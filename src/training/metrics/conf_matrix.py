@@ -168,28 +168,28 @@ class ConfusionMatrix:
         return dict(self._metrics)
 
     @property
-    def metrics_text(self) -> str:
+    def metrics_text(self) -> list[str]:
         '''Printer friendly text presentation of the metrics.'''
 
         mm = self._metrics
         text = []
         # all classes
         m = f"{mm['mean']:.4f}"
-        text.append('Mean IoU (all classes):\t' + m)
+        text.append('Mean IoU (all):\t' + m)
         c = '|'.join(f'cls{k}={v:.4f}' for k, v in mm['ious'].items())
-        text.append('Per-class IoU (all classes):\t' + c)
-        s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
-        text.append('Per-class support (all classes):\t' + s)
+        text.append('Class IoU (all):\t' + c)
+        # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
+        # text.append('Class support (all):\t' + s)
         # subset of active classes (if not None)
         if self.exclude_class_1b:
             m = f"{mm['ac_mean']:.4f}"
-            text.append('Mean IoU (active classes):\t' + m)
+            text.append('Mean IoU (active):\t' + m)
             c = '|'.join(f'cls{k}={v:.4f}' for k, v in mm['ac_ious'].items())
-            text.append('Per-class IoU (active classes):\t' + c)
-            s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
-            text.append('Per-class support (active classes):\t' + s)
-        # return text in lines
-        return '\n'.join(text)
+            text.append('Class IoU (active):\t' + c)
+            # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
+            # text.append('Class support (active):\t' + s)
+        # return text lines
+        return text
 
 class _Metrics(typing.TypedDict):
     '''Typed dict for metrics.'''

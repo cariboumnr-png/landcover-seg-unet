@@ -72,7 +72,3 @@ class TrainCallback(training.callback.Callback):
         # accumulate batch loss to epoch-level total loss
         batch_loss = float(self.state.batch_out.total_loss.detach().item())
         self.state.epoch_sum.train_loss += batch_loss
-
-    def on_train_epoch_end(self) -> None:
-        # finalize average over all batches in the epoch
-        self.trainer._update_train_logs(bidx=-1)

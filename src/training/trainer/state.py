@@ -126,7 +126,7 @@ class _Epoch:
     train_logs: dict[str, float] = dataclasses.field(default_factory=dict)
     train_logs_text: str = ''
     val_logs: dict[str, dict] = dataclasses.field(default_factory=dict)
-    val_logs_text: dict[str, str] = dataclasses.field(default_factory=dict)
+    val_logs_text: dict[str, list[str]] = dataclasses.field(default_factory=dict)
 
     def __str__(self) -> str:
         return '\n'.join([

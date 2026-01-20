@@ -1,4 +1,22 @@
-'''Trainer class.'''
+'''
+Multi-head training orchestration for hierarchical segmentation.
+
+This module defines `MultiHeadTrainer`, a callback-driven trainer that
+wires together model, data loaders, optimization, and per-head
+specifications for multi-head hierarchical segmentation/classification
+tasks.
+
+Key features:
+- Epoch-level training and validation with callback hooks.
+- Dynamic control of active/frozen heads and per-head class exclusion.
+- Mixed-precision contexts and gradient scaling.
+- Aggregated logging for total and per-head losses, and per-head IoU
+    metrics.
+
+See also:
+- training.trainer (components, configs, and runtime state)
+- callback modules under ./callback for phase-specific hooks
+'''
 
 # standard imports
 import contextlib
@@ -13,12 +31,16 @@ class MultiHeadTrainer:
     Trainer for multi-head hierarchical segmentation.
 
     Responsibilities:
-    - Wire up model, data loaders, optimizer, schedulers, head specs,
-        and metrics.
-    - Run training and validation loops.
-    - Shift labels from 1-based to 0-based (keep 255) before loss/metrics.
-    - Gate child-head loss/metrics under matching parent class regions.
-    - Aggregate logs, track best metric, and save/load checkpoints.
+    - Wire up model, data loaders, optimizer/scheduler, head specs,
+        loss, and metrics.
+    - Run epoch-level training and validation via callback hooks.
+    - Set/reset active/frozen training heads; mask specific classes for
+        loss/metrics.
+    - Aggregate logs and track best metric.
+
+    This trainer delegates workflow steps to callback classes (see
+    `callback` modules) but retains core logic such as batch parsing,
+    context management, and phase-specific helpers.
     '''
 
     def __init__(
@@ -28,11 +50,18 @@ class MultiHeadTrainer:
             device: str
         ):
         '''
-        Initialize and store all parts; move model to device.
+        Initialize trainer with components and configuration.
 
-        components: Concrete dataclass containing component protocols
-        config: concrete dataclass containing runtime config
-        callbacks: list of callback class protocols
+        A `RuntimeState` object is created and callback classes are to
+        wired to the trainer.
+
+        Args:
+            components: Dataclass of trainer components (see
+                `./comps.py`).
+            config: Dataclass of runtime configuration. (see
+                `./config.py`).
+            device (str): Device string (e.g., 'cpu'/'cuda'/or 'cuda:0')
+                applied at trainer level.
         '''
 
         # parse arguments
@@ -48,7 +77,24 @@ class MultiHeadTrainer:
 
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
         '''
-        Train for one epoch.
+        Train for one epoch and return an epoch-level training log.
+
+        Orchestrated by callback hooks that invoke private helpers:
+        - `on_train_epoch_begin`
+        - `on_train_batch_begin`
+        - `on_train_batch_forward`
+        - `on_train_backward`
+        - `on_train_before_optimizer_step`
+        - `on_train_optimizer_step`
+        - `on_train_batch_end`
+        - `on_train_epoch_end`
+
+        See `./training/callback/phase_train.py` for phase-specific hook
+        implementations.
+
+        Returns:
+            A dictionary of averaged training metrics (e.g.,
+            total/per-head loss).
         '''
 
         # train phase begin:
@@ -92,8 +138,23 @@ class MultiHeadTrainer:
         self._emit('on_train_epoch_end')
         return self.state.epoch_sum.train_logs
 
-    def validate(self) -> dict:
-        '''Validation.'''
+    def validate(self) -> dict[str, dict]:
+        '''
+        Validate on the validation set and return epoch-level metrics.
+
+        Orchestrated by callback hooks that invoke private helpers:
+        - `on_validation_begin`
+        - `on_validation_batch_begin`
+        - `on_validation_batch_forward`
+        - `on_validation_batch_end`
+        - `on_validation_end`
+
+        See `.training/callback/phase_val.py` for phase-specific hook
+        implementations.
+
+        Returns:
+            A mapping from head name to its validation metrics (dict).
+        '''
 
         # val phase start
         # - reset head confusion matrices
@@ -127,7 +188,22 @@ class MultiHeadTrainer:
             frozen_heads: list[str] | None=None,
             excluded_cls: dict[str, tuple[int, ...]] | None=None
         ) -> None:
-        '''Set the head states from input configuration.'''
+        '''
+        Set active/frozen heads and per-head class exclusions.
+
+        Side effects:
+            - Updates model active/frozen heads.
+            - Deep-copies and installs per-head specs, loss, and metrics
+                into `self.state`.
+            - Applies per-head class exclusions to specs and metrics.
+
+        Args:
+            active_heads: Heads to activate. Defaults to all heads when
+                set to `None`.
+            frozen_heads: Heads to freeze (if provided).
+            excluded_cls: Mapping of head -> tuple of class indices to
+                exclude from loss and validation metrics.
+        '''
 
         # if no active heads provided, make all heads active
         if active_heads is None:
@@ -158,23 +234,41 @@ class MultiHeadTrainer:
 
         # set excluded classes to active heads
         if excluded_cls is not None:
-            for head in active_heads:
-                excluded=excluded_cls.get(head)
-                if excluded is not None:
-                    self.state.heads.active_hspecs[head].set_exclude(excluded)
-                    self.headmetrics[head].exclude_class_1b = excluded
+            for h in active_heads:
+                excl = excluded_cls.get(h)
+                if excl is not None:
+                    self.state.heads.active_hspecs[h].set_exclude(excl)
+                    self.state.heads.active_hmetrics[h].exclude_class_1b = excl
 
     def reset_head_state(self):
-        '''Reset the training state back to model defaults.'''
+        '''
+        Reset runtime training heads.
 
+        Side effects:
+        - Calls `model.reset_heads()`.
+        - Clears active/frozen heads and related per-head modules.
+        '''
+
+        self.model.reset_heads()
         self.state.heads.active_heads = None
         self.state.heads.frozen_heads = None
         self.state.heads.active_hspecs = None
-        self.model.reset_heads()
+        self.state.heads.active_hloss = None
+        self.state.heads.active_hmetrics = None
 
     def predict(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         '''
-        Inference: run forward pass and return processed predictions.
+        Run a simple head-aware inference pass.
+
+        For segmentation heads, returns argmax class maps; for
+        classification heads, returns top-1 class indices; for other
+        heads, returns raw outputs.
+
+        Args:
+            x: Input tensor, moved to trainer device.
+
+        Returns:
+            A mapping from head name to prediction tensor.
         '''
 
         self.model.eval()
@@ -198,7 +292,7 @@ class MultiHeadTrainer:
     # ----------------------------internal methods----------------------------
     # runtime state initialization
     def _init_state(self) -> training.trainer.RuntimeState:
-        '''Instantiate runtime state in line with trainer config.'''
+        '''Instantiate the runtime state aligned with trainer config.'''
 
         # instantiate a state
         state = training.trainer.RuntimeState()
@@ -212,15 +306,23 @@ class MultiHeadTrainer:
         # return
         return state
 
+    # callback classes setup
     def _setup_callbacks(self) -> None:
-        '''Setup callback classes (passes `self.trainer` instance).'''
+        '''Pass current trainer instance to all callback classes.'''
 
         for callback in self.callbacks:
             callback.setup(self)
 
     # callback callers
     def _emit(self, hook: str, *args, **kwargs) -> None:
-        '''Get callback by name and send trainer and args to execute.'''
+        '''
+        Invoke a named hook from callbacks with the provided arguments.
+
+        Args:
+            hook: Hook method to call (e.g., 'on_train_batch_begin').
+            *args: Positional arguments passed to the callback method.
+            **kwargs: Keyword arguments passed to the callback method.
+        '''
 
         for callback in self.callbacks:
             method = getattr(callback, hook, None)
@@ -231,31 +333,15 @@ class MultiHeadTrainer:
     # batch extraction
     def _parse_batch(self) -> None:
         '''
-        Extract labels for a subset of active heads from a batched tensor.
+        Extract input, targets, and domain tensors from current batch.
 
-        Args:
-            batch (tuple[Tensor, Tensor]):
-            A tuple where
-                - `x`: Input image tensor of shape [B, C, H, W].
-                - `y`: Stacked label tensor of shape [B, S, H, W], where S
-                    corresponds to heads in the order of `all_heads`.
-                - 'domain': batch-level domain dict of tensors. can be empty.
+        Expects a `(x, y, domain)` tuple in `self.state.batch_cxt.batch`
+            where:
+            - x: float tensor of shape [B, S, H, W]
+            - y: int/long tensor of shape [B, S, H, W]
+            - domain: dict[str, torch.Tensor] or empty dict
 
-            all_heads (list[str]):
-                List of all head names and their ordering
-
-            active_heads (list[str]):
-                List of head names to extract label slices for.
-
-        Returns:
-            tuple:
-                - `x` (torch.Tensor): The unchanged input image tensor.
-                - `y_dict` (dict[str, torch.Tensor]): A mapping from each
-                active head name to its corresponding label tensor of
-                shape [B, H, W].
-        --------------------------------------------------------------------
-        Note:
-        Returned `x` tensor and tensors in `y_dict` will be on `device`.
+        Populates `self.state.batch_cxt.x`, `.y_dict`, and `.domain`.
         '''
 
         # make sure the batch is properly populated
@@ -283,19 +369,19 @@ class MultiHeadTrainer:
         y = y.to(device)
         domain = {k: v.to(device) for k, v in domain.items()} if domain else {}
 
-        # fall back to all heads if activce heads not provided
+        # fall back to all available heads if activce heads not provided
         if self.state.heads.active_heads is None:
             self.state.heads.active_heads = self.state.heads.all_heads
 
         # precompute head index mapping
-        head_to_idx = {name: i for i, name in enumerate(self.state.heads.all_heads)}
+        hmap = {name: i for i, name in enumerate(self.state.heads.all_heads)}
         # validate active heads
-        missing = set(self.state.heads.active_heads) - set(self.state.heads.all_heads)
-        if missing:
-            raise KeyError(f'Active heads not found in all_heads: {missing}')
+        m = set(self.state.heads.active_heads) - set(self.state.heads.all_heads)
+        if m:
+            raise KeyError(f'Active heads not found in all_heads: {m}')
 
         # extract y slices
-        y_dict = {head: y[:, head_to_idx[head], ...] for head in self.state.heads.active_heads}
+        y_dict = {h: y[:, hmap[h], ...] for h in self.state.heads.active_heads}
         # get running domain
         running_domain = self.__sel_domain(domain)
         # assign to context
@@ -307,7 +393,7 @@ class MultiHeadTrainer:
             self,
             domain: dict[str, torch.Tensor]
         ) -> dict[str, torch.Tensor | None]:
-        '''Get domain tensors - currently one for ids and one for vec.'''
+        '''Get domain tensors - currently one slot for each ids/vec.'''
 
         ids_name = self.config.data.dom_ids_name
         vec_name = self.config.data.dom_vec_name
@@ -317,7 +403,7 @@ class MultiHeadTrainer:
 
     # precision context
     def _autocast_ctx(self):
-        '''Autocast context for training.'''
+        '''Autocast context for training based on precision setting.'''
         device_type = self.device
         # pick dtype; feel free to prefer bf16 if supported:
         dtype = torch.bfloat16 if device_type == 'cpu' else torch.float16
@@ -330,7 +416,7 @@ class MultiHeadTrainer:
         return contextlib.nullcontext()
 
     def _val_ctx(self):
-        '''Autocast and no gradient context for validation.'''
+        '''Inference mode and autocast context for validation phase.'''
         stack = contextlib.ExitStack()
         stack.enter_context(torch.inference_mode())
         stack.enter_context(self._autocast_ctx())
@@ -338,7 +424,11 @@ class MultiHeadTrainer:
 
     # training phase
     def _compute_loss(self) -> None:
-        '''Wrapper for compute loss.'''
+        '''
+        Compute total and per-head losses for the current batch.
+
+        Writes `total_loss` and `head_loss` into `self.state.batch_out`.
+        '''
 
         # sanity
         assert self.state.heads.active_hspecs is not None
@@ -355,38 +445,41 @@ class MultiHeadTrainer:
         self.state.batch_out.head_loss = perhead
 
     def _clip_grad(self):
-        '''Gradient clip'''
+        '''Clip gradients by global norm when set.'''
         if self.config.optim.grad_clip_norm is not None:
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(),
                 self.config.optim.grad_clip_norm
             )
 
-    def _update_train_logs(self, bidx: int) -> bool:
+    def _update_train_logs(self, bidx: int, flush: bool=False) -> bool:
         '''
         Average losses and update per-head loss logs at intervals.
 
-        Set `bidx = -1` to flush results at end of training epoch.
+        Set `flush=True` to flush results at end of a training epoch.
+
+        Returns a boolean flag on whether the log is updated or not and
+        write logs to `self.state.epoch_sum`.
         '''
 
         logs = {}
         # update log at interval
-        if bidx == -1 or bidx % self.config.schedule.logging_interval == 0:
+        if flush or bidx % self.config.schedule.logging_interval == 0:
             # average total loss so far
             avg_loss = self.state.epoch_sum.train_loss / max(1, bidx)
-            logs['train_loss_total'] = avg_loss
+            logs['Total_Loss'] = avg_loss
             # per-head losses
             for h, v in self.state.batch_out.head_loss.items():
-                logs[f'train_loss_{h}'] = float(v)
+                logs[f'Head_Loss_{h}'] = float(v)
             # extras - lr
-            logs['train_lr'] = self.optimization.optimizer.param_groups[0]['lr']
-
+            logs['LR'] = self.optimization.optimizer.param_groups[0]['lr']
             # assgin to state dict
             self.state.epoch_sum.train_logs = logs
+
         # if logs are updated: provide a printer friendly text and return flag
         if logs:
-            text_list = [f'{k}_loss: {v:.4f}' for k, v in logs.items()]
-            text = f'{bidx:05d} | ' + '|'.join(text_list)
+            text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
+            text = f'b{bidx:04d} | ' + '|'.join(text_list)
             self.state.epoch_sum.train_logs_text = text
             return True
         return False
@@ -411,12 +504,16 @@ class MultiHeadTrainer:
             )
 
     def _compute_iou(self) -> None:
-        '''Compute IoU at the end of validation phase.'''
+        '''
+        Compute IoU at the end of validation phase.
+
+        Writes metrics to `self.state.epoch_sum`.
+        '''
 
         # sanity
         assert self.state.heads.active_hmetrics is not None
         val_logs: dict[str, dict] = {}
-        val_logs_text: dict[str, str] = {}
+        val_logs_text: dict[str, list[str]] = {}
         # calculate IoU related metrics for each head
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             metrics_module.compute() # final metrics from batch accumulations

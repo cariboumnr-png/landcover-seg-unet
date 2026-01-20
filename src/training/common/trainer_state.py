@@ -59,7 +59,7 @@ class Epoch(typing.Protocol):
     train_logs: dict[str, float]
     train_logs_text: str
     val_logs: dict[str, dict]
-    val_logs_text: dict[str, str]
+    val_logs_text: dict[str, list[str]]
 
 class Metrics(typing.Protocol):
     last_value: float | None
