@@ -20,7 +20,7 @@ class Callback:
             raise RuntimeError("Callback.setup() called twice.")
         self._trainer = trainer
 
-    def log(self, message: str, level: str='INFO' ) -> None:
+    def log(self, level: str, message: str) -> None:
         '''Centralized callback logging'''
         log.log(level, message)
 

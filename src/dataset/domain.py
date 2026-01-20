@@ -99,12 +99,30 @@ def _parse_raster_blocks(
         unique_values.update(uniques)
     unique_values.remove(nodata) # remove nodata from unique values
 
-    # remap all arrays from 1 to n
-    remap = numpy.array(sorted(unique_values)) # 1-D sorted unique values
+    # global mapping: raw 1..K  ->  0..K-1 ----
+    # If global raws are continuous 1..K, K is simply max(unique_values)
+    # but safer to compute via the set to allow future gaps.
+    remap_sorted = numpy.array(sorted(unique_values), dtype=numpy.int64)
+    kmax = remap_sorted.size
+    if kmax == 0:
+        # no valid class pixels at all; keep arrays as-is, but define a trivial space
+        for b in parsed_blocks:
+            b.mmin, b.mmax = 0, -1  # empty category space
+        return parsed_blocks
+
+    # Map each block: valid raw -> index in [0..K-1], nodata -> -1
     for b in parsed_blocks:
-        b.array = numpy.searchsorted(remap, b.array) + 1 # 0-based to 1-based
-        b.mmin = 1
-        b.mmax = max(remap)
+        arr = b.array
+        mask_valid = arr != nodata
+        # Initialize with -1 (nodata)
+        mapped = numpy.full_like(arr, fill_value=-1, dtype=numpy.int64)
+        # searchsorted assumes remap_sorted is sorted (it is)
+        mapped[mask_valid] = numpy.searchsorted(remap_sorted, arr[mask_valid])
+        b.array = mapped  # 0-based indices
+        b.nodata = -1 # nodata is now -1
+        # global index space for downstream consumers (fixed)
+        b.mmin = 0
+        b.mmax = kmax - 1
 
     # return
     return parsed_blocks
@@ -115,7 +133,7 @@ def _get_nodata(ras_fpath: str) -> int:
     with rasterio.open(ras_fpath) as src:
         nodata = src.nodata
     if nodata is None:
-        nodata = 0
+        nodata = -1
     else:
         assert abs(nodata - round(nodata)) < 1e-9 # nodata is a round number
     return int(nodata)

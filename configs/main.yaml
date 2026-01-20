@@ -12,6 +12,6 @@ defaults:
 seed: 42
 test:
   # if not zero randomly select n training blocks and n/5 validation blocks
-  rand_sample_n: 100
+  rand_sample_n: 0
 skip:
   dataprep: False

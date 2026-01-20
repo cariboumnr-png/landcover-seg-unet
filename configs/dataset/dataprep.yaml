@@ -80,7 +80,7 @@ overwrite:
   norm: false
   # Overwrite block scoring (update or recreate)
   score: false
-  # OVerwrite block split between training/validation dataset
+  # Overwrite block split between training/validation dataset
   split: false
 
 cleanup:

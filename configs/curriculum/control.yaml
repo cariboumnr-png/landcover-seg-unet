@@ -8,7 +8,7 @@ phases:
   # each phase
   phase_1:
     name: Phase 1
-    num_epochs: 1
+    num_epochs: 10
     active_heads: [layer1]
     masked_classes:
       layer1: [4, 6]
