@@ -1,16 +1,56 @@
-'''Multi-head Unet architecture.'''
+'''
+Multihead UNet architecture with domain conditioning and safety utils.
+
+**Overview**\n
+This module composes a UNet backbone with a lightweight multihead output
+manager to support multi-prediction tasks (e.g., segmentation, detection
+heatmaps, or auxiliary heads) from shared features. Domain conditioning
+is supported through two complementary mechanisms:
+
+- **Concatenation** (input-level): domain channels are appended to the
+  input tensor when enabled. This is useful for simple categorical
+  indicators or low-dimensional continuous descriptors that should
+  influence all stages.
+
+- **FiLM** (bottleneck-level): Feature-wise Linear Modulation is applied
+  at the U-Net bottleneck using learned affine parameters derived from
+  domain embeddings. This focuses adaptation where global context is
+  strongest.
+
+The design cleanly separates concerns:
+- `MultiHeadUNet`: orchestrates backbone, conditioning, and head routing.
+- `_HeadManager`: manages a set of 1x1 conv heads, activate/freeze state,
+  and optional per-head logit adjustment.
+- `_DomainRouter`: decides what domain info feeds concatenation vs FiLM,
+  with optional projections from raw vectors to required dimensions.
+- `_NumericSafety`: centralizes autocast context and value clamping to
+  improve numerical stability during training/inference.
+
+**Expected Shapes**
+- Input  `x`: (N, C_in, H, W)
+- U-Net body output for heads: (N, base_ch, H, W)
+- Per-head logits: (N, C_head, H, W)
+
+**Extension Points**
+- Add or replace heads in `_HeadManager`.
+- Swap input concatenation or FiLM policies in `_DomainRouter`.
+- Adjust clamping ranges and autocast dtype in `_NumericSafety`.
+- Replace the backbone with a drop-in module exposing `.encode/.decode`.
+
+**Notes**
+- Perhead logit adjustment supports label-frequency priors or calibrated
+  offsets via a broadcastable `(1, C_head, 1, 1)` tensor stored in a
+  non-trainable `Parameter`.
+'''
 
 # third-party imports
 import torch
 import torch.nn
 # local imports
-import models.backbones.unet
-import models.multihead.base
-import models.multihead.concat
-import models.multihead.config
-import models.multihead.film
+import models.backbones
+import models.multihead
 
-class MultiHeadUNet(models.multihead.base.BaseModel):
+class MultiHeadUNet(models.multihead.BaseModel):
     '''
     UNet with 4 down/up levels and multi heads and conditioning support.
 
@@ -23,9 +63,9 @@ class MultiHeadUNet(models.multihead.base.BaseModel):
 
     def __init__(
             self,
-            config: models.multihead.config.ModelConfig,
-            cond: models.multihead.config.CondConfig
-            ):
+            config: models.multihead.ModelConfig,
+            cond: models.multihead.CondConfig
+        ):
         super().__init__()
 
         # channels
@@ -49,14 +89,14 @@ class MultiHeadUNet(models.multihead.base.BaseModel):
         self.domain_router = _DomainRouter(cond)
 
         # domain concatenation if proviced
-        self.concat = models.multihead.concat.get(cond)
+        self.concat = models.multihead.get_concat(cond)
         add = self.concat.output_dim if self.concat is not None else 0
 
         # core UNet body
-        self.body = models.backbones.unet.UNetBackbone(in_ch + add, base_ch)
+        self.body = models.backbones.UNet(in_ch + add, base_ch)
 
         # conditioner
-        self.film = models.multihead.film.get(cond, base_ch)
+        self.film = models.multihead.get_film(cond, base_ch)
 
         # safety utilities
         self.safety = _NumericSafety(config.enable_clamp, config.clamp_range)
@@ -66,7 +106,7 @@ class MultiHeadUNet(models.multihead.base.BaseModel):
             x: torch.Tensor,
             **kwargs
         ) -> dict[str, torch.Tensor]:
-        '''Forward.'''
+        '''Compute per-head logits with optional domain info.'''
 
         # numeric safty
         assert torch.isfinite(x).all(), "Input has NaN/Inf"
@@ -105,33 +145,40 @@ class MultiHeadUNet(models.multihead.base.BaseModel):
         return self.heads.forward(x, self.heads.state.active, self.logit_adjust)
 
     def set_active_heads(self, active_heads: list[str] | None=None) -> None:
-        '''Convenience method to set active heads in forward method.'''
+        '''Set the list of active heads used during forward.'''
+
         self.heads.state.active = active_heads
 
     def set_frozen_heads(self, frozen_heads: list[str] | None=None) -> None:
-        '''Freeze gradient for selected heads.'''
+        '''Freeze parameters for selected heads.'''
+
         self.heads.state.frozen = frozen_heads
         self.heads.freeze(frozen_heads)
 
     def reset_heads(self):
-        '''Reset heads.'''
+        '''Clear active/frozen head selections.'''
+
         self.heads.state.active = None
         self.heads.state.frozen = None
 
     @property
     def encoder(self) -> list:
-        '''Returns a list of encoders'''
+        '''Return a list of encoder blocks (incl. bottleneck).'''
         return [self.body.inc, *self.body.downs, self.body.bottleneck]
 
     @property
     def decoder(self) -> list:
-        '''Returns a list of encoders'''
+        '''Return a list of decoder (upsampling) blocks.'''
         return [*self.body.ups]
 
 # internal pieces
 class _HeadManager(torch.nn.Module):
     '''
-    Docstring for HeadManager.
+    Manage multiple 1x1 conv heads, activation state, and freezing.
+
+    Each head as `Conv2d(in_ch → num_classes, kernel_size=1)` producing
+    per-pixel logits. The manager tracks which heads are active for
+    forward passes and supports freezing selected heads' parameters.
     '''
 
     def __init__(
@@ -140,7 +187,11 @@ class _HeadManager(torch.nn.Module):
             heads: dict[str, int],
         ):
         '''
-        Initialize the `HeadManager`.
+        Create per-head 1x1 convs and initialize head state.
+
+        Args:
+            in_ch: Channel of the shared feature map feeding all heads.
+            heads: Mapping from head's name to head's number of classes.
         '''
 
         super().__init__()
@@ -159,7 +210,7 @@ class _HeadManager(torch.nn.Module):
             active_heads: list[str] | None=None,
             logit_adjust: torch.nn.ParameterDict | None=None
         ) -> dict[str, torch.Tensor]:
-        '''Forward active heads if provided.'''
+        '''Run active heads and return a dict of logits.'''
 
         # if external active heads provided
         if active_heads is not None:
@@ -183,7 +234,7 @@ class _HeadManager(torch.nn.Module):
         return output_logits
 
     def freeze(self, frozen_heads: list[str] | None=None) -> None:
-        '''Freeze selected heads if provided.'''
+        '''Disable gradients of selected heads.'''
         if frozen_heads is None:
             return
         for h in frozen_heads:
@@ -192,15 +243,33 @@ class _HeadManager(torch.nn.Module):
 
 class _DomainRouter(torch.nn.Module):
     '''
-    Docstring for DomainRouter
+    Route domain information to concatenation and FiLM branches.
+
+    This class determines which parts of the provided domain identifiers
+    (`ids`) and vectors (`vec`) should be used for:
+    - **Concatenation**: optionally project `vec` to `concat.out_dim`
+        before channel-wise concatenation at the input.
+    - **FiLM**: optionally project `vec` to `film.embed_dim` before
+        computing FiLM parameters at the bottleneck.
+
+    Projections are created only if a raw domain vector dimension is
+    provided and the corresponding branch (`concat` or `film`) is
+    configured to use it.
     '''
-    def __init__(
-            self,
-            cfg: models.multihead.config.CondConfig
-        ):
+
+    def __init__(self, cfg: models.multihead.config.CondConfig):
+        '''
+        Initialize optional projections and record routing policy.
+
+        Args:
+            cfg: Conditioning configuration describing whether to use
+                `ids` and/or `vec` for each branch, and the target
+                dimensions for projections.
+        '''
+
         super().__init__()
         self.cfg = cfg
-        #
+        # set concat and film projection
         self.concat_proj = torch.nn.Linear(
             in_features=cfg.domain_vec_dim,
             out_features=cfg.concat.out_dim
@@ -215,39 +284,42 @@ class _DomainRouter(torch.nn.Module):
             ids: torch.Tensor | None,
             vec: torch.Tensor | None
         ) -> tuple[tuple, tuple]:
-        '''
-        Docstring for forward
+        '''Return domain routing according to configuration.'''
 
-        :param self: Description
-        :param ids: Description
-        :type ids: torch.Tensor | None
-        :param vec: Description
-        :type vec: torch.Tensor | None
-        '''
-
-        # Decide and shape what goes to concat vs film
+        # Decide and shape what goes to concat
         concat_ids = ids if self.cfg.concat.use_ids else None
-        concat_vec = None
-        film_ids = ids if self.cfg.film.use_ids else None
-        film_vec = None
-
+        # if to use vec for concat and vec is provided
         if self.cfg.concat.use_vec and vec is not None:
-            concat_vec = self.concat_proj(vec) \
-                if self.concat_proj is not None else vec
+            if self.concat_proj is not None:
+                concat_vec = self.concat_proj(vec)
+            else:
+                concat_vec = vec
+        else:
+            concat_vec = None
 
+        # Decide and shape what goes to film
+        film_ids = ids if self.cfg.film.use_ids else None
+        # if use vec for fil, and vec is provided
         if self.cfg.film.use_vec and vec is not None:
-            film_vec = self.film_proj(vec) \
-                if self.film_proj is not None else vec
+            if self.film_proj is not None:
+                film_vec = self.film_proj(vec)
+            else:
+                film_vec = vec
+        else:
+            film_vec = None
 
+        # return
         return (concat_ids, concat_vec), (film_ids, film_vec)
 
 class _NumericSafety():
-    '''Numeric safety utilities.'''
+    '''Autocast and clamping utilities for numerical stability.'''
     def __init__(
             self,
             enable_clamp: bool,
             clamp_range: tuple[float, float]
         ):
+        '''Configure clamping behavior and bounds.'''
+
         self.enable_clamp = enable_clamp
         self.clamp_range = clamp_range
 
@@ -256,13 +328,15 @@ class _NumericSafety():
             enable: bool=True,
             dtype: torch.dtype=torch.float16
         ) -> torch.autocast:
-        '''AMP context manager.'''
+        '''Create an AMP autocast context for the current device.'''
+
         device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
         return torch.autocast(device_type, dtype, enable)
 
 
     def clamp(self, x: torch.Tensor) -> torch.Tensor:
-        '''Gradient safetp clamp.'''
+        '''Clamp tensor values to a safe numeric range.'''
+        
         if not self.enable_clamp:
             return x
         mmin, mmax = self.clamp_range

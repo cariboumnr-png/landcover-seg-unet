@@ -4,7 +4,7 @@
 import torch
 import torch.nn
 # local imports
-import models.multihead.config
+import models.multihead
 
 class FilmConditioner(torch.nn.Module):
     '''
@@ -148,8 +148,8 @@ class FilmConditioner(torch.nn.Module):
         z = self.embed(domain_ids=domain_ids, domain_vec=domain_vec)
         return self.film_bottleneck(xb, z)
 
-def get(
-        config: models.multihead.config.CondConfig,
+def get_film(
+        config: models.multihead.CondConfig,
         base_ch: int
     ) -> FilmConditioner | None:
     '''Generate a film conditioner for the model.'''

@@ -88,11 +88,12 @@ class Controller:
         # train
         print(f'__Phase [{phase.name}] started__')
         for epoch in range(1, num_epoch + 1):
-            print(f'__Epoch: {epoch}/{num_epoch}__')
             # early stop check - patience can be None = no early stop
             patience = self.trainer.config.schedule.patience_epochs
             if patience and self.trainer.state.metrics.patience_n >= patience:
+                log.log('INFO', 'Patience limit reached, phase stopping')
                 break
+            print(f'__Epoch: {epoch}/{num_epoch}__')
             # set trainer heads
             self.trainer.set_head_state(
                 active_heads=phase.active_heads,

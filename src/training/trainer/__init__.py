@@ -16,6 +16,8 @@ __all__ = [
     'RuntimeConfig',
     'RuntimeState',
     # functions
+    'load',
+    'save',
     'multihead_loss',
 ]
 

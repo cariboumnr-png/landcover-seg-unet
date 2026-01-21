@@ -4,7 +4,7 @@
 import torch
 import torch.nn
 # local imports
-import models.multihead.config
+import models.multihead
 
 class ConcatAdapter(torch.nn.Module):
     '''
@@ -94,7 +94,7 @@ class ConcatAdapter(torch.nn.Module):
         return torch.cat([x, dv], dim=1)
 
 
-def get(config: models.multihead.config.CondConfig) -> ConcatAdapter | None:
+def get_concat(config: models.multihead.CondConfig) -> ConcatAdapter | None:
     '''Generate a concat adapter for the model.'''
 
     if config.mode in ['concat', 'hybrid'] and config.concat.out_dim > 0:
