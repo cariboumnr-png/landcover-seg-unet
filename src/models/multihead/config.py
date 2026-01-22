@@ -1,30 +1,22 @@
 '''Multihead model config classes'''
 
+from __future__ import annotations
 # standard imports
 import dataclasses
 
+# -------------------------model general configuration-------------------------
 @dataclasses.dataclass
-class HeadsState:
-    '''Multihead status.'''
-    active: list[str] | None = dataclasses.field(init=False)
-    frozen: list[str] | None = dataclasses.field(init=False)
+class ModelConfig:
+    '''General config'''
+    in_ch: int
+    base_ch: int
+    heads_w_counts: dict[str, list[int]]
+    enable_logit_adjust: bool
+    logit_adjust: dict[str, list[float]]
+    enable_clamp: bool
+    clamp_range: tuple[float, float]
 
-@dataclasses.dataclass
-class ConcatConfig:
-    '''doc'''
-    out_dim: int
-    use_ids: bool
-    use_vec: bool
-    use_mlp: bool
-
-@dataclasses.dataclass
-class FilmConfig:
-    '''doc'''
-    embed_dim: int
-    use_ids: bool
-    use_vec: bool
-    hidden: int
-
+# ----------------------model conditioning configuration----------------------
 @dataclasses.dataclass
 class CondConfig:
     '''Wrapper for conditioning configuration.'''
@@ -42,12 +34,24 @@ class CondConfig:
         assert self.mode in ['none', 'concat', 'film', 'hybrid']
 
 @dataclasses.dataclass
-class ModelConfig:
-    '''General config'''
-    in_ch: int
-    base_ch: int
-    heads_w_counts: dict[str, list[int]]
-    enable_logit_adjust: bool
-    logit_adjust: dict[str, list[float]]
-    enable_clamp: bool
-    clamp_range: tuple[float, float]
+class ConcatConfig:
+    '''doc'''
+    out_dim: int
+    use_ids: bool
+    use_vec: bool
+    use_mlp: bool
+
+@dataclasses.dataclass
+class FilmConfig:
+    '''doc'''
+    embed_dim: int
+    use_ids: bool
+    use_vec: bool
+    hidden: int
+
+# -----------------------model head state configuration-----------------------
+@dataclasses.dataclass
+class HeadsState:
+    '''Multihead status.'''
+    active: list[str] | None = dataclasses.field(init=False)
+    frozen: list[str] | None = dataclasses.field(init=False)

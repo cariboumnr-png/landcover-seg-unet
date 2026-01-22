@@ -61,8 +61,14 @@ class MultiHeadUNet(models.multihead.BaseModel):
       {'film','hybrid'})
     '''
 
+    body_registry = {
+        'unet': models.backbones.UNet,
+        'unet++': models.backbones.UNetPP
+    }
+
     def __init__(
             self,
+            body: str,
             config: models.multihead.ModelConfig,
             cond: models.multihead.CondConfig
         ):
@@ -93,7 +99,8 @@ class MultiHeadUNet(models.multihead.BaseModel):
         add = self.concat.output_dim if self.concat is not None else 0
 
         # core UNet body
-        self.body = models.backbones.UNet(in_ch + add, base_ch)
+        assert body in self.body_registry, f'Invalid body type: {body}'
+        self.body = self.body_registry[body](in_ch + add, base_ch)
 
         # conditioner
         self.film = models.multihead.get_film(cond, base_ch)
@@ -101,11 +108,7 @@ class MultiHeadUNet(models.multihead.BaseModel):
         # safety utilities
         self.safety = _NumericSafety(config.enable_clamp, config.clamp_range)
 
-    def forward(
-            self,
-            x: torch.Tensor,
-            **kwargs
-        ) -> dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
         '''Compute per-head logits with optional domain info.'''
 
         # numeric safty
@@ -132,7 +135,7 @@ class MultiHeadUNet(models.multihead.BaseModel):
             # encoders
             x1, x2, x3, x4, xb = self.body.encode(self.safety.clamp(x))
             xb = self.safety.clamp(xb)
-            # FiLM at bottleneck if provided
+            # FiLM at bottom if provided
             if self.film is not None:
                 z = self.film.embed(*film)
                 xb = self.film.film_bottleneck(xb, z)
@@ -181,11 +184,7 @@ class _HeadManager(torch.nn.Module):
     forward passes and supports freezing selected heads' parameters.
     '''
 
-    def __init__(
-            self,
-            in_ch: int,
-            heads: dict[str, int],
-        ):
+    def __init__(self, in_ch: int, heads: dict[str, int]):
         '''
         Create per-head 1x1 convs and initialize head state.
 
@@ -336,7 +335,7 @@ class _NumericSafety():
 
     def clamp(self, x: torch.Tensor) -> torch.Tensor:
         '''Clamp tensor values to a safe numeric range.'''
-        
+
         if not self.enable_clamp:
             return x
         mmin, mmax = self.clamp_range

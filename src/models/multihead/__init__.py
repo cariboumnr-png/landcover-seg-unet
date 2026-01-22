@@ -36,11 +36,11 @@ def __getattr__(name: str):
 
     if name == 'BaseModel':
         return importlib.import_module('.base', __package__).BaseModel
-    if name == ['ConcatAdapter', 'get_concat']:
+    if name in ['ConcatAdapter', 'get_concat']:
         return getattr(importlib.import_module('.concat', __package__), name)
     if name in ['ConcatConfig', 'CondConfig', 'FilmConfig', 'ModelConfig']:
-        return getattr(importlib.import_module('.base', __package__), name)
-    if name == ['FilmConditioner', 'get_film']:
+        return getattr(importlib.import_module('.config', __package__), name)
+    if name in ['FilmConditioner', 'get_film']:
         return getattr(importlib.import_module('.film', __package__), name)
     if name == 'MultiHeadUNet':
         return importlib.import_module('.frame', __package__).MultiHeadUNet

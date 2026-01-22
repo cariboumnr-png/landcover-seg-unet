@@ -45,4 +45,8 @@ def build_multihead_unet(
     )
 
     # return model instance
-    return models.multihead.frame.MultiHeadUNet(model_config, cond_config)
+    return models.multihead.frame.MultiHeadUNet(
+        body=config.body,
+        config=model_config,
+        cond=cond_config,
+    )
