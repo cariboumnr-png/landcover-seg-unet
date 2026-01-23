@@ -3,16 +3,15 @@
 # third-party imports
 import omegaconf
 # local imports
-import training.common
 import training.callback
+import training.common
+import training.controller
 import training.dataloading
 import training.heads
 import training.loss
 import training.metrics
 import training.optim
 import training.trainer
-
-import training.controller
 
 def get_components(
         model: training.common.MultiheadModelLike,
@@ -134,4 +133,12 @@ def build_controller(
     ) -> training.controller.Controller:
     '''Setup training controller.'''
 
-    return training.controller.Controller(trainer, config)
+    # get phases
+    phases = training.controller.generate_phases(config)
+
+    # return a controller class
+    return training.controller.controller.Controller(
+        trainer=trainer,
+        phases=phases,
+        ckpt_dpath=config.ckpt_dpath
+    )
