@@ -117,6 +117,24 @@ class Logger():
                 console_handler.setFormatter(formatter)
                 self.logger.addHandler(console_handler)
 
+    def get_child(self, suffix: str) -> 'Logger':
+        '''Return a new Logger wrapper around a child logger.'''
+
+        # build the child logging.Logger
+        child_logging_logger = self.logger.getChild(suffix)
+
+        # create a new wrapper instance without re-adding handlers
+        child = object.__new__(self.__class__)  # bypass __init__
+        # copy simple attributes
+        child.name = child_logging_logger.name
+        child.log_file = getattr(self, 'log_file', None)
+        # attach the child logger
+        child.logger = child_logging_logger
+
+        # no handlers here. let the child propagate to the parent
+        # base has handlers and propagate=False only stops base->root).
+        # child propagate=True: its records reach the base’s handlers.
+        return child
 
     def log(self, level: str, message: str, skip_log: bool=False) -> None:
         '''
@@ -147,6 +165,18 @@ class Logger():
         log_method = log_levels.get(level.lower(), self.logger.info)
         log_method(message)
 
+    def log_sep(self, sep: str='=', ln: int=90) -> None:
+        '''
+        Log a separator with a length of repeated string.
+
+        Args:
+            sep (str, optional): Repeats to form a separator line
+                (default: `'='`).
+            ln (int, optional): Length of the line (default: 90).
+        '''
+
+        self.log('INFO', sep * ln)
+
     def close(self) -> None:
         '''Closes the file handler.'''
 
@@ -154,16 +184,3 @@ class Logger():
         for handler in handlers:
             handler.close()
             self.logger.removeHandler(handler)
-
-def log_separator(log: Logger, sep: str='=', ln: int=90) -> None:
-    '''
-    Log a separator with a repeated string and length.
-
-    Args:
-        log (Logger): Logs to file and console.
-        sep (str, optional): Repeats to form a separator line
-            (default: `'='`).
-        ln (int, optional): Length of the line (default: 90).
-    '''
-
-    log.log('INFO', sep * ln)

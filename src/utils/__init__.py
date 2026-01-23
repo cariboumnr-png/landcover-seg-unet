@@ -1,8 +1,11 @@
-'''Publich API'''
+'''Simple top-level namesapce for utilities.'''
 
-from .lazy import lazy_function, LazyClassProxy
+from .funcs import(
+    get_timestamp
+)
+from .logger import Logger
 
 __all__ = [
-    'lazy_function',
-    'LazyClassProxy'
+    'Logger',
+    'get_timestamp',
 ]

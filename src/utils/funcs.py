@@ -8,11 +8,9 @@ Functions:
     get_timestamp(): Get current time as a formatted string.
     timed_tun(): Runs a function with a timer.
     ...
-
 '''
 
 # standard imports
-import ast
 import csv
 import datetime
 import inspect
@@ -244,7 +242,7 @@ def timed_run(func, log: utils.logger.Logger, args: object | None=None,
         raise TypeError("kwargs must be a dictionary if provided.")
 
     # start logging with module and function name
-    utils.logger.log_separator(log)
+    log.log_sep()
     t0 = datetime.datetime.now() # timer on
     log.log('INFO', f'[Started] {func.__name__}()@{func.__module__}.py')
 
@@ -278,7 +276,7 @@ def timed_run(func, log: utils.logger.Logger, args: object | None=None,
             log.log('INFO', f'{n} items processed at average speed: {sp} s/it')
 
     # return the function outcome
-    utils.logger.log_separator(log)
+    log.log_sep()
     return result
 
 def print_status(lines: list):

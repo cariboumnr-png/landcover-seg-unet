@@ -40,6 +40,7 @@ Notes:
     division; a cumulative index array is unnecessary.
 '''
 
+from __future__ import annotations
 # standard imports
 import collections
 import dataclasses
@@ -51,12 +52,10 @@ import torchvision.transforms.functional
 import tqdm
 # local imports
 import dataset.blocks
-import utils.logger
-
-log = utils.logger.Logger(name='dldrs')
+import utils
 
 @dataclasses.dataclass
-class BlockConfig():
+class BlockConfig:
     '''
     Simple dataclass to hold block processing config.
 
@@ -90,16 +89,23 @@ class BlockConfig():
     patch_size: int
     domain_dict: dict[str, dict[str, int | list[float]]] | None = None
     patch_per_dim: int = dataclasses.field(init=False)
-    patch_per_block: int = dataclasses.field(init=False)
+    patch_per_blk: int = dataclasses.field(init=False)
 
     def __post_init__(self):
         assert self.block_size >= self.patch_size
         assert self.block_size % self.patch_size == 0
         self.patch_per_dim = int(self.block_size // self.patch_size)
-        self.patch_per_block = self.patch_per_dim ** 2
+        self.patch_per_blk = self.patch_per_dim ** 2
 
     def __repr__(self):
         return repr(dataclasses.asdict(self))
+
+@dataclasses.dataclass
+class MultiBlockData:
+    '''Small container for multiblock data.'''
+    img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
+    lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
+    dom: list[dict[str, torch.Tensor]] | _CacheDict = dataclasses.field(init=False)
 
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
@@ -143,8 +149,8 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self,
             fpaths: list[str],
             blk_cfg: BlockConfig,
-            preload: bool,
-            blk_cache_num: int
+            logger: utils.Logger,
+            **kwargs
         ):
         '''
         Initialize the dataset over multiple data blocks (.npz files).
@@ -162,40 +168,44 @@ class MultiBlockDataset(torch.utils.data.Dataset):
 
         # process args
         self.fpaths = fpaths
-        self.preload = preload
         self.blk_cfg = blk_cfg
+        self.logger = logger
+        self.preload = kwargs.get('preload', False)
+        blk_cache_num = kwargs.get('blk_cache_num', 16)
 
+        # init data container
+        self.data = MultiBlockData()
         # load all files into one dataset
         if self.preload:
-            log.log('INFO', 'Preloading blocks into RAM')
-            log.log('DEBUG', f'Config: {blk_cfg}')
+            self.logger.log('INFO', 'Preloading blocks into RAM')
+            self.logger.log('DEBUG', f'Config: {blk_cfg}')
             _imgs = []
             _lbls = []
-            self._doms = []
+            self.data.dom = []
             for fp in tqdm.tqdm(fpaths, ncols=100, desc='Loading blocks'):
                 dom = self._get_domain(fp)
-                blk_data = _BlockDataset(fp, blk_cfg, dom)
+                blk_data = _BlockDataset(fp, blk_cfg, self.logger, dom)
                 _imgs.append(blk_data.imgs)
                 _lbls.append(blk_data.lbls)
-                self._doms.extend([blk_data.domain] * blk_cfg.patch_per_block)
+                self.data.dom.extend([blk_data.domain] * blk_cfg.patch_per_blk)
             # concatenate
-            self._imgs = numpy.concatenate(_imgs, axis=0)
-            self._lbls = numpy.concatenate(_lbls, axis=0)
-            self._len = int(self._imgs.shape[0])
-            log.log('INFO', f'{len(fpaths)} blocks preloaded into RAM')
+            self.data.img = numpy.concatenate(_imgs, axis=0)
+            self.data.lbl = numpy.concatenate(_lbls, axis=0)
+            self._len = int( self.data.img.shape[0])
+            self.logger.log('INFO', f'{len(fpaths)} blocks preloaded into RAM')
 
         # otherwise streaming
         else:
-            log.log('INFO', 'Setting up block streaming')
-            log.log('DEBUG', f'Config: {blk_cfg}')
-            self._len = self.blk_cfg.patch_per_block * len(fpaths)
+            self.logger.log('INFO', 'Setting up block streaming')
+            self.logger.log('DEBUG', f'Config: {blk_cfg}')
+            self._len = self.blk_cfg.patch_per_blk * len(fpaths)
             # below not needed for uniform n
             # n =  self.block_config.patch_per_block
             # self.cumulative_i = [n * i for i in range(len(fpaths) + 1)]
-            self._imgs = _CacheDict(maxsize=blk_cache_num)
-            self._lbls = _CacheDict(maxsize=blk_cache_num)
-            self._doms = _CacheDict(maxsize=blk_cache_num)
-            log.log('INFO', f'Streaming cache: {blk_cache_num} blocks')
+            self.data.img = _CacheDict(maxsize=blk_cache_num)
+            self.data.lbl = _CacheDict(maxsize=blk_cache_num)
+            self.data.dom = _CacheDict(maxsize=blk_cache_num)
+            self.logger.log('INFO', f'Streaming cache: {blk_cache_num} blocks')
 
     def __len__(self):
         return self._len
@@ -205,39 +215,39 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             idx: int
         ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.preload:
-            x = self._imgs[idx].astype(numpy.float32)  # [C, ps, ps]
-            y = self._lbls[idx].astype(numpy.int64)  # [ps, ps]
-            dom = self._doms[idx] # dict[str, tensor]
+            x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
+            y = self.data.lbl[idx].astype(numpy.int64)  # [ps, ps]
+            dom = self.data.dom[idx] # dict[str, tensor]
             dom = {k: v.clone() for k, v in dom.items()} # new - no shared refs
         else:
             blk_idx, pch_idx = self._global_to_local(idx)
             self._load_block_to_cache(blk_idx)
-            x = self._imgs[blk_idx][pch_idx]
-            y = self._lbls[blk_idx][pch_idx]
-            dom = self._doms[blk_idx] # domain at is batch-level
+            x = self.data.img[blk_idx][pch_idx]
+            y = self.data.lbl[blk_idx][pch_idx]
+            dom = self.data.dom[blk_idx] # domain at is batch-level
             dom = {k: v.clone() for k, v in dom.items()} # new - no shared refs
         return torch.from_numpy(x), torch.from_numpy(y).long(), dom
 
     def _global_to_local(self, idx: int) -> tuple[int, int]:
         '''Map global patch to block/patch indices (uniform blocks).'''
 
-        blk_idx = idx // self.blk_cfg.patch_per_block
-        pch_idx = idx % self.blk_cfg.patch_per_block
+        blk_idx = idx // self.blk_cfg.patch_per_blk
+        pch_idx = idx % self.blk_cfg.patch_per_blk
         return int(blk_idx), int(pch_idx)
 
     def _load_block_to_cache(self, blk_idx: int) -> None:
         '''Load a block into streaming caches if not already present.'''
 
         # skip loading if block already in the cache
-        if blk_idx in self._imgs:
+        if blk_idx in self.data.img:
             return
         # otherwise proceed
         fp = self.fpaths[blk_idx]
         dom = self._get_domain(fp)
-        blk_data = _BlockDataset(fp, self.blk_cfg, dom)
-        self._imgs[blk_idx] = blk_data.imgs.astype(numpy.float32)
-        self._lbls[blk_idx] = blk_data.lbls.astype(numpy.int64)
-        self._doms[blk_idx] = blk_data.domain
+        blk_data = _BlockDataset(fp, self.blk_cfg, self.logger, dom)
+        self.data.img[blk_idx] = blk_data.imgs.astype(numpy.float32)
+        self.data.lbl[blk_idx] = blk_data.lbls.astype(numpy.int64)
+        self.data.dom[blk_idx] = blk_data.domain
 
     def _get_domain(self, fp: str) -> dict[str, int | list[float]] | None:
         '''Retrieve the per-block domain dict if available.'''
@@ -247,7 +257,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             blk_domain = self.blk_cfg.domain_dict.get(blkid)
             # relaxed check allowing block with empty or missing domain
             if not isinstance(blk_domain, dict) or len(blk_domain) == 0:
-                log.log('WARNING', f'Empty or missing domain for {blkid}')
+                self.logger.log('WARNING', f'Empty/missing domain for {blkid}')
                 return None
             return blk_domain
         return None
@@ -284,6 +294,7 @@ class _BlockDataset(torch.utils.data.Dataset):
             self,
             block_fpath: str,
             block_config: BlockConfig,
+            logger: utils.Logger,
             block_domain: dict[str, int | list[float]] | None=None
         ):
         '''
@@ -307,6 +318,7 @@ class _BlockDataset(torch.utils.data.Dataset):
         # process args
         self.config = block_config
         self.domain: dict[str, torch.Tensor] = {}
+        self.logger = logger
 
         # load data from npz
         data = dataset.blocks.DataBlock().load_from_npz(block_fpath).data
@@ -315,8 +327,8 @@ class _BlockDataset(torch.utils.data.Dataset):
             self.imgs = self._get_patches(data.image_normalized)
             self.lbls = self._get_patches(data.label_masked)
         except ValueError:
-            log.log('ERROR', f'Bad patch at {block_fpath}')
-            log.log('ERROR', f'Meta:\n{self.meta}')
+            self.logger.log('ERROR', f'Bad patch at {block_fpath}')
+            self.logger.log('ERROR', f'Meta:\n{self.meta}')
             raise
 
         # parse domain if provided
@@ -328,10 +340,10 @@ class _BlockDataset(torch.utils.data.Dataset):
                     self.domain[key] = torch.tensor(dom, dtype=torch.float32)
 
     def __len__(self) -> int:
-        return self.config.patch_per_block
+        return self.config.patch_per_blk
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, dict]:
-        assert idx in range(self.config.patch_per_block) # sanity check
+        assert idx in range(self.config.patch_per_blk) # sanity check
         x = self.imgs[idx].astype(numpy.float32)
         y = self.lbls[idx].astype(numpy.int64)
         x_tensor = torch.from_numpy(x)

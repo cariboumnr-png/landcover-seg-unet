@@ -5,6 +5,7 @@ import dataclasses
 # local imports
 import training.callback
 import training.common
+import utils
 
 @dataclasses.dataclass
 class CallbackSet:
@@ -17,12 +18,12 @@ class CallbackSet:
     def __iter__(self):
         return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
-def build_callbacks() -> CallbackSet:
+def build_callbacks(logger: utils.Logger) -> CallbackSet:
     '''Public API'''
 
     return CallbackSet(
-        train=training.callback.TrainCallback(),
-        validate=training.callback.ValCallback(),
-        logging=training.callback.LoggingCallback(),
-        progress=training.callback.ProgressCallback()
+        train=training.callback.TrainCallback(logger),
+        validate=training.callback.ValCallback(logger),
+        logging=training.callback.LoggingCallback(logger),
+        progress=training.callback.ProgressCallback(logger),
     )

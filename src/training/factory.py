@@ -12,11 +12,13 @@ import training.loss
 import training.metrics
 import training.optim
 import training.trainer
+import utils
 
 def get_components(
         model: training.common.MultiheadModelLike,
         data_summary: training.common.DataSummaryFull,
-        config: omegaconf.DictConfig
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
     ) -> training.trainer.TrainerComponents:
     '''Setup the model trainer.'''
 
@@ -31,7 +33,8 @@ def get_components(
     )
     data_loaders = training.dataloading.get_dataloaders(
         data_summary=data_summary,
-        loader_config=loader_config
+        loader_config=loader_config,
+        logger=logger
     )
 
     # compile training heads basic specifications
@@ -67,7 +70,7 @@ def get_components(
     )
 
     # generate callback instances
-    callbacks = training.callback.build_callbacks()
+    callbacks = training.callback.build_callbacks(logger)
 
     # collect components and return
     components = training.trainer.TrainerComponents(
@@ -111,14 +114,20 @@ def get_config(config: omegaconf.DictConfig) -> training.trainer.RuntimeConfig:
 def build_trainer(
         model: training.common.MultiheadModelLike,
         data_summary: training.common.DataSummaryFull,
-        config: omegaconf.DictConfig
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
     ) -> training.trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
     # collect componenets
-    trainer_comps = get_components(model, data_summary, config)
+    trainer_comps = get_components(
+        model=model,
+        data_summary=data_summary,
+        config=config,
+        logger=logger
+    )
     # generate runtime config
-    runtime_config = get_config(config=config.config)
+    runtime_config = get_config(config.config)
 
     # build and return a trainer class
     return training.trainer.MultiHeadTrainer(
@@ -129,7 +138,8 @@ def build_trainer(
 
 def build_controller(
         trainer: training.trainer.MultiHeadTrainer,
-        config: omegaconf.DictConfig
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
     ) -> training.controller.Controller:
     '''Setup training controller.'''
 
@@ -137,8 +147,9 @@ def build_controller(
     phases = training.controller.generate_phases(config)
 
     # return a controller class
-    return training.controller.controller.Controller(
+    return training.controller.Controller(
         trainer=trainer,
         phases=phases,
-        ckpt_dpath=config.ckpt_dpath
+        ckpt_dpath=config.ckpt_dpath,
+        logger=logger
     )

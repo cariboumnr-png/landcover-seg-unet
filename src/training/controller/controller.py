@@ -4,9 +4,7 @@
 import training.common
 import training.controller
 import training.trainer
-import utils.logger
-
-log = utils.logger.Logger(name='phase')
+import utils
 
 class Controller:
     '''doc'''
@@ -14,7 +12,8 @@ class Controller:
             self,
             trainer: training.trainer.MultiHeadTrainer,
             phases: list[training.controller.Phase],
-            ckpt_dpath: str
+            ckpt_dpath: str,
+            logger: utils.Logger
         ):
         '''Initialization'''
 
@@ -22,6 +21,7 @@ class Controller:
         self.trainer = trainer
         self.phases = phases
         self.ckpt_dpath = ckpt_dpath
+        self.logger = logger.get_child('phase') # a child from base logger
 
         # init phase counter
         self.current_phase_idx = 0
@@ -40,15 +40,15 @@ class Controller:
 
             if self.done:
                 print('__Experiment Complete__')
-                log.log('INFO', 'All training phases finished')
+                self.logger.log('INFO', 'All training phases finished')
                 break
             if isinstance(stopat, str) and stopat == phase.name:
                 print('__Experiment Complete__')
-                log.log('INFO', f'Training stopped at: {stopat}')
+                self.logger.log('INFO', f'Training stopped at: {stopat}')
                 break
             if isinstance(stopat, int) and stopat == self.current_phase_idx:
                 print('__Experiment Complete__')
-                log.log('INFO', f'Training stopped at: Phase_{stopat + 1}')
+                self.logger.log('INFO', f'Training stopped at: Phase_{stopat + 1}')
                 break
 
     def _train_phase(self) -> tuple[dict, dict]:
@@ -73,7 +73,7 @@ class Controller:
             patience = self.trainer.config.schedule.patience_epochs
             patience_counter = self.trainer.state.metrics.patience_n
             if patience and patience_counter >= patience and epoch >= 10:
-                log.log('INFO', 'Patience limit reached, phase stopping')
+                self.logger.log('INFO', 'Patience limit reached, phase stopping')
                 break
             print(f'__Epoch: {epoch}/{num_epoch}__')
             # set trainer heads
@@ -124,7 +124,7 @@ class Controller:
             scheduler=self.trainer.comps.optimization.scheduler,
             fpath=fpath
         )
-        log.log('INFO', f'Checkpoint saved: {fpath}')
+        self.logger.log('INFO', f'Checkpoint saved: {fpath}')
 
     @property
     def done(self) -> bool:

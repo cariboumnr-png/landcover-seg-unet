@@ -5,24 +5,28 @@
 
 # local imports
 import training.common
-import utils.logger
-
-log = utils.logger.Logger(name='callb')
+import utils
 
 class Callback:
     '''Base class for callbacks. Subclass to implement behaviors'''
 
-    def __init__(self) -> None:
+    def __init__(self, logger: utils.Logger) -> None:
         self._trainer: training.common.TrainerLike | None = None
+        self.train_logger = logger.get_child('train')
+        self.valdn_logger = logger.get_child('valdn')
 
     def setup(self, trainer: training.common.TrainerLike) -> None:
         if self._trainer is not None:
             raise RuntimeError("Callback.setup() called twice.")
         self._trainer = trainer
 
-    def log(self, level: str, message: str) -> None:
+    def log_train(self, level: str, message: str) -> None:
         '''Centralized callback logging'''
-        log.log(level, message)
+        self.train_logger.log(level, message)
+
+    def log_valdn(self, level: str, message: str) -> None:
+        '''Centralized callback logging'''
+        self.valdn_logger.log(level, message)
 
     # -----------------------------training phase-----------------------------
     def on_train_epoch_begin(self, epoch: int) -> None: ...
