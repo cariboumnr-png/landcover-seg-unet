@@ -1,4 +1,4 @@
-'''Public API.'''
+'''Simple top-level namespace for dataset module.'''
 
 from .prep import run as prepare_data
 from .summary import DataSummary

@@ -5,80 +5,94 @@ import os
 # third-party imports
 import omegaconf
 # local imports
-import dataset.summary
-import dataset.blocks.cache
+import dataset.blocks
 import dataset.domain
 import dataset.split
 import dataset.stats
+import dataset.summary
+import utils
 
-def build_cache_blocks(config: omegaconf.DictConfig) -> None:
+def build_data_cache(
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
+    ) -> None:
     '''Create cache blocks from scratch'''
 
     # create cache dirs
     os.makedirs(config.paths.cache, exist_ok=True)
     os.makedirs(config.paths.blksdpath, exist_ok=True)
 
-    # gather blocks from raw inputs
-    dataset.blocks.cache.get_block_scheme(
-        scheme_fpath=config.paths.blkscheme,
-        input_ras=(config.inputs.image, config.inputs.label),
-        block_size=config.blocks.size,
+    # collect paths for tiling
+    paths = dataset.blocks.CachePaths(
+        label_fpath=config.inputs.label,
+        image_fpath=config.inputs.image,
+        meta_fpath=config.inputs.meta,
+        blks_dpath=config.paths.blksdpath,
+        blk_scheme=config.paths.blkscheme,
+        valid_blks=config.paths.blkvalid
+    )
+
+    # gather config
+    blk_config = dataset.blocks.CacheConfig(
+        blk_size=config.blocks.size,
         overlap=config.blocks.overlap,
-        rand_test=config.blocks.randtest,
+        valid_px_threshold=config.filters.pxthres,
+        water_px_threshold=config.filters.watthres
+    )
+
+    # gather blocks from raw inputs
+    dataset.blocks.tile_rasters(
+        paths=paths,
+        config=blk_config,
+        logger=logger,
         overwrite=config.overwrite.scheme
     )
 
-    # clean-up routine to remove corrupted .npz files (to be recreated next)
-    dataset.blocks.cache.clean_up_bad_npz(
-        block_dpath=config.paths.blksdpath,
-        to_clean=config.cleanup.clean_npz
-    )
-
     # create block caches - first step, no image normalization
-    dataset.blocks.cache.create_block_caches(
-        scheme_fpath=config.paths.blkscheme,
-        blk_dpath=config.paths.blksdpath,
-        meta_fpath=config.inputs.meta,
-        lbl_fpath=config.inputs.label,
-        img_fpath=config.inputs.image,
+    dataset.blocks.create_block_cache(
+        paths=paths,
+        logger=logger,
+        run_cleanup=config.cleanup.clean_npz,
         overwrite=config.overwrite.cache
     )
 
     # filter valid blocks and create a list of npz files
-    dataset.blocks.cache.get_valid_block_fpaths(
-        block_dpath=config.paths.blksdpath,
-        valid_fpath=config.paths.blkvalid,
-        block_size=config.blocks.size,
-        ratio_t=config.filters.pxthres,
-        wat_thres=config.filters.watthres,
+    dataset.blocks.validate_blocks_cache(
+        paths=paths,
+        config=blk_config,
+        logger=logger,
         overwrite=config.overwrite.valid
     )
 
 def parse_domain(
         config: omegaconf.DictConfig,
-        domain_config: list[dict] | None
+        domain_config: list[dict] | None,
+        logger: utils.Logger
     ) -> None:
     '''Parse domain knowledge if provided.'''
 
     dataset.domain.parse(
-        valid_fpath=config.paths.blkvalid,
         scheme_fpath=config.paths.blkscheme,
-        domain_config=domain_config,
+        valid_fpath=config.paths.blkvalid,
         domain_fpath=config.paths.domain,
+        domain_config=domain_config,
+        logger=logger,
         overwrite=config.overwrite.domain
     )
 
 def split_datasets(
         config: omegaconf.DictConfig,
         score_params: dict,
-        valselect_param: dict
+        valselect_param: dict,
+        logger: utils.Logger
     ) -> None:
     '''Split blocks into train/validation/test sets.'''
 
     # count classes from all blocks
     dataset.stats.count_label_classes(
         blkslist_fpath=config.paths.blkvalid,
-        count_fpath=config.paths.lblcountg, # ..g for gloabl
+        count_fpath=config.paths.lblcountg, # ..g for gloabl,
+        logger=logger,
         overwrite=config.overwrite.count
     )
 
@@ -88,6 +102,7 @@ def split_datasets(
         blkvalid_fpath=config.paths.blkvalid,
         score_param=score_params,
         global_count_fpath=config.paths.lblcountg,
+        logger=logger,
         overwrite=config.overwrite.score
     )
 
@@ -96,16 +111,21 @@ def split_datasets(
         v_fpath=config.paths.dataval,
         t_fpath=config.paths.datatrain,
         valselect_param=valselect_param,
+        logger=logger,
         overwrite=config.overwrite.split
     )
 
-def normalize_datasets(config: omegaconf.DictConfig) -> None:
+def normalize_datasets(
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
+    ) -> None:
     '''Aggragate block stats'''
 
     # count classes from training blocks
     dataset.stats.count_label_classes(
         blkslist_fpath=config.paths.datatrain,
         count_fpath=config.paths.lblcountt, # ..t for training
+        logger=logger,
         overwrite=config.overwrite.count
     )
 
@@ -113,6 +133,7 @@ def normalize_datasets(config: omegaconf.DictConfig) -> None:
     dataset.stats.get_image_stats(
         blkslist_fpath=config.paths.datatrain,
         stats_fpath=config.paths.imgstats,
+        logger=logger,
         overwrite=config.overwrite.stats
     )
 
@@ -121,39 +142,11 @@ def normalize_datasets(config: omegaconf.DictConfig) -> None:
         blkslist_fpath=config.paths.blkvalid,
         stats_fpath=config.paths.imgstats,
         update_norm=config.normalize.update_norm,
+        logger=logger,
         overwrite=config.overwrite.norm
     )
 
-def run(config: omegaconf.DictConfig) -> dataset.summary.DataSummary:
-    '''Data preparation pipeline.'''
-
-    dom_cfg, score_params, valselect = _validate_config(config)
-
-    # if to run the whole process
-    if not config.skip_dataprep:
-
-        # get all valid blocks
-        build_cache_blocks(config)
-
-        # parse domain knowledge if provided
-        parse_domain(config, dom_cfg)
-
-        # get training blocks
-        split_datasets(config, score_params, valselect)
-
-        # use stats from training blocks to normalize all valid blocks
-        normalize_datasets(config)
-
-    # return blocks metadata
-    return dataset.summary.generate(
-        validblks_fpath=config.paths.blkvalid,
-        train_lblstats_fpath=config.paths.lblcountt,
-        train_datablks_fpaths=config.paths.datatrain,
-        val_datablks_fpaths=config.paths.dataval,
-        domain_fpath=config.paths.domain
-    )
-
-def _validate_config(config: omegaconf.DictConfig):
+def validate_config(config: omegaconf.DictConfig):
     '''doc'''
 
     dom = omegaconf.OmegaConf.to_container(config.inputs.domain, resolve=True)
@@ -168,3 +161,35 @@ def _validate_config(config: omegaconf.DictConfig):
     assert isinstance(val, dict)
 
     return dom, score, val
+
+def run(
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
+    ) -> dataset.summary.DataSummary:
+    '''Data preparation pipeline.'''
+
+    dom_cfg, score_params, valselect = validate_config(config)
+
+    # if to run the whole process
+    if not config.skip_dataprep:
+
+        # get all valid blocks
+        build_data_cache(config, logger)
+
+        # parse domain knowledge if provided
+        parse_domain(config, dom_cfg, logger)
+
+        # get training blocks
+        split_datasets(config, score_params, valselect, logger)
+
+        # use stats from training blocks to normalize all valid blocks
+        normalize_datasets(config, logger)
+
+    # return blocks metadata
+    return dataset.summary.generate(
+        validblks_fpath=config.paths.blkvalid,
+        train_lblstats_fpath=config.paths.lblcountt,
+        train_datablks_fpaths=config.paths.datatrain,
+        val_datablks_fpaths=config.paths.dataval,
+        domain_fpath=config.paths.domain
+    )

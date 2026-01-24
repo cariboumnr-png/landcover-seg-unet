@@ -3,7 +3,7 @@
 # third-party imports
 import numpy
 
-def get(x, k) -> tuple[numpy.ndarray, float]:
+def pca_transform(x, k) -> tuple[numpy.ndarray, float]:
     '''doc'''
 
     mean, components, evr = _fit_pca(x, k)

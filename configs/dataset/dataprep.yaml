@@ -54,8 +54,6 @@ blocks:
   size: 256
   # Overlap in pixels between neighboring blocks (y, x)
   overlap: 0
-  # If true, randomly sample a subset of test blocks (implementation-specific)
-  randtest: false
 
 filters:
   # Pixel ratio threshold used to validate blocks (e.g., min non-nodata ratio)

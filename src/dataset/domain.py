@@ -8,13 +8,8 @@ import numpy
 import rasterio
 import rasterio.io
 # local imports
-import dataset.blocks.tiler
-import utils.funcs
-import utils.logger
-import utils.multip
-import utils.pca
-
-log = utils.logger.Logger(name='domkw')
+import dataset.blocks
+import utils
 
 @dataclasses.dataclass
 class DomainRasterBlock:
@@ -26,25 +21,27 @@ class DomainRasterBlock:
     mmax: int  = dataclasses.field(init=False)
 
 def parse(
-        valid_fpath: str,
         scheme_fpath: str,
-        domain_config: list[dict] | None,
+        valid_fpath: str,
         domain_fpath: str,
-        **kwargs
+        domain_config: list[dict] | None,
+        *,
+        logger: utils.Logger,
+        overwrite: bool
     ) -> list[dict] | None:
     '''Inspect domain knowledge config and take actions accordingly.'''
 
-    # kwargs
-    overwrite = kwargs.get('overwrite', False)
+    # get a child logger
+    logger=logger.get_child('domkw')
 
     # check if already generated
     if os.path.exists(domain_fpath) and not overwrite:
-        log.log('INFO', f'Existing domain knowledge at: {domain_fpath}')
-        return utils.funcs.load_json(domain_fpath)
+        logger.log('INFO', f'Existing domain knowledge at: {domain_fpath}')
+        return utils.load_json(domain_fpath)
 
     # get valid blocks and block window scheme
-    blks = utils.funcs.load_pickle(valid_fpath)
-    scheme = utils.funcs.load_pickle(scheme_fpath)
+    blks = utils.load_pickle(valid_fpath)
+    scheme = utils.load_pickle(scheme_fpath)
 
     # setup
     treated: list[dict] = []
@@ -52,7 +49,7 @@ def parse(
 
     # iterate through provided domain rasters
     if domain_config is None:
-        log.log('INFO', 'No domain knowledge provided')
+        logger.log('INFO', 'No domain knowledge provided')
         return None
     for item in domain_config:
         # list of domain raster blocks
@@ -61,19 +58,19 @@ def parse(
         if item['treat'] == 'majority':
             treated = _majority(bb, item['name'])
             domains.append({dom['block_name']: dom for dom in treated})
-            log.log('INFO', f"Domain {item['name']} added from {item['path']} "
+            logger.log('INFO', f"Domain {item['name']} added from {item['path']} "
                             f'as the majority class at each block')
         if item['treat'] == 'pca':
             treated, var_exp = _pca_vectorize(bb, item['axes'], item['name'])
             domains.append({dom['block_name']: dom for dom in treated})
-            log.log('INFO', f"Domain {item['name']} added from {item['path']} "
+            logger.log('INFO', f"Domain {item['name']} added from {item['path']} "
                             f"as the first {item['axes']} PCA axes explaining "
                             f"{var_exp:.2f}% of the total variance")
 
     # merge domains and write to csv
     merged = _merge_domain(domains)
-    utils.funcs.write_json(domain_fpath, merged)
-    log.log('INFO', f'Domain knowledge saved to: {domain_fpath}')
+    utils.write_json(domain_fpath, merged)
+    logger.log('INFO', f'Domain knowledge saved to: {domain_fpath}')
     return merged
 
 def _parse_raster_blocks(
@@ -88,7 +85,7 @@ def _parse_raster_blocks(
 
     # read through all raster blocks
     jobs = [(_read_ras_window, (b, scheme, domain_fpath), {}) for b in blks]
-    results = utils.multip.ParallelExecutor().run(jobs)
+    results = utils.ParallelExecutor().run(jobs)
 
     # fetch results from reading the blocks
     parsed_blocks: list[DomainRasterBlock] = []
@@ -147,7 +144,7 @@ def _read_ras_window(
     '''Get the `rasterio.windows.Window` from a given block fpath'''
 
     # use block name to retrieve raster read window from scheme
-    block_name = dataset.blocks.tiler.parse_block_name(block_fpath).name
+    block_name = dataset.blocks.parse_block_name(block_fpath).name
     block_window = blockscheme[block_name]
 
     # read domain raster
@@ -190,7 +187,7 @@ def _pca_vectorize(
         frequencies.append(freq)
     #
     freq_stack = numpy.stack(frequencies)
-    pca_arr, var_explained = utils.pca.get(freq_stack, out_axes)
+    pca_arr, var_explained = utils.pca_transform(freq_stack, out_axes)
     # iterate rows
     for i, row in enumerate(pca_arr):
         results.append({

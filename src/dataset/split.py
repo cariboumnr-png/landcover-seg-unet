@@ -4,14 +4,12 @@
 import math
 import os
 # local imports
-import utils.funcs
-import utils.logger
-
-log = utils.logger.Logger(name='split')
+import utils
 
 def select_validation_blocks(
         scores: list[dict[str, str | int ]] ,
-        valselect_param: dict
+        valselect_param: dict,
+        logger: utils.Logger
     ) -> list[str]:
     '''Select a set of validation blocks.'''
 
@@ -33,9 +31,9 @@ def select_validation_blocks(
             existing_locs.append((x, y))
             return_list.append(blk['file_path'])
         if len(return_list) == num_blk:
-            log.log('INFO', f'Gathered enough blocks at block {i + 1}')
+            logger.log('INFO', f'Gathered enough blocks at block {i + 1}')
             break
-    log.log('INFO', f'Gathered {len(return_list)} blocks from all')
+    logger.log('INFO', f'Gathered {len(return_list)} blocks from all')
 
     # return
     return return_list
@@ -59,22 +57,26 @@ def run(
         v_fpath: str,
         t_fpath: str,
         valselect_param: dict,
-        **kwargs
+        *,
+        logger: utils.Logger,
+        overwrite: bool
     ) -> None:
     '''Split validation/training data.'''
 
+    # get a child logger
+    logger=logger.get_child('split')
+
     # skip if not to overwrite and all files are present
-    overwrite = kwargs.get('overwrite', False)
     if os.path.exists(v_fpath) and os.path.exists(t_fpath) and not overwrite:
-        log.log('INFO', 'Keeping existing validation/training dataset split')
+        logger.log('INFO', 'Keeping existing validation/training dataset split')
         return
 
     # get validation blocks
     scores: list[dict[str, str | int ]] = utils.funcs.load_json(scores_fpath)
-    v_list = select_validation_blocks(scores, valselect_param)
+    v_list = select_validation_blocks(scores, valselect_param, logger=logger)
     t_list = [b['file_path'] for b in scores if b['file_path'] not in v_list]
 
     # pickle validation blocks to a file
-    utils.funcs.write_pickle(v_fpath, v_list)
+    utils.write_pickle(v_fpath, v_list)
     # pickle training blocks to a file
-    utils.funcs.write_pickle(t_fpath, t_list)
+    utils.write_pickle(t_fpath, t_list)

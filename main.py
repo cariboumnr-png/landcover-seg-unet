@@ -27,7 +27,8 @@ def main(config: omegaconf.DictConfig):
 
     # data preparation
     data_summary = src.dataset.prepare_data(
-        config=config.dataset
+        config=config.dataset,
+        logger=logger
     )
 
     # setup multihead model

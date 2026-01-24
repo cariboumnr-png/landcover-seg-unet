@@ -184,3 +184,17 @@ class Logger():
         for handler in handlers:
             handler.close()
             self.logger.removeHandler(handler)
+
+# decorator function
+def with_child_logger(base, *, suffix: str | None=None):
+    'Decorator that injects a child Logger wrapper via kwarg `logger`.'
+
+    def decorator(func):
+        auto_suffix = f'{func.__module__}.{func.__name__}'
+        def wrapper(*args, **kwargs):
+            if 'logger' not in kwargs or kwargs['logger'] is None:
+                use_suffix = suffix or auto_suffix
+                kwargs['logger'] = base.get_child(use_suffix)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator

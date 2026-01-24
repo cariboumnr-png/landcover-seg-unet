@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
     from .factory import build_headspecs
 
 def __getattr__(name: str):
-    
+
     if name == 'Spec':
         return importlib.import_module('.specs', __package__).Spec
     if name == 'build_headspecs':
