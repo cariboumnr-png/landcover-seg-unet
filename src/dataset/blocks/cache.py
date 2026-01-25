@@ -190,8 +190,7 @@ def _block_from_ras(
 
             # init and populate RasterBlock, meta as the kwargs
             raster_block = dataset.DataBlock()
-            raster_block.load_from_rasters(lbl_arr, img_arr, dem_padded, meta)
-
+            raster_block.create_from_rasters(img_arr, lbl_arr, dem_padded, meta)
             # write to target npz file
             raster_block.save_npz(f'{paths.blks_dpath}/block_{block[0]}.npz')
 
@@ -281,7 +280,7 @@ def _is_valid_block(
     '''Helper to flag whether a block is valid for downstream apps.'''
 
     # get meta from block
-    meta = dataset.DataBlock().load_from_npz(block_fpath).data.meta
+    meta = dataset.DataBlock().load_from_npz(block_fpath).meta
 
     # keep only square blocks
     if meta['block_shape'] != [config.blk_size, config.blk_size]:
