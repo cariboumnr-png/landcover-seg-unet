@@ -24,8 +24,8 @@ def build_data_cache(
 
     # collect paths for tiling
     paths = dataset.blocks.CachePaths(
-        label_fpath=config.inputs.label,
         image_fpath=config.inputs.image,
+        label_fpath=config.inputs.label,
         meta_fpath=config.inputs.meta,
         blks_dpath=config.paths.blksdpath,
         blk_scheme=config.paths.blkscheme,

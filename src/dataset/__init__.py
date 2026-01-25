@@ -3,7 +3,7 @@
 from .prep import run as prepare_data
 from .summary import DataSummary
 from .blocks.block import DataBlock
-from .blocks.tiler import parse_block_name
+from .blocks.layout import parse_block_name
 
 __all__ = [
     'prepare_data',

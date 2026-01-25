@@ -26,8 +26,8 @@ Window: typing.TypeAlias = rasterio.windows.Window
 @dataclasses.dataclass
 class CachePaths:
     '''Doc'''
-    label_fpath: str    # path to raw data
     image_fpath: str    # path to raw data
+    label_fpath: str    # path to raw data
     meta_fpath: str     # path to raw data
     blks_dpath: str     # path to save block files (.npz)
     blk_scheme: str     # path to save block tiling scheme (.pkl)
@@ -50,7 +50,9 @@ def tile_rasters(
         logger: utils.Logger,
         overwrite: bool
     ) -> dict[str, Window]:
-    '''Prepare blocks from the input raster, create new if not exists.'''
+    '''
+    Prepare blocks from the input raster(s).
+    '''
 
     # get a child logger
     logger=logger.get_child('tiler')
@@ -62,13 +64,13 @@ def tile_rasters(
     # otherwise create if scheme not already exsited
     else:
         logger.log('INFO', f'Creating/re-writing scheme: {paths.blk_scheme}')
-        input_blocks = dataset.blocks.RasterPairedBlocks(
+        processed = dataset.blocks.RasterBlockLayout(
             blk_size=config.blk_size,
             overlap=config.overlap,
             logger=logger
         )
-        input_blocks.ingest((paths.label_fpath, paths.image_fpath))
-        tiles = input_blocks['blocks_both_valid']
+        processed.ingest(paths.image_fpath, paths.label_fpath)
+        tiles = processed.blks
         logger.log('INFO', f'New block scheme save at: {paths.blk_scheme}')
         utils.write_pickle(paths.blk_scheme, tiles)
 

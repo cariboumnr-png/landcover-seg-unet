@@ -12,7 +12,7 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
-    'RasterPairedBlocks',
+    'RasterBlockLayout',
     'CacheConfig',
     'CachePaths',
     # functions
@@ -32,7 +32,7 @@ if typing.TYPE_CHECKING:
         validate_blocks_cache
     )
     from .block import DataBlock
-    from .tiler import RasterPairedBlocks, parse_block_name
+    from .layout import RasterBlockLayout, parse_block_name
 
 def __getattr__(name: str):
 
@@ -42,7 +42,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.cache', __package__), name)
     if name == 'DataBlock':
         return importlib.import_module('.block', __package__).DataBlock
-    if name in ['RasterPairedBlocks', 'parse_block_name']:
-        return getattr(importlib.import_module('.tiler', __package__), name)
+    if name in ['RasterBlockLayout', 'parse_block_name']:
+        return getattr(importlib.import_module('.layout', __package__), name)
 
     raise AttributeError(name)
