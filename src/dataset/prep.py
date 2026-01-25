@@ -141,7 +141,6 @@ def normalize_datasets(
     dataset.stats.normalize_blocks(
         blkslist_fpath=config.paths.blkvalid,
         stats_fpath=config.paths.imgstats,
-        update_norm=config.normalize.update_norm,
         logger=logger,
         overwrite=config.overwrite.norm
     )

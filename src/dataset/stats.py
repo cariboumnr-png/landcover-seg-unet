@@ -34,7 +34,7 @@ def count_label_classes(
     count_results = {}
     for fpath in tqdm.tqdm(fpaths, desc='Counting label class dist.'):
         bb = dataset.blocks.DataBlock().load_from_npz(fpath)
-        for layer, counts in bb.data.meta['label_count'].items():
+        for layer, counts in bb.meta['label_count'].items():
             bb_count = numpy.asarray(counts)
             if layer in count_results:
                 count_results[layer] += bb_count
@@ -103,7 +103,7 @@ def _score_block(
     reward_cls = param.get('reward', [])
 
     # block class distributions
-    block_p = _count_to_inv_prob(bb.data.meta['label_count'][layer], alpha=1.0)
+    block_p = _count_to_inv_prob(bb.meta['label_count'][layer], alpha=1.0)
     # L1 distance to measure pairwise closeness
     score = _weighted_l1_w_reward(target_p, block_p, reward_cls, b, e)
 
@@ -181,7 +181,7 @@ def get_image_stats(
     # read a random block to get number of image channels
     temp = dataset.blocks.DataBlock()
     temp.load_from_npz(random.choice(block_list))
-    num_bands = len(temp.data.meta['block_image_stats'])
+    num_bands = len(temp.meta['block_image_stats'])
 
     # define a return dict
     stats_dict = {
@@ -197,7 +197,7 @@ def get_image_stats(
     for fpath in tqdm.tqdm(block_list):
         # prep
         rb = dataset.blocks.DataBlock().load_from_npz(fpath)
-        stats = rb.data.meta['block_image_stats']
+        stats = rb.meta['block_image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
             stats_dict[key] = _welfords_online(value_dict, stats_dict[key])
@@ -227,15 +227,14 @@ def _validate_image_stats(
     logger.log('INFO', f'Found {len(work_fpaths)} blocks with bad stats')
     for fpath in tqdm.tqdm(work_fpaths):
         rb = dataset.blocks.DataBlock().load_from_npz(fpath)
-        rb.block_get_image_stats()
-        rb.save_npz(fpath)
+        rb.recalc_stats(fpath) # save to overwrite
     logger.log('INFO', f'Updated stats for {len(work_fpaths)} blocks')
     return False
 
 def _check_block_image_stats(block_fpath: str) -> dict[str, str]:
     '''doc'''
 
-    meta = dataset.blocks.block.DataBlock().load_from_npz(block_fpath).data.meta
+    meta = dataset.blocks.DataBlock().load_from_npz(block_fpath).meta
     stats = meta['block_image_stats']
     for value_dict in stats.values():
         if any(numpy.isnan(x) for x in value_dict.values()):
@@ -271,7 +270,6 @@ def _welfords_online(
 def normalize_blocks(
         blkslist_fpath: str,
         stats_fpath: str,
-        update_norm: tuple | None=None,
         *,
         logger: utils.Logger,
         overwrite: bool
@@ -301,7 +299,7 @@ def normalize_blocks(
     # parallel processing blocks
     stats: dict[str, dict[str, float]] = utils.load_json(stats_fpath)
     logger.log('INFO', 'Updating/overwriting block image normalization')
-    jobs = [(_normalize_block, (f, stats, update_norm,), {}) for f in work_fpaths]
+    jobs = [(_normalize_block, (f, stats,), {}) for f in work_fpaths]
     _ = utils.ParallelExecutor().run(jobs)
     logger.log('INFO', 'Image normalization completed')
 
@@ -317,10 +315,10 @@ def _check_block_normal(block_fpath: str) -> dict[str, str]:
 def _normalize_block(
         fpath: str,
         stats: dict,
-        update_norm: tuple | None=None) -> None:
+    ) -> None:
     '''doc.'''
 
     rb = dataset.blocks.DataBlock().load_from_npz(fpath)
-    mmin, mmax = rb.normalize_image(stats, update_norm=update_norm)
+    mmin, mmax = rb.normalize_image(stats)
     assert mmin > -100 and mmax < 100
     rb.save_npz(fpath)
