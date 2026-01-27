@@ -6,7 +6,7 @@ This module defines a lightweight container/builder for a single raster
 them with derived features and block-level metadata—without performing
 any raster I/O.
 
-Key responsibilities
+**Key responsibilities**
 - Ingest per-window arrays: image (C,H,W), optional label (1,H,W → H,W),
   and a DEM padded on all sides (for neighborhood topo metrics).
 - Add derived channels: NDVI/NDMI/NBR (from band assignments) and slope,
@@ -17,7 +17,7 @@ Key responsibilities
   for global aggregation (e.g., Welford's online algorithm).
 - Save/load a block to/from a single .npz artifact.
 
-Assumptions
+**Assumptions**
 - Heavy lifting (reading rasters, windowing, padding) is done upstream;
   this module only consumes NumPy arrays and metadata.
 - Shapes: image is (C,H,W); label, if provided, is (1,H,W) and squeezed
@@ -30,13 +30,7 @@ Assumptions
   * block_name, block_shape
 - Nodata handling relies on np.isnan / np.isclose and masked arrays;
   ensure nodata values are correctly specified.
-- Topographic metrics use small neighborhoods and are computed per pixel;
-  for very large blocks, consider vectorization/acceleration if needed.
-
-Public API
-- DataBlock.create_from_rasters(img_arr, lbl_arr, dem_padded, meta) -> DataBlock
-- DataBlock.save_npz(path, compress=True) / DataBlock.load_from_npz(path)
-- DataBlock.normalize_image(global_stats) -> (min, max)
+- Topographic metrics use small neighborhoods and computed per pixel.
 '''
 
 from __future__ import annotations
@@ -44,9 +38,10 @@ from __future__ import annotations
 import dataclasses
 import json
 import math
-import typing
 # third party imports
 import numpy
+# local imports
+import dataset.blocks
 
 class DataBlock:
     '''Data block compiled from input label and image rasters.'''
@@ -54,27 +49,48 @@ class DataBlock:
     def __init__(self):
         '''Can be instantiate without arguments.'''
 
-        # init with empty block data and meta
+        # init with empty block data
         self.data = _Data()
-        self.meta: dict[str, typing.Any]
+        # meta dict with default foo values
+        self.meta: dataset.blocks.BlockMetaDict = {
+            'block_name': '',
+            'block_shape': (0, 0),
+            'valid_pixel_ratio': {},
+            'has_label': True,
+            'label_nodata': 0,
+            'ignore_label': 0,
+            'label1_num_classes': 0,
+            'label1_to_ignore': [],
+            'label1_class_name': {},
+            'label1_reclass_map': {},
+            'label1_reclass_name': {},
+            'label_count': {},
+            'label_entropy': {},
+            'image_nodata': 0.0,
+            'dem_pad': 0,
+            'band_map': {},
+            'spectral_indices_added': [],
+            'topo_metrics_added': [],
+            'block_image_stats': {}
+        }
 
     # -----------------------------public methods-----------------------------
-    def create_from_rasters(
+    def create(
             self,
             img_arr: numpy.ndarray,
             lbl_arr: numpy.ndarray | None,
-            dem_padded: numpy.ndarray,
-            meta: dict[str, typing.Any]
+            padded_dem: numpy.ndarray,
+            meta: dataset.blocks.BlockMetaDict
         ) -> 'DataBlock':
         '''
         Create a new block instance from raw input raster(s).
         '''
 
-        # assign meta
-        self.meta = meta
+        # update meta with input
+        self.meta.update(meta)
         # assign image
         self.data.image = img_arr.astype(numpy.float32) # remote sensing default
-        self.data.image_dem_padded = dem_padded.astype(numpy.float32) # padded
+        self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
         # assign label if provided:
         if lbl_arr is not None:
             # assertions - both 3 dims and the same H and W read by rasterio
@@ -99,15 +115,12 @@ class DataBlock:
         # block-wise
         self._get_block_valid_mask()
         self._get_block_image_stats()
-        # metadata
-        self.__reorder_meta()
-        # sanity check self.data
-        self.data.validate(skip_attr='image_normalized') # to be populated later
 
-        # return self to allow chained calls
+        # sanity check self.data and return self to allow chained calls
+        self.data.validate(skip_attr='image_normalized') # to populate later
         return self
 
-    def load_from_npz(
+    def load(
             self,
             fpath: str
         ) -> 'DataBlock':
@@ -122,7 +135,9 @@ class DataBlock:
             # 'meta' is a pickled dict, convert from 0-d array
             if key == 'meta' and isinstance(value, numpy.ndarray):
                 value = value.item()
-            # set value
+                self.meta = value # type: ignore
+                continue
+            # set arrays to self.data
             try:
                 setattr(self.data, key, value)
             except AttributeError:
@@ -131,7 +146,7 @@ class DataBlock:
         # return self to allow chained calls
         return self
 
-    def save_npz(
+    def save(
             self,
             fpath: str,
             compress: bool=True
@@ -140,15 +155,17 @@ class DataBlock:
 
         # sanity check
         assert fpath.endswith('.npz')
-        # directly write self.data to npz file
-        save_data = vars(self.data)
+        # convert self.data dataclass to dict
+        to_save = vars(self.data)
+        # add meta dict
+        to_save.update({'meta': self.meta})
         # save file - allow pickle to write meta dict
         if compress:
-            numpy.savez_compressed(fpath, allow_pickle=True, **save_data)
+            numpy.savez_compressed(fpath, allow_pickle=True, **to_save)
         else:
-            numpy.savez(fpath, allow_pickle=True, **save_data)
+            numpy.savez(fpath, allow_pickle=True, **to_save)
 
-    def recalc_stats(
+    def recalculate_stats(
             self,
             fpath: str
         ) -> None:
@@ -159,7 +176,7 @@ class DataBlock:
         '''
 
         self._get_block_image_stats()
-        self.save_npz(fpath)
+        self.save(fpath)
 
     def normalize_image(
             self,
@@ -207,7 +224,7 @@ class DataBlock:
             return
 
         # retrieve from meta
-        spec_bands = self.meta.get('band_assignment', {})
+        spec_bands = self.meta.get('band_map', {})
         nodata = self.meta.get('image_nodata', numpy.nan)
 
         # assertions
@@ -222,8 +239,8 @@ class DataBlock:
 
         # add data to class
         self.meta['spectral_indices_added'] = ['NDVI', 'NDMI', 'NBR']
-        n = len(self.meta['band_assignment'])
-        self.meta['band_assignment'].update({
+        n = len(self.meta['band_map'])
+        self.meta['band_map'].update({
             'NDVI': n,
             'NDMI': n + 1,
             'NBR': n + 2
@@ -270,8 +287,8 @@ class DataBlock:
         self.meta['topo_metrics_added'] = [
             'slope', 'cos_aspect', 'sin_aspect', 'tpi'
         ]
-        n = len(self.meta['band_assignment'])
-        self.meta['band_assignment'].update({
+        n = len(self.meta['band_map'])
+        self.meta['band_map'].update({
             'slope': n,
             'cos_aspect': n + 1,
             'sin_aspect': n + 2,
@@ -289,7 +306,7 @@ class DataBlock:
         if not self.meta['has_label']:
             return
 
-        # get kwargs
+        # get value from meta
         label_nodata = self.meta.get('label_nodata', 0) # ignore 0 -> safe
         label1_to_ignore = self.meta.get('label1_to_ignore', [])
         ignore_label = self.meta.get('ignore_label', 255)
@@ -323,9 +340,9 @@ class DataBlock:
         self.data.label_masked = numpy.stack(fn_stack, axis=0)
 
         # add metadata
-        self.meta['valid_pixel_ratio'] = {
-            'layer1': numpy.sum(layer1_mask) / layer1_valid.size
-        }
+        self.meta['valid_pixel_ratio'].update({
+            'layer1': float(numpy.sum(layer1_mask) / layer1_valid.size)
+        })
         for i in range(len(label1_reclass)):
             _valid = fn_stack[i + 1] != ignore_label
             self.meta['valid_pixel_ratio'].update({
@@ -338,10 +355,6 @@ class DataBlock:
         # skip if label is not provided
         if not self.meta['has_label']:
             return
-
-        # write to following entries for meta
-        self.meta['label_count'] = {}
-        self.meta['label_entropy'] = {}
 
         # supposed number of classes for each label layer
         n_classes = [
@@ -389,14 +402,14 @@ class DataBlock:
 
             # add to metadata
             if i == 0:
-                self.meta['label_count']['original_label'] = counts
-                self.meta['label_entropy']['original_label'] = ent
+                self.meta['label_count'].update({'original_label': counts})
+                self.meta['label_entropy'].update({'original_label': ent})
             elif i == 1:
-                self.meta['label_count']['layer1'] = counts
-                self.meta['label_entropy']['layer1'] = ent
+                self.meta['label_count'].update({'layer1': counts})
+                self.meta['label_entropy'].update({'layer1': ent})
             else:
-                self.meta['label_count'][f'layer2_{i - 1}'] = counts
-                self.meta['label_entropy'][f'layer2_{i - 1}'] = ent
+                self.meta['label_count'].update({f'layer2_{i - 1}': counts})
+                self.meta['label_entropy'].update({f'layer2_{i - 1}': ent})
 
     def _get_block_valid_mask(self):
         '''Get a valid mask for the whole block.'''
@@ -453,50 +466,6 @@ class DataBlock:
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
-    def __reorder_meta(self):
-        '''Reorder meta dict keys.'''
-
-        # block
-        _block = [
-            'block_name',
-            'block_shape',
-            'valid_pixel_ratio',
-            'has_label'
-        ]
-        # label
-        _label = [
-            'label_nodata',
-            'ignore_label',
-            'label1_num_classes',
-            'label1_to_ignore',
-            'label1_class_name',
-            'label1_reclass_map',
-            'label1_reclass_name',
-            'label_count',
-            'label_entropy'
-        ]
-        # image
-        _image = [
-            'image_nodata',
-            'dem_pad',
-            'band_assignment',
-            'spectral_indices_added',
-            'topo_metrics_added',
-            'block_image_stats'
-        ]
-
-        image_label = _block + _label + _image
-        image_only = _block + _image
-
-        # reorder with sanity checks
-        if self.meta['has_label']:
-            assert set(image_label) == set(self.meta.keys()), \
-                f'{image_label}\n {self.meta.keys()}'
-            self.meta = {k: self.meta[k] for k in image_label}
-        else:
-            assert set(image_only) == set(self.meta.keys()), \
-                f'{image_only}\n {self.meta.keys()}'
-            self.meta = {k: self.meta[k] for k in image_only}
 # ---------------------------------Caculators---------------------------------
 class _Calc:
     '''Calculator namespace.'''

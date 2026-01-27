@@ -89,20 +89,24 @@ def _read_rand_block_meta(validblks_fpath: str) -> _Meta:
     '''Retrieve meta from a random valid block file.'''
 
     # read a random block from valid blocks
-    rblk_fpath = random.choice(utils.funcs.load_pickle(validblks_fpath))
-    data = dataset.blocks.block.DataBlock().load_from_npz(rblk_fpath).data
-    data.validate()
+    valid_blks: dict[str, str] = utils.funcs.load_json(validblks_fpath)
+    rblk_fpath = random.choice(list(valid_blks.values()))
+    blk = dataset.blocks.block.DataBlock().load(rblk_fpath)
+    blk.data.validate()
     # return
-    return _Meta(data.meta['ignore_label'], data.image_normalized.shape[0])
+    return _Meta(blk.meta['ignore_label'], blk.data.image_normalized.shape[0])
 
 def _read_datasets(train_fpaths: str, val_fpaths: str) -> _Data:
     '''Get data file lists.'''
 
     # training and validation datasets
-    training_data = utils.funcs.load_pickle(train_fpaths)
-    validation_data = utils.funcs.load_pickle(val_fpaths)
+    training_blks: dict[str, str] = utils.funcs.load_json(train_fpaths)
+    validation_blks: dict[str, str] = utils.funcs.load_json(val_fpaths)
 
-    return _Data(training_data, validation_data)
+    training_blks_fpaths = list(training_blks.values())
+    validation_blk_fpaths = list(validation_blks.values())
+
+    return _Data(training_blks_fpaths, validation_blk_fpaths)
 
 def _heads_stats(fp: str) -> _Heads:
     '''Get label class distribution and logits adjustments.'''

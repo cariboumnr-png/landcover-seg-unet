@@ -1,7 +1,5 @@
 '''Pipeline to prepare data from rasters for training.'''
 
-# standard imports
-import os
 # third-party imports
 import omegaconf
 # local imports
@@ -11,74 +9,6 @@ import dataset.split
 import dataset.stats
 import dataset.summary
 import utils
-
-def build_data_cache(
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> None:
-    '''Create cache blocks from scratch'''
-
-    # create cache dirs
-    os.makedirs(config.paths.cache, exist_ok=True)
-    os.makedirs(config.paths.blksdpath, exist_ok=True)
-
-    # collect paths for tiling
-    paths = dataset.blocks.CachePaths(
-        image_fpath=config.inputs.image,
-        label_fpath=config.inputs.label,
-        meta_fpath=config.inputs.meta,
-        blks_dpath=config.paths.blksdpath,
-        blk_scheme=config.paths.blkscheme,
-        valid_blks=config.paths.blkvalid
-    )
-
-    # gather config
-    blk_config = dataset.blocks.CacheConfig(
-        blk_size=config.blocks.size,
-        overlap=config.blocks.overlap,
-        valid_px_threshold=config.filters.pxthres,
-        water_px_threshold=config.filters.watthres
-    )
-
-    # gather blocks from raw inputs
-    dataset.blocks.tile_rasters(
-        paths=paths,
-        config=blk_config,
-        logger=logger,
-        overwrite=config.overwrite.scheme
-    )
-
-    # create block caches - first step, no image normalization
-    dataset.blocks.create_block_cache(
-        paths=paths,
-        logger=logger,
-        run_cleanup=config.cleanup.clean_npz,
-        overwrite=config.overwrite.cache
-    )
-
-    # filter valid blocks and create a list of npz files
-    dataset.blocks.validate_blocks_cache(
-        paths=paths,
-        config=blk_config,
-        logger=logger,
-        overwrite=config.overwrite.valid
-    )
-
-def parse_domain(
-        config: omegaconf.DictConfig,
-        domain_config: list[dict] | None,
-        logger: utils.Logger
-    ) -> None:
-    '''Parse domain knowledge if provided.'''
-
-    dataset.domain.parse(
-        scheme_fpath=config.paths.blkscheme,
-        valid_fpath=config.paths.blkvalid,
-        domain_fpath=config.paths.domain,
-        domain_config=domain_config,
-        logger=logger,
-        overwrite=config.overwrite.domain
-    )
 
 def split_datasets(
         config: omegaconf.DictConfig,
@@ -90,7 +20,7 @@ def split_datasets(
 
     # count classes from all blocks
     dataset.stats.count_label_classes(
-        blkslist_fpath=config.paths.blkvalid,
+        validblk_json=config.paths.blkvalid,
         count_fpath=config.paths.lblcountg, # ..g for gloabl,
         logger=logger,
         overwrite=config.overwrite.count
@@ -123,7 +53,7 @@ def normalize_datasets(
 
     # count classes from training blocks
     dataset.stats.count_label_classes(
-        blkslist_fpath=config.paths.datatrain,
+        validblk_json=config.paths.datatrain,
         count_fpath=config.paths.lblcountt, # ..t for training
         logger=logger,
         overwrite=config.overwrite.count
@@ -131,7 +61,7 @@ def normalize_datasets(
 
     # aggregate stats from training blocks
     dataset.stats.get_image_stats(
-        blkslist_fpath=config.paths.datatrain,
+        valid_blks_json=config.paths.datatrain,
         stats_fpath=config.paths.imgstats,
         logger=logger,
         overwrite=config.overwrite.stats
@@ -139,7 +69,7 @@ def normalize_datasets(
 
     # normalize all valid blocks using the aggregated stats from training data
     dataset.stats.normalize_blocks(
-        blkslist_fpath=config.paths.blkvalid,
+        blks_fpaths_json=config.paths.blkvalid,
         stats_fpath=config.paths.imgstats,
         logger=logger,
         overwrite=config.overwrite.norm
@@ -167,16 +97,16 @@ def run(
     ) -> dataset.summary.DataSummary:
     '''Data preparation pipeline.'''
 
-    dom_cfg, score_params, valselect = validate_config(config)
+    domain_config, score_params, valselect = validate_config(config)
 
     # if to run the whole process
     if not config.skip_dataprep:
 
         # get all valid blocks
-        build_data_cache(config, logger)
+        dataset.blocks.build_data_cache(config, logger)
 
         # parse domain knowledge if provided
-        parse_domain(config, dom_cfg, logger)
+        dataset.domain.parse(config, domain_config, logger)
 
         # get training blocks
         split_datasets(config, score_params, valselect, logger)

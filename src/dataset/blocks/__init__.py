@@ -11,38 +11,32 @@ import typing
 
 __all__ = [
     # classes
-    'DataBlock',
+    'RasterBlockCache',
     'RasterBlockLayout',
-    'CacheConfig',
-    'CachePaths',
+    'DataBlock',
     # functions
+    'build_data_cache',
     'parse_block_name',
-    'tile_rasters',
-    'create_block_cache',
-    'validate_blocks_cache'
+    # typing
+    'BlockMetaDict',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .cache import (
-        CacheConfig,
-        CachePaths,
-        tile_rasters,
-        create_block_cache,
-        validate_blocks_cache
-    )
+    from .cache import RasterBlockCache, build_data_cache
     from .block import DataBlock
     from .layout import RasterBlockLayout, parse_block_name
+    from .typing import BlockMetaDict
 
 def __getattr__(name: str):
 
-    if name in ['tile_rasters', 'create_block_cache', 'validate_blocks_cache']:
-        return getattr(importlib.import_module('.cache', __package__), name)
-    if name in ['CacheConfig', 'CachePaths']:
+    if name in ['RasterBlockCache', 'build_data_cache']:
         return getattr(importlib.import_module('.cache', __package__), name)
     if name == 'DataBlock':
         return importlib.import_module('.block', __package__).DataBlock
     if name in ['RasterBlockLayout', 'parse_block_name']:
         return getattr(importlib.import_module('.layout', __package__), name)
+    if name in ['BlockMetaDict']:
+        return getattr(importlib.import_module('.typing', __package__), name)
 
     raise AttributeError(name)

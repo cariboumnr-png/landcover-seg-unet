@@ -46,7 +46,7 @@ class RasterBlockLayout:
         # assign attributes
         self.blk_size = blk_size
         self.overlap = overlap
-        self.logger = logger
+        self.logger = logger.get_child('layou')
 
         # sanity
         assert blk_size > overlap, 'Overlap must be smaller than block size.'
@@ -81,6 +81,10 @@ class RasterBlockLayout:
             self._get_new_transform()
             # tile the raster into blocks
             self._extent_to_blocks()
+
+        # clear rasterio DatasetReader objects so the class can be pickled
+        self.img = None
+        self.lbl = None
 
     def reset(self) -> None:
         '''Reset class data, blocks and meta.'''
@@ -362,6 +366,9 @@ class RasterBlockLayout:
             lbl_data = self.lbl.read(1, window=window)
 
         # check validity
+        # if the block is sqaure
+        if window.height != window.width:
+            return False
         # if image and label raster both present
         if numpy.any(img_data != self.img.nodata) and \
             (self.lbl is not None and numpy.any(lbl_data != self.lbl.nodata)):

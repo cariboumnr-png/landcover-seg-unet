@@ -1,5 +1,3 @@
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
 '''Protocol for trainer checkpointing.'''
 
 from __future__ import annotations

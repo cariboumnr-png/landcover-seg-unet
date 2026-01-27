@@ -46,7 +46,7 @@ class ParallelExecutor:
         return self._run_with_processes(jobs)
 
     def place_holder(self):
-        '''Place holder publich method.'''
+        '''Place holder public method.'''
 
     def _run_with_threads(self, jobs: list):
         '''Run jobs using ThreadPoolExecutor with error handling.'''
@@ -89,5 +89,6 @@ class ParallelExecutor:
             raise sys_exc # re-raise syetem-level exceptions
         except Exception as e: # pylint: disable=broad-except
             print('Job failed in', func.__name__, e)
+            print({"error": str(e), "traceback": traceback.format_exc()})
             # raise e
             return {"error": str(e), "traceback": traceback.format_exc()}

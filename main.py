@@ -22,7 +22,7 @@ logger = src.utils.Logger(name='main', log_file=f'./logs/{timestamp}.log')
 
 # main process
 @hydra.main(config_path='./configs', config_name='main', version_base='1.3')
-def main(config: omegaconf.DictConfig):
+def main(config: omegaconf.DictConfig) -> None:
     '''doc'''
 
     # data preparation
@@ -30,6 +30,7 @@ def main(config: omegaconf.DictConfig):
         config=config.dataset,
         logger=logger
     )
+    print(data_summary)
 
     # setup multihead model
     model = src.models.multihead_unet(

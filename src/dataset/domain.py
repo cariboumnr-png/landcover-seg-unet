@@ -5,10 +5,10 @@ import dataclasses
 import os
 # third-party imports
 import numpy
+import omegaconf
 import rasterio
 import rasterio.io
 # local imports
-import dataset.blocks
 import utils
 
 @dataclasses.dataclass
@@ -21,18 +21,22 @@ class DomainRasterBlock:
     mmax: int  = dataclasses.field(init=False)
 
 def parse(
-        scheme_fpath: str,
-        valid_fpath: str,
-        domain_fpath: str,
+        config: omegaconf.DictConfig,
         domain_config: list[dict] | None,
-        *,
         logger: utils.Logger,
-        overwrite: bool
     ) -> list[dict] | None:
     '''Inspect domain knowledge config and take actions accordingly.'''
 
+    # parse config
+    scheme_fpath = config.paths.blklayout
+    valid_fpath = config.paths.blkvalid
+    domain_fpath = config.paths.domain
+
     # get a child logger
     logger=logger.get_child('domkw')
+
+    # get overwrite option
+    overwrite = omegaconf.OmegaConf.select(config, 'overwrite.domain', default=False)
 
     # check if already generated
     if os.path.exists(domain_fpath) and not overwrite:
@@ -40,8 +44,8 @@ def parse(
         return utils.load_json(domain_fpath)
 
     # get valid blocks and block window scheme
-    blks = utils.load_pickle(valid_fpath)
-    scheme = utils.load_pickle(scheme_fpath)
+    valid_blks: dict[str, str] = utils.load_json(valid_fpath)
+    layout = utils.load_pickle(scheme_fpath)
 
     # setup
     treated: list[dict] = []
@@ -53,7 +57,7 @@ def parse(
         return None
     for item in domain_config:
         # list of domain raster blocks
-        bb = _parse_raster_blocks(blks, scheme, item['path'])
+        bb = _parse_raster_blocks(valid_blks, layout.blks, item['path'])
         # domain assignment according to configured treatment
         if item['treat'] == 'majority':
             treated = _majority(bb, item['name'])
@@ -74,8 +78,8 @@ def parse(
     return merged
 
 def _parse_raster_blocks(
-        blks: list[str],
-        scheme: dict[str, rasterio.io.DatasetReader],
+        valid_blks: dict[str, str],
+        layout: dict[str, rasterio.io.DatasetReader],
         domain_fpath: str,
     ) -> list[DomainRasterBlock]:
     '''Parse raster blocks via parallel processing.'''
@@ -84,7 +88,7 @@ def _parse_raster_blocks(
     nodata = _get_nodata(domain_fpath)
 
     # read through all raster blocks
-    jobs = [(_read_ras_window, (b, scheme, domain_fpath), {}) for b in blks]
+    jobs = [(_read_ras_window, (b, layout, domain_fpath), {}) for b in valid_blks]
     results = utils.ParallelExecutor().run(jobs)
 
     # fetch results from reading the blocks
@@ -137,15 +141,14 @@ def _get_nodata(ras_fpath: str) -> int:
     return int(nodata)
 
 def _read_ras_window(
-        block_fpath: str,
-        blockscheme: dict[str, rasterio.io.DatasetReader],
+        block_name: str,
+        blocklayout: dict[str, rasterio.io.DatasetReader],
         domain_ras_fpath: str
     ) -> tuple[str, numpy.ndarray, numpy.ndarray]:
     '''Get the `rasterio.windows.Window` from a given block fpath'''
 
     # use block name to retrieve raster read window from scheme
-    block_name = dataset.blocks.parse_block_name(block_fpath).name
-    block_window = blockscheme[block_name]
+    block_window = blocklayout[block_name]
 
     # read domain raster
     with rasterio.open(domain_ras_fpath, 'r') as src:

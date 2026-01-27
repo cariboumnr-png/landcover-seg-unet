@@ -10,7 +10,7 @@ def select_validation_blocks(
         scores: list[dict[str, str | int ]] ,
         valselect_param: dict,
         logger: utils.Logger
-    ) -> list[str]:
+    ) -> dict[str, str]:
     '''Select a set of validation blocks.'''
 
     valblk_per = valselect_param.get('toprange', 0.1)
@@ -19,7 +19,7 @@ def select_validation_blocks(
     # get an expanded top ranking blocks
     num_blk = round(len(scores) * valblk_per)
     existing_locs = [(0, 0)] # init the list
-    return_list = []
+    return_dict = {}
 
     # iterat through blocks
     for i, blk in enumerate(scores):
@@ -29,14 +29,14 @@ def select_validation_blocks(
         dd = _min_distance_from_locs(existing_locs, (x, y))
         if dd >= min_dist:
             existing_locs.append((x, y))
-            return_list.append(blk['file_path'])
-        if len(return_list) == num_blk:
+            return_dict[blk['block_name']] = blk['file_path']
+        if len(return_dict) == num_blk:
             logger.log('INFO', f'Gathered enough blocks at block {i + 1}')
             break
-    logger.log('INFO', f'Gathered {len(return_list)} blocks from all')
+    logger.log('INFO', f'Gathered {len(return_dict)} blocks from all')
 
     # return
-    return return_list
+    return return_dict
 
 def _min_distance_from_locs(
         existing_locs: list[tuple[int, int]],
@@ -73,10 +73,13 @@ def run(
 
     # get validation blocks
     scores: list[dict[str, str | int ]] = utils.funcs.load_json(scores_fpath)
-    v_list = select_validation_blocks(scores, valselect_param, logger=logger)
-    t_list = [b['file_path'] for b in scores if b['file_path'] not in v_list]
+    v_blks = select_validation_blocks(scores, valselect_param, logger=logger)
+    t_blks = {
+        b['block_name']: b['file_path']
+        for b in scores if b['block_name'] not in v_blks
+    }
 
     # pickle validation blocks to a file
-    utils.write_pickle(v_fpath, v_list)
+    utils.write_json(v_fpath, v_blks)
     # pickle training blocks to a file
-    utils.write_pickle(t_fpath, t_list)
+    utils.write_json(t_fpath, t_blks)

@@ -321,7 +321,7 @@ class _BlockDataset(torch.utils.data.Dataset):
         self.logger = logger
 
         # load data from npz
-        data = dataset.blocks.DataBlock().load_from_npz(block_fpath).data
+        data = dataset.blocks.DataBlock().load(block_fpath).data
         self.meta = data.meta # get metadata of the block for later
         try:
             self.imgs = self._get_patches(data.image_normalized)

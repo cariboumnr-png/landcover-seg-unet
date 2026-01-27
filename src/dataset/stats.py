@@ -13,7 +13,7 @@ import utils
 
 # --------------------class distribution of each label layer--------------------
 def count_label_classes(
-        blkslist_fpath: str,
+        validblk_json: str,
         count_fpath: str,
         *,
         logger: utils.Logger,
@@ -30,10 +30,10 @@ def count_label_classes(
         return utils.load_json(count_fpath)
 
     # aggregate pixel count in each block
-    fpaths: list[str] = utils.load_pickle(blkslist_fpath)
+    fpaths: dict[str, str] = utils.load_json(validblk_json)
     count_results = {}
-    for fpath in tqdm.tqdm(fpaths, desc='Counting label class dist.'):
-        bb = dataset.blocks.DataBlock().load_from_npz(fpath)
+    for fpath in tqdm.tqdm(fpaths.values(), desc='Counting label class dist.'):
+        bb = dataset.blocks.DataBlock().load(fpath)
         for layer, counts in bb.meta['label_count'].items():
             bb_count = numpy.asarray(counts)
             if layer in count_results:
@@ -68,7 +68,7 @@ def score_blocks(
         return utils.load_json(blkscore_fpath)
 
     # load valid block list
-    blks = utils.load_pickle(blkvalid_fpath)
+    blks: dict[str, str] = utils.load_json(blkvalid_fpath)
     global_count = utils.load_json(global_count_fpath)
 
     # get scoring parameters with defaults
@@ -77,7 +77,7 @@ def score_blocks(
 
     # score blocks from list with parallel processing
     target_p  = _count_to_inv_prob(global_count[layer], alpha=a)
-    jobs = [(_score_block, (_, target_p, score_param), {}) for _ in blks]
+    jobs = [(_score_block, (_, target_p, score_param), {}) for _ in blks.values()]
     scores = utils.ParallelExecutor().run(jobs)
     sorted_scores = sorted(scores, key=lambda _: _['score'])
 
@@ -93,8 +93,8 @@ def _score_block(
     '''Score each block.'''
 
     # read from block
-    col, row = dataset.blocks.parse_block_name(block_fpath).colrow
-    bb = dataset.blocks.DataBlock().load_from_npz(block_fpath)
+    blkname = dataset.blocks.parse_block_name(block_fpath)
+    bb = dataset.blocks.DataBlock().load(block_fpath)
 
     # parse from parameter dict
     layer = param.get('layer', 'layer1')
@@ -109,9 +109,10 @@ def _score_block(
 
     # return
     return {
+        'block_name': blkname.name,
         'file_path': block_fpath,
-        'col': col,
-        'row': row,
+        'col': blkname.col,
+        'row': blkname.row,
         'score': score,
         'block_p': [round(p, 4) for p in block_p],
         'off_target': [round(p, 4) for p in block_p - target_p]
@@ -156,7 +157,7 @@ def _weighted_l1_w_reward(
 
 # -------------global image stats aggregated from selected blocks-------------
 def get_image_stats(
-        blkslist_fpath: str,
+        valid_blks_json: str,
         stats_fpath: str,
         *,
         logger: utils.Logger,
@@ -169,8 +170,8 @@ def get_image_stats(
 
     # check if stats are complete
     logger.log('INFO', 'Checking block image stats')
-    block_list: list[str] = utils.load_pickle(blkslist_fpath)
-    stats_complete = _validate_image_stats(block_list, logger)
+    valid_blks: dict[str, str] = utils.load_json(valid_blks_json)
+    stats_complete = _validate_image_stats(list(valid_blks.values()), logger)
 
     # load stats if file already exists
     if os.path.exists(stats_fpath) and stats_complete and not overwrite:
@@ -180,7 +181,7 @@ def get_image_stats(
     logger.log('INFO', 'Aggregating global image stats')
     # read a random block to get number of image channels
     temp = dataset.blocks.DataBlock()
-    temp.load_from_npz(random.choice(block_list))
+    temp.load(random.choice(list(valid_blks.values())))
     num_bands = len(temp.meta['block_image_stats'])
 
     # define a return dict
@@ -194,9 +195,9 @@ def get_image_stats(
     }
 
     # iterate through provided block files
-    for fpath in tqdm.tqdm(block_list):
+    for fpath in tqdm.tqdm(valid_blks.values()):
         # prep
-        rb = dataset.blocks.DataBlock().load_from_npz(fpath)
+        rb = dataset.blocks.DataBlock().load(fpath)
         stats = rb.meta['block_image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
@@ -212,12 +213,12 @@ def get_image_stats(
     return stats_dict
 
 def _validate_image_stats(
-        block_list: list[str],
+        blks_fpaths: list[str],
         logger: utils.Logger,
     ) -> bool:
     '''doc'''
 
-    jobs = [(_check_block_image_stats, (f, ), {}) for f in block_list]
+    jobs = [(_check_block_image_stats, (f, ), {}) for f in blks_fpaths]
     rr: list[dict] = utils.ParallelExecutor().run(jobs)
     work_fpaths = [r.get('restats', 0) for r in rr if r.get('restats', 0)]
     # fix if any blocks have invalida stats
@@ -226,15 +227,15 @@ def _validate_image_stats(
         return True
     logger.log('INFO', f'Found {len(work_fpaths)} blocks with bad stats')
     for fpath in tqdm.tqdm(work_fpaths):
-        rb = dataset.blocks.DataBlock().load_from_npz(fpath)
-        rb.recalc_stats(fpath) # save to overwrite
+        rb = dataset.blocks.DataBlock().load(fpath)
+        rb.recalculate_stats(fpath) # save to overwrite
     logger.log('INFO', f'Updated stats for {len(work_fpaths)} blocks')
     return False
 
 def _check_block_image_stats(block_fpath: str) -> dict[str, str]:
     '''doc'''
 
-    meta = dataset.blocks.DataBlock().load_from_npz(block_fpath).meta
+    meta = dataset.blocks.DataBlock().load(block_fpath).meta
     stats = meta['block_image_stats']
     for value_dict in stats.values():
         if any(numpy.isnan(x) for x in value_dict.values()):
@@ -268,7 +269,7 @@ def _welfords_online(
 
 # -------------normalized selected blocks using global image stats-------------
 def normalize_blocks(
-        blkslist_fpath: str,
+        blks_fpaths_json: str,
         stats_fpath: str,
         *,
         logger: utils.Logger,
@@ -279,15 +280,15 @@ def normalize_blocks(
     # get a child logger
     logger=logger.get_child('stats')
 
-    block_fpaths: list[str] = utils.load_pickle(blkslist_fpath)
+    blk_fpaths: dict[str, str] = utils.load_json(blks_fpaths_json)
 
     # get blocks that needs to be updated for image normalization
     if overwrite:
-        work_fpaths = block_fpaths
+        work_fpaths = blk_fpaths.values()
     else:
         # multiprocessing check blocks on normalized image channels
         logger.log('INFO', 'Checking block image normalization')
-        jobs = [(_check_block_normal, (f, ), {}) for f in block_fpaths]
+        jobs = [(_check_block_normal, (f, ), {}) for f in blk_fpaths.values()]
         rs: list[dict] = utils.ParallelExecutor().run(jobs)
         work_fpaths = [r.get('renorm', 0) for r in rs if r.get('renorm', 0)]
         logger.log('INFO', f'{len(work_fpaths)} blocks with faulty normalization')
@@ -306,7 +307,7 @@ def normalize_blocks(
 def _check_block_normal(block_fpath: str) -> dict[str, str]:
     '''Check completeness of normalized image channel of a block.'''
 
-    data = dataset.blocks.DataBlock().load_from_npz(block_fpath).data
+    data = dataset.blocks.DataBlock().load(block_fpath).data
     if data.image_normalized.size != data.image.size or \
         numpy.isnan(data.image_normalized).any():
         return {'renorm': block_fpath}
@@ -318,7 +319,7 @@ def _normalize_block(
     ) -> None:
     '''doc.'''
 
-    rb = dataset.blocks.DataBlock().load_from_npz(fpath)
+    rb = dataset.blocks.DataBlock().load(fpath)
     mmin, mmax = rb.normalize_image(stats)
     assert mmin > -100 and mmax < 100
-    rb.save_npz(fpath)
+    rb.save(fpath)

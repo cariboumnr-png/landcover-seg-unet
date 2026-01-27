@@ -7,12 +7,12 @@ skip_dataprep: ${skip.dataprep}
 paths:
   # root directory for general cache artifacts
   cache: ./cache/demo
-  # Path to block scheme file (.pkl)
-  blkscheme: ${.cache}/blocks_all_${..blocks.size}_${..blocks.overlap}.pkl
+  # Path to block layout file (.pkl)
+  blklayout: ${.cache}/blocks_all_${..blocks.size}_${..blocks.overlap}.pkl
   # Directory where individual block NPZ files are stored
   blksdpath: ${.cache}/blocks
   # Path to save list of valid block NPZ files
-  blkvalid: ${.cache}/blocks_valid_${c:${..filters.pxthres}}_${c:${..filters.watthres}}.pkl
+  blkvalid: ${.cache}/blocks_valid.json
   # Path to save label counts (all valid blocks)
   lblcountg: ${.cache}/label_count_global.json
   # Path to save label counts (training dataset)
@@ -22,9 +22,9 @@ paths:
   # Path to save block scores
   blkscore: ${.cache}/scores.json
   # Path to save training blocks list
-  datatrain: ${.cache}/blocks_training.pkl
+  datatrain: ${.cache}/blocks_training.json
   # Path to save validation blocks list
-  dataval: ${.cache}/blocks_validation.pkl
+  dataval: ${.cache}/blocks_validation.json
   # Path to save block-level domain assignment (as csv)
   domain: ${.cache}/domain.json
 
@@ -34,7 +34,7 @@ inputs:
   # Source label raster or vector-derived raster
   label: ./data/demo/label.tif
   # Label raster metadata (e.g., index, geometry, band info)
-  meta: ./data/demo/label_meta.json
+  meta: ./data/demo/metadata.json
   # if any domain knowledge provided
   domain:
     # raster with id via most frequent in each block
@@ -62,8 +62,8 @@ filters:
   watthres: 1.0
 
 overwrite:
-  # Overwrite the block scheme file if it exists
-  scheme: false
+  # Overwrite the block layout file if it exists
+  layout: false
   # Overwrite existing block caches (NPZ files) if they exist
   cache: false
   # Overwrite the list of valid block file paths
@@ -81,7 +81,7 @@ overwrite:
   # Overwrite block split between training/validation dataset
   split: false
 
-cleanup:
+flags:
   # If true, remove corrupted or unreadable NPZ files before recreating
   clean_npz: true
 
