@@ -28,7 +28,7 @@ artifacts:
       path: label_count_training.json
   # block scores for label distribution
   scoring:
-    - name: block_scores
+    - name: by_block
       path: scores.json
   # training/validation block file list
   split:
@@ -59,6 +59,10 @@ flags:
   overwrite_cache: false
   validate_cache: false
   overwrite_domain: false
+  overwrite_counts: false
+  overwrite_scores: false
+  overwrite_split: false
+  overwrite_stats: false
 
 # block scoring parameters
 scoring:

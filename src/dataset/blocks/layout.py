@@ -370,19 +370,3 @@ class _BlockName:
     def __post_init__(self):
         self.colrow = (self.col, self.row)
         self.name = f'col_{self.col}_row_{self.row}'
-
-# import re
-# def parse_block_name(input_str: str) -> _BlockName:
-#     '''Retrieve block naming info from a given string.'''
-
-#     # find pattern from string
-#     pattern = r'col_(\d+)_row_(\d+)'
-#     matched = re.search(pattern, input_str)
-#     # there should be just one match
-#     if not matched:
-#         raise ValueError(f'Block naming pattern {pattern} not found')
-#     # get col and row
-#     col = int(matched.group(1))
-#     row = int(matched.group(2))
-#     # return
-#     return _BlockName(col, row)

@@ -8,169 +8,94 @@ import random
 import numpy
 import tqdm
 # local imports
-import dataset.blocks
+import _types
+import dataset
 import utils
 
-# --------------------class distribution of each label layer--------------------
-def count_label_classes(
-        validblk_json: str,
-        count_fpath: str,
-        *,
-        logger: utils.Logger,
-        overwrite: bool
-    ) -> dict[str, list[int]]:
-    '''Aggregate label class counting.'''
-
-    # get a child logger
-    logger=logger.get_child('stats')
-
-    # check if already counted
-    if os.path.exists(count_fpath) and not overwrite:
-        logger.log('INFO', f'Gathering label counts from: {count_fpath}')
-        return utils.load_json(count_fpath)
-
-    # aggregate pixel count in each block
-    fpaths: dict[str, str] = utils.load_json(validblk_json)
-    count_results = {}
-    for fpath in tqdm.tqdm(fpaths.values(), desc='Counting label class dist.'):
-        bb = dataset.blocks.DataBlock().load(fpath)
-        for layer, counts in bb.meta['label_count'].items():
-            bb_count = numpy.asarray(counts)
-            if layer in count_results:
-                count_results[layer] += bb_count
-            else:
-                count_results[layer] = bb_count
-            count_results[layer] = [int(x) for x in count_results[layer]]
-
-    # save to file and return
-    logger.log('INFO', f'Label class distributions save to {count_fpath}')
-    utils.write_json(count_fpath, count_results)
-    return count_results
-
-# score all valid blocks based on label class distribution
-def score_blocks(
-        blkscore_fpath: str,
-        blkvalid_fpath: str,
-        score_param: dict,
-        global_count_fpath: str,
-        *,
-        logger: utils.Logger,
-        overwrite: bool
-    ) -> list[dict[str, str | int ]]:
+def normalize_datasets(
+        dataset_name: str,
+        cache_config: _types.ConfigType,
+        logger: utils.Logger
+    ):
     '''doc'''
 
     # get a child logger
     logger=logger.get_child('stats')
 
-    # check if already scored
-    if os.path.exists(blkscore_fpath) and not overwrite:
-        logger.log('INFO', f'Gathering block scoring from: {blkscore_fpath}')
-        return utils.load_json(blkscore_fpath)
+    # config accessors
+    cache_cfg = utils.ConfigAccess(cache_config)
 
-    # load valid block list
-    blks: dict[str, str] = utils.load_json(blkvalid_fpath)
-    global_count = utils.load_json(global_count_fpath)
+    # get artifacts names (same between training and inference datasets)
+    lbl_count = cache_cfg.get_asset('artifacts', 'label', 'count_training')
+    valid_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    image_stats = cache_cfg.get_asset('artifacts', 'image', 'stats')
 
-    # get scoring parameters with defaults
-    layer = score_param.get('layer', 'layer1')
-    a = score_param.get('alpha', 0.6)
+    # -----------------------------training blocks-----------------------------
+    # training blocks dirpath and artifact filepaths
+    _dir = f'./data/{dataset_name}/cache/training'
+    lbl_count_fpath = os.path.join(_dir, lbl_count)
+    blks_fpath = os.path.join(_dir, valid_blks)
+    stats_fpath = os.path.join(_dir, image_stats)
 
-    # score blocks from list with parallel processing
-    target_p  = _count_to_inv_prob(global_count[layer], alpha=a)
-    jobs = [(_score_block, (_, target_p, score_param), {}) for _ in blks.values()]
-    scores = utils.ParallelExecutor().run(jobs)
-    sorted_scores = sorted(scores, key=lambda _: _['score'])
+    # count label classes on training blocks
+    dataset.count_label_cls(
+        blks_fpaths=blks_fpath,
+        results_fpath=lbl_count_fpath,
+        logger=logger,
+        overwrite=cache_cfg.get_option('flags', 'overwrite_counts')
+    )
 
-    # save sorted scores to a file
-    utils.write_json(blkscore_fpath, sorted_scores)
-    return scores
+    # get image stats on training blocks
+    get_image_stats(
+        blks_fpaths=blks_fpath,
+        stats_fpath=stats_fpath,
+        logger=logger,
+        overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
+    )
 
-def _score_block(
-        block_fpath: str,
-        target_p: numpy.ndarray,
-        param: dict
-    ) -> dict[str, str | int | float | list[float]]:
-    '''Score each block.'''
+    # normalize training blocks
+    normalize_blocks(
+        blks_fpaths=blks_fpath,
+        stats_fpath=stats_fpath,
+        logger=logger,
+        overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
+    )
 
-    # read from block
-    blkname = dataset.blocks.parse_block_name(block_fpath)
-    bb = dataset.blocks.DataBlock().load(block_fpath)
+    # ----------------------------inference blocks----------------------------
+    # inference blocks dirpath and artifact filepaths
+    _dir = f'./data/{dataset_name}/cache/inference'
+    blks_fpath = os.path.join(_dir, valid_blks)
+    stats_fpath = os.path.join(_dir, image_stats)
 
-    # parse from parameter dict
-    layer = param.get('layer', 'layer1')
-    b = param.get('beta', 1.0)
-    e = param.get('epsilon', 1e-12)
-    reward_cls = param.get('reward', [])
+    # get image stats on training blocks
+    get_image_stats(
+        blks_fpaths=blks_fpath,
+        stats_fpath=stats_fpath,
+        logger=logger,
+        overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
+    )
 
-    # block class distributions
-    block_p = _count_to_inv_prob(bb.meta['label_count'][layer], alpha=1.0)
-    # L1 distance to measure pairwise closeness
-    score = _weighted_l1_w_reward(target_p, block_p, reward_cls, b, e)
-
-    # return
-    return {
-        'block_name': blkname.name,
-        'file_path': block_fpath,
-        'col': blkname.col,
-        'row': blkname.row,
-        'score': score,
-        'block_p': [round(p, 4) for p in block_p],
-        'off_target': [round(p, 4) for p in block_p - target_p]
-    }
-
-def _count_to_inv_prob(
-        counts: list[int],
-        alpha: float,
-        epsilon: float=1e-12
-    ) -> numpy.ndarray:
-    '''Global count to inverse distribution with epsilon smoothing.'''
-
-    # safe count to probability distribution
-    arr = numpy.asarray(counts)
-    tt = arr.sum()
-    assert tt > 0
-    p = arr / tt
-    p = numpy.clip(p, epsilon, 1.0) # avoid downstream log(0)
-    p = p / p.sum() # re-normalize to have probability sum==1
-
-    # inverse and return
-    inv = p ** (alpha)
-    return inv / inv.sum()
-
-def _weighted_l1_w_reward(
-        p: numpy.ndarray,
-        q: numpy.ndarray,
-        reward_cls: list[int],
-        beta: float,
-        eps: float
-    ) -> float:
-    '''Weighted L1 distance between distributions with rewards.'''
-
-    # sanity check
-    assert numpy.isclose(p.sum(), 1), p.sum()
-    assert numpy.isclose(q.sum(), 1), q.sum()
-    # p as target q as test
-    # use log weight and bonus for reward classes > target classes
-    w_l1 = sum(abs(a - b) * (1 + abs(math.log(a + eps))) for a, b in zip(p, q))
-    bonus = sum(max(0, q[i] - p[i]) for i in reward_cls) * beta
-    return float(w_l1 - bonus)
+    # normalize training blocks
+    normalize_blocks(
+        blks_fpaths=blks_fpath,
+        stats_fpath=stats_fpath,
+        logger=logger,
+        overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
+    )
 
 # -------------global image stats aggregated from selected blocks-------------
 def get_image_stats(
-        valid_blks_json: str,
+        blks_fpaths: str,
         stats_fpath: str,
-        *,
         logger: utils.Logger,
+        *,
         overwrite: bool
     ) -> dict[str, dict[str, int | float]]:
     '''Aggregate stats from a given list of blocks'''
 
-    # get a child logger
-    logger=logger.get_child('stats')
-
     # check if stats are complete
     logger.log('INFO', 'Checking block image stats')
-    valid_blks: dict[str, str] = utils.load_json(valid_blks_json)
+    valid_blks: dict[str, str] = utils.load_json(blks_fpaths)
     stats_complete = _validate_image_stats(list(valid_blks.values()), logger)
 
     # load stats if file already exists
@@ -180,7 +105,7 @@ def get_image_stats(
 
     logger.log('INFO', 'Aggregating global image stats')
     # read a random block to get number of image channels
-    temp = dataset.blocks.DataBlock()
+    temp = dataset.DataBlock()
     temp.load(random.choice(list(valid_blks.values())))
     num_bands = len(temp.meta['block_image_stats'])
 
@@ -197,7 +122,7 @@ def get_image_stats(
     # iterate through provided block files
     for fpath in tqdm.tqdm(valid_blks.values()):
         # prep
-        rb = dataset.blocks.DataBlock().load(fpath)
+        rb = dataset.DataBlock().load(fpath)
         stats = rb.meta['block_image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
@@ -227,7 +152,7 @@ def _validate_image_stats(
         return True
     logger.log('INFO', f'Found {len(work_fpaths)} blocks with bad stats')
     for fpath in tqdm.tqdm(work_fpaths):
-        rb = dataset.blocks.DataBlock().load(fpath)
+        rb = dataset.DataBlock().load(fpath)
         rb.recalculate_stats(fpath) # save to overwrite
     logger.log('INFO', f'Updated stats for {len(work_fpaths)} blocks')
     return False
@@ -235,7 +160,7 @@ def _validate_image_stats(
 def _check_block_image_stats(block_fpath: str) -> dict[str, str]:
     '''doc'''
 
-    meta = dataset.blocks.DataBlock().load(block_fpath).meta
+    meta = dataset.DataBlock().load(block_fpath).meta
     stats = meta['block_image_stats']
     for value_dict in stats.values():
         if any(numpy.isnan(x) for x in value_dict.values()):
@@ -269,18 +194,15 @@ def _welfords_online(
 
 # -------------normalized selected blocks using global image stats-------------
 def normalize_blocks(
-        blks_fpaths_json: str,
+        blks_fpaths: str,
         stats_fpath: str,
-        *,
         logger: utils.Logger,
+        *,
         overwrite: bool
     ) -> None:
     '''Normalize blocks using provided global stats dict.'''
 
-    # get a child logger
-    logger=logger.get_child('stats')
-
-    blk_fpaths: dict[str, str] = utils.load_json(blks_fpaths_json)
+    blk_fpaths: dict[str, str] = utils.load_json(blks_fpaths)
 
     # get blocks that needs to be updated for image normalization
     if overwrite:
@@ -307,7 +229,7 @@ def normalize_blocks(
 def _check_block_normal(block_fpath: str) -> dict[str, str]:
     '''Check completeness of normalized image channel of a block.'''
 
-    data = dataset.blocks.DataBlock().load(block_fpath).data
+    data = dataset.DataBlock().load(block_fpath).data
     if data.image_normalized.size != data.image.size or \
         numpy.isnan(data.image_normalized).any():
         return {'renorm': block_fpath}
@@ -319,7 +241,7 @@ def _normalize_block(
     ) -> None:
     '''doc.'''
 
-    rb = dataset.blocks.DataBlock().load(fpath)
+    rb = dataset.DataBlock().load(fpath)
     mmin, mmax = rb.normalize_image(stats)
     assert mmin > -100 and mmax < 100
     rb.save(fpath)
