@@ -191,8 +191,8 @@ def split(
     blks_scores = cache_cfg.get_asset('artifacts', 'scoring', 'by_block')
 
     # artifact filepaths
-    t_fpath = os.path.join(training_dir, 'blocks', training_blks)
-    v_fpath = os.path.join(training_dir, 'blocks', validation_blks)
+    t_fpath = os.path.join(training_dir, training_blks)
+    v_fpath = os.path.join(training_dir, validation_blks)
     s_fpath = os.path.join(training_dir, blks_scores)
 
     # get overwrite option

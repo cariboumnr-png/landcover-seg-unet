@@ -51,9 +51,6 @@ def prepare_data(
 
     # return blocks metadata
     return dataset.summary.generate(
-        validblks_fpath=config.paths.blkvalid,
-        train_lblstats_fpath=config.paths.lblcountt,
-        train_datablks_fpaths=config.paths.datatrain,
-        val_datablks_fpaths=config.paths.dataval,
-        domain_fpath=config.paths.domain
+        dataset_name=dataset_name,
+        cache_config=config.cache
     )

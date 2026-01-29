@@ -252,7 +252,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def _get_domain(self, fp: str) -> dict[str, int | list[float]] | None:
         '''Retrieve the per-block domain dict if available.'''
 
-        blkid = dataset.blocks.parse_block_name(fp).name
+        blkid = dataset.blocks.parse_block_name(fp).name #TODO
         if self.blk_cfg.domain_dict is not None:
             blk_domain = self.blk_cfg.domain_dict.get(blkid)
             # relaxed check allowing block with empty or missing domain
@@ -321,7 +321,7 @@ class _BlockDataset(torch.utils.data.Dataset):
         self.logger = logger
 
         # load data from npz
-        bb = dataset.blocks.DataBlock().load(block_fpath)
+        bb = dataset.DataBlock().load(block_fpath)
         self.meta = bb.meta # get metadata of the block for later
         try:
             self.imgs = self._get_patches(bb.data.image_normalized)

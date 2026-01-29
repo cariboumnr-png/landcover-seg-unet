@@ -7,8 +7,9 @@ import math
 import os
 import random
 # local imports
-import dataset.blocks.block
-import utils.funcs
+import _types
+import dataset
+import utils
 
 @dataclasses.dataclass
 class DataSummary:
@@ -69,17 +70,32 @@ class _Domain:
     meta: dict[str, dict[str, str | int | list]] | None
 
 def generate(
-        validblks_fpath: str,
-        train_lblstats_fpath: str,
-        train_datablks_fpaths: str,
-        val_datablks_fpaths: str,
-        domain_fpath: str
+        dataset_name: str,
+        cache_config: _types.ConfigType
     ) -> DataSummary:
     '''Wrapper function to generate concrete `DataSummary` class.'''
 
+    # config accessor
+    cache_cfg = utils.ConfigAccess(cache_config)
+
+    # get artifacts names
+    lbl_count = cache_cfg.get_asset('artifacts', 'label', 'count_training')
+    valid_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    training_blks = cache_cfg.get_asset('artifacts', 'split', 'training')
+    validation_blks = cache_cfg.get_asset('artifacts', 'split', 'validation')
+    domain_dict = cache_cfg.get_asset('artifacts', 'domain', 'by_block')
+
+    # training blocks dirpath and artifact filepaths
+    _dir = f'./data/{dataset_name}/cache/training'
+    train_lblstats_fpath = os.path.join(_dir, lbl_count)
+    blks_fpath = os.path.join(_dir, valid_blks)
+    train_datablks_fpaths = os.path.join(_dir, training_blks)
+    val_datablks_fpaths = os.path.join(_dir, validation_blks)
+    domain_fpath = os.path.join(_dir, domain_dict)
+
     # return the data summary dataclass
     return DataSummary(
-        meta=_read_rand_block_meta(validblks_fpath),
+        meta=_read_rand_block_meta(blks_fpath),
         heads=_heads_stats(train_lblstats_fpath),
         data=_read_datasets(train_datablks_fpaths, val_datablks_fpaths),
         dom=_get_domain(domain_fpath)
@@ -89,9 +105,9 @@ def _read_rand_block_meta(validblks_fpath: str) -> _Meta:
     '''Retrieve meta from a random valid block file.'''
 
     # read a random block from valid blocks
-    valid_blks: dict[str, str] = utils.funcs.load_json(validblks_fpath)
+    valid_blks: dict[str, str] = utils.load_json(validblks_fpath)
     rblk_fpath = random.choice(list(valid_blks.values()))
-    blk = dataset.blocks.block.DataBlock().load(rblk_fpath)
+    blk = dataset.DataBlock().load(rblk_fpath)
     blk.data.validate()
     # return
     return _Meta(blk.meta['ignore_label'], blk.data.image_normalized.shape[0])
@@ -100,8 +116,8 @@ def _read_datasets(train_fpaths: str, val_fpaths: str) -> _Data:
     '''Get data file lists.'''
 
     # training and validation datasets
-    training_blks: dict[str, str] = utils.funcs.load_json(train_fpaths)
-    validation_blks: dict[str, str] = utils.funcs.load_json(val_fpaths)
+    training_blks: dict[str, str] = utils.load_json(train_fpaths)
+    validation_blks: dict[str, str] = utils.load_json(val_fpaths)
 
     training_blks_fpaths = list(training_blks.values())
     validation_blk_fpaths = list(validation_blks.values())
@@ -117,7 +133,7 @@ def _heads_stats(fp: str) -> _Heads:
     topology: dict[str, dict[str, str | int | None]] = {}
 
     # iterate through label counts (training dataset)
-    lbl_count = utils.funcs.load_json(fp)
+    lbl_count = utils.load_json(fp)
     for layer_name, counts in lbl_count.items():
         if layer_name == 'original_label': # skip this for now
             continue
@@ -152,7 +168,7 @@ def _get_domain(fp: str) -> _Domain:
     if os.path.exists(fp):
         domain: dict[str, dict[str, int | list[float]]] = {}
         meta: dict[str, dict[str, str | int | list]] = {}
-        domain_src = utils.funcs.load_json(fp)
+        domain_src = utils.load_json(fp)
         assert isinstance(domain_src, list)
         # iterate through the original loaded json
         for dom in domain_src:
