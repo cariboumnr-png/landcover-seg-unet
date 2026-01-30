@@ -27,6 +27,7 @@ class DataSummaryFull(DataSummaryLoader, DataSummaryHeads, typing.Protocol):
 # internal pieces
 class _Meta(typing.Protocol):
     '''DataSummary meta part.'''
+    dataset_name: str
     ignore_index: int
     img_ch_num: int
 
@@ -40,6 +41,7 @@ class _Data(typing.Protocol):
     '''DataSummary dataloaders part.'''
     train: dict[str, str]
     val: dict[str, str]
+    infer: dict[str, str] | None
 
 class _Dom(typing.Protocol):
     '''DataSummary domain part.'''

@@ -49,6 +49,7 @@ class DataSummary:
 @dataclasses.dataclass
 class _Meta:
     '''Metadata.'''
+    dataset_name: str
     ignore_index: int
     img_ch_num: int
 
@@ -100,7 +101,9 @@ def generate_summary(
     # return the data summary dataclass
     return DataSummary(
         meta=_read_rand_block_meta(
-            validblks_fpath=os.path.join(train_dir, valid_blks)
+            dataset_name=dataset_name,
+            valid_blks_fpath=os.path.join(train_dir, valid_blks),
+            infer_blks_fpath=square_blks_fpath
         ),
         heads=_heads_stats(
             label_count_fpath=os.path.join(train_dir, lbl_count)
@@ -116,16 +119,32 @@ def generate_summary(
     )
 
 # ------------------------------private  function------------------------------
-def _read_rand_block_meta(validblks_fpath: str) -> _Meta:
+def _read_rand_block_meta(
+        dataset_name: str,
+        valid_blks_fpath: str,
+        infer_blks_fpath: str | None = None
+    ) -> _Meta:
     '''Retrieve meta from a random valid block file.'''
 
     # read a random block from valid blocks
-    valid_blks: dict[str, str] = utils.load_json(validblks_fpath)
+    valid_blks: dict[str, str] = utils.load_json(valid_blks_fpath)
     rblk_fpath = random.choice(list(valid_blks.values()))
     blk = dataset.DataBlock().load(rblk_fpath)
     blk.data.validate()
+    # retrieve meta
+    ignore_index = blk.meta['ignore_label']
+    img_ch_num=blk.data.image_normalized.shape[0]
+
+    # if inference blocks are present, read one as well
+    if infer_blks_fpath is not None:
+        infer_blks: dict[str, str] = utils.load_json(infer_blks_fpath)
+        rblk_fpath = random.choice(list(infer_blks.values()))
+        blk = dataset.DataBlock().load(rblk_fpath)
+        # sanity: image channel should be the same for train and infer data
+        assert blk.data.image_normalized.shape[0] == img_ch_num
+
     # return
-    return _Meta(blk.meta['ignore_label'], blk.data.image_normalized.shape[0])
+    return _Meta(dataset_name, ignore_index, img_ch_num)
 
 def _read_datasets(
         train_blks_fpath: str,
