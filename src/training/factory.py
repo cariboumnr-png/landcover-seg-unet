@@ -23,15 +23,9 @@ def get_components(
     '''Setup the model trainer.'''
 
     # compile data loaders
-    loader_config = training.dataloading.parse_loader_config(
-        block_size=config.loader.block_size,
-        patch_size=config.loader.patch_size,
-        batch_size=config.loader.batch_size,
-        stream_cache=config.loader.stream_cache
-    )
     data_loaders = training.dataloading.get_dataloaders(
         data_summary=data_summary,
-        loader_config=loader_config,
+        loader_config=config.loader,
         logger=logger
     )
 

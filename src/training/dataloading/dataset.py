@@ -51,7 +51,7 @@ import torch.utils.data
 import torchvision.transforms.functional
 import tqdm
 # local imports
-import dataset.blocks
+import dataset
 import utils
 
 @dataclasses.dataclass
@@ -101,7 +101,7 @@ class BlockConfig:
         return repr(dataclasses.asdict(self))
 
 @dataclasses.dataclass
-class MultiBlockData:
+class _MultiBlockData:
     '''Small container for multiblock data.'''
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
@@ -147,7 +147,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
 
     def __init__(
             self,
-            blks_dicr: dict[str, str],
+            blks_dict: dict[str, str],
             blk_cfg: BlockConfig,
             logger: utils.Logger,
             **kwargs
@@ -167,14 +167,14 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         super().__init__()
 
         # process args
-        self.blks = blks_dicr
+        self.blks = blks_dict
         self.blk_cfg = blk_cfg
         self.logger = logger
         self.preload = kwargs.get('preload', False)
         blk_cache_num = kwargs.get('blk_cache_num', 16)
 
         # init data container
-        self.data = MultiBlockData()
+        self.data = _MultiBlockData()
         # load all files into one dataset
         if self.preload:
             self.logger.log('INFO', 'Preloading blocks into RAM')
@@ -182,7 +182,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             _imgs = []
             _lbls = []
             self.data.dom = []
-            for blk_name, blk_fpath in tqdm.tqdm(blks_dicr.items(), ncols=100):
+            for blk_name, blk_fpath in tqdm.tqdm(blks_dict.items(), ncols=100):
                 dom = self._get_domain(blk_name)
                 blk_data = _BlockDataset(blk_fpath, blk_cfg, self.logger, dom)
                 _imgs.append(blk_data.imgs)
@@ -192,13 +192,13 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self.data.img = numpy.concatenate(_imgs, axis=0)
             self.data.lbl = numpy.concatenate(_lbls, axis=0)
             self._len = int( self.data.img.shape[0])
-            self.logger.log('INFO', f'{len(blks_dicr)} blocks preloaded into RAM')
+            self.logger.log('INFO', f'{len(blks_dict)} blocks preloaded into RAM')
 
         # otherwise streaming
         else:
             self.logger.log('INFO', 'Setting up block streaming')
             self.logger.log('DEBUG', f'Config: {blk_cfg}')
-            self._len = self.blk_cfg.patch_per_blk * len(blks_dicr)
+            self._len = self.blk_cfg.patch_per_blk * len(blks_dict)
             # below not needed for uniform n
             # n =  self.block_config.patch_per_block
             # self.cumulative_i = [n * i for i in range(len(fpaths) + 1)]

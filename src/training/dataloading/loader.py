@@ -6,6 +6,7 @@ import dataclasses
 import torch
 import torch.utils.data
 # local imports
+import _types
 import training.common
 import training.dataloading
 import utils
@@ -16,34 +17,9 @@ class DataLoaders:
     train: torch.utils.data.DataLoader
     val: torch.utils.data.DataLoader
 
-@dataclasses.dataclass(frozen=True)
-class _LoaderConfig:
-    '''Static config for `dataloader.py`.'''
-    block_size: int
-    patch_size: int
-    batch_size: int
-    stream_cache: bool
-    rand_n: int | None = None
-    rand_seed: int | None = None
-
-def parse_loader_config(
-        block_size: int,
-        patch_size: int,
-        batch_size: int,
-        stream_cache: bool,
-    ) -> _LoaderConfig:
-    '''Generate loader config for dataloaders.'''
-
-    return _LoaderConfig(
-        block_size=block_size,
-        patch_size=patch_size,
-        batch_size=batch_size,
-        stream_cache=stream_cache,
-    )
-
 def get_dataloaders(
         data_summary: training.common.DataSummaryLoader,
-        loader_config: _LoaderConfig,
+        loader_config: _types.ConfigType,
         logger: utils.Logger
     ) -> DataLoaders:
     '''Entry to the module, returns two dataloaders for training.'''
@@ -51,16 +27,17 @@ def get_dataloaders(
     # get a child from the base logger
     logger = logger.get_child('dldrs')
 
-    # parse arguments from data summart
+    # get dataset filepaths from DataSummary
     t_fpaths = data_summary.data.train
     v_fpaths = data_summary.data.val
     domain_dict = data_summary.dom.data
 
-    # parse args from config
-    block_size = loader_config.block_size
-    patch_size = loader_config.patch_size
-    batch_size = loader_config.batch_size
-    stream_blk = loader_config.stream_cache
+    # parse args from config accessor
+    loader_cfg = utils.ConfigAccess(loader_config)
+    block_size = loader_cfg.get_option('block_size')
+    patch_size = loader_cfg.get_option('patch_size')
+    batch_size = loader_cfg.get_option('batch_size')
+    stream_blk = loader_cfg.get_option('stream_cache')
 
     # get training data loader
     cfg = training.dataloading.BlockConfig(
@@ -70,7 +47,7 @@ def get_dataloaders(
         domain_dict=domain_dict
     )
     data = training.dataloading.MultiBlockDataset(
-            blks_dicr=t_fpaths,
+            blks_dict=t_fpaths,
             blk_cfg=cfg,
             logger=logger,
             preload=False,              # no preload for larger training data
@@ -92,10 +69,10 @@ def get_dataloaders(
         domain_dict=domain_dict
     )
     data = training.dataloading.MultiBlockDataset(
-            blks_dicr=v_fpaths,
+            blks_dict=v_fpaths,
             blk_cfg=cfg,
             logger=logger,
-            preload=bool(loader_config.rand_n == 0),# preload if not a test
+            preload=False,# preload if not a test
             blk_cache_num=stream_blk  # max stream size
         )
     v_loader = torch.utils.data.DataLoader(

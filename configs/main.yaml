@@ -5,7 +5,7 @@ defaults:
   - dataset/input: input.yaml
   - dataset/cache: cache.yaml
   - models: multihead
-  - trainer: trainer_config
+  - trainer/config: config.yaml
   - curriculum: control
   - _self_
 
