@@ -11,29 +11,23 @@ Functions:
 '''
 
 # standard imports
-import csv
 import datetime
 import json
 import os
+import pathlib
 import pickle
 import sys
 import typing
 
-def check_valid_csv(csv_path: str) -> bool:
-    '''Checks if a csv file exists and contains data.'''
+# -------------------------------Public Function-------------------------------
+def get_dir_size(dirpath: str, pattern: str | None=None) -> int:
+    '''Get total size of files (optionally filtered by glob type).'''
 
-    # FALSE if file does not exist
-    if not os.path.exists(csv_path):
-        return False
-
-    # FALSE if only contains a header (no content from row 1)
-    with open(csv_path, mode='r', encoding='utf-8') as file:
-        rows = list(csv.reader(file))
-        if not rows[1:]:
-            return False
-
-    # TRUE otherwise
-    return True
+    pattern = pattern or '*'
+    return sum(
+        f.stat().st_size
+        for f in pathlib.Path(dirpath).rglob(pattern) if f.is_file()
+    )
 
 def get_file_ctime(filepath: str, t_format: str='%Y%m%d_%H%M%S') -> str:
     '''
@@ -62,6 +56,18 @@ def get_timestamp(t_format: str='%Y%m%d_%H%M%S') -> str:
     # return formatted time string
     return datetime.datetime.now().strftime(t_format)
 
+def load_json(json_fpath: str) -> typing.Any:
+    '''Helper to load a json config file.'''
+
+    with open(json_fpath, 'r', encoding='UTF-8') as src:
+        return json.load(src)
+
+def load_pickle(pickle_fpath: str) -> typing.Any:
+    '''Helper to load a .pickle file'''
+
+    with open(pickle_fpath, 'rb') as file:
+        return pickle.load(file)
+
 def print_status(lines: list):
     '''Helper to print multiple lines refreshing'''
 
@@ -77,39 +83,14 @@ def print_status(lines: list):
         print(line)
     print('\n')
 
-def load_json(json_fpath: str) -> typing.Any:
-    '''Helper to load a json config file.'''
-
-    with open(json_fpath, 'r', encoding='UTF-8') as src:
-        return json.load(src)
-
 def write_json(json_fpath: str, src_dict: list | dict) -> None:
     '''Helper to write a json config file from a python dict or list.'''
 
     with open(json_fpath, 'w', encoding='UTF-8') as file:
         json.dump(src_dict, file, indent=4)
 
-def load_pickle(pickle_fpath: str) -> typing.Any:
-    '''Helper to load a .pickle file'''
-
-    with open(pickle_fpath, 'rb') as file:
-        return pickle.load(file)
-
 def write_pickle(pickle_fpath: str, src_obj: typing.Any) -> None:
     '''Helper to write a json config file from a python dict or list.'''
 
     with open(pickle_fpath, 'wb') as file:
         pickle.dump(src_obj, file)
-
-def get_fpaths_from_dir(dirpath: str, suffix: str | None=None) -> list:
-    '''List all files from a directory with optional suffix filter.'''
-
-    fpaths = []
-    for root, _, files in os.walk(dirpath):
-        for file in files:
-            if not suffix:
-                fpaths.append(os.path.join(root, file))
-            else:
-                if file.endswith(suffix):
-                    fpaths.append(os.path.join(root, file))
-    return fpaths
