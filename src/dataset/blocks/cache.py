@@ -144,42 +144,40 @@ class BlockCache:
         # self.layout needs to be initiated
         assert self.layout_meta
 
-        # early exit if no validation needed, e.g., for inference blocks
+        # for inference blocks that need not validation. load all square blocks
         if not self.layout_meta.get('has_label'):
-            valid_blks = self.cfg.output.valid_blks # all square blocks valid
-            self.logger.log('INFO', 'All square blocks are valid')
-            self.logger.log('INFO', f'List file saved to {valid_blks}')
-            utils.write_json(valid_blks, self.square_blocks)
+            _blks = self.cfg.output.square_blks
+            self.logger.log('INFO', f'All square blocks from: {_blks} are valid')
+            self.valid_blks = utils.load_json(self.cfg.output.square_blks)
+            self.logger.log('INFO', f'Got {len(self.valid_blks)} blocks')
             return
 
-        # proceed with sanity check
-        assert self.cfg.thres is not None
-        # output json fpath
-        valid_blks = self.cfg.output.valid_blks
+        # for training blocks that need validation. try load valid blocks
+        _blks = self.cfg.output.valid_blks
+        # if already exists and not to overwrite
+        if os.path.exists(_blks) and not overwrite:
+            self.logger.log('INFO', f'Gather valid blocks from: {_blks}')
+            self.valid_blks = utils.load_json(_blks)
+            self.logger.log('INFO', f'Got {len(self.valid_blks)} blocks')
+            return
 
-        # read and exit if list already pickled to file and not overwrite
-        if os.path.exists(valid_blks) and not overwrite:
-            self.logger.log('INFO', f'Gather valid blocks from: {valid_blks}')
-            self.valid_blks = utils.load_json(valid_blks)
-            self.logger.log('INFO', f'Got {len(self.valid_blks)} valid blocks')
-
-        # otherwise create a new list
+        # otherwise create a new valid blocks json
+        assert self.cfg.thres is not None # sanity check
         self.logger.log('INFO', 'Validating existing blocks')
         # prep block validation arguments
         val_px = self.cfg.thres.valid_px_ratio
         kw = {'water_px_ratio': self.cfg.thres.water_px_ratio}
-        jobs = [(_valid_block, (b, val_px,), kw) for b in self.square_blocks.items()]
+        all_blks = self.square_blocks
+        jobs = [(_valid_block, (b, val_px,), kw) for b in all_blks.items()]
         # parallel processing through all blocks
         results: list[dict] = utils.ParallelExecutor().run(jobs)
         self.valid_blks = {
-            r['valid']: self.square_blocks[r['valid']]
-            for r in results if 'valid' in r
+            r['valid']: all_blks[r['valid']] for r in results if 'valid' in r
         }
-
         # log and save
-        self.logger.log('INFO', f'Gathered {len(self.valid_blks)} valid blocks')
-        self.logger.log('INFO', f'List file saved to {valid_blks}')
-        utils.write_json(valid_blks, self.valid_blks)
+        self.logger.log('INFO', f'Got {len(self.valid_blks)} valid blocks')
+        self.logger.log('INFO', f'Valid blocks json saved to {_blks}')
+        utils.write_json(_blks, self.valid_blks)
 
     # -------------------------------properties-------------------------------
     @property
