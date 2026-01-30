@@ -38,8 +38,8 @@ class _Head(typing.Protocol):
 
 class _Data(typing.Protocol):
     '''DataSummary dataloaders part.'''
-    train: list[str]
-    val: list[str]
+    train: dict[str, str]
+    val: dict[str, str]
 
 class _Dom(typing.Protocol):
     '''DataSummary domain part.'''

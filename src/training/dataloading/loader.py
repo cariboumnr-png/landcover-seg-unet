@@ -2,7 +2,6 @@
 
 # standard imports
 import dataclasses
-import random
 # third-party imports
 import torch
 import torch.utils.data
@@ -32,19 +31,14 @@ def parse_loader_config(
         patch_size: int,
         batch_size: int,
         stream_cache: bool,
-        **kwargs
     ) -> _LoaderConfig:
     '''Generate loader config for dataloaders.'''
 
-    rand_sample_n = kwargs.get('rand_sample_n', None)
-    rand_seed = kwargs.get('rand_seed', None)
     return _LoaderConfig(
         block_size=block_size,
         patch_size=patch_size,
         batch_size=batch_size,
         stream_cache=stream_cache,
-        rand_n=rand_sample_n,
-        rand_seed=rand_seed,
     )
 
 def get_dataloaders(
@@ -58,8 +52,8 @@ def get_dataloaders(
     logger = logger.get_child('dldrs')
 
     # parse arguments from data summart
-    t_fpaths = list(data_summary.data.train)
-    v_fpaths = list(data_summary.data.val)
+    t_fpaths = data_summary.data.train
+    v_fpaths = data_summary.data.val
     domain_dict = data_summary.dom.data
 
     # parse args from config
@@ -67,12 +61,6 @@ def get_dataloaders(
     patch_size = loader_config.patch_size
     batch_size = loader_config.batch_size
     stream_blk = loader_config.stream_cache
-
-    # if this is for a test sample randomly pick files from each
-    if loader_config.rand_n:
-        random.seed(loader_config.rand_seed)
-        t_fpaths = random.sample(t_fpaths, loader_config.rand_n)
-        v_fpaths = random.sample(v_fpaths, max(1, loader_config.rand_n // 5))
 
     # get training data loader
     cfg = training.dataloading.BlockConfig(
@@ -82,7 +70,7 @@ def get_dataloaders(
         domain_dict=domain_dict
     )
     data = training.dataloading.MultiBlockDataset(
-            fpaths=t_fpaths,
+            blks_dicr=t_fpaths,
             blk_cfg=cfg,
             logger=logger,
             preload=False,              # no preload for larger training data
@@ -104,7 +92,7 @@ def get_dataloaders(
         domain_dict=domain_dict
     )
     data = training.dataloading.MultiBlockDataset(
-            fpaths=v_fpaths,
+            blks_dicr=v_fpaths,
             blk_cfg=cfg,
             logger=logger,
             preload=bool(loader_config.rand_n == 0),# preload if not a test

@@ -27,9 +27,7 @@ def get_components(
         block_size=config.loader.block_size,
         patch_size=config.loader.patch_size,
         batch_size=config.loader.batch_size,
-        stream_cache=config.loader.stream_cache,
-        rand_sample_n=config.loader.rand_sample_n,
-        rand_seed=config.loader.rand_seed
+        stream_cache=config.loader.stream_cache
     )
     data_loaders = training.dataloading.get_dataloaders(
         data_summary=data_summary,

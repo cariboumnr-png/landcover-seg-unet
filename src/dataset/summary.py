@@ -60,8 +60,8 @@ class _Heads:
 @dataclasses.dataclass
 class _Data:
     '''Block file paths of training and validation datasets.'''
-    train: list[str]
-    val: list[str]
+    train: dict[str, str]
+    val: dict[str, str]
 
 @dataclasses.dataclass
 class _Domain:
@@ -119,10 +119,7 @@ def _read_datasets(train_fpaths: str, val_fpaths: str) -> _Data:
     training_blks: dict[str, str] = utils.load_json(train_fpaths)
     validation_blks: dict[str, str] = utils.load_json(val_fpaths)
 
-    training_blks_fpaths = list(training_blks.values())
-    validation_blk_fpaths = list(validation_blks.values())
-
-    return _Data(training_blks_fpaths, validation_blk_fpaths)
+    return _Data(training_blks, validation_blks)
 
 def _heads_stats(fp: str) -> _Heads:
     '''Get label class distribution and logits adjustments.'''
@@ -181,7 +178,7 @@ def _get_domain(fp: str) -> _Domain:
         dom_name_type = _dom_type(dom_sample)
         # assess each domain by its type
         for dom_name, dom_type in dom_name_type.items():
-            if dom_type == 'id':
+            if dom_type == 'ids':
                 # iterate through the domain to get id range
                 ids = set()
                 for dom in domain.values():
@@ -189,7 +186,7 @@ def _get_domain(fp: str) -> _Domain:
                     assert isinstance(v, int) # sanity
                     ids.add(v)
                 meta[dom_name] = {
-                    'type': 'id',
+                    'type': 'ids',
                     'range': [min(ids), max(ids)]
                 }
             if dom_type == 'vec':
@@ -215,7 +212,7 @@ def _dom_type(dom_sample: dict[str, int | list[float]]) -> dict[str, str]:
         meta = {}
         for k, v in dom_sample.items():
             if isinstance(v, int):
-                meta[k] = 'id'
+                meta[k] = 'ids'
             elif isinstance(v, list):
                 meta[k] = 'vec'
             else:

@@ -147,7 +147,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
 
     def __init__(
             self,
-            fpaths: list[str],
+            blks_dicr: dict[str, str],
             blk_cfg: BlockConfig,
             logger: utils.Logger,
             **kwargs
@@ -156,7 +156,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         Initialize the dataset over multiple data blocks (.npz files).
 
         Args:
-            fpaths (list[str]): File paths to block `.npz` files.
+            fpaths (dict[str, str]): Block name: paths to `.npz` files.
             blk_cfg (BlockConfig): Tiling, augmentation & domain config.
             preload (bool): If `True`, load and patchify all blocks into
                 RAM; else stream with an LRU-like cache.
@@ -167,7 +167,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         super().__init__()
 
         # process args
-        self.fpaths = fpaths
+        self.blks = blks_dicr
         self.blk_cfg = blk_cfg
         self.logger = logger
         self.preload = kwargs.get('preload', False)
@@ -182,9 +182,9 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             _imgs = []
             _lbls = []
             self.data.dom = []
-            for fp in tqdm.tqdm(fpaths, ncols=100, desc='Loading blocks'):
-                dom = self._get_domain(fp)
-                blk_data = _BlockDataset(fp, blk_cfg, self.logger, dom)
+            for blk_name, blk_fpath in tqdm.tqdm(blks_dicr.items(), ncols=100):
+                dom = self._get_domain(blk_name)
+                blk_data = _BlockDataset(blk_fpath, blk_cfg, self.logger, dom)
                 _imgs.append(blk_data.imgs)
                 _lbls.append(blk_data.lbls)
                 self.data.dom.extend([blk_data.domain] * blk_cfg.patch_per_blk)
@@ -192,13 +192,13 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self.data.img = numpy.concatenate(_imgs, axis=0)
             self.data.lbl = numpy.concatenate(_lbls, axis=0)
             self._len = int( self.data.img.shape[0])
-            self.logger.log('INFO', f'{len(fpaths)} blocks preloaded into RAM')
+            self.logger.log('INFO', f'{len(blks_dicr)} blocks preloaded into RAM')
 
         # otherwise streaming
         else:
             self.logger.log('INFO', 'Setting up block streaming')
             self.logger.log('DEBUG', f'Config: {blk_cfg}')
-            self._len = self.blk_cfg.patch_per_blk * len(fpaths)
+            self._len = self.blk_cfg.patch_per_blk * len(blks_dicr)
             # below not needed for uniform n
             # n =  self.block_config.patch_per_block
             # self.cumulative_i = [n * i for i in range(len(fpaths) + 1)]
@@ -242,22 +242,22 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         if blk_idx in self.data.img:
             return
         # otherwise proceed
-        fp = self.fpaths[blk_idx]
-        dom = self._get_domain(fp)
-        blk_data = _BlockDataset(fp, self.blk_cfg, self.logger, dom)
+        blk_name = list(self.blks.keys())[blk_idx] # find blk name by block idx
+        blk_fpath = self.blks[blk_name]
+        dom = self._get_domain(blk_name)
+        blk_data = _BlockDataset(blk_fpath, self.blk_cfg, self.logger, dom)
         self.data.img[blk_idx] = blk_data.imgs.astype(numpy.float32)
         self.data.lbl[blk_idx] = blk_data.lbls.astype(numpy.int64)
         self.data.dom[blk_idx] = blk_data.domain
 
-    def _get_domain(self, fp: str) -> dict[str, int | list[float]] | None:
+    def _get_domain(self, blk_name: str) -> dict[str, int | list[float]] | None:
         '''Retrieve the per-block domain dict if available.'''
 
-        blkid = dataset.blocks.parse_block_name(fp).name #TODO
         if self.blk_cfg.domain_dict is not None:
-            blk_domain = self.blk_cfg.domain_dict.get(blkid)
+            blk_domain = self.blk_cfg.domain_dict.get(blk_name)
             # relaxed check allowing block with empty or missing domain
             if not isinstance(blk_domain, dict) or len(blk_domain) == 0:
-                self.logger.log('WARNING', f'Empty/missing domain for {blkid}')
+                self.logger.log('WARNING', f'Invalid domain for {blk_name}')
                 return None
             return blk_domain
         return None
