@@ -6,7 +6,6 @@ import functools
 import omegaconf
 # local imports
 import dataset
-import dataset.summary
 import utils
 
 def prepare_data(
@@ -15,13 +14,13 @@ def prepare_data(
         logger: utils.Logger,
         *,
         mode: str
-    ) -> dataset.summary.DataSummary:
+    ) -> dataset.DataSummary:
     '''Data preparation pipeline.'''
 
     # if skip data preperation, e.g., continue training on existing data
     if mode == 'skip':
         # run data summary and return
-        summary = dataset.summary.generate(dataset_name, config.cache)
+        summary = dataset.generate_summary(dataset_name, config.cache)
         return summary
 
     # otherwise prepare partially filed building functions
@@ -84,5 +83,5 @@ def prepare_data(
         )
 
     # run data summary and return
-    summary = dataset.summary.generate(dataset_name, config.cache)
+    summary = dataset.generate_summary(dataset_name, config.cache)
     return summary

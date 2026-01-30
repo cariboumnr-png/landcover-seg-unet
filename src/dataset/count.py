@@ -9,7 +9,7 @@ import tqdm
 import dataset
 import utils
 
-# --------------------class distribution of each label layer--------------------
+# -------------------------------Public Function-------------------------------
 def count_label_cls(
         blks_fpaths: str,
         results_fpath: str,

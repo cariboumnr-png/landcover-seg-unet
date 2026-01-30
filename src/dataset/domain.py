@@ -12,6 +12,7 @@ import rasterio
 import _types
 import utils
 
+# --------------------------------Public  Class--------------------------------
 class DomainBlocks:
     '''doc'''
 
@@ -138,6 +139,7 @@ class DomainBlocks:
             assert abs(nodata - round(nodata)) < 1e-9 # nodata is a round number
         return int(nodata)
 
+# --------------------------------private class--------------------------------
 class _DomainConversion:
     '''doc'''
 
@@ -215,6 +217,7 @@ class _DomainConversion:
         # return
         return numpy.array([freq_map.get(idx, 0.0) for idx in range(i, j + 1)])
 
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _DomainRasterBlock:
     '''doc'''
@@ -233,6 +236,7 @@ class _DomainProcessingContext:
     layout_dict: dict[str, _types.RasterWindow]
     cfg: _types.ConfigType
 
+# -------------------------------Public Function-------------------------------
 def build_domains(
         dataset_name: str,
         input_config: _types.ConfigType,
@@ -279,6 +283,7 @@ def build_domains(
     logger.log('INFO', 'Domain knowlage parsed')
     logger.log_sep()
 
+# ------------------------------private  function------------------------------
 def _build(
         contxt: _DomainProcessingContext,
         domain_save_fpath: str,
@@ -314,12 +319,12 @@ def _build(
         domains.append({d['block_name']: d for d in domain_blks.domain_list})
 
     # merge domains and write to csv
-    merged = _merge_domain(domains)
+    merged = _merge(domains)
     utils.write_json(domain_save_fpath, merged)
     logger.log('INFO', f'Domain knowledge saved to: {domain_save_fpath}')
     return merged
 
-def _merge_domain(list_domains: list[dict]) -> list[dict]:
+def _merge(list_domains: list[dict]) -> list[dict]:
     '''doc.'''
 
     merged = []

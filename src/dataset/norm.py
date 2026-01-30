@@ -12,6 +12,7 @@ import _types
 import dataset
 import utils
 
+# -------------------------------Public Function-------------------------------
 def normalize_dataset(
         dataset_name: str,
         cache_config: _types.ConfigType,
@@ -67,7 +68,8 @@ def normalize_dataset(
         overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
     )
 
-# -------------global image stats aggregated from selected blocks-------------
+# ------------------------------private  function------------------------------
+# global image stats aggregated from selected blocks
 def _get_image_stats(
         blks_fpaths: str,
         stats_fpath: str,
@@ -176,7 +178,7 @@ def _welfords_online(
     current_results['accum_m2'] = dt
     return current_results
 
-# -------------normalized selected blocks using global image stats-------------
+# normalize blocks using global image stats
 def _normalize_blocks(
         blks_fpaths: str,
         stats_fpath: str,

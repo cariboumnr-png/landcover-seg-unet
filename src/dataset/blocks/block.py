@@ -33,7 +33,6 @@ any raster I/O.
 - Topographic metrics use small neighborhoods and computed per pixel.
 '''
 
-from __future__ import annotations
 # standard imports
 import dataclasses
 import json
@@ -41,8 +40,9 @@ import math
 # third party imports
 import numpy
 # local imports
-import dataset.blocks
+import dataset
 
+# --------------------------------Public  Class--------------------------------
 class DataBlock:
     '''Data block compiled from input label and image rasters.'''
 
@@ -52,7 +52,7 @@ class DataBlock:
         # init with empty block data
         self.data = _Data()
         # meta dict with default foo values
-        self.meta: dataset.blocks.BlockCreationOptions = {
+        self.meta: dataset.BlockCreationOptions = {
             'block_name': '',
             'block_shape': (0, 0),
             'valid_pixel_ratio': {},
@@ -80,7 +80,7 @@ class DataBlock:
             img_arr: numpy.ndarray,
             lbl_arr: numpy.ndarray | None,
             padded_dem: numpy.ndarray,
-            meta: dataset.blocks.BlockCreationOptions
+            meta: dataset.BlockCreationOptions
         ) -> 'DataBlock':
         '''
         Create a new block instance from raw input raster(s).
@@ -466,7 +466,7 @@ class DataBlock:
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
-# ---------------------------------Caculators---------------------------------
+# --------------------------------private class--------------------------------
 class _Calc:
     '''Calculator namespace.'''
     # spectral indices related
@@ -548,7 +548,7 @@ class _Calc:
         # valid arr
         return centre - (masked.sum() - centre) / (masked.count() - 1)
 
-# ------------------------------block data class------------------------------
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _Data:
     '''Simple dataclass for block-wise image/label data.'''

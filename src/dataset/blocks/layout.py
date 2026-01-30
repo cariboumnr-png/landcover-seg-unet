@@ -2,7 +2,7 @@
 Public Class:
     RasterBlocks(): Generates and stores blocks from input raster(s).
 '''
-from __future__ import annotations
+
 # standard imports
 import dataclasses
 import math
@@ -16,6 +16,7 @@ import rasterio.transform
 import _types
 import utils
 
+# --------------------------------Public  Class--------------------------------
 class BlockLayout:
     '''
     Ingest image and/or label rasters and create a tiling scheme.
@@ -358,7 +359,7 @@ class BlockLayout:
         # otherwise
         return False
 
-# ------------------------------block name helper------------------------------
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _BlockName:
     '''Simple class to define block name from column and row number.'''

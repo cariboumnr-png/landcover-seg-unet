@@ -1,7 +1,7 @@
 '''Summarize the existing cache blocks and generate metadata.'''
 
-from __future__ import annotations
 # standard imports
+from __future__ import annotations
 import dataclasses
 import math
 import os
@@ -11,6 +11,7 @@ import _types
 import dataset
 import utils
 
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DataSummary:
     '''doc'''
@@ -44,6 +45,7 @@ class DataSummary:
             f'Domain knowledge includes: {self.dom.meta}'
         ])
 
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _Meta:
     '''Metadata.'''
@@ -70,7 +72,8 @@ class _Domain:
     data: dict[str, dict[str, int | list[float]]] | None
     meta: dict[str, dict[str, str | int | list]] | None
 
-def generate(
+# -------------------------------Public Function-------------------------------
+def generate_summary(
         dataset_name: str,
         cache_config: _types.ConfigType
     ) -> DataSummary:
@@ -112,6 +115,7 @@ def generate(
         )
     )
 
+# ------------------------------private  function------------------------------
 def _read_rand_block_meta(validblks_fpath: str) -> _Meta:
     '''Retrieve meta from a random valid block file.'''
 

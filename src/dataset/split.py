@@ -11,7 +11,7 @@ import _types
 import dataset
 import utils
 
-# public API
+# -------------------------------Public Function-------------------------------
 def split_dataset(
         dataset_name: str,
         cache_config: _types.ConfigType,
@@ -47,7 +47,8 @@ def split_dataset(
     # split datasets according to scores
     split(training_dir, cache_cfg, logger)
 
-# ----------score all valid blocks based on label class distribution----------
+# ------------------------------private  function------------------------------
+# score all valid blocks based on label class distribution
 def score(
         training_dir: str,
         cache_cfg: utils.ConfigAccess,
@@ -175,6 +176,7 @@ def _weighted_l1_w_reward(
     bonus = sum(max(0, q[i] - p[i]) for i in reward_cls) * beta
     return float(w_l1 - bonus)
 
+# split training blocks into training and validation dataset
 def split(
         training_dir: str,
         cache_cfg: utils.ConfigAccess,

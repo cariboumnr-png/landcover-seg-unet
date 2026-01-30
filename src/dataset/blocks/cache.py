@@ -1,7 +1,7 @@
 '''Data blocks preperation pipeline.'''
 
-from __future__ import annotations
 # standard imports
+from __future__ import annotations
 import copy
 import dataclasses
 import os
@@ -16,12 +16,13 @@ import _types
 import dataset
 import utils
 
+# --------------------------------Public  Class--------------------------------
 class BlockCache:
     '''doc'''
 
     def __init__(
             self,
-            config: BlockCacheConfig,
+            config: _BlockCacheConfig,
             logger: utils.Logger,
         ):
         '''doc'''
@@ -80,7 +81,7 @@ class BlockCache:
         if not skip:
             self.logger.log('INFO', 'Checking block .npz files')
             # parallel processing
-            jobs = [(_valid_npz, (f,), {}) for f in self.square_blocks.values()]
+            jobs = [(_valid_npz, (f,), {}) for f in self.square_blks.values()]
             results: list[dict[str, str]] = utils.ParallelExecutor().run(jobs)
             # parse results
             invalid = []
@@ -123,8 +124,8 @@ class BlockCache:
         # prep block creation arguments
         img = self.cfg.data.image_fpath
         lbl = self.cfg.data.label_fpath
-        config: BlockConfig = utils.load_json(self.cfg.data.config_fpath)
-        lookup = self.square_blocks
+        config: _BlockConfig = utils.load_json(self.cfg.data.config_fpath)
+        lookup = self.square_blks
         jobs = [(_do_a_blk, (b, img, lbl, config, lookup,), {}) for b in todo.items()]
         # parallel processing through all raster windows
         results = utils.ParallelExecutor().run(jobs)
@@ -136,7 +137,7 @@ class BlockCache:
                     self.logger.log('WARNING', f'{s}')
 
         # write an artifect: square block list
-        utils.write_json(self.cfg.output.square_blks, self.square_blocks)
+        utils.write_json(self.cfg.output.square_blks, self.square_blks)
 
     def validate_cache(self, overwrite: bool) -> None:
         '''Get a list of file paths of the valid block with given thres.'''
@@ -167,7 +168,7 @@ class BlockCache:
         # prep block validation arguments
         val_px = self.cfg.thres.valid_px_ratio
         kw = {'water_px_ratio': self.cfg.thres.water_px_ratio}
-        all_blks = self.square_blocks
+        all_blks = self.square_blks
         jobs = [(_valid_block, (b, val_px,), kw) for b in all_blks.items()]
         # parallel processing through all blocks
         results: list[dict] = utils.ParallelExecutor().run(jobs)
@@ -181,7 +182,7 @@ class BlockCache:
 
     # -------------------------------properties-------------------------------
     @property
-    def square_blocks(self) -> dict[str, str]:
+    def square_blks(self) -> dict[str, str]:
         '''Expected block (square) file list from layout.'''
         if self.layout_dict is not None:
             return {
@@ -195,11 +196,11 @@ class BlockCache:
         '''Blocks in `block_fpath_list` but in cache dir.'''
         existing = set(os.listdir(self.cfg.output.blks_dpath)) # filenames
         return{
-            name: path for name, path in self.square_blocks.items()
+            name: path for name, path in self.square_blks.items()
             if os.path.basename(path) not in existing # also filenames
         }
 
-# ------------------------------helper functions------------------------------
+# ---------------------BlockCache related helper functions---------------------
 def _valid_npz(blk_fpath: str) -> dict[str, str]:
     '''Check if a .npz block file is corrupted.'''
 
@@ -343,25 +344,24 @@ def _valid_block(
     # if all checks passed
     return {'valid': name}
 
-# -----------------------------config dataclasses-----------------------------
-# composite config
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class BlockCacheConfig:
+class _BlockCacheConfig:
     '''Config for `RasterBlockCache`.'''
-    data: DataPaths
-    output: OutputPaths
-    block: BlockConfig
-    thres: ValidThresholds | None # none for inference blocks
+    data: _DataPaths
+    output: _OutputPaths
+    block: _BlockConfig
+    thres: _ValidThresholds | None # none for inference blocks
 
 @dataclasses.dataclass
-class DataPaths:
+class _DataPaths:
     '''Collection of file paths to raw data.'''
     image_fpath: str            # path to raw image data (.tiff)
     label_fpath: str | None     # path to raw label data (.tiff)
     config_fpath: str             # path to raw metadata (.json)
 
 @dataclasses.dataclass
-class OutputPaths:
+class _OutputPaths:
     '''Collection of cache file paths.'''
     blks_dpath: str     # dirpath to save block files
     layout_dict: str    # filepath (.pkl) to save the block layout
@@ -370,25 +370,62 @@ class OutputPaths:
     valid_blks: str     # filepath (.json) to save a dict of valid block files
 
 @dataclasses.dataclass
-class BlockConfig:
+class _BlockConfig:
     '''Block layout config.'''
     blk_size: int
     overlap: int
 
 @dataclasses.dataclass
-class ValidThresholds:
+class _ValidThresholds:
     '''Block validation thresholds.'''
     valid_px_ratio: float
     water_px_ratio: float
 
-# ---------------------------factory-like functions---------------------------
-def _get_block_cache_config(
+# -------------------------------Public Function-------------------------------
+def build_data_cache(
+        dataset_name: str,
+        input_config: _types.ConfigType,
+        cache_config: _types.ConfigType,
+        logger: utils.Logger,
+        mode: str,
+    ) -> None:
+    '''Create cache blocks from scratch'''
+
+    # get a child logger
+    _logger = logger.get_child('cache')
+
+    # make root path if not exist
+    cache_dir = f'./data/{dataset_name}/cache'
+    os.makedirs(cache_dir, exist_ok=True)
+
+    # build by mode
+    # get config for RasterBlockCache
+    _logger.log('INFO', f'Building {mode} block cache')
+    cache_cfg = _get_config(
+        mode=mode,
+        cache_dpath=cache_dir,
+        dataset_name=dataset_name,
+        input_config=input_config,
+        cache_config=cache_config
+    )
+    # get creation options
+    options = _get_creation_options(
+        mode=mode,
+        cache_config=cache_config
+    )
+    # process
+    _ = BlockCache(cache_cfg, _logger).process(**options)
+    _logger.log('INFO', f'Building {mode} block cache - completed')
+    _logger.log_sep()
+
+# ------------------------------private  function------------------------------
+def _get_config(
         mode: str,
         cache_dpath: str,
         dataset_name: str,
         input_config: _types.ConfigType,
         cache_config: _types.ConfigType,
-    ) -> BlockCacheConfig:
+    ) -> _BlockCacheConfig:
     '''Factory function to create BlockCacheConfig from config mappings.'''
 
     # cache root dir
@@ -401,20 +438,20 @@ def _get_block_cache_config(
     # compose cache config conomponents
     # data paths
     if mode == 'training':
-        data_cfg = DataPaths(
+        data_cfg = _DataPaths(
             image_fpath=input_cfg.get_asset(mode, 'images', dataset_name),
             label_fpath=input_cfg.get_asset(mode, 'labels', dataset_name),
             config_fpath=input_cfg.get_option('config')
         )
     else: # inference
-        data_cfg = DataPaths(
+        data_cfg = _DataPaths(
             image_fpath=input_cfg.get_asset(mode, 'images', dataset_name),
             label_fpath=None,
             config_fpath=input_cfg.get_option('config')
         )
 
     # output paths
-    output_cfg = OutputPaths(
+    output_cfg = _OutputPaths(
         f'{_dir}/blocks',
         f'{_dir}/{cache_cfg.get_asset('artifacts', 'blocks', 'layout_dict')}',
         f'{_dir}/{cache_cfg.get_asset('artifacts', 'blocks', 'layout_meta')}',
@@ -423,13 +460,13 @@ def _get_block_cache_config(
     )
 
     # block config
-    block_cfg = BlockConfig(
+    block_cfg = _BlockConfig(
         cache_cfg.get_option('blocks', 'size'),
         cache_cfg.get_option('blocks','overlap')
     )
 
     # validation thresholds
-    thres = ValidThresholds(
+    thres = _ValidThresholds(
         cache_cfg.get_option('filters', 'valid_px_thres'),
         cache_cfg.get_option('filters', 'water_px_thres')
     )
@@ -441,9 +478,9 @@ def _get_block_cache_config(
     os.makedirs(f'{_dir}/blocks', exist_ok=True)
 
     # return composite config
-    return BlockCacheConfig(data_cfg, output_cfg, block_cfg, thres)
+    return _BlockCacheConfig(data_cfg, output_cfg, block_cfg, thres)
 
-def _get_cache_creation_options(
+def _get_creation_options(
         mode: str,
         cache_config: _types.ConfigType
     ) -> dict[str, bool]:
@@ -465,39 +502,3 @@ def _get_cache_creation_options(
         'overwrite_cache': _get_option('flags', 'overwrite_cache'),
         'validate_cache': False # no validation for inference blocks
     }
-
-def build_data_cache(
-        dataset_name: str,
-        input_config: _types.ConfigType,
-        cache_config: _types.ConfigType,
-        logger: utils.Logger,
-        mode: str,
-    ) -> None:
-    '''Create cache blocks from scratch'''
-
-    # get a child logger
-    _logger = logger.get_child('cache')
-
-    # make root path if not exist
-    cache_dir = f'./data/{dataset_name}/cache'
-    os.makedirs(cache_dir, exist_ok=True)
-
-    # build by mode
-    # get config for RasterBlockCache
-    _logger.log('INFO', f'Building {mode} block cache')
-    cache_cfg = _get_block_cache_config(
-        mode=mode,
-        cache_dpath=cache_dir,
-        dataset_name=dataset_name,
-        input_config=input_config,
-        cache_config=cache_config
-    )
-    # get creation options
-    options = _get_cache_creation_options(
-        mode=mode,
-        cache_config=cache_config
-    )
-    # process
-    _ = BlockCache(cache_cfg, _logger).process(**options)
-    _logger.log('INFO', f'Building {mode} block cache - completed')
-    _logger.log_sep()

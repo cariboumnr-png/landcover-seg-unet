@@ -12,45 +12,44 @@ import typing
 
 __all__ = [
     # classes
+    'BlockLayout',
     'DataBlock',
     'DataSummary',
     # functions
     'build_data_cache',
     'build_domains',
     'count_label_cls',
+    'generate_summary',
     'normalize_dataset',
     'prepare_data',
     'split_dataset',
-    # typing
-    'BlockCreationOptions',
-    'BlockLayout',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .blocks import BlockCreationOptions, DataBlock, BlockLayout, build_data_cache
+    from .blocks import DataBlock, BlockLayout, build_data_cache
     from .count import count_label_cls
     from .domain import build_domains
     from .factory import prepare_data
     from .norm import normalize_dataset
     from .split import split_dataset
-    from .summary import DataSummary
+    from .summary import DataSummary, generate_summary
 
 def __getattr__(name: str):
 
-    if name in ['BlockCreationOptions','DataBlock', 'BlockLayout', 'build_data_cache']:
+    if name in ['DataBlock', 'BlockLayout', 'build_data_cache']:
         return getattr(importlib.import_module('.blocks', __package__), name)
     if name in ['count_label_cls']:
         return getattr(importlib.import_module('.count', __package__), name)
-    if name == 'build_domains':
-        return importlib.import_module('.domain', __package__).build_domains
-    if name == 'prepare_data':
-        return importlib.import_module('.factory', __package__).prepare_data
-    if name == 'normalize_dataset':
-        return importlib.import_module('.norm', __package__).normalize_dataset
-    if name == 'split_dataset':
-        return importlib.import_module('.split', __package__).split_dataset
-    if name == 'DataSummary':
-        return importlib.import_module('.summary', __package__).DataSummary
+    if name in ['build_domains']:
+        return getattr(importlib.import_module('.domain', __package__), name)
+    if name in ['prepare_data']:
+        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in ['normalize_dataset']:
+        return getattr(importlib.import_module('.norm', __package__), name)
+    if name in ['split_dataset']:
+        return getattr(importlib.import_module('.split', __package__), name)
+    if name in ['DataSummary', 'generate_summary']:
+        return getattr(importlib.import_module('.summary', __package__), name)
 
     raise AttributeError(name)
