@@ -18,7 +18,7 @@ __all__ = [
     'build_data_cache',
     'build_domains',
     'count_label_cls',
-    'normalize_datasets',
+    'normalize_dataset',
     'prepare_data',
     'split_dataset',
     # typing
@@ -32,7 +32,7 @@ if typing.TYPE_CHECKING:
     from .count import count_label_cls
     from .domain import build_domains
     from .factory import prepare_data
-    from .norm import normalize_datasets
+    from .norm import normalize_dataset
     from .split import split_dataset
     from .summary import DataSummary
 
@@ -46,8 +46,8 @@ def __getattr__(name: str):
         return importlib.import_module('.domain', __package__).build_domains
     if name == 'prepare_data':
         return importlib.import_module('.factory', __package__).prepare_data
-    if name == 'normalize_datasets':
-        return importlib.import_module('.norm', __package__).normalize_datasets
+    if name == 'normalize_dataset':
+        return importlib.import_module('.norm', __package__).normalize_dataset
     if name == 'split_dataset':
         return importlib.import_module('.split', __package__).split_dataset
     if name == 'DataSummary':

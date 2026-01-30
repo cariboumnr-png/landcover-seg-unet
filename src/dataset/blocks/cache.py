@@ -471,6 +471,7 @@ def build_data_cache(
         input_config: _types.ConfigType,
         cache_config: _types.ConfigType,
         logger: utils.Logger,
+        mode: str,
     ) -> None:
     '''Create cache blocks from scratch'''
 
@@ -481,11 +482,11 @@ def build_data_cache(
     cache_dir = f'./data/{dataset_name}/cache'
     os.makedirs(cache_dir, exist_ok=True)
 
-    # training mode
+    # build by mode
     # get config for RasterBlockCache
-    _logger.log('INFO', 'Building training block cache')
+    _logger.log('INFO', f'Building {mode} block cache')
     cache_cfg = _get_block_cache_config(
-        mode='training',
+        mode=mode,
         cache_dpath=cache_dir,
         dataset_name=dataset_name,
         input_config=input_config,
@@ -493,30 +494,10 @@ def build_data_cache(
     )
     # get creation options
     options = _get_cache_creation_options(
-        mode='training',
+        mode=mode,
         cache_config=cache_config
     )
     # process
     _ = BlockCache(cache_cfg, _logger).process(**options)
-    _logger.log('INFO', 'Training cache building completed')
-    _logger.log_sep()
-
-    # inference mode
-    # get config for RasterBlockCache
-    _logger.log('INFO', 'Building inference block cache')
-    cache_cfg = _get_block_cache_config(
-        mode='inference',
-        cache_dpath=cache_dir,
-        dataset_name=dataset_name,
-        input_config=input_config,
-        cache_config=cache_config
-    )
-    # get creation options
-    options = _get_cache_creation_options(
-        mode='inference',
-        cache_config=cache_config
-    )
-    # process
-    _ = BlockCache(cache_cfg, _logger).process(**options)
-    _logger.log('INFO', 'Inference cache building completed')
+    _logger.log('INFO', f'Building {mode} block cache - completed')
     _logger.log_sep()

@@ -232,13 +232,13 @@ class _DomainProcessingContext:
     blks_dict: dict[str, str]
     layout_dict: dict[str, _types.RasterWindow]
     cfg: _types.ConfigType
-    overwrite: bool
 
 def build_domains(
         dataset_name: str,
         input_config: _types.ConfigType,
         cache_config: _types.ConfigType,
         logger: utils.Logger,
+        mode: str,
     ):
     '''Inspect domain knowledge config and take actions accordingly.'''
 
@@ -252,65 +252,45 @@ def build_domains(
     input_cfg = utils.ConfigAccess(input_config)
     cache_cfg = utils.ConfigAccess(cache_config)
 
-    # get overwrite option
-    overwrite = cache_cfg.get_option('flags', 'overwrite_domain')
-
-    # get input files
-    disc_domains: list[dict] = input_cfg.get_option('domain', 'disc') or []
-    cont_domains: list[dict] = input_cfg.get_option('domain', 'cont') or []
-    domain_cfg = input_cfg.get_option('config')
-
     # get artifacts names
     blks_layout = cache_cfg.get_asset('artifacts', 'blocks', 'layout_dict')
-    valid_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    if mode == 'training':
+        _blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    elif mode == 'inference':
+        _blks = cache_cfg.get_asset('artifacts', 'blocks', 'square')
+    else:
+        raise ValueError('Mode must be either "training" or "inference".')
     domain_dict = cache_cfg.get_asset('artifacts', 'domain', 'by_block')
 
-    # mode selection
-    # training mode
-    mode = 'training'
-    logger.log('INFO', 'Adding domain to training blocks')
-    _parse(
+    # build according to mode
+    logger.log('INFO', f'Adding domain to {mode} blocks')
+    _build(
         contxt=_DomainProcessingContext(
-            disc_domains=disc_domains,
-            cont_domains=cont_domains,
-            blks_dict=utils.load_json(f'{cache_dir}/{mode}/{valid_blks}'),
+            disc_domains=input_cfg.get_option('domain', 'disc') or [],
+            cont_domains=input_cfg.get_option('domain', 'cont') or [],
+            blks_dict=utils.load_json(f'{cache_dir}/{mode}/{_blks}'),
             layout_dict=utils.load_pickle(f'{cache_dir}/{mode}/{blks_layout}'),
-            cfg=utils.load_json(domain_cfg),
-            overwrite=overwrite
+            cfg=utils.load_json(input_cfg.get_option('config'))
         ),
-        domain_fpath=f'{cache_dir}/{mode}/{domain_dict}',
-        logger=logger
-    )
-
-    # inference mode
-    mode = 'inference'
-    logger.log('INFO', 'Adding domain to inference blocks')
-    _parse(
-        contxt=_DomainProcessingContext(
-            disc_domains=disc_domains,
-            cont_domains=cont_domains,
-            blks_dict=utils.load_json(f'{cache_dir}/{mode}/{valid_blks}'),
-            layout_dict=utils.load_pickle(f'{cache_dir}/{mode}/{blks_layout}'),
-            cfg=utils.load_json(domain_cfg),
-            overwrite=overwrite
-        ),
-        domain_fpath=f'{cache_dir}/{mode}/{domain_dict}',
-        logger=logger
+        domain_save_fpath=f'{cache_dir}/{mode}/{domain_dict}',
+        logger=logger,
+        overwrite=cache_cfg.get_option('flags', 'overwrite_domain')
     )
     logger.log('INFO', 'Domain knowlage parsed')
     logger.log_sep()
 
-def _parse(
+def _build(
         contxt: _DomainProcessingContext,
-        domain_fpath: str,
-        logger: utils.Logger
+        domain_save_fpath: str,
+        logger: utils.Logger,
+        overwrite: bool
     ):
     '''doc'''
 
     # check if already generated
-    if os.path.exists(domain_fpath) and not contxt.overwrite:
-        logger.log('INFO', f'Existing domain knowledge at: {domain_fpath}')
-        return utils.load_json(domain_fpath)
+    if os.path.exists(domain_save_fpath) and not overwrite:
+        logger.log('INFO', f'Existing domain knowledge: {domain_save_fpath}')
+        return utils.load_json(domain_save_fpath)
 
     # setup
     domains: list[dict] = []
@@ -335,8 +315,8 @@ def _parse(
 
     # merge domains and write to csv
     merged = _merge_domain(domains)
-    utils.write_json(domain_fpath, merged)
-    logger.log('INFO', f'Domain knowledge saved to: {domain_fpath}')
+    utils.write_json(domain_save_fpath, merged)
+    logger.log('INFO', f'Domain knowledge saved to: {domain_save_fpath}')
     return merged
 
 def _merge_domain(list_domains: list[dict]) -> list[dict]:

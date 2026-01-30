@@ -28,10 +28,10 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # data preparation
     data_summary = src.dataset.prepare_data(
-        dataset_name='demo',
+        dataset_name=config.dataprep.dataset_name,
         config=config.dataset,
         logger=logger,
-        skip=config.skip.dataprep
+        mode=config.dataprep.mode
     )
     print(data_summary)
 

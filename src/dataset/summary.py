@@ -62,6 +62,7 @@ class _Data:
     '''Block file paths of training and validation datasets.'''
     train: dict[str, str]
     val: dict[str, str]
+    infer: dict[str, str] | None
 
 @dataclasses.dataclass
 class _Domain:
@@ -80,25 +81,35 @@ def generate(
 
     # get artifacts names
     lbl_count = cache_cfg.get_asset('artifacts', 'label', 'count_training')
+    square_blks = cache_cfg.get_asset('artifacts', 'blocks', 'square')
     valid_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
     training_blks = cache_cfg.get_asset('artifacts', 'split', 'training')
     validation_blks = cache_cfg.get_asset('artifacts', 'split', 'validation')
     domain_dict = cache_cfg.get_asset('artifacts', 'domain', 'by_block')
 
     # training blocks dirpath and artifact filepaths
-    _dir = f'./data/{dataset_name}/cache/training'
-    train_lblstats_fpath = os.path.join(_dir, lbl_count)
-    blks_fpath = os.path.join(_dir, valid_blks)
-    train_datablks_fpaths = os.path.join(_dir, training_blks)
-    val_datablks_fpaths = os.path.join(_dir, validation_blks)
-    domain_fpath = os.path.join(_dir, domain_dict)
+    train_dir = f'./data/{dataset_name}/cache/training'
+    # if inference blocks are present
+    infer_dir = f'./data/{dataset_name}/cache/inference'
+    _p = os.path.join(infer_dir, square_blks)
+    square_blks_fpath = _p if os.path.exists(_p) else None
 
     # return the data summary dataclass
     return DataSummary(
-        meta=_read_rand_block_meta(blks_fpath),
-        heads=_heads_stats(train_lblstats_fpath),
-        data=_read_datasets(train_datablks_fpaths, val_datablks_fpaths),
-        dom=_get_domain(domain_fpath)
+        meta=_read_rand_block_meta(
+            validblks_fpath=os.path.join(train_dir, valid_blks)
+        ),
+        heads=_heads_stats(
+            label_count_fpath=os.path.join(train_dir, lbl_count)
+        ),
+        data=_read_datasets(
+            train_blks_fpath=os.path.join(train_dir, training_blks),
+            val_blks_fpath=os.path.join(train_dir, validation_blks),
+            infer_blks_fpath=square_blks_fpath
+        ),
+        dom=_get_domain(
+            domain_fpath = os.path.join(train_dir, domain_dict)
+        )
     )
 
 def _read_rand_block_meta(validblks_fpath: str) -> _Meta:
@@ -112,16 +123,24 @@ def _read_rand_block_meta(validblks_fpath: str) -> _Meta:
     # return
     return _Meta(blk.meta['ignore_label'], blk.data.image_normalized.shape[0])
 
-def _read_datasets(train_fpaths: str, val_fpaths: str) -> _Data:
+def _read_datasets(
+        train_blks_fpath: str,
+        val_blks_fpath: str,
+        infer_blks_fpath: str | None
+    ) -> _Data:
     '''Get data file lists.'''
 
-    # training and validation datasets
-    training_blks: dict[str, str] = utils.load_json(train_fpaths)
-    validation_blks: dict[str, str] = utils.load_json(val_fpaths)
+    # training and validation datasets (must both be present)
+    training_blks: dict[str, str] = utils.load_json(train_blks_fpath)
+    validation_blks: dict[str, str] = utils.load_json(val_blks_fpath)
+    # inference blocks (optional)
+    inference_blks: dict[str, str] | None = None
+    if infer_blks_fpath is not None:
+        inference_blks = utils.load_json(infer_blks_fpath)
+    # return
+    return _Data(training_blks, validation_blks, inference_blks)
 
-    return _Data(training_blks, validation_blks)
-
-def _heads_stats(fp: str) -> _Heads:
+def _heads_stats(label_count_fpath: str) -> _Heads:
     '''Get label class distribution and logits adjustments.'''
 
     # set up
@@ -130,7 +149,7 @@ def _heads_stats(fp: str) -> _Heads:
     topology: dict[str, dict[str, str | int | None]] = {}
 
     # iterate through label counts (training dataset)
-    lbl_count = utils.load_json(fp)
+    lbl_count = utils.load_json(label_count_fpath)
     for layer_name, counts in lbl_count.items():
         if layer_name == 'original_label': # skip this for now
             continue
@@ -158,14 +177,14 @@ def _la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_domain(fp: str) -> _Domain:
+def _get_domain(domain_fpath: str) -> _Domain:
     '''Read domain data with type checks'''
 
     # index domain by block name if provided
-    if os.path.exists(fp):
+    if os.path.exists(domain_fpath):
         domain: dict[str, dict[str, int | list[float]]] = {}
         meta: dict[str, dict[str, str | int | list]] = {}
-        domain_src = utils.load_json(fp)
+        domain_src = utils.load_json(domain_fpath)
         assert isinstance(domain_src, list)
         # iterate through the original loaded json
         for dom in domain_src:

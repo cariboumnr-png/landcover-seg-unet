@@ -12,10 +12,11 @@ import _types
 import dataset
 import utils
 
-def normalize_datasets(
+def normalize_dataset(
         dataset_name: str,
         cache_config: _types.ConfigType,
-        logger: utils.Logger
+        logger: utils.Logger,
+        mode: str
     ):
     '''doc'''
 
@@ -25,58 +26,41 @@ def normalize_datasets(
     # config accessors
     cache_cfg = utils.ConfigAccess(cache_config)
 
-    # get artifacts names (same between training and inference datasets)
+    # get artifacts names
     lbl_count = cache_cfg.get_asset('artifacts', 'label', 'count_training')
-    valid_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    if mode == 'training':
+        work_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    elif mode == 'inference':
+        work_blks = cache_cfg.get_asset('artifacts', 'blocks', 'square')
+    else:
+        raise ValueError('Mode must be either "training" or "inference".')
     image_stats = cache_cfg.get_asset('artifacts', 'image', 'stats')
 
-    # -----------------------------training blocks-----------------------------
-    # training blocks dirpath and artifact filepaths
-    _dir = f'./data/{dataset_name}/cache/training'
+    # training or inference blocks dirpath and artifact filepaths
+    _dir = f'./data/{dataset_name}/cache/{mode}'
     lbl_count_fpath = os.path.join(_dir, lbl_count)
-    blks_fpath = os.path.join(_dir, valid_blks)
+    blks_fpath = os.path.join(_dir, work_blks)
     stats_fpath = os.path.join(_dir, image_stats)
 
-    # count label classes on training blocks
-    dataset.count_label_cls(
-        blks_fpaths=blks_fpath,
-        results_fpath=lbl_count_fpath,
-        logger=logger,
-        overwrite=cache_cfg.get_option('flags', 'overwrite_counts')
-    )
+    # count label classes only on training blocks
+    if mode == 'training':
+        dataset.count_label_cls(
+            blks_fpaths=blks_fpath,
+            results_fpath=lbl_count_fpath,
+            logger=logger,
+            overwrite=cache_cfg.get_option('flags', 'overwrite_counts')
+        )
 
-    # get image stats on training blocks
-    get_image_stats(
-        blks_fpaths=blks_fpath,
-        stats_fpath=stats_fpath,
-        logger=logger,
-        overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
-    )
-
-    # normalize training blocks
-    normalize_blocks(
+    # get image stats on blocks
+    _get_image_stats(
         blks_fpaths=blks_fpath,
         stats_fpath=stats_fpath,
         logger=logger,
         overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
     )
 
-    # ----------------------------inference blocks----------------------------
-    # inference blocks dirpath and artifact filepaths
-    _dir = f'./data/{dataset_name}/cache/inference'
-    blks_fpath = os.path.join(_dir, valid_blks)
-    stats_fpath = os.path.join(_dir, image_stats)
-
-    # get image stats on training blocks
-    get_image_stats(
-        blks_fpaths=blks_fpath,
-        stats_fpath=stats_fpath,
-        logger=logger,
-        overwrite=cache_cfg.get_option('flags', 'overwrite_stats')
-    )
-
-    # normalize training blocks
-    normalize_blocks(
+    # normalize blocks
+    _normalize_blocks(
         blks_fpaths=blks_fpath,
         stats_fpath=stats_fpath,
         logger=logger,
@@ -84,7 +68,7 @@ def normalize_datasets(
     )
 
 # -------------global image stats aggregated from selected blocks-------------
-def get_image_stats(
+def _get_image_stats(
         blks_fpaths: str,
         stats_fpath: str,
         logger: utils.Logger,
@@ -193,7 +177,7 @@ def _welfords_online(
     return current_results
 
 # -------------normalized selected blocks using global image stats-------------
-def normalize_blocks(
+def _normalize_blocks(
         blks_fpaths: str,
         stats_fpath: str,
         logger: utils.Logger,

@@ -14,5 +14,7 @@ seed: 42
 test:
   # if not zero randomly select n training blocks and n/5 validation blocks
   rand_sample_n: 0
-skip:
-  dataprep: False
+# can be skip, training, inference, training+inference
+dataprep:
+  dataset_name: demo
+  mode: train_only
