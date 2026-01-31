@@ -21,7 +21,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .conf_matrix import ConfusionMatrix
-    from .typing import ConfusionMatrixConfig
+    from ._types import ConfusionMatrixConfig
     from .factory import build_headmetrics
     from .validator import is_cm_config
 
@@ -30,7 +30,7 @@ def __getattr__(name: str):
     if name == 'ConfusionMatrix':
         return importlib.import_module('.conf_matrix', __package__).ConfusionMatrix
     if name == 'ConfusionMatrixConfig':
-        return importlib.import_module('.typing', __package__).ConfusionMatrixConfig
+        return importlib.import_module('._types', __package__).ConfusionMatrixConfig
     if name == 'build_headmetrics':
         return importlib.import_module('.factory', __package__).build_headmetrics
     if name == 'is_cm_config':

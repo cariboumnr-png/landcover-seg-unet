@@ -8,7 +8,6 @@ order simple and circular-free.
 from __future__ import annotations
 import importlib
 import typing
-
 __all__ = [
     # classes
     'ModelWithParams',
@@ -22,13 +21,13 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .optimizer import build_optim_config, build_optimization
-    from .typing import ModelWithParams, OptimizerFactory, SchedulerFactory
+    from ._types import ModelWithParams, OptimizerFactory, SchedulerFactory
 
 def __getattr__(name: str):
 
     if name in ('build_optim_config', 'build_optimization'):
         return getattr(importlib.import_module('.optimizer', __package__), name)
     if name in ('ModelWithParams', 'OptimizerFactory', 'SchedulerFactory'):
-        return getattr(importlib.import_module('.typing', __package__), name)
+        return getattr(importlib.import_module('._types', __package__), name)
 
     raise AttributeError(name)

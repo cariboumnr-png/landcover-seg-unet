@@ -25,7 +25,7 @@ if typing.TYPE_CHECKING:
     from .base import PrimitiveLoss
     from .composite import CompositeLoss
     from .primitives import DiceLoss, FocalLoss
-    from .typing import LossTypes
+    from ._types import LossTypes
     from .factory import build_headlosses
     from .validator import is_loss_types
 
@@ -39,7 +39,7 @@ def __getattr__(name: str):
     if name in ('DiceLoss', 'FocalLoss'):
         return getattr(importlib.import_module('.primitives', __package__), name)
     if name in ('LossTypes',):
-        return importlib.import_module('.typing', __package__).LossTypes
+        return importlib.import_module('._types', __package__).LossTypes
     if name == 'build_headlosses':
         return importlib.import_module('.factory', __package__).build_headlosses
     if name == 'is_loss_types':
