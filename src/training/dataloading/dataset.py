@@ -44,6 +44,7 @@ from __future__ import annotations
 # standard imports
 import collections
 import dataclasses
+import typing
 # third-party imports
 import numpy
 import torch
@@ -53,6 +54,9 @@ import tqdm
 # local imports
 import dataset
 import utils
+
+# typing alias
+TorchDict: typing.TypeAlias = dict[str, torch.Tensor]
 
 @dataclasses.dataclass
 class BlockConfig:
@@ -105,7 +109,7 @@ class _MultiBlockData:
     '''Small container for multiblock data.'''
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
-    dom: list[dict[str, torch.Tensor]] | _CacheDict = dataclasses.field(init=False)
+    dom: list[TorchDict] | _CacheDict = dataclasses.field(init=False)
 
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
@@ -210,10 +214,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self._len
 
-    def __getitem__(
-            self,
-            idx: int
-        ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, TorchDict]:
         if self.preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
             y = self.data.lbl[idx].astype(numpy.int64)  # [ps, ps]
@@ -317,7 +318,7 @@ class _BlockDataset(torch.utils.data.Dataset):
 
         # process args
         self.config = block_config
-        self.domain: dict[str, torch.Tensor] = {}
+        self.domain: TorchDict = {}
         self.logger = logger
 
         # load data from npz
@@ -342,7 +343,7 @@ class _BlockDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return self.config.patch_per_blk
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, dict]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, TorchDict]:
         assert idx in range(self.config.patch_per_blk) # sanity check
         x = self.imgs[idx].astype(numpy.float32)
         y = self.lbls[idx].astype(numpy.int64)
