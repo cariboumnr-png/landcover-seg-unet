@@ -2,19 +2,11 @@
 
 # standard imports
 import dataclasses
-import typing
 # third-party imports
 import torch
 # local imports
+import _types
 import training.common
-
-# typing alias
-Tensor: typing.TypeAlias = torch.Tensor
-BatchTuple: typing.TypeAlias = tuple[Tensor, Tensor | None, dict[str, Tensor]]
-'''
-A tuple for a dataloader batch: x (always present), y (can be None for
-inference) and domain (always present but can be empty).
-'''
 
 # -------------------------------trainer state-------------------------------
 @dataclasses.dataclass
@@ -56,12 +48,11 @@ class _Heads:
             return 'N/A'
         return '|'.join(lst)
 
-
 @dataclasses.dataclass
 class _BatchCtx:
     '''Batch level data context.'''
     bidx: int = 0
-    batch: BatchTuple | None = None
+    batch: _types.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
     y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
     domain: dict[str, torch.Tensor | None] = dataclasses.field(default_factory=dict)

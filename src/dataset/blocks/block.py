@@ -101,8 +101,8 @@ class DataBlock:
             self.meta['has_label'] = True
         # otherwise give label related data a place holder
         else:
-            self.data.label = numpy.empty([1])
-            self.data.label_masked = numpy.empty([1])
+            self.data.label = numpy.array([1])
+            self.data.label_masked = numpy.array([1])
             self.meta['has_label'] = False
 
         # process data sequence
@@ -586,6 +586,6 @@ class _Data:
         '''Validate if all attr has been populated.'''
         for field in dataclasses.fields(self):
             if skip_attr is not None and field.name == skip_attr:
-                setattr(self, skip_attr, numpy.empty([1])) # place holder
+                setattr(self, skip_attr, numpy.array([1])) # place holder
             if not hasattr(self, field.name):
                 raise ValueError(f"{field.name} has not been populated yet")

@@ -339,9 +339,10 @@ class MultiHeadTrainer:
 
         Expects a `(x, y, domain)` tuple in `self.state.batch_cxt.batch`
             where:
-            - x: float tensor of shape [B, S, H, W]
-            - y: int/long tensor of shape [B, S, H, W]
-            - domain: dict[str, torch.Tensor] or empty dict
+            - x: float tensor of shape [B, S, H, W].
+            - y: int/long tensor of shape [B, S, H, W] or empty [B, 0]
+                for inference.
+            - domain: dict[str, torch.Tensor] or empty dict.
 
         Populates `self.state.batch_cxt.x`, `.y_dict`, and `.domain`.
         '''
@@ -356,8 +357,9 @@ class MultiHeadTrainer:
         # x should always be present
         assert isinstance(x, torch.Tensor) and x.ndim == 4 # shape [B, S, H, W]
         x = x.to(device)
-        # y is optional (None when in inference mode)
-        if y is not None:
+        # whether label is a placeholder
+        has_label = y.numel() > 0
+        if has_label:
             assert isinstance(y, torch.Tensor) and y.ndim == 4 # shape [B, S, H, W]
             # x and y should have the same batch size and h*w, slice might differ
             assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
@@ -391,7 +393,8 @@ class MultiHeadTrainer:
             raise KeyError(f'Active heads not found in all_heads: {m}')
 
         # extract y slices for currently active heads (empty for inference)
-        y_dict = {h: y[:, hmap[h], ...] for h in active_heads} if y else {}
+        # NOTE: assumes y is [B, S, H, W] and head index maps to axis=1
+        y_dict = {h: y[:, hmap[h], ...] for h in active_heads} if has_label else {}
 
         # assign to context
         self.state.batch_cxt.x = x
