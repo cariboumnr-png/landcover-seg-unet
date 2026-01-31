@@ -43,6 +43,7 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # setup trainer
     trainer = src.training.build_trainer(
+        trainer_mode=config.trainer_mode,
         model=model,
         data_summary=data_summary,
         config=config.trainer,

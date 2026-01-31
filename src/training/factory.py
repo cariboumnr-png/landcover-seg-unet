@@ -14,9 +14,55 @@ import training.optim
 import training.trainer
 import utils
 
-def get_components(
+def build_trainer(
+        trainer_mode: str,
         model: training.common.MultiheadModelLike,
-        data_summary: training.common.DataSummaryFull,
+        data_summary: training.common.DataSummaryLike,
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
+    ) -> training.trainer.MultiHeadTrainer:
+    '''Builder trainer.'''
+
+    # collect componenets
+    trainer_comps = _get_components(
+        trainer_mode=trainer_mode,
+        model=model,
+        data_summary=data_summary,
+        config=config,
+        logger=logger
+    )
+    # generate runtime config
+    runtime_config = _get_config(config.config)
+
+    # build and return a trainer class
+    return training.trainer.MultiHeadTrainer(
+        components=trainer_comps,
+        config=runtime_config,
+        device='cuda'
+    )
+
+def build_controller(
+        trainer: training.trainer.MultiHeadTrainer,
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
+    ) -> training.controller.Controller:
+    '''Setup training controller.'''
+
+    # get phases
+    phases = training.controller.generate_phases(config)
+
+    # return a controller class
+    return training.controller.Controller(
+        trainer=trainer,
+        phases=phases,
+        ckpt_dpath=config.ckpt_dpath,
+        logger=logger
+    )
+
+def _get_components(
+        trainer_mode: str,
+        model: training.common.MultiheadModelLike,
+        data_summary: training.common.DataSummaryLike,
         config: omegaconf.DictConfig,
         logger: utils.Logger
     ) -> training.trainer.TrainerComponents:
@@ -24,6 +70,7 @@ def get_components(
 
     # compile data loaders
     data_loaders = training.dataloading.get_dataloaders(
+        mode=trainer_mode,
         data_summary=data_summary,
         loader_config=config.loader,
         logger=logger
@@ -76,7 +123,7 @@ def get_components(
     )
     return components
 
-def get_config(config: omegaconf.DictConfig) -> training.trainer.RuntimeConfig:
+def _get_config(config: omegaconf.DictConfig) -> training.trainer.RuntimeConfig:
     '''Generate trainer runtime config from hydra.'''
 
     running_config = training.trainer.RuntimeConfig()
@@ -102,46 +149,3 @@ def get_config(config: omegaconf.DictConfig) -> training.trainer.RuntimeConfig:
     running_config.optim.grad_clip_norm=config.optimization.grad_clip_norm
     # return complete runnning config
     return running_config
-
-def build_trainer(
-        model: training.common.MultiheadModelLike,
-        data_summary: training.common.DataSummaryFull,
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> training.trainer.MultiHeadTrainer:
-    '''Builder trainer.'''
-
-    # collect componenets
-    trainer_comps = get_components(
-        model=model,
-        data_summary=data_summary,
-        config=config,
-        logger=logger
-    )
-    # generate runtime config
-    runtime_config = get_config(config.config)
-
-    # build and return a trainer class
-    return training.trainer.MultiHeadTrainer(
-        components=trainer_comps,
-        config=runtime_config,
-        device='cuda'
-    )
-
-def build_controller(
-        trainer: training.trainer.MultiHeadTrainer,
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> training.controller.Controller:
-    '''Setup training controller.'''
-
-    # get phases
-    phases = training.controller.generate_phases(config)
-
-    # return a controller class
-    return training.controller.Controller(
-        trainer=trainer,
-        phases=phases,
-        ckpt_dpath=config.ckpt_dpath,
-        logger=logger
-    )

@@ -12,6 +12,7 @@ import typing
 
 __all__ = [
     # classes
+    'BlockCreationOptions',
     'BlockLayout',
     'DataBlock',
     'DataSummary',
@@ -27,7 +28,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .blocks import DataBlock, BlockLayout, build_data_cache
+    from .blocks import BlockCreationOptions, BlockLayout, DataBlock, build_data_cache
     from .count import count_label_cls
     from .domain import build_domains
     from .factory import prepare_data
@@ -37,7 +38,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['DataBlock', 'BlockLayout', 'build_data_cache']:
+    if name in ['BlockCreationOptions', 'BlockLayout', 'DataBlock', 'build_data_cache']:
         return getattr(importlib.import_module('.blocks', __package__), name)
     if name in ['count_label_cls']:
         return getattr(importlib.import_module('.count', __package__), name)

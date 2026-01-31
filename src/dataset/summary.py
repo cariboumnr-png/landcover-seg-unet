@@ -18,14 +18,21 @@ class DataSummary:
     meta: _Meta
     heads: _Heads
     data: _Data
-    dom: _Domain
+    doms: _Domain
 
     def __post_init__(self):
+        # either train+val or train+val+infer or infer only
+        if not self.data.train and not self.data.val:
+            assert self.data.infer
+        if not self.data.infer:
+            assert self.data.train and self.data.val
+        # heads match with logit adjustment
         assert self.heads.class_counts.keys() == self.heads.logits_adjust.keys()
-        if self.dom.data is not None:
-            assert len(self.data.train) + len(self.data.val) == len(self.dom.data)
+        # if domain is provided, all blocks should have it
+        if self.data.train and self.data.val and self.doms.train_val_domain:
+            assert len(self.data.train) + len(self.data.val) == len(self.doms.train_val_domain)
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         def _ln(lst):
             return [round(x, 4) for x in lst]
         t1 = '\n - '.join([
@@ -36,13 +43,15 @@ class DataSummary:
         ])
         return '\n'.join([
             'Dataset summary:\n----------------------------------------',
+            f'Dataset name: {self.meta.dataset_name}'
             f'Ignore index: {self.meta.ignore_index}',
             f'Number of image channels: {self.meta.img_ch_num}',
             f'Class distribution of each head: \n - {t1}',
             f'Head-wise logits adjustment: \n - {t2}',
-            f'Number of training blocks: {len(self.data.train)}',
-            f'Number of validation blocks: {len(self.data.val)}',
-            f'Domain knowledge includes: {self.dom.meta}'
+            f'Number of training blocks: {len(self.data.train or {})}',
+            f'Number of validation blocks: {len(self.data.val or {})}',
+            f'Number of inference blocks: {len(self.data.val or {})}',
+            f'Domain knowledge includes: {self.doms.train_val_meta}'
         ])
 
 # ------------------------------private dataclass------------------------------
@@ -50,6 +59,8 @@ class DataSummary:
 class _Meta:
     '''Metadata.'''
     dataset_name: str
+    train_val_blk_bytes: int
+    infer_blk_bytes: int
     ignore_index: int
     img_ch_num: int
 
@@ -63,15 +74,17 @@ class _Heads:
 @dataclasses.dataclass
 class _Data:
     '''Block file paths of training and validation datasets.'''
-    train: dict[str, str]
-    val: dict[str, str]
+    train: dict[str, str] | None
+    val: dict[str, str] | None
     infer: dict[str, str] | None
 
 @dataclasses.dataclass
 class _Domain:
     '''Domain related.'''
-    data: dict[str, dict[str, int | list[float]]] | None
-    meta: dict[str, dict[str, str | int | list]] | None
+    train_val_domain: dict[str, dict[str, int | list[float]]] | None
+    train_val_meta: dict[str, dict[str, str | int | list]] | None
+    infer_domain: dict[str, dict[str, int | list[float]]] | None
+    infer_meta: dict[str, dict[str, str | int | list]] | None
 
 # -------------------------------Public Function-------------------------------
 def generate_summary(
@@ -86,7 +99,7 @@ def generate_summary(
     # get artifacts names
     lbl_count = cache_cfg.get_asset('artifacts', 'label', 'count_training')
     square_blks = cache_cfg.get_asset('artifacts', 'blocks', 'square')
-    valid_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
+    train_val_blks = cache_cfg.get_asset('artifacts', 'blocks', 'valid')
     training_blks = cache_cfg.get_asset('artifacts', 'split', 'training')
     validation_blks = cache_cfg.get_asset('artifacts', 'split', 'validation')
     domain_dict = cache_cfg.get_asset('artifacts', 'domain', 'by_block')
@@ -102,7 +115,7 @@ def generate_summary(
     return DataSummary(
         meta=_read_rand_block_meta(
             dataset_name=dataset_name,
-            valid_blks_fpath=os.path.join(train_dir, valid_blks),
+            train_val_blks_fpath=os.path.join(train_dir, train_val_blks),
             infer_blks_fpath=square_blks_fpath
         ),
         heads=_heads_stats(
@@ -113,38 +126,72 @@ def generate_summary(
             val_blks_fpath=os.path.join(train_dir, validation_blks),
             infer_blks_fpath=square_blks_fpath
         ),
-        dom=_get_domain(
-            domain_fpath = os.path.join(train_dir, domain_dict)
+        doms=_get_domain(
+            train_domain_fpath = os.path.join(train_dir, domain_dict),
+            infer_domain_fpath = os.path.join(infer_dir, domain_dict)
         )
     )
 
 # ------------------------------private  function------------------------------
 def _read_rand_block_meta(
         dataset_name: str,
-        valid_blks_fpath: str,
-        infer_blks_fpath: str | None = None
+        train_val_blks_fpath: str | None,
+        infer_blks_fpath: str | None
     ) -> _Meta:
     '''Retrieve meta from a random valid block file.'''
 
-    # read a random block from valid blocks
-    valid_blks: dict[str, str] = utils.load_json(valid_blks_fpath)
-    rblk_fpath = random.choice(list(valid_blks.values()))
-    blk = dataset.DataBlock().load(rblk_fpath)
-    blk.data.validate()
-    # retrieve meta
-    ignore_index = blk.meta['ignore_label']
-    img_ch_num=blk.data.image_normalized.shape[0]
+    # declare types and default values
+    train_val_blk_bytes: int = 0
+    infer_blk_bytes: int = 0
+    ignore_index: int = -1
+    img_ch_num: int = 0
 
-    # if inference blocks are present, read one as well
+    if train_val_blks_fpath is not None:
+        # read a random block from valid blocks
+        valid_blks: dict[str, str] = utils.load_json(train_val_blks_fpath)
+        rblk_fpath = random.choice(list(valid_blks.values()))
+        blk = dataset.DataBlock().load(rblk_fpath)
+        blk.data.validate()
+
+        # get array size
+        # dtype float32 (4 bytes)
+        img_size = math.prod(blk.data.image_normalized.shape) * 4
+        # dtype long (8 bytes)
+        lbl_size = math.prod(blk.data.label_masked.shape) * 8
+        # total
+        train_val_blk_bytes = img_size + lbl_size
+
+        # retrieve values for _Meta
+        ignore_index = blk.meta['ignore_label']
+        img_ch_num = blk.data.image_normalized.shape[0]
+
     if infer_blks_fpath is not None:
+        # if inference blocks are present, read one as well
         infer_blks: dict[str, str] = utils.load_json(infer_blks_fpath)
         rblk_fpath = random.choice(list(infer_blks.values()))
         blk = dataset.DataBlock().load(rblk_fpath)
         # sanity: image channel should be the same for train and infer data
-        assert blk.data.image_normalized.shape[0] == img_ch_num
+        if img_ch_num != 0: # meaning taken value from train_val blocks
+            assert blk.data.image_normalized.shape[0] == img_ch_num
+        else:
+            img_ch_num = blk.data.image_normalized.shape[0]
+
+        # get array size - image only
+        # dtype float32 (4 bytes)
+        infer_blk_bytes = math.prod(blk.data.image_normalized.shape) * 4
+
+    # check before return
+    if train_val_blk_bytes + infer_blk_bytes == 0 or img_ch_num == 0:
+        raise ValueError('Either train_val or inference data incomplete')
 
     # return
-    return _Meta(dataset_name, ignore_index, img_ch_num)
+    return _Meta(
+        dataset_name=dataset_name,
+        train_val_blk_bytes=train_val_blk_bytes,
+        infer_blk_bytes=infer_blk_bytes,
+        ignore_index=ignore_index,
+        img_ch_num=img_ch_num
+    )
 
 def _read_datasets(
         train_blks_fpath: str,
@@ -200,7 +247,17 @@ def _la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_domain(domain_fpath: str) -> _Domain:
+def _get_domain(
+        train_domain_fpath: str,
+        infer_domain_fpath: str
+    ) -> _Domain:
+    '''doc'''
+
+    train_dom, train_meta = _domain(train_domain_fpath)
+    infer_dom, infer_meta = _domain(infer_domain_fpath)
+    return _Domain(train_dom, train_meta, infer_dom, infer_meta)
+
+def _domain(domain_fpath: str) -> tuple[dict[str, dict] | None, dict | None]:
     '''Read domain data with type checks'''
 
     # index domain by block name if provided
@@ -244,9 +301,9 @@ def _get_domain(domain_fpath: str) -> _Domain:
                     'dims': next(iter(dim))
                 }
 
-        return _Domain(domain, meta)
+        return domain, meta
     # otherwise return None
-    return _Domain(None, None)
+    return None, None
 
 def _dom_type(dom_sample: dict[str, int | list[float]]) -> dict[str, str]:
     meta: dict[str, str] | None = None

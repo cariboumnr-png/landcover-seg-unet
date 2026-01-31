@@ -1,8 +1,6 @@
 '''Common protocols'''
 
-from .data import DataSummaryFull
-from .data import DataSummaryHeads
-from .data import DataSummaryLoader
+from .data import DataSummaryLike
 
 from .checkpoint import CheckpointMetaLike
 from .trainer import (
@@ -61,9 +59,7 @@ __all__ = [
     #
     'RuntimeStateLike',
     #
-    'DataSummaryFull',
-    'DataSummaryHeads',
-    'DataSummaryLoader',
+    'DataSummaryLike',
     #
     'CallBacksLike',
     'ProgressCallbackLike',

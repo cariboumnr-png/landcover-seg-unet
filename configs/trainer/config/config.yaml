@@ -4,8 +4,6 @@ loader:
   patch_size: 128
   batch_size: 16
   stream_cache: 16
-  rand_sample_n: ${test.rand_sample_n}
-  rand_seed: ${seed}
 
 # loss config
 loss:
