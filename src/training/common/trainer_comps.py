@@ -46,8 +46,9 @@ class MultiheadModelLike(typing.Protocol):
 # trainer component - dataloaders
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
-    train: 'torch.utils.data.DataLoader'
-    val: 'torch.utils.data.DataLoader'
+    train: 'torch.utils.data.DataLoader | None'
+    val: 'torch.utils.data.DataLoader | None'
+    infer: 'torch.utils.data.DataLoader | None'
 
 # trainer component - head specs (wrapper and individual spec)
 @typing.runtime_checkable

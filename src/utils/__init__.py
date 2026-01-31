@@ -3,7 +3,7 @@
 from .cfg_access import ConfigAccess
 from .contxt import open_rasters
 from .funcs import(
-    get_fpaths_from_dir,
+    get_dir_size,
     get_timestamp,
     load_json,
     load_pickle,
@@ -18,7 +18,7 @@ __all__ = [
     'ConfigAccess',
     'Logger',
     'ParallelExecutor',
-    'get_fpaths_from_dir',
+    'get_dir_size',
     'get_timestamp',
     'load_json',
     'load_pickle',

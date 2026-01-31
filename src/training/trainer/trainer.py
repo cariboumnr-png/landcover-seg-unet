@@ -102,6 +102,7 @@ class MultiHeadTrainer:
         self._emit('on_train_epoch_begin', epoch)
 
         # interate through training data batches
+        assert self.dataloaders.train, 'Training dataset not provided'
         for bidx, batch in enumerate(self.dataloaders.train, start=1):
             print(f'Training Batch_{bidx}', end='\r', flush=True)
 
@@ -161,6 +162,7 @@ class MultiHeadTrainer:
         self._emit('on_validation_begin')
 
         # iterate through validation dataset
+        assert self.dataloaders.val, 'Validation dataset not provided'
         for bidx, batch in enumerate(self.dataloaders.val, start=1):
 
             # batch start

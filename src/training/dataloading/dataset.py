@@ -84,9 +84,9 @@ class BlockConfig:
             not divisible by `patch_size`.
     '''
 
-    augment_flip: bool
     block_size: int
     patch_size: int
+    augment_flip: bool = False
     domain_dict: dict[str, dict[str, int | list[float]]] | None = None
     patch_per_dim: int = dataclasses.field(init=False)
     patch_per_blk: int = dataclasses.field(init=False)

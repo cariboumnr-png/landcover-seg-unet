@@ -34,7 +34,7 @@ class HeadSpecs:
 
 # Public API
 def build_headspecs(
-        data: training.common.DataSummaryHeads,
+        data: training.common.DataSummaryLike,
         alpha_fn: str,
     ) -> HeadSpecs:
     '''Generate concreate head specs classes indexed by head name.'''
