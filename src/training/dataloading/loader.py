@@ -168,35 +168,6 @@ def get_dataloaders(
     # return
     return DataLoaders(t_loader, v_loader, i_loader)
 
-# def _parse_training_loader(
-#         cfg: training.dataloading.BlockConfig,
-#         data_summary: training.common.DataSummaryLike,
-#         logger: utils.Logger,
-#         flags: _LoadingFlags,
-#         batch_size: int
-#     ) -> torch.utils.data.DataLoader:
-#     '''doc'''
-
-#     assert data_summary.data.train is not None
-#     cfg.augment_flip = False
-#     cfg.domain_dict = data_summary.doms.train_val_domain
-#     # data
-#     data = training.dataloading.MultiBlockDataset(
-#         blks_dict=data_summary.data.train,
-#         blk_cfg=cfg,
-#         logger=logger,
-#         preload=flags.val_preload,
-#         blk_cache_num=flags.val_cache
-#     )
-#     # loader
-#     loader = torch.utils.data.DataLoader(
-#         dataset=data,
-#         batch_size=batch_size,
-#         shuffle=False,
-#         collate_fn=_collate_multi_block
-#     )
-#     return loader
-
 def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
     '''Get flags.'''
 
@@ -235,24 +206,55 @@ def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
     # return flags
     return _LoadingFlags(t_pre, v_pre, i_pre, t_cac, v_cac, i_cac)
 
-def _collate_multi_block(batch):
-    '''Customized collate function to properly stack a batch.'''
+def _collate_multi_block(batch: _types.DatasetBatch) -> _types.DatasetItem:
+    '''
+    Customized collate function to properly stack a batch.
+
+    Contract per split:
+      - Labeled split: every y is [ps, ps] (long) -> stacked to [B, ps, ps]
+      - Unlabeled split: every y is empty tensor -> stacked to [B, 0] (long)
+      - Domain: all items share the same keys; each value stacks to [B, ...]
+    '''
 
     # unpack batch as a list
-    xs, ys, doms = zip(*batch)
+    xs, ys, ds = zip(*batch)            # length B:
+    xs = [x for x, _, _ in batch]       # list[Tensor]
+    ys = [y for _, y, _ in batch]       # list[Tensor]
+    ds = [d for _, _, d in batch]       # list[TorchDict]
 
-    # x -> [B, C, H, W]
-    xs = torch.stack(xs, dim=0)
+    # x is always stackable
+    xs = torch.stack(xs, dim=0) # x -> [B, C, H, W]
 
-    # y_dict -> [B, C, H, W]
-    ys = torch.stack(ys, dim=0)
+    # y can be labeled or unlabeled - fail fast if mixed
+    # determine if this is a labeled or unlabeled batch from the first item
+    y0 = ys[0] # read first and determined. assuming homogeny
+    labeled_batch = y0.numel() > 0
+    # if labeled/training
+    if labeled_batch:
+        # Guard: ensure all y match shape of first_y
+        exp_shape = y0.shape
+        for i, y in enumerate(ys):
+            if y.shape != exp_shape:
+                raise ValueError(
+                    f'inconsistent y shapes in batch at index {i}: '
+                    f'expected {tuple(exp_shape)} but got {tuple(y.shape)}'
+                )
+        ys_out = torch.stack(ys, dim=0).long()
+    # unlabeled/inference: all y must be empty tensors
+    else:
+        for i, y in enumerate(ys):
+            if y.numel() != 0:
+                raise ValueError(
+                    f'mixed labeled/unlabeled batch: item {i} has non-empty y'
+                )
+        # Stack to [B, 0]; torch.stack works for same shape zero-length tensors
+        ys_out = torch.stack(ys, dim=0).long()
 
-    # domain -> dict[str, [B, V]] or dict[str, [B]]
-    dom_out = {}
-    first_dom = doms[0]
+    # domain assumes consistent keys across batch
+    dom_out = {} # -> dict[str, [B, V]] or dict[str, [B]]
+    first_dom = ds[0]
     for key in first_dom.keys():
-        dom_out[key] = torch.stack([d[key] for d in doms], dim=0)
-
+        dom_out[key] = torch.stack([d[key] for d in ds], dim=0)
 
     # return
-    return xs, ys, dom_out
+    return xs, ys_out, dom_out

@@ -51,6 +51,7 @@ import torch.utils.data
 import torchvision.transforms.functional
 import tqdm
 # local imports
+import _types
 import dataset
 import utils
 
@@ -105,7 +106,7 @@ class _MultiBlockData:
     '''Small container for multiblock data.'''
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
-    dom: list[dict[str, torch.Tensor]] | _CacheDict = dataclasses.field(init=False)
+    dom: list[_types.TorchDict] | _CacheDict = dataclasses.field(init=False)
 
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
@@ -179,8 +180,8 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         if self.preload:
             self.logger.log('INFO', 'Preloading blocks into RAM')
             self.logger.log('DEBUG', f'Config: {blk_cfg}')
-            _imgs = []
-            _lbls = []
+            _imgs: list[numpy.ndarray] = []
+            _lbls: list[numpy.ndarray] = []
             self.data.dom = []
             for blk_name, blk_fpath in tqdm.tqdm(blks_dict.items(), ncols=100):
                 dom = self._get_domain(blk_name)
@@ -210,10 +211,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self._len
 
-    def __getitem__(
-            self,
-            idx: int
-        ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+    def __getitem__(self, idx: int) -> _types.DatasetItem:
         if self.preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
             y = self.data.lbl[idx].astype(numpy.int64)  # [ps, ps]
@@ -250,17 +248,17 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         self.data.lbl[blk_idx] = blk_data.lbls.astype(numpy.int64)
         self.data.dom[blk_idx] = blk_data.domain
 
-    def _get_domain(self, blk_name: str) -> dict[str, int | list[float]] | None:
+    def _get_domain(self, blk_name: str) -> dict[str, int | list[float]]:
         '''Retrieve the per-block domain dict if available.'''
 
-        if self.blk_cfg.domain_dict is not None:
-            blk_domain = self.blk_cfg.domain_dict.get(blk_name)
+        if self.blk_cfg.domain_dict:
+            blk_domain = self.blk_cfg.domain_dict.get(blk_name, {})
             # relaxed check allowing block with empty or missing domain
-            if not isinstance(blk_domain, dict) or len(blk_domain) == 0:
-                self.logger.log('WARNING', f'Invalid domain for {blk_name}')
-                return None
+            if len(blk_domain) == 0:
+                self.logger.log('DEBUG', f'Invalid domain for {blk_name}')
+                return {}
             return blk_domain
-        return None
+        return {}
 
 # internal pieces
 class _BlockDataset(torch.utils.data.Dataset):
@@ -295,7 +293,7 @@ class _BlockDataset(torch.utils.data.Dataset):
             block_fpath: str,
             block_config: BlockConfig,
             logger: utils.Logger,
-            block_domain: dict[str, int | list[float]] | None=None
+            block_domain: dict[str, int | list[float]]
         ):
         '''
         Initialize the per-block dataset and patchify arrays.
@@ -317,7 +315,7 @@ class _BlockDataset(torch.utils.data.Dataset):
 
         # process args
         self.config = block_config
-        self.domain: dict[str, torch.Tensor] = {}
+        self.domain: _types.TorchDict = {}
         self.logger = logger
 
         # load data from npz
@@ -332,35 +330,40 @@ class _BlockDataset(torch.utils.data.Dataset):
             raise
 
         # parse domain if provided
-        if block_domain is not None:
-            for key, dom in block_domain.items():
-                if isinstance(dom, int):
-                    self.domain[key] = torch.tensor(dom, dtype=torch.long)
-                elif isinstance(dom, list):
-                    self.domain[key] = torch.tensor(dom, dtype=torch.float32)
+        for key, dom in block_domain.items():
+            if isinstance(dom, int):
+                self.domain[key] = torch.tensor(dom, dtype=torch.long)
+            elif isinstance(dom, list):
+                self.domain[key] = torch.tensor(dom, dtype=torch.float32)
 
     def __len__(self) -> int:
         return self.config.patch_per_blk
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, dict]:
+    def __getitem__(self, idx: int) -> _types.DatasetItem:
         assert idx in range(self.config.patch_per_blk) # sanity check
-        x = self.imgs[idx].astype(numpy.float32)
-        y = self.lbls[idx].astype(numpy.int64)
-        x_tensor = torch.from_numpy(x)
-        y_tensor = torch.from_numpy(y)
-        if self.config.augment_flip:
-            # one decision for horizontal, one for vertical
-            if torch.rand(()) < 0.5:
-                x_tensor = torchvision.transforms.functional.hflip(x_tensor)
-                y_tensor = torchvision.transforms.functional.hflip(y_tensor)
-            if torch.rand(()) < 0.5:
-                x_tensor = torchvision.transforms.functional.vflip(x_tensor)
-                y_tensor = torchvision.transforms.functional.vflip(y_tensor)
-        return x_tensor, y_tensor, self.domain
+        x = torch.from_numpy(self.imgs[idx].astype(numpy.float32))
+        # if label is a placeholder array
+        if self.lbls.ndim == 1 and self.lbls.shape == (1,):
+            y = torch.empty(0, dtype=torch.long)  # passive placeholder
+        else:
+            y = torch.from_numpy(self.lbls[idx].astype(numpy.int64))
+            # augment only when both image and label are present
+            if self.config.augment_flip:
+                # one decision for horizontal, one for vertical
+                if torch.rand(()) < 0.5:
+                    x = torchvision.transforms.functional.hflip(x)
+                    y = torchvision.transforms.functional.hflip(y)
+                if torch.rand(()) < 0.5:
+                    x = torchvision.transforms.functional.vflip(x)
+                    y = torchvision.transforms.functional.vflip(y)
+        return x, y, self.domain
 
     def _get_patches(self, arr: numpy.ndarray) -> numpy.ndarray:
         '''Patchify a square block into configured patches.'''
 
+        # if input is an unlabeled placeholder. see dataset/blocks/block.py
+        if arr.ndim == 1 and arr.shape == (1,):
+            return arr  # keep as-is to signal 'no labels'
         # e.g., arr.shape = [C, 256, 256] ps = 128
         # top row to bottom, within each row left to right
         c, h, w = arr.shape # [C, H, W]

@@ -5,6 +5,7 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
+import _types
 import training.common
 
 # -------------------------------trainer state-------------------------------
@@ -47,12 +48,11 @@ class _Heads:
             return 'N/A'
         return '|'.join(lst)
 
-
 @dataclasses.dataclass
 class _BatchCtx:
     '''Batch level data context.'''
     bidx: int = 0
-    batch: tuple[torch.Tensor, dict, dict] | None = None  # x, y and domain
+    batch: _types.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
     y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
     domain: dict[str, torch.Tensor | None] = dataclasses.field(default_factory=dict)
@@ -77,13 +77,12 @@ class _BatchCtx:
             return '|'.join(out)
         return 'N/A'
 
-    # clear the old batch
     def refresh(self, bidx: int, batch: tuple) -> None:
         '''Refresh context at the beginning of a batch.'''
-        self.bidx = bidx                            # take input from new batch
-        self.batch = batch                          # take input from new batch
-        self.x = torch.empty(0)                     # clear the old batch
-        self.y_dict.clear()                         # clear the old batch
+        self.bidx = bidx                # take input from new batch
+        self.batch = batch              # take input from new batch
+        self.x = torch.empty(0)         # clear the old batch
+        self.y_dict.clear()             # clear the old batch
         self.domain.clear()
 
 @dataclasses.dataclass

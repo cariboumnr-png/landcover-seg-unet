@@ -339,53 +339,63 @@ class MultiHeadTrainer:
 
         Expects a `(x, y, domain)` tuple in `self.state.batch_cxt.batch`
             where:
-            - x: float tensor of shape [B, S, H, W]
-            - y: int/long tensor of shape [B, S, H, W]
-            - domain: dict[str, torch.Tensor] or empty dict
+            - x: float tensor of shape [B, S, H, W].
+            - y: int/long tensor of shape [B, S, H, W] or empty [B, 0]
+                for inference.
+            - domain: dict[str, torch.Tensor] or empty dict.
 
         Populates `self.state.batch_cxt.x`, `.y_dict`, and `.domain`.
         '''
 
-        # make sure the batch is properly populated
+        # get device
+        device = self.device
+        # make sure the batch is properly populated and parse
         assert self.state.batch_cxt.batch is not None
-        # parse x, y, domain from batch context
         x, y, domain = self.state.batch_cxt.batch
-        # make sure it contains data indicated by dims
+
+        # check each data and move to device
+        # x should always be present
         assert isinstance(x, torch.Tensor) and x.ndim == 4 # shape [B, S, H, W]
-        assert isinstance(y, torch.Tensor) and y.ndim == 4 # shape [B, S, H, W]
-        # x and y should have the same batch size and h*w, slice might differ
-        assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
+        x = x.to(device)
+        # whether label is a placeholder
+        has_label = y.numel() > 0
+        if has_label:
+            assert isinstance(y, torch.Tensor) and y.ndim == 4 # shape [B, S, H, W]
+            # x and y should have the same batch size and h*w, slice might differ
+            assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
+            y = y.to(device)
         # domain can be an empty dict or a dict[str, torch.Tensore]
-        assert isinstance(domain, dict)
         if domain:
+            assert isinstance(domain, dict)
             # domain names must be str
             # each domain can be a tensor with the same batch size or None
             for k, v in domain.items():
                 assert isinstance(k, str)
                 if isinstance(v, torch.Tensor):
                     assert v.shape[0] == x.shape[0]
+            domain = {k: v.to(device) for k, v in domain.items()}
+        else:
+            domain = {}
+        running_domain = self.__sel_domain(domain)
 
-        # move tensors to device
-        device = self.device
-        x = x.to(device)
-        y = y.to(device)
-        domain = {k: v.to(device) for k, v in domain.items()} if domain else {}
-
-        # fall back to all available heads if activce heads not provided
+        # heads: fall back to all available heads if activce heads not provided
         if self.state.heads.active_heads is None:
             self.state.heads.active_heads = self.state.heads.all_heads
+        # aliases
+        active_heads = self.state.heads.active_heads
+        all_heads = self.state.heads.all_heads
 
         # precompute head index mapping
-        hmap = {name: i for i, name in enumerate(self.state.heads.all_heads)}
+        hmap = {name: i for i, name in enumerate(all_heads)}
         # validate active heads
-        m = set(self.state.heads.active_heads) - set(self.state.heads.all_heads)
+        m = set(active_heads) - set(all_heads)
         if m:
             raise KeyError(f'Active heads not found in all_heads: {m}')
 
-        # extract y slices
-        y_dict = {h: y[:, hmap[h], ...] for h in self.state.heads.active_heads}
-        # get running domain
-        running_domain = self.__sel_domain(domain)
+        # extract y slices for currently active heads (empty for inference)
+        # NOTE: assumes y is [B, S, H, W] and head index maps to axis=1
+        y_dict = {h: y[:, hmap[h], ...] for h in active_heads} if has_label else {}
+
         # assign to context
         self.state.batch_cxt.x = x
         self.state.batch_cxt.y_dict = y_dict
@@ -433,6 +443,7 @@ class MultiHeadTrainer:
         '''
 
         # sanity
+        assert self.state.batch_cxt.y_dict is not None
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
         # call loss function
@@ -491,7 +502,11 @@ class MultiHeadTrainer:
         '''Update confusion matrix in-place at validation batch end.'''
 
         # sanity
+        # head metrics is set
         assert self.state.heads.active_hmetrics is not None
+        # data contains y labels
+        assert self.state.batch_cxt.y_dict is not None
+        # get predictions and targets
         preds = self.state.batch_out.preds
         targets = self.state.batch_cxt.y_dict
         for head, logits in preds.items():
