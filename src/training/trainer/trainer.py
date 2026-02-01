@@ -258,7 +258,11 @@ class MultiHeadTrainer:
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
 
-    def predict(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def predict(
+            self,
+            x: torch.Tensor,
+            mode: str
+        ) -> dict[str, torch.Tensor]:
         '''
         Run a simple head-aware inference pass.
 
@@ -268,27 +272,34 @@ class MultiHeadTrainer:
 
         Args:
             x: Input tensor, moved to trainer device.
+            mode: Determins the return type.
 
         Returns:
             A mapping from head name to prediction tensor.
         '''
 
+        # set model to evaluation mode and move to device
         self.model.eval()
-        device = self.device
-        x = x.to(device)
+        x = x.to(self.device)
 
+        # get outputs in proper context
         with torch.inference_mode(), self._autocast_ctx():
             outputs = self.model.forward(x)  # raw logits per head
 
+        # get prediction by mode and return
         preds = {}
         for head, logits in outputs.items():
-            if head.startswith('seg'):  # segmentation head
+            if mode == 'seg':       # segmentation head
                 preds[head] = torch.argmax(logits, dim=1)  # [B, H, W]
-            elif head.startswith('cls'):  # classification head
+            elif mode == 'cls':     # classification head
                 probs = torch.softmax(logits, dim=1)
                 preds[head] = torch.topk(probs, k=1).indices  # top-1 class
-            else:  # regression or other
-                preds[head] = logits  # raw values
+            elif mode == 'raw':      # raw values
+                preds[head] = logits
+            else:
+                raise ValueError(
+                    f'Invalid mode: {mode}: must be in ["seg", "cls", "raw"]'
+                )
         return preds
 
     # ----------------------------internal methods----------------------------
