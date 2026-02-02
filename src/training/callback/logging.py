@@ -14,18 +14,15 @@ class LoggingCallback(training.callback.Callback):
         print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
 
     def on_train_batch_end(self) -> None:
-        # update train logs at intervals and log to console if updated
-        bidx=self.state.batch_cxt.bidx
-        flag = self.trainer._update_train_logs(bidx=bidx, flush=False)
-        if flag:
-            self.log_train('INFO', self.state.epoch_sum.train_logs_text)
+        # train logs to console if updated
+        if self.state.epoch_sum.train_logs.updated:
+            msg = self.state.epoch_sum.train_logs.head_loss_str
+            self.log_train('INFO', msg)
 
     def on_train_epoch_end(self) -> None:
-        # flush train logs at the end (regardless of interval)
+        # train logs to consle
         epoch = self.state.progress.epoch
-        bidx=self.state.batch_cxt.bidx
-        self.trainer._update_train_logs(bidx=bidx, flush=True)
-        self.log_train('INFO', self.state.epoch_sum.train_logs_text)
+        self.log_train('INFO', self.state.epoch_sum.train_logs.head_loss_str)
         self.log_train('INFO', f'Epoch_{epoch:03d} training finished')
 
     def on_validation_begin(self) -> None:
@@ -40,7 +37,7 @@ class LoggingCallback(training.callback.Callback):
         target_head = self.config.monitor.head
         v = self.trainer.state.metrics.best_value
         e = self.trainer.state.metrics.best_epoch
-        for t in self.state.epoch_sum.val_logs_text[target_head]:
+        for t in self.state.epoch_sum.val_logs.head_metrics_str[target_head]:
             self.log_valdn('INFO', t)
         self.log_valdn('INFO', f'Current best metric/epoch:\t{v:.4f}|{e}')
         self.log_valdn('INFO', f'Epoch_{epoch:03d} validation finished')

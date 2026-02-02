@@ -14,7 +14,7 @@ import training.common
 if typing.TYPE_CHECKING:
     import torch
 
-# -------------------------------trainer state-------------------------------
+# ----- Runtime state (composite)
 @typing.runtime_checkable
 class RuntimeStateLike(typing.Protocol):
     progress: Progress
@@ -25,11 +25,13 @@ class RuntimeStateLike(typing.Protocol):
     metrics: Metrics
     optim: OptimState
 
+# ----- .progress
 class Progress(typing.Protocol):
     epoch: int
     epoch_step: int
     global_step: int
 
+# ----- .heads
 class Heads(typing.Protocol):
     all_heads: list[str]
     active_heads: list[str] | None
@@ -38,6 +40,7 @@ class Heads(typing.Protocol):
     active_hloss: dict[str, training.common.CompositeLossLike] | None
     active_hmetrics: dict[str, training.common.MetricLike] | None
 
+# ----- .batch_ctx (context)
 class BatchCtx(typing.Protocol):
     bidx: int
     batch: tuple['torch.Tensor', dict, dict] | None
@@ -46,6 +49,7 @@ class BatchCtx(typing.Protocol):
     domain: dict[str, 'torch.Tensor| None']
     def refresh(self, bidx: int, batch: tuple) -> None: ...
 
+# ----- .batch_out (output)
 class BatchOut(typing.Protocol):
     bdix: int
     preds: dict[str, 'torch.Tensor']
@@ -53,14 +57,30 @@ class BatchOut(typing.Protocol):
     head_loss: dict[str, float]
     def refresh(self, bidx) -> None: ...
 
+# ----- .epoch_sum (summary)
 class Epoch(typing.Protocol):
     train_loss: float
     val_loss: float
-    train_logs: dict[str, float]
-    train_logs_text: str
-    val_logs: dict[str, dict]
-    val_logs_text: dict[str, list[str]]
+    train_logs: _TrainLogs
+    val_logs: _ValLogs
+    infer_logs: _InferLogs
 
+class _TrainLogs(typing.Protocol):
+    '''Training logs.'''
+    head_loss: dict[str, float]
+    head_loss_str: str
+    updated: bool
+
+class _ValLogs(typing.Protocol):
+    '''Validation logs.'''
+    head_metrics: dict[str, dict[str, typing.Any]]
+    head_metrics_str: dict[str, list[str]]
+
+class _InferLogs(typing.Protocol):
+    '''Inference logs.'''
+    maps: dict[str, dict[str, torch.Tensor]]
+
+# ----- .metrics
 class Metrics(typing.Protocol):
     last_value: float
     curr_value: float
@@ -68,5 +88,6 @@ class Metrics(typing.Protocol):
     best_epoch: int
     patience_n: int
 
+# ----- .optim (optimization state)
 class OptimState(typing.Protocol):
     scaler: 'torch.GradScaler'

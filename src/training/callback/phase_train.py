@@ -15,8 +15,9 @@ class TrainCallback(training.callback.Callback):
         self.trainer.comps.model.train()
         # reset train loss and logs
         self.state.epoch_sum.train_loss = 0.0
-        self.state.epoch_sum.train_logs.clear()
-        self.state.epoch_sum.train_logs_text = ''
+        self.state.epoch_sum.train_logs.head_loss.clear()
+        self.state.epoch_sum.train_logs.head_loss_str = ''
+        self.state.epoch_sum.train_logs.updated = False
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch context with new input batch (from training data)
@@ -72,3 +73,9 @@ class TrainCallback(training.callback.Callback):
         # accumulate batch loss to epoch-level total loss
         batch_loss = float(self.state.batch_out.total_loss.detach().item())
         self.state.epoch_sum.train_loss += batch_loss
+        # update train logs if at interval (decided by trainer method)
+        self.trainer._update_train_logs(flush=False)
+
+    def on_train_epoch_end(self) -> None:
+        # update train logs (flush, regardless of logging interval)
+        self.trainer._update_train_logs(flush=True)
