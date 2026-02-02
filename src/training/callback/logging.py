@@ -16,13 +16,13 @@ class LoggingCallback(training.callback.Callback):
     def on_train_batch_end(self) -> None:
         # train logs to console if updated
         if self.state.epoch_sum.train_logs.updated:
-            msg = self.state.epoch_sum.train_logs.head_loss_str
+            msg = self.state.epoch_sum.train_logs.head_losses_str
             self.log_train('INFO', msg)
 
     def on_train_epoch_end(self) -> None:
         # train logs to consle
         epoch = self.state.progress.epoch
-        self.log_train('INFO', self.state.epoch_sum.train_logs.head_loss_str)
+        self.log_train('INFO', self.state.epoch_sum.train_logs.head_losses_str)
         self.log_train('INFO', f'Epoch_{epoch:03d} training finished')
 
     def on_validation_begin(self) -> None:

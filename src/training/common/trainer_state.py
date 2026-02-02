@@ -63,12 +63,12 @@ class Epoch(typing.Protocol):
     val_loss: float
     train_logs: _TrainLogs
     val_logs: _ValLogs
-    infer_logs: _InferLogs
+    infer_outputs: _InferOutputs
 
 class _TrainLogs(typing.Protocol):
     '''Training logs.'''
-    head_loss: dict[str, float]
-    head_loss_str: str
+    head_losses: dict[str, float]
+    head_losses_str: str
     updated: bool
 
 class _ValLogs(typing.Protocol):
@@ -76,9 +76,9 @@ class _ValLogs(typing.Protocol):
     head_metrics: dict[str, dict[str, typing.Any]]
     head_metrics_str: dict[str, list[str]]
 
-class _InferLogs(typing.Protocol):
+class _InferOutputs(typing.Protocol):
     '''Inference logs.'''
-    maps: dict[str, dict[str, torch.Tensor]]
+    maps: dict[int, dict[str, torch.Tensor]]
 
 # ----- .metrics
 class Metrics(typing.Protocol):

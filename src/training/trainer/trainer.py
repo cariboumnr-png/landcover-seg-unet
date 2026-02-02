@@ -139,7 +139,7 @@ class MultiHeadTrainer:
         # train phase end
         # - update logs and loss (total/per-head) for the epoch
         self._emit('on_train_epoch_end')
-        return self.state.epoch_sum.train_logs.head_loss
+        return self.state.epoch_sum.train_logs.head_losses
 
     def validate(self) -> dict[str, dict]:
         '''
@@ -196,6 +196,7 @@ class MultiHeadTrainer:
 
         # infer phase start
         # - set model to .eval()
+        # - clear inference output mapping (batch -> preds)
         self._emit('on_inference_begin')
 
         # iterate through inference dataset
@@ -213,6 +214,7 @@ class MultiHeadTrainer:
             self._emit('on_inference_batch_forward')
 
             # batch end
+            # - aggregate predictions to epoch storage
             self._emit('on_inference_batch_end')
 
         # inference phase end
@@ -532,14 +534,14 @@ class MultiHeadTrainer:
             # extras - lr
             logs['LR'] = self.optimization.optimizer.param_groups[0]['lr']
             # assgin to state dict
-            self.state.epoch_sum.train_logs.head_loss = logs
+            self.state.epoch_sum.train_logs.head_losses = logs
 
         # if logs are updated: provide a printer friendly text and return flag
         if logs:
             self.state.epoch_sum.train_logs.updated = True
             text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
             text = f'b{bidx:04d} | ' + '|'.join(text_list)
-            self.state.epoch_sum.train_logs.head_loss_str = text
+            self.state.epoch_sum.train_logs.head_losses_str = text
 
     # validation phase
     def _update_conf_matrix(self) -> None:
@@ -614,8 +616,60 @@ class MultiHeadTrainer:
                 self.state.metrics.patience_n += 1
 
     # inference phase
-    def _logits_to_cls(self):
-        '''doc'''
+    def _aggregate_batch_predictions(self):
+        '''Convert predictions of the current batch into a class map'''
+
+        batch_size = self.comps.dataloaders.meta.batch_size
+        patch_per_blk = self.comps.dataloaders.meta.patch_per_blk
+        infer_blk_seq = self.comps.dataloaders.meta.infer_blks_loading_seq
+
+        assert infer_blk_seq is not None
+        assert batch_size % patch_per_blk == 0
+
+        n_blks_per_batch = batch_size // patch_per_blk
+
+        bidx = self.state.batch_cxt.bidx
+        blks_start = (bidx - 1) * n_blks_per_batch
+        blks_end = bidx * n_blks_per_batch  # exclusive
+
+        maps = {}
+
+        for head, logits in self.state.batch_out.preds.items():
+            # logits: [B, C, Hp, Wp]
+            probs = torch.softmax(logits, dim=1)
+            preds = torch.argmax(probs, dim=1)  # [B, Hp, Wp]
+
+            _, hp, wp = preds.shape
+
+            # infer patch grid (e.g. 2x2)
+            n_cols = int(patch_per_blk ** 0.5)
+            n_rows = patch_per_blk // n_cols
+            assert n_rows * n_cols == patch_per_blk, "patch_per_blk must form a grid"
+
+            for blk_offset, blk_seq_idx in enumerate(range(blks_start, blks_end)):
+                blk_id = infer_blk_seq[blk_seq_idx]
+
+                patch_start = blk_offset * patch_per_blk
+                patch_end = patch_start + patch_per_blk
+
+                blk_patches = preds[patch_start:patch_end]  # [P, Hp, Wp]
+
+                # reshape scanline → grid
+                blk_patches = blk_patches.view(n_rows, n_cols, hp, wp)
+
+                # stitch rows then cols
+                blk_map = torch.cat(
+                    [torch.cat(list(row), dim=1) for row in blk_patches],
+                    dim=0
+                )  # [H_blk, W_blk]
+
+                if blk_id not in maps:
+                    maps[blk_id] = {}
+
+                maps[blk_id][head] = blk_map
+
+        return maps
+
 
 
     # -------------------------convenience properties-------------------------

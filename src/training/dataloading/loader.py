@@ -1,6 +1,7 @@
 '''Get dataloaders'''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
 # third-party imports
 import psutil
@@ -18,12 +19,20 @@ class DataLoaders:
     train: torch.utils.data.DataLoader | None
     val: torch.utils.data.DataLoader | None
     infer: torch.utils.data.DataLoader | None
+    meta: _LoaderMeta
 
     def __post_init__(self):
         if not self.train and not self.val:
             assert self.infer
         if not self.infer:
             assert self.train and self.val
+
+@dataclasses.dataclass
+class _LoaderMeta:
+    '''Simple meta to be shipped with the dataloaders.'''
+    batch_size: int
+    patch_per_blk: int
+    infer_blks_loading_seq: list[str] | None = None
 
 @dataclasses.dataclass
 class _LoadingFlags:
@@ -67,6 +76,8 @@ def get_dataloaders(
         patch_size=loader_cfg.get_option('patch_size'),
     )
     batch_size = loader_cfg.get_option('batch_size')
+    # meta to be shipped
+    meta = _LoaderMeta(batch_size, cfg.patch_per_blk)
 
     # by work mode
     if mode in ['with_inference', 'no_inference']:
@@ -160,13 +171,16 @@ def get_dataloaders(
     else:
         raise ValueError(f'Invalide mode: {mode}')
 
+    # add inference blocks loading sequence to meta if infer data present
+    if data_paths.infer:
+        meta.infer_blks_loading_seq = list(data_paths.infer.keys())
     # final sanity
     # at least one loader is not None
     assert any([t_loader, v_loader, i_loader])
     # training and validation loaders are tied together
     assert (t_loader and v_loader) or not (t_loader and not v_loader)
     # return
-    return DataLoaders(t_loader, v_loader, i_loader)
+    return DataLoaders(t_loader, v_loader, i_loader, meta)
 
 def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
     '''Get flags.'''

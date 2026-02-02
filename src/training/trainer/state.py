@@ -125,21 +125,21 @@ class _BatchOut:
 # ----- .epoch_sum (summary)
 @dataclasses.dataclass
 class _TrainLogs:
-    '''Training logs.'''
-    head_loss: dict[str, float] = dataclasses.field(default_factory=dict)
-    head_loss_str: str = ''
+    '''Training result summary.'''
+    head_losses: dict[str, float] = dataclasses.field(default_factory=dict)
+    head_losses_str: str = ''
     updated: bool = False
 
 @dataclasses.dataclass
 class _ValLogs:
-    '''Validation logs.'''
+    '''Validation result summary.'''
     head_metrics: dict[str, dict[str, typing.Any]] = dataclasses.field(default_factory=dict)
     head_metrics_str: dict[str, list[str]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
-class _InferLogs:
-    '''Inference logs.'''
-    maps: dict[str, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
+class _InferOutputs:
+    '''Inference result summary.'''
+    maps: dict[int, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
 class _Epoch:
@@ -148,7 +148,7 @@ class _Epoch:
     val_loss: float = 0.0
     train_logs: _TrainLogs = dataclasses.field(default_factory=_TrainLogs)
     val_logs: _ValLogs = dataclasses.field(default_factory=_ValLogs)
-    infer_logs: _InferLogs = dataclasses.field(default_factory=_InferLogs)
+    infer_outputs: _InferOutputs = dataclasses.field(default_factory=_InferOutputs)
 
     def __str__(self) -> str:
         return '\n'.join([

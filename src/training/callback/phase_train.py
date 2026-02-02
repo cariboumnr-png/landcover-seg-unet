@@ -15,8 +15,8 @@ class TrainCallback(training.callback.Callback):
         self.trainer.comps.model.train()
         # reset train loss and logs
         self.state.epoch_sum.train_loss = 0.0
-        self.state.epoch_sum.train_logs.head_loss.clear()
-        self.state.epoch_sum.train_logs.head_loss_str = ''
+        self.state.epoch_sum.train_logs.head_losses.clear()
+        self.state.epoch_sum.train_logs.head_losses_str = ''
         self.state.epoch_sum.train_logs.updated = False
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
