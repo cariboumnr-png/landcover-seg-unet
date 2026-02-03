@@ -2,6 +2,7 @@
 
 from .cfg_access import ConfigAccess
 from .contxt import open_rasters
+from .preview import export_previews
 from .funcs import(
     get_dir_size,
     get_timestamp,
@@ -15,9 +16,12 @@ from .multip import ParallelExecutor
 from .pca import pca_transform
 
 __all__ = [
+    # classes
     'ConfigAccess',
     'Logger',
     'ParallelExecutor',
+    # functions
+    'export_previews',
     'get_dir_size',
     'get_timestamp',
     'load_json',

@@ -56,6 +56,7 @@ class _Heads:
 class _BatchCtx:
     '''Batch level data context.'''
     bidx: int = 0
+    block_index_range: tuple[int, int] = (-1, -1)
     batch: _types.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
     y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
@@ -139,7 +140,7 @@ class _ValLogs:
 @dataclasses.dataclass
 class _InferOutputs:
     '''Inference result summary.'''
-    maps: dict[int, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
+    maps: dict[str, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
 class _Epoch:

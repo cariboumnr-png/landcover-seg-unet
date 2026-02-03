@@ -5,7 +5,7 @@ body: 'unet++'
 
 channels:
   # base channels for model
-  base_ch: 16
+  base_ch: 32
 
 logits_adjustment:
   # whether to use default logits_adjustment

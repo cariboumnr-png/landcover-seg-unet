@@ -72,10 +72,10 @@ def _count_to_inv_weights(count: list[int]) -> list[float]:
     assert inv_sum != 0
     return [float(x / inv_sum) for x in inv]
 
-def _count_to_effective_num(counts: list[int], b: float=0.9999) -> list[float]:
+def _count_to_effective_num(counts: list[int], b: float=0.95) -> list[float]:
     '''Convert count to EN weights Cui et al. 2019'''
 
     counts_arr = numpy.array(counts)
-    weights = (1.0 - b) / 1.0 - numpy.power(b, counts_arr)
+    weights = (1.0 - b) / (1.0 - numpy.power(b, counts_arr))
     normalized = weights / weights.sum() * len(counts_arr)
     return normalized.tolist()

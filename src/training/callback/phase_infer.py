@@ -23,10 +23,13 @@ class InferCallback(training.callback.Callback):
     def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch ctx
         self.state.batch_cxt.refresh(bidx, batch)
+        self.state.batch_cxt.block_index_range = (-1, -1)
         # refresh batch results
         self.state.batch_out.refresh(bidx)
         # parse the batch (x, domain), y may be empty [B, 0]
         self.trainer._parse_batch()
+        # resolve block index range from this batch
+        self.trainer._resolve_batch_block_range()
 
     def on_inference_batch_forward(self) -> None:
         # get x and (optional) domain
@@ -41,13 +44,7 @@ class InferCallback(training.callback.Callback):
     def on_inference_batch_end(self) -> None:
         # aggregate to epoch storage (CPU detach)
         self.trainer._aggregate_batch_predictions()
-        # Optional: also store domain info for bookkeeping
-        # (e.g., ids to map predictions back to data units)
-        # self.state.epoch_sum.infer_meta.append(self.state.batch_cxt.domain)
 
-    def on_inference_end(self) -> None:
-        # Optional: finalize logs, or run any per-epoch post-processing.
-        # You could also concatenate lists here if desired:
-        # for h, parts in self.state.epoch_sum.infer_preds.items():
-        #     self.state.epoch_sum.infer_preds[h] = torch.cat(parts, dim=0)
-        pass
+    def on_inference_end(self, out_dir: str) -> None:
+        # stitch all blocks together and output a preview
+        self.trainer._preview_monitor_head(out_dir)

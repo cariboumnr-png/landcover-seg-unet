@@ -192,7 +192,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             # concatenate
             self.data.img = numpy.concatenate(_imgs, axis=0)
             self.data.lbl = numpy.concatenate(_lbls, axis=0)
-            self._len = int( self.data.img.shape[0])
+            self._len = int(self.data.img.shape[0])
             self.logger.log('INFO', f'{len(blks_dict)} blocks preloaded into RAM')
 
         # otherwise streaming
@@ -214,17 +214,28 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx: int) -> _types.DatasetItem:
         if self.preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
-            y = self.data.lbl[idx].astype(numpy.int64)  # [ps, ps]
+            if isinstance(self.data.lbl, numpy.ndarray) and self.data.lbl.ndim == 1:
+                y = numpy.array([1])
+            else:
+                y = self.data.lbl[idx].astype(numpy.int64)  # [ps, ps]
             dom = self.data.dom[idx] # dict[str, tensor]
             dom = {k: v.clone() for k, v in dom.items()} # new - no shared refs
         else:
             blk_idx, pch_idx = self._global_to_local(idx)
             self._load_block_to_cache(blk_idx)
             x = self.data.img[blk_idx][pch_idx]
-            y = self.data.lbl[blk_idx][pch_idx]
+            if isinstance(self.data.lbl, numpy.ndarray) and self.data.lbl.ndim == 1:
+                y = numpy.array([1])
+            else:
+                y = self.data.lbl[blk_idx][pch_idx].astype(numpy.int64)  # [ps, ps]
             dom = self.data.dom[blk_idx] # domain at is batch-level
             dom = {k: v.clone() for k, v in dom.items()} # new - no shared refs
-        return torch.from_numpy(x), torch.from_numpy(y).long(), dom
+        # in case y is a placeholder
+        if y.ndim != 1:
+            y = torch.from_numpy(y).long()
+        else:
+            y = torch.empty(0, dtype=torch.long)
+        return torch.from_numpy(x), y, dom
 
     def _global_to_local(self, idx: int) -> tuple[int, int]:
         '''Map global patch to block/patch indices (uniform blocks).'''

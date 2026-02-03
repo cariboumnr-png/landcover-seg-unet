@@ -2,7 +2,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 '''
-Trainer runtime state protocols.
+Callback facing trainer runtime state protocols.
 '''
 
 # standard imports
@@ -43,6 +43,7 @@ class Heads(typing.Protocol):
 # ----- .batch_ctx (context)
 class BatchCtx(typing.Protocol):
     bidx: int
+    block_index_range: tuple[int, int]
     batch: tuple['torch.Tensor', dict, dict] | None
     x: 'torch.Tensor'
     y_dict: dict[str, 'torch.Tensor']
@@ -78,7 +79,7 @@ class _ValLogs(typing.Protocol):
 
 class _InferOutputs(typing.Protocol):
     '''Inference logs.'''
-    maps: dict[int, dict[str, torch.Tensor]]
+    maps: dict[str, dict[str, torch.Tensor]]
 
 # ----- .metrics
 class Metrics(typing.Protocol):

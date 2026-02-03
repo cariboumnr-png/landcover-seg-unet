@@ -25,6 +25,7 @@ import copy
 import torch
 # local imports
 import training.trainer
+import utils
 
 class MultiHeadTrainer:
     '''
@@ -188,7 +189,7 @@ class MultiHeadTrainer:
         self._emit('on_validation_end')
         return self.state.epoch_sum.val_logs.head_metrics
 
-    def infer(self):
+    def infer(self, out_dir: str):
         '''
         Production inference over dataloaders.infer (images only).
         Returns: head -> {block_id -> full_map_tensor}
@@ -218,7 +219,7 @@ class MultiHeadTrainer:
             self._emit('on_inference_batch_end')
 
         # inference phase end
-        self._emit('on_inference_end')
+        self._emit('on_inference_end', out_dir)
 
     def set_head_state(
             self,
@@ -460,6 +461,26 @@ class MultiHeadTrainer:
         vec = domain.get(vec_name) if vec_name is not None else None
         return {'ids': ids, 'vec': vec}
 
+    def _resolve_batch_block_range(self) -> None:
+        '''
+        Compute the [start, end) block index window covered by the
+        current batch.
+        '''
+
+        # get dataloader meta with sanity check
+        meta = self.comps.dataloaders.meta
+        batch_size = meta.batch_size
+        patch_per_blk = meta.patch_per_blk
+        if batch_size % patch_per_blk != 0:
+            raise ValueError('batch_size must be a multiple of patch_per_blk')
+
+        # determine which blks this batch covers
+        bidx = self.state.batch_cxt.bidx # 1-based
+        n_blks_per_batch = batch_size // patch_per_blk
+        blks_start = (bidx - 1) * n_blks_per_batch
+        blks_end = bidx * n_blks_per_batch  # exclusive
+        self.state.batch_cxt.block_index_range = (blks_start, blks_end)
+
     # context setup
     def _autocast_ctx(self):
         '''Autocast context for training based on precision setting.'''
@@ -619,58 +640,74 @@ class MultiHeadTrainer:
     def _aggregate_batch_predictions(self):
         '''Convert predictions of the current batch into a class map'''
 
-        batch_size = self.comps.dataloaders.meta.batch_size
-        patch_per_blk = self.comps.dataloaders.meta.patch_per_blk
+        # assumes no ragged batches for inference - guarantee from loader
+        # get number of patches per block from dataloader meta
+        p = self.comps.dataloaders.meta.patch_per_blk
+        # infer patch grid (assuming perfectly square)
+        n  = int(p ** 0.5)
+        assert n * n == p, 'Invalid patch grid'
+
+        # stable block names
         infer_blk_seq = self.comps.dataloaders.meta.infer_blks_loading_seq
+        assert infer_blk_seq is not None, 'Inference data not provided'
 
-        assert infer_blk_seq is not None
-        assert batch_size % patch_per_blk == 0
-
-        n_blks_per_batch = batch_size // patch_per_blk
-
-        bidx = self.state.batch_cxt.bidx
-        blks_start = (bidx - 1) * n_blks_per_batch
-        blks_end = bidx * n_blks_per_batch  # exclusive
-
-        maps = {}
-
+        # get through each head and attach preds to corresponding block-heads
+        maps: dict[str, dict[str, torch.Tensor]] = {}
         for head, logits in self.state.batch_out.preds.items():
-            # logits: [B, C, Hp, Wp]
-            probs = torch.softmax(logits, dim=1)
-            preds = torch.argmax(probs, dim=1)  # [B, Hp, Wp]
+            # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
+            preds = torch.argmax(logits, dim=1)
+            # get preds per head, stitched for each block
+            block_preds = self.__stitch_head_preds(preds, p, n)
+            #
+            for blkid, preds in block_preds.items():
+                blkname = infer_blk_seq[blkid]
+                if blkname not in maps:
+                    maps[blkname] = {}
+                maps[blkname][head] = preds
+        # assign to trainer state
+        self.state.epoch_sum.infer_outputs.maps = maps
 
-            _, hp, wp = preds.shape
+    def __stitch_head_preds(
+            self,
+            preds: torch.Tensor,
+            p_per_blk: int,
+            p_per_dim: int
+        ) -> dict[int, torch.Tensor]:
+        '''doc'''
 
-            # infer patch grid (e.g. 2x2)
-            n_cols = int(patch_per_blk ** 0.5)
-            n_rows = patch_per_blk // n_cols
-            assert n_rows * n_cols == patch_per_blk, "patch_per_blk must form a grid"
+        out: dict[int, torch.Tensor] = {}
+        # get block index range of current batch
+        rr = self.state.batch_cxt.block_index_range
+        # get H * W of preds
+        _, hp, wp = preds.shape
 
-            for blk_offset, blk_seq_idx in enumerate(range(blks_start, blks_end)):
-                blk_id = infer_blk_seq[blk_seq_idx]
+        # iterate through involved blocks
+        for blk_offset, blk_seq_idx in enumerate(range(rr[0], rr[1])):
 
-                patch_start = blk_offset * patch_per_blk
-                patch_end = patch_start + patch_per_blk
+            # get preds for current block
+            patch_start = blk_offset * p_per_blk
+            patch_end = patch_start + p_per_blk
+            blk_patches = preds[patch_start: patch_end]  # [P, Hp, Wp]
 
-                blk_patches = preds[patch_start:patch_end]  # [P, Hp, Wp]
+            # reshape scanline → grid
+            grid = blk_patches.reshape(p_per_dim, p_per_dim, hp, wp)
+            # stitch rows then cols
+            stitched = torch.cat(
+                [torch.cat(list(grid[r]), dim=1) for r in range(p_per_dim)],
+                dim=0
+            )
+            out[blk_seq_idx] = stitched
+        # return
+        return out
 
-                # reshape scanline → grid
-                blk_patches = blk_patches.view(n_rows, n_cols, hp, wp)
+    def _preview_monitor_head(self, out_dir: str) -> None:
+        '''doc'''
 
-                # stitch rows then cols
-                blk_map = torch.cat(
-                    [torch.cat(list(row), dim=1) for row in blk_patches],
-                    dim=0
-                )  # [H_blk, W_blk]
-
-                if blk_id not in maps:
-                    maps[blk_id] = {}
-
-                maps[blk_id][head] = blk_map
-
-        return maps
-
-
+        utils.export_previews(
+            self.state.epoch_sum.infer_outputs.maps,
+            out_dir=out_dir,
+            heads=[self.config.monitor.head] # as list
+        )
 
     # -------------------------convenience properties-------------------------
     @property
