@@ -38,7 +38,7 @@ config:
     log_every: 50
     val_every: 1
     ckpt_every: 5
-    patience: 5
+    patience: 10
     min_delta: 0.0005
   monitor:
     metric_name: iou

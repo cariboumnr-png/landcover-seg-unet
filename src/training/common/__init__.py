@@ -21,6 +21,7 @@ from .trainer_comps import (
     ProgressCallbackLike,
     TrainCallbackLike,
     ValCallbackLike,
+    InferCallbackLike,
     LoggingCallbackLike
 )
 from .trainer_config import (
@@ -65,5 +66,6 @@ __all__ = [
     'ProgressCallbackLike',
     'TrainCallbackLike',
     'ValCallbackLike',
+    'InferCallbackLike',
     'LoggingCallbackLike'
 ]

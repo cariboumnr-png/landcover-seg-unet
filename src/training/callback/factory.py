@@ -12,6 +12,7 @@ class CallbackSet:
     '''Wrapper for concrete callback classes.'''
     train: training.common.TrainCallbackLike
     validate: training.common.ValCallbackLike
+    infer: training.common.InferCallbackLike
     logging: training.common.LoggingCallbackLike
     progress: training.common.ProgressCallbackLike
 
@@ -24,6 +25,7 @@ def build_callbacks(logger: utils.Logger) -> CallbackSet:
     return CallbackSet(
         train=training.callback.TrainCallback(logger),
         validate=training.callback.ValCallback(logger),
+        infer=training.callback.InferCallback(logger),
         logging=training.callback.LoggingCallback(logger),
         progress=training.callback.ProgressCallback(logger),
     )

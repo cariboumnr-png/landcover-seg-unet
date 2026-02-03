@@ -18,6 +18,7 @@ __all__ = [
     'LoggingCallback',
     'TrainCallback',
     'ValCallback',
+    'InferCallback',
     'ProgressCallback',
     # functions
     'build_callbacks'
@@ -28,6 +29,7 @@ if typing.TYPE_CHECKING:
     from training.common import TrainerLike
     from .base import Callback
     from .logging import LoggingCallback
+    from .phase_infer import InferCallback
     from .phase_train import TrainCallback
     from .phase_val import ValCallback
     from .progress import ProgressCallback
@@ -45,6 +47,8 @@ def __getattr__(name: str):
         return importlib.import_module('.phase_train', __package__).TrainCallback
     if name == 'ValCallback':
         return importlib.import_module('.phase_val', __package__).ValCallback
+    if name == 'InferCallback':
+        return importlib.import_module('.phase_infer', __package__).InferCallback
     if name == 'ProgressCallback':
         return importlib.import_module('.progress', __package__).ProgressCallback
     if name == 'build_callbacks':

@@ -19,3 +19,5 @@ __pycache__/
 !/misc/
 /outputs/*
 !/outputs/
+/previews/*
+!/previews/

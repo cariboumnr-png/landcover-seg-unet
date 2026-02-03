@@ -1,14 +1,16 @@
 '''Module internal: trainer runtime state.'''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
+import typing
 # third-party imports
 import torch
 # local imports
 import _types
 import training.common
 
-# -------------------------------trainer state-------------------------------
+# ----- .progress
 @dataclasses.dataclass
 class _Progress:
     '''Trainig progress.'''
@@ -24,6 +26,7 @@ class _Progress:
             f'\tCurrent Global Step: {self.global_step}'
         ])
 
+# ----- .heads
 @dataclasses.dataclass
 class _Heads:
     '''Heads related state.'''
@@ -48,10 +51,12 @@ class _Heads:
             return 'N/A'
         return '|'.join(lst)
 
+# ----- .batch_ctx (context)
 @dataclasses.dataclass
 class _BatchCtx:
     '''Batch level data context.'''
     bidx: int = 0
+    block_index_range: tuple[int, int] = (-1, -1)
     batch: _types.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
     y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
@@ -85,6 +90,7 @@ class _BatchCtx:
         self.y_dict.clear()             # clear the old batch
         self.domain.clear()
 
+# ----- .batch_out (output)
 @dataclasses.dataclass
 class _BatchOut:
     '''Batch level outputs.'''
@@ -117,15 +123,33 @@ class _BatchOut:
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
 
+# ----- .epoch_sum (summary)
+@dataclasses.dataclass
+class _TrainLogs:
+    '''Training result summary.'''
+    head_losses: dict[str, float] = dataclasses.field(default_factory=dict)
+    head_losses_str: str = ''
+    updated: bool = False
+
+@dataclasses.dataclass
+class _ValLogs:
+    '''Validation result summary.'''
+    head_metrics: dict[str, dict[str, typing.Any]] = dataclasses.field(default_factory=dict)
+    head_metrics_str: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+
+@dataclasses.dataclass
+class _InferOutputs:
+    '''Inference result summary.'''
+    maps: dict[str, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
+
 @dataclasses.dataclass
 class _Epoch:
     '''Epoch level summary'''
     train_loss: float = 0.0
     val_loss: float = 0.0
-    train_logs: dict[str, float] = dataclasses.field(default_factory=dict)
-    train_logs_text: str = ''
-    val_logs: dict[str, dict] = dataclasses.field(default_factory=dict)
-    val_logs_text: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+    train_logs: _TrainLogs = dataclasses.field(default_factory=_TrainLogs)
+    val_logs: _ValLogs = dataclasses.field(default_factory=_ValLogs)
+    infer_outputs: _InferOutputs = dataclasses.field(default_factory=_InferOutputs)
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -134,6 +158,7 @@ class _Epoch:
             f'\tValidation Loss: {self.val_loss}',
         ])
 
+# ----- .metrics
 @dataclasses.dataclass
 class _Metrics:
     '''Experiment level metrics'''
@@ -157,6 +182,7 @@ class _Metrics:
             f'\tPatience: {self.patience_n}'
         ])
 
+# ----- .optim (optimization state)
 @dataclasses.dataclass
 class _Optim:
     '''Optimization state.'''
@@ -177,6 +203,7 @@ class _Optim:
             f'\t{scaler_text}',
         ])
 
+# ----- Runtime state (composite)
 @dataclasses.dataclass
 class RuntimeState:
     '''Training state with defualt values.'''

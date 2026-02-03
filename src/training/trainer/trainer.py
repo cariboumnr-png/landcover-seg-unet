@@ -25,6 +25,7 @@ import copy
 import torch
 # local imports
 import training.trainer
+import utils
 
 class MultiHeadTrainer:
     '''
@@ -75,6 +76,7 @@ class MultiHeadTrainer:
         # setup callback classes
         self._setup_callbacks()
 
+# -------------------------------Public  Methods-------------------------------
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
         '''
         Train for one epoch and return an epoch-level training log.
@@ -99,6 +101,7 @@ class MultiHeadTrainer:
 
         # train phase begin:
         # - set model to .train()
+        # - reset train loss/logs
         self._emit('on_train_epoch_begin', epoch)
 
         # interate through training data batches
@@ -137,7 +140,7 @@ class MultiHeadTrainer:
         # train phase end
         # - update logs and loss (total/per-head) for the epoch
         self._emit('on_train_epoch_end')
-        return self.state.epoch_sum.train_logs
+        return self.state.epoch_sum.train_logs.head_losses
 
     def validate(self) -> dict[str, dict]:
         '''
@@ -158,7 +161,9 @@ class MultiHeadTrainer:
         '''
 
         # val phase start
+        # - set model to .eval()
         # - reset head confusion matrices
+        # - reset validation loss/logs
         self._emit('on_validation_begin')
 
         # iterate through validation dataset
@@ -182,7 +187,39 @@ class MultiHeadTrainer:
         # val phase end
         # - calculate per-head IoU related metrics for and update the log dict
         self._emit('on_validation_end')
-        return self.state.epoch_sum.val_logs
+        return self.state.epoch_sum.val_logs.head_metrics
+
+    def infer(self, out_dir: str):
+        '''
+        Production inference over dataloaders.infer (images only).
+        Returns: head -> {block_id -> full_map_tensor}
+        '''
+
+        # infer phase start
+        # - set model to .eval()
+        # - clear inference output mapping (batch -> preds)
+        self._emit('on_inference_begin')
+
+        # iterate through inference dataset
+        assert self.dataloaders.infer, 'Inference dataset not provided'
+        for bidx, batch in enumerate(self.dataloaders.infer, start=1):
+
+            # batch start
+            # - get new batch and parse into x, y_dict (empty dict) and domain
+            self._emit('on_inference_batch_begin', bidx, batch)
+
+            # batch forward
+            # - forward the model with x and domain
+            # - autocast context handled
+            # - use torch.inference_mode()
+            self._emit('on_inference_batch_forward')
+
+            # batch end
+            # - aggregate predictions to epoch storage
+            self._emit('on_inference_batch_end')
+
+        # inference phase end
+        self._emit('on_inference_end', out_dir)
 
     def set_head_state(
             self,
@@ -258,7 +295,11 @@ class MultiHeadTrainer:
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
 
-    def predict(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def predict(
+            self,
+            x: torch.Tensor,
+            mode: str
+        ) -> dict[str, torch.Tensor]:
         '''
         Run a simple head-aware inference pass.
 
@@ -268,27 +309,34 @@ class MultiHeadTrainer:
 
         Args:
             x: Input tensor, moved to trainer device.
+            mode: Determins the return type.
 
         Returns:
             A mapping from head name to prediction tensor.
         '''
 
+        # set model to evaluation mode and move to device
         self.model.eval()
-        device = self.device
-        x = x.to(device)
+        x = x.to(self.device)
 
+        # get outputs in proper context
         with torch.inference_mode(), self._autocast_ctx():
             outputs = self.model.forward(x)  # raw logits per head
 
+        # get prediction by mode and return
         preds = {}
         for head, logits in outputs.items():
-            if head.startswith('seg'):  # segmentation head
+            if mode == 'seg':       # segmentation head
                 preds[head] = torch.argmax(logits, dim=1)  # [B, H, W]
-            elif head.startswith('cls'):  # classification head
+            elif mode == 'cls':     # classification head
                 probs = torch.softmax(logits, dim=1)
                 preds[head] = torch.topk(probs, k=1).indices  # top-1 class
-            else:  # regression or other
-                preds[head] = logits  # raw values
+            elif mode == 'raw':      # raw values
+                preds[head] = logits
+            else:
+                raise ValueError(
+                    f'Invalid mode: {mode}: must be in ["seg", "cls", "raw"]'
+                )
         return preds
 
     # ----------------------------internal methods----------------------------
@@ -413,7 +461,27 @@ class MultiHeadTrainer:
         vec = domain.get(vec_name) if vec_name is not None else None
         return {'ids': ids, 'vec': vec}
 
-    # precision context
+    def _resolve_batch_block_range(self) -> None:
+        '''
+        Compute the [start, end) block index window covered by the
+        current batch.
+        '''
+
+        # get dataloader meta with sanity check
+        meta = self.comps.dataloaders.meta
+        batch_size = meta.batch_size
+        patch_per_blk = meta.patch_per_blk
+        if batch_size % patch_per_blk != 0:
+            raise ValueError('batch_size must be a multiple of patch_per_blk')
+
+        # determine which blks this batch covers
+        bidx = self.state.batch_cxt.bidx # 1-based
+        n_blks_per_batch = batch_size // patch_per_blk
+        blks_start = (bidx - 1) * n_blks_per_batch
+        blks_end = bidx * n_blks_per_batch  # exclusive
+        self.state.batch_cxt.block_index_range = (blks_start, blks_end)
+
+    # context setup
     def _autocast_ctx(self):
         '''Autocast context for training based on precision setting.'''
         device_type = self.device
@@ -465,16 +533,16 @@ class MultiHeadTrainer:
                 self.config.optim.grad_clip_norm
             )
 
-    def _update_train_logs(self, bidx: int, flush: bool=False) -> bool:
+    def _update_train_logs(self, flush: bool=False):
         '''
         Average losses and update per-head loss logs at intervals.
 
         Set `flush=True` to flush results at end of a training epoch.
-
-        Returns a boolean flag on whether the log is updated or not and
-        write logs to `self.state.epoch_sum`.
         '''
 
+        # get current batch id
+        bidx = self.state.batch_cxt.bidx
+        # create log dict
         logs = {}
         # update log at interval
         if flush or bidx % self.config.schedule.logging_interval == 0:
@@ -487,15 +555,14 @@ class MultiHeadTrainer:
             # extras - lr
             logs['LR'] = self.optimization.optimizer.param_groups[0]['lr']
             # assgin to state dict
-            self.state.epoch_sum.train_logs = logs
+            self.state.epoch_sum.train_logs.head_losses = logs
 
         # if logs are updated: provide a printer friendly text and return flag
         if logs:
+            self.state.epoch_sum.train_logs.updated = True
             text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
             text = f'b{bidx:04d} | ' + '|'.join(text_list)
-            self.state.epoch_sum.train_logs_text = text
-            return True
-        return False
+            self.state.epoch_sum.train_logs.head_losses_str = text
 
     # validation phase
     def _update_conf_matrix(self) -> None:
@@ -536,15 +603,15 @@ class MultiHeadTrainer:
             metrics_module.compute() # final metrics from batch accumulations
             val_logs[head] = metrics_module.metrics_dict
             val_logs_text[head] = metrics_module.metrics_text
-        self.state.epoch_sum.val_logs = val_logs
-        self.state.epoch_sum.val_logs_text = val_logs_text
+        self.state.epoch_sum.val_logs.head_metrics = val_logs
+        self.state.epoch_sum.val_logs.head_metrics_str = val_logs_text
 
     def _track_metrics(self) -> None:
         '''Track the best metric and count patience epochs.'''
 
         # get metric from validation metrics dictionary
         track_head = self.config.monitor.head
-        val = self.state.epoch_sum.val_logs[track_head]
+        val = self.state.epoch_sum.val_logs.head_metrics[track_head]
         met = val['ac_mean'] if val['has_active'] in val else val['mean']
 
         # at the end of the first epoch
@@ -568,6 +635,79 @@ class MultiHeadTrainer:
             # otherwise increment patience counter
             else:
                 self.state.metrics.patience_n += 1
+
+    # inference phase
+    def _aggregate_batch_predictions(self):
+        '''Convert predictions of the current batch into a class map'''
+
+        # assumes no ragged batches for inference - guarantee from loader
+        # get number of patches per block from dataloader meta
+        p = self.comps.dataloaders.meta.patch_per_blk
+        # infer patch grid (assuming perfectly square)
+        n  = int(p ** 0.5)
+        assert n * n == p, 'Invalid patch grid'
+
+        # stable block names
+        infer_blk_seq = self.comps.dataloaders.meta.infer_blks_loading_seq
+        assert infer_blk_seq is not None, 'Inference data not provided'
+
+        # get through each head and attach preds to corresponding block-heads
+        maps: dict[str, dict[str, torch.Tensor]] = {}
+        for head, logits in self.state.batch_out.preds.items():
+            # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
+            preds = torch.argmax(logits, dim=1)
+            # get preds per head, stitched for each block
+            block_preds = self.__stitch_head_preds(preds, p, n)
+            #
+            for blkid, preds in block_preds.items():
+                blkname = infer_blk_seq[blkid]
+                if blkname not in maps:
+                    maps[blkname] = {}
+                maps[blkname][head] = preds
+        # assign to trainer state
+        self.state.epoch_sum.infer_outputs.maps = maps
+
+    def __stitch_head_preds(
+            self,
+            preds: torch.Tensor,
+            p_per_blk: int,
+            p_per_dim: int
+        ) -> dict[int, torch.Tensor]:
+        '''doc'''
+
+        out: dict[int, torch.Tensor] = {}
+        # get block index range of current batch
+        rr = self.state.batch_cxt.block_index_range
+        # get H * W of preds
+        _, hp, wp = preds.shape
+
+        # iterate through involved blocks
+        for blk_offset, blk_seq_idx in enumerate(range(rr[0], rr[1])):
+
+            # get preds for current block
+            patch_start = blk_offset * p_per_blk
+            patch_end = patch_start + p_per_blk
+            blk_patches = preds[patch_start: patch_end]  # [P, Hp, Wp]
+
+            # reshape scanline → grid
+            grid = blk_patches.reshape(p_per_dim, p_per_dim, hp, wp)
+            # stitch rows then cols
+            stitched = torch.cat(
+                [torch.cat(list(grid[r]), dim=1) for r in range(p_per_dim)],
+                dim=0
+            )
+            out[blk_seq_idx] = stitched
+        # return
+        return out
+
+    def _preview_monitor_head(self, out_dir: str) -> None:
+        '''doc'''
+
+        utils.export_previews(
+            self.state.epoch_sum.infer_outputs.maps,
+            out_dir=out_dir,
+            heads=[self.config.monitor.head] # as list
+        )
 
     # -------------------------convenience properties-------------------------
     @property

@@ -87,6 +87,9 @@ class Controller:
             if self.trainer.config.schedule.eval_interval is not None and \
                 epoch % self.trainer.config.schedule.eval_interval == 0:
                 v_logs = self.trainer.validate()
+                # also do a preview if inference data provided
+                if self.trainer.dataloaders.infer:
+                    self.trainer.infer('./previews')
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
                 fpath = f'{self.ckpt_dpath}/{phase.name}_best.pt'
