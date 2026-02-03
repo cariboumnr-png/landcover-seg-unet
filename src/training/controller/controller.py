@@ -1,18 +1,22 @@
 '''Curriculum controller class.'''
 
+# standard imports
+import dataclasses
 # local imports
+import _types
 import training.common
 import training.controller
 import training.trainer
 import utils
 
+# --------------------------------Public  Class--------------------------------
 class Controller:
     '''doc'''
     def __init__(
             self,
             trainer: training.trainer.MultiHeadTrainer,
             phases: list[training.controller.Phase],
-            ckpt_dpath: str,
+            config: _types.ConfigType,
             logger: utils.Logger
         ):
         '''Initialization'''
@@ -20,8 +24,13 @@ class Controller:
         # parse arguments
         self.trainer = trainer
         self.phases = phases
-        self.ckpt_dpath = ckpt_dpath
         self.logger = logger.get_child('phase') # a child from base logger
+        # config accessor
+        cfg = utils.ConfigAccess(config)
+        self.cfg = _ExperimentConfig(
+            cfg.get_option('ckpt_dpath'),
+            cfg.get_option('preview_dpath')
+        )
 
         # init phase counter
         self.current_phase_idx = 0
@@ -44,11 +53,11 @@ class Controller:
                 break
             if isinstance(stopat, str) and stopat == phase.name:
                 print('__Experiment Complete__')
-                self.logger.log('INFO', f'Training stopped at: {stopat}')
+                self.logger.log('INFO', f'Training stopped@{stopat}')
                 break
             if isinstance(stopat, int) and stopat == self.current_phase_idx:
                 print('__Experiment Complete__')
-                self.logger.log('INFO', f'Training stopped at: Phase_{stopat + 1}')
+                self.logger.log('INFO', f'Training stopped@Phase_{stopat + 1}')
                 break
 
     def _train_phase(self) -> tuple[dict, dict]:
@@ -73,7 +82,7 @@ class Controller:
             patience = self.trainer.config.schedule.patience_epochs
             patience_counter = self.trainer.state.metrics.patience_n
             if patience and patience_counter >= patience and epoch >= 10:
-                self.logger.log('INFO', 'Patience limit reached, phase stopping')
+                self.logger.log('INFO', 'Patience limit reached, stopping')
                 break
             print(f'__Epoch: {epoch}/{num_epoch}__')
             # set trainer heads
@@ -89,12 +98,12 @@ class Controller:
                 v_logs = self.trainer.validate()
                 # also do a preview if inference data provided
                 if self.trainer.dataloaders.infer:
-                    self.trainer.infer('./previews')
+                    self.trainer.infer(self.cfg.preview_dpath)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
-                fpath = f'{self.ckpt_dpath}/{phase.name}_best.pt'
+                fpath = f'{self.cfg.ckpt_dpath}/{phase.name}_best.pt'
             else:
-                fpath = f'{self.ckpt_dpath}/{phase.name}_last.pt'
+                fpath = f'{self.cfg.ckpt_dpath}/{phase.name}_last.pt'
             self._save_progress(fpath)
         print(f'__Phase [{phase.name}] finished__')
 
@@ -133,3 +142,10 @@ class Controller:
     def done(self) -> bool:
         '''Returns whether controller has reached the final phase.'''
         return self.current_phase_idx >= len(self.phases)
+
+# ------------------------------private dataclass------------------------------
+@dataclasses.dataclass
+class _ExperimentConfig:
+    '''Experiment configs.'''
+    ckpt_dpath: str
+    preview_dpath: str

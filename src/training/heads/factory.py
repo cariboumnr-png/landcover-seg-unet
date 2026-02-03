@@ -3,8 +3,10 @@
 # third-party imports
 import numpy
 # local imports
+import _types
 import training.common
 import training.heads
+import utils
 
 class HeadSpecs:
     '''
@@ -35,11 +37,15 @@ class HeadSpecs:
 # Public API
 def build_headspecs(
         data: training.common.DataSummaryLike,
-        alpha_fn: str,
+        config: _types.ConfigType
     ) -> HeadSpecs:
     '''Generate concreate head specs classes indexed by head name.'''
 
+    # config accesor
+    cfg = utils.ConfigAccess(config)
+
     # register alpha compute function
+    alpha_fn = cfg.get_option('alpha_fn')
     alpha_fn_registry = {
         'effective_n': _count_to_effective_num,
         'inverse': _count_to_inv_weights
@@ -47,14 +53,17 @@ def build_headspecs(
     if alpha_fn not in alpha_fn_registry:
         raise ValueError(f'Invalid alpha calc fn: {alpha_fn}')
 
+    # get Effective Number weights beta
+    en_beta = cfg.get_option('en_beta')
+    fn_kwargs = {'b': en_beta}
+
     # iterate heads in data and create headspec for each
     headspecs_dict: dict[str, training.heads.Spec] = {}
-
     for name, counts in data.heads.class_counts.items():
         headspec =  training.heads.Spec(
             name=name,
             count=counts,
-            loss_alpha=alpha_fn_registry[alpha_fn](list(counts)),
+            loss_alpha=alpha_fn_registry[alpha_fn](list(counts), **fn_kwargs),
             parent_head=data.heads.topology[name]['head'],
             parent_cls=data.heads.topology[name]['cls'],
             weight=1.0,
@@ -72,7 +81,11 @@ def _count_to_inv_weights(count: list[int]) -> list[float]:
     assert inv_sum != 0
     return [float(x / inv_sum) for x in inv]
 
-def _count_to_effective_num(counts: list[int], b: float=0.95) -> list[float]:
+def _count_to_effective_num(
+        counts: list[int],
+        *,
+        b: float
+    ) -> list[float]:
     '''Convert count to EN weights Cui et al. 2019'''
 
     counts_arr = numpy.array(counts)

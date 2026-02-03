@@ -5,7 +5,9 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
+import _types
 import training.optim
+import utils
 
 @dataclasses.dataclass
 class Optimization:
@@ -37,7 +39,9 @@ _SCHEDULERS: dict[str, training.optim.SchedulerFactory] = {
 # public functions
 def build_optimizer(
         model: training.optim.ModelWithParams,
-        cfg: _Config
+        optim_cls: str,
+        lr: float,
+        weight_decay: float
     ) -> torch.optim.Optimizer:
     '''
     Docstring for build_optimizer
@@ -46,18 +50,19 @@ def build_optimizer(
     :param cfg: Description
     '''
 
-    opt_cls = _OPTIMIZERS.get(cfg.opt_cls)
-    if opt_cls is None:
-        raise ValueError(f"Unknown optimizer: {cfg.opt_cls}")
-    return opt_cls(
+    optimizer_class = _OPTIMIZERS.get(optim_cls)
+    if optimizer_class is None:
+        raise ValueError(f"Unknown optimizer: {optim_cls}")
+    return optimizer_class(
         params=model.parameters(),
-        lr=cfg.lr,
-        weight_decay=cfg.weight_decay
+        lr=lr,
+        weight_decay=weight_decay
     )
 
 def build_scheduler(
         optimizer: torch.optim.Optimizer,
-        cfg: _Config
+        sched_cls: str,
+        sched_args: dict
     ) -> torch.optim.lr_scheduler.LRScheduler | None:
     '''
     Docstring for build_scheduler
@@ -65,29 +70,31 @@ def build_scheduler(
     :param optimizer: Description
     :param cfg: Description
     '''
-    if cfg.sched_cls is None:
-        return None
-    sched_cls = _SCHEDULERS.get(cfg.sched_cls)
     if sched_cls is None:
-        raise ValueError(f"Unknown scheduler: {cfg.sched_cls}")
-    return sched_cls(optimizer=optimizer, **cfg.sched_args)
-
-def build_optim_config(
-    opt_cls: str,
-    lr: float,
-    weight_decay: float,
-    sched_cls: str,
-    sched_args: dict
-) -> _Config:
-    '''Build optimization config'''
-    return _Config(opt_cls, lr, weight_decay, sched_cls, sched_args)
+        return None
+    scheduler = _SCHEDULERS.get(sched_cls)
+    if scheduler is None:
+        raise ValueError(f"Unknown scheduler: {sched_cls}")
+    return scheduler(optimizer=optimizer, **sched_args)
 
 def build_optimization(
         model: training.optim.ModelWithParams,
-        config: _Config
+        config: _types.ConfigType
     ) -> Optimization:
-    '''Wrapper'''
+    '''Factory-like wrapper function.'''
 
-    optimizer = build_optimizer(model, config)
-    scheduler = build_scheduler(optimizer, config)
+    # config accessor
+    cfg = utils.ConfigAccess(config)
+
+    optimizer = build_optimizer(
+        model=model,
+        optim_cls=cfg.get_option('opt_cls'),
+        lr=cfg.get_option('lr'),
+        weight_decay=cfg.get_option('weight_decay')
+    )
+    scheduler = build_scheduler(
+        optimizer,
+        sched_cls=cfg.get_option('sched_cls'),
+        sched_args=cfg.get_option('sched_args')
+    )
     return Optimization(optimizer=optimizer, scheduler=scheduler)

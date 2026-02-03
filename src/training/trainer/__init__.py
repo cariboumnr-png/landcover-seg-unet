@@ -16,6 +16,7 @@ __all__ = [
     'RuntimeConfig',
     'RuntimeState',
     # functions
+    'get_config',
     'load',
     'save',
     'multihead_loss',
@@ -25,7 +26,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .ckpts import load, save
     from .comps import TrainerComponents
-    from .config import RuntimeConfig
+    from .config import RuntimeConfig, get_config
     from .state import RuntimeState
     from .trainer import MultiHeadTrainer
     from .loss import multihead_loss
@@ -36,8 +37,8 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.ckpts', __package__), name)
     if name == 'TrainerComponents':
         return importlib.import_module('.comps', __package__).TrainerComponents
-    if name == 'RuntimeConfig':
-        return importlib.import_module('.config', __package__).RuntimeConfig
+    if name in ['RuntimeConfig', 'get_config']:
+        return getattr(importlib.import_module('.config', __package__), name)
     if name == 'RuntimeState':
         return importlib.import_module('.state', __package__).RuntimeState
     if name == 'MultiHeadTrainer':

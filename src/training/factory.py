@@ -14,6 +14,25 @@ import training.optim
 import training.trainer
 import utils
 
+# -------------------------------Public Function-------------------------------
+def build_controller(
+        trainer: training.trainer.MultiHeadTrainer,
+        config: omegaconf.DictConfig,
+        logger: utils.Logger
+    ) -> training.controller.Controller:
+    '''Setup training controller.'''
+
+    # get phases
+    phases = training.controller.generate_phases(config)
+
+    # return a controller class
+    return training.controller.Controller(
+        trainer=trainer,
+        phases=phases,
+        config=config.experiment,
+        logger=logger
+    )
+
 def build_trainer(
         trainer_mode: str,
         model: training.common.MultiheadModelLike,
@@ -32,7 +51,7 @@ def build_trainer(
         logger=logger
     )
     # generate runtime config
-    runtime_config = _get_config(config.config)
+    runtime_config = training.trainer.get_config(config.config)
 
     # build and return a trainer class
     return training.trainer.MultiHeadTrainer(
@@ -41,24 +60,7 @@ def build_trainer(
         device='cuda'
     )
 
-def build_controller(
-        trainer: training.trainer.MultiHeadTrainer,
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> training.controller.Controller:
-    '''Setup training controller.'''
-
-    # get phases
-    phases = training.controller.generate_phases(config)
-
-    # return a controller class
-    return training.controller.Controller(
-        trainer=trainer,
-        phases=phases,
-        ckpt_dpath=config.ckpt_dpath,
-        logger=logger
-    )
-
+# ------------------------------private  function------------------------------
 def _get_components(
         trainer_mode: str,
         model: training.common.MultiheadModelLike,
@@ -79,7 +81,7 @@ def _get_components(
     # compile training heads basic specifications
     headspecs = training.heads.build_headspecs(
         data=data_summary,
-        alpha_fn=config.loss.alpha_fn,
+        config=config.loss.alpha_fn,
     )
 
     # compile training heads loss compute modules
@@ -96,16 +98,9 @@ def _get_components(
     )
 
     # build optimizer and scheduler
-    optim_config = training.optim.build_optim_config(
-        opt_cls=config.optim.opt_cls,
-        lr=config.optim.lr,
-        weight_decay=config.optim.weight_decay,
-        sched_cls=config.optim.sched_cls,
-        sched_args=config.optim.sched_args
-    )
     optimization = training.optim.build_optimization(
         model=model,
-        config=optim_config
+        config=config.optim_config
     )
 
     # generate callback instances
@@ -122,30 +117,3 @@ def _get_components(
         callbacks=callbacks,
     )
     return components
-
-def _get_config(config: omegaconf.DictConfig) -> training.trainer.RuntimeConfig:
-    '''Generate trainer runtime config from hydra.'''
-
-    running_config = training.trainer.RuntimeConfig()
-    # assign domain config
-    running_config.data.dom_ids_name=config.data.domain_ids_name
-    running_config.data.dom_vec_name=config.data.domain_vec_name
-    # assign schedule config
-    running_config.schedule.max_epoch=config.schedule.max_epoch
-    running_config.schedule.max_step=config.schedule.max_step
-    running_config.schedule.logging_interval=config.schedule.log_every
-    running_config.schedule.eval_interval=config.schedule.val_every
-    running_config.schedule.checkpoint_interval=config.schedule.ckpt_every
-    running_config.schedule.patience_epochs=config.schedule.patience
-    running_config.schedule.min_delta=config.schedule.min_delta
-    # assign monitoring config
-    running_config.monitor.enabled=('iou',)
-    running_config.monitor.metric=config.monitor.metric_name
-    running_config.monitor.head=config.monitor.track_head_name
-    running_config.monitor.mode=config.monitor.track_mode
-    # assign precision config
-    running_config.precision.use_amp=config.precision.use_amp
-    # assign optimization config
-    running_config.optim.grad_clip_norm=config.optimization.grad_clip_norm
-    # return complete runnning config
-    return running_config

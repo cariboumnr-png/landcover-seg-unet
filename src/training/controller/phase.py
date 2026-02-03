@@ -8,6 +8,7 @@ import typing
 # third-party imports
 import omegaconf
 
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class Phase:
     '''doc'''
@@ -30,6 +31,7 @@ class Phase:
             f'- LR Scale:\t{self.lr_scale}'
         ])
 
+# -------------------------------Public Function-------------------------------
 def generate_phases(config: omegaconf.DictConfig) -> list[Phase]:
     '''doc'''
 
