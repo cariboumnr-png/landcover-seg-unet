@@ -81,7 +81,7 @@ def _get_components(
     # compile training heads basic specifications
     headspecs = training.heads.build_headspecs(
         data=data_summary,
-        config=config.loss.alpha_fn,
+        config=config.loss,
     )
 
     # compile training heads loss compute modules
@@ -100,7 +100,7 @@ def _get_components(
     # build optimizer and scheduler
     optimization = training.optim.build_optimization(
         model=model,
-        config=config.optim_config
+        config=config.optim
     )
 
     # generate callback instances

@@ -270,8 +270,8 @@ def build_domains(
     logger.log('INFO', f'Adding domain to {mode} blocks')
     _build(
         contxt=_DomainProcessingContext(
-            disc_domains=input_cfg.get_option('domain', 'disc') or [],
-            cont_domains=input_cfg.get_option('domain', 'cont') or [],
+            disc_domains=input_cfg.get_option('domain', mode, 'disc') or [],
+            cont_domains=input_cfg.get_option('domain', mode, 'cont') or [],
             blks_dict=utils.load_json(f'{cache_dir}/{mode}/{_blks}'),
             layout_dict=utils.load_pickle(f'{cache_dir}/{mode}/{blks_layout}'),
             cfg=utils.load_json(input_cfg.get_option('config'))

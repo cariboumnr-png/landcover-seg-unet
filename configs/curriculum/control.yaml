@@ -2,7 +2,10 @@
 
 name: control
 
-ckpt_dpath: './checkpoints'
+# experiment config (consumed by controller)
+experiment:
+  ckpt_dpath: ./checkpoints
+  preview_dpath: ./previews
 
 phases:
   # each phase

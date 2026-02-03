@@ -49,8 +49,3 @@ config:
     use_amp: True
   optimization:
     grad_clip_norm: 1.0
-
-# experiment config (consumed by controller)
-experiment:
-  ckpt_dpath: ./checkpoints
-  preview_dpath: ./previews

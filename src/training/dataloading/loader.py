@@ -2,6 +2,7 @@
 
 # standard imports
 from __future__ import annotations
+import copy
 import dataclasses
 # third-party imports
 import psutil
@@ -71,13 +72,13 @@ def get_dataloaders(
     i_loader: torch.utils.data.DataLoader | None = None
 
     # get persistent block config
-    cfg = training.dataloading.BlockConfig(
+    _cfg = training.dataloading.BlockConfig(
         block_size=loader_cfg.get_option('block_size'),
         patch_size=loader_cfg.get_option('patch_size'),
     )
     batch_size = loader_cfg.get_option('batch_size')
     # meta to be shipped
-    meta = _LoaderMeta(batch_size, cfg.patch_per_blk)
+    meta = _LoaderMeta(batch_size, _cfg.patch_per_blk)
 
     # by work mode
     if mode in ['with_inference', 'no_inference']:
@@ -85,6 +86,7 @@ def get_dataloaders(
 
         # training loader
         # config
+        cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = True
         cfg.domain_dict = domain_paths.train_val_domain
         # data
@@ -105,6 +107,7 @@ def get_dataloaders(
 
         # validation loader
         # config
+        cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = False
         cfg.domain_dict = domain_paths.train_val_domain
         # data
@@ -128,6 +131,7 @@ def get_dataloaders(
             assert data_paths.infer
             # inference loader
             # config
+            cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
             cfg.augment_flip = False
             cfg.domain_dict = domain_paths.infer_domain
             # data
@@ -198,6 +202,7 @@ def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
         i_cac = round(0.1 * mem / data_summary.meta.infer_blk_bytes)
 
     # return flags
+    i_pre = True # TODO
     return _LoadingFlags(t_pre, v_pre, i_pre, t_cac, v_cac, i_cac)
 
 def _collate_multi_block(batch: _types.DatasetBatch) -> _types.DatasetItem:

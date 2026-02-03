@@ -1,33 +1,31 @@
 # training data
 training:
   images:
-    - name: demo
-      path: ./data/demo/data/training/image.tif
     - name: work
       path: ./data/work/data/training/image.tif
   labels:
-    - name: demo
-      path: ./data/demo/data/training/label.tif
     - name: work
-      path: ./data/work/data/training/image.tif
+      path: ./data/work/data/training/label.tif
 # inference data
 inference:
   images:
-    - name: demo
-      path: ./data/demo/data/inference/image.tif
     - name: work
-      path: ./data/work/data/training/image.tif
+      path: ./data/work/data/inference/image.tif
 # domain data
 domain:
-  disc:
-    - name: ecodist_demo
-      path: ./data/demo/data/domain/ecodistrict.tif
-    - name: geology_demo
-      path: ./data/demo/data/domain/geology.tif
-    - name: ecodist
-      path: ./data/work/data/domain/ecodistrict.tif
-    - name: geology
-      path: ./data/work/data/domain/geology.tif
-  cont: null
+  training:
+    disc:
+      - name: ecodist
+        path: ./data/work/data/training/ecodistrict.tif
+      - name: geology
+        path: ./data/work/data/training/geology.tif
+    cont: null
+  inference:
+    disc:
+      - name: ecodist
+        path: ./data/work/data/inference/ecodistrict.tif
+      - name: geology
+        path: ./data/work/data/inference/geology.tif
+    cont: null
 # shared data configuration
-config: ./data/demo/config.json
+config: ./data/work/config.json

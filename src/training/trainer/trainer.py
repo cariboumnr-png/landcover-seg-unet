@@ -556,6 +556,8 @@ class MultiHeadTrainer:
             logs['LR'] = self.optimization.optimizer.param_groups[0]['lr']
             # assgin to state dict
             self.state.epoch_sum.train_logs.head_losses = logs
+        else:
+            self.state.epoch_sum.train_logs.updated = False # reset flag
 
         # if logs are updated: provide a printer friendly text and return flag
         if logs:
