@@ -52,34 +52,34 @@ def prepare_data(
     )
 
     # build data blocks according to mode
-    # training-only data
-    if mode == 'train_only':
+    # both training and inference data
+    if mode == 'with_inference':
+        build_data_cache(mode='training')
+        build_data_cache(mode='inference')
+        build_domains(mode='training')
+        build_domains(mode='inference')
+        split_dataset()
+        normalize_dataset(mode='training')
+        normalize_dataset(mode='inference')
+
+    # training-validation data
+    elif mode == 'no_inference':
         build_data_cache(mode='training')
         build_domains(mode='training')
         split_dataset()
         normalize_dataset(mode='training')
 
     # inference-only data
-    elif mode == 'infer_only':
+    elif mode == 'inference_only':
         build_data_cache(mode='inference')
         build_domains(mode='inference')
-        normalize_dataset(mode='inference')
-
-    # both training and inference data
-    elif mode == 'train_infer':
-        build_data_cache(mode='training')
-        build_data_cache(mode='inference')
-        build_domains(mode='training')
-        build_domains(mode='inference')
-        split_dataset()
-        normalize_dataset(mode='training')
         normalize_dataset(mode='inference')
 
     # catch wrong mode argument
     else:
         raise ValueError(
-            f'Unsupported mode: {mode}. Should be one of the following:'
-            f'"skip", "train_only", "infer_only", or "train_infer".'
+            f'Invalid mode: "{mode}". Must be in: ["skip", "with_inference",'
+            f' "no_inference", or "inference_only"].'
         )
 
     # run data summary and return

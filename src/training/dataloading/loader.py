@@ -145,31 +145,11 @@ def get_dataloaders(
                 shuffle=False,
                 collate_fn=_collate_multi_block
             )
-    elif mode == 'inference_only':
-
-        assert data_paths.infer
-        # inference loader
-        # config
-        cfg.augment_flip = False
-        cfg.domain_dict = domain_paths.infer_domain
-        # data
-        data = training.dataloading.MultiBlockDataset(
-            blks_dict=data_paths.infer,
-            blk_cfg=cfg,
-            logger=logger,
-            preload=flags.infer_preload,
-            blk_cache_num=flags.infer_cache
-        )
-        # loader
-        i_loader = torch.utils.data.DataLoader(
-            dataset=data,
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=_collate_multi_block
-        )
-
     else:
-        raise ValueError(f'Invalide mode: {mode}')
+        raise ValueError(
+            f'Invalide mode: "{mode}". Must be "with_inference" or '
+            f'"no_inference"'
+        )
 
     # add inference blocks loading sequence to meta if infer data present
     if data_paths.infer:
