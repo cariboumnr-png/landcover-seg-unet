@@ -1,6 +1,9 @@
 '''
-Public Class:
-    RasterBlocks(): Generates and stores blocks from input raster(s).
+Raster block layout utilities.
+
+Provides `BlockLayout`, which ingests image and optional label rasters
+and produces a tiling layout of square raster windows. The resulting
+layout and metadata are consumed by downstream block cache pipelines.
 '''
 
 # standard imports
@@ -19,22 +22,32 @@ import utils
 # --------------------------------Public  Class--------------------------------
 class BlockLayout:
     '''
-    Ingest image and/or label rasters and create a tiling scheme.
+    Create a tiling layout from image and optional label rasters.
+
+    This class validates raster compatibility (CRS, pixel size, extent),
+    computes a shared spatial extent, and divides it into square blocks
+    with optional overlap.
+
+    The primary entry point is `ingest()`, which populates:
+      - `self.blks`: mapping of block names to raster windows
+      - `self.meta`: layout metadata describing geometry and grid
     '''
 
     def __init__(
-            self,
-            blk_size: int,
-            overlap: int,
-            logger: utils.Logger
-        ):
+        self,
+        blk_size: int,
+        overlap: int,
+        logger: utils.Logger
+    ):
         '''
         Creates processing blocks from the input rasters.
 
         Args:
             block_size: The pixel size of the squared blocks.
             overlap: The overlap in pixel between blocks
-            logger: Class-level logger.
+            logger: Class-level logger for layout diagnostic.
+        Raises:
+            ValueError: if `overlap >= blk_size`.
         '''
 
         # assign attributes
@@ -43,7 +56,8 @@ class BlockLayout:
         self.logger = logger
 
         # sanity
-        assert blk_size > overlap, 'Overlap must be smaller than block size.'
+        if not blk_size > overlap:
+            raise ValueError('Overlap must be smaller than block size.')
 
         # init attributes
         self.img: _types.RasterReader | None = None
@@ -53,12 +67,25 @@ class BlockLayout:
 
     # -----------------------------public methods-----------------------------
     def ingest(
-            self,
-            image_fpath: str,
-            label_fpath: str | None
-        ) -> None:
+        self,
+        image_fpath: str,
+        label_fpath: str | None
+    ) -> None:
         '''
-        Ingest data.
+        Ingest raster inputs and generate a block layout.
+
+        This method:
+        - validates CRS and pixel size
+        - computes shared extent and transform
+        - tiles the extent into square raster windows
+
+        Raster reader handles are released before returning to allow
+        pickling of the class instance.
+
+        Args:
+            image_fpath: Path to the image raster.
+            label_fpath: Optional label raster path. If provided must be
+                co-registered with the image raster.
         '''
 
         with utils.open_rasters(image_fpath, label_fpath) as (img, lbl):
@@ -85,7 +112,7 @@ class BlockLayout:
         self.lbl = None
 
     def reset(self) -> None:
-        '''Reset class data, blocks and meta.'''
+        '''Clear all stored blocks and layout metadata.'''
 
         self.img = None
         self.lbl = None
@@ -101,12 +128,12 @@ class BlockLayout:
             ValueError: If the input rasters do not have the same
                 projection system.
         ----------------------------------------------------------------
-        Populate key `'proj'`.
+        Populates `meta['projection']`.
         '''
 
         # if both image and label provided
         if self.img is not None and self.lbl is not None:
-            self.logger.log('DEBUG', ' | Both image and label rasters provided')
+            self.logger.log('DEBUG', ' | Both image & label rasters provided')
             # get projection names, raster.crs might return differently
             try:
                 crs_1 = self.img.crs.to_string().split('"')[1]
@@ -150,7 +177,7 @@ class BlockLayout:
             ValueError: If the pixel sizes are different or the pixels
                 are not squared.
         ----------------------------------------------------------------
-        Populate key `'res'`.
+        Populates `meta['pixel_size']`.
         '''
 
         # if both image and label provided
@@ -177,7 +204,7 @@ class BlockLayout:
                 m = f' | Input rasters have different pixel sizes: '\
                     f'Raster1: ({x1}, {y1}), Raster2: ({x2}, {y2})'
                 self.logger.log('ERROR', m)
-                raise ValueError('Input rasters must have the same pixel sizes')
+                raise ValueError('Input rasters must have the same pixel size')
 
             # assign value and log out
             self.meta['pixel_size'] = (x1, x1)
@@ -209,8 +236,8 @@ class BlockLayout:
         Raises:
             ValueError: If input rasters have no overlapping extents.
         ----------------------------------------------------------------
-        Populate keys: `'raster1_bbox'`, `'raster2_bbox'`, `'same_bbox'`,
-        and `'shared_bbox'`.
+        Populates `meta['raster1_bbox']`,` meta['raster2_bbox']`,
+        `meta['same_bbox']`, and `meta['shared_bbox']`.
         '''
 
         # if both image and label provided
@@ -220,7 +247,7 @@ class BlockLayout:
             b1 = self.img.bounds
             b2 = self.lbl.bounds
 
-            # bounds(0-3) correspond to [left, bottom, right, top] side of the box
+            # bounds(0-3) correspond to [left, bottom, right, top]
             lft = max(b1[0], b2[0]) # max of the left bounds
             btm = max(b1[1], b2[1]) # max of the bottom bounds
             rgt = min(b1[2], b2[2]) # min of the right bounds
@@ -252,7 +279,7 @@ class BlockLayout:
         '''
         Create Affine transform from the overlapping extent.\n
         ----------------------------------------------------------------
-        Popluate key: `transform`.
+        Popluates `meta['transform']`.
         '''
 
         # get the boundaries and resolution
@@ -289,9 +316,10 @@ class BlockLayout:
         Intended to work on projected rasters with meter unit, such as
         an UTM projected raster.\n
         ----------------------------------------------------------------
-        Populate keys: `'H'`, `'W'`, `'regular_rows'`, `'regular_cols'`,
-        `'r_edge_px'`, `'b_edge_px'`, `'all_rows'`, `'all_cols'`,
-        `'total_blks'`, and `'regular_blks'`.
+        Populates `meta['H']`, `meta['W']`, `meta['regular_rows']`,
+        `meta['regular_cols']`, `meta['r_edge_px']`, `meta['b_edge_px']`,
+        `meta['all_rows']`, `meta['all_cols']`,` meta['total_blks']`,
+        and `meta['regular_blks']`
         '''
 
         # get extent dimensions (pixel count) - round to nearest int
@@ -307,10 +335,10 @@ class BlockLayout:
                 # create a block index from its position
                 idx = _BlockName(j, i).name
                 # dynamically adjust window size to stay within bounds
-                blk_h = min(self.blk_size, h - i) # at the last row
-                blk_w = min(self.blk_size, w - j) # at the last col
+                bh = min(self.blk_size, h - i) # at the last row
+                bw = min(self.blk_size, w - j) # at the last col
                 # set up the window and update the result dict
-                read_window = _types.RasterWindow(j, i, blk_w, blk_h) # type: ignore
+                read_window = _types.RasterWindow(j, i, bw, bh) # type: ignore
                 if self.__check_valid(read_window):
                     self.blks[idx] =  read_window
 

@@ -39,20 +39,40 @@ import json
 import math
 # third party imports
 import numpy
-# local imports
+# local import
 import dataset
 
 # --------------------------------Public  Class--------------------------------
 class DataBlock:
-    '''Data block compiled from input label and image rasters.'''
+    '''
+    Container for per-block raster data and derived metadata.
+
+    A `DataBlock` represents a single raster window compiled from arrays
+    read upstream. It augments raw inputs with derived spectral indices,
+    topographic metrics, label structures, and block-level statistics.
+
+    This class performs no raster I/O during creation; all inputs are
+    provided as NumPy arrays. Blocks can be serialized to and restored
+    from a single `.npz` artifact.
+
+    Typical usage:
+      - `create()` to build a new block from arrays
+      - `save()` / `load()` for persistence
+      - `normalize_image()` for post hoc iamge normalization
+    '''
 
     def __init__(self):
-        '''Can be instantiate without arguments.'''
+        '''
+        Initialize an empty data block with placeholder data and meta.
+
+        A `DataBlock` can be instantiated without arguments and later
+        populated via `create()` or `load()`.
+        '''
 
         # init with empty block data
         self.data = _Data()
         # meta dict with default foo values
-        self.meta: dataset.BlockCreationOptions = {
+        self.meta: dataset.BlockMeta = {
             'block_name': '',
             'block_shape': (0, 0),
             'valid_pixel_ratio': {},
@@ -76,14 +96,29 @@ class DataBlock:
 
     # -----------------------------public methods-----------------------------
     def create(
-            self,
-            img_arr: numpy.ndarray,
-            lbl_arr: numpy.ndarray | None,
-            padded_dem: numpy.ndarray,
-            meta: dataset.BlockCreationOptions
-        ) -> 'DataBlock':
+        self,
+        img_arr: numpy.ndarray,
+        lbl_arr: numpy.ndarray | None,
+        padded_dem: numpy.ndarray,
+        meta: dataset.BlockMeta
+    ) -> 'DataBlock':
         '''
-        Create a new block instance from raw input raster(s).
+        Create a data block from in-memory raster arrays.
+
+        Args:
+            img_arr: Image array of shape (C, H, W).
+            lbl_arr: Optional label array of shape (1, H, W). If None,
+                the block is treated as unlabeled.
+            padded_dem: DEM array padded on all sides for neighborhood
+                calculations.
+            meta: Block-level metadata and configuration.
+
+        Returns:
+            DataBlock: The populated block instance (returned for
+                chaining).
+        ----------------------------------------------------------------
+        Notes: This method derives spectral indices, topographic metrics,
+        label hierarchies, valid masks, and per-block statistics.
         '''
 
         # update meta with input
@@ -120,12 +155,16 @@ class DataBlock:
         self.data.validate(skip_attr='image_normalized') # to populate later
         return self
 
-    def load(
-            self,
-            fpath: str
-        ) -> 'DataBlock':
+    def load(self, fpath: str) -> 'DataBlock':
         '''
         Load data from existing .npz file to populate a class instance.
+
+        Args:
+            fpath: Path to a serialized block artifact.
+
+        Returns:
+            DataBlock: The populated block instance (returned for
+                chaining).
         '''
 
         # load and set attributes
@@ -146,12 +185,12 @@ class DataBlock:
         # return self to allow chained calls
         return self
 
-    def save(
-            self,
-            fpath: str,
-            compress: bool=True
-        ) -> None:
-        '''Save block data as an `.npz` file. Will overwrite.'''
+    def save(self, fpath: str) -> None:
+        '''
+        Save the block data to a compressed `.npz` file.
+
+        Args: Output file path. Existing files will be overwritten.
+        '''
 
         # sanity check
         assert fpath.endswith('.npz')
@@ -160,34 +199,36 @@ class DataBlock:
         # add meta dict
         to_save.update({'meta': self.meta})
         # save file - allow pickle to write meta dict
-        if compress:
-            numpy.savez_compressed(fpath, allow_pickle=True, **to_save)
-        else:
-            numpy.savez(fpath, allow_pickle=True, **to_save)
+        numpy.savez_compressed(fpath, allow_pickle=True, **to_save)
 
-    def recalculate_stats(
-            self,
-            fpath: str
-        ) -> None:
+    def recalculate_stats(self, fpath: str) -> None:
         '''
-        Re-calculate block-level stats and save in-place.
+        Recompute block-level image statistics and save in place.
 
-        Rarely used when some blocks contain corrupted stats.
+        This is intended for recovery when stored statistics are
+        missing or corrupted.
         '''
 
         self._get_block_image_stats()
         self.save(fpath)
 
     def normalize_image(
-            self,
-            global_stats: dict[str, dict[str, int | float]],
-        ) -> tuple[float, float]:
+        self,
+        global_stats: dict[str, dataset.ImageStats]
+    ) -> tuple[float, float]:
         '''
-        Normalize block-level image bands using provided global stats.
+        Normalize image bands using precomputed global statistics.
 
-        Such global stats are typically aggregated from a set of blocks
-        and this method is called to added normalized image channels to
-        a block post hoc.
+        The process is carried by Welford's Online Algorithm.
+
+        Args:
+            global_stats: Global per-band statistics aggregated from
+                multiple blocks.
+
+        Returns:
+            tuple: Minimum and maximum values of the normalized image.
+        ----------------------------------------------------------------
+        Notes: Normalized bands are stored in `data.image_normalized`.
         '''
 
         # assertion
@@ -560,7 +601,7 @@ class _Data:
     image_normalized: numpy.ndarray = dataclasses.field(init=False)
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         lines = ['Block summary\n']
         lines.append('-' * 70)
         # iterate attributes from the dataclass
@@ -582,10 +623,10 @@ class _Data:
         # return lines
         return '\n'.join(lines)
 
-    def validate(self, skip_attr: str | None=None):
+    def validate(self, skip_attr: str | None = None):
         '''Validate if all attr has been populated.'''
         for field in dataclasses.fields(self):
             if skip_attr is not None and field.name == skip_attr:
                 setattr(self, skip_attr, numpy.array([1])) # place holder
             if not hasattr(self, field.name):
-                raise ValueError(f"{field.name} has not been populated yet")
+                raise ValueError(f'{field.name} has not been populated yet')

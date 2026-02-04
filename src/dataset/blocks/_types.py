@@ -1,17 +1,17 @@
-'''Block typing classes'''
+'''Typed dictionaries used in this module.'''
 
 # standard imports
 import typing
 
-# ---------------------------Block level meta dict---------------------------
-class BlockGeneralMeta(typing.TypedDict):
+# ----- Block Meta dict
+class _GeneralMeta(typing.TypedDict):
     '''Block-level general metadata.'''
     block_name: str
     block_shape: tuple[int, int]
     valid_pixel_ratio: dict[str, float]
     has_label: bool
 
-class BlockLabelMeta(typing.TypedDict):
+class _LabelMeta(typing.TypedDict):
     '''Block-level label metadata.'''
     label_nodata: int
     ignore_label: int
@@ -23,7 +23,7 @@ class BlockLabelMeta(typing.TypedDict):
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
 
-class BlockImageMeta(typing.TypedDict):
+class _ImageMeta(typing.TypedDict):
     '''Block-level image metadata.'''
     image_nodata: float
     dem_pad: int
@@ -32,5 +32,13 @@ class BlockImageMeta(typing.TypedDict):
     topo_metrics_added: list[str]
     block_image_stats: dict[str, dict[str, int | float]]
 
-class BlockCreationOptions(BlockGeneralMeta, BlockImageMeta, BlockLabelMeta):
-    '''Simple composite for the shape of a block meta dictionary.'''
+class BlockMeta(_GeneralMeta, _ImageMeta, _LabelMeta):
+    '''Defines the shape of a block meta dictionary.'''
+
+# ------ Global image stats dict
+class ImageStats(typing.TypedDict):
+    '''Block-level image stats used in Welford's Online Algorithm.'''
+    total_count: int
+    current_mean: float
+    accum_m2: float
+    std: float

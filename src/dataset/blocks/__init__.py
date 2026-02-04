@@ -16,19 +16,20 @@ __all__ = [
     # functions
     'build_data_cache',
     # typing
-    'BlockCreationOptions',
+    'BlockMeta',
+    'ImageStats'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._types import BlockCreationOptions
+    from ._types import BlockMeta, ImageStats
     from .block import DataBlock
     from .cache import build_data_cache
     from .layout import BlockLayout
 
 def __getattr__(name: str):
 
-    if name in ['BlockCreationOptions']:
+    if name in ['BlockMeta', 'ImageStats']:
         return getattr(importlib.import_module('._types', __package__), name)
     if name in ['DataBlock']:
         return getattr(importlib.import_module('.block', __package__), name)
