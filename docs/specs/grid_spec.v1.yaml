@@ -1,0 +1,74 @@
+grid_spec:
+  version: grid_v1
+
+  # Spatial reference and resolution definition
+  crs: 'EPSG:3161'   # Mandatory. All inputs/outputs for this grid are in this CRS.
+
+  # Tile geometry (pixel- or meter-based; pick one and keep consistent)
+  tile_size:
+    unit: pixels      # 'pixels' | 'meters'
+    width: 256
+    height: 256
+
+  overlap:
+    unit: pixels      # must match tile_size.unit
+    x: 0
+    y: 0
+
+  # How tile indices are aligned relative to a reference point
+  origin:
+    mode: 'auto'      # 'auto' | 'anchor'
+    # when mode = 'auto'
+    auto:
+      corner: 'upper-left'  # 'upper-left' | 'upper-right' | 'lower-left' | 'lower-right'
+
+    # when mode = 'anchor'
+    anchor:
+      point:
+        easting: null       # float in CRS units; required when mode='anchor'
+        northing: null      # float in CRS units; required when mode='anchor'
+      # Optional snapping of the anchor to tile grid
+      snap: 'none'          # 'none' | 'tile' (snap to nearest tile boundary)
+
+  # How the grid extent is determined
+  extent:
+    mode: 'aoi'             # 'aoi' | 'blocks'
+    # when mode = 'aoi', AOI defines the bounding box for grid generation
+    aoi:
+      bbox:
+        # [min_easting, min_northing, max_easting, max_northing] in CRS units
+        - null
+        - null
+        - null
+        - null
+      edge_policy:
+        # 'trim'  : include partial edge tiles cut to aoi boundary
+        # 'drop'  : exclude partial edge tiles (only full tiles)
+        # 'pad'   : include full tiles and pad imagery/domain outside AOI as nodata
+        mode: 'trim'
+
+    # when mode = 'blocks', AOI is optional; anchor + counts define the grid
+    blocks:
+      count_east: null       # integer ≥ 1
+      count_south: null      # integer ≥ 1
+      # Optional clip by AOI even in blocks mode (e.g., to mask tiles outside study area)
+      clip_aoi:
+        enabled: false
+        bbox: []             # same format as above
+
+  # Tile ID naming convention (stable and deterministic)
+  naming:
+    # Pattern can use {row}, {col} and optional zero-padding like {row:06d}
+    pattern: 'grid_v1/{row:06d}_{col:06d}'
+    zero_pad: 6
+
+  # Determinism knobs for index math at edges / rounding
+  indexing:
+    rounding: 'floor'        # 'floor' | 'ceil' | 'round' for start index
+    # Applies only when converting AOI extents to integer row/col indices
+
+  # Optional metadata for provenance (non-functional)
+  metadata:
+    description: 'Canonical grid for AOI tiling'
+    owner: 'YourTeamOrProject'
+    created: '2026-02-04'

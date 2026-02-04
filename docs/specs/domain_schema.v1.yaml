@@ -1,0 +1,43 @@
+<domain_name>:
+  source:
+    type: raster
+    path: <string>              # external dataset reference (not a file path requirement)
+    crs: <string | inherit>     # optional; inherit grid CRS if omitted
+    nodata: <number | null>
+
+  data_type:
+    kind: discrete | continuous
+
+    # for discrete rasters
+    discrete:
+      id_min: <int>
+      id_max: <int>
+      unknown_id: <int | null>  # optional explicit "unknown" category
+
+    # for continuous rasters
+    continuous:
+      bands: <int | list>       # number of bands or explicit band indices
+      units: <string | null>
+
+  block_assignment:
+    method: majority | histogram | mean | median | weighted_mean
+    min_coverage:
+      type: fraction | pixels
+      value: <float | int>
+    empty_policy: drop | fill | flag
+
+  transform:
+    type: none | pca
+    pca:
+      fit_scope: global | region
+      max_axes: <int>
+      variance_target: <float | null>   # e.g., 0.95
+      hard_cap_axes: <int>               # absolute upper bound
+      artifact_version: <string | null>
+
+  output:
+    representation: categorical | vector
+    dim: <int>
+    normalization:
+      type: none | standard | minmax
+      stats_version: <string | null>
