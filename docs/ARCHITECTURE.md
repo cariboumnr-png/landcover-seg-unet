@@ -3,7 +3,7 @@
 ## Purpose
 Document the current *coupled* dataset pipeline (grid → domain → training in one sequence) and the target *decoupled* architecture where **grid**, **domain**, and **task** are independent, versioned components.
 
-## Current State (as of 2025-02-04)
+## Current State (as of 2026-02-04)
 **Flow:**
 1) Create grid
 2) Assign domain along with training data to the grid

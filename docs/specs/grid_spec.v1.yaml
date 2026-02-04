@@ -70,5 +70,5 @@ grid_spec:
   # Optional metadata for provenance (non-functional)
   metadata:
     description: 'Canonical grid for AOI tiling'
-    owner: 'YourTeamOrProject'
+    owner: 'Wenxi Feng'
     created: '2026-02-04'
