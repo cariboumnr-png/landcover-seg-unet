@@ -1,3 +1,4 @@
+```
 src/
   core/                       # foundation: types, config, logging, errors
     __init__.py
@@ -77,3 +78,4 @@ src/
     pca.py                    # (thin): consider delegating to domain/transforms
 
   # tests/                    # recommend top-level tests next to src/, not inside it
+  ```
