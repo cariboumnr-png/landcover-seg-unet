@@ -44,5 +44,5 @@ Document the current *coupled* dataset pipeline (grid → domain → training in
 
 ## Versioning
 - `grid_spec.version`: e.g., `grid_v1`
-- `domain_schema.version`: e.g., `dom_v1` (references `eco_2024a`, `geo_pca_v1.0`)
+- `domain_schema.version`: e.g., `dom_v1`
 - PCA artifacts: `(μ, W)` persisted under version; never refit silently
