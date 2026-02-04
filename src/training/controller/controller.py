@@ -2,6 +2,7 @@
 
 # standard imports
 import dataclasses
+import os
 # local imports
 import _types
 import training.common
@@ -39,12 +40,14 @@ class Controller:
     def fit(self, stopat: str | int| None=None) -> None:
         '''Main entry.'''
 
+
         for phase in self.phases:
 
             print('__Phase details__')
             print(phase)
 
-            self._train_phase()
+            meta = self._load_progress(phase.name)
+            self._train_phase(meta)
             self._next_phase()
 
             if self.done:
@@ -60,8 +63,15 @@ class Controller:
                 self.logger.log('INFO', f'Training stopped@Phase_{stopat + 1}')
                 break
 
-    def _train_phase(self) -> tuple[dict, dict]:
+    def _train_phase(self, meta) -> tuple[dict, dict]:
         '''Train the current phase.'''
+
+        # if loaded from previous
+        if meta is not None:
+            self.logger.log('INFO', 'Loading from previous checkpoint')
+            self.trainer.state.progress.epoch = meta['epoch'] + 1
+            self.trainer.state.progress.global_step = meta['step']
+            self.trainer.state.metrics.best_value = meta['metric']
 
         # context for current phase
         phase = self.current_phase
@@ -74,7 +84,7 @@ class Controller:
 
         # train
         print(f'__Phase [{phase.name}] started__')
-        for epoch in range(1, num_epoch + 1):
+        for epoch in range(meta['epoch'] + 1, num_epoch + 1):
             # early stop check
             # - patience can be None = no early stop
             # - stop when patience reached
@@ -120,6 +130,20 @@ class Controller:
             return
         # else reset trainer state and continue
         self.trainer.reset_head_state()
+
+    def _load_progress(self, phase: str):
+        '''Load previous best checkpoint'''
+
+        best_ckpt = f'{self.cfg.ckpt_dpath}/{phase}_best.pt'
+        if os.path.exists(best_ckpt):
+            meta = training.trainer.load(
+                model=self.trainer.model,
+                optimizer=self.trainer.optimization.optimizer,
+                scheduler=self.trainer.optimization.scheduler,
+                fpath=best_ckpt,
+                device='cuda')
+            return meta
+        return None
 
     def _save_progress(self, fpath: str) -> None:
         '''Save at the current phase.'''
