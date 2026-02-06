@@ -160,27 +160,32 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
             assert spec.grid_extent is not None
             row_px = math.floor(spec.grid_extent[0] / spec.pixel_size[1])
             col_px = math.floor(spec.grid_extent[1] / spec.pixel_size[0])
-            self._extent = (row_px, col_px)
+            # iterate through the blocks by row then col
+            ystep = spec.tile_size[0] - spec.tile_overlap[0]
+            xstep = spec.tile_size[1] - spec.tile_overlap[1]
+            for y in range(0, row_px, ystep):
+                for x in range(0, col_px, xstep):
+                    # dynamically adjust window size to stay within bounds
+                    th = min(spec.tile_size[0], row_px - y) # at the last row
+                    tw = min(spec.tile_size[1], col_px - x) # at the last col
+                    # set up the window and update the result dict
+                    window = rasterio.windows.Window(x, y, tw, th) # type: ignore
+                    self._data[(x, y)] =  window
         elif self.mode == 'tiles':
             assert spec.grid_shape is not None
-            row_px = spec.grid_shape[0] * spec.tile_size[0]
-            col_px = spec.grid_shape[1] * spec.tile_size[1]
-            self._extent = (row_px, col_px)
+            # iterate through the blocks by row then col
+            ystep = spec.tile_size[0] - spec.tile_overlap[0]
+            xstep = spec.tile_size[1] - spec.tile_overlap[1]
+            for row in range(spec.grid_shape[0]):
+                for col in range(spec.grid_shape[1]):
+                    tw = spec.tile_size[1]
+                    th = spec.tile_size[0]
+                    x = col * tw
+                    y = row * th
+                    window = rasterio.windows.Window(x, y, tw, th) # type: ignore
+                    self._data[(x, y)] =  window
         else:
             raise ValueError('Invalid extent mode')
-        h, w = self._extent
-
-        # iterate through the blocks by row then col
-        ystep = spec.tile_size[0] - spec.tile_overlap[0]
-        xstep = spec.tile_size[1] - spec.tile_overlap[1]
-        for y in range(0, h, ystep):
-            for x in range(0, w, xstep):
-                # dynamically adjust window size to stay within bounds
-                bh = min(spec.tile_size[0], h - y) # at the last row
-                bw = min(spec.tile_size[1], w - x) # at the last col
-                # set up the window and update the result dict
-                window = rasterio.windows.Window(x, y, bw, bh) # type: ignore
-                self._data[(x, y)] =  window
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -191,16 +196,16 @@ class GridSpec:
     Conventions:
     - CRS space uses (x, y).
     - Pixel/array space uses (row, col).
-    - All pixel sizes are positive magnitudes.
+    - All pixel sizes are positive magnitudes (x, y).
     - All shapes and tile sizes use (rows, cols).
 
     Note: this class is called during `GridLayout` construction, where
     the mode is determined.
     '''
     crs: str                                        # a projected CRS
-    pixel_size: tuple[int, int]                     # xsize, ysize in CRS units
     tile_size: tuple[int, int]                      # rows, cols in pixels
     tile_overlap: tuple[int, int]                   # rows, cols in pixels
+    pixel_size: tuple[int, int]                     # xsize, ysize in CRS units
     origin: tuple[float, float]                     # x, y in CRS units
     grid_extent: tuple[float, float] | None = None  # H_y, W_x in in CRS units
     grid_shape: tuple[int, int] | None = None       # rows, cols as n of tiles
