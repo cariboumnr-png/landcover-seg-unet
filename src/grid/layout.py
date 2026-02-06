@@ -61,10 +61,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         '''
 
         # ingest spec and init attributes
-        self.mode = mode
-        self.spec = spec
-        self._data: dict[tuple[int, int], rasterio.windows.Window] = {}
+        self._mode = mode
+        self._spec = spec
         self._extent: tuple[int, int] = (0, 0) # (rows, cols)
+        self._data: dict[tuple[int, int], rasterio.windows.Window] = {}
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
         self._generate()
 
@@ -90,8 +90,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         '''
 
         return {
-            'mode': self.mode,
-            'spec': dataclasses.asdict(self.spec),
+            'mode': self._mode,
+            'spec': dataclasses.asdict(self._spec),
             'tile_count': len(self._data),
         }
 
@@ -119,10 +119,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         rx, ry = src.transform.c, src.transform.f
         # get raster pixel size and check alignment with the grid
         res_x, res_y = src.transform.a, abs(src.transform.e)
-        assert self.spec.pixel_size[0] == res_x
-        assert self.spec.pixel_size[1] == res_y
+        assert self._spec.pixel_size[0] == res_x
+        assert self._spec.pixel_size[1] == res_y
         # get world grid origin in CRS units
-        gx, gy = self.spec.origin
+        gx, gy = self._spec.origin
         # calculate origin offset in pixel
         dc = math.floor((rx - gx) / res_x)      # + right
         dr = math.floor((ry - gy) / res_y)      # + down
@@ -135,11 +135,11 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         # create empty GridLayout instance
         obj = cls.__new__(cls)
         # populate attributes from payload
-        obj.mode = payload['mode']
-        obj.spec = GridSpec(**payload['spec'])
+        obj._mode = payload['mode']
+        obj._spec = GridSpec(**payload['spec'])
         obj._data = payload['windows']
-        # init remaining attributes
-        obj._extent = (0, 0)
+        obj._extent = payload['extent']
+        # init offset (runtime attribute)
         obj._offset_px = (0, 0)
         # return class object
         return obj
@@ -147,22 +147,22 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
     @property
     def crs(self) -> str:
         '''CRS of the layout.'''
-        return self.spec.crs
+        return self._spec.crs
 
     @property
     def origin(self) -> tuple[float, float]:
         '''Grid origin in CRS units (Easting, Northing).'''
-        return self.spec.origin
+        return self._spec.origin
 
     @property
     def tile_size(self) -> tuple[int, int]:
         '''Grid tile size in pixels.'''
-        return self.spec.tile_size
+        return self._spec.tile_size
 
     @property
     def tile_overlap(self) -> tuple[int, int]:
         '''Grid tile overlap in pixels.'''
-        return self.spec.tile_overlap
+        return self._spec.tile_overlap
 
     @property
     def h(self) -> int:
@@ -182,9 +182,9 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         Intended to work with a projected CRS with meter unit.
         '''
 
-        spec = self.spec
+        spec = self._spec
         # get extent dimensions (in crs units)
-        if self.mode == 'aoi':
+        if self._mode == 'aoi':
             assert spec.grid_extent is not None
             row_px = math.floor(spec.grid_extent[0] / spec.pixel_size[1])
             col_px = math.floor(spec.grid_extent[1] / spec.pixel_size[0])
@@ -198,8 +198,9 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
                     tw = min(spec.tile_size[1], col_px - x) # at the last col
                     # set up the window and update the result dict
                     window = rasterio.windows.Window(x, y, tw, th) # type: ignore
-                    self._data[(x, y)] =  window
-        elif self.mode == 'tiles':
+                    self._data[(x, y)] = window
+            self._extent = row_px, col_px
+        elif self._mode == 'tiles':
             assert spec.grid_shape is not None
             # iterate through the blocks by row then col
             ystep = spec.tile_size[0] - spec.tile_overlap[0]
@@ -211,7 +212,11 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
                     x = col * tw
                     y = row * th
                     window = rasterio.windows.Window(x, y, tw, th) # type: ignore
-                    self._data[(x, y)] =  window
+                    self._data[(x, y)] = window
+            self._extent = (
+                (spec.grid_shape[0] - 1) * ystep + spec.tile_size[0],
+                (spec.grid_shape[1] - 1) * xstep + spec.tile_size[1]
+            )
         else:
             raise ValueError('Invalid extent mode')
 
@@ -245,7 +250,7 @@ class GridSpec:
 
 class GridLayoutPayload(typing.TypedDict):
     '''GridLayout payload for controlled de-/serialization.'''
-    schema: str
     mode: str
     spec: dict[str, typing.Any]
+    extent: tuple[int, int]
     windows: dict[tuple[int, int], rasterio.windows.Window]
