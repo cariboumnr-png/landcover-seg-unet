@@ -45,7 +45,7 @@ extent_modes:
       existing reference raster. Raster must already be aligned to the
       canonical grid CRS and pixel size.
     required_fields:
-      - ref_raster_path
+      - ref_raster_fpath
     derived_parameters:
       - origin
       - pixel_size

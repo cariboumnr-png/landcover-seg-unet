@@ -1,4 +1,4 @@
-mode: manual
+mode: aoi
 pixel_size:
   x: 30
   y: 30
@@ -6,5 +6,5 @@ origin:
     x: 0.0
     y: 0.0
 grid_extent:
-    x: 0.0
-    y: 0.0
+    hy: 0.0
+    wx: 0.0

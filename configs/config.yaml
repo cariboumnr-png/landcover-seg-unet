@@ -9,7 +9,7 @@ defaults:
   - trainer: runtime
   - curriculum: control
   - grid: base
-  - grid/extent_mode: from_ref
+  - grid/extent_mode: ref
 
 # dataset name
 dataset_name: ${hydra:runtime.choices.dataset}
