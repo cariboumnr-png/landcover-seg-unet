@@ -38,6 +38,7 @@ from __future__ import annotations
 import collections.abc
 import dataclasses
 import math
+import typing
 # third-party imports
 import rasterio
 import rasterio.crs
@@ -62,8 +63,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         # ingest spec and init attributes
         self.mode = mode
         self.spec = spec
-        self._extent: tuple[int, int] = (0, 0) # (rows, cols)
         self._data: dict[tuple[int, int], rasterio.windows.Window] = {}
+        self._extent: tuple[int, int] = (0, 0) # (rows, cols)
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
         self._generate()
 
@@ -82,6 +83,17 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
 
     def __len__(self) -> int:
         return len(self._data)
+
+    def describe(self) -> dict:
+        '''
+        Simple io-facing class meta.
+        '''
+
+        return {
+            'mode': self.mode,
+            'spec': dataclasses.asdict(self.spec),
+            'tile_count': len(self._data),
+        }
 
     def align_to_raster(self, src: rasterio.io.DatasetReader):
         '''
@@ -115,6 +127,22 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         dc = math.floor((rx - gx) / res_x)      # + right
         dr = math.floor((ry - gy) / res_y)      # + down
         self._offset_px = (dc, dr)
+
+    @classmethod
+    def from_payload(cls, payload: GridLayoutPayload):
+        '''Instantiate the class with input payload.'''
+
+        # create empty GridLayout instance
+        obj = cls.__new__(cls)
+        # populate attributes from payload
+        obj.mode = payload['mode']
+        obj.spec = GridSpec(**payload['spec'])
+        obj._data = payload['windows']
+        # init remaining attributes
+        obj._extent = (0, 0)
+        obj._offset_px = (0, 0)
+        # return class object
+        return obj
 
     @property
     def crs(self) -> str:
@@ -214,3 +242,10 @@ class GridSpec:
         ts, to = self.tile_size, self.tile_overlap
         if not (to[0] < ts[0] and to[1] < ts[1]):
             raise ValueError('Overlap must be smaller than block size.')
+
+class GridLayoutPayload(typing.TypedDict):
+    '''GridLayout payload for controlled de-/serialization.'''
+    schema: str
+    mode: str
+    spec: dict[str, typing.Any]
+    windows: dict[tuple[int, int], rasterio.windows.Window]
