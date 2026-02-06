@@ -27,14 +27,14 @@ def prepare_data(
     build_data_cache = functools.partial(
         dataset.build_data_cache,
         dataset_name=dataset_name,
-        input_config=config.input,
+        input_config=config.dataset,
         cache_config=config.cache,
         logger=logger,
     )
     build_domains = functools.partial(
         dataset.build_domains,
         dataset_name=dataset_name,
-        input_config=config.input,
+        input_config=config.dataset,
         cache_config=config.cache,
         logger=logger
     )

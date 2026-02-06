@@ -18,7 +18,7 @@ omegaconf.OmegaConf.register_new_resolver('c', lambda x: int(x * 100))
 
 
 # main process
-@hydra.main(config_path='./configs', config_name='main', version_base='1.3')
+@hydra.main(config_path='./configs', config_name='config', version_base='1.3')
 def main(config: omegaconf.DictConfig) -> None:
     '''doc'''
 
@@ -28,10 +28,10 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # data preparation
     data_summary = src.dataset.prepare_data(
-        dataset_name=config.dataprep.dataset_name,
-        config=config.dataset,
+        dataset_name=config.dataset_name,
+        config=config,
         logger=logger,
-        mode=config.dataprep.mode
+        mode=config.dataprep_mode
     )
     print(data_summary)
 
