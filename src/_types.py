@@ -10,6 +10,9 @@ import torch
 # typing aliases
 # generic
 ConfigType: typing.TypeAlias = typing.Mapping[str, typing.Any]
+'''
+Generic string-keyed config mapping, e.g., from omega dict.
+'''
 # batch context
 Tensor: typing.TypeAlias = torch.Tensor
 TorchDict: typing.TypeAlias = dict[str, Tensor]

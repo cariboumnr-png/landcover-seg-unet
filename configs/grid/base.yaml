@@ -1,0 +1,10 @@
+name: grid
+crs: 'EPSG:3161'
+tile_size:
+  x: 256
+  y: 256
+tile_overlap:
+  x: 0
+  y: 0
+defualts:
+  extent: from_ref

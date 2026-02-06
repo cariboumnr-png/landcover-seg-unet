@@ -1,0 +1,99 @@
+grid_spec:
+  version: grid_v1
+  purpose: >
+    Canonical, deterministic world-grid tiling definition independent
+    of raster datasets. Defines CRS, pixel geometry, tile layout rules,
+    and supported extent derivation modes.
+
+conventions:
+  coordinate_space:
+    crs_space: '(x, y)'
+    pixel_space: '(row, col)'
+  units:
+    pixel_size: 'CRS units'
+    tile_geometry: 'pixels'
+  rules:
+    - 'All pixel sizes are positive magnitudes.'
+    - 'Tile sizes use (rows, cols).'
+    - 'Grid origin is the upper-left corner.'
+    - 'Tiles are generated row-major from top-left.'
+
+base_definition:
+  description: >
+    Core grid parameters independent of how spatial extent is derived.
+  fields:
+    crs:
+      type: 'Projected CRS string'
+      required: true
+      example: 'EPSG:3161'
+
+    tile_size:
+      type: '[rows, cols]'
+      units: 'pixels'
+      description: 'Nominal tile dimensions.'
+
+    tile_overlap:
+      type: '[rows, cols]'
+      units: 'pixels'
+      constraint: 'Must be smaller than tile_size.'
+
+extent_modes:
+
+  from_reference_raster:
+    description: >
+      Grid origin, resolution, and spatial extent are derived from an
+      existing reference raster. Raster must already be aligned to the
+      canonical grid CRS and pixel size.
+    required_fields:
+      - ref_raster_path
+    derived_parameters:
+      - origin
+      - pixel_size
+      - grid_extent
+
+  manual_aoi:
+    description: >
+      User supplies origin, pixel resolution, and AOI extent in CRS
+      units. Grid dimensions are computed from these values.
+    required_fields:
+      - origin
+      - pixel_size
+      - grid_extent
+    field_descriptions:
+      origin: 'Upper-left grid origin in CRS units.'
+      pixel_size: '[xsize, ysize] in CRS units.'
+      grid_extent: '[height_y, width_x] in CRS units.'
+
+  manual_tiles:
+    description: >
+      User supplies origin, pixel resolution, and number of tiles.
+      Overall grid extent is derived from tile geometry.
+    required_fields:
+      - origin
+      - pixel_size
+      - grid_shape
+    field_descriptions:
+      grid_shape: '[rows, cols] number of tiles.'
+
+tile_naming:
+  description: >
+    Stable and deterministic tile identifier convention used across
+    datasets and processing stages.
+  fields:
+    pattern:
+      example: 'grid_v1/{row:06d}_{col:06d}'
+      notes:
+        - 'Supports Python-style format tokens.'
+        - 'Row-major indexing assumed.'
+
+    zero_padding:
+      example: 6
+      purpose: 'Ensures lexicographic ordering and stable filenames.'
+
+non_functional_metadata:
+  description: >
+    Optional provenance information. Does not affect grid generation.
+  fields:
+    description: 'Human-readable explanation of grid purpose.'
+    owner: 'Responsible individual or team.'
+    created: 'ISO date of creation.'

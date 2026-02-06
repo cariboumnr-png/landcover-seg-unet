@@ -161,7 +161,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
             row_px = math.floor(spec.grid_extent[0] / spec.pixel_size[1])
             col_px = math.floor(spec.grid_extent[1] / spec.pixel_size[0])
             self._extent = (row_px, col_px)
-        elif self.mode == 'blocks':
+        elif self.mode == 'tiles':
             assert spec.grid_shape is not None
             row_px = spec.grid_shape[0] * spec.tile_size[0]
             col_px = spec.grid_shape[1] * spec.tile_size[1]
@@ -198,10 +198,10 @@ class GridSpec:
     the mode is determined.
     '''
     crs: str                                        # a projected CRS
-    origin: tuple[float, float]                     # x, y in CRS units
     pixel_size: tuple[int, int]                     # xsize, ysize in CRS units
     tile_size: tuple[int, int]                      # rows, cols in pixels
     tile_overlap: tuple[int, int]                   # rows, cols in pixels
+    origin: tuple[float, float]                     # x, y in CRS units
     grid_extent: tuple[float, float] | None = None  # H_y, W_x in in CRS units
     grid_shape: tuple[int, int] | None = None       # rows, cols as n of tiles
 

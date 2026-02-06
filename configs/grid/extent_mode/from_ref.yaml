@@ -1,0 +1,2 @@
+mode: from_ref
+ref_raster_path: './'

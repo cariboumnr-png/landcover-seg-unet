@@ -1,0 +1,10 @@
+mode: manual
+pixel_size:
+  x: 30
+  y: 30
+origin:
+    x: 0.0
+    y: 0.0
+grid_shape:
+    x: 0
+    y: 0
