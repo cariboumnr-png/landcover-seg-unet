@@ -84,17 +84,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
     def __len__(self) -> int:
         return len(self._data)
 
-    def describe(self) -> dict:
-        '''
-        Simple io-facing class meta.
-        '''
-
-        return {
-            'mode': self._mode,
-            'spec': dataclasses.asdict(self._spec),
-            'tile_count': len(self._data),
-        }
-
     def align_to_raster(self, src: rasterio.io.DatasetReader):
         '''
         Align the grid to a raster by computing an integer pixel offset.
@@ -127,6 +116,16 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         dc = math.floor((rx - gx) / res_x)      # + right
         dr = math.floor((ry - gy) / res_y)      # + down
         self._offset_px = (dc, dr)
+
+    def generate_payload(self) -> GridLayoutPayload:
+        '''Generate class payload for serialization.'''
+
+        return {
+            'mode': self._mode,
+            'spec': dataclasses.asdict(self._spec),
+            'extent': self._extent,
+            'windows': self._data
+        }
 
     @classmethod
     def from_payload(cls, payload: GridLayoutPayload):
