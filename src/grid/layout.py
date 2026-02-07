@@ -49,7 +49,15 @@ import rasterio.windows
 class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Window]):
     '''
     Raster-agnostic grid layout as a dictionary of rasterio windows.
+
+    **Key space**: dictionary keys are pixel-origin coordinates
+    `(x_px, y_px)` relative to the *grid origin* (top-left). These are
+    stable across rasters. Alignment to a specific raster is applied
+    at access time; it does not change the keys.
     '''
+
+    # current payload schema
+    SCHEMA_ID: str = 'grid_layout_payload/v1'
 
     def __init__(
         self,
@@ -69,6 +77,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         self._generate()
 
     def __getitem__(self, idx: tuple[int, int]) -> rasterio.windows.Window:
+        # fail fast on idx type check
+        if (not isinstance(idx, tuple) or len(idx) != 2
+            or not all(isinstance(v, int) for v in idx)):
+            raise TypeError('Index must be (x, y) in pixels as integers.')
         # get base window
         base = self._data[idx]
         # get right/down offset (in pixels)
@@ -117,7 +129,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         dr = math.floor((ry - gy) / res_y)      # + down
         self._offset_px = (dc, dr)
 
-    def generate_payload(self) -> GridLayoutPayload:
+    def to_payload(self) -> GridLayoutPayload:
         '''Generate class payload for serialization.'''
 
         return {
@@ -208,8 +220,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
                 for col in range(spec.grid_shape[1]):
                     tw = spec.tile_size[1]
                     th = spec.tile_size[0]
-                    x = col * tw
-                    y = row * th
+                    x = col * xstep
+                    y = row * ystep
                     window = rasterio.windows.Window(x, y, tw, th) # type: ignore
                     self._data[(x, y)] = window
             self._extent = (

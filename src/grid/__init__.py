@@ -13,15 +13,17 @@ __all__ = [
     # classes
     'GridLayout',
     'GridSpec',
+    # typing
+    'GridLayoutPayload',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .layout import GridLayout, GridSpec
+    from .layout import GridLayout, GridLayoutPayload, GridSpec
 
 def __getattr__(name: str):
 
-    if name in ['GridLayout', 'GridSpec']:
+    if name in ['GridLayout', 'GridSpec', 'GridLayoutPayload']:
         return getattr(importlib.import_module('._types', __package__), name)
 
     raise AttributeError(name)
