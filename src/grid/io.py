@@ -18,6 +18,7 @@ import os
 import grid
 import utils
 
+# -------------------------------Public Function-------------------------------
 def save_grid(
     grid_name: str,
     grid_obj: grid.GridLayout,
@@ -88,6 +89,7 @@ def load_grid(
     # otherwise return class object via class method
     return grid.GridLayout.from_payload(payload)
 
+# ------------------------------private  function------------------------------
 def _hash_payload(payload: grid.GridLayoutPayload) -> str:
     '''Compute a stable SHA-256 hash for a GridLayout payload.'''
 
