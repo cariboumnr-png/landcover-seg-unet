@@ -1,5 +1,13 @@
 '''
 I/O utilites for class `GridLayout`.
+
+This module handles persistence of GridLayout objects via a pickled
+payload and a JSON metadata sidecar. The payload represents a stable
+world-grid indexed by pixel-origin coordinates (x_px, y_px). Raster
+alignment is not stored and is applied at access time.
+
+A schema identifier and a canonical hash are used to validate payload
+compatibility and integrity on load.
 '''
 
 # standard imports
@@ -15,7 +23,19 @@ def save_grid(
     grid_obj: grid.GridLayout,
     dirpath: str
 ) -> None:
-    '''doc'''
+    '''
+    Serialize a `GridLayout` to disk.
+
+    Writes a pickled payload and a JSON metadata file containing schema
+    identifier, integrity hash, and summary fields. The payload encodes
+    the world grid in stable pixel-origin space; no raster alignment
+    state is persisted.
+
+    Args:
+        grid_name: Name of the grid in both `.pkl` and `.json` artifacts.
+        grid_obj: The `GridLayout` instance to be saved.
+        dirpath: Directory where artifacts are saved.
+    '''
 
     # prepare output dir
     os.makedirs(dirpath, exist_ok=True)
@@ -39,7 +59,17 @@ def load_grid(
     grid_name: str,
     dirpath: str
 ) -> grid.GridLayout:
-    '''doc'''
+    '''
+    Load a GridLayout from disk.
+
+    Validates the payload hash and schema identifier before reconstructing
+    the GridLayout instance. Raises if the payload is corrupted or the
+    schema is unsupported.
+
+    Args:
+        grid_name: Name of the grid in both `.pkl` and `.json` artifacts.
+        dirpath: Directory where artifacts are saved.
+    '''
 
     # load payload and meta json
     payload = utils.load_pickle(f'{dirpath}/{grid_name}.pkl')
@@ -59,8 +89,9 @@ def load_grid(
     return grid.GridLayout.from_payload(payload)
 
 def _hash_payload(payload: grid.GridLayoutPayload) -> str:
-    '''Hash payload.'''
+    '''Compute a stable SHA-256 hash for a GridLayout payload.'''
 
+    # canonical independent of  pickle ordering or runtime attributes
     canonical = {
         'mode': payload['mode'],
         'spec': payload['spec'],
