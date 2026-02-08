@@ -88,6 +88,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         self._extent: tuple[int, int] = (0, 0) # (rows, cols)
         self._data: dict[tuple[int, int], rasterio.windows.Window] = {}
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
+        # generate grid - self._data to be populated
         self._generate()
 
     # ----- container protocol
@@ -121,7 +122,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
             f'Extent (height_px, width_px): {self.extent[0]}, {self.extent[1]}'
         ])
 
-    # ----- publich method
+    # ----- public method
     def align_to_raster(self, src: rasterio.io.DatasetReader):
         '''
         Align the grid to a raster by computing an integer pixel offset.

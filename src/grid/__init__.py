@@ -14,8 +14,8 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
-    'prep_world_grid',
     'load_grid',
+    'prep_world_grid',
     'save_grid',
     # typing
     'GridLayoutPayload',
