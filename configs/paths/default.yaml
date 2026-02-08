@@ -1,0 +1,11 @@
+artifacts:
+  root: ./artifacts
+  grids: ${paths.artifacts.root}/world_grids
+  domain: ${paths.artifacts.root}/domain_knowledge
+
+data:
+  root: ./data
+  extent_reference: ${paths.data.root}/extent_reference
+  domain_knowledge: ${paths.data.root}/domain_knowledge
+  raw: ${paths.data.root}/raw
+  processed: ${paths.data.root}/processed

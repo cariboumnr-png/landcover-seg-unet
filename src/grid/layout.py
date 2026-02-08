@@ -65,7 +65,21 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         spec: GridSpec
     ):
         '''
-        Initiate the dict instance by the input `GridSpec` dataclass.
+        Initiate the `GridLayout` instance.
+
+        Supports two modes:
+        - `'bbox'`: the grid is bounded by origin x, y and rows, cols in
+            pixels. Might contain ragged tiles at right and bottom edges.
+            In this mode, `spec.grid_extent` must be provided.
+        - `'tiles'`: the grid is bounded by origin x, y and number of
+            tiles along row and col.
+            In this mode, `spec.grid_shape` must be provided.
+
+        See `GridSpec` for details in configuration.
+
+        Args:
+            mode: Grid generation mode (`'bbox'` or `'tiles'`).
+            spec: A dataclass with layout configurations.
         '''
 
         # ingest spec and init attributes
@@ -76,6 +90,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
         self._generate()
 
+    # ----- container protocol
     def __getitem__(self, idx: tuple[int, int]) -> rasterio.windows.Window:
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
@@ -96,6 +111,17 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
     def __len__(self) -> int:
         return len(self._data)
 
+    # ----- representation
+    def __str__(self) -> str:
+        return '\n'.join([
+            'World grid details:',
+            f'CRS: {self.crs}',
+            f'Origin (x, y): {self.origin[0]:.4f}, {self.origin[1]:.4f}',
+            f'Pixel size (x, -y): {self.pixel_size[0], self.pixel_size[1]}',
+            f'Extent (height_px, width_px): {self.extent[0]}, {self.extent[1]}'
+        ])
+
+    # ----- publich method
     def align_to_raster(self, src: rasterio.io.DatasetReader):
         '''
         Align the grid to a raster by computing an integer pixel offset.
@@ -155,6 +181,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         # return class object
         return obj
 
+    # ----- property
     @property
     def crs(self) -> str:
         '''CRS of the layout.'''
@@ -162,8 +189,13 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
 
     @property
     def origin(self) -> tuple[float, float]:
-        '''Grid origin in CRS units (Easting, Northing).'''
+        '''Grid origin (x, y) in CRS units.'''
         return self._spec.origin
+
+    @property
+    def pixel_size(self) -> tuple[float, float]:
+        '''Grid pixel size (x, -y) in CRS units.'''
+        return self._spec.pixel_size[0], -self._spec.pixel_size[1]
 
     @property
     def tile_size(self) -> tuple[int, int]:
@@ -176,6 +208,11 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         return self._spec.tile_overlap
 
     @property
+    def extent(self) -> tuple[int, int]:
+        '''Grid extent (height, width) in pixels.'''
+        return self._extent
+
+    @property
     def h(self) -> int:
         '''Grid extent height in pixels.'''
         return self._extent[0]
@@ -185,7 +222,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         '''Grid extent width in pixels.'''
         return self._extent[1]
 
-    # -----------------------------private  method-----------------------------
+    # ----- private method
     def _generate(self) -> None:
         '''
         Derive spatial extent from inputs and divide it into a grid.
@@ -195,7 +232,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
 
         spec = self._spec
         # get extent dimensions (in crs units)
-        if self._mode == 'aoi':
+        if self._mode == 'bbox':
             assert spec.grid_extent is not None
             row_px = math.floor(spec.grid_extent[0] / spec.pixel_size[1])
             col_px = math.floor(spec.grid_extent[1] / spec.pixel_size[0])
@@ -249,7 +286,7 @@ class GridSpec:
     crs: str                                        # a projected CRS
     tile_size: tuple[int, int]                      # rows, cols in pixels
     tile_overlap: tuple[int, int]                   # rows, cols in pixels
-    pixel_size: tuple[int, int]                     # xsize, ysize in CRS units
+    pixel_size: tuple[float, float]                 # xsize, ysize in CRS units
     origin: tuple[float, float]                     # x, y in CRS units
     grid_extent: tuple[float, float] | None = None  # H_y, W_x in in CRS units
     grid_shape: tuple[int, int] | None = None       # rows, cols as n of tiles

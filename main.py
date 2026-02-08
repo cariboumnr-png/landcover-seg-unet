@@ -8,6 +8,7 @@ import hydra
 import omegaconf
 # local imports
 import src.dataset
+import src.grid
 import src.models
 import src.training
 import src.utils
@@ -25,6 +26,14 @@ def main(config: omegaconf.DictConfig) -> None:
     # create a centralized logger file named by current time stamp
     timestamp = src.utils.get_timestamp()
     logger = src.utils.Logger(name='main', log_file=f'./logs/{timestamp}.log')
+
+    # world grid preparation
+    world_grid = src.grid.prep_world_grid(
+        extent_config=config.grid_extent,
+        grid_profile=config.grid_profile,
+        logger=logger
+    )
+    print(world_grid)
 
     # data preparation
     data_summary = src.dataset.prepare_data(
