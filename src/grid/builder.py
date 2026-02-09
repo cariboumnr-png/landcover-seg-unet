@@ -30,8 +30,8 @@ import utils
 
 # -------------------------------Public Function-------------------------------
 def prep_world_grid(
-    extent_config: _types.ConfigType,
-    grid_profile: _types.ConfigType,
+    extent: _types.ConfigType,
+    config: _types.ConfigType,
     logger: utils.Logger
 ) -> grid.GridLayout:
     '''
@@ -52,8 +52,8 @@ def prep_world_grid(
     # get a child logger
     logger = logger.get_child('wgrid')
     # config accessor
-    extent_cfg = utils.ConfigAccess(extent_config)
-    profile = utils.ConfigAccess(grid_profile)
+    extent_cfg = utils.ConfigAccess(extent)
+    profile = utils.ConfigAccess(config)
 
     # get grid id and root dir
     gid = profile.get_option('id')

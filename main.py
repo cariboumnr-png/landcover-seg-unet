@@ -29,8 +29,8 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # world grid preparation
     world_grid = src.grid.prep_world_grid(
-        extent_config=config.grid_extent,
-        grid_profile=config.grid_profile,
+        extent=config.grid_extent,
+        config=config.grid,
         logger=logger
     )
     print(world_grid)

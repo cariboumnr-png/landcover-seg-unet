@@ -4,7 +4,7 @@ defaults:
   - cache: cache
   - curriculum: control
   - dataset: demo
-  - grid_profile: base
+  - grid: base
   - models: multihead
   - paths: default
   - trainer: runtime
