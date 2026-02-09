@@ -1,6 +1,6 @@
 id: square256px_no_overlap # human-facing name
 version: v1
-root: ${paths.artifacts.grids}/${grid_profile.id}
+root: ${paths.artifacts.grids}/${grid.id}
 tile_size:
   row: 256
   col: 256

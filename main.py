@@ -8,6 +8,7 @@ import hydra
 import omegaconf
 # local imports
 import src.dataset
+import src.domain
 import src.grid
 import src.models
 import src.training
@@ -34,6 +35,17 @@ def main(config: omegaconf.DictConfig) -> None:
         logger=logger
     )
     print(world_grid)
+
+    # fetch domain test
+    domain = src.domain.map_domain_to_grid(
+        domain_fpath='./data/domain_knowledge/geology.tif',
+        world_grid=world_grid,
+        index_base=1,
+        valid_pixel_threshold=0.7
+    )
+    # quick writing test
+    json_ready = [[list(k), v] for k, v in domain.items()]
+    src.utils.write_json('./artifacts/domain_knowledge/test.json', json_ready)
 
     # data preparation
     data_summary = src.dataset.prepare_data(

@@ -42,7 +42,6 @@ import typing
 # third-party imports
 import rasterio
 import rasterio.crs
-import rasterio.io
 # local imports
 import alias
 
@@ -124,7 +123,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         ])
 
     # ----- public method
-    def align_to_raster(self, src: rasterio.io.DatasetReader):
+    def set_offset_from(self, src: alias.RasterReader):
         '''
         Align the grid to a raster by computing an integer pixel offset.
 

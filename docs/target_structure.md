@@ -7,7 +7,7 @@ src/
     logging.py
     errors.py
 
-  specs/                      # first-class, code-level contracts (loaders/validators)
+  specs/                      # first-class, code-level contracts (loaders/alidators)
     __init__.py
     grid_spec.py              # GridSpec (YAML → dataclass; validate)
     domain_schema.py          # DomainSchema (YAML → dataclass; validate)
@@ -16,8 +16,7 @@ src/
   grid/                       # pure geometry & tiling (no labels, no training)
     __init__.py
     builder.py                # tiles from GridSpec (row/col, bbox, geom)
-    ids.py                    # stable tile_id naming from (row, col, version)
-    index.py                  # AOI → tile index selection; edge rules
+    layout.py
     io.py                     # read/write grid products (GeoParquet/GeoJSON)
 
   domain/                     # domain extraction & transforms (PCA), no labels

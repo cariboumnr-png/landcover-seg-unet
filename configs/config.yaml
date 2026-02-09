@@ -25,6 +25,11 @@ grid_extent:
     # when mode=tiles
     grid_shape: [0, 0] # rows and cols as number of tiles
 
+# domain building configs
+domain:
+  mode: scan                  # scan | target
+  target_domain_path: ''
+
 # dataset name
 dataset_name: ${hydra:runtime.choices.dataset}
 
