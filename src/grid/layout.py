@@ -43,10 +43,11 @@ import typing
 import rasterio
 import rasterio.crs
 import rasterio.io
-import rasterio.windows
+# local imports
+import alias
 
 # --------------------------------Public  Class--------------------------------
-class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Window]):
+class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
     '''
     Raster-agnostic grid layout as a dictionary of rasterio windows.
 
@@ -86,13 +87,13 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasterio.windows.Windo
         self._mode = mode
         self._spec = spec
         self._extent: tuple[int, int] = (0, 0) # (rows, cols)
-        self._data: dict[tuple[int, int], rasterio.windows.Window] = {}
+        self._data: dict[tuple[int, int], alias.RasterWindow] = {}
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
         # generate grid - self._data to be populated
         self._generate()
 
     # ----- container protocol
-    def __getitem__(self, idx: tuple[int, int]) -> rasterio.windows.Window:
+    def __getitem__(self, idx: tuple[int, int]) -> alias.RasterWindow:
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
             or not all(isinstance(v, int) for v in idx)):
@@ -302,4 +303,4 @@ class GridLayoutPayload(typing.TypedDict):
     mode: str
     spec: dict[str, typing.Any]
     extent: tuple[int, int]
-    windows: dict[tuple[int, int], rasterio.windows.Window]
+    windows: dict[tuple[int, int], alias.RasterWindow]

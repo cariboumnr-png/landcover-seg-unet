@@ -9,7 +9,7 @@ import typing
 import numpy
 import rasterio
 # local imports
-import _types
+import alias
 import utils
 
 # --------------------------------Public  Class--------------------------------
@@ -20,7 +20,7 @@ class DomainBlocks:
             self,
             domain_name: str,
             domain_fpath: str,
-            domain_config: _types.ConfigType,
+            domain_config: alias.ConfigType,
         ):
         '''doc'''
 
@@ -35,7 +35,7 @@ class DomainBlocks:
     def process(
             self,
             valid_blks: dict[str, str],
-            blks_layout: dict[str, _types.RasterWindow],
+            blks_layout: dict[str, alias.RasterWindow],
         ) -> list[str]:
         '''doc'''
 
@@ -65,7 +65,7 @@ class DomainBlocks:
     def parse_raster_blocks(
             self,
             valid_blks: dict[str, str],
-            blks_layout: dict[str, _types.RasterWindow],
+            blks_layout: dict[str, alias.RasterWindow],
         ) -> None:
         '''Parse raster blocks via parallel processing.'''
 
@@ -113,7 +113,7 @@ class DomainBlocks:
     @staticmethod
     def _read_window(
             window_name: str,
-            window_dict: dict[str, _types.RasterWindow],
+            window_dict: dict[str, alias.RasterWindow],
             raster_fpath: str
         ) -> tuple[str, numpy.ndarray]:
         '''Read raster from a raster via a window.'''
@@ -233,14 +233,14 @@ class _DomainProcessingContext:
     disc_domains: list[dict]
     cont_domains: list[dict]
     blks_dict: dict[str, str]
-    layout_dict: dict[str, _types.RasterWindow]
-    cfg: _types.ConfigType
+    layout_dict: dict[str, alias.RasterWindow]
+    cfg: alias.ConfigType
 
 # -------------------------------Public Function-------------------------------
 def build_domains(
         dataset_name: str,
-        input_config: _types.ConfigType,
-        cache_config: _types.ConfigType,
+        input_config: alias.ConfigType,
+        cache_config: alias.ConfigType,
         logger: utils.Logger,
         mode: str,
     ):

@@ -7,7 +7,7 @@ import typing
 # third-party imports
 import torch
 # local imports
-import _types
+import alias
 import training.common
 
 # ----- .progress
@@ -57,7 +57,7 @@ class _BatchCtx:
     '''Batch level data context.'''
     bidx: int = 0
     block_index_range: tuple[int, int] = (-1, -1)
-    batch: _types.DatasetItem | None = None
+    batch: alias.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
     y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
     domain: dict[str, torch.Tensor | None] = dataclasses.field(default_factory=dict)

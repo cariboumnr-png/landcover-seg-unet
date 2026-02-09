@@ -4,7 +4,7 @@
 from __future__ import annotations
 import dataclasses
 # local imports
-import _types
+import alias
 import utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -52,7 +52,7 @@ class _OptimConfig:
     grad_clip_norm: float | None
 
 # -------------------------------Public Function-------------------------------
-def get_config(config: _types.ConfigType):
+def get_config(config: alias.ConfigType):
     '''Factory function.'''
 
     # config accessor

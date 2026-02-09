@@ -16,7 +16,7 @@ import rasterio
 import rasterio.coords
 import rasterio.transform
 # local imports
-import _types
+import alias
 import utils
 
 # --------------------------------Public  Class--------------------------------
@@ -60,9 +60,9 @@ class BlockLayout:
             raise ValueError('Overlap must be smaller than block size.')
 
         # init attributes
-        self.img: _types.RasterReader | None = None
-        self.lbl: _types.RasterReader | None = None
-        self.blks: dict[str, _types.RasterWindow] = {}
+        self.img: alias.RasterReader | None = None
+        self.lbl: alias.RasterReader | None = None
+        self.blks: dict[str, alias.RasterWindow] = {}
         self.meta: dict[str, typing.Any] = {}
 
     # -----------------------------public methods-----------------------------
@@ -338,7 +338,7 @@ class BlockLayout:
                 bh = min(self.blk_size, h - i) # at the last row
                 bw = min(self.blk_size, w - j) # at the last col
                 # set up the window and update the result dict
-                read_window = _types.RasterWindow(j, i, bw, bh) # type: ignore
+                read_window = alias.RasterWindow(j, i, bw, bh) # type: ignore
                 if self.__check_valid(read_window):
                     self.blks[idx] =  read_window
 
@@ -363,7 +363,7 @@ class BlockLayout:
         self.meta['reg_blks'] = self.meta['reg_rows'] * self.meta['reg_cols']
         self.meta['valid_blks'] = len(self.blks)
 
-    def __check_valid(self, window: _types.RasterWindow) -> bool:
+    def __check_valid(self, window: alias.RasterWindow) -> bool:
         '''Crude check if a `Window` yields valid data from rasters.'''
 
         # read the rasters at the current block

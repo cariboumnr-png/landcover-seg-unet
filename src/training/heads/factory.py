@@ -3,7 +3,7 @@
 # third-party imports
 import numpy
 # local imports
-import _types
+import alias
 import training.common
 import training.heads
 import utils
@@ -37,7 +37,7 @@ class HeadSpecs:
 # Public API
 def build_headspecs(
         data: training.common.DataSummaryLike,
-        config: _types.ConfigType
+        config: alias.ConfigType
     ) -> HeadSpecs:
     '''Generate concreate head specs classes indexed by head name.'''
 

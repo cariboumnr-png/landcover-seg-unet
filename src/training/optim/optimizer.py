@@ -5,7 +5,7 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
-import _types
+import alias
 import training.optim
 import utils
 
@@ -79,7 +79,7 @@ def build_scheduler(
 
 def build_optimization(
         model: training.optim.ModelWithParams,
-        config: _types.ConfigType
+        config: alias.ConfigType
     ) -> Optimization:
     '''Factory-like wrapper function.'''
 

@@ -51,7 +51,7 @@ import torch.utils.data
 import torchvision.transforms.functional
 import tqdm
 # local imports
-import _types
+import alias
 import dataset
 import utils
 
@@ -106,7 +106,7 @@ class _MultiBlockData:
     '''Small container for multiblock data.'''
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
-    dom: list[_types.TorchDict] | _CacheDict = dataclasses.field(init=False)
+    dom: list[alias.TorchDict] | _CacheDict = dataclasses.field(init=False)
 
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
@@ -211,7 +211,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self._len
 
-    def __getitem__(self, idx: int) -> _types.DatasetItem:
+    def __getitem__(self, idx: int) -> alias.DatasetItem:
         if self.preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
             if isinstance(self.data.lbl, numpy.ndarray) and self.data.lbl.ndim == 1:
@@ -326,7 +326,7 @@ class _BlockDataset(torch.utils.data.Dataset):
 
         # process args
         self.config = block_config
-        self.domain: _types.TorchDict = {}
+        self.domain: alias.TorchDict = {}
         self.logger = logger
 
         # load data from npz
@@ -350,7 +350,7 @@ class _BlockDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return self.config.patch_per_blk
 
-    def __getitem__(self, idx: int) -> _types.DatasetItem:
+    def __getitem__(self, idx: int) -> alias.DatasetItem:
         assert idx in range(self.config.patch_per_blk) # sanity check
         x = torch.from_numpy(self.imgs[idx].astype(numpy.float32))
         # if label is a placeholder array

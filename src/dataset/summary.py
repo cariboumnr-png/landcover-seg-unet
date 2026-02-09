@@ -7,7 +7,7 @@ import math
 import os
 import random
 # local imports
-import _types
+import alias
 import dataset
 import utils
 
@@ -89,7 +89,7 @@ class _Domain:
 # -------------------------------Public Function-------------------------------
 def generate_summary(
         dataset_name: str,
-        cache_config: _types.ConfigType
+        cache_config: alias.ConfigType
     ) -> DataSummary:
     '''Wrapper function to generate concrete `DataSummary` class.'''
 

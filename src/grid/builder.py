@@ -24,14 +24,14 @@ import os
 # third-party import
 import rasterio
 # local imports
-import _types
+import alias
 import grid
 import utils
 
 # -------------------------------Public Function-------------------------------
 def prep_world_grid(
-    extent: _types.ConfigType,
-    config: _types.ConfigType,
+    extent: alias.ConfigType,
+    config: alias.ConfigType,
     logger: utils.Logger
 ) -> grid.GridLayout:
     '''
