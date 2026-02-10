@@ -1,4 +1,39 @@
-'''doc'''
+'''
+Resolve a domain raster into per-tile stats and conditioning features.
+
+Overview
+--------
+This module parses a domain raster into a set of spatial tiles defined
+by a `GridLayout`. For each tile, raster data within the tile's bounds
+is retrieved, remapped to a 0..K-1 class index space, and processed to
+compute:
+
+- majority class and its relative frequency
+- PCA-based conditioning vectors at explained-variance thresholds
+
+Tiles correspond to fixed spatial units defined by the grid. Internally,
+each tile is read using a raster window, but operationally all functions
+treat tiles as logical grid units rather than raster I/O constructs.
+
+Processing steps
+----------------
+1. Parse the raster into tiles using the GridLayout.
+2. Remap raw raster values to 0..K-1 based on global unique classes.
+3. For each valid tile (sufficient fraction of non-nodata pixels):
+   - compute majority label and majority frequency
+   - compute a normalized class-frequency vector
+4. Run PCA on all valid tiles once, then project tiles to:
+   - PCA90  (>= 90% cumulative variance)
+   - PCA95  (>= 95% cumulative variance)
+   - PCA99  (>= 99% cumulative variance)
+5. Assemble all outputs into a list of tile-indexed dictionaries.
+
+Notes
+-----
+- Invalid tiles (insufficient valid pixels) retain None/empty statistics.
+- PCA computation is delegated to the domain PCA utility module.
+- Remapping ensures all tiles share the same fixed class index domain.
+'''
 
 #standard imports
 import copy
@@ -11,14 +46,39 @@ import domain
 import grid
 import utils
 
+# -------------------------------Public Function-------------------------------
 def map_domain_to_grid(
     domain_fpath: str,
     world_grid: grid.GridLayout,
     *,
     index_base: int = 1,
     valid_pixel_threshold: float = 0.7
-) -> dict[tuple[int, int], dict]:
-    '''doc'''
+) -> list[dict]:
+    '''
+    Parse a domain raster into tiles and compute majority and PCA-based
+    conditioning features.
+
+    Args:
+        domain_fpath:
+            Path to the discrete domain raster.
+        world_grid:
+            GridLayout defining tile coordinate keys and their spatial extents.
+        index_base:
+            Expected lowest raw class value in the raster (default 1).
+        valid_pixel_threshold:
+            Minimum fraction of non-nodata pixels required for a tile to be
+            considered valid and included in PCA.
+
+    Returns:
+        A dict mapping tile coordinates (e.g., (row, col)) to a result dict
+        containing fields:
+            - 'coords'
+            - 'majority'
+            - 'major_freq'
+            - 'pca90'
+            - 'pca95'
+            - 'pca99'
+    '''
 
     # parse domain
     parsed, max_idx = _parse_domain(domain_fpath, world_grid, index_base)
@@ -71,8 +131,9 @@ def map_domain_to_grid(
         })
 
     # return
-    return output
+    return list(output.values())
 
+# ------------------------------private  function------------------------------
 def _parse_domain(
     domain_fpath: str,
     world_grid: grid.GridLayout,

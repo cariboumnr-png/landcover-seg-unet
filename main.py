@@ -44,8 +44,7 @@ def main(config: omegaconf.DictConfig) -> None:
         valid_pixel_threshold=0.7
     )
     # quick writing test
-    json_ready = [[list(k), v] for k, v in domain.items()]
-    src.utils.write_json('./artifacts/domain_knowledge/test.json', json_ready)
+    src.utils.write_json('./artifacts/domain_knowledge/test.json', domain)
 
     # data preparation
     data_summary = src.dataset.prepare_data(

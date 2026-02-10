@@ -1,13 +1,56 @@
-'''doc'''
+'''
+PCA utilities for converting per-tile class-frequencies into compact
+conditioning vectors.
+
+Overview
+--------
+Given a mapping from grid coordinates to class-frequency vectors (one
+vector per tile; each vector sums to 1 over K classes), this module fits
+a PCA model once over the stacked frequency matrix (shape N x K), selects
+the smallest number of principal components that meets target cumulative
+explained variance, and projects each tile into that low-dimensional
+space.
+
+Design notes
+------------
+- PCA is fit via economical SVD on mean-centered rows (tiles).
+- Target variance is specified in (0, 1]; e.g., 0.90 for 90%.
+- Returned per-tile vectors are float32 for compactness and consistency.
+- Numerical guards:
+  * _k_from_target_evr() clamps k to [1, L], where L = min(N, K).
+  * _transform() ensures a 2-D float32 array even for edge cases.
+'''
 
 # third-party imports
 import numpy
 
+# -------------------------------Public Function-------------------------------
 def pca_transform(
     freqs: dict[tuple[int, int], numpy.ndarray],
     target_var: float
 ) -> tuple[dict[tuple[int, int], numpy.ndarray], float]:
-    '''Perform PCA and output top axes that meets the target variance.'''
+    '''
+    Project tile class-frequency vectors onto PCA axes to reach variance.
+
+    Args:
+        freqs: Mapping from tile coordinates (e.g., (x, y)) to 1-D class-
+            frequency vectors of length K (non-negative; sum to 1).
+        target_var: Target cumulative explained variance in (0, 1].
+
+    Returns:
+        tuple:
+        - Dict mapping the same tile coordinates to PCA vectors of length
+        k, where k is the smallest number of components whose cumulative
+        explained variance ≥ target_var. Each vector is dtype float32.
+        - The cumulative explained variance captured by the selected k
+        components, expressed in percent (e.g., 92.34).
+
+    Notes:
+    - PCA is fit once across all provided tiles, and the top-k components
+        are applied to each tile.
+    - If target_var is very small or the spectrum is dominated by PC1, k
+    may be 1.
+    '''
 
     # lock ordering in one pass
     items = list(freqs.items())
@@ -32,6 +75,7 @@ def pca_transform(
     mapped_z = dict(zip(keys, z))
     return mapped_z, float(evr_k.sum() * 100.0)
 
+# ------------------------------private  function------------------------------
 def _fit_pca(x: numpy.ndarray) -> tuple[numpy.ndarray, ...]:
     '''
     Fit PCA on rows of X (N x D) using SVD.
@@ -60,10 +104,10 @@ def _k_from_target_evr(
 
     if not 0.0 < target <= 1.0:
         raise ValueError('target must be in (0, 1].')
-    if not numpy.all(numpy.isfinite(evr_full)):
-        print("DEBUG: evr_full has non-finite values:", evr_full)
+    # if not numpy.all(numpy.isfinite(evr_full)):
+    #     print('DEBUG: evr_full has non-finite values:', evr_full)
     cum = numpy.cumsum(evr_full)
-    print("DEBUG: target=", target, " first_evr=", evr_full[0], " cum_last=", cum[-1])
+    # print(f'target={target}, first_evr={evr_full[0]}, cum_last={cum[-1]}')
     k = int(numpy.searchsorted(cum, target, side='left') + 1)
     k = max(1, min(k, evr_full.shape[0]))
     return k
@@ -74,6 +118,7 @@ def _transform(
         components: numpy.ndarray
     ) -> numpy.ndarray:
     '''Project rows of X onto PCA components (k x D).'''
+
     xc = x - mean
     z = xc @ components.T  # (N, k)
     z = numpy.asarray(z, dtype=numpy.float32) # ensure float32
