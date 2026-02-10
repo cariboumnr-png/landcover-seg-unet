@@ -11,9 +11,9 @@ import typing
 
 __all__ = [
     # classes
-
+    'DomainContext',
+    'DomainTileMap',
     # functions
-    'map_domain_to_grid',
     'pca_transform',
     # typing
 
@@ -21,13 +21,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .resolver import map_domain_to_grid
+    from .tilemap import DomainContext, DomainTileMap
     from .transform import pca_transform
 
 def __getattr__(name: str):
 
-    if name in ['map_domain_to_grid']:
-        return getattr(importlib.import_module('.resolver', __package__), name)
+    if name in ['DomainContext', 'DomainTileMap']:
+        return getattr(importlib.import_module('.tilemap', __package__), name)
     if name in ['pca_transform']:
         return getattr(importlib.import_module('.transform', __package__), name)
 

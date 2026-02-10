@@ -21,10 +21,10 @@ src/
 
   domain/                     # domain extraction & transforms (PCA), no labels
     __init__.py
-    resolver.py               # compute per-tile domain features from rasters
+    mapper.py
+    io.py
+    tilemap.py                # compute per-tile domain features from rasters
     transforms.py             # PCA projection, normalization (no fitting here)
-    artifacts.py              # load PCA artifacts (mu, components, stats)
-    ood.py                    # OOD checks (range, Mahalanobis), flags
 
   tasks/                      # binding layer (no training required for v1)
     __init__.py

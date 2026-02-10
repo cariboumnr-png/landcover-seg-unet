@@ -28,7 +28,7 @@ import numpy
 def pca_transform(
     freqs: dict[tuple[int, int], numpy.ndarray],
     target_var: float
-) -> tuple[dict[tuple[int, int], numpy.ndarray], float]:
+) -> tuple[dict[tuple[int, int], numpy.ndarray], float, int]:
     '''
     Project tile class-frequency vectors onto PCA axes to reach variance.
 
@@ -73,7 +73,7 @@ def pca_transform(
 
     # map z back to freqs keys
     mapped_z = dict(zip(keys, z))
-    return mapped_z, float(evr_k.sum() * 100.0)
+    return mapped_z, float(evr_k.sum() * 100.0), k
 
 # ------------------------------private  function------------------------------
 def _fit_pca(x: numpy.ndarray) -> tuple[numpy.ndarray, ...]:

@@ -45,6 +45,42 @@ import rasterio.crs
 # local imports
 import alias
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class GridSpec:
+    '''
+    World grid specification.
+
+    Conventions:
+    - CRS space uses (x, y).
+    - Pixel/array space uses (row, col).
+    - All pixel sizes are positive magnitudes (x, y).
+    - All shapes and tile sizes use (rows, cols).
+
+    Note: this class is called during `GridLayout` construction, where
+    the mode is determined.
+    '''
+    crs: str                                        # a projected CRS
+    tile_size: tuple[int, int]                      # rows, cols in pixels
+    tile_overlap: tuple[int, int]                   # rows, cols in pixels
+    pixel_size: tuple[float, float]                 # xsize, ysize in CRS units
+    origin: tuple[float, float]                     # x, y in CRS units
+    grid_extent: tuple[float, float] | None = None  # H_y, W_x in in CRS units
+    grid_shape: tuple[int, int] | None = None       # rows, cols as n of tiles
+
+    def __post_init__(self):
+        ts, to = self.tile_size, self.tile_overlap
+        if not (to[0] < ts[0] and to[1] < ts[1]):
+            raise ValueError('Overlap must be smaller than block size.')
+
+# ---------------------------------Public Type---------------------------------
+class GridLayoutPayload(typing.TypedDict):
+    '''GridLayout payload for controlled de-/serialization.'''
+    mode: str
+    spec: dict[str, typing.Any]
+    extent: tuple[int, int]
+    windows: dict[tuple[int, int], alias.RasterWindow]
+
 # --------------------------------Public  Class--------------------------------
 class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
     '''
@@ -167,7 +203,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         }
 
     @classmethod
-    def from_payload(cls, payload: GridLayoutPayload):
+    def from_payload(cls, payload: GridLayoutPayload) -> GridLayout:
         '''Instantiate the class with input payload.'''
 
         # create empty GridLayout instance
@@ -268,38 +304,3 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
             )
         else:
             raise ValueError('Invalid extent mode')
-
-# ------------------------------Public  Dataclass------------------------------
-@dataclasses.dataclass
-class GridSpec:
-    '''
-    World grid specification.
-
-    Conventions:
-    - CRS space uses (x, y).
-    - Pixel/array space uses (row, col).
-    - All pixel sizes are positive magnitudes (x, y).
-    - All shapes and tile sizes use (rows, cols).
-
-    Note: this class is called during `GridLayout` construction, where
-    the mode is determined.
-    '''
-    crs: str                                        # a projected CRS
-    tile_size: tuple[int, int]                      # rows, cols in pixels
-    tile_overlap: tuple[int, int]                   # rows, cols in pixels
-    pixel_size: tuple[float, float]                 # xsize, ysize in CRS units
-    origin: tuple[float, float]                     # x, y in CRS units
-    grid_extent: tuple[float, float] | None = None  # H_y, W_x in in CRS units
-    grid_shape: tuple[int, int] | None = None       # rows, cols as n of tiles
-
-    def __post_init__(self):
-        ts, to = self.tile_size, self.tile_overlap
-        if not (to[0] < ts[0] and to[1] < ts[1]):
-            raise ValueError('Overlap must be smaller than block size.')
-
-class GridLayoutPayload(typing.TypedDict):
-    '''GridLayout payload for controlled de-/serialization.'''
-    mode: str
-    spec: dict[str, typing.Any]
-    extent: tuple[int, int]
-    windows: dict[tuple[int, int], alias.RasterWindow]

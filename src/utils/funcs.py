@@ -83,7 +83,7 @@ def print_status(lines: list):
         print(line)
     print('\n')
 
-def write_json(json_fpath: str, src_dict: list | dict) -> None:
+def write_json(json_fpath: str, src_dict: list | dict | typing.Mapping) -> None:
     '''Helper to write a json config file from a python dict or list.'''
 
     with open(json_fpath, 'w', encoding='UTF-8') as file:
