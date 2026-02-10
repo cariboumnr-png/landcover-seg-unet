@@ -36,28 +36,18 @@ def main(config: omegaconf.DictConfig) -> None:
     )
     print(world_grid)
 
-    # fetch domain test
-    # domain = src.domain.map_domain_to_grid(
-    #     domain_fpath='./data/domain_knowledge/geology.tif',
-    #     world_grid=world_grid,
-    #     index_base=1,
-    #     valid_pixel_threshold=0.7
-    # )
     domain_ctx = src.domain.DomainContext(
         index_base=1,
         valid_threshold=0.7,
         target_variance=0.9
     )
     domain = src.domain.DomainTileMap(
-        domain_fpath='./data/domain_knowledge/geology.tif',
+        domain_fpath='./data/domain_knowledge/ecodistrict.tif',
         world_grid=world_grid,
         context=domain_ctx,
         logger=logger
     )
     print(domain)
-    payload = domain.to_payload()
-    # quick writing test
-    src.utils.write_json('./artifacts/domain_knowledge/test.json', payload)
 
     # data preparation
     data_summary = src.dataset.prepare_data(

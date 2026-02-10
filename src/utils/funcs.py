@@ -1,17 +1,10 @@
 '''
-A module contains utility functions used throughout this project.
-
-Functions:
-    check_valid_csv(): Checks if a csv file exists and contains data.
-    check_gpu(): Checks GPU availability for parallel computing.
-    get_file_ctime(): Get file creation time as a formatted string.
-    get_timestamp(): Get current time as a formatted string.
-    timed_tun(): Runs a function with a timer.
-    ...
+General utility functions used throughout this project.
 '''
 
 # standard imports
 import datetime
+import hashlib
 import json
 import os
 import pathlib
@@ -94,3 +87,15 @@ def write_pickle(pickle_fpath: str, src_obj: typing.Any) -> None:
 
     with open(pickle_fpath, 'wb') as file:
         pickle.dump(src_obj, file)
+
+def hash_payload(payload: typing.Any) -> str:
+    '''
+    Hash a JSON-serializable payload.
+
+    Raises:
+        TypeError if the payload is not JSON-serializable.
+    '''
+
+    blob = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+    sha256 = hashlib.sha256(blob.encode()).hexdigest()
+    return sha256

@@ -16,13 +16,13 @@ src/
   grid/                       # pure geometry & tiling (no labels, no training)
     __init__.py
     builder.py                # tiles from GridSpec (row/col, bbox, geom)
-    layout.py
     io.py                     # read/write grid products (GeoParquet/GeoJSON)
+    layout.py
 
   domain/                     # domain extraction & transforms (PCA), no labels
     __init__.py
-    mapper.py
     io.py
+    mapper.py
     tilemap.py                # compute per-tile domain features from rasters
     transforms.py             # PCA projection, normalization (no fitting here)
 

@@ -22,8 +22,10 @@ class DomainContext:
     index_base: int
     valid_threshold: float
     target_variance: float
-    pca_axes_n: int | None = None
-    explained_variance: float | None = None
+    major_freq_mean: float = 0.0
+    major_freq_min: float = 1.0
+    pca_axes_n: int = 0
+    explained_variance: float = 0.0
 
 # ---------------------------------Public Type---------------------------------
 class DomainTile(typing.TypedDict):
@@ -92,6 +94,8 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             'Domain details:',
             f'Tile filtering threshold: {self._ctx.valid_threshold:.2f}',
             f'Number of valid domain tiles: {len(self)}',
+            f'Mean frequency of major class: {self._ctx.major_freq_mean:.2f}',
+            f'Min frequency of major class {self._ctx.major_freq_min:.2f}',
             f'Target PCA variance: {self._ctx.target_variance}',
             f'PCA axes count: {self._ctx.pca_axes_n}',
             f'PCA variance explained: {self._ctx.explained_variance:.2f}',
@@ -101,8 +105,11 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     def to_payload(self) -> DomainPayload:
         '''Generate class payload for json dump.'''
 
-        assert self._ctx.pca_axes_n is not None
-        assert self._ctx.explained_variance is not None
+        # sanity checks and return payload
+        assert self._ctx.major_freq_mean > 0.0
+        assert self._ctx.major_freq_min < 1.0
+        assert self._ctx.pca_axes_n > 0
+        assert self._ctx.explained_variance > 0.0
         return {
             'context': dataclasses.asdict(self._ctx),
             'valid_idx': [f'{x[0]}, {x[1]}' for x in self._valid],
@@ -198,28 +205,31 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
                 self._valid.append(coords)
 
         # get majority index for valid tiles - calc here
-        for idx in valid_indices:
-            coords, arr = all_tiles[idx]
+        for i in valid_indices:
+            coords, arr = all_tiles[i]
             values, counts = numpy.unique(arr, return_counts=True)
             # update domain tile dict
-            self._data[coords].update({
-                'majority': values[numpy.argmax(counts)].item(), # serializable
-                'major_freq': counts[numpy.argmax(counts)] / sum(counts)
-            })
+            major = values[numpy.argmax(counts)].item() # serializable
+            freq = counts[numpy.argmax(counts)] / sum(counts)
+            self._data[coords].update({'majority': major, 'major_freq': freq})
+            # update major_freq stats
+            self._ctx.major_freq_min = min(self._ctx.major_freq_min, freq)
+            self._ctx.major_freq_mean += freq
+        self._ctx.major_freq_mean /= len(valid_indices)
 
         # get pca transform for valid tiles - calc delegated to transform.py
         # get index frequency for valid tiles
         freqs: dict[tuple[int, int], numpy.ndarray] = {}
-        for idx in valid_indices:
-            coords, arr = all_tiles[idx]
+        for i in valid_indices:
+            coords, arr = all_tiles[i]
             freqs[coords] = _norm_freq(arr, self._range)
         # get full pca
         z, evr, k = domain.pca_transform(freqs, self._ctx.target_variance)
         self._ctx.explained_variance = evr
         self._ctx.pca_axes_n = k
         # assign to each valid tile
-        for idx in valid_indices:
-            coords, arr = all_tiles[idx]
+        for i in valid_indices:
+            coords, arr = all_tiles[i]
             self._data[coords].update(
                 {'pca_feature': [float(x) for x in z[coords]]}
             )

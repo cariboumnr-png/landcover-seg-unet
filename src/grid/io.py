@@ -1,7 +1,7 @@
 '''
 I/O utilites for class `GridLayout`.
 
-This module handles persistence of GridLayout objects via a pickled
+This module handles persistence of `GridLayout` objects via a pickled
 payload and a JSON metadata sidecar. The payload represents a stable
 world-grid indexed by pixel-origin coordinates (x_px, y_px). Raster
 alignment is not stored and is applied at access time.
@@ -11,8 +11,6 @@ compatibility and integrity on load.
 '''
 
 # standard imports
-import hashlib
-import json
 import os
 # local imports
 import grid
@@ -35,7 +33,7 @@ def save_grid(
     Args:
         grid_name: Name of the grid in both `.pkl` and `.json` artifacts.
         grid_obj: The `GridLayout` instance to be saved.
-        dirpath: Directory where artifacts are saved.
+        dirpath: Directory where artifacts are to be saved.
     '''
 
     # prepare output dir
@@ -46,9 +44,10 @@ def save_grid(
     utils.write_pickle(f'{dirpath}/{grid_name}.pkl', payload)
 
     # write meta to json
+    canonical = _canonicalize(payload)
     meta = {
         'schema_id': getattr(grid_obj, 'SCHEMA_ID', 'unknown'),
-        'sha256': _hash_payload(payload),
+        'sha256': utils.hash_payload(canonical),
         'mode': payload['mode'],
         'spec': payload['spec'],
         'extent': payload['extent'],
@@ -61,15 +60,15 @@ def load_grid(
     dirpath: str
 ) -> grid.GridLayout:
     '''
-    Load a GridLayout from disk.
+    Load a `GridLayout` from disk.
 
-    Validates the payload hash and schema identifier before reconstructing
-    the GridLayout instance. Raises if the payload is corrupted or the
+    Validates payload hash and schema identifier before reconstructing
+    the `GridLayout` instance. Raises if the payload is corrupted or the
     schema is unsupported.
 
     Args:
         grid_name: Name of the grid in both `.pkl` and `.json` artifacts.
-        dirpath: Directory where artifacts are saved.
+        dirpath: Directory where artifacts are located.
     '''
 
     # load payload and meta json
@@ -77,7 +76,8 @@ def load_grid(
     meta = utils.load_json(f'{dirpath}/{grid_name}_meta.json')
 
     # check hash
-    if _hash_payload(payload) != meta['sha256']:
+    canonical = _canonicalize(payload)
+    if utils.hash_payload(canonical) != meta['sha256']:
         raise ValueError(f'Grid {grid_name} might be altered/damaged.')
 
     # schema guard
@@ -90,11 +90,11 @@ def load_grid(
     return grid.GridLayout.from_payload(payload)
 
 # ------------------------------private  function------------------------------
-def _hash_payload(payload: grid.GridLayoutPayload) -> str:
-    '''Compute a stable SHA-256 hash for a GridLayout payload.'''
+def _canonicalize(payload: grid.GridLayoutPayload) -> dict:
+    '''Get a canonical, deterministic representation of the payload.'''
 
-    # canonical independent of  pickle ordering or runtime attributes
-    canonical = {
+    # logically equivalent inputs produce the same hash
+    return {
         'mode': payload['mode'],
         'spec': payload['spec'],
         'extent': payload['extent'],
@@ -103,6 +103,3 @@ def _hash_payload(payload: grid.GridLayoutPayload) -> str:
             for k, w in sorted(payload['windows'].items())
         ]
     }
-    blob = json.dumps(canonical, sort_keys=True, separators=(',', ':'))
-    sha256 = hashlib.sha256(blob.encode()).hexdigest()
-    return sha256
