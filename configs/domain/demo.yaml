@@ -1,0 +1,10 @@
+source:
+  dirpath: ${paths.data.domain_knowledge}
+  file:
+    - name: geology.tif
+      index_base: 1
+    - name: ecodistrict.tif
+      index_base: 1
+valid_threshold: 0.7
+target_variance: 0.9
+output_dirpath: ${paths.artifacts.domain}

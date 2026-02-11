@@ -1,11 +1,15 @@
+# location to store grid and domain artifacts (static & versioned)
 artifacts:
   root: ./artifacts
   grids: ${paths.artifacts.root}/world_grids
   domain: ${paths.artifacts.root}/domain_knowledge
 
-data:
-  root: ./data
-  extent_reference: ${paths.data.root}/extent_reference
-  domain_knowledge: ${paths.data.root}/domain_knowledge
-  raw: ${paths.data.root}/raw
-  processed: ${paths.data.root}/processed
+# location to store data cache and related files
+cache:
+  root: ./data_cache
+  training:
+    root: ${paths.data.cache}/training
+    blocks: ${paths.data.cache.root}/blocks
+  inference:
+    root: ${paths.data.cache}/inference
+    blocks: ${paths.data.cache.root}/blocks

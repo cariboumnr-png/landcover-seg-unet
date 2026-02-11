@@ -1,35 +1,17 @@
-# default subconfigs
+# -----------------------------default  subconfigs-----------------------------
 defaults:
   - _self_
-  - cache: cache
-  - curriculum: control
+  - cache: default
+  - curriculum: demo
+  - extent: demo
   - dataset: demo
+  - domain: demo
   - grid: base
   - models: multihead
   - paths: default
   - trainer: runtime
 
-# study area extent definition
-grid_extent:
-  crs: 'EPSG:3161'
-  mode: ref                   # ref | aoi | tiles
-  inputs:
-    # when mode=ref provide:
-    ref_name: 'on_3161_30m.tif'
-    ref_path: ${paths.data.extent_reference}/${grid_extent.inputs.ref_name}
-    # when mode=(aoi | tiles) provide:
-    origin: [0.0, 0.0] # x, y in CRS units
-    pixel_size: [0.0, 0.0] # x, y positive magnitudes; we assume north up
-    # when mode=aoi
-    grid_extent: [0.0, 0.0] # height and width in CRS units
-    # when mode=tiles
-    grid_shape: [0, 0] # rows and cols as number of tiles
-
-# domain building configs
-domain:
-  mode: scan                  # scan | target
-  target_domain_path: ''
-
+# ----------------------------------------------------------------------------
 # dataset name
 dataset_name: ${hydra:runtime.choices.dataset}
 

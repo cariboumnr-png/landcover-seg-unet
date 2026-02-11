@@ -1,0 +1,15 @@
+# study area extent definition
+extent:
+  crs: 'EPSG:3161'
+  mode: ref # ref | aoi | tiles
+  inputs:
+    # when mode=ref provide:
+    dirpath: ${paths.data.extent_reference}
+    filename: 'on_3161_30m.tif'
+    # when mode=(aoi | tiles) provide:
+    origin: [0.0, 0.0] # x, y in CRS units
+    pixel_size: [0.0, 0.0] # x, y positive magnitudes; we assume north up
+    # when mode=aoi
+    grid_extent: [0.0, 0.0] # height and width in CRS units
+    # when mode=tiles
+    grid_shape: [0, 0] # rows and cols as number of tiles
