@@ -7,14 +7,14 @@ import re
 # third-party imports
 import numpy
 # local imports
-import _types
+import alias
 import dataset
 import utils
 
 # -------------------------------Public Function-------------------------------
 def split_dataset(
         dataset_name: str,
-        cache_config: _types.ConfigType,
+        cache_config: alias.ConfigType,
         logger: utils.Logger
     ):
     '''doc'''

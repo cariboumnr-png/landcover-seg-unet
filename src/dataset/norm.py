@@ -8,14 +8,14 @@ import random
 import numpy
 import tqdm
 # local imports
-import _types
+import alias
 import dataset
 import utils
 
 # -------------------------------Public Function-------------------------------
 def normalize_dataset(
         dataset_name: str,
-        cache_config: _types.ConfigType,
+        cache_config: alias.ConfigType,
         logger: utils.Logger,
         mode: str
     ):

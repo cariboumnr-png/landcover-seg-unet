@@ -21,3 +21,6 @@ __pycache__/
 !/outputs/
 /previews/*
 !/previews/
+/artifacts/*
+!/artifacts/
+/demo_data/*

@@ -6,6 +6,7 @@ from .preview import export_previews
 from .funcs import(
     get_dir_size,
     get_timestamp,
+    hash_payload,
     load_json,
     load_pickle,
     write_json,
@@ -24,6 +25,7 @@ __all__ = [
     'export_previews',
     'get_dir_size',
     'get_timestamp',
+    'hash_payload',
     'load_json',
     'load_pickle',
     'open_rasters',

@@ -3,6 +3,7 @@
 # standard imports
 import typing
 # third-party imports
+import numpy
 import rasterio.io
 import rasterio.windows
 import torch
@@ -10,6 +11,9 @@ import torch
 # typing aliases
 # generic
 ConfigType: typing.TypeAlias = typing.Mapping[str, typing.Any]
+'''
+Generic string-keyed config mapping, e.g., from omega dict.
+'''
 # batch context
 Tensor: typing.TypeAlias = torch.Tensor
 TorchDict: typing.TypeAlias = dict[str, Tensor]
@@ -26,3 +30,9 @@ A collection of `DatasetItem` objects.
 # from rasterio
 RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
 RasterWindow: typing.TypeAlias = rasterio.windows.Window
+#
+RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.ndarray]
+'''
+Array read from a raster window with its top-left corner at specified
+coordinates (x, y in pixels) from the world grid.
+'''

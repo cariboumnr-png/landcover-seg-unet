@@ -5,7 +5,7 @@ import typing
 # third-party imports
 import omegaconf
 # local imports
-import _types
+import alias
 
 class ConfigAccessError(Exception):
     '''Custom exception for config access errors.'''
@@ -31,7 +31,7 @@ class ConfigAccess:
 
     def __init__(
             self,
-            config: _types.ConfigType,
+            config: alias.ConfigType,
         ) -> None:
         '''Initialize with a config mapping.'''
 
@@ -89,13 +89,13 @@ class ConfigAccess:
     def get_section_as_dict(
             self,
             section: str
-        ) -> _types.ConfigType:
+        ) -> alias.ConfigType:
         '''
         Retrieve a section and return as a dict.
         '''
 
         try:
-            sec: _types.ConfigType = self._config[section]
+            sec: alias.ConfigType = self._config[section]
             if not isinstance(sec, typing.Mapping):
                 raise ValueError('Config section not a dict')
             return sec
@@ -103,7 +103,7 @@ class ConfigAccess:
             raise e
 
     @staticmethod
-    def from_omega(cfg: _types.ConfigType) -> _types.ConfigType:
+    def from_omega(cfg: alias.ConfigType) -> alias.ConfigType:
         '''Convert OmegaConf.DictConfig to standard dict recursively.'''
 
         if isinstance(cfg, omegaconf.DictConfig):

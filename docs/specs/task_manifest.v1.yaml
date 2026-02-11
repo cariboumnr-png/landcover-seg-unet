@@ -1,0 +1,5 @@
+task:
+  version: task_v1
+  name: landcover_segmentation
+  grid_spec: "grid_v1"
+  domain_schema: "dom_v1"

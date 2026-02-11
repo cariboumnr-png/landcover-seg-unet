@@ -1,0 +1,111 @@
+grid_spec_design:
+  version: grid_v1
+  purpose: >
+    Canonical, deterministic world-grid independent of any raster.
+    Public API supports three extent modes (ref|aoi|tiles), which map
+    to two internal layout modes (bbox|tiles).
+
+  conventions:
+    coordinate_space:
+      crs_space: '(x, y)'
+      pixel_space: '(row, col)'
+    units:
+      pixel_size: 'CRS units (xsize, ysize > 0)'
+      tile_geometry: 'pixels'
+    rules:
+      - 'All pixel sizes are positive magnitudes.'
+      - 'Tile sizes/overlaps use (rows, cols) in pixels.'
+      - 'Grid origin is upper-left (x_min, y_max).'
+      - 'Tiles are generated row-major from top-left.'
+
+  # ---------- Public API (builder._get_extent) ----------
+  # Users provide 'extent.mode' and inputs; builder returns a partial GridSpec.
+  api_extent_modes:
+    ref:
+      description: >
+        Use a reference raster to derive origin (x_min, y_max), pixel_size,
+        and grid_extent (height_y, width_x) in CRS units.
+      required:
+        - crs
+        - inputs.dirpath
+        - inputs.filename
+      derives:
+        - origin
+        - pixel_size
+        - grid_extent
+      maps_to_layout: 'bbox'
+    aoi:
+      description: >
+        Manual AOI in CRS units: provide origin, pixel_size, and grid_extent.
+      required:
+        - crs
+        - inputs.origin
+        - inputs.pixel_size
+        - inputs.grid_extent
+      maps_to_layout: 'bbox'
+    tiles:
+      description: >
+        Manual tile grid: provide origin, pixel_size, and grid_shape
+        (rows, cols).
+      required:
+        - crs
+        - inputs.origin
+        - inputs.pixel_size
+        - inputs.grid_shape
+      maps_to_layout: 'tiles'
+
+  # ---------- Engine (grid.layout.GridLayout) ----------
+  # The layout class only implements these two modes.
+  layout_modes:
+    bbox:
+      description: >
+        Extent given in CRS units; pixel dimensions derived from pixel_size.
+      requires:
+        - GridSpec.origin
+        - GridSpec.pixel_size
+        - GridSpec.grid_extent
+        - GridSpec.tile_size
+        - GridSpec.tile_overlap
+    tiles:
+      description: >
+        Extent given as grid_shape (rows, cols) in tiles.
+      requires:
+        - GridSpec.origin
+        - GridSpec.pixel_size
+        - GridSpec.grid_shape
+        - GridSpec.tile_size
+        - GridSpec.tile_overlap
+
+  # ---------- GridSpec fields (dataclass parity) ----------
+  gridspec_fields:
+    crs: {type: 'str', example: 'EPSG:3161'}
+    origin: {type: '[x, y] in CRS units', example: [0.0, 0.0]}
+    pixel_size: {type: '[xsize, ysize] in CRS units', example: [30.0, 30.0]}
+    tile_size: {type: '[rows, cols] px', example: [256, 256]}
+    tile_overlap:
+      type: '[rows, cols] px'
+      example: [0, 0]
+      constraints:
+        - 'tile_overlap[0] < tile_size[0]'
+        - 'tile_overlap[1] < tile_size[1]]'
+    grid_extent: {type: '[height_y, width_x] in CRS units', required: false}
+    grid_shape: {type: '[rows, cols] tiles', required: false}
+
+  tile_identifiers:
+    description: >
+      Keys are pixel origins (x_px, y_px) relative to grid origin.
+      Stable across rasters; filenames may be derived at task level.
+    examples:
+      - pattern: 'grid_v1/{row:06d}_{col:06d}'
+      - pattern: 'grid_v1/x{xp}_y{yp}'
+
+  serialization:
+    layout_payload_schema_id: 'grid_layout_payload/v1'
+    notes:
+      - 'No reprojection/resampling; inputs must already match grid CRS and pixel size.'
+
+  notes:
+    - >
+      The 'ref' mode is implemented in the builder by reading the
+      reference raster (bounds + transform) and producing a GridSpec
+      for the bbox layout. The layout class is intentionally minimal.

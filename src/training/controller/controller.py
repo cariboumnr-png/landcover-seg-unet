@@ -4,7 +4,7 @@
 import dataclasses
 import os
 # local imports
-import _types
+import alias
 import training.common
 import training.controller
 import training.trainer
@@ -17,7 +17,7 @@ class Controller:
             self,
             trainer: training.trainer.MultiHeadTrainer,
             phases: list[training.controller.Phase],
-            config: _types.ConfigType,
+            config: alias.ConfigType,
             logger: utils.Logger
         ):
         '''Initialization'''

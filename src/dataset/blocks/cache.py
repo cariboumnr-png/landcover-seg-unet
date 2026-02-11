@@ -21,7 +21,7 @@ import zlib
 # third-party imports
 import numpy
 # local imports
-import _types
+import alias
 import dataset
 import utils
 
@@ -72,7 +72,7 @@ class BlockCache:
         self.logger = logger
 
         # init attributes
-        self.layout_dict: dict[str, _types.RasterWindow] = {}
+        self.layout_dict: dict[str, alias.RasterWindow] = {}
         self.layout_meta: dict[str, typing.Any] = {}
         self.valid_blks: dict[str, str] = {}
 
@@ -162,7 +162,7 @@ class BlockCache:
         assert self.layout_dict
 
         # determine block files that need to be created
-        todo: dict[str, _types.RasterWindow] = {}
+        todo: dict[str, alias.RasterWindow] = {}
         if overwrite:
             todo = self.layout_dict # all blocks in layout
         elif self.missing_blks:
@@ -269,7 +269,7 @@ def _valid_npz(blk_fpath: str) -> dict[str, str]:
         return {'invalid': blk_fpath}
 
 def _do_a_blk(
-    block: tuple[str, _types.RasterWindow],
+    block: tuple[str, alias.RasterWindow],
     image_fpath: str,
     label_fpath: str | None,
     config: dataset.BlockMeta,
@@ -334,8 +334,8 @@ def _do_a_blk(
         ]
 
 def _pad_dem(
-    img: _types.RasterReader,
-    window: _types.RasterWindow,
+    img: alias.RasterReader,
+    window: alias.RasterWindow,
     dem_band: int,
     pad: int
 ) -> numpy.ndarray:
@@ -346,7 +346,7 @@ def _pad_dem(
     nw_y = max(window.row_off - pad, 0)
     se_x = min(window.col_off + window.width + pad, img.width)
     se_y = min(window.row_off + window.height + pad, img.height)
-    _window = _types.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+    _window = alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
 
     # get expanded array using the new window
     # band number in rasterio.read is 1-based
@@ -439,8 +439,8 @@ class _ValidThresholds:
 # -------------------------------Public Function-------------------------------
 def build_data_cache(
     dataset_name: str,
-    input_config: _types.ConfigType,
-    cache_config: _types.ConfigType,
+    input_config: alias.ConfigType,
+    cache_config: alias.ConfigType,
     logger: utils.Logger,
     mode: str,
 ) -> None:
@@ -500,8 +500,8 @@ def _get_config(
     mode: str,
     cache_dpath: str,
     dataset_name: str,
-    input_config: _types.ConfigType,
-    cache_config: _types.ConfigType,
+    input_config: alias.ConfigType,
+    cache_config: alias.ConfigType,
 ) -> _BlockCacheConfig:
     '''Helper to create `BlockCacheConfig` from config mappings.'''
 
@@ -559,7 +559,7 @@ def _get_config(
 
 def _get_creation_options(
     mode: str,
-    cache_config: _types.ConfigType
+    cache_config: alias.ConfigType
 ) -> dict[str, bool]:
     '''Helper to get creation options from config mappings.'''
 

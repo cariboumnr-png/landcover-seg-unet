@@ -9,7 +9,7 @@ import psutil
 import torch
 import torch.utils.data
 # local imports
-import _types
+import alias
 import training.common
 import training.dataloading
 import utils
@@ -48,7 +48,7 @@ class _LoadingFlags:
 def get_dataloaders(
         mode: str,
         data_summary: training.common.DataSummaryLike,
-        loader_config: _types.ConfigType,
+        loader_config: alias.ConfigType,
         logger: utils.Logger,
     ) -> DataLoaders:
     '''Entry to the module, returns two dataloaders for training.'''
@@ -205,7 +205,7 @@ def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
     i_pre = True # TODO
     return _LoadingFlags(t_pre, v_pre, i_pre, t_cac, v_cac, i_cac)
 
-def _collate_multi_block(batch: _types.DatasetBatch) -> _types.DatasetItem:
+def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
     '''
     Customized collate function to properly stack a batch.
 
