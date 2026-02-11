@@ -39,7 +39,7 @@ def save_domain(
 
     # get domain object payload and pickle
     payload = domain_obj.to_payload()
-    utils.write_pickle(f'{dirpath}/{domain_name}.json', payload)
+    utils.write_json(f'{dirpath}/{domain_name}.json', payload)
 
     # write meta to json
     meta = {

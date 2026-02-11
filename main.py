@@ -29,25 +29,22 @@ def main(config: omegaconf.DictConfig) -> None:
     logger = src.utils.Logger(name='main', log_file=f'./logs/{timestamp}.log')
 
     # world grid preparation
-    world_grid = src.grid.prep_world_grid(
+    gid, world_grid = src.grid.prep_world_grid(
         extent=config.extent,
         config=config.grid,
         logger=logger
     )
     print(world_grid)
 
-    domain_ctx = src.domain.DomainContext(
-        index_base=1,
-        valid_threshold=0.7,
-        target_variance=0.9
-    )
-    domain = src.domain.DomainTileMap(
-        domain_fpath='./data/domain_knowledge/ecodistrict.tif',
+    domains = src.domain.prepare_domain(
+        grid_id=gid,
         world_grid=world_grid,
-        context=domain_ctx,
+        config=config.domain,
         logger=logger
     )
-    print(domain)
+    for k, dom in domains.items():
+        print(k)
+        print(dom)
 
     # data preparation
     data_summary = src.dataset.prepare_data(

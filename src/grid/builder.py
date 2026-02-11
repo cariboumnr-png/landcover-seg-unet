@@ -33,7 +33,7 @@ def prep_world_grid(
     extent: alias.ConfigType,
     config: alias.ConfigType,
     logger: utils.Logger
-) -> grid.GridLayout:
+) -> tuple[str, grid.GridLayout]:
     '''
     Build or load a persisted world grid.
 
@@ -57,14 +57,14 @@ def prep_world_grid(
 
     # get grid id and root dir
     gid = grid_cfg.get_option('id')
-    root = grid_cfg.get_option('root')
+    outdir = grid_cfg.get_option('output_dirpath')
 
     # if grid already exist, load and return
     try:
-        logger.log('INFO', f'Try to load grid {gid} at {root}')
-        output_grid = grid.load_grid(gid, root)
+        logger.log('INFO', f'Try to load grid {gid} at {outdir}')
+        output_grid = grid.load_grid(gid, outdir)
         logger.log('INFO', 'World grid successfully loaded')
-        return output_grid
+        return gid, output_grid
     # otherwise create grid accordingly
     except FileNotFoundError:
         logger.log('INFO', f'World grid {gid} not found, creating from config')
@@ -89,9 +89,9 @@ def prep_world_grid(
 
         # build - save - return
         output_grid = grid.GridLayout(mode, spec)
-        grid.save_grid(gid, output_grid, root)
-        logger.log('INFO', f'World grid {gid} created and saved at {root}')
-        return output_grid
+        grid.save_grid(gid, output_grid, outdir)
+        logger.log('INFO', f'World grid {gid} created and saved at {outdir}')
+        return gid, output_grid
 
 # ------------------------------private  function------------------------------
 def _get_extent(cfg: utils.ConfigAccess) -> functools.partial[grid.GridSpec]:

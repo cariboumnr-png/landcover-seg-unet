@@ -16,6 +16,7 @@ __all__ = [
     # functions
     'load_domain',
     'pca_transform',
+    'prepare_domain',
     'save_domain',
     # typing
 
@@ -24,6 +25,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .io import load_domain, save_domain
+    from .mapper import prepare_domain
     from .tilemap import DomainContext, DomainTileMap
     from .transform import pca_transform
 
@@ -31,6 +33,8 @@ def __getattr__(name: str):
 
     if name in ['load_domain', 'save_domain']:
         return getattr(importlib.import_module('.io', __package__), name)
+    if name in ['prepare_domain']:
+        return getattr(importlib.import_module('.mapper', __package__), name)
     if name in ['DomainContext', 'DomainTileMap']:
         return getattr(importlib.import_module('.tilemap', __package__), name)
     if name in ['pca_transform']:

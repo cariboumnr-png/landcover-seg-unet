@@ -3,13 +3,13 @@ defaults:
   - _self_
   - cache: default
   - curriculum: demo
-  - extent: demo
+  - extent: demo_extent
   - dataset: demo
-  - domain: demo
-  - grid: base
+  - domain: demo_domain
+  - grid: base_grid
   - models: multihead
   - paths: default
-  - trainer: runtime
+  - trainer: default
 
 # ----------------------------------------------------------------------------
 # dataset name
