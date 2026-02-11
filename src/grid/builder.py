@@ -53,11 +53,11 @@ def prep_world_grid(
     logger = logger.get_child('wgrid')
     # config accessor
     extent_cfg = utils.ConfigAccess(extent)
-    profile = utils.ConfigAccess(config)
+    grid_cfg = utils.ConfigAccess(config)
 
     # get grid id and root dir
-    gid = profile.get_option('id')
-    root = profile.get_option('root')
+    gid = grid_cfg.get_option('id')
+    root = grid_cfg.get_option('root')
 
     # if grid already exist, load and return
     try:
@@ -73,12 +73,12 @@ def prep_world_grid(
         # finish gridspec from grid profile
         spec = spec_from_extent(
             tile_size=(
-                profile.get_option('tile_size', 'row'),
-                profile.get_option('tile_size', 'col')
+                grid_cfg.get_option('tile_size', 'row'),
+                grid_cfg.get_option('tile_size', 'col')
             ),
             tile_overlap=(
-                profile.get_option('tile_overlap', 'row'),
-                profile.get_option('tile_overlap', 'col')
+                grid_cfg.get_option('tile_overlap', 'row'),
+                grid_cfg.get_option('tile_overlap', 'col')
             )
         )
 
@@ -99,7 +99,10 @@ def _get_extent(cfg: utils.ConfigAccess) -> functools.partial[grid.GridSpec]:
 
     # from reference raster (auto)
     if cfg.get_option('mode') == 'ref':
-        ref_raster = cfg.get_option('inputs', 'ref_path')
+        ref_raster = os.path.join(
+            f'{cfg.get_option('inputs', 'dirpath')}',
+            f'{cfg.get_option('inputs', 'filename')}'
+        )
         if not os.path.exists(ref_raster):
             raise ValueError('Reference raster not provided')
         # open reference raster

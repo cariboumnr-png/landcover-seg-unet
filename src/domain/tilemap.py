@@ -69,7 +69,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         self._range: tuple[int, int] = (0, 0)
         self._valid: list[tuple[int, int]] = []
         self._data: dict[tuple[int, int], DomainTile] = {}
-        self.logger = logger.get_child('dkmap')
+        self.logger = logger
         # finish initialization
         all_tiles = self._map_domain_to_grid()
         self._populate(all_tiles)
