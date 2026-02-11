@@ -216,7 +216,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         # open domain raster
         with rasterio.open(self._src) as src:
             # offset the world grid to align with input raster
-            self._grid.set_offset_from(src)
+            self._grid.offset_from(src)
             # infer dtype and nodata
             dtype = numpy.dtype(src.dtypes[0])
             assert numpy.issubdtype(dtype, numpy.integer) # sanity check: int only

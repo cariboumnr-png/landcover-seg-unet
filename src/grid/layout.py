@@ -159,7 +159,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         ])
 
     # ----- public method
-    def set_offset_from(self, src: alias.RasterReader):
+    def offset_from(self, src: alias.RasterReader | rasterio.Affine) -> None:
         '''
         Align the grid to a raster by computing an integer pixel offset.
 
@@ -171,18 +171,26 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         pixel windows.
 
         Args:
-            src: Input raster reader handler. Must align with the grid's
-            CRS and pixel size.
+            src: Input raster reader handler or an Affine transform. The
+                raster must align with the grid's CRS and pixel size. If
+                Affine transform is provided, please make sure the CRSs
+                are aligned.
         '''
 
-        # check target raster CRS
-        grid_crs = rasterio.crs.CRS.from_user_input(self.crs)
-        inpt_crs = rasterio.crs.CRS.from_user_input(src.crs)
-        assert grid_crs == inpt_crs
+        # if a raster reader handler is provided:
+        if isinstance(src, alias.RasterReader):
+            # check target raster CRS
+            grid_crs = rasterio.crs.CRS.from_user_input(self.crs)
+            inpt_crs = rasterio.crs.CRS.from_user_input(src.crs)
+            assert grid_crs == inpt_crs
+            transform = src.transform
+        # else src is already an Affine transform
+        else:
+            transform = src
         # get raster origin in CRS units
-        rx, ry = src.transform.c, src.transform.f
+        rx, ry = transform.c, transform.f
         # get raster pixel size and check alignment with the grid
-        res_x, res_y = src.transform.a, abs(src.transform.e)
+        res_x, res_y = transform.a, abs(transform.e)
         assert self._spec.pixel_size[0] == res_x
         assert self._spec.pixel_size[1] == res_y
         # get world grid origin in CRS units
@@ -236,12 +244,12 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
 
     @property
     def tile_size(self) -> tuple[int, int]:
-        '''Grid tile size in pixels.'''
+        '''Grid tile size (row, col) in pixels.'''
         return self._spec.tile_size
 
     @property
     def tile_overlap(self) -> tuple[int, int]:
-        '''Grid tile overlap in pixels.'''
+        '''Grid tile overlap (row, col) in pixels.'''
         return self._spec.tile_overlap
 
     @property

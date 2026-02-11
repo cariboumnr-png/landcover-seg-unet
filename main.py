@@ -7,6 +7,7 @@ import sys
 import hydra
 import omegaconf
 # local imports
+import src.dataprep
 import src.dataset
 import src.domain
 import src.grid
@@ -26,9 +27,13 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # create a centralized logger file named by current time stamp
     timestamp = src.utils.get_timestamp()
-    logger = src.utils.Logger(name='main', log_file=f'./logs/{timestamp}.log')
+    logger = src.utils.Logger(
+        name='main',
+        log_file=f'./logs/{timestamp}.log',
+        console_lvl=10 # debug
+    )
 
-    # world grid preparation
+    # TEST: world grid preparation
     gid, world_grid = src.grid.prep_world_grid(
         extent=config.extent,
         config=config.grid,
@@ -36,6 +41,7 @@ def main(config: omegaconf.DictConfig) -> None:
     )
     print(world_grid)
 
+    # TEST: domain mapping
     domains = src.domain.prepare_domain(
         grid_id=gid,
         world_grid=world_grid,
@@ -45,6 +51,16 @@ def main(config: omegaconf.DictConfig) -> None:
     for k, dom in domains.items():
         print(k)
         print(dom)
+
+    # TEST: data mapping
+    img_windows, lbl_windows = src.dataprep.map_rasters_to_grid(
+        world_grid=world_grid,
+        image_fpath='./demo_data/training/image.tif',
+        label_fpath='./demo_data/training/label.tif',
+        logger=logger
+    )
+    print(len(img_windows))
+    print(len(lbl_windows))
 
     # data preparation
     data_summary = src.dataset.prepare_data(
