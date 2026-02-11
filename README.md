@@ -1,29 +1,27 @@
-**Caribou Landcover** is a work‑in‑progress project focused on pixel‑level land‑cover segmentation using Landsat imagery and topographic features.
+### Multi-Modal Landcover Classification Framework
+A PyTorch-based deep learning pipeline for pixel-level segmentation, fusing Landsat spectral imagery with topographical data using U-Net architectures and enhanced by domain knowledge injection.
 
 ## Overview
 This repository provides the scaffolding for a segmentation workflow including data ingestion, model architectures, training routines, and supporting utilities.
 
-## Repository Structure
+## WIP
+Currently working on: ADR-0002 (see docs/ADRs)
+
+## Current Repository Structure
 ```
-caribou_landcover/
+project/
 ├─ configs/
 ├─ src/
 │  ├─ dataset/
 │  ├─ domain/
 │  ├─ grid/
 │  ├─ models/
+│  ├─ tiler/   <-- currently active branch here
 │  ├─ training/
 │  ├─ utils/
 │  └─ alias.py
 ├─ main.py
 └─ run.ps1
-```
-
-## Getting Started
-Clone the repository:
-```bash
-git clone https://github.com/cariboumnr-png/caribou_landcover.git
-cd caribou_landcover
 ```
 
 ## Data
