@@ -1,0 +1,163 @@
+domain_spec_design:
+  version: dom_v1
+  purpose: >
+    Produce versioned, per-tile domain features from categorical rasters,
+    keyed by world-grid tile coordinates. Each domain is persisted as a
+    DomainTileMap with summary context and integrity metadata.
+
+  scope:
+    inputs:
+      world_grid:
+        type: grid.GridLayout
+        contract: >
+          Same CRS & pixel_size as domain rasters. Alignment uses an integer
+          pixel offset from grid origin to raster upper-left.
+      config:
+        type: dict
+        fields:
+          dirpath: str              # directory with domain rasters
+          files:                    # list of domain sources to prepare
+            - name: str            # e.g., 'geology.tif'
+              index_base: int      # expected min valid class value (1-based)
+          valid_threshold: float    # [0..1], min fraction of valid pixels
+          target_variance: float    # (0..1], PCA explained variance target
+          output_dirpath: str      # where DomainTileMaps are written
+    outputs:
+      maps:
+        type: dict[str, DomainTileMap]
+        description: >
+          One map per configured file (keyed by file name without suffix).
+
+  conventions:
+    tile_coords: '(x_px, y_px) pixel origins relative to grid origin'
+    class_domain: 'integer labels; nodata is an integer (default -1 if missing)'
+    index_range: '[0..K-1] after remapping sorted unique raw labels'
+
+  data_requirements:
+    rasters:
+      - 'Must be single-band integer rasters (class labels).'  # dtype guard
+      - 'CRS == world_grid.crs; pixel_size == world_grid.pixel_size.'
+      - 'If nodata is absent, default to -1 (int).'
+    integrity_checks:
+      - 'All valid values discovered > ensure not empty; else raise.'
+      - 'min(valid_values) == index_base; else raise.'
+
+  processing_pipeline:
+    step_1_align:
+      description: >
+        Align grid to raster (compute integer-pixel offset) so each grid
+        window reads the correct raster subset.
+      method: 'world_grid.set_offset_from(raster_reader)'
+    step_2_read_windows:
+      description: 'Read every grid window in parallel (first band only).'
+      returns: 'List[(tile_coords, ndarray[int])]'
+    step_3_discover_classes:
+      description: >
+        From all windows, collect unique values (exclude nodata). Assert the
+        set is non-empty and its min equals index_base. Build `remap` by sorting
+        unique values and mapping to [0..K-1].
+    step_4_remap_and_filter:
+      description: >
+        For each window: apply remap (valid->0..K-1, nodata->-1). Mark a tile
+        valid if fraction(valid_pixels) >= valid_threshold.
+      per_valid_tile:
+        majority: 'argmax(counts)'
+        major_freq: 'max(counts)/sum(counts)'
+        stats_update:
+          major_freq_min: 'min over valid tiles'
+          major_freq_mean: 'mean over valid tiles (computed once)'
+    step_5_norm_freq:
+      description: >
+        For each valid tile, build a length-K frequency vector in [0..1] that
+        sums to 1 across classes (zeros for missing classes).
+    step_6_pca:
+      description: >
+        Fit PCA once across all valid tiles’ frequency vectors; pick the smallest
+        k such that cumulative explained variance ≥ target_variance; project each
+        valid tile to kD float32 vector.
+      returns_context:
+        pca_axes_n: int
+        explained_variance: float   # percent (e.g., 92.34)
+      notes:
+        - 'Rows are tiles; columns are class frequencies.'
+        - 'Uses economical SVD; centers rows before SVD.'
+    step_7_assemble:
+      description: >
+        Populate DomainTileMap: for each valid tile store majority, major_freq,
+        and pca_feature (list[float]); record valid tile indices; pack context.
+
+  domain_objects:
+    DomainContext:
+      fields:
+        index_base: int
+        valid_threshold: float
+        target_variance: float
+        major_freq_mean: float
+        major_freq_min: float
+        pca_axes_n: int
+        explained_variance: float
+    DomainTile:
+      fields:
+        majority: int | null
+        major_freq: float | null
+        pca_feature: list[float] | null
+    DomainTileMap:
+      mapping_key: '(x_px, y_px) tuple in pixel-origin space'
+      __len__: 'number of valid tiles'
+      schema_id: 'domain_tile_map_payload/v1'
+      payload:
+        context: DomainContext (as dict)
+        valid_idx: list[str]          # each as "x, y"
+        tiles: dict[str, DomainTile]  # keys as "x, y"
+
+  persistence:
+    save:
+      artifacts:
+        - '{domain_name}.json'        # payload
+        - '{domain_name}_meta.json'   # metadata
+      meta_fields:
+        schema_id: 'domain_tile_map_payload/v1'
+        sha256: 'hash of payload'
+        associated_grid: 'grid_id used to create this domain'
+        n_valid_tiles: 'len(DomainTileMap)'
+        context: 'repeat of payload.context'
+    load:
+      validation:
+        - 'schema_id must match DomainTileMap.SCHEMA_ID'
+        - 'sha256 must match payload hash (integrity guard)'
+
+  api:
+    mapper_prepare_domain:
+      signature: >
+        prepare_domain(grid_id: str,
+                       world_grid: grid.GridLayout,
+                       config: dict,
+                       logger: utils.Logger)
+        -> dict[str, DomainTileMap]
+      behavior:
+        - 'For each file in config.files, try to load; else build via steps above.'
+        - 'On build, save artifacts and return in the map keyed by base name.'
+      config_schema:
+        dirpath: str
+        files:
+          - name: str
+            index_base: int
+        valid_threshold: float
+        target_variance: float
+        output_dirpath: str
+
+  non_functional:
+    determinism:
+      - 'Sorted unique labels ensure stable 0..K-1 remap.'
+      - 'Float32 PCA embeddings; stable ordering of tiles via world_grid.'
+    performance:
+      - 'Parallel window reads.'
+      - 'Single PCA fit across all valid tiles.'
+    portability:
+      - 'JSON payload + JSON meta; schema id pinned.'
+    logging:
+      - 'Structured logs via provided logger (child: "dkmap").'
+
+  notes:
+    - 'Domain generation reads rasters (read-only). Future refactors may inject
+       arrays from task to keep domain purely compute-only if desired.'

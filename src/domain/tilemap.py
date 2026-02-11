@@ -1,4 +1,38 @@
-'''doc'''
+'''
+Domain-tile mapping utilities for categorical rasters aligned to a
+world-grid layout.
+
+This module defines the `DomainTileMap` class, its supporting data
+structures, and the full pipeline for converting a categorical raster
+into stable, per-tile domain features:
+
+    - Align a deep-copied world grid to the raster by computing an
+      integer pixel offset. The raster must share the grid’s CRS and
+      pixel size.
+    - Read all grid windows (in parallel) and extract per-tile integer
+      label arrays, enforcing integer dtype and a well-defined nodata
+      value.
+    - Discover all unique valid labels globally; validate against the
+      configured index_base, then remap labels to a compact [0..K-1]
+      space for consistency across tiles.
+    - Filter tiles based on the fraction of valid pixels. For each valid
+      tile, compute majority-class id and frequency and update global
+      summary statistics in the `DomainContext`.
+    - Construct normalized class-frequency vectors for valid tiles and
+      apply PCA (via economical SVD) to produce low-dimensional float32
+      feature vectors that meet a target cumulative explained variance.
+    - Assemble a `DomainTileMap` containing majority statistics, PCA
+      features, and context metadata.
+
+Persistence is handled through JSON payloads and JSON metadata files.
+A schema identifier ('domain_tile_map_payload/v1') and SHA256 hash ensure
+compatibility and integrity upon reload.
+
+Tile coordinates follow grid conventions: (x_px, y_px) pixel-origin
+coordinates relative to the grid origin. All mapping operations preserve
+this stable coordinate space, which enables reproducible conditioning and
+cross-dataset alignment.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -18,7 +52,7 @@ import utils
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DomainContext:
-    '''doc'''
+    '''Run-time context and summary statistics for a `DomainTileMap`.'''
     index_base: int
     valid_threshold: float
     target_variance: float
@@ -29,23 +63,39 @@ class DomainContext:
 
 # ---------------------------------Public Type---------------------------------
 class DomainTile(typing.TypedDict):
-    '''doc'''
+    '''Per-tile domain descriptors stored in a `DomainTileMap`.'''
     majority: int | None
     major_freq: float | None
     pca_feature: list[float] | None
 
 class DomainPayload(typing.TypedDict):
-    '''doc'''
+    '''Serializable payload for `DomainTileMap` persistence.'''
     context: dict[str, typing.Any]
     valid_idx: list[str]
     tiles: dict[str, typing.Any]
 
 # --------------------------------Public  Class--------------------------------
 class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
-    '''doc'''
+    '''
+    Mapping from world-grid tile coordinates to per-tile domain features.
 
+    A `DomainTileMap` materializes domain knowledge over a fixed world
+    grid. It aligns the grid to a categorical raster, remaps raw labels
+    to a compact [0..K-1] space, filters tiles by valid-pixel fraction,
+    computes majority statistics, derives normalized class-frequency
+    vectors, and projects them via PCA to reach a target explained
+    variance.
+
+    Key space:
+    - (x_px, y_px) pixel-origin coordinates relative to the grid origin.
+
+    Schema:
+        SCHEMA_ID = 'domain_tile_map_payload/v1'
+    '''
+
+    # current schema
     SCHEMA_ID: str = 'domain_tile_map_payload/v1'
-
+    # tile template
     TILE_TEMP: DomainTile = {
         'majority': None,
         'major_freq': None,
@@ -59,7 +109,27 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         context: DomainContext,
         logger: utils.Logger
     ) -> None:
-        '''doc'''
+        '''
+        Build a `DomainTileMap` from categorical raster and world grid.
+
+        Args:
+            domain_fpath: Path to a single-band integer raster of class
+                labels. Its CRS and pixel size must match those of
+                `world_grid`.
+            world_grid: A grid.GridLayout instance that defines tile
+                windows. The grid is deep-copied and aligned to
+                `domain_fpath` via an integer pixel offset before reads.
+            context: `DomainContext` carrying thresholds and PCA target
+                variance. This object is updated in-place with statistics
+                collected during build.
+            logger: Logger for progress and summary messages.
+
+        Notes:
+        The constructor reads all tile windows, performs label discovery
+        and remapping, filters tiles by 'valid_threshold', computes
+        majority statistics, runs PCA on normalized frequency vectors,
+        and stores results in the internal mapping.
+        '''
 
         # parse argument
         self._src = domain_fpath
@@ -131,7 +201,17 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
 
     # ----- private method
     def _map_domain_to_grid(self) -> list[alias.RasterTile]:
-        '''doc'''
+        '''
+        Read the domain raster over all grid windows and remap labels.
+
+        Behavior:
+        - Align the deep-copied world grid to the raster by computing an
+        integer-pixel offset.
+        - Discover all unique labels across tiles (excluding nodata);
+        assert the set is non-empty and its minimum equals 'index_base'.
+        - Build a sorted 'remap' array and convert valid labels to
+        [0..K-1]; assign -1 to nodata.
+        '''
 
         # open domain raster
         with rasterio.open(self._src) as src:
@@ -191,7 +271,18 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         return all_tiles
 
     def _populate(self, all_tiles: list[alias.RasterTile]) -> None:
-        '''doc'''
+        '''
+        Compute per-tile statistics and PCA features, and fill the map.
+
+        Steps:
+        1) Initialize a DomainTile template for each tile.
+        2) Select valid tiles using 'valid_threshold'.
+        3) For valid tiles, compute 'majority' and 'major_freq' and
+            update 'major_freq_min' and 'major_freq_mean' in the context.
+        4) Build normalized frequency vectors for valid tiles, run
+            PCA to reach 'target_variance', and store 'pca_feature' per
+            valid tile.
+        '''
 
         # give all tiles a copy of the template
         for (coord, _) in all_tiles:

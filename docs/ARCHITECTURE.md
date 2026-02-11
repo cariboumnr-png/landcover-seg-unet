@@ -1,48 +1,74 @@
 # Architecture Overview
 
+> This document describes the architecture enacted by ADR‑0001 and the
+> resulting module boundaries and data contracts.
+
 ## Purpose
-Document the current *coupled* dataset pipeline (grid → domain → training in one sequence) and the target *decoupled* architecture where **grid**, **domain**, and **task** are independent, versioned components.
 
-## Current State (as of 2026-02-04)
-**Flow:**
-1) Create grid
-2) Assign domain along with training data to the grid
-3) Train model
+Promote grid and domain to first‑class, versioned artifacts reusable
+across training and inference, with configuration injected via manifests
+and strict decoupling from task code.
 
-**Coupling observed:**
-- `dataset/blocks/layout.py` generates tiles directly for a specific dataset/split
-- `dataset/domain.py` pulls domain features as part of dataset assembly
-- `training/dataloading/dataset.py` assumes domain+imagery+labels are bundled
+## Components
 
-**Implications:**
-- Hard to reproduce the same grid across tasks
-- Domain PCA can drift if recomputed per run/split
-- Inference tooling can’t reuse grid/domain caches easily
+### Grid
 
-## Target State (Decoupled)
-**Contracts:**
-- **Grid**: Purely geometric. Deterministic tiling (CRS, tile size, overlap), stable IDs. No labels/domain at this stage.
-- **Domain**: Predefined, versioned datasets (eco IDs, geology PCA on a fixed global basis). Computed per grid cell, independent of labels/splits.
-- **Task**: Binds a grid spec + domain schema + labels/splits + model config.
+- **Responsibility:** Deterministic tiling over a projected CRS using a
+  `GridSpec`; returns stable pixel‑origin windows and supports raster
+  alignment via integer offsets. No raster I/O.
+- **Extent Modes (API → Engine):**
+  - API: `ref`, `aoi`, `tiles` (chosen by builder).
+  - Engine: `bbox` (covers `ref`, `aoi`) and `tiles` (in `GridLayout`).
+- **Persistence:** payload `.pkl` + meta `.json`
+  (`grid_layout_payload/v1`, canonical hash).
 
-**Benefits:**
-- Reproducibility (same tile IDs across runs)
-- Safe conditioning (global, fixed PCA/normalization)
-- General inference (any AOI → grid → domain → run)
-- Cache-ability (grid IDs key domain & imagery)
+### Domain
 
-## Interfaces (summary)
-- Grid Spec → `docs/specs/grid_spec.v1.yaml`
-- Domain Schema → `docs/specs/domain_schema.v1.yaml`
-- Task Manifest → `docs/specs/task_manifest.v1.yaml`
+- **Responsibility:** For each domain raster (categorical, single‑band),
+  align to the world grid, remap labels to `[0..K‑1]`, filter tiles by
+  valid‑pixel fraction, compute majority stats and normalized frequency
+  vectors, and project to PCA features meeting target variance.
+- **Persistence:** JSON payload + metadata
+  (`domain_tile_map_payload/v1`, SHA‑256).
 
-## Migration Plan (phased)
-- Phase 1: Document current behavior, freeze PCA artifacts, add manifests (no code movement)
-- Phase 2: Extract grid as first-class spec + IDs (keep call sites unchanged)
-- Phase 3: Extract domain generation to use grid IDs + versioned PCA
-- Phase 4: Task manifest becomes the single entrypoint for training/inference
+### Task
 
-## Versioning
-- `grid_spec.version`: e.g., `grid_v1`
-- `domain_schema.version`: e.g., `dom_v1`
-- PCA artifacts: `(μ, W)` persisted under version; never refit silently
+- **Responsibility:** Bind grid/domain artifacts with datasets and model
+  configs; orchestrate training/inference; no grid/domain definitions.
+
+## Specifications
+
+### Grid Spec (design)
+
+- Fields: `crs`, `origin`, `pixel_size` (positive magnitudes), `tile_size`,
+  `tile_overlap`, plus either `grid_extent` (for `bbox`) or `grid_shape`
+  (for `tiles`).
+- API extent modes are mapped by builder: `ref|aoi|tiles` → `bbox|tiles`.
+
+### Domain Spec (design)
+
+- Fields: `index_base`, `valid_threshold`, `target_variance`.
+- Rules: integer labels; global remap to `[0..K‑1]`; PCA (SVD), `k` by
+  cumulative explained variance; JSON persistence with schema id and hash.
+
+## Data Flow (high level)
+
+1. Choose **extent config** (`ref|aoi|tiles`) and **grid profile** → builder
+   computes `GridSpec` and constructs `GridLayout`.
+2. Prepare **domain** for each configured raster → build `DomainTileMap`
+   (alignment, remap, filter, stats, PCA) or load existing artifacts.
+3. **Task** consumes grid/domain artifacts for training or inference.
+
+## Invariants & Guards
+
+- Grid and rasters share CRS and pixel_size; alignment uses integer pixel
+  offsets; no reprojection/resampling here.
+- Domain rasters are integer; nodata is integer (default `-1` if absent).
+- Persistence uses schema ids and content hashes for integrity checks
+  (grid: canonicalized hash; domain: SHA‑256).
+
+## Future Work (separate ADRs)
+
+- Grid‑keyed dataset caching & cataloging.
+- Standard tile and AOI summaries (EDA/QA).
+- Unified task manifest and pipeline orchestration.

@@ -95,7 +95,7 @@ def prep_world_grid(
 
 # ------------------------------private  function------------------------------
 def _get_extent(cfg: utils.ConfigAccess) -> functools.partial[grid.GridSpec]:
-    '''Parse grid extent and returns a partially filled `Gridspec`.'''
+    '''Parse grid extent and returns a partially filled `GridSpec`.'''
 
     # from reference raster (auto)
     if cfg.get_option('mode') == 'ref':
