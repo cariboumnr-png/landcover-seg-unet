@@ -59,12 +59,12 @@ def _crop(
     tile_y = world_grid.tile_size[0] * py
     # iterate through world grid
     for (x, y) in world_grid.keys(): # keys (x, y) are in pixels
-        # tile size (row, col) in pixels
+        # unify comparisons to be between CRS coordinates
         if (
-            gx + x * px < r and
-            gy - y * py > b and
-            gx + x * px > l - tile_x and
-            gy - y * py < t + tile_y
+            gx + x * px < r and             # right side of tile < R
+            gy - y * py > b and             # bottom side of tile > B
+            gx + x * px > l - tile_x and    # left side of tile > L
+            gy - y * py < t + tile_y        # top side of tile < T
         ):
             inside.append((x, y))
     return inside
