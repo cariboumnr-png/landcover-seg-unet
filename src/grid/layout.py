@@ -197,7 +197,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         gx, gy = self._spec.origin
         # calculate origin offset in pixel
         dc = math.floor((rx - gx) / res_x)      # + right
-        dr = math.floor((ry - gy) / res_y)      # + down
+        dr = math.floor((gy - ry) / res_y)      # + down
         self._offset_px = (dc, dr)
 
     def to_payload(self) -> GridLayoutPayload:
