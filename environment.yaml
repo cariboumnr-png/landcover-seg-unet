@@ -1,0 +1,13 @@
+name: demo
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.12
+  - numpy
+  - pillow
+  - rasterio
+  - pytorch
+  - tqdm
+  - hydra-core
+  - pip
