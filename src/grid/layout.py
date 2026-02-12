@@ -79,7 +79,7 @@ class GridLayoutPayload(typing.TypedDict):
     mode: str
     spec: dict[str, typing.Any]
     extent: tuple[int, int]
-    windows: dict[tuple[int, int], alias.RasterWindow]
+    windows: alias.RasterWindowDict
 
 # --------------------------------Public  Class--------------------------------
 class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
@@ -122,7 +122,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         self._mode = mode
         self._spec = spec
         self._extent: tuple[int, int] = (0, 0) # (rows, cols)
-        self._data: dict[tuple[int, int], alias.RasterWindow] = {}
+        self._data: alias.RasterWindowDict = {}
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
         # generate grid - self._data to be populated
         self._generate()
@@ -140,7 +140,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         # get components for raster window
         xoff, yoff = base.col_off - dx, base.row_off - dy
         width, height = base.width, base.height
-        return rasterio.windows.Window(xoff, yoff, width, height) # type: ignore
+        return alias.RasterWindow(xoff, yoff, width, height) # type: ignore
 
     def __iter__(self) -> collections.abc.Iterator[tuple[int, int]]:
         return iter(self._data)
@@ -290,7 +290,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
                     th = min(spec.tile_size[0], row_px - y) # at the last row
                     tw = min(spec.tile_size[1], col_px - x) # at the last col
                     # set up the window and update the result dict
-                    window = rasterio.windows.Window(x, y, tw, th) # type: ignore
+                    window = alias.RasterWindow(x, y, tw, th) # type: ignore
                     self._data[(x, y)] = window
             self._extent = row_px, col_px
         elif self._mode == 'tiles':
@@ -304,7 +304,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
                     th = spec.tile_size[0]
                     x = col * xstep
                     y = row * ystep
-                    window = rasterio.windows.Window(x, y, tw, th) # type: ignore
+                    window = alias.RasterWindow(x, y, tw, th) # type: ignore
                     self._data[(x, y)] = window
             self._extent = (
                 (spec.grid_shape[0] - 1) * ystep + spec.tile_size[0],
