@@ -12,11 +12,14 @@ Currently working on: ADR-0002 (see docs/ADRs)
 project/
 ├─ configs/
 ├─ src/
+│  ├─ dataprep/   <-- currently active branch here
+│  │  ├─ build/
+│  │  ├─ postprocess/
+│  │  ├─ preprocess/
 │  ├─ dataset/
 │  ├─ domain/
 │  ├─ grid/
 │  ├─ models/
-│  ├─ tiler/   <-- currently active branch here
 │  ├─ training/
 │  ├─ utils/
 │  └─ alias.py
