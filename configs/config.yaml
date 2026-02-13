@@ -1,6 +1,7 @@
 # -----------------------------default  subconfigs-----------------------------
 defaults:
   - _self_
+  - artifacts: default
   - cache: default
   - curriculum: demo
   - extent: demo_extent
@@ -8,7 +9,6 @@ defaults:
   - domain: demo_domain
   - grid: base_grid
   - models: multihead
-  - paths: default
   - trainer: default
 
 # ----------------------------------------------------------------------------

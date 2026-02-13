@@ -1,0 +1,29 @@
+# cache directory structure
+root: ./artifacts
+grids: ${artifacts.root}/world_grids
+domain: ${artifacts.root}/domain_knowledge
+cache: ${artifacts.root}/data_cache
+
+# get current dataset in use
+dataset_name: ${hydra:runtime.choices.dataset}
+
+# derived paths for current dataset
+# training
+training: ${artifacts.root}/${dataset_name}/training
+training_blocks_dir: ${artifacts.training}/blocks
+training_all_blocks: ${artifacts.training}/all_blocks.json
+training_valid_blocks: ${artifacts.training}/valid_blocks.json
+#
+training_image_stats: ${artifacts.training}/image_stats.json
+label_count_global: ${artifacts.training}/count_global.json
+label_count_training: ${artifacts.training}/count_training.json
+block_scores: ${artifacts.training}/score.json
+training_blocks_split: ${artifacts.training}/training_blocks_split.json
+validation_blocks_split: ${artifacts.training}/validation_blocks_split.json
+# inference
+inference: ${artifacts.root}/${dataset_name}/inference
+inference_blocks_dir: ${artifacts.inference}/blocks
+inference_all_blocks: ${artifacts.training}/all_blocks.json
+inference_valid_blocks: ${artifacts.training}/valid_blocks.json
+#
+inference_image_stats: ${artifacts.inference}/image_stats.json

@@ -33,6 +33,7 @@ def main(config: omegaconf.DictConfig) -> None:
         console_lvl=10 # debug
     )
 
+    # -------------------------------------------------------------------------
     # TEST: world grid preparation
     gid, world_grid = src.grid.prep_world_grid(
         extent=config.extent,
@@ -52,8 +53,9 @@ def main(config: omegaconf.DictConfig) -> None:
         print(k)
         print(dom)
 
+    # ------------------------------------------------------------------------
     # TEST: data mapping
-    img_windows, lbl_windows = src.dataprep.map_rasters_to_grid(
+    img_windows, lbl_windows = src.dataprep.map_rasters(
         world_grid=world_grid,
         image_fpath='./demo_data/training/image.tif',
         label_fpath='./demo_data/training/label.tif',
@@ -61,21 +63,19 @@ def main(config: omegaconf.DictConfig) -> None:
     )
 
     # TEST data caching
-    from src.dataprep.extraction.cache import BlockCachePipeline
-    from src.dataprep.extraction.cache import DataPaths, Artifacts, Windows
-    test_pipe = BlockCachePipeline(
-        windows=Windows(
+    test_pipe = src.dataprep.BlockCachePipeline(
+        windows=src.dataprep.Windows(
             image_windows=img_windows,
             label_windows=lbl_windows,
             expected_shape=(256, 256)
         ),
-        inputs=DataPaths(
+        inputs=src.dataprep.DataPaths(
             config_fpath='./demo_data/config.json',
             image_fpath='./demo_data/training/image.tif',
             label_fpath='./demo_data/training/label.tif',
 
         ),
-        output=Artifacts(
+        output=src.dataprep.Artifacts(
             blks_dpath='./cache/demo_data/blocks',
             all_blocks='./artifacts/demo_data/square.json',
             valid_blks='./artifacts/demo_data/valid.json'
@@ -84,6 +84,10 @@ def main(config: omegaconf.DictConfig) -> None:
     )
     test_pipe.build_block_cache()
     test_pipe.build_valid_block_index(px_thres=0.75, rebuild=True)
+
+    # TEST data partitioning
+
+    #--------------------------------------------------------------------------
 
     # data preparation
     data_summary = src.dataset.prepare_data(

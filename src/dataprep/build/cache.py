@@ -41,9 +41,9 @@ class Windows:
 @dataclasses.dataclass
 class DataPaths:
     '''Paths to raw rasters and per-block configuration.'''
-    config_fpath: str                       # path to raw metadata (.json)
     image_fpath: str                        # path to raw image data (.tiff)
     label_fpath: str | None                 # path to raw label data (.tiff)
+    config_fpath: str                       # path to raw metadata (.json)
 
 @dataclasses.dataclass
 class Artifacts:
@@ -223,6 +223,8 @@ class BlockCachePipeline:
             self._xy_name(c): f'{self.output.blks_dpath}/{self._xy_name(c)}.npz'
             for c in self.shared_coords
         }
+        # write an artifect: normal block list
+        utils.write_json(self.output.all_blocks, self.all_blocks)
 
     def _validate_existing_blocks(self) -> None:
         '''
@@ -293,9 +295,6 @@ class BlockCachePipeline:
 
         # parallel processing through all raster windows
         utils.ParallelExecutor().run(jobs)
-
-        # write an artifect: normal block list
-        utils.write_json(self.output.all_blocks, self.all_blocks)
 
     # -------------------------------properties-------------------------------
     @property

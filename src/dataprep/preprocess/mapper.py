@@ -10,12 +10,12 @@ import dataprep
 import grid
 import utils
 
-def map_rasters_to_grid(
+def map_rasters(
     world_grid: grid.GridLayout,
     image_fpath: str,
     label_fpath: str | None,
     logger: utils.Logger
-):
+) -> tuple[alias.RasterWindowDict, alias.RasterWindowDict]:
     '''doc'''
 
     # get a child logger

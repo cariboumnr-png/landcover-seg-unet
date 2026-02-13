@@ -7,8 +7,8 @@ __pycache__/
 
 # Ignore the folders
 .vscode/
-/cache/*
-!/cache/
+/data_cache/*
+!/data_cache/
 /checkpoints/*
 !/checkpoints/
 /data/*
