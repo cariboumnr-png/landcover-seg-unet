@@ -8,6 +8,7 @@ dependencies:
   - pillow
   - rasterio
   - pytorch
+  - torchvision
   - tqdm
   - hydra-core
   - pip
