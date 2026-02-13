@@ -32,6 +32,9 @@ class Controller:
             cfg.get_option('ckpt_dpath'),
             cfg.get_option('preview_dpath')
         )
+        # make sure dirs exist
+        os.makedirs(cfg.get_option('ckpt_dpath'), exist_ok=True)
+        os.makedirs(cfg.get_option('preview_dpath'), exist_ok=True)
 
         # init phase counter
         self.current_phase_idx = 0
@@ -72,6 +75,9 @@ class Controller:
             self.trainer.state.progress.epoch = meta['epoch'] + 1
             self.trainer.state.progress.global_step = meta['step']
             self.trainer.state.metrics.best_value = meta['metric']
+            start = meta['epoch'] + 1
+        else:
+            start = 1
 
         # context for current phase
         phase = self.current_phase
@@ -84,7 +90,7 @@ class Controller:
 
         # train
         print(f'__Phase [{phase.name}] started__')
-        for epoch in range(meta['epoch'] + 1, num_epoch + 1):
+        for epoch in range(start + 1, num_epoch + 1):
             # early stop check
             # - patience can be None = no early stop
             # - stop when patience reached
