@@ -1,0 +1,15 @@
+# training data
+training:
+  images:
+    - name: demo
+      path: ./demo_data/data/training/image.tif
+  labels:
+    - name: demo
+      path: ./demo_data/data/training/label.tif
+# inference data
+inference:
+  images:
+    - name: demo
+      path: ./demo_data/data/inference/image.tif
+# data configuration
+config: ./demo_data/config.json

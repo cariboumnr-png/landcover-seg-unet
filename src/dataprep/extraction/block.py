@@ -27,7 +27,7 @@ any raster I/O.
   * band_assignment with at least: 'red', 'nir', 'swir1', 'swir2'
   * label1_num_classes, label1_to_ignore, label1_reclass_map,
     label1_class_name, label1_reclass_name
-  * block_name, block_shape
+  * block_name
 - Nodata handling relies on np.isnan / np.isclose and masked arrays;
   ensure nodata values are correctly specified.
 - Topographic metrics use small neighborhoods and computed per pixel.
@@ -46,7 +46,6 @@ class BlockMeta(typing.TypedDict):
     '''Defines the shape of a block meta dictionary.'''
     # general metadata
     block_name: str
-    block_shape: tuple[int, int]
     valid_pixel_ratio: dict[str, float]
     has_label: bool
     # label metadata
@@ -76,7 +75,7 @@ class ImageStats(typing.TypedDict):
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class _Data:
+class _BlockArrays:
     '''Simple dataclass for block-wise image/label data.'''
 
     label: numpy.ndarray = dataclasses.field(init=False)
@@ -144,11 +143,10 @@ class DataBlock:
         '''
 
         # init with empty block data
-        self.data = _Data()
+        self.data = _BlockArrays()
         # meta dict with default foo values
         self.meta: BlockMeta = {
             'block_name': '',
-            'block_shape': (0, 0),
             'valid_pixel_ratio': {},
             'has_label': True,
             'label_nodata': 0,
@@ -169,7 +167,7 @@ class DataBlock:
         }
 
     # -----------------------------public methods-----------------------------
-    def create(
+    def build(
         self,
         img_arr: numpy.ndarray,
         lbl_arr: numpy.ndarray | None,
@@ -216,11 +214,11 @@ class DataBlock:
 
         # process data sequence
         # image bands related
-        self._image_add_spec_indices()
-        self._image_add_topo_metrics()
+        self._add_spectral_indices()
+        self._add_topographical_metrics()
         # labels related
-        self._labels_get_structure()
-        self._label_count_classes()
+        self._build_label_hierarchy()
+        self._count_label_classes()
         # block-wise
         self._get_block_valid_mask()
         self._get_block_image_stats()
@@ -275,7 +273,7 @@ class DataBlock:
         # save file - allow pickle to write meta dict
         numpy.savez_compressed(fpath, allow_pickle=True, **to_save)
 
-    def recalculate_stats(self, fpath: str) -> None:
+    def recompute_image_stats(self, fpath: str) -> None:
         '''
         Recompute block-level image statistics and save in place.
 
@@ -330,8 +328,8 @@ class DataBlock:
         # return
         return mmin, mmax
 
-    # ----------------------------internal methods----------------------------
-    def _image_add_spec_indices(self) -> None:
+    # -----------------------------internal method-----------------------------
+    def _add_spectral_indices(self) -> None:
         '''Add spectral indices using loaded Landsat bands.'''
 
         # skip if already created
@@ -367,7 +365,7 @@ class DataBlock:
         ]).astype(numpy.float32)
         self.data.image = numpy.append(self.data.image, add_indices, axis=0)
 
-    def _image_add_topo_metrics(self) -> None:
+    def _add_topographical_metrics(self) -> None:
         '''Add topographical metrics to the image array.'''
 
         # skip if already added
@@ -379,7 +377,8 @@ class DataBlock:
         nodata = self.meta.get('image_nodata', numpy.nan)
         max_h, max_w = self.data.image_dem_padded.shape
         # sanity check
-        assert self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad)
+        assert self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad), \
+        f'{self.data.image[0].shape} {max_h}, {max_w}, {pad}'
 
         # prep metrics to add
         slope = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
@@ -414,7 +413,7 @@ class DataBlock:
         to_add = numpy.stack([slope, cos_a, sin_a, tpi], axis=0)
         self.data.image = numpy.append(self.data.image, to_add, axis=0)
 
-    def _labels_get_structure(self) -> None:
+    def _build_label_hierarchy(self) -> None:
         '''Prep the hierarchy of labels according to metadata.'''
 
         # skip if label is not provided
@@ -464,7 +463,7 @@ class DataBlock:
                 f'layer2_{i + 1}': numpy.sum(_valid) / layer1_valid.size
             })
 
-    def _label_count_classes(self) -> None:
+    def _count_label_classes(self) -> None:
         '''Count present label values and calculate entropy.'''
 
         # skip if label is not provided

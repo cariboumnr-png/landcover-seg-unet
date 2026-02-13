@@ -59,8 +59,31 @@ def main(config: omegaconf.DictConfig) -> None:
         label_fpath='./demo_data/training/label.tif',
         logger=logger
     )
-    print(len(img_windows))
-    print(len(lbl_windows))
+
+    # TEST data caching
+    from src.dataprep.extraction.cache import BlockCachePipeline
+    from src.dataprep.extraction.cache import DataPaths, Artifacts, Windows
+    test_pipe = BlockCachePipeline(
+        windows=Windows(
+            image_windows=img_windows,
+            label_windows=lbl_windows,
+            expected_shape=(256, 256)
+        ),
+        inputs=DataPaths(
+            config_fpath='./demo_data/config.json',
+            image_fpath='./demo_data/training/image.tif',
+            label_fpath='./demo_data/training/label.tif',
+
+        ),
+        output=Artifacts(
+            blks_dpath='./cache/demo_data/blocks',
+            all_blocks='./artifacts/demo_data/square.json',
+            valid_blks='./artifacts/demo_data/valid.json'
+        ),
+        logger=logger
+    )
+    test_pipe.build_block_cache()
+    test_pipe.build_valid_block_index(px_thres=0.75, rebuild=True)
 
     # data preparation
     data_summary = src.dataset.prepare_data(

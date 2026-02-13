@@ -335,7 +335,7 @@ def _read_window(
 
     # read raster at window and return
     with rasterio.open(raster_fpath, 'r') as src:
-        arr = src.read(1, window=raster_window) # [1, H, W] for 2D rasters
+        arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
         arr = arr.astype(numpy.int64, copy=False) # ensure negatives support
         return raster_window_id, arr
 
