@@ -10,5 +10,6 @@ dependencies:
   - pytorch
   - torchvision
   - tqdm
+  - psutil
   - hydra-core
   - pip
