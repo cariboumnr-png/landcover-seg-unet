@@ -11,7 +11,7 @@ import typing
 
 __all__ = [
     # classes
-
+    'DataWindows',
     # functions
     'map_rasters',
     'validate_geometry',
@@ -23,13 +23,13 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .geometry import validate_geometry, GeometrySummary
-    from .mapper import map_rasters
+    from .mapper import map_rasters, DataWindows
 
 def __getattr__(name: str):
 
     if name in [ 'validate_geometry', 'GeometrySummary']:
         return getattr(importlib.import_module('.geometry', __package__), name)
-    if name in ['map_rasters']:
+    if name in ['map_rasters', 'DataWindows']:
         return getattr(importlib.import_module('.mapper', __package__), name)
 
     raise AttributeError(name)

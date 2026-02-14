@@ -4,10 +4,10 @@ defaults:
   - artifacts: default
   - cache: default
   - curriculum: demo
-  - extent: demo_extent
+  - extent: demo
   - dataset: demo
-  - domain: demo_domain
-  - grid: base_grid
+  - domain: demo
+  - grid: base
   - models: multihead
   - trainer: default
 

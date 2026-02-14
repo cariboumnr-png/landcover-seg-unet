@@ -6,4 +6,4 @@ files:
     index_base: 1
 valid_threshold: 0.7
 target_variance: 0.9
-output_dirpath: ${paths.artifacts.domain}
+output_dirpath: ${artifacts.domain}

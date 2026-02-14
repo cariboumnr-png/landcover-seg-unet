@@ -9,6 +9,7 @@ computes the overlapping bounding box (intersection). A typed summary
 '''
 
 # standard imports
+import math
 import typing
 # third-party imports
 import rasterio
@@ -155,7 +156,7 @@ def _check_raster_pixels(
         x2, y2 = transform_2[0], -transform_2[4]
 
         # check if the pixel sizes match
-        if (x1, y1) != (x2, y2):
+        if not _is_close((x1, y1), (x2, y2)):
             m = f' | Input rasters have different pixel sizes: '\
                 f'Raster1: ({x1}, {-y1}), Raster2: ({x2}, {-y2})'
             logger.log('ERROR', m)
@@ -166,7 +167,7 @@ def _check_raster_pixels(
         x1, y1 = transform_1[0], -transform_1[4]
 
     # assign value and log out
-    logger.log('DEBUG', f' | Image raster pixel size: {x1} x {-y1}')
+    logger.log('DEBUG', f' | Image raster pixel size: {x1:.6f} x {-y1:.6f}')
     return x1, y1
 
 def _compute_overlap_extent(
@@ -221,3 +222,13 @@ def _compute_overlap_extent(
         'same_bbox': None,
         'inter_bbox': img.bounds
     }
+
+def _is_close(p1: tuple[float, float], p2: tuple[float, float]) -> bool:
+    '''Close with a small tolerance (1e-9).'''
+
+    px1, py1 = p1
+    px2, py2 = p2
+    return (
+        math.isclose(px1, px2, rel_tol=1e-9, abs_tol=1e-9) and
+        math.isclose(py1, py2, rel_tol=1e-9, abs_tol=1e-9)
+    )

@@ -11,15 +11,14 @@ import typing
 
 __all__ = [
     # classes
-    'Artifacts',
-    'BlockCachePipeline',
+    'BlockCacheBuilder',
     'DataBlock',
-    'DataPaths',
-    'Windows',
+    'BuilderConfig',
+    'DataWindows',
     # functions
-    'build_cache',
     'count_label_class',
     'map_rasters',
+    'prepare_data',
     'validate_geometry',
     # typing
     'BlockMeta',
@@ -29,19 +28,20 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .build import (DataBlock, BlockMeta, ImageStats, BlockCachePipeline,
-                        Artifacts, DataPaths, Windows, build_cache)
-    from .postprocess import count_label_class
-    from .preprocess import map_rasters, validate_geometry, GeometrySummary
+    from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
+    from .tiler import DataBlock, BlockMeta, ImageStats, BlockCacheBuilder, BuilderConfig
+    from .builder import count_label_class
+    from .pipeline import prepare_data
 
 def __getattr__(name: str):
 
-    if name in ['DataBlock', 'BlockMeta', 'ImageStats', 'BlockCachePipeline',
-                'Artifacts', 'DataPaths', 'Windows', 'build_cache']:
-        return getattr(importlib.import_module('.build', __package__), name)
+    if name in ['map_rasters', 'validate_geometry', 'GeometrySummary', 'DataWindows']:
+        return getattr(importlib.import_module('.mapper', __package__), name)
+    if name in ['DataBlock', 'BlockMeta', 'ImageStats', 'BlockCacheBuilder','BuilderConfig']:
+        return getattr(importlib.import_module('.tiler', __package__), name)
     if name in ['count_label_class']:
-        return getattr(importlib.import_module('.postprocess', __package__), name)
-    if name in ['map_rasters_to_grid', 'validate_geometry', 'GeometrySummary']:
-        return getattr(importlib.import_module('.preprocess', __package__), name)
+        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in ['prepare_data']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(name)

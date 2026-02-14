@@ -32,25 +32,14 @@ import utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class Windows:
-    '''Container for input read windows and expected window shape.'''
-    image_windows: alias.RasterWindowDict   # indexed read windows
-    label_windows: alias.RasterWindowDict   # indexed read windows can be empty
-    expected_shape: tuple[int, int]  # expected window shape (W*H) in px
-
-@dataclasses.dataclass
-class DataPaths:
+class BuilderConfig:
     '''Paths to raw rasters and per-block configuration.'''
     image_fpath: str                        # path to raw image data (.tiff)
     label_fpath: str | None                 # path to raw label data (.tiff)
     config_fpath: str                       # path to raw metadata (.json)
-
-@dataclasses.dataclass
-class Artifacts:
-    '''Destination locations for cache artifacts.'''
-    blks_dpath: str # dirpath to save block files
-    all_blocks: str # filepath (.json) to all blocks indexed by coordinates
-    valid_blks: str # filepath (.json) to valid blocks indexed by coordinates
+    blks_dpath: str   # dirpath to save block files
+    all_blocks: str   # filepath (.json) to all blocks indexed by coordinates
+    valid_blks: str   # filepath (.json) to valid blocks indexed by coordinates
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -61,11 +50,11 @@ class _BlockCreationContext:
     img_path: str
     img_window: alias.RasterWindow
     lbl_path: str | None
-    lbl_window: alias.RasterWindow
+    lbl_window: alias.RasterWindow | None
     npz_fpath: str
 
 # --------------------------------Public  Class--------------------------------
-class BlockCachePipeline:
+class BlockCacheBuilder:
     '''
     Orchestrates block cache validation and creation from supplied read
     windows.
@@ -84,9 +73,8 @@ class BlockCachePipeline:
 
     def __init__(
         self,
-        windows: Windows,
-        inputs: DataPaths,
-        output: Artifacts,
+        windows: dataprep.DataWindows,
+        config: BuilderConfig,
         logger: utils.Logger,
     ):
         '''
@@ -101,8 +89,7 @@ class BlockCachePipeline:
 
         # parse arguments
         self.windows = windows
-        self.inputs = inputs
-        self.output = output
+        self.config = config
         self.logger = logger
 
         # init attributes
@@ -110,7 +97,10 @@ class BlockCachePipeline:
         self.all_blocks: dict[str, str] = {}
         self.valid_blks: dict[str, str] = {}
 
-    def build_block_cache(self) -> 'BlockCachePipeline':
+        # make sure output dir for the blocks exist
+        os.makedirs(self.config.blks_dpath, exist_ok=True)
+
+    def build_block_cache(self) -> 'BlockCacheBuilder':
         '''
         Run the cache preparation sequence.
 
@@ -142,14 +132,6 @@ class BlockCachePipeline:
         '''
         Build or load the valid-block index for training.
 
-        Behavior:
-        - If no label is present, all square blocks are considered
-        valid; the method loads 'all_blocks' and returns.
-        - If labels exist and a prior valid index exists and 'rebuild'
-        is False, the index is loaded and returned.
-        - Otherwise, all blocks are evaluated in parallel and those with
-        'valid_pixel_ratio["block"] >= px_thres' are kept.
-
         Args:
             px_thres: Threshold on block-level valid pixel ratio.
             rebuild: Force re-evaluation even if an index exists.
@@ -157,19 +139,20 @@ class BlockCachePipeline:
         Side effects:
             - Populates 'self.valid_blks'.
             - Writes the valid-blocks JSON to 'output.valid_blks'.
+
+        Note: `px_thres` == 0.0 means no validation.
         '''
 
-        # for inference blocks that need not validation. load all square blocks
-        if not self.has_label:
-            _blks = self.output.all_blocks
-            self.logger.log('INFO', f'All square blocks from: {_blks} are valid')
-            self.valid_blks = utils.load_json(self.output.all_blocks)
+        # if px_thres == 0.0 then skip validation
+        if not px_thres:
+            _blks = self.config.all_blocks
+            self.logger.log('INFO', f'All blocks from: {_blks} are valid')
+            self.valid_blks = utils.load_json(self.config.all_blocks)
             self.logger.log('INFO', f'Got {len(self.valid_blks)} blocks')
             return
 
-        # for training blocks that need validation. try load valid blocks
-        _blks = self.output.valid_blks
         # if already exists and not to overwrite
+        _blks = self.config.valid_blks
         if os.path.exists(_blks) and not rebuild:
             self.logger.log('INFO', f'Gather valid blocks from: {_blks}')
             self.valid_blks = utils.load_json(_blks)
@@ -204,27 +187,32 @@ class BlockCachePipeline:
         '''
 
         # find shared coordinates between image and label read windows
-        self.shared_coords = set(self.windows.image_windows.keys()) \
-            & set(self.windows.label_windows.keys())
+        if self.has_label:
+            self.shared_coords = set(self.windows.image_windows.keys()) \
+                & set(self.windows.label_windows.keys())
+        else:
+            self.shared_coords = set(self.windows.image_windows.keys())
         self.logger.log('DEBUG', f'Loaded {len(self.shared_coords)} read windows')
 
         # remove windows or irregular shapes, e.g., edge windows
         for coord in self.shared_coords:
             # access image window
             iw = self.windows.image_windows[coord]
-            lw = self.windows.label_windows[coord]
-            # remove coord if any irregularity detected
-            if (iw.width, iw.height) != self.windows.expected_shape or \
-                (lw.width, lw.height) != self.windows.expected_shape:
+            if (iw.width, iw.height) != self.windows.expected_shape:
                 self.shared_coords.remove(coord)
+            if self.has_label:
+                lw = self.windows.label_windows[coord]
+                if (lw.width, lw.height) != self.windows.expected_shape:
+                    self.shared_coords.remove(coord)
         self.logger.log('DEBUG', f'Windows with expected shape: {len(self.shared_coords)}')
+
         # all blocks come from the shared coordinates
         self.all_blocks = {
-            self._xy_name(c): f'{self.output.blks_dpath}/{self._xy_name(c)}.npz'
+            self._xy_name(c): f'{self.config.blks_dpath}/{self._xy_name(c)}.npz'
             for c in self.shared_coords
         }
         # write an artifect: normal block list
-        utils.write_json(self.output.all_blocks, self.all_blocks)
+        utils.write_json(self.config.all_blocks, self.all_blocks)
 
     def _validate_existing_blocks(self) -> None:
         '''
@@ -267,7 +255,7 @@ class BlockCachePipeline:
         '''
 
         # determine block files that need to be created
-        existing = set(os.listdir(self.output.blks_dpath)) # filenames
+        existing = set(os.listdir(self.config.blks_dpath)) # filenames
         coords_todo = set(
             self._name_xy(name) for name, path in self.all_blocks.items()
             if os.path.basename(path) not in existing # also filenames
@@ -279,19 +267,19 @@ class BlockCachePipeline:
 
         # prep block creation jobs
         jobs = []
-        meta_src: dataprep.BlockMeta = utils.load_json(self.inputs.config_fpath)
+        meta_src: dataprep.BlockMeta = utils.load_json(self.config.config_fpath)
         for c in coords_todo:
             name = self._xy_name(c)
             co_contxt = _BlockCreationContext(
                 name=name,
                 meta=copy.deepcopy(meta_src),
-                img_path=self.inputs.image_fpath,
+                img_path=self.config.image_fpath,
                 img_window=self.windows.image_windows[c],
-                lbl_path=self.inputs.label_fpath,
-                lbl_window=self.windows.label_windows[c],
+                lbl_path=self.config.label_fpath,
+                lbl_window=self.windows.label_windows[c] if self.has_label else None,
                 npz_fpath=self.all_blocks[name]
             )
-            jobs.append((_make_blk, co_contxt, {}))
+            jobs.append((_make_blk, (co_contxt,), {}))
 
         # parallel processing through all raster windows
         utils.ParallelExecutor().run(jobs)
@@ -301,7 +289,7 @@ class BlockCachePipeline:
     def has_label(self) -> bool:
         '''If current pipeline is supplied with a label raster.'''
 
-        return bool(self.inputs.label_fpath)
+        return bool(self.config.label_fpath)
 
     # ------------------------------static method------------------------------
     @staticmethod

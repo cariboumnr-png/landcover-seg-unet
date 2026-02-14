@@ -79,12 +79,18 @@ def print_status(lines: list):
 def write_json(json_fpath: str, src_dict: list | dict | typing.Mapping) -> None:
     '''Helper to write a json config file from a python dict or list.'''
 
+    # make sure parent directory exsits before writing
+    dirpath = os.path.dirname(json_fpath)
+    os.makedirs(dirpath, exist_ok=True)
     with open(json_fpath, 'w', encoding='UTF-8') as file:
         json.dump(src_dict, file, indent=4)
 
 def write_pickle(pickle_fpath: str, src_obj: typing.Any) -> None:
     '''Helper to write a json config file from a python dict or list.'''
 
+    # make sure parent directory exsits before writing
+    dirpath = os.path.dirname(pickle_fpath)
+    os.makedirs(dirpath, exist_ok=True)
     with open(pickle_fpath, 'wb') as file:
         pickle.dump(src_obj, file)
 

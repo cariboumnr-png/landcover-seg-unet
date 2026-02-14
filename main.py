@@ -53,40 +53,14 @@ def main(config: omegaconf.DictConfig) -> None:
         print(k)
         print(dom)
 
-    # ------------------------------------------------------------------------
-    # TEST: data mapping
-    img_windows, lbl_windows = src.dataprep.map_rasters(
+    # TEST: data prep
+    src.dataprep.prepare_data(
         world_grid=world_grid,
-        image_fpath='./demo_data/training/image.tif',
-        label_fpath='./demo_data/training/label.tif',
+        data_config=config.dataset,
+        artifact_config=config.artifacts,
+        cache_config=config.cache,
         logger=logger
     )
-
-    # TEST data caching
-    test_pipe = src.dataprep.BlockCachePipeline(
-        windows=src.dataprep.Windows(
-            image_windows=img_windows,
-            label_windows=lbl_windows,
-            expected_shape=(256, 256)
-        ),
-        inputs=src.dataprep.DataPaths(
-            config_fpath='./demo_data/config.json',
-            image_fpath='./demo_data/training/image.tif',
-            label_fpath='./demo_data/training/label.tif',
-
-        ),
-        output=src.dataprep.Artifacts(
-            blks_dpath='./cache/demo_data/blocks',
-            all_blocks='./artifacts/demo_data/square.json',
-            valid_blks='./artifacts/demo_data/valid.json'
-        ),
-        logger=logger
-    )
-    test_pipe.build_block_cache()
-    test_pipe.build_valid_block_index(px_thres=0.75, rebuild=True)
-
-    # TEST data partitioning
-
     #--------------------------------------------------------------------------
 
     # data preparation

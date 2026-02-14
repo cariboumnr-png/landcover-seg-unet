@@ -2,6 +2,7 @@
 
 # standard imports
 import copy
+import dataclasses
 # third-party imports
 import rasterio
 # local imports
@@ -10,16 +11,21 @@ import dataprep
 import grid
 import utils
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class DataWindows:
+    '''Container for input read windows and expected window shape.'''
+    image_windows: alias.RasterWindowDict   # indexed read windows
+    label_windows: alias.RasterWindowDict   # indexed read windows can be empty
+    expected_shape: tuple[int, int]  # expected window shape (W*H) in px
+
 def map_rasters(
     world_grid: grid.GridLayout,
     image_fpath: str,
     label_fpath: str | None,
     logger: utils.Logger
-) -> tuple[alias.RasterWindowDict, alias.RasterWindowDict]:
+) -> DataWindows:
     '''doc'''
-
-    # get a child logger
-    logger = logger.get_child('prprc')
 
     # get geometry summary
     geom = dataprep.validate_geometry(image_fpath, label_fpath, logger)
@@ -39,7 +45,7 @@ def map_rasters(
     lbl_windows = _get_windows(world_grid, geom['label_transform'], inside)
 
     # return
-    return img_windows, lbl_windows
+    return DataWindows(img_windows, lbl_windows, world_grid.tile_size)
 
 def _crop(
     world_grid: grid.GridLayout,

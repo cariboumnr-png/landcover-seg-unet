@@ -191,8 +191,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         rx, ry = transform.c, transform.f
         # get raster pixel size and check alignment with the grid
         res_x, res_y = transform.a, abs(transform.e)
-        assert self._spec.pixel_size[0] == res_x
-        assert self._spec.pixel_size[1] == res_y
+        assert abs(self._spec.pixel_size[0] - res_x) < 1e-9
+        assert abs(self._spec.pixel_size[1] - res_y) < 1e-9
         # get world grid origin in CRS units
         gx, gy = self._spec.origin
         # calculate origin offset in pixel
