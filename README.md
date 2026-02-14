@@ -13,9 +13,9 @@ project/
 ├─ configs/
 ├─ src/
 │  ├─ dataprep/   <-- currently active branch here
-│  │  ├─ build/
-│  │  ├─ postprocess/
-│  │  ├─ preprocess/
+│  │  ├─ mapper/    # [Done] map rasters onto world grid
+│  │  ├─ tiler/     # [Done] build datablocks from raster by grid
+│  │  ├─ builder/   # [WIP] component for subsequent processing,e.g., stats calc, train/Val split, normalization
 │  ├─ dataset/
 │  ├─ domain/
 │  ├─ grid/
