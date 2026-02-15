@@ -15,7 +15,7 @@ __all__ = [
     'DataBlock',
     'BuilderConfig',
     # functions
-
+    'get_block_builder',
     # typing
     'BlockMeta',
     'ImageStats',
@@ -25,6 +25,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .block import DataBlock, BlockMeta, ImageStats
     from .cache import BlockCacheBuilder, BuilderConfig
+    from .builder import get_block_builder
 
 def __getattr__(name: str):
 
@@ -32,5 +33,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.block', __package__), name)
     if name in ['BlockCacheBuilder', 'BuilderConfig']:
         return getattr(importlib.import_module('.cache', __package__), name)
+    if name in ['get_block_builder']:
+        return getattr(importlib.import_module('.builder', __package__), name)
 
     raise AttributeError(name)

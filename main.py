@@ -56,7 +56,7 @@ def main(config: omegaconf.DictConfig) -> None:
     # TEST: data prep
     src.dataprep.prepare_data(
         world_grid=world_grid,
-        data_config=config.dataset,
+        inputs_config=config.dataset,
         artifact_config=config.artifacts,
         cache_config=config.cache,
         logger=logger
