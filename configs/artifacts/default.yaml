@@ -24,6 +24,5 @@ validation_blocks_split: ${artifacts.training}/validation_blocks_split.json
 inference: ${artifacts.root}/${dataset_name}/inference
 inference_blocks_dir: ${artifacts.inference}/blocks
 inference_all_blocks: ${artifacts.inference}/all_blocks.json
-inference_valid_blocks: ${artifacts.inference}/valid_blocks.json
 #
 inference_image_stats: ${artifacts.inference}/image_stats.json

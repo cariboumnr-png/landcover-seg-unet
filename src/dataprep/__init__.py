@@ -30,8 +30,9 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
     from .tiler import DataBlock, BlockMeta, ImageStats, BlockCacheBuilder, BuilderConfig
-    from .builder import count_label_class
+    # from .partitioner import
     from .pipeline import prepare_data
+    from .utils import count_label_class
 
 def __getattr__(name: str):
 
@@ -39,9 +40,9 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.mapper', __package__), name)
     if name in ['DataBlock', 'BlockMeta', 'ImageStats', 'BlockCacheBuilder','BuilderConfig']:
         return getattr(importlib.import_module('.tiler', __package__), name)
-    if name in ['count_label_class']:
-        return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['prepare_data']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in ['count_label_class']:
+        return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(name)

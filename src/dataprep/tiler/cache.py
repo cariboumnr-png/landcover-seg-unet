@@ -37,9 +37,9 @@ class BuilderConfig:
     image_fpath: str                        # path to raw image data (.tiff)
     label_fpath: str | None                 # path to raw label data (.tiff)
     config_fpath: str                       # path to raw metadata (.json)
-    blks_dpath: str   # dirpath to save block files
-    all_blocks: str   # filepath (.json) to all blocks indexed by coordinates
-    valid_blks: str   # filepath (.json) to valid blocks indexed by coordinates
+    blks_dpath: str         # dirpath to save block files
+    all_blocks: str         # filepath (.json) to all blocks
+    valid_blks: str | None  # filepath (.json) to valid blocks 
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -144,7 +144,7 @@ class BlockCacheBuilder:
         '''
 
         # if px_thres == 0.0 then skip validation
-        if not px_thres:
+        if not px_thres or self.config.valid_blks is None:
             _blks = self.config.all_blocks
             self.logger.log('INFO', f'All blocks from: {_blks} are valid')
             self.valid_blks = utils.load_json(self.config.all_blocks)
