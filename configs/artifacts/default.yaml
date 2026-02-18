@@ -8,21 +8,21 @@ cache: ${artifacts.root}/data_cache
 dataset_name: ${hydra:runtime.choices.dataset}
 
 # derived paths for current dataset
-# training
-training: ${artifacts.root}/${dataset_name}/training
-training_blocks_dir: ${artifacts.training}/blocks
-training_all_blocks: ${artifacts.training}/all_blocks.json
-training_valid_blocks: ${artifacts.training}/valid_blocks.json
+# from fit input data
+fit: ${artifacts.root}/${dataset_name}/fit
+fit_blocks_dir: ${artifacts.fit}/blocks
+fit_all_blocks: ${artifacts.fit}/all_blocks.json
+fit_valid_blocks: ${artifacts.fit}/valid_blocks.json
 #
-training_image_stats: ${artifacts.training}/image_stats.json
-label_count_global: ${artifacts.training}/count_global.json
-label_count_training: ${artifacts.training}/count_training.json
-block_scores: ${artifacts.training}/score.json
-training_blocks_split: ${artifacts.training}/training_blocks_split.json
-validation_blocks_split: ${artifacts.training}/validation_blocks_split.json
-# inference
-inference: ${artifacts.root}/${dataset_name}/inference
-inference_blocks_dir: ${artifacts.inference}/blocks
-inference_all_blocks: ${artifacts.inference}/all_blocks.json
+fit_image_stats: ${artifacts.fit}/image_stats.json
+label_count_global: ${artifacts.fit}/count_global.json
+label_count_train: ${artifacts.fit}/count_train.json
+block_scores: ${artifacts.fit}/score.json
+train_blocks_split: ${artifacts.fit}/train_blocks_split.json
+val_blocks_split: ${artifacts.fit}/val_blocks_split.json
+# from user-provided test data
+test: ${artifacts.root}/${dataset_name}/test
+test_blocks_dir: ${artifacts.test}/blocks
+test_all_blocks: ${artifacts.test}/all_blocks.json
 #
-inference_image_stats: ${artifacts.inference}/image_stats.json
+test_image_stats: ${artifacts.test}/image_stats.json

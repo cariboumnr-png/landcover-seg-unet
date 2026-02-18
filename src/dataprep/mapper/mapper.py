@@ -28,12 +28,12 @@ def map_rasters(
     '''doc'''
 
     # mode selection
-    if mode == 'train':
-        image_fpath=config['train_img']
-        label_fpath=config['train_lbl']
-    elif mode == 'infer':
-        assert config['infer_img'] # sanity type check
-        image_fpath=config['infer_img']
+    if mode == 'fit':
+        image_fpath=config['fit_input_img']
+        label_fpath=config['fit_input_lbl']
+    elif mode == 'test':
+        assert config['test_input_img'] # sanity type check
+        image_fpath=config['test_input_img']
         label_fpath=None
     else:
         raise ValueError(f'Invalid builder mode {mode}')

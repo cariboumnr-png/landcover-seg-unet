@@ -13,20 +13,20 @@ def get_block_builder(
     '''doc'''
 
     # mode selection
-    if mode == 'train':
-        image_fpath=config['train_img']
-        label_fpath=config['train_lbl']
+    if mode == 'fit':
+        image_fpath=config['fit_input_img']
+        label_fpath=config['fit_input_lbl']
         config_fpath=config['input_config']
-        blks_dpath=config['train_blks_dir']
-        all_blocks=config['train_all_blks']
-        valid_blks=config['train_valid_blks']
-    elif mode == 'infer':
-        assert config['infer_img'] # sanity type check
-        image_fpath=config['infer_img']
+        blks_dpath=config['fit_blks_dir']
+        all_blocks=config['fit_all_blks']
+        valid_blks=config['fit_valid_blks']
+    elif mode == 'test':
+        assert config['test_input_img'] # sanity type check
+        image_fpath=config['test_input_img']
         label_fpath=None
         config_fpath=config['input_config']
-        blks_dpath=config['infer_blks_dir']
-        all_blocks=config['infer_all_blks']
+        blks_dpath=config['test_blks_dir']
+        all_blocks=config['test_all_blks']
         valid_blks=None
 
     else:

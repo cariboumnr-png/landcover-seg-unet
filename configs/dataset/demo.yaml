@@ -1,9 +1,9 @@
-# training data
-training:
-  image: ./demo_data/training/image.tif
-  label: ./demo_data/training/label.tif
-# inference data
-inference:
-  image: ./demo_data/inference/image.tif
+# input fit data
+fit:
+  image: ./demo_data/fit_input/image.tif
+  label: ./demo_data/fit_input/label.tif
+# input test data (optional)
+test:
+  image: ./demo_data/test_input/image.tif
 # data configuration
 config: ./demo_data/config.json

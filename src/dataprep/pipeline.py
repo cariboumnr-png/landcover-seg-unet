@@ -22,17 +22,17 @@ def prepare_data(
     cfg = _parse_configs(inputs_config, artifact_config, cache_config)
 
     # map training rasters to world grid
-    windows = dataprep.map_rasters(world_grid, 'train', cfg, logger)
-    builder = dataprep.get_block_builder(windows, 'train', cfg, logger)
+    windows = dataprep.map_rasters(world_grid, 'fit', cfg, logger)
+    builder = dataprep.get_block_builder(windows, 'fit', cfg, logger)
     builder.build_block_cache()
-    builder.build_valid_block_index(cfg['train_px_thres'])
+    builder.build_valid_block_index(cfg['fit_blk_thres'])
 
-    # map inference rasters to world grid if provided
-    if cfg['infer_img']:
-        windows = dataprep.map_rasters(world_grid, 'infer', cfg, logger)
-        builder = dataprep.get_block_builder(windows, 'infer', cfg, logger)
+    # map test raster to world grid if provided
+    if cfg['test_input_img']:
+        windows = dataprep.map_rasters(world_grid, 'test', cfg, logger)
+        builder = dataprep.get_block_builder(windows, 'test', cfg, logger)
         builder.build_block_cache()
-        builder.build_valid_block_index(cfg['infer_px_thres'])
+        builder.build_valid_block_index(cfg['test_blk_thres'])
 
 def _parse_configs(
     data_config: alias.ConfigType,
@@ -47,17 +47,21 @@ def _parse_configs(
     cache_cfg = utils.ConfigAccess(cache_config)
 
     return_cfg: dataprep.DataprepConfigs = {
-        'train_img': data_cfg.get_option('training', 'image', default=None),
-        'train_lbl': data_cfg.get_option('training', 'label', default=None),
-        'infer_img': data_cfg.get_option('inference', 'image', default=None),
-        'input_config': data_cfg.get_option('config', default=None),
-        'train_blks_dir': artifact_cfg.get_option('training_blocks_dir'),
-        'train_all_blks': artifact_cfg.get_option('training_all_blocks'),
-        'train_valid_blks': artifact_cfg.get_option('training_valid_blocks'),
-        'infer_blks_dir': artifact_cfg.get_option('inference_blocks_dir'),
-        'infer_all_blks': artifact_cfg.get_option('inference_all_blocks'),
-        'train_px_thres': cache_cfg.get_option('threshold', 'train_blocks_px'),
-        'infer_px_thres': cache_cfg.get_option('threshold', 'infer_blocks_px'),
+        # inputs
+        'fit_input_img': data_cfg.get_option('fit', 'image'),
+        'fit_input_lbl': data_cfg.get_option('fit', 'label'),
+        'test_input_img': data_cfg.get_option('test', 'image', default=None),
+        'input_config': data_cfg.get_option('config'),
+        # artifacts
+        'fit_blks_dir': artifact_cfg.get_option('fit_blocks_dir'),
+        'fit_all_blks': artifact_cfg.get_option('fit_all_blocks'),
+        'fit_valid_blks': artifact_cfg.get_option('fit_valid_blocks'),
+        'test_blks_dir': artifact_cfg.get_option('test_blocks_dir'),
+        'test_all_blks': artifact_cfg.get_option('test_all_blocks'),
+        # thresholds
+        'fit_blk_thres': cache_cfg.get_option('threshold', 'train_blocks_px'),
+        'test_blk_thres': cache_cfg.get_option('threshold', 'infer_blocks_px'),
+        # scoring
         'score_head': cache_cfg.get_option('scoring', 'head'),
         'score_alpha': cache_cfg.get_option('scoring', 'alpha'),
         'score_beta': cache_cfg.get_option('scoring', 'beta'),
@@ -66,7 +70,7 @@ def _parse_configs(
     }
 
     # sanity checks on required items
-    assert return_cfg['train_img'] is not None
+    assert return_cfg['fit_input_img'] is not None
     assert return_cfg['input_config'] is not None
 
     return return_cfg

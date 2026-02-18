@@ -5,23 +5,23 @@ import typing
 
 class InputConfig(typing.TypedDict):
     '''Bimodal input rasters and config file paths.'''
-    train_img: str
-    train_lbl: str | None
-    infer_img: str | None
+    fit_input_img: str
+    fit_input_lbl: str | None
+    test_input_img: str | None
     input_config: str
 
 class ArtifactConfig(typing.TypedDict):
     '''Bimodal block building related artifacts.'''
-    train_blks_dir: str
-    train_all_blks: str
-    train_valid_blks: str
-    infer_blks_dir: str
-    infer_all_blks: str
+    fit_blks_dir: str
+    fit_all_blks: str
+    fit_valid_blks: str
+    test_blks_dir: str
+    test_all_blks: str
 
-class ThresholdConfig(typing.TypedDict):
+class PixelThresholdConfig(typing.TypedDict):
     '''Block validation pixel ratio thresholds.'''
-    train_px_thres: float
-    infer_px_thres: float
+    fit_blk_thres: float
+    test_blk_thres: float
 
 class ScoringConfig(typing.TypedDict):
     '''Block label representation scoring config.'''
@@ -32,7 +32,7 @@ class ScoringConfig(typing.TypedDict):
     score_reward: tuple[int, ...]
 
 class CacheConfig(
-    ThresholdConfig,
+    PixelThresholdConfig,
     ScoringConfig,
     typing.TypedDict
 ):
@@ -48,7 +48,7 @@ class BlockBuilderConfigs(
 class DataprepConfigs(
     InputConfig,
     ArtifactConfig,
-    ThresholdConfig,
+    PixelThresholdConfig,
     ScoringConfig,
     typing.TypedDict,
 ):

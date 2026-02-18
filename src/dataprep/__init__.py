@@ -28,7 +28,7 @@ __all__ = [
     'GeometrySummary',
     'InputConfig',
     'ArtifactConfig',
-    'ThresholdConfig',
+    'PixelThresholdConfig',
     'ScoringConfig',
     'BlockBuilderConfigs',
     'DataprepConfigs',
@@ -37,7 +37,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .config import (InputConfig, ArtifactConfig, ThresholdConfig,
+    from .config import (InputConfig, ArtifactConfig, PixelThresholdConfig,
                          ScoringConfig, BlockBuilderConfigs, DataprepConfigs)
     from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
     from .blockbuilder import (DataBlock, BlockMeta, ImageStats, BlockCacheBuilder,
@@ -49,7 +49,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
 
     if name in ['InputConfig',' ArtifactConfig',' CacheConfig', 'ScoringConfig',
-                'ThresholdConfig', 'BlockBuilderConfigs', 'DataprepConfigs']:
+                'PixelThresholdConfig', 'BlockBuilderConfigs', 'DataprepConfigs']:
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['map_rasters', 'validate_geometry', 'GeometrySummary',
                 'DataWindows']:
