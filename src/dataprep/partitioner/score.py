@@ -2,8 +2,6 @@
 
 # standard imports
 import math
-import os
-import re
 import typing
 # third-party imports
 import numpy
@@ -21,63 +19,43 @@ class BlockScore(typing.TypedDict):
     score: float
 
 # score all valid blocks based on label class distribution
-def score(
-    lbl_count_fpath: str,
-    valid_blks_fpath: str,
-    blks_scores_fpath: str,
-    cache_cfg: utils.ConfigAccess,
+def score_blocks(
+    label_count: dict[str, list[int]],
+    valid_blks: dict[str, str],
+    config: dataprep.ScoringConfig,
+    scores_fpath: str,
     logger: utils.Logger,
 ) -> list[BlockScore]:
     '''doc'''
 
-    # get a child logger
-    logger = logger.get_child('score')
-
-    # get scoring paramters
-    score_param = cache_cfg.get_section_as_dict('scoring')
-
-    # get overwrite option
-    overwrite = cache_cfg.get_option('flags', 'overwrite_scores')
-
-    # check if already scored
-    if os.path.exists(blks_scores_fpath) and not overwrite:
-        logger.log('INFO', f'Gathering block scoring from: {blks_scores_fpath}')
-        return utils.load_json(blks_scores_fpath)
-
-    # load valid block list
-    blks: dict[str, str] = utils.load_json(valid_blks_fpath)
-    global_count: dict[str, list[int]] = utils.load_json(lbl_count_fpath)
-
     # score blocks from list with parallel processing
-    target_p  = _count_to_inv_prob(global_count, **score_param)
-    jobs = [(_score_block, (b, target_p,), score_param) for b in blks.values()]
+    target  = _count_to_inv_prob(label_count, **config)
+    jobs = [(_score_block, (b, target,), config) for b in valid_blks.items()]
     scores = utils.ParallelExecutor().run(jobs)
     sorted_scores = sorted(scores, key=lambda _: _['score'])
 
     # save sorted scores to a file
-    utils.write_json(blks_scores_fpath, sorted_scores)
+    logger.log('INFO', f'Scores saved to {scores_fpath}')
+    utils.write_json(scores_fpath, sorted_scores)
     return sorted_scores
 
 def _score_block(
-    block_fpath: str,
+    block: tuple[str, str],
     target_p: numpy.ndarray,
     **kwargs
 ) -> BlockScore:
     '''Score each block.'''
 
-    # read from block
-    meta = dataprep.DataBlock().load(block_fpath).meta
-    name = meta['block_name']
+    # parse
+    name, fpath = block
 
-    # find pattern from string
-    pattern = r'col_(\d+)_row_(\d+)'
-    matched = re.search(pattern, name)
-    # there should be just one match
-    if not matched:
-        raise ValueError(f'Block naming pattern {pattern} not found')
-    # get col and row
-    col = int(matched.group(1))
-    row = int(matched.group(2))
+    # read from block
+    meta = dataprep.DataBlock().load(fpath).meta
+
+    # split name string and get coords
+    split = name.split('_')
+    col = int(split[1])
+    row = int(split[3])
 
     # parse from parameter dict
     b = kwargs.get('beta', 1.0)
@@ -92,7 +70,7 @@ def _score_block(
     # return
     output: BlockScore = {
         'name': name,
-        'path': block_fpath,
+        'path': fpath,
         'col': col,
         'row': row,
         'score': _score,

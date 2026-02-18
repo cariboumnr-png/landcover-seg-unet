@@ -18,10 +18,25 @@ class ArtifactConfig(typing.TypedDict):
     infer_blks_dir: str
     infer_all_blks: str
 
-class RuntimeConfig(typing.TypedDict):
-    '''doc'''
+class ThresholdConfig(typing.TypedDict):
+    '''Block validation pixel ratio thresholds.'''
     train_px_thres: float
     infer_px_thres: float
+
+class ScoringConfig(typing.TypedDict):
+    '''Block label representation scoring config.'''
+    score_head: str
+    score_alpha: float
+    score_beta: float
+    score_epsilon: float
+    score_reward: tuple[int, ...]
+
+class CacheConfig(
+    ThresholdConfig,
+    ScoringConfig,
+    typing.TypedDict
+):
+    '''Cache processing configs.'''
 
 class BlockBuilderConfigs(
     InputConfig,
@@ -33,7 +48,8 @@ class BlockBuilderConfigs(
 class DataprepConfigs(
     InputConfig,
     ArtifactConfig,
-    RuntimeConfig,
+    ThresholdConfig,
+    ScoringConfig,
     typing.TypedDict,
 ):
     '''Composite config for data preparation.'''

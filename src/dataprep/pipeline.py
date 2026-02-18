@@ -57,7 +57,12 @@ def _parse_configs(
         'infer_blks_dir': artifact_cfg.get_option('inference_blocks_dir'),
         'infer_all_blks': artifact_cfg.get_option('inference_all_blocks'),
         'train_px_thres': cache_cfg.get_option('threshold', 'train_blocks_px'),
-        'infer_px_thres': cache_cfg.get_option('threshold', 'infer_blocks_px')
+        'infer_px_thres': cache_cfg.get_option('threshold', 'infer_blocks_px'),
+        'score_head': cache_cfg.get_option('scoring', 'head'),
+        'score_alpha': cache_cfg.get_option('scoring', 'alpha'),
+        'score_beta': cache_cfg.get_option('scoring', 'beta'),
+        'score_epsilon': cache_cfg.get_option('scoring', 'epsilon'),
+        'score_reward': tuple(cache_cfg.get_option('scoring', 'reward')),
     }
 
     # sanity checks on required items

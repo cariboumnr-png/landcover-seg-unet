@@ -13,18 +13,18 @@ __all__ = [
     # classes
 
     # functions
-
+    'score_blocks',
     # typing
-
+    'BlockScore',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    pass
+    from. score import BlockScore, score_blocks
 
 def __getattr__(name: str):
 
-    if name in ['...']:
-        return getattr(importlib.import_module('...', __package__), name)
+    if name in ['BlockScore', 'score_blocks']:
+        return getattr(importlib.import_module('.score', __package__), name)
 
     raise AttributeError(name)

@@ -2,41 +2,30 @@
 
 # standard imports
 import math
-import os
 # local imports
+import dataprep
 import utils
 
 # split training blocks into training and validation dataset
-def split(
-    scores: list[dict[str, str | int ]],
+def split_blocks(
+    scores: list[dataprep.BlockScore],
     training_blocks: str,
     validation_blocks: str,
     logger: utils.Logger,
 ) -> None:
     '''Split validation/training data.'''
 
-    # get a child logger
-    logger = logger.get_child('split')
-
-    # skip if not to overwrite and all files are present
-    if os.path.exists(validation_blocks) and os.path.exists(training_blocks):
-        logger.log('INFO', 'Keeping existing validation/training dataset split')
-        return
-
     # get validation blocks
     v_blks = _select_validation_blocks(scores, logger)
-    t_blks = {
-        b['block_name']: b['file_path']
-        for b in scores if b['block_name'] not in v_blks
-    }
+    t_blks = {b['name']: b['path'] for b in scores if b['name'] not in v_blks}
 
-    # pickle validation blocks to a file
+    # write validation blocks to json
     utils.write_json(validation_blocks, v_blks)
-    # pickle training blocks to a file
+    # write training blocks to json
     utils.write_json(training_blocks, t_blks)
 
 def _select_validation_blocks(
-    scores: list[dict[str, str | int ]] ,
+    scores: list[dataprep.BlockScore],
     logger: utils.Logger,
     **kwargs
 ) -> dict[str, str]:
@@ -58,7 +47,7 @@ def _select_validation_blocks(
         dd = _min_distance_from_locs(existing_locs, (x, y))
         if dd >= min_dist:
             existing_locs.append((x, y))
-            return_dict[blk['block_name']] = blk['file_path']
+            return_dict[blk['name']] = blk['path']
         if len(return_dict) == num_blk:
             logger.log('INFO', f'Gathered enough blocks at block {i + 1}')
             break

@@ -20,6 +20,7 @@ __all__ = [
     'get_block_builder',
     'map_rasters',
     'prepare_data',
+    'score_blocks',
     'validate_geometry',
     # typing
     'BlockMeta',
@@ -27,26 +28,28 @@ __all__ = [
     'GeometrySummary',
     'InputConfig',
     'ArtifactConfig',
-    'RuntimeConfig',
+    'ThresholdConfig',
+    'ScoringConfig',
     'BlockBuilderConfigs',
     'DataprepConfigs',
+    'BlockScore',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .config import (InputConfig, ArtifactConfig, RuntimeConfig,
-                         BlockBuilderConfigs, DataprepConfigs)
+    from .config import (InputConfig, ArtifactConfig, ThresholdConfig,
+                         ScoringConfig, BlockBuilderConfigs, DataprepConfigs)
     from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
     from .blockbuilder import (DataBlock, BlockMeta, ImageStats, BlockCacheBuilder,
                                BuilderConfig, get_block_builder)
-    # from .partitioner import
+    from .partitioner import BlockScore, score_blocks
     from .pipeline import prepare_data
     from .utils import count_label_class
 
 def __getattr__(name: str):
 
-    if name in ['InputConfig',' ArtifactConfig',' RuntimeConfig',
-                'BlockBuilderConfigs', 'DataprepConfigs']:
+    if name in ['InputConfig',' ArtifactConfig',' CacheConfig', 'ScoringConfig',
+                'ThresholdConfig', 'BlockBuilderConfigs', 'DataprepConfigs']:
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['map_rasters', 'validate_geometry', 'GeometrySummary',
                 'DataWindows']:
@@ -54,6 +57,8 @@ def __getattr__(name: str):
     if name in ['DataBlock', 'BlockMeta', 'ImageStats', 'BlockCacheBuilder',
                 'BuilderConfig']:
         return getattr(importlib.import_module('.blockbuilder', __package__), name)
+    if name in ['BlockScore', 'score_blocks']:
+        return getattr(importlib.import_module('.score', __package__), name)
     if name in ['prepare_data']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
     if name in ['count_label_class']:

@@ -58,7 +58,7 @@ def main(config: omegaconf.DictConfig) -> None:
         world_grid=world_grid,
         inputs_config=config.dataset,
         artifact_config=config.artifacts,
-        cache_config=config.cache,
+        cache_config=config.datacache,
         logger=logger
     )
     #--------------------------------------------------------------------------
