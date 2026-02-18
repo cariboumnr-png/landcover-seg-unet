@@ -21,11 +21,22 @@ class DataWindows:
 
 def map_rasters(
     world_grid: grid.GridLayout,
-    image_fpath: str,
-    label_fpath: str | None,
+    mode: str,
+    config: dataprep.InputConfig,
     logger: utils.Logger
 ) -> DataWindows:
     '''doc'''
+
+    # mode selection
+    if mode == 'train':
+        image_fpath=config['train_img']
+        label_fpath=config['train_lbl']
+    elif mode == 'infer':
+        assert config['infer_img'] # sanity type check
+        image_fpath=config['infer_img']
+        label_fpath=None
+    else:
+        raise ValueError(f'Invalid builder mode {mode}')
 
     # get geometry summary
     geom = dataprep.validate_geometry(image_fpath, label_fpath, logger)

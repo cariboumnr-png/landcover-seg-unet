@@ -22,24 +22,14 @@ def prepare_data(
     cfg = _parse_configs(inputs_config, artifact_config, cache_config)
 
     # map training rasters to world grid
-    windows = dataprep.map_rasters(
-        world_grid=world_grid,
-        image_fpath=cfg['train_img'],
-        label_fpath=cfg['train_lbl'],
-        logger=logger
-    )
+    windows = dataprep.map_rasters(world_grid, 'train', cfg, logger)
     builder = dataprep.get_block_builder(windows, 'train', cfg, logger)
     builder.build_block_cache()
     builder.build_valid_block_index(cfg['train_px_thres'])
 
     # map inference rasters to world grid if provided
     if cfg['infer_img']:
-        windows = dataprep.map_rasters(
-            world_grid=world_grid,
-            image_fpath=cfg['infer_img'],
-            label_fpath=None,
-            logger=logger
-        )
+        windows = dataprep.map_rasters(world_grid, 'infer', cfg, logger)
         builder = dataprep.get_block_builder(windows, 'infer', cfg, logger)
         builder.build_block_cache()
         builder.build_valid_block_index(cfg['infer_px_thres'])

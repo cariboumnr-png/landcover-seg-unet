@@ -28,12 +28,14 @@ __all__ = [
     'InputConfig',
     'ArtifactConfig',
     'RuntimeConfig',
+    'BlockBuilderConfigs',
     'DataprepConfigs',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .config import InputConfig, ArtifactConfig, RuntimeConfig, DataprepConfigs
+    from .config import (InputConfig, ArtifactConfig, RuntimeConfig,
+                         BlockBuilderConfigs, DataprepConfigs)
     from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
     from .blockbuilder import (DataBlock, BlockMeta, ImageStats, BlockCacheBuilder,
                                BuilderConfig, get_block_builder)
@@ -43,6 +45,9 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
+    if name in ['InputConfig',' ArtifactConfig',' RuntimeConfig',
+                'BlockBuilderConfigs', 'DataprepConfigs']:
+        return getattr(importlib.import_module('.config', __package__), name)
     if name in ['map_rasters', 'validate_geometry', 'GeometrySummary',
                 'DataWindows']:
         return getattr(importlib.import_module('.mapper', __package__), name)

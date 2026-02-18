@@ -33,13 +33,13 @@ import utils
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class BuilderConfig:
-    '''Paths to raw rasters and per-block configuration.'''
+    '''I/O Paths to raw rasters and artifacts during block building.'''
     image_fpath: str                        # path to raw image data (.tiff)
     label_fpath: str | None                 # path to raw label data (.tiff)
     config_fpath: str                       # path to raw metadata (.json)
     blks_dpath: str         # dirpath to save block files
     all_blocks: str         # filepath (.json) to all blocks
-    valid_blks: str | None  # filepath (.json) to valid blocks 
+    valid_blks: str | None  # filepath (.json) to valid blocks
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass

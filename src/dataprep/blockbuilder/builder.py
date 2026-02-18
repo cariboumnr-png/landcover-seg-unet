@@ -7,12 +7,12 @@ import utils
 def get_block_builder(
     windows: dataprep.DataWindows,
     mode: str,
-    config: dataprep.DataprepConfigs,
+    config: dataprep.BlockBuilderConfigs,
     logger: utils.Logger
 ) -> dataprep.BlockCacheBuilder:
     '''doc'''
 
-    # mode difference
+    # mode selection
     if mode == 'train':
         image_fpath=config['train_img']
         label_fpath=config['train_lbl']
@@ -21,6 +21,7 @@ def get_block_builder(
         all_blocks=config['train_all_blks']
         valid_blks=config['train_valid_blks']
     elif mode == 'infer':
+        assert config['infer_img'] # sanity type check
         image_fpath=config['infer_img']
         label_fpath=None
         config_fpath=config['input_config']
@@ -31,7 +32,6 @@ def get_block_builder(
     else:
         raise ValueError(f'Invalid builder mode {mode}')
 
-    assert image_fpath # sanity type check
     # get a builder and return
     builder_config=dataprep.BuilderConfig(
         image_fpath = image_fpath,
