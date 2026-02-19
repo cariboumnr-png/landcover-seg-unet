@@ -1,3 +1,5 @@
+# name of the dataset
+name: demo
 # input fit data
 fit:
   image: ./demo_data/fit_input/image.tif

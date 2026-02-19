@@ -4,12 +4,9 @@ grids: ${artifacts.root}/world_grids
 domain: ${artifacts.root}/domain_knowledge
 cache: ${artifacts.root}/data_cache
 
-# get current dataset in use
-dataset_name: ${hydra:runtime.choices.dataset}
-
-# derived paths for current dataset
+# derived paths for current dataset (dirname = dataset name)
 # fit input data
-fit: ${artifacts.root}/${dataset_name}/fit
+fit: ${artifacts.root}/${dataset.name}/fit
 # fit blocks building
 fit_blocks_dir: ${artifacts.fit}/blocks
 fit_all_blocks: ${artifacts.fit}/all_blocks.json
@@ -24,7 +21,7 @@ val_blocks_split: ${artifacts.fit}/val_blocks_split.json
 # train data label count for downstream, e.g., LA
 label_count_train: ${artifacts.fit}/count_train.json
 # test input data (optional)
-test: ${artifacts.root}/${dataset_name}/test
+test: ${artifacts.root}/${dataset.name}/test
 # test blocks building
 test_blocks_dir: ${artifacts.test}/blocks
 test_all_blocks: ${artifacts.test}/all_blocks.json

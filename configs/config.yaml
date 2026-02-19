@@ -12,9 +12,6 @@ defaults:
   - trainer: default
 
 # ----------------------------------------------------------------------------
-# dataset name
-dataset_name: ${hydra:runtime.choices.dataset}
-
 # data preparation mode
 # can be skip, with_inference, no_inference, or inference_only
 dataprep_mode: skip
