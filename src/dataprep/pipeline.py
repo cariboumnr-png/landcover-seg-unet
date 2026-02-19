@@ -27,15 +27,20 @@ def prepare_data(
     builder = dataprep.get_block_builder(windows, 'fit', cfg, logger)
     builder.build_block_cache()
     builder.build_valid_block_index(cfg['blk_thres_fit'])
+    # normalize fit blocks
+    dataprep.normalize_data_blocks('fit', cfg, logger)
     # split fit blocks
     dataprep.split_blocks(cfg, logger)
 
     # map test raster to world grid if provided
     if cfg['test_input_img']:
         windows = dataprep.map_rasters(world_grid, 'test', cfg, logger)
+        # build test blocks
         builder = dataprep.get_block_builder(windows, 'test', cfg, logger)
         builder.build_block_cache()
         builder.build_valid_block_index(cfg['blk_thres_test'])
+        # normalize test blocks
+        dataprep.normalize_data_blocks('test', cfg, logger)
 
 def _parse_configs(
     data_config: alias.ConfigType,

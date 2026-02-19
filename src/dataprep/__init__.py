@@ -1,3 +1,4 @@
+# pylint: disable=too-many-return-statements
 '''
 Top-level namespace for dataprep.
 
@@ -25,6 +26,8 @@ __all__ = [
     'validate_geometry',
     'select_val_blocks',
     'split_blocks',
+    'get_image_stats',
+    'normalize_data_blocks',
     # typing
     'BlockMeta',
     'ImageStats',
@@ -34,15 +37,17 @@ __all__ = [
     'BlockBuilderConfigs',
     'DataprepConfigs',
     'BlockScore',
+    'OutputConfig',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .config import (InputConfig, BlockBuilderConfigs, ProcessConfig,
-                         DataprepConfigs)
+    from .config import (InputConfig, OutputConfig, BlockBuilderConfigs,
+                         ProcessConfig, DataprepConfigs)
     from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
     from .blockbuilder import (DataBlock, BlockMeta, ImageStats, BlockCacheBuilder,
                                BuilderConfig, get_block_builder)
+    from .normalizer import get_image_stats, normalize_data_blocks
     from .splitter import (BlockScore, ScoreParams, score_blocks, select_val_blocks,
                            split_blocks)
     from .pipeline import prepare_data
@@ -50,8 +55,8 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['InputConfig', 'BlockBuilderConfigs', 'ProcessConfig',
-                'DataprepConfigs']:
+    if name in ['InputConfig', 'OutputConfig', 'BlockBuilderConfigs',
+                'ProcessConfig', 'DataprepConfigs']:
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['map_rasters', 'validate_geometry', 'GeometrySummary',
                 'DataWindows']:
@@ -59,6 +64,8 @@ def __getattr__(name: str):
     if name in ['DataBlock', 'BlockMeta', 'ImageStats', 'BlockCacheBuilder',
                 'BuilderConfig', 'get_block_builder']:
         return getattr(importlib.import_module('.blockbuilder', __package__), name)
+    if name in ['get_image_stats', 'normalize_data_blocks']:
+        return getattr(importlib.import_module('.normalizer', __package__), name)
     if name in ['BlockScore', 'ScoreParams', 'score_blocks', 'select_val_blocks',
                 'split_blocks']:
         return getattr(importlib.import_module('.splitter', __package__), name)
