@@ -17,8 +17,8 @@ import utils
 
 # -------------------------------Public Function-------------------------------
 def count_label_class(
-    blks_fpaths: str,
-    results_fpath: str,
+    input_blocks: str,
+    output_fpath: str,
     logger: utils.Logger,
     *,
     recount: bool =  False
@@ -27,9 +27,9 @@ def count_label_class(
     Aggregate label class counts across a set of data blocks.
 
     Args:
-        blks_fpaths: Path to a JSON file mapping block names to `.npz`
+        input_blocks: Path to a JSON file mapping block names to `.npz`
             file paths.
-        results_fpath: Path to the output JSON file for aggregated class
+        output_fpath: Path to the output JSON file for aggregated class
             counts.
         logger: Logger used for progress and status reporting.
         overwrite: If `False` and `results_fpath` exists, previously
@@ -48,12 +48,12 @@ def count_label_class(
     logger=logger.get_child('stats')
 
     # check if already counted
-    if os.path.exists(results_fpath) and not recount:
-        logger.log('INFO', f'Gathering label counts from: {results_fpath}')
-        return utils.load_json(results_fpath)
+    if os.path.exists(output_fpath) and not recount:
+        logger.log('INFO', f'Gathering label counts from: {output_fpath}')
+        return utils.load_json(output_fpath)
 
     # load blocks dict
-    blks_fpaths_dict = utils.load_json(blks_fpaths)
+    blks_fpaths_dict = utils.load_json(input_blocks)
 
     # aggregate pixel count in each block
     count_results = {}
@@ -68,6 +68,6 @@ def count_label_class(
             count_results[layer] = [int(x) for x in count_results[layer]]
 
     # save to file and return
-    logger.log('INFO', f'Label class distributions save to {results_fpath}')
-    utils.write_json(results_fpath, count_results)
+    logger.log('INFO', f'Label class distributions save to {output_fpath}')
+    utils.write_json(output_fpath, count_results)
     return count_results

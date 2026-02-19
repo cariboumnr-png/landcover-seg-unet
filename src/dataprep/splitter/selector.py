@@ -6,25 +6,7 @@ import math
 import dataprep
 import utils
 
-# split training blocks into training and validation dataset
-def split_blocks(
-    scores: list[dataprep.BlockScore],
-    training_blocks: str,
-    validation_blocks: str,
-    logger: utils.Logger,
-) -> None:
-    '''Split validation/training data.'''
-
-    # get validation blocks
-    v_blks = _select_validation_blocks(scores, logger)
-    t_blks = {b['name']: b['path'] for b in scores if b['name'] not in v_blks}
-
-    # write validation blocks to json
-    utils.write_json(validation_blocks, v_blks)
-    # write training blocks to json
-    utils.write_json(training_blocks, t_blks)
-
-def _select_validation_blocks(
+def select_val_blocks(
     scores: list[dataprep.BlockScore],
     logger: utils.Logger,
     **kwargs
@@ -41,13 +23,13 @@ def _select_validation_blocks(
 
     # iterat through blocks
     for i, blk in enumerate(scores):
-        x = blk['col']
-        y = blk['row']
+        x = blk.col
+        y = blk.row
         assert isinstance(x, int) and isinstance(y, int) # typing sanity
         dd = _min_distance_from_locs(existing_locs, (x, y))
         if dd >= min_dist:
             existing_locs.append((x, y))
-            return_dict[blk['name']] = blk['path']
+            return_dict[blk.name] = blk.path
         if len(return_dict) == num_blk:
             logger.log('INFO', f'Gathered enough blocks at block {i + 1}')
             break

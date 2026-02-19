@@ -15,6 +15,7 @@ __all__ = [
     'DataBlock',
     'BuilderConfig',
     'DataWindows',
+    'ScoreParams',
     # functions
     'count_label_class',
     'get_block_builder',
@@ -22,14 +23,14 @@ __all__ = [
     'prepare_data',
     'score_blocks',
     'validate_geometry',
+    'select_val_blocks',
+    'split_blocks',
     # typing
     'BlockMeta',
     'ImageStats',
     'GeometrySummary',
     'InputConfig',
-    'ArtifactConfig',
-    'PixelThresholdConfig',
-    'ScoringConfig',
+    'ProcessConfig',
     'BlockBuilderConfigs',
     'DataprepConfigs',
     'BlockScore',
@@ -37,28 +38,30 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .config import (InputConfig, ArtifactConfig, PixelThresholdConfig,
-                         ScoringConfig, BlockBuilderConfigs, DataprepConfigs)
+    from .config import (InputConfig, BlockBuilderConfigs, ProcessConfig,
+                         DataprepConfigs)
     from .mapper import map_rasters, validate_geometry, GeometrySummary, DataWindows
     from .blockbuilder import (DataBlock, BlockMeta, ImageStats, BlockCacheBuilder,
                                BuilderConfig, get_block_builder)
-    from .partitioner import BlockScore, score_blocks
+    from .splitter import (BlockScore, ScoreParams, score_blocks, select_val_blocks,
+                           split_blocks)
     from .pipeline import prepare_data
     from .utils import count_label_class
 
 def __getattr__(name: str):
 
-    if name in ['InputConfig',' ArtifactConfig',' CacheConfig', 'ScoringConfig',
-                'PixelThresholdConfig', 'BlockBuilderConfigs', 'DataprepConfigs']:
+    if name in ['InputConfig', 'BlockBuilderConfigs', 'ProcessConfig',
+                'DataprepConfigs']:
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['map_rasters', 'validate_geometry', 'GeometrySummary',
                 'DataWindows']:
         return getattr(importlib.import_module('.mapper', __package__), name)
     if name in ['DataBlock', 'BlockMeta', 'ImageStats', 'BlockCacheBuilder',
-                'BuilderConfig']:
+                'BuilderConfig', 'get_block_builder']:
         return getattr(importlib.import_module('.blockbuilder', __package__), name)
-    if name in ['BlockScore', 'score_blocks']:
-        return getattr(importlib.import_module('.score', __package__), name)
+    if name in ['BlockScore', 'ScoreParams', 'score_blocks', 'select_val_blocks',
+                'split_blocks']:
+        return getattr(importlib.import_module('.splitter', __package__), name)
     if name in ['prepare_data']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
     if name in ['count_label_class']:

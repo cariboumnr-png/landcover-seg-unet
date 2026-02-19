@@ -46,8 +46,8 @@ def normalize_dataset(
     # count label classes only on training blocks
     if mode == 'training':
         dataprep.count_label_class(
-            blks_fpaths=blks_fpath,
-            results_fpath=lbl_count_fpath,
+            input_blocks=blks_fpath,
+            output_fpath=lbl_count_fpath,
             logger=logger,
             recount=cache_cfg.get_option('flags', 'overwrite_counts')
         )
