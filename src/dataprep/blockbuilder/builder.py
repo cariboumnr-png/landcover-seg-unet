@@ -1,13 +1,32 @@
 '''doc'''
 
-# local import
+# standard imports
+import os
+# local imports
 import dataprep
 import utils
 
-def get_block_builder(
+def build_data_blocks(
+    mode: str,
+    config: dataprep.BlockBuildingConfig,
+    logger: utils.Logger
+) -> None:
+    '''doc'''
+
+    # mode derivatives
+    windows_key = f'{mode}_windows'
+    thres_key = f'blk_thres_{mode}'
+    # fit raster windows
+    windows = utils.load_pickle(config[windows_key])
+    # build fit blocks
+    builder = _get_blocks_builder(windows, mode, config, logger)
+    builder.build_block_cache()
+    builder.build_valid_block_index(config[thres_key])
+
+def _get_blocks_builder(
     windows: dataprep.DataWindows,
     mode: str,
-    config: dataprep.BlockBuilderConfigs,
+    config: dataprep.IOConfig,
     logger: utils.Logger
 ) -> dataprep.BlockCacheBuilder:
     '''doc'''

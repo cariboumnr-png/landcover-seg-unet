@@ -6,8 +6,9 @@ cache: ${artifacts.root}/data_cache
 
 # derived paths for current dataset (dirname = dataset name)
 # fit input data
-fit: ${artifacts.root}/${dataset.name}/fit
+fit: ${artifacts.cache}/${dataset.name}/fit
 # fit blocks building
+fit_raster_windows: ${artifacts.fit}/fit_raster_windows.pkl
 fit_blocks_dir: ${artifacts.fit}/blocks
 fit_all_blocks: ${artifacts.fit}/all_blocks.json
 fit_valid_blocks: ${artifacts.fit}/valid_blocks.json
@@ -21,8 +22,9 @@ val_blocks_split: ${artifacts.fit}/val_blocks_split.json
 # train data label count for downstream, e.g., LA
 label_count_train: ${artifacts.fit}/count_train.json
 # test input data (optional)
-test: ${artifacts.root}/${dataset.name}/test
+test: ${artifacts.cache}/${dataset.name}/test
 # test blocks building
+test_raster_windows: ${artifacts.test}/test_raster_windows.pkl
 test_blocks_dir: ${artifacts.test}/blocks
 test_all_blocks: ${artifacts.test}/all_blocks.json
 # test blocks stats for normalization

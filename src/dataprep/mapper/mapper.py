@@ -11,7 +11,7 @@ import dataprep
 import grid
 import utils
 
-# ------------------------------Public  Dataclass------------------------------
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class DataWindows:
     '''Container for input read windows and expected window shape.'''
@@ -19,30 +19,41 @@ class DataWindows:
     label_windows: alias.RasterWindowDict   # indexed read windows can be empty
     expected_shape: tuple[int, int]  # expected window shape (W*H) in px
 
+# -------------------------------Public Function-------------------------------
 def map_rasters(
     world_grid: grid.GridLayout,
-    mode: str,
-    config: dataprep.InputConfig,
+    config: dataprep.IOConfig,
     logger: utils.Logger
-) -> DataWindows:
+) -> None:
     '''doc'''
 
-    # mode selection
-    if mode == 'fit':
-        image_fpath=config['fit_input_img']
-        label_fpath=config['fit_input_lbl']
-    elif mode == 'test':
-        assert config['test_input_img'] # sanity type check
-        image_fpath=config['test_input_img']
-        label_fpath=None
-    else:
-        raise ValueError(f'Invalid builder mode {mode}')
+    # paths to artifacts from fit input
+    fit_img = config['fit_input_img']
+    fit_lbl = config['fit_input_lbl']
+    fit_windows = config['fit_windows']
+    # map fit data
+    _map(world_grid, fit_img, fit_lbl, fit_windows, logger)
+
+    # paths to artifacts from test input if provided
+    test_img = config['test_input_img']
+    test_windows = config['test_windows']
+    # map test data if provided
+    if test_img:
+        _map(world_grid, test_img, None, test_windows, logger)
+
+def _map(
+    world_grid: grid.GridLayout,
+    image_fpath: str,
+    label_fpath: str | None,
+    windows_fpath: str,
+    logger: utils.Logger
+) -> None:
+    '''doc'''
 
     # get geometry summary
     geom = dataprep.validate_geometry(image_fpath, label_fpath, logger)
 
-    # alignment to the world grid
-    # check CRS match
+    # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
     data_crs = geom['crs']
     if grid_crs != data_crs:
@@ -55,9 +66,11 @@ def map_rasters(
     img_windows = _get_windows(world_grid, geom['image_transform'], inside)
     lbl_windows = _get_windows(world_grid, geom['label_transform'], inside)
 
-    # return
-    return DataWindows(img_windows, lbl_windows, world_grid.tile_size)
+    # pickle
+    data = DataWindows(img_windows, lbl_windows, world_grid.tile_size)
+    utils.write_pickle(windows_fpath, data)
 
+# ------------------------------private  function------------------------------
 def _crop(
     world_grid: grid.GridLayout,
     geom_summary: dataprep.GeometrySummary,
@@ -90,11 +103,11 @@ def _get_windows(
     world_grid: grid.GridLayout,
     transform: rasterio.Affine | None,
     inside_idx: list[tuple[int, int]]
-) -> dict[tuple[int, int], alias.RasterWindow]:
+) -> alias.RasterWindowDict:
     '''doc'''
 
     # get raster reading windows - empty when transform is None
-    windows: dict[tuple[int, int], alias.RasterWindow] = {}
+    windows: alias.RasterWindowDict = {}
     if transform is not None:
         # set grid offset for label
         _grid = copy.deepcopy(world_grid)

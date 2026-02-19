@@ -12,6 +12,7 @@ class InputConfig(typing.TypedDict):
 
 class OutputConfig(typing.TypedDict):
     '''Paths to artifacts generated during data preparation.'''
+    fit_windows: str
     fit_blks_dir: str
     fit_all_blks: str
     fit_valid_blks: str
@@ -21,6 +22,7 @@ class OutputConfig(typing.TypedDict):
     train_blks: str
     val_blks: str
     lbl_count_train: str
+    test_windows: str
     test_blks_dir: str
     test_all_blks: str
     test_img_stats: str
@@ -38,13 +40,20 @@ class ScoringConfig(typing.TypedDict):
     score_epsilon: float
     score_reward: tuple[int, ...]
 
-class BlockBuilderConfigs(
+class IOConfig(
+    InputConfig,
+    OutputConfig,
+    typing.TypedDict
+):
+    '''Bimodal I/O paths for configuring a block builder.'''
+
+class BlockBuildingConfig(
     InputConfig,
     OutputConfig,
     PixelThresholdConfig,
     typing.TypedDict
 ):
-    '''Bimodal I/O paths for configuring a block builder.'''
+    '''Block building related config'''
 
 class ProcessConfig(
     OutputConfig,

@@ -11,7 +11,7 @@ def split_blocks(
     logger: utils.Logger,
     *,
     rebuild: bool = False
-):
+) -> None:
     '''doc'''
 
     # get a child logger
@@ -54,3 +54,10 @@ def split_blocks(
     # write train and val blocks to json artifacts
     utils.write_json(process_config['train_blks'], trains)
     utils.write_json(process_config['val_blks'], vals)
+
+    # count label classes from training blocks
+    dataprep.count_label_class(
+        input_blocks=process_config['train_blks'],
+        output_fpath=process_config['lbl_count_train'],
+        logger=logger
+    )
