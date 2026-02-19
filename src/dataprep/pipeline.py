@@ -31,6 +31,8 @@ def prepare_data(
     dataprep.normalize_data_blocks('fit', cfg, logger)
     # split fit blocks
     dataprep.split_blocks(cfg, logger)
+    # count label class for train blocks
+    dataprep.count_label_class(cfg['train_blks'], cfg['lbl_count_train'], logger)
 
     # map test raster to world grid if provided
     if cfg['test_input_img']:
