@@ -53,7 +53,9 @@ def split_blocks(
 
     # write train and val blocks to json artifacts
     utils.write_json(process_config['train_blks'], trains)
+    utils.hash_artifacts(process_config['train_blks'])
     utils.write_json(process_config['val_blks'], vals)
+    utils.hash_artifacts(process_config['val_blks'])
 
     # count label classes from training blocks
     dataprep.count_label_class(

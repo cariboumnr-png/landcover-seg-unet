@@ -174,6 +174,8 @@ class BlockCacheBuilder:
         self.logger.log('INFO', f'Got {len(self.valid_blks)} valid blocks')
         self.logger.log('INFO', f'Valid blocks json saved to {_blks}')
         utils.write_json(_blks, self.valid_blks)
+        utils.hash_artifacts(_blks)
+
 
     # -----------------------------internal method-----------------------------
     def _prepare_block_windows(self):
@@ -213,6 +215,7 @@ class BlockCacheBuilder:
         }
         # write an artifect: normal block list
         utils.write_json(self.config.all_blocks, self.all_blocks)
+        utils.hash_artifacts(self.config.all_blocks)
 
     def _validate_existing_blocks(self) -> None:
         '''

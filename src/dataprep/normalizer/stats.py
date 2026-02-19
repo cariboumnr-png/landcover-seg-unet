@@ -61,6 +61,7 @@ def get_image_stats(
     # save results to file and return
     logger.log('INFO', f'Global image stats save to {stats_fpath}')
     utils.write_json(stats_fpath, stats_dict)
+    utils.hash_artifacts(stats_fpath)
     return stats_dict
 
 def _validate_image_stats(

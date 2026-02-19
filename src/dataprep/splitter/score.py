@@ -54,6 +54,7 @@ def score_blocks(
 
     # save sorted scores to a file
     utils.write_json(scores_path, [dataclasses.asdict(s) for s in sorted_scores])
+    utils.hash_artifacts(scores_path)
     return sorted_scores
 
 def _score(

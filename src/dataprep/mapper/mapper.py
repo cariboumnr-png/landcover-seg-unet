@@ -3,6 +3,7 @@
 # standard imports
 import copy
 import dataclasses
+import os
 # third-party imports
 import rasterio
 # local imports
@@ -23,7 +24,9 @@ class DataWindows:
 def map_rasters(
     world_grid: grid.GridLayout,
     config: dataprep.IOConfig,
-    logger: utils.Logger
+    logger: utils.Logger,
+    *,
+    remap: bool = False
 ) -> None:
     '''doc'''
 
@@ -32,14 +35,15 @@ def map_rasters(
     fit_lbl = config['fit_input_lbl']
     fit_windows = config['fit_windows']
     # map fit data
-    _map(world_grid, fit_img, fit_lbl, fit_windows, logger)
+    if not os.path.exists(fit_windows) or remap:
+        _map(world_grid, fit_img, fit_lbl, fit_windows, logger)
 
     # paths to artifacts from test input if provided
     test_img = config['test_input_img']
     test_windows = config['test_windows']
     # map test data if provided
-    if test_img:
-        _map(world_grid, test_img, None, test_windows, logger)
+    if test_img and (not os.path.exists(test_windows) or remap):
+            _map(world_grid, test_img, None, test_windows, logger)
 
 def _map(
     world_grid: grid.GridLayout,
@@ -69,6 +73,7 @@ def _map(
     # pickle
     data = DataWindows(img_windows, lbl_windows, world_grid.tile_size)
     utils.write_pickle(windows_fpath, data)
+    utils.hash_artifacts(windows_fpath)
 
 # ------------------------------private  function------------------------------
 def _crop(

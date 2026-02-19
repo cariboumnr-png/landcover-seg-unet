@@ -1,5 +1,7 @@
 '''doc'''
 
+# standard imports
+import os
 # local imports
 import alias
 import dataprep
@@ -21,6 +23,8 @@ def prepare_data(
     # get pipeline configs from input
     cfg = _parse_configs(inputs_config, artifact_config, proc_config)
 
+    # create a hash record for upcoming artifacts
+    _create_hash_record(artifact_config['fit'])
     # map fit rasters to world grid
     dataprep.map_rasters(world_grid, cfg, logger)
     # build fit blocks
@@ -32,6 +36,8 @@ def prepare_data(
 
     # map test raster to world grid if provided
     if cfg['test_input_img']:
+        # create a hash record for upcoming artifacts
+        _create_hash_record(artifact_config['test'])
         dataprep.map_rasters(world_grid, cfg, logger)
         # build test blocks
         dataprep.build_data_blocks('test', cfg, logger)
@@ -87,3 +93,11 @@ def _parse_configs(
     assert return_cfg['input_config'] is not None
 
     return return_cfg
+
+def _create_hash_record(root: str) -> None:
+    '''doc'''
+
+    os.makedirs(root, exist_ok=True)
+    hash_record = f'{root}/hash'
+    with open(hash_record, 'w') as file:
+        file.write(f'{root}\n') # write artifacts root

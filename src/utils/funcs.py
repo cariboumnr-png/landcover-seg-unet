@@ -94,6 +94,36 @@ def write_pickle(pickle_fpath: str, src_obj: typing.Any) -> None:
     with open(pickle_fpath, 'wb') as file:
         pickle.dump(src_obj, file)
 
+def hash_artifacts(fpath: str) -> None:
+    '''Hash an artifact and write to a hash file.'''
+
+    # get root and name of the file
+    root = os.path.dirname(fpath)
+    fname = os.path.basename(fpath)
+    # create a hash record file if not already present
+    hash_record = f'{root}/hash'
+    if not os.path.exists(hash_record):
+        with open(hash_record, 'w') as record:
+            record.write(f'{root}\n') # write artifacts root
+    # otherwise hash
+    with open(fpath, 'rb') as file:
+        sha256 = hashlib.sha256()
+        for chunk in iter(lambda: file.read(8192), b''):
+            sha256.update(chunk)
+    # check hash in record
+    with open(hash_record, 'r') as record:
+        records = record.readlines()
+    not_present = True
+    for i, r in enumerate(records):
+        if fname in r:
+            records[i] = f'{fname},{sha256.hexdigest()}\n'
+            not_present = False
+    if not_present:
+        records.append(f'{fname},{sha256.hexdigest()}\n')
+    # update record
+    with open(hash_record, 'w') as record:
+        record.writelines(records)
+
 def hash_payload(payload: typing.Any) -> str:
     '''
     Hash a JSON-serializable payload.
