@@ -1,7 +1,5 @@
 '''doc'''
 
-# standard imports
-import os
 # local imports
 import dataprep
 import utils
@@ -9,7 +7,9 @@ import utils
 def build_data_blocks(
     mode: str,
     config: dataprep.BlockBuildingConfig,
-    logger: utils.Logger
+    logger: utils.Logger,
+    *,
+    rebuild: bool = False
 ) -> None:
     '''doc'''
 
@@ -21,7 +21,7 @@ def build_data_blocks(
     # build fit blocks
     builder = _get_blocks_builder(windows, mode, config, logger)
     builder.build_block_cache()
-    builder.build_valid_block_index(config[thres_key])
+    builder.build_valid_block_index(config[thres_key], rebuild=rebuild)
 
 def _get_blocks_builder(
     windows: dataprep.DataWindows,
