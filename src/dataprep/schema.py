@@ -17,7 +17,12 @@ def build_schema(
 
     # read a sample block to get meta
     sample = next(iter(utils.load_json(config['train_blks']).values()))
-    meta = dataprep.DataBlock().load(sample).meta
+    sample_data = dataprep.DataBlock().load(sample).data
+    sample_meta = dataprep.DataBlock().load(sample).meta
+
+    # image and label shape
+    image_shape = sample_data.image_normalized.shape
+    label_shape = sample_data.label_masked.shape
 
     # populate schema dict
     schema = {
@@ -25,8 +30,8 @@ def build_schema(
 
         'dataset': {
             'name': os.path.basename(data_cache_root), # dataset name
-            'created_at': utils.get_timestamp(),
-            'dataprep_commit': '',
+            'created_at': utils.get_timestamp('%Y-%m-%dT%H:%M:%S'), # ISO-8601
+            'dataprep_commit': 'dev', # to be fixed once branch stable
         },
 
         'io_conventions': {
@@ -46,13 +51,28 @@ def build_schema(
                 'label': 'uint8',
                 'valid_mask': 'bool'
             },
-            'ignore_index': meta['ignore_label']
+            'ignore_index': sample_meta['ignore_label']
+        },
+
+        'tensor_shapes': {
+            'image': {
+                'order': 'C,H,W',
+                'C': image_shape[0],
+                'H': image_shape[1],
+                'W': image_shape[2]
+            },
+            'label': {
+                'order': 'L,H,W',
+                'L': label_shape[0],
+                'H': label_shape[1],
+                'W': label_shape[2]
+            }
         },
 
         'labels': {
-            'label_num_classes': meta['label_num_classes'],
-            'label_to_ignore': meta['label_to_ignore'],
-            'heads_topology': _get_topology(meta['label_count'])
+            'label_num_classes': sample_meta['label_num_classes'],
+            'label_to_ignore': sample_meta['label_to_ignore'],
+            'heads_topology': _get_topology(sample_meta['label_count'])
         },
 
         'normalization': {
@@ -73,6 +93,7 @@ def build_schema(
         }
     }
 
+    # write schema to json
     utils.write_json(f'{data_cache_root}/schema.json', schema)
 
 def _resolve(fpath: str) -> dict[str, str]:

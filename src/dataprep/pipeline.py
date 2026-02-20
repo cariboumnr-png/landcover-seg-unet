@@ -1,7 +1,5 @@
 '''doc'''
 
-# standard imports
-import os
 # local imports
 import alias
 import dataprep
@@ -41,7 +39,7 @@ def prepare_data(
         dataprep.normalize_data_blocks('test', cfg, logger)
 
     # generate schema
-    data_cache_root = f'{artifact_config['cache']/inputs_config['name']}'
+    data_cache_root = f'{artifact_config["cache"]}/{inputs_config["name"]}'
     dataprep.build_schema(data_cache_root, cfg)
 
 def _parse_configs(
