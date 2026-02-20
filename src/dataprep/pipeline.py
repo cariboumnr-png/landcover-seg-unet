@@ -7,40 +7,51 @@ import grid
 import utils
 
 def prepare_data(
-    world_grid: grid.GridLayout,
+    world_grid: tuple[str, grid.GridLayout],
     inputs_config: alias.ConfigType,
     artifact_config: alias.ConfigType,
     proc_config: alias.ConfigType,
-    logger: utils.Logger
+    logger: utils.Logger,
+    **kwargs
 ):
     '''doc'''
 
+    # get flags from keyword arguments
+    rebuild_all = kwargs.get('rebuild_all', False)
+    remap = kwargs.get('remap', rebuild_all)
+    rebuild_blocks = kwargs.get('rebuild_blocks', rebuild_all)
+    renorm = kwargs.get('renormalize', rebuild_all)
+    rebuild_split = kwargs.get('rebuild_split', rebuild_all)
+
     # get a child logger
     logger = logger.get_child('dprep')
+
+    # parse world grid
+    grid_id, work_grid = world_grid
 
     # get pipeline configs from input
     cfg = _parse_configs(inputs_config, artifact_config, proc_config)
 
     # map fit rasters to world grid
-    dataprep.map_rasters(world_grid, cfg, logger)
+    dataprep.map_rasters(work_grid, cfg, logger, remap=remap)
     # build fit blocks
-    dataprep.build_data_blocks('fit', cfg, logger)
+    dataprep.build_data_blocks('fit', cfg, logger, rebuild=rebuild_blocks)
     # normalize fit blocks
-    dataprep.normalize_data_blocks('fit', cfg, logger)
+    dataprep.normalize_data_blocks('fit', cfg, logger, renormalize=renorm)
     # split fit blocks
-    dataprep.split_blocks(cfg, logger)
+    dataprep.split_blocks(cfg, logger, rebuild=rebuild_split)
 
     # map test raster to world grid if provided
     if cfg['test_input_img']:
-        dataprep.map_rasters(world_grid, cfg, logger)
+        dataprep.map_rasters(work_grid, cfg, logger, remap=remap)
         # build test blocks
-        dataprep.build_data_blocks('test', cfg, logger)
+        dataprep.build_data_blocks('test', cfg, logger, rebuild=rebuild_blocks)
         # normalize test blocks
-        dataprep.normalize_data_blocks('test', cfg, logger)
+        dataprep.normalize_data_blocks('test', cfg, logger, renormalize=renorm)
 
     # generate schema
     data_cache_root = f'{artifact_config["cache"]}/{inputs_config["name"]}'
-    dataprep.build_schema(data_cache_root, cfg)
+    dataprep.build_schema(grid_id, data_cache_root, cfg)
 
 def _parse_configs(
     input_data_config: alias.ConfigType,
