@@ -436,6 +436,14 @@ class DataBlock:
         # collection of final layers
         fn_stack = [layer1_valid] # layer1 as the first element of the list
 
+        # if no reclass, only keep layer1 == original label
+        if not label_reclass:
+            self.data.label_masked = numpy.stack(fn_stack, axis=0)
+            self.meta['valid_pixel_ratio'].update({
+                'layer1': float(numpy.sum(layer1_mask) / layer1_valid.size)
+            })
+            return
+
         # iterate through layer1 classes in reclass map
         for band_num, classes in label_reclass.items():
             # mask to the current layer 1 class (as the layer2 subclasses)
@@ -471,13 +479,17 @@ class DataBlock:
             return
 
         # supposed number of classes for each label layer
-        n_classes = [
-            self.meta['label_num_classes'], # count of original label
-            len(self.meta['label_reclass_map']) # count of reclassed lyr1
-        ]
-        n_classes.extend([
-            len(v) for v in self.meta['label_reclass_map'].values()
-        ]) # counts of lyr2 groups
+        label_num = self.meta['label_num_classes']
+        reclass_map = self.meta['label_reclass_map']
+
+        # when no reclass, treat layer1 as original classes
+        if not reclass_map:
+            n_classes = [label_num, label_num]
+        # count of original label and reclassed layer1 groups
+        else:
+            n_classes = [label_num, len(reclass_map)]
+            # counts of layer2 groups
+            n_classes.extend([len(v) for v in reclass_map.values()])
 
         # all arrays to be counted
         lyrs = numpy.concatenate(
@@ -495,34 +507,31 @@ class DataBlock:
             uniques, counts = numpy.unique(filtered, return_counts=True)
 
             # convert to list. avoid using arr.tolist()
-            uu = [int(_) for _ in uniques]
-            cc = [int(_) for _ in counts]
+            uniques = [int(_) for _ in uniques]
+            counts = [int(_) for _ in counts]
 
             # shannon entropy
-            ent = 0.0
-            for _ in cc:
-                p = _ / sum(cc)
-                ent -= p * math.log2(p)
+            ent = _Calc.entropy(counts)
 
             # assign zero count to no_show classes
-            counts = []
+            cc = []
             for _ in range(n_classes[i]):
                 idx = _ + 1
-                if idx in uu:
-                    count_idx = uu.index(idx)
-                    counts.append(cc[count_idx])
+                if idx in uniques:
+                    count_idx = uniques.index(idx)
+                    cc.append(counts[count_idx])
                 else:
-                    counts.append(0)
+                    cc.append(0)
 
             # add to metadata
             if i == 0:
-                self.meta['label_count'].update({'original_label': counts})
+                self.meta['label_count'].update({'original_label': cc})
                 self.meta['label_entropy'].update({'original_label': ent})
             elif i == 1:
-                self.meta['label_count'].update({'layer1': counts})
+                self.meta['label_count'].update({'layer1': cc})
                 self.meta['label_entropy'].update({'layer1': ent})
             else:
-                self.meta['label_count'].update({f'layer2_{i - 1}': counts})
+                self.meta['label_count'].update({f'layer2_{i - 1}': cc})
                 self.meta['label_entropy'].update({f'layer2_{i - 1}': ent})
 
     def _get_block_valid_mask(self):
@@ -591,6 +600,17 @@ class _Calc:
         return numpy.ma.masked_where(
             numpy.isclose(band, nodata), band.astype(numpy.float64)
         )
+
+    @staticmethod
+    def entropy(counts):
+        '''Shannon entropy.'''
+        ent = 0.0
+        ss = sum(counts)
+        for c in counts:
+            if c > 0:
+                p = c / ss
+                ent -= p * math.log2(p)
+        return ent
 
     @staticmethod
     def ndvi(nir, red, nodata):
