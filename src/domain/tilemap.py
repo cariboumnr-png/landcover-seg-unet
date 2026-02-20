@@ -203,7 +203,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     @property
     def max_id(self) -> int:
         '''Gloabl max index.'''
-        return self._range[1]
+        return max(tile['majority'] or 0 for tile in self._data.values())
 
     @property
     def n_pca_ax(self) -> int:
