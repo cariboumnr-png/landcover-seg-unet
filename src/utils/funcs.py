@@ -94,35 +94,33 @@ def write_pickle(pickle_fpath: str, src_obj: typing.Any) -> None:
     with open(pickle_fpath, 'wb') as file:
         pickle.dump(src_obj, file)
 
-def hash_artifacts(fpath: str) -> None:
+def hash_artifacts(fpath: str, write_to_record: bool = True) -> str:
     '''Hash an artifact and write to a hash file.'''
 
-    # get root and name of the file
-    root = os.path.dirname(fpath)
-    fname = os.path.basename(fpath)
-    # create a hash record file if not already present
-    hash_record = f'{root}/hash'
-    if not os.path.exists(hash_record):
-        with open(hash_record, 'w') as record:
-            record.write(f'{root}\n') # write artifacts root
-    # otherwise hash
+    # get hash as a string
     with open(fpath, 'rb') as file:
         sha256 = hashlib.sha256()
         for chunk in iter(lambda: file.read(8192), b''):
             sha256.update(chunk)
-    # check hash in record
-    with open(hash_record, 'r') as record:
-        records = record.readlines()
-    not_present = True
-    for i, r in enumerate(records):
-        if fname in r:
-            records[i] = f'{fname},{sha256.hexdigest()}\n'
-            not_present = False
-    if not_present:
-        records.append(f'{fname},{sha256.hexdigest()}\n')
-    # update record
-    with open(hash_record, 'w') as record:
-        record.writelines(records)
+    hash_value = sha256.hexdigest()
+
+    # if needs to write to a record at the root
+    if write_to_record:
+        # get root and name of the file
+        root = os.path.dirname(fpath)
+        fname = os.path.basename(fpath)
+        # create a hash record file at the root if not already present
+        hash_record_path = f'{root}/hash.json'
+        if not os.path.exists(hash_record_path):
+            write_json(hash_record_path, {'root': root})
+        # check hash in record
+        records = load_json(hash_record_path)
+        records[fname] = hash_value
+        # update record
+        write_json(hash_record_path, records)
+
+    # return
+    return hash_value
 
 def hash_payload(payload: typing.Any) -> str:
     '''

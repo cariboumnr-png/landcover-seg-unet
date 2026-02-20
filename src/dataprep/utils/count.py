@@ -70,4 +70,5 @@ def count_label_class(
     # save to file and return
     logger.log('INFO', f'Label class distributions save to {output_fpath}')
     utils.write_json(output_fpath, count_results)
+    utils.hash_artifacts(output_fpath)
     return count_results

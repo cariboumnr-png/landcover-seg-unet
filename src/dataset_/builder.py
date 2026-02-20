@@ -215,13 +215,13 @@ def _heads_stats(train_label_count_fpath: str) -> _Heads:
 
         # emit topology for current convention - from layer naming
         if layer_name == 'layer1':
-            topology[layer_name] = {'head': None, 'cls': None}
+            topology[layer_name] = {'parent': None, 'parent_cls': None}
         elif layer_name.startswith('layer2_'):
             cls_id = int(layer_name.split('layer2_')[1])
-            topology[layer_name] = {'head': 'layer1', 'cls': cls_id}
+            topology[layer_name] = {'parent': 'layer1', 'parent_cls': cls_id}
         else:
             # if future names appear, one can decide to raise or set None
-            topology[layer_name] = {'head': None, 'cls': None}
+            topology[layer_name] = {'parent': None, 'parent_cls': None}
 
     # return the dicts
     return _Heads(heads_w_counts, logits_adjust, topology)

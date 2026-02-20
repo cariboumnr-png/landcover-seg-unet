@@ -20,6 +20,7 @@ __all__ = [
     # functions
     'count_label_class',
     'build_data_blocks',
+    'build_schema',
     'map_rasters',
     'prepare_data',
     'score_blocks',
@@ -52,6 +53,7 @@ if typing.TYPE_CHECKING:
     from .splitter import (BlockScore, ScoreParams, score_blocks, select_val_blocks,
                            split_blocks)
     from .pipeline import prepare_data
+    from .schema import  build_schema
     from .utils import count_label_class
 
 def __getattr__(name: str):
@@ -72,6 +74,8 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.splitter', __package__), name)
     if name in ['prepare_data']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in ['build_schema']:
+        return getattr(importlib.import_module('.schema', __package__), name)
     if name in ['count_label_class']:
         return getattr(importlib.import_module('.utils', __package__), name)
 

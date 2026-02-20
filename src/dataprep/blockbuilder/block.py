@@ -25,8 +25,8 @@ any raster I/O.
 - Required metadata includes (non-exhaustive):
   * image_nodata, label_nodata, ignore_label, dem_pad
   * band_assignment with at least: 'red', 'nir', 'swir1', 'swir2'
-  * label1_num_classes, label1_to_ignore, label1_reclass_map,
-    label1_class_name, label1_reclass_name
+  * label_num_classes, label_to_ignore, label_reclass_map,
+    label_class_name, label_reclass_name
   * block_name
 - Nodata handling relies on np.isnan / np.isclose and masked arrays;
   ensure nodata values are correctly specified.
@@ -51,11 +51,11 @@ class BlockMeta(typing.TypedDict):
     # label metadata
     label_nodata: int
     ignore_label: int
-    label1_num_classes: int
-    label1_to_ignore: list[int]
-    label1_class_name: dict[str, str]
-    label1_reclass_map: dict[str, list[int]]
-    label1_reclass_name: dict[str, str]
+    label_num_classes: int
+    label_to_ignore: list[int]
+    label_class_name: dict[str, str]
+    label_reclass_map: dict[str, list[int]]
+    label_reclass_name: dict[str, str]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
     # image metadata
@@ -151,14 +151,14 @@ class DataBlock:
             'has_label': True,
             'label_nodata': 0,
             'ignore_label': 0,
-            'label1_num_classes': 0,
-            'label1_to_ignore': [],
-            'label1_class_name': {},
-            'label1_reclass_map': {},
-            'label1_reclass_name': {},
+            'label_num_classes': 0,
+            'label_to_ignore': [],
+            'label_class_name': {},
+            'label_reclass_map': {},
+            'label_reclass_name': {},
             'label_count': {},
             'label_entropy': {},
-            'image_nodata': 0.0,
+            'image_nodata': numpy.nan,
             'dem_pad': 0,
             'band_map': {},
             'spectral_indices_added': [],
@@ -333,12 +333,12 @@ class DataBlock:
         '''Add spectral indices using loaded Landsat bands.'''
 
         # skip if already created
-        if self.meta.get('spectral_indices_added', False):
+        if self.meta['spectral_indices_added']:
             return
 
         # retrieve from meta
-        spec_bands = self.meta.get('band_map', {})
-        nodata = self.meta.get('image_nodata', numpy.nan)
+        spec_bands = self.meta['band_map']
+        nodata = self.meta['image_nodata']
 
         # assertions
         assert all(k in spec_bands for k in ['red', 'nir', 'swir1', 'swir2'])
@@ -369,12 +369,12 @@ class DataBlock:
         '''Add topographical metrics to the image array.'''
 
         # skip if already added
-        if self.meta.get('topo_metrics_added', False):
+        if self.meta['topo_metrics_added']:
             return
 
         # get vars
         pad = self.meta['dem_pad']
-        nodata = self.meta.get('image_nodata', numpy.nan)
+        nodata = self.meta['image_nodata']
         max_h, max_w = self.data.image_dem_padded.shape
         # sanity check
         assert self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad), \
@@ -421,23 +421,23 @@ class DataBlock:
             return
 
         # get value from meta
-        label_nodata = self.meta.get('label_nodata', 0) # ignore 0 -> safe
-        label1_to_ignore = self.meta.get('label1_to_ignore', [])
-        ignore_label = self.meta.get('ignore_label', 255)
-        label1_reclass = self.meta.get('label1_reclass_map', {})
+        label_nodata = self.meta['label_nodata']
+        label_to_ignore = self.meta['label_to_ignore']
+        ignore_label = self.meta['ignore_label']
+        label_reclass = self.meta['label_reclass_map']
 
         # fill invalid pixels with ignore label
-        label1_to_ignore = list(label1_to_ignore) # avoid modifying the meta
-        label1_to_ignore.append(label_nodata)
-        label1_to_ignore = [x for x in label1_to_ignore if x is not None]
-        layer1_mask = ~numpy.isin(self.data.label, label1_to_ignore)
+        label_to_ignore = list(label_to_ignore) # avoid modifying the meta
+        label_to_ignore.append(label_nodata)
+        label_to_ignore = [x for x in label_to_ignore if x is not None]
+        layer1_mask = ~numpy.isin(self.data.label, label_to_ignore)
         layer1_valid = numpy.where(layer1_mask, self.data.label, ignore_label)
 
         # collection of final layers
         fn_stack = [layer1_valid] # layer1 as the first element of the list
 
         # iterate through layer1 classes in reclass map
-        for band_num, classes in label1_reclass.items():
+        for band_num, classes in label_reclass.items():
             # mask to the current layer 1 class (as the layer2 subclasses)
             _mask = numpy.isin(self.data.label, classes)
             # in-place reclass relevant pixels in layer1
@@ -457,7 +457,7 @@ class DataBlock:
         self.meta['valid_pixel_ratio'].update({
             'layer1': float(numpy.sum(layer1_mask) / layer1_valid.size)
         })
-        for i in range(len(label1_reclass)):
+        for i in range(len(label_reclass)):
             _valid = fn_stack[i + 1] != ignore_label
             self.meta['valid_pixel_ratio'].update({
                 f'layer2_{i + 1}': numpy.sum(_valid) / layer1_valid.size
@@ -472,11 +472,11 @@ class DataBlock:
 
         # supposed number of classes for each label layer
         n_classes = [
-            self.meta['label1_num_classes'], # count of original label
-            len(self.meta['label1_reclass_map']) # count of reclassed lyr1
+            self.meta['label_num_classes'], # count of original label
+            len(self.meta['label_reclass_map']) # count of reclassed lyr1
         ]
         n_classes.extend([
-            len(v) for v in self.meta['label1_reclass_map'].values()
+            len(v) for v in self.meta['label_reclass_map'].values()
         ]) # counts of lyr2 groups
 
         # all arrays to be counted
@@ -529,8 +529,8 @@ class DataBlock:
         '''Get a valid mask for the whole block.'''
 
         # get image nodata and ignore label index
-        img_nodata = self.meta.get('image_nodata', numpy.nan)
-        ignore_label = self.meta.get('ignore_label', 255)
+        img_nodata = self.meta['image_nodata']
+        ignore_label = self.meta['ignore_label']
 
         # for label data
         # if provided, locs where label layer1 is valid (not ignore)
@@ -559,7 +559,7 @@ class DataBlock:
         '''Per block stats for later aggregation using Welford's.'''
 
         # parse
-        image_nodata = self.meta.get('image_nodata', numpy.nan)
+        image_nodata = self.meta['image_nodata']
         # create dict for block stats
         self.meta['block_image_stats'] = {}
         #
