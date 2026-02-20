@@ -199,6 +199,17 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         # return class object
         return obj
 
+    # ----- property
+    @property
+    def max_id(self) -> int:
+        '''Gloabl max index.'''
+        return self._range[1]
+
+    @property
+    def n_pca_ax(self) -> int:
+        '''Number of PCA axes that achieves target variance.'''
+        return self._ctx.pca_axes_n
+
     # ----- private method
     def _map_domain_to_grid(self) -> list[alias.RasterTile]:
         '''
