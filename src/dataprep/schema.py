@@ -7,6 +7,7 @@ import dataprep
 import utils
 
 def build_schema(
+    world_grid_id: str,
     data_cache_root: str,
     config: dataprep.DataprepConfigs
 ):
@@ -31,6 +32,8 @@ def build_schema(
         'dataset': {
             'name': os.path.basename(data_cache_root), # dataset name
             'created_at': utils.get_timestamp('%Y-%m-%dT%H:%M:%S'), # ISO-8601
+            'world_grid': world_grid_id,
+            'has_test_data': has_test,
             'dataprep_commit': 'dev', # to be fixed once branch stable
         },
 
@@ -57,12 +60,14 @@ def build_schema(
         'tensor_shapes': {
             'image': {
                 'order': 'C,H,W',
+                'shape': [image_shape[0], image_shape[1], image_shape[2]],
                 'C': image_shape[0],
                 'H': image_shape[1],
                 'W': image_shape[2]
             },
             'label': {
                 'order': 'L,H,W',
+                'shape': [label_shape[0], label_shape[1], label_shape[2]],
                 'L': label_shape[0],
                 'H': label_shape[1],
                 'W': label_shape[2]
@@ -78,7 +83,7 @@ def build_schema(
         'normalization': {
             'method': 'per-channel-zscore',
             'fit_stats_file': _resolve(config['fit_img_stats']),
-            'test_stats_file': _resolve(config['test_img_stats']),
+            'test_stats_file': _resolve(config['test_img_stats']) if has_test else {},
         },
 
         'splits': {
@@ -115,7 +120,7 @@ def _resolve(fpath: str) -> dict[str, str]:
         raise ValueError('File hash not in record')
 
     # return a dict
-    return {'fpath': fpath, 'sh256': hash_records[fname]}
+    return {'fpath': fpath, 'sha256': hash_records[fname]}
 
 def _get_topology(label_count: dict[str, list[int]]):
     '''doc'''

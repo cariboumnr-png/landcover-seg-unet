@@ -7,10 +7,8 @@ import sys
 import hydra
 import omegaconf
 # local imports
-import src.dataprep
+import src.dataset_
 import src.dataset
-import src.domain
-import src.grid
 import src.models
 import src.training
 import src.utils
@@ -18,7 +16,6 @@ import src.utils
 # add resolvers to omegaconf for conveniences
 #  - convert decimals to percentages
 omegaconf.OmegaConf.register_new_resolver('c', lambda x: int(x * 100))
-
 
 # main process
 @hydra.main(config_path='./configs', config_name='config', version_base='1.3')
@@ -33,35 +30,9 @@ def main(config: omegaconf.DictConfig) -> None:
         console_lvl=10 # debug
     )
 
-    # -------------------------------------------------------------------------
-    # TEST: world grid preparation
-    gid, world_grid = src.grid.prep_world_grid(
-        extent=config.extent,
-        config=config.grid,
-        logger=logger
-    )
-    print(world_grid)
-
-    # TEST: domain mapping
-    domains = src.domain.prepare_domain(
-        grid_id=gid,
-        world_grid=world_grid,
-        config=config.domain,
-        logger=logger
-    )
-    for k, dom in domains.items():
-        print(k)
-        print(dom)
-
-    # TEST: data prep
-    src.dataprep.prepare_data(
-        world_grid=world_grid,
-        inputs_config=config.dataset,
-        artifact_config=config.artifacts,
-        proc_config=config.dataproc,
-        logger=logger
-    )
-    #--------------------------------------------------------------------------
+    # Branch test - data preparation
+    datapec = src.dataset_.load_data(config, logger)
+    print(datapec)
 
     # data preparation
     data_summary = src.dataset.prepare_data(

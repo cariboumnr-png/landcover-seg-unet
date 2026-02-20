@@ -7,3 +7,6 @@ files:
 valid_threshold: 0.7
 target_variance: 0.9
 output_dirpath: ${artifacts.domain}
+use_type:
+  ids: ecodistrict
+  vec: geology

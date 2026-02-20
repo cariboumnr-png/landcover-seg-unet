@@ -172,10 +172,14 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         ])
 
     # ----- public method
-    def pop(self, idx: tuple[int, int]) -> None:
-        '''Remove items from class (! duplicate class if necessary).'''
-
-        self._data.pop(idx)
+    def pop_many(self, coords: typing.Iterable[tuple[int, int]]) -> None:
+        '''Bulk delete items from class.'''
+        keys = list(coords)              # snapshot to be safe
+        for k in keys:
+            self._data.pop(k, None)      # O(1) each, ignore missing
+        if self._valid:
+            keep = set(self._data.keys())  # O(N)
+            self._valid = [k for k in self._valid if k in keep]  # O(V)
 
     def to_payload(self) -> DomainPayload:
         '''Generate class payload for json dump.'''
