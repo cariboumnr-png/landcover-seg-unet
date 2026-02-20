@@ -172,6 +172,11 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         ])
 
     # ----- public method
+    def pop(self, idx: tuple[int, int]) -> None:
+        '''Remove items from class (! duplicate class if necessary).'''
+
+        self._data.pop(idx)
+
     def to_payload(self) -> DomainPayload:
         '''Generate class payload for json dump.'''
 
@@ -203,7 +208,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     @property
     def max_id(self) -> int:
         '''Gloabl max index.'''
-        return max(tile['majority'] or 0 for tile in self._data.values())
+        return max(self._data[coord]['majority'] or 0 for coord in self._valid)
 
     @property
     def n_pca_ax(self) -> int:
