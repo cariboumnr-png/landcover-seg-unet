@@ -20,9 +20,6 @@ clamp:
 conditioning:
   # mode of conditioning: 'none', 'concat', 'film', 'hybrid'
   mode: 'hybrid'
-  # id categories and vector dims for adapter embeddings
-  domain_ids_num: 71
-  domain_vec_dim: 4
   # concat pathway
   concat_out_dim: 4
   concat_use_ids: True

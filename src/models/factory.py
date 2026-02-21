@@ -28,8 +28,8 @@ def build_multihead_unet(
     # conditioning config
     cond_config = models.multihead.config.CondConfig(
         mode=config.conditioning.mode,
-        domain_ids_num=config.conditioning.domain_ids_num,
-        domain_vec_dim=config.conditioning.domain_vec_dim,
+        domain_ids_num=data_specs.domains.ids_max,
+        domain_vec_dim=data_specs.domains.vec_dim,
         concat=models.multihead.config.ConcatConfig(
             out_dim=config.conditioning.concat_out_dim,
             use_ids=config.conditioning.concat_use_ids,

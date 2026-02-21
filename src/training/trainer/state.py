@@ -138,8 +138,10 @@ class _ValLogs:
     head_metrics_str: dict[str, list[str]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
-class _InferOutputs:
+class _InferContext:
     '''Inference result summary.'''
+    cursor:  dict[int, int] = dataclasses.field(default_factory=dict)
+    buffers: dict[str, dict[int, torch.Tensor]] = dataclasses.field(default_factory=dict)
     maps: dict[str, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
@@ -149,7 +151,7 @@ class _Epoch:
     val_loss: float = 0.0
     train_logs: _TrainLogs = dataclasses.field(default_factory=_TrainLogs)
     val_logs: _ValLogs = dataclasses.field(default_factory=_ValLogs)
-    infer_outputs: _InferOutputs = dataclasses.field(default_factory=_InferOutputs)
+    infer_ctx: _InferContext = dataclasses.field(default_factory=_InferContext)
 
     def __str__(self) -> str:
         return '\n'.join([

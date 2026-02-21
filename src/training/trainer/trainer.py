@@ -449,18 +449,6 @@ class MultiHeadTrainer:
         self.state.batch_cxt.y_dict = y_dict
         self.state.batch_cxt.domain = work_domain
 
-    # def __sel_domain(
-    #         self,
-    #         domain: dict[str, torch.Tensor]
-    #     ) -> dict[str, torch.Tensor | None]:
-    #     '''Get domain tensors - currently one slot for each ids/vec.'''
-
-    #     ids_name = self.config.data.dom_ids_name
-    #     vec_name = self.config.data.dom_vec_name
-    #     ids = domain.get(ids_name) if ids_name is not None else None
-    #     vec = domain.get(vec_name) if vec_name is not None else None
-    #     return {'ids': ids, 'vec': vec}
-
     def _resolve_batch_block_range(self) -> None:
         '''
         Compute the [start, end) block index window covered by the
@@ -667,7 +655,7 @@ class MultiHeadTrainer:
                     maps[blkname] = {}
                 maps[blkname][head] = preds
         # assign to trainer state
-        self.state.epoch_sum.infer_outputs.maps = maps
+        self.state.epoch_sum.infer_ctx.maps = maps
 
     def __stitch_head_preds(
             self,
@@ -706,7 +694,7 @@ class MultiHeadTrainer:
         '''doc'''
 
         utils.export_previews(
-            self.state.epoch_sum.infer_outputs.maps,
+            self.state.epoch_sum.infer_ctx.maps,
             out_dir=out_dir,
             heads=[self.config.monitor.head] # as list
         )

@@ -67,11 +67,14 @@ class Controller:
         '''Train the current phase.'''
 
         # if loaded from previous
-        if meta is not None:
+        if meta:
             self.logger.log('INFO', 'Loading from previous checkpoint')
             self.trainer.state.progress.epoch = meta['epoch'] + 1
             self.trainer.state.progress.global_step = meta['step']
             self.trainer.state.metrics.best_value = meta['metric']
+            start = meta['epoch'] + 1
+        else:
+            start = 1
 
         # context for current phase
         phase = self.current_phase
@@ -84,7 +87,7 @@ class Controller:
 
         # train
         print(f'__Phase [{phase.name}] started__')
-        for epoch in range(meta['epoch'] + 1, num_epoch + 1):
+        for epoch in range(start, num_epoch + 1):
             # early stop check
             # - patience can be None = no early stop
             # - stop when patience reached

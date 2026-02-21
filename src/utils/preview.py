@@ -93,6 +93,15 @@ def _build_mosaic_per_head(
     h_blk, w_blk = int(sample.shape[0]), int(sample.shape[1])
     device, dtype = sample.device, sample.dtype
 
+    # sanity: ensure all blocks same shape (optional but helpful)
+    for _, block in items:
+        if block.shape != sample.shape:
+            raise ValueError(
+                'Inconsistent block shapes for head '
+                f'"{head}": expected {tuple(sample.shape)}, '
+                f'got {tuple(block.shape)}'
+            )
+
     # parse coords and compute grid size
     coords = [_parse_col_row(n) for (n, _) in items]
     max_col = max(c for c, _ in coords)
@@ -104,7 +113,9 @@ def _build_mosaic_per_head(
             f'invalid grid size from names: grid=({grid_h}, {grid_w}), '
             f'index_base={index_base}'
         )
-    mosaic = torch.empty(
+
+    # int with background (0); avoids uninitialized garbage.
+    mosaic = torch.zeros(
         (grid_h * h_blk, grid_w * w_blk),
         dtype=dtype,
         device=device

@@ -64,7 +64,7 @@ class Epoch(typing.Protocol):
     val_loss: float
     train_logs: _TrainLogs
     val_logs: _ValLogs
-    infer_outputs: _InferOutputs
+    infer_ctx: _InferOutputs
 
 class _TrainLogs(typing.Protocol):
     '''Training logs.'''

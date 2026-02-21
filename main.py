@@ -33,15 +33,6 @@ def main(config: omegaconf.DictConfig) -> None:
     # Branch test - data preparation
     datapecs = src.dataset_.load_data(config, logger)
 
-    # # data preparation
-    # data_summary = src.dataset.prepare_data(
-    #     dataset_name=config.dataset_name,
-    #     config=config,
-    #     logger=logger,
-    #     mode=config.dataprep_mode
-    # )
-    # print(data_summary)
-
     # setup multihead model
     model = src.models.multihead_unet(
         data_specs=datapecs,
@@ -52,7 +43,7 @@ def main(config: omegaconf.DictConfig) -> None:
     trainer = src.training.build_trainer(
         trainer_mode=config.trainer_mode,
         model=model,
-        data_summary=datapecs,
+        data_specs=datapecs,
         config=config.trainer,
         logger=logger
     )

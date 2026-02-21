@@ -15,7 +15,7 @@ class InferCallback(training.callback.Callback):
         self.trainer.comps.model.eval()
         # reset/prepare inference accumulators if you aggregate
         # A dict[str, list[Tensor]]: head -> list of batched preds
-        self.state.epoch_sum.infer_outputs.maps.clear()
+        self.state.epoch_sum.infer_ctx.maps.clear()
         # self.state.epoch_sum.infer_meta = []  # optional: stash block ids, etc.
         # You can also reset a text log if you like:
         # self.state.epoch_sum.infer_logs_text = ''

@@ -36,7 +36,7 @@ def build_controller(
 def build_trainer(
         trainer_mode: str,
         model: training.common.MultiheadModelLike,
-        data_summary: training.common.DataSpecsLike,
+        data_specs: training.common.DataSpecsLike,
         config: omegaconf.DictConfig,
         logger: utils.Logger
     ) -> training.trainer.MultiHeadTrainer:
@@ -46,7 +46,7 @@ def build_trainer(
     trainer_comps = _get_components(
         trainer_mode=trainer_mode,
         model=model,
-        data_summary=data_summary,
+        data_specs=data_specs,
         config=config,
         logger=logger
     )
@@ -64,7 +64,7 @@ def build_trainer(
 def _get_components(
         trainer_mode: str,
         model: training.common.MultiheadModelLike,
-        data_summary: training.common.DataSpecsLike,
+        data_specs: training.common.DataSpecsLike,
         config: omegaconf.DictConfig,
         logger: utils.Logger
     ) -> training.trainer.TrainerComponents:
@@ -73,14 +73,14 @@ def _get_components(
     # compile data loaders
     data_loaders = training.dataloading.get_dataloaders(
         mode=trainer_mode,
-        data_specs=data_summary,
+        data_specs=data_specs,
         loader_config=config.loader,
         logger=logger
     )
 
     # compile training heads basic specifications
     headspecs = training.heads.build_headspecs(
-        data=data_summary,
+        data=data_specs,
         config=config.loss,
     )
 
@@ -88,13 +88,13 @@ def _get_components(
     headlosses = training.loss.build_headlosses(
         headspecs=headspecs,
         config=config.loss.types,
-        ignore_index=data_summary.meta.ignore_index,
+        ignore_index=data_specs.meta.ignore_index,
     )
 
     # compile training heads metric compute modules
     headmetrics = training.metrics.build_headmetrics(
         headspecs=headspecs,
-        ignore_index=data_summary.meta.ignore_index
+        ignore_index=data_specs.meta.ignore_index
     )
 
     # build optimizer and scheduler
