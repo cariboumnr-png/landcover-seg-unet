@@ -11,7 +11,7 @@ import typing
 
 __all__ = [
     # classes
-    'DataSpec',
+    'DataSpecs',
     # functions
     'build_dataspec',
     'load_data',
@@ -22,13 +22,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import DataSpec, build_dataspec
+    from .builder import DataSpecs, build_dataspec
     from .load import load_data
     from .validate import validate_schema
 
 def __getattr__(name: str):
 
-    if name in ['DataSpec', 'build_dataspec']:
+    if name in ['DataSpecs', 'build_dataspec']:
         return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['load_data']:
         return getattr(importlib.import_module('.load', __package__), name)

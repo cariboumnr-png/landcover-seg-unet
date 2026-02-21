@@ -27,25 +27,24 @@ def main(config: omegaconf.DictConfig) -> None:
     logger = src.utils.Logger(
         name='main',
         log_file=f'./logs/{timestamp}.log',
-        console_lvl=10 # debug
+        console_lvl=20 # debug
     )
 
     # Branch test - data preparation
-    datapec = src.dataset_.load_data(config, logger)
-    print(datapec)
+    datapecs = src.dataset_.load_data(config, logger)
 
-    # data preparation
-    data_summary = src.dataset.prepare_data(
-        dataset_name=config.dataset_name,
-        config=config,
-        logger=logger,
-        mode=config.dataprep_mode
-    )
-    print(data_summary)
+    # # data preparation
+    # data_summary = src.dataset.prepare_data(
+    #     dataset_name=config.dataset_name,
+    #     config=config,
+    #     logger=logger,
+    #     mode=config.dataprep_mode
+    # )
+    # print(data_summary)
 
     # setup multihead model
     model = src.models.multihead_unet(
-        data_summary=data_summary,
+        data_specs=datapecs,
         config=config.models
     )
 
@@ -53,7 +52,7 @@ def main(config: omegaconf.DictConfig) -> None:
     trainer = src.training.build_trainer(
         trainer_mode=config.trainer_mode,
         model=model,
-        data_summary=data_summary,
+        data_summary=datapecs,
         config=config.trainer,
         logger=logger
     )

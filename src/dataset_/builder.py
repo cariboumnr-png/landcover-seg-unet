@@ -2,7 +2,6 @@
 
 # standard imports
 from __future__ import annotations
-import copy
 import dataclasses
 import math
 import typing
@@ -14,12 +13,12 @@ import utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class DataSpec:
+class DataSpecs:
     '''doc'''
     meta: _Meta
     heads: _Heads
     splits: _Splits
-    domains: _Domain
+    domains: _Domains
 
     def __str__(self) -> str:
         def _ln(lst):
@@ -68,26 +67,31 @@ class _Splits:
     test: dict[str, str] | None
 
 @dataclasses.dataclass
-class _Domain:
+class _Domains:
     '''Domain related.'''
-    train_domain: dict[str, typing.Any]
-    val_domain: dict[str, typing.Any]
-    test_domain: dict[str, typing.Any] | None
-    domain_max_ids: int
-    domain_n_pca_ax: int
+    train: _Dom
+    val: _Dom
+    test: _Dom
+    ids_max: int
+    vec_dim: int
+
+    class _Dom(typing.TypedDict):
+        '''doc'''
+        ids_domain: dict[str, int] | None
+        vec_domain: dict[str, list[float]] | None
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
     schema_fpath: str,
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
-) -> DataSpec:
+) -> DataSpecs:
     '''doc'''
 
     # read schema
     schema: dict[str, typing.Any] = utils.load_json(schema_fpath)
 
-    return DataSpec(
+    return DataSpecs(
         meta=_get_meta(schema),
         heads=_get_heads(schema),
         splits=_get_split(schema),
@@ -148,7 +152,7 @@ def _get_domain(
     schema: dict[str, typing.Any],
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
-) -> _Domain:
+) -> _Domains:
     '''doc'''
 
     # get file paths
@@ -163,47 +167,41 @@ def _get_domain(
     # format domains
     train_domain = _parse_domain(train_fpath, ids_domain, vec_domain)
     val_domain = _parse_domain(val_fpath, ids_domain, vec_domain)
-    if test_fpath:
-        test_domain = _parse_domain(test_fpath, ids_domain, vec_domain)
-    else:
-        test_domain = None
+    test_domain = _parse_domain(test_fpath, ids_domain, vec_domain)
 
-    return _Domain(train_domain, val_domain, test_domain, max_ids, vec_dim)
+    return _Domains(train_domain, val_domain, test_domain, max_ids, vec_dim)
 
 def _parse_domain(
-    blocks_fpath: str,
+    blocks_fpath: str | None,
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
-) -> dict[str, domain.DomainTileMap | None]:
+) -> _Domains._Dom:
     '''doc'''
+
+    # early exit
+    if not blocks_fpath:
+        return {'ids_domain': None, 'vec_domain': None}
 
     # prep
     input_blocks: dict[str, str] = utils.load_json(blocks_fpath)
-    blk_ids_domain = copy.deepcopy(ids_domain)
-    blk_vec_domain = copy.deepcopy(vec_domain)
+    output_ids_domain: dict[str, int] = {}
+    output_vec_domain: dict[str, list[float]] = {}
 
     # index domain if provided
-    if blk_ids_domain:
-        to_pop = []
-        for coord in blk_ids_domain.keys():
-            x, y = coord
+    if ids_domain:
+        for (x, y), dom in ids_domain.items():
             blkname = f'col_{x:06d}_row_{y:06d}'
-            if blkname not in input_blocks:
-                to_pop.append(coord)
-        blk_ids_domain.pop_many(coords=to_pop)
+            if blkname in input_blocks:
+                assert dom['majority']
+                output_ids_domain[blkname] = dom['majority']
 
     # vector domain if provided
-    if blk_vec_domain:
-        to_pop = []
-        for coord in blk_vec_domain.keys():
-            x, y = coord
+    if vec_domain:
+        for (x, y), dom in vec_domain.items():
             blkname = f'col_{x:06d}_row_{y:06d}'
-            if blkname not in input_blocks:
-                to_pop.append(coord)
-        blk_vec_domain.pop_many(coords=to_pop)
+            if blkname in input_blocks:
+                assert dom['pca_feature']
+                output_vec_domain[blkname] = dom['pca_feature']
 
     # return
-    return {
-        'ids_domain': blk_ids_domain,
-        'vec_domain': blk_vec_domain
-    }
+    return {'ids_domain': output_ids_domain, 'vec_domain': output_vec_domain}

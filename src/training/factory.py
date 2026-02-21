@@ -36,7 +36,7 @@ def build_controller(
 def build_trainer(
         trainer_mode: str,
         model: training.common.MultiheadModelLike,
-        data_summary: training.common.DataSummaryLike,
+        data_summary: training.common.DataSpecsLike,
         config: omegaconf.DictConfig,
         logger: utils.Logger
     ) -> training.trainer.MultiHeadTrainer:
@@ -64,7 +64,7 @@ def build_trainer(
 def _get_components(
         trainer_mode: str,
         model: training.common.MultiheadModelLike,
-        data_summary: training.common.DataSummaryLike,
+        data_summary: training.common.DataSpecsLike,
         config: omegaconf.DictConfig,
         logger: utils.Logger
     ) -> training.trainer.TrainerComponents:
@@ -73,7 +73,7 @@ def _get_components(
     # compile data loaders
     data_loaders = training.dataloading.get_dataloaders(
         mode=trainer_mode,
-        data_summary=data_summary,
+        data_specs=data_summary,
         loader_config=config.loader,
         logger=logger
     )

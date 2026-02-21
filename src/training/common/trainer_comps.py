@@ -48,14 +48,14 @@ class MultiheadModelLike(typing.Protocol):
 class DataLoadersLike(typing.Protocol):
     train: 'torch.utils.data.DataLoader | None'
     val: 'torch.utils.data.DataLoader | None'
-    infer: 'torch.utils.data.DataLoader | None'
+    test: 'torch.utils.data.DataLoader | None'
     @property
     def meta(self) -> _LoaderMetaLike: ...
 
 class _LoaderMetaLike(typing.Protocol):
     batch_size: int
     patch_per_blk: int
-    infer_blks_loading_seq: list[str] | None
+    test_blks_loading_seq: list[str] | None
 
 # trainer component - head specs (wrapper and individual spec)
 @typing.runtime_checkable

@@ -19,13 +19,13 @@ class DataLoaders:
     '''doc'''
     train: torch.utils.data.DataLoader | None
     val: torch.utils.data.DataLoader | None
-    infer: torch.utils.data.DataLoader | None
+    test: torch.utils.data.DataLoader | None
     meta: _LoaderMeta
 
     def __post_init__(self):
         if not self.train and not self.val:
-            assert self.infer
-        if not self.infer:
+            assert self.test
+        if not self.test:
             assert self.train and self.val
 
 @dataclasses.dataclass
@@ -33,7 +33,7 @@ class _LoaderMeta:
     '''Simple meta to be shipped with the dataloaders.'''
     batch_size: int
     patch_per_blk: int
-    infer_blks_loading_seq: list[str] | None = None
+    test_blks_loading_seq: list[str] | None = None
 
 @dataclasses.dataclass
 class _LoadingFlags:
@@ -47,7 +47,7 @@ class _LoadingFlags:
 
 def get_dataloaders(
         mode: str,
-        data_summary: training.common.DataSummaryLike,
+        data_specs: training.common.DataSpecsLike,
         loader_config: alias.ConfigType,
         logger: utils.Logger,
     ) -> DataLoaders:
@@ -60,11 +60,11 @@ def get_dataloaders(
     loader_cfg = utils.ConfigAccess(loader_config)
 
     # get dataset filepaths from DataSummary
-    data_paths = data_summary.data
-    domain_paths = data_summary.doms
+    data_paths = data_specs.splits
+    domains = data_specs.domains
 
     # get loading flags
-    flags = _get_flags(data_summary)
+    flags = _get_flags(data_specs)
 
     # declare loaders type and defualt value
     t_loader: torch.utils.data.DataLoader | None = None
@@ -88,7 +88,8 @@ def get_dataloaders(
         # config
         cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = True
-        cfg.domain_dict = domain_paths.train_val_domain
+        cfg.ids_domain = domains.train['ids_domain']
+        cfg.vec_domain = domains.train['vec_domain']
         # data
         data = training.dataloading.MultiBlockDataset(
             blks_dict=data_paths.train,
@@ -109,7 +110,8 @@ def get_dataloaders(
         # config
         cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = False
-        cfg.domain_dict = domain_paths.train_val_domain
+        cfg.ids_domain = domains.val['ids_domain']
+        cfg.vec_domain = domains.val['vec_domain']
         # data
         data = training.dataloading.MultiBlockDataset(
             blks_dict=data_paths.val,
@@ -128,15 +130,16 @@ def get_dataloaders(
 
         if mode == 'with_inference':
 
-            assert data_paths.infer
-            # inference loader
+            assert data_paths.test
+            # test loader
             # config
             cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
             cfg.augment_flip = False
-            cfg.domain_dict = domain_paths.infer_domain
+            cfg.ids_domain = domains.test['ids_domain']
+            cfg.vec_domain = domains.test['vec_domain']
             # data
             data = training.dataloading.MultiBlockDataset(
-                blks_dict=data_paths.infer,
+                blks_dict=data_paths.test,
                 blk_cfg=cfg,
                 logger=logger,
                 preload=flags.infer_preload,
@@ -155,9 +158,9 @@ def get_dataloaders(
             f'"no_inference"'
         )
 
-    # add inference blocks loading sequence to meta if infer data present
-    if data_paths.infer:
-        meta.infer_blks_loading_seq = list(data_paths.infer.keys())
+    # add test blocks loading sequence to meta if test data present
+    if data_paths.test:
+        meta.test_blks_loading_seq = list(data_paths.test.keys())
     # final sanity
     # at least one loader is not None
     assert any([t_loader, v_loader, i_loader])
@@ -166,18 +169,18 @@ def get_dataloaders(
     # return
     return DataLoaders(t_loader, v_loader, i_loader, meta)
 
-def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
+def _get_flags(data_summary: training.common.DataSpecsLike) -> _LoadingFlags:
     '''Get flags.'''
 
     # get dataset filepaths from DataSummary
-    data = data_summary.data
-    t_v_bytes = data_summary.meta.train_val_blk_bytes
-    i_bytes = data_summary.meta.infer_blk_bytes
+    data = data_summary.splits
+    t_v_bytes = data_summary.meta.fit_perblk_bytes
+    i_bytes = data_summary.meta.test_perblk_bytes
 
     # get dataset sizes
     train_bytes = len(data.train or {}) * t_v_bytes
     val_bytes = len(data.val or {}) * t_v_bytes
-    infer_bytes = len(data.infer or {}) * i_bytes
+    infer_bytes = len(data.test or {}) * i_bytes
 
     # decision on preload and cache size
     mem = psutil.virtual_memory().available
@@ -199,7 +202,7 @@ def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
     else:
         v_cac = round(0.3 * mem / t_v_bytes)
         t_cac = round(0.2 * mem / t_v_bytes)
-        i_cac = round(0.1 * mem / data_summary.meta.infer_blk_bytes)
+        i_cac = round(0.1 * mem / data_summary.meta.test_perblk_bytes)
 
     # return flags
     i_pre = True # TODO

@@ -1,6 +1,6 @@
 '''Common protocols'''
 
-from .data import DataSummaryLike
+from .data import DataSpecsLike
 
 from .checkpoint import CheckpointMetaLike
 from .trainer import (
@@ -60,7 +60,7 @@ __all__ = [
     #
     'RuntimeStateLike',
     #
-    'DataSummaryLike',
+    'DataSpecsLike',
     #
     'CallBacksLike',
     'ProgressCallbackLike',

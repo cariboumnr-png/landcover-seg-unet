@@ -3,24 +3,24 @@
 # third-party imports
 import omegaconf
 # local imports
-import dataset.summary
+import dataset_
 import models.multihead.base
 import models.multihead.config
 import models.multihead.frame
 
 def build_multihead_unet(
-        data_summary: dataset.summary.DataSummary,
+        data_specs: dataset_.DataSpecs,
         config: omegaconf.DictConfig,
     ) -> models.multihead.base.BaseModel:
     '''Build the multi-head model from provided dataset.'''
 
     # general config
     model_config = models.multihead.config.ModelConfig(
-        in_ch=data_summary.meta.img_ch_num,
+        in_ch=data_specs.meta.img_ch_num,
         base_ch=config.channels.base_ch,
-        heads_w_counts=data_summary.heads.class_counts,
+        heads_w_counts=data_specs.heads.class_counts,
         enable_logit_adjust=config.logits_adjustment.enable,
-        logit_adjust=data_summary.heads.logits_adjust,
+        logit_adjust=data_specs.heads.logits_adjust,
         enable_clamp=config.clamp.enable,
         clamp_range=tuple(config.clamp.range),
     )

@@ -201,8 +201,8 @@ class MultiHeadTrainer:
         self._emit('on_inference_begin')
 
         # iterate through inference dataset
-        assert self.dataloaders.infer, 'Inference dataset not provided'
-        for bidx, batch in enumerate(self.dataloaders.infer, start=1):
+        assert self.dataloaders.test, 'Inference dataset not provided'
+        for bidx, batch in enumerate(self.dataloaders.test, start=1):
 
             # batch start
             # - get new batch and parse into x, y_dict (empty dict) and domain
@@ -413,18 +413,18 @@ class MultiHeadTrainer:
             assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
             y = y.to(device)
         # domain can be an empty dict or a dict[str, torch.Tensore]
+        work_domain = {}
         if domain:
-            assert isinstance(domain, dict)
-            # domain names must be str
             # each domain can be a tensor with the same batch size or None
             for k, v in domain.items():
-                assert isinstance(k, str)
                 if isinstance(v, torch.Tensor):
                     assert v.shape[0] == x.shape[0]
-            domain = {k: v.to(device) for k, v in domain.items()}
+                    work_domain[k] = v
+                else:
+                    work_domain[k] = None
+            work_domain = {k: v.to(device) for k, v in work_domain.items()}
         else:
-            domain = {}
-        running_domain = self.__sel_domain(domain)
+            work_domain = {}
 
         # heads: fall back to all available heads if activce heads not provided
         if self.state.heads.active_heads is None:
@@ -447,19 +447,19 @@ class MultiHeadTrainer:
         # assign to context
         self.state.batch_cxt.x = x
         self.state.batch_cxt.y_dict = y_dict
-        self.state.batch_cxt.domain = running_domain
+        self.state.batch_cxt.domain = work_domain
 
-    def __sel_domain(
-            self,
-            domain: dict[str, torch.Tensor]
-        ) -> dict[str, torch.Tensor | None]:
-        '''Get domain tensors - currently one slot for each ids/vec.'''
+    # def __sel_domain(
+    #         self,
+    #         domain: dict[str, torch.Tensor]
+    #     ) -> dict[str, torch.Tensor | None]:
+    #     '''Get domain tensors - currently one slot for each ids/vec.'''
 
-        ids_name = self.config.data.dom_ids_name
-        vec_name = self.config.data.dom_vec_name
-        ids = domain.get(ids_name) if ids_name is not None else None
-        vec = domain.get(vec_name) if vec_name is not None else None
-        return {'ids': ids, 'vec': vec}
+    #     ids_name = self.config.data.dom_ids_name
+    #     vec_name = self.config.data.dom_vec_name
+    #     ids = domain.get(ids_name) if ids_name is not None else None
+    #     vec = domain.get(vec_name) if vec_name is not None else None
+    #     return {'ids': ids, 'vec': vec}
 
     def _resolve_batch_block_range(self) -> None:
         '''
@@ -650,8 +650,8 @@ class MultiHeadTrainer:
         assert n * n == p, 'Invalid patch grid'
 
         # stable block names
-        infer_blk_seq = self.comps.dataloaders.meta.infer_blks_loading_seq
-        assert infer_blk_seq is not None, 'Inference data not provided'
+        test_blk_seq = self.comps.dataloaders.meta.test_blks_loading_seq
+        assert test_blk_seq is not None, 'Inference data not provided'
 
         # get through each head and attach preds to corresponding block-heads
         maps: dict[str, dict[str, torch.Tensor]] = {}
@@ -662,7 +662,7 @@ class MultiHeadTrainer:
             block_preds = self.__stitch_head_preds(preds, p, n)
             #
             for blkid, preds in block_preds.items():
-                blkname = infer_blk_seq[blkid]
+                blkname = test_blk_seq[blkid]
                 if blkname not in maps:
                     maps[blkname] = {}
                 maps[blkname][head] = preds

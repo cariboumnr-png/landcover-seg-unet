@@ -12,7 +12,7 @@ import utils
 def load_data(
     config: omegaconf.DictConfig,
     logger: utils.Logger
-) -> dataset_.DataSpec:
+) -> dataset_.DataSpecs:
     '''doc'''
 
     # load/create world grid
