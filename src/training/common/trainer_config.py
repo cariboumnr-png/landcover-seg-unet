@@ -1,7 +1,9 @@
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
-'''Trainer config protocols.'''
+'''
+Callback-facing trainer runtime config protocols.
+'''
 
 from __future__ import annotations
 # standard imports

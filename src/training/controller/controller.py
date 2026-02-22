@@ -3,12 +3,19 @@
 # standard imports
 import dataclasses
 import os
+import typing
 # local imports
 import alias
-import training.common
 import training.controller
 import training.trainer
 import utils
+
+# --------------------------------private  type--------------------------------
+class _CheckpointMeta(typing.TypedDict):
+    '''Checkpont metadata'''
+    metric: float
+    epoch: int
+    step: int
 
 # --------------------------------Public  Class--------------------------------
 class Controller:
@@ -151,7 +158,7 @@ class Controller:
     def _save_progress(self, fpath: str) -> None:
         '''Save at the current phase.'''
 
-        ckpt_meta: training.common.CheckpointMetaLike = {
+        ckpt_meta: _CheckpointMeta = {
             'metric': self.trainer.state.metrics.curr_value,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step

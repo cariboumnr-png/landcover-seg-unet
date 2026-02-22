@@ -45,11 +45,11 @@ class MultiHeadTrainer:
     '''
 
     def __init__(
-            self,
-            components: training.trainer.TrainerComponents,
-            config: training.trainer.RuntimeConfig,
-            device: str
-        ):
+        self,
+        components: training.trainer.TrainerComponents,
+        config: training.trainer.RuntimeConfig,
+        device: str
+    ):
         '''
         Initialize trainer with components and configuration.
 
@@ -340,7 +340,7 @@ class MultiHeadTrainer:
         return preds
 
     # ----------------------------internal methods----------------------------
-    # runtime state initialization
+    # ----- runtime state initialization
     def _init_state(self) -> training.trainer.RuntimeState:
         '''Instantiate the runtime state aligned with trainer config.'''
 
@@ -372,14 +372,14 @@ class MultiHeadTrainer:
         # return
         return state
 
-    # callback classes setup
+    # ----- callback classes setup
     def _setup_callbacks(self) -> None:
         '''Pass current trainer instance to all callback classes.'''
 
         for callback in self.callbacks:
             callback.setup(self)
 
-    # callback callers
+    # ----- callback callers
     def _emit(self, hook: str, *args, **kwargs) -> None:
         '''
         Invoke a named hook from callbacks with the provided arguments.
@@ -396,7 +396,7 @@ class MultiHeadTrainer:
                 method(*args, **kwargs)
 
     # -----------------------helpers called by callbacks----------------------
-    # batch extraction
+    # ----- batch extraction
     def _parse_batch(self) -> None:
         '''
         Extract input, targets, and domain tensors from current batch.
@@ -465,7 +465,7 @@ class MultiHeadTrainer:
         self.state.batch_cxt.y_dict = y_dict
         self.state.batch_cxt.domain = work_domain
 
-    # context setup
+    # ----- context setup
     def _autocast_ctx(self):
         '''Autocast context for training based on precision setting.'''
         device_type = self.device
@@ -486,7 +486,7 @@ class MultiHeadTrainer:
         stack.enter_context(self._autocast_ctx())
         return stack
 
-    # training phase
+    # ----- training phase
     def _compute_loss(self) -> None:
         '''
         Compute total and per-head losses for the current batch.
@@ -550,7 +550,7 @@ class MultiHeadTrainer:
             text = f'b{bidx:04d} | ' + '|'.join(text_list)
             self.state.epoch_sum.train_logs.head_losses_str = text
 
-    # validation phase
+    # ----- validation phase
     def _update_conf_matrix(self) -> None:
         '''Update confusion matrix in-place at validation batch end.'''
 
@@ -574,11 +574,7 @@ class MultiHeadTrainer:
             )
 
     def _compute_iou(self) -> None:
-        '''
-        Compute IoU at the end of validation phase.
-
-        Writes metrics to `self.state.epoch_sum`.
-        '''
+        '''Compute IoU at the end of validation phase.'''
 
         # sanity
         assert self.state.heads.active_hmetrics is not None
@@ -622,9 +618,9 @@ class MultiHeadTrainer:
             else:
                 self.state.metrics.patience_n += 1
 
-    # inference phase
+    # ----- inference phase
     def _aggregate_batch_predictions(self):
-        '''Convert predictions of the current batch into a class map'''
+        '''Accumulate batch predictions a class map.'''
 
         # inference context alias
         ctx = self.state.epoch_sum.infer_ctx
@@ -659,7 +655,7 @@ class MultiHeadTrainer:
             # Keys are (col, row) in patch-grid coords
 
     def _preview_monitor_head(self, out_dir: str) -> None:
-        '''doc'''
+        '''Generate a preview image for `self.config.monitor.head`.'''
 
         utils.export_previews(
             self.state.epoch_sum.infer_ctx.maps,

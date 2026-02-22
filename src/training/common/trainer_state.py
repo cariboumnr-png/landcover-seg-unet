@@ -2,7 +2,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 '''
-Callback facing trainer runtime state protocols.
+Callback-facing trainer runtime state protocols.
 '''
 
 # standard imports
@@ -68,18 +68,15 @@ class Epoch(typing.Protocol):
     infer_ctx: _InferContext
 
 class _TrainLogs(typing.Protocol):
-    '''Training logs.'''
     head_losses: dict[str, float]
     head_losses_str: str
     updated: bool
 
 class _ValLogs(typing.Protocol):
-    '''Validation logs.'''
     head_metrics: dict[str, dict[str, typing.Any]]
     head_metrics_str: dict[str, list[str]]
 
 class _InferContext(typing.Protocol):
-    '''Inference logs.'''
     patch_per_blk: int
     patch_per_dim: int
     block_columns: int

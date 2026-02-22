@@ -1,8 +1,6 @@
 '''Common protocols'''
 
-from .data import DataSpecsLike
-
-from .checkpoint import CheckpointMetaLike
+from .dataset import DataSpecsLike
 from .trainer import (
     TrainerLike
 )
@@ -34,8 +32,6 @@ from .trainer_config import (
 from .trainer_state import RuntimeStateLike
 
 __all__ = [
-    #
-    'CheckpointMetaLike',
     #
     'TrainerLike',
     #

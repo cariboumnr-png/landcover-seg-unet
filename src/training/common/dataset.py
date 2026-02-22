@@ -1,6 +1,6 @@
 # pylint: disable=missing-function-docstring, too-few-public-methods
 '''
-Common runtime Protocols shared across models and training.
+Trainer-facing dataset specifications protocol.
 '''
 
 from __future__ import annotations

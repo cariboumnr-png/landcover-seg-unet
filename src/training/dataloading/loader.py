@@ -33,7 +33,6 @@ class _LoaderMeta:
     '''Simple meta to be shipped with the dataloaders.'''
     batch_size: int
     patch_per_blk: int
-    test_blks_loading_seq: list[str]
     test_blks_grid:  tuple[int, int]
 
 @dataclasses.dataclass
@@ -82,7 +81,6 @@ def get_dataloaders(
     meta = _LoaderMeta(
         batch_size=batch_size,
         patch_per_blk=_cfg.patch_per_blk,
-        test_blks_loading_seq=[], # populate at runtime
         test_blks_grid=data_specs.meta.test_blks_grid
     )
 
@@ -164,9 +162,6 @@ def get_dataloaders(
             f'"no_inference"'
         )
 
-    # add test blocks loading sequence to meta if test data present
-    if data_paths.test:
-        meta.test_blks_loading_seq = list(data_paths.test.keys())
     # final sanity
     # at least one loader is not None
     assert any([t_loader, v_loader, i_loader])
