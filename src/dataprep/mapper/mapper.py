@@ -43,7 +43,7 @@ def map_rasters(
     test_windows = config['test_windows']
     # map test data if provided
     if test_img and (not os.path.exists(test_windows) or remap):
-            _map(world_grid, test_img, None, test_windows, logger)
+        _map(world_grid, test_img, None, test_windows, logger)
 
 def _map(
     world_grid: grid.GridLayout,

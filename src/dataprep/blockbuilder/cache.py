@@ -186,6 +186,11 @@ class BlockCacheBuilder:
         and whose (width, height) match `windows.expected_shape`. The
         resulting set defines `self.all_blocks` with canonical block
         names mapped to their target `.npz` paths.
+
+        Note that `self.all_blocks` is sorted by keys lexicographically,
+        which is to ensure the loading sequence of test blocks follow a
+        typical row-cal scanline order (row first,  then col).Typically
+        needed for test data blocks mapped only in `self.all_blocks`.
         '''
 
         # find shared coordinates between image and label read windows
@@ -208,10 +213,12 @@ class BlockCacheBuilder:
                     self.shared_coords.remove(coord)
         self.logger.log('DEBUG', f'Windows with expected shape: {len(self.shared_coords)}')
 
+        # sort coordinates by x then y
+        sorted_coords = sorted(self.shared_coords, key=lambda x: (x[1], x[0]))
         # all blocks come from the shared coordinates
         self.all_blocks = {
             self._xy_name(c): f'{self.config.blks_dpath}/{self._xy_name(c)}.npz'
-            for c in self.shared_coords
+            for c in sorted_coords
         }
         # write an artifect: normal block list
         utils.write_json(self.config.all_blocks, self.all_blocks)

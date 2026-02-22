@@ -26,14 +26,11 @@ def prepare_data(
     # get a child logger
     logger = logger.get_child('dprep')
 
-    # parse world grid
-    grid_id, work_grid = world_grid
-
     # get pipeline configs from input
     cfg = _parse_configs(inputs_config, artifact_config, proc_config)
 
     # map fit rasters to world grid
-    dataprep.map_rasters(work_grid, cfg, logger, remap=remap)
+    dataprep.map_rasters(world_grid[1], cfg, logger, remap=remap)
     # build fit blocks
     dataprep.build_data_blocks('fit', cfg, logger, rebuild=rebuild_blocks)
     # normalize fit blocks
@@ -43,7 +40,7 @@ def prepare_data(
 
     # map test raster to world grid if provided
     if cfg['test_input_img']:
-        dataprep.map_rasters(work_grid, cfg, logger, remap=remap)
+        dataprep.map_rasters(world_grid[1], cfg, logger, remap=remap)
         # build test blocks
         dataprep.build_data_blocks('test', cfg, logger, rebuild=rebuild_blocks)
         # normalize test blocks
@@ -51,7 +48,7 @@ def prepare_data(
 
     # generate schema
     data_cache_root = f'{artifact_config["cache"]}/{inputs_config["name"]}'
-    dataprep.build_schema(grid_id, data_cache_root, cfg)
+    dataprep.build_schema(world_grid, data_cache_root, cfg)
 
 def _parse_configs(
     input_data_config: alias.ConfigType,

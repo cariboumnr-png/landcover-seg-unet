@@ -4,10 +4,11 @@
 import os
 # local imports
 import dataprep
+import grid
 import utils
 
 def build_schema(
-    world_grid_id: str,
+    world_grid: tuple[str, grid.GridLayout],
     data_cache_root: str,
     config: dataprep.DataprepConfigs
 ):
@@ -15,6 +16,9 @@ def build_schema(
 
     # has test data flag
     has_test = os.path.exists(config['test_windows'])
+
+    # parse grid
+    gid, work_grid = world_grid
 
     # read a sample block to get meta
     sample = next(iter(utils.load_json(config['train_blks']).values()))
@@ -32,9 +36,18 @@ def build_schema(
         'dataset': {
             'name': os.path.basename(data_cache_root), # dataset name
             'created_at': utils.get_timestamp('%Y-%m-%dT%H:%M:%S'), # ISO-8601
-            'world_grid': world_grid_id,
             'has_test_data': has_test,
             'dataprep_commit': 'dev', # to be fixed once branch stable
+        },
+
+        'world_grid': {
+            'gid': gid,
+            'tile_size_x': work_grid.tile_size[0],
+            'tile_size_y': work_grid.tile_size[1],
+            'tile_overlap_x': work_grid.tile_overlap[0],
+            'tile_overlap_y': work_grid.tile_overlap[1],
+            'tile_step_x': work_grid.tile_size[0] - work_grid.tile_overlap[0],
+            'tile_step_y': work_grid.tile_size[1] - work_grid.tile_overlap[1]
         },
 
         'io_conventions': {

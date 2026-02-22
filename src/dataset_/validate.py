@@ -30,7 +30,7 @@ def validate_schema(
         logger.log('ERROR', 'Dataset name not matching')
         status = 1
     # world grid match
-    if world_grid_id != schema['dataset']['world_grid']:
+    if world_grid_id != schema['world_grid']['gid']:
         logger.log('ERROR', 'World grid not matching')
         status = 1
     # fit data artifact integrity

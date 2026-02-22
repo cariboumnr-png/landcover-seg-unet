@@ -27,6 +27,7 @@ class _Meta(typing.Protocol):
     test_perblk_bytes: int
     ignore_index: int
     img_ch_num: int
+    test_blks_grid: tuple[int, int]
 
 class _Head(typing.Protocol):
     '''DataSummary head part.'''

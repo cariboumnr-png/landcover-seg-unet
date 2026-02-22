@@ -64,7 +64,7 @@ class Epoch(typing.Protocol):
     val_loss: float
     train_logs: _TrainLogs
     val_logs: _ValLogs
-    infer_ctx: _InferOutputs
+    infer_output: _InferOutputs
 
 class _TrainLogs(typing.Protocol):
     '''Training logs.'''
@@ -79,7 +79,7 @@ class _ValLogs(typing.Protocol):
 
 class _InferOutputs(typing.Protocol):
     '''Inference logs.'''
-    maps: dict[str, dict[str, torch.Tensor]]
+    maps: dict[str, dict[tuple[int, int], torch.Tensor]]
 
 # ----- .metrics
 class Metrics(typing.Protocol):

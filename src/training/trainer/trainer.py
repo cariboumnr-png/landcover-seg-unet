@@ -630,71 +630,91 @@ class MultiHeadTrainer:
     def _aggregate_batch_predictions(self):
         '''Convert predictions of the current batch into a class map'''
 
-        # assumes no ragged batches for inference - guarantee from loader
-        # get number of patches per block from dataloader meta
-        p = self.comps.dataloaders.meta.patch_per_blk
-        # infer patch grid (assuming perfectly square)
-        n  = int(p ** 0.5)
-        assert n * n == p, 'Invalid patch grid'
+        # get current batch id
+        bidx = self.state.batch_cxt.bidx
+        batch_size = self.dataloaders.meta.batch_size
+        start_patch = (bidx - 1) * batch_size
 
-        # stable block names
-        test_blk_seq = self.comps.dataloaders.meta.test_blks_loading_seq
-        assert test_blk_seq is not None, 'Inference data not provided'
+        # patch per block and patch per dim
+        per_blk = self.comps.dataloaders.meta.patch_per_blk
+        per_dim = int(per_blk ** 0.5)
+        assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
+
+        # pull existing epoch-level maps (persist across batches)
+        epoch_maps: dict[str, dict[tuple[int, int], torch.Tensor]] | None
+        epoch_maps = getattr(self.state.epoch_sum.infer_output, 'maps', None)
+        if epoch_maps is None:
+            epoch_maps = {}
+            self.state.epoch_sum.infer_output.maps = epoch_maps
 
         # get through each head and attach preds to corresponding block-heads
-        maps: dict[str, dict[str, torch.Tensor]] = {}
         for head, logits in self.state.batch_out.preds.items():
             # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
             preds = torch.argmax(logits, dim=1)
-            # get preds per head, stitched for each block
-            block_preds = self.__stitch_head_preds(preds, p, n)
-            #
-            for blkid, preds in block_preds.items():
-                blkname = test_blk_seq[blkid]
-                if blkname not in maps:
-                    maps[blkname] = {}
-                maps[blkname][head] = preds
-        # assign to trainer state
-        self.state.epoch_sum.infer_ctx.maps = maps
+            # get preds placed according to locations from this batch
+            placed = self.__place_patches(preds, per_blk, per_dim, start_patch)
+            # ensure per-head dict exists, then accumulate
+            if head not in epoch_maps:
+                epoch_maps[head] = {}
+            # Update (merge) placements for this head
+            # Keys are (col, row) in patch-grid coords
+            epoch_maps[head].update(placed)
 
-    def __stitch_head_preds(
-            self,
-            preds: torch.Tensor,
-            p_per_blk: int,
-            p_per_dim: int
-        ) -> dict[int, torch.Tensor]:
-        '''doc'''
+    def __place_patches(
+        self,
+        preds: torch.Tensor,
+        patch_per_blk: int,
+        patch_per_dim: int,
+        start_patch_idx: int,
+    ) -> dict[tuple[int, int], torch.Tensor]:
+        '''
+        Map batch patch predictions to global (x, y) pixel positions.
 
-        out: dict[int, torch.Tensor] = {}
-        # get block index range of current batch
-        rr = self.state.batch_cxt.block_index_range
-        # get H * W of preds
-        _, hp, wp = preds.shape
+        Args:
+            preds: [B, Hp, Wp]
+            patch_per_blk: patches per block
+            patch_per_dim: patches per dimension (p = n*n, square)
+            start_patch_idx: global patch index for preds[0]
 
-        # iterate through involved blocks
-        for blk_offset, blk_seq_idx in enumerate(range(rr[0], rr[1])):
+        Returns:
+            {(x, y): patch_tensor}
+        '''
 
-            # get preds for current block
-            patch_start = blk_offset * p_per_blk
-            patch_end = patch_start + p_per_blk
-            blk_patches = preds[patch_start: patch_end]  # [P, Hp, Wp]
+        # total columns from the grid
+        cols_total, _ = self.dataloaders.meta.test_blks_grid
 
-            # reshape scanline → grid
-            grid = blk_patches.reshape(p_per_dim, p_per_dim, hp, wp)
-            # stitch rows then cols
-            stitched = torch.cat(
-                [torch.cat(list(grid[r]), dim=1) for r in range(p_per_dim)],
-                dim=0
-            )
-            out[blk_seq_idx] = stitched
+        # output dict
+        out: dict[tuple[int, int], torch.Tensor] = {}
+        # place patches to locations
+        for i in range(preds.shape[0]):
+            # global patch tracker
+            global_patch_i = start_patch_idx + i
+            # which block?
+            global_block_i = global_patch_i // patch_per_blk
+            block_col = global_block_i % cols_total
+            block_row = global_block_i // cols_total
+            # patch position inside bloc
+            p_in_blk = global_patch_i % patch_per_blk
+            patch_col = p_in_blk % patch_per_dim
+            patch_row = p_in_blk // patch_per_dim
+            # patch-grid coordinates
+            col = block_col * patch_per_dim + patch_col
+            row = block_row * patch_per_dim + patch_row
+            out[(col, row)] = preds[i]
         # return
         return out
 
     def _preview_monitor_head(self, out_dir: str) -> None:
         '''doc'''
 
+        patch_per_block = self.comps.dataloaders.meta.patch_per_blk
+        n = int(patch_per_block ** 0.5)
+        grid_shape = tuple(i * n for i in self.dataloaders.meta.test_blks_grid)
+        assert len(grid_shape) == 2 # typing sanity
+
         utils.export_previews(
-            self.state.epoch_sum.infer_ctx.maps,
+            self.state.epoch_sum.infer_output.maps,
+            grid_shape,
             out_dir=out_dir,
             heads=[self.config.monitor.head] # as list
         )

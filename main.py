@@ -8,7 +8,6 @@ import hydra
 import omegaconf
 # local imports
 import src.dataset_
-import src.dataset
 import src.models
 import src.training
 import src.utils

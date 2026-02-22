@@ -2,7 +2,6 @@
 
 # standard imports
 import os
-import re
 # third-party imports
 import numpy
 import PIL.Image
@@ -10,11 +9,11 @@ import torch
 
 # -------------------------------Public Function-------------------------------
 def export_previews(
-    maps: dict[str, dict[str, torch.Tensor]],
+    maps: dict[str, dict[tuple[int, int], torch.Tensor]],
+    map_grid_shape: tuple[int, int],
     out_dir: str,
     heads: list[str] | None = None,
     palettes: dict[str, numpy.ndarray] | None = None,
-    index_base: int = 0,
 ) -> dict[str, str]:
     '''
     Build and save PNG previews per head from infer maps.
@@ -34,13 +33,17 @@ def export_previews(
     # make output dir if not already
     os.makedirs(out_dir, exist_ok=True)
 
+    # parse grid shape
+    cols_total, rows_total = map_grid_shape
+
     # if heads not provided, use all heads
     if heads is None:
-        heads = sorted(_discover_heads(maps))
+        heads = list(maps.keys())
 
+    # iterate through heads
     results: dict[str, str] = {}
     for head in heads:
-        mosaic = _build_mosaic_per_head(maps, head, index_base)
+        mosaic = _stitch_patches(maps[head], cols_total, rows_total)
         pal = palettes.get(head) if palettes else None
         out_path = f'{out_dir}/preview_{head}.png'
         _save_index_mosaic_png(mosaic, out_path, pal)
@@ -49,98 +52,46 @@ def export_previews(
     return results
 
 # ------------------------------private  function------------------------------
-# ----- parse heads
-def _discover_heads(maps: dict[str, dict[str, torch.Tensor]]) -> set[str]:
-    '''
-    Return the set of head names present in the infer maps.
-    '''
-
-    heads: set[str] = set()
-    for per_blk in maps.values():
-        heads.update(per_blk.keys())
-    return heads
-
 # ----- mosaic building
-def _build_mosaic_per_head(
-    maps: dict[str, dict[str, torch.Tensor]],
-    head: str,
-    index_base: int=0
+
+def _stitch_patches(
+    placements: dict[tuple[int, int], torch.Tensor],
+    cols_total: int,
+    rows_total: int,
+    *,
+    fill_value: int | float = 0,
 ) -> torch.Tensor:
     '''
-    Stitch a full-scene mosaic for a specific head from infer maps.
+    Merge {(col, row): patch[Hp, Wp]} into a full [H_total, W_total] tensor.
 
-    Args:
-        maps: { blkname: { head: Tensor[H_blk, W_blk] } }
-        head: head name to assemble.
-        index_base: 0 if names start at col_0/row_0, 1 if names start at
-            col_1/row_1.
+    cols_total, rows_total are the total number of patches horizontally
+    and vertically (precomputed upstream).
 
     Returns:
-        Tensor[H_full, W_full] with class indices (same dtype/device as
-            inputs).
+        Canvas of shape [H_total, W_total].
     '''
+    assert placements, 'placements is empty'
 
-    # extract from given head
-    items: list[tuple[str, torch.Tensor]] = []
-    for blkname, per_head in maps.items():
-        if head in per_head:
-            items.append((blkname, per_head[head]))
-    if not items:
-        raise ValueError(f'No blocks found for head="{head}"')
+    # Take a sample patch to get shape/device/dtype
+    any_patch = next(iter(placements.values()))
+    hp, wp = any_patch.shape
+    device = any_patch.device
+    dtype = any_patch.dtype
 
-    # infer block size and device/dtype from the first block
-    _, sample = items[0]
-    h_blk, w_blk = int(sample.shape[0]), int(sample.shape[1])
-    device, dtype = sample.device, sample.dtype
-
-    # sanity: ensure all blocks same shape (optional but helpful)
-    for _, block in items:
-        if block.shape != sample.shape:
-            raise ValueError(
-                'Inconsistent block shapes for head '
-                f'"{head}": expected {tuple(sample.shape)}, '
-                f'got {tuple(block.shape)}'
-            )
-
-    # parse coords and compute grid size
-    coords = [_parse_col_row(n) for (n, _) in items]
-    max_col = max(c for c, _ in coords)
-    max_row = max(r for _, r in coords)
-    grid_w = max_col - index_base + 1
-    grid_h = max_row - index_base + 1
-    if grid_w <= 0 or grid_h <= 0:
-        raise ValueError(
-            f'invalid grid size from names: grid=({grid_h}, {grid_w}), '
-            f'index_base={index_base}'
-        )
-
-    # int with background (0); avoids uninitialized garbage.
-    mosaic = torch.zeros(
-        (grid_h * h_blk, grid_w * w_blk),
+    # init a canvas
+    canvas = torch.full(
+        (rows_total * hp, cols_total * wp),
+        fill_value=fill_value,
         dtype=dtype,
-        device=device
+        device=device,
     )
 
-    # Place each block into the mosaic and return
-    for blkname, block in items:
-        col, row = _parse_col_row(blkname)
-        r0 = (row - index_base) * h_blk
-        c0 = (col - index_base) * w_blk
-        mosaic[r0: r0 + h_blk, c0: c0 + w_blk] = block
-    return mosaic
-
-def _parse_col_row(name: str) -> tuple[int, int]:
-    '''
-    Extract (col, row) from a block name like 'col_03_row_05'.
-    Supports minor variations with dashes and case.
-    '''
-
-    pattern = re.compile(r'.*col[_-]?(\d+).*row[_-]?(\d+).*', re.IGNORECASE)
-    m = pattern.match(name)
-    if not m:
-        raise ValueError(f'cannot parse (col,row) from block name: {name}')
-    col, row = int(m.group(1)), int(m.group(2))
-    return int(col / 256), int(row / 256)
+    # place each patch and return
+    for (col, row), patch in placements.items():
+        y = row * hp
+        x = col * wp
+        canvas[y: y + hp, x: x + wp] = patch
+    return canvas
 
 # ----- png saving
 def _save_index_mosaic_png(

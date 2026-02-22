@@ -33,7 +33,8 @@ class _LoaderMeta:
     '''Simple meta to be shipped with the dataloaders.'''
     batch_size: int
     patch_per_blk: int
-    test_blks_loading_seq: list[str] | None = None
+    test_blks_loading_seq: list[str]
+    test_blks_grid:  tuple[int, int]
 
 @dataclasses.dataclass
 class _LoadingFlags:
@@ -78,7 +79,12 @@ def get_dataloaders(
     )
     batch_size = loader_cfg.get_option('batch_size')
     # meta to be shipped
-    meta = _LoaderMeta(batch_size, _cfg.patch_per_blk)
+    meta = _LoaderMeta(
+        batch_size=batch_size,
+        patch_per_blk=_cfg.patch_per_blk,
+        test_blks_loading_seq=[], # populate at runtime
+        test_blks_grid=data_specs.meta.test_blks_grid
+    )
 
     # by work mode
     if mode in ['with_inference', 'no_inference']:

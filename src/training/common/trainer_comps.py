@@ -55,7 +55,8 @@ class DataLoadersLike(typing.Protocol):
 class _LoaderMetaLike(typing.Protocol):
     batch_size: int
     patch_per_blk: int
-    test_blks_loading_seq: list[str] | None
+    test_blks_loading_seq: list[str]
+    test_blks_grid: tuple[int, int]
 
 # trainer component - head specs (wrapper and individual spec)
 @typing.runtime_checkable
