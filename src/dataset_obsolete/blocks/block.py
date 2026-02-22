@@ -40,7 +40,7 @@ import math
 # third party imports
 import numpy
 # local import
-import dataset
+import dataset_obsolete
 
 # --------------------------------Public  Class--------------------------------
 class DataBlock:
@@ -72,7 +72,7 @@ class DataBlock:
         # init with empty block data
         self.data = _Data()
         # meta dict with default foo values
-        self.meta: dataset.BlockMeta = {
+        self.meta: dataset_obsolete.BlockMeta = {
             'block_name': '',
             'block_shape': (0, 0),
             'valid_pixel_ratio': {},
@@ -100,7 +100,7 @@ class DataBlock:
         img_arr: numpy.ndarray,
         lbl_arr: numpy.ndarray | None,
         padded_dem: numpy.ndarray,
-        meta: dataset.BlockMeta
+        meta: dataset_obsolete.BlockMeta
     ) -> 'DataBlock':
         '''
         Create a data block from in-memory raster arrays.
@@ -214,7 +214,7 @@ class DataBlock:
 
     def normalize_image(
         self,
-        global_stats: dict[str, dataset.ImageStats]
+        global_stats: dict[str, dataset_obsolete.ImageStats]
     ) -> tuple[float, float]:
         '''
         Normalize image bands using precomputed global statistics.

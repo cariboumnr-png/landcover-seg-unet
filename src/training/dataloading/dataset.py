@@ -52,7 +52,7 @@ import torchvision.transforms.functional
 import tqdm
 # local imports
 import alias
-import dataset
+import dataprep
 import utils
 
 @dataclasses.dataclass
@@ -330,7 +330,7 @@ class _BlockDataset(torch.utils.data.Dataset):
         self.logger = logger
 
         # load data from npz
-        bb = dataset.DataBlock().load(block_fpath)
+        bb = dataprep.DataBlock().load(block_fpath)
         self.meta = bb.meta # get metadata of the block for later
         try:
             self.imgs = self._get_patches(bb.data.image_normalized)

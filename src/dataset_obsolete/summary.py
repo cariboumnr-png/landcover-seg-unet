@@ -8,7 +8,7 @@ import os
 import random
 # local imports
 import alias
-import dataset
+import dataset_obsolete
 import utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -150,7 +150,7 @@ def _read_rand_block_meta(
         # read a random block from valid blocks
         valid_blks: dict[str, str] = utils.load_json(train_val_blks_fpath)
         rblk_fpath = random.choice(list(valid_blks.values()))
-        blk = dataset.DataBlock().load(rblk_fpath)
+        blk = dataset_obsolete.DataBlock().load(rblk_fpath)
         blk.data.validate()
 
         # get array size
@@ -169,7 +169,7 @@ def _read_rand_block_meta(
         # if inference blocks are present, read one as well
         infer_blks: dict[str, str] = utils.load_json(infer_blks_fpath)
         rblk_fpath = random.choice(list(infer_blks.values()))
-        blk = dataset.DataBlock().load(rblk_fpath)
+        blk = dataset_obsolete.DataBlock().load(rblk_fpath)
         # sanity: image channel should be the same for train and infer data
         if img_ch_num != 0: # meaning taken value from train_val blocks
             assert blk.data.image_normalized.shape[0] == img_ch_num

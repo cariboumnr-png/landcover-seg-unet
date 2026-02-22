@@ -8,7 +8,7 @@ import re
 import numpy
 # local imports
 import alias
-import dataset
+import dataset_obsolete
 import utils
 
 # -------------------------------Public Function-------------------------------
@@ -34,7 +34,7 @@ def split_dataset(
     valid_blks_fpath = os.path.join(training_dir, valid_blks)
 
     # count label classes globally (all valid blocks)
-    dataset.count_label_cls(
+    dataset_obsolete.count_label_cls(
         blks_fpaths=valid_blks_fpath,
         results_fpath=lbl_count_fpath,
         logger=logger,
@@ -101,7 +101,7 @@ def _score_block(
     '''Score each block.'''
 
     # read from block
-    meta = dataset.DataBlock().load(block_fpath).meta
+    meta = dataset_obsolete.DataBlock().load(block_fpath).meta
     name = meta['block_name']
 
     # find pattern from string

@@ -22,7 +22,7 @@ import zlib
 import numpy
 # local imports
 import alias
-import dataset
+import dataset_obsolete
 import utils
 
 # --------------------------------Public  Class--------------------------------
@@ -114,7 +114,7 @@ class BlockCache:
         # get layout from input raster(s)
         else:
             self.logger.log('INFO', f'Creating/rewriting layout: {layout_dict}')
-            layout = dataset.BlockLayout(
+            layout = dataset_obsolete.BlockLayout(
                 blk_size=self.cfg.block.blk_size,
                 overlap=self.cfg.block.overlap,
                 logger=self.logger
@@ -259,7 +259,7 @@ class BlockCache:
 def _valid_npz(blk_fpath: str) -> dict[str, str]:
     '''Check if a .npz block file is corrupted.'''
 
-    rb = dataset.DataBlock()
+    rb = dataset_obsolete.DataBlock()
     # pass if the npz file can be loaded properly
     try:
         rb.load(blk_fpath)
@@ -272,7 +272,7 @@ def _do_a_blk(
     block: tuple[str, alias.RasterWindow],
     image_fpath: str,
     label_fpath: str | None,
-    config: dataset.BlockMeta,
+    config: dataset_obsolete.BlockMeta,
     fpath_lookup: dict[str, str]
 ) -> list[str]:
     '''Create new a block from input rasters (read by given Window).'''
@@ -312,7 +312,7 @@ def _do_a_blk(
                 lbl_arr = None
 
             # init and populate RasterBlock
-            raster_block = dataset.DataBlock().create(
+            raster_block = dataset_obsolete.DataBlock().create(
                 img_arr=img_arr,
                 lbl_arr=lbl_arr,
                 padded_dem=padded_dem,
@@ -377,7 +377,7 @@ def _valid_block(
     # parse arguments
     name, fpath = block
     # get meta from block
-    meta = dataset.DataBlock().load(fpath).meta
+    meta = dataset_obsolete.DataBlock().load(fpath).meta
 
     # valid pixel ratio threshold
     if meta['valid_pixel_ratio']['block'] < valid_px_threshold:

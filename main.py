@@ -7,13 +7,9 @@ import sys
 import hydra
 import omegaconf
 # local imports
-import src.dataset_
+import src.dataset
 import src.training
 import src.utils
-
-# add resolvers to omegaconf for conveniences
-#  - convert decimals to percentages
-omegaconf.OmegaConf.register_new_resolver('c', lambda x: int(x * 100))
 
 # main process
 @hydra.main(config_path='./configs', config_name='config', version_base='1.3')
@@ -25,7 +21,7 @@ def main(config: omegaconf.DictConfig) -> None:
     logger = src.utils.Logger('main', f'./logs/{timestamp}.log')
 
     # data preparation
-    data_specs = src.dataset_.load_data(config, logger)
+    data_specs = src.dataset.load_data(config, logger)
 
     # builder runner
     runner = src.training.build_runner(data_specs, config, logger)

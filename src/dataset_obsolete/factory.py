@@ -5,7 +5,7 @@ import functools
 # third-party imports
 import omegaconf
 # local imports
-import dataset
+import dataset_obsolete
 import utils
 
 def prepare_data(
@@ -14,38 +14,38 @@ def prepare_data(
         logger: utils.Logger,
         *,
         mode: str
-    ) -> dataset.DataSummary:
+    ) -> dataset_obsolete.DataSummary:
     '''Data preparation pipeline.'''
 
     # if skip data preperation, e.g., continue training on existing data
     if mode == 'skip':
         # run data summary and return
-        summary = dataset.generate_summary(dataset_name, config.cache)
+        summary = dataset_obsolete.generate_summary(dataset_name, config.cache)
         return summary
 
     # otherwise prepare partially filed building functions
     build_data_cache = functools.partial(
-        dataset.build_data_cache,
+        dataset_obsolete.build_data_cache,
         dataset_name=dataset_name,
         input_config=config.dataset,
         cache_config=config.cache,
         logger=logger,
     )
     build_domains = functools.partial(
-        dataset.build_domains,
+        dataset_obsolete.build_domains,
         dataset_name=dataset_name,
         input_config=config.dataset,
         cache_config=config.cache,
         logger=logger
     )
     split_dataset = functools.partial(
-        dataset.split_dataset,
+        dataset_obsolete.split_dataset,
         dataset_name=dataset_name,
         cache_config=config.cache,
         logger=logger
     )
     normalize_dataset = functools.partial(
-        dataset.normalize_dataset,
+        dataset_obsolete.normalize_dataset,
         dataset_name=dataset_name,
         cache_config=config.cache,
         logger=logger
@@ -83,5 +83,5 @@ def prepare_data(
         )
 
     # run data summary and return
-    summary = dataset.generate_summary(dataset_name, config.cache)
+    summary = dataset_obsolete.generate_summary(dataset_name, config.cache)
     return summary
