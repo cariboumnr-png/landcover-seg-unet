@@ -31,6 +31,11 @@ A collection of `DatasetItem` objects.
 RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
 RasterWindow: typing.TypeAlias = rasterio.windows.Window
 #
+RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
+'''
+A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
+in pixels) from the world grid.
+'''
 RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.ndarray]
 '''
 Array read from a raster window with its top-left corner at specified

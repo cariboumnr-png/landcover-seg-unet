@@ -1,8 +1,6 @@
 '''Common protocols'''
 
-from .data import DataSummaryLike
-
-from .checkpoint import CheckpointMetaLike
+from .dataset import DataSpecsLike
 from .trainer import (
     TrainerLike
 )
@@ -26,7 +24,6 @@ from .trainer_comps import (
 )
 from .trainer_config import (
     RuntimeConfigLike,
-    DataConfigLike,
     ScheduleLike,
     MonitorLike,
     PrecisionLike,
@@ -35,8 +32,6 @@ from .trainer_config import (
 from .trainer_state import RuntimeStateLike
 
 __all__ = [
-    #
-    'CheckpointMetaLike',
     #
     'TrainerLike',
     #
@@ -52,7 +47,6 @@ __all__ = [
     'OptimizationLike',
     #
     'RuntimeConfigLike',
-    'DataConfigLike',
     'ScheduleLike',
     'MonitorLike',
     'PrecisionLike',
@@ -60,7 +54,7 @@ __all__ = [
     #
     'RuntimeStateLike',
     #
-    'DataSummaryLike',
+    'DataSpecsLike',
     #
     'CallBacksLike',
     'ProgressCallbackLike',

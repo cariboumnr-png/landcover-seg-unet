@@ -9,7 +9,7 @@ import numpy
 import tqdm
 # local imports
 import alias
-import dataset
+import dataset_obsolete
 import utils
 
 # -------------------------------Public Function-------------------------------
@@ -45,7 +45,7 @@ def normalize_dataset(
 
     # count label classes only on training blocks
     if mode == 'training':
-        dataset.count_label_cls(
+        dataset_obsolete.count_label_cls(
             blks_fpaths=blks_fpath,
             results_fpath=lbl_count_fpath,
             logger=logger,
@@ -91,7 +91,7 @@ def _get_image_stats(
 
     logger.log('INFO', 'Aggregating global image stats')
     # read a random block to get number of image channels
-    temp = dataset.DataBlock()
+    temp = dataset_obsolete.DataBlock()
     temp.load(random.choice(list(valid_blks.values())))
     num_bands = len(temp.meta['block_image_stats'])
 
@@ -108,7 +108,7 @@ def _get_image_stats(
     # iterate through provided block files
     for fpath in tqdm.tqdm(valid_blks.values()):
         # prep
-        rb = dataset.DataBlock().load(fpath)
+        rb = dataset_obsolete.DataBlock().load(fpath)
         stats = rb.meta['block_image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
@@ -138,7 +138,7 @@ def _validate_image_stats(
         return True
     logger.log('INFO', f'Found {len(work_fpaths)} blocks with bad stats')
     for fpath in tqdm.tqdm(work_fpaths):
-        rb = dataset.DataBlock().load(fpath)
+        rb = dataset_obsolete.DataBlock().load(fpath)
         rb.recalculate_stats(fpath) # save to overwrite
     logger.log('INFO', f'Updated stats for {len(work_fpaths)} blocks')
     return False
@@ -146,7 +146,7 @@ def _validate_image_stats(
 def _check_block_image_stats(block_fpath: str) -> dict[str, str]:
     '''doc'''
 
-    meta = dataset.DataBlock().load(block_fpath).meta
+    meta = dataset_obsolete.DataBlock().load(block_fpath).meta
     stats = meta['block_image_stats']
     for value_dict in stats.values():
         if any(numpy.isnan(x) for x in value_dict.values()):
@@ -215,7 +215,7 @@ def _normalize_blocks(
 def _check_block_normal(block_fpath: str) -> dict[str, str]:
     '''Check completeness of normalized image channel of a block.'''
 
-    data = dataset.DataBlock().load(block_fpath).data
+    data = dataset_obsolete.DataBlock().load(block_fpath).data
     if data.image_normalized.size != data.image.size or \
         numpy.isnan(data.image_normalized).any():
         return {'renorm': block_fpath}
@@ -227,7 +227,7 @@ def _normalize_block(
     ) -> None:
     '''doc.'''
 
-    rb = dataset.DataBlock().load(fpath)
+    rb = dataset_obsolete.DataBlock().load(fpath)
     mmin, mmax = rb.normalize_image(stats)
     assert mmin > -100 and mmax < 100
     rb.save(fpath)

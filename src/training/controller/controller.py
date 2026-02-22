@@ -3,12 +3,19 @@
 # standard imports
 import dataclasses
 import os
+import typing
 # local imports
 import alias
-import training.common
 import training.controller
 import training.trainer
 import utils
+
+# --------------------------------private  type--------------------------------
+class _CheckpointMeta(typing.TypedDict):
+    '''Checkpont metadata'''
+    metric: float
+    epoch: int
+    step: int
 
 # --------------------------------Public  Class--------------------------------
 class Controller:
@@ -70,7 +77,7 @@ class Controller:
         '''Train the current phase.'''
 
         # if loaded from previous
-        if meta is not None:
+        if meta:
             self.logger.log('INFO', 'Loading from previous checkpoint')
             self.trainer.state.progress.epoch = meta['epoch'] + 1
             self.trainer.state.progress.global_step = meta['step']
@@ -90,7 +97,7 @@ class Controller:
 
         # train
         print(f'__Phase [{phase.name}] started__')
-        for epoch in range(start + 1, num_epoch + 1):
+        for epoch in range(start, num_epoch + 1):
             # early stop check
             # - patience can be None = no early stop
             # - stop when patience reached
@@ -112,8 +119,8 @@ class Controller:
             if self.trainer.config.schedule.eval_interval is not None and \
                 epoch % self.trainer.config.schedule.eval_interval == 0:
                 v_logs = self.trainer.validate()
-                # also do a preview if inference data provided
-                if self.trainer.dataloaders.infer:
+                # also do a preview if inference data provided TODO
+                if self.trainer.dataloaders.test:
                     self.trainer.infer(self.cfg.preview_dpath)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
@@ -154,7 +161,7 @@ class Controller:
     def _save_progress(self, fpath: str) -> None:
         '''Save at the current phase.'''
 
-        ckpt_meta: training.common.CheckpointMetaLike = {
+        ckpt_meta: _CheckpointMeta = {
             'metric': self.trainer.state.metrics.curr_value,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step

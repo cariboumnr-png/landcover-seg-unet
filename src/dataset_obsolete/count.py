@@ -12,7 +12,7 @@ import os
 import numpy
 import tqdm
 # local imports
-import dataset
+import dataset_obsolete
 import utils
 
 # -------------------------------Public Function-------------------------------
@@ -58,7 +58,7 @@ def count_label_cls(
     # aggregate pixel count in each block
     count_results = {}
     for fpath in tqdm.tqdm(blks_fpaths_dict.values()):
-        blk = dataset.DataBlock().load(fpath)
+        blk = dataset_obsolete.DataBlock().load(fpath)
         for layer, counts in blk.meta['label_count'].items():
             cls_count = numpy.asarray(counts)
             if layer in count_results:

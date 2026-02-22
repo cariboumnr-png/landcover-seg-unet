@@ -45,11 +45,11 @@ class MultiHeadTrainer:
     '''
 
     def __init__(
-            self,
-            components: training.trainer.TrainerComponents,
-            config: training.trainer.RuntimeConfig,
-            device: str
-        ):
+        self,
+        components: training.trainer.TrainerComponents,
+        config: training.trainer.RuntimeConfig,
+        device: str
+    ):
         '''
         Initialize trainer with components and configuration.
 
@@ -201,8 +201,8 @@ class MultiHeadTrainer:
         self._emit('on_inference_begin')
 
         # iterate through inference dataset
-        assert self.dataloaders.infer, 'Inference dataset not provided'
-        for bidx, batch in enumerate(self.dataloaders.infer, start=1):
+        assert self.dataloaders.test, 'Inference dataset not provided'
+        for bidx, batch in enumerate(self.dataloaders.test, start=1):
 
             # batch start
             # - get new batch and parse into x, y_dict (empty dict) and domain
@@ -222,11 +222,11 @@ class MultiHeadTrainer:
         self._emit('on_inference_end', out_dir)
 
     def set_head_state(
-            self,
-            active_heads: list[str] | None=None,
-            frozen_heads: list[str] | None=None,
-            excluded_cls: dict[str, tuple[int, ...]] | None=None
-        ) -> None:
+        self,
+        active_heads: list[str] | None=None,
+        frozen_heads: list[str] | None=None,
+        excluded_cls: dict[str, tuple[int, ...]] | None=None
+    ) -> None:
         '''
         Set active/frozen heads and per-head class exclusions.
 
@@ -296,10 +296,10 @@ class MultiHeadTrainer:
         self.state.heads.active_hmetrics = None
 
     def predict(
-            self,
-            x: torch.Tensor,
-            mode: str
-        ) -> dict[str, torch.Tensor]:
+        self,
+        x: torch.Tensor,
+        mode: str = 'seg'
+    ) -> dict[str, torch.Tensor]:
         '''
         Run a simple head-aware inference pass.
 
@@ -340,12 +340,14 @@ class MultiHeadTrainer:
         return preds
 
     # ----------------------------internal methods----------------------------
-    # runtime state initialization
+    # ----- runtime state initialization
     def _init_state(self) -> training.trainer.RuntimeState:
         '''Instantiate the runtime state aligned with trainer config.'''
 
         # instantiate a state
         state = training.trainer.RuntimeState()
+        # state - full batch size:
+        state.batch_cxt.batch_size_full = self.dataloaders.meta.batch_size
         # state - heads
         state.heads.all_heads = list(self.headspecs.as_dict().keys())
         # state = optimization
@@ -353,17 +355,31 @@ class MultiHeadTrainer:
             device=self.device,
             enabled=self.config.precision.use_amp
         )
+        # if test dataset if provided, setup inference context
+        if self.dataloaders.test:
+            # resolve patch-block layout
+            per_blk = self.dataloaders.meta.patch_per_blk
+            per_dim = int(per_blk ** 0.5)
+            assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
+            state.epoch_sum.infer_ctx.patch_per_blk = per_blk
+            state.epoch_sum.infer_ctx.patch_per_dim = per_dim
+            # resolve block col/row numbers
+            blk_col, blk_row = self.dataloaders.meta.test_blks_grid
+            state.epoch_sum.infer_ctx.block_columns = blk_col
+            # resolve patch col/row numbers
+            pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
+            state.epoch_sum.infer_ctx.patch_grid_shape = pch_col, pch_row
         # return
         return state
 
-    # callback classes setup
+    # ----- callback classes setup
     def _setup_callbacks(self) -> None:
         '''Pass current trainer instance to all callback classes.'''
 
         for callback in self.callbacks:
             callback.setup(self)
 
-    # callback callers
+    # ----- callback callers
     def _emit(self, hook: str, *args, **kwargs) -> None:
         '''
         Invoke a named hook from callbacks with the provided arguments.
@@ -380,7 +396,7 @@ class MultiHeadTrainer:
                 method(*args, **kwargs)
 
     # -----------------------helpers called by callbacks----------------------
-    # batch extraction
+    # ----- batch extraction
     def _parse_batch(self) -> None:
         '''
         Extract input, targets, and domain tensors from current batch.
@@ -413,18 +429,18 @@ class MultiHeadTrainer:
             assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
             y = y.to(device)
         # domain can be an empty dict or a dict[str, torch.Tensore]
+        work_domain = {}
         if domain:
-            assert isinstance(domain, dict)
-            # domain names must be str
             # each domain can be a tensor with the same batch size or None
             for k, v in domain.items():
-                assert isinstance(k, str)
                 if isinstance(v, torch.Tensor):
                     assert v.shape[0] == x.shape[0]
-            domain = {k: v.to(device) for k, v in domain.items()}
+                    work_domain[k] = v
+                else:
+                    work_domain[k] = None
+            work_domain = {k: v.to(device) for k, v in work_domain.items()}
         else:
-            domain = {}
-        running_domain = self.__sel_domain(domain)
+            work_domain = {}
 
         # heads: fall back to all available heads if activce heads not provided
         if self.state.heads.active_heads is None:
@@ -447,41 +463,9 @@ class MultiHeadTrainer:
         # assign to context
         self.state.batch_cxt.x = x
         self.state.batch_cxt.y_dict = y_dict
-        self.state.batch_cxt.domain = running_domain
+        self.state.batch_cxt.domain = work_domain
 
-    def __sel_domain(
-            self,
-            domain: dict[str, torch.Tensor]
-        ) -> dict[str, torch.Tensor | None]:
-        '''Get domain tensors - currently one slot for each ids/vec.'''
-
-        ids_name = self.config.data.dom_ids_name
-        vec_name = self.config.data.dom_vec_name
-        ids = domain.get(ids_name) if ids_name is not None else None
-        vec = domain.get(vec_name) if vec_name is not None else None
-        return {'ids': ids, 'vec': vec}
-
-    def _resolve_batch_block_range(self) -> None:
-        '''
-        Compute the [start, end) block index window covered by the
-        current batch.
-        '''
-
-        # get dataloader meta with sanity check
-        meta = self.comps.dataloaders.meta
-        batch_size = meta.batch_size
-        patch_per_blk = meta.patch_per_blk
-        if batch_size % patch_per_blk != 0:
-            raise ValueError('batch_size must be a multiple of patch_per_blk')
-
-        # determine which blks this batch covers
-        bidx = self.state.batch_cxt.bidx # 1-based
-        n_blks_per_batch = batch_size // patch_per_blk
-        blks_start = (bidx - 1) * n_blks_per_batch
-        blks_end = bidx * n_blks_per_batch  # exclusive
-        self.state.batch_cxt.block_index_range = (blks_start, blks_end)
-
-    # context setup
+    # ----- context setup
     def _autocast_ctx(self):
         '''Autocast context for training based on precision setting.'''
         device_type = self.device
@@ -502,7 +486,7 @@ class MultiHeadTrainer:
         stack.enter_context(self._autocast_ctx())
         return stack
 
-    # training phase
+    # ----- training phase
     def _compute_loss(self) -> None:
         '''
         Compute total and per-head losses for the current batch.
@@ -566,7 +550,7 @@ class MultiHeadTrainer:
             text = f'b{bidx:04d} | ' + '|'.join(text_list)
             self.state.epoch_sum.train_logs.head_losses_str = text
 
-    # validation phase
+    # ----- validation phase
     def _update_conf_matrix(self) -> None:
         '''Update confusion matrix in-place at validation batch end.'''
 
@@ -590,11 +574,7 @@ class MultiHeadTrainer:
             )
 
     def _compute_iou(self) -> None:
-        '''
-        Compute IoU at the end of validation phase.
-
-        Writes metrics to `self.state.epoch_sum`.
-        '''
+        '''Compute IoU at the end of validation phase.'''
 
         # sanity
         assert self.state.heads.active_hmetrics is not None
@@ -638,75 +618,48 @@ class MultiHeadTrainer:
             else:
                 self.state.metrics.patience_n += 1
 
-    # inference phase
+    # ----- inference phase
     def _aggregate_batch_predictions(self):
-        '''Convert predictions of the current batch into a class map'''
+        '''Accumulate batch predictions a class map.'''
 
-        # assumes no ragged batches for inference - guarantee from loader
-        # get number of patches per block from dataloader meta
-        p = self.comps.dataloaders.meta.patch_per_blk
-        # infer patch grid (assuming perfectly square)
-        n  = int(p ** 0.5)
-        assert n * n == p, 'Invalid patch grid'
-
-        # stable block names
-        infer_blk_seq = self.comps.dataloaders.meta.infer_blks_loading_seq
-        assert infer_blk_seq is not None, 'Inference data not provided'
+        # inference context alias
+        ctx = self.state.epoch_sum.infer_ctx
 
         # get through each head and attach preds to corresponding block-heads
-        maps: dict[str, dict[str, torch.Tensor]] = {}
         for head, logits in self.state.batch_out.preds.items():
+
             # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
             preds = torch.argmax(logits, dim=1)
-            # get preds per head, stitched for each block
-            block_preds = self.__stitch_head_preds(preds, p, n)
-            #
-            for blkid, preds in block_preds.items():
-                blkname = infer_blk_seq[blkid]
-                if blkname not in maps:
-                    maps[blkname] = {}
-                maps[blkname][head] = preds
-        # assign to trainer state
-        self.state.epoch_sum.infer_outputs.maps = maps
+            # get preds placed according to locations from this batch
+            mapped: dict[tuple[int, int], torch.Tensor] = {}
+            # place patches to locations
+            for i, pred in enumerate(preds):
+                # global patch index
+                patch_idx = self.state.batch_cxt.pidx_start + i
+                # block position
+                block_idx = patch_idx // ctx.patch_per_blk
+                block_row, block_col = divmod(block_idx, ctx.block_columns)
+                # patch position inside block
+                p_in_blk = patch_idx % ctx.patch_per_blk
+                patch_row, patch_col = divmod(p_in_blk, ctx.patch_per_dim)
+                # map pred to patch-grid coordinates
+                mapped[(
+                    block_col * ctx.patch_per_dim + patch_col,
+                    block_row * ctx.patch_per_dim + patch_row
+                )] = pred
 
-    def __stitch_head_preds(
-            self,
-            preds: torch.Tensor,
-            p_per_blk: int,
-            p_per_dim: int
-        ) -> dict[int, torch.Tensor]:
-        '''doc'''
-
-        out: dict[int, torch.Tensor] = {}
-        # get block index range of current batch
-        rr = self.state.batch_cxt.block_index_range
-        # get H * W of preds
-        _, hp, wp = preds.shape
-
-        # iterate through involved blocks
-        for blk_offset, blk_seq_idx in enumerate(range(rr[0], rr[1])):
-
-            # get preds for current block
-            patch_start = blk_offset * p_per_blk
-            patch_end = patch_start + p_per_blk
-            blk_patches = preds[patch_start: patch_end]  # [P, Hp, Wp]
-
-            # reshape scanline → grid
-            grid = blk_patches.reshape(p_per_dim, p_per_dim, hp, wp)
-            # stitch rows then cols
-            stitched = torch.cat(
-                [torch.cat(list(grid[r]), dim=1) for r in range(p_per_dim)],
-                dim=0
-            )
-            out[blk_seq_idx] = stitched
-        # return
-        return out
+            # pull existing epoch-level maps (persist across batches)
+            # ensure per-head dict exists, then mutate
+            ctx.maps.setdefault(head, {}).update(mapped)
+            # Update (merge) mapping for this head
+            # Keys are (col, row) in patch-grid coords
 
     def _preview_monitor_head(self, out_dir: str) -> None:
-        '''doc'''
+        '''Generate a preview image for `self.config.monitor.head`.'''
 
         utils.export_previews(
-            self.state.epoch_sum.infer_outputs.maps,
+            self.state.epoch_sum.infer_ctx.maps,
+            self.state.epoch_sum.infer_ctx.patch_grid_shape,
             out_dir=out_dir,
             heads=[self.config.monitor.head] # as list
         )

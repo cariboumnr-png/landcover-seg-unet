@@ -56,7 +56,8 @@ class _Heads:
 class _BatchCtx:
     '''Batch level data context.'''
     bidx: int = 0
-    block_index_range: tuple[int, int] = (-1, -1)
+    pidx_start: int = 0
+    batch_size_full: int = 0
     batch: alias.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
     y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
@@ -84,10 +85,14 @@ class _BatchCtx:
 
     def refresh(self, bidx: int, batch: tuple) -> None:
         '''Refresh context at the beginning of a batch.'''
-        self.bidx = bidx                # take input from new batch
-        self.batch = batch              # take input from new batch
-        self.x = torch.empty(0)         # clear the old batch
-        self.y_dict.clear()             # clear the old batch
+        # take input from new batch
+        self.bidx = bidx
+        self.batch = batch
+        # calc starting patch id of this batch
+        self.pidx_start = (bidx - 1) * self.batch_size_full
+        # clear old batch
+        self.x = torch.empty(0)
+        self.y_dict.clear()
         self.domain.clear()
 
 # ----- .batch_out (output)
@@ -138,9 +143,13 @@ class _ValLogs:
     head_metrics_str: dict[str, list[str]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
-class _InferOutputs:
+class _InferContext:
     '''Inference result summary.'''
-    maps: dict[str, dict[str, torch.Tensor]] = dataclasses.field(default_factory=dict)
+    patch_per_blk: int = 0
+    patch_per_dim: int = 0
+    block_columns: int = 0
+    patch_grid_shape: tuple[int, int] = (0, 0)
+    maps: dict[str, dict[tuple[int, int], torch.Tensor]] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
 class _Epoch:
@@ -149,7 +158,7 @@ class _Epoch:
     val_loss: float = 0.0
     train_logs: _TrainLogs = dataclasses.field(default_factory=_TrainLogs)
     val_logs: _ValLogs = dataclasses.field(default_factory=_ValLogs)
-    infer_outputs: _InferOutputs = dataclasses.field(default_factory=_InferOutputs)
+    infer_ctx: _InferContext = dataclasses.field(default_factory=_InferContext)
 
     def __str__(self) -> str:
         return '\n'.join([

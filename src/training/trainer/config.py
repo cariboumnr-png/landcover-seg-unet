@@ -11,18 +11,12 @@ import utils
 @dataclasses.dataclass
 class RuntimeConfig:
     '''Minimal runtime config'''
-    data: _DataConfig
     schedule: _Schedule
     monitor: _Monitor
     precision: _Precision
     optim: _OptimConfig
 
 # ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _DataConfig:
-    dom_ids_name: str | None
-    dom_vec_name: str | None
-
 @dataclasses.dataclass
 class _Schedule:
     '''Progression and scheduling'''
@@ -59,10 +53,6 @@ def get_config(config: alias.ConfigType):
     cfg = utils.ConfigAccess(config)
 
     return RuntimeConfig(
-        data=_DataConfig(
-            cfg.get_option('data', 'domain_ids_name'),
-            cfg.get_option('data', 'domain_vec_name')
-        ),
         schedule=_Schedule(
             cfg.get_option('schedule', 'max_epoch'),
             cfg.get_option('schedule', 'max_step'),

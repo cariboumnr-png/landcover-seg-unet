@@ -6,4 +6,4 @@ tile_size:
 tile_overlap:
   row: 0
   col: 0
-output_dirpath: ${paths.artifacts.grids}/${grid.id}
+output_dirpath: ${artifacts.grids}/${grid.id}

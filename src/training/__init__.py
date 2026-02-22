@@ -10,16 +10,15 @@ import importlib
 import typing
 
 __all__ = [
-    'build_controller',
-    'build_trainer',
+    'build_runner',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_controller, build_trainer
+    from .factory import build_runner
 
 def __getattr__(name: str):
 
-    if name in ('build_controller', 'build_trainer'):
+    if name in ('build_runner'):
         return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(name)

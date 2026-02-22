@@ -172,6 +172,15 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         ])
 
     # ----- public method
+    def pop_many(self, coords: typing.Iterable[tuple[int, int]]) -> None:
+        '''Bulk delete items from class.'''
+        keys = list(coords)              # snapshot to be safe
+        for k in keys:
+            self._data.pop(k, None)      # O(1) each, ignore missing
+        if self._valid:
+            keep = set(self._data.keys())  # O(N)
+            self._valid = [k for k in self._valid if k in keep]  # O(V)
+
     def to_payload(self) -> DomainPayload:
         '''Generate class payload for json dump.'''
 
@@ -199,6 +208,17 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         # return class object
         return obj
 
+    # ----- property
+    @property
+    def max_id(self) -> int:
+        '''Gloabl max index.'''
+        return max(self._data[coord]['majority'] or 0 for coord in self._valid)
+
+    @property
+    def n_pca_ax(self) -> int:
+        '''Number of PCA axes that achieves target variance.'''
+        return self._ctx.pca_axes_n
+
     # ----- private method
     def _map_domain_to_grid(self) -> list[alias.RasterTile]:
         '''
@@ -216,7 +236,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         # open domain raster
         with rasterio.open(self._src) as src:
             # offset the world grid to align with input raster
-            self._grid.set_offset_from(src)
+            self._grid.offset_from(src)
             # infer dtype and nodata
             dtype = numpy.dtype(src.dtypes[0])
             assert numpy.issubdtype(dtype, numpy.integer) # sanity check: int only
@@ -335,7 +355,7 @@ def _read_window(
 
     # read raster at window and return
     with rasterio.open(raster_fpath, 'r') as src:
-        arr = src.read(1, window=raster_window) # [1, H, W] for 2D rasters
+        arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
         arr = arr.astype(numpy.int64, copy=False) # ensure negatives support
         return raster_window_id, arr
 

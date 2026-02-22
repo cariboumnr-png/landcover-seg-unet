@@ -1,31 +1,11 @@
-# training data
-training:
-  images:
-    - name: demo
-      path: ./data/demo/data/training/image.tif
-  labels:
-    - name: demo
-      path: ./data/demo/data/training/label.tif
-# inference data
-inference:
-  images:
-    - name: demo
-      path: ./data/demo/data/inference/image.tif
-# domain data
-domain:
-  training:
-    disc:
-      - name: ecodist
-        path: ./data/demo/data/training/ecodistrict.tif
-      - name: geology
-        path: ./data/demo/data/training/geology.tif
-    cont: null
-  inference:
-    disc:
-      - name: ecodist
-        path: ./data/demo/data/inference/ecodistrict.tif
-      - name: geology
-        path: ./data/demo/data/inference/geology.tif
-    cont: null
-# shared data configuration
-config: ./data/demo/config.json
+# name of the dataset
+name: demo
+# input fit data
+fit:
+  image: ./demo_data/fit_input/image.tif
+  label: ./demo_data/fit_input/label.tif
+# input test data (optional)
+test:
+  image: ./demo_data/test_input/image.tif
+# data configuration
+config: ./demo_data/config.json

@@ -17,23 +17,17 @@ import utils
 @dataclasses.dataclass
 class DataLoaders:
     '''doc'''
-    train: torch.utils.data.DataLoader | None
-    val: torch.utils.data.DataLoader | None
-    infer: torch.utils.data.DataLoader | None
+    train: torch.utils.data.DataLoader
+    val: torch.utils.data.DataLoader
+    test: torch.utils.data.DataLoader | None
     meta: _LoaderMeta
-
-    def __post_init__(self):
-        if not self.train and not self.val:
-            assert self.infer
-        if not self.infer:
-            assert self.train and self.val
 
 @dataclasses.dataclass
 class _LoaderMeta:
     '''Simple meta to be shipped with the dataloaders.'''
     batch_size: int
     patch_per_blk: int
-    infer_blks_loading_seq: list[str] | None = None
+    test_blks_grid:  tuple[int, int]
 
 @dataclasses.dataclass
 class _LoadingFlags:
@@ -46,11 +40,10 @@ class _LoadingFlags:
     infer_cache: int
 
 def get_dataloaders(
-        mode: str,
-        data_summary: training.common.DataSummaryLike,
-        loader_config: alias.ConfigType,
-        logger: utils.Logger,
-    ) -> DataLoaders:
+    data_specs: training.common.DataSpecsLike,
+    loader_config: alias.ConfigType,
+    logger: utils.Logger,
+) -> DataLoaders:
     '''Entry to the module, returns two dataloaders for training.'''
 
     # get a child from the base logger
@@ -60,16 +53,16 @@ def get_dataloaders(
     loader_cfg = utils.ConfigAccess(loader_config)
 
     # get dataset filepaths from DataSummary
-    data_paths = data_summary.data
-    domain_paths = data_summary.doms
+    data_paths = data_specs.splits
+    domains = data_specs.domains
 
     # get loading flags
-    flags = _get_flags(data_summary)
+    flags = _get_flags(data_specs)
 
     # declare loaders type and defualt value
-    t_loader: torch.utils.data.DataLoader | None = None
-    v_loader: torch.utils.data.DataLoader | None = None
-    i_loader: torch.utils.data.DataLoader | None = None
+    train_loader: torch.utils.data.DataLoader
+    val_loader: torch.utils.data.DataLoader
+    test_loader: torch.utils.data.DataLoader | None = None
 
     # get persistent block config
     _cfg = training.dataloading.BlockConfig(
@@ -78,106 +71,95 @@ def get_dataloaders(
     )
     batch_size = loader_cfg.get_option('batch_size')
     # meta to be shipped
-    meta = _LoaderMeta(batch_size, _cfg.patch_per_blk)
+    meta = _LoaderMeta(
+        batch_size=batch_size,
+        patch_per_blk=_cfg.patch_per_blk,
+        test_blks_grid=data_specs.meta.test_blks_grid
+    )
 
     # by work mode
-    if mode in ['with_inference', 'no_inference']:
-        assert data_paths.train and data_paths.val
+    # training loader
+    # config
+    cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
+    cfg.augment_flip = True
+    cfg.ids_domain = domains.train['ids_domain']
+    cfg.vec_domain = domains.train['vec_domain']
+    # data
+    data = training.dataloading.MultiBlockDataset(
+        blks_dict=data_paths.train,
+        blk_cfg=cfg,
+        logger=logger,
+        preload=flags.train_preload,
+        blk_cache_num=flags.train_cache
+    )
+    # loader
+    train_loader = torch.utils.data.DataLoader(
+        dataset=data,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=_collate_multi_block
+    )
 
-        # training loader
-        # config
-        cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-        cfg.augment_flip = True
-        cfg.domain_dict = domain_paths.train_val_domain
-        # data
-        data = training.dataloading.MultiBlockDataset(
-            blks_dict=data_paths.train,
-            blk_cfg=cfg,
-            logger=logger,
-            preload=flags.train_preload,
-            blk_cache_num=flags.train_cache
-        )
-        # loader
-        t_loader = torch.utils.data.DataLoader(
-            dataset=data,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=_collate_multi_block
-        )
+    # validation loader
+    # config
+    cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
+    cfg.augment_flip = False
+    cfg.ids_domain = domains.val['ids_domain']
+    cfg.vec_domain = domains.val['vec_domain']
+    # data
+    data = training.dataloading.MultiBlockDataset(
+        blks_dict=data_paths.val,
+        blk_cfg=cfg,
+        logger=logger,
+        preload=flags.val_preload,
+        blk_cache_num=flags.val_cache
+    )
+    # loader
+    val_loader = torch.utils.data.DataLoader(
+        dataset=data,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=_collate_multi_block
+    )
 
-        # validation loader
+    if data_paths.test:
+        # test loader
         # config
         cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = False
-        cfg.domain_dict = domain_paths.train_val_domain
+        cfg.ids_domain = domains.test['ids_domain']
+        cfg.vec_domain = domains.test['vec_domain']
         # data
         data = training.dataloading.MultiBlockDataset(
-            blks_dict=data_paths.val,
+            blks_dict=data_paths.test,
             blk_cfg=cfg,
             logger=logger,
-            preload=flags.val_preload,
-            blk_cache_num=flags.val_cache
+            preload=flags.infer_preload,
+            blk_cache_num=flags.infer_cache
         )
         # loader
-        v_loader = torch.utils.data.DataLoader(
+        test_loader = torch.utils.data.DataLoader(
             dataset=data,
             batch_size=batch_size,
             shuffle=False,
             collate_fn=_collate_multi_block
         )
 
-        if mode == 'with_inference':
-
-            assert data_paths.infer
-            # inference loader
-            # config
-            cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-            cfg.augment_flip = False
-            cfg.domain_dict = domain_paths.infer_domain
-            # data
-            data = training.dataloading.MultiBlockDataset(
-                blks_dict=data_paths.infer,
-                blk_cfg=cfg,
-                logger=logger,
-                preload=flags.infer_preload,
-                blk_cache_num=flags.infer_cache
-            )
-            # loader
-            i_loader = torch.utils.data.DataLoader(
-                dataset=data,
-                batch_size=batch_size,
-                shuffle=False,
-                collate_fn=_collate_multi_block
-            )
-    else:
-        raise ValueError(
-            f'Invalide mode: "{mode}". Must be "with_inference" or '
-            f'"no_inference"'
-        )
-
-    # add inference blocks loading sequence to meta if infer data present
-    if data_paths.infer:
-        meta.infer_blks_loading_seq = list(data_paths.infer.keys())
-    # final sanity
-    # at least one loader is not None
-    assert any([t_loader, v_loader, i_loader])
-    # training and validation loaders are tied together
-    assert (t_loader and v_loader) or not (t_loader and not v_loader)
     # return
-    return DataLoaders(t_loader, v_loader, i_loader, meta)
+    return DataLoaders(train_loader, val_loader, test_loader, meta)
 
-def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
+def _get_flags(data_summary: training.common.DataSpecsLike) -> _LoadingFlags:
     '''Get flags.'''
 
     # get dataset filepaths from DataSummary
-    data = data_summary.data
-    t_v_bytes = data_summary.meta.train_val_blk_bytes
-    i_bytes = data_summary.meta.infer_blk_bytes
+    data = data_summary.splits
+    t_v_bytes = data_summary.meta.fit_perblk_bytes
+    i_bytes = data_summary.meta.test_perblk_bytes
 
     # get dataset sizes
     train_bytes = len(data.train or {}) * t_v_bytes
     val_bytes = len(data.val or {}) * t_v_bytes
-    infer_bytes = len(data.infer or {}) * i_bytes
+    infer_bytes = len(data.test or {}) * i_bytes
 
     # decision on preload and cache size
     mem = psutil.virtual_memory().available
@@ -199,7 +181,7 @@ def _get_flags(data_summary: training.common.DataSummaryLike) -> _LoadingFlags:
     else:
         v_cac = round(0.3 * mem / t_v_bytes)
         t_cac = round(0.2 * mem / t_v_bytes)
-        i_cac = round(0.1 * mem / data_summary.meta.infer_blk_bytes)
+        i_cac = round(0.1 * mem / data_summary.meta.test_perblk_bytes)
 
     # return flags
     i_pre = True # TODO

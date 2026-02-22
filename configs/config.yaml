@@ -1,24 +1,14 @@
-# -----------------------------default  subconfigs-----------------------------
+# Main entry to the config tree
 defaults:
   - _self_
-  - cache: default
-  - curriculum: demo
-  - extent: demo_extent
+  # data-side
+  - artifacts: default
+  - dataprep: default
   - dataset: demo
-  - domain: demo_domain
-  - grid: base_grid
+  - domain: demo
+  - extent: demo
+  - grid: base
+  # training-side
+  - curriculum: demo
   - models: multihead
-  - paths: default
   - trainer: default
-
-# ----------------------------------------------------------------------------
-# dataset name
-dataset_name: ${hydra:runtime.choices.dataset}
-
-# data preparation mode
-# can be skip, with_inference, no_inference, or inference_only
-dataprep_mode: skip
-
-# training mode
-# can be with_inference or no_inference
-trainer_mode: with_inference

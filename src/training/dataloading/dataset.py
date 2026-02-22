@@ -52,7 +52,7 @@ import torchvision.transforms.functional
 import tqdm
 # local imports
 import alias
-import dataset
+import dataprep
 import utils
 
 @dataclasses.dataclass
@@ -88,7 +88,8 @@ class BlockConfig:
     block_size: int
     patch_size: int
     augment_flip: bool = False
-    domain_dict: dict[str, dict[str, int | list[float]]] | None = None
+    ids_domain: dict[str, int] | None = None
+    vec_domain: dict[str, list[float]] | None = None
     patch_per_dim: int = dataclasses.field(init=False)
     patch_per_blk: int = dataclasses.field(init=False)
 
@@ -259,17 +260,16 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         self.data.lbl[blk_idx] = blk_data.lbls.astype(numpy.int64)
         self.data.dom[blk_idx] = blk_data.domain
 
-    def _get_domain(self, blk_name: str) -> dict[str, int | list[float]]:
+    def _get_domain(self, name: str) -> dict[str, int | list[float] | None]:
         '''Retrieve the per-block domain dict if available.'''
 
-        if self.blk_cfg.domain_dict:
-            blk_domain = self.blk_cfg.domain_dict.get(blk_name, {})
-            # relaxed check allowing block with empty or missing domain
-            if len(blk_domain) == 0:
-                self.logger.log('DEBUG', f'Invalid domain for {blk_name}')
-                return {}
-            return blk_domain
-        return {}
+        ids: int | None = None
+        vec: list[float] | None = None
+        if self.blk_cfg.ids_domain:
+            ids = self.blk_cfg.ids_domain[name]
+        if self.blk_cfg.vec_domain:
+            vec = self.blk_cfg.vec_domain[name]
+        return {'ids': ids, 'vec': vec}
 
 # internal pieces
 class _BlockDataset(torch.utils.data.Dataset):
@@ -304,7 +304,7 @@ class _BlockDataset(torch.utils.data.Dataset):
             block_fpath: str,
             block_config: BlockConfig,
             logger: utils.Logger,
-            block_domain: dict[str, int | list[float]]
+            block_domain: dict[str, int | list[float] | None]
         ):
         '''
         Initialize the per-block dataset and patchify arrays.
@@ -330,7 +330,7 @@ class _BlockDataset(torch.utils.data.Dataset):
         self.logger = logger
 
         # load data from npz
-        bb = dataset.DataBlock().load(block_fpath)
+        bb = dataprep.DataBlock().load(block_fpath)
         self.meta = bb.meta # get metadata of the block for later
         try:
             self.imgs = self._get_patches(bb.data.image_normalized)

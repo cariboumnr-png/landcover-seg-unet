@@ -2,7 +2,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 '''
-Trainer runtime state protocols.
+Trainer building facing components protocols.
 '''
 
 # standard imports
@@ -13,8 +13,6 @@ import training.trainer
 
 if typing.TYPE_CHECKING:
     import torch
-
-TensorDict: typing.TypeAlias = typing.Mapping[str, 'torch.Tensor']
 
 # -----------------------------trainer components-----------------------------
 # components collection
@@ -31,8 +29,8 @@ class TrainerComponentsLike(typing.Protocol):
 # trainer component - trainable and checkpointable model
 @typing.runtime_checkable
 class MultiheadModelLike(typing.Protocol):
-    def __call__(self, x: 'torch.Tensor', **kwargs) -> TensorDict: ...
-    def forward(self, x: 'torch.Tensor', **kwargs) -> TensorDict: ...
+    def __call__(self, x: 'torch.Tensor', **kwargs) -> typing.Mapping[str, 'torch.Tensor']: ...
+    def forward(self, x: 'torch.Tensor', **kwargs) -> typing.Mapping[str, 'torch.Tensor']: ...
     def parameters(self) -> typing.Iterable['torch.nn.Parameter']: ...
     def to(self: typing.Self, device: 'torch.device | str') -> typing.Self: ...
     def train(self: typing.Self, mode: bool = True) -> typing.Self: ...
@@ -46,16 +44,16 @@ class MultiheadModelLike(typing.Protocol):
 # trainer component - dataloaders
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
-    train: 'torch.utils.data.DataLoader | None'
-    val: 'torch.utils.data.DataLoader | None'
-    infer: 'torch.utils.data.DataLoader | None'
+    train: 'torch.utils.data.DataLoader'
+    val: 'torch.utils.data.DataLoader'
+    test: 'torch.utils.data.DataLoader | None'
     @property
     def meta(self) -> _LoaderMetaLike: ...
 
 class _LoaderMetaLike(typing.Protocol):
     batch_size: int
     patch_per_blk: int
-    infer_blks_loading_seq: list[str] | None
+    test_blks_grid: tuple[int, int]
 
 # trainer component - head specs (wrapper and individual spec)
 @typing.runtime_checkable
