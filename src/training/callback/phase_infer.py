@@ -13,8 +13,6 @@ class InferCallback(training.callback.Callback):
     def on_inference_begin(self) -> None:
         # model to eval mode
         self.trainer.comps.model.eval()
-        # resolve infer context
-        self.trainer._setup_infer_context()
         # reset infer outputs
         self.state.epoch_sum.infer_ctx.maps.clear()
 

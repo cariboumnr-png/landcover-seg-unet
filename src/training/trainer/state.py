@@ -151,18 +151,6 @@ class _InferContext:
     patch_grid_shape: tuple[int, int] = (0, 0)
     maps: dict[str, dict[tuple[int, int], torch.Tensor]] = dataclasses.field(default_factory=dict)
 
-    def setup(self, per_blk: int, blk_shape: tuple[int, int]) -> None:
-        '''Setup test block grid layout.'''
-        # resolve patch-block layout
-        per_dim = int(per_blk ** 0.5)
-        assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
-        self.patch_per_blk = per_blk
-        self.patch_per_dim = per_dim
-        # resolve patch-block col/row numbers
-        blk_col, blk_row = blk_shape
-        self.block_columns = blk_col
-        self.patch_grid_shape = (blk_col * per_dim, blk_row * per_dim)
-
 @dataclasses.dataclass
 class _Epoch:
     '''Epoch level summary'''

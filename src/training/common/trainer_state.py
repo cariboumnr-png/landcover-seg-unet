@@ -85,7 +85,6 @@ class _InferContext(typing.Protocol):
     block_columns: int
     patch_grid_shape: tuple[int, int]
     maps: dict[str, dict[tuple[int, int], torch.Tensor]]
-    def setup(self, per_blk: int, blk_shape: tuple[int, int]) -> None: ...
 
 # ----- .metrics
 class Metrics(typing.Protocol):

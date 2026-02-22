@@ -222,11 +222,11 @@ class MultiHeadTrainer:
         self._emit('on_inference_end', out_dir)
 
     def set_head_state(
-            self,
-            active_heads: list[str] | None=None,
-            frozen_heads: list[str] | None=None,
-            excluded_cls: dict[str, tuple[int, ...]] | None=None
-        ) -> None:
+        self,
+        active_heads: list[str] | None=None,
+        frozen_heads: list[str] | None=None,
+        excluded_cls: dict[str, tuple[int, ...]] | None=None
+    ) -> None:
         '''
         Set active/frozen heads and per-head class exclusions.
 
@@ -296,10 +296,10 @@ class MultiHeadTrainer:
         self.state.heads.active_hmetrics = None
 
     def predict(
-            self,
-            x: torch.Tensor,
-            mode: str
-        ) -> dict[str, torch.Tensor]:
+        self,
+        x: torch.Tensor,
+        mode: str = 'seg'
+    ) -> dict[str, torch.Tensor]:
         '''
         Run a simple head-aware inference pass.
 
@@ -355,6 +355,20 @@ class MultiHeadTrainer:
             device=self.device,
             enabled=self.config.precision.use_amp
         )
+        # if test dataset if provided, setup inference context
+        if self.dataloaders.test:
+            # resolve patch-block layout
+            per_blk = self.dataloaders.meta.patch_per_blk
+            per_dim = int(per_blk ** 0.5)
+            assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
+            state.epoch_sum.infer_ctx.patch_per_blk = per_blk
+            state.epoch_sum.infer_ctx.patch_per_dim = per_dim
+            # resolve block col/row numbers
+            blk_col, blk_row = self.dataloaders.meta.test_blks_grid
+            state.epoch_sum.infer_ctx.block_columns = blk_col
+            # resolve patch col/row numbers
+            pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
+            state.epoch_sum.infer_ctx.patch_grid_shape = pch_col, pch_row
         # return
         return state
 
@@ -609,78 +623,40 @@ class MultiHeadTrainer:
                 self.state.metrics.patience_n += 1
 
     # inference phase
-    def _setup_infer_context(self):
-        '''Setup context for the inference stage.'''
-
-        per_blk = self.dataloaders.meta.patch_per_blk
-        blk_grid = self.dataloaders.meta.test_blks_grid # shape (col, row)
-        self.state.epoch_sum.infer_ctx.setup(per_blk, blk_grid)
-
     def _aggregate_batch_predictions(self):
         '''Convert predictions of the current batch into a class map'''
 
-        # pull existing epoch-level maps (persist across batches)
-        epoch_maps: dict[str, dict[tuple[int, int], torch.Tensor]] | None
-        epoch_maps = getattr(self.state.epoch_sum.infer_ctx, 'maps', None)
-        if epoch_maps is None:
-            epoch_maps = {}
-            self.state.epoch_sum.infer_ctx.maps = epoch_maps
+        # inference context alias
+        ctx = self.state.epoch_sum.infer_ctx
 
         # get through each head and attach preds to corresponding block-heads
         for head, logits in self.state.batch_out.preds.items():
+
             # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
             preds = torch.argmax(logits, dim=1)
             # get preds placed according to locations from this batch
-            placed = self.__place_patches(preds)
-            # ensure per-head dict exists, then accumulate
-            if head not in epoch_maps:
-                epoch_maps[head] = {}
-            # Update (merge) placements for this head
+            mapped: dict[tuple[int, int], torch.Tensor] = {}
+            # place patches to locations
+            for i, pred in enumerate(preds):
+                # global patch index
+                patch_idx = self.state.batch_cxt.pidx_start + i
+                # block position
+                block_idx = patch_idx // ctx.patch_per_blk
+                block_row, block_col = divmod(block_idx, ctx.block_columns)
+                # patch position inside block
+                p_in_blk = patch_idx % ctx.patch_per_blk
+                patch_row, patch_col = divmod(p_in_blk, ctx.patch_per_dim)
+                # map pred to patch-grid coordinates
+                mapped[(
+                    block_col * ctx.patch_per_dim + patch_col,
+                    block_row * ctx.patch_per_dim + patch_row
+                )] = pred
+
+            # pull existing epoch-level maps (persist across batches)
+            # ensure per-head dict exists, then mutate
+            ctx.maps.setdefault(head, {}).update(mapped)
+            # Update (merge) mapping for this head
             # Keys are (col, row) in patch-grid coords
-            epoch_maps[head].update(placed)
-
-    def __place_patches(
-        self,
-        preds: torch.Tensor,
-    ) -> dict[tuple[int, int], torch.Tensor]:
-        '''
-        Map batch patch predictions to global (x, y) pixel positions.
-
-        Args:
-            preds: [B, Hp, Wp]
-            patch_per_blk: patches per block
-            patch_per_dim: patches per dimension (p = n*n, square)
-            start_patch_idx: global patch index for preds[0]
-
-        Returns:
-            {(x, y): patch_tensor}
-        '''
-
-        # get values from contxt
-        patch_per_blk = self.state.epoch_sum.infer_ctx.patch_per_blk
-        patch_per_dim = self.state.epoch_sum.infer_ctx.patch_per_dim
-        cols_total = self.state.epoch_sum.infer_ctx.block_columns
-
-        # output dict
-        out: dict[tuple[int, int], torch.Tensor] = {}
-        # place patches to locations
-        for i in range(preds.shape[0]):
-            # global patch tracker
-            global_patch_i = self.state.batch_cxt.pidx_start + i
-            # which block?
-            global_block_i = global_patch_i // patch_per_blk
-            block_col = global_block_i % cols_total
-            block_row = global_block_i // cols_total
-            # patch position inside bloc
-            p_in_blk = global_patch_i % patch_per_blk
-            patch_col = p_in_blk % patch_per_dim
-            patch_row = p_in_blk // patch_per_dim
-            # patch-grid coordinates
-            col = block_col * patch_per_dim + patch_col
-            row = block_row * patch_per_dim + patch_row
-            out[(col, row)] = preds[i]
-        # return
-        return out
 
     def _preview_monitor_head(self, out_dir: str) -> None:
         '''doc'''
