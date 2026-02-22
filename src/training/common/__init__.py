@@ -26,7 +26,6 @@ from .trainer_comps import (
 )
 from .trainer_config import (
     RuntimeConfigLike,
-    DataConfigLike,
     ScheduleLike,
     MonitorLike,
     PrecisionLike,
@@ -52,7 +51,6 @@ __all__ = [
     'OptimizationLike',
     #
     'RuntimeConfigLike',
-    'DataConfigLike',
     'ScheduleLike',
     'MonitorLike',
     'PrecisionLike',

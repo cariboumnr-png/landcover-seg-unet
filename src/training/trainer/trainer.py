@@ -346,6 +346,8 @@ class MultiHeadTrainer:
 
         # instantiate a state
         state = training.trainer.RuntimeState()
+        # state - full batch size:
+        state.batch_cxt.batch_size_full = self.dataloaders.meta.batch_size
         # state - heads
         state.heads.all_heads = list(self.headspecs.as_dict().keys())
         # state = optimization
@@ -448,26 +450,6 @@ class MultiHeadTrainer:
         self.state.batch_cxt.x = x
         self.state.batch_cxt.y_dict = y_dict
         self.state.batch_cxt.domain = work_domain
-
-    def _resolve_batch_block_range(self) -> None:
-        '''
-        Compute the [start, end) block index window covered by the
-        current batch.
-        '''
-
-        # get dataloader meta with sanity check
-        meta = self.comps.dataloaders.meta
-        batch_size = meta.batch_size
-        patch_per_blk = meta.patch_per_blk
-        if batch_size % patch_per_blk != 0:
-            raise ValueError('batch_size must be a multiple of patch_per_blk')
-
-        # determine which blks this batch covers
-        bidx = self.state.batch_cxt.bidx # 1-based
-        n_blks_per_batch = batch_size // patch_per_blk
-        blks_start = (bidx - 1) * n_blks_per_batch
-        blks_end = bidx * n_blks_per_batch  # exclusive
-        self.state.batch_cxt.block_index_range = (blks_start, blks_end)
 
     # context setup
     def _autocast_ctx(self):
@@ -627,32 +609,29 @@ class MultiHeadTrainer:
                 self.state.metrics.patience_n += 1
 
     # inference phase
+    def _setup_infer_context(self):
+        '''Setup context for the inference stage.'''
+
+        per_blk = self.dataloaders.meta.patch_per_blk
+        blk_grid = self.dataloaders.meta.test_blks_grid # shape (col, row)
+        self.state.epoch_sum.infer_ctx.setup(per_blk, blk_grid)
+
     def _aggregate_batch_predictions(self):
         '''Convert predictions of the current batch into a class map'''
 
-        # get current batch id
-        bidx = self.state.batch_cxt.bidx
-        batch_size = self.dataloaders.meta.batch_size
-        start_patch = (bidx - 1) * batch_size
-
-        # patch per block and patch per dim
-        per_blk = self.comps.dataloaders.meta.patch_per_blk
-        per_dim = int(per_blk ** 0.5)
-        assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
-
         # pull existing epoch-level maps (persist across batches)
         epoch_maps: dict[str, dict[tuple[int, int], torch.Tensor]] | None
-        epoch_maps = getattr(self.state.epoch_sum.infer_output, 'maps', None)
+        epoch_maps = getattr(self.state.epoch_sum.infer_ctx, 'maps', None)
         if epoch_maps is None:
             epoch_maps = {}
-            self.state.epoch_sum.infer_output.maps = epoch_maps
+            self.state.epoch_sum.infer_ctx.maps = epoch_maps
 
         # get through each head and attach preds to corresponding block-heads
         for head, logits in self.state.batch_out.preds.items():
             # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
             preds = torch.argmax(logits, dim=1)
             # get preds placed according to locations from this batch
-            placed = self.__place_patches(preds, per_blk, per_dim, start_patch)
+            placed = self.__place_patches(preds)
             # ensure per-head dict exists, then accumulate
             if head not in epoch_maps:
                 epoch_maps[head] = {}
@@ -663,9 +642,6 @@ class MultiHeadTrainer:
     def __place_patches(
         self,
         preds: torch.Tensor,
-        patch_per_blk: int,
-        patch_per_dim: int,
-        start_patch_idx: int,
     ) -> dict[tuple[int, int], torch.Tensor]:
         '''
         Map batch patch predictions to global (x, y) pixel positions.
@@ -680,15 +656,17 @@ class MultiHeadTrainer:
             {(x, y): patch_tensor}
         '''
 
-        # total columns from the grid
-        cols_total, _ = self.dataloaders.meta.test_blks_grid
+        # get values from contxt
+        patch_per_blk = self.state.epoch_sum.infer_ctx.patch_per_blk
+        patch_per_dim = self.state.epoch_sum.infer_ctx.patch_per_dim
+        cols_total = self.state.epoch_sum.infer_ctx.block_columns
 
         # output dict
         out: dict[tuple[int, int], torch.Tensor] = {}
         # place patches to locations
         for i in range(preds.shape[0]):
             # global patch tracker
-            global_patch_i = start_patch_idx + i
+            global_patch_i = self.state.batch_cxt.pidx_start + i
             # which block?
             global_block_i = global_patch_i // patch_per_blk
             block_col = global_block_i % cols_total
@@ -707,14 +685,9 @@ class MultiHeadTrainer:
     def _preview_monitor_head(self, out_dir: str) -> None:
         '''doc'''
 
-        patch_per_block = self.comps.dataloaders.meta.patch_per_blk
-        n = int(patch_per_block ** 0.5)
-        grid_shape = tuple(i * n for i in self.dataloaders.meta.test_blks_grid)
-        assert len(grid_shape) == 2 # typing sanity
-
         utils.export_previews(
-            self.state.epoch_sum.infer_output.maps,
-            grid_shape,
+            self.state.epoch_sum.infer_ctx.maps,
+            self.state.epoch_sum.infer_ctx.patch_grid_shape,
             out_dir=out_dir,
             heads=[self.config.monitor.head] # as list
         )

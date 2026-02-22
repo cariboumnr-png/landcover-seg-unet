@@ -10,16 +10,10 @@ import typing
 # ---------------------------trainer runtime config---------------------------
 @typing.runtime_checkable
 class RuntimeConfigLike(typing.Protocol):
-    data: DataConfigLike
     schedule: ScheduleLike
     precision: PrecisionLike
     optim: OptimConfigLike
     monitor: MonitorLike
-
-@typing.runtime_checkable
-class DataConfigLike(typing.Protocol):
-    dom_ids_name: str | None
-    dom_vec_name: str | None
 
 @typing.runtime_checkable
 class ScheduleLike(typing.Protocol):

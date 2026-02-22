@@ -43,8 +43,9 @@ class Heads(typing.Protocol):
 # ----- .batch_ctx (context)
 class BatchCtx(typing.Protocol):
     bidx: int
-    block_index_range: tuple[int, int]
+    pidx_start: int
     batch: tuple['torch.Tensor', dict, dict] | None
+    batch_size_full: int
     x: 'torch.Tensor'
     y_dict: dict[str, 'torch.Tensor']
     domain: dict[str, 'torch.Tensor| None']
@@ -64,7 +65,7 @@ class Epoch(typing.Protocol):
     val_loss: float
     train_logs: _TrainLogs
     val_logs: _ValLogs
-    infer_output: _InferOutputs
+    infer_ctx: _InferContext
 
 class _TrainLogs(typing.Protocol):
     '''Training logs.'''
@@ -77,9 +78,14 @@ class _ValLogs(typing.Protocol):
     head_metrics: dict[str, dict[str, typing.Any]]
     head_metrics_str: dict[str, list[str]]
 
-class _InferOutputs(typing.Protocol):
+class _InferContext(typing.Protocol):
     '''Inference logs.'''
+    patch_per_blk: int
+    patch_per_dim: int
+    block_columns: int
+    patch_grid_shape: tuple[int, int]
     maps: dict[str, dict[tuple[int, int], torch.Tensor]]
+    def setup(self, per_blk: int, blk_shape: tuple[int, int]) -> None: ...
 
 # ----- .metrics
 class Metrics(typing.Protocol):
