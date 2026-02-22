@@ -3,6 +3,7 @@
 # third-party imports
 import omegaconf
 # local imports
+import models
 import training.callback
 import training.common
 import training.controller
@@ -15,79 +16,79 @@ import training.trainer
 import utils
 
 # -------------------------------Public Function-------------------------------
-def build_controller(
-        trainer: training.trainer.MultiHeadTrainer,
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> training.controller.Controller:
+def build_runner(
+    data_specs: training.common.DataSpecsLike,
+    config: omegaconf.DictConfig,
+    logger: utils.Logger
+) -> training.controller.Controller:
     '''Setup training controller.'''
 
-    # get phases
-    phases = training.controller.generate_phases(config)
+    # build trainer
+    trainer = _build_trainer(data_specs, config, logger)
 
-    # return a controller class
+    # get phases
+    phases = training.controller.generate_phases(config.curriculum)
+
+    # return a controller (as the main runner)
     return training.controller.Controller(
         trainer=trainer,
         phases=phases,
-        config=config.experiment,
+        config=config.curriculum.experiment,
         logger=logger
     )
 
-def build_trainer(
-        trainer_mode: str,
-        model: training.common.MultiheadModelLike,
-        data_specs: training.common.DataSpecsLike,
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> training.trainer.MultiHeadTrainer:
+def _build_trainer(
+    data_specs: training.common.DataSpecsLike,
+    config: omegaconf.DictConfig,
+    logger: utils.Logger
+) -> training.trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
     # collect componenets
-    trainer_comps = _get_components(
-        trainer_mode=trainer_mode,
-        model=model,
-        data_specs=data_specs,
-        config=config,
-        logger=logger
-    )
+    comps = _get_components(data_specs, config, logger)
     # generate runtime config
-    runtime_config = training.trainer.get_config(config.config)
+    runtime_cfg = training.trainer.get_config(config.trainer.runtime)
 
     # build and return a trainer class
-    return training.trainer.MultiHeadTrainer(
-        components=trainer_comps,
-        config=runtime_config,
-        device='cuda'
-    )
+    return training.trainer.MultiHeadTrainer(comps, runtime_cfg, device='cuda')
 
 # ------------------------------private  function------------------------------
 def _get_components(
-        trainer_mode: str,
-        model: training.common.MultiheadModelLike,
-        data_specs: training.common.DataSpecsLike,
-        config: omegaconf.DictConfig,
-        logger: utils.Logger
-    ) -> training.trainer.TrainerComponents:
+    data_specs: training.common.DataSpecsLike,
+    config: omegaconf.DictConfig,
+    logger: utils.Logger
+) -> training.trainer.TrainerComponents:
     '''Setup the model trainer.'''
+
+    # setup the model
+    model = models.build_multihead_unet(
+        dataset_config={
+            'img_ch_num': data_specs.meta.img_ch_num,
+            'class_counts': data_specs.heads.class_counts,
+            'logits_adjust': data_specs.heads.logits_adjust,
+            'domain_ids_max': data_specs.domains.ids_max,
+            'domain_vec_dim': data_specs.domains.vec_dim
+        },
+        model_config=config.models
+    )
 
     # compile data loaders
     data_loaders = training.dataloading.get_dataloaders(
-        mode=trainer_mode,
         data_specs=data_specs,
-        loader_config=config.loader,
+        loader_config=config.trainer.loader,
         logger=logger
     )
 
     # compile training heads basic specifications
     headspecs = training.heads.build_headspecs(
         data=data_specs,
-        config=config.loss,
+        config=config.trainer.loss,
     )
 
     # compile training heads loss compute modules
     headlosses = training.loss.build_headlosses(
         headspecs=headspecs,
-        config=config.loss.types,
+        config=config.trainer.loss.types,
         ignore_index=data_specs.meta.ignore_index,
     )
 
@@ -100,7 +101,7 @@ def _get_components(
     # build optimizer and scheduler
     optimization = training.optim.build_optimization(
         model=model,
-        config=config.optim
+        config=config.trainer.optim
     )
 
     # generate callback instances

@@ -29,7 +29,7 @@ optim:
     T_max: 50
 
 # runtime config
-config:
+runtime:
   data:
     domain_ids_name: ecodist
     domain_vec_name: geology

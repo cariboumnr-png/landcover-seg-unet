@@ -44,8 +44,8 @@ class MultiheadModelLike(typing.Protocol):
 # trainer component - dataloaders
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
-    train: 'torch.utils.data.DataLoader | None'
-    val: 'torch.utils.data.DataLoader | None'
+    train: 'torch.utils.data.DataLoader'
+    val: 'torch.utils.data.DataLoader'
     test: 'torch.utils.data.DataLoader | None'
     @property
     def meta(self) -> _LoaderMetaLike: ...

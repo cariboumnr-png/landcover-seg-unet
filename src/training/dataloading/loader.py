@@ -17,16 +17,10 @@ import utils
 @dataclasses.dataclass
 class DataLoaders:
     '''doc'''
-    train: torch.utils.data.DataLoader | None
-    val: torch.utils.data.DataLoader | None
+    train: torch.utils.data.DataLoader
+    val: torch.utils.data.DataLoader
     test: torch.utils.data.DataLoader | None
     meta: _LoaderMeta
-
-    def __post_init__(self):
-        if not self.train and not self.val:
-            assert self.test
-        if not self.test:
-            assert self.train and self.val
 
 @dataclasses.dataclass
 class _LoaderMeta:
@@ -46,11 +40,10 @@ class _LoadingFlags:
     infer_cache: int
 
 def get_dataloaders(
-        mode: str,
-        data_specs: training.common.DataSpecsLike,
-        loader_config: alias.ConfigType,
-        logger: utils.Logger,
-    ) -> DataLoaders:
+    data_specs: training.common.DataSpecsLike,
+    loader_config: alias.ConfigType,
+    logger: utils.Logger,
+) -> DataLoaders:
     '''Entry to the module, returns two dataloaders for training.'''
 
     # get a child from the base logger
@@ -67,9 +60,9 @@ def get_dataloaders(
     flags = _get_flags(data_specs)
 
     # declare loaders type and defualt value
-    t_loader: torch.utils.data.DataLoader | None = None
-    v_loader: torch.utils.data.DataLoader | None = None
-    i_loader: torch.utils.data.DataLoader | None = None
+    train_loader: torch.utils.data.DataLoader
+    val_loader: torch.utils.data.DataLoader
+    test_loader: torch.utils.data.DataLoader | None = None
 
     # get persistent block config
     _cfg = training.dataloading.BlockConfig(
@@ -85,90 +78,75 @@ def get_dataloaders(
     )
 
     # by work mode
-    if mode in ['with_inference', 'no_inference']:
-        assert data_paths.train and data_paths.val
+    # training loader
+    # config
+    cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
+    cfg.augment_flip = True
+    cfg.ids_domain = domains.train['ids_domain']
+    cfg.vec_domain = domains.train['vec_domain']
+    # data
+    data = training.dataloading.MultiBlockDataset(
+        blks_dict=data_paths.train,
+        blk_cfg=cfg,
+        logger=logger,
+        preload=flags.train_preload,
+        blk_cache_num=flags.train_cache
+    )
+    # loader
+    train_loader = torch.utils.data.DataLoader(
+        dataset=data,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=_collate_multi_block
+    )
 
-        # training loader
-        # config
-        cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-        cfg.augment_flip = True
-        cfg.ids_domain = domains.train['ids_domain']
-        cfg.vec_domain = domains.train['vec_domain']
-        # data
-        data = training.dataloading.MultiBlockDataset(
-            blks_dict=data_paths.train,
-            blk_cfg=cfg,
-            logger=logger,
-            preload=flags.train_preload,
-            blk_cache_num=flags.train_cache
-        )
-        # loader
-        t_loader = torch.utils.data.DataLoader(
-            dataset=data,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=_collate_multi_block
-        )
+    # validation loader
+    # config
+    cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
+    cfg.augment_flip = False
+    cfg.ids_domain = domains.val['ids_domain']
+    cfg.vec_domain = domains.val['vec_domain']
+    # data
+    data = training.dataloading.MultiBlockDataset(
+        blks_dict=data_paths.val,
+        blk_cfg=cfg,
+        logger=logger,
+        preload=flags.val_preload,
+        blk_cache_num=flags.val_cache
+    )
+    # loader
+    val_loader = torch.utils.data.DataLoader(
+        dataset=data,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=_collate_multi_block
+    )
 
-        # validation loader
+    if data_paths.test:
+        # test loader
         # config
         cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = False
-        cfg.ids_domain = domains.val['ids_domain']
-        cfg.vec_domain = domains.val['vec_domain']
+        cfg.ids_domain = domains.test['ids_domain']
+        cfg.vec_domain = domains.test['vec_domain']
         # data
         data = training.dataloading.MultiBlockDataset(
-            blks_dict=data_paths.val,
+            blks_dict=data_paths.test,
             blk_cfg=cfg,
             logger=logger,
-            preload=flags.val_preload,
-            blk_cache_num=flags.val_cache
+            preload=flags.infer_preload,
+            blk_cache_num=flags.infer_cache
         )
         # loader
-        v_loader = torch.utils.data.DataLoader(
+        test_loader = torch.utils.data.DataLoader(
             dataset=data,
             batch_size=batch_size,
             shuffle=False,
             collate_fn=_collate_multi_block
         )
 
-        if mode == 'with_inference':
-
-            assert data_paths.test
-            # test loader
-            # config
-            cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-            cfg.augment_flip = False
-            cfg.ids_domain = domains.test['ids_domain']
-            cfg.vec_domain = domains.test['vec_domain']
-            # data
-            data = training.dataloading.MultiBlockDataset(
-                blks_dict=data_paths.test,
-                blk_cfg=cfg,
-                logger=logger,
-                preload=flags.infer_preload,
-                blk_cache_num=flags.infer_cache
-            )
-            # loader
-            i_loader = torch.utils.data.DataLoader(
-                dataset=data,
-                batch_size=batch_size,
-                shuffle=False,
-                collate_fn=_collate_multi_block
-            )
-    else:
-        raise ValueError(
-            f'Invalide mode: "{mode}". Must be "with_inference" or '
-            f'"no_inference"'
-        )
-
-    # final sanity
-    # at least one loader is not None
-    assert any([t_loader, v_loader, i_loader])
-    # training and validation loaders are tied together
-    assert (t_loader and v_loader) or not (t_loader and not v_loader)
     # return
-    return DataLoaders(t_loader, v_loader, i_loader, meta)
+    return DataLoaders(train_loader, val_loader, test_loader, meta)
 
 def _get_flags(data_summary: training.common.DataSpecsLike) -> _LoadingFlags:
     '''Get flags.'''
