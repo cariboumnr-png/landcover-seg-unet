@@ -13,6 +13,7 @@ __pycache__/
 !/checkpoints/
 /data/*
 !/data/
+/demo_data/*
 /logs/*
 !/logs/
 /misc/*
@@ -23,4 +24,3 @@ __pycache__/
 !/previews/
 /artifacts/*
 !/artifacts/
-/demo_data/*

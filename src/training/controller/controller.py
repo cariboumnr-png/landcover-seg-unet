@@ -39,6 +39,9 @@ class Controller:
             cfg.get_option('ckpt_dpath'),
             cfg.get_option('preview_dpath')
         )
+        # make sure dirs exist
+        os.makedirs(cfg.get_option('ckpt_dpath'), exist_ok=True)
+        os.makedirs(cfg.get_option('preview_dpath'), exist_ok=True)
 
         # init phase counter
         self.current_phase_idx = 0
