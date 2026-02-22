@@ -36,7 +36,7 @@ def load_data(
             world_grid=(gid, world_grid),
             inputs_config=config.dataset,
             artifact_config=config.artifacts,
-            proc_config=config.dataproc,
+            proc_config=config.dataprep,
             logger=logger
         )
     # prompt data blocks fresh build (all steps will be redone)
@@ -46,7 +46,7 @@ def load_data(
             world_grid=(gid, world_grid),
             inputs_config=config.dataset,
             artifact_config=config.artifacts,
-            proc_config=config.dataproc,
+            proc_config=config.dataprep,
             logger=logger,
             rebuild_all=True
         )

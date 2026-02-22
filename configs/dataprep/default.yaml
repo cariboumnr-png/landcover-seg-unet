@@ -17,16 +17,3 @@ scoring:
   epsilon: 1e-12
   # classes to reward (1-based)
   reward: [3, 5]
-
-# flags TODO
-flags:
-  # routine check on existing npz cache files
-  overwrite_layout: false
-  check_npz: true
-  overwrite_cache: false
-  validate_cache: false
-  overwrite_domain: false
-  overwrite_counts: false
-  overwrite_scores: false
-  overwrite_split: false
-  overwrite_stats: false

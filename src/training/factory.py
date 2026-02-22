@@ -44,22 +44,6 @@ def _build_trainer(
 ) -> training.trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
-    # collect componenets
-    comps = _get_components(data_specs, config, logger)
-    # generate runtime config
-    runtime_cfg = training.trainer.get_config(config.trainer.runtime)
-
-    # build and return a trainer class
-    return training.trainer.MultiHeadTrainer(comps, runtime_cfg, device='cuda')
-
-# ------------------------------private  function------------------------------
-def _get_components(
-    data_specs: training.common.DataSpecsLike,
-    config: omegaconf.DictConfig,
-    logger: utils.Logger
-) -> training.trainer.TrainerComponents:
-    '''Setup the model trainer.'''
-
     # setup the model
     model = models.build_multihead_unet(
         dataset_config={
@@ -107,8 +91,8 @@ def _get_components(
     # generate callback instances
     callbacks = training.callback.build_callbacks(logger)
 
-    # collect components and return
-    components = training.trainer.TrainerComponents(
+    # collect components
+    comps = training.trainer.TrainerComponents(
         model=model,
         dataloaders=data_loaders,
         headspecs=headspecs,
@@ -117,4 +101,9 @@ def _get_components(
         optimization=optimization,
         callbacks=callbacks,
     )
-    return components
+
+    # parse runtime config
+    runtime_cfg = training.trainer.get_config(config.trainer.runtime)
+
+    # build and return a trainer class
+    return training.trainer.MultiHeadTrainer(comps, runtime_cfg, device='cuda')

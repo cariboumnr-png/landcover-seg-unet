@@ -1,6 +1,4 @@
 # configuration for building multihead model
-name: multihead
-
 body: 'unet++'
 
 channels:

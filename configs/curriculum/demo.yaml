@@ -1,7 +1,4 @@
 # Config for training phases
-
-name: control
-
 # experiment config (consumed by controller)
 experiment:
   ckpt_dpath: ./checkpoints
