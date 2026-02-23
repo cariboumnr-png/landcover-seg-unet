@@ -31,6 +31,7 @@ This repository provides a complete end‑to‑end workflow:
 
 **Actively implementing ADR‑0006** (packaging & entrypoints) on branch:
 `packaging-entry-points`
+> **Status:** Packaging complete, pending merge (as of 2026-02-23).
 
 The next major steps include:
 
@@ -48,7 +49,7 @@ The next major steps include:
 
 ## 📁 Current Repository Structure (Source‑First Layout — *Research‑Oriented*)
 ```
-root/src
+root/src/landseg
 ├── grid/               # generate stable world grid
 │   ├── builder.py      <- module API
 │   ├── io.py
@@ -88,7 +89,10 @@ root/src
 │   ├── builder.py      <- module API
 │   ├── controller.py
 │   └── phases.py
-└── utils/              # project utilities
+├── utils/              # project utilities
+├── configs/            # hydra config tree shipped with package
+└── cli/
+    └── end_to_end.py   <- previously root/main.py
 ```
 
 ## 🧊 Data Foundation
