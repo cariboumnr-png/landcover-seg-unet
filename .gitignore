@@ -1,26 +1,104 @@
-# Ignore common files
-*.log
+# ------------------------------------------------------------------------------
+# OS FILES
+# ------------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# Ignore Python cache files
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ------------------------------------------------------------------------------
+# PYTHON FILES / ENVIRONMENTS
+# ------------------------------------------------------------------------------
+# Bytecode / cache
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
 
-# Ignore the folders
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Testing / coverage
+.coverage
+.coverage.*
+htmlcov/
+.cache/          # Often created by pytest
+pytest_cache/
+
+# Linters / tools
+*.log
+*.pylintrc
+.mypy_cache/
+.pytest_cache/
+ruff_cache/
+
+# ------------------------------------------------------------------------------
+# IDE / EDITOR
+# ------------------------------------------------------------------------------
 .vscode/
-/data_cache/*
-!/data_cache/
-/checkpoints/*
-!/checkpoints/
-/data/*
-!/data/
-/demo_data/*
-/logs/*
-!/logs/
-/misc/*
-!/misc/
-/outputs/*
-!/outputs/
-/previews/*
-!/previews/
+.idea/
+*.swp
+*.swo
+
+# ------------------------------------------------------------------------------
+# PROJECT-SPECIFIC DIRECTORIES
+# Keep the folder, ignore generated content
+# ------------------------------------------------------------------------------
+
+# Artifacts
 /artifacts/*
 !/artifacts/
+
+# Cache
+/data_cache/*
+!/data_cache/
+
+# Checkpoints
+/checkpoints/*
+!/checkpoints/
+
+# Demo data
+/demo_data/*
+
+# Logs
+/logs/*
+!/logs/
+
+# Misc
+/misc/*
+!/misc/
+
+# Outputs
+/outputs/*
+!/outputs/
+
+# Previews
+/previews/*
+!/previews/
+
+# ------------------------------------------------------------------------------
+# MISC
+# ------------------------------------------------------------------------------
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb~
+
+# Environment variables
+.env
+.env.*

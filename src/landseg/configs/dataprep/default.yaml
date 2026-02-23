@@ -1,0 +1,19 @@
+# filtering thresholds for valid blocks
+threshold:
+  # minimum valid pixel ratio threshold for training blocks
+  train_blocks_px: 0.75
+  # minimum valid pixel ratio threshold for inference blocks
+  infer_blocks_px: 0.0
+
+# block scoring parameters
+scoring:
+  # Layer to focus on
+  head: 'layer1'
+  # Inverse distribution alpha
+  alpha: 0.6
+  # L1 weight reward beta
+  beta: 0.8
+  # L1 weight reward epsilon
+  epsilon: 1e-12
+  # classes to reward (1-based)
+  reward: [3, 5]

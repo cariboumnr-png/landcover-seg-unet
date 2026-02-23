@@ -1,0 +1,14 @@
+# Main entry to the config tree
+defaults:
+  - _self_
+  # data-side
+  - artifacts: default
+  - dataprep: default
+  - dataset: demo
+  - domain: demo
+  - extent: demo
+  - grid: base
+  # training-side
+  - curriculum: demo
+  - models: multihead
+  - trainer: default

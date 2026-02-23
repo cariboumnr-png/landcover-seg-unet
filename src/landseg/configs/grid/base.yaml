@@ -1,0 +1,9 @@
+id: square256px_no_overlap # human-facing name
+version: v1
+tile_size:
+  row: 256
+  col: 256
+tile_overlap:
+  row: 0
+  col: 0
+output_dirpath: ${artifacts.grids}/${grid.id}
