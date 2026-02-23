@@ -6,8 +6,8 @@ import os
 import typing
 # local imports
 import alias
-import training.controller
-import training.trainer
+import controller
+import training
 import utils
 
 # --------------------------------private  type--------------------------------
@@ -21,12 +21,12 @@ class _CheckpointMeta(typing.TypedDict):
 class Controller:
     '''doc'''
     def __init__(
-            self,
-            trainer: training.trainer.MultiHeadTrainer,
-            phases: list[training.controller.Phase],
-            config: alias.ConfigType,
-            logger: utils.Logger
-        ):
+        self,
+        trainer: training.trainer.MultiHeadTrainer,
+        phases: list[controller.Phase],
+        config: alias.ConfigType,
+        logger: utils.Logger
+    ):
         '''Initialization'''
 
         # parse arguments

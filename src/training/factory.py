@@ -6,7 +6,6 @@ import omegaconf
 import models
 import training.callback
 import training.common
-import training.controller
 import training.dataloading
 import training.heads
 import training.loss
@@ -16,32 +15,11 @@ import training.trainer
 import utils
 
 # -------------------------------Public Function-------------------------------
-def build_runner(
+def build_trainer(
     data_specs: training.common.DataSpecsLike,
     config: omegaconf.DictConfig,
     logger: utils.Logger
-) -> training.controller.Controller:
-    '''Setup training controller.'''
-
-    # build trainer
-    trainer = _build_trainer(data_specs, config, logger)
-
-    # get phases
-    phases = training.controller.generate_phases(config.curriculum)
-
-    # return a controller (as the main runner)
-    return training.controller.Controller(
-        trainer=trainer,
-        phases=phases,
-        config=config.curriculum.experiment,
-        logger=logger
-    )
-
-def _build_trainer(
-    data_specs: training.common.DataSpecsLike,
-    config: omegaconf.DictConfig,
-    logger: utils.Logger
-) -> training.trainer.MultiHeadTrainer:
+ ) -> training.trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
     # setup the model

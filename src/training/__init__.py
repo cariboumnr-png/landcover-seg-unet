@@ -10,15 +10,20 @@ import importlib
 import typing
 
 __all__ = [
-    'build_runner',
+    'MultiHeadTrainer',
+    'build_trainer',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_runner
+    from .trainer import MultiHeadTrainer
+    from .factory import build_trainer
 
 def __getattr__(name: str):
 
-    if name in ('build_runner'):
+    if name in ('MultiHeadTrainer'):
+        return getattr(importlib.import_module('.trainer', __package__), name)
+
+    if name in ('build_trainer'):
         return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(name)

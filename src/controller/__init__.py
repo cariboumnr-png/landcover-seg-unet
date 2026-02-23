@@ -12,15 +12,19 @@ import typing
 __all__ = [
     'Controller',
     'Phase',
+    'build_controller',
     'generate_phases'
 ]
 # for static check
 if typing.TYPE_CHECKING:
+    from .builder import build_controller
     from .controller import Controller
     from .phase import Phase, generate_phases
 
 def __getattr__(name: str):
 
+    if name in ('build_controller'):
+        return getattr(importlib.import_module('.builder', __package__), name)
     if name == 'Controller':
         return importlib.import_module('.controller', __package__).Controller
     if name in ('Phase', 'generate_phases'):

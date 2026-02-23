@@ -7,6 +7,7 @@ import sys
 import hydra
 import omegaconf
 # local imports
+import src.controller
 import src.dataset
 import src.training
 import src.utils
@@ -23,11 +24,14 @@ def main(config: omegaconf.DictConfig) -> None:
     # data preparation
     data_specs = src.dataset.load_data(config, logger)
 
-    # builder runner
-    runner = src.training.build_runner(data_specs, config, logger)
+    # build trainer
+    trainer = src.training.build_trainer(data_specs, config, logger)
 
-    # start
-    runner.fit()
+    # build controller
+    controller = src.controller.build_controller(trainer, config, logger)
+
+    # run via controller
+    controller.fit()
 
 if __name__ == '__main__':
     # handles keyboard interruption
