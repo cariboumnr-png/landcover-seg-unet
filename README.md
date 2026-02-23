@@ -5,6 +5,10 @@ A modular, reproducible deep-learning framework for pixel‑level landcover mapp
 The system fuses **Landsat spectral imagery**, **DEM‑derived topographical metrics**, and **domain‑knowledge features** under stable **grid** and **domain** artifacts.
 The pipeline is powered by PyTorch U‑Net architectures and a fully specification‑driven data preparation workflow.
 
+> **Project Status:**
+> This repository is currently in **research / experimental** mode.
+> Module boundaries and APIs are **not yet stable** and may change without notice.
+> A production‑leaning runtime (`engine/`) is planned for future milestones but is **not part of the current codebase**.
 ---
 
 ## Overview
@@ -18,6 +22,9 @@ This repository provides a complete end‑to‑end workflow:
 - **Training Runner:** A unified training/inference controller with callbacks, metrics, losses, and preview generation.
 - **Reproducibility:** Strict artifact hashing, schema validation, and rebuild‑on‑mismatch behavior.
 
+> **Note:**
+> The current implementation reflects ongoing research and exploration;
+> interfaces and components may evolve as the project matures.
 ---
 
 ## ⚙️ Current Work
@@ -34,9 +41,12 @@ The next major steps include:
   - `<package_name> train` — unified training workflow
   - `<package_name> infer` — optional inference & stitching
 
+> **Note:**
+> These entrypoints are initially aimed at research workflows; a dedicated
+> production‑grade runtime (`engine/`) will be introduced in a later milestone.
 ---
 
-## 📁 Current Repository Structure (Source‑First Layout)
+## 📁 Current Repository Structure (Source‑First Layout — *Research‑Oriented*)
 ```
 root/src
 ├── grid/               # generate stable world grid
@@ -64,10 +74,9 @@ root/src
 │   ├── backbones/
 │   ├── multihead/
 │   └── factory.py      <- module API
-├── training/           # builder trainer and controller (as a unified runner)
+├── training/           # build trainer
 │   ├── callback/
 │   ├── common/
-│   ├── controller/
 │   ├── dataloading/
 │   ├── heads/
 │   ├── loss/
@@ -75,6 +84,10 @@ root/src
 │   ├── optim/
 │   ├── trainer/
 │   └── factory.py      <- module API
+├── controller/         # build controller (experiment run from it)
+│   ├── builder.py      <- module API
+│   ├── controller.py
+│   └── phases.py
 └── utils/              # project utilities
 ```
 
@@ -90,7 +103,6 @@ The dataprep pipeline:
 - bundles everything into stable `.npz` blocks
 
 All artifacts are validated via per‑file SHA‑256 + schema hashing.
-
 ---
 
 ## 🚀 Roadmap (Updated for ADR‑0005 & ADR‑0006)
@@ -114,11 +126,18 @@ All artifacts are validated via per‑file SHA‑256 + schema hashing.
 - Additional model architectures
 - Cross‑sensor extension (Sentinel‑2)
 - Evaluation & export utilities
-
+- Gradually promote stable components from the research trainer into
+  `engine/training` as maturity and interface stability improve.
 ---
+
 ## Contributing
-Contributions welcome once the initial packaging + entrypoint refactor stabilizes.
-Please see active ADRs for the current project direction.
+
+The project is currently in an experimental phase. Module APIs, directory
+layout, and CLI behavior may change. Contributions should target research usability unless aligned with an accepted ADR defining a stable interface.
+
+> **Note:**
+>Please see active ADRs for the current project direction.
+---
 
 ## License
 To be determined.
