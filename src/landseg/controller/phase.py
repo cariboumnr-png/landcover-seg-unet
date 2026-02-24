@@ -18,6 +18,7 @@ class Phase:
     frozen_heads: list[str] | None = None
     excluded_cls: dict[str, tuple[int, ...]] | None = None
     lr_scale: float = 1.0
+    finished: bool = False
 
     def __str__(self) -> str:
         indent: int=2

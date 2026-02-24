@@ -657,14 +657,12 @@ class MultiHeadTrainer:
     def _preview_monitor_head(self, out_dir: str) -> None:
         '''Generate a preview image for `self.config.monitor.head`.'''
 
-        # update preview only when a better metric is achieved
-        if self.state.metrics.best_epoch + 1 == self.state.progress.epoch:
-            utils.export_previews(
-                self.state.epoch_sum.infer_ctx.maps,
-                self.state.epoch_sum.infer_ctx.patch_grid_shape,
-                out_dir=out_dir,
-                heads=[self.config.monitor.head] # as list
-            )
+        utils.export_previews(
+            self.state.epoch_sum.infer_ctx.maps,
+            self.state.epoch_sum.infer_ctx.patch_grid_shape,
+            out_dir=out_dir,
+            heads=[self.config.monitor.head] # as list
+        )
 
     # -------------------------convenience properties-------------------------
     @property

@@ -47,19 +47,40 @@ class Controller:
         self.current_phase_idx = 0
         self.current_phase = self.phases[self.current_phase_idx]
 
-    def fit(self, stopat: str | int| None=None) -> None:
+        # check which phases have already finished
+        self.phase_status_path = f'{self.cfg.ckpt_dpath}/status.json'
+        if os.path.exists(self.phase_status_path):
+            scheme = utils.load_json(self.phase_status_path)
+            for i, p in enumerate(scheme):
+                if controller.Phase(**p).finished:
+                    self.phases[i].finished = True
+        else:
+            self._record_progress() # write phase status.json
+
+    def fit(
+        self,
+        stopat: str | None=None
+    ) -> None:
         '''Main entry.'''
 
-
+        # iterate from the starting phase (default to first phase)
         for phase in self.phases:
-
-            print('__Phase details__')
-            print(phase)
-
+            # skip already finished phases
+            if phase.finished:
+                self._next_phase() # progress
+                continue
+            print('__Phase details__\n', phase)
+            # try load from previous checkpoint
             meta = self._load_progress(phase.name)
+            # main execution
             self._train_phase(meta)
+            # update phase sheme
+            self.current_phase.finished = True
+            self._record_progress()
+            # advance
             self._next_phase()
 
+            # check completion status
             if self.done:
                 print('__Experiment Complete__')
                 self.logger.log('INFO', 'All training phases finished')
@@ -68,10 +89,12 @@ class Controller:
                 print('__Experiment Complete__')
                 self.logger.log('INFO', f'Training stopped@{stopat}')
                 break
-            if isinstance(stopat, int) and stopat == self.current_phase_idx:
-                print('__Experiment Complete__')
-                self.logger.log('INFO', f'Training stopped@Phase_{stopat + 1}')
-                break
+
+    def _record_progress(self):
+        '''doc'''
+
+        scheme = [dataclasses.asdict(p) for p in self.phases]
+        utils.write_json(self.phase_status_path, scheme) # overwrite
 
     def _train_phase(self, meta) -> tuple[dict, dict]:
         '''Train the current phase.'''
@@ -119,7 +142,8 @@ class Controller:
             if self.trainer.config.schedule.eval_interval is not None and \
                 epoch % self.trainer.config.schedule.eval_interval == 0:
                 v_logs = self.trainer.validate()
-                # also do a preview if inference data provided
+                # update preview if test data provided
+                # TODO and if model improved
                 if self.trainer.dataloaders.test:
                     self.trainer.infer(self.cfg.preview_dpath)
             # save progress
@@ -141,7 +165,9 @@ class Controller:
         # if already done stop
         if self.done:
             return
-        # else reset trainer state and continue
+        # update current active phase
+        self.current_phase = self.phases[self.current_phase_idx]
+        #  reset trainer state and continue
         self.trainer.reset_head_state()
 
     def _load_progress(self, phase: str):

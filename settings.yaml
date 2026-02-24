@@ -88,7 +88,7 @@ curriculum:
     phase_2:
       name: Phase 2
       num_epochs: 50
-      active_heads: [layer2_2]
+      active_heads: [layer1, layer2_2]
       masked_classes:
         layer1: []
       frozen_heads: [layer1]
