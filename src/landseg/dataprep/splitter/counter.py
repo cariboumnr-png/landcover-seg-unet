@@ -12,8 +12,8 @@ import os
 import numpy
 import tqdm
 # local imports
-import dataprep
-import utils
+import landseg.dataprep.blockbuilder as blockbuilder
+import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def count_label_class(
@@ -58,7 +58,7 @@ def count_label_class(
     # aggregate pixel count in each block
     count_results = {}
     for fpath in tqdm.tqdm(blks_fpaths_dict.values()):
-        blk = dataprep.DataBlock().load(fpath)
+        blk = blockbuilder.DataBlock().load(fpath)
         for layer, counts in blk.meta['label_count'].items():
             cls_count = numpy.asarray(counts)
             if layer in count_results:

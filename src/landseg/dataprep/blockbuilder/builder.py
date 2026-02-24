@@ -54,7 +54,7 @@ def _get_blocks_builder(
         raise ValueError(f'Invalid builder mode {mode}')
 
     # get a builder and return
-    builder_config=dataprep.BuilderConfig(
+    builder_config=blockbuilder.BuilderConfig(
         image_fpath = image_fpath,
         label_fpath = label_fpath,
         config_fpath = config_fpath,

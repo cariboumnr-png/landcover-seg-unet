@@ -119,7 +119,7 @@ class Controller:
             if self.trainer.config.schedule.eval_interval is not None and \
                 epoch % self.trainer.config.schedule.eval_interval == 0:
                 v_logs = self.trainer.validate()
-                # also do a preview if inference data provided TODO
+                # also do a preview if inference data provided
                 if self.trainer.dataloaders.test:
                     self.trainer.infer(self.cfg.preview_dpath)
             # save progress
