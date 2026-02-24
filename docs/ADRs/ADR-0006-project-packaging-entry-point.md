@@ -1,51 +1,105 @@
+
 # ADR‑0006 — Packaging & Entry Points
-**Status:** Proposed
+
+**Status:** Accepted
 **Date:** 2026‑02‑22
+**Updated:** 2026‑02‑23
 
-## Context
-The code under `./src` should be bundled as a proper Python package with:
-- a consistent import namespace,
-- a versioned distribution,
-- clear console entrypoints for the main workflows (prepare, load, report).
+## 1. Context
 
-This improves reproducibility, discoverability, and CI/CD integration.
+The project required proper packaging to ensure that:
 
-## Decision
-- Adopt **src‑layout packaging** with a single top‑level namespace (e.g.,
-  `caribou_landcover`) and publish as a wheel.
-- Use a `pyproject.toml` (PEP 621) and a modern backend (`hatchling` or
-  `setuptools>=64`).
-- Provide **console scripts**:
-  - `caribou prep` — run the dataprep pipeline end‑to‑end (map → build →
-    normalize → split → schema). 
-  - `caribou load` — validate schema, (re)build if required, and print a
-    concise `DataSpecs` summary.
-  - `caribou report` — aggregate per‑tile/AOI diagnostics as per ADR‑0005.
-- Treat generated `schema.json` as the **manifest of record**; optionally
-  accept a user manifest later (see ADR‑0005).
+- the ./src directory is a fully installable Python package,
+- Hydra configuration is shipped with the package rather than living at repo root,
+- CLI entry points are user‑facing, stable, and easy to discover,
+- installation via `pip install .` works without manual path adjustments,
+- users can run workflows without touching internal modules.
 
-## Alternatives Considered
-- Flat layout without package: rejected; poorer tooling and discoverability.
-- Single monolithic CLI binary: rejected; less composable for future modules.
+This improves maintainability, reproducibility, and usability for both developers and downstream users.
 
-## Consequences
-- Clear imports and API stability.
-- Easier installation (`pip install .`) and environment management.
-- CI can call stable entrypoints; users can discover commands via `--help`.
+---
 
-## Implementation Notes (Non‑normative)
-- Namespace: `caribou_landcover` (or shorter if you prefer).
-- Minimum Python: 3.12 (project standard).
-- Type hints: adhere to existing style (e.g., `str | None`), PEP 8 line widths.
-- Versioning: SemVer; keep `__version__` in the package and expose via CLI.
-- Dependencies: pin lower bounds; avoid vendor‑locking GDAL—document env setup.
-- Testing: `tests/` with unit tests for CLI and critical modules.
-- Logging: `logging` with `--log-level` flag; structured if needed.
+## 2. Decision
 
-## Status & Tasks
-- Status: Proposed
-- Tasks:
-  1) Create `pyproject.toml` with build backend and metadata.
-  2) Move modules under `src/caribou_landcover/` + fix imports.
-  3) Wire console scripts (`caribou prep|load|report`).
-  4) Add packaging docs and a quickstart.
+The following changes have been implemented and validated:
+
+### 2.1 Packaging Layout
+- Created dedicated package under:
+
+        ./src/landseg/
+
+- Added pyproject.toml‑based project metadata and build configuration.
+- Installation now works cleanly via:
+
+        pip install .
+
+### 2.2 Configuration Structure
+- Moved Hydra configuration tree from:
+
+        ./configs/
+
+  to:
+
+        ./src/landseg/configs/
+
+  ensuring configs are packaged and available post‑installation.
+
+- Added a draft root‑level `settings.yaml` that acts as a user‑override layer
+  (non‑exhaustive; designed to grow).
+
+### 2.3 CLI Entry Points
+- Moved original entry (`root/main.py`) to:
+
+        ./src/landseg/cli/end_to_end.py
+
+- Added the console script installed as:
+
+        experiment_run
+
+  which triggers the full end‑to‑end workflow.
+
+### 2.4 ADR Status
+- Implementation is complete, tested, and approved.
+- ADR‑0006 is now **Accepted**.
+
+---
+
+## 3. Alternatives Considered
+
+- Flat repository without packaging — rejected due to poor import hygiene and discoverability.
+- Configs remaining outside the package — rejected because installed users would lose access to required Hydra configuration.
+- Keeping a single Python entry script in root — rejected in favour of standardized, packaged CLI entry points.
+
+---
+
+## 4. Consequences
+
+Positive outcomes:
+
+- Users can execute workflows directly through `experiment_run`.
+- Hydra configurations are properly versioned and shipped with the package.
+- The project now follows modern Python packaging best practices.
+- CI/CD workflows rely on stable, reproducible entry points.
+- Provides a foundation for future modular CLI commands.
+
+No negative impacts identified.
+
+---
+
+## 5. Status & Tasks
+
+### Status: Accepted
+
+### Completed
+1. Packaging completed under `src/landseg/`.
+2. Hydra config tree moved and included in package distribution.
+3. Draft `settings.yaml` added at repository root.
+4. `pyproject.toml` created; local installation verified.
+5. CLI entry module moved to `landseg/cli/end_to_end.py`.
+6. New console‑script entry point `experiment_run` added.
+
+### Optional Future Work
+- Expand `settings.yaml` to expose more user options.
+- Add richer CLI subcommands (e.g., diagnostics, batch processing).
+- Publish wheels to internal/external package index.
+---

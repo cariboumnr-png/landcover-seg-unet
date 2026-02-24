@@ -1,0 +1,33 @@
+# input data
+dataset:
+  # input fit data
+  fit:
+    image: ./demo_data/fit_input/image.tif
+    label: ./demo_data/fit_input/label.tif
+  # input test data (optional)
+  test:
+    image: ./demo_data/test_input/image.tif
+  # data configuration
+  config: ./demo_data/config.json
+
+# model settings
+models:
+  # whether to use default logits_adjustment
+  logits_adjustment:
+    enable: True
+  # mode of conditioning: 'none', 'concat', 'film', 'hybrid'
+  conditioning:
+    mode: 'hybrid'
+
+# training phases
+curriculum:
+  # phases
+  phases:
+    phase_1:
+      name: Phase 1
+      num_epochs: 100
+      active_heads: [layer1]
+      masked_classes:
+        layer1: [2, 3, 4, 5, 6] # only train on water (vs other)
+      frozen_heads: null
+      lr_scale: 1.0
