@@ -594,7 +594,7 @@ class MultiHeadTrainer:
         # get metric from validation metrics dictionary
         track_head = self.config.monitor.head
         val = self.state.epoch_sum.val_logs.head_metrics[track_head]
-        met = val['ac_mean'] if val['has_active'] in val else val['mean']
+        met = val['ac_mean'] if val['has_active'] else val['mean']
 
         # at the end of the first epoch
         if self.state.progress.epoch == 1:

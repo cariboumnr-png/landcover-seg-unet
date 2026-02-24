@@ -36,9 +36,9 @@ class Heads(typing.Protocol):
     all_heads: list[str]
     active_heads: list[str] | None
     frozen_heads: list[str] | None
-    active_hspecs: dict[str, common._SpecLike] | None
-    active_hloss: dict[str, common._CompositeLossLike] | None
-    active_hmetrics: dict[str, common._MetricLike] | None
+    active_hspecs: dict[str, common.SpecLike] | None
+    active_hloss: dict[str, common.CompositeLossLike] | None
+    active_hmetrics: dict[str, common.MetricLike] | None
 
 # ----- .batch_ctx (context)
 class BatchCtx(typing.Protocol):
