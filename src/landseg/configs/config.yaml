@@ -12,3 +12,8 @@ defaults:
   - curriculum: demo
   - models: multihead
   - trainer: default
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null

@@ -18,7 +18,7 @@ This repository provides a complete end‑to‑end workflow:
 - **Grid & Domain Artifacts:** Deterministic world‑grid tiling and domain raster alignment.
 - **Dataprep Pipeline:** Window mapping → raster block caching → spectral/topo feature derivation → label hierarchy → normalization → scoring & dataset split → schema generation.
 - **Dataset Specs:** A unified representation (`DataSpecs`) describing shapes, class topology, splits, and normalization.
-- **Model Architectures:** Multi‑head U‑Net / U‑Net++ with optional domain conditioning.
+- **Model Architectures:** Multi‑head U‑Net / U‑Net with optional domain conditioning.
 - **Training Runner:** A unified training/inference controller with callbacks, metrics, losses, and preview generation.
 - **Reproducibility:** Strict artifact hashing, schema validation, and rebuild‑on‑mismatch behavior.
 
@@ -27,24 +27,53 @@ This repository provides a complete end‑to‑end workflow:
 > interfaces and components may evolve as the project matures.
 ---
 
+## 🟦 How to Use This Project (WIP — interfaces may change)
+
+This framework is now packaged as a Python module. After cloning:
+
+    pip install .
+
+You can run the full end‑to‑end experiment pipeline via:
+
+    experiment_run
+
+This will execute the packaged Hydra configuration located at:
+
+    src/landseg/configs/
+
+and apply any overrides you place in the root-level `settings.yaml`.
+
+⚠️ **Important:**
+This project is still *research‑stage* and **brittle**.
+Interfaces, config structure, and behavior **may change frequently** as the
+pipeline stabilizes. Use at your own risk and expect breaking changes.
+
+Additional CLI commands (prep, report, train, infer) will be added as the
+interface matures.
+
 ## ⚙️ Current Work
 
-**Actively implementing ADR‑0006** (packaging & entrypoints) on branch:
-`packaging-entry-points`
-> **Status:** Packaging complete, pending merge (as of 2026-02-23).
 
-The next major steps include:
+ **ADR‑0006 Status:**
+Packaging & entrypoint refactor is **complete** and merged.
 
-- Converting the project into a **pip-installable package** under `src/<package_name>/`
-- Adding CLI entrypoints:
-  - `<package_name> prep` — run full dataprep
-  - `<package_name> report` — tile/AOI EDA/QA summaries
-  - `<package_name> train` — unified training workflow
-  - `<package_name> infer` — optional inference & stitching
+The project is now installable via `pip install` we and exposes the new CLI entrypoint: `experiment_run` that runs the entire workflow end‑to‑end (dataprep → dataset → model → training).
 
-> **Note:**
-> These entrypoints are initially aimed at research workflows; a dedicated
-> production‑grade runtime (`engine/`) will be introduced in a later milestone.
+This is intentionally a single "everything" entrypoint for now. The internal
+pipeline is still being stabilized and may be brittle.
+
+As the framework matures, the monolithic flow will be decomposed into dedicated step‑level entrypoints such as:
+
+    prep     — dataprep only
+    report   — tile/AOI QA and diagnostics
+    train    — model training
+    infer    — inference & stitching
+
+These will be introduced gradually once the underlying modules and Hydra config structure become stable.
+
+Hydra configuration is now packaged under `src/landseg/configs/`, and users
+may override settings via the root-level `settings.yaml` (WIP, non‑exhaustive).
+
 ---
 
 ## 📁 Current Repository Structure (Source‑First Layout — *Research‑Oriented*)
@@ -71,7 +100,7 @@ root/src/landseg
 │   ├── builder.py      <- module API
 │   ├── load.py
 │   └── validate.py
-├── models/             # defines model structure (current: UNet, UNet++)
+├── models/             # defines model structure (current: UNet, UNet)
 │   ├── backbones/
 │   ├── multihead/
 │   └── factory.py      <- module API
@@ -91,8 +120,8 @@ root/src/landseg
 │   └── phases.py
 ├── utils/              # project utilities
 ├── configs/            # hydra config tree shipped with package
-└── cli/
-    └── end_to_end.py   <- previously root/main.py
+└── cli/                # CLI scripts
+    └── end_to_end.py   <- primary entrypoint for `experiment_run`
 ```
 
 ## 🧊 Data Foundation
@@ -106,20 +135,15 @@ The dataprep pipeline:
 - normalizes features globally using Welford statistics
 - bundles everything into stable `.npz` blocks
 
-All artifacts are validated via per‑file SHA‑256 + schema hashing.
+>Artifacts are validated via per‑file SHA‑256  schema hashing.
 ---
 
-## 🚀 Roadmap (Updated for ADR‑0005 & ADR‑0006)
+## 🚀 Roadmap (Updated for ADR‑0005)
 
 ### Near‑Term (current milestone)
-- Package the repo into a proper Python distribution
-- Add CLI entrypoints:
-  - `<package_name> prep`
-  - `<package_name> report`
-  - `<package_name> train`
-  - `<package_name> infer`
+- ADR-0005
 - Improve documentation and examples
-- Add unit tests for dataprep + dataset + training
+- Add unit tests for dataprep  dataset  training
 
 ### Medium‑Term
 - Standard tile/AOI reporting (ADR‑0005)

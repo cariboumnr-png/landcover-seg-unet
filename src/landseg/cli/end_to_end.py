@@ -2,7 +2,9 @@
 '''End-to-end experiment.'''
 
 # standard imports
+import os
 import sys
+import typing
 # third-party imports
 import hydra
 import omegaconf
@@ -16,6 +18,19 @@ import landseg.utils as utils
 @hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
 def main(config: omegaconf.DictConfig) -> None:
     '''End-to-end experiment.'''
+
+    # fetch user settings and merge with default config
+    candidates = [f'{os.getcwd()}/settings.yaml']
+    for p in candidates:
+        if os.path.exists(p):
+            user_cfg = omegaconf.OmegaConf.load(p)
+            if not isinstance(user_cfg, omegaconf.DictConfig):
+                raise TypeError('settings.yaml must have a mapping at the root')
+            merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
+            config = typing.cast(omegaconf.DictConfig, merged)
+
+    # resolve
+    omegaconf.OmegaConf.resolve(config)
 
     # handles keyboard interruption
     try:

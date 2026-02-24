@@ -14,17 +14,3 @@ phases:
       layer1: [4, 6]
     frozen_heads: null
     lr_scale: 1.0
-
-  # phase_2:
-  #   name: Phase 2
-  #   num_epochs: 5
-  #   active_heads: [layer1, layer2_2]
-  #   frozen_heads: null
-  #   lr_scale: 1.0
-
-  # phase_3:
-  #   name: Phase 3
-  #   num_epochs: 5
-  #   active_heads: [layer1, layer2_2, layer2_5]
-  #   frozen_heads: null
-  #   lr_scale: 1.0
