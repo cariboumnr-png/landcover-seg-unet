@@ -1,16 +1,58 @@
-# input data
+# ================================USER SETTINGS================================
+
+# ----- Study Area Extent Definition
+extent:
+  crs: 'EPSG:3161'
+  mode: ref
+  inputs:
+    # when mode='ref' provide:
+    dirpath: ./demo_data/extent_reference
+    filename: 'on_3161_30m.tif'
+    # when mode='aoi' or 'tiles' provide:
+    origin: [0.0, 0.0] # x, y in CRS units
+    pixel_size: [0.0, 0.0] # x, y positive magnitudes
+    # when mode='aoi', also provide:
+    grid_extent: [0.0, 0.0] # height and width in CRS units
+    # when mode='tiles', also provide:
+    grid_shape: [0, 0] # rows and cols as number of tiles
+
+# ----- World Grid Specifications
+grid:
+  tile_size:
+    row: 256
+    col: 256
+  tile_overlap:
+    row: 0
+    col: 0
+
+# ----- Source of Domain Knowledge
+domain:
+  dirpath: ./demo_data/domain_knowledge
+  files:
+    - name: geology.tif
+      index_base: 1
+    - name: ecodistrict.tif
+      index_base: 1
+  use_type:
+    ids: ecodistrict
+    vec: geology
+
+# ----- Source of Fit and Test (optional) Data
 dataset:
-  # input fit data
   fit:
     image: ./demo_data/fit_input/image.tif
     label: ./demo_data/fit_input/label.tif
-  # input test data (optional)
   test:
     image: ./demo_data/test_input/image.tif
   # data configuration
   config: ./demo_data/config.json
 
-# model settings
+# ----- Artifacts Storage
+artifacts:
+  # root where artifacts from dataprep are saved
+  root: ./artifacts
+
+# ----- Model Features
 models:
   # whether to use default logits_adjustment
   logits_adjustment:
@@ -19,15 +61,35 @@ models:
   conditioning:
     mode: 'hybrid'
 
-# training phases
+# ----- Trainer Runtime Settings
+trainer:
+  runtime:
+    data:
+      domain_ids_name: ecodist
+      domain_vec_name: geology
+    schedule:
+      patience: 10
+      min_delta: 0.0005
+    monitor:
+      track_head_name: layer1
+
+# ----- Curriculum Learning Phases
 curriculum:
   # phases
   phases:
     phase_1:
       name: Phase 1
-      num_epochs: 100
+      num_epochs: 50
       active_heads: [layer1]
       masked_classes:
-        layer1: [2, 3, 4, 5, 6] # only train on water (vs other)
+        layer1: [6]
       frozen_heads: null
+      lr_scale: 1.0
+    phase_2:
+      name: Phase 2
+      num_epochs: 50
+      active_heads: [layer2_2]
+      masked_classes:
+        layer1: []
+      frozen_heads: [layer1]
       lr_scale: 1.0

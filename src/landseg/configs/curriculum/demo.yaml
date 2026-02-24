@@ -8,9 +8,9 @@ phases:
   # each phase
   phase_1:
     name: Phase 1
-    num_epochs: 100
+    num_epochs: 50
     active_heads: [layer1]
     masked_classes:
-      layer1: [4, 6]
+      layer1: []
     frozen_heads: null
     lr_scale: 1.0

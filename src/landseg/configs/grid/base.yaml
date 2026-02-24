@@ -1,4 +1,4 @@
-id: square256px_no_overlap # human-facing name
+id: grid_row_${grid.tile_size.row}_${grid.tile_overlap.row}_col_${grid.tile_size.col}_${grid.tile_overlap.col}
 version: v1
 tile_size:
   row: 256

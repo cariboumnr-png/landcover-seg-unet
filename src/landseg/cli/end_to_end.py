@@ -26,7 +26,9 @@ def main(config: omegaconf.DictConfig) -> None:
             user_cfg = omegaconf.OmegaConf.load(p)
             if not isinstance(user_cfg, omegaconf.DictConfig):
                 raise TypeError('settings.yaml must have a mapping at the root')
-            merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
+            # allow new phases to be added
+            with omegaconf.open_dict(config.curriculum.phases):
+                merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
             config = typing.cast(omegaconf.DictConfig, merged)
 
     # resolve
