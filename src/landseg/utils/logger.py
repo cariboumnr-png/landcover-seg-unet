@@ -137,7 +137,13 @@ class Logger():
         # child propagate=True: its records reach the base’s handlers.
         return child
 
-    def log(self, level: str, message: str, skip_log: bool=False) -> None:
+    def log(
+        self,
+        level: str,
+        message: str,
+        skip_log: bool=False,
+        exc_info: bool = False
+    ) -> None:
         '''
         Logs a message with the specified logging level.
 
@@ -164,7 +170,7 @@ class Logger():
         # log accordingly and defaulting to 'info' if level is unrecognized
         # case-insensitive
         log_method = log_levels.get(level.lower(), self.logger.info)
-        log_method(message)
+        log_method(message, exc_info=exc_info)
 
     def log_sep(self, sep: str='=', ln: int=90) -> None:
         '''

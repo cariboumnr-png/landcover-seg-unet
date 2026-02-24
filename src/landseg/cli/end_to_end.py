@@ -34,12 +34,12 @@ def main(config: omegaconf.DictConfig) -> None:
     # resolve
     omegaconf.OmegaConf.resolve(config)
 
-    # handles keyboard interruption
-    try:
-        # create a centralized logger file named by current time stamp
-        timestamp = utils.get_timestamp()
-        logger = utils.Logger('main', f'./logs/{timestamp}.log')
+    # create a centralized logger file named by current time stamp
+    timestamp = utils.get_timestamp()
+    logger = utils.Logger('main', f'./logs/{timestamp}.log')
 
+    # run exceptions handling
+    try:
         # data preparation
         data_specs = dataset.load_data(config, logger)
 
@@ -51,9 +51,14 @@ def main(config: omegaconf.DictConfig) -> None:
 
         # run via controller
         runner.fit()
+    # manual keyboard interruption
     except KeyboardInterrupt:
-        print('\nExperiment interrupted, exiting...')
+        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
         sys.exit(130)
+    # capture others and log
+    except Exception: # pylint: disable=broad-exception-caught
+        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
