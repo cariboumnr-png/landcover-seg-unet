@@ -6,7 +6,7 @@ extent:
   mode: ref
   inputs:
     # when mode='ref' provide:
-    dirpath: ./demo_data/extent_reference
+    dirpath: ./data/reference
     filename: 'on_3161_30m.tif'
     # when mode='aoi' or 'tiles' provide:
     origin: [0.0, 0.0] # x, y in CRS units
@@ -27,7 +27,7 @@ grid:
 
 # ----- Source of Domain Knowledge
 domain:
-  dirpath: ./demo_data/domain_knowledge
+  dirpath: ./data/domain
   files:
     - name: geology.tif
       index_base: 1
