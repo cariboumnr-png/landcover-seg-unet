@@ -65,16 +65,12 @@ ruff_cache/
 /artifacts/*
 !/artifacts/
 
-# Cache
-/data_cache/*
-!/data_cache/
-
 # Checkpoints
 /checkpoints/*
 !/checkpoints/
 
 # Demo data
-/demo_data/*
+/data/demo_data/*
 
 # Logs
 /logs/*
@@ -82,11 +78,9 @@ ruff_cache/
 
 # Misc
 /misc/*
-!/misc/
 
 # Outputs
 /outputs/*
-!/outputs/
 
 # Previews
 /previews/*

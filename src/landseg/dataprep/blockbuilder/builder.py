@@ -48,8 +48,7 @@ def _get_blocks_builder(
         config_fpath=config['input_config']
         blks_dpath=config['test_blks_dir']
         all_blocks=config['test_all_blks']
-        valid_blks=None
-
+        valid_blks=config['test_valid_blks']
     else:
         raise ValueError(f'Invalid builder mode {mode}')
 

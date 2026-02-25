@@ -87,10 +87,11 @@ def _parse_configs(
         'test_windows': output_cfg.get_option('test_raster_windows'),
         'test_blks_dir': output_cfg.get_option('test_blocks_dir'),
         'test_all_blks': output_cfg.get_option('test_all_blocks'),
+        'test_valid_blks': output_cfg.get_option('test_valid_blocks'),
         'test_img_stats': output_cfg.get_option('test_image_stats'),
         # thresholds
-        'blk_thres_fit': proc_cfg.get_option('threshold', 'train_blocks_px'),
-        'blk_thres_test': proc_cfg.get_option('threshold', 'infer_blocks_px'),
+        'blk_thres_fit': proc_cfg.get_option('threshold', 'blk_thres_fit'),
+        'blk_thres_test': proc_cfg.get_option('threshold', 'blk_thres_test'),
         # scoring
         'score_head': proc_cfg.get_option('scoring', 'head'),
         'score_alpha': proc_cfg.get_option('scoring', 'alpha'),

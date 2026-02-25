@@ -103,7 +103,7 @@ def build_schema(
         'splits': {
             'train_blocks': _resolve(config['train_blks']),
             'val_blocks': _resolve(config['val_blks']),
-            'test_blocks': _resolve(config['test_all_blks']) if has_test else {}
+            'test_blocks': _resolve(config['test_valid_blks']) if has_test else {}
         },
 
         'training_stats': {

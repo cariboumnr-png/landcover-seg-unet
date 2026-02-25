@@ -82,13 +82,18 @@ def _count_to_inv_weights(count: list[int]) -> list[float]:
     return [float(x / inv_sum) for x in inv]
 
 def _count_to_effective_num(
-        counts: list[int],
-        *,
-        b: float
-    ) -> list[float]:
+    counts: list[int],
+    *,
+    b: float
+) -> list[float]:
     '''Convert count to EN weights Cui et al. 2019'''
 
     counts_arr = numpy.array(counts)
-    weights = (1.0 - b) / (1.0 - numpy.power(b, counts_arr))
-    normalized = weights / weights.sum() * len(counts_arr)
-    return normalized.tolist()
+    weights = numpy.zeros_like(counts_arr)
+    # assign weight only to non-zero classes
+    n_zeros = counts_arr > 0
+    weights[n_zeros] = (1.0 - b) / (1.0 - numpy.power(b, counts_arr[n_zeros]))
+    s = weights.sum()
+    if s > 0:
+        weights = weights / s * len(counts_arr)
+    return weights.tolist()

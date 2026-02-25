@@ -27,5 +27,6 @@ test: ${artifacts.cache}/${dataset.name}/test
 test_raster_windows: ${artifacts.test}/test_raster_windows.pkl
 test_blocks_dir: ${artifacts.test}/blocks
 test_all_blocks: ${artifacts.test}/all_blocks.json
+test_valid_blocks: ${artifacts.test}/valid_blocks.json
 # test blocks stats for normalization
 test_image_stats: ${artifacts.test}/image_stats.json

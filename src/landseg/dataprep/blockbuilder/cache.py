@@ -40,7 +40,7 @@ class BuilderConfig:
     config_fpath: str                       # path to raw metadata (.json)
     blks_dpath: str         # dirpath to save block files
     all_blocks: str         # filepath (.json) to all blocks
-    valid_blks: str | None  # filepath (.json) to valid blocks
+    valid_blks: str         # filepath (.json) to valid blocks
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass

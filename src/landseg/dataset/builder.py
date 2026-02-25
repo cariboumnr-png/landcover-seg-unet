@@ -157,6 +157,8 @@ def _get_heads(schema: dict[str, typing.Any]) -> _Heads:
 def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     '''Long-Tailed Recognition via Logit Adjustment Menon et al 2021.'''
 
+    if sum(ct) == 0:
+        return [0] * len(ct)
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 

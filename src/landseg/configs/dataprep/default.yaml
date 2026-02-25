@@ -1,9 +1,10 @@
 # filtering thresholds for valid blocks
 threshold:
-  # minimum valid pixel ratio threshold for training blocks
-  train_blocks_px: 0.75
-  # minimum valid pixel ratio threshold for inference blocks
-  infer_blocks_px: 0.0
+  # minimum valid pixel ratio threshold for fit blocks
+  blk_thres_fit: 0.75
+  # minimum valid pixel ratio threshold for test blocks
+  blk_thres_test: 0.1
+
 
 # block scoring parameters
 scoring:

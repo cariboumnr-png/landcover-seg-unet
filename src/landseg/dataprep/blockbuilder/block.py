@@ -25,8 +25,7 @@ any raster I/O.
 - Required metadata includes (non-exhaustive):
   * image_nodata, label_nodata, ignore_label, dem_pad
   * band_assignment with at least: 'red', 'nir', 'swir1', 'swir2'
-  * label_num_classes, label_to_ignore, label_reclass_map,
-    label_class_name, label_reclass_name
+  * label_num_classes, label_to_ignore, label_reclass_map
   * block_name
 - Nodata handling relies on np.isnan / np.isclose and masked arrays;
   ensure nodata values are correctly specified.
@@ -53,9 +52,9 @@ class BlockMeta(typing.TypedDict):
     ignore_label: int
     label_num_classes: int
     label_to_ignore: list[int]
-    label_class_name: dict[str, str]
+    label_class_name: typing.NotRequired[dict[str, str]]
     label_reclass_map: dict[str, list[int]]
-    label_reclass_name: dict[str, str]
+    label_reclass_name: typing.NotRequired[dict[str, str]]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
     # image metadata
@@ -583,8 +582,21 @@ class DataBlock:
             valid = band[~mask]
             # 3 block stats to be done: nb, mb, m2b
             num = valid.size
-            mean = numpy.mean(valid)
-            mean_sq = numpy.sum((valid - mean) ** 2)
+            # if no valid pixels
+            if num == 0:
+                # safe neutral values for Welford aggregation
+                mean = 0.0
+                mean_sq = 0.0
+            else:
+                # nan-safe ops in case stray NaNs remain
+                mean = numpy.nanmean(valid)
+                diff = valid - mean
+                mean_sq = numpy.nansum(diff * diff)
+                # final guard against numerical weirdness
+                if not numpy.isfinite(mean):
+                    mean = 0.0
+                if not numpy.isfinite(mean_sq):
+                    mean_sq = 0.0
             # give to self.image_stats
             self.meta['block_image_stats'][f'band_{i}'] = {
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)

@@ -25,6 +25,7 @@ class OutputConfig(typing.TypedDict):
     test_windows: str
     test_blks_dir: str
     test_all_blks: str
+    test_valid_blks: str
     test_img_stats: str
 
 class PixelThresholdConfig(typing.TypedDict):
