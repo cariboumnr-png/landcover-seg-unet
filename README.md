@@ -76,18 +76,21 @@ may override settings via the root-level `settings.yaml` (WIP, non‑exhaustive)
 
 ---
 
-## 📁 Current Repository Structure (Source‑First Layout — *Research‑Oriented*)
+## 📁 Current Repository Structure (Source‑first - collapsed to first class)
 ```
 root/src/landseg
+│
 ├── grid/               # generate stable world grid
 │   ├── builder.py      <- module API
 │   ├── io.py
 │   └── layout.py
-├── domain/             # mapp domain rasters to world grid
+|
+├── domain/             # map domain rasters to world grid
 │   ├── io.py
 │   ├── mapper.py       <- module API
 │   ├── tilemap.py
 │   └── transform.py
+|
 ├── dataprep/           # process raw rasters to stable artifacts
 │   ├── blockbuilder/
 │   ├── mapper/
@@ -96,15 +99,18 @@ root/src/landseg
 │   ├── utils/
 │   ├── pipeline.py     <- module API
 │   └── schema.py
-├── dataset/            # wire data schema to trainer dataloading
+│
+├── dataset/            # consume data schema for traininig.dataloading
 │   ├── builder.py      <- module API
 │   ├── load.py
 │   └── validate.py
-├── models/             # defines model structure (current: UNet, UNet)
+│
+├── models/             # defines model structure (current: UNet, UNet++)
 │   ├── backbones/
 │   ├── multihead/
 │   └── factory.py      <- module API
-├── training/           # build trainer
+│
+├── training/           # trainer and its components
 │   ├── callback/
 │   ├── common/
 │   ├── dataloading/
@@ -114,14 +120,38 @@ root/src/landseg
 │   ├── optim/
 │   ├── trainer/
 │   └── factory.py      <- module API
-├── controller/         # build controller (experiment run from it)
+│
+├── controller/         # build controller (experiment run from this)
 │   ├── builder.py      <- module API
 │   ├── controller.py
 │   └── phases.py
-├── utils/              # project utilities
+│
+├── utils/              # project-wide utilities
+│
 ├── configs/            # hydra config tree shipped with package
+│
 └── cli/                # CLI scripts
     └── end_to_end.py   <- primary entrypoint for `experiment_run`
+
+# see ./docs/current_folder_structure.md for detailed tree
+```
+## ⚙️ Current WorkFlow
+
+```
+[configs/]
+└─> grid/builder.py                     (1 World Grid)
+    ├─> domain/mapper.py                    (2 DK → grid, optional)
+    └─> dataprep/pipeline.py                (3 Fit/Test → grid)
+        └─> dataprep/schema.py                  (4 Data Scheme)
+            ├─> models/factory.py                   (5.1 Model)
+            ├─> dataset/builder.py                  (5.2 Dataloaders)
+            ├─> training/heads                      (5.3 Data-influenced)
+            ├─> training/loss                       (5.4 Head-specified)
+            ├─. training/metrics                    (5.5 Head-specified)
+            └─> training/optim|callback|...         (5.6 Other)
+                └─> training/factory.py → Trainer       (6 Trainer 🗸)
+                    └─> controller/builder.py + phases      (7 Controller 🗸)
+                        └─> cli/end_to_end.py                   (8 Start ➝)
 ```
 
 ## 🧊 Data Foundation
@@ -135,7 +165,7 @@ The dataprep pipeline:
 - normalizes features globally using Welford statistics
 - bundles everything into stable `.npz` blocks
 
->Artifacts are validated via per‑file SHA‑256  schema hashing.
+>Artifacts are validated via per‑file SHA‑256 schema hashing.
 ---
 
 ## 🚀 Roadmap (Updated for ADR‑0005)
