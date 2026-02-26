@@ -51,7 +51,7 @@ pipeline stabilizes. Use at your own risk and expect breaking changes.
 Additional CLI commands (prep, report, train, infer) will be added as the
 interface matures.
 
-## ⚙️ Current Work
+## 🛠️ Current Work
 
 
  **ADR‑0006 Status:**
@@ -133,7 +133,7 @@ root/src/landseg
 └── cli/                # CLI scripts
     └── end_to_end.py   <- primary entrypoint for `experiment_run`
 
-# see ./docs/current_folder_structure.md for detailed tree
+# see ./docs/current_folder_structure.md for a detailed tree
 ```
 ## ⚙️ Current WorkFlow
 
