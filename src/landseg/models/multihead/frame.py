@@ -78,14 +78,19 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         in_ch = config.in_ch
         base_ch = config.base_ch
 
-        # convert per head logit adjustment to paramter dict
-        self.logit_adjust = torch.nn.ParameterDict({
-            h: torch.nn.Parameter(
-                data=torch.tensor(v).view(1, -1, 1, 1).to(torch.float32),
-                requires_grad=False
-            )
-            for h, v in config.logit_adjust.items()
-        }) if config.enable_logit_adjust else None
+        # scalar strength alpha (1.0 = as-provided priors) for logit adjust
+        self.register_buffer('la_alpha', torch.tensor(1.0, dtype=torch.float32))
+
+        # register perhead logit adjustment as buffers (NOT parameters)
+        self.logit_adjust: dict[str, torch.Tensor] = {} # pointer to the buffer
+        if config.logit_adjust:
+            for h, v in config.logit_adjust.items():
+                t = torch.tensor(v, dtype=torch.float32).view(1, -1, 1, 1)
+                self.register_buffer(f'la_{h}', t)
+                self.logit_adjust[h] = getattr(self, f'la_{h}')
+
+        # runtime toggle whether to use la for inference (init state)
+        self._use_logit_adjust: bool = bool(config.enable_logit_adjust)
 
         # multihead management
         heads_w_num_cls = {k: len(v) for k, v in config.heads_w_counts.items()}
@@ -145,7 +150,13 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
             x = self.body.decode(xs)
 
         # return head outputs
-        return self.heads.forward(x, self.heads.state.active, self.logit_adjust)
+        return self.heads.forward(
+            x,
+            self.heads.state.active,
+            self.logit_adjust,
+            self.logit_adjust_alpha,
+            enable_la=self._use_logit_adjust
+        )
 
     def set_active_heads(self, active_heads: list[str] | None=None) -> None:
         '''Set the list of active heads used during forward.'''
@@ -163,6 +174,22 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
 
         self.heads.state.active = None
         self.heads.state.frozen = None
+
+    def enable_logit_adjust(self, enabled: bool):
+        '''External toggle on logit adjustment'''
+
+        self._use_logit_adjust = enabled
+
+    def set_logit_adjust_alpha(self, alpha: float):
+        '''Set logit adjust alpha.'''
+
+        la_alpha: torch.Tensor = getattr(self, 'la_alpha')
+        la_alpha.fill_(float(alpha))
+
+    @property
+    def logit_adjust_alpha(self) -> float:
+        '''Global logit adjust alpha scalar.'''
+        return float(getattr(self, 'la_alpha').item())
 
     @property
     def encoder(self) -> list:
@@ -204,11 +231,14 @@ class _HeadManager(torch.nn.Module):
         self.state.frozen = None
 
     def forward(
-            self,
-            x: torch.Tensor,
-            active_heads: list[str] | None=None,
-            logit_adjust: torch.nn.ParameterDict | None=None
-        ) -> dict[str, torch.Tensor]:
+        self,
+        x: torch.Tensor,
+        active_heads: list[str] | None,
+        logit_adjust: dict[str, torch.Tensor],
+        logit_adjust_alpha: float,
+        *,
+        enable_la: bool,
+    ) -> dict[str, torch.Tensor]:
         '''Run active heads and return a dict of logits.'''
 
         # if external active heads provided
@@ -220,16 +250,18 @@ class _HeadManager(torch.nn.Module):
 
         # iterate through active heads
         output_logits: dict[str, torch.Tensor] = {}
-        for head_name in self.state.active:
-            conv = self.outc[head_name]
+        for head in self.state.active:
+            conv = self.outc[head]
             logits = conv(x)
             logits = torch.nan_to_num(logits, nan=0.0, posinf=1e4, neginf=-1e4)
-            # if external logit adjust is provided
-            if logit_adjust is not None:
-                head_a = logit_adjust.get(head_name, None)
-                if head_a is not None:
-                    logits = logits + head_a.to(logits.dtype).to(logits.device)
-            output_logits[head_name] = logits
+            # apply logit adjustment
+            output_logits[head] = self._apply_logit_adjust(
+                head,
+                logits,
+                logit_adjust,
+                use_la=enable_la,
+                la_alpha=logit_adjust_alpha
+            )
         return output_logits
 
     def freeze(self, frozen_heads: list[str] | None=None) -> None:
@@ -239,6 +271,27 @@ class _HeadManager(torch.nn.Module):
         for h in frozen_heads:
             for p in self.outc[h].parameters():
                 p.requires_grad = False
+
+    @staticmethod
+    def _apply_logit_adjust(
+        head: str,
+        logits: torch.Tensor,
+        logit_adjust: dict[str, torch.Tensor],
+        *,
+        use_la: bool | None = None,
+        la_alpha: float | None = None,
+    ) -> torch.Tensor:
+        '''
+        Apply logit adjustment if enabled and available for this head.
+        '''
+
+        prior = logit_adjust.get(head)
+        a = float(la_alpha) if la_alpha is not None else 1.0
+        # early exit
+        if not use_la or prior is None or a == 0.0:
+            return logits
+        # apply la alpha if provided
+        return logits + a * prior
 
 class _DomainRouter(torch.nn.Module):
     '''
