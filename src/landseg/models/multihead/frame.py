@@ -70,7 +70,9 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
             self,
             body: str,
             config: multihead.ModelConfig,
-            cond: multihead.CondConfig
+            *,
+            enable_logit_adjust: bool = True,
+            enable_clamp: bool = True
         ):
         super().__init__()
 
@@ -87,17 +89,17 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
                 t = torch.tensor(v, dtype=torch.float32).view(1, -1, 1, 1)
                 self.register_buffer(f'la_{h}', t)
         # runtime toggle whether to use la for inference (init state)
-        self.enable_logit_adjust: bool = bool(config.enable_logit_adjust)
+        self.enable_logit_adjust = bool(enable_logit_adjust)
 
         # multihead management
         heads_w_num_cls = {k: len(v) for k, v in config.heads_w_counts.items()}
         self.heads = _HeadManager(in_ch=base_ch, heads=heads_w_num_cls)
 
         # domain knowledge router
-        self.domain_router = _DomainRouter(cond)
+        self.domain_router = _DomainRouter(config.conditioning)
 
         # domain concatenation if proviced
-        self.concat = multihead.get_concat(cond)
+        self.concat = multihead.get_concat(config.conditioning)
         add = self.concat.output_dim if self.concat is not None else 0
 
         # core UNet body
@@ -105,10 +107,10 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         self.body = self.body_registry[body](in_ch + add, base_ch)
 
         # conditioner
-        self.film = multihead.get_film(cond, base_ch)
+        self.film = multihead.get_film(config.conditioning, base_ch)
 
         # safety utilities
-        self.safety = _NumericSafety(config.enable_clamp, config.clamp_range)
+        self.safety = _NumericSafety(enable_clamp, config.clamp_range)
 
     def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
         '''Compute per-head logits with optional domain info.'''
@@ -343,10 +345,10 @@ class _DomainRouter(torch.nn.Module):
         ) if cfg.domain_vec_dim else None
 
     def forward(
-            self,
-            ids: torch.Tensor | None,
-            vec: torch.Tensor | None
-        ) -> tuple[tuple, tuple]:
+        self,
+        ids: torch.Tensor | None,
+        vec: torch.Tensor | None
+    ) -> tuple[tuple, tuple]:
         '''Return domain routing according to configuration.'''
 
         # Decide and shape what goes to concat
@@ -377,20 +379,20 @@ class _DomainRouter(torch.nn.Module):
 class _NumericSafety():
     '''Autocast and clamping utilities for numerical stability.'''
     def __init__(
-            self,
-            enable_clamp: bool,
-            clamp_range: tuple[float, float]
-        ):
+        self,
+        enable_clamp: bool,
+        clamp_range: tuple[float, float]
+    ):
         '''Configure clamping behavior and bounds.'''
 
         self.enable_clamp = enable_clamp
         self.clamp_range = clamp_range
 
     def autocast_context(
-            self,
-            enable: bool=True,
-            dtype: torch.dtype=torch.float16
-        ) -> torch.autocast:
+        self,
+        enable: bool=True,
+        dtype: torch.dtype=torch.float16
+    ) -> torch.autocast:
         '''Create an AMP autocast context for the current device.'''
 
         device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
