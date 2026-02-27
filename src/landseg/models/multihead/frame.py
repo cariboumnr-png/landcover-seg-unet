@@ -78,19 +78,16 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         in_ch = config.in_ch
         base_ch = config.base_ch
 
+        # logit adjustments
         # scalar strength alpha (1.0 = as-provided priors) for logit adjust
         self.register_buffer('la_alpha', torch.tensor(1.0, dtype=torch.float32))
-
         # register perhead logit adjustment as buffers (NOT parameters)
-        self.logit_adjust: dict[str, torch.Tensor] = {} # pointer to the buffer
         if config.logit_adjust:
             for h, v in config.logit_adjust.items():
                 t = torch.tensor(v, dtype=torch.float32).view(1, -1, 1, 1)
                 self.register_buffer(f'la_{h}', t)
-                self.logit_adjust[h] = getattr(self, f'la_{h}')
-
         # runtime toggle whether to use la for inference (init state)
-        self._use_logit_adjust: bool = bool(config.enable_logit_adjust)
+        self.enable_logit_adjust: bool = bool(config.enable_logit_adjust)
 
         # multihead management
         heads_w_num_cls = {k: len(v) for k, v in config.heads_w_counts.items()}
@@ -155,7 +152,7 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
             self.heads.state.active,
             self.logit_adjust,
             self.logit_adjust_alpha,
-            enable_la=self._use_logit_adjust
+            enable_la=self.enable_logit_adjust
         )
 
     def set_active_heads(self, active_heads: list[str] | None=None) -> None:
@@ -175,10 +172,10 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         self.heads.state.active = None
         self.heads.state.frozen = None
 
-    def enable_logit_adjust(self, enabled: bool):
+    def set_logit_adjust_enabled(self, enabled: bool):
         '''External toggle on logit adjustment'''
 
-        self._use_logit_adjust = enabled
+        self.enable_logit_adjust = enabled
 
     def set_logit_adjust_alpha(self, alpha: float):
         '''Set logit adjust alpha.'''
@@ -190,6 +187,19 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
     def logit_adjust_alpha(self) -> float:
         '''Global logit adjust alpha scalar.'''
         return float(getattr(self, 'la_alpha').item())
+
+    @property
+    def logit_adjust(self) -> dict[str, torch.Tensor]:
+        '''
+        Lazily gather per-head logit adjustment buffers. Buffers are
+        named 'la_{head}'. Excludes the scalar 'la_alpha'.
+        '''
+        out: dict[str, torch.Tensor] = {}
+        for name, buf in self.named_buffers():
+            if name.startswith('la_') and name != 'la_alpha':
+                head = name.removeprefix('la_')
+                out[head] = buf
+        return out
 
     @property
     def encoder(self) -> list:
@@ -236,8 +246,7 @@ class _HeadManager(torch.nn.Module):
         active_heads: list[str] | None,
         logit_adjust: dict[str, torch.Tensor],
         logit_adjust_alpha: float,
-        *,
-        enable_la: bool,
+        **kwargs
     ) -> dict[str, torch.Tensor]:
         '''Run active heads and return a dict of logits.'''
 
@@ -247,6 +256,8 @@ class _HeadManager(torch.nn.Module):
         # reset logic
         if self.state.active is None:
             self.state.active = list(self.outc.keys())
+        # parse from kwargs
+        use_la = bool(kwargs.get('enable_la', False))
 
         # iterate through active heads
         output_logits: dict[str, torch.Tensor] = {}
@@ -259,7 +270,7 @@ class _HeadManager(torch.nn.Module):
                 head,
                 logits,
                 logit_adjust,
-                use_la=enable_la,
+                use_la=use_la,
                 la_alpha=logit_adjust_alpha
             )
         return output_logits
