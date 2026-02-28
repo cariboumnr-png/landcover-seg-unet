@@ -220,7 +220,7 @@ def __parse_domain(
         for (x, y), dom in ids_domain.items():
             blkname = f'col_{x:06d}_row_{y:06d}'
             if blkname in input_blocks:
-                if dom['majority'] is None:
+                if dom['majority'] is None or dom['majority'] < 0:
                     output_ids_domain[blkname] = 0 # default value
                 else:
                     output_ids_domain[blkname] = dom['majority']
@@ -231,7 +231,7 @@ def __parse_domain(
             blkname = f'col_{x:06d}_row_{y:06d}'
             if blkname in input_blocks:
                 if dom['pca_feature'] is None:
-                    output_vec_domain[blkname] = [1.0] * vec_domain.n_pca_ax
+                    output_vec_domain[blkname] = [0.0] * vec_domain.n_pca_ax
                 else:
                     output_vec_domain[blkname] = dom['pca_feature']
 

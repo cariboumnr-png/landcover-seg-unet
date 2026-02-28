@@ -40,7 +40,7 @@ def build_multihead_unet(
     # conditioning config
     cond_config = multihead.CondConfig(
         mode=model_cfg.get_option('conditioning', 'mode'),
-        domain_ids_num=dataset_config['domain_ids_max'],
+        domain_ids_num=dataset_config['domain_ids_max'] + 1,
         domain_vec_dim=dataset_config['domain_vec_dim'],
         concat=multihead.ConcatConfig(
             out_dim=model_cfg.get_option('conditioning', 'concat_out_dim'),
