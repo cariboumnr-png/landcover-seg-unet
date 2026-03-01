@@ -21,12 +21,11 @@ class Phase:
     finished: bool = False
 
     def __str__(self) -> str:
-        indent: int=2
-        s = ' ' * indent
-        return f'\n{s}'.join([
+        return '\n'.join([
             f'- Phase Name:\t{self.name}',
             f'- Max Epochs:\t{self.num_epochs}',
             str(self.heads),
+            str(self.la_scheme),
             f'- LR Scale:\t{self.lr_scale}'
         ])
 
@@ -41,6 +40,7 @@ class _HeadsConifg:
         indent: int=2
         s = ' ' * indent
         return f'\n{s}'.join([
+            '- Heads Specs',
             f'- Active Heads:\t{self.active_heads}',
             f'- Frozen Heads:\t{self.frozen_heads}',
             f'- Excld. Class:\t{self.excluded_cls}',
@@ -53,6 +53,17 @@ class _LogitAdjustScheme:
     enable_train_logit_adjustment: bool
     enable_val_logit_adjustment: bool
     enable_test_logit_adjustment: bool
+
+    def __str__(self) -> str:
+        indent: int=2
+        s = ' ' * indent
+        return f'\n{s}'.join([
+            '- Logit Adjustment',
+            f'- Global Alpha:\t{self.logit_adjust_alpha:.2f}',
+            f'- Training Stage:\t{self.enable_train_logit_adjustment}',
+            f'- Validation Stage:\t{self.enable_val_logit_adjustment}',
+            f'- Inference Stage:\t{self.enable_test_logit_adjustment}',
+        ])
 
 # -------------------------------Public Function-------------------------------
 def generate_phases(phase_config: alias.ConfigType) -> list[Phase]:

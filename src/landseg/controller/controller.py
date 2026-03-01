@@ -69,7 +69,8 @@ class Controller:
             if phase.finished:
                 self._next_phase() # progress
                 continue
-            print('__Phase details__\n', phase)
+            print('__Phase details__')
+            print(phase)
             # try load from previous checkpoint
             meta = self._load_progress(phase.name)
             # main execution
