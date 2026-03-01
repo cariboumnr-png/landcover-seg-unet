@@ -306,14 +306,19 @@ class MultiHeadTrainer:
         enable_train_logit_adjustment: bool,
         enable_val_logit_adjustment: bool,
         enable_test_logit_adjustment: bool,
+        **kwargs
     ) -> None:
         '''
         Simple helper to set logit adjustment use flags.
         '''
 
+        # assign flags
         self.flags['enable_train_la'] = enable_train_logit_adjustment
         self.flags['enable_val_la'] = enable_val_logit_adjustment
         self.flags['enable_test_la'] = enable_test_logit_adjustment
+        # implemented for signature flexibility
+        if kwargs:
+            pass
 
     def predict(
         self,
