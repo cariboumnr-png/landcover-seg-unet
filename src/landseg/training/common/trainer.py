@@ -17,6 +17,7 @@ class TrainerLike(typing.Protocol):
     comps: common.TrainerComponentsLike
     config: common.RuntimeConfigLike
     state: common.RuntimeStateLike
+    flags: dict[str, bool]
     device: str
     # batch extraction
     def _parse_batch(self) -> None: ...

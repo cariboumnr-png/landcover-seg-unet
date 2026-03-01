@@ -10,8 +10,12 @@ class ValCallback(callback.Callback):
     '''
 
     def on_validation_begin(self) -> None:
-        # set model to validation mode
-        self.trainer.comps.model.eval()
+        model = self.trainer.comps.model
+        flags = self.trainer.flags
+        # set model to evaluation mode
+        model.eval()
+        # set la status
+        model.set_logit_adjust_enabled(flags['enable_val_la'])
         # reset per-head confusion matrix from active heads
         assert self.trainer.state.heads.active_hmetrics is not None
         for metrics_mod in self.trainer.state.heads.active_hmetrics.values():

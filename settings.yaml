@@ -48,14 +48,14 @@ dataprep:
 
 # ----- Source of Fit and Test (optional) Data
 dataset:
-  name: econum_test
+  name: demo
   fit:
-    image: ./data/demo_data/fit/image.tif
-    label: ./data/demo_data/fit/label_econum.tif
+    image: ''
+    label: ''
   test:
-    image: ./data/demo_data/test/image.tif
+    image: ''
   # data configuration
-  config: ./data/demo_data/config.json
+  config: ''
 
 # ----- Artifacts Storage
 artifacts:
@@ -64,9 +64,6 @@ artifacts:
 
 # ----- Model Features
 models:
-  # whether to use default logits_adjustment
-  logits_adjustment:
-    enable: False
   # mode of conditioning: 'none', 'concat', 'film', 'hybrid'
   conditioning:
     mode: 'hybrid'
@@ -87,11 +84,15 @@ trainer:
 curriculum:
   # phases
   phases:
-    phase_1:
-      name: coarse_head
-      num_epochs: 200
-      active_heads: [layer1]
-      masked_classes:
-        layer1: [2, 3, 4, 7, 8, 11, 12, 13]
-      frozen_heads: null
+    - name: coarse_head
+      num_epochs: 100
+      heads:
+        active_heads: [layer1]
+        frozen_heads: null
+        masked_classes: null
+      logit_adjust:
+        train: False
+        val: False
+        test: False
+        alpha: 1.0
       lr_scale: 1.0

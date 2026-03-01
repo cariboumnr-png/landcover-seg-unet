@@ -10,8 +10,12 @@ class TrainCallback(callback.Callback):
     '''
 
     def on_train_epoch_begin(self, epoch: int) -> None:
+        model = self.trainer.comps.model
+        flags = self.trainer.flags
         # set model to train mode
-        self.trainer.comps.model.train()
+        model.train()
+        # set la status
+        model.set_logit_adjust_enabled(flags['enable_train_la'])
         # reset train loss and logs
         self.state.epoch_sum.train_loss = 0.0
         self.state.epoch_sum.train_logs.head_losses.clear()

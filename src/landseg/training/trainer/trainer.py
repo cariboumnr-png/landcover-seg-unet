@@ -75,6 +75,8 @@ class MultiHeadTrainer:
         self.state = self._init_state()
         # setup callback classes
         self._setup_callbacks()
+        # init a flags dict
+        self.flags: dict[str, bool] = {}
 
 # -------------------------------Public  Methods-------------------------------
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
@@ -101,6 +103,7 @@ class MultiHeadTrainer:
 
         # train phase begin:
         # - set model to .train()
+        # - enable/disable logit adjustment
         # - reset train loss/logs
         self._emit('on_train_epoch_begin', epoch)
 
@@ -162,6 +165,7 @@ class MultiHeadTrainer:
 
         # val phase start
         # - set model to .eval()
+        # - enable/disable logit adjustment
         # - reset head confusion matrices
         # - reset validation loss/logs
         self._emit('on_validation_begin')
@@ -197,6 +201,7 @@ class MultiHeadTrainer:
 
         # infer phase start
         # - set model to .eval()
+        # - enable/disable logit adjustment
         # - clear inference output mapping (batch -> preds)
         self._emit('on_inference_begin')
 
@@ -294,6 +299,21 @@ class MultiHeadTrainer:
         self.state.heads.active_hspecs = None
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
+
+    def config_logit_adjustment(
+        self,
+        *,
+        enable_train_logit_adjustment: bool,
+        enable_val_logit_adjustment: bool,
+        enable_test_logit_adjustment: bool,
+    ) -> None:
+        '''
+        Simple helper to set logit adjustment use flags.
+        '''
+
+        self.flags['enable_train_la'] = enable_train_logit_adjustment
+        self.flags['enable_val_la'] = enable_val_logit_adjustment
+        self.flags['enable_test_la'] = enable_test_logit_adjustment
 
     def predict(
         self,
