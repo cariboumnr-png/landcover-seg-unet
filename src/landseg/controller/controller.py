@@ -69,7 +69,8 @@ class Controller:
             if phase.finished:
                 self._next_phase() # progress
                 continue
-            print('__Phase details__\n', phase)
+            print('__Phase details__')
+            print(phase)
             # try load from previous checkpoint
             meta = self._load_progress(phase.name)
             # main execution
@@ -118,6 +119,11 @@ class Controller:
         # align trainer config with phase specs
         self.trainer.config.schedule.max_epoch = num_epoch
 
+        # set trainer logit adjustments
+        la_scheme = phase.la_scheme
+        self.trainer.model.set_logit_adjust_alpha(la_scheme.logit_adjust_alpha)
+        self.trainer.config_logit_adjustment(**dataclasses.asdict(la_scheme))
+
         # train
         print(f'__Phase [{phase.name}] started__')
         for epoch in range(start, num_epoch + 1):
@@ -133,17 +139,17 @@ class Controller:
             print(f'__Epoch: {epoch}/{num_epoch}__')
             # set trainer heads
             self.trainer.set_head_state(
-                active_heads=phase.active_heads,
-                frozen_heads=phase.frozen_heads,
-                excluded_cls=phase.excluded_cls
+                phase.heads.active_heads,
+                phase.heads.frozen_heads,
+                phase.heads.excluded_cls
             )
+            # train the current epoch
             t_logs = self.trainer.train_one_epoch(epoch)
             # validate at set interval
             if self.trainer.config.schedule.eval_interval is not None and \
                 epoch % self.trainer.config.schedule.eval_interval == 0:
                 v_logs = self.trainer.validate()
                 # update preview if test data provided
-                # TODO and if model improved
                 if self.trainer.dataloaders.test:
                     self.trainer.infer(self.cfg.preview_dpath)
             # save progress

@@ -10,8 +10,12 @@ class InferCallback(callback.Callback):
     '''
 
     def on_inference_begin(self) -> None:
-        # model to eval mode
-        self.trainer.comps.model.eval()
+        model = self.trainer.comps.model
+        flags = self.trainer.flags
+        # set model to evaluation mode
+        model.eval()
+        # set la status
+        model.set_logit_adjust_enabled(flags['enable_test_la'])
         # reset infer outputs
         self.state.epoch_sum.infer_ctx.maps.clear()
 

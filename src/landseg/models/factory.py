@@ -19,23 +19,12 @@ class ModelDatasetConfig(typing.TypedDict):
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     dataset_config: ModelDatasetConfig,
-    model_config: alias.ConfigType
+    model_config: alias.ConfigType,
 ) -> multihead.BaseMultiheadModel:
     '''Build the multi-head model from provided dataset.'''
 
-    # config accessor
+    # config accessors
     model_cfg = utils.ConfigAccess(model_config)
-
-    # base model config
-    base_config = multihead.ModelConfig(
-        in_ch=dataset_config['img_ch_num'],
-        base_ch=model_cfg.get_option('channels', 'base_ch'),
-        heads_w_counts=dataset_config['class_counts'],
-        enable_logit_adjust=model_cfg.get_option('logits_adjustment', 'enable'),
-        logit_adjust=dataset_config['logits_adjust'],
-        enable_clamp=model_cfg.get_option('clamp', 'enable'),
-        clamp_range=tuple(model_cfg.get_option('clamp', 'range')),
-    )
 
     # conditioning config
     cond_config = multihead.CondConfig(
@@ -56,9 +45,18 @@ def build_multihead_unet(
         )
     )
 
+    # base model config
+    base_config = multihead.ModelConfig(
+        in_ch=dataset_config['img_ch_num'],
+        base_ch=model_cfg.get_option('channels', 'base_ch'),
+        heads_w_counts=dataset_config['class_counts'],
+        logit_adjust=dataset_config['logits_adjust'],
+        clamp_range=tuple(model_cfg.get_option('clamp', 'range')),
+        conditioning=cond_config
+    )
+
     # return model instance
     return multihead.MultiHeadUNet(
         body=model_cfg.get_option('body'),
-        config=base_config,
-        cond=cond_config,
+        config=base_config
     )

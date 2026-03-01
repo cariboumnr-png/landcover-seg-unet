@@ -11,10 +11,9 @@ class ModelConfig:
     in_ch: int
     base_ch: int
     heads_w_counts: dict[str, list[int]]
-    enable_logit_adjust: bool
     logit_adjust: dict[str, list[float]]
-    enable_clamp: bool
     clamp_range: tuple[float, float]
+    conditioning: CondConfig
 
 # ----------------------model conditioning configuration----------------------
 @dataclasses.dataclass

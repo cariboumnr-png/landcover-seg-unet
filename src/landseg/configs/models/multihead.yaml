@@ -5,13 +5,7 @@ channels:
   # base channels for model
   base_ch: 32
 
-logits_adjustment:
-  # whether to use default logits_adjustment
-  enable: True
-
 clamp:
-  # whether to enable logits clamping
-  enable: True
   # clamping range
   range: [1e-4, 1e4]
 
