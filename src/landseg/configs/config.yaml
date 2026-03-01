@@ -13,6 +13,9 @@ defaults:
   - models: multihead
   - trainer: default
 
+# dev-facing local override; optional and untracked
+dev_settings_path: ${oc.env:AUX_SETTINGS_PATH, null}
+
 hydra:
   run:
     dir: .

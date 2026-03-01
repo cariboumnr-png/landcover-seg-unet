@@ -7,6 +7,7 @@ import sys
 import typing
 # third-party imports
 import hydra
+import hydra.utils
 import omegaconf
 # local imports
 import landseg.controller as controller
@@ -19,8 +20,18 @@ import landseg.utils as utils
 def main(config: omegaconf.DictConfig) -> None:
     '''End-to-end experiment.'''
 
-    # fetch user settings and merge with default config
-    candidates = [f'{os.getcwd()}/settings.yaml']
+    # safer CWD fetching
+    original_cwd = hydra.utils.get_original_cwd()
+
+    # user settings at root
+    candidates = [os.path.join(original_cwd, 'settings.yaml')]
+    # optional dev settings (untracked, supplied via CLI argument)
+    aux = config.get('dev_settings_path')
+    if aux:
+        aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
+    candidates.append(aux)
+
+    # merging overrides with default config tree
     for p in candidates:
         if os.path.exists(p):
             user_cfg = omegaconf.OmegaConf.load(p)
@@ -29,7 +40,7 @@ def main(config: omegaconf.DictConfig) -> None:
             # allow new phases to be added
             with omegaconf.open_dict(config.curriculum.phases):
                 merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
-            config = typing.cast(omegaconf.DictConfig, merged)
+                config = typing.cast(omegaconf.DictConfig, merged)
 
     # resolve
     omegaconf.OmegaConf.resolve(config)

@@ -72,6 +72,9 @@ ruff_cache/
 # Demo data
 /data/demo_data/*
 
+# Dev folder
+/dev/*
+
 # Logs
 /logs/*
 !/logs/
