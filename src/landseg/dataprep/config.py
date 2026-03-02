@@ -8,6 +8,7 @@ class InputConfig(typing.TypedDict):
     fit_input_img: str
     fit_input_lbl: str
     test_input_img: str | None
+    test_input_lbl: str | None
     input_config: str
 
 class OutputConfig(typing.TypedDict):

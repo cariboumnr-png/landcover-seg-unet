@@ -72,6 +72,7 @@ def _parse_configs(
         'fit_input_img': input_cfg.get_option('fit', 'image'),
         'fit_input_lbl': input_cfg.get_option('fit', 'label'),
         'test_input_img': input_cfg.get_option('test', 'image', default=None),
+        'test_input_lbl': input_cfg.get_option('test', 'label', default=None),
         'input_config': input_cfg.get_option('config'),
         # output - artifact paths
         'fit_windows': output_cfg.get_option('fit_raster_windows'),

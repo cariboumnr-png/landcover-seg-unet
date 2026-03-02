@@ -21,25 +21,12 @@ class DataSpecs:
     domains: _Domains
 
     def __str__(self) -> str:
-        def _ln(lst):
-            return [round(x, 4) for x in lst]
-        t1 = '\n - '.join([
-            f'{k}:\t{v}' for k, v in self.heads.class_counts.items()
-        ])
-        t2 = '\n - '.join([
-            f'{k}:\t{_ln(v)}' for k, v in self.heads.logits_adjust.items()
-        ])
         return '\n'.join([
             'Dataset summary:\n----------------------------------------',
-            f'Dataset name: {self.meta.dataset_name}'
-            f'Ignore index: {self.meta.ignore_index}',
-            f'Number of image channels: {self.meta.img_ch_num}',
-            f'Class distribution of each head: \n - {t1}',
-            f'Head-wise logits adjustment: \n - {t2}',
-            f'Number of train blocks: {len(self.splits.train)}',
-            f'Number of val blocks: {len(self.splits.val)}',
-            f'Number of test blocks: {len(self.splits.val or {})}',
-            f'Domain knowledge includes: {self.domains}'
+            str(self.meta),
+            str(self.heads),
+            str(self.splits),
+            str(self.domains)
         ])
 
 # ------------------------------private dataclass------------------------------
@@ -47,11 +34,21 @@ class DataSpecs:
 class _Meta:
     '''Metadata.'''
     dataset_name: str
+    img_ch_num: int
+    ignore_index: int
     fit_perblk_bytes: int
     test_perblk_bytes: int
-    ignore_index: int
-    img_ch_num: int
     test_blks_grid: tuple[int, int]
+
+    def __str__(self) -> str:
+        return '\n'.join([
+            '[General Meta]',
+            f'Dataset name: {self.dataset_name}'
+            f'Number of image channels: {self.img_ch_num}',
+            f'Ignore index: {self.ignore_index}',
+            f'Fit data blocks size (b): {self.fit_perblk_bytes}',
+            f'Test data blocks size (b): {self.test_perblk_bytes}'
+        ])
 
 @dataclasses.dataclass
 class _Heads:
@@ -60,12 +57,31 @@ class _Heads:
     logits_adjust: dict[str, list[float]]
     topology: dict[str, dict[str, str | int | None]]
 
+    def __str__(self) -> str:
+        def _ln(lst):
+            return [round(x, 2) for x in lst]
+        t1 = '\n - '.join([f'{k}:\t{v}' for k, v in self.class_counts.items()])
+        t2 = '\n - '.join([f'{k}:\t{_ln(v)}' for k, v in self.logits_adjust.items()])
+        return '\n'.join([
+            '[Heads Specs]',
+            f'Class distribution of each head: \n - {t1}',
+            f'Head-wise logits adjustment: \n - {t2}',
+        ])
+
 @dataclasses.dataclass
 class _Splits:
     '''Block file paths of training and validation datasets.'''
     train: dict[str, str]
     val: dict[str, str]
     test: dict[str, str] | None
+
+    def __str__(self) -> str:
+        return '\n'.join([
+            '[Dataset Split]',
+            f'Number of train blocks: {len(self.train)}',
+            f'Number of val blocks: {len(self.val)}',
+            f'Number of test blocks: {len(self.test or {})}',
+        ])
 
 @dataclasses.dataclass
 class _Domains:
@@ -80,6 +96,13 @@ class _Domains:
         '''doc'''
         ids_domain: dict[str, int] | None
         vec_domain: dict[str, list[float]] | None
+
+    def __str__(self) -> str:
+        return '\n'.join([
+            '[Domain Knowledge]',
+            f'Discrete domain IDs count: {self.ids_max + 1}', # 0- to 1-based
+            f'Continuous domain PCA number of axes: {self.vec_dim}'
+        ])
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
@@ -126,13 +149,21 @@ def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
             col = max(col, (x - xmin) / schema['world_grid']['tile_step_x'])
             row = max(row, (y - ymin) / schema['world_grid']['tile_step_y'])
 
+    # get test block byte size
+    if schema['dataset']['has_test_data']:
+        test_perblk_bytes = img_b * img_px
+        if schema['dataset']['test_data_has_label']:
+            test_perblk_bytes += lbl_b * lbl_px
+    else:
+        test_perblk_bytes = 0
+
     # return
     return _Meta(
         dataset_name=schema['dataset']['name'],
-        fit_perblk_bytes=img_b * img_px,
-        test_perblk_bytes=lbl_b * lbl_px,
         ignore_index=schema['io_conventions']['ignore_index'],
         img_ch_num=schema['tensor_shapes']['image']['C'],
+        fit_perblk_bytes=img_b * img_px + lbl_b * lbl_px,
+        test_perblk_bytes=test_perblk_bytes,
         test_blks_grid=(int(col + 1), int(row + 1))
     )
 

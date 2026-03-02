@@ -44,7 +44,7 @@ def _get_blocks_builder(
     elif mode == 'test':
         assert config['test_input_img'] # sanity type check
         image_fpath=config['test_input_img']
-        label_fpath=None
+        label_fpath=config['test_input_lbl']
         config_fpath=config['input_config']
         blks_dpath=config['test_blks_dir']
         all_blocks=config['test_all_blks']
