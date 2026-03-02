@@ -48,31 +48,17 @@ This project is still *research‑stage* and **brittle**.
 Interfaces, config structure, and behavior **may change frequently** as the
 pipeline stabilizes. Use at your own risk and expect breaking changes.
 
-Additional CLI commands (prep, report, train, infer) will be added as the
-interface matures.
+Additional CLI commands (e.g., `prep`, `report`, `train`, `infer`) will be
+added as the interface matures.
 
 ## 🛠️ Current Work
+The project is undergoing a restructuring based on [ADR-0007](./docs/ADRs/ADR-0007-unified-experiment-io.md) that introduces a unified experiment‑level
+I/O design (branch: /unified-experiment-io). The goal is to centralize all
+inputs, cached artifacts, and per‑run outputs under a single `/exp_root/`,
+making experiments easier to isolate, reproduce, and manage.
 
-
- **ADR‑0006 Status:**
-Packaging & entrypoint refactor is **complete** and merged.
-
-The project is now installable via `pip install` we and exposes the new CLI entrypoint: `experiment_run` that runs the entire workflow end‑to‑end (dataprep → dataset → model → training).
-
-This is intentionally a single "everything" entrypoint for now. The internal
-pipeline is still being stabilized and may be brittle.
-
-As the framework matures, the monolithic flow will be decomposed into dedicated step‑level entrypoints such as:
-
-    prep     — dataprep only
-    report   — tile/AOI QA and diagnostics
-    train    — model training
-    infer    — inference & stitching
-
-These will be introduced gradually once the underlying modules and Hydra config structure become stable.
-
-Hydra configuration is now packaged under `src/landseg/configs/`, and users
-may override settings via the root-level `settings.yaml` (WIP, non‑exhaustive).
+This change is in progress and may temporarily reshape paths, directory layouts,
+and logging locations as the new structure is phased in.
 
 ---
 
@@ -171,7 +157,8 @@ The dataprep pipeline:
 ## 🚀 Roadmap (Updated for ADR‑0005)
 
 ### Near‑Term (current milestone)
-- ADR-0005
+- [ADR-0005](./docs/ADRs/ADR-0005-deferred-goals-scope-consolidate.md) (pending)
+- [ADR-0007](./docs/ADRs/ADR-0007-unified-experiment-io.md) (active)
 - Improve documentation and examples
 - Add unit tests for dataprep  dataset  training
 

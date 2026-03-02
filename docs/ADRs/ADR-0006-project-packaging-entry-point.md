@@ -1,4 +1,3 @@
-
 # ADR‑0006 — Packaging & Entry Points
 
 **Status:** Accepted
