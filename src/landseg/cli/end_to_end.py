@@ -113,7 +113,9 @@ def init_exp_io(config: omegaconf.DictConfig) -> utils.Logger:
         except FileExistsError:
             i += 1
     # save running config per experiment
-    utils.write_json(os.path.join(experiment, 'config.json'), config)
+    _config = omegaconf.OmegaConf.to_container(config, resolve=True)
+    _config = typing.cast(dict, _config)
+    utils.write_json(os.path.join(experiment, 'config.json'), _config)
     # experiment components
     logs = os.path.join(experiment, 'logs')
     ckpt = os.path.join(experiment, 'checkpoints')
