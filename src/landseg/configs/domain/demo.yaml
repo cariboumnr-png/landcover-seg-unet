@@ -1,4 +1,4 @@
-dirpath: ./demo_data/domain_knowledge
+dirpath: ${exp_root}/input/domain
 files:
   - name: geology.tif
     index_base: 1

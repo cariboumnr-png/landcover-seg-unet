@@ -18,7 +18,7 @@ A minimal, stable high‑level layout:
                 test/           # raw rasters for testing (optional)
                 configs/        # input rasters metadata (.json file)
             domain/
-            reference/
+            extent_ref/
         artifacts/              # data-prep cache, schema, grids, domains
         results/
             <experiment_id>/    # each training run is isolated here

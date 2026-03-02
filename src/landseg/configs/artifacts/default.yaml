@@ -1,5 +1,5 @@
 # cache directory structure
-root: ./artifacts
+root: ${exp_root}/artifacts
 grids: ${artifacts.root}/world_grids
 domain: ${artifacts.root}/domain_knowledge
 cache: ${artifacts.root}/data_cache
