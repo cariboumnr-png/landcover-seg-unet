@@ -80,10 +80,11 @@ class Logger():
         # gather arguments
         if name is None:
             name = os.path.basename(__file__)
-        # make sure dir exists
-        default_dirpath = f'{os.getcwd()}/logs'
-        os.makedirs(default_dirpath, exist_ok=True)
+        # if no log file path is provided
         if log_file is None:
+            # make sure dir exists
+            default_dirpath = f'{os.getcwd()}/logs'
+            os.makedirs(default_dirpath, exist_ok=True)
             # timestap = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
             log_file = f'{default_dirpath}/proj.log' # default log file
 
