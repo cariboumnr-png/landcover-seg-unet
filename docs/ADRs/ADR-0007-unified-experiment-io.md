@@ -2,7 +2,6 @@
 **Status:** Proposed
 **Date:** 2026‑03-02
 
-
 ## Context
 The project currently scatters I/O across several locations (root‑level logs, user‑configured cache paths, checkpoints in experiment configs). This makes experiments harder to isolate, archive, and reproduce.
 Hydra naturally supports run‑scoped output directories, and widely used ML project structures (e.g., Cookiecutter Data Science) keep *data artifacts* separate from *per‑experiment outputs*.
@@ -13,15 +12,21 @@ Adopt a **single user‑specified `exp_root` directory** that becomes the parent
 A minimal, stable high‑level layout:
 ```
     <exp_root>/
-        input_data/             # user-provided data or just a manifest
+        input/                  # user-provided data or just a manifest
+            <dataset_name>/     # user-pointed dataset name
+                fit/            # raw rasters for training
+                test/           # raw rasters for testing (optional)
+                configs/        # input rasters metadata (.json file)
+            domain/
+            reference/
         artifacts/              # data-prep cache, schema, grids, domains
         results/
-        <experiment_id>/        # each training run is isolated here
-            logs/
-            checkpoints/
-            previews/
-            plots/
-            .hydra/             # (optional) Hydra config snapshot
+            <experiment_id>/    # each training run is isolated here
+                logs/
+                checkpoints/
+                previews/
+                plots/
+                .hydra/         # (optional) Hydra config snapshot
 ```
 
 Only the top‑level idea is fixed:

@@ -13,6 +13,9 @@ defaults:
   - models: multihead
   - trainer: default
 
+# experiment root
+exp_root: ./experiment
+
 # dev-facing local override; optional and untracked
 dev_settings_path: ${oc.env:AUX_SETTINGS_PATH, null}
 

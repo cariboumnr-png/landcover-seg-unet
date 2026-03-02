@@ -31,7 +31,7 @@ def main(config: omegaconf.DictConfig) -> None:
         aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
     candidates.append(aux)
 
-    # merging overrides with default config tree
+    # merging overrides with default config tree and resolve
     for p in candidates:
         if os.path.exists(p):
             user_cfg = omegaconf.OmegaConf.load(p)
@@ -41,13 +41,10 @@ def main(config: omegaconf.DictConfig) -> None:
             with omegaconf.open_dict(config.curriculum.phases):
                 merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
                 config = typing.cast(omegaconf.DictConfig, merged)
-
-    # resolve
     omegaconf.OmegaConf.resolve(config)
 
-    # create a centralized logger file named by current time stamp
-    timestamp = utils.get_timestamp()
-    logger = utils.Logger('main', f'./logs/{timestamp}.log')
+    # init io folder tree and create a centralized logger file
+    logger = init_exp_io(config['exp_root'], config['dataset']['name'])
 
     # run exceptions handling
     try:
@@ -70,6 +67,64 @@ def main(config: omegaconf.DictConfig) -> None:
     except Exception: # pylint: disable=broad-exception-caught
         logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
         sys.exit(1)
+
+def init_exp_io(
+    exp_root: str,
+    dataset_name: str
+) -> utils.Logger:
+    '''Initialize experiment I/O folder tree and lazily check inputs.'''
+
+    # lazy check if mandatory inputs are present
+    # check input fit rasters
+    input_fit_dir = os.path.join(exp_root, 'input', dataset_name, 'fit')
+    if not os.path.exists(input_fit_dir):
+        raise ValueError(f'Input fit raster root not found: {input_fit_dir}')
+    if not any(
+        name.endswith('.tif') or name.endswith('.tiff')
+        for name in os.listdir(input_fit_dir)
+        if os.path.isfile(os.path.join(input_fit_dir, name))
+    ):
+        raise ValueError(f'No rasters (.tif) found at {input_fit_dir}')
+    # check input configs
+    input_cfg_dir = os.path.join(exp_root, 'input', dataset_name, 'configs')
+    if not os.path.exists(input_cfg_dir):
+        raise ValueError(f'Input configs root not found: {input_cfg_dir}')
+    if not any(
+        name.endswith('.json')
+        for name in os.listdir(input_cfg_dir)
+        if os.path.isfile(os.path.join(input_cfg_dir, name))
+    ):
+        raise ValueError(f'No data configs (.json) found at {input_cfg_dir}')
+
+    # ensure output folders exist (e.g, for fresh experiment)
+    # top-level
+    artifacts = os.path.join(exp_root, 'artifacts')
+    results = os.path.join(exp_root, 'results')
+    os.makedirs(artifacts, exist_ok=True)
+    os.makedirs(results, exist_ok=True)
+    # experiment root - natural counter from 0001 to 9999
+    i = 1
+    while True:
+        experiment = os.path.join(results, f'exp_{i:04d}')
+        try:
+            os.makedirs(experiment)
+            break
+        except FileExistsError:
+            i += 1
+    # experiment components
+    logs = os.path.join(experiment, 'logs')
+    ckpt = os.path.join(experiment, 'checkpoints')
+    prev = os.path.join(experiment, 'previews')
+    plot = os.path.join(experiment, 'plots')
+    os.makedirs(logs, exist_ok=True)
+    os.makedirs(ckpt, exist_ok=True)
+    os.makedirs(prev, exist_ok=True)
+    os.makedirs(plot, exist_ok=True)
+
+    # create a centralized main logger and return
+    timestamp = utils.get_timestamp()
+    log_file = os.path.join(logs, f'main_{timestamp}.log')
+    return utils.Logger('main', log_file)
 
 if __name__ == '__main__':
     main()
