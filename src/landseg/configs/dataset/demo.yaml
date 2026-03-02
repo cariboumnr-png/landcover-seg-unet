@@ -7,5 +7,6 @@ fit:
 # input test data (optional)
 test:
   image: ./demo_data/test_input/image.tif
+  label: ./demo_data/test_input/label.tif
 # data configuration
 config: ./demo_data/config.json

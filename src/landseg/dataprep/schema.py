@@ -17,6 +17,7 @@ def build_schema(
 
     # has test data flag
     has_test = os.path.exists(config['test_windows'])
+    test_data_has_label = os.path.exists(config['test_input_lbl'] or '')
 
     # parse grid
     gid, work_grid = world_grid
@@ -32,13 +33,20 @@ def build_schema(
 
     # populate schema dict
     schema = {
-        'schema_version': '1.0.0',
+        'schema_version': '1.0.1',
 
         'dataset': {
             'name': os.path.basename(data_cache_root), # dataset name
             'created_at': utils.get_timestamp('%Y-%m-%dT%H:%M:%S'), # ISO-8601
-            'has_test_data': has_test,
             'dataprep_commit': 'dev', # to be fixed once branch stable
+            'data_source': {
+                'fit_image_path': config['fit_input_img'],
+                'fit_label_path': config['fit_input_lbl'],
+                'test_image_path': config['test_input_img'],
+                'test_label_path': config['test_input_lbl'],
+            },
+            'has_test_data': has_test,
+            'test_data_has_label': test_data_has_label
         },
 
         'world_grid': {
