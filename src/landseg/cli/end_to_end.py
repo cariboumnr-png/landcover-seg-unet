@@ -44,7 +44,7 @@ def main(config: omegaconf.DictConfig) -> None:
     omegaconf.OmegaConf.resolve(config)
 
     # init io folder tree and create a centralized logger file
-    logger = init_exp_io(config['exp_root'], config['dataset']['name'])
+    logger = init_exp_io(config)
 
     # run exceptions handling
     try:
@@ -68,11 +68,12 @@ def main(config: omegaconf.DictConfig) -> None:
         logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
         sys.exit(1)
 
-def init_exp_io(
-    exp_root: str,
-    dataset_name: str
-) -> utils.Logger:
+def init_exp_io(config: omegaconf.DictConfig) -> utils.Logger:
     '''Initialize experiment I/O folder tree and lazily check inputs.'''
+
+    # get from config
+    exp_root = config['exp_root']
+    dataset_name = config['dataset']['name']
 
     # lazy check if mandatory inputs are present
     # check input fit rasters
@@ -111,6 +112,8 @@ def init_exp_io(
             break
         except FileExistsError:
             i += 1
+    # save running config per experiment
+    utils.write_json(os.path.join(experiment, 'config.json'), config)
     # experiment components
     logs = os.path.join(experiment, 'logs')
     ckpt = os.path.join(experiment, 'checkpoints')
