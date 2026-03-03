@@ -106,20 +106,23 @@ class _Domains:
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
-    schema_fpath: str,
+    schema: str | dict[str, typing.Any],
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
 ) -> DataSpecs:
     '''doc'''
 
     # read schema
-    schema: dict[str, typing.Any] = utils.load_json(schema_fpath)
+    if isinstance(schema, str):
+        _schema: dict[str, typing.Any] = utils.load_json(schema)
+    else:
+        _schema = schema
 
     return DataSpecs(
-        meta=_get_meta(schema),
-        heads=_get_heads(schema),
-        splits=_get_split(schema),
-        domains=_get_domain(schema, ids_domain, vec_domain)
+        meta=_get_meta(_schema),
+        heads=_get_heads(_schema),
+        splits=_get_split(_schema),
+        domains=_get_domain(_schema, ids_domain, vec_domain)
     )
 
 # ------------------------------private  function------------------------------
