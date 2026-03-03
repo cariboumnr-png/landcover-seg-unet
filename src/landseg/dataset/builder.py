@@ -125,6 +125,17 @@ def build_dataspec(
         domains=_get_domain(_schema, ids_domain, vec_domain)
     )
 
+def build_empty_dataspec() -> DataSpecs:
+    '''Return a DataSpecs instance with dummy values.'''
+
+    dom: _Domains._Dom = {'ids_domain': None, 'vec_domain': None}
+    return DataSpecs(
+        _Meta('', 0, 0, 0, 0, (0, 0)),
+        _Heads({}, {}, {}),
+        _Splits({}, {}, None),
+        _Domains(dom, dom, dom, 0, 0)
+    )
+
 # ------------------------------private  function------------------------------
 def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
     '''doc'''
