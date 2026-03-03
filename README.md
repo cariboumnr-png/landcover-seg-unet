@@ -52,13 +52,9 @@ Additional CLI commands (e.g., `prep`, `report`, `train`, `infer`) will be
 added as the interface matures.
 
 ## 🛠️ Current Work
-The project is undergoing a restructuring based on [ADR-0007](./docs/ADRs/ADR-0007-unified-experiment-io.md) that introduces a unified experiment‑level
-I/O design (branch: /unified-experiment-io). The goal is to centralize all
-inputs, cached artifacts, and per‑run outputs under a single `/exp_root/`,
-making experiments easier to isolate, reproduce, and manage.
+Currently refining the project’s configuration and training control surfaces, including a comprehensive audit of all existing knobs (data, model, training, controller, and runtime). This work prepares the foundation for a robust `overfit_test` profile, improves determinism, and introduces clear separation between public and internal configuration options. These updates will streamline debugging, ensure reproducible runs, and improve the overall developer experience.
 
-This change is in progress and may temporarily reshape paths, directory layouts,
-and logging locations as the new structure is phased in.
+see [ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) & [ADR-0009](./docs/ADRs/ADR-0009-overfit-test-profile.md)
 
 ---
 
@@ -158,7 +154,8 @@ The dataprep pipeline:
 
 ### Near‑Term (current milestone)
 - [ADR-0005](./docs/ADRs/ADR-0005-deferred-goals-scope-consolidate.md) (pending)
-- [ADR-0007](./docs/ADRs/ADR-0007-unified-experiment-io.md) (active)
+- [ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) (active)
+- [ADR-0009](./docs/ADRs/ADR-0009-overfit-test-profile.md) (active)
 - Improve documentation and examples
 - Add unit tests for dataprep  dataset  training
 
