@@ -177,6 +177,41 @@ class BlockCacheBuilder:
         utils.write_json(_blks, self.valid_blks)
         utils.hash_artifacts(_blks)
 
+    def build_a_block(
+        self,
+        block_coordinates: tuple[int, int],
+    ) -> blockbuilder.DataBlock:
+        '''Build a single data block for overfitting test.'''
+
+        # load data config and extract by keys in block meta dict
+        meta_src = utils.load_json(self.config.config_fpath)
+        meta = {k: meta_src[k] for k in blockbuilder.BlockMeta.__annotations__}
+        meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
+        # enrich meta
+        meta['block_name'] = self._xy_name(block_coordinates)
+        dem_band = meta['band_map']['dem']
+        pad = meta['dem_pad']
+
+        # read rasters at given window and create blocks
+        img_fpath = self.config.image_fpath
+        lbl_fpath = self.config.label_fpath
+        img_window = self.windows.image_windows[block_coordinates]
+        lbl_window = self.windows.label_windows[block_coordinates]
+        with utils.open_rasters(img_fpath, lbl_fpath) as (img, lbl):
+            # sanity check, image raster must be provided
+            assert img is not None
+            # read image array
+            img_arr: numpy.ndarray = img.read(window=img_window)
+            meta['image_nodata'] = img.nodata
+            # get padded dem array from image
+            padded = _read_w_pad(img, img_window, dem_band, pad)
+            # assert label array is provided
+            assert lbl is not None and lbl_window is not None
+            lbl_arr = lbl.read(window=lbl_window)
+            meta['label_nodata'] = lbl.nodata
+
+        # create and return
+        return blockbuilder.DataBlock().build(img_arr, lbl_arr, padded, meta)
 
     # -----------------------------internal method-----------------------------
     def _prepare_block_windows(self):
@@ -372,9 +407,9 @@ def _make_blk(contxt: _BlockCreationContext) -> None:
             lbl_arr = lbl.read(window=lbl_window, boundless=True)
             meta['label_nodata'] = lbl.nodata
 
-        # create and save
-        blk = blockbuilder.DataBlock().build(img_arr, lbl_arr, padded_dem, meta)
-        blk.save(npz_fpath)
+    # create and save
+    blk = blockbuilder.DataBlock().build(img_arr, lbl_arr, padded_dem, meta)
+    blk.save(npz_fpath)
 
 def _read_w_pad(
     img: alias.RasterReader,
