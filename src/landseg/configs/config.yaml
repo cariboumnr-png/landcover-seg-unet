@@ -9,7 +9,7 @@ defaults:
   - extent: demo
   - grid: base
   # training-side
-  - curriculum: demo
+  - experiment: demo
   - models: multihead
   - trainer: default
 

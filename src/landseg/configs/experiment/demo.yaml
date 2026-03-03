@@ -1,0 +1,19 @@
+# experiment config
+ckpt_dpath: ${exp_root}/checkpoints
+preview_dpath: ${exp_root}/previews
+
+# training phases
+phases:
+  # example phase
+    - name: coarse_head
+      num_epochs: 50
+      heads:
+        active_heads: [layer1]
+        frozen_heads: null
+        masked_classes: null
+      logit_adjust:
+        train: False
+        val: False
+        test: False
+        alpha: 1.0
+      lr_scale: 1.0

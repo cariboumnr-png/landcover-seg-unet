@@ -82,8 +82,8 @@ trainer:
     monitor:
       track_head_name: layer1
 
-# ----- Curriculum Learning Phases
-curriculum:
+# ----- Learning Phases
+experiment:
   # phases
   phases:
     - name: coarse_head
