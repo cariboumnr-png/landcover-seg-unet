@@ -18,9 +18,9 @@ Notes:
 
 # standard imports
 from __future__ import annotations
-import copy
 import dataclasses
 import os
+import typing
 import zipfile
 import zlib
 # third-party imports
@@ -276,19 +276,22 @@ class BlockCacheBuilder:
             return
         self.logger.log('INFO', f'{len(coords_todo)} data blocks to be created')
 
+        # load data config and extract by keys in block meta dict
+        meta_src = utils.load_json(self.config.config_fpath)
+        meta = {k: meta_src[k] for k in blockbuilder.BlockMeta.__annotations__}
+        meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
         # prep block creation jobs
         jobs = []
-        meta_src: blockbuilder.BlockMeta = utils.load_json(self.config.config_fpath)
         for c in coords_todo:
             name = self._xy_name(c)
             co_contxt = _BlockCreationContext(
-                name=name,
-                meta=copy.deepcopy(meta_src),
-                img_path=self.config.image_fpath,
-                img_window=self.windows.image_windows[c],
-                lbl_path=self.config.label_fpath,
-                lbl_window=self.windows.label_windows[c] if self.has_label else None,
-                npz_fpath=self.all_blocks[name]
+                name,
+                meta,
+                self.config.image_fpath,
+                self.windows.image_windows[c],
+                self.config.label_fpath,
+                self.windows.label_windows[c] if self.has_label else None,
+                self.all_blocks[name]
             )
             jobs.append((_make_blk, (co_contxt,), {}))
 
