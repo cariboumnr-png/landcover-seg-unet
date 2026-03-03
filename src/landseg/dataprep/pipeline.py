@@ -18,7 +18,7 @@ def prepare_data(
     proc_config: alias.ConfigType,
     logger: utils.Logger,
     **kwargs
-):
+) -> blockbuilder.DataBlock | None:
     '''doc'''
 
     # get flags from keyword arguments
@@ -27,6 +27,7 @@ def prepare_data(
     rebuild_blks = kwargs.get('rebuild_blocks', rebuild_all)
     renorm = kwargs.get('renormalize', rebuild_all)
     rebuild_split = kwargs.get('rebuild_split', rebuild_all)
+    build_a_blk = kwargs.get('build_a_block', False) # single block mode
 
     # get a child logger
     logger = logger.get_child('dprep')
@@ -36,6 +37,11 @@ def prepare_data(
 
     # map rasters to world grid (alway map fit, map test if provided)
     mapper.map_rasters(world_grid[1], cfg, logger, remap=remap)
+
+    # if single block mode - build and return the instance
+    if build_a_blk:
+        block = blockbuilder.build_a_block(cfg, logger)
+        return block
 
     # build/normalize/split fit blocks
     blockbuilder.build_blocks('fit', cfg, logger, rebuild=rebuild_blks)
@@ -50,6 +56,7 @@ def prepare_data(
     # generate schema
     data_cache_root = f'{artifact_config["cache"]}/{inputs_config["name"]}'
     schema.build_schema(world_grid, data_cache_root, cfg)
+    return None
 
 def _parse_configs(
     input_data_config: alias.ConfigType,
