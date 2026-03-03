@@ -34,21 +34,17 @@ def prepare_data(
     # get pipeline configs from input
     cfg = _parse_configs(inputs_config, artifact_config, proc_config)
 
-    # map fit rasters to world grid
+    # map rasters to world grid (alway map fit, map test if provided)
     mapper.map_rasters(world_grid[1], cfg, logger, remap=remap)
-    # build fit blocks
+
+    # build/normalize/split fit blocks
     blockbuilder.build_blocks('fit', cfg, logger, rebuild=rebuild_blks)
-    # normalize fit blocks
     normalizer.normalize_blocks('fit', cfg, logger, renormalize=renorm)
-    # split fit blocks
     splitter.split_blocks(cfg, logger, rebuild=rebuild_split)
 
-    # map test raster to world grid if provided
+    # # build/normalize test blocks if provided
     if cfg['test_input_img']:
-        mapper.map_rasters(world_grid[1], cfg, logger, remap=remap)
-        # build test blocks
         blockbuilder.build_blocks('test', cfg, logger, rebuild=rebuild_blks)
-        # normalize test blocks
         normalizer.normalize_blocks('test', cfg, logger, renormalize=renorm)
 
     # generate schema

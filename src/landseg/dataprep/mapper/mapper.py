@@ -34,18 +34,18 @@ def map_rasters(
     # paths to artifacts from fit input
     fit_img = config['fit_input_img']
     fit_lbl = config['fit_input_lbl']
-    fit_windows = config['fit_windows']
+    fit_windows_fpath = config['fit_windows']
     # map fit data
-    if not os.path.exists(fit_windows) or remap:
-        _map(world_grid, fit_img, fit_lbl, fit_windows, logger)
+    if not os.path.exists(fit_windows_fpath) or remap:
+        _map(world_grid, fit_img, fit_lbl, fit_windows_fpath, logger)
 
     # paths to artifacts from test input if provided
     test_img = config['test_input_img']
     test_lbl = config['test_input_lbl']
-    test_windows = config['test_windows']
+    test_windows_fpath = config['test_windows']
     # map test data if provided
-    if test_img and (not os.path.exists(test_windows) or remap):
-        _map(world_grid, test_img, test_lbl, test_windows, logger)
+    if test_img and (not os.path.exists(test_windows_fpath) or remap):
+        _map(world_grid, test_img, test_lbl, test_windows_fpath, logger)
 
 def _map(
     world_grid: grid.GridLayout,
