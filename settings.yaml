@@ -1,12 +1,15 @@
 # ================================USER SETTINGS================================
 
+# ----- Experiment Master I/O Location
+exp_root: ./experiment
+
 # ----- Study Area Extent Definition
 extent:
   crs: 'EPSG:3161'
   mode: ref
   inputs:
     # when mode='ref' provide:
-    dirpath: ./data/reference
+    dirpath: ${exp_root}/input/extent_ref
     filename: 'on_3161_30m.tif'
     # when mode='aoi' or 'tiles' provide:
     origin: [0.0, 0.0] # x, y in CRS units
@@ -27,7 +30,7 @@ grid:
 
 # ----- Source of Domain Knowledge
 domain:
-  dirpath: ./data/domain
+  dirpath: ${exp_root}/input/domain
   files:
     - name: geology.tif
       index_base: 1
@@ -48,19 +51,18 @@ dataprep:
 
 # ----- Source of Fit and Test (optional) Data
 dataset:
-  name: demo
+  # name of the dataset
+  name: demo_data
+  # input fit data
   fit:
-    image: ''
-    label: ''
+    image: ${exp_root}/input/${dataset.name}/fit/image.tif
+    label: ${exp_root}/input/${dataset.name}/fit/label_lctype.tif
+  # input test data (optional)
   test:
-    image: ''
+    image: ${exp_root}/input/${dataset.name}/test/image.tif
+    label: ${exp_root}/input/${dataset.name}/test/label_lctype.tif
   # data configuration
-  config: ''
-
-# ----- Artifacts Storage
-artifacts:
-  # root where artifacts from dataprep are saved
-  root: ./artifacts
+  config: ${exp_root}/input/${dataset.name}/configs/lctype.json
 
 # ----- Model Features
 models:
@@ -80,8 +82,8 @@ trainer:
     monitor:
       track_head_name: layer1
 
-# ----- Curriculum Learning Phases
-curriculum:
+# ----- Learning Phases
+experiment:
   # phases
   phases:
     - name: coarse_head

@@ -5,7 +5,6 @@ import dataclasses
 import os
 import typing
 # local imports
-import landseg.alias as alias
 import landseg.controller as controller
 import landseg.training.trainer as trainer
 import landseg.utils as utils
@@ -24,7 +23,7 @@ class Controller:
         self,
         engine: trainer.MultiHeadTrainer,
         phases: list[controller.Phase],
-        config: alias.ConfigType,
+        exp_dir: str,
         logger: utils.Logger
     ):
         '''Initialization'''
@@ -33,22 +32,16 @@ class Controller:
         self.trainer = engine
         self.phases = phases
         self.logger = logger.get_child('phase') # a child from base logger
-        # config accessor
-        cfg = utils.ConfigAccess(config)
-        self.cfg = _ExperimentConfig(
-            cfg.get_option('ckpt_dpath'),
-            cfg.get_option('preview_dpath')
-        )
-        # make sure dirs exist
-        os.makedirs(cfg.get_option('ckpt_dpath'), exist_ok=True)
-        os.makedirs(cfg.get_option('preview_dpath'), exist_ok=True)
+        # preview and checkpoint dir
+        self.previews = os.path.join(exp_dir, 'previews')
+        self.ckpts = os.path.join(exp_dir, 'checkpoints')
 
         # init phase counter
         self.current_phase_idx = 0
         self.current_phase = self.phases[self.current_phase_idx]
 
         # check which phases have already finished
-        self.phase_status_path = f'{self.cfg.ckpt_dpath}/status.json'
+        self.phase_status_path = f'{self.ckpts}/status.json'
         if os.path.exists(self.phase_status_path):
             scheme = utils.load_json(self.phase_status_path)
             for i, p in enumerate(scheme):
@@ -151,12 +144,12 @@ class Controller:
                 v_logs = self.trainer.validate()
                 # update preview if test data provided
                 if self.trainer.dataloaders.test:
-                    self.trainer.infer(self.cfg.preview_dpath)
+                    self.trainer.infer(self.previews)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
-                fpath = f'{self.cfg.ckpt_dpath}/{phase.name}_best.pt'
+                fpath = f'{self.ckpts}/{phase.name}_best.pt'
             else:
-                fpath = f'{self.cfg.ckpt_dpath}/{phase.name}_last.pt'
+                fpath = f'{self.ckpts}/{phase.name}_last.pt'
             self._save_progress(fpath)
         print(f'__Phase [{phase.name}] finished__')
 
@@ -179,7 +172,7 @@ class Controller:
     def _load_progress(self, phase: str):
         '''Load previous best checkpoint'''
 
-        best_ckpt = f'{self.cfg.ckpt_dpath}/{phase}_best.pt'
+        best_ckpt = f'{self.ckpts}/{phase}_best.pt'
         if os.path.exists(best_ckpt):
             meta = trainer.load(
                 model=self.trainer.model,
@@ -211,10 +204,3 @@ class Controller:
     def done(self) -> bool:
         '''Returns whether controller has reached the final phase.'''
         return self.current_phase_idx >= len(self.phases)
-
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _ExperimentConfig:
-    '''Experiment configs.'''
-    ckpt_dpath: str
-    preview_dpath: str

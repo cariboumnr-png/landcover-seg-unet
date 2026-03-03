@@ -75,6 +75,9 @@ ruff_cache/
 # Dev folder
 /dev/*
 
+# Experiment io
+/experiment/*
+
 # Logs
 /logs/*
 !/logs/

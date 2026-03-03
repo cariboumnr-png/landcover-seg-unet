@@ -1,12 +1,12 @@
 # name of the dataset
-name: demo
+name: demo_data
 # input fit data
 fit:
-  image: ./demo_data/fit_input/image.tif
-  label: ./demo_data/fit_input/label.tif
+  image: ${exp_root}/input/${dataset.name}/fit/image.tif
+  label: ${exp_root}/input/${dataset.name}/fit/label.tif
 # input test data (optional)
 test:
-  image: ./demo_data/test_input/image.tif
-  label: ./demo_data/test_input/label.tif
+  image: ${exp_root}/input/${dataset.name}/test/image.tif
+  label: ${exp_root}/input/${dataset.name}/test/label.tif
 # data configuration
-config: ./demo_data/config.json
+config: ${exp_root}/input/${dataset.name}/config.json
