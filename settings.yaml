@@ -3,6 +3,9 @@
 # ----- Experiment Master I/O Location
 exp_root: ./experiment
 
+# running mode
+run_mode: 'end-to-end'
+
 # ----- Study Area Extent Definition
 extent:
   crs: 'EPSG:3161'

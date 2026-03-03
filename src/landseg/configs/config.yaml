@@ -13,6 +13,9 @@ defaults:
   - models: multihead
   - trainer: default
 
+# running mode
+run_mode: 'end-to-end'
+
 # experiment root
 exp_root: ./experiment
 
