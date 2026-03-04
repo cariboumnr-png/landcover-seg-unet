@@ -15,7 +15,7 @@ import landseg.utils as utils
 
 CMD = {
     'end-to-end': cli.train_end_to_end,
-    'overfit-test': ''
+    'overfit-test': cli.overfit_test
 }
 
 # main process
@@ -50,7 +50,7 @@ def main(config: omegaconf.DictConfig) -> None:
     logger = utils.Logger('cli', os.path.join(original_cwd, 'log.log'))
 
     # run specified mode with exceptions handling
-    mode = config['run_mmode']
+    mode = config['run_mode']
     try:
         CMD[mode](config)
     # manual keyboard interruption
@@ -61,9 +61,6 @@ def main(config: omegaconf.DictConfig) -> None:
     except Exception: # pylint: disable=broad-exception-caught
         logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
         sys.exit(1)
-
-
-
 
 if __name__ == '__main__':
     main()

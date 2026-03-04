@@ -14,7 +14,7 @@ import landseg.utils as utils
 def train_end_to_end(
     config: omegaconf.DictConfig,
     logger: utils.Logger
-):
+) -> None:
     '''End to end training'''
 
     # init experiment io folder tree

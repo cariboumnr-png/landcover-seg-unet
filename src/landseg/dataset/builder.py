@@ -43,7 +43,7 @@ class _Meta:
     def __str__(self) -> str:
         return '\n'.join([
             '[General Meta]',
-            f'Dataset name: {self.dataset_name}'
+            f'Dataset name: {self.dataset_name}',
             f'Number of image channels: {self.img_ch_num}',
             f'Ignore index: {self.ignore_index}',
             f'Fit data blocks size (b): {self.fit_perblk_bytes}',
@@ -60,8 +60,10 @@ class _Heads:
     def __str__(self) -> str:
         def _ln(lst):
             return [round(x, 2) for x in lst]
-        t1 = '\n - '.join([f'{k}:\t{v}' for k, v in self.class_counts.items()])
-        t2 = '\n - '.join([f'{k}:\t{_ln(v)}' for k, v in self.logits_adjust.items()])
+        cc = self.class_counts
+        la = self.logits_adjust
+        t1 = '\n - '.join([f'{k}:\t{v}' for k, v in cc.items()])
+        t2 = '\n - '.join([f'{k}:\t{_ln(v)}' for k, v in la.items()])
         return '\n'.join([
             '[Heads Specs]',
             f'Class distribution of each head: \n - {t1}',

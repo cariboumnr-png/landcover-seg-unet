@@ -46,9 +46,14 @@ def build_a_block(
     # build a block (>= 80% valid pixels) and return
     i = 0
     while True:
-        block = builder.build_a_block(coords[i])
+        print('Searching for a good raster window...', end='\r', flush=True)
+        try:
+            block = builder.build_a_block(coords[i])
+        except ValueError: # likely an empty window for the rasters
+            i += 1
+            continue
         if block.meta['valid_pixel_ratio']['block'] >= 0.8:
-            logger.log('DEBUG', f'Fetched a valid block at coord: {coords[i]}')
+            logger.log('INFO', f'Fetched a valid block at coord: {coords[i]}')
             # normalize
             block.data.image_normalized = numpy.empty_like(block.data.image)
             for i, arr in enumerate(block.data.image):

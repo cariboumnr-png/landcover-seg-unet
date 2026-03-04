@@ -185,7 +185,8 @@ class BlockCacheBuilder:
 
         # load data config and extract by keys in block meta dict
         meta_src = utils.load_json(self.config.config_fpath)
-        meta = {k: meta_src[k] for k in blockbuilder.BlockMeta.__annotations__}
+        keys = meta_src.keys() & blockbuilder.BlockMeta.__annotations__
+        meta = {k: meta_src[k] for k in keys}
         meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
         # enrich meta
         meta['block_name'] = self._xy_name(block_coordinates)
@@ -198,17 +199,17 @@ class BlockCacheBuilder:
         img_window = self.windows.image_windows[block_coordinates]
         lbl_window = self.windows.label_windows[block_coordinates]
         with utils.open_rasters(img_fpath, lbl_fpath) as (img, lbl):
-            # sanity check, image raster must be provided
-            assert img is not None
-            # read image array
+            # sanity checks
+            assert img and lbl and lbl_window
+            # read image and label array
             img_arr: numpy.ndarray = img.read(window=img_window)
+            lbl_arr: numpy.ndarray = lbl.read(window=lbl_window)
+            if img_arr.size == 0 or lbl_arr.size == 0:
+                raise ValueError('Empty arrays, likely read outside of raster')
             meta['image_nodata'] = img.nodata
+            meta['label_nodata'] = lbl.nodata
             # get padded dem array from image
             padded = _read_w_pad(img, img_window, dem_band, pad)
-            # assert label array is provided
-            assert lbl is not None and lbl_window is not None
-            lbl_arr = lbl.read(window=lbl_window)
-            meta['label_nodata'] = lbl.nodata
 
         # create and return
         return blockbuilder.DataBlock().build(img_arr, lbl_arr, padded, meta)

@@ -56,7 +56,7 @@ def load_data(
 
     # build dataspec
     dataspec = dataset.build_dataspec(
-        schema_fpath=f'{cache_root}/schema.json',
+        schema=f'{cache_root}/schema.json',
         ids_domain=ids_domain,
         vec_domain=vec_domain
     )
