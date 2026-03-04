@@ -2,7 +2,6 @@
 
 # standard imports
 from __future__ import annotations
-import copy
 import dataclasses
 # third-party imports
 import psutil
@@ -14,14 +13,16 @@ import landseg.training.common as common
 import landseg.training.dataloading as dataloading
 import landseg.utils as utils
 
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DataLoaders:
-    '''doc'''
+    '''Train/Val/Test dataloader for the trainer.'''
     train: torch.utils.data.DataLoader
     val: torch.utils.data.DataLoader
     test: torch.utils.data.DataLoader | None
     meta: _LoaderMeta
 
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _LoaderMeta:
     '''Simple meta to be shipped with the dataloaders.'''
@@ -29,14 +30,7 @@ class _LoaderMeta:
     patch_per_blk: int
     test_blks_grid:  tuple[int, int]
 
-@dataclasses.dataclass
-class _LoadingFlags:
-    '''Flags to be consumed during loader creation.'''
-    train_preload: bool
-    train_cache: int
-    val_preload: bool
-    val_cache: int
-
+# -------------------------------Public Function-------------------------------
 def get_dataloaders(
     data_specs: common.DataSpecsLike,
     loader_config: alias.ConfigType,
@@ -50,106 +44,112 @@ def get_dataloaders(
     # parse args from config accessor
     loader_cfg = utils.ConfigAccess(loader_config)
 
-    # get dataset filepaths from DataSummary
-    data_paths = data_specs.splits
-    domains = data_specs.domains
-
-    # get loading flags
-    flags = _get_flags(data_specs)
-
-    # declare loaders type and defualt value
-    train_loader: torch.utils.data.DataLoader
-    val_loader: torch.utils.data.DataLoader
-    test_loader: torch.utils.data.DataLoader | None = None
-
-    # get persistent block config
-    _cfg = dataloading.BlockConfig(
-        loader_cfg.get_option('block_size'),
-        loader_cfg.get_option('patch_size'),
-    )
-    batch_size = loader_cfg.get_option('batch_size')
     # meta to be shipped
     meta = _LoaderMeta(
-        batch_size,
-        _cfg.patch_per_blk,
+        loader_cfg.get_option('batch_size'),
+        loader_cfg.get_option('patch_size'),
         data_specs.meta.test_blks_grid
     )
 
-    # training loader
-    # config
-    cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-    cfg.augment_flip = True
-    cfg.ids_domain = domains.train['ids_domain']
-    cfg.vec_domain = domains.train['vec_domain']
-    # get dataset
-    dataset = dataloading.MultiBlockDataset(
-        data_paths.train,
-        cfg,
-        logger,
-        preload=flags.train_preload,
-        blk_cache_num=flags.train_cache
-    )
-    # get dataloader
-    train_loader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=_collate_multi_block
-    )
+    # if single block mode (for overfit test)
+    if data_specs.meta.single_block_mode:
+        single_loader = _load('single', loader_cfg, data_specs, logger)
+        # pass the same as val dataloader for minimal disturbance downstream
+        assert single_loader
+        return DataLoaders(single_loader, single_loader, None, meta)
 
-    # validation loader
-    # config
-    cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-    cfg.augment_flip = False
-    cfg.ids_domain = domains.val['ids_domain']
-    cfg.vec_domain = domains.val['vec_domain']
-    # get dataset
-    dataset = dataloading.MultiBlockDataset(
-        data_paths.val,
-        cfg,
-        logger,
-        preload=flags.val_preload,
-        blk_cache_num=flags.val_cache
-    )
-    # get dataloader
-    val_loader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=_collate_multi_block
-    )
-
-    # test loader if provided
-    if data_paths.test:
-        # config
-        cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
-        cfg.augment_flip = False
-        cfg.ids_domain = domains.test['ids_domain']
-        cfg.vec_domain = domains.test['vec_domain']
-        # get dataset
-        dataset = dataloading.MultiBlockDataset(
-            data_paths.test,
-            cfg,
-            logger,
-            preload=True,   # assuming small dataset, always preload
-        )
-        # get dataloader
-        test_loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=_collate_multi_block
-        )
-
-    # return
+    # otherwise (normal experiment)
+    train_loader = _load('train', loader_cfg, data_specs, logger)
+    val_loader = _load('val', loader_cfg, data_specs, logger)
+    test_loader = _load('test', loader_cfg, data_specs, logger)
+    # sanity checks and return
+    assert train_loader and val_loader
     return DataLoaders(train_loader, val_loader, test_loader, meta)
 
-def _get_flags(data_summary: common.DataSpecsLike) -> _LoadingFlags:
+# ------------------------------private  function------------------------------
+def _load(
+    mode: str,
+    loader_cfg: utils.ConfigAccess,
+    data_specs: common.DataSpecsLike,
+    logger: utils.Logger
+) -> torch.utils.data.DataLoader | None:
+    '''Get a specific dataloader.'''
+
+    # mode sanity check
+    assert mode in ['train', 'val', 'test', 'single']
+
+    # prepare dataset by mode
+    # dataset path registry
+    data_blocks_registry = {
+        'train': data_specs.splits.train,
+        'val': data_specs.splits.val,
+        'test': data_specs.splits.test,
+        'single': data_specs.splits.train   # the single block will be here
+    }
+    data_blocks = data_blocks_registry[mode]
+    # early exit if no data blocks are available, e.g., no test dataset
+    if not data_blocks:
+        return None
+
+    # dataset configuration
+    dataset_config = _mode_configurator(mode, loader_cfg, data_specs)
+    # preload/cache config
+    load_options = _preload_option(data_specs)
+    dataset = dataloading.MultiBlockDataset(
+        data_blocks,
+        dataset_config,
+        logger,
+        preload=load_options[f'preload_{mode}'],
+        blk_cache_num=load_options[f'cache_{mode}']
+    )
+
+    # get dataloader
+    # torch dataloader arguments dict
+    batch_size = loader_cfg.get_option('batch_size')
+    dataloader_args =  {
+        'batch_size': 1 if mode == 'single' else batch_size,
+        'shuffle': mode == 'train',
+        'collate_fn': _collate_multi_block
+    }
+    # return dataloader
+    return torch.utils.data.DataLoader(dataset, **dataloader_args)
+
+def _mode_configurator(
+    mode: str,
+    loader_cfg: utils.ConfigAccess,
+    data_specs: common.DataSpecsLike
+):
+    '''Configure dataloading by mode.'''
+
+    # domain registry
+    domains_registry = {
+        'train': data_specs.domains.train,
+        'val': data_specs.domains.val,
+        'test': data_specs.domains.test,
+        'single': None
+    }
+    domain = domains_registry[mode]
+
+    # return config by mode
+    block_size = loader_cfg.get_option('block_size')
+    if mode == 'single':
+        patch_size = block_size # single block
+    else:
+        patch_size = loader_cfg.get_option('patch_size')
+    return dataloading.BlockConfig(
+        block_size,
+        patch_size,
+        mode == 'train',
+        domain['ids_domain'] if domain else None,
+        domain['vec_domain'] if domain else None
+    )
+
+def _preload_option(data_specs: common.DataSpecsLike) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary
-    data = data_summary.splits
-    fbytes = data_summary.meta.fit_perblk_bytes     # fit block byte size
+    data = data_specs.splits
+    fbytes = data_specs.meta.fit_perblk_bytes     # fit block byte size
 
     # get dataset sizes
     train_bytes = len(data.train or {}) * fbytes
@@ -172,7 +172,12 @@ def _get_flags(data_summary: common.DataSpecsLike) -> _LoadingFlags:
         train_n = round(0.2 * mem / fbytes)
 
     # return flags
-    return _LoadingFlags(_train, train_n, _val, _val_n)
+    return {
+        'preload_train': _train,
+        'cache_train': train_n,
+        'preload_val': _val,
+        'cache_val': _val_n
+    }
 
 def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
     '''
