@@ -39,6 +39,7 @@ class _Meta:
     fit_perblk_bytes: int
     test_perblk_bytes: int
     test_blks_grid: tuple[int, int]
+    single_block_mode: bool
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -132,7 +133,7 @@ def build_empty_dataspec() -> DataSpecs:
 
     dom: _Domains._Dom = {'ids_domain': None, 'vec_domain': None}
     return DataSpecs(
-        _Meta('', 0, 0, 0, 0, (0, 0)),
+        _Meta('', 0, 0, 0, 0, (0, 0), True),
         _Heads({}, {}, {}),
         _Splits({}, {}, None),
         _Domains(dom, dom, dom, 0, 0)
@@ -175,12 +176,13 @@ def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
 
     # return
     return _Meta(
-        dataset_name=schema['dataset']['name'],
-        ignore_index=schema['io_conventions']['ignore_index'],
-        img_ch_num=schema['tensor_shapes']['image']['C'],
-        fit_perblk_bytes=img_b * img_px + lbl_b * lbl_px,
-        test_perblk_bytes=test_perblk_bytes,
-        test_blks_grid=(int(col + 1), int(row + 1))
+        schema['dataset']['name'],
+        schema['io_conventions']['ignore_index'],
+        schema['tensor_shapes']['image']['C'],
+        img_b * img_px + lbl_b * lbl_px,
+        test_perblk_bytes,
+        (int(col + 1), int(row + 1)),
+        False
     )
 
 def __name_to_xy(key: str) -> tuple[int, int]:

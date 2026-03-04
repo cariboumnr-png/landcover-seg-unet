@@ -28,6 +28,7 @@ class _Meta(typing.Protocol):
     ignore_index: int
     img_ch_num: int
     test_blks_grid: tuple[int, int]
+    single_block_mode: bool
 
 class _Head(typing.Protocol):
     '''DataSummary head part.'''
