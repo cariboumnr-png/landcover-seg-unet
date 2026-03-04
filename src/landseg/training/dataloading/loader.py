@@ -151,6 +151,13 @@ def _preload_option(data_specs: common.DataSpecsLike) -> dict[str, int | bool]:
     data = data_specs.splits
     fbytes = data_specs.meta.fit_perblk_bytes     # fit block byte size
 
+    # early exit for single block test (fbytes = 0)
+    if not fbytes:
+        return {
+            'preload_single': True,
+            'cache_single': 0
+        }
+
     # get dataset sizes
     train_bytes = len(data.train or {}) * fbytes
     val_bytes = len(data.val or {}) * fbytes

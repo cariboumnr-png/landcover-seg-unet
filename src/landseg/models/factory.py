@@ -20,6 +20,7 @@ class ModelDatasetConfig(typing.TypedDict):
 def build_multihead_unet(
     dataset_config: ModelDatasetConfig,
     model_config: alias.ConfigType,
+    **kwargs
 ) -> multihead.BaseMultiheadModel:
     '''Build the multi-head model from provided dataset.'''
 
@@ -58,5 +59,6 @@ def build_multihead_unet(
     # return model instance
     return multihead.MultiHeadUNet(
         body=model_cfg.get_option('body'),
-        config=base_config
+        config=base_config,
+        **kwargs
     )

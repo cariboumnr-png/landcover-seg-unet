@@ -31,7 +31,7 @@ def build_trainer(
             'domain_ids_max': data_specs.domains.ids_max,
             'domain_vec_dim': data_specs.domains.vec_dim
         },
-        model_config=config.models
+        model_config=config.models,
     )
 
     # compile data loaders

@@ -5,7 +5,6 @@ import os
 # third-party imports
 import omegaconf
 # local imports
-import landseg.controller as controller
 import landseg.dataprep as dataprep
 import landseg.dataset as dataset
 import landseg.grid as grid
@@ -24,12 +23,27 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     # create a single test block and derive dataspec for downstream
     dataspecs = _mock_dataspecs(config, logger)
 
-    # build a trainer with minimal interference
+    # build a trainer with minimal extras
+    # overfit test settings
+    config.models['conditioning']['mode'] = 'none'
+    config.trainer['optim']['weight_decay'] = 0.0
+    config.trainer['runtime']['schedule']['val_every'] = None
+    config.trainer['runtime']['optimization']['grad_clip_norm'] = None
+    config.trainer['loss']['types']['focal']['weight'] = 1.0
+    config.trainer['loss']['types']['focal']['gamma'] = 0.0
+    config.trainer['loss']['types']['dice']['weight'] = 0.0
     trainer = training.build_trainer(dataspecs, config, logger)
+    # trainer.comps.optimization.optimizer.
+    trainer.flags = {
+        'enable_train_la': False,
+        'enable_val_la': False,
+        'enable_test_la': False
+    }
+    trainer.set_head_state(active_heads=['layer1'], excluded_cls={'layer1': (5, 6)})
 
-    # controller
-    runner = controller.build_controller(trainer, config, '', logger)
-    runner.fit()
+    # use trainer to run
+    for epoch in range(1, 3000):
+        trainer.train_one_epoch(epoch)
 
     # remove test block
     os.remove('./overfit_test_block.npz')
@@ -64,7 +78,7 @@ def _mock_dataspecs(
     dspecs.meta.ignore_index = blk.meta['ignore_label']
     # heads
     counts = blk.meta['label_count']
-    cc = {k: counts[k] for k in counts if k != 'original_label'}
+    cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
     dspecs.heads.class_counts = cc
     dspecs.heads.logits_adjust = {k: [1.0] * len(v) for k, v in cc.items()}
     dspecs.heads.topology = _get_topology(blk.meta['label_count'])

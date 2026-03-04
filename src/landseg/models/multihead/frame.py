@@ -72,7 +72,8 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
             config: multihead.ModelConfig,
             *,
             enable_logit_adjust: bool = True,
-            enable_clamp: bool = True
+            enable_clamp: bool = True,
+            **kwargs
         ):
         super().__init__()
 
@@ -104,7 +105,7 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
 
         # core UNet body
         assert body in self.body_registry, f'Invalid body type: {body}'
-        self.body = self.body_registry[body](in_ch + add, base_ch)
+        self.body = self.body_registry[body](in_ch + add, base_ch, **kwargs)
 
         # conditioner
         self.film = multihead.get_film(config.conditioning, base_ch)
