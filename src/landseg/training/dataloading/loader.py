@@ -33,11 +33,9 @@ class _LoaderMeta:
 class _LoadingFlags:
     '''Flags to be consumed during loader creation.'''
     train_preload: bool
-    val_preload: bool
-    infer_preload: bool
     train_cache: int
+    val_preload: bool
     val_cache: int
-    infer_cache: int
 
 def get_dataloaders(
     data_specs: common.DataSpecsLike,
@@ -66,35 +64,34 @@ def get_dataloaders(
 
     # get persistent block config
     _cfg = dataloading.BlockConfig(
-        block_size=loader_cfg.get_option('block_size'),
-        patch_size=loader_cfg.get_option('patch_size'),
+        loader_cfg.get_option('block_size'),
+        loader_cfg.get_option('patch_size'),
     )
     batch_size = loader_cfg.get_option('batch_size')
     # meta to be shipped
     meta = _LoaderMeta(
-        batch_size=batch_size,
-        patch_per_blk=_cfg.patch_per_blk,
-        test_blks_grid=data_specs.meta.test_blks_grid
+        batch_size,
+        _cfg.patch_per_blk,
+        data_specs.meta.test_blks_grid
     )
 
-    # by work mode
     # training loader
     # config
     cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
     cfg.augment_flip = True
     cfg.ids_domain = domains.train['ids_domain']
     cfg.vec_domain = domains.train['vec_domain']
-    # data
-    data = dataloading.MultiBlockDataset(
-        blks_dict=data_paths.train,
-        blk_cfg=cfg,
-        logger=logger,
+    # get dataset
+    dataset = dataloading.MultiBlockDataset(
+        data_paths.train,
+        cfg,
+        logger,
         preload=flags.train_preload,
         blk_cache_num=flags.train_cache
     )
-    # loader
+    # get dataloader
     train_loader = torch.utils.data.DataLoader(
-        dataset=data,
+        dataset,
         batch_size=batch_size,
         shuffle=True,
         collate_fn=_collate_multi_block
@@ -106,40 +103,39 @@ def get_dataloaders(
     cfg.augment_flip = False
     cfg.ids_domain = domains.val['ids_domain']
     cfg.vec_domain = domains.val['vec_domain']
-    # data
-    data = dataloading.MultiBlockDataset(
-        blks_dict=data_paths.val,
-        blk_cfg=cfg,
-        logger=logger,
+    # get dataset
+    dataset = dataloading.MultiBlockDataset(
+        data_paths.val,
+        cfg,
+        logger,
         preload=flags.val_preload,
         blk_cache_num=flags.val_cache
     )
-    # loader
+    # get dataloader
     val_loader = torch.utils.data.DataLoader(
-        dataset=data,
+        dataset,
         batch_size=batch_size,
         shuffle=False,
         collate_fn=_collate_multi_block
     )
 
+    # test loader if provided
     if data_paths.test:
-        # test loader
         # config
         cfg = copy.deepcopy(_cfg) # avoid contamination from other loaders
         cfg.augment_flip = False
         cfg.ids_domain = domains.test['ids_domain']
         cfg.vec_domain = domains.test['vec_domain']
-        # data
-        data = dataloading.MultiBlockDataset(
-            blks_dict=data_paths.test,
-            blk_cfg=cfg,
-            logger=logger,
-            preload=flags.infer_preload,
-            blk_cache_num=flags.infer_cache
+        # get dataset
+        dataset = dataloading.MultiBlockDataset(
+            data_paths.test,
+            cfg,
+            logger,
+            preload=True,   # assuming small dataset, always preload
         )
-        # loader
+        # get dataloader
         test_loader = torch.utils.data.DataLoader(
-            dataset=data,
+            dataset,
             batch_size=batch_size,
             shuffle=False,
             collate_fn=_collate_multi_block
@@ -149,43 +145,34 @@ def get_dataloaders(
     return DataLoaders(train_loader, val_loader, test_loader, meta)
 
 def _get_flags(data_summary: common.DataSpecsLike) -> _LoadingFlags:
-    '''Get flags.'''
+    '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary
     data = data_summary.splits
-    t_v_bytes = data_summary.meta.fit_perblk_bytes
-    i_bytes = data_summary.meta.test_perblk_bytes
+    fbytes = data_summary.meta.fit_perblk_bytes     # fit block byte size
 
     # get dataset sizes
-    train_bytes = len(data.train or {}) * t_v_bytes
-    val_bytes = len(data.val or {}) * t_v_bytes
-    infer_bytes = len(data.test or {}) * i_bytes
+    train_bytes = len(data.train or {}) * fbytes
+    val_bytes = len(data.val or {}) * fbytes
 
     # decision on preload and cache size
     mem = psutil.virtual_memory().available
-    v_pre = t_pre = i_pre = False
-    v_cac = t_cac = i_cac = 0
-    # first priority: preload validation data into memory
+    _val = _train = False
+    _val_n = train_n = 0
+
+    # first priority: preload validation blocks into memory
     if val_bytes <= 0.6 * mem:
-        v_pre = True
-        # second priority: preload training data if possible
+        _val = True
+        # second priority: preload training blocks if possible
         if train_bytes <= 0.6 * (mem - val_bytes):
-            t_pre = True
-            # last priority: preload inference data if possible
-            if infer_bytes <= 0.6 * (mem - val_bytes - train_bytes):
-                i_pre = True
-            else:
-                i_cac = round(0.1 * (mem - val_bytes - train_bytes) / i_bytes)
-        else:
-            t_cac = round(0.1 * (mem - val_bytes) / t_v_bytes)
+            _train = True
+            train_n = round(0.1 * (mem - val_bytes) / fbytes)
     else:
-        v_cac = round(0.3 * mem / t_v_bytes)
-        t_cac = round(0.2 * mem / t_v_bytes)
-        i_cac = round(0.1 * mem / data_summary.meta.test_perblk_bytes)
+        _val_n = round(0.3 * mem / fbytes)
+        train_n = round(0.2 * mem / fbytes)
 
     # return flags
-    i_pre = True # TODO
-    return _LoadingFlags(t_pre, v_pre, i_pre, t_cac, v_cac, i_cac)
+    return _LoadingFlags(_train, train_n, _val, _val_n)
 
 def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
     '''
