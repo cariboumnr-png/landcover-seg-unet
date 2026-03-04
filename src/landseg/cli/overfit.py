@@ -12,7 +12,7 @@ import landseg.grid as grid
 import landseg.training as training
 import landseg.utils as utils
 
-def overfit_test(config: omegaconf.DictConfig,) -> None:
+def overfit_test(config: omegaconf.DictConfig) -> None:
     '''Overfit test on a single data block.'''
 
     # create a centralized main logger
@@ -20,6 +20,25 @@ def overfit_test(config: omegaconf.DictConfig,) -> None:
     os.makedirs(log_dir, exist_ok=True)
     t_stamp = utils.get_timestamp()
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
+
+    # create a single test block and derive dataspec for downstream
+    dataspecs = _mock_dataspecs(config, logger)
+
+    # build a trainer with minimal interference
+    trainer = training.build_trainer(dataspecs, config, logger)
+
+    # controller
+    runner = controller.build_controller(trainer, config, '', logger)
+    runner.fit()
+
+    # remove test block
+    os.remove('./overfit_test_block.npz')
+
+def _mock_dataspecs(
+    config: omegaconf.DictConfig,
+    logger: utils.Logger
+) -> dataset.DataSpecs:
+    '''Manually generate a `DataSpecs` instance from a signle block.'''
 
     # load world grid
     gid, world_grid = grid.prep_world_grid(config.extent, config.grid, logger)
@@ -52,17 +71,8 @@ def overfit_test(config: omegaconf.DictConfig,) -> None:
     # splits
     dspecs.splits.train = {blk.meta['block_name']: './overfit_test_block.npz'}
     dspecs.splits.val = {blk.meta['block_name']: './overfit_test_block.npz'}
-    print(dspecs)
-
-    # # build a trainer with minimal interference
-    # trainer = training.build_trainer(dataspecs, config, logger)
-
-    # # controller
-    # runner = controller.build_controller(trainer, config, '', logger)
-    # runner.fit()
-
-    # remove test block
-    os.remove('./overfit_test_block.npz')
+    # return
+    return dspecs
 
 def _get_topology(label_count: dict[str, list[int]]):
     '''From `dataprep.schema.py`.'''
