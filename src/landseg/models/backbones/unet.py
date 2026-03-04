@@ -96,14 +96,13 @@ class UNet(backbones.Backbone):
             in_ch: Number of input channels.
             base_ch: Base number of feature channels. Deeper layers use
                 multiples of this.
-            **kwargs: Additional options pass to convolutional blocks.
-                - `norm` (str | None): normalization kind; one of
-                    {'bn', 'gn', 'ln', None}. Default: 'gn'.
-                - `gn_groups` (int): number of groups when `norm='gn'`.
-                    Automatically reduced to a divisor of channels.
-                    Default: 8.
-                - `p_drop` (float): dropout probability used in
-                    `DoubleConvBlock`. Default: 0.05.
+            **kwargs: Section-level config for convolutional blocks.
+                Pass dictionaries keyed by section name, e.g.
+                `{'downs': {...}}`, `{'bottleneck': {...}}`, or
+                `{'ups': {...}}` These dictionaries are forwarded to
+                `DoubleConv` modules inside that section. See
+                `models.backbones.DoubleConv` for valid options (e.g.,
+                `norm`, `gn_groups`, `p_drop`).
 
         **Notes**:
         - Weight initialization uses Kaiming normal suited for ReLU.
@@ -115,23 +114,23 @@ class UNet(backbones.Backbone):
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
-        # initial convolution block with no norm
-        self.inc = self.DC(in_ch, ch, norm=None, **kwargs)
+        # initial convolution block with no norm nor drop outs
+        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
         # 4 downs
         self.downs = torch.nn.ModuleList([
-            self.DS(ch,   ch*2,  **kwargs),
-            self.DS(ch*2, ch*4,  **kwargs),
-            self.DS(ch*4, ch*8,  **kwargs),
-            self.DS(ch*8, ch*16, **kwargs),
+            self.DS(ch,   ch*2,  **kwargs.get('downs', {})),
+            self.DS(ch*2, ch*4,  **kwargs.get('downs', {})),
+            self.DS(ch*4, ch*8,  **kwargs.get('downs', {})),
+            self.DS(ch*8, ch*16, **kwargs.get('downs', {})),
         ])
         # bottleneck
-        self.bottleneck = self.DC(ch*16, ch*16, **kwargs)
+        self.bottleneck = self.DC(ch*16, ch*16, **kwargs.get('bottleneck', {}))
         # 4 ups
         self.ups = torch.nn.ModuleList([
-            self.US(ch*16 + ch*8, ch*8, **kwargs),
-            self.US(ch*8  + ch*4, ch*4, **kwargs),
-            self.US(ch*4  + ch*2, ch*2, **kwargs),
-            self.US(ch*2  + ch,   ch,   **kwargs)
+            self.US(ch*16 + ch*8, ch*8, **kwargs.get('ups', {})),
+            self.US(ch*8  + ch*4, ch*4, **kwargs.get('ups', {})),
+            self.US(ch*4  + ch*2, ch*2, **kwargs.get('ups', {})),
+            self.US(ch*2  + ch,   ch,   **kwargs.get('ups', {}))
         ])
 
         # Kaiming weight initialization
