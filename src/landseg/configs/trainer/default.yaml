@@ -1,3 +1,6 @@
+# model config
+model_body: unetpp
+
 # loader config
 loader:
   block_size: 256

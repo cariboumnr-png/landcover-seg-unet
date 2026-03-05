@@ -47,7 +47,6 @@ The design cleanly separates concerns:
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
 import landseg.models.multihead as multihead
 
 class MultiHeadUNet(multihead.BaseMultiheadModel):
@@ -61,19 +60,13 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
       {'film','hybrid'})
     '''
 
-    body_registry = {
-        'unet': backbones.UNet,
-        'unet++': backbones.UNetPP
-    }
-
     def __init__(
             self,
-            body: str,
             config: multihead.ModelConfig,
             *,
-            enable_logit_adjust: bool = True,
-            enable_clamp: bool = True,
-            **kwargs
+            conv_params: dict,
+            enable_logit_adjust: bool,
+            enable_clamp: bool,
         ):
         super().__init__()
 
@@ -104,8 +97,7 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         add = self.concat.output_dim if self.concat is not None else 0
 
         # core UNet body
-        assert body in self.body_registry, f'Invalid body type: {body}'
-        self.body = self.body_registry[body](in_ch + add, base_ch, **kwargs)
+        self.body = config.body(in_ch + add, base_ch, **conv_params)
 
         # conditioner
         self.film = multihead.get_film(config.conditioning, base_ch)

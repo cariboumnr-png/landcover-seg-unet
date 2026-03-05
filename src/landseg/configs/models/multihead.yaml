@@ -1,14 +1,29 @@
 # configuration for building multihead model
-body: 'unet++'
+body:
+  unet:
+    base_ch: 32
+    conv_params:
+      downs:
+        norm: gn
+        gn_groups: 8
+        p_drop: 0.0
+      ups:
+        norm: gn
+        gn_groups: 8
+        p_drop: 0.0
+  unetpp:
+    base_ch: 32
+    conv_params:
+      downs:
+        norm: gn
+        gn_groups: 8
+        p_drop: 0.0
+      nodes:
+        norm: gn
+        gn_groups: 8
+        p_drop: 0.0
 
-channels:
-  # base channels for model
-  base_ch: 32
-
-clamp:
-  # clamping range
-  range: [1e-4, 1e4]
-
+# conditioning
 conditioning:
   # mode of conditioning: 'none', 'concat', 'film', 'hybrid'
   mode: 'hybrid'
@@ -22,3 +37,11 @@ conditioning:
   film_use_ids: True
   film_use_vec: True
   film_hidden: 128
+
+# numerical safety
+clamp_range: [1e-4, 1e4]
+
+# runtime flags - don't modify unless debugging
+flags:
+  enable_logit_adjust: True
+  enable_clamp: True
