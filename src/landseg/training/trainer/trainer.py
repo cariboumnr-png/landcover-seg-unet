@@ -77,7 +77,11 @@ class MultiHeadTrainer:
         # setup callback classes
         self._setup_callbacks(kwargs.get('skip_log', False))
         # init a flags dict
-        self.flags: dict[str, bool] = {}
+        self.flags: dict[str, bool] = {
+            'enable_train_la': False,
+            'enable_val_la': False,
+            'enable_test_la': False
+        }
 
 # -------------------------------Public  Methods-------------------------------
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
