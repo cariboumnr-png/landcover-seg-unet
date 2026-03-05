@@ -104,8 +104,7 @@ class BlockCacheBuilder:
 
         Args:
             windows: Image/label read windows and expected shape.
-            inputs: Paths to rasters and block meta config.
-            output: Paths for block cache and index artifacts.
+            config: Block builder configuration.
             logger: Logger for progress and diagnostics.
         '''
 
@@ -198,11 +197,13 @@ class BlockCacheBuilder:
         utils.write_json(_blks, self.valid_blks)
         utils.hash_artifacts(_blks)
 
-    def build_a_block(
-        self,
-        block_coordinates: tuple[int, int],
-    ) -> blockbuilder.DataBlock:
-        '''Build a single data block for overfitting test.'''
+    def single_block(self, coords: tuple[int, int]) -> blockbuilder.DataBlock:
+        '''
+        Build a single data block from given grid coordinates.
+
+        Args:
+            coords: Coordinates (px) of the block's top-level corner.
+        '''
 
         # load data config and extract by keys in block meta dict
         meta_src = utils.load_json(self.config.config_fpath)
@@ -210,27 +211,26 @@ class BlockCacheBuilder:
         meta = {k: meta_src[k] for k in keys}
         meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
         # enrich meta
-        meta['block_name'] = self._xy_name(block_coordinates)
+        meta['block_name'] = self._xy_name(coords)
         dem_band = meta['band_map']['dem']
         pad = meta['dem_pad']
 
         # read rasters at given window and create blocks
         img_fpath = self.config.image_fpath
         lbl_fpath = self.config.label_fpath
-        img_window = self.windows.image_windows[block_coordinates]
-        lbl_window = self.windows.label_windows[block_coordinates]
+        window = self.windows.image_windows[coords] # from the same window
         with utils.open_rasters(img_fpath, lbl_fpath) as (img, lbl):
             # sanity checks
-            assert img and lbl and lbl_window
+            assert img and lbl
             # read image and label array
-            img_arr: numpy.ndarray = img.read(window=img_window)
-            lbl_arr: numpy.ndarray = lbl.read(window=lbl_window)
+            img_arr: numpy.ndarray = img.read(window=window)
+            lbl_arr: numpy.ndarray = lbl.read(window=window)
             if img_arr.size == 0 or lbl_arr.size == 0:
                 raise ValueError('Empty arrays, likely read outside of raster')
             meta['image_nodata'] = img.nodata
             meta['label_nodata'] = lbl.nodata
             # get padded dem array from image
-            padded = _read_w_pad(img, img_window, dem_band, pad)
+            padded = _read_w_pad(img, window, dem_band, pad)
 
         # create and return
         return blockbuilder.DataBlock().build(img_arr, lbl_arr, padded, meta)

@@ -98,7 +98,6 @@ class _ImageStats(typing.TypedDict):
 @dataclasses.dataclass
 class _BlockArrays:
     '''Simple dataclass for block-wise image/label data.'''
-
     label: numpy.ndarray = dataclasses.field(init=False)
     label_masked: numpy.ndarray = dataclasses.field(init=False)
     image: numpy.ndarray = dataclasses.field(init=False)

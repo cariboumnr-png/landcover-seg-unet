@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Block-building utilities that assemble dataset blocks from raster windows,
+including single-block sampling for tests and cache/index generation.
+
+Public APIs:
+    - build_blocks: Generate block caches and valid-block indices.
+    - build_a_block: Produce a single valid block using fit windows.'
+'''
 
 # standard imports
 import random
@@ -37,10 +44,19 @@ def build_blocks(
     logger: utils.Logger,
     *,
     rebuild: bool = False,
-) -> blockbuilder.DataBlock | None:
-    '''doc'''
+) -> None:
+    '''
+    Build cached blocks and a valid-block index for the selected mode.
+
+    Args:
+        mode: Operation mode, e.g., "fit" or "test".
+        config: Block-building configuration with paths and thresholds.
+        logger: Logger for status and diagnostics.
+        rebuild: If True, recompute and overwrite existing indices.
+    '''
 
     # mode derivatives
+    assert mode in ['fit', 'test'], f'Invalid build mode: {mode}'
     windows_key = f'{mode}_windows'
     thres_key = f'blk_thres_{mode}'
     # get raster windows
@@ -53,9 +69,30 @@ def build_blocks(
 
 def build_a_block(
     config: dataprep.BlockBuildingConfig,
-    logger: utils.Logger
+    logger: utils.Logger,
+    *,
+    valid_px_per: float = 0.8,
+    monitor_head: str = 'layer1',
+    need_all_classes: bool = True
 ) -> blockbuilder.DataBlock:
-    '''doc'''
+    '''
+    Construct and return one valid data block from fit windows.
+
+    Args:
+        config: Block-building configuration with input resources.
+        logger: Logger for progress and selection details.
+        valid_px_per: Minimum fraction of valid pixels required for the
+            block. Defaults to `0.8`.
+        monitor_head: Label head name used to check for class coverage.
+            Defaults to `"layer1"`.
+        need_all_classes: If True, require all classes to be present
+            under the monitor head; if False, skip the class-coverage
+            check. Defaults to `True`.
+
+    Returns:
+        DataBlock: A block meeting the validity threshold, and class
+            coverage criterion if enabled.
+    '''
 
     # get fit raster windows
     windows: mapper.DataWindows = utils.load_pickle(config['fit_windows'])
@@ -64,26 +101,30 @@ def build_a_block(
     # get a deterministic coordinate sequence to iterate
     coords = list(windows.image_windows.keys()) # from image windows
     random.Random(42).shuffle(coords)
-    # build a block (>= 80% valid pixels) and return
+    # build a valid block and return
     i = 0
     while True:
-        print('Searching for a good raster window...', end='\r', flush=True)
+        print('Searching for a valid raster window...', end='\r', flush=True)
         try:
-            block = builder.build_a_block(coords[i])
+            block = builder.single_block(coords[i])
         except ValueError: # likely an empty window for the rasters
             i += 1
             continue
-        if block.meta['valid_pixel_ratio']['block'] >= 0.8 and \
-            all(block.meta['label_count']['layer1']):
+        meta = block.meta
+        data = block.data
+        if meta['valid_pixel_ratio']['block'] >= valid_px_per and \
+            (all(meta['label_count'][monitor_head]) or not need_all_classes):
             logger.log('INFO', f'Fetched a valid block at coord: {coords[i]}')
-            logger.log('INFO', 'Criteria: valid pixel >= 80% & has all class')
+            logger.log('DEBUG', 'Criteria:')
+            logger.log('DEBUG', f'Minimum valid pixel: {valid_px_per:.2f}')
+            logger.log('DEBUG', f'Focused head: {monitor_head}')
+            logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
             # normalize
-            block.data.image_normalized = numpy.empty_like(block.data.image)
-            for i, arr in enumerate(block.data.image):
-                std = numpy.std(arr)
-                std_safe = numpy.where(std == 0, 1, std)
+            data.image_normalized = numpy.empty_like(data.image)
+            for i, arr in enumerate(data.image):
+                std_safe = numpy.where(numpy.std(arr) == 0, 1, numpy.std(arr))
                 norm = (arr - numpy.mean(arr)) / std_safe   # (H, W)
-                block.data.image_normalized[i] = norm       # (C, H, W)
+                data.image_normalized[i] = norm       # (C, H, W)
             # return the block instance
             return block
         i += 1
@@ -94,35 +135,36 @@ def _get_blocks_builder(
     config: dataprep.IOConfig,
     logger: utils.Logger
 ) -> blockbuilder.BlockCacheBuilder:
-    '''doc'''
+    '''Return a block builder configured for the given mode.'''
 
-    # mode selection
+    # gather configurations by mode
     if mode == 'fit':
-        image_fpath=config['fit_input_img']
-        label_fpath=config['fit_input_lbl']
-        config_fpath=config['input_config']
-        blks_dpath=config['fit_blks_dir']
-        all_blocks=config['fit_all_blks']
-        valid_blks=config['fit_valid_blks']
+        image_fpath = config['fit_input_img']
+        label_fpath = config['fit_input_lbl']
+        config_fpath = config['input_config']
+        blks_dpath = config['fit_blks_dir']
+        all_blocks = config['fit_all_blks']
+        valid_blks = config['fit_valid_blks']
     elif mode == 'test':
         assert config['test_input_img'] # sanity type check
-        image_fpath=config['test_input_img']
-        label_fpath=config['test_input_lbl']
-        config_fpath=config['input_config']
-        blks_dpath=config['test_blks_dir']
-        all_blocks=config['test_all_blks']
-        valid_blks=config['test_valid_blks']
+        image_fpath = config['test_input_img']
+        label_fpath = config['test_input_lbl']
+        config_fpath = config['input_config']
+        blks_dpath = config['test_blks_dir']
+        all_blocks = config['test_all_blks']
+        valid_blks = config['test_valid_blks']
     else:
         raise ValueError(f'Invalid builder mode {mode}')
 
-    # get a builder and return
+    # get a builder configuration dataclass
     builder_config=blockbuilder.BuilderConfig(
-        image_fpath = image_fpath,
-        label_fpath = label_fpath,
-        config_fpath = config_fpath,
-        blks_dpath = blks_dpath,
-        all_blocks = all_blocks,
+        image_fpath=image_fpath,
+        label_fpath=label_fpath,
+        config_fpath=config_fpath,
+        blks_dpath=blks_dpath,
+        all_blocks=all_blocks,
         valid_blks=valid_blks
     )
-    builder = blockbuilder.BlockCacheBuilder(windows, builder_config, logger)
-    return builder
+
+    # build and return a builder instance
+    return blockbuilder.BlockCacheBuilder(windows, builder_config, logger)
