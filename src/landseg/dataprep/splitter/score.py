@@ -19,7 +19,18 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Select validation dataset pipeline.'''
+'''
+Validation dataset scoring utilities that rank blocks by their label-
+distribution similarity to a target. Computes target distributions from
+global counts and scores blocks with a weighted L1 metric and reward
+terms.
+
+Public APIs:
+    - BlockScore: Dataclass representing a scored block and its metadata.
+    - ScoreParams: Dataclass holding scoring hyperparameters.
+    - score_blocks: Compute and persist per-block scores based on label
+      distributions.
+'''
 
 # standard imports
 import dataclasses
@@ -34,21 +45,21 @@ import landseg.utils as utils
 #
 @dataclasses.dataclass
 class BlockScore:
-    '''doc'''
-    name: str
-    path: str
-    col: int
-    row: int
-    score: float
+    '''Scored validation-block record with location and score.'''
+    name: str                       # block ID (e.g., "col_XXXX_row_YYYY")
+    path: str                       # file path to the block artifact (.npz)
+    col: int                        # column index parsed from the block name
+    row: int                        # row index parsed from the block name
+    score: float                    # computed score (lower is closer/better)
 
 @dataclasses.dataclass
 class ScoreParams:
     '''Score configuration.'''
-    head: str
-    alpha: float
-    beta: float
-    eps: float
-    reward_cls: tuple[int, ...]
+    head: str                       # focal label head name (e.g., "layer1")
+    alpha: float                    # exponent for transforming counts
+    beta: float                     # reward weight for classes
+    eps: float                      # small constant for numerical stability
+    reward_cls: tuple[int, ...]     # class indices to reward
 
 #
 def score_blocks(
@@ -59,7 +70,20 @@ def score_blocks(
     *,
     rescore: bool = False
 ) -> list[BlockScore]:
-    '''Score inputs blocks based on its label class distribution.'''
+    '''
+    Score input blocks based on label class distributions.
+
+    Args:
+        global_cls_count: Global per-class counts by head used to derive
+            the target distribution.
+        input_blocks: Mapping from block names to file paths to score.
+        params: Scoring parameters (head/alpha/beta/eps/reward classes).
+        scores_path: Output JSON path for persisted, sorted scores.
+        rescore: If True, recompute even if scores_path already exists.
+
+    Returns:
+        list[BlockScore]: Sorted scores (ascending by score).
+    '''
 
     # read saved scores if already exist
     if os.path.exists(scores_path) and not rescore:
@@ -84,7 +108,7 @@ def _score(
     target_p: numpy.ndarray,
     params: ScoreParams
 ) -> BlockScore:
-    '''Score each block.'''
+    '''Score a single block against the target distribution.'''
 
     # parse arguments
     name, fpath = block
@@ -113,7 +137,7 @@ def _count_to_inv_prob(
     alpha: float,
     eps: float
 ) -> numpy.ndarray:
-    '''Global count to inverse distribution with epsilon smoothing.'''
+    '''Counts to smoothed distribution, optionally exponentiated.'''
 
     # safe count to probability distribution
     arr = numpy.asarray(cls_counts)
@@ -134,7 +158,7 @@ def _weighted_l1_w_reward(
     beta: float,
     eps: float
 ) -> float:
-    '''Weighted L1 distance between distributions with rewards.'''
+    '''Weighted L1 distance with bonus on specified reward classes.'''
 
     # sanity check
     assert numpy.isclose(p.sum(), 1), p.sum()

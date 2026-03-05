@@ -19,7 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Dataset splitting utilities for producing train/val block lists.
+Orchestrates global label counting, block scoring, validation selection,
+and artifact persistence.
+
+Public APIs:
+    - split_blocks: Create train/val splits from scored blocks and write
+      results to artifacts.
+'''
 
 # standard imports
 import os
@@ -34,7 +42,17 @@ def split_blocks(
     *,
     rebuild: bool = False
 ) -> None:
-    '''doc'''
+    '''
+    'Create train/val splits from scored blocks and persist artifacts.
+
+    Args:
+        process_config: Process configuration containing input artifact
+            paths (e.g., fit_valid_blks) and output targets (e.g.,
+            train_blks, val_blks, lbl_count_*), plus scoring parameters.
+        logger: Logger used for progress and status reporting.
+        rebuild: If True, overwrite existing split artifacts; if False,
+            keep existing train/val files when both are present.
+    '''
 
     # get a child logger
     logger = logger.get_child('split')
@@ -70,7 +88,7 @@ def split_blocks(
     # split blocks by scores
     # get validation blocks
     vals = splitter.select_val_blocks(scores, logger)
-    # WIP here simple use the rest without spatial buffering and exclusion
+    # WIP here simply use the rest without spatial buffering and exclusion
     trains = {b.name: b.path for b in scores if b.name not in vals}
 
     # write train and val blocks to json artifacts

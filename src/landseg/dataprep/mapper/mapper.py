@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Raster-to-grid mapping utilities that generate indexed read windows for
+images and labels, and persist them as artifacts for training/inference.
+
+Public APIs:
+    - map_rasters: Map input rasters onto the world grid and serialize
+      window indices for fit/test datasets.'
+'''
 
 # standard imports
 import copy
@@ -40,7 +47,7 @@ class DataWindows:
     '''Container for input read windows and expected window shape.'''
     image_windows: alias.RasterWindowDict   # indexed read windows
     label_windows: alias.RasterWindowDict   # indexed read windows can be empty
-    expected_shape: tuple[int, int]  # expected window shape (W*H) in px
+    expected_shape: tuple[int, int]         # expected window shape (W*H) in px
 
 # -------------------------------Public Function-------------------------------
 def map_rasters(
@@ -50,7 +57,18 @@ def map_rasters(
     *,
     remap: bool = False
 ) -> None:
-    '''doc'''
+    '''
+    Map input rasters to the world grid and serialize read windows.
+
+    Args:
+        world_grid: Target grid layout definition.
+        config: I/O config with input paths and output artifact targets.
+        logger: Logger for progress and diagnostics.
+        remap: If True, force recompute mappings.
+
+    Raises:
+        ValueError: If the rasters' CRS does not match the world grid CRS.
+    '''
 
     # paths to artifacts from fit input
     fit_img = config['fit_input_img']
@@ -75,7 +93,7 @@ def _map(
     windows_fpath: str,
     logger: utils.Logger
 ) -> None:
-    '''doc'''
+    '''Create and persist windows for a raster pair (image & label).'''
 
     # get geometry summary
     geom = mapper.validate_geometry(image_fpath, label_fpath, logger)
@@ -103,7 +121,7 @@ def _crop(
     world_grid: grid.GridLayout,
     geom_summary: mapper.GeometrySummary,
 ) -> list[tuple[int, int]]:
-    '''doc'''
+    '''Return grid tile indices that intersect the raster extent.'''
 
     # prep return list
     inside: list[tuple[int, int]] = []
@@ -132,7 +150,7 @@ def _get_windows(
     transform: rasterio.Affine | None,
     inside_idx: list[tuple[int, int]]
 ) -> alias.RasterWindowDict:
-    '''doc'''
+    '''Return window dict for tiles inside the target area .'''
 
     # get raster reading windows - empty when transform is None
     windows: alias.RasterWindowDict = {}

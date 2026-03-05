@@ -19,7 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Image statistics aggregation utilities for cached data blocks. Computes
+global per-band means and standard deviations using Welford's online
+algorithm and validates per-block stats when needed.
+
+Public APIs:
+    - get_image_stats: Aggregate global image statistics across blocks,
+      validating and (if needed) repairing per-block stats before use.
+'''
 
 # standard imports
 import math
@@ -40,7 +48,19 @@ def get_image_stats(
     *,
     recompute: bool = False
 ) -> dict[str, dict[str, int | float]]:
-    '''Aggregate stats from a given list of blocks'''
+    '''
+    Aggregate global per-band image statistics across cached blocks.
+
+    Args:
+        input_blocks: List of file paths to block artifacts to scan.
+        stats_fpath: Output JSON path for the aggregated statistics.
+        logger: Logger for progress messages and diagnostics.
+        recompute: If True, force recompute stats from blocks.
+
+    Returns:
+        dict: A mapping of band keys to statistics, including
+            "total_count", "current_mean", "accum_m2", and "std".
+    '''
 
     # load stats if file already exists
     if os.path.exists(stats_fpath) and not recompute:
@@ -89,7 +109,7 @@ def _validate_image_stats(
     blks_fpaths: list[str],
     logger: utils.Logger,
 ) -> bool:
-    '''doc'''
+    '''Validate and repair per-block stats if incomplete or invalid.'''
 
     jobs = [(_check_block_image_stats, (f, ), {}) for f in blks_fpaths]
     rr: list[dict] = utils.ParallelExecutor().run(jobs)
@@ -106,7 +126,7 @@ def _validate_image_stats(
     return False
 
 def _check_block_image_stats(block_fpath: str) -> dict[str, str]:
-    '''doc'''
+    '''Return whether a single block's image stats contain NaNs.'''
 
     meta = blockbuilder.DataBlock().load(block_fpath).meta
     stats = meta['block_image_stats']
@@ -119,7 +139,7 @@ def _welfords_online(
     input_stats: dict[str, int | float],
     current_results: dict[str, int | float]
 ) -> dict[str, int | float]:
-    '''Welford's Online Algorithm.'''
+    '''Combine per-block stats using Welford's online algorithm.'''
 
     # block stats from stats dict
     nb = input_stats['count']

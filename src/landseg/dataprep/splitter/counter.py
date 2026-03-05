@@ -20,11 +20,13 @@
 # =========================================================================== #
 
 '''
-Utilities for aggregating label class counts across cached blocks.
+Utilities for aggregating label class counts across cached blocks. Sums
+per-block counts from serialized DataBlock artifacts to produce dataset-
+level label distributions.
 
-This module provides helpers to compute dataprep-level label
-distributions by summing per-block class counts stored in
-serialized `DataBlock` artifacts.
+Public APIs:
+    - count_label_class: Aggregate label counts across block artifacts
+      and persist the combined distribution.
 '''
 
 # standard imports
@@ -53,16 +55,11 @@ def count_label_class(
         output_fpath: Path to the output JSON file for aggregated class
             counts.
         logger: Logger used for progress and status reporting.
-        overwrite: If `False` and `results_fpath` exists, previously
+        recount: If `False` and `results_fpath` exists, previously
             computed results are loaded and returned.
 
     Returns:
         dict: Mapping from label layer name to aggregated class counts.
-
-    --------------------------------------------------------------------
-    Notes: This function loads each `DataBlock` and sums `label_count`
-    metadata across all blocks. It is typically used for computing
-    dataprep-wide label distributions for training diagnostics.
     '''
 
     # get a child logger

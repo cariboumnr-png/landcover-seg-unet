@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Data blocks preperation pipeline.'''
+'''
+Block normalization utilities for dataset blocks using global image
+statistics. Supports validation and (re)normalization of cached blocks.
+
+Public APIs:
+    - normalize_blocks: Validate and normalize blocks for fit/test data.
+'''
 
 # third-party imports
 import numpy
@@ -37,7 +43,19 @@ def normalize_blocks(
     *,
     renormalize = False
 ) -> None:
-    '''doc'''
+    '''
+    Validate and normalize image channels of cached blocks.
+
+    Args:
+        input_type: Dataset split to process, either "fit" or "test".
+        config: Output configuration with block/artifact paths.
+        logger: Logger for progress updates and diagnostics.
+        renormalize: If True, force normalization for all blocks; else
+            only fix blocks detected with missing/invalid normalization.
+
+    Raises:
+        ValueError: If input_type is not "fit" or "test".
+    '''
 
     # retrieve artifact paths by input data type
     if input_type == 'fit':
@@ -101,7 +119,7 @@ def _normalize_block(
         fpath: str,
         stats: dict,
     ) -> None:
-    '''doc.'''
+    '''Apply normalization to a single block and persist the update.'''
 
     rb = blockbuilder.DataBlock().load(fpath)
     mmin, mmax = rb.normalize_image(stats)

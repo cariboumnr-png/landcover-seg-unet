@@ -19,7 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+TypedDict-based configuration schemas for dataprep, block building,
+scoring, and process orchestration. Defines structured config interfaces
+used throughout the dataprep pipeline.
+
+Public APIs:
+    - InputConfig: Paths for bimodal input rasters and config files.
+    - OutputConfig: Paths to dataprep-generated artifacts.
+    - PixelThresholdConfig: Thresholds for validating block pixel ratios.
+    - ScoringConfig: Parameters for block scoring onlabel distribution.
+    - IOConfig: Combined input/output configuration for block building.
+    - BlockBuildingConfig: Full block-building configuration with pixel
+      thresholds included.
+    - ProcessConfig: Post-block-building configuration used for splitting,
+      scoring, and aggregation.
+    - DataprepConfigs: Composite configuration covering the entire
+      dataprep workflow.
+'''
 
 # standard imports
 import typing
@@ -68,7 +85,7 @@ class IOConfig(
     OutputConfig,
     typing.TypedDict
 ):
-    '''Bimodal I/O paths for configuring a block builder.'''
+    '''Combined input/output paths for configuring a block builder.'''
 
 class BlockBuildingConfig(
     InputConfig,
@@ -76,14 +93,14 @@ class BlockBuildingConfig(
     PixelThresholdConfig,
     typing.TypedDict
 ):
-    '''Block building related config'''
+    '''Combined configuration for block building.'''
 
 class ProcessConfig(
     OutputConfig,
     ScoringConfig,
     typing.TypedDict
 ):
-    '''Post block building process configs.'''
+    '''Post-block-building configuration for scoring and splitting.'''
 
 class DataprepConfigs(
     InputConfig,
@@ -92,4 +109,4 @@ class DataprepConfigs(
     ScoringConfig,
     typing.TypedDict,
 ):
-    '''Composite config for data preparation.'''
+    '''Composite configuration for the full dataprep workflow.'''

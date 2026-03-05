@@ -19,7 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Schema builders for dataprep artifacts. Emits a dataset-wide JSON schema
+from cached blocks and grid metadata, and can derive a minimal schema
+from a single block (overfit mode).
+
+Public APIs:
+    - build_schema: Generate and write the dataset schema JSON.
+    - schema_from_a_block: Build a minimal schema from one block.
+'''
 
 # standard import
 import os
@@ -35,7 +43,21 @@ def build_schema(
     data_cache_root: str,
     config: dataprep.DataprepConfigs
 ):
-    '''doc'''
+    '''
+    Generate and persist the dataset schema JSON from data and grid.
+
+    Args:
+        world_grid: Tuple of (grid_id, GridLayout) describing the target
+            grid.
+        data_cache_root: Root directory for the dataset cache;
+            schema.json is written here.
+        config: Consolidated dataprep configuration with input, output,
+            and process fields.
+
+    Raises:
+        FileNotFoundError: If hash records for referenced artifacts are
+            missing when resolving paths and checksums.
+    '''
 
     # has test data flag
     has_test = os.path.exists(config['test_windows'])
@@ -127,13 +149,15 @@ def build_schema(
         'normalization': {
             'method': 'per-channel-zscore',
             'fit_stats_file': _resolve(config['fit_img_stats']),
-            'test_stats_file': _resolve(config['test_img_stats']) if has_test else {},
+            'test_stats_file': _resolve(config['test_img_stats'])
+            if has_test else {},
         },
 
         'splits': {
             'train_blocks': _resolve(config['train_blks']),
             'val_blocks': _resolve(config['val_blks']),
-            'test_blocks': _resolve(config['test_valid_blks']) if has_test else {}
+            'test_blocks': _resolve(config['test_valid_blks'])
+            if has_test else {}
         },
 
         'training_stats': {
@@ -149,7 +173,17 @@ def schema_from_a_block(
     block_fpath: str,
     block: blockbuilder.DataBlock
 ) -> dict[str, typing.Any]:
-    '''Build schema dictionary from a single block for overfit test.'''
+    '''
+    Build a minimal schema from a single block for overfit tests.
+
+    Args:
+        block_fpath: Filesystem path to the serialized block artifact.
+        block: Loaded DataBlock instance corresponding to block_fpath.
+
+    Returns:
+        dict: Minimal schema including topology, splits, and per-head
+            counts inferred from the provided block.
+    '''
 
     data = block.data
     meta = block.meta
@@ -167,7 +201,7 @@ def schema_from_a_block(
     }
 
 def _resolve(fpath: str) -> dict[str, str]:
-    '''doc'''
+    '''Resolve an artifact path to its recorded SHA-256 in hash.json.'''
 
     # get file root and name
     root = os.path.dirname(fpath)
@@ -188,7 +222,7 @@ def _resolve(fpath: str) -> dict[str, str]:
     return {'fpath': fpath, 'sha256': hash_records[fname]}
 
 def _get_topology(label_count: dict[str, list[int]]):
-    '''doc'''
+    '''Derive head topology (parent-child) from label count naming.'''
 
     topology: dict[str, dict[str, str | int | None]] = {}
     # iterate through label counts

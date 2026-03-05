@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Data preparation pipeline.'''
+'''
+Data preparation pipeline that maps rasters to a grid, builds and
+normalizes blocks, splits datasets, and persists a versioned schema.
+
+Public APIs:
+    - prepare_data: Run the end-to-end dataprep workflow.
+'''
 
 # standard imports
 import typing
@@ -41,7 +47,36 @@ def prepare_data(
     logger: utils.Logger,
     **kwargs
 ) -> dict[str, typing.Any] | None:
-    '''doc'''
+    '''
+    Run the dataprep workflow: map rasters, build/normalize blocks, split
+    sets, and generate schema. Supports a single-block mode for testing.
+
+    Args:
+        world_grid: Target grid description.
+        inputs_config: Config mapping for input data sources.
+        artifact_config: Config mapping for artifact/cache/output paths.
+        process_config: Config mapping for thresholds and scoring
+            parameters.
+        logger: Logger for progress and diagnostics.
+        kwargs: Optional flags
+            - rebuild_all (bool): Rebuild all stages. Defaults to False.
+            - remap (bool): Remap raster windows. Defaults to
+                `rebuild_all`.
+            - rebuild_blocks (bool): Rebuild block caches. Defaults to
+                `rebuild_all`.
+            - renormalize (bool): Recompute image normalization. Defaults
+                to `rebuild_all`.
+            - rebuild_split (bool): Regenerate train/val splits. Defaults
+                to `rebuild_all`.
+            - build_a_block (bool): If True, produce a single block
+                artifact and return its schema. Defaults to False.
+            - block_fpath (str): Output path for the single block when
+                build_a_block=True.
+
+    Returns:
+        (dict | None): Schema when build_a_block=True; otherwise None
+            (schema persists as an artifact).
+    '''
 
     # get flags from keyword arguments
     rebuild_all = kwargs.get('rebuild_all', False)
@@ -88,7 +123,7 @@ def _parse_configs(
     output_artifact_config: alias.ConfigType,
     process_config: alias.ConfigType,
 ) -> dataprep.DataprepConfigs:
-    '''doc'''
+    '''Parse and consolidate input configs into a typed config.'''
 
     # config accessors
     input_cfg = utils.ConfigAccess(input_data_config)
@@ -129,8 +164,7 @@ def _parse_configs(
         'score_reward': tuple(proc_cfg.get_option('scoring', 'reward')),
     }
 
-    # sanity checks on required items
+    # sanity checks on required items and return
     assert return_cfg['fit_input_img'] is not None
     assert return_cfg['input_config'] is not None
-
     return return_cfg
