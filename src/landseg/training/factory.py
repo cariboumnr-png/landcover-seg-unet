@@ -76,5 +76,5 @@ def build_trainer(
     runtime_cfg = trainer.get_config(config.trainer.runtime)
 
     # build and return a trainer class
-    skip_log = config['run_mode'] == 'overfit-test'
+    skip_log = config['profile'] == 'overfit_test'
     return trainer.MultiHeadTrainer(comps, runtime_cfg, 'cuda', skip_log=skip_log)

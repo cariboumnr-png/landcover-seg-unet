@@ -21,24 +21,19 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     # create a single test block and derive dataspec for downstream
     dataspecs = _single_block_dataspecs(config, test_dir, logger)
 
+    # parse from config
+    monitor_head = config['trainer']['runtime']['monitor']['track_head_name']
+    max_epoch = config['trainer']['runtime']['schedule']['max_epoch']
+
     # build a trainer with minimal settings
-    config.models['conditioning']['mode'] = 'none'
-    config.trainer['optim']['weight_decay'] = 0.0
-    config.trainer['runtime']['schedule']['log_every'] = 1
-    config.trainer['runtime']['precision']['use_amp'] = False
-    config.trainer['runtime']['optimization']['grad_clip_norm'] = None
-    config.trainer['loss']['types']['focal']['weight'] = 1.0
-    config.trainer['loss']['types']['focal']['gamma'] = 0.0
-    config.trainer['loss']['types']['dice']['weight'] = 0.0
     trainer = training.build_trainer(dataspecs, config, logger)
-    trainer.set_head_state(['layer1'])
+    trainer.set_head_state([monitor_head])
 
     # run trainer
-    max_epoch = config['overfit_test_max_epoch']
     logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
     for ep in range(1, max_epoch + 1):
         los = trainer.train_one_epoch(ep)['Total_Loss']
-        iou = trainer.validate()['layer1']['mean']
+        iou = trainer.validate()[monitor_head]['mean']
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')

@@ -7,15 +7,16 @@ import sys
 import typing
 # third-party imports
 import hydra
+import hydra.core.hydra_config
 import hydra.utils
 import omegaconf
 # local imports
 import landseg.cli as cli
 import landseg.utils as utils
 
-CMD = {
-    'end-to-end': cli.train_end_to_end,
-    'overfit-test': cli.overfit_test
+command_registry = {
+    'end_to_end': cli.train_end_to_end,
+    'overfit_test': cli.overfit_test
 }
 
 # main process
@@ -23,18 +24,21 @@ CMD = {
 def main(config: omegaconf.DictConfig) -> None:
     '''Main CLI entry point.'''
 
+    # get running profile
+    profile = hydra.core.hydra_config.HydraConfig.get().runtime.choices['profile']
+
     # resolve config
     _config = _resolve_config(config)
+    _config['profile'] = profile # add profile string to config tree
 
     # master logger
     logger = utils.Logger('cli', os.path.join(_config['exp_root'], 'cli.log'))
 
     # run specified mode with exceptions handling
-    mode = _config['run_mode']
     try:
-        logger.log('INFO', f'Run mode: {mode} start')
-        CMD[mode](_config)
-        logger.log('INFO', f'Run mode: {mode} finish')
+        logger.log('INFO', f'Runing profile: {profile} start')
+        command_registry[profile](_config)
+        logger.log('INFO', f'Runing profile: {profile} finish')
     # manual keyboard interruption
     except KeyboardInterrupt:
         logger.log('INFO', '\nExperiment manually interrupted, exiting...')
@@ -58,6 +62,9 @@ def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
         aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
     candidates.append(aux)
 
+    # profile overwrite
+    profile = config.profile
+
     # merging overrides with default config tree and resolve
     for p in candidates:
         if os.path.exists(p):
@@ -66,7 +73,8 @@ def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
                 raise TypeError('./settings.yaml must have a mapping')
             # allow new phases to be added
             with omegaconf.open_dict(config.experiment.phases):
-                merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
+                # right wins over left during merging
+                merged = omegaconf.OmegaConf.merge(config, user_cfg, profile)
                 config = typing.cast(omegaconf.DictConfig, merged)
     omegaconf.OmegaConf.resolve(config)
 

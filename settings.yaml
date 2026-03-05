@@ -3,10 +3,6 @@
 # ----- Experiment Master I/O Location
 exp_root: ./experiment
 
-# running mode
-run_mode: 'end-to-end'
-overfit_test_max_epoch: 2000
-
 # ----- Study Area Extent Definition
 extent:
   crs: 'EPSG:3161'

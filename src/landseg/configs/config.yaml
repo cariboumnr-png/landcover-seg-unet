@@ -12,10 +12,8 @@ defaults:
   - experiment: demo
   - models: multihead
   - trainer: default
-
-# running mode
-run_mode: 'end-to-end'
-overfit_test_max_epoch: 2000
+  # profile:
+  - profile: end_to_end
 
 # experiment root
 exp_root: ./experiment
