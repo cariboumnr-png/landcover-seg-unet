@@ -12,7 +12,9 @@ import typing
 __all__ = [
     # classes
     # functions
+    'build_schema',
     'prepare_data',
+    'schema_from_a_block',
     # typing
     'BlockBuildingConfig',
     'DataprepConfigs',
@@ -33,6 +35,7 @@ if typing.TYPE_CHECKING:
         ProcessConfig,
     )
     from .pipeline import prepare_data
+    from .schema import build_schema, schema_from_a_block
 
 def __getattr__(name: str):
 
@@ -41,5 +44,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['prepare_data']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in ['build_schema', 'schema_from_a_block']:
+        return getattr(importlib.import_module('.schema', __package__), name)
 
     raise AttributeError(name)

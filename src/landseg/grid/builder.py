@@ -61,7 +61,7 @@ def prep_world_grid(
 
     # if grid already exist, load and return
     try:
-        logger.log('INFO', f'Try to load grid {gid} at {outdir}')
+        logger.log('INFO', f'Try to load grid {gid}')
         output_grid = grid.load_grid(gid, outdir)
         logger.log('INFO', 'World grid successfully loaded')
         return gid, output_grid

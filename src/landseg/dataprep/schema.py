@@ -2,6 +2,7 @@
 
 # standard import
 import os
+import typing
 # local imports
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
@@ -122,6 +123,27 @@ def build_schema(
 
     # write schema to json
     utils.write_json(f'{data_cache_root}/schema.json', schema)
+
+def schema_from_a_block(
+    block_fpath: str,
+    block: blockbuilder.DataBlock
+) -> dict[str, typing.Any]:
+    '''Build schema dictionary from a single block for overfit test.'''
+
+    data = block.data
+    meta = block.meta
+    counts = meta['label_count']
+    cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
+    return {
+        'dataset_name': meta['block_name'],
+        'image_channel': data.image_normalized.shape[0],
+        'ignore_index': meta['ignore_label'],
+        'class_counts': cc,
+        'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()},
+        'topology': _get_topology(meta['label_count']),
+        'train_split': {meta['block_name']: block_fpath},
+        'val_split': {meta['block_name']: block_fpath}
+    }
 
 def _resolve(fpath: str) -> dict[str, str]:
     '''doc'''

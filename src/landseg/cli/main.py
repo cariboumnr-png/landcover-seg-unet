@@ -27,7 +27,7 @@ def main(config: omegaconf.DictConfig) -> None:
     _config = _resolve_config(config)
 
     # master logger
-    logger = utils.Logger('cli', os.path.join(_config['exp_root'], '.log'))
+    logger = utils.Logger('cli', os.path.join(_config['exp_root'], 'cli.log'))
 
     # run specified mode with exceptions handling
     mode = _config['run_mode']

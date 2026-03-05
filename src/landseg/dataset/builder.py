@@ -128,14 +128,25 @@ def build_dataspec(
         domains=_get_domain(_schema, ids_domain, vec_domain)
     )
 
-def build_empty_dataspec() -> DataSpecs:
-    '''Return a DataSpecs instance with dummy values.'''
+def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> DataSpecs:
+    '''Build a `DataSpecs` instance from one block with essentials.'''
 
+    # retrieve values from schema
+    name = schema['dataset_name']
+    img_ch = schema['image_channel']
+    ignore_index = schema['ignore_index']
+    class_counts = schema['class_counts']
+    logit_adjust = schema['logit_adjust']
+    topology = schema['topology']
+    train_split = schema['train_split']
+    val_split = schema['val_split']
+    # no domain
     dom: _Domains._Dom = {'ids_domain': None, 'vec_domain': None}
+    # return
     return DataSpecs(
-        _Meta('', 0, 0, 0, 0, (0, 0), True),
-        _Heads({}, {}, {}),
-        _Splits({}, {}, None),
+        _Meta(name, img_ch, ignore_index, 0, 0, (0, 0), True),
+        _Heads(class_counts, logit_adjust, topology),
+        _Splits(train_split, val_split, None),
         _Domains(dom, dom, dom, 0, 0)
     )
 

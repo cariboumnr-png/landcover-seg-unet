@@ -1,12 +1,13 @@
 '''Data preparation pipeline.'''
 
+# standard imports
+import typing
 # local imports
 import landseg.alias as alias
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.dataprep.mapper as mapper
 import landseg.dataprep.normalizer as normalizer
-import landseg.dataprep.schema as schema
 import landseg.dataprep.splitter as splitter
 import landseg.grid as grid
 import landseg.utils as utils
@@ -15,10 +16,10 @@ def prepare_data(
     world_grid: tuple[str, grid.GridLayout],
     inputs_config: alias.ConfigType,
     artifact_config: alias.ConfigType,
-    proc_config: alias.ConfigType,
+    process_config: alias.ConfigType,
     logger: utils.Logger,
     **kwargs
-) -> blockbuilder.DataBlock | None:
+) -> dict[str, typing.Any] | None:
     '''doc'''
 
     # get flags from keyword arguments
@@ -27,21 +28,24 @@ def prepare_data(
     rebuild_blks = kwargs.get('rebuild_blocks', rebuild_all)
     renorm = kwargs.get('renormalize', rebuild_all)
     rebuild_split = kwargs.get('rebuild_split', rebuild_all)
-    build_a_blk = kwargs.get('build_a_block', False) # single block mode
 
     # get a child logger
     logger = logger.get_child('dprep')
 
     # get pipeline configs from input
-    cfg = _parse_configs(inputs_config, artifact_config, proc_config)
+    cfg = _parse_configs(inputs_config, artifact_config, process_config)
 
     # map rasters to world grid (alway map fit, map test if provided)
     mapper.map_rasters(world_grid[1], cfg, logger, remap=remap)
 
     # if single block mode - build and return the instance
-    if build_a_blk:
+    if kwargs.get('build_a_block', False):
+        logger.log('INFO', 'Single data block preparation mode')
+        block_fpath = kwargs.get('block_fpath')
+        assert block_fpath, 'No block file path provided'
         block = blockbuilder.build_a_block(cfg, logger)
-        return block
+        block.save(block_fpath)
+        return dataprep.schema_from_a_block(block_fpath, block)
 
     # build/normalize/split fit blocks
     blockbuilder.build_blocks('fit', cfg, logger, rebuild=rebuild_blks)
@@ -55,7 +59,7 @@ def prepare_data(
 
     # generate schema
     data_cache_root = f'{artifact_config["cache"]}/{inputs_config["name"]}'
-    schema.build_schema(world_grid, data_cache_root, cfg)
+    dataprep.build_schema(world_grid, data_cache_root, cfg)
     return None
 
 def _parse_configs(
