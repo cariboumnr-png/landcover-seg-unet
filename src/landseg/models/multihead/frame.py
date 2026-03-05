@@ -72,23 +72,50 @@ import landseg.models.multihead as multihead
 
 class MultiHeadUNet(multihead.BaseMultiheadModel):
     '''
-    UNet with 4 down/up levels and multi heads and conditioning support.
+    UNet with multihead outputs and optional domain conditioning.
 
-    Hybrid domain conditioning support:
-      - Concatenation at input (if concat_domain_dim > 0 & mode in
-      {'concat','hybrid'})
-      - FiLM at bottleneck (if domain_embed_dim set & mode in
-      {'film','hybrid'})
+    Supports:
+        - Input-level domain concatenation (ConcatAdapter).
+        - Bottleneck-level conditioning via FiLM (FilmConditioner).
+        - Per-head logit adjustments.
+        - Autocast and clamping utilities for numerical stability.
+
+    The model orchestrates:
+        * UNet backbone (.body)
+        * Multihead output manager (.heads)
+        * Domain routing to concat / FiLM branches (.domain_router)
+        * Safety utilities controlling mixed precision (.safety)
     '''
 
     def __init__(
-            self,
-            config: multihead.ModelConfig,
-            *,
-            conv_params: dict,
-            enable_logit_adjust: bool,
-            enable_clamp: bool,
-        ):
+        self,
+        config: multihead.ModelConfig,
+        *,
+        conv_params: dict,
+        enable_logit_adjust: bool,
+        enable_clamp: bool,
+    ):
+        '''
+        Initialize a multihead UNet with optional domain conditioning.
+
+        Initializes:
+            - Per-head Conv2d blocks via _HeadManager.
+            - Optional ConcatAdapter for input-level conditioning.
+            - Optional FilmConditioner for bottleneck modulation.
+            - Optional projection router for domain IDs / vectors.
+            - Autocast and clamping utilities.
+            - Logit-adjust buffers (non-trainable).
+
+        Args:
+            config:
+                Full model configuration, see `multihead.ModelConfig`.
+            conv_params:
+                Keyword arguments forwarded to the UNet body constructor.
+            enable_logit_adjust:
+                Enable or disable per-head logit adjustment at runtime.
+            enable_clamp:
+                Enable numeric clamping inside the UNet body.
+        '''
         super().__init__()
 
         # channels
@@ -217,16 +244,6 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
                 out[head] = buf
         return out
 
-    @property
-    def encoder(self) -> list:
-        '''Return a list of encoder blocks (incl. bottleneck).'''
-        return [self.body.inc, *self.body.downs, self.body.bottleneck]
-
-    @property
-    def decoder(self) -> list:
-        '''Return a list of decoder (upsampling) blocks.'''
-        return [*self.body.ups]
-
 # internal pieces
 class _HeadManager(torch.nn.Module):
     '''
@@ -291,7 +308,7 @@ class _HeadManager(torch.nn.Module):
             )
         return output_logits
 
-    def freeze(self, frozen_heads: list[str] | None=None) -> None:
+    def freeze(self, frozen_heads: list[str] | None = None) -> None:
         '''Disable gradients of selected heads.'''
         if frozen_heads is None:
             return
@@ -404,8 +421,8 @@ class _NumericSafety():
 
     def autocast_context(
         self,
-        enable: bool=True,
-        dtype: torch.dtype=torch.float16
+        enable: bool = True,
+        dtype: torch.dtype = torch.float16
     ) -> torch.autocast:
         '''Create an AMP autocast context for the current device.'''
 

@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base model interface'''
+'''Base interface for multihead model.'''
 
 # standard imports
 import abc
@@ -28,7 +28,7 @@ import torch
 import torch.nn
 
 class BaseMultiheadModel(torch.nn.Module, metaclass=abc.ABCMeta):
-    '''With minimal required methods.'''
+    '''Minimally required class methods.'''
 
     @abc.abstractmethod
     def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:

@@ -19,7 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Domain knowledge concat.'''
+'''
+Domain-feature concatenation adapters for conditional models. Provides a
+module to compress/broadcast domain info and append it as extra channels.
+
+Public APIs:
+    - ConcatAdapter: Torch module that projects domain and concatenates
+      it to input feature maps.
+    - get_concat: Factory that builds an adapter from model config.
+'''
 
 # third-party imports
 import torch
@@ -29,11 +37,24 @@ import landseg.models.multihead as multihead
 
 class ConcatAdapter(torch.nn.Module):
     '''
-    Compress and broadcast domain info -> D channels for input concatenation.
+    Compress and broadcast domain info to D ch for input concatenation.
+
     Supports:
       - Continuous domain vectors (optionally via MLP).
       - Categorical domain IDs (via Embedding).
       - If both provided, they are added together.
+
+    Args:
+        out_dom: Number of domain channels to append to the input.
+        dim_continuous: Dimensionality of input domain vectors.
+        num_categories: Number of categorical domain IDs for embedding.
+        use_mlp: If True, apply MLP to domain vectors to reach out_dom.
+
+    Raises:
+        valueError: If use_mlp=True but dim_continuous<=0.
+        valueError: If forward() receives neither vectors nor IDs.
+        valueError: If vector dims mismatch expected sizes.
+        valueError: If domain IDs are given but no embedding defined.
     '''
 
     def __init__(
@@ -43,7 +64,19 @@ class ConcatAdapter(torch.nn.Module):
         num_categories: int,
         use_mlp: bool,
     ):
-        '''Init.'''
+        '''
+        Initialize the domain-feature adapter.
+
+        Args:
+            out_dom: Number of domain channels to append to the input.
+            dim_continuous: Dimensionality of input domain vectors.
+            num_categories: No. of categorical domain IDs for embedding.
+            use_mlp: If True, project domain vectors to out_dom via an
+                MLP; otherwise vectors must already have size out_dom.
+
+        Raises:
+            ValueError: If use_mlp is True but dim_continuous <= 0.
+        '''
         super().__init__()
 
         self.input_dim = dim_continuous
@@ -51,7 +84,8 @@ class ConcatAdapter(torch.nn.Module):
 
         # Optional MLP for continuous domain vectors
         if out_dom > 0 and use_mlp:
-            assert dim_continuous > 0, 'in_dim must be > 0 when use_mlp=True'
+            if dim_continuous <= 0:
+                raise ValueError('in_dim must be > 0 when use_mlp=True')
             self.mlp = torch.nn.Sequential(
                 torch.nn.Linear(dim_continuous, out_dom),
                 torch.nn.ReLU(inplace=True)
@@ -68,38 +102,63 @@ class ConcatAdapter(torch.nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        domain_ids: torch.Tensor | None = None,        # [B] LongTensor
-        domain_vectors: torch.Tensor | None = None,  # [B, in_dim] or [B, out_dom] if no MLP
+        domain_ids: torch.Tensor | None = None,
+        domain_vectors: torch.Tensor | None = None
     ) -> torch.Tensor:
-        '''Forward.'''
+        '''
+        Concatenate projected/broadcast domain features to input tensor.
+
+        Args:
+            x: Input feature map of shape [B, C, H, W].
+            domain_ids: Optional categorical domain IDs of shape [B].
+            domain_vectors: Optional continuous domain vectors of shape
+                [B, dim_continuous] when use_mlp=True, or [B, out_dom]
+                when use_mlp=False.
+
+        Returns:
+            torch.Tensor: Output feature map of shape [B, C + out_dom,
+                H, W] when out_dom > 0; otherwise returns x unchanged.
+
+        Raises:
+            ValueError: If out_dom > 0 and neither domain_vectors nor
+                domain_ids is provided.
+            ValueError: If provided domain_vectors have mismatched
+                dimension for the configured mode (with/without MLP).
+            ValueError: If domain_ids are provided but no embedding is
+                defined.
+        '''
         # No extra domain channels requested -> return input unchanged
         if self.output_dim <= 0:
             return x
 
         # Must have at least one source of domain info
         if domain_vectors is None and domain_ids is None:
-            raise AssertionError('Provide domain_vectors or domain_ids when out_dom>0')
+            raise ValueError('No domain_vectors or domain_ids when out_dom>0')
 
         # Build continuous part (if provided)
         dv_cont = None
         if domain_vectors is not None:
             if self.mlp is not None:
-                assert domain_vectors.shape[1] == self.input_dim, \
-                    f'Expected domain_vectors dim={self.input_dim}, \
-                        got {domain_vectors.shape[1]}'
+                if domain_vectors.shape[1] != self.input_dim:
+                    raise ValueError(
+                        f'Expected domain_vectors dim={self.input_dim}, '
+                        f'got {domain_vectors.shape[1]}'
+                    )
                 dv_cont = self.mlp(domain_vectors.to(x.device))
             else:
                 # If no MLP, domain_vectors must already match out_dom
-                assert domain_vectors.shape[1] == self.output_dim, \
-                    f'Expected domain_vectors dim={self.output_dim} (no MLP), \
-                        got {domain_vectors.shape[1]}'
+                if domain_vectors.shape[1] != self.output_dim:
+                    raise ValueError(
+                        f'Expected domain_vectors dim={self.output_dim} '
+                        f'(no MLP), got {domain_vectors.shape[1]}'
+                    )
                 dv_cont = domain_vectors.to(x.device)
 
         # Build categorical part (if provided)
         dv_cat = None
         if domain_ids is not None:
             if self.embedding is None:
-                raise AssertionError('num_categories must be >0 to use domain_ids')
+                raise ValueError('num_categories must be >0 to use domain_ids')
             dv_cat = self.embedding(domain_ids.to(x.device))
 
         # Combine: add if both present, else whichever is present
@@ -116,7 +175,16 @@ class ConcatAdapter(torch.nn.Module):
 
 
 def get_concat(config: multihead.CondConfig) -> ConcatAdapter | None:
-    '''Generate a concat adapter for the model.'''
+    '''
+    Build a ConcatAdapter from a conditional-config, if enabled.
+
+    Args:
+        config: Conditional model configuration with related settings.
+
+    Returns:
+        (ConcatAdapter | None): Adapter when mode is `"concat"` or
+            `"hybrid"` and out_dim > 0; otherwise None.
+    '''
 
     if config.mode in ['concat', 'hybrid'] and config.concat.out_dim > 0:
         return ConcatAdapter(

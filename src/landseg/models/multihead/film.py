@@ -19,7 +19,18 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''FiLM conditioning.'''
+'''
+FiLM-based domain conditioning for UNet-style models.
+
+Provides modules to embed domain information (categorical and/or
+continuous) and generate FiLM parameters to modulate bottleneck feature
+maps.
+
+Public APIs:
+    - FilmConditioner: Builds domain embeddings and applies FiLM to
+      bottleneck features.
+    - get_film: Factory that constructs a FilmConditioner from config.
+'''
 
 # third-party imports
 import torch
@@ -29,29 +40,39 @@ import landseg.models.multihead as multihead
 
 class FilmConditioner(torch.nn.Module):
     '''
-    Build domain embeddings and FiLM the bottleneck.
+    Build domain embeddings and generate FiLM parameters to modulate
+    UNet bottleneck features.
+
+    Supports:
+        - Categorical domain IDs (via Embedding).
+        - Continuous domain vectors (via MLP).
+        - Combined embeddings (summed).
+
+    FiLM output provides (gamma, beta) to scale and shift bottleneck
+    channels.
     '''
 
     def __init__(
-            self,
-            embed_dim: int,
-            num_categories: int,
-            dim_continuous: int,
-            **kwargs):
+        self,
+        embed_dim: int,
+        num_categories: int,
+        dim_continuous: int,
+        **kwargs
+    ):
         '''
-        Args:
-            embed_dim (int): Width of the domain embedding
-                (0 disables FiLM).
-            num_categories (int): Number of categorical domain classes
-                (0 disables).
-            dim_continuous (int): Dimensionality of continuous domain
-                vector (0 disables).
+        Initialize a FiLM conditioner with optional embeddings.
 
+        Args:
+            embed_dim: Width of the domain embedding (0 disables FiLM).
+            num_categories: Number of categorical domain classes (0
+                disables).
+            dim_continuous: Dimensionality of continuous domain vector
+                (0 disables).
             kwargs:
-            bottleneck_ch (int): Channel count of UNet bottleneck
-                feature map to FiLM.
-            hidden (int): Hidden width of the FiLM MLP; if falsy,
-                defaults to embed_dim.
+                - bottleneck_ch (int): Channel count of UNet bottleneck
+                    feature map to FiLM.
+                - hidden (int): Hidden width of the FiLM MLP; if falsy,
+                    defaults to embed_dim.
         '''
         super().__init__()
 
@@ -92,10 +113,10 @@ class FilmConditioner(torch.nn.Module):
                 torch.nn.init.zeros_(m.bias)
 
     def embed(
-            self,
-            domain_ids: torch.Tensor | None=None,
-            domain_vec: torch.Tensor | None=None
-        ) -> torch.Tensor | None:
+        self,
+        domain_ids: torch.Tensor | None=None,
+        domain_vec: torch.Tensor | None=None
+    ) -> torch.Tensor | None:
         '''
         Build domain embedding z (shape [B, embed_dim]) from:
             - domain_ids (categorical) via Embedding, and/or
@@ -119,10 +140,10 @@ class FilmConditioner(torch.nn.Module):
         return torch.nn.functional.layer_norm(z, (z.shape[-1],))
 
     def film_bottleneck(
-            self,
-            xb: torch.Tensor,
-            z: torch.Tensor | None=None
-        ) -> torch.Tensor:
+        self,
+        xb: torch.Tensor,
+        z: torch.Tensor | None=None
+    ) -> torch.Tensor:
         '''
         Apply FiLM to bottleneck features xb using embedding z.
 
@@ -147,11 +168,11 @@ class FilmConditioner(torch.nn.Module):
 
 
     def forward(
-            self,
-            xb: torch.Tensor,
-            domain_ids: torch.Tensor | None=None,
-            domain_vec: torch.Tensor | None=None,
-        ) -> torch.Tensor:
+        self,
+        xb: torch.Tensor,
+        domain_ids: torch.Tensor | None=None,
+        domain_vec: torch.Tensor | None=None,
+    ) -> torch.Tensor:
         '''
         One-call interface:
         1) Build embedding z from (domain_ids, domain_vec)
@@ -170,10 +191,19 @@ class FilmConditioner(torch.nn.Module):
         return self.film_bottleneck(xb, z)
 
 def get_film(
-        config: multihead.CondConfig,
-        base_ch: int
-    ) -> FilmConditioner | None:
-    '''Generate a film conditioner for the model.'''
+    config: multihead.CondConfig,
+    base_ch: int
+) -> FilmConditioner | None:
+    '''
+    Build a FilmAdapter from a conditional-config, if enabled.
+
+    Args:
+        config: Conditional model configuration with related settings.
+
+    Returns:
+        (FilmConditioner | None): Adapter when mode is `"film"` or
+            `"hybrid"` and embed_dim > 0; otherwise None.
+    '''
 
     if config.mode in ['film', 'hybrid'] and config.film.embed_dim > 0:
         return FilmConditioner(

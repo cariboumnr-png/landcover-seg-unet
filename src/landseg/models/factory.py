@@ -19,7 +19,19 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Wrapper module to build the multihead model.'''
+'''
+Factory for constructing multihead UNet models.
+
+Provides a factory that assembles:
+    - A UNet or UNet++ backbone,
+    - Multihead output configuration derived from dataset metadata,
+    - Optional domain-conditioning settings (concat / FiLM),
+    - Numeric-safety and logit-adjust behaviour.
+
+The primary entry point is `build_multihead_unet`, which returns an
+initialized `MultiHeadUNet` instance based on dataset specs and a
+user-supplied configuration.
+'''
 
 # local imports
 import landseg.alias as alias
@@ -34,32 +46,48 @@ def build_multihead_unet(
     dataspecs: core.DataSpecsLike,
     model_config: alias.ConfigType,
 ) -> multihead.BaseMultiheadModel:
-    '''Build the multi-head model from provided dataset.'''
+    '''
+    Build a configured MultiHeadUNet instance.
+
+    Args:
+        body: Backbone type (currently 'unet' or 'unetpp').
+        dataspecs: Dataset specs containing image channels, domain, and
+            per-head class counts.
+        model_config: User configuration describing backbone parameters,
+            conditioning options, clamping/logit-adjust flags, and other
+            model settings.
+
+    Returns:
+        MultiHeadUNet:
+            - Selected backbone,
+            - Multihead outputs,
+            - Input concatenation and/or FiLM conditioning (if enabled),
+            - Optional numeric safety and logit-adjust behaviour.
+
+    Raises:
+        ValueError: If an unsupported backbone name is provided.
+    '''
 
     # model body registry
     body_registry = {
         'unet': backbones.UNet,
         'unetpp': backbones.UNetPP
     }
-    assert body in body_registry, f'Invalid base model: {body}'
+    if not body in body_registry:
+        raise ValueError(f'Invalid base model: {body}')
 
     # config accessors
     model_cfg = utils.ConfigAccess(model_config)
 
-    # parse from config and dataspecs
-    model_base_channel = model_cfg.get_option('body', body, 'base_ch')
-    model_conditioning = _conditioning_config(model_cfg, dataspecs)
-    model_clamp_range = tuple(model_cfg.get_option('clamp_range'))
-
     # multihead model config
     multihead_config = multihead.ModelConfig(
-        body_registry[body],
-        dataspecs.meta.img_ch_num,
-        model_base_channel,
-        dataspecs.heads.logits_adjust,
-        dataspecs.heads.class_counts,
-        model_conditioning,
-        model_clamp_range,
+        body=body_registry[body],
+        in_ch= dataspecs.meta.img_ch_num,
+        base_ch=model_cfg.get_option('body', body, 'base_ch'),
+        logit_adjust=dataspecs.heads.logits_adjust,
+        heads_w_counts=dataspecs.heads.class_counts,
+        conditioning=_conditioning_config(model_cfg, dataspecs),
+        clamp_range=tuple(model_cfg.get_option('clamp_range')),
     )
 
     # keyword arguments
@@ -79,22 +107,22 @@ def _conditioning_config(
     model_cfg: utils.ConfigAccess,
     dataspecs: core.DataSpecsLike
 ) -> multihead.CondConfig:
-    '''Helper to configure model conditioning.'''
+    '''Configure model conditioning components.'''
 
     return multihead.CondConfig(
-        model_cfg.get_option('conditioning', 'mode'),
-        dataspecs.domains.ids_max + 1,
-        dataspecs.domains.vec_dim,
-        multihead.ConcatConfig(
-            model_cfg.get_option('conditioning', 'concat_out_dim'),
-            model_cfg.get_option('conditioning', 'concat_use_ids'),
-            model_cfg.get_option('conditioning', 'concat_use_vec'),
-            model_cfg.get_option('conditioning', 'concat_use_mlp')
+        mode=model_cfg.get_option('conditioning', 'mode'),
+        domain_ids_num=dataspecs.domains.ids_max + 1,
+        domain_vec_dim=dataspecs.domains.vec_dim,
+        concat=multihead.ConcatConfig(
+            out_dim=model_cfg.get_option('conditioning', 'concat_out_dim'),
+            use_ids=model_cfg.get_option('conditioning', 'concat_use_ids'),
+            use_vec=model_cfg.get_option('conditioning', 'concat_use_vec'),
+            use_mlp=model_cfg.get_option('conditioning', 'concat_use_mlp')
         ),
-        multihead.FilmConfig(
-            model_cfg.get_option('conditioning', 'film_embed_dim'),
-            model_cfg.get_option('conditioning', 'film_use_ids'),
-            model_cfg.get_option('conditioning', 'film_use_vec'),
-            model_cfg.get_option('conditioning', 'film_hidden')
+        film=multihead.FilmConfig(
+            embed_dim=model_cfg.get_option('conditioning', 'film_embed_dim'),
+            use_ids=model_cfg.get_option('conditioning', 'film_use_ids'),
+            use_vec=model_cfg.get_option('conditioning', 'film_use_vec'),
+            hidden=model_cfg.get_option('conditioning', 'film_hidden')
         )
     )

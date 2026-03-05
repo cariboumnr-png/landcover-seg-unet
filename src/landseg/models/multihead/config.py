@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Multihead model config classes'''
+'''Multihead model configuration dataclasses.'''
 
 from __future__ import annotations
 # standard imports
@@ -30,7 +30,7 @@ import landseg.models.backbones as backbones
 # -------------------------model general configuration-------------------------
 @dataclasses.dataclass
 class ModelConfig:
-    '''General config'''
+    '''General configuration'''
     body: backbones.Backbone
     in_ch: int
     base_ch: int
@@ -42,7 +42,7 @@ class ModelConfig:
 # ----------------------model conditioning configuration----------------------
 @dataclasses.dataclass
 class CondConfig:
-    '''Wrapper for conditioning configuration.'''
+    '''Conditioning configuration.'''
 
     mode: str               # mode
     domain_ids_num: int     # id categories
@@ -55,7 +55,7 @@ class CondConfig:
 
 @dataclasses.dataclass
 class ConcatConfig:
-    '''doc'''
+    '''Concatenation adapter configuration.'''
     out_dim: int
     use_ids: bool
     use_vec: bool
@@ -63,7 +63,7 @@ class ConcatConfig:
 
 @dataclasses.dataclass
 class FilmConfig:
-    '''doc'''
+    '''FiLM conditioner configuration'''
     embed_dim: int
     use_ids: bool
     use_vec: bool
