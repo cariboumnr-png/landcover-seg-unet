@@ -15,6 +15,7 @@ defaults:
 
 # running mode
 run_mode: 'end-to-end'
+overfit_test_max_epoch: 2000
 
 # experiment root
 exp_root: ./experiment

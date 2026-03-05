@@ -36,12 +36,16 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     # trainer.comps.optimization.optimizer.
 
     # run trainer
+    max_epoch = config['overfit_test_max_epoch']
     trainer.set_head_state(['layer1'])
-    for epoch in range(1, 3000):
+    print(f'Starting overfit test for maximum {max_epoch} epochs')
+    for epoch in range(1, max_epoch + 1):
         loss = trainer.train_one_epoch(epoch)['Total_Loss']
         iou = trainer.validate()['layer1']['mean']
-        print(f'Epoch: {epoch:04d} | Train loss: {loss:4f} | Val IoU: {iou:4f}')
-
+        print(f'Epoch: {epoch:04d} | Loss: {loss:4f} | IoU: {iou:4f}')
+        if iou >= 0.99:
+            print('Overfit reached - test complete')
+            break
 
     # remove test block
     os.remove('./overfit_test_block.npz')
