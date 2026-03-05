@@ -20,7 +20,10 @@
 # =========================================================================== #
 
 # pylint: disable=no-value-for-parameter
-'''Main CLI entry point.'''
+'''
+CLI entry that resolves Hydra configs, selects a profile, dispatches the
+mapped command, and manages logging and error handling.
+'''
 
 # standard imports
 import os
@@ -43,7 +46,7 @@ command_registry = {
 # main process
 @hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
 def main(config: omegaconf.DictConfig) -> None:
-    '''Main CLI entry point.'''
+    '''Run the selected CLI profile with resolved configuration.'''
 
     # get running profile
     get = hydra.core.hydra_config.HydraConfig.get()
@@ -71,7 +74,7 @@ def main(config: omegaconf.DictConfig) -> None:
         sys.exit(1)
 
 def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
-    '''Resolve configs from difference sources.'''
+    '''Merge and resolve config sources.'''
 
     # safer CWD fetching
     original_cwd = hydra.utils.get_original_cwd()

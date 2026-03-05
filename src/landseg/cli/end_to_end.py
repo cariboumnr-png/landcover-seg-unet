@@ -19,7 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''End-to-end experiment.'''
+'''
+End-to-end experiment pipeline that prepares data, builds the trainer,
+initializes experiment I/O, and runs the full training workflow.
+'''
 
 # standard imports
 import os
@@ -33,7 +36,7 @@ import landseg.training as training
 import landseg.utils as utils
 
 def train_end_to_end(config: omegaconf.DictConfig) -> None:
-    '''End to end training'''
+    '''Run the full end-to-end training workflow.'''
 
     # init experiment io folder tree
     exp_dir, log_dir = _init_exp_io(config)
@@ -55,7 +58,7 @@ def train_end_to_end(config: omegaconf.DictConfig) -> None:
     runner.fit()
 
 def _init_exp_io(config: omegaconf.DictConfig) -> tuple[str, str]:
-    '''Initialize experiment I/O folder tree and lazily check inputs.'''
+    '''Initialize experiment directories and validate input resources.'''
 
     # get from config
     exp_root = config['exp_root']
@@ -103,13 +106,13 @@ def _init_exp_io(config: omegaconf.DictConfig) -> tuple[str, str]:
     # return experiment dir and log dir
     return exp_dir, logs_dir
 
-def _check_file_types_in_dir(suffixes: tuple[str, ...], dirpath: str) -> bool:
-    '''Check if files of select suffixes are present in directory.'''
+def _check_file_types_in_dir(ext: tuple[str, ...], dirpath: str) -> bool:
+    '''Return True if files matching given extensions are found.'''
 
     if not os.path.exists(dirpath):
         return False
     if not any(
-        any(name.endswith(s) for s in suffixes) for name in os.listdir(dirpath)
+        any(name.endswith(s) for s in ext) for name in os.listdir(dirpath)
         if os.path.isfile(os.path.join(dirpath, name))
     ):
         return False

@@ -19,7 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Overfit test on a single data block.'''
+'''
+Overfit test routine that builds a single-block dataspec and trains a \
+minimal model until convergence.
+'''
 
 # standard imports
 import os
@@ -33,7 +36,7 @@ import landseg.training as training
 import landseg.utils as utils
 
 def overfit_test(config: omegaconf.DictConfig) -> None:
-    '''Overfit test on a single data block.'''
+    '''Run an overfit test using a single prepared data block.'''
 
     # create a logger at dedicated folder
     test_dir = os.path.join(config['exp_root'], 'results/overfit_test')
@@ -65,7 +68,7 @@ def _single_block_dataspecs(
     test_dir: str,
     logger: utils.Logger
 ) -> dataset.DataSpecs:
-    '''Manually generate a `DataSpecs` instance from a signle block.'''
+    '''Create dataspecs from a single test block.'''
 
     # load world grid
     world_grid = grid.prep_world_grid(config.extent, config.grid, logger)

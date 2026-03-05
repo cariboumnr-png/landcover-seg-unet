@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for landseg.cli.
+Top-level namespace for `landseg.cli`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
