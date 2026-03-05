@@ -20,15 +20,13 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
-'''Batch pipeline callbacks.'''
+'''Train phase callback class.'''
 
 # local imports
 import landseg.training.callback as callback
 
 class TrainCallback(callback.Callback):
-    '''
-    Training pipeline: parse - forward - compute loss - backward - step.
-    '''
+    '''Training: parse - forward - compute loss - backward - step.'''
 
     def on_train_epoch_begin(self, epoch: int) -> None:
         model = self.trainer.comps.model

@@ -22,14 +22,14 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-many-public-methods
 # pylint: disable=unused-argument
-'''Base class for callbacks.'''
+'''Base class for trainer callbacks.'''
 
 # local imports
 import landseg.training.common as common
 import landseg.utils as utils
 
 class Callback:
-    '''Base class for callbacks. Subclass to implement behaviors'''
+    '''Base class for callbacks; subclass to implement behaviors.'''
 
     def __init__(self, logger: utils.Logger):
         self._trainer: common.TrainerLike | None = None

@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Compose a list of callback classes.'''
+'''Compose a list of callback classes in sequence for the trainer.'''
 
 # standard imports
 import dataclasses
@@ -30,7 +30,7 @@ import landseg.utils as utils
 
 @dataclasses.dataclass
 class CallbackSet:
-    '''Wrapper for concrete callback classes.'''
+    '''Collection of callback class contracts.'''
     train: common.TrainerCallbackLike
     validate: common.ValCallbackLike
     infer: common.InferCallbackLike
@@ -41,7 +41,7 @@ class CallbackSet:
         return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
 def build_callbacks(logger: utils.Logger) -> CallbackSet:
-    '''Public API'''
+    '''Factory to generate a set of callback class instances.'''
 
     return CallbackSet(
         train=callback.TrainCallback(logger),

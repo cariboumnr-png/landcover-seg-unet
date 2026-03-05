@@ -20,15 +20,13 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
-'''Batch pipeline callbacks.'''
+'''Validation phase callback class.'''
 
 # local imports
 import landseg.training.callback as callback
 
 class ValCallback(callback.Callback):
-    '''
-    Validation pipeline: parse - forward - compute metrics.
-    '''
+    '''Validation pipeline: parse - forward - compute metrics.'''
 
     def on_validation_begin(self) -> None:
         model = self.trainer.comps.model

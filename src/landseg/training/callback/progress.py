@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
-'''Progress increments'''
+'''Progress increments callback class.'''
 
 # local imports
 import landseg.training.callback as callback

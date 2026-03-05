@@ -26,9 +26,7 @@
 import landseg.training.callback as callback
 
 class InferCallback(callback.Callback):
-    '''
-    Inference pipeline: parse -> forward -> collect outputs (optional).
-    '''
+    '''Inference: parse -> forward -> collect outputs (optional).'''
 
     def on_inference_begin(self) -> None:
         model = self.trainer.comps.model
