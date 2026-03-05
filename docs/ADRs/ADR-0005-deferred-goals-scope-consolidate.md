@@ -1,6 +1,6 @@
 # ADR‑0005 — Consolidation of Deferred Goals & Scope Update
-**Status:** Proposed
-**Date:** 2026‑02‑22
+- **Status:** Proposed
+- **Date:** 2026‑02‑22
 
 ## Context
 ADR‑0002/0003/0004 introduced several intentions that remain partially or

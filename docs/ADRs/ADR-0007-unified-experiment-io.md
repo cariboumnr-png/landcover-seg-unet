@@ -1,6 +1,7 @@
 # ADR‑0007 — Unified Experiment‑Level I/O Structure
-**Status:** Accepted
-**Date:** 2026‑03-02
+- **Status:** Accepted
+- **Date:** 2026‑03-02
+- **Updated:** 2026‑03-02
 
 ## Context
 The project currently scatters I/O across several locations (root‑level logs, user‑configured cache paths, checkpoints in experiment configs). This makes experiments harder to isolate, archive, and reproduce.

@@ -1,7 +1,7 @@
 # ADR‑0002 — Grid‑Keyed Dataset Caching & Catalog
-**Status:** Accepted
-**Date:** 2026‑02‑10
-**Updated:** 2026‑02‑22
+- **Status:** Accepted
+- **Date:** 2026‑02‑10
+- **Updated:** 2026‑02‑22
 
 ## 1. Context
 The original intent of this ADR was to introduce a unified, reproducible

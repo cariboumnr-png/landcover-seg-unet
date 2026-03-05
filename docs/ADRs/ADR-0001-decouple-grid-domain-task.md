@@ -1,5 +1,4 @@
 # ADR‑0001 — Decouple Grid, Domain, and Task
-
 - **Status:** Accepted
 - **Date:** 2026‑02‑10
 - **Version:** v1

@@ -1,6 +1,7 @@
 # ADR‑0008: Knob Inventory & Control Surface
-**Status:** Accepted (pre‑work for [ADR‑0009](./ADR-0008-knob-inventory-control-surface.md))
-**Date:** 2026‑03-05
+- **Status:** Accepted (pre‑work for [ADR‑0009](./ADR-0008-knob-inventory-control-surface.md))
+- **Date:** 2026‑03-02
+- **Updated:** 2026‑03-05
 
 ## Context
 

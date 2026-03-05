@@ -1,7 +1,7 @@
 # ADR‑0003 — Tile Summaries & Reporting
-**Status:** Accepted
-**Date:** 2026‑02‑10
-**Updated:** 2026‑02‑22
+- **Status:** Accepted
+- **Date:** 2026‑02‑10
+- **Updated:** 2026‑02‑22
 
 ## 1. Context
 This ADR proposed standardizing **per‑tile** and **per‑AOI** EDA/QA summaries:

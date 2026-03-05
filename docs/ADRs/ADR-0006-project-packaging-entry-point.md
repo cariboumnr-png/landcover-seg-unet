@@ -1,8 +1,7 @@
 # ADR‑0006 — Packaging & Entry Points
-
-**Status:** Accepted
-**Date:** 2026‑02‑22
-**Updated:** 2026‑02‑23
+- **Status:** Accepted
+- **Date:** 2026‑02‑22
+- **Updated:** 2026‑02‑23
 
 ## 1. Context
 

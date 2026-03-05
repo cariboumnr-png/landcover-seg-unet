@@ -1,4 +1,3 @@
-
 # Multi-Modal Landcover Classification Framework
 
 A modular, reproducible deep-learning framework for pixel‑level landcover mapping.
@@ -120,8 +119,8 @@ root/src/landseg
 ├── configs/            # hydra config tree shipped with package
 │
 └── cli/                # CLI scripts
-│   ├── main.py         <- module API
-│   ├── end_to_end.py
+    ├── main.py         <- module API
+    ├── end_to_end.py
     └── overfit_test.py
 ```
 ## ⚙️ Current WorkFlow
@@ -180,12 +179,23 @@ The dataprep pipeline:
 
 ## Contributing
 
-The project is currently in an experimental phase. Module APIs, directory
-layout, and CLI behavior may change. Contributions should target research usability unless aligned with an accepted ADR defining a stable interface.
+This project is currently in an experimental phase. Module APIs, directory
+layout, and CLI behavior may change as the design evolves. Contributions
+should focus on research usability unless aligned with an accepted
+Architecture Decision Record (ADR) that defines a stable interface.
 
 > **Note:**
->Please see active ADRs for the current project direction.
+> Please review the active ADRs to understand the current direction and
+> architectural assumptions of this project.
+
 ---
 
 ## License
-To be determined.
+
+This project is licensed under the **Apache License, Version 2.0**.
+See the `LICENSE` file for full terms and the `NOTICE` file for required
+attribution.
+
+© His Majesty the King in right of Ontario,
+as represented by the Minister of Natural Resources, 2026.
+© King's Printer for Ontario, 2026.

@@ -1,6 +1,7 @@
 # ADR‑0009: Introduce a Built‑In “Overfit Test” Profile
-**Status:** Accepted
-**Date:** 2026‑03-05
+- **Status:** Accepted
+- **Date:** 2026‑03-02
+- **Updated:** 2026‑03-05
 
 > this ADR is pratically combined with [ADR-0008](./ADR-0008-knob-inventory-control-surface.md) during implementation.
 ## Context
