@@ -169,12 +169,12 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     '''
 
     def __init__(
-            self,
-            blks_dict: dict[str, str],
-            blk_cfg: BlockConfig,
-            logger: utils.Logger,
-            **kwargs
-        ):
+        self,
+        blks_dict: dict[str, str],
+        blk_cfg: BlockConfig,
+        logger: utils.Logger,
+        **kwargs
+    ):
         '''
         Initialize the dataset over multiple data blocks (.npz files).
 
@@ -321,12 +321,12 @@ class _BlockDataset(torch.utils.data.Dataset):
     '''
 
     def __init__(
-            self,
-            block_fpath: str,
-            block_config: BlockConfig,
-            logger: utils.Logger,
-            block_domain: dict[str, int | list[float] | None]
-        ):
+        self,
+        block_fpath: str,
+        block_config: BlockConfig,
+        logger: utils.Logger,
+        block_domain: dict[str, int | list[float] | None]
+    ):
         '''
         Initialize the per-block dataset and patchify arrays.
 

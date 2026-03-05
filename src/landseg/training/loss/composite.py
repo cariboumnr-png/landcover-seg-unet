@@ -19,7 +19,19 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Composite loss calculation manager.'''
+'''
+Composite loss manager for combining multiple primitive loss functions.
+
+This module provides a flexible interface for constructing weighted
+combinations of primitive loss types (e.g., focal, dice) based on a user
+configuration. Each component loss must implement the PrimitiveLoss
+interface and is instantiated from a small registry of supported types.
+
+The main entry point is `CompositeLoss`, which handles:
+    - Instantiating individual loss modules,
+    - Managing their per-component weights,
+    - Computing a weighted sum of all enabled losses
+'''
 
 # third-party imports
 import torch
@@ -27,26 +39,70 @@ import torch.nn
 # local imports
 import landseg.training.loss as loss
 
+# --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
-    '''doc'''
+    '''
+    Combine multiple loss components into a weighted composite loss.
 
-    # class-level flexible registry of supported loss types
-    registry = {
-            "focal": loss.FocalLoss,
-            "dice": loss.DiceLoss,
-    }
+    Supported loss types are defined in the class-level `registry`.
+    Configuration is provided as a dictionary describing which loss
+    components to enable and the parameters for each.
+
+    Example:
+        Base configuration enabling focal + dice losses:
+
+            sample_config = {
+                "focal": {
+                    "weight": 0.7,
+                    "alpha": None,
+                    "gamma": 2.0,
+                    "reduction": "mean",
+                },
+                "dice": {
+                    "weight": 0.3,
+                    "smooth": 1.0,
+                }
+            }
+
+        Create a composite loss manually:
+        >>> from landseg.training import loss
+        >>> sample_class = loss.CompositeLoss(sample_config, 255)
+
+        When used via `build_headlosses`, per-head a values for
+        focal loss are injected dynamically from head specifications.
+
+    Each enabled component is instantiated, stored in a ModuleList, and
+    evaluated during the forward pass.
+    '''
 
     def __init__(
-            self,
-            config: dict,
-            ignore_index: int
-        ):
+        self,
+        config: dict,
+        ignore_index: int
+    ):
         '''
+        Initialize the composite loss from a configuration dictionary.
+
+        Creates:
+            - self.losses: a ModuleList of instantiated loss functions.
+            - self.weights: parallel list of scalar weights for each
+              component loss.
+
         Args:
-            config (dict): Specifies loss types and their parameters.
+            config: Dictionary mapping loss-type names to their parameter
+                blocks. Must satisfy `loss.is_loss_types(...)`.
+            ignore_index: Label index to ignore in all component losses
+                that support masking of invalid or void labels.
         '''
 
         super().__init__()
+
+        # flexible registry of supported loss types
+        registry = {
+            "focal": loss.FocalLoss,
+            "dice": loss.DiceLoss,
+        }
+
         # type check input config
         if loss.is_loss_types(config):
             self.cfgs = config
@@ -64,7 +120,7 @@ class CompositeLoss(torch.nn.Module):
         focal = self.cfgs.get('focal', None)
         if focal is not None:
             weight = focal['weight']
-            loss_fn = self.registry['focal'](
+            loss_fn = registry['focal'](
                 alpha=focal['alpha'],
                 gamma=focal['gamma'],
                 reduction=focal['reduction'],
@@ -77,7 +133,7 @@ class CompositeLoss(torch.nn.Module):
         dice = self.cfgs.get('dice', None)
         if dice is not None:
             weight = dice['weight']
-            loss_fn = self.registry['dice'](
+            loss_fn = registry['dice'](
                 smooth=dice['smooth'],
                 ignore_index=ignore_index
                 )
@@ -86,12 +142,25 @@ class CompositeLoss(torch.nn.Module):
             self.weights.append(weight)
 
     def forward(
-            self,
-            p: torch.Tensor,
-            t: torch.Tensor,
-            **kwargs
-        ) -> torch.Tensor:
-        '''Compute combined loss with NaN/Inf check before output.'''
+        self,
+        p: torch.Tensor,
+        t: torch.Tensor,
+        **kwargs
+    ) -> torch.Tensor:
+        '''
+        Compute the weighted sum of all enabled loss components.
+
+        Args:
+            p: Model logits or predictions.
+            t: Target labels with a shape compatible with `p`.
+            masks: Optional dictionary of masks passed to each loss
+                component (keyword-only argument).
+
+        Returns:
+            A scalar tensor representing the total loss across all
+            components. NaN/Inf propagation is controlled by relying on
+            each primitive loss implementation.
+        '''
 
         # get mask
         masks = kwargs.get('masks', None)

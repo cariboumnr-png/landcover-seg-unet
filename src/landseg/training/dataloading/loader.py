@@ -19,7 +19,20 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Get dataloaders'''
+'''
+Utilities for constructing training/validation/test dataloaders.
+
+This module prepares:
+    - Block-based datasets backed by MultiBlockDataset,
+    - Mode-specific configurations for train/val/test/single-block use,
+    - Optional in-memory preload and caching decisions based on system
+      memory,
+    - A custom collate function supporting labeled and unlabeled splits,
+    - A small metadata bundle shipped with the dataloaders.
+
+The main entry point is `get_dataloaders`, returning a structured
+DataLoaders object containing train/val/test loaders and metadata.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -57,7 +70,29 @@ def get_dataloaders(
     loader_config: alias.ConfigType,
     logger: utils.Logger,
 ) -> DataLoaders:
-    '''Entry to the module, returns two dataloaders for training.'''
+    '''
+    Build dataloaders based on dataset metadata and configuration.
+
+    Args:
+        data_specs: Dataset specification containing block paths, domain
+            information, split definitions, and global metadata.
+        loader_config: Configuration describing batch size, block/patch
+            size, and dataloading behaviour (shuffle, caching, etc.).
+        logger: Base logger used to create a child logger for logging.
+
+    Returns:
+        A `DataLoaders` instance containing:
+            - train: DataLoader for training blocks,
+            - val:   DataLoader for validation blocks,
+            - test:  DataLoader for test blocks (or None),
+            - meta:  Small metadata bundle (see `_Meta`).
+
+    Notes:
+        - In single-block mode, a single loader is built and reused for
+          both train and val.
+        - Preload and caching decisions are computed dynamically based
+          on available system memory.
+    '''
 
     # get a child from the base logger
     logger = logger.get_child('dldrs')
@@ -99,8 +134,7 @@ def _load(
     # mode sanity check
     assert mode in ['train', 'val', 'test', 'single']
 
-    # prepare dataset by mode
-    # dataset path registry
+    # fetch data blocks by mode
     data_blocks_registry = {
         'train': data_specs.splits.train,
         'val': data_specs.splits.val,
@@ -142,7 +176,7 @@ def _mode_configurator(
 ):
     '''Configure dataloading by mode.'''
 
-    # domain registry
+    # fetch domain by mode
     domains_registry = {
         'train': data_specs.domains.train,
         'val': data_specs.domains.val,
@@ -158,11 +192,11 @@ def _mode_configurator(
     else:
         patch_size = loader_cfg.get_option('patch_size')
     return dataloading.BlockConfig(
-        block_size,
-        patch_size,
-        mode == 'train',
-        domain['ids_domain'] if domain else None,
-        domain['vec_domain'] if domain else None
+        block_size=block_size,
+        patch_size=patch_size,
+        augment_flip=mode == 'train',
+        ids_domain=domain['ids_domain'] if domain else None,
+        vec_domain=domain['vec_domain'] if domain else None
     )
 
 def _preload_option(data_specs: core.DataSpecsLike) -> dict[str, int | bool]:
@@ -214,9 +248,9 @@ def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
     Customized collate function to properly stack a batch.
 
     Contract per split:
-      - Labeled split: every y is [ps, ps] (long) -> stacked to [B, ps, ps]
-      - Unlabeled split: every y is empty tensor -> stacked to [B, 0] (long)
-      - Domain: all items share the same keys; each value stacks to [B, ...]
+      - Labeled: every y is [ps, ps] (long) -> stacked to [B, ps, ps]
+      - Unlabeled: every y is empty tensor -> stacked to [B, 0] (long)
+      - Domain: all items share the same keys; each stacks to [B, ...]
     '''
 
     # unpack batch as a list

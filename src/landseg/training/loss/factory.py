@@ -19,12 +19,27 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Module entry: build head loss components for trainer.'''
+'''
+Utilities for constructing per-head composite loss functions.
+
+This module builds loss components for each prediction head defined in a
+multi-task model. It provides:
+
+    - HeadLosses: a typed wrapper around a mapping of head names to
+      CompositeLoss instances.
+    - build_headlosses: factory that instantiates and configures
+      CompositeLoss objects per head, including per-head a parameters
+      for focal loss.
+
+Used by the trainer to supply consistent, per-head loss computation
+objects.
+'''
 
 # local imports
 import landseg.training.common as common
 import landseg.training.loss as loss
 
+# --------------------------------Public  Class--------------------------------
 class HeadLosses:
     '''
     Typed wrapper around a mapping of heads to `CompositeLoss` objects.
@@ -51,16 +66,36 @@ class HeadLosses:
         '''Return a shallow copy of the mapping as `dict[str, Spec]`.'''
         return dict(self._specs)
 
-# Public API
+# -------------------------------Public Function-------------------------------
 def build_headlosses(
         headspecs: common.HeadSpecsLike,
         config: dict[str, dict],
         ignore_index: int
     ) -> HeadLosses:
     '''
-    Generate indexed concrete `CompositeLoss` instances by given names.
+    Construct a mapping of head names to configured `CompositeLoss`
+    instances.
 
-    Note head names and loss config dicts need to be aligned.
+    Args:
+        headspecs A structure describing the model's prediction heads,
+            including each head's name and its loss-specific parameters
+            (e.g., per-head a values for focal loss).
+        config: Base loss configuration shared across heads. Each enabled
+            loss type must have its configuration block under a name
+            matching those used by `CompositeLoss.registry`. This
+            dictionary is modified per head if focal a values are
+            provided.
+        ignore_index: Label index to exclude from all loss computations.
+
+    Returns:
+        A `HeadLosses` container, providing typed access to the concrete
+        `CompositeLoss` objects keyed by head name.
+
+    Notes:
+        - If focal loss is enabled, its a parameter is replaced for each
+          head using values from `headspecs`.
+        - The function expects alignment between head names and the
+          configuration dictionary.
     '''
 
     loss_dict: dict[str, loss.CompositeLoss] = {}
@@ -76,18 +111,3 @@ def build_headlosses(
         loss_cls = loss.CompositeLoss(config, ignore_index)
         loss_dict[name] = loss_cls
     return HeadLosses(loss_dict)
-
-#
-sample_config = {
-    'focal': {
-        'weight': 0.7,
-        'alpha': None,
-        'gamma': 2.0,
-        'reduction': 'mean',
-    },
-    'dice': {
-        'weight': 0.3,
-        'smooth': 1.0,
-    }
-}
-sample_class = loss.CompositeLoss(sample_config, 255)

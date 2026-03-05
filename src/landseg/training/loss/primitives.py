@@ -19,7 +19,18 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Loss calculation math blocks.'''
+'''
+Loss computation blocks for segmentation models.
+
+Currently provides implementations of:
+    - FocalLoss: multi-class focal loss with ignore-index and optional
+      per-pixel masking.
+    - DiceLoss: soft Dice loss with weighted pixels and safe
+      ignore-index handling.
+
+Also includes a helper for constructing per-pixel weight maps from
+user-provided masks and ignore-index rules.
+'''
 
 # third-party imports
 import torch
@@ -30,27 +41,36 @@ import landseg.training.loss as loss
 
 # --------------------------------Public  Class--------------------------------
 class FocalLoss(loss.PrimitiveLoss):
-    '''Multi-class focal loss with proper ignore_index handling.'''
+    '''
+    Multi-class focal loss supporting per-pixel weights and ignore_index.
+
+    The loss operates on per-pixel logits, optionally reweights pixels
+    through a mask dictionary, and applies the standard focal formulation:
+
+        FL = - a_t * (1 - p_t) ^ y * log(p_t)
+
+    where a_t is class weighting (optional) and y controls focus on hard
+    examples.
+    '''
 
     def __init__(
-            self,
-            alpha: list[float] | None,
-            gamma: float,
-            reduction: str,
-            ignore_index: int
-        ):
+        self,
+        alpha: list[float] | None,
+        gamma: float,
+        reduction: str,
+        ignore_index: int
+    ):
         '''
-        Docstring for __init__
+        Initialize a multi-class focal loss module.
 
-        :param self: Description
-        :param alpha: Description
-        :type alpha: list[float] | None
-        :param gamma: Description
-        :type gamma: float
-        :param reduction: Description
-        :type reduction: str
-        :param ignore_index: Description
-        :type ignore_index: int
+        Args:
+            alpha: Optional list of per-class weights. If None, all classes
+                receive equal weight.
+            gamma: Focal exponent controlling down-weighting of easy
+                samples.
+            reduction: One of {'mean', 'sum', 'none'}, applied after
+                masking.
+            ignore_index: Label to exclude entirely from loss compute.
         '''
         super().__init__()
         self.alpha = alpha
@@ -65,7 +85,18 @@ class FocalLoss(loss.PrimitiveLoss):
             *,
             masks: dict[float, torch.Tensor] | None
         ) -> torch.Tensor:
-        '''Forward.'''
+        '''
+        Compute focal loss over valid pixels.
+
+        Args:
+            logits: Tensor of shape [B, C, H, W], raw class logits.
+            targets: Tensor of shape [B, H, W], integer class labels.
+            masks: Optional dict mapping weights (floats in [0,1]) to
+                bool/float masks selecting which pixels to down-weight.
+
+        Returns:
+            A scalar loss tensor (after reduction).
+        '''
 
         # logits: [B, C, H, W]
         # targets: [B, H, W]
@@ -127,9 +158,29 @@ class FocalLoss(loss.PrimitiveLoss):
         return weighted
 
 class DiceLoss(loss.PrimitiveLoss):
-    '''Dice loss.'''
+    '''
+    Multi-class soft Dice loss with ignore-index and optional masks.
 
-    def __init__(self, smooth: float, ignore_index: int):
+    Computes per-class Dice scores from softmax probabilities and returns
+    1 - mean(Dice). Supports weighted pixels through the mask mechanism.
+    '''
+
+    def __init__(
+        self,
+        smooth: float,
+        ignore_index: int
+    ):
+        '''
+        Initialize the Dice loss module.
+
+        Args:
+            smooth: Small constant added to the numerator and denominator
+                to stabilize division, especially when masks or classes
+                have zero foreground.
+            ignore_index: Label to exclude completely from Dice compute.
+                Pixels with this label receive zero weight and do not
+                contribute to intersection or union.
+        '''
         super().__init__()
         self.smooth = smooth
         self.ignore_index = ignore_index
@@ -141,7 +192,18 @@ class DiceLoss(loss.PrimitiveLoss):
             *,
             masks: dict[float, torch.Tensor] | None
         ) -> torch.Tensor:
-        '''Forward.'''
+        '''
+        Compute soft Dice loss across classes.
+
+        Args:
+            logits: Tensor [B, C, H, W], class logits.
+            targets: Tensor [B, H, W], ground-truth labels.
+            masks: Optional pixel-weight masks combined into a single
+                per-pixel weight map.
+
+        Returns:
+            A scalar tensor containing the Dice loss (1 - mean Dice).
+        '''
 
         # get per-pixel weights
         w = _compose_pixel_weights(
@@ -185,20 +247,22 @@ class DiceLoss(loss.PrimitiveLoss):
 
 # ------------------------------private  function------------------------------
 def _compose_pixel_weights(
-        *,
-        masks: dict[float, torch.Tensor] | None,
-        targets: torch.Tensor,
-        ignore_index: int | None,
-        device: torch.device,
-        dtype: torch.dtype
-
-    ) -> torch.Tensor:
+    *,
+    masks: dict[float, torch.Tensor] | None,
+    targets: torch.Tensor,
+    ignore_index: int | None,
+    device: torch.device,
+    dtype: torch.dtype
+) -> torch.Tensor:
     '''
-    Build a per-pixel weight map in [0, 1].
-    - Starts at 1.0 everywhere.
-    - For each (w_i, m_i) in mask, sets weight to
-        min(current, clamp(w_i, 0, 1)) where m_i is True.
-    - Pixels at ignore_index are forced to 0.
+    Construct a per-pixel weight map in [0, 1].
+
+    Behavior:
+        - Start with weight 1.0 for all pixels.
+        - For each (w_i, mask_i), update weights:
+              weight[pixel] = min(weight, clamp(w_i, 0, 1))
+          where mask_i is True.
+        - Pixels at ignore_index receive weight 0.
     '''
 
     # init weight tensor aligned with the targets

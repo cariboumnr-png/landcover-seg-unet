@@ -38,6 +38,7 @@ import landseg.domain as domain
 import landseg.grid as grid
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def load_data(
     config: omegaconf.DictConfig,
     logger: utils.Logger

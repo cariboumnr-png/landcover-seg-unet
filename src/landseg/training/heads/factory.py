@@ -58,10 +58,19 @@ class HeadSpecs:
 
 # Public API
 def build_headspecs(
-        data: core.DataSpecsLike,
-        config: alias.ConfigType
-    ) -> HeadSpecs:
-    '''Generate concreate head specs classes indexed by head name.'''
+    data: core.DataSpecsLike,
+    config: alias.ConfigType
+) -> HeadSpecs:
+    '''
+    Generate concreate head specs classes indexed by head name.
+
+    Args:
+        data: Object matching the shape of `.dataset.DataSpecs`.
+        config: `ConfigType` with loss alpha calculation parameters.
+
+    Return:
+        HeadSpecs: Per-head specification at runtime.
+    '''
 
     # config accesor
     cfg = utils.ConfigAccess(config)
@@ -82,7 +91,7 @@ def build_headspecs(
     # iterate heads in data and create headspec for each
     headspecs_dict: dict[str, heads.Spec] = {}
     for name, counts in data.heads.class_counts.items():
-        headspec =  heads.Spec(
+        headspec = heads.Spec(
             name=name,
             count=counts,
             loss_alpha=alpha_fn_registry[alpha_fn](list(counts), **fn_kwargs),
@@ -92,7 +101,7 @@ def build_headspecs(
             exclude_cls=()
         )
         headspecs_dict[name] = headspec
-
+    # return
     return HeadSpecs(headspecs_dict)
 
 def _count_to_inv_weights(count: list[int]) -> list[float]:

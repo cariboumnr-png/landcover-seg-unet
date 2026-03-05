@@ -298,16 +298,18 @@ def _get_domain(
     val_fpath=schema['splits']['val_blocks']['fpath']
     test_fpath=schema['splits']['test_blocks'].get('fpath', None)
 
-    # max id and number of pca axes
-    max_ids = ids_domain.max_id if ids_domain else 0
-    vec_dim = vec_domain.n_pca_ax if vec_domain else 0
-
     # format domains
     train_domain = __parse_domain(train_fpath, ids_domain, vec_domain)
     val_domain = __parse_domain(val_fpath, ids_domain, vec_domain)
     test_domain = __parse_domain(test_fpath, ids_domain, vec_domain)
 
-    return _Domains(train_domain, val_domain, test_domain, max_ids, vec_dim)
+    return _Domains(
+        train=train_domain,
+        val=val_domain,
+        test=test_domain,
+        ids_max=ids_domain.max_id if ids_domain else -1,
+        vec_dim=vec_domain.n_pca_ax if vec_domain else 0
+    )
 
 def __parse_domain(
     blocks_fpath: str | None,

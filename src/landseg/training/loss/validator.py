@@ -19,7 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Loss config validation type guard.'''
+'''
+Type guards and TypedDict definitions for validating composite loss
+configuration. Ensures focal and dice loss blocks follow expected
+schemas before constructing CompositeLoss modules.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -27,26 +31,26 @@ import typing
 
 # ---------------------------------Public Type---------------------------------
 class LossTypes(typing.TypedDict, total=False):
-    '''Composite config for composite loss.'''
+    '''Typed composite loss config supporting focal and dice entries.'''
     focal: _FocalConfig
     dice: _DiceConfig
 
 # --------------------------------private  type--------------------------------
 class _FocalConfig(typing.TypedDict):
-    '''Parameters needed for focal loss.'''
+    '''TypedDict schema for focal loss parameters.'''
     weight: float
     alpha: list[float] | None
     gamma: float
     reduction: str
 
 class _DiceConfig(typing.TypedDict):
-    '''Parameters needed for dice loss.'''
+    '''TypedDict schema for dice loss parameters.'''
     weight: float
     smooth: float
 
 # -------------------------------Public Function-------------------------------
 def is_loss_types(cfg: dict) -> typing.TypeGuard[LossTypes]:
-    '''Loss config validation. Grows with according TypedDict.'''
+    '''Validate loss config against supported TypedDict schemas.'''
 
     # current types: focal, dice
     has_focal = False
@@ -60,6 +64,7 @@ def is_loss_types(cfg: dict) -> typing.TypeGuard[LossTypes]:
     return has_focal or has_dice
 
 def _is_focal(d: dict | None) -> bool:
+    '''Check whether dict matches focal-loss parameter schema.'''
     if d is None:
         return False
     return (
@@ -70,6 +75,7 @@ def _is_focal(d: dict | None) -> bool:
     )
 
 def _is_dice(d: dict | None) -> bool:
+    '''Check whether dict matches dice-loss parameter schema.'''
     if d is None:
         return False
     return (
@@ -78,6 +84,7 @@ def _is_dice(d: dict | None) -> bool:
     )
 
 def _is_alpha(a: list | None) -> bool:
+    '''Validate a as None or a list of float values.'''
     # can be a list of float or just None
     return (
         a is None or

@@ -44,22 +44,22 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import PrimitiveLoss
     from .composite import CompositeLoss
-    from .primitives import DiceLoss, FocalLoss
     from .factory import build_headlosses
+    from .primitives import DiceLoss, FocalLoss
     from .validator import is_loss_types
 
 
 def __getattr__(name: str):
 
-    if name == 'PrimitiveLoss':
-        return importlib.import_module('.base', __package__).PrimitiveLoss
-    if name == 'CompositeLoss':
-        return importlib.import_module('.composite', __package__).CompositeLoss
-    if name in ('DiceLoss', 'FocalLoss'):
+    if name in ['PrimitiveLoss']:
+        return getattr(importlib.import_module('.base', __package__), name)
+    if name in ['CompositeLoss']:
+        return getattr(importlib.import_module('.composite', __package__), name)
+    if name in ['build_headlosses']:
+        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in ['DiceLoss', 'FocalLoss']:
         return getattr(importlib.import_module('.primitives', __package__), name)
-    if name == 'build_headlosses':
-        return importlib.import_module('.factory', __package__).build_headlosses
-    if name == 'is_loss_types':
-        return importlib.import_module('.validator', __package__).is_loss_types
+    if name in ['is_loss_types']:
+        return getattr(importlib.import_module('.validator', __package__), name)
 
     raise AttributeError(name)
