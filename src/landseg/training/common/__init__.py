@@ -16,7 +16,6 @@ __all__ = [
     'CallBacksLike',
     'CompositeLossLike',
     'DataLoadersLike',
-    'DataSpecsLike',
     'HeadLossesLike',
     'HeadMetricsLike',
     'HeadSpecsLike',
@@ -36,7 +35,6 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .dataset import DataSpecsLike
     from .trainer import TrainerLike
     from .trainer_comps import (
         CallBacksLike,
@@ -61,8 +59,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['DataSpecsLike']:
-        return getattr(importlib.import_module('.dataset', __package__), name)
     if name in ['TrainerLike']:
         return getattr(importlib.import_module('.trainer', __package__), name)
     if name in [

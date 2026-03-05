@@ -9,7 +9,7 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.alias as alias
-import landseg.training.common as common
+import landseg.core as core
 import landseg.training.dataloading as dataloading
 import landseg.utils as utils
 
@@ -32,7 +32,7 @@ class _LoaderMeta:
 
 # -------------------------------Public Function-------------------------------
 def get_dataloaders(
-    data_specs: common.DataSpecsLike,
+    data_specs: core.DataSpecsLike,
     loader_config: alias.ConfigType,
     logger: utils.Logger,
 ) -> DataLoaders:
@@ -70,7 +70,7 @@ def get_dataloaders(
 def _load(
     mode: str,
     loader_cfg: utils.ConfigAccess,
-    data_specs: common.DataSpecsLike,
+    data_specs: core.DataSpecsLike,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -117,7 +117,7 @@ def _load(
 def _mode_configurator(
     mode: str,
     loader_cfg: utils.ConfigAccess,
-    data_specs: common.DataSpecsLike
+    data_specs: core.DataSpecsLike
 ):
     '''Configure dataloading by mode.'''
 
@@ -144,7 +144,7 @@ def _mode_configurator(
         domain['vec_domain'] if domain else None
     )
 
-def _preload_option(data_specs: common.DataSpecsLike) -> dict[str, int | bool]:
+def _preload_option(data_specs: core.DataSpecsLike) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary

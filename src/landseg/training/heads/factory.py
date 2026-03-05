@@ -4,6 +4,7 @@
 import numpy
 # local imports
 import landseg.alias as alias
+import landseg.core as core
 import landseg.training.common as common
 import landseg.training.heads as heads
 import landseg.utils as utils
@@ -36,7 +37,7 @@ class HeadSpecs:
 
 # Public API
 def build_headspecs(
-        data: common.DataSpecsLike,
+        data: core.DataSpecsLike,
         config: alias.ConfigType
     ) -> HeadSpecs:
     '''Generate concreate head specs classes indexed by head name.'''
