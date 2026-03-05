@@ -52,7 +52,8 @@ def build_a_block(
         except ValueError: # likely an empty window for the rasters
             i += 1
             continue
-        if block.meta['valid_pixel_ratio']['block'] >= 0.8:
+        if block.meta['valid_pixel_ratio']['block'] >= 0.8 and \
+            all(block.meta['label_count']['layer1']):
             logger.log('INFO', f'Fetched a valid block at coord: {coords[i]}')
             # normalize
             block.data.image_normalized = numpy.empty_like(block.data.image)

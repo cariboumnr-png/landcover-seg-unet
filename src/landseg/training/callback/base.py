@@ -10,23 +10,25 @@ import landseg.utils as utils
 class Callback:
     '''Base class for callbacks. Subclass to implement behaviors'''
 
-    def __init__(self, logger: utils.Logger) -> None:
+    def __init__(self, logger: utils.Logger):
         self._trainer: common.TrainerLike | None = None
         self.train_logger = logger.get_child('train')
         self.valdn_logger = logger.get_child('valdn')
+        self.skip_log = False
 
-    def setup(self, trainer: common.TrainerLike) -> None:
+    def setup(self, trainer: common.TrainerLike, skip_log: bool) -> None:
         if self._trainer is not None:
             raise RuntimeError("Callback.setup() called twice.")
         self._trainer = trainer
+        self.skip_log = skip_log
 
     def log_train(self, level: str, message: str) -> None:
         '''Centralized callback logging'''
-        self.train_logger.log(level, message)
+        self.train_logger.log(level, message, self.skip_log)
 
     def log_valdn(self, level: str, message: str) -> None:
         '''Centralized callback logging'''
-        self.valdn_logger.log(level, message)
+        self.valdn_logger.log(level, message, self.skip_log)
 
     # -----------------------------training phase-----------------------------
     def on_train_epoch_begin(self, epoch: int) -> None: ...

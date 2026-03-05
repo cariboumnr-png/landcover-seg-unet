@@ -27,7 +27,7 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     # overfit test settings
     config.models['conditioning']['mode'] = 'none'
     config.trainer['optim']['weight_decay'] = 0.0
-    config.trainer['runtime']['schedule']['val_every'] = None
+    config.trainer['runtime']['schedule']['log_every'] = 1
     config.trainer['runtime']['optimization']['grad_clip_norm'] = None
     config.trainer['loss']['types']['focal']['weight'] = 1.0
     config.trainer['loss']['types']['focal']['gamma'] = 0.0
@@ -39,11 +39,13 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
         'enable_val_la': False,
         'enable_test_la': False
     }
-    trainer.set_head_state(active_heads=['layer1'], excluded_cls={'layer1': (5, 6)})
 
-    # use trainer to run
+    # run trainer
+    trainer.set_head_state(['layer1'])
     for epoch in range(1, 3000):
-        trainer.train_one_epoch(epoch)
+        loss = trainer.train_one_epoch(epoch)['Total_Loss']
+        iou = trainer.validate()['layer1']['mean']
+        print(f'Epoch: {epoch:04d} | Train loss: {loss:4f} | Val IoU: {iou:4f}')
 
     # remove test block
     os.remove('./overfit_test_block.npz')
