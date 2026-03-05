@@ -23,6 +23,30 @@ CMD = {
 def main(config: omegaconf.DictConfig) -> None:
     '''Main CLI entry point.'''
 
+    # resolve config
+    _config = _resolve_config(config)
+
+    # master logger
+    logger = utils.Logger('cli', os.path.join(_config['exp_root'], '.log'))
+
+    # run specified mode with exceptions handling
+    mode = _config['run_mode']
+    try:
+        logger.log('INFO', f'Run mode: {mode} start')
+        CMD[mode](_config)
+        logger.log('INFO', f'Run mode: {mode} finish')
+    # manual keyboard interruption
+    except KeyboardInterrupt:
+        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
+        sys.exit(130)
+    # capture others and log
+    except Exception: # pylint: disable=broad-exception-caught
+        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
+        sys.exit(1)
+
+def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
+    '''Resolve configs from difference sources.'''
+
     # safer CWD fetching
     original_cwd = hydra.utils.get_original_cwd()
 
@@ -46,21 +70,8 @@ def main(config: omegaconf.DictConfig) -> None:
                 config = typing.cast(omegaconf.DictConfig, merged)
     omegaconf.OmegaConf.resolve(config)
 
-    # master logger
-    logger = utils.Logger('cli', os.path.join(original_cwd, 'log.log'))
-
-    # run specified mode with exceptions handling
-    mode = config['run_mode']
-    try:
-        CMD[mode](config)
-    # manual keyboard interruption
-    except KeyboardInterrupt:
-        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
-        sys.exit(130)
-    # capture others and log
-    except Exception: # pylint: disable=broad-exception-caught
-        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
-        sys.exit(1)
+    # return
+    return config
 
 if __name__ == '__main__':
     main()

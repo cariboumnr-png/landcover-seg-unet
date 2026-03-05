@@ -14,14 +14,13 @@ import landseg.utils as utils
 def overfit_test(config: omegaconf.DictConfig) -> None:
     '''Overfit test on a single data block.'''
 
-    # create a centralized main logger
-    log_dir = os.path.join(config['exp_root'], 'results', 'overfit_test', 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-    t_stamp = utils.get_timestamp()
-    logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
+    # create a logger at dedicated folder
+    test_dir = os.path.join(config['exp_root'], 'results/overfit_test')
+    logger = utils.Logger('main', os.path.join(test_dir, 'test.log'))
 
     # create a single test block and derive dataspec for downstream
-    dataspecs = _mock_dataspecs(config, logger)
+    test_dir = os.path.join(config['exp_root'], 'results/overfit_test')
+    dataspecs = _mock_dataspecs(config, test_dir, logger)
 
     # build a trainer with minimal extras
     # overfit test settings
@@ -38,20 +37,18 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     # run trainer
     max_epoch = config['overfit_test_max_epoch']
     trainer.set_head_state(['layer1'])
-    print(f'Starting overfit test for maximum {max_epoch} epochs')
+    logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
     for epoch in range(1, max_epoch + 1):
         loss = trainer.train_one_epoch(epoch)['Total_Loss']
         iou = trainer.validate()['layer1']['mean']
-        print(f'Epoch: {epoch:04d} | Loss: {loss:4f} | IoU: {iou:4f}')
+        logger.log('INFO', f'Epoch: {epoch:04d} | Loss: {loss:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
-            print('Overfit reached - test complete')
+            logger.log('INFO', 'Overfit reached - test complete')
             break
-
-    # remove test block
-    os.remove('./overfit_test_block.npz')
 
 def _mock_dataspecs(
     config: omegaconf.DictConfig,
+    test_dir: str,
     logger: utils.Logger
 ) -> dataset.DataSpecs:
     '''Manually generate a `DataSpecs` instance from a signle block.'''
@@ -69,7 +66,7 @@ def _mock_dataspecs(
         build_a_block=True # ensure function returns a class instance
     )
     assert blk # typing sanity
-    blk.save('./overfit_test_block.npz')
+    blk.save(os.path.join(test_dir, 'overfit_test_block.npz'))
 
     # build a dataspec from schema dict (skipping dataset module)
     dspecs = dataset.build_empty_dataspec() # with dummy values
@@ -78,13 +75,13 @@ def _mock_dataspecs(
     dspecs.meta.dataset_name = blk.meta['block_name']
     dspecs.meta.img_ch_num = blk.data.image_normalized.shape[0]
     dspecs.meta.ignore_index = blk.meta['ignore_label']
-    # heads
+    # heads - all dummy values
     counts = blk.meta['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
     dspecs.heads.class_counts = cc
     dspecs.heads.logits_adjust = {k: [1.0] * len(v) for k, v in cc.items()}
     dspecs.heads.topology = _get_topology(blk.meta['label_count'])
-    # splits
+    # splits - same block for both training and validation
     dspecs.splits.train = {blk.meta['block_name']: './overfit_test_block.npz'}
     dspecs.splits.val = {blk.meta['block_name']: './overfit_test_block.npz'}
     # return
