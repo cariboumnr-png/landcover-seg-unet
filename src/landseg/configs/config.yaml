@@ -12,6 +12,8 @@ defaults:
   - experiment: demo
   - models: multihead
   - trainer: default
+  # profile:
+  - profile: end_to_end
 
 # experiment root
 exp_root: ./experiment

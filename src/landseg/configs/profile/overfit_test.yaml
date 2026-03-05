@@ -1,0 +1,23 @@
+models:
+  conditioning:
+    mode: 'none'
+
+trainer:
+  optim:
+    weight_decay: 0.0
+  loss:
+    types:
+      focal:
+        weight: 1.0
+        gamma: 0.0
+      dice:
+        weight: 0.0
+  runtime:
+    schedule:
+      max_epoch: 2000
+    monitor:
+      track_head_name: layer1
+    precision:
+      use_amp: False
+    optimization:
+      grad_clip_norm: 'none'

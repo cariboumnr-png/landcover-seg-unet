@@ -24,3 +24,11 @@ class BaseMultiheadModel(torch.nn.Module, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def reset_heads(self) -> None:
         '''Reset heads state.'''
+
+    @abc.abstractmethod
+    def set_logit_adjust_enabled(self, enabled: bool) -> None:
+        '''Enable/disable logit adjustment.'''
+
+    @abc.abstractmethod
+    def set_logit_adjust_alpha(self, alpha: float) -> None:
+        '''Set global logit adjustment scalar.'''

@@ -3,9 +3,9 @@
 # third-party imports
 import omegaconf
 # local imports
+import landseg.core as core
 import landseg.models as models
 import landseg.training.callback as callback
-import landseg.training.common as common
 import landseg.training.dataloading as dataloading
 import landseg.training.heads as heads
 import landseg.training.loss as loss
@@ -16,23 +16,15 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_trainer(
-    data_specs: common.DataSpecsLike,
+    data_specs: core.DataSpecsLike,
     config: omegaconf.DictConfig,
     logger: utils.Logger
  ) -> trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
     # setup the model
-    model = models.build_multihead_unet(
-        dataset_config={
-            'img_ch_num': data_specs.meta.img_ch_num,
-            'class_counts': data_specs.heads.class_counts,
-            'logits_adjust': data_specs.heads.logits_adjust,
-            'domain_ids_max': data_specs.domains.ids_max,
-            'domain_vec_dim': data_specs.domains.vec_dim
-        },
-        model_config=config.models
-    )
+    body = config.trainer.get('model_body', 'unet')
+    model = models.build_multihead_unet(body, data_specs, config.models)
 
     # compile data loaders
     data_loaders = dataloading.get_dataloaders(
@@ -84,4 +76,5 @@ def build_trainer(
     runtime_cfg = trainer.get_config(config.trainer.runtime)
 
     # build and return a trainer class
-    return trainer.MultiHeadTrainer(comps, runtime_cfg, device='cuda')
+    skip_log = config['profile'] == 'overfit_test'
+    return trainer.MultiHeadTrainer(comps, runtime_cfg, 'cuda', skip_log=skip_log)

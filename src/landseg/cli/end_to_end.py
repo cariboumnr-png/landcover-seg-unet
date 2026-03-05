@@ -1,13 +1,9 @@
-# pylint: disable=no-value-for-parameter
 '''End-to-end experiment.'''
 
 # standard imports
 import os
-import sys
 import typing
 # third-party imports
-import hydra
-import hydra.utils
 import omegaconf
 # local imports
 import landseg.controller as controller
@@ -15,33 +11,8 @@ import landseg.dataset as dataset
 import landseg.training as training
 import landseg.utils as utils
 
-# main process
-@hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
-def main(config: omegaconf.DictConfig) -> None:
-    '''End-to-end experiment.'''
-
-    # safer CWD fetching
-    original_cwd = hydra.utils.get_original_cwd()
-
-    # user settings at root
-    candidates = [os.path.join(original_cwd, 'settings.yaml')]
-    # optional dev settings (untracked, supplied via CLI argument)
-    aux = config.get('dev_settings_path')
-    if aux:
-        aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
-    candidates.append(aux)
-
-    # merging overrides with default config tree and resolve
-    for p in candidates:
-        if os.path.exists(p):
-            user_cfg = omegaconf.OmegaConf.load(p)
-            if not isinstance(user_cfg, omegaconf.DictConfig):
-                raise TypeError('./settings.yaml must have a mapping')
-            # allow new phases to be added
-            with omegaconf.open_dict(config.experiment.phases):
-                merged = omegaconf.OmegaConf.merge(config, user_cfg) # right wins
-                config = typing.cast(omegaconf.DictConfig, merged)
-    omegaconf.OmegaConf.resolve(config)
+def train_end_to_end(config: omegaconf.DictConfig) -> None:
+    '''End to end training'''
 
     # init experiment io folder tree
     exp_dir, log_dir = _init_exp_io(config)
@@ -50,27 +21,17 @@ def main(config: omegaconf.DictConfig) -> None:
     t_stamp = utils.get_timestamp()
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
-    # run exceptions handling
-    try:
-        # data preparation
-        data_specs = dataset.load_data(config, logger)
+    # data preparation
+    data_specs = dataset.load_data(config, logger)
 
-        # build trainer
-        trainer = training.build_trainer(data_specs, config, logger)
+    # build trainer
+    trainer = training.build_trainer(data_specs, config, logger)
 
-        # build controller
-        runner = controller.build_controller(trainer, config, exp_dir, logger)
+    # build controller
+    runner = controller.build_controller(trainer, config, exp_dir, logger)
 
-        # run via controller
-        runner.fit()
-    # manual keyboard interruption
-    except KeyboardInterrupt:
-        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
-        sys.exit(130)
-    # capture others and log
-    except Exception: # pylint: disable=broad-exception-caught
-        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
-        sys.exit(1)
+    # run via controller
+    runner.fit()
 
 def _init_exp_io(config: omegaconf.DictConfig) -> tuple[str, str]:
     '''Initialize experiment I/O folder tree and lazily check inputs.'''
@@ -132,7 +93,3 @@ def _check_file_types_in_dir(suffixes: tuple[str, ...], dirpath: str) -> bool:
     ):
         return False
     return True
-
-
-if __name__ == '__main__':
-    main()

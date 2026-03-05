@@ -48,7 +48,8 @@ class MultiHeadTrainer:
         self,
         components: trainer.TrainerComponents,
         config: trainer.RuntimeConfig,
-        device: str
+        device: str,
+        **kwargs
     ):
         '''
         Initialize trainer with components and configuration.
@@ -74,9 +75,13 @@ class MultiHeadTrainer:
         # init the runtime state
         self.state = self._init_state()
         # setup callback classes
-        self._setup_callbacks()
+        self._setup_callbacks(kwargs.get('skip_log', False))
         # init a flags dict
-        self.flags: dict[str, bool] = {}
+        self.flags: dict[str, bool] = {
+            'enable_train_la': False,
+            'enable_val_la': False,
+            'enable_test_la': False
+        }
 
 # -------------------------------Public  Methods-------------------------------
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
@@ -398,11 +403,11 @@ class MultiHeadTrainer:
         return state
 
     # ----- callback classes setup
-    def _setup_callbacks(self) -> None:
+    def _setup_callbacks(self, skip_log: bool) -> None:
         '''Pass current trainer instance to all callback classes.'''
 
         for callback in self.callbacks:
-            callback.setup(self)
+            callback.setup(self, skip_log)
 
     # ----- callback callers
     def _emit(self, hook: str, *args, **kwargs) -> None:

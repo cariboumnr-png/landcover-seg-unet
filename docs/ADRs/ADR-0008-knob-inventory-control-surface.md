@@ -1,6 +1,6 @@
-# ADR‑0009: Knob Inventory & Control Surface
-**Status:** Proposed (pre‑work for [ADR‑0008](./ADR-0008-knob-inventory-control-surface.md))
-**date:**2026‑03-02
+# ADR‑0008: Knob Inventory & Control Surface
+**Status:** Proposed (pre‑work for [ADR‑0009](./ADR-0008-knob-inventory-control-surface.md))
+**Date:** 2026‑03-02
 
 ## Context
 
@@ -16,7 +16,7 @@ This ADR inventories existing controls across **data**, **model**, **training/co
 
 2. **Introduce deterministic “off” paths** for any behavior that is *on by default* and affects reproducibility—even if those switches remain internal only.
 
-3. **Document a canonical checklist** (below) to validate the control surface before adopting ADR‑00X.
+3. **Document a canonical checklist** (below) to validate the control surface before adopting ADR‑0009.
 
 ---
 

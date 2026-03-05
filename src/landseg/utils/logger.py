@@ -91,6 +91,7 @@ class Logger():
         # assign attributes for potential access
         self.name = name
         self.log_file = log_file
+        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
 
         # init logger attribute
         self.logger = logging.getLogger(name)

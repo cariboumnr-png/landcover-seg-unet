@@ -18,9 +18,9 @@ Notes:
 
 # standard imports
 from __future__ import annotations
-import copy
 import dataclasses
 import os
+import typing
 import zipfile
 import zlib
 # third-party imports
@@ -177,6 +177,42 @@ class BlockCacheBuilder:
         utils.write_json(_blks, self.valid_blks)
         utils.hash_artifacts(_blks)
 
+    def build_a_block(
+        self,
+        block_coordinates: tuple[int, int],
+    ) -> blockbuilder.DataBlock:
+        '''Build a single data block for overfitting test.'''
+
+        # load data config and extract by keys in block meta dict
+        meta_src = utils.load_json(self.config.config_fpath)
+        keys = meta_src.keys() & blockbuilder.BlockMeta.__annotations__
+        meta = {k: meta_src[k] for k in keys}
+        meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
+        # enrich meta
+        meta['block_name'] = self._xy_name(block_coordinates)
+        dem_band = meta['band_map']['dem']
+        pad = meta['dem_pad']
+
+        # read rasters at given window and create blocks
+        img_fpath = self.config.image_fpath
+        lbl_fpath = self.config.label_fpath
+        img_window = self.windows.image_windows[block_coordinates]
+        lbl_window = self.windows.label_windows[block_coordinates]
+        with utils.open_rasters(img_fpath, lbl_fpath) as (img, lbl):
+            # sanity checks
+            assert img and lbl and lbl_window
+            # read image and label array
+            img_arr: numpy.ndarray = img.read(window=img_window)
+            lbl_arr: numpy.ndarray = lbl.read(window=lbl_window)
+            if img_arr.size == 0 or lbl_arr.size == 0:
+                raise ValueError('Empty arrays, likely read outside of raster')
+            meta['image_nodata'] = img.nodata
+            meta['label_nodata'] = lbl.nodata
+            # get padded dem array from image
+            padded = _read_w_pad(img, img_window, dem_band, pad)
+
+        # create and return
+        return blockbuilder.DataBlock().build(img_arr, lbl_arr, padded, meta)
 
     # -----------------------------internal method-----------------------------
     def _prepare_block_windows(self):
@@ -276,19 +312,22 @@ class BlockCacheBuilder:
             return
         self.logger.log('INFO', f'{len(coords_todo)} data blocks to be created')
 
+        # load data config and extract by keys in block meta dict
+        meta_src = utils.load_json(self.config.config_fpath)
+        meta = {k: meta_src[k] for k in blockbuilder.BlockMeta.__annotations__}
+        meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
         # prep block creation jobs
         jobs = []
-        meta_src: blockbuilder.BlockMeta = utils.load_json(self.config.config_fpath)
         for c in coords_todo:
             name = self._xy_name(c)
             co_contxt = _BlockCreationContext(
-                name=name,
-                meta=copy.deepcopy(meta_src),
-                img_path=self.config.image_fpath,
-                img_window=self.windows.image_windows[c],
-                lbl_path=self.config.label_fpath,
-                lbl_window=self.windows.label_windows[c] if self.has_label else None,
-                npz_fpath=self.all_blocks[name]
+                name,
+                meta,
+                self.config.image_fpath,
+                self.windows.image_windows[c],
+                self.config.label_fpath,
+                self.windows.label_windows[c] if self.has_label else None,
+                self.all_blocks[name]
             )
             jobs.append((_make_blk, (co_contxt,), {}))
 
@@ -369,9 +408,9 @@ def _make_blk(contxt: _BlockCreationContext) -> None:
             lbl_arr = lbl.read(window=lbl_window, boundless=True)
             meta['label_nodata'] = lbl.nodata
 
-        # create and save
-        blk = blockbuilder.DataBlock().build(img_arr, lbl_arr, padded_dem, meta)
-        blk.save(npz_fpath)
+    # create and save
+    blk = blockbuilder.DataBlock().build(img_arr, lbl_arr, padded_dem, meta)
+    blk.save(npz_fpath)
 
 def _read_w_pad(
     img: alias.RasterReader,

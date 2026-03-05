@@ -3,31 +3,31 @@
 from __future__ import annotations
 # standard imports
 import dataclasses
+# local imports
+import landseg.models.backbones as backbones
 
 # -------------------------model general configuration-------------------------
 @dataclasses.dataclass
 class ModelConfig:
     '''General config'''
+    body: backbones.Backbone
     in_ch: int
     base_ch: int
-    heads_w_counts: dict[str, list[int]]
     logit_adjust: dict[str, list[float]]
-    clamp_range: tuple[float, float]
+    heads_w_counts: dict[str, list[int]]
     conditioning: CondConfig
+    clamp_range: tuple[float, float]
 
 # ----------------------model conditioning configuration----------------------
 @dataclasses.dataclass
 class CondConfig:
     '''Wrapper for conditioning configuration.'''
-    # mode
-    mode: str
-    # id categories and vector dims for adapter embeddings
-    domain_ids_num: int
-    domain_vec_dim: int
-    # Concat
-    concat: ConcatConfig
-    # FiLM
-    film: FilmConfig
+
+    mode: str               # mode
+    domain_ids_num: int     # id categories
+    domain_vec_dim: int     # vector dims
+    concat: ConcatConfig    # Concat
+    film: FilmConfig        # FiLM
 
     def __post_init__(self):
         assert self.mode in ['none', 'concat', 'film', 'hybrid']

@@ -36,7 +36,7 @@ def load_data(
             world_grid=(gid, world_grid),
             inputs_config=config.dataset,
             artifact_config=config.artifacts,
-            proc_config=config.dataprep,
+            process_config=config.dataprep,
             logger=logger
         )
     # prompt data blocks fresh build (all steps will be redone)
@@ -46,7 +46,7 @@ def load_data(
             world_grid=(gid, world_grid),
             inputs_config=config.dataset,
             artifact_config=config.artifacts,
-            proc_config=config.dataprep,
+            process_config=config.dataprep,
             logger=logger,
             rebuild_all=True
         )
@@ -56,7 +56,7 @@ def load_data(
 
     # build dataspec
     dataspec = dataset.build_dataspec(
-        schema_fpath=f'{cache_root}/schema.json',
+        schema=f'{cache_root}/schema.json',
         ids_domain=ids_domain,
         vec_domain=vec_domain
     )

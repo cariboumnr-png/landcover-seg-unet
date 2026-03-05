@@ -83,8 +83,13 @@ class UNetPP(backbones.Backbone):
             in_ch: Number of input channels.
             base_ch: Base number of feature channels. Deeper layers use
                 multiples of this.
-            **kwargs: Additional options pass to convolutional blocks.
-                see `models.backbones.DoubleConv`.
+            **kwargs: Section-level config for convolutional blocks.
+                Pass dictionaries keyed by section name, e.g.
+                `{'downs': {...}}` or `{'nodes': {...}}`. These
+                dictionaries are forwarded to `DoubleConv` modules
+                inside that section. See `models.backbones.DoubleConv`
+                for valid options (e.g., `norm`, `gn_groups`, `p_drop`).
+
 
         **Notes**
         - All decoder nodes output `base_ch` channels which simplifies
@@ -97,14 +102,14 @@ class UNetPP(backbones.Backbone):
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
-        # initial convolution block with no norm
-        self.inc = self.DC(in_ch, ch, norm=None, **kwargs)
+        # initial convolution block with no norm nor drop outs
+        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
         # 4 downsample encoders
         self.downs = torch.nn.ModuleList([
-            self.DS(ch,     ch * 2,  **kwargs),
-            self.DS(ch * 2, ch * 4,  **kwargs),
-            self.DS(ch * 4, ch * 8,  **kwargs),
-            self.DS(ch * 8, ch * 16, **kwargs)
+            self.DS(ch,     ch * 2,  **kwargs.get('downs', {})),
+            self.DS(ch * 2, ch * 4,  **kwargs.get('downs', {})),
+            self.DS(ch * 4, ch * 8,  **kwargs.get('downs', {})),
+            self.DS(ch * 8, ch * 16, **kwargs.get('downs', {}))
         ])
 
         # decoders (nested refinement) - every nested node becomes ch channels
@@ -112,19 +117,19 @@ class UNetPP(backbones.Backbone):
         chs = {0: ch, 1: ch * 2, 2: ch * 4, 3: ch * 8, 4: ch * 16}
         self.nodes = torch.nn.ModuleDict({
         # Level 1 nested (j=1)
-            'x01': self.DC(chs[0]     + chs[1], chs[0], **kwargs),
-            'x11': self.DC(chs[1]     + chs[2], chs[1], **kwargs),
-            'x21': self.DC(chs[2]     + chs[3], chs[2], **kwargs),
-            'x31': self.DC(chs[3]     + chs[4], chs[3], **kwargs),
+            'x01': self.DC(chs[0]     + chs[1], chs[0], **kwargs.get('nodes', {})),
+            'x11': self.DC(chs[1]     + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x21': self.DC(chs[2]     + chs[3], chs[2], **kwargs.get('nodes', {})),
+            'x31': self.DC(chs[3]     + chs[4], chs[3], **kwargs.get('nodes', {})),
             # Level 2 nested (j=2)
-            'x02': self.DC(chs[0] * 2 + chs[1], chs[0], **kwargs),
-            'x12': self.DC(chs[1] * 2 + chs[2], chs[1], **kwargs),
-            'x22': self.DC(chs[2] * 2 + chs[3], chs[2], **kwargs),
+            'x02': self.DC(chs[0] * 2 + chs[1], chs[0], **kwargs.get('nodes', {})),
+            'x12': self.DC(chs[1] * 2 + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x22': self.DC(chs[2] * 2 + chs[3], chs[2], **kwargs.get('nodes', {})),
             # Level 3 nested (j=3)
-            'x03': self.DC(chs[0] * 3 + chs[1], chs[0], **kwargs),
-            'x13': self.DC(chs[1] * 3 + chs[2], chs[1], **kwargs),
+            'x03': self.DC(chs[0] * 3 + chs[1], chs[0], **kwargs.get('nodes', {})),
+            'x13': self.DC(chs[1] * 3 + chs[2], chs[1], **kwargs.get('nodes', {})),
             # Level 4 nested (final output j=4)
-            'x04': self.DC(chs[0] * 4 + chs[1], chs[0], **kwargs)
+            'x04': self.DC(chs[0] * 4 + chs[1], chs[0], **kwargs.get('nodes', {}))
         })
 
         # upsamplers for backbone resolution

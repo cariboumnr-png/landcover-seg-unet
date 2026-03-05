@@ -39,11 +39,12 @@ class _Meta:
     fit_perblk_bytes: int
     test_perblk_bytes: int
     test_blks_grid: tuple[int, int]
+    single_block_mode: bool
 
     def __str__(self) -> str:
         return '\n'.join([
             '[General Meta]',
-            f'Dataset name: {self.dataset_name}'
+            f'Dataset name: {self.dataset_name}',
             f'Number of image channels: {self.img_ch_num}',
             f'Ignore index: {self.ignore_index}',
             f'Fit data blocks size (b): {self.fit_perblk_bytes}',
@@ -60,8 +61,10 @@ class _Heads:
     def __str__(self) -> str:
         def _ln(lst):
             return [round(x, 2) for x in lst]
-        t1 = '\n - '.join([f'{k}:\t{v}' for k, v in self.class_counts.items()])
-        t2 = '\n - '.join([f'{k}:\t{_ln(v)}' for k, v in self.logits_adjust.items()])
+        cc = self.class_counts
+        la = self.logits_adjust
+        t1 = '\n - '.join([f'{k}:\t{v}' for k, v in cc.items()])
+        t2 = '\n - '.join([f'{k}:\t{_ln(v)}' for k, v in la.items()])
         return '\n'.join([
             '[Heads Specs]',
             f'Class distribution of each head: \n - {t1}',
@@ -106,20 +109,45 @@ class _Domains:
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
-    schema_fpath: str,
+    schema: str | dict[str, typing.Any],
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
 ) -> DataSpecs:
     '''doc'''
 
     # read schema
-    schema: dict[str, typing.Any] = utils.load_json(schema_fpath)
+    if isinstance(schema, str):
+        _schema: dict[str, typing.Any] = utils.load_json(schema)
+    else:
+        _schema = schema
 
     return DataSpecs(
-        meta=_get_meta(schema),
-        heads=_get_heads(schema),
-        splits=_get_split(schema),
-        domains=_get_domain(schema, ids_domain, vec_domain)
+        meta=_get_meta(_schema),
+        heads=_get_heads(_schema),
+        splits=_get_split(_schema),
+        domains=_get_domain(_schema, ids_domain, vec_domain)
+    )
+
+def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> DataSpecs:
+    '''Build a `DataSpecs` instance from one block with essentials.'''
+
+    # retrieve values from schema
+    name = schema['dataset_name']
+    img_ch = schema['image_channel']
+    ignore_index = schema['ignore_index']
+    class_counts = schema['class_counts']
+    logit_adjust = schema['logit_adjust']
+    topology = schema['topology']
+    train_split = schema['train_split']
+    val_split = schema['val_split']
+    # no domain
+    dom: _Domains._Dom = {'ids_domain': None, 'vec_domain': None}
+    # return
+    return DataSpecs(
+        _Meta(name, img_ch, ignore_index, 0, 0, (0, 0), True),
+        _Heads(class_counts, logit_adjust, topology),
+        _Splits(train_split, val_split, None),
+        _Domains(dom, dom, dom, 0, 0)
     )
 
 # ------------------------------private  function------------------------------
@@ -159,12 +187,13 @@ def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
 
     # return
     return _Meta(
-        dataset_name=schema['dataset']['name'],
-        ignore_index=schema['io_conventions']['ignore_index'],
-        img_ch_num=schema['tensor_shapes']['image']['C'],
-        fit_perblk_bytes=img_b * img_px + lbl_b * lbl_px,
-        test_perblk_bytes=test_perblk_bytes,
-        test_blks_grid=(int(col + 1), int(row + 1))
+        schema['dataset']['name'],
+        schema['tensor_shapes']['image']['C'],
+        schema['io_conventions']['ignore_index'],
+        img_b * img_px + lbl_b * lbl_px,
+        test_perblk_bytes,
+        (int(col + 1), int(row + 1)),
+        False
     )
 
 def __name_to_xy(key: str) -> tuple[int, int]:

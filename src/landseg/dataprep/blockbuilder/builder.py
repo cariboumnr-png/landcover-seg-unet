@@ -1,5 +1,9 @@
 '''doc'''
 
+# standard imports
+import random
+# third-party imports
+import numpy
 # local imports
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
@@ -11,19 +15,57 @@ def build_blocks(
     config: dataprep.BlockBuildingConfig,
     logger: utils.Logger,
     *,
-    rebuild: bool = False
-) -> None:
+    rebuild: bool = False,
+) -> blockbuilder.DataBlock | None:
     '''doc'''
 
     # mode derivatives
     windows_key = f'{mode}_windows'
     thres_key = f'blk_thres_{mode}'
-    # fit raster windows
+    # get raster windows
     windows = utils.load_pickle(config[windows_key])
-    # build fit blocks
+    # get a builder instance
     builder = _get_blocks_builder(windows, mode, config, logger)
+    # build blocks
     builder.build_block_cache()
     builder.build_valid_block_index(config[thres_key], rebuild=rebuild)
+
+def build_a_block(
+    config: dataprep.BlockBuildingConfig,
+    logger: utils.Logger
+) -> blockbuilder.DataBlock:
+    '''doc'''
+
+    # get fit raster windows
+    windows: mapper.DataWindows = utils.load_pickle(config['fit_windows'])
+    # get a builder instance
+    builder = _get_blocks_builder(windows, 'fit', config, logger)
+    # get a deterministic coordinate sequence to iterate
+    coords = list(windows.image_windows.keys()) # from image windows
+    random.Random(42).shuffle(coords)
+    # build a block (>= 80% valid pixels) and return
+    i = 0
+    while True:
+        print('Searching for a good raster window...', end='\r', flush=True)
+        try:
+            block = builder.build_a_block(coords[i])
+        except ValueError: # likely an empty window for the rasters
+            i += 1
+            continue
+        if block.meta['valid_pixel_ratio']['block'] >= 0.8 and \
+            all(block.meta['label_count']['layer1']):
+            logger.log('INFO', f'Fetched a valid block at coord: {coords[i]}')
+            logger.log('INFO', 'Criteria: valid pixel >= 80% & has all class')
+            # normalize
+            block.data.image_normalized = numpy.empty_like(block.data.image)
+            for i, arr in enumerate(block.data.image):
+                std = numpy.std(arr)
+                std_safe = numpy.where(std == 0, 1, std)
+                norm = (arr - numpy.mean(arr)) / std_safe   # (H, W)
+                block.data.image_normalized[i] = norm       # (C, H, W)
+            # return the block instance
+            return block
+        i += 1
 
 def _get_blocks_builder(
     windows: mapper.DataWindows,
