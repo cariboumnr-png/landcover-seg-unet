@@ -1,7 +1,8 @@
 # ADR‑0009: Introduce a Built‑In “Overfit Test” Profile
-**Status:** Proposed
-**Date:** 2026‑03-02
+**Status:** Accepted
+**Date:** 2026‑03-05
 
+> this ADR is pratically combined with [ADR-0008](./ADR-0008-knob-inventory-control-surface.md) during implementation.
 ## Context
 
 The project maintains a complex end‑to‑end pipeline:
@@ -70,16 +71,6 @@ This profile configures the system to intentionally overfit a tiny dataset to va
 #### 9. Minimal batch size
 - `batch_size = 1`
 
-### Usage
-
-The test is invoked via:
-
-```
-python cli/end_to_end.py +profiles/overfit_test
-```
-
-This ensures a guaranteed‑to‑overfit run, validating the whole training pipeline.
-
 ## Alternatives Considered
 
 #### **Option A — Modify the base config directly**
@@ -106,13 +97,11 @@ Hydra profiles are already the project’s established and cleaner method for mo
 - Introduces one additional config file (low maintenance cost).
 - Developers must discover the profile (addressed via documentation).
 
-## Implementation Plan
+## Implementation
 
-1. Create `configs/profiles/overfit_test.yaml`.
-2. Add documentation to `README` under **Developer Quick Checks**.
-3. Optionally add CI integration:
+1. Created `configs/profile/overfit_test.yaml`.
+2. Added documentation to `README` under **Developer Quick Checks**.
+3. The test is now invoked via:
    ```
-   pytest --run-overfit-test
+   python cli/main.py profile=overfit_test
    ```
-4. (Optional) Provide a helper script that generates a tiny single‑block dataset index if missing.
-``

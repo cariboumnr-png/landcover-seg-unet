@@ -1,6 +1,6 @@
 # ADR‑0008: Knob Inventory & Control Surface
-**Status:** Proposed (pre‑work for [ADR‑0009](./ADR-0008-knob-inventory-control-surface.md))
-**Date:** 2026‑03-02
+**Status:** Accepted (pre‑work for [ADR‑0009](./ADR-0008-knob-inventory-control-surface.md))
+**Date:** 2026‑03-05
 
 ## Context
 
@@ -35,9 +35,11 @@ This ADR inventories existing controls across **data**, **model**, **training/co
 - Domain tile maps (categorical raster → PCA‑reduced vectors).
 - Rebuild flags: `rebuild_all`, `remap`, `rebuild_blocks`, `renormalize`, `rebuild_split`.
 
-**Gaps to close**
+**Gaps closed**
 - No standardized single‑block or micro‑split generator for overfit testing.
+> added a pipeline to generate a single data block
 - No explicit “disable scoring/valid‑block filtering” switch aside from setting thresholds manually.
+> not applicable since the single block generator is now in place
 
 ---
 
@@ -48,10 +50,13 @@ This ADR inventories existing controls across **data**, **model**, **training/co
 - Patch sampling (`patch_per_blk`), test grid layout for inference.
 - A minimal augmentation flag (e.g., flips) toggled by train/val/test mode.
 
-**Gaps to close**
+**Gaps to closed**
 - Missing deterministic loader knobs:
   `shuffle=false`, `num_workers=0`, `seed=<int>`, `deterministic=true`.
+> not applicable since a single block is inherently deterministic and block
+searching is determined by a fixed seed (42).
 - Missing global augmentation disable switch (`augment.enable=false`).
+> now added and exposed
 
 ---
 
@@ -64,9 +69,10 @@ This ADR inventories existing controls across **data**, **model**, **training/co
 - Domain conditioning modes: none / concat / FiLM / hybrid, with flags for ids/vec/MLP usage.
 - Output clamping range.
 
-**Gaps to close**
+**Gaps to closed**
 - Confirm `conditioning.mode=none` is fully neutral (no latent conditioning ops).
 - Ensure `p_drop=0.0` becomes globally effective.
+> both conditioning and p_drop knobs added and exposed
 
 ---
 
@@ -82,8 +88,12 @@ This ADR inventories existing controls across **data**, **model**, **training/co
 **Gaps to close**
 - Need neutral positions for:
   `eval_interval=null`, `patience_epochs=null`, `grad_clip_norm=null`.
+> `grad_clip_norm` knob exposed; rest not applicable as the test is done by directly
+calling trainer methods, no controller is involved
 - Ensure optimizer exposes `weight_decay` and can be set to `0.0`.
+> done
 - Confirm that AMP can be fully disabled (no autocast/scaler).
+> done
 
 ---
 
@@ -97,105 +107,20 @@ This ADR inventories existing controls across **data**, **model**, **training/co
 - Deterministic backend toggles.
 - Internal config keys such as:
   `runtime.seed`, `runtime.deterministic=true`.
+> not applicable/not implemented
 
 ---
 
-## Control Surface: Public vs. Internal
+## Outcome
 
-**Public (documented)**
-- Dataset/cache paths, grid selection, backbone choice, domain config.
-- Major training knobs: `max_epoch`, `eval_interval`, learning rate, weight decay.
-- AMP toggle.
-
-**Internal (not documented)**
-- `augment.enable`
-- `dataloader.shuffle`, `dataloader.num_workers`, `dataloader.seed`
-- `runtime.seed`, `runtime.deterministic`
-- `conditioning.mode`
-- `logit_adjust.*`, `logit_adjust.alpha`
-- `p_drop`
-- `grad_clip_norm`
-- `patience_epochs`
-- Micro‑split generation
-
-**Experimental**
-- Future augmentation ops
-- Advanced schedulers or unreleased loss functions
-
----
-
-## Checklist: Explicit Items to Implement/Verify
-
-### Data / Splits
-- [ ] Add internal single‑block `{train,val}` split generator.
-- [ ] Ensure `blk_thres_fit=0` and associated logic cleanly bypass validation.
-
-### Dataloader & Augmentation
-- [ ] Add deterministic loader config:
-  `shuffle=false`, `num_workers=0`, `seed=<int>`, `deterministic=true`.
-- [ ] Add `augment.enable=false` to disable all augmentation.
-
-### Model / Regularization / Conditioning
-- [ ] Make sure `p_drop=0.0` is honored everywhere.
-- [ ] Confirm `conditioning.mode=none` fully disables domain features.
-- [ ] Ensure logit adjustment can be globally neutralized using `alpha=0.0`.
-
-### Training / Scheduler
-- [ ] Allow `weight_decay=0.0`.
-- [ ] Allow `grad_clip_norm=null`.
-- [ ] Allow `eval_interval=null`.
-- [ ] Allow `patience_epochs=null`.
-
-### AMP / Precision
-- [ ] Ensure `use_amp=false` produces no autocast or scaling.
-
-### Batch Size
-- [ ] Ensure `batch_size=1` flows safely end‑to‑end.
-
-### Global Seeds
-- [ ] Add internal `runtime.seed` and set all relevant RNG seeds.
-- [ ] Add `runtime.deterministic=true`.
-
-### Controller & Checkpointing
-- [ ] Ensure checkpoints and previews function even with validation off.
-
----
-
-## Consequences
-
-**Positive**
-- Establishes a clear, maintainable control surface.
-- Prevents accidental nondeterministic behavior.
-- Enables a reliable `overfit_test` configuration for CI and debugging.
-
-**Negative**
-- Slightly larger internal config surface.
-- Public/internal distinction must be maintained in docs.
-
----
-
-## Implementation Plan
-
-1. Add internal configs:
-   `runtime.seed`, `runtime.deterministic`, loader knobs, global `augment.enable`, expose `weight_decay`.
-2. Add global seeding logic to the CLI entry point.
-3. Verify all “neutral paths” (dropout off, conditioning none, logit adjustment off, early‑stop off).
-4. Implement micro‑split writer.
-5. Document public knobs; keep internal knobs out of main README.
-
----
-
-## Acceptance Criteria
-
-Running:
+Now overfit can be run by:
 
 ```
-python cli/end_to_end.py +overfit_test
+python cli/main.py profile=overfit_test
 ```
 
-must perform a deterministic, minimal, fully reproducible run that:
-- Loads exactly one block,
-- Trains with minimal batch size and no regularization/conditioning/augmentation,
-- Disables validation, early stopping, and AMP,
-- Converges (memorizes) the tiny sample,
-- Saves checkpoints without errors.
+which perform a deterministic, minimal, fully reproducible run that:
+- Loads exactly one block / one batch
+- Trains with no regularization/conditioning/augmentation
+- Validation (IoU) on the same block
+- No early stopping till max epoch reached or 99% IoU reached

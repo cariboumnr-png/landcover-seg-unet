@@ -37,7 +37,11 @@ You can run the full end‑to‑end experiment pipeline via:
 
     experiment_run
 
-This will execute the packaged Hydra configuration located at:
+or run an overifit test via:
+
+    experiment_run profile=overfit
+
+These commands will execute the packaged Hydra configuration located at:
 
     src/landseg/configs/
 
@@ -52,9 +56,9 @@ Additional CLI commands (e.g., `prep`, `report`, `train`, `infer`) will be
 added as the interface matures.
 
 ## 🛠️ Current Work
-Currently refining the project’s configuration and training control surfaces, including a comprehensive audit of all existing knobs (data, model, training, controller, and runtime). This work prepares the foundation for a robust `overfit_test` profile, improves determinism, and introduces clear separation between public and internal configuration options. These updates will streamline debugging, ensure reproducible runs, and improve the overall developer experience.
-
-see [ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) & [ADR-0009](./docs/ADRs/ADR-0009-overfit-test-profile.md)
+[ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) & [ADR-0009](./docs/ADRs/ADR-0009-overfit-test-profile.md) has been completed and an `overfit_
+test` profile is now implemented.
+Currently working to check and update docstrings across the project.
 
 ---
 
@@ -62,6 +66,9 @@ see [ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) & [ADR-
 ```
 root/src/landseg
 │
+├── core/               # project-level contracts
+│   └── protocols.py
+|
 ├── grid/               # generate stable world grid
 │   ├── builder.py      <- module API
 │   ├── io.py
@@ -113,27 +120,27 @@ root/src/landseg
 ├── configs/            # hydra config tree shipped with package
 │
 └── cli/                # CLI scripts
-    └── end_to_end.py   <- primary entrypoint for `experiment_run`
-
-# see ./docs/current_folder_structure.md for a detailed tree
+│   ├── main.py         <- module API
+│   ├── end_to_end.py
+    └── overfit_test.py
 ```
 ## ⚙️ Current WorkFlow
 
 ```
 [configs/]
-└─> grid/builder.py                     (1 World Grid)
-    ├─> domain/mapper.py                    (2 DK → grid, optional)
-    └─> dataprep/pipeline.py                (3 Fit/Test → grid)
-        └─> dataprep/schema.py                  (4 Data Scheme)
-            ├─> models/factory.py                   (5.1 Model)
-            ├─> dataset/builder.py                  (5.2 Dataloaders)
-            ├─> training/heads                      (5.3 Data-influenced)
-            ├─> training/loss                       (5.4 Head-specified)
-            ├─. training/metrics                    (5.5 Head-specified)
-            └─> training/optim|callback|...         (5.6 Other)
-                └─> training/factory.py → Trainer       (6 Trainer 🗸)
-                    └─> controller/builder.py + phases      (7 Controller 🗸)
-                        └─> cli/end_to_end.py                   (8 Start ➝)
+└─> grid/builder.py                    (1 World Grid)
+    ├─> domain/mapper.py                   (2 DK → grid, optional)
+    └─> dataprep/pipeline.py               (3 Fit/Test → grid)
+        └─> dataprep/schema.py                 (4 Data Scheme)
+            ├─> models/factory.py                  (5.1 Model)
+            ├─> dataset/builder.py                 (5.2 Dataloaders)
+            ├─> training/heads                     (5.3 Data-influenced)
+            ├─> training/loss                      (5.4 Head-specified)
+            ├─. training/metrics                   (5.5 Head-specified)
+            └─> training/optim|callback|...        (5.6 Other)
+                └─> training/factory.py → Trainer      (6 Trainer 🗸)
+                    └─> controller/builder.py + phases     (7 Controller 🗸)
+                        └─> cli/main.py                    (8 Start ➝)
 ```
 
 ## 🧊 Data Foundation
@@ -154,10 +161,9 @@ The dataprep pipeline:
 
 ### Near‑Term (current milestone)
 - [ADR-0005](./docs/ADRs/ADR-0005-deferred-goals-scope-consolidate.md) (pending)
-- [ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) (active)
-- [ADR-0009](./docs/ADRs/ADR-0009-overfit-test-profile.md) (active)
-- Improve documentation and examples
-- Add unit tests for dataprep  dataset  training
+- [ADR‑0008](./docs/ADRs/ADR-0008-knob-inventory-control-surface.md) (done)
+- [ADR-0009](./docs/ADRs/ADR-0009-overfit-test-profile.md) (done)
+- Improve documentation and examples (active)
 
 ### Medium‑Term
 - Standard tile/AOI reporting (ADR‑0005)
