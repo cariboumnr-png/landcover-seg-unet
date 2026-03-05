@@ -89,8 +89,8 @@ root/src/landseg
 │   └── schema.py
 │
 ├── dataset/            # consume data schema for traininig.dataloading
-│   ├── builder.py      <- module API
-│   ├── load.py
+│   ├── specs.py
+│   ├── loader.py       <- module API
 │   └── validate.py
 │
 ├── models/             # defines model structure (current: UNet, UNet++)

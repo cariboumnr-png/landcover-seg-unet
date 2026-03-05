@@ -19,7 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Summarize the existing cache blocks and generate metadata.'''
+'''
+Summarize cached blocks and emit dataset specifications for training and
+evaluation. Builds a consolidated DataSpecs object from a dataset schema
+(or from a single block) including meta, heads, splits, and domain info.
+
+Public APIs:
+    - DataSpecs: Dataclass container describing dataset specs.
+    - build_dataspec: Construct DataSpecs from a full dataset schema.
+    - build_dataspec_from_a_block: Construct minimal DataSpecs from one
+      block (overfit mode).
+'''
 
 # standard imports
 from __future__ import annotations
@@ -35,11 +45,11 @@ import landseg.utils as utils
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DataSpecs:
-    '''doc'''
-    meta: _Meta
-    heads: _Heads
-    splits: _Splits
-    domains: _Domains
+    '''Container for dataset specs used by trainers and models'''
+    meta: _Meta         # general dataset metadata
+    heads: _Heads       # head-wise label statistics and topology
+    splits: _Splits     # train/val/test block file mappings
+    domains: _Domains   # discrete/continuous domain metadata for conditioning
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -53,12 +63,11 @@ class DataSpecs:
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _Meta:
-    '''Metadata.'''
+    '''General dataset metadata.'''
     dataset_name: str
     img_ch_num: int
     ignore_index: int
     fit_perblk_bytes: int
-    test_perblk_bytes: int
     test_blks_grid: tuple[int, int]
     single_block_mode: bool
 
@@ -67,14 +76,12 @@ class _Meta:
             '[General Meta]',
             f'Dataset name: {self.dataset_name}',
             f'Number of image channels: {self.img_ch_num}',
-            f'Ignore index: {self.ignore_index}',
-            f'Fit data blocks size (b): {self.fit_perblk_bytes}',
-            f'Test data blocks size (b): {self.test_perblk_bytes}'
+            f'Ignore index: {self.ignore_index}'
         ])
 
 @dataclasses.dataclass
 class _Heads:
-    '''Heads label stats'''
+    '''Head-wise label statistics and topology.'''
     class_counts: dict[str, list[int]]
     logits_adjust: dict[str, list[float]]
     topology: dict[str, dict[str, str | int | None]]
@@ -94,7 +101,7 @@ class _Heads:
 
 @dataclasses.dataclass
 class _Splits:
-    '''Block file paths of training and validation datasets.'''
+    '''Train/val/test block file mappings.'''
     train: dict[str, str]
     val: dict[str, str]
     test: dict[str, str] | None
@@ -109,7 +116,7 @@ class _Splits:
 
 @dataclasses.dataclass
 class _Domains:
-    '''Domain related.'''
+    '''Domain metadata for conditioning.'''
     train: _Dom
     val: _Dom
     test: _Dom
@@ -117,7 +124,7 @@ class _Domains:
     vec_dim: int
 
     class _Dom(typing.TypedDict):
-        '''doc'''
+        '''Typed domain dictionaries.'''
         ids_domain: dict[str, int] | None
         vec_domain: dict[str, list[float]] | None
 
@@ -130,50 +137,80 @@ class _Domains:
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
-    schema: str | dict[str, typing.Any],
+    schema_fpath: str,
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
 ) -> DataSpecs:
-    '''doc'''
+    '''
+    Build a `DataSpecs` instance from dataset schema and optional domains.
+
+    Args:
+        schema: Path to a schema JSON file.
+        ids_domain: Optional domain map of discrete domain IDs by tile.
+        vec_domain: Optional domain map of continuous vectors by tile.
+
+    Returns:
+        DataSpecs: Dataset specifications assembled from the schema and
+            domain maps.
+
+    Raises:
+        FileNotFoundError: If a schema path is provided but not be found.
+        ValueError: If the schema file is unreadable or malformed.
+    '''
 
     # read schema
-    if isinstance(schema, str):
-        _schema: dict[str, typing.Any] = utils.load_json(schema)
-    else:
-        _schema = schema
-
+    schema_dict: dict[str, typing.Any] = utils.load_json(schema_fpath)
+    # build return the class instance
     return DataSpecs(
-        meta=_get_meta(_schema),
-        heads=_get_heads(_schema),
-        splits=_get_split(_schema),
-        domains=_get_domain(_schema, ids_domain, vec_domain)
+        meta=_get_meta(schema_dict),
+        heads=_get_heads(schema_dict),
+        splits=_get_split(schema_dict),
+        domains=_get_domain(schema_dict, ids_domain, vec_domain)
     )
 
 def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> DataSpecs:
-    '''Build a `DataSpecs` instance from one block with essentials.'''
+    '''
+    Build a minimal DataSpecs instance from a single block schema.
 
-    # retrieve values from schema
-    name = schema['dataset_name']
-    img_ch = schema['image_channel']
-    ignore_index = schema['ignore_index']
-    class_counts = schema['class_counts']
-    logit_adjust = schema['logit_adjust']
-    topology = schema['topology']
-    train_split = schema['train_split']
-    val_split = schema['val_split']
-    # no domain
-    dom: _Domains._Dom = {'ids_domain': None, 'vec_domain': None}
-    # return
+    Args:
+        schema: In-memory schema dictionary derived from one block.
+
+    Returns:
+        DataSpecs: Minimal specs suitable for overfit/sanity tests.
+    '''
+
+    # return directly from schema dict
     return DataSpecs(
-        _Meta(name, img_ch, ignore_index, 0, 0, (0, 0), True),
-        _Heads(class_counts, logit_adjust, topology),
-        _Splits(train_split, val_split, None),
-        _Domains(dom, dom, dom, 0, 0)
+        meta =_Meta(
+            dataset_name=schema['dataset_name'],
+            img_ch_num=schema['image_channel'],
+            ignore_index=schema['ignore_index'],
+            fit_perblk_bytes=0,
+            test_blks_grid=(0, 0),
+            single_block_mode=True
+        ),
+        heads=_Heads(
+            class_counts=schema['class_counts'],
+            logits_adjust=schema['logit_adjust'],
+            topology=schema['topology']
+        ),
+        splits=_Splits(
+            train=schema['train_split'],
+            val=schema['val_split'],
+            test=None
+        ),
+        domains=_Domains(
+            train={'ids_domain': None, 'vec_domain': None},
+            val={'ids_domain': None, 'vec_domain': None},
+            test={'ids_domain': None, 'vec_domain': None},
+            ids_max=-1,
+            vec_dim=0
+        )
     )
 
 # ------------------------------private  function------------------------------
 def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
-    '''doc'''
+    '''Populate `_Meta` dataclass from schema dictionary.'''
 
     # expected tensor sizes
     # per-pixel byte size
@@ -198,40 +235,32 @@ def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
             col = max(col, (x - xmin) / schema['world_grid']['tile_step_x'])
             row = max(row, (y - ymin) / schema['world_grid']['tile_step_y'])
 
-    # get test block byte size
-    if schema['dataset']['has_test_data']:
-        test_perblk_bytes = img_b * img_px
-        if schema['dataset']['test_data_has_label']:
-            test_perblk_bytes += lbl_b * lbl_px
-    else:
-        test_perblk_bytes = 0
-
     # return
     return _Meta(
-        schema['dataset']['name'],
-        schema['tensor_shapes']['image']['C'],
-        schema['io_conventions']['ignore_index'],
-        img_b * img_px + lbl_b * lbl_px,
-        test_perblk_bytes,
-        (int(col + 1), int(row + 1)),
-        False
+        dataset_name=schema['dataset']['name'],
+        img_ch_num=schema['tensor_shapes']['image']['C'],
+        ignore_index=schema['io_conventions']['ignore_index'],
+        fit_perblk_bytes=img_b * img_px + lbl_b * lbl_px,
+        test_blks_grid=(int(col + 1), int(row + 1)),
+        single_block_mode=False
     )
 
 def __name_to_xy(key: str) -> tuple[int, int]:
-    '''doc'''
+    '''Simple parser to get coordinates from block name.'''
 
     # Expected pattern: 'col_<col>_row_<row>'
     _, col, _, row = key.split('_')
     return int(col), int(row)
 
 def _get_heads(schema: dict[str, typing.Any]) -> _Heads:
-    '''doc'''
+    '''Populate `_Heads` dataclass from schema dictionary.'''
 
-    cc: dict[str, list[int]]
-    cc = utils.load_json(schema['training_stats']['class_counts_train']['fpath'])
+    train_blks_path = schema['training_stats']['class_counts_train']['fpath']
+    raw_counts: dict[str, list[int]] = utils.load_json(train_blks_path)
+    counts = {k: v for k, v in raw_counts.items() if k != 'original_label'}
     return _Heads(
-        class_counts={k: v for k, v in cc.items() if k != 'original_label'},
-        logits_adjust={k: __la_from_count(v) for k, v in cc.items() if k !='original_label'},
+        class_counts=counts,
+        logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
         topology=schema['labels']['heads_topology']
     )
 
@@ -244,7 +273,7 @@ def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 def _get_split(schema: dict[str, typing.Any]) -> _Splits:
-    '''doc'''
+    '''Populate `_Split` dataclass from schema dictionary.'''
 
     # get file paths
     train_fpath=schema['splits']['train_blocks']['fpath']
@@ -262,7 +291,7 @@ def _get_domain(
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
 ) -> _Domains:
-    '''doc'''
+    '''Populate `_Domain` dataclass from schema dictionary.'''
 
     # get file paths
     train_fpath=schema['splits']['train_blocks']['fpath']
@@ -285,7 +314,7 @@ def __parse_domain(
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
 ) -> _Domains._Dom:
-    '''doc'''
+    '''Parse blocks into discrete and vector domain mappings.'''
 
     # early exit
     if not blocks_fpath:

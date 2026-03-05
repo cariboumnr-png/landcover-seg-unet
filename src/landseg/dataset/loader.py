@@ -19,7 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Validate world grid, domain, datablocks as per configuration.'''
+'''
+Dataset loading and validation pipeline. Prepares the world grid and
+domain features, validates/repairs dataprep artifacts, and emits a
+`DataSpecs` object for training and evaluation.
+
+Public APIs:
+    - load_data: Prepare grid/domains, validate schema, rebuild if
+      needed, and return a dataset specifications dataclass.
+'''
 
 # third-party imports
 import omegaconf
@@ -34,7 +42,21 @@ def load_data(
     config: omegaconf.DictConfig,
     logger: utils.Logger
 ) -> dataset.DataSpecs:
-    '''doc'''
+    '''
+    Load dataset specifications after validating dataprep artifacts.
+
+    Args:
+        config: Hydra/OMEGACONF configuration containing extent, grid,
+            dataset, artifacts, dataprep, and domain settings.
+        logger: Logger for progress, warnings, and error messages.
+
+    Returns:
+        DataSpecs: Consolidated dataset specification ready for training.
+
+    Raises:
+        ValueError: If configuration fields required for grid/domain/
+            dataprep are malformed or missing.
+    '''
 
     # load/create world grid
     gid, world_grid = grid.prep_world_grid(config.extent, config.grid, logger)
@@ -77,7 +99,7 @@ def load_data(
 
     # build dataspec
     dataspec = dataset.build_dataspec(
-        schema=f'{cache_root}/schema.json',
+        schema_fpath=f'{cache_root}/schema.json',
         ids_domain=ids_domain,
         vec_domain=vec_domain
     )

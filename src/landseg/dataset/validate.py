@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Schema validation utilities for dataprep caches. Verifies dataset name,
+grid ID, and artifact integrity via recorded SHA-256 checksums.
+
+Public APIs:
+    - validate_schema: Validate a dataset schema.json and referenced
+      artifacts.
+'''
 
 # standard imoprts
 import os
@@ -32,7 +39,20 @@ def validate_schema(
     cache_root: str,
     logger: utils.Logger
 ) -> int:
-    '''doc'''
+    '''
+    Validate a dataset schema and referenced artifacts at given root.
+
+    Args:
+        world_grid_id: Expected world grid identifier.
+        cache_root: Root directory containing schema.json and artifacts.
+        logger: Logger for error reporting during validation.
+
+    Returns:
+        int: Validation status code
+            * 0 -> all checks passed,
+            * 1 -> mismatch or corrupted/missing artifacts,
+            * 2 -> schema.json not found.
+    '''
 
     # initial status
     status = 0
@@ -83,7 +103,7 @@ def validate_schema(
     return status
 
 def _check_hash(obj: dict[str, str]) -> bool:
-    '''doc'''
+    '''Return True if an artifact exists and matches recorded hash.'''
 
     fpath = obj.get('fpath', '')
     hash_rec = obj.get('sha256', '')

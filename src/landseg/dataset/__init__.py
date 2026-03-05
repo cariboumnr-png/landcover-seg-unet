@@ -43,16 +43,16 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import DataSpecs, build_dataspec, build_dataspec_from_a_block
-    from .load import load_data
+    from .specs import DataSpecs, build_dataspec, build_dataspec_from_a_block
+    from .loader import load_data
     from .validate import validate_schema
 
 def __getattr__(name: str):
 
     if name in ['DataSpecs', 'build_dataspec', 'build_dataspec_from_a_block']:
-        return getattr(importlib.import_module('.builder', __package__), name)
+        return getattr(importlib.import_module('.specs', __package__), name)
     if name in ['load_data']:
-        return getattr(importlib.import_module('.load', __package__), name)
+        return getattr(importlib.import_module('.loader', __package__), name)
     if name in ['validate_schema']:
         return getattr(importlib.import_module('.validate', __package__), name)
 
