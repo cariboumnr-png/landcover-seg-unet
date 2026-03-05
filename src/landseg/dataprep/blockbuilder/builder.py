@@ -55,6 +55,7 @@ def build_a_block(
         if block.meta['valid_pixel_ratio']['block'] >= 0.8 and \
             all(block.meta['label_count']['layer1']):
             logger.log('INFO', f'Fetched a valid block at coord: {coords[i]}')
+            logger.log('INFO', 'Criteria: valid pixel >= 80% & has all class')
             # normalize
             block.data.image_normalized = numpy.empty_like(block.data.image)
             for i, arr in enumerate(block.data.image):

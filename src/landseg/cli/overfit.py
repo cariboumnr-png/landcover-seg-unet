@@ -25,6 +25,7 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     config.models['conditioning']['mode'] = 'none'
     config.trainer['optim']['weight_decay'] = 0.0
     config.trainer['runtime']['schedule']['log_every'] = 1
+    config.trainer['runtime']['precision']['use_amp'] = False
     config.trainer['runtime']['optimization']['grad_clip_norm'] = None
     config.trainer['loss']['types']['focal']['weight'] = 1.0
     config.trainer['loss']['types']['focal']['gamma'] = 0.0
