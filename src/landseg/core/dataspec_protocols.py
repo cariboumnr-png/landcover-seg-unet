@@ -20,16 +20,15 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring, too-few-public-methods
-'''
-Trainer-facing dataset specifications protocol.
-'''
+'''Dataset specification protocol used by models and trainers.'''
 
+# standard imports
 from __future__ import annotations
 import typing
 
-# Public data summary protocols
+# ---------------------------------Public Type---------------------------------
 class DataSpecsLike(typing.Protocol):
-    '''Protocol for full `DataSummary`.'''
+    '''Protocol describing the full dataset specification interface.'''
     @property
     def meta(self) -> _Meta:...
     @property
@@ -40,9 +39,8 @@ class DataSpecsLike(typing.Protocol):
     def domains(self) -> _Domains: ...
 
 # --------------------------------private  type--------------------------------
-# internal pieces
 class _Meta(typing.Protocol):
-    '''DataSummary meta part.'''
+    '''Metadata section of the dataset specification.'''
     dataset_name: str
     img_ch_num: int
     ignore_index: int
@@ -52,19 +50,19 @@ class _Meta(typing.Protocol):
     single_block_mode: bool
 
 class _Head(typing.Protocol):
-    '''DataSummary head part.'''
+    '''Head configuration section of the dataset specification.'''
     class_counts: dict[str, list[int]]
     logits_adjust: dict[str, list[float]]
     topology: dict[str, dict[str, typing.Any]]
 
 class _Splits(typing.Protocol):
-    '''DataSummary dataloaders part.'''
+    '''Split definitions for train/val/test loaders.'''
     train: dict[str, str]
     val: dict[str, str]
     test: dict[str, str] | None
 
 class _Domains(typing.Protocol):
-    '''DataSummary domain part.'''
+    '''Domain information for each dataset split.'''
     train: _Dom
     val: _Dom
     test: _Dom
@@ -72,6 +70,6 @@ class _Domains(typing.Protocol):
     vec_dim: int
 
     class _Dom(typing.TypedDict):
-        '''doc'''
+        '''TypedDict describing a single domain entry.'''
         ids_domain: dict[str, int] | None
         vec_domain: dict[str, list[float]] | None

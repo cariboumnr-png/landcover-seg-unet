@@ -39,11 +39,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .protocols import DataSpecsLike
+    from .dataspec_protocols import DataSpecsLike
 
 def __getattr__(name: str):
 
     if name in ['DataSpecsLike']:
-        return getattr(importlib.import_module('.protocols', __package__), name)
+        return getattr(importlib.import_module('.dataspec_protocols', __package__), name)
 
     raise AttributeError(name)
