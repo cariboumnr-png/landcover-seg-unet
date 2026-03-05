@@ -11,10 +11,7 @@ import landseg.dataset as dataset
 import landseg.training as training
 import landseg.utils as utils
 
-def train_end_to_end(
-    config: omegaconf.DictConfig,
-    logger: utils.Logger
-) -> None:
+def train_end_to_end(config: omegaconf.DictConfig) -> None:
     '''End to end training'''
 
     # init experiment io folder tree

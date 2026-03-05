@@ -188,8 +188,8 @@ def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
     # return
     return _Meta(
         schema['dataset']['name'],
-        schema['io_conventions']['ignore_index'],
         schema['tensor_shapes']['image']['C'],
+        schema['io_conventions']['ignore_index'],
         img_b * img_px + lbl_b * lbl_px,
         test_perblk_bytes,
         (int(col + 1), int(row + 1)),

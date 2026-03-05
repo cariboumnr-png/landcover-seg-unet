@@ -20,11 +20,11 @@ class DataLoaders:
     train: torch.utils.data.DataLoader
     val: torch.utils.data.DataLoader
     test: torch.utils.data.DataLoader | None
-    meta: _LoaderMeta
+    meta: _Meta
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class _LoaderMeta:
+class _Meta:
     '''Simple meta to be shipped with the dataloaders.'''
     batch_size: int
     patch_per_blk: int
@@ -45,11 +45,11 @@ def get_dataloaders(
     loader_cfg = utils.ConfigAccess(loader_config)
 
     # meta to be shipped
-    meta = _LoaderMeta(
-        loader_cfg.get_option('batch_size'),
-        loader_cfg.get_option('patch_size'),
-        data_specs.meta.test_blks_grid
-    )
+    batch_size = loader_cfg.get_option('batch_size')
+    block_size = loader_cfg.get_option('block_size')
+    patch_size = loader_cfg.get_option('patch_size')
+    patch_per_blk = int(block_size / patch_size) ** 2
+    meta = _Meta(batch_size, patch_per_blk, data_specs.meta.test_blks_grid)
 
     # if single block mode (for overfit test)
     if data_specs.meta.single_block_mode:
@@ -183,7 +183,9 @@ def _preload_option(data_specs: core.DataSpecsLike) -> dict[str, int | bool]:
         'preload_train': _train,
         'cache_train': train_n,
         'preload_val': _val,
-        'cache_val': _val_n
+        'cache_val': _val_n,
+        'preload_test': True,
+        'cache_test': 0
     }
 
 def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:

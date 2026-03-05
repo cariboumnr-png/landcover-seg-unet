@@ -25,11 +25,11 @@ def main(config: omegaconf.DictConfig) -> None:
     '''Main CLI entry point.'''
 
     # get running profile
-    profile = hydra.core.hydra_config.HydraConfig.get().runtime.choices['profile']
+    get = hydra.core.hydra_config.HydraConfig.get()
+    profile = get.runtime.choices['profile']
 
     # resolve config
     _config = _resolve_config(config)
-    _config['profile'] = profile # add profile string to config tree
 
     # master logger
     logger = utils.Logger('cli', os.path.join(_config['exp_root'], 'cli.log'))
@@ -37,6 +37,7 @@ def main(config: omegaconf.DictConfig) -> None:
     # run specified mode with exceptions handling
     try:
         logger.log('INFO', f'Runing profile: {profile} start')
+        _config['profile'] = profile # add profile string to config tree
         command_registry[profile](_config)
         logger.log('INFO', f'Runing profile: {profile} finish')
     # manual keyboard interruption
@@ -62,7 +63,7 @@ def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
         aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
     candidates.append(aux)
 
-    # profile overwrite
+    # overwrite from selected profile
     profile = config.profile
 
     # merging overrides with default config tree and resolve

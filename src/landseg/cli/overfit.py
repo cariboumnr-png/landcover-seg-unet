@@ -62,6 +62,6 @@ def _single_block_dataspecs(
     )
     assert blk_schema # sanity
 
-    # build a dataspec from schema dict (skipping dataset module)
-    dspecs = dataset.build_dataspec_from_a_block(blk_schema) # with dummy values
+    # build a dataspec from the schema with essential values
+    dspecs = dataset.build_dataspec_from_a_block(blk_schema)
     return dspecs

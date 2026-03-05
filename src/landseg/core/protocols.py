@@ -23,10 +23,10 @@ class DataSpecsLike(typing.Protocol):
 class _Meta(typing.Protocol):
     '''DataSummary meta part.'''
     dataset_name: str
+    img_ch_num: int
+    ignore_index: int
     fit_perblk_bytes: int
     test_perblk_bytes: int
-    ignore_index: int
-    img_ch_num: int
     test_blks_grid: tuple[int, int]
     single_block_mode: bool
 
