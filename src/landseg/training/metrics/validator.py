@@ -19,22 +19,38 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Metrics config validation.'''
+'''
+Validation utilities for confusion-matrix configuration.
+
+Defines the TypedDict schema for ConfusionMatrix setup and provides a
+type-guard to ensure user-supplied configs follow the expected structure.
+'''
 
 # standard imports
 import typing
 
 class ConfusionMatrixConfig(typing.TypedDict):
-    '''Config dict for confusion matrix compute.'''
+    '''Typed configuration for confusion-matrix computation.'''
     num_classes: int
     ignore_index: int
     parent_class_1b: int | None
     exclude_class_1b: tuple[int, ...] | None
 
 def is_cm_config(
-        cfg: dict[str, int | None]
-    ) -> typing.TypeGuard[ConfusionMatrixConfig]:
-    '''Validate confusion matrix calc config dict.'''
+    cfg: dict[str, int | None]
+) -> typing.TypeGuard[ConfusionMatrixConfig]:
+    '''
+    Validate a confusion-matrix config dictionary.
+
+    Checks:
+    - num_classes        : int
+    - ignore_index       : int
+    - parent_class_1b    : int or None
+    - exclude_class_1b   : empty or integer tuple
+
+    Returns:
+        True if the dictionary matches ConfusionMatrixConfig.
+    '''
 
     def _is_parent_class(v):
         return isinstance(v, int) or v is None

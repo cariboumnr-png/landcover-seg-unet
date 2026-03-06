@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Training metrics related functions.'''
+'''
+Training metrics utilities: confusion matrix accumulation and IoU metrics.
+
+Provides:
+    - A typed metrics dictionary for reporting.
+    - ConfusionMatrix: incremental updates and IoU/mean IoU computation,
+      with optional hierarchical gating and class exclusion.
+'''
 
 from __future__ import annotations
 # standard imports
@@ -29,19 +36,44 @@ import torch
 # local imports
 import landseg.training.metrics as metrics
 
+# --------------------------------private  type--------------------------------
+class _Metrics(typing.TypedDict):
+    '''Typed dict with IoU metrics, supports, and active-class views.'''
+    mean: float
+    ious: dict[str, float]
+    support: dict[str, int]
+    has_active: bool
+    ac_mean: float
+    ac_ious: dict[str, float]
+    ac_support: dict[str, int]
+
+# --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
     '''
-    Computes IoU metrics from predictions and targets.
+    Incremental confusion matrix with IoU computation.
 
-    Supports hierarchical gating via a parent class filter and optional
-    exclusion of classes when reporting 'active-class' metrics.
+    Supports:
+        - Hierarchical gating via a parent-class filter.
+        - Excluding classes when reporting active-class IoUs.
     '''
 
     def __init__(
-            self,
-            config: dict[str, int | None],
-        ):
-        '''doc'''
+        self,
+        config: dict[str, int | None],
+    ):
+        '''
+        Initialize the confusion matrix and configuration.
+
+        Args:
+            config:
+                Dictionary with
+                - 'num_classes': total number of classes (int)
+                - 'ignore_index': label to ignore (int or None)
+                - 'parent_class_1b': parent class (1-based) to gate on
+                    when provided (int or None)
+                - 'exclude_class_1b': classes (1-based) to exclude from
+                    active-class metrics (list[int] or None)
+        '''
 
         # type guard on input config
         if not metrics.is_cm_config(config):
@@ -70,29 +102,26 @@ class ConfusionMatrix:
 
     @torch.no_grad()
     def update(
-            self,
-            p0: torch.Tensor,
-            t1: torch.Tensor,
-            **kwargs
-        ) -> None:
+        self,
+        preds: torch.Tensor,
+        targets: torch.Tensor,
+        **kwargs
+    ) -> None:
 
         '''
-        In-place update confusion matrix w/ optional hierarchical gating.
-
-        - `target_1b`: child head labels in 1-based + ignore_index.
-        - `preds`: prediction labels in 0-based [0..C-1].
-        - If `parent_raw_1b` (kwarg) are provided and
-            `self.parent_class_1b`, is not None, only pixels where
-            `parent==parent_class_1b` are counted.
-        - `self.cm` is updated in place.
+        Update confusion matrix with a new batch.
 
         Args:
-            logits: [B, C, H, W] model outputs.
-            target_1b: [B, H, W] 1-based class labels (+ ignore_index).
+            preds: Model outputs of shape [B, C, H, W].
+            targets: Child labels of shape [B, H, W], 1-based with
+                ignore index.
+            parent_raw_1b (kwarg): Optional parent labels (1-based). If
+                provided and `parent_class_1b` is set, only those pixels
+                are counted.
         '''
 
         # get valid pixels (mask off ignored)
-        valid = t1 != self.ignore_index
+        valid = targets != self.ignore_index
 
         # optional hierarchical gating using raw parent labels (1-based)
         parent_raw_1b = kwargs.get('parent_raw_1b')
@@ -103,10 +132,10 @@ class ConfusionMatrix:
             return
 
         # get prediction for the batch
-        preds_0b = torch.argmax(p0, dim=1) # [B, H, W] - along S (slice)
+        preds_0b = torch.argmax(preds, dim=1) # [B, H, W] - along S (slice)
 
         # shift child target to 0-based for bincount indexing
-        t0 = t1[valid].to(torch.int64) - 1 # because target_1b is 1..C
+        t0 = targets[valid].to(torch.int64) - 1 # because target_1b is 1..C
         p = preds_0b[valid].to(torch.int64) # preds should already be 0..C-1
 
         # safety: drop any accidental negatives, in case ignore slipped through
@@ -125,12 +154,11 @@ class ConfusionMatrix:
         '''
         Compute per-class IoU and aggregate means.
 
-        Returns:
-            dict:
+        Populates a `_Metrics` typed dict:
             - 'mean': Mean IoU over all classes (float)
             - 'ious': Dict of per-class IoU values {str: float}
             - 'support': Dict of per-class supports {str: int}
-            - 'ac_mean': Mean IoU over active (non-excluded) classes (float)
+            - 'ac_mean': Mean IoU over active classes (float)
             - 'ac_ious': Dict of IoU per active class {str: float}
             - 'ac_support': Dict of support per active class {str: int}
 
@@ -181,19 +209,19 @@ class ConfusionMatrix:
         self._metrics['ac_mean'] = activ_sum / len(activ) if activ else 0.0
 
     def reset(self, device: str) -> None:
-        '''Zero out the confusion matrix.'''
+        '''Zero the confusion matrix and move to specified device.'''
 
         self.cm = self.cm.zero_().to(device)
 
     @property
     def metrics_dict(self) -> dict[str, typing.Any]:
-        '''Metrics as a plain dict.'''
+        '''Return metrics as a plain Python dict.'''
 
         return dict(self._metrics)
 
     @property
     def metrics_text(self) -> list[str]:
-        '''Printer friendly text presentation of the metrics.'''
+        '''Human-readable summary for mean/class IoUs (all/active).'''
 
         mm = self._metrics
         text = []
@@ -214,13 +242,3 @@ class ConfusionMatrix:
             # text.append('Class support (active):\t' + s)
         # return text lines
         return text
-
-class _Metrics(typing.TypedDict):
-    '''Typed dict for metrics.'''
-    mean: float
-    ious: dict[str, float]
-    support: dict[str, int]
-    has_active: bool
-    ac_mean: float
-    ac_ious: dict[str, float]
-    ac_support: dict[str, int]

@@ -19,7 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Validation metrics calculation functions for trainer.'''
+'''
+Factory utilities for constructing per-head validation metrics.
+
+Provides:
+    - HeadMetrics: typed container mapping head names to ConfusionMatrix
+      instances.
+    - build_headmetrics: factory that builds per-head ConfusionMatrix
+      objects from head specifications.
+
+Used by the trainer to compute IoU-based metrics for each prediction head.
+'''
 
 # local imports
 import landseg.training.common as common
@@ -52,10 +62,21 @@ class HeadMetrics:
         return dict(self._specs)
 
 def build_headmetrics(
-        headspecs: common.HeadSpecsLike,
-        ignore_index: int
-    ) -> HeadMetrics:
-    '''Generate concreate head metric classes indexed by head name.'''
+    headspecs: common.HeadSpecsLike,
+    ignore_index: int
+) -> HeadMetrics:
+    '''
+    Construct ConfusionMatrix objects for each prediction head.
+
+    Args:
+        headspecs: Structure describing each head's number of classes,
+            optional parent-class gating, and excluded classes.
+        ignore_index: Label index to ignore during metric updates.
+
+    Returns:
+        A HeadMetrics container, mapping head names to initialized
+        ConfusionMatrix instances.
+    '''
 
     out: dict[str, metrics.ConfusionMatrix] = {}
     # iterate through configs
