@@ -1,6 +1,10 @@
+# Cadre de classification de la couverture terrestre multimodale
+
 [Français](README_fr.md) | [English](README.md)
 
-# Cadre de classification de la couverture terrestre multimodale
+> ***Résumé en langage clair :***<br>
+> *Ce projet fournit des outils pour préparer des images satellitaires et entraîner des modèles qui classifient la couverture terrestre. Il aide les utilisateurs à organiser leurs données, exécuter des modèles d’apprentissage profond et reproduire les résultats de manière cohérente.*
+
 
 Un cadre modulaire et reproductible d’apprentissage profond pour la cartographie de la couverture terrestre au niveau du pixel.
 Le système combine **imagerie spectrale Landsat**, **métriques topographiques dérivées du MNE** et **caractéristiques fondées sur l’expertise métier**, dans des artéfacts stables de **grille** et de **domaine**.

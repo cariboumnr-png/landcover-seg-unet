@@ -1,6 +1,9 @@
+# Multi-Modal Landcover Classification Framework
+
 [English](README.md) | [Français](README_fr.md)
 
-# Multi-Modal Landcover Classification Framework
+>***Plain‑language summary:***<br>
+>*This project provides tools for preparing satellite imagery and training models that classify land cover. It helps users organize data, run deep‑learning models, and reproduce results consistently.*
 
 A modular, reproducible deep-learning framework for pixel‑level landcover mapping.
 The system fuses **Landsat spectral imagery**, **DEM‑derived topographical metrics**, and **domain‑knowledge features** under stable **grid** and **domain** artifacts.
