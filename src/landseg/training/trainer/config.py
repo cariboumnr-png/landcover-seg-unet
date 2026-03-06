@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Module internal: trainer runtime state.'''
+'''
+Internal runtime configuration structures for the trainer.
+
+Defines typed dataclasses for scheduling, monitoring, precision, and
+optimization settings, along with a factory that constructs a unified
+RuntimeConfig from user configuration files.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -31,7 +37,7 @@ import landseg.utils as utils
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class RuntimeConfig:
-    '''Minimal runtime config'''
+    '''Container holding all trainer runtime configuration sections.'''
     schedule: _Schedule
     monitor: _Monitor
     precision: _Precision
@@ -40,59 +46,69 @@ class RuntimeConfig:
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _Schedule:
-    '''Progression and scheduling'''
+    '''Training schedule related: epochs/logging/eval/ckpt/patience.'''
     max_epoch: int                  # total epochs target
     max_step: int | None            # optional hard cap on steps (global)
-    logging_interval: int         # log every N steps (or batches)
-    eval_interval: int | None      # evaluate every N steps (optional)
+    logging_interval: int           # log every N steps (or batches)
+    eval_interval: int | None       # evaluate every N steps (optional)
     checkpoint_interval: int | None # checkpoint every N steps (optional)
     patience_epochs: int | None     # for early stopping
-    min_delta: float | None      # minimum improvement threshold
+    min_delta: float | None         # minimum improvement threshold
 
 @dataclasses.dataclass
 class _Monitor:
-    enabled: tuple[str, ...] # e.g., ('iou', ...)
-    metric: str                    # e.g., 'iou'
-    head: str                    # e.g., 'layer1' (the parent layer)
-    mode: str                     # e.g., 'max'
+    '''Metric tracking configuration for validation/early stopping.'''
+    enabled: tuple[str, ...]        # e.g., ('iou', ...)
+    metric: str                     # e.g., 'iou'
+    head: str                       # e.g., 'layer1' (the parent layer)
+    mode: str                       # e.g., 'max'
 
 @dataclasses.dataclass
 class _Precision:
-    '''Compute precision.'''
+    '''AMP/numerical precision settings.'''
     use_amp: bool
 
 @dataclasses.dataclass
 class _OptimConfig:
-    '''Optimization related.'''
+    '''Optimization-related runtime settings.'''
     grad_clip_norm: float | None
 
 # -------------------------------Public Function-------------------------------
 def get_config(config: alias.ConfigType):
-    '''Factory function.'''
+    '''
+    Build a RuntimeConfig from user configuration.
+
+    Args:
+        config: Configuration object providing schedule, monitor,
+            precision, and optimization fields via nested keys.
+
+    Returns:
+        RuntimeConfig: fully populated runtime settings for the trainer.
+    '''
 
     # config accessor
     cfg = utils.ConfigAccess(config)
 
     return RuntimeConfig(
         schedule=_Schedule(
-            cfg.get_option('schedule', 'max_epoch'),
-            cfg.get_option('schedule', 'max_step'),
-            cfg.get_option('schedule', 'log_every'),
-            cfg.get_option('schedule', 'val_every'),
-            cfg.get_option('schedule', 'ckpt_every'),
-            cfg.get_option('schedule', 'patience'),
-            cfg.get_option('schedule', 'min_delta'),
+            max_epoch=cfg.get_option('schedule', 'max_epoch'),
+            max_step=cfg.get_option('schedule', 'max_step'),
+            logging_interval=cfg.get_option('schedule', 'log_every'),
+            eval_interval=cfg.get_option('schedule', 'val_every'),
+            checkpoint_interval=cfg.get_option('schedule', 'ckpt_every'),
+            patience_epochs=cfg.get_option('schedule', 'patience'),
+            min_delta=cfg.get_option('schedule', 'min_delta'),
         ),
         monitor=_Monitor(
-            ('iou',),
-            cfg.get_option('monitor', 'metric_name'),
-            cfg.get_option('monitor', 'track_head_name'),
-            cfg.get_option('monitor', 'track_mode'),
+            enabled=('iou',),
+            metric=cfg.get_option('monitor', 'metric_name'),
+            head=cfg.get_option('monitor', 'track_head_name'),
+            mode=cfg.get_option('monitor', 'track_mode'),
         ),
         precision=_Precision(
-            cfg.get_option('precision', 'use_amp')
+            use_amp=cfg.get_option('precision', 'use_amp')
         ),
         optim=_OptimConfig(
-            cfg.get_option('grad_clip_norm')
+            grad_clip_norm=cfg.get_option('grad_clip_norm')
         )
     )

@@ -23,6 +23,7 @@
 
 # third-party imports
 import omegaconf
+import torch
 # local imports
 import landseg.core as core
 import landseg.models as models
@@ -39,13 +40,18 @@ import landseg.utils as utils
 def build_trainer(
     data_specs: core.DataSpecsLike,
     config: omegaconf.DictConfig,
-    logger: utils.Logger
+    logger: utils.Logger,
+    **kwargs
  ) -> trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
     # setup the model
     body = config.trainer.get('model_body', 'unet')
-    model = models.build_multihead_unet(body, data_specs, config.models)
+    model = models.build_multihead_unet(
+        body=body,
+        dataspecs=data_specs,
+        model_config=config.models
+    )
 
     # compile data loaders
     data_loaders = dataloading.get_dataloaders(
@@ -83,7 +89,7 @@ def build_trainer(
     callbacks = callback.build_callbacks(logger)
 
     # collect components
-    comps = trainer.TrainerComponents(
+    trainer_components = trainer.TrainerComponents(
         model=model,
         dataloaders=data_loaders,
         headspecs=headspecs,
@@ -93,9 +99,16 @@ def build_trainer(
         callbacks=callbacks,
     )
 
-    # parse runtime config
-    runtime_cfg = trainer.get_config(config.trainer.runtime)
+    # generate runtime config dataclass from config
+    trainer_runtime_config = trainer.get_config(config.trainer.runtime)
+
+    # get currently avalaible device
+    available_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # build and return a trainer class
-    skip_log = config['profile'] == 'overfit_test'
-    return trainer.MultiHeadTrainer(comps, runtime_cfg, 'cuda', skip_log=skip_log)
+    return trainer.MultiHeadTrainer(
+        trainer_components,
+        trainer_runtime_config,
+        available_device,
+        **kwargs
+    )

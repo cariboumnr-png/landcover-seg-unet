@@ -19,17 +19,29 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Collection of external protocols for trainer components.'''
+'''
+Collection of protocol-typed components used by the training loop.
+
+This small module exists to centralize the set of objects the trainer
+requires (model, dataloaders, losses, metrics, optimization, callbacks),
+while keeping their concrete implementations defined in other modules.
+'''
 
 # standard imports
 import dataclasses
 # local imports
 import landseg.training.common as common
 
-# ---------------------------trainer runtime config---------------------------
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class TrainerComponents:
-    '''Trainer components protocol.'''
+    '''
+    Container for all trainer-required components.
+
+    Each field uses a protocol type from `landseg.training.common`,
+    allowing different concrete implementations to be supplied while
+    keeping the trainer strongly typed and modular.
+    '''
     model: common.MultiheadModelLike
     dataloaders: common.DataLoadersLike
     headspecs: common.HeadSpecsLike

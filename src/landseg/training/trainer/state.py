@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Module internal: trainer runtime state.'''
+'''Internal: trainer runtime state containers and pretty printers.'''
 
 # standard imports
 from __future__ import annotations
@@ -31,13 +31,38 @@ import torch
 import landseg.alias as alias
 import landseg.training.common as common
 
+# ------------------------------Public  Dataclass------------------------------
+# ----- Runtime state (composite)
+@dataclasses.dataclass
+class RuntimeState:
+    '''Composite training state with sensible defaults.'''
+    progress: _Progress
+    heads: _Heads
+    batch_cxt: _BatchContex
+    batch_out: _BatchOutput
+    epoch_sum: _EpochSummary
+    metrics: _MetricsTracker
+    optim: _OptimState
+
+    def __str__(self):
+        return '\n'.join([
+            f'{str(self.progress)}',
+            f'{str(self.heads)}',
+            f'{str(self.batch_cxt)}',
+            f'{str(self.batch_out)}',
+            f'{str(self.epoch_sum)}',
+            f'{str(self.metrics)}',
+            f'{str(self.optim)}'
+        ])
+
+# ------------------------------private dataclass------------------------------
 # ----- .progress
 @dataclasses.dataclass
 class _Progress:
-    '''Trainig progress.'''
-    epoch: int = 0
-    epoch_step: int = 0
-    global_step: int =  0
+    '''Training progress counters (epoch/step/global).'''
+    epoch: int
+    epoch_step: int
+    global_step: int
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -50,13 +75,13 @@ class _Progress:
 # ----- .heads
 @dataclasses.dataclass
 class _Heads:
-    '''Heads related state.'''
-    all_heads: list[str] = dataclasses.field(init=False)
-    active_heads: list[str] | None = None
-    frozen_heads: list[str] | None = None
-    active_hspecs: dict[str, common.SpecLike] | None = None
-    active_hloss: dict[str, common.CompositeLossLike] | None = None
-    active_hmetrics: dict[str, common.MetricLike] | None = None
+    '''State for multihead selection, freezing, and active specs.'''
+    all_heads: list[str]
+    active_heads: list[str] | None
+    frozen_heads: list[str] | None
+    active_hspecs: dict[str, common.SpecLike] | None
+    active_hloss: dict[str, common.CompositeLossLike] | None
+    active_hmetrics: dict[str, common.MetricLike] | None
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -67,22 +92,22 @@ class _Heads:
 
     @staticmethod
     def list_to_str(lst: list[str] | None) -> str:
-        '''Turn list of strings to a joined string.'''
+        '''Join a list of head names or return 'N/A' if None.'''
         if lst is None:
             return 'N/A'
         return '|'.join(lst)
 
-# ----- .batch_ctx (context)
+# ----- .batch context
 @dataclasses.dataclass
-class _BatchCtx:
-    '''Batch level data context.'''
-    bidx: int = 0
-    pidx_start: int = 0
-    batch_size_full: int = 0
-    batch: alias.DatasetItem | None = None
-    x: torch.Tensor = torch.empty(0)
-    y_dict: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
-    domain: dict[str, torch.Tensor | None] = dataclasses.field(default_factory=dict)
+class _BatchContex:
+    '''Per-batch input/context (indices, tensors, and domain info).'''
+    bidx: int
+    pidx_start: int
+    batch_size_full: int
+    batch: alias.DatasetItem | None
+    x: torch.Tensor
+    y_dict: dict[str, torch.Tensor]
+    domain: dict[str, torch.Tensor | None]
 
     def __str__(self):
         x = self.x.shape if self.x.numel() != 0 else 'N/A'
@@ -95,7 +120,7 @@ class _BatchCtx:
         ])
 
     def _active_domain(self) -> str:
-        '''Active domain'''
+        '''Summarize present domain tensors and their shapes.'''
         out: list[str] = []
         for k, v in self.domain.items():
             if v is not None:
@@ -105,7 +130,7 @@ class _BatchCtx:
         return 'N/A'
 
     def refresh(self, bidx: int, batch: tuple) -> None:
-        '''Refresh context at the beginning of a batch.'''
+        '''Reset batch context for a new iteration.'''
         # take input from new batch
         self.bidx = bidx
         self.batch = batch
@@ -116,14 +141,14 @@ class _BatchCtx:
         self.y_dict.clear()
         self.domain.clear()
 
-# ----- .batch_out (output)
+# ----- .batch output
 @dataclasses.dataclass
-class _BatchOut:
-    '''Batch level outputs.'''
-    bidx: int = 0
-    preds: dict[str, torch.Tensor] = dataclasses.field(default_factory=dict)
-    total_loss: torch.Tensor = torch.empty(0)
-    head_loss: dict[str, float] = dataclasses.field(default_factory=dict)
+class _BatchOutput:
+    '''Per-batch outputs: predictions and losses.'''
+    bidx: int
+    preds: dict[str, torch.Tensor]
+    total_loss: torch.Tensor
+    head_loss: dict[str, float]
 
     def __str__(self) -> str:
         loss = self.total_loss.detach().item() \
@@ -137,49 +162,27 @@ class _BatchOut:
         ])
 
     def _perhead_loss(self) -> str:
-        '''Per-head loss.'''
+        '''Format per-head loss values or return 'N/A'.'''
         if self.head_loss:
             return '|'.join([f'{k}={v:.4f}' for k, v in self.head_loss.items()])
         return 'N/A'
 
     def refresh(self, bidx: int):
-        '''Clean up for a new batch.'''
+        '''Clear outputs to start a new batch.'''
         self.bidx = bidx                            # take input from new batch
         self.preds.clear()                          # clear the old batch
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
 
-# ----- .epoch_sum (summary)
+# ----- .epoch summary
 @dataclasses.dataclass
-class _TrainLogs:
-    '''Training result summary.'''
-    head_losses: dict[str, float] = dataclasses.field(default_factory=dict)
-    head_losses_str: str = ''
-    updated: bool = False
-
-@dataclasses.dataclass
-class _ValLogs:
-    '''Validation result summary.'''
-    head_metrics: dict[str, dict[str, typing.Any]] = dataclasses.field(default_factory=dict)
-    head_metrics_str: dict[str, list[str]] = dataclasses.field(default_factory=dict)
-
-@dataclasses.dataclass
-class _InferContext:
-    '''Inference result summary.'''
-    patch_per_blk: int = 0
-    patch_per_dim: int = 0
-    block_columns: int = 0
-    patch_grid_shape: tuple[int, int] = (0, 0)
-    maps: dict[str, dict[tuple[int, int], torch.Tensor]] = dataclasses.field(default_factory=dict)
-
-@dataclasses.dataclass
-class _Epoch:
-    '''Epoch level summary'''
-    train_loss: float = 0.0
-    val_loss: float = 0.0
-    train_logs: _TrainLogs = dataclasses.field(default_factory=_TrainLogs)
-    val_logs: _ValLogs = dataclasses.field(default_factory=_ValLogs)
-    infer_ctx: _InferContext = dataclasses.field(default_factory=_InferContext)
+class _EpochSummary:
+    '''Epoch-level aggregates for train/val/infer.'''
+    train_loss: float
+    val_loss: float
+    train_logs: _TrainLogs
+    val_logs: _ValLogs
+    infer_ctx: _InferContext
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -188,15 +191,37 @@ class _Epoch:
             f'\tValidation Loss: {self.val_loss}',
         ])
 
+@dataclasses.dataclass
+class _TrainLogs:
+    '''Training summary for an epoch (aggregated losses).'''
+    head_losses: dict[str, float]
+    head_losses_str: str
+    updated: bool
+
+@dataclasses.dataclass
+class _ValLogs:
+    '''Validation summary for an epoch (per-head metrics).'''
+    head_metrics: dict[str, dict[str, typing.Any]]
+    head_metrics_str: dict[str, list[str]]
+
+@dataclasses.dataclass
+class _InferContext:
+    '''Inference assembly context for block-wise stitching.'''
+    patch_per_blk: int
+    patch_per_dim: int
+    block_columns: int
+    patch_grid_shape: tuple[int, int]
+    maps: dict[str, dict[tuple[int, int], torch.Tensor]]
+
 # ----- .metrics
 @dataclasses.dataclass
-class _Metrics:
-    '''Experiment level metrics'''
-    last_value: float = -float('inf')
-    curr_value: float = -float('inf')
-    best_value: float = -float('inf')
-    best_epoch: int = -1
-    patience_n: int = 0
+class _MetricsTracker:
+    '''Experiment-level metric tracker with patience bookkeeping.'''
+    last_value: float
+    curr_value: float
+    best_value: float
+    best_epoch: int
+    patience_n: int
 
     def __str__(self) -> str:
         _lastv = self.last_value if self.last_value != -float('inf') else 'N/A'
@@ -212,10 +237,10 @@ class _Metrics:
             f'\tPatience: {self.patience_n}'
         ])
 
-# ----- .optim (optimization state)
+# ----- .optimization state
 @dataclasses.dataclass
-class _Optim:
-    '''Optimization state.'''
+class _OptimState:
+    '''Optimization state (e.g., AMP GradScaler).'''
     scaler: torch.GradScaler = dataclasses.field(init=False)
 
     def __str__(self) -> str:
@@ -233,25 +258,65 @@ class _Optim:
             f'\t{scaler_text}',
         ])
 
-# ----- Runtime state (composite)
-@dataclasses.dataclass
-class RuntimeState:
-    '''Training state with defualt values.'''
-    progress: _Progress = dataclasses.field(default_factory=_Progress)
-    heads: _Heads = dataclasses.field(default_factory=_Heads)
-    batch_cxt: _BatchCtx = dataclasses.field(default_factory=_BatchCtx)
-    batch_out: _BatchOut = dataclasses.field(default_factory=_BatchOut)
-    epoch_sum: _Epoch = dataclasses.field(default_factory=_Epoch)
-    metrics: _Metrics = dataclasses.field(default_factory=_Metrics)
-    optim: _Optim = dataclasses.field(default_factory=_Optim)
+# -------------------------------Public Function-------------------------------
+def init_trainer_state() -> RuntimeState:
+    '''Instantiate a trainer state dataclass with placeholder values.'''
 
-    def __str__(self):
-        return '\n'.join([
-            f'{str(self.progress)}',
-            f'{str(self.heads)}',
-            f'{str(self.batch_cxt)}',
-            f'{str(self.batch_out)}',
-            f'{str(self.epoch_sum)}',
-            f'{str(self.metrics)}',
-            f'{str(self.optim)}'
-        ])
+    return RuntimeState(
+        progress=_Progress(
+            epoch=0,
+            epoch_step=0,
+            global_step=0,
+        ),
+        heads=_Heads(
+            all_heads=[],
+            active_heads=None,
+            frozen_heads=None,
+            active_hspecs=None,
+            active_hloss=None,
+            active_hmetrics=None,
+        ),
+        batch_cxt=_BatchContex(
+            bidx=0,
+            pidx_start=0,
+            batch_size_full=0,
+            batch=None,
+            x=torch.empty(0),
+            y_dict={},
+            domain={},
+        ),
+        batch_out=_BatchOutput(
+            bidx=0,
+            preds={},
+            total_loss=torch.empty(0),
+            head_loss={},
+        ),
+        epoch_sum=_EpochSummary(
+            train_loss=0.0,
+            val_loss=0.0,
+            train_logs=_TrainLogs(
+                head_losses={},
+                head_losses_str='',
+                updated=False,
+            ),
+            val_logs=_ValLogs(
+                head_metrics={},
+                head_metrics_str={},
+            ),
+            infer_ctx=_InferContext(
+                patch_per_blk=0,
+                patch_per_dim=0,
+                block_columns=0,
+                patch_grid_shape=(0, 0),
+                maps = {}
+            )
+        ),
+        metrics=_MetricsTracker(
+            last_value=-float('inf'),
+            curr_value=-float('inf'),
+            best_value=-float('inf'),
+            best_epoch=-1,
+            patience_n=0
+        ),
+        optim=_OptimState()
+    )

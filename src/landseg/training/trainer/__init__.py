@@ -38,6 +38,7 @@ __all__ = [
     'RuntimeState',
     # functions
     'get_config',
+    'init_trainer_state',
     'load',
     'save',
     'multihead_loss',
@@ -49,7 +50,7 @@ if typing.TYPE_CHECKING:
     from .comps import TrainerComponents
     from .config import RuntimeConfig, get_config
     from .loss import multihead_loss
-    from .state import RuntimeState
+    from .state import RuntimeState, init_trainer_state
     from .trainer import MultiHeadTrainer
 
 def __getattr__(name: str):
@@ -62,7 +63,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['multihead_loss']:
         return getattr(importlib.import_module('.loss', __package__), name)
-    if name in ['RuntimeState']:
+    if name in ['RuntimeState', 'init_trainer_state']:
         return getattr(importlib.import_module('.state', __package__), name)
     if name in ['MultiHeadTrainer']:
         return getattr(importlib.import_module('.trainer', __package__), name)

@@ -5,7 +5,7 @@ models:
 trainer:
   optim:
     weight_decay: 0.0
-    sched_cls: 'none'
+    sched_cls: null
     sched_args: {}
   loss:
     types:
@@ -22,4 +22,4 @@ trainer:
     precision:
       use_amp: False
     optimization:
-      grad_clip_norm: 'none'
+      grad_clip_norm: null

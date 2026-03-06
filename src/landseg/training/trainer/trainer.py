@@ -42,6 +42,7 @@ See also:
 # standard imports
 import contextlib
 import copy
+import typing
 # third-party imports
 import torch
 # local imports
@@ -65,6 +66,13 @@ class MultiHeadTrainer:
     context management, and phase-specific helpers.
     '''
 
+    class Flags(typing.TypedDict):
+        '''Typed training running flags (flexible).'''
+        skip_log: bool
+        enable_train_la: bool
+        enable_val_la: bool
+        enable_test_la: bool
+
     def __init__(
         self,
         components: trainer.TrainerComponents,
@@ -85,24 +93,27 @@ class MultiHeadTrainer:
                 `./config.py`).
             device (str): Device string (e.g., 'cpu'/'cuda'/or 'cuda:0')
                 applied at trainer level.
+            kwargs:
+                runtime convenience flags
+                - skip_log: bool
+                - enable_train_la: bool
+                - enable_val_la: bool
+                - enable_test_la: bool
         '''
 
-        # parse arguments
+        # get model components
         self.comps = components
-        self.config = config
-        self.device = device
         # move model to device
+        self.device = device
         self.model.to(self.device)
+        # get model runtime config
+        self.config = config
         # init the runtime state
         self.state = self._init_state()
+        # populate runtime flags from kwargs
+        self.flags = self._get_flags(**kwargs)
         # setup callback classes
-        self._setup_callbacks(kwargs.get('skip_log', False))
-        # init a flags dict
-        self.flags: dict[str, bool] = {
-            'enable_train_la': False,
-            'enable_val_la': False,
-            'enable_test_la': False
-        }
+        self._setup_callbacks()
 
 # -------------------------------Public  Methods-------------------------------
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
@@ -396,7 +407,7 @@ class MultiHeadTrainer:
         '''Instantiate the runtime state aligned with trainer config.'''
 
         # instantiate a state
-        state = trainer.RuntimeState()
+        state = trainer.init_trainer_state()
         # state - full batch size:
         state.batch_cxt.batch_size_full = self.dataloaders.meta.batch_size
         # state - heads
@@ -423,14 +434,25 @@ class MultiHeadTrainer:
         # return
         return state
 
+    # ----- get runtime flags
+    def _get_flags(self, **kwargs) -> Flags:
+        '''Return a `Flags` dict from input keyword arguments.'''
+
+        return {
+            'skip_log': kwargs.get('skip_log', False),
+            'enable_train_la': kwargs.get('enable_train_la', False),
+            'enable_val_la': kwargs.get('enable_val_la', False),
+            'enable_test_la': kwargs.get('enable_test_la', False),
+        }
+
     # ----- callback classes setup
-    def _setup_callbacks(self, skip_log: bool) -> None:
+    def _setup_callbacks(self) -> None:
         '''Pass current trainer instance to all callback classes.'''
 
         for callback in self.callbacks:
-            callback.setup(self, skip_log)
+            callback.setup(self, self.flags['skip_log'])
 
-    # ----- callback callers
+    # ----- callback signal emitter
     def _emit(self, hook: str, *args, **kwargs) -> None:
         '''
         Invoke a named hook from callbacks with the provided arguments.
@@ -619,9 +641,9 @@ class MultiHeadTrainer:
             # retrieve head metric calculator
             metrics_module = self.state.heads.active_hmetrics[head]
             metrics_module.update(
-                p0=logits,                              # 0-based
-                t1=targets[head],                       # 1-based
-                parent_raw_1b=parent_1b                 # 1-based (keyword arg)
+                logits,                     # 0-based
+                targets[head],              # 1-based
+                parent_raw_1b=parent_1b     # 1-based (keyword arg)
             )
 
     def _compute_iou(self) -> None:

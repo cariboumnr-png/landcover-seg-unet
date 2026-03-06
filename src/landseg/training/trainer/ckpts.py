@@ -19,8 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-'''Standalone basic model checkpointing functions.'''
+'''
+Basic model checkpointing utilities.
+
+Provides simple save/load helpers for storing and restoring model,
+optimizer, and scheduler state along with lightweight training metadata.
+'''
 
 # standard imports
 import typing
@@ -29,23 +33,30 @@ import torch
 # local imports
 import landseg.training.common as common
 
-# checkpoint metadata
+# ---------------------------------Public Type---------------------------------
 class CheckpointMetaLike(typing.TypedDict):
-    '''Checkpont metadata'''
+    '''Typed metadata stored alongside checkpoint state.'''
     metric: float
     epoch: int
     step: int
 
-# publich functions
+# -------------------------------Public Function-------------------------------
 def save(
-        model: common.MultiheadModelLike,
-        ckpt_meta: CheckpointMetaLike,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.LRScheduler | None,
-        fpath: str
-    ) -> None:
+    model: common.MultiheadModelLike,
+    ckpt_meta: CheckpointMetaLike,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    fpath: str
+) -> None:
     '''
-    Save model/optimizer/scheduler states.
+    Save model, optimizer, scheduler (if present), and metadata to file.
+
+    Args:
+        model: Model exposing `state_dict()`.
+        ckpt_meta: Dict containing metric, epoch, and step information.
+        optimizer: Optimizer whose state should be checkpointed.
+        scheduler: Optional LR scheduler to save.
+        fpath: Destination file path.
     '''
 
     # save states to file
@@ -60,15 +71,24 @@ def save(
     torch.save(state, fpath)
 
 def load(
-        model: common.MultiheadModelLike,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.LRScheduler | None,
-        fpath: str,
-        device: str
-    ) -> CheckpointMetaLike:
+    model: common.MultiheadModelLike,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    fpath: str,
+    device: str
+) -> CheckpointMetaLike:
     '''
-    Load previously saved state dicts for model, optimizer,
-    scheduler, return a meta dict.
+    Load model, optimizer, and scheduler state dicts from file.
+
+    Args:
+        model: Model instance to load parameters into.
+        optimizer: Optimizer instance to receive restored state.
+        scheduler: Optional scheduler whose state should be restored.
+        fpath: Checkpoint file path.
+        device: Device mapping for loading ('cpu', 'cuda', etc.).
+
+    Returns:
+        A metadata dict containing metric, epoch, and step fields.
     '''
 
     # load states dict from file

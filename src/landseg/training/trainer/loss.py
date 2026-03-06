@@ -19,19 +19,20 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Multihead loss compute function.'''
+'''Multihead loss computation helpers for trainer.'''
 
 # third-party imports
 import torch
 # local imports
 import landseg.training.common as common
 
+# -------------------------------Public Function-------------------------------
 def multihead_loss(
-        multihead_preds: dict[str, torch.Tensor],
-        multihead_targets: dict[str, torch.Tensor],
-        headspecs: dict[str, common.SpecLike],
-        headlosses: dict[str, common.CompositeLossLike],
-    ) -> tuple[torch.Tensor, dict[str, float]]:
+    multihead_preds: dict[str, torch.Tensor],
+    multihead_targets: dict[str, torch.Tensor],
+    headspecs: dict[str, common.SpecLike],
+    headlosses: dict[str, common.CompositeLossLike],
+) -> tuple[torch.Tensor, dict[str, float]]:
     '''
     Compose the total loss from per-head losses.
 
@@ -41,9 +42,11 @@ def multihead_loss(
         - shift target from 1-based to 0-based (keep 255)
         - optionally gate by parent class if hierarchical
         - apply all specified loss functions (weighted sum)
-    - Return total loss and a dict of per-head loss values for logging.
-    '''
 
+    Returns:
+        (total_loss, per_head): scalar total loss and a dict of detached
+        per-head loss values for logging.
+    '''
 
     # infer device from preds (assumes all on same device)
     pred_device = next(iter(multihead_preds.values())).device
@@ -77,13 +80,20 @@ def multihead_loss(
         raise RuntimeError('Contains NaN/Inf loss.')
     return total, per_head
 
+# ------------------------------private  function------------------------------
 def _prep_loss_compute(
-        head_target: torch.Tensor,
-        head_spec: common.SpecLike,
-        head_loss: common.CompositeLossLike,
-        parent_tensor: torch.Tensor | None,
-    ) -> tuple[torch.Tensor, dict[float, torch.Tensor] | None]:
-    '''doc'''
+    head_target: torch.Tensor,
+    head_spec: common.SpecLike,
+    head_loss: common.CompositeLossLike,
+    parent_tensor: torch.Tensor | None,
+) -> tuple[torch.Tensor, dict[float, torch.Tensor] | None]:
+    '''
+    Prepare targets and masks for a single head.
+
+    Builds pixel-weight masks from exclusion classes and optional
+    parent-child gating, then converts targets to 0-based labels while
+    preserving ignore_index.
+    '''
 
     # get mask while raw and parent tensor is still 1-based
     masks = _get_masks(
@@ -98,12 +108,19 @@ def _prep_loss_compute(
     return target_0, masks
 
 def _get_masks(
-        raw: torch.Tensor,
-        masked_cls: tuple[int, ...] | None=None,
-        parent_tensor: torch.Tensor | None=None,
-        parent_cls_1b: int | None=None
-    ) -> dict[float, torch.Tensor] | None:
-    '''Build valid mask with support of parent class gating.'''
+    raw: torch.Tensor,
+    masked_cls: tuple[int, ...] | None=None,
+    parent_tensor: torch.Tensor | None=None,
+    parent_cls_1b: int | None=None
+) -> dict[float, torch.Tensor] | None:
+    '''
+    Construct a mask dictionary for loss weighting.
+
+    Creates:
+        - A down-weight mask (e.g., 0.05) for excluded classes.
+        - A hard-zero mask (0.0) for pixels outside the parent class
+          when parent gating is active.
+    '''
 
     # masks
     masks: dict[float, torch.Tensor] = {}
@@ -120,10 +137,12 @@ def _get_masks(
     return masks if masks else None
 
 def _shift_1_to_0(
-        target_1: torch.Tensor,
-        ignore_idx: int
-    ) -> torch.Tensor:
-    '''Utility: 1..K -> 0..K-1; keep ignore_index unchanged.'''
+    target_1: torch.Tensor,
+    ignore_idx: int
+) -> torch.Tensor:
+    '''
+    Convert labels from 1..K to 0..K-1 while preserving ignore_index.
+    '''
 
     t = target_1.clone()
     m = t != ignore_idx

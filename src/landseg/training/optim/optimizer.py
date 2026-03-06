@@ -20,7 +20,14 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring, too-few-public-methods
-'''Simple optimizer factory.'''
+'''
+Simple optimizer and scheduler factory utilities.
+
+Provides:
+    - A minimal Protocol for models exposing `.parameters()`.
+    - Registries for common optimizers and schedulers.
+    - A factory to build (optimizer, scheduler) pairs from config.
+'''
 
 # standard imports
 import dataclasses
@@ -34,7 +41,7 @@ import landseg.utils as utils
 # ---------------------------------Public Type---------------------------------
 @typing.runtime_checkable
 class ModelWithParams(typing.Protocol):
-    '''Minimal protocol for a model that contains torch parameters.'''
+    '''Protocol for models exposing iterable torch parameters.'''
     def parameters(self) -> typing.Iterable['torch.nn.Parameter']: ...
 
 # a callable that constructs an Optimizer (e.g., torch.optim.AdamW)
@@ -57,16 +64,28 @@ _SCHEDULERS: dict[str, SchedulerFactory] = {
 # -------------------------------Public Function-------------------------------
 @dataclasses.dataclass
 class Optimization:
-    '''Wrapper for optimization components'''
+    '''Container for optimizer and optional scheduler.'''
     optimizer: torch.optim.Optimizer
     scheduler: torch.optim.lr_scheduler.LRScheduler | None
 
 # -------------------------------Public Function-------------------------------
 def build_optimization(
-        model: ModelWithParams,
-        config: alias.ConfigType
-    ) -> Optimization:
-    '''Factory-like wrapper function.'''
+    model: ModelWithParams,
+    config: alias.ConfigType
+) -> Optimization:
+    '''
+    Build optimizer and scheduler from a config.
+
+    Expected config options:
+    - 'opt_cls'       : optimizer key in _OPTIMIZERS (e.g., 'AdamW')
+    - 'lr'            : learning rate (float)
+    - 'weight_decay'  : weight decay (float)
+    - 'sched_cls'     : scheduler key in _SCHEDULERS or None
+    - 'sched_args'    : dict of scheduler kwargs (if sched_cls set)
+
+    Returns:
+        Optimization(optimizer, scheduler_or_none).
+    '''
 
     # config accessor
     cfg = utils.ConfigAccess(config)
@@ -86,17 +105,12 @@ def build_optimization(
 
 # ------------------------------private  function------------------------------
 def _build_optimizer(
-        model: ModelWithParams,
-        optim_cls: str,
-        lr: float,
-        weight_decay: float
-    ) -> torch.optim.Optimizer:
-    '''
-    Docstring for build_optimizer
-
-    :param model: Description
-    :param cfg: Description
-    '''
+    model: ModelWithParams,
+    optim_cls: str,
+    lr: float,
+    weight_decay: float
+) -> torch.optim.Optimizer:
+    '''Instantiate an optimizer from the registry.'''
 
     optimizer_class = _OPTIMIZERS.get(optim_cls)
     if optimizer_class is None:
@@ -108,16 +122,12 @@ def _build_optimizer(
     )
 
 def _build_scheduler(
-        optimizer: torch.optim.Optimizer,
-        sched_cls: str,
-        sched_args: dict
-    ) -> torch.optim.lr_scheduler.LRScheduler | None:
-    '''
-    Docstring for build_scheduler
+    optimizer: torch.optim.Optimizer,
+    sched_cls: str,
+    sched_args: dict
+) -> torch.optim.lr_scheduler.LRScheduler | None:
+    '''Instantiate a scheduler from the registry if requested.'''
 
-    :param optimizer: Description
-    :param cfg: Description
-    '''
     if sched_cls is None:
         return None
     scheduler = _SCHEDULERS.get(sched_cls)

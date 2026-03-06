@@ -85,7 +85,7 @@ def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
     aux = config.get('dev_settings_path')
     if aux:
         aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
-    candidates.append(aux)
+        candidates.append(aux)
 
     # overwrite from selected profile
     profile = config.profile

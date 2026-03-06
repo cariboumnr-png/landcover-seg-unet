@@ -49,8 +49,8 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
     monitor_head = config['trainer']['runtime']['monitor']['track_head_name']
     max_epoch = config['trainer']['runtime']['schedule']['max_epoch']
 
-    # build a trainer with minimal settings
-    trainer = training.build_trainer(dataspecs, config, logger)
+    # build a trainer with no logging
+    trainer = training.build_trainer(dataspecs, config, logger, skip_log=True)
     trainer.set_head_state([monitor_head])
 
     # run trainer
