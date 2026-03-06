@@ -5,6 +5,8 @@ models:
 trainer:
   optim:
     weight_decay: 0.0
+    sched_cls: 'none'
+    sched_args: {}
   loss:
     types:
       focal:
