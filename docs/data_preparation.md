@@ -17,13 +17,13 @@ This guide outlines the recommended steps for creating a reference raster, enfor
 ---
 
 ## Contents
+
 - [World Grid Definition](#world-grid-definition)
 - [Input Data Raster Specification](#input-data-raster-specification)
   - [Image Raster](#image-raster)
   - [Label Raster](#label-raster)
   - [Domain Raster (Optional)](#domain-raster-optional)
 - [Raster Alignment Requirements](#raster-alignment-requirements)
-  - [Snapping Workflow in QGIS](#snapping-workflow-in-qgis)
 - [Data Configuration JSON](#data-configuration-json)
 
 ---
@@ -112,6 +112,7 @@ Because domain processing occurs within the training configuration—not the dat
 ---
 
 ## Raster Alignment Requirements
+
 All input rasters—image, label, and optional domain—must be **aligned** to the
 project’s reference raster created during world‑grid definition. This ensures that
 every raster shares:
@@ -135,52 +136,28 @@ appropriately before entering the pipeline.
 
 ## Data Configuration JSON
 
-The data configuration JSON provides the metadata required for interpreting image bands, raw labels, and optional class groupings. This file must accompany the input rasters and should follow the structure described in the sections below.
+A data configuration JSON must accompany the input rasters.
+It defines band ordering, label behavior, and (optionally) parent–child grouping.
 
-### 1. Image Band Specification
+### Required Fields
+| Key | Purpose | Notes |
+|-----|---------|-------|
+| band_map | Defines band order of the composite image | Must be 0‑based |
+| label_num_classes | Number of raw label IDs | Any numbering scheme allowed |
+| label_to_ignore | Raw labels to exclude | Will be mapped to ignore_label |
+| ignore_label | Unified ignore class ID | Typically 255 |
+| label_reclass_map | Parent→child class grouping (optional) | Enables hierarchical training |
 
-Defines the ordering of composite image bands. Band indices must be **zero‑based**
-and continuous, since they directly index array channels.
-
-**Example**:
-```
+**Example:**
+```json
 {
   "band_map": {
-    "dem": 0,
-    "blue": 1,
-    "green": 2,
-    "red": 3,
-    "nir": 4,
-    "swir1": 5,
-    "swir2": 6
+    "dem": 0, "blue": 1, "green": 2,
+    "red": 3, "nir": 4, "swir1": 5, "swir2": 6
   },
-}
-```
-
----
-
-### 2. Required Label Configuration
-
-These fields describe the **raw** land‑cover classes as they appear in the label
-raster. Label IDs may use any numbering scheme.
-
-**Example**:
-```
-{
-  "ignore_label": 255,          # ignored raw labels to map to this
-  "label_num_classes": 8,       # total number of label IDs
-  "label_to_ignore": [7, 8],    # labels not to be trained; [] if none
-}
-```
-
-### 3. Optional Label Parent–Child Hierarchy
-
-This hierarchy allows raw classes to be grouped into broader parent categories
-for staged training. This is optional, where keys represent parent class IDs; values list the raw child classes belonging to each parent.
-
-**Example**:
-```
-{
+  "label_num_classes": 8,
+  "label_to_ignore": [7, 8],
+  "ignore_label": 255,
   "label_reclass_map": {
     "1": [1, 2],
     "2": [3, 4],
@@ -189,72 +166,59 @@ for staged training. This is optional, where keys represent parent class IDs; va
 }
 ```
 
+### Optional Documentation Fields
+These improve interpretability and visualization, but are not required by the preprocessing pipeline.
 
-### 4. Optional Documentation Fields
+| Key| Purpose |
+|----|---------|
+| label_class_name       | Human‑readable names for raw labels                   |
+|label_reclass_name      |Human‑readable names for parent classes                |
+|label_reclass_color_map | RGB colors for parent classes (preview visualization) |
 
-These keys are not required for preprocessing but are useful for clarity and
-visualization.
-
-**label_class_name:** Human‑readable names for raw label IDs.
-
-**Example**:
-```
+**Example:**
+```json
 {
   "label_class_name": {
-    "1": "WAT",
-    "2": "ISL",
-    "3": "FOR",
-    ...
-    "7": "ROCK",
-    "8": "URBAN"
-  }
-}
-```
-
-**label_reclass_name:** Names for parent classes.
-
-**Example**:
-```
-{
+    "1": "ISL", "2": "WAT",
+    "3": "FOR_NEW", "4": "FOR_OLD",
+    "5": "TMS", "6": "OMS",
+    "7": "RCK", "8": "UCL"
+  },
   "label_reclass_name": {
     "1": "water",
     "2": "forest",
     "3": "wetland"
-  }
-}
-```
-
-**label_reclass_color_map:** RGB color values for each parent class. Intended for future visualization tools.
-
-**Example**:
-```
-{
+  },
   "label_reclass_color_map": {
-    "1": [51, 108, 230],
-    "2": [25, 114, 19],
-    "3": [195, 208, 54]
+    "1": [51,108,230],
+    "2": [25,114,19],
+    "3": [195,208,54]
   }
 }
 ```
 
-### Summary
+**Key Rules**
+  - Band indices must be 0‑based.
+  - Label IDs may use any numbering system.
+  - label_reclass_map is optional; use only if leveraging hierarchical training.
+  - Fields like dem_pad are intentionally omitted (under revision).
 
-- Required keys:
-  `band_map`, `label_num_classes`, `label_to_ignore`, `ignore_label`,
-  `label_reclass_map` (if using hierarchy),
-- Optional keys:
-  `label_class_name`, `label_reclass_name`, `label_reclass_color_map`.
-- Band indices must be zero‑based; label IDs may use any numbering convention.
+**Summary**
 
-The final JSON must be supplied together with the input rasters to ensure
-consistent and reproducible preprocessing across the project.
+You only need:
+  - `band_map`
+  - `label_num_classes`
+  - `label_to_ignore`
+  - `ignore_label`
+  - `label_reclass_map` (optional)
+
+Everything else is optional metadata for readability or visualization.
 
 ---
 
 ## Appendix
 
 ### Tutorial - Create A Reference Raster
-
 For the purpose of this guide, we will create a reference raster in QGIS in the
 following steps:
 
@@ -311,7 +275,6 @@ All world grids and snapped input rasters will be anchored to this reference.
 ---
 
 ### Tutorial - Snapping Workflow in QGIS
-
 With the reference extent raster prepared, all remaining input rasters (image,
 label, and optional domain) must be reprojected and snapped to match it. The
 following example workflow uses QGIS:
