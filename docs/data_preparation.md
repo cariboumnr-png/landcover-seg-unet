@@ -43,8 +43,8 @@ After project extent is defined, world grids are derived from it during the pipe
 
 [Jump](#tutorial---create-a-reference-raster) to the tutorial on how to create reference raster in QGIS.
 
+<img src="./images/extent_reference.png" alt="extent_reference" width="800">
 
-![extent_reference_creation](./images/extent_reference.png)
 **Figure 1**. Extent reference raster creation.
 
 ---
@@ -61,7 +61,8 @@ Regardless of the processing path, the final image must contain at least the six
 this minimal 7‑channel composite input, you may supply as many additional channels
 as applicable.
 
-![example_image_raster](./images/example_image_raster.png)
+<img src="./images/example_label_raster.png" alt="example_label_raster" width="800">
+
 **Figure 2**. Example image raster.
 
 ---
@@ -91,7 +92,8 @@ This hierarchy enables workflows such as:
 
 If you wish to use this hierarchical approach, you must provide a JSON configuration that defines the parent–child mappings. The format and usage of this configuration are described later in the guide.
 
-![example_label_raster](./images/example_label_raster.png)
+<img src="./images/example_image_raster.png" alt="example_image_raster" width="800">
+
 **Figure 3**. Example label raster.
 
 ---
@@ -103,8 +105,9 @@ The domain raster must be **integer‑valued**, with each integer representing a
 
 Because domain processing occurs within the training configuration—not the data‑preparation stage—this guide only requires users to provide a clean, integer‑encoded domain raster aligned to the project extent and reference raster.
 
-![example_domain_raster](./images/example_domain_raster.png)
-**Figure 2**. Example domain raster.
+<img src="./images/example_domain_raster.png" alt="example_domain_raster" width="800">
+
+**Figure 4**. Example domain raster.
 
 ---
 
@@ -125,6 +128,8 @@ All rasters must also fall **entirely within the bounds** of the project extent.
 Any data extending beyond the reference raster’s extent will be clipped or
 discarded during alignment. Users should therefore crop or reproject their data
 appropriately before entering the pipeline.
+
+[Jump](#tutorial---snapping-workflow-in-qgis) to the tutorial on how to align rasters to a reference raster in QGIS.
 
 ---
 
