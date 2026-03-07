@@ -39,71 +39,10 @@ The grid extent can be provided in two ways:
   - Manual definition using a top‑left origin and a specified number of tiles in    the horizontal and vertical directions.
   - Reference‑raster definition (preferred), where a raster created in common GIS tools (QGIS, ArcGIS, GDAL) that supplies the CRS, pixel resolution, extent, and origin to build grid
 
-For the purpose of this guide, we will create a reference raster in QGIS in the
-following steps:
+After project extent is defined, world grids are derived from it during the pipeline (module `landseg.grid`) to form reproducible, versioned tiling schemes used throughout experimentation and production.
 
+[Jump](#tutorial---create-a-reference-raster) to the tutorial on how to create reference raster in QGIS.
 
----
-
-### 🗺️ Task 1 — Define Your Study Area
-**Goal:** Identify the total spatial region to be modeled.
-
-1. Determine the full area covering:
-   - Your **training region**, and
-   - All **intended prediction regions**.
-2. Choose a **projected CRS** (units in metres recommended).
-
----
-
-### 🧩 Task 2 — Create an Extent Polygon
-**Goal:** Build a vector outline representing the project extent.
-*(Skip if you already have a suitable polygon.)*
-
-1. Open the **Processing Toolbox**.
-2. Navigate to: **Vector Geometry → Create layer from extent**
-3. Generate a polygon that fully covers your study area.
-
----
-
-### 🖼️ Task 3 — Convert the Extent Polygon to a Raster
-**Goal:** Produce the reference raster that formalizes project CRS, resolution,
-and alignment.
-
-1. Open the **Processing Toolbox** again.
-2. Navigate to: **GDAL → Vector Conversion → Rasterize (vector to raster)**
-3. Set **Output raster size units** to *Georeferenced units*.
-4. Specify:
-   - **Horizontal resolution** (e.g., 30 m for Landsat‑scale inputs)
-   - **Vertical resolution** (same as above)
-5. Ensure the CRS matches your projected CRS.
-
----
-
-### 💾 Task 4 — Save the Reference Raster
-**Goal:** Export the raster that anchors all future grids and data alignment.
-
-- Save the output as something like: **ref_extent.tif**
-
-This file will be used during world‑grid generation and forms the fixed spatial
-reference for all aligned rasters.
-
----
-
-### ✅ Result
-You now have a **reference extent raster** that defines:
-
-- The **immutable project extent**
-- The **project CRS**
-- The **pixel size**
-- The **origin and alignment**
-
-All world grids and snapped input rasters will be anchored to this reference.
-
----
-
-This reference raster defines the immutable project extent. Grids derived from
-it form reproducible, versioned tiling schemes used throughout experimentation
-and production.
 
 ![extent_reference_creation](./images/extent_reference.png)
 **Figure 1**. Extent reference raster creation.
@@ -121,6 +60,9 @@ For GEE users, we recommend exploring the **Best Available Pixel (BAP)** workflo
 Regardless of the processing path, the final image must contain at least the six standard Landsat optical bands, which are required for computing the project’s spectral indices. In addition, users should append a DEM layer, which should be resampled and aligned to the same raster properties as the optical data. Besides
 this minimal 7‑channel composite input, you may supply as many additional channels
 as applicable.
+
+![example_image_raster](./images/example_image_raster.png)
+**Figure 2**. Example image raster.
 
 ---
 
@@ -149,6 +91,9 @@ This hierarchy enables workflows such as:
 
 If you wish to use this hierarchical approach, you must provide a JSON configuration that defines the parent–child mappings. The format and usage of this configuration are described later in the guide.
 
+![example_label_raster](./images/example_label_raster.png)
+**Figure 3**. Example label raster.
+
 ---
 
 ### Domain Raster (Optional)
@@ -157,6 +102,9 @@ A domain raster is an ***optional*** input that can be included when the study b
 The domain raster must be **integer‑valued**, with each integer representing a unique domain category. Users do not need to pre‑process these values beyond ensuring their correctness; during training, the framework automatically converts the raw domain raster into the internal representations required by the chosen conditioning strategy (whether used as concatenated inputs, FiLM‑style conditioning, or left as discrete indices).
 
 Because domain processing occurs within the training configuration—not the data‑preparation stage—this guide only requires users to provide a clean, integer‑encoded domain raster aligned to the project extent and reference raster.
+
+![example_domain_raster](./images/example_domain_raster.png)
+**Figure 2**. Example domain raster.
 
 ---
 
@@ -180,85 +128,14 @@ appropriately before entering the pipeline.
 
 ---
 
-### Snapping Workflow in QGIS
-
-With the reference extent raster prepared, all remaining input rasters (image,
-label, and optional domain) must be reprojected and snapped to match it. The
-following workflow uses QGIS:
-
----
-
-### 🗂️ Task 1 — Load Data
-**Goal:** Bring all relevant rasters into QGIS.
-
-1. Open QGIS.
-2. Drag in:
-   - The **reference extent raster**.
-   - Your **image raster**.
-   - Your **label raster**.
-   - Your **domain raster** (optional).
-
----
-
-### 🛠️ Task 2 — Open the Align Rasters Tool
-**Goal:** Use GDAL’s alignment utility inside QGIS.
-
-1. Open the **Processing Toolbox**.
-2. Navigate to:
-   **GDAL → Raster Alignment → Align rasters**
-
----
-
-### 🎯 Task 3 — Set Up Alignment Parameters
-**Goal:** Configure the tool so the input raster snaps exactly to the reference.
-
-1. **Input layer:**
-   Select the raster you wish to align (image, label, or domain).
-
-2. **Reference layer:**
-   Choose the **reference extent raster**.
-
-3. **Output raster size:**
-   - Target resolution: **Layer resolution** (inherits reference pixel size)
-   - Target CRS: automatically taken from the reference raster
-
-4. **Output alignment:**
-   - Enable **Match pixel alignment**
-   - Enable **Clip to reference layer extent**
-
----
-
-### 💾 Task 4 — Save the Aligned Raster
-**Goal:** Export the snapped version.
-
-- Save as:
-  - `image_aligned.tif`
-  - `labels_aligned.tif`
-  - `domain_aligned.tif` (if applicable)
-
----
-
-### 🔁 Task 5 — Repeat for All Rasters
-Run the alignment process for each input raster individually.
-
-### ✅ Result
-All rasters now share:
-- The **same CRS**
-- The **same pixel resolution**
-- The **same pixel origin and alignment**
-- The **same spatial bounds**
-
-They are now fully compatible with the world grid and the rest of the pipeline.
-
----
-
 ## Data Configuration JSON
 
 The data configuration JSON provides the metadata required for interpreting image bands, raw labels, and optional class groupings. This file must accompany the input rasters and should follow the structure described in the sections below.
 
 ### 1. Image Band Specification
 
-Defines the ordering of composite image bands. Band indices must be zero‑based, since they directly index array channels.
+Defines the ordering of composite image bands. Band indices must be **zero‑based**
+and continuous, since they directly index array channels.
 
 **Example**:
 ```
@@ -272,7 +149,6 @@ Defines the ordering of composite image bands. Band indices must be zero‑based
     "swir1": 5,
     "swir2": 6
   },
-  ...
 }
 ```
 
@@ -286,11 +162,9 @@ raster. Label IDs may use any numbering scheme.
 **Example**:
 ```
 {
-  ...
   "ignore_label": 255,          # ignored raw labels to map to this
   "label_num_classes": 8,       # total number of label IDs
-  "label_to_ignore": [7, 8],    # labels not to be trained; leave [] if none
-  ...
+  "label_to_ignore": [7, 8],    # labels not to be trained; [] if none
 }
 ```
 
@@ -302,7 +176,6 @@ for staged training. This is optional, where keys represent parent class IDs; va
 **Example**:
 ```
 {
-  ...
   "label_reclass_map": {
     "1": [1, 2],
     "2": [3, 4],
@@ -367,7 +240,135 @@ visualization.
 - Optional keys:
   `label_class_name`, `label_reclass_name`, `label_reclass_color_map`.
 - Band indices must be zero‑based; label IDs may use any numbering convention.
-- Keys such as dem_pad are omitted because they are being redesigned.
 
 The final JSON must be supplied together with the input rasters to ensure
 consistent and reproducible preprocessing across the project.
+
+---
+
+## Appendix
+
+### Tutorial - Create A Reference Raster
+
+For the purpose of this guide, we will create a reference raster in QGIS in the
+following steps:
+
+**Task 1 — Define Your Study Area**<br>
+**Goal:** Identify the total spatial region to be modeled.
+1. Determine the full area covering:
+   - Your **training region**, and
+   - All **intended prediction regions**.
+2. Choose a **projected CRS** (units in metres recommended).
+
+---
+
+**Task 2 — Create an Extent Polygon**<br>
+**Goal:** Build a vector outline representing the project extent.
+*(Skip if you already have a suitable polygon.)*
+1. Open the **Processing Toolbox**.
+2. Navigate to: **Vector Geometry → Create layer from extent**
+3. Generate a polygon that fully covers your study area.
+
+---
+
+**Task 3 — Convert the Extent Polygon to a Raster**<br>
+**Goal:** Produce the reference raster that formalizes project CRS, resolution,
+and alignment.
+1. Open the **Processing Toolbox** again.
+2. Navigate to: **GDAL → Vector Conversion → Rasterize (vector to raster)**
+3. Set **Output raster size units** to *Georeferenced units*.
+4. Specify:
+   - **Horizontal resolution** (e.g., 30 m for Landsat‑scale inputs)
+   - **Vertical resolution** (same as above)
+5. Ensure the CRS matches your projected CRS.
+
+---
+
+**Task 4 — Save the Reference Raster**<br>
+**Goal:** Export the raster that anchors all future grids and data alignment.
+- Save the output as something like: **ref_extent.tif**
+
+This file will be used during world‑grid generation and forms the fixed spatial
+reference for all aligned rasters.
+
+---
+
+**Result**<br>
+You now have a **reference extent raster** that defines:
+
+- The **immutable project extent**
+- The **project CRS**
+- The **pixel size**
+- The **origin and alignment**
+
+All world grids and snapped input rasters will be anchored to this reference.
+
+---
+
+### Tutorial - Snapping Workflow in QGIS
+
+With the reference extent raster prepared, all remaining input rasters (image,
+label, and optional domain) must be reprojected and snapped to match it. The
+following example workflow uses QGIS:
+
+---
+
+**Task 1 — Load Data**<br>
+**Goal:** Bring all relevant rasters into QGIS.
+1. Open QGIS.
+2. Drag in:
+   - The **reference extent raster**.
+   - Your **image raster**.
+   - Your **label raster**.
+   - Your **domain raster** (optional).
+
+---
+
+**Task 2 — Open the Align Rasters Tool**<br>
+**Goal:** Use GDAL’s alignment utility inside QGIS.
+1. Open the **Processing Toolbox**.
+2. Navigate to:
+   **GDAL → Raster Alignment → Align rasters**
+
+---
+
+**Task 3 — Set Up Alignment Parameters**<br>
+**Goal:** Configure the tool so the input raster snaps exactly to the reference.
+1. **Input layer:**
+   Select the raster you wish to align (image, label, or domain).
+
+2. **Reference layer:**
+   Choose the **reference extent raster**.
+
+3. **Output raster size:**
+   - Target resolution: **Layer resolution** (inherits reference pixel size)
+   - Target CRS: automatically taken from the reference raster
+
+4. **Output alignment:**
+   - Enable **Match pixel alignment**
+   - Enable **Clip to reference layer extent**
+
+---
+**Task 4 — Save the Aligned Raster**<br>
+**Goal:** Export the snapped version.
+
+- Save as:
+  - `image_aligned.tif`
+  - `labels_aligned.tif`
+  - `domain_aligned.tif` (if applicable)
+
+---
+
+**Task 5 — Repeat for All Rasters**<br>
+Run the alignment process for each input raster individually.
+
+**Result**<br>
+All rasters now share:
+- The **same CRS**
+- The **same pixel resolution**
+- The **same pixel origin and alignment**
+- The **same spatial bounds**
+
+They are now fully compatible with the world grid and the rest of the pipeline.
+
+---
