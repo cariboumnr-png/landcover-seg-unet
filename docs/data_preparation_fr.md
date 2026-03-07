@@ -42,7 +42,7 @@ Après la définition de l’emprise du projet, les grilles mondiales sont déri
 
 [Aller](#tutoriel---créer-un-raster-de-référence) au tutoriel expliquant comment créer un raster de référence dans QGIS.
 
-<img src="./images/extent_reference.png" alt="extent_reference" width="800">
+<img src="./images/extent_reference_fr.png" alt="raster de référence" width="800">
 
 **Figure 1**. Création d’un raster de référence d’emprise.
 
@@ -59,7 +59,7 @@ Pour les utilisateurs GEE, nous recommandons d’explorer le workflow **Best Ava
 
 Quel que soit le chemin de traitement, l’image finale doit contenir au moins les six bandes optiques Landsat standard, nécessaires au calcul des indices spectraux du projet. Les utilisateurs doivent également ajouter une couche MNT, reséchantillonnée et alignée aux mêmes propriétés raster que les données optiques. En plus de ce composite minimal à 7 canaux, vous pouvez ajouter d'autres canaux.
 
-<img src="./images/example_label_raster.png" alt="example_label_raster" width="800">
+<img src="./images/example_label_raster_fr.png" alt="exemple de raster d'image" width="800">
 
 **Figure 2**. Exemple de raster d’image.
 
@@ -85,7 +85,7 @@ Cette hiérarchie permet notamment :
 
 Si vous souhaitez utiliser cette approche hiérarchique, fournissez un fichier JSON définissant les relations parent–enfant.
 
-<img src="./images/example_image_raster.png" alt="example_image_raster" width="800">
+<img src="./images/example_image_raster.png" alt="exemple de raster d’étiquettes" width="800">
 
 **Figure 3**. Exemple de raster d’étiquettes.
 
@@ -96,7 +96,7 @@ Le raster de domaine est **optionnel** et peut être inclus lorsque l’étude b
 
 Le raster de domaine doit être **entier**, chaque valeur entière représentant une catégorie de domaine. Aucune pré‑transformation n’est nécessaire : durant l’entraînement, le framework convertit automatiquement le raster de domaine brut vers les représentations internes selon la stratégie de conditionnement choisie.
 
-<img src="./images/example_domain_raster.png" alt="example_domain_raster" width="800">
+<img src="./images/example_domain_raster_fr.png" alt="exemple de raster de domaine" width="800">
 
 **Figure 4**. Exemple de raster de domaine.
 
