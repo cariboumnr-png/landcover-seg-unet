@@ -2,7 +2,7 @@
 
 [English](./data_preparation.md) | [Français](./data_preparation_fr.md)
 
-Dernière mise à jour : 2026-03-06
+Dernière mise à jour : 2026-03-07
 
 ---
 
@@ -59,7 +59,7 @@ Pour les utilisateurs GEE, nous recommandons d’explorer le workflow **Best Ava
 
 Quel que soit le chemin de traitement, l’image finale doit contenir au moins les six bandes optiques Landsat standard, nécessaires au calcul des indices spectraux du projet. Les utilisateurs doivent également ajouter une couche MNT, reséchantillonnée et alignée aux mêmes propriétés raster que les données optiques. En plus de ce composite minimal à 7 canaux, vous pouvez ajouter d'autres canaux.
 
-<img src="./images/example_label_raster_fr.png" alt="exemple de raster d'image" width="800">
+<img src="./images/example_image_raster.png" alt="exemple de raster d’étiquettes" width="800">
 
 **Figure 2**. Exemple de raster d’image.
 
@@ -85,7 +85,7 @@ Cette hiérarchie permet notamment :
 
 Si vous souhaitez utiliser cette approche hiérarchique, fournissez un fichier JSON définissant les relations parent–enfant.
 
-<img src="./images/example_image_raster.png" alt="exemple de raster d’étiquettes" width="800">
+<img src="./images/example_label_raster_fr.png" alt="exemple de raster d'image" width="800">
 
 **Figure 3**. Exemple de raster d’étiquettes.
 

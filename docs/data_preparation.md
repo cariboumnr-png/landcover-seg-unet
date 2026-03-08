@@ -2,7 +2,7 @@
 
 [English](./data_preparation.md) | [Français](./data_preparation_fr.md)
 
-Last updated: 2026-03-06
+Last updated: 2026-03-07
 
 ---
 
@@ -61,7 +61,7 @@ Regardless of the processing path, the final image must contain at least the six
 this minimal 7‑channel composite input, you may supply as many additional channels
 as applicable.
 
-<img src="./images/example_label_raster.png" alt="example_label_raster" width="800">
+<img src="./images/example_image_raster.png" alt="example_image_raster" width="800">
 
 **Figure 2**. Example image raster.
 
@@ -92,7 +92,7 @@ This hierarchy enables workflows such as:
 
 If you wish to use this hierarchical approach, you must provide a JSON configuration that defines the parent–child mappings. The format and usage of this configuration are described later in the guide.
 
-<img src="./images/example_image_raster.png" alt="example_image_raster" width="800">
+<img src="./images/example_label_raster.png" alt="example_label_raster" width="800">
 
 **Figure 3**. Example label raster.
 
