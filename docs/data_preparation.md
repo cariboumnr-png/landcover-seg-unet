@@ -10,7 +10,7 @@ Last updated: 2026-03-07
 
 Effective geospatial machine‑learning workflows begin with careful and consistent data preparation. Before any modeling, training, or experimentation can take place, all input rasters must be standardized in terms of CRS, resolution, extent, and alignment so they behave predictably throughout the pipeline. Ensuring these core properties are harmonized at the start greatly reduces downstream complexity and prevents errors related to mismatched spatial reference systems or misaligned pixels.
 
-A central part of this standardization is the definition of a stable, static, and effectively immutable world grid, which provides the fixed spatial framework used for tiling and deterministic indexing. Once this grid is established, all datasets intended for training, inference, or future production must be snapped or reprojected to match its CRS, pixel size, and origin using external GIS tools such as QGIS, ArcGIS, or GDAL.
+A central part of this standardization is the definition of a static spatial extent as the canvas for tiling and deterministic indexing. Once the extent is established, all datasets intended for training, inference, or future production must be snapped or reprojected to match its CRS, pixel size using external GIS tools such as QGIS, ArcGIS, or GDAL.
 
 This guide outlines the recommended steps for creating a reference raster, enforcing consistent alignment across datasets, and exporting clean, grid‑compatible rasters that form a reliable foundation for all subsequent analysis and modeling.
 
