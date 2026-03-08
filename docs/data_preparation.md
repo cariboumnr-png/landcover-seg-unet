@@ -25,6 +25,7 @@ This guide outlines the recommended steps for creating a reference raster, enfor
   - [Domain Raster (Optional)](#domain-raster-optional)
 - [Raster Alignment Requirements](#raster-alignment-requirements)
 - [Data Configuration JSON](#data-configuration-json)
+- [Required Project Folder Structure](#required-project-folder-structure)
 
 ---
 
@@ -213,6 +214,75 @@ You only need:
   - `label_reclass_map` (optional)
 
 Everything else is optional metadata for readability or visualization.
+
+---
+
+## Required Project Folder Structure
+
+After all data rasters and the corresponding configuration JSON are prepared,
+they are expected to follows a fixed and predictable folder structure. The system expects this structure exactly as described below:
+
+```
+<exp_root>/                                 # user-picked location
+├── input/
+│   ├── extent_ref/
+│   │    └── example_extent.tif
+│   │
+│   ├── domain/
+│   │    └── example_domain_1.tif
+│   │    └── example_domain_2.tif
+│   │    └── ... (you may add more)
+│   │
+│   └── <dataset_name>/                     # user-defined dataset name
+│        ├── fit/
+│        │    ├── example_image.tif
+│        │    └── example_label.tif
+│        │
+│        ├── test/                          # optional
+│        │    ├── example_image.tif
+│        │    └── example_label.tif
+│        │
+│        └── configs/
+│             └── example_config.json
+```
+
+This predictable structure allows the pipeline to automatically locate training
+data, labels, domain rasters, and configuration files without requiring users to
+manually specify paths.
+
+### Folder Purpose Summary
+
+- **extent_ref/**
+  Contains a single reference raster that defines the project CRS, pixel size,
+  origin, and extent. All other rasters must be aligned to this file.
+
+- **domain/**
+  Contains any number of *domain rasters* used as categorical or contextual
+  layers. These files are treated as a library; the model uses only one for ID
+  values and one for vector values, selected later in the configuration file.
+
+- **\<dataset_name\>/**
+  A user-named folder containing the rasters used for training and testing.
+
+  - **fit/**
+    Contains the image and label rasters used for model training.
+
+  - **test/** (optional)
+    Contains the image and label rasters for evaluation or validation.
+
+  - **configs/**
+    Contains the JSON configuration that defines band order, label handling, and
+    optional parent–child class grouping.
+
+### Key Rules
+
+1. The structure inside `exp_root` must remain exactly as shown.
+2. Only `exp_root` and `dataset_name` are user-defined.
+3. Filenames inside each folder may vary, but **folder names must not change**.
+4. The system automatically constructs full paths from this structure; you do not
+   need to provide directory paths in the YAML configuration.
+5. Missing files or incorrect folder organization will lead to errors during
+   data preparation or training.
 
 ---
 

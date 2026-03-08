@@ -25,6 +25,7 @@ Ce guide décrit les étapes recommandées pour créer un raster de référence,
   - [Raster de domaine (optionnel)](#raster-de-domaine-optionnel)
 - [Exigences d’alignement des rasters](#exigences-dalignement-des-rasters)
 - [Fichier JSON de configuration des données](#fichier-json-de-configuration-des-données)
+- [Structure de dossier requise pour le projet](#structure-de-dossier-requise-pour-le-projet)
 
 ---
 
@@ -195,6 +196,69 @@ Vous avez seulement besoin de :
   - `label_reclass_map` (optionnel)
 
 Tout le reste est un métadonné facultatif visant à améliorer la lisibilité ou la visualisation.
+
+---
+
+## Structure de dossier requise pour le projet
+
+Une fois que tous les rasters de données et le fichier JSON de configuration correspondant sont préparés, ils doivent suivre une **structure de dossiers fixe et prévisible**.
+Le système attend **exactement** la structure suivante :
+
+```
+<exp_root>/                           # emplacement choisi par l'utilisateur
+├── input/
+│   ├── extent_ref/
+│   │    └── example_extent.tif
+│   │
+│   ├── domain/
+│   │    └── example_domain_1.tif
+│   │    └── example_domain_2.tif
+│   │    └── ... (vous pouvez en ajouter d'autres)
+│   │
+│   └── <dataset_name>/               # nom de dataset défini par l'utilisateur
+│        ├── fit/
+│        │    ├── example_image.tif
+│        │    └── example_label.tif
+│        │
+│        ├── test/                    # optionnel
+│        │    ├── example_image.tif
+│        │    └── example_label.tif
+│        │
+│        └── configs/
+│             └── example_config.json
+```
+
+Cette structure prévisible permet au pipeline de **localiser automatiquement** les données d’entraînement, les labels, les rasters de domaine et les fichiers de configuration, sans que l’utilisateur ait à spécifier manuellement les chemins.
+
+### Résumé du rôle des dossiers
+
+- **extent_ref/**
+  Contient un raster de référence unique qui définit le **SCR (CRS) du projet, la taille des pixels, l’origine et l’étendue**.
+  Tous les autres rasters doivent être **alignés sur ce fichier**.
+
+- **domain/**
+  Contient un nombre quelconque de *rasters de domaine* utilisés comme couches **catégorielles ou contextuelles**.
+  Ces fichiers sont traités comme une bibliothèque ; le modèle n’en utilise qu’un pour les **valeurs d’ID** et un pour les **valeurs vectorielles**, sélectionnés ultérieurement dans le fichier de configuration.
+
+- **<dataset_name>/**
+  Un dossier nommé par l’utilisateur contenant les rasters utilisés pour **l’entraînement et les tests**.
+
+  - **fit/**
+    Contient les rasters d’image et de label utilisés pour **l’entraînement du modèle**.
+
+  - **test/** (optionnel)
+    Contient les rasters d’image et de label utilisés pour **l’évaluation ou la validation**.
+
+  - **configs/**
+    Contient la **configuration JSON** qui définit l’ordre des bandes, la gestion des labels et l’éventuel **regroupement hiérarchique parent–enfant des classes**.
+
+### Règles importantes
+
+1. La structure à l’intérieur de `exp_root` doit rester **exactement telle qu’indiquée**.
+2. Seuls `exp_root` et `dataset_name` sont définis par l’utilisateur.
+3. Les noms de fichiers dans chaque dossier peuvent varier, mais **les noms des dossiers ne doivent pas être modifiés**.
+4. Le système construit automatiquement les chemins complets à partir de cette structure ; vous **n’avez pas besoin de fournir les chemins des répertoires dans la configuration YAML**.
+5. Des fichiers manquants ou une organisation incorrecte des dossiers entraîneront des **erreurs lors de la préparation des données ou de l’entraînement**.
 
 ---
 

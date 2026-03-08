@@ -36,17 +36,21 @@ Documentation détaillée :
 
 ## ▶️ Utilisation
 
-Avant d’exécuter des expériences, consulter [ce guide](./docs/data_preparation_fr.md) pour les instructions de préparation des rasters d’images et d’étiquettes.
+Avant d’exécuter une expérience, vous devez préparer vos rasters d’entrée et organiser correctement votre dossier de projet. Veuillez commencer par lire le guide de préparation des données:
 
-Installer le cadre :
+📄 [**Guide de préparation des données**](./docs/data_preparation_fr.md)
+
+Une fois vos rasters et dossiers prêts, configurez votre expérience en utilisant le fichier settings.yaml à la racine du projet. Ce fichier fournit un emplacement sécurisé pour que les utilisateurs puissent préciser leurs entrées sans modifier l’arborescence interne de configurations Hydra.
+
+Installez le framework:
 
     pip install .
 
-Exécuter une expérience complète :
+Exécuter une expérience complète:
 
     experiment_run profile=end_to_end
 
-Exécuter un test d’ajustement excessif :
+Exécuter un test d’ajustement excessif:
 
     experiment_run profile=overfit_test
 

@@ -36,21 +36,30 @@ More detailed documentation available here:
 
 ## ▶️ Usage
 
-Prior to running, [see guide](./docs/data_preparation.md) on preparing label and image rasters
+Before running any experiment, you must prepare your input rasters and organize
+your project folder correctly. Please start by reading the data‑preparation guide:
+
+📄 [**Data preparation guide**](./docs/data_preparation.md)
+
+Once your rasters and folders are ready, configure your experiment using the
+root‑level `settings.yaml`. This file provides a safe place for users to specify
+inputs without modifying the internal Hydra configuration tree.
 
 Install the framework:
 
-    `pip install .`
+    pip install .
 
 Run a full experiment:
 
-    `experiment_run profile=end_to_end`
+    experiment_run profile=end_to_end
 
 Run an overfit silo test:
 
-    `experiment_run profile=overfit_test`
+    experiment_run profile=overfit_test
 
-These commands execute Hydra configurations from `src/landseg/configs/`. For most users, it is recommended to provide inputs through the root‑level `settings.yaml`, which is designed for safe customization without modifying the internal configuration tree.
+>🔔 These commands execute Hydra configurations from `src/landseg/configs/`. These
+internal files control the framework’s behavior and should only be modified by
+advanced users familiar with Hydra and the project structure. For most workflows, all required inputs should be provided through the root‑level `settings.yaml`.
 
 ---
 
