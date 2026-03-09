@@ -4,9 +4,11 @@
 # standard imports
 import dataclasses
 import json
+import os
 import typing
 # third-party imports
 import hydra
+import hydra.utils
 import omegaconf
 # local imports
 import landseg.configs as configs
@@ -16,11 +18,37 @@ import landseg.configs as configs
 def main(config: omegaconf.DictConfig) -> None:
     '''Run the selected CLI profile with resolved configuration.'''
 
-    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    merged = omegaconf.OmegaConf.merge(schema, config)
-    omegaconf.OmegaConf.resolve(merged)
+    # safer CWD fetching
+    cwd = hydra.utils.get_original_cwd()
 
-    cfg = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(merged))
+    # get schema
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+
+    # user settings at root
+    candidates = [os.path.join(cwd, 'settings.yaml')]
+    # optional dev settings (untracked, supplied via CLI argument)
+    aux = config.get('dev_settings_path')
+    if aux:
+        aux = aux if os.path.isabs(aux) else os.path.join(cwd, aux)
+        candidates.append(aux)
+
+    # merging overrides with default config tree and resolve
+    for p in candidates:
+        if os.path.exists(p):
+            user_cfg = omegaconf.OmegaConf.load(p)
+            if not isinstance(user_cfg, omegaconf.DictConfig):
+                raise TypeError('./settings.yaml must have a mapping')
+            # allow domain files to be added
+            with omegaconf.open_dict(config.input_domain.files):
+                merged = omegaconf.OmegaConf.merge(schema, config, user_cfg)
+                config = typing.cast(omegaconf.DictConfig, merged)
+            # allow new phases to be added
+            with omegaconf.open_dict(config.experiment.phases):
+                merged = omegaconf.OmegaConf.merge(schema, config, user_cfg)
+                config = typing.cast(omegaconf.DictConfig, merged)
+    omegaconf.OmegaConf.resolve(config)
+
+    cfg = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(config))
     cfg_dict = dataclasses.asdict(cfg)
     print(json.dumps(cfg_dict, indent=4))
 

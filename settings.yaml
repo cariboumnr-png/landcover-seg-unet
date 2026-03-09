@@ -1,214 +1,54 @@
-# =============================================================================
-# USER SETTINGS / PARAMÈTRES UTILISATEUR
-# This file allows you to configure the project without touching internal code.
-# Adjust only the items needed for your analysis.
-#
-# Ce fichier vous permet de configurer le projet sans modifier le code interne.
-# Modifiez uniquement les éléments nécessaires à votre analyse.
-#
-# IMPORTANT / IMPORTANT :
-#   - Do NOT edit anything inside ${...}. These are system-generated links
-#     called "interpolation keys."
-#   - Ne PAS modifier le texte dans ${...}. Ce sont des références générées
-#     par le système (« clés d’interpolation »).
-#
-#   - All folders inside the experiment root MUST follow the required structure.
-#   - Tous les dossiers à l’intérieur de la racine du projet DOIVENT suivre
-#     la structure requise.
-# =============================================================================
+exp_root: ./experiment
 
-
-# =============================================================================
-# REQUIRED PROJECT FOLDER STRUCTURE
-# STRUCTURE REQUISE DES DOSSIERS DU PROJET
-#
-# The experiment root (exp_root) can be ANY folder you choose.
-# Inside that folder, you MUST create the following structure:
-#
-# Le répertoire racine du projet (exp_root) peut être N’IMPORTE QUEL dossier.
-# À l’intérieur, vous DEVEZ créer la structure suivante :
-#
-#   exp_root/
-#   ├── input/
-#   │   ├── extent_ref/
-#   │   │    └── example_extent.tif
-#   │   ├── domain/
-#   │   │    └── example_domain_1.tif, example_domain_2.tif, ...
-#   │   └── dataset_name/
-#   │        ├── fit/
-#   │        │    ├── example_image.tif
-#   │        │    └── example_label.tif
-#   │        ├── test/       (optional)
-#   │        │    ├── example_image.tif
-#   │        │    └── example_label.tif
-#   │        └── configs/
-#   │             └── example_config.json
-#
-# The system expects THIS EXACT structure.
-# Le système s’attend à CETTE STRUCTURE EXACTE.
-# =============================================================================
-
-
-# -----------------------------------------------------------------------------
-# PROJECT ROOT / RACINE DU PROJET
-# Folder chosen by the user containing all inputs and outputs.
-#
-# Dossier choisi par l’utilisateur contenant toutes les entrées et sorties.
-# -----------------------------------------------------------------------------
-exp_root: ./experiment   # You may change this / Vous pouvez modifier ceci
-
-
-# -----------------------------------------------------------------------------
-# STUDY AREA (REFERENCE EXTENT ONLY)
-# ZONE D’ÉTUDE (RASTER DE RÉFÉRENCE)
-#
-# The study area is defined by a single raster located in:
-#   input/extent_ref/
-#
-# La zone d’étude est définie par un seul raster placé dans :
-#   input/extent_ref/
-# -----------------------------------------------------------------------------
 input_extent:
-  crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
-  mode: ref          # Fixed to 'ref' / Fixé à 'ref'
-
+  crs: 'EPSG:3161'
+  mode: ref
   inputs:
-    # Name of the reference raster file located in:
-    #   ${exp_root}/input/extent_ref/
-    #
-    # Nom du fichier raster placé dans :
-    #   ${exp_root}/input/extent_ref/
-    filename: 'example_extent.tif'
+    filename: 'on_3161_30m.tif'
 
-
-# -----------------------------------------------------------------------------
-# WORLD GRID SETTINGS / PARAMÈTRES DE GRILLE
-# Determines how the study area is divided into tiles.
-#
-# Détermine comment la zone d’étude est divisée en tuiles.
-# -----------------------------------------------------------------------------
 prep_grid:
   tile_size:
-    row: 256  # Tile height (pixels) / Hauteur (pixels)
-    col: 256  # Tile width  (pixels) / Largeur (pixels)
-
+    row: 256
+    col: 256
   tile_overlap:
-    row: 0    # Overlap (pixels) / Chevauchement (pixels)
+    row: 0
     col: 0
 
-
-# -----------------------------------------------------------------------------
-# DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
-#
-# Place ANY NUMBER of domain rasters into:
-#   input/domain/
-#
-# Placez autant de rasters thématiques que souhaité dans :
-#   input/domain/
-#
-# All listed rasters will be processed into stable internal products.
-# At runtime, the model uses:
-#   - ONE raster for ID values
-#   - ONE raster for vector values
-#
-# Tous les rasters listés seront traités pour produire des artefacts internes.
-# À l’exécution, le modèle utilise :
-#   - UN raster pour les valeurs ID
-#   - UN raster pour les vecteurs
-# -----------------------------------------------------------------------------
 input_domain:
-  # List every domain raster you provide in input/domain/
-  # Listez tous les rasters placés dans input/domain/
   files:
-    - name: example_domain_1.tif
+    - filename: geology.tif
       index_base: 1
-    - name: example_domain_2.tif
+    - filename: ecodistrict.tif
       index_base: 1
 
 prep_domain:
-    # Choose ONE raster for ID values / Choisissez UN raster pour les valeurs ID
-    as_ids: example_domain_1
+  as_ids: ecodistrict
+  as_vec: geology
 
-    # Choose ONE raster for vector values / Choisissez UN raster pour les vecteurs
-    as_vec: example_domain_2
-
-
-# -----------------------------------------------------------------------------
-# DATA PREPARATION / PRÉPARATION DES DONNÉES
-# Thresholds controlling whether a tile is valid based on pixel coverage.
-#
-# Seuils déterminant si une tuile est valide selon la couverture de pixels.
-# -----------------------------------------------------------------------------
-dataprep:
-  threshold:
-    blk_thres_fit: 0.75    # Training tiles / Tuiles d’entraînement
-    blk_thres_test: 0.05   # Test tiles / Tuiles de test
-
-
-# -----------------------------------------------------------------------------
-# DATASET SETTINGS / PARAMÈTRES DU JEU DE DONNÉES
-#
-# Dataset must be located in:
-#   input/<dataset_name>/
-#
-# Le jeu de données doit être situé dans :
-#   input/<dataset_name>/
-# -----------------------------------------------------------------------------
 input_data:
-  name: demo_data      # Replace with your dataset folder name
-                       # Remplacez par le nom de votre dossier de données
+  name: demo_data
+  filenames:
+    fit_image: image.tif
+    fit_label: label_lctype.tif
+    test_image: image.tif
+    test_label: label_lctype.tif
+    config: lctype.json
 
-  file_names:
-    fit_image: example_image.tif
-    fit_label: example_label.tif
-    test_image: example_image.tif
-    test_label: example_label.tif
-    config: example_config.json
-
-
-# -----------------------------------------------------------------------------
-# MODEL SETTINGS / PARAMÈTRES DU MODÈLE
-# How optional domain layers are integrated with imagery.
-#
-# Comment les couches thématiques optionnelles sont intégrées à l’imagerie.
-# -----------------------------------------------------------------------------
 models:
   conditioning:
-    mode: 'hybrid'   # Options: none | concat | film | hybrid
+    mode: 'hybrid'
 
-
-# -----------------------------------------------------------------------------
-# TRAINING RUNTIME / PARAMÈTRES D’EXÉCUTION
-# Controls the model body, monitoring settings, and early stopping.
-#
-# Contrôle le corps du modèle, le suivi et l’arrêt anticipé.
-# -----------------------------------------------------------------------------
 trainer:
-  model_body: unetpp    # Available: unet / unetpp
-                        # Disponibles : unet / unetpp
-
   runtime:
     data:
-      # Must match a domain file name above.
-      # Doit correspondre à un fichier thématique ci‑dessus.
-      domain_ids_name: example_domain_1
-      domain_vec_name: example_domain_2
-
+      domain_ids_name: ecodist
+      domain_vec_name: geology
     schedule:
-      patience: 10      # Stop if no improvement / Arrêt sans amélioration
-      min_delta: 0.0005 # Minimum improvement / Amélioration minimale
-
+      patience: 10
+      min_delta: 0.0005
     monitor:
       track_head_name: layer1
 
-
-# -----------------------------------------------------------------------------
-# EXPERIMENT PHASES (EXAMPLE ONLY)
-# PHASES D’EXPÉRIMENTATION (EXEMPLE)
-#
-# This is only a template. You may edit or add phases as needed.
-# Ceci est seulement un exemple. Vous pouvez modifier ou ajouter des phases.
-# -----------------------------------------------------------------------------
 experiment:
   phases:
     - name: coarse_head

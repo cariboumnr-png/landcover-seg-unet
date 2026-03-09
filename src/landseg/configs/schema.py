@@ -25,7 +25,11 @@
 # standard imports
 from __future__ import annotations
 import dataclasses
+import os
+import re
 import typing
+# third-party imports
+import omegaconf
 
 # NOTE: This module mirrors the Hydra/YAML config tree using
 # Python dataclasses, suitable for OmegaConf structured configs.
@@ -39,16 +43,14 @@ import typing
 #   cfg: RootConfig = OmegaConf.to_object(merged)
 #
 # Field defaults below reflect the repository YAMLs; string defaults
-# may contain Hydra/OmegaConf interpolations (e.g., "${exp_root}").
+# may contain Hydra/OmegaConf interpolations (e.g., '${exp_root}').
 
 
 # ----- input_extent
 @dataclasses.dataclass
 class Extent:
-    # ref mode
     dirpath: str = '${exp_root}/input/extent_ref'
-    filename: str = 'on_3161_30m.tif'
-    # aoi / tiles mode
+    filename: str = ''
     origin: tuple[float, float] = (0.0, 0.0)
     pixel_size: tuple[float, float] = (0.0, 0.0)
     grid_extent: tuple[float, float] = (0.0, 0.0)
@@ -56,9 +58,33 @@ class Extent:
 
 @dataclasses.dataclass
 class InputExtentCfg:
-    crs: str = 'EPSG:3161'
+    crs: str = omegaconf.MISSING
     mode: str = 'ref'  # 'ref' | 'aoi' | 'tiles'
     inputs: Extent = dataclasses.field(default_factory=Extent)
+
+    def __post_init__(self):
+        # defer validation until config is composed and resolved
+        if not _is_resolved(self.crs) or not _is_resolved(self.mode):
+            return
+        # validation checks
+        if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
+            raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
+        if self.mode not in {'ref', 'aoi', 'tiles'}:
+            raise ValueError(f'Invalid mode: {self.mode}')
+        if self.mode == 'ref':
+            ref = os.path.join(self.inputs.dirpath, self.inputs.filename)
+            if not os.path.exists(ref):
+                raise FileNotFoundError('Mode=ref but ref raster not provided')
+        elif self.mode == 'aoi':
+            if not all(self.inputs.pixel_size):
+                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
+            if not all(self.inputs.grid_extent):
+                raise ValueError('Mode=aoi but grid extent has zero(s)')
+        elif self.mode == 'tiles':
+            if not all(self.inputs.pixel_size):
+                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
+            if not all(self.inputs.grid_shape):
+                raise ValueError('Mode=tiles but grid shape has zero(s)')
 
 # ----- dataprep_grid
 @dataclasses.dataclass
@@ -82,37 +108,46 @@ class PrepGridCfg:
     tile_size: TileSize = dataclasses.field(default_factory=TileSize)
     tile_overlap: TileOverlap = dataclasses.field(default_factory=TileOverlap)
 
+    def __post_init__(self):
+        os.makedirs(self.output_dirpath, exist_ok=True)
+
 # ----- input_domain
 @dataclasses.dataclass
 class DomainFile:
-    name: str = ''
-    index_base: int = 1
+    filename: str = omegaconf.MISSING
+    index_base: int = omegaconf.MISSING
 
 @dataclasses.dataclass
 class InputDomainCfg:
     input_dirpath: str = '${exp_root}/input/domain'
-    files: list[DomainFile] = dataclasses.field(default_factory=lambda: [
-        DomainFile(name='ecodist.tif', index_base=1),
-        DomainFile(name='geology.tif', index_base=1)
-    ])
+    files: list[DomainFile] = dataclasses.field(default_factory=lambda: [])
+
+    def __post_init__(self):
+        for file in self.files:
+            fpath = os.path.join(self.input_dirpath, file.filename)
+            if file.filename and not os.path.exists(fpath):
+                raise FileNotFoundError(f'Invalid domain raster: {fpath}')
 
 # ----- dataprep_domain
 @dataclasses.dataclass
 class PrepDomainCfg:
     output_dirpath: str = '${exp_root}/artifacts/domain'
-    as_ids: str = 'ecodist'
-    as_vec: str = 'geology'
+    as_ids: str | None = None
+    as_vec: str | None = None
     valid_threshold: float = 0.7
     target_variance: float = 0.9
+
+    def __post_init__(self):
+        os.makedirs(self.output_dirpath, exist_ok=True)
 
 # ----- input_data
 @dataclasses.dataclass
 class FileNames:
-    fit_image: str = 'image.tif'
-    fit_label: str = 'label.tif'
-    test_image: str | None = 'image.tif'
-    test_label: str | None = 'label.tif'
-    config: str = 'config.json'
+    fit_image: str = omegaconf.MISSING
+    fit_label: str = omegaconf.MISSING
+    test_image: str | None = omegaconf.MISSING
+    test_label: str | None = omegaconf.MISSING
+    config: str = omegaconf.MISSING
 
 @dataclasses.dataclass
 class Dirs:
@@ -130,11 +165,30 @@ class FilePaths:
 
 @dataclasses.dataclass
 class InputDataCfg:
-    name: str = 'demo_data'
+    name: str = omegaconf.MISSING
     input_dirpath: str = '${exp_root}/input/${input_data.name}'
-    file_names: FileNames = dataclasses.field(default_factory=FileNames)
+    filenames: FileNames = dataclasses.field(default_factory=FileNames)
     dirs: Dirs = dataclasses.field(default_factory=Dirs)
-    file_paths: FilePaths = dataclasses.field(default_factory=FilePaths)
+    filepaths: FilePaths = dataclasses.field(default_factory=FilePaths)
+
+    def __post_init__(self):
+        # defer validation until config is composed and resolved
+        if not _is_resolved(self.name):
+            return
+
+        fps = self.filepaths
+        if not self.name:
+            raise ValueError('Input data name not provided')
+        if not os.path.exists(fps.fit_image):
+            raise FileNotFoundError(f'Invalid fit image: {fps.fit_image}')
+        if not os.path.exists(fps.fit_label):
+            raise FileNotFoundError(f'Invalid fit label: {fps.fit_label}')
+        if fps.test_image and not os.path.exists(fps.test_image):
+            raise FileNotFoundError(f'Invalid test image: {fps.fit_image}')
+        if fps.test_label and not os.path.exists(fps.test_label):
+            raise FileNotFoundError(f'Invalid test label: {fps.fit_label}')
+        if not os.path.exists(fps.config):
+            raise FileNotFoundError(f'Invalid config json: {fps.config}')
 
 # ----- prep_data
 @dataclasses.dataclass
@@ -188,33 +242,8 @@ class PrepDataCfg:
     threshold: Thresholds = dataclasses.field(default_factory=Thresholds)
     scoring: Scoring = dataclasses.field(default_factory=Scoring)
 
-# ------------------------------- experiment ---------------------------
-@dataclasses.dataclass
-class LogitAdjustConfig:
-    train: bool = False
-    val: bool = False
-    test: bool = False
-    alpha: float = 1.0
-
-@dataclasses.dataclass
-class PhaseHeads:
-    active_heads: tuple[str, ...] = ('layer1',)
-    frozen_heads: tuple[str, ...] | None = None
-    masked_classes: dict[str, list[int]] | None = None
-
-@dataclasses.dataclass
-class PhaseConfig:
-    name: str = 'coarse_head'
-    num_epochs: int = 50
-    heads: PhaseHeads = dataclasses.field(default_factory=PhaseHeads)
-    logit_adjust: LogitAdjustConfig = dataclasses.field(default_factory=LogitAdjustConfig)
-    lr_scale: float = 1.0
-
-@dataclasses.dataclass
-class ExperimentCfg:
-    ckpt_dpath: str = '${exp_root}/checkpoints'
-    preview_dpath: str = '${exp_root}/previews'
-    phases: list[PhaseConfig] = dataclasses.field(default_factory=lambda: [PhaseConfig()])
+    def __post_init__(self):
+        os.makedirs(self.output_dirpath, exist_ok=True)
 
 # --------------------------------- models ------------------------------
 @dataclasses.dataclass
@@ -244,24 +273,24 @@ class UnetPPBody:
     )
 
 @dataclasses.dataclass
-class ConditioningConcat:
+class Concat:
     out_dim: int = 4
     use_ids: bool = True
     use_vec: bool = True
     use_mlp: bool = True
 
 @dataclasses.dataclass
-class ConditioningFiLM:
+class FiLM:
     embed_dim: int = 4
     use_ids: bool = True
     use_vec: bool = True
     hidden: int = 128
 
 @dataclasses.dataclass
-class ConditioningConfig:
-    mode: str = 'hybrid'  # 'none' | 'concat' | 'film' | 'hybrid'
-    concat: ConditioningConcat = dataclasses.field(default_factory=ConditioningConcat)
-    film: ConditioningFiLM = dataclasses.field(default_factory=ConditioningFiLM)
+class CondCfg:
+    mode: str | None = None  #  'concat' | 'film' | 'hybrid'
+    concat: Concat = dataclasses.field(default_factory=Concat)
+    film: FiLM = dataclasses.field(default_factory=FiLM)
 
 @dataclasses.dataclass
 class ModelFlags:
@@ -276,9 +305,14 @@ class ModelsCfg:
             'unetpp': UnetPPBody(),
         }
     )
-    conditioning: ConditioningConfig = dataclasses.field(default_factory=ConditioningConfig)
+    conditioning: CondCfg = dataclasses.field(default_factory=CondCfg)
     clamp_range: tuple[float, float] = (1e-4, 1e4)
     flags: ModelFlags = dataclasses.field(default_factory=ModelFlags)
+
+    def __post_init__(self):
+        mode = self.conditioning.mode
+        if mode and mode not in ['hybrid', 'concat', 'film']:
+            raise ValueError(f'Invalid conditionning mode: {mode}')
 
 # --------------------------------- trainer -----------------------------
 @dataclasses.dataclass
@@ -345,8 +379,8 @@ class RuntimeOptimization:
 
 @dataclasses.dataclass
 class RuntimeData:
-    domain_ids_name: str = 'ecodist'
-    domain_vec_name: str = 'geology'
+    domain_ids_name: str | None = None
+    domain_vec_name: str | None = None
 
 @dataclasses.dataclass
 class RuntimeConfig:
@@ -364,15 +398,43 @@ class TrainerCfg:
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)
     runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
 
+# ------------------------------- experiment ---------------------------
+@dataclasses.dataclass
+class LogitAdjustConfig:
+    train: bool = False
+    val: bool = False
+    test: bool = False
+    alpha: float = 1.0
+
+@dataclasses.dataclass
+class PhaseHeads:
+    active_heads: tuple[str, ...] = ('layer1',)
+    frozen_heads: tuple[str, ...] | None = None
+    masked_classes: dict[str, list[int]] | None = None
+
+@dataclasses.dataclass
+class PhaseConfig:
+    name: str = 'coarse_head'
+    num_epochs: int = 50
+    heads: PhaseHeads = dataclasses.field(default_factory=PhaseHeads)
+    logit_adjust: LogitAdjustConfig = dataclasses.field(default_factory=LogitAdjustConfig)
+    lr_scale: float = 1.0
+
+@dataclasses.dataclass
+class ExperimentCfg:
+    ckpt_dpath: str = '${exp_root}/checkpoints'
+    preview_dpath: str = '${exp_root}/previews'
+    phases: list[PhaseConfig] = dataclasses.field(default_factory=lambda: [PhaseConfig()])
+
 # ----- profile
 @dataclasses.dataclass
 class ProfileConfig:
-    name: str = "default"
+    name: str = 'default'
 
 # --------------------------------- root --------------------------------
 @dataclasses.dataclass
 class RootConfig:
-    """Root structured config for landseg."""
+    '''Root structured config for landseg.'''
 
     # composition defaults are Hydra-side; keep explicit sections here
     exp_root: str = './experiment'
@@ -395,3 +457,13 @@ class RootConfig:
 # This module intentionally does not import OmegaConf to avoid a hard
 # runtime dependency here. A helper function can be created in the CLI
 # module to compose/merge/resolve against this schema.
+
+#
+def _is_resolved(value: typing.Any) -> bool:
+    '''Return True if not omegaconf.MISSING and not an interpolation.'''
+    if value is omegaconf.MISSING:
+        return False
+    # OmegaConf marks interpolations as strings like '${...}' pre-resolution
+    if isinstance(value, str) and value.strip().startswith('${'):
+        return False
+    return True
