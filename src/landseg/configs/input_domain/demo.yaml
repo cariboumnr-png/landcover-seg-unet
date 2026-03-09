@@ -1,0 +1,8 @@
+# input dirpath
+input_dirpath: ${exp_root}/input/domain_knowledge
+# files
+files:
+  - name: ecodist.tif
+    index_base: 1
+  - name: geology.tif
+    index_base: 1

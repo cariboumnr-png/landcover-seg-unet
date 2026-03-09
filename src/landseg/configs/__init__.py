@@ -19,5 +19,31 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# not really functional but make ./configs a pacakge
-# so python can properly fectch configs here
+'''
+Top-level namespace for `landseg.configs`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    'RootConfig',
+    # functions
+    # typing
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .schema import RootConfig
+
+def __getattr__(name: str):
+
+    if name in ['RootConfig']:
+        return getattr(importlib.import_module('.schema', __package__), name)
+
+    raise AttributeError(name)

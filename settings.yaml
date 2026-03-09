@@ -68,7 +68,7 @@ exp_root: ./experiment   # You may change this / Vous pouvez modifier ceci
 # La zone d’étude est définie par un seul raster placé dans :
 #   input/extent_ref/
 # -----------------------------------------------------------------------------
-extent:
+input_extent:
   crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
   mode: ref          # Fixed to 'ref' / Fixé à 'ref'
 
@@ -87,7 +87,7 @@ extent:
 #
 # Détermine comment la zone d’étude est divisée en tuiles.
 # -----------------------------------------------------------------------------
-grid:
+prep_grid:
   tile_size:
     row: 256  # Tile height (pixels) / Hauteur (pixels)
     col: 256  # Tile width  (pixels) / Largeur (pixels)
@@ -116,7 +116,7 @@ grid:
 #   - UN raster pour les valeurs ID
 #   - UN raster pour les vecteurs
 # -----------------------------------------------------------------------------
-domain:
+input_domain:
   # List every domain raster you provide in input/domain/
   # Listez tous les rasters placés dans input/domain/
   files:
@@ -125,12 +125,12 @@ domain:
     - name: example_domain_2.tif
       index_base: 1
 
-  use_type:
+prep_domain:
     # Choose ONE raster for ID values / Choisissez UN raster pour les valeurs ID
-    ids: example_domain_1
+    as_ids: example_domain_1
 
     # Choose ONE raster for vector values / Choisissez UN raster pour les vecteurs
-    vec: example_domain_2
+    as_vec: example_domain_2
 
 
 # -----------------------------------------------------------------------------
@@ -154,25 +154,16 @@ dataprep:
 # Le jeu de données doit être situé dans :
 #   input/<dataset_name>/
 # -----------------------------------------------------------------------------
-dataset:
-  name: dataset_name   # Replace with your dataset folder name
+input_data:
+  name: demo_data      # Replace with your dataset folder name
                        # Remplacez par le nom de votre dossier de données
 
-  fit:
-    # Filenames located in:
-    #   ${exp_root}/input/${dataset.name}/fit/
-    image: example_image.tif
-    label: example_label.tif
-
-  test:
-    # Filenames located in:
-    #   ${exp_root}/input/${dataset.name}/test/
-    image: example_image.tif
-    label: example_label.tif
-
-  # Filename located in:
-  #   ${exp_root}/input/${dataset.name}/configs/
-  config: example_config.json
+  file_names:
+    fit_image: example_image.tif
+    fit_label: example_label.tif
+    test_image: example_image.tif
+    test_label: example_label.tif
+    config: example_config.json
 
 
 # -----------------------------------------------------------------------------

@@ -1,0 +1,16 @@
+# output
+id: >
+  grid_
+  row_${prep_grid.tile_size.row}_${prep_grid.tile_overlap.row}
+  _
+  col_${prep_grid.tile_size.col}_${prep_grid.tile_overlap.col}
+output_dirpath: ${exp_root}/artifacts/world_grids
+# meta
+version: v1
+# specs
+tile_size:
+  row: 256
+  col: 256
+tile_overlap:
+  row: 0
+  col: 0

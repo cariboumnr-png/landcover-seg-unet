@@ -1,0 +1,18 @@
+name: demo_data
+input_dirpath: ${exp_root}/input/${input_data.name}
+file_names:
+  fit_image: image.tif
+  fit_label: label.tif
+  test_image: image.tif
+  test_label: label.tif
+  config: config.json
+dirs:
+  fit: ${exp_root}/input/${input_data.name}/fit
+  test: ${exp_root}/input/${input_data.name}/test
+  config: ${exp_root}/input/${input_data.name}/config
+file_paths:
+  fit_image: ${input_data.dirs.fit}/${input_data.file_names.fit_image}
+  fit_label: ${input_data.dirs.fit}/${input_data.file_names.fit_label}
+  test_image: ${input_data.dirs.test}/${input_data.file_names.test_image}
+  test_label: ${input_data.dirs.test}/${input_data.file_names.test_label}
+  config: ${input_data.dirs.config}/${input_data.file_names.config}
