@@ -1,38 +1,40 @@
 exp_root: ./experiment
 
-input_extent:
-  crs: 'EPSG:3161'
-  mode: ref
-  inputs:
-    filename: 'on_3161_30m.tif'
+inputs:
+  extent:
+    crs: 'EPSG:3161'
+    mode: ref
+    inputs:
+      filename: 'on_3161_30m.tif'
 
-prep_grid:
-  tile_size:
-    row: 256
-    col: 256
-  tile_overlap:
-    row: 0
-    col: 0
+  domain:
+    files:
+      - filename: geology.tif
+        index_base: 1
+      - filename: ecodistrict.tif
+        index_base: 1
 
-input_domain:
-  files:
-    - filename: geology.tif
-      index_base: 1
-    - filename: ecodistrict.tif
-      index_base: 1
+  data:
+    name: demo_data
+    filenames:
+      fit_image: image.tif
+      fit_label: label_lctype.tif
+      test_image: image.tif
+      test_label: label_lctype.tif
+      config: lctype.json
 
-prep_domain:
-  as_ids: ecodistrict
-  as_vec: geology
+prep:
+  grid:
+    tile_size:
+      row: 256
+      col: 256
+    tile_overlap:
+      row: 0
+      col: 0
 
-input_data:
-  name: demo_data
-  filenames:
-    fit_image: image.tif
-    fit_label: label_lctype.tif
-    test_image: image.tif
-    test_label: label_lctype.tif
-    config: lctype.json
+  domain:
+    as_ids: ecodistrict
+    as_vec: geology
 
 models:
   conditioning:
@@ -49,7 +51,7 @@ trainer:
     monitor:
       track_head_name: layer1
 
-experiment:
+controller:
   phases:
     - name: coarse_head
       num_epochs: 100

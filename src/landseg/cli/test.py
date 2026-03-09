@@ -26,11 +26,16 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # user settings at root
     candidates = [os.path.join(cwd, 'settings.yaml')]
-    # optional dev settings (untracked, supplied via CLI argument)
+
+    # dev settings (untracked, supplied via CLI argument)
     aux = config.get('dev_settings_path')
     if aux:
         aux = aux if os.path.isabs(aux) else os.path.join(cwd, aux)
         candidates.append(aux)
+
+    # overwrite from selected profile
+    profile = config.profile
+    print(profile)
 
     # merging overrides with default config tree and resolve
     for p in candidates:
@@ -39,11 +44,11 @@ def main(config: omegaconf.DictConfig) -> None:
             if not isinstance(user_cfg, omegaconf.DictConfig):
                 raise TypeError('./settings.yaml must have a mapping')
             # allow domain files to be added
-            with omegaconf.open_dict(config.input_domain.files):
+            with omegaconf.open_dict(config.inputs.domain.files):
                 merged = omegaconf.OmegaConf.merge(schema, config, user_cfg)
                 config = typing.cast(omegaconf.DictConfig, merged)
             # allow new phases to be added
-            with omegaconf.open_dict(config.experiment.phases):
+            with omegaconf.open_dict(config.controller.phases):
                 merged = omegaconf.OmegaConf.merge(schema, config, user_cfg)
                 config = typing.cast(omegaconf.DictConfig, merged)
     omegaconf.OmegaConf.resolve(config)

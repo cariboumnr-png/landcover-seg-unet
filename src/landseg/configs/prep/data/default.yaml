@@ -1,0 +1,49 @@
+output_dirpath: ${exp_root}/artifacts/data_cache/${inputs.data.name}
+# derived paths for current dataset (dirname = dataset name)
+# fit input data
+fit_blocks:
+  # fit blocks building
+  fit_raster_windows: ${prep.data.output_dirpath}/fit/fit_raster_windows.pkl
+  fit_blocks_dir: ${prep.data.output_dirpath}/fit/blocks
+  fit_all_blocks: ${prep.data.output_dirpath}/fit/all_blocks.json
+  fit_valid_blocks: ${prep.data.output_dirpath}/fit/valid_blocks.json
+fit_post_blocks:
+  # fit blocks stats for normalization
+  fit_image_stats: ${prep.data.output_dirpath}/fit/image_stats.json
+  # train/val split reltead
+  label_count_global: ${prep.data.output_dirpath}/fit/count_global.json
+  block_scores: ${prep.data.output_dirpath}/fit/score.json
+  train_blocks_split: ${prep.data.output_dirpath}/fit/train_blocks_split.json
+  val_blocks_split: ${prep.data.output_dirpath}/fit/val_blocks_split.json
+  # train data label count for downstream, e.g., LA
+  label_count_train: ${prep.data.output_dirpath}/fit/count_train.json
+# test input data (optional)
+test_blocks:
+  # test blocks building
+  test_raster_windows: ${prep.data.output_dirpath}/test/test_raster_windows.pkl
+  test_blocks_dir: ${prep.data.output_dirpath}/test/blocks
+  test_all_blocks: ${prep.data.output_dirpath}/test/all_blocks.json
+  test_valid_blocks: ${prep.data.output_dirpath}/test/valid_blocks.json
+test_post_blocks:
+  # test blocks stats for normalization
+  test_image_stats: ${prep.data.output_dirpath}/test/image_stats.json
+
+# filtering thresholds for valid blocks
+threshold:
+  # minimum valid pixel ratio threshold for fit blocks
+  blk_thres_fit: 0.75
+  # minimum valid pixel ratio threshold for test blocks
+  blk_thres_test: 0.1
+
+# block scoring parameters
+scoring:
+  # Layer to focus on
+  head: 'layer1'
+  # Inverse distribution alpha
+  alpha: 0.6
+  # L1 weight reward beta
+  beta: 0.8
+  # L1 weight reward epsilon
+  epsilon: 1e-12
+  # classes to reward (1-based)
+  reward: [3, 5]

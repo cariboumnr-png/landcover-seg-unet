@@ -1,9 +1,9 @@
 # output
 id: >
   grid_
-  row_${prep_grid.tile_size.row}_${prep_grid.tile_overlap.row}
+  row_${prep.grid.tile_size.row}_${prep.grid.tile_overlap.row}
   _
-  col_${prep_grid.tile_size.col}_${prep_grid.tile_overlap.col}
+  col_${prep.grid.tile_size.col}_${prep.grid.tile_overlap.col}
 output_dirpath: ${exp_root}/artifacts/world_grids
 # meta
 version: v1

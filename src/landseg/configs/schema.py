@@ -20,7 +20,10 @@
 # =========================================================================== #
 
 # pylint: disable=missing-class-docstring
-'''doc'''
+'''
+This module mirrors the Hydra/YAML config tree using Python dataclasses,
+suitable for OmegaConf structured configs.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -31,22 +34,8 @@ import typing
 # third-party imports
 import omegaconf
 
-# NOTE: This module mirrors the Hydra/YAML config tree using
-# Python dataclasses, suitable for OmegaConf structured configs.
-# It is intentionally verbose to provide a single source of truth
-# for configuration shape, defaults, and types.
-#
-# Usage at the CLI boundary (conceptual):
-#   schema = OmegaConf.structured(RootConfig)
-#   merged = OmegaConf.merge(schema, hydra_cfg)
-#   OmegaConf.resolve(merged)
-#   cfg: RootConfig = OmegaConf.to_object(merged)
-#
-# Field defaults below reflect the repository YAMLs; string defaults
-# may contain Hydra/OmegaConf interpolations (e.g., '${exp_root}').
-
-
-# ----- input_extent
+# --------------------------------INPUT CONFIGS--------------------------------
+# ----- extent
 @dataclasses.dataclass
 class Extent:
     dirpath: str = '${exp_root}/input/extent_ref'
@@ -86,32 +75,7 @@ class InputExtentCfg:
             if not all(self.inputs.grid_shape):
                 raise ValueError('Mode=tiles but grid shape has zero(s)')
 
-# ----- dataprep_grid
-@dataclasses.dataclass
-class TileSize:
-    row: int = 256
-    col: int = 256
-
-@dataclasses.dataclass
-class TileOverlap:
-    row: int = 0
-    col: int = 0
-
-@dataclasses.dataclass
-class PrepGridCfg:
-    id: str = '''
-    grid_row_${grid.tile_size.row}_${grid.tile_overlap.row}_
-    col_${grid.tile_size.col}_${grid.tile_overlap.col}
-    '''
-    output_dirpath: str = '${exp_root}/artifacts/world_grids'
-    version: str = 'v1'
-    tile_size: TileSize = dataclasses.field(default_factory=TileSize)
-    tile_overlap: TileOverlap = dataclasses.field(default_factory=TileOverlap)
-
-    def __post_init__(self):
-        os.makedirs(self.output_dirpath, exist_ok=True)
-
-# ----- input_domain
+# ----- domain
 @dataclasses.dataclass
 class DomainFile:
     filename: str = omegaconf.MISSING
@@ -128,19 +92,7 @@ class InputDomainCfg:
             if file.filename and not os.path.exists(fpath):
                 raise FileNotFoundError(f'Invalid domain raster: {fpath}')
 
-# ----- dataprep_domain
-@dataclasses.dataclass
-class PrepDomainCfg:
-    output_dirpath: str = '${exp_root}/artifacts/domain'
-    as_ids: str | None = None
-    as_vec: str | None = None
-    valid_threshold: float = 0.7
-    target_variance: float = 0.9
-
-    def __post_init__(self):
-        os.makedirs(self.output_dirpath, exist_ok=True)
-
-# ----- input_data
+# ----- data
 @dataclasses.dataclass
 class FileNames:
     fit_image: str = omegaconf.MISSING
@@ -151,22 +103,22 @@ class FileNames:
 
 @dataclasses.dataclass
 class Dirs:
-    fit: str = '${exp_root}/input/${input_data.name}/fit'
-    test: str = '${exp_root}/input/${input_data.name}/test'
-    config: str = '${exp_root}/input/${input_data.name}/config'
+    fit: str = '${exp_root}/input/${inputs.data.name}/fit'
+    test: str = '${exp_root}/input/${inputs.data.name}/test'
+    config: str = '${exp_root}/input/${inputs.data.name}/config'
 
 @dataclasses.dataclass
 class FilePaths:
-    fit_image: str = '${input_data.dirs.fit}/${input_data.file_names.fit_image}'
-    fit_label: str = '${input_data.dirs.fit}/${input_data.file_names.fit_label}'
-    test_image: str = '${input_data.dirs.test}/${input_data.file_names.test_image}'
-    test_label: str = '${input_data.dirs.test}/${input_data.file_names.test_label}'
-    config: str = '${input_data.dirs.config}/${input_data.file_names.config}'
+    fit_image: str = '${inputs.data.dirs.fit}/${inputs.data.file_names.fit_image}'
+    fit_label: str = '${inputs.data.dirs.fit}/${inputs.data.file_names.fit_label}'
+    test_image: str = '${inputs.data.dirs.test}/${inputs.data.file_names.test_image}'
+    test_label: str = '${inputs.data.dirs.test}/${inputs.data.file_names.test_label}'
+    config: str = '${inputs.data.dirs.config}/${inputs.data.file_names.config}'
 
 @dataclasses.dataclass
 class InputDataCfg:
     name: str = omegaconf.MISSING
-    input_dirpath: str = '${exp_root}/input/${input_data.name}'
+    input_dirpath: str = '${exp_root}/input/${inputs.data.name}'
     filenames: FileNames = dataclasses.field(default_factory=FileNames)
     dirs: Dirs = dataclasses.field(default_factory=Dirs)
     filepaths: FilePaths = dataclasses.field(default_factory=FilePaths)
@@ -190,34 +142,79 @@ class InputDataCfg:
         if not os.path.exists(fps.config):
             raise FileNotFoundError(f'Invalid config json: {fps.config}')
 
-# ----- prep_data
+# ----- INPUTS
+@dataclasses.dataclass
+class Inputs:
+    extent: InputExtentCfg = dataclasses.field(default_factory=InputExtentCfg)
+    domain: InputDomainCfg = dataclasses.field(default_factory=InputDomainCfg)
+    data: InputDataCfg = dataclasses.field(default_factory=InputDataCfg)
+
+# ------------------------------DATAPREP  CONFIGS------------------------------
+# ----- grid
+@dataclasses.dataclass
+class TileSize:
+    row: int = 256
+    col: int = 256
+
+@dataclasses.dataclass
+class TileOverlap:
+    row: int = 0
+    col: int = 0
+
+@dataclasses.dataclass
+class PrepGridCfg:
+    id: str = '''
+    grid_row_${prep.grid.tile_size.row}_${prep.grid.tile_overlap.row}_
+    col_${prep.grid.tile_size.col}_${prep.grid.tile_overlap.col}
+    '''
+    output_dirpath: str = '${exp_root}/artifacts/world_grids'
+    version: str = 'v1'
+    tile_size: TileSize = dataclasses.field(default_factory=TileSize)
+    tile_overlap: TileOverlap = dataclasses.field(default_factory=TileOverlap)
+
+    def __post_init__(self):
+        os.makedirs(self.output_dirpath, exist_ok=True)
+
+# ----- domain
+@dataclasses.dataclass
+class PrepDomainCfg:
+    output_dirpath: str = '${exp_root}/artifacts/domain'
+    as_ids: str | None = None
+    as_vec: str | None = None
+    valid_threshold: float = 0.7
+    target_variance: float = 0.9
+
+    def __post_init__(self):
+        os.makedirs(self.output_dirpath, exist_ok=True)
+
+# ----- data
 @dataclasses.dataclass
 class FitBlocks:
-    fit_raster_windows: str = '${prep_data.output_dirpath}/fit/fit_raster_windows.pkl'
-    fit_blocks_dir: str = '${prep_data.output_dirpath}/fit/blocks'
-    fit_all_blocks: str = '${prep_data.output_dirpath}/fit/all_blocks.json'
-    fit_valid_blocks: str = '${prep_data.output_dirpath}/fit/valid_blocks.json'
+    fit_raster_windows: str = '${prep.data.output_dirpath}/fit/fit_raster_windows.pkl'
+    fit_blocks_dir: str = '${prep.data.output_dirpath}/fit/blocks'
+    fit_all_blocks: str = '${prep.data.output_dirpath}/fit/all_blocks.json'
+    fit_valid_blocks: str = '${prep.data.output_dirpath}/fit/valid_blocks.json'
 
 @dataclasses.dataclass
 class FitPostBlocks:
-    fit_image_stats: str = '${prep_data.output_dirpath}/fit/image_stats.json'
-    label_count_global: str = '${prep_data.output_dirpath}/fit/count_global.json'
-    block_scores: str = '${prep_data.output_dirpath}/fit/score.json'
-    train_blocks_split: str = '${prep_data.output_dirpath}/fit/train_blocks_split.json'
-    val_blocks_split: str = '${prep_data.output_dirpath}/fit/val_blocks_split.json'
-    label_count_train: str = '${prep_data.output_dirpath}/fit/count_train.json'
+    fit_image_stats: str = '${prep.data.output_dirpath}/fit/image_stats.json'
+    label_count_global: str = '${prep.data.output_dirpath}/fit/count_global.json'
+    block_scores: str = '${prep.data.output_dirpath}/fit/score.json'
+    train_blocks_split: str = '${prep.data.output_dirpath}/fit/train_blocks_split.json'
+    val_blocks_split: str = '${prep.data.output_dirpath}/fit/val_blocks_split.json'
+    label_count_train: str = '${prep.data.output_dirpath}/fit/count_train.json'
 
 @dataclasses.dataclass
 class TestBlocks:
-    test_raster_windows: str = '${prep_data.output_dirpath}/test/test_raster_windows.pkl'
-    test_blocks_dir: str = '${prep_data.output_dirpath}/test/blocks'
-    test_all_blocks: str = '${prep_data.output_dirpath}/test/all_blocks.json'
-    test_valid_blocks: str = '${prep_data.output_dirpath}/test/valid_blocks.json'
+    test_raster_windows: str = '${prep.data.output_dirpath}/test/test_raster_windows.pkl'
+    test_blocks_dir: str = '${prep.data.output_dirpath}/test/blocks'
+    test_all_blocks: str = '${prep.data.output_dirpath}/test/all_blocks.json'
+    test_valid_blocks: str = '${prep.data.output_dirpath}/test/valid_blocks.json'
 
 @dataclasses.dataclass
 class TestPostBlocks:
   # test blocks stats for normalization
-    test_image_stats: str = '${prep_data.output_dirpath}/test/image_stats.json'
+    test_image_stats: str = '${prep.data.output_dirpath}/test/image_stats.json'
 
 @dataclasses.dataclass
 class Thresholds:
@@ -234,7 +231,7 @@ class Scoring:
 
 @dataclasses.dataclass
 class PrepDataCfg:
-    output_dirpath: str = '${exp_root}/artifacts/data_cache/${input_data.name}'
+    output_dirpath: str = '${exp_root}/artifacts/data_cache/${inputs.data.name}'
     fit_blocks: FitBlocks = dataclasses.field(default_factory=FitBlocks)
     fit_post_blocks: FitPostBlocks = dataclasses.field(default_factory=FitPostBlocks)
     test_blocks: TestBlocks = dataclasses.field(default_factory=TestBlocks)
@@ -245,7 +242,14 @@ class PrepDataCfg:
     def __post_init__(self):
         os.makedirs(self.output_dirpath, exist_ok=True)
 
-# --------------------------------- models ------------------------------
+# ----- PREP
+@dataclasses.dataclass
+class Prep:
+    grid: PrepGridCfg = dataclasses.field(default_factory=PrepGridCfg)
+    domain: PrepDomainCfg = dataclasses.field(default_factory=PrepDomainCfg)
+    data: PrepDataCfg = dataclasses.field(default_factory=PrepDataCfg)
+
+# ---------------------------------MODELS CONFIGS------------------------------
 @dataclasses.dataclass
 class ConvParams:
     norm: str = 'gn'
@@ -297,6 +301,7 @@ class ModelFlags:
     enable_logit_adjust: bool = True
     enable_clamp: bool = True
 
+# ----- MODELS
 @dataclasses.dataclass
 class ModelsCfg:
     body: dict[str, typing.Any] = dataclasses.field(
@@ -314,7 +319,7 @@ class ModelsCfg:
         if mode and mode not in ['hybrid', 'concat', 'film']:
             raise ValueError(f'Invalid conditionning mode: {mode}')
 
-# --------------------------------- trainer -----------------------------
+# -------------------------------TRAINER CONFIGS-------------------------------
 @dataclasses.dataclass
 class LoaderConfig:
     block_size: int = 256
@@ -390,6 +395,7 @@ class RuntimeConfig:
     precision: RuntimePrecision = dataclasses.field(default_factory=RuntimePrecision)
     optimization: RuntimeOptimization = dataclasses.field(default_factory=RuntimeOptimization)
 
+# ----- TRAINER
 @dataclasses.dataclass
 class TrainerCfg:
     model_body: str = 'unetpp'
@@ -398,7 +404,7 @@ class TrainerCfg:
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)
     runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
 
-# ------------------------------- experiment ---------------------------
+# -------------------------------CONTROLLER  CONFIGS---------------------------
 @dataclasses.dataclass
 class LogitAdjustConfig:
     train: bool = False
@@ -420,45 +426,36 @@ class PhaseConfig:
     logit_adjust: LogitAdjustConfig = dataclasses.field(default_factory=LogitAdjustConfig)
     lr_scale: float = 1.0
 
+# ----- CONTROLLER
 @dataclasses.dataclass
-class ExperimentCfg:
+class ControllerCfg:
     ckpt_dpath: str = '${exp_root}/checkpoints'
     preview_dpath: str = '${exp_root}/previews'
     phases: list[PhaseConfig] = dataclasses.field(default_factory=lambda: [PhaseConfig()])
 
-# ----- profile
-@dataclasses.dataclass
-class ProfileConfig:
-    name: str = 'default'
-
-# --------------------------------- root --------------------------------
+# --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass
 class RootConfig:
     '''Root structured config for landseg.'''
 
-    # composition defaults are Hydra-side; keep explicit sections here
+    #
     exp_root: str = './experiment'
+    #
     dev_settings_path: str | None = None
     #
-    input_extent: InputExtentCfg = dataclasses.field(default_factory=InputExtentCfg)
-    input_domain: InputDomainCfg = dataclasses.field(default_factory=InputDomainCfg)
-    input_data: InputDataCfg = dataclasses.field(default_factory=InputDataCfg)
+    inputs: Inputs = dataclasses.field(default_factory=Inputs)
     #
-    prep_grid: PrepGridCfg = dataclasses.field(default_factory=PrepGridCfg)
-    prep_domain: PrepDomainCfg = dataclasses.field(default_factory=PrepDomainCfg)
-    prep_data: PrepDataCfg = dataclasses.field(default_factory=PrepDataCfg)
+    prep: Prep = dataclasses.field(default_factory=Prep)
     #
     models: ModelsCfg = dataclasses.field(default_factory=ModelsCfg)
+    #
     trainer: TrainerCfg = dataclasses.field(default_factory=TrainerCfg)
     #
-    experiment: ExperimentCfg = dataclasses.field(default_factory=ExperimentCfg)
-    profile: ProfileConfig = dataclasses.field(default_factory=ProfileConfig)
+    controller: ControllerCfg = dataclasses.field(default_factory=ControllerCfg)
+    #
+    profile: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 
-# This module intentionally does not import OmegaConf to avoid a hard
-# runtime dependency here. A helper function can be created in the CLI
-# module to compose/merge/resolve against this schema.
-
-#
+# ------------------------------private  function------------------------------
 def _is_resolved(value: typing.Any) -> bool:
     '''Return True if not omegaconf.MISSING and not an interpolation.'''
     if value is omegaconf.MISSING:
