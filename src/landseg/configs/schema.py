@@ -38,7 +38,7 @@ import omegaconf
 # ----- extent
 @dataclasses.dataclass
 class Extent:
-    dirpath: str = '${exp_root}/input/extent_ref'
+    dirpath: str = '${exp_root}/input/extent_reference'
     filename: str = ''
     origin: tuple[float, float] = (0.0, 0.0)
     pixel_size: tuple[float, float] = (0.0, 0.0)
@@ -83,7 +83,7 @@ class DomainFile:
 
 @dataclasses.dataclass
 class InputDomainCfg:
-    input_dirpath: str = '${exp_root}/input/domain'
+    input_dirpath: str = '${exp_root}/input/domain_knowledge'
     files: list[DomainFile] = dataclasses.field(default_factory=lambda: [])
 
     def __post_init__(self):
@@ -109,11 +109,11 @@ class Dirs:
 
 @dataclasses.dataclass
 class FilePaths:
-    fit_image: str = '${inputs.data.dirs.fit}/${inputs.data.file_names.fit_image}'
-    fit_label: str = '${inputs.data.dirs.fit}/${inputs.data.file_names.fit_label}'
-    test_image: str = '${inputs.data.dirs.test}/${inputs.data.file_names.test_image}'
-    test_label: str = '${inputs.data.dirs.test}/${inputs.data.file_names.test_label}'
-    config: str = '${inputs.data.dirs.config}/${inputs.data.file_names.config}'
+    fit_image: str = '${inputs.data.dirs.fit}/${inputs.data.filenames.fit_image}'
+    fit_label: str = '${inputs.data.dirs.fit}/${inputs.data.filenames.fit_label}'
+    test_image: str = '${inputs.data.dirs.test}/${inputs.data.filenames.test_image}'
+    test_label: str = '${inputs.data.dirs.test}/${inputs.data.filenames.test_label}'
+    config: str = '${inputs.data.dirs.config}/${inputs.data.filenames.config}'
 
 @dataclasses.dataclass
 class InputDataCfg:
@@ -163,10 +163,10 @@ class TileOverlap:
 
 @dataclasses.dataclass
 class PrepGridCfg:
-    id: str = '''
-    grid_row_${prep.grid.tile_size.row}_${prep.grid.tile_overlap.row}_
-    col_${prep.grid.tile_size.col}_${prep.grid.tile_overlap.col}
-    '''
+    id: str = (
+        'grid_row_${prep.grid.tile_size.row}_${prep.grid.tile_overlap.row}_'
+        'col_${prep.grid.tile_size.col}_${prep.grid.tile_overlap.col}'
+    )
     output_dirpath: str = '${exp_root}/artifacts/world_grids'
     version: str = 'v1'
     tile_size: TileSize = dataclasses.field(default_factory=TileSize)
@@ -355,8 +355,8 @@ class OptimConfig:
     opt_cls: str = 'AdamW'
     lr: float = 1e-4
     weight_decay: float = 1e-3
-    sched_cls: str = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = dataclasses.field(default_factory=lambda: {'T_max': 50})
+    sched_cls: str | None = 'CosAnneal'
+    sched_args: dict[str, typing.Any] = omegaconf.MISSING
 
 @dataclasses.dataclass
 class RuntimeSchedule:
@@ -404,6 +404,13 @@ class TrainerCfg:
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)
     runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
 
+    def __post_init__(self):
+        if not _is_resolved(self.optim.sched_args):
+            return
+        if self.optim.sched_cls == 'CosAnneal':
+            if not 'T_max' in self.optim.sched_args:
+                raise ValueError('T_max kwarg missing for CosAnneal scheduler')
+
 # -------------------------------CONTROLLER  CONFIGS---------------------------
 @dataclasses.dataclass
 class LogitAdjustConfig:
@@ -438,21 +445,21 @@ class ControllerCfg:
 class RootConfig:
     '''Root structured config for landseg.'''
 
-    #
+    # root dir for an experiment run
     exp_root: str = './experiment'
-    #
+    # dev override paths
     dev_settings_path: str | None = None
-    #
+    # raw input data and configs
     inputs: Inputs = dataclasses.field(default_factory=Inputs)
-    #
+    # data preparation
     prep: Prep = dataclasses.field(default_factory=Prep)
-    #
+    # model settings
     models: ModelsCfg = dataclasses.field(default_factory=ModelsCfg)
-    #
+    # trainer settings
     trainer: TrainerCfg = dataclasses.field(default_factory=TrainerCfg)
-    #
+    # controller settings
     controller: ControllerCfg = dataclasses.field(default_factory=ControllerCfg)
-    #
+    # optional profile overrides
     profile: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 
 # ------------------------------private  function------------------------------

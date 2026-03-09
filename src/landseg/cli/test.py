@@ -2,8 +2,6 @@
 '''hydra schema test'''
 
 # standard imports
-import dataclasses
-import json
 import os
 import typing
 # third-party imports
@@ -18,44 +16,43 @@ import landseg.configs as configs
 def main(config: omegaconf.DictConfig) -> None:
     '''Run the selected CLI profile with resolved configuration.'''
 
-    # safer CWD fetching
-    cwd = hydra.utils.get_original_cwd()
+    root_config = _resolve_configs(config)
 
-    # get schema
+def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
+    '''Resolve configs from difference sources'''
+
+        # list of configs to resolve
+    config_list: list = []
+
+    # add schema
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    config_list.append(schema)
 
-    # user settings at root
-    candidates = [os.path.join(cwd, 'settings.yaml')]
+    # get user settings at root (with safer CWD fetching)
+    user = os.path.join(hydra.utils.get_original_cwd(), 'settings.yaml')
+    if os.path.exists(user):
+        user_settings = omegaconf.OmegaConf.load(user)
+        assert isinstance(user_settings, omegaconf.DictConfig)
+        config_list.append(user_settings)
 
-    # dev settings (untracked, supplied via CLI argument)
-    aux = config.get('dev_settings_path')
-    if aux:
-        aux = aux if os.path.isabs(aux) else os.path.join(cwd, aux)
-        candidates.append(aux)
+    # get dev settings (untracked)
+    dev = config.get('dev_settings_path')
+    if dev and os.path.exists(dev):
+        dev_settings = omegaconf.OmegaConf.load(dev)
+        assert isinstance(dev_settings, omegaconf.DictConfig)
+        config_list.append(dev_settings)
 
-    # overwrite from selected profile
-    profile = config.profile
-    print(profile)
+    # final profile overwrites
+    config_list.append(config.profile)
 
-    # merging overrides with default config tree and resolve
-    for p in candidates:
-        if os.path.exists(p):
-            user_cfg = omegaconf.OmegaConf.load(p)
-            if not isinstance(user_cfg, omegaconf.DictConfig):
-                raise TypeError('./settings.yaml must have a mapping')
-            # allow domain files to be added
-            with omegaconf.open_dict(config.inputs.domain.files):
-                merged = omegaconf.OmegaConf.merge(schema, config, user_cfg)
-                config = typing.cast(omegaconf.DictConfig, merged)
-            # allow new phases to be added
-            with omegaconf.open_dict(config.controller.phases):
-                merged = omegaconf.OmegaConf.merge(schema, config, user_cfg)
-                config = typing.cast(omegaconf.DictConfig, merged)
-    omegaconf.OmegaConf.resolve(config)
+    # merging overrides resolve
+    with omegaconf.open_dict(config):
+        merged = omegaconf.OmegaConf.merge(*config_list)
+    cfg = typing.cast(omegaconf.DictConfig, merged)
+    omegaconf.OmegaConf.resolve(cfg)
 
-    cfg = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(config))
-    cfg_dict = dataclasses.asdict(cfg)
-    print(json.dumps(cfg_dict, indent=4))
+    # return the casted config dataclass
+    return typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
 
 if __name__ == '__main__':
     main()
