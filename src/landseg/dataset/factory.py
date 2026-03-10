@@ -30,7 +30,7 @@ Public APIs:
 '''
 
 # local imports
-import landseg.configs as confgis
+import landseg.configs as configs
 import landseg.dataset as dataset
 import landseg.dataprep as dataprep
 import landseg.domain as domain
@@ -38,9 +38,9 @@ import landseg.grid as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
-def load_data(
-    inputs: confgis.Inputs,
-    prep: confgis.Prep,
+def load_dataset(
+    inputs: configs.Inputs,
+    prep: configs.Prep,
     logger: utils.Logger
 ) -> dataset.DataSpecs:
     '''

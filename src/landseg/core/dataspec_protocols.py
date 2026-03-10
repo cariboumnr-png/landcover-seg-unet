@@ -63,13 +63,13 @@ class _Splits(typing.Protocol):
 
 class _Domains(typing.Protocol):
     '''Domain information for each dataset split.'''
-    train: _Dom
-    val: _Dom
-    test: _Dom
+    train: Dom
+    val: Dom
+    test: Dom
     ids_max: int
     vec_dim: int
 
-    class _Dom(typing.TypedDict):
+    class Dom(typing.TypedDict):
         '''TypedDict describing a single domain entry.'''
         ids_domain: dict[str, int] | None
         vec_domain: dict[str, list[float]] | None
