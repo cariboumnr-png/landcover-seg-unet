@@ -193,6 +193,7 @@ def schema_from_a_block(
         'dataset_name': meta['block_name'],
         'image_channel': data.image_normalized.shape[0],
         'ignore_index': meta['ignore_label'],
+        'block_size': data.image_normalized.shape[1], # here H==W
         'class_counts': cc,
         'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()},
         'topology': _get_topology(meta['label_count']),

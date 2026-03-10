@@ -44,6 +44,7 @@ class _Meta(typing.Protocol):
     dataset_name: str
     img_ch_num: int
     ignore_index: int
+    block_size: int
     fit_perblk_bytes: int
     test_blks_grid: tuple[int, int]
     single_block_mode: bool

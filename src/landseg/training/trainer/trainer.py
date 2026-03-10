@@ -267,7 +267,7 @@ class MultiHeadTrainer:
         self,
         active_heads: list[str] | None=None,
         frozen_heads: list[str] | None=None,
-        excluded_cls: dict[str, tuple[int, ...]] | None=None
+        excluded_cls: dict[str, list[int]] | None=None
     ) -> None:
         '''
         Set active/frozen heads and per-head class exclusions.
@@ -318,8 +318,8 @@ class MultiHeadTrainer:
             for h in active_heads:
                 excl = excluded_cls.get(h)
                 if excl is not None:
-                    self.state.heads.active_hspecs[h].set_exclude(excl)
-                    self.state.heads.active_hmetrics[h].exclude_class_1b = excl
+                    self.state.heads.active_hspecs[h].set_exclude(tuple(excl))
+                    self.state.heads.active_hmetrics[h].exclude_class_1b = tuple(excl)
 
     def reset_head_state(self):
         '''

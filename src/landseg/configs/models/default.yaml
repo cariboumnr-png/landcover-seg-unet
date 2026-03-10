@@ -1,5 +1,5 @@
 # configuration for building multihead model
-body:
+body_registry:
   unet:
     base_ch: 32
     conv_params:

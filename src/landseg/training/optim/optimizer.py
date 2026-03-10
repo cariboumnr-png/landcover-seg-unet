@@ -35,8 +35,7 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.alias as alias
-import landseg.utils as utils
+import landseg.configs as configs
 
 # ---------------------------------Public Type---------------------------------
 @typing.runtime_checkable
@@ -71,7 +70,7 @@ class Optimization:
 # -------------------------------Public Function-------------------------------
 def build_optimization(
     model: ModelWithParams,
-    config: alias.ConfigType
+    config: configs.OptimConfig
 ) -> Optimization:
     '''
     Build optimizer and scheduler from a config.
@@ -87,19 +86,16 @@ def build_optimization(
         Optimization(optimizer, scheduler_or_none).
     '''
 
-    # config accessor
-    cfg = utils.ConfigAccess(config)
-
     optimizer = _build_optimizer(
         model=model,
-        optim_cls=cfg.get_option('opt_cls'),
-        lr=cfg.get_option('lr'),
-        weight_decay=cfg.get_option('weight_decay')
+        optim_cls=config.opt_cls,
+        lr=config.lr,
+        weight_decay=config.weight_decay
     )
     scheduler = _build_scheduler(
         optimizer,
-        sched_cls=cfg.get_option('sched_cls'),
-        sched_args=cfg.get_option('sched_args')
+        sched_cls=config.sched_cls,
+        sched_args=config.sched_args
     )
     return Optimization(optimizer=optimizer, scheduler=scheduler)
 
@@ -123,7 +119,7 @@ def _build_optimizer(
 
 def _build_scheduler(
     optimizer: torch.optim.Optimizer,
-    sched_cls: str,
+    sched_cls: str | None,
     sched_args: dict
 ) -> torch.optim.lr_scheduler.LRScheduler | None:
     '''Instantiate a scheduler from the registry if requested.'''

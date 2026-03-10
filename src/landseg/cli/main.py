@@ -35,11 +35,12 @@ import hydra.core.hydra_config
 import hydra.utils
 import omegaconf
 # local imports
+import landseg.configs as configs
 import landseg.cli as cli
 import landseg.utils as utils
 
 command_registry = {
-    'end_to_end': cli.train_end_to_end,
+    'default': cli.train_end_to_end,
     'overfit_test': cli.overfit_test
 }
 
@@ -48,21 +49,22 @@ command_registry = {
 def main(config: omegaconf.DictConfig) -> None:
     '''Run the selected CLI profile with resolved configuration.'''
 
-    # get running profile
-    get = hydra.core.hydra_config.HydraConfig.get()
-    profile = get.runtime.choices['profile']
-
     # resolve config
-    _config = _resolve_config(config)
+    root_config = _resolve_configs(config)
 
     # master logger
-    logger = utils.Logger('cli', os.path.join(_config['exp_root'], 'cli.log'))
+    logger = utils.Logger('cli', os.path.join(root_config.exp_root, 'cli.log'))
 
     # run specified mode with exceptions handling
     try:
+        # get running profile
+        get = hydra.core.hydra_config.HydraConfig.get()
+        profile = get.runtime.choices['profile']
+        # get command from profile
+        command = command_registry[profile]
+        # run command
         logger.log('INFO', f'Runing profile: {profile} start')
-        _config['profile'] = profile # add profile string to config tree
-        command_registry[profile](_config)
+        command(root_config)
         logger.log('INFO', f'Runing profile: {profile} finish')
     # manual keyboard interruption
     except KeyboardInterrupt:
@@ -73,38 +75,41 @@ def main(config: omegaconf.DictConfig) -> None:
         logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
         sys.exit(1)
 
-def _resolve_config(config: omegaconf.DictConfig) -> omegaconf.DictConfig:
-    '''Merge and resolve config sources.'''
+def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
+    '''Resolve configs from difference sources'''
 
-    # safer CWD fetching
-    original_cwd = hydra.utils.get_original_cwd()
+        # list of configs to resolve
+    config_list: list = []
 
-    # user settings at root
-    candidates = [os.path.join(original_cwd, 'settings.yaml')]
-    # optional dev settings (untracked, supplied via CLI argument)
-    aux = config.get('dev_settings_path')
-    if aux:
-        aux = aux if os.path.isabs(aux) else os.path.join(original_cwd, aux)
-        candidates.append(aux)
+    # add schema
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    config_list.append(schema)
 
-    # overwrite from selected profile
-    profile = config.profile
+    # get user settings at root (with safer CWD fetching)
+    user = os.path.join(hydra.utils.get_original_cwd(), 'settings.yaml')
+    if os.path.exists(user):
+        user_settings = omegaconf.OmegaConf.load(user)
+        assert isinstance(user_settings, omegaconf.DictConfig)
+        config_list.append(user_settings)
 
-    # merging overrides with default config tree and resolve
-    for p in candidates:
-        if os.path.exists(p):
-            user_cfg = omegaconf.OmegaConf.load(p)
-            if not isinstance(user_cfg, omegaconf.DictConfig):
-                raise TypeError('./settings.yaml must have a mapping')
-            # allow new phases to be added
-            with omegaconf.open_dict(config.experiment.phases):
-                # right wins over left during merging
-                merged = omegaconf.OmegaConf.merge(config, user_cfg, profile)
-                config = typing.cast(omegaconf.DictConfig, merged)
-    omegaconf.OmegaConf.resolve(config)
+    # get dev settings (untracked)
+    dev = config.get('dev_settings_path')
+    if dev and os.path.exists(dev):
+        dev_settings = omegaconf.OmegaConf.load(dev)
+        assert isinstance(dev_settings, omegaconf.DictConfig)
+        config_list.append(dev_settings)
 
-    # return
-    return config
+    # final profile overwrites
+    config_list.append(config.profile)
+
+    # merging overrides resolve
+    with omegaconf.open_dict(config):
+        merged = omegaconf.OmegaConf.merge(*config_list)
+    cfg = typing.cast(omegaconf.DictConfig, merged)
+    omegaconf.OmegaConf.resolve(cfg)
+
+    # return the casted config dataclass
+    return typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
 
 if __name__ == '__main__':
     main()

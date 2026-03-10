@@ -67,6 +67,7 @@ class _Meta:
     dataset_name: str
     img_ch_num: int
     ignore_index: int
+    block_size: int
     fit_perblk_bytes: int
     test_blks_grid: tuple[int, int]
     single_block_mode: bool
@@ -185,6 +186,7 @@ def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> DataSpecs:
             dataset_name=schema['dataset_name'],
             img_ch_num=schema['image_channel'],
             ignore_index=schema['ignore_index'],
+            block_size=schema['block_size'],
             fit_perblk_bytes=0,
             test_blks_grid=(0, 0),
             single_block_mode=True
@@ -240,6 +242,7 @@ def _get_meta(schema: dict[str, typing.Any]) -> _Meta:
         dataset_name=schema['dataset']['name'],
         img_ch_num=schema['tensor_shapes']['image']['C'],
         ignore_index=schema['io_conventions']['ignore_index'],
+        block_size=schema['tensor_shapes']['image']['H'],
         fit_perblk_bytes=img_b * img_px + lbl_b * lbl_px,
         test_blks_grid=(int(col + 1), int(row + 1)),
         single_block_mode=False

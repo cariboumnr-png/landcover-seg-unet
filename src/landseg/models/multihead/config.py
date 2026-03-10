@@ -36,22 +36,19 @@ class ModelConfig:
     base_ch: int
     logit_adjust: dict[str, list[float]]
     heads_w_counts: dict[str, list[int]]
-    conditioning: CondConfig
     clamp_range: tuple[float, float]
+    conditioning: CondConfig
 
 # ----------------------model conditioning configuration----------------------
 @dataclasses.dataclass
 class CondConfig:
     '''Conditioning configuration.'''
 
-    mode: str               # mode
+    mode: str | None        # mode ['concat', 'film', 'hybrid']
     domain_ids_num: int     # id categories
     domain_vec_dim: int     # vector dims
     concat: ConcatConfig    # Concat
     film: FilmConfig        # FiLM
-
-    def __post_init__(self):
-        assert self.mode in ['none', 'concat', 'film', 'hybrid']
 
 @dataclasses.dataclass
 class ConcatConfig:

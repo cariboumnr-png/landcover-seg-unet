@@ -30,7 +30,7 @@ Public APIs:
 # standard imports
 import typing
 # local imports
-import landseg.alias as alias
+import landseg.configs as configs
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.dataprep.mapper as mapper
@@ -41,9 +41,8 @@ import landseg.utils as utils
 
 def prepare_data(
     world_grid: tuple[str, grid.GridLayout],
-    inputs_config: alias.ConfigType,
-    artifact_config: alias.ConfigType,
-    process_config: alias.ConfigType,
+    input_config: configs.InputDataCfg,
+    prep_config: configs.PrepDataCfg,
     logger: utils.Logger,
     **kwargs
 ) -> dict[str, typing.Any] | None:
@@ -89,7 +88,7 @@ def prepare_data(
     logger = logger.get_child('dprep')
 
     # get pipeline configs from input
-    cfg = _parse_configs(inputs_config, artifact_config, process_config)
+    cfg = _parse_configs(input_config, prep_config)
 
     # map rasters to world grid (alway map fit, map test if provided)
     mapper.map_rasters(world_grid[1], cfg, logger, remap=remap)
@@ -114,57 +113,47 @@ def prepare_data(
         normalizer.normalize_blocks('test', cfg, logger, renormalize=renorm)
 
     # generate schema
-    data_cache_root = f'{artifact_config["cache"]}/{inputs_config["name"]}'
-    dataprep.build_schema(world_grid, data_cache_root, cfg)
+    dataprep.build_schema(world_grid, prep_config.output_dirpath, cfg)
     return None
 
 def _parse_configs(
-    input_data_config: alias.ConfigType,
-    output_artifact_config: alias.ConfigType,
-    process_config: alias.ConfigType,
+    input_config: configs.InputDataCfg,
+    prep_config: configs.PrepDataCfg,
 ) -> dataprep.DataprepConfigs:
     '''Parse and consolidate input configs into a typed config.'''
 
-    # config accessors
-    input_cfg = utils.ConfigAccess(input_data_config)
-    output_cfg = utils.ConfigAccess(output_artifact_config)
-    proc_cfg = utils.ConfigAccess(process_config)
-
     return_cfg: dataprep.DataprepConfigs = {
         # input - raw data paths
-        'fit_input_img': input_cfg.get_option('fit', 'image'),
-        'fit_input_lbl': input_cfg.get_option('fit', 'label'),
-        'test_input_img': input_cfg.get_option('test', 'image', default=None),
-        'test_input_lbl': input_cfg.get_option('test', 'label', default=None),
-        'input_config': input_cfg.get_option('config'),
-        # output - artifact paths
-        'fit_windows': output_cfg.get_option('fit_raster_windows'),
-        'fit_blks_dir': output_cfg.get_option('fit_blocks_dir'),
-        'fit_all_blks': output_cfg.get_option('fit_all_blocks'),
-        'fit_valid_blks': output_cfg.get_option('fit_valid_blocks'),
-        'fit_img_stats': output_cfg.get_option('fit_image_stats'),
-        'lbl_count_global': output_cfg.get_option('label_count_global'),
-        'blk_scores': output_cfg.get_option('block_scores'),
-        'train_blks': output_cfg.get_option('train_blocks_split'),
-        'val_blks': output_cfg.get_option('val_blocks_split'),
-        'lbl_count_train': output_cfg.get_option('label_count_train'),
-        'test_windows': output_cfg.get_option('test_raster_windows'),
-        'test_blks_dir': output_cfg.get_option('test_blocks_dir'),
-        'test_all_blks': output_cfg.get_option('test_all_blocks'),
-        'test_valid_blks': output_cfg.get_option('test_valid_blocks'),
-        'test_img_stats': output_cfg.get_option('test_image_stats'),
+        'fit_input_img': input_config.filepaths.fit_image,
+        'fit_input_lbl': input_config.filepaths.fit_label,
+        'test_input_img': input_config.filepaths.test_image,
+        'test_input_lbl': input_config.filepaths.test_label,
+        'input_config': input_config.filepaths.config,
+        # fit data artifacts
+        'fit_windows': prep_config.fit_blocks.raster_windows,
+        'fit_blks_dir': prep_config.fit_blocks.blocks_dir,
+        'fit_all_blks': prep_config.fit_blocks.all_blocks,
+        'fit_valid_blks': prep_config.fit_blocks.valid_blocks,
+        'fit_img_stats': prep_config.fit_post_blocks.image_stats,
+        'lbl_count_global': prep_config.fit_post_blocks.label_count_global,
+        'blk_scores': prep_config.fit_post_blocks.block_scores,
+        'train_blks': prep_config.fit_post_blocks.train_blocks_split,
+        'val_blks': prep_config.fit_post_blocks.val_blocks_split,
+        'lbl_count_train': prep_config.fit_post_blocks.label_count_train,
+        # test data artifacts
+        'test_windows': prep_config.test_blocks.raster_windows,
+        'test_blks_dir': prep_config.test_blocks.blocks_dir,
+        'test_all_blks': prep_config.test_blocks.all_blocks,
+        'test_valid_blks': prep_config.test_blocks.valid_blocks,
+        'test_img_stats': prep_config.test_post_blocks.image_stats,
         # thresholds
-        'blk_thres_fit': proc_cfg.get_option('threshold', 'blk_thres_fit'),
-        'blk_thres_test': proc_cfg.get_option('threshold', 'blk_thres_test'),
+        'blk_thres_fit': prep_config.threshold.blk_thres_fit,
+        'blk_thres_test': prep_config.threshold.blk_thres_test,
         # scoring
-        'score_head': proc_cfg.get_option('scoring', 'head'),
-        'score_alpha': proc_cfg.get_option('scoring', 'alpha'),
-        'score_beta': proc_cfg.get_option('scoring', 'beta'),
-        'score_epsilon': proc_cfg.get_option('scoring', 'epsilon'),
-        'score_reward': tuple(proc_cfg.get_option('scoring', 'reward')),
+        'score_head': prep_config.scoring.head,
+        'score_alpha': prep_config.scoring.alpha,
+        'score_beta': prep_config.scoring.beta,
+        'score_epsilon': prep_config.scoring.epsilon,
+        'score_reward': tuple(prep_config.scoring.reward),
     }
-
-    # sanity checks on required items and return
-    assert return_cfg['fit_input_img'] is not None
-    assert return_cfg['input_config'] is not None
     return return_cfg

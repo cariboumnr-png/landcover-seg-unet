@@ -25,54 +25,42 @@ initializes experiment I/O, and runs the full training workflow.
 '''
 
 # standard imports
+import dataclasses
 import os
-import typing
-# third-party imports
-import omegaconf
 # local imports
+import landseg.configs as configs
 import landseg.controller as controller
 import landseg.dataset as dataset
 import landseg.training as training
 import landseg.utils as utils
 
-def train_end_to_end(config: omegaconf.DictConfig) -> None:
+def train_end_to_end(config: configs.RootConfig) -> None:
     '''Run the full end-to-end training workflow.'''
 
     # init experiment io folder tree
-    exp_dir, log_dir = _init_exp_io(config)
+    exp_dir, log_dir = _init_experiment_folder(config)
 
     # create a centralized main logger
     t_stamp = utils.get_timestamp()
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
     # data preparation
-    data_specs = dataset.load_data(config, logger)
+    dataspecs = dataset.load_data(config.inputs, config.prep, logger)
 
     # build trainer
-    trainer = training.build_trainer(data_specs, config, logger)
+    trainer = training.build_trainer(dataspecs, config.models, config.trainer, logger)
 
     # build controller
-    runner = controller.build_controller(trainer, config, exp_dir, logger)
+    runner = controller.build_controller(trainer, config.controller, exp_dir, logger)
 
     # run via controller
     runner.fit()
 
-def _init_exp_io(config: omegaconf.DictConfig) -> tuple[str, str]:
-    '''Initialize experiment directories and validate input resources.'''
+def _init_experiment_folder(config: configs.RootConfig) -> tuple[str, str]:
+    '''Initialize experiment directories.'''
 
     # get from config
-    exp_root = config['exp_root']
-    dataset_name = config['dataset']['name']
-
-    # lazy check if mandatory inputs are present
-    # check input fit rasters
-    input_fit_dir = os.path.join(exp_root, 'input', dataset_name, 'fit')
-    if not _check_file_types_in_dir(('tif', 'tiff'), input_fit_dir):
-        raise ValueError(f'No rasters (.tif) found at {input_fit_dir}')
-    # check input configs
-    input_cfg_dir = os.path.join(exp_root, 'input', dataset_name, 'configs')
-    if not _check_file_types_in_dir(('json',), input_cfg_dir):
-        raise ValueError(f'No data configs (.json) found at {input_cfg_dir}')
+    exp_root = config.exp_root
 
     # ensure output folders exist (e.g, for fresh experiment)
     # top-level
@@ -90,9 +78,8 @@ def _init_exp_io(config: omegaconf.DictConfig) -> tuple[str, str]:
         except FileExistsError:
             i += 1
     # save running config per experiment
-    _config = omegaconf.OmegaConf.to_container(config, resolve=True)
-    _config = typing.cast(dict, _config)
-    utils.write_json(os.path.join(exp_dir, 'config.json'), _config)
+    config_dict = dataclasses.asdict(config)
+    utils.write_json(os.path.join(exp_dir, 'config.json'), config_dict)
     # experiment components
     logs_dir = os.path.join(exp_dir, 'logs')
     ckpt_dir = os.path.join(exp_dir, 'checkpoints')
@@ -105,15 +92,3 @@ def _init_exp_io(config: omegaconf.DictConfig) -> tuple[str, str]:
 
     # return experiment dir and log dir
     return exp_dir, logs_dir
-
-def _check_file_types_in_dir(ext: tuple[str, ...], dirpath: str) -> bool:
-    '''Return True if files matching given extensions are found.'''
-
-    if not os.path.exists(dirpath):
-        return False
-    if not any(
-        any(name.endswith(s) for s in ext) for name in os.listdir(dirpath)
-        if os.path.isfile(os.path.join(dirpath, name))
-    ):
-        return False
-    return True

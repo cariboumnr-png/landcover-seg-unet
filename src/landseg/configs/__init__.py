@@ -32,6 +32,21 @@ import typing
 
 __all__ = [
     # classes
+    'InputDataCfg',
+    'InputDomainCfg',
+    'InputExtentCfg',
+    'Inputs',
+    'PrepDataCfg',
+    'PrepDomainCfg',
+    'PrepGridCfg',
+    'Prep',
+    'ModelsCfg',
+    'LoaderConfig',
+    'LossConfig',
+    'OptimConfig',
+    'RuntimeConfig',
+    'TrainerCfg',
+    'ControllerCfg',
     'RootConfig',
     # functions
     # typing
@@ -39,11 +54,34 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import RootConfig
+    from .schema import (
+        InputDataCfg,
+        InputDomainCfg,
+        InputExtentCfg,
+        Inputs,
+        PrepDataCfg,
+        PrepDomainCfg,
+        PrepGridCfg,
+        Prep,
+        ModelsCfg,
+        LoaderConfig,
+        LossConfig,
+        OptimConfig,
+        RuntimeConfig,
+        TrainerCfg,
+        ControllerCfg,
+        RootConfig,
+    )
 
 def __getattr__(name: str):
 
-    if name in ['RootConfig']:
+    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
+                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
+                'ModelsCfg',
+                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
+                'ControllerCfg', 'TrainerCfg',
+                'RootConfig'
+                ]:
         return getattr(importlib.import_module('.schema', __package__), name)
 
     raise AttributeError(name)

@@ -172,9 +172,6 @@ class PrepGridCfg:
     tile_size: TileSize = dataclasses.field(default_factory=TileSize)
     tile_overlap: TileOverlap = dataclasses.field(default_factory=TileOverlap)
 
-    def __post_init__(self):
-        os.makedirs(self.output_dirpath, exist_ok=True)
-
 # ----- domain
 @dataclasses.dataclass
 class PrepDomainCfg:
@@ -184,20 +181,17 @@ class PrepDomainCfg:
     valid_threshold: float = 0.7
     target_variance: float = 0.9
 
-    def __post_init__(self):
-        os.makedirs(self.output_dirpath, exist_ok=True)
-
 # ----- data
 @dataclasses.dataclass
 class FitBlocks:
-    fit_raster_windows: str = '${prep.data.output_dirpath}/fit/fit_raster_windows.pkl'
-    fit_blocks_dir: str = '${prep.data.output_dirpath}/fit/blocks'
-    fit_all_blocks: str = '${prep.data.output_dirpath}/fit/all_blocks.json'
-    fit_valid_blocks: str = '${prep.data.output_dirpath}/fit/valid_blocks.json'
+    raster_windows: str = '${prep.data.output_dirpath}/fit/fit_raster_windows.pkl'
+    blocks_dir: str = '${prep.data.output_dirpath}/fit/blocks'
+    all_blocks: str = '${prep.data.output_dirpath}/fit/all_blocks.json'
+    valid_blocks: str = '${prep.data.output_dirpath}/fit/valid_blocks.json'
 
 @dataclasses.dataclass
 class FitPostBlocks:
-    fit_image_stats: str = '${prep.data.output_dirpath}/fit/image_stats.json'
+    image_stats: str = '${prep.data.output_dirpath}/fit/image_stats.json'
     label_count_global: str = '${prep.data.output_dirpath}/fit/count_global.json'
     block_scores: str = '${prep.data.output_dirpath}/fit/score.json'
     train_blocks_split: str = '${prep.data.output_dirpath}/fit/train_blocks_split.json'
@@ -206,15 +200,15 @@ class FitPostBlocks:
 
 @dataclasses.dataclass
 class TestBlocks:
-    test_raster_windows: str = '${prep.data.output_dirpath}/test/test_raster_windows.pkl'
-    test_blocks_dir: str = '${prep.data.output_dirpath}/test/blocks'
-    test_all_blocks: str = '${prep.data.output_dirpath}/test/all_blocks.json'
-    test_valid_blocks: str = '${prep.data.output_dirpath}/test/valid_blocks.json'
+    raster_windows: str = '${prep.data.output_dirpath}/test/test_raster_windows.pkl'
+    blocks_dir: str = '${prep.data.output_dirpath}/test/blocks'
+    all_blocks: str = '${prep.data.output_dirpath}/test/all_blocks.json'
+    valid_blocks: str = '${prep.data.output_dirpath}/test/valid_blocks.json'
 
 @dataclasses.dataclass
 class TestPostBlocks:
   # test blocks stats for normalization
-    test_image_stats: str = '${prep.data.output_dirpath}/test/image_stats.json'
+    image_stats: str = '${prep.data.output_dirpath}/test/image_stats.json'
 
 @dataclasses.dataclass
 class Thresholds:
@@ -239,9 +233,6 @@ class PrepDataCfg:
     threshold: Thresholds = dataclasses.field(default_factory=Thresholds)
     scoring: Scoring = dataclasses.field(default_factory=Scoring)
 
-    def __post_init__(self):
-        os.makedirs(self.output_dirpath, exist_ok=True)
-
 # ----- PREP
 @dataclasses.dataclass
 class Prep:
@@ -261,8 +252,8 @@ class UnetBody:
     base_ch: int = 32
     conv_params: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {
-            'downs': ConvParams,
-            'ups': ConvParams
+            'downs': dataclasses.asdict(ConvParams()),
+            'ups': dataclasses.asdict(ConvParams())
         }
     )
 
@@ -271,8 +262,8 @@ class UnetPPBody:
     base_ch: int = 32
     conv_params: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {
-            'downs': ConvParams,
-            'nodes': ConvParams
+            'downs': dataclasses.asdict(ConvParams()),
+            'nodes': dataclasses.asdict(ConvParams())
         }
     )
 
@@ -304,7 +295,7 @@ class ModelFlags:
 # ----- MODELS
 @dataclasses.dataclass
 class ModelsCfg:
-    body: dict[str, typing.Any] = dataclasses.field(
+    body_registry: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {
             'unet': UnetBody(),
             'unetpp': UnetPPBody(),
@@ -322,15 +313,13 @@ class ModelsCfg:
 # -------------------------------TRAINER CONFIGS-------------------------------
 @dataclasses.dataclass
 class LoaderConfig:
-    block_size: int = 256
-    patch_size: int = 128
+    patch_dim_denom: int = 2
     batch_size: int = 16
-    stream_cache: int = 16
 
 @dataclasses.dataclass
 class FocalLossConfig:
     weight: float = 0.5
-    alpha: float | None = None
+    alpha: list[float] | None = None
     gamma: float = 2.0
     reduction: str = 'mean'
 
@@ -356,7 +345,7 @@ class OptimConfig:
     lr: float = 1e-4
     weight_decay: float = 1e-3
     sched_cls: str | None = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = omegaconf.MISSING
+    sched_args: dict[str, typing.Any] = dataclasses.field(default_factory=lambda: {'T_max': 50})
 
 @dataclasses.dataclass
 class RuntimeSchedule:
@@ -404,13 +393,6 @@ class TrainerCfg:
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)
     runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
 
-    def __post_init__(self):
-        if not _is_resolved(self.optim.sched_args):
-            return
-        if self.optim.sched_cls == 'CosAnneal':
-            if not 'T_max' in self.optim.sched_args:
-                raise ValueError('T_max kwarg missing for CosAnneal scheduler')
-
 # -------------------------------CONTROLLER  CONFIGS---------------------------
 @dataclasses.dataclass
 class LogitAdjustConfig:
@@ -421,8 +403,8 @@ class LogitAdjustConfig:
 
 @dataclasses.dataclass
 class PhaseHeads:
-    active_heads: tuple[str, ...] = ('layer1',)
-    frozen_heads: tuple[str, ...] | None = None
+    active_heads: list[str] = dataclasses.field(default_factory=lambda: ['layer1'])
+    frozen_heads: list[str] | None = None
     masked_classes: dict[str, list[int]] | None = None
 
 @dataclasses.dataclass

@@ -22,10 +22,10 @@
 '''Pipeline to build the trainer class.'''
 
 # third-party imports
-import omegaconf
 import torch
 # local imports
 import landseg.core as core
+import landseg.configs as configs
 import landseg.models as models
 import landseg.training.callback as callback
 import landseg.training.dataloading as dataloading
@@ -39,37 +39,37 @@ import landseg.utils as utils
 # -------------------------------Public Function-------------------------------
 def build_trainer(
     data_specs: core.DataSpecsLike,
-    config: omegaconf.DictConfig,
+    model_config: configs.ModelsCfg,
+    trainer_config: configs.TrainerCfg,
     logger: utils.Logger,
     **kwargs
  ) -> trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
     # setup the model
-    body = config.trainer.get('model_body', 'unet')
     model = models.build_multihead_unet(
-        body=body,
+        body=trainer_config.model_body,
         dataspecs=data_specs,
-        model_config=config.models
+        config=model_config
     )
 
     # compile data loaders
     data_loaders = dataloading.get_dataloaders(
         data_specs=data_specs,
-        loader_config=config.trainer.loader,
+        config=trainer_config.loader,
         logger=logger
     )
 
     # compile training heads basic specifications
     headspecs = heads.build_headspecs(
         data=data_specs,
-        config=config.trainer.loss,
+        config=trainer_config.loss,
     )
 
     # compile training heads loss compute modules
     headlosses = loss.build_headlosses(
         headspecs=headspecs,
-        config=config.trainer.loss.types,
+        config=trainer_config.loss,
         ignore_index=data_specs.meta.ignore_index,
     )
 
@@ -82,7 +82,7 @@ def build_trainer(
     # build optimizer and scheduler
     optimization = optim.build_optimization(
         model=model,
-        config=config.trainer.optim
+        config=trainer_config.optim
     )
 
     # generate callback instances
@@ -100,7 +100,7 @@ def build_trainer(
     )
 
     # generate runtime config dataclass from config
-    trainer_runtime_config = trainer.get_config(config.trainer.runtime)
+    trainer_runtime_config = trainer.get_config(trainer_config.runtime)
 
     # get currently avalaible device
     available_device = 'cuda' if torch.cuda.is_available() else 'cpu'
