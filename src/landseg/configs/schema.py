@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
 suitable for OmegaConf structured configs.
@@ -52,14 +53,16 @@ class InputExtentCfg:
     inputs: Extent = dataclasses.field(default_factory=Extent)
 
     def __post_init__(self):
-        # defer validation until config is composed and resolved
         if not _is_resolved(self.crs) or not _is_resolved(self.mode):
             return
-        # validation checks
         if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
             raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
         if self.mode not in {'ref', 'aoi', 'tiles'}:
             raise ValueError(f'Invalid mode: {self.mode}')
+
+    def validate(self) -> None:
+        if not _is_resolved(self.mode):
+            return
         if self.mode == 'ref':
             ref = os.path.join(self.inputs.dirpath, self.inputs.filename)
             if not os.path.exists(ref):
@@ -86,7 +89,7 @@ class InputDomainCfg:
     input_dirpath: str = '${exp_root}/input/domain_knowledge'
     files: list[DomainFile] = dataclasses.field(default_factory=lambda: [])
 
-    def __post_init__(self):
+    def validate(self):
         for file in self.files:
             fpath = os.path.join(self.input_dirpath, file.filename)
             if file.filename and not os.path.exists(fpath):
@@ -127,20 +130,19 @@ class InputDataCfg:
         # defer validation until config is composed and resolved
         if not _is_resolved(self.name):
             return
-
-        fps = self.filepaths
         if not self.name:
             raise ValueError('Input data name not provided')
-        if not os.path.exists(fps.fit_image):
-            raise FileNotFoundError(f'Invalid fit image: {fps.fit_image}')
-        if not os.path.exists(fps.fit_label):
-            raise FileNotFoundError(f'Invalid fit label: {fps.fit_label}')
-        if fps.test_image and not os.path.exists(fps.test_image):
-            raise FileNotFoundError(f'Invalid test image: {fps.fit_image}')
-        if fps.test_label and not os.path.exists(fps.test_label):
-            raise FileNotFoundError(f'Invalid test label: {fps.fit_label}')
-        if not os.path.exists(fps.config):
-            raise FileNotFoundError(f'Invalid config json: {fps.config}')
+
+    def validate(self) -> None:
+        def _must_exist(path: str | None, label: str) -> None:
+            if path and not os.path.exists(path):
+                raise FileNotFoundError(f'invalid {label}: {path}')
+        # checks
+        _must_exist(self.filepaths.fit_image, 'fit image')
+        _must_exist(self.filepaths.fit_label, 'fit label')
+        _must_exist(self.filepaths.test_image, 'test image')
+        _must_exist(self.filepaths.test_label, 'test label')
+        _must_exist(self.filepaths.config, 'config json')
 
 # ----- INPUTS
 @dataclasses.dataclass
@@ -148,6 +150,11 @@ class Inputs:
     extent: InputExtentCfg = dataclasses.field(default_factory=InputExtentCfg)
     domain: InputDomainCfg = dataclasses.field(default_factory=InputDomainCfg)
     data: InputDataCfg = dataclasses.field(default_factory=InputDataCfg)
+
+    def validate(self) -> None:
+        self.extent.validate()
+        self.domain.validate()
+        self.data.validate()
 
 # ------------------------------DATAPREP  CONFIGS------------------------------
 # ----- grid
@@ -310,6 +317,12 @@ class ModelsCfg:
         if mode and mode not in ['hybrid', 'concat', 'film']:
             raise ValueError(f'Invalid conditionning mode: {mode}')
 
+    def validate(self) -> None:
+        # cross-check clamp range ordering
+        lo, hi = self.clamp_range
+        if lo <= 0 or hi <= 0 or lo >= hi:
+            raise ValueError('invalid clamp_range ordering or non-positive')
+
 # -------------------------------TRAINER CONFIGS-------------------------------
 @dataclasses.dataclass
 class LoaderConfig:
@@ -393,6 +406,12 @@ class TrainerCfg:
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)
     runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
 
+    def validate(self) -> None:
+        # Example: scheduler-specific requirements
+        if self.optim.sched_cls == 'CosAnneal':
+            if 'T_max' not in self.optim.sched_args:
+                raise ValueError('missing T_max for CosAnneal')
+
 # -------------------------------CONTROLLER  CONFIGS---------------------------
 @dataclasses.dataclass
 class LogitAdjustConfig:
@@ -443,6 +462,13 @@ class RootConfig:
     controller: ControllerCfg = dataclasses.field(default_factory=ControllerCfg)
     # optional profile overrides
     profile: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
+
+    def validate_all(self) -> None:
+        # delegated to subtrees.
+        self.inputs.validate()
+        self.models.validate()
+        self.trainer.validate()
+        # future checks to be added below (e.g., controller phases)
 
 # ------------------------------private  function------------------------------
 def _is_resolved(value: typing.Any) -> bool:

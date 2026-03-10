@@ -85,6 +85,9 @@ def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     config_list.append(schema)
 
+    # add Hydra-composed runtime config
+    config_list.append(config)
+
     # get user settings at root (with safer CWD fetching)
     user = os.path.join(hydra.utils.get_original_cwd(), 'settings.yaml')
     if os.path.exists(user):
@@ -99,8 +102,9 @@ def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
         assert isinstance(dev_settings, omegaconf.DictConfig)
         config_list.append(dev_settings)
 
-    # final profile overwrites
-    config_list.append(config.profile)
+    # final profile overwrites (with sanity guard)
+    if isinstance(config.get('profile'), omegaconf.DictConfig):
+        config_list.append(config.profile)
 
     # merging overrides resolve
     with omegaconf.open_dict(config):
@@ -108,8 +112,12 @@ def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
     cfg = typing.cast(omegaconf.DictConfig, merged)
     omegaconf.OmegaConf.resolve(cfg)
 
-    # return the casted config dataclass
-    return typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
+    # construct and cast config dataclass
+    root = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
+
+    # final validation checks before returning
+    root.validate_all()
+    return root
 
 if __name__ == '__main__':
     main()
