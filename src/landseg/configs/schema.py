@@ -313,7 +313,7 @@ class ModelsCfg:
 # -------------------------------TRAINER CONFIGS-------------------------------
 @dataclasses.dataclass
 class LoaderConfig:
-    patch_dim_denom: int = 2
+    patch_size: int = 128
     batch_size: int = 16
 
 @dataclasses.dataclass

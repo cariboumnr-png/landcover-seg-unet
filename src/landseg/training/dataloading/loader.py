@@ -99,10 +99,9 @@ def get_dataloaders(
     logger = logger.get_child('dldrs')
 
     # parse
-    patch_dim_denom = config.patch_dim_denom
-    assert data_specs.meta.block_size % patch_dim_denom == 0
-    patch_size = int(data_specs.meta.block_size / patch_dim_denom)
-    patch_per_blk = patch_dim_denom ** 2
+    patch_size = config.patch_size
+    assert data_specs.meta.block_size % patch_size == 0 # sanity check
+    patch_per_blk = int(data_specs.meta.block_size / patch_size) ** 2
     batch_size = config.batch_size
 
     # meta to be shipped
