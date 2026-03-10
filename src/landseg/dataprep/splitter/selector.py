@@ -34,6 +34,7 @@ import math
 import landseg.dataprep.splitter as splitter
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def select_val_blocks(
     scores: list[splitter.BlockScore],
     logger: utils.Logger,
@@ -79,6 +80,7 @@ def select_val_blocks(
     # return
     return return_dict
 
+# ------------------------------private  function------------------------------
 def _min_distance_from_locs(
     existing_locs: list[tuple[int, int]],
     input_locs: tuple[int, int]

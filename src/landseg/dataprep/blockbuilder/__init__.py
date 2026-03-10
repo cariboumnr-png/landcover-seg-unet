@@ -45,16 +45,16 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
-    from .builder import build_a_block, build_blocks
-    from .cache import BlockCacheBuilder, BuilderConfig
+    from .builder import BlockCacheBuilder, BuilderConfig
+    from .factory import build_a_block, build_blocks
 
 def __getattr__(name: str):
 
     if name in ['BlockMeta', 'DataBlock']:
         return getattr(importlib.import_module('.block', __package__), name)
-    if name in ['build_a_block', 'build_blocks']:
-        return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['BlockCacheBuilder', 'BuilderConfig']:
-        return getattr(importlib.import_module('.cache', __package__), name)
+        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in ['build_a_block', 'build_blocks']:
+        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(name)

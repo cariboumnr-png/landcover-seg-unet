@@ -38,6 +38,7 @@ import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.grid as grid
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def build_schema(
     world_grid: tuple[str, grid.GridLayout],
     data_cache_root: str,
@@ -201,6 +202,7 @@ def schema_from_a_block(
         'val_split': {meta['block_name']: block_fpath}
     }
 
+# ------------------------------private  function------------------------------
 def _resolve(fpath: str) -> dict[str, str]:
     '''Resolve an artifact path to its recorded SHA-256 in hash.json.'''
 

@@ -20,151 +20,464 @@
 # =========================================================================== #
 
 '''
-Block-building utilities that assemble dataset blocks from raster windows,
-including single-block sampling for tests and cache/index generation.
+Data block preparation pipeline.
 
-Public APIs:
-    - build_blocks: Generate block caches and valid-block indices.
-    - build_a_block: Produce a single valid block using fit windows.'
+This module consumes precomputed raster read windows and builds a block
+cache on disk:
+
+- verifies integrity of existing '.npz' block files,
+- creates any missing block files (gap filling only),
+- optionally builds an index of valid blocks for training.
+
+Notes:
+- Window tiling and world-grid construction are handled upstream.
+- Integrity checking always runs.
+- Block creation only fills gaps; it does not rebuild existing blocks.
+- Class balance or content filtering is not performed here; handle that
+  in training samplers or policies.
 '''
 
 # standard imports
-import random
+from __future__ import annotations
+import dataclasses
+import os
+import typing
+import zipfile
+import zlib
 # third-party imports
 import numpy
 # local imports
-import landseg.dataprep as dataprep
+import landseg.alias as alias
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.dataprep.mapper as mapper
 import landseg.utils as utils
 
-def build_blocks(
-    mode: str,
-    config: dataprep.BlockBuildingConfig,
-    logger: utils.Logger,
-    *,
-    rebuild: bool = False,
-) -> None:
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class BuilderConfig:
+    '''I/O Paths to raw rasters and artifacts during block building.'''
+    image_fpath: str                        # path to raw image data (.tiff)
+    label_fpath: str | None                 # path to raw label data (.tiff)
+    config_fpath: str                       # path to raw metadata (.json)
+    blks_dpath: str         # dirpath to save block files
+    all_blocks: str         # filepath (.json) to all blocks
+    valid_blks: str         # filepath (.json) to valid blocks
+
+# ------------------------------private dataclass------------------------------
+@dataclasses.dataclass
+class _BlockCreationContext:
+    '''Immutable inputs required to create a single block.'''
+    name: str
+    meta: blockbuilder.BlockMeta
+    img_path: str
+    img_window: alias.RasterWindow
+    lbl_path: str | None
+    lbl_window: alias.RasterWindow | None
+    npz_fpath: str
+
+# --------------------------------Public  Class--------------------------------
+class BlockCacheBuilder:
     '''
-    Build cached blocks and a valid-block index for the selected mode.
+    Orchestrates block cache validation and creation from supplied read
+    windows.
 
-    Args:
-        mode: Operation mode, e.g., "fit" or "test".
-        config: Block-building configuration with paths and thresholds.
-        logger: Logger for status and diagnostics.
-        rebuild: If True, recompute and overwrite existing indices.
-    '''
+    Processing stages (in order):
+    - _load_read_windows(): intersect image/label windows and drop any
+      that do not match the expected shape.
+    - _check_block_files(): always runs; flags missing/corrupted '.npz'
+      and removes damaged files.
+    - _create_block_files(): creates '.npz' only for missing blocks.
+    - build_valid_block_index(): optional training step to construct or
+      load the valid-block index.
 
-    # mode derivatives
-    assert mode in ['fit', 'test'], f'Invalid build mode: {mode}'
-    windows_key = f'{mode}_windows'
-    thres_key = f'blk_thres_{mode}'
-    # get raster windows
-    windows = utils.load_pickle(config[windows_key])
-    # get a builder instance
-    builder = _get_blocks_builder(windows, mode, config, logger)
-    # build blocks
-    builder.build_block_cache()
-    builder.build_valid_block_index(config[thres_key], rebuild=rebuild)
-
-def build_a_block(
-    config: dataprep.BlockBuildingConfig,
-    logger: utils.Logger,
-    *,
-    valid_px_per: float = 0.8,
-    monitor_head: str = 'layer1',
-    need_all_classes: bool = True
-) -> blockbuilder.DataBlock:
-    '''
-    Construct and return one valid data block from fit windows.
-
-    Args:
-        config: Block-building configuration with input resources.
-        logger: Logger for progress and selection details.
-        valid_px_per: Minimum fraction of valid pixels required for the
-            block. Defaults to `0.8`.
-        monitor_head: Label head name used to check for class coverage.
-            Defaults to `"layer1"`.
-        need_all_classes: If True, require all classes to be present
-            under the monitor head; if False, skip the class-coverage
-            check. Defaults to `True`.
-
-    Returns:
-        DataBlock: A block meeting the validity threshold, and class
-            coverage criterion if enabled.
+    Window tiling must be provided upstream.
     '''
 
-    # get fit raster windows
-    windows: mapper.DataWindows = utils.load_pickle(config['fit_windows'])
-    # get a builder instance
-    builder = _get_blocks_builder(windows, 'fit', config, logger)
-    # get a deterministic coordinate sequence to iterate
-    coords = list(windows.image_windows.keys()) # from image windows
-    random.Random(42).shuffle(coords)
-    # build a valid block and return
-    i = 0
-    while True:
-        print('Searching for a valid raster window...', end='\r', flush=True)
-        try:
-            block = builder.single_block(coords[i])
-        except ValueError: # likely an empty window for the rasters
-            i += 1
-            continue
-        meta = block.meta
-        data = block.data
-        if meta['valid_pixel_ratio']['block'] >= valid_px_per and \
-            (all(meta['label_count'][monitor_head]) or not need_all_classes):
-            logger.log('INFO', f'Fetched a valid block at coord: {coords[i]}')
-            logger.log('DEBUG', 'Criteria:')
-            logger.log('DEBUG', f'Minimum valid pixel: {valid_px_per:.2f}')
-            logger.log('DEBUG', f'Focused head: {monitor_head}')
-            logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
-            # normalize
-            data.image_normalized = numpy.empty_like(data.image)
-            for i, arr in enumerate(data.image):
-                std_safe = numpy.where(numpy.std(arr) == 0, 1, numpy.std(arr))
-                norm = (arr - numpy.mean(arr)) / std_safe   # (H, W)
-                data.image_normalized[i] = norm       # (C, H, W)
-            # return the block instance
-            return block
-        i += 1
+    def __init__(
+        self,
+        windows: mapper.DataWindows,
+        config: BuilderConfig,
+        logger: utils.Logger,
+    ):
+        '''
+        Initialize the pipeline.
 
-def _get_blocks_builder(
-    windows: mapper.DataWindows,
-    mode: str,
-    config: dataprep.IOConfig,
-    logger: utils.Logger
-) -> blockbuilder.BlockCacheBuilder:
-    '''Return a block builder configured for the given mode.'''
+        Args:
+            windows: Image/label read windows and expected shape.
+            config: Block builder configuration.
+            logger: Logger for progress and diagnostics.
+        '''
 
-    # gather configurations by mode
-    if mode == 'fit':
-        image_fpath = config['fit_input_img']
-        label_fpath = config['fit_input_lbl']
-        config_fpath = config['input_config']
-        blks_dpath = config['fit_blks_dir']
-        all_blocks = config['fit_all_blks']
-        valid_blks = config['fit_valid_blks']
-    elif mode == 'test':
-        assert config['test_input_img'] # sanity type check
-        image_fpath = config['test_input_img']
-        label_fpath = config['test_input_lbl']
-        config_fpath = config['input_config']
-        blks_dpath = config['test_blks_dir']
-        all_blocks = config['test_all_blks']
-        valid_blks = config['test_valid_blks']
-    else:
-        raise ValueError(f'Invalid builder mode {mode}')
+        # parse arguments
+        self.windows = windows
+        self.config = config
+        self.logger = logger
 
-    # get a builder configuration dataclass
-    builder_config=blockbuilder.BuilderConfig(
-        image_fpath=image_fpath,
-        label_fpath=label_fpath,
-        config_fpath=config_fpath,
-        blks_dpath=blks_dpath,
-        all_blocks=all_blocks,
-        valid_blks=valid_blks
+        # init attributes
+        self.shared_coords: set[tuple[int, int]] = set()
+        self.all_blocks: dict[str, str] = {}
+        self.valid_blks: dict[str, str] = {}
+
+        # make sure output dir for the blocks exist
+        os.makedirs(self.config.blks_dpath, exist_ok=True)
+
+    def build_block_cache(self) -> 'BlockCacheBuilder':
+        '''
+        Run the cache preparation sequence.
+
+        Steps:
+            1) Load and filter shared read windows by expected shape.
+            2) Check existing '.npz' blocks; remove any damaged files.
+            3) Create '.npz' blocks only where missing.
+
+        Returns:
+            Self, for optional chaining.
+
+        Notes:
+            Validation is not performed here. Use
+            'build_valid_block_index()' for training scenarios.
+        '''
+
+        # run sequence with flags
+        self._prepare_block_windows()
+        self._validate_existing_blocks()
+        self._create_missing_blocks()
+        return self # for possible chaining
+
+    def build_valid_block_index(
+        self,
+        px_thres: float,
+        *,
+        rebuild: bool = False
+    ) -> None:
+        '''
+        Build or load the valid-block index for training.
+
+        Args:
+            px_thres: Threshold on block-level valid pixel ratio.
+            rebuild: Force re-evaluation even if an index exists.
+
+        Side effects:
+            - Populates 'self.valid_blks'.
+            - Writes the valid-blocks JSON to 'output.valid_blks'.
+
+        Note: `px_thres` == 0.0 means no validation.
+        '''
+
+        # if px_thres == 0.0 then skip validation
+        if not px_thres or self.config.valid_blks is None:
+            _blks = self.config.all_blocks
+            self.logger.log('INFO', f'All blocks from: {_blks} are valid')
+            self.valid_blks = utils.load_json(self.config.all_blocks)
+            self.logger.log('INFO', f'Got {len(self.valid_blks)} blocks')
+            return
+
+        # if already exists and not to overwrite
+        _blks = self.config.valid_blks
+        if os.path.exists(_blks) and not rebuild:
+            self.logger.log('INFO', f'Gather valid blocks from: {_blks}')
+            self.valid_blks = utils.load_json(_blks)
+            self.logger.log('INFO', f'Got {len(self.valid_blks)} blocks')
+            return
+
+        # otherwise create a new valid blocks json
+        self.logger.log('INFO', 'Validating existing blocks')
+        # prep block validation arguments
+        all_blks = self.all_blocks
+        jobs = [(_eval_blk, (b, px_thres), {}) for b in all_blks.items()]
+        # parallel processing through all blocks
+        results: list[dict] = utils.ParallelExecutor().run(jobs)
+        self.valid_blks = {
+            r['valid']: all_blks[r['valid']] for r in results if 'valid' in r
+        }
+
+        # log and save
+        self.logger.log('INFO', f'Got {len(self.valid_blks)} valid blocks')
+        self.logger.log('INFO', f'Valid blocks json saved to {_blks}')
+        utils.write_json(_blks, self.valid_blks)
+        utils.hash_artifacts(_blks)
+
+    def single_block(self, coords: tuple[int, int]) -> blockbuilder.DataBlock:
+        '''
+        Build a single data block from given grid coordinates.
+
+        Args:
+            coords: Coordinates (px) of the block's top-level corner.
+        '''
+
+        # load data config and extract by keys in block meta dict
+        meta_src = utils.load_json(self.config.config_fpath)
+        keys = meta_src.keys() & blockbuilder.BlockMeta.__annotations__
+        meta = {k: meta_src[k] for k in keys}
+        meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
+        # enrich meta
+        meta['block_name'] = self._xy_name(coords)
+        dem_band = meta['band_map']['dem']
+        pad = meta['dem_pad']
+
+        # read rasters at given window and create blocks
+        img_fpath = self.config.image_fpath
+        lbl_fpath = self.config.label_fpath
+        window = self.windows.image_windows[coords] # from the same window
+        with utils.open_rasters(img_fpath, lbl_fpath) as (img, lbl):
+            # sanity checks
+            assert img and lbl
+            # read image and label array
+            img_arr: numpy.ndarray = img.read(window=window)
+            lbl_arr: numpy.ndarray = lbl.read(window=window)
+            if img_arr.size == 0 or lbl_arr.size == 0:
+                raise ValueError('Empty arrays, likely read outside of raster')
+            meta['image_nodata'] = img.nodata
+            meta['label_nodata'] = lbl.nodata
+            # get padded dem array from image
+            padded = _read_w_pad(img, window, dem_band, pad)
+
+        # create and return
+        return blockbuilder.DataBlock().build(img_arr, lbl_arr, padded, meta)
+
+    # -----------------------------internal method-----------------------------
+    def _prepare_block_windows(self):
+        '''
+        Intersect image and label windows and filter by expected shape.
+
+        Keeps only coordinates present in both image and label windows
+        and whose (width, height) match `windows.expected_shape`. The
+        resulting set defines `self.all_blocks` with canonical block
+        names mapped to their target `.npz` paths.
+
+        Note that `self.all_blocks` is sorted by keys lexicographically,
+        which is to ensure the loading sequence of test blocks follow a
+        typical row-cal scanline order (row first,  then col).Typically
+        needed for test data blocks mapped only in `self.all_blocks`.
+        '''
+
+        # find shared coordinates between image and label read windows
+        if self.has_label:
+            self.shared_coords = set(self.windows.image_windows.keys()) \
+                & set(self.windows.label_windows.keys())
+        else:
+            self.shared_coords = set(self.windows.image_windows.keys())
+        self.logger.log('DEBUG', f'Loaded {len(self.shared_coords)} read windows')
+
+        # remove windows or irregular shapes, e.g., edge windows
+        for coord in self.shared_coords:
+            # access image window
+            iw = self.windows.image_windows[coord]
+            if (iw.width, iw.height) != self.windows.expected_shape:
+                self.shared_coords.remove(coord)
+            if self.has_label:
+                lw = self.windows.label_windows[coord]
+                if (lw.width, lw.height) != self.windows.expected_shape:
+                    self.shared_coords.remove(coord)
+        self.logger.log('DEBUG', f'Windows with expected shape: {len(self.shared_coords)}')
+
+        # sort coordinates by x then y
+        sorted_coords = sorted(self.shared_coords, key=lambda x: (x[1], x[0]))
+        # all blocks come from the shared coordinates
+        self.all_blocks = {
+            self._xy_name(c): f'{self.config.blks_dpath}/{self._xy_name(c)}.npz'
+            for c in sorted_coords
+        }
+        # write an artifect: normal block list
+        utils.write_json(self.config.all_blocks, self.all_blocks)
+        utils.hash_artifacts(self.config.all_blocks)
+
+    def _validate_existing_blocks(self) -> None:
+        '''
+        Verify integrity of expected block '.npz' files.
+
+        Runs parallel checks over all expected file paths. Any missing
+        or corrupted files are reported; corrupted files that exist on
+        disk are removed. Does not create new blocks.
+        '''
+
+        # check files from expected list of .npz files
+        self.logger.log('INFO', 'Checking block .npz files')
+        # parallel processing
+        jobs = [(_check_npz, (f,), {}) for f in self.all_blocks.values()]
+        results: list[dict[str, str]] = utils.ParallelExecutor().run(jobs)
+        # parse results
+        inv = [] # invalid blocks
+        rm = [] # damaged files to be removed
+        for result in results:
+            fpath = result.get('invalid')
+            if fpath:
+                inv.append(result['invalid'])
+            if fpath and os.path.exists(fpath):
+                rm.append(result['invalid'])
+        # remove corrupted/damaged files if present
+        for fpath in rm:
+            os.remove(fpath)
+        # log checking results
+        self.logger.log('INFO', f'Found {len(inv)} missing/damaged files')
+        self.logger.log('INFO', f'Removed {len(rm)} damaged files')
+
+    def _create_missing_blocks(self) -> None:
+        '''
+        Create missing block '.npz' files.
+
+        Determines which blocks are absent by comparing expected names
+        to the current contents of 'output.blks_dpath'. For each missing
+        block, reads the required rasters, constructs the data block,
+        and writes it to disk. Finally writes `output.all_blocks` JSON.
+        '''
+
+        # determine block files that need to be created
+        existing = set(os.listdir(self.config.blks_dpath)) # filenames
+        coords_todo = set(
+            self._name_xy(name) for name, path in self.all_blocks.items()
+            if os.path.basename(path) not in existing # also filenames
+        )
+        if not coords_todo:
+            self.logger.log('INFO', 'No data blocks to be created')
+            return
+        self.logger.log('INFO', f'{len(coords_todo)} data blocks to be created')
+
+        # load data config and extract by keys in block meta dict
+        meta_src = utils.load_json(self.config.config_fpath)
+        keys = meta_src.keys() & blockbuilder.BlockMeta.__annotations__
+        meta = {k: meta_src[k] for k in keys}
+        meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
+        # prep block creation jobs
+        jobs = []
+        for c in coords_todo:
+            name = self._xy_name(c)
+            co_contxt = _BlockCreationContext(
+                name,
+                meta,
+                self.config.image_fpath,
+                self.windows.image_windows[c],
+                self.config.label_fpath,
+                self.windows.label_windows[c] if self.has_label else None,
+                self.all_blocks[name]
+            )
+            jobs.append((_make_blk, (co_contxt,), {}))
+
+        # parallel processing through all raster windows
+        utils.ParallelExecutor().run(jobs)
+
+    # -------------------------------properties-------------------------------
+    @property
+    def has_label(self) -> bool:
+        '''If current pipeline is supplied with a label raster.'''
+
+        return bool(self.config.label_fpath)
+
+    # ------------------------------static method------------------------------
+    @staticmethod
+    def _xy_name(coords: tuple[int, int]) -> str:
+        '''
+        Convert (x, y) coordinates to a canonical block name string:
+        `(12, 34)` -> `'col_000012_row_000034'`.
+        '''
+
+        x, y = coords
+        return f'col_{x:06d}_row_{y:06d}'
+
+    @staticmethod
+    def _name_xy(name: str) -> tuple[int, int]:
+        '''
+        Convert a canonical block name back to coordinates:
+        `'col_000012_row_000034'` -> `(12, 34)`.
+        '''
+
+        split = name.split('_')
+        x_str, y_str = split[1], split[3]
+        return int(x_str), int(y_str)
+
+# ------------------------------private functions------------------------------
+# outside of class for the use in parallel processing
+def _check_npz(blk_fpath: str) -> dict[str, str]:
+    '''Check if a .npz block file can be loaded properly.'''
+
+    rb = blockbuilder.DataBlock()
+    # pass if the npz file can be loaded properly
+    try:
+        rb.load(blk_fpath)
+        return {'pass': blk_fpath}
+    # flag absent/corrupted/damaged npz file
+    except (FileNotFoundError, zipfile.error, zlib.error):
+        return {'invalid': blk_fpath}
+
+def _make_blk(contxt: _BlockCreationContext) -> None:
+    '''Create a block from the input rasters for the given window.'''
+
+    # parse args
+    meta = contxt.meta
+    img_path = contxt.img_path
+    img_window = contxt.img_window
+    lbl_path = contxt.lbl_path
+    lbl_window = contxt.lbl_window
+    npz_fpath = contxt.npz_fpath
+
+    # meta i/o
+    meta['block_name'] = contxt.name # assign name
+    dem_band = meta['band_map']['dem']
+    pad = meta['dem_pad']
+
+    # read rasters at given window and create blocks
+    with utils.open_rasters(img_path, lbl_path) as (img, lbl):
+        # sanity check, image raster must be provided
+        assert img is not None
+        # read image array
+        img_arr: numpy.ndarray = img.read(window=img_window, boundless=True)
+        meta['image_nodata'] = img.nodata
+        # get padded dem array from image
+        padded_dem = _read_w_pad(img, img_window, dem_band, pad)
+        # read label array if provided
+        lbl_arr: numpy.ndarray | None = None
+        if lbl is not None and lbl_window is not None:
+            lbl_arr = lbl.read(window=lbl_window, boundless=True)
+            meta['label_nodata'] = lbl.nodata
+
+    # create and save
+    blk = blockbuilder.DataBlock().build(img_arr, lbl_arr, padded_dem, meta)
+    blk.save(npz_fpath)
+
+def _read_w_pad(
+    img: alias.RasterReader,
+    window: alias.RasterWindow,
+    dem_band: int,
+    pad: int
+) -> numpy.ndarray:
+    '''Read the DEM band around 'window' with reflection padding.'''
+
+    # expand window within the original raster
+    nw_x = max(window.col_off - pad, 0)
+    nw_y = max(window.row_off - pad, 0)
+    se_x = min(window.col_off + window.width + pad, img.width)
+    se_y = min(window.row_off + window.height + pad, img.height)
+    _window = alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+
+    # get expanded array using the new window
+    # band number in rasterio.read is 1-based
+    expanded = img.read(dem_band + 1, window=_window)
+
+    # get required padding on each side - no padding if within raster bound
+    pad_top = max(0, pad - window.row_off)
+    pad_left = max(0, pad - window.col_off)
+    pad_bottm = max(0, (window.row_off + window.height + pad) - img.height)
+    pad_right = max(0, (window.col_off + window.width + pad) - img.width)
+
+    # pad the expanded arr accordingly controlled by pad_width and return
+    expanded_padded = numpy.pad(
+        array=expanded,
+        pad_width=((pad_top, pad_bottm), (pad_left, pad_right)),
+        mode='reflect'
     )
+    return expanded_padded
 
-    # build and return a builder instance
-    return blockbuilder.BlockCacheBuilder(windows, builder_config, logger)
+def _eval_blk(
+    block: tuple[str, str],
+    valid_px_threshold: float,
+) -> dict[str, str]:
+    '''Evaluate a block's validity against a pixel-ratio threshold.'''
+
+    # parse arguments
+    name, fpath = block
+    # get meta from block
+    meta = blockbuilder.DataBlock().load(fpath).meta
+    # valid pixel ratio threshold
+    if meta['valid_pixel_ratio']['block'] < valid_px_threshold:
+        return {'invalid': name}
+    return {'valid': name}

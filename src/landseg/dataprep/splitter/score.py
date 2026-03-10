@@ -42,7 +42,7 @@ import numpy
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.utils as utils
 
-#
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class BlockScore:
     '''Scored validation-block record with location and score.'''
@@ -61,7 +61,7 @@ class ScoreParams:
     eps: float                      # small constant for numerical stability
     reward_cls: tuple[int, ...]     # class indices to reward
 
-#
+# -------------------------------Public Function-------------------------------
 def score_blocks(
     global_cls_count: dict[str, list[int]],
     input_blocks: dict[str, str],
@@ -102,6 +102,7 @@ def score_blocks(
     utils.hash_artifacts(scores_path)
     return sorted_scores
 
+# ------------------------------private  function------------------------------
 def _score(
     block: tuple[str, str],
     head: str,

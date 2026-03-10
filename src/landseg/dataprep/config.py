@@ -41,6 +41,7 @@ Public APIs:
 # standard imports
 import typing
 
+# ---------------------------------Public Type---------------------------------
 class InputConfig(typing.TypedDict):
     '''Bimodal input rasters and config file paths.'''
     fit_input_img: str

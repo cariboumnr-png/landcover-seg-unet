@@ -36,6 +36,7 @@ import landseg.dataprep as dataprep
 import landseg.dataprep.splitter as splitter
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def split_blocks(
     process_config: dataprep.ProcessConfig,
     logger: utils.Logger,

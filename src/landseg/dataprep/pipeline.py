@@ -39,6 +39,7 @@ import landseg.dataprep.splitter as splitter
 import landseg.grid as grid
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def prepare_data(
     world_grid: tuple[str, grid.GridLayout],
     input_config: configs.InputDataCfg,
@@ -116,6 +117,7 @@ def prepare_data(
     dataprep.build_schema(world_grid, prep_config.output_dirpath, cfg)
     return None
 
+# ------------------------------private  function------------------------------
 def _parse_configs(
     input_config: configs.InputDataCfg,
     prep_config: configs.PrepDataCfg,
