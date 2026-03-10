@@ -4,7 +4,7 @@
 
 ## Context
 
-The current landseg pipeline relies on Hydra’s `DictConfig` objects with scattered validation across modules. There is no single authoritative schema for configuration structure, types, or cross-field rules.
+The previous landseg pipeline relies on Hydra’s `DictConfig` objects with scattered validation across modules. There is no single authoritative schema for configuration structure, types, or cross-field rules.
 
 ## Decision
 
@@ -28,13 +28,7 @@ Adopt **structured configs** backed by **Python dataclasses**, validated at the 
 - Migration effort to replace TypedDicts and ConfigAccess.
 - Care needed for defaults in nested dataclasses.
 
-## Scope
-
-All major configuration sections (artifacts, dataprep, dataset, domain, extent, grid, experiment, models, trainer) will be modeled as dataclasses.
-
-Hydra will still compose YAML configs, but the resulting DictConfig will be validated and converted into dataclass instances before entering pipelines.
-
-## Validation Boundary Model
+## Validation Boundary Realized 
 
 **Upfront (boundary / config-level) validation**:
 - Types, enums, field presence.
@@ -51,25 +45,21 @@ Hydra will still compose YAML configs, but the resulting DictConfig will be vali
 
 This aligns with secure coding guidelines: validate at boundaries, then verify runtime assumptions where data is consumed.
 
-## Alternatives
+## Alternatives Considered 
 
 - **Status Quo**: continue with DictConfig and scattered validation:
-  - Inconsistent enforcement, harder to reason about; validation errors appear
+  - Rejected due to inconsistent enforcement, harder to reason about; validation errors appear
   late.
-- Use **Pydantic** instead of dataclasses:
-  - Powerful validators & error messages, but not Hydra’s native path; adds a
-  heavy dep; several teams still prefer OmegaConf’s native structured configs for seamless composition. (Community patterns exist to mix Hydra with Pydantic, but we prefer fewer moving parts.)
-- Use **attrs** instead of **dataclasses**:
-  - Also supported by OmegaConf; we can switch if needed.
+- **Pydantic** : Rejected to keep dependencies light and leverage Hydra's native OmegaConf integration.
 
-## Implementation Plan
+## Implementation Status
 
-1. Create RootConfig and nested section dataclasses.
-2. Add conversion logic at CLI boundary (`OmegaConf.structured()` + merge + resolve).
-3. Add `__post_init__` semantic checks.
-4. Migrate modules from ConfigAccess to typed dataclasses.
-5. Add tests for configuration schema and error cases.
-6. Remove redundant structural checks now covered by schema.
+- [x] Created `RootConfig` and nested section dataclasses.
+- [x] Integrated `OmegaConf.structured()` + merge + resolve at the entry point.
+- [.] Implemented `__post_init__` semantic checks for experiment parameters - some implemented, more to go.
+- [x] Migrated all modules from `ConfigAccess` to typed dataclasses.
+- [ ] Verified schema integrity with new test suite - not doing this at current scope as we don't have a test framework implemented yet.
+
 
 ## File Boundary Summary (High-Level)
 - **Validate early**: config structure, types, ranges.
