@@ -29,9 +29,8 @@ Public APIs:
       needed, and return a dataset specifications dataclass.
 '''
 
-# third-party imports
-import omegaconf
 # local imports
+import landseg.configs as confgis
 import landseg.dataset as dataset
 import landseg.dataprep as dataprep
 import landseg.domain as domain
@@ -40,7 +39,8 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def load_data(
-    config: omegaconf.DictConfig,
+    inputs: confgis.Inputs,
+    prep: confgis.Prep,
     logger: utils.Logger
 ) -> dataset.DataSpecs:
     '''
@@ -60,27 +60,25 @@ def load_data(
     '''
 
     # load/create world grid
-    gid, world_grid = grid.prep_world_grid(config.extent, config.grid, logger)
+    gid, world_grid = grid.prep_world_grid(inputs.extent, prep.grid, logger)
 
     # load/map domain
-    domains = domain.prepare_domain(gid, world_grid, config.domain, logger)
-    as_ids = config.domain['use_type'].get('ids')
-    as_vec = config.domain['use_type'].get('vec')
+    domains = domain.prepare_domain(gid, world_grid, inputs.domain, prep.domain, logger)
+    as_ids = prep.domain.as_ids
+    as_vec = prep.domain.as_vec
     ids_domain = domains[as_ids] if as_ids else None
     vec_domain = domains[as_vec] if as_vec else None
 
     # validate data blocks
-    cache_root = f'{config.artifacts["cache"]}/{config.dataset["name"]}'
-    status = dataset.validate_schema(gid, cache_root, logger)
+    status = dataset.validate_schema(gid, prep.data.output_dirpath, logger)
 
     # prompt data blocks rebuild
     if status == 1:
         logger.log('WARNING', 'Data schema check failed, rebuild data blocks')
         dataprep.prepare_data(
             world_grid=(gid, world_grid),
-            inputs_config=config.dataset,
-            artifact_config=config.artifacts,
-            process_config=config.dataprep,
+            input_config=inputs.data,
+            prep_config=prep.data,
             logger=logger
         )
     # prompt data blocks fresh build (all steps will be redone)
@@ -88,9 +86,8 @@ def load_data(
         logger.log('WARNING', 'Data schema not found, build data blocks')
         dataprep.prepare_data(
             world_grid=(gid, world_grid),
-            inputs_config=config.dataset,
-            artifact_config=config.artifacts,
-            process_config=config.dataprep,
+            input_config=inputs.data,
+            prep_config=prep.data,
             logger=logger,
             rebuild_all=True
         )
@@ -100,7 +97,7 @@ def load_data(
 
     # build dataspec
     dataspec = dataset.build_dataspec(
-        schema_fpath=f'{cache_root}/schema.json',
+        schema_fpath=f'{prep.data.output_dirpath}/schema.json',
         ids_domain=ids_domain,
         vec_domain=vec_domain
     )

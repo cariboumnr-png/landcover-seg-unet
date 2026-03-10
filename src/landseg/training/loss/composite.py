@@ -37,6 +37,7 @@ The main entry point is `CompositeLoss`, which handles:
 import torch
 import torch.nn
 # local imports
+import landseg.configs as configs
 import landseg.training.loss as loss
 
 # --------------------------------Public  Class--------------------------------
@@ -77,7 +78,7 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: dict,
+        config: configs.LossConfig,
         ignore_index: int
     ):
         '''
@@ -103,12 +104,6 @@ class CompositeLoss(torch.nn.Module):
             "dice": loss.DiceLoss,
         }
 
-        # type check input config
-        if loss.is_loss_types(config):
-            self.cfgs = config
-        else:
-            raise ValueError('Input config not compliant with `LossTypes`')
-
         # make ignore index public
         self.ignore_index = ignore_index
 
@@ -116,25 +111,22 @@ class CompositeLoss(torch.nn.Module):
         self.losses = torch.nn.ModuleList()
         self.weights: list[float] = []
         # loss function by type
-        # focal
-        focal = self.cfgs.get('focal', None)
-        if focal is not None:
-            weight = focal['weight']
-            loss_fn = registry['focal'](
-                alpha=focal['alpha'],
-                gamma=focal['gamma'],
-                reduction=focal['reduction'],
-                ignore_index=ignore_index
-            )
+        # focal loss
+        if config.types.focal.weight:
             # add to sequences
+            loss_fn = registry['focal'](
+                    alpha=config.types.focal.alpha,
+                    gamma=config.types.focal.gamma,
+                    reduction=config.types.focal.reduction,
+                    ignore_index=ignore_index
+                )
             self.losses.append(loss_fn)
-            self.weights.append(weight)
-        # dice
-        dice = self.cfgs.get('dice', None)
-        if dice is not None:
-            weight = dice['weight']
+            self.weights.append(config.types.focal.weight)
+        # dice loss
+        if config.types.dice.weight:
+            weight = config.types.dice.weight
             loss_fn = registry['dice'](
-                smooth=dice['smooth'],
+                smooth=config.types.dice.smooth,
                 ignore_index=ignore_index
                 )
             # add to sequences

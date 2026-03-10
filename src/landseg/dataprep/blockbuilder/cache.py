@@ -335,7 +335,8 @@ class BlockCacheBuilder:
 
         # load data config and extract by keys in block meta dict
         meta_src = utils.load_json(self.config.config_fpath)
-        meta = {k: meta_src[k] for k in blockbuilder.BlockMeta.__annotations__}
+        keys = meta_src.keys() & blockbuilder.BlockMeta.__annotations__
+        meta = {k: meta_src[k] for k in keys}
         meta = typing.cast(blockbuilder.BlockMeta, meta) # typing compliance
         # prep block creation jobs
         jobs = []

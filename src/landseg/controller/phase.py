@@ -27,8 +27,7 @@ Training phase
 from __future__ import annotations
 import dataclasses
 # local imports
-import landseg.alias as alias
-import landseg.utils as utils
+import landseg.configs as configs
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -55,7 +54,7 @@ class _HeadsConifg:
     '''Phase level heads-related config.'''
     active_heads: list[str]
     frozen_heads: list[str] | None
-    excluded_cls: dict[str, tuple[int, ...]] | None
+    excluded_cls: dict[str, list[int]] | None
 
     def __str__(self) -> str:
         indent: int=2
@@ -87,31 +86,29 @@ class _LogitAdjustScheme:
         ])
 
 # -------------------------------Public Function-------------------------------
-def generate_phases(phase_config: alias.ConfigType) -> list[Phase]:
+def generate_phases(config: configs.ControllerCfg) -> list[Phase]:
     '''doc'''
 
     # config accesor
-    phase_cfg = utils.ConfigAccess(phase_config)
     phases: list[Phase] = []
     # iterate through phases in config (1-based)
-    for p in phase_cfg.get_option('phases'):
-        cfg = utils.ConfigAccess(p)
+    for cfg in config.phases:
         phases.append(
             Phase(
-                name=cfg.get_option('name'),
-                num_epochs=cfg.get_option('num_epochs'),
+                name=cfg.name,
+                num_epochs=cfg.num_epochs,
                 heads=_HeadsConifg(
-                    cfg.get_option('heads', 'active_heads'),
-                    cfg.get_option('heads', 'frozen_heads', default=None),
-                    cfg.get_option('heads', 'masked_classes', default=None)
+                    cfg.heads.active_heads,
+                    cfg.heads.frozen_heads,
+                    cfg.heads.masked_classes
                 ),
                 la_scheme=_LogitAdjustScheme(
-                    cfg.get_option('logit_adjust', 'alpha', default=1.0),
-                    cfg.get_option('logit_adjust', 'train', default=False),
-                    cfg.get_option('logit_adjust', 'val', default=False),
-                    cfg.get_option('logit_adjust', 'test', default=False)
+                    cfg.logit_adjust.alpha,
+                    cfg.logit_adjust.train,
+                    cfg.logit_adjust.val,
+                    cfg.logit_adjust.test,
                 ),
-                lr_scale=cfg.get_option('lr_scale')
+                lr_scale=cfg.lr_scale
             )
         )
 

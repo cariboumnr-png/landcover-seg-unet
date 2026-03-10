@@ -1,6 +1,6 @@
 models:
   conditioning:
-    mode: 'none'
+    mode: null
 
 trainer:
   optim:

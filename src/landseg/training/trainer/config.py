@@ -31,8 +31,7 @@ RuntimeConfig from user configuration files.
 from __future__ import annotations
 import dataclasses
 # local imports
-import landseg.alias as alias
-import landseg.utils as utils
+import landseg.configs as configs
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -74,7 +73,7 @@ class _OptimConfig:
     grad_clip_norm: float | None
 
 # -------------------------------Public Function-------------------------------
-def get_config(config: alias.ConfigType):
+def get_config(config: configs.RuntimeConfig):
     '''
     Build a RuntimeConfig from user configuration.
 
@@ -86,29 +85,26 @@ def get_config(config: alias.ConfigType):
         RuntimeConfig: fully populated runtime settings for the trainer.
     '''
 
-    # config accessor
-    cfg = utils.ConfigAccess(config)
-
     return RuntimeConfig(
         schedule=_Schedule(
-            max_epoch=cfg.get_option('schedule', 'max_epoch'),
-            max_step=cfg.get_option('schedule', 'max_step'),
-            logging_interval=cfg.get_option('schedule', 'log_every'),
-            eval_interval=cfg.get_option('schedule', 'val_every'),
-            checkpoint_interval=cfg.get_option('schedule', 'ckpt_every'),
-            patience_epochs=cfg.get_option('schedule', 'patience'),
-            min_delta=cfg.get_option('schedule', 'min_delta'),
+            max_epoch=config.schedule.max_epoch,
+            max_step=config.schedule.max_step,
+            logging_interval=config.schedule.log_every,
+            eval_interval=config.schedule.val_every,
+            checkpoint_interval=config.schedule.ckpt_every,
+            patience_epochs=config.schedule.patience,
+            min_delta=config.schedule.min_delta
         ),
         monitor=_Monitor(
             enabled=('iou',),
-            metric=cfg.get_option('monitor', 'metric_name'),
-            head=cfg.get_option('monitor', 'track_head_name'),
-            mode=cfg.get_option('monitor', 'track_mode'),
+            metric=config.monitor.metric_name,
+            head=config.monitor.track_head_name,
+            mode=config.monitor.track_mode,
         ),
         precision=_Precision(
-            use_amp=cfg.get_option('precision', 'use_amp')
+            use_amp=config.precision.use_amp
         ),
         optim=_OptimConfig(
-            grad_clip_norm=cfg.get_option('grad_clip_norm')
+            grad_clip_norm=config.optimization.grad_clip_norm
         )
     )

@@ -1,19 +1,22 @@
 # Main entry to the config tree
 defaults:
   - _self_
-  # data-side
-  - artifacts: default
-  - dataprep: default
-  - dataset: demo
-  - domain: demo
-  - extent: demo
-  - grid: base
-  # training-side
-  - experiment: demo
-  - models: multihead
+  # raw inputs
+  - inputs/extent: demo
+  - inputs/domain: demo
+  - inputs/data: demo
+  # preparation
+  - prep/grid: default
+  - prep/domain: default
+  - prep/data: default
+  # models
+  - models: default
+  # trainer
   - trainer: default
-  # profile:
-  - profile: end_to_end
+  # controller
+  - controller: demo
+  # profile
+  - profile: default
 
 # experiment root
 exp_root: ./experiment

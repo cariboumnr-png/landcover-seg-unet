@@ -26,31 +26,36 @@ minimal model until convergence.
 
 # standard imports
 import os
-# third-party imports
-import omegaconf
 # local imports
+import landseg.configs as configs
 import landseg.dataprep as dataprep
 import landseg.dataset as dataset
 import landseg.grid as grid
 import landseg.training as training
 import landseg.utils as utils
 
-def overfit_test(config: omegaconf.DictConfig) -> None:
+def overfit_test(config: configs.RootConfig) -> None:
     '''Run an overfit test using a single prepared data block.'''
 
     # create a logger at dedicated folder
-    test_dir = os.path.join(config['exp_root'], 'results/overfit_test')
+    test_dir = os.path.join(config.exp_root, 'results/overfit_test')
     logger = utils.Logger('test', os.path.join(test_dir, 'test.log'))
 
     # create a single test block and derive dataspec for downstream
     dataspecs = _single_block_dataspecs(config, test_dir, logger)
 
     # parse from config
-    monitor_head = config['trainer']['runtime']['monitor']['track_head_name']
-    max_epoch = config['trainer']['runtime']['schedule']['max_epoch']
+    monitor_head = config.trainer.runtime.monitor.track_head_name
+    max_epoch = config.trainer.runtime.schedule.max_epoch
 
     # build a trainer with no logging
-    trainer = training.build_trainer(dataspecs, config, logger, skip_log=True)
+    trainer = training.build_trainer(
+        dataspecs,
+        config.models,
+        config.trainer,
+        logger,
+        skip_log=True
+    )
     trainer.set_head_state([monitor_head])
 
     # run trainer
@@ -64,22 +69,25 @@ def overfit_test(config: omegaconf.DictConfig) -> None:
             break
 
 def _single_block_dataspecs(
-    config: omegaconf.DictConfig,
+    config: configs.RootConfig,
     test_dir: str,
     logger: utils.Logger
 ) -> dataset.DataSpecs:
     '''Create dataspecs from a single test block.'''
 
     # load world grid
-    world_grid = grid.prep_world_grid(config.extent, config.grid, logger)
+    world_grid = grid.prep_world_grid(
+        config.inputs.extent,
+        config.prep.grid,
+        logger
+    )
 
     # build a minimul schema dict from a single block
     blk_path = os.path.join(test_dir, 'overfit_test_block.npz')
     blk_schema = dataprep.prepare_data(
         world_grid,
-        config.dataset,
-        config.artifacts,
-        config.dataprep,
+        config.inputs.data,
+        config.prep.data,
         logger,
         build_a_block=True,
         block_fpath=blk_path

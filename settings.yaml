@@ -22,12 +22,6 @@
 # REQUIRED PROJECT FOLDER STRUCTURE
 # STRUCTURE REQUISE DES DOSSIERS DU PROJET
 #
-# The experiment root (exp_root) can be ANY folder you choose.
-# Inside that folder, you MUST create the following structure:
-#
-# Le répertoire racine du projet (exp_root) peut être N’IMPORTE QUEL dossier.
-# À l’intérieur, vous DEVEZ créer la structure suivante :
-#
 #   exp_root/
 #   ├── input/
 #   │   ├── extent_ref/
@@ -38,197 +32,137 @@
 #   │        ├── fit/
 #   │        │    ├── example_image.tif
 #   │        │    └── example_label.tif
-#   │        ├── test/       (optional)
+#   │        ├── test/       (optional / optionnel)
 #   │        │    ├── example_image.tif
 #   │        │    └── example_label.tif
 #   │        └── configs/
 #   │             └── example_config.json
-#
-# The system expects THIS EXACT structure.
-# Le système s’attend à CETTE STRUCTURE EXACTE.
 # =============================================================================
 
 
 # -----------------------------------------------------------------------------
 # PROJECT ROOT / RACINE DU PROJET
 # Folder chosen by the user containing all inputs and outputs.
-#
 # Dossier choisi par l’utilisateur contenant toutes les entrées et sorties.
 # -----------------------------------------------------------------------------
-exp_root: ./experiment   # You may change this / Vous pouvez modifier ceci
+exp_root: ./experiment
 
 
 # -----------------------------------------------------------------------------
-# STUDY AREA (REFERENCE EXTENT ONLY)
-# ZONE D’ÉTUDE (RASTER DE RÉFÉRENCE)
-#
-# The study area is defined by a single raster located in:
-#   input/extent_ref/
-#
-# La zone d’étude est définie par un seul raster placé dans :
-#   input/extent_ref/
+# INPUT DEFINITIONS / DÉFINITION DES ENTRÉES
+# Defines the spatial extent, domain layers, and raw dataset files.
+# Définit l'étendue spatiale, les couches thématiques et les fichiers de données.
 # -----------------------------------------------------------------------------
-extent:
-  crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
-  mode: ref          # Fixed to 'ref' / Fixé à 'ref'
+inputs:
+  # STUDY AREA (REFERENCE EXTENT) / ZONE D’ÉTUDE (RÉFÉRENCE)
+  extent:
+    crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
+    mode: ref          # Fixed to 'ref' / Fixé à 'ref'
+    inputs:
+      # Located in / Situé dans : ${exp_root}/input/extent_ref/
+      filename: 'example_extent.tif'
 
-  inputs:
-    # Name of the reference raster file located in:
-    #   ${exp_root}/input/extent_ref/
-    #
-    # Nom du fichier raster placé dans :
-    #   ${exp_root}/input/extent_ref/
-    filename: 'example_extent.tif'
+  # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
+  # Place ANY NUMBER of domain rasters into / Placez AUTANT de rasters dans : ${exp_root}/input/domain/
+  domain:
+    files:
+      - filename: 'example_domain_1.tif'
+        index_base: 1
+      - filename: 'example_domain_2.tif'
+        index_base: 1
 
-
-# -----------------------------------------------------------------------------
-# WORLD GRID SETTINGS / PARAMÈTRES DE GRILLE
-# Determines how the study area is divided into tiles.
-#
-# Détermine comment la zone d’étude est divisée en tuiles.
-# -----------------------------------------------------------------------------
-grid:
-  tile_size:
-    row: 256  # Tile height (pixels) / Hauteur (pixels)
-    col: 256  # Tile width  (pixels) / Largeur (pixels)
-
-  tile_overlap:
-    row: 0    # Overlap (pixels) / Chevauchement (pixels)
-    col: 0
-
-
-# -----------------------------------------------------------------------------
-# DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
-#
-# Place ANY NUMBER of domain rasters into:
-#   input/domain/
-#
-# Placez autant de rasters thématiques que souhaité dans :
-#   input/domain/
-#
-# All listed rasters will be processed into stable internal products.
-# At runtime, the model uses:
-#   - ONE raster for ID values
-#   - ONE raster for vector values
-#
-# Tous les rasters listés seront traités pour produire des artefacts internes.
-# À l’exécution, le modèle utilise :
-#   - UN raster pour les valeurs ID
-#   - UN raster pour les vecteurs
-# -----------------------------------------------------------------------------
-domain:
-  # List every domain raster you provide in input/domain/
-  # Listez tous les rasters placés dans input/domain/
-  files:
-    - name: example_domain_1.tif
-      index_base: 1
-    - name: example_domain_2.tif
-      index_base: 1
-
-  use_type:
-    # Choose ONE raster for ID values / Choisissez UN raster pour les valeurs ID
-    ids: example_domain_1
-
-    # Choose ONE raster for vector values / Choisissez UN raster pour les vecteurs
-    vec: example_domain_2
+  # RAW DATASET / JEU DE DONNÉES BRUTES
+  # Located in / Situé dans : ${exp_root}/input/${inputs.data.name}/
+  data:
+    name: dataset_name  # Folder name / Nom du dossier
+    filenames:
+      # Files in / Fichiers dans .../fit/
+      fit_image: 'example_image.tif'
+      fit_label: 'example_label.tif'
+      # Files in / Fichiers dans .../test/
+      test_image: 'example_image.tif'
+      test_label: 'example_label.tif'
+      # File in / Fichier dans .../configs/
+      config: 'example_config.json'
 
 
 # -----------------------------------------------------------------------------
-# DATA PREPARATION / PRÉPARATION DES DONNÉES
-# Thresholds controlling whether a tile is valid based on pixel coverage.
-#
-# Seuils déterminant si une tuile est valide selon la couverture de pixels.
+# PRE-PROCESSING & GRID / PRÉ-TRAITEMENT ET GRILLE
+# Configuration for tiling and thematic layer assignment.
+# Configuration du découpage en tuiles et de l'assignation des couches thématiques.
 # -----------------------------------------------------------------------------
-dataprep:
-  threshold:
-    blk_thres_fit: 0.75    # Training tiles / Tuiles d’entraînement
-    blk_thres_test: 0.05   # Test tiles / Tuiles de test
+prep:
+  grid:
+    tile_size:
+      row: 256  # Height in pixels / Hauteur en pixels
+      col: 256  # Width in pixels / Largeur en pixels
+    tile_overlap:
+      row: 0    # Overlap in pixels / Chevauchement en pixels
+      col: 0
 
-
-# -----------------------------------------------------------------------------
-# DATASET SETTINGS / PARAMÈTRES DU JEU DE DONNÉES
-#
-# Dataset must be located in:
-#   input/<dataset_name>/
-#
-# Le jeu de données doit être situé dans :
-#   input/<dataset_name>/
-# -----------------------------------------------------------------------------
-dataset:
-  name: dataset_name   # Replace with your dataset folder name
-                       # Remplacez par le nom de votre dossier de données
-
-  fit:
-    # Filenames located in:
-    #   ${exp_root}/input/${dataset.name}/fit/
-    image: example_image.tif
-    label: example_label.tif
-
-  test:
-    # Filenames located in:
-    #   ${exp_root}/input/${dataset.name}/test/
-    image: example_image.tif
-    label: example_label.tif
-
-  # Filename located in:
-  #   ${exp_root}/input/${dataset.name}/configs/
-  config: example_config.json
+  domain:
+    # Select domain files for IDs and Vectors (used by the model architecture).
+    # Sélectionnez les fichiers thématiques pour les ID et vecteurs (utilisés par le modèle).
+    as_ids: example_domain_1
+    as_vec: example_domain_2
 
 
 # -----------------------------------------------------------------------------
-# MODEL SETTINGS / PARAMÈTRES DU MODÈLE
-# How optional domain layers are integrated with imagery.
-#
-# Comment les couches thématiques optionnelles sont intégrées à l’imagerie.
+# MODEL ARCHITECTURE / ARCHITECTURE DU MODÈLE
 # -----------------------------------------------------------------------------
 models:
   conditioning:
-    mode: 'hybrid'   # Options: none | concat | film | hybrid
+    # Integration mode for domain data / Mode d'intégration des données thématiques
+    # Options: null | concat | film | hybrid
+    mode: 'hybrid'
 
 
 # -----------------------------------------------------------------------------
-# TRAINING RUNTIME / PARAMÈTRES D’EXÉCUTION
-# Controls the model body, monitoring settings, and early stopping.
-#
-# Contrôle le corps du modèle, le suivi et l’arrêt anticipé.
+# TRAINING RUNTIME / PARAMÈTRES D’ÉXÉCUTION
+# Global settings for the training loop and performance monitoring.
+# Paramètres globaux pour la boucle d'entraînement et le suivi des performances.
 # -----------------------------------------------------------------------------
 trainer:
-  model_body: unetpp    # Available: unet / unetpp
-                        # Disponibles : unet / unetpp
-
   runtime:
     data:
-      # Must match a domain file name above.
-      # Doit correspondre à un fichier thématique ci‑dessus.
+      # Must match a filename defined in 'inputs.domain'.
+      # Doit correspondre à un nom de fichier défini dans 'inputs.domain'.
       domain_ids_name: example_domain_1
       domain_vec_name: example_domain_2
-
+    
     schedule:
-      patience: 10      # Stop if no improvement / Arrêt sans amélioration
-      min_delta: 0.0005 # Minimum improvement / Amélioration minimale
-
+      patience: 10      # Stop training if no improvement / Arrêt si aucune amélioration
+      min_delta: 0.0005 # Sensitivity for improvement / Sensibilité de l'amélioration
+    
     monitor:
+      # Metric or layer head to track for checkpoints.
+      # Métrique ou tête de couche à suivre pour les points de sauvegarde.
       track_head_name: layer1
 
 
 # -----------------------------------------------------------------------------
-# EXPERIMENT PHASES (EXAMPLE ONLY)
-# PHASES D’EXPÉRIMENTATION (EXEMPLE)
-#
-# This is only a template. You may edit or add phases as needed.
-# Ceci est seulement un exemple. Vous pouvez modifier ou ajouter des phases.
+# EXPERIMENT CONTROLLER / CONTRÔLEUR D'EXPÉRIMENTATION
+# Defines the specific sequence of training phases.
+# Définit la séquence spécifique des phases d'entraînement.
 # -----------------------------------------------------------------------------
-experiment:
+controller:
   phases:
-    - name: coarse_head
-      num_epochs: 100
+    - name: coarse_head # Phase name / Nom de la phase
+      num_epochs: 100   # Max iterations / Itérations maximales
+      
       heads:
+        # Layers to update / Couches à mettre à jour
         active_heads: [layer1]
+        # Layers to lock / Couches à verrouiller
         frozen_heads: null
+        # Classes to ignore in loss / Classes à ignorer dans la perte
         masked_classes: null
+        
       logit_adjust:
+        # Toggle class imbalance correction / Activer la correction du déséquilibre des classes
         train: False
         val: False
         test: False
-        alpha: 1.0
-      lr_scale: 1.0
+        alpha: 1.0  # Power of adjustment / Puissance de l'ajustement
+        
+      lr_scale: 1.0 # Learning rate multiplier / Multiplicateur du taux d'apprentissage

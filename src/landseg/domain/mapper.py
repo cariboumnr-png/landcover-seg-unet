@@ -51,7 +51,7 @@ task-level feature assembly.
 '''
 
 # local imports
-import landseg.alias as alias
+import landseg.configs as configs
 import landseg.domain as domain
 import landseg.grid as grid
 import landseg.utils as utils
@@ -59,7 +59,8 @@ import landseg.utils as utils
 def prepare_domain(
     grid_id: str,
     world_grid: grid.GridLayout,
-    config: alias.ConfigType,
+    input_config: configs.InputDomainCfg,
+    prep_config: configs.PrepDomainCfg,
     logger: utils.Logger
 ) -> dict[str, domain.DomainTileMap]:
     '''
@@ -97,15 +98,13 @@ def prepare_domain(
 
     # get a child logger
     logger = logger.get_child('dkmap')
-    # config accessor
-    cfg = utils.ConfigAccess(config)
 
-    source_dir = cfg.get_option('dirpath')
-    output_dir = cfg.get_option('output_dirpath')
+    source_dir = input_config.input_dirpath
+    output_dir = prep_config.output_dirpath
     output: dict[str, domain.DomainTileMap] = {}
     # prep each domain from configured list
-    for file in cfg.get_option('files'):
-        name = str(file['name']).split('.', maxsplit=1)[0] # no suffix
+    for file in input_config.files:
+        name = file.filename.split('.', maxsplit=1)[0] # no suffix
         # if domain already exist, load and add to return
         try:
             dom = domain.load_domain(name, output_dir)
@@ -113,11 +112,11 @@ def prepare_domain(
         # otherwise create domain accordingly
         except FileNotFoundError:
             ctx = domain.DomainContext(
-                index_base=file['index_base'],
-                valid_threshold=cfg.get_option('valid_threshold'),
-                target_variance=cfg.get_option('target_variance')
+                index_base=file.index_base,
+                valid_threshold=prep_config.valid_threshold,
+                target_variance=prep_config.target_variance
             )
-            fp = f'{source_dir}/{file["name"]}'
+            fp = f'{source_dir}/{file.filename}'
             dom = domain.DomainTileMap(fp, world_grid, ctx, logger)
             output[name] = dom
             domain.save_domain(grid_id, name, dom, output_dir)

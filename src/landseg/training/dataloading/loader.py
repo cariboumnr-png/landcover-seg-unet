@@ -43,6 +43,7 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.alias as alias
+import landseg.configs as configs
 import landseg.core as core
 import landseg.training.dataloading as dataloading
 import landseg.utils as utils
@@ -67,7 +68,7 @@ class _Meta:
 # -------------------------------Public Function-------------------------------
 def get_dataloaders(
     data_specs: core.DataSpecsLike,
-    loader_config: alias.ConfigType,
+    config: configs.LoaderConfig,
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
@@ -97,27 +98,26 @@ def get_dataloaders(
     # get a child from the base logger
     logger = logger.get_child('dldrs')
 
-    # parse args from config accessor
-    loader_cfg = utils.ConfigAccess(loader_config)
+    # parse
+    patch_size = config.patch_size
+    assert data_specs.meta.block_size % patch_size == 0 # sanity check
+    patch_per_blk = int(data_specs.meta.block_size / patch_size) ** 2
+    batch_size = config.batch_size
 
     # meta to be shipped
-    batch_size = loader_cfg.get_option('batch_size')
-    block_size = loader_cfg.get_option('block_size')
-    patch_size = loader_cfg.get_option('patch_size')
-    patch_per_blk = int(block_size / patch_size) ** 2
     meta = _Meta(batch_size, patch_per_blk, data_specs.meta.test_blks_grid)
 
     # if single block mode (for overfit test)
     if data_specs.meta.single_block_mode:
-        single_loader = _load('single', loader_cfg, data_specs, logger)
+        single_loader = _load('single', batch_size, patch_size, data_specs, logger)
         # pass the same as val dataloader for minimal disturbance downstream
         assert single_loader
         return DataLoaders(single_loader, single_loader, None, meta)
 
     # otherwise (normal experiment)
-    train_loader = _load('train', loader_cfg, data_specs, logger)
-    val_loader = _load('val', loader_cfg, data_specs, logger)
-    test_loader = _load('test', loader_cfg, data_specs, logger)
+    train_loader = _load('train', batch_size, patch_size, data_specs, logger)
+    val_loader = _load('val', batch_size, patch_size, data_specs, logger)
+    test_loader = _load('test', batch_size, patch_size, data_specs, logger)
     # sanity checks and return
     assert train_loader and val_loader
     return DataLoaders(train_loader, val_loader, test_loader, meta)
@@ -125,7 +125,8 @@ def get_dataloaders(
 # ------------------------------private  function------------------------------
 def _load(
     mode: str,
-    loader_cfg: utils.ConfigAccess,
+    batch_size: int,
+    patch_size: int,
     data_specs: core.DataSpecsLike,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
@@ -147,7 +148,7 @@ def _load(
         return None
 
     # dataset configuration
-    dataset_config = _mode_configurator(mode, loader_cfg, data_specs)
+    dataset_config = _mode_configurator(mode, patch_size, data_specs)
     # preload/cache config
     load_options = _preload_option(data_specs)
     dataset = dataloading.MultiBlockDataset(
@@ -160,7 +161,6 @@ def _load(
 
     # get dataloader
     # torch dataloader arguments dict
-    batch_size = loader_cfg.get_option('batch_size')
     dataloader_args =  {
         'batch_size': 1 if mode == 'single' else batch_size,
         'shuffle': mode == 'train',
@@ -171,7 +171,7 @@ def _load(
 
 def _mode_configurator(
     mode: str,
-    loader_cfg: utils.ConfigAccess,
+    patch_size: int,
     data_specs: core.DataSpecsLike
 ):
     '''Configure dataloading by mode.'''
@@ -186,15 +186,12 @@ def _mode_configurator(
     domain = domains_registry[mode]
 
     # return config by mode
-    block_size = loader_cfg.get_option('block_size')
     if mode == 'single':
-        patch_size = block_size # single block
-    else:
-        patch_size = loader_cfg.get_option('patch_size')
+        patch_size = data_specs.meta.block_size # single block
     return dataloading.BlockConfig(
-        block_size=block_size,
+        block_size=data_specs.meta.block_size,
         patch_size=patch_size,
-        augment_flip=mode == 'train',
+        augment_flip=bool(mode == 'train'),
         ids_domain=domain['ids_domain'] if domain else None,
         vec_domain=domain['vec_domain'] if domain else None
     )

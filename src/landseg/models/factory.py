@@ -34,17 +34,16 @@ user-supplied configuration.
 '''
 
 # local imports
-import landseg.alias as alias
+import landseg.configs as configs
 import landseg.core as core
 import landseg.models.backbones as backbones
 import landseg.models.multihead as multihead
-import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     body: str,
     dataspecs: core.DataSpecsLike,
-    model_config: alias.ConfigType,
+    config: configs.ModelsCfg,
 ) -> multihead.BaseMultiheadModel:
     '''
     Build a configured MultiHeadUNet instance.
@@ -76,53 +75,41 @@ def build_multihead_unet(
     if not body in body_registry:
         raise ValueError(f'Invalid base model: {body}')
 
-    # config accessors
-    model_cfg = utils.ConfigAccess(model_config)
+    # body configs
+    body_config = config.body_registry.get(body)
+    assert body_config is not None # sanity
 
     # multihead model config
     multihead_config = multihead.ModelConfig(
         body=body_registry[body],
         in_ch= dataspecs.meta.img_ch_num,
-        base_ch=model_cfg.get_option('body', body, 'base_ch'),
+        base_ch=body_config.base_ch,
         logit_adjust=dataspecs.heads.logits_adjust,
         heads_w_counts=dataspecs.heads.class_counts,
-        conditioning=_conditioning_config(model_cfg, dataspecs),
-        clamp_range=tuple(model_cfg.get_option('clamp_range')),
+        clamp_range=config.clamp_range,
+        conditioning=multihead.CondConfig(
+            mode=config.conditioning.mode,
+            domain_ids_num=dataspecs.domains.ids_max + 1,
+            domain_vec_dim=dataspecs.domains.vec_dim,
+            concat=multihead.ConcatConfig(
+                out_dim=config.conditioning.concat.out_dim,
+                use_ids=config.conditioning.concat.use_ids,
+                use_vec=config.conditioning.concat.use_vec,
+                use_mlp=config.conditioning.concat.use_mlp
+            ),
+            film=multihead.FilmConfig(
+                embed_dim=config.conditioning.film.embed_dim,
+                use_ids=config.conditioning.film.use_ids,
+                use_vec=config.conditioning.film.use_vec,
+                hidden=config.conditioning.film.hidden
+            )
+        )
     )
-
-    # keyword arguments
-    enable_logit_adjust = model_cfg.get_option('flags', 'enable_logit_adjust')
-    enable_clamp = model_cfg.get_option('flags', 'enable_clamp')
-    model_conv_params = model_cfg.get_option('body', body, 'conv_params')
 
     # return model instance
     return multihead.MultiHeadUNet(
         multihead_config,
-        conv_params=model_conv_params,
-        enable_logit_adjust=enable_logit_adjust,
-        enable_clamp=enable_clamp
-    )
-
-def _conditioning_config(
-    model_cfg: utils.ConfigAccess,
-    dataspecs: core.DataSpecsLike
-) -> multihead.CondConfig:
-    '''Configure model conditioning components.'''
-
-    return multihead.CondConfig(
-        mode=model_cfg.get_option('conditioning', 'mode'),
-        domain_ids_num=dataspecs.domains.ids_max + 1,
-        domain_vec_dim=dataspecs.domains.vec_dim,
-        concat=multihead.ConcatConfig(
-            out_dim=model_cfg.get_option('conditioning', 'concat_out_dim'),
-            use_ids=model_cfg.get_option('conditioning', 'concat_use_ids'),
-            use_vec=model_cfg.get_option('conditioning', 'concat_use_vec'),
-            use_mlp=model_cfg.get_option('conditioning', 'concat_use_mlp')
-        ),
-        film=multihead.FilmConfig(
-            embed_dim=model_cfg.get_option('conditioning', 'film_embed_dim'),
-            use_ids=model_cfg.get_option('conditioning', 'film_use_ids'),
-            use_vec=model_cfg.get_option('conditioning', 'film_use_vec'),
-            hidden=model_cfg.get_option('conditioning', 'film_hidden')
-        )
+        conv_params=body_config.conv_params,
+        enable_logit_adjust=config.flags.enable_logit_adjust,
+        enable_clamp=config.flags.enable_clamp
     )

@@ -24,11 +24,10 @@
 # third-party imports
 import numpy
 # local imports
-import landseg.alias as alias
+import landseg.configs as configs
 import landseg.core as core
 import landseg.training.common as common
 import landseg.training.heads as heads
-import landseg.utils as utils
 
 class HeadSpecs:
     '''
@@ -59,7 +58,7 @@ class HeadSpecs:
 # Public API
 def build_headspecs(
     data: core.DataSpecsLike,
-    config: alias.ConfigType
+    config: configs.LossConfig
 ) -> HeadSpecs:
     '''
     Generate concreate head specs classes indexed by head name.
@@ -72,11 +71,8 @@ def build_headspecs(
         HeadSpecs: Per-head specification at runtime.
     '''
 
-    # config accesor
-    cfg = utils.ConfigAccess(config)
-
     # register alpha compute function
-    alpha_fn = cfg.get_option('alpha_fn')
+    alpha_fn = config.alpha_fn
     alpha_fn_registry = {
         'effective_n': _count_to_effective_num,
         'inverse': _count_to_inv_weights
@@ -85,7 +81,7 @@ def build_headspecs(
         raise ValueError(f'Invalid alpha calc fn: {alpha_fn}')
 
     # get Effective Number weights beta
-    en_beta = cfg.get_option('en_beta')
+    en_beta = config.en_beta
     fn_kwargs = {'b': en_beta}
 
     # iterate heads in data and create headspec for each
