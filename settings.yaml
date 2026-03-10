@@ -1,67 +1,168 @@
+# =============================================================================
+# USER SETTINGS / PARAMÈTRES UTILISATEUR
+# This file allows you to configure the project without touching internal code.
+# Adjust only the items needed for your analysis.
+#
+# Ce fichier vous permet de configurer le projet sans modifier le code interne.
+# Modifiez uniquement les éléments nécessaires à votre analyse.
+#
+# IMPORTANT / IMPORTANT :
+#   - Do NOT edit anything inside ${...}. These are system-generated links
+#     called "interpolation keys."
+#   - Ne PAS modifier le texte dans ${...}. Ce sont des références générées
+#     par le système (« clés d’interpolation »).
+#
+#   - All folders inside the experiment root MUST follow the required structure.
+#   - Tous les dossiers à l’intérieur de la racine du projet DOIVENT suivre
+#     la structure requise.
+# =============================================================================
+
+
+# =============================================================================
+# REQUIRED PROJECT FOLDER STRUCTURE
+# STRUCTURE REQUISE DES DOSSIERS DU PROJET
+#
+#   exp_root/
+#   ├── input/
+#   │   ├── extent_ref/
+#   │   │    └── example_extent.tif
+#   │   ├── domain/
+#   │   │    └── example_domain_1.tif, example_domain_2.tif, ...
+#   │   └── dataset_name/
+#   │        ├── fit/
+#   │        │    ├── example_image.tif
+#   │        │    └── example_label.tif
+#   │        ├── test/       (optional / optionnel)
+#   │        │    ├── example_image.tif
+#   │        │    └── example_label.tif
+#   │        └── configs/
+#   │             └── example_config.json
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# PROJECT ROOT / RACINE DU PROJET
+# Folder chosen by the user containing all inputs and outputs.
+# Dossier choisi par l’utilisateur contenant toutes les entrées et sorties.
+# -----------------------------------------------------------------------------
 exp_root: ./experiment
 
-inputs:
-  extent:
-    crs: 'EPSG:3161'
-    mode: ref
-    inputs:
-      filename: 'on_3161_30m.tif'
 
+# -----------------------------------------------------------------------------
+# INPUT DEFINITIONS / DÉFINITION DES ENTRÉES
+# Defines the spatial extent, domain layers, and raw dataset files.
+# Définit l'étendue spatiale, les couches thématiques et les fichiers de données.
+# -----------------------------------------------------------------------------
+inputs:
+  # STUDY AREA (REFERENCE EXTENT) / ZONE D’ÉTUDE (RÉFÉRENCE)
+  extent:
+    crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
+    mode: ref          # Fixed to 'ref' / Fixé à 'ref'
+    inputs:
+      # Located in / Situé dans : ${exp_root}/input/extent_ref/
+      filename: 'example_extent.tif'
+
+  # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
+  # Place ANY NUMBER of domain rasters into / Placez AUTANT de rasters dans : ${exp_root}/input/domain/
   domain:
     files:
-      - filename: geology.tif
+      - filename: 'example_domain_1.tif'
         index_base: 1
-      - filename: ecodistrict.tif
+      - filename: 'example_domain_2.tif'
         index_base: 1
 
+  # RAW DATASET / JEU DE DONNÉES BRUTES
+  # Located in / Situé dans : ${exp_root}/input/${inputs.data.name}/
   data:
-    name: demo_data
+    name: dataset_name  # Folder name / Nom du dossier
     filenames:
-      fit_image: image.tif
-      fit_label: label_lctype.tif
-      test_image: image.tif
-      test_label: label_lctype.tif
-      config: lctype.json
+      # Files in / Fichiers dans .../fit/
+      fit_image: 'example_image.tif'
+      fit_label: 'example_label.tif'
+      # Files in / Fichiers dans .../test/
+      test_image: 'example_image.tif'
+      test_label: 'example_label.tif'
+      # File in / Fichier dans .../configs/
+      config: 'example_config.json'
 
+
+# -----------------------------------------------------------------------------
+# PRE-PROCESSING & GRID / PRÉ-TRAITEMENT ET GRILLE
+# Configuration for tiling and thematic layer assignment.
+# Configuration du découpage en tuiles et de l'assignation des couches thématiques.
+# -----------------------------------------------------------------------------
 prep:
   grid:
     tile_size:
-      row: 256
-      col: 256
+      row: 256  # Height in pixels / Hauteur en pixels
+      col: 256  # Width in pixels / Largeur en pixels
     tile_overlap:
-      row: 0
+      row: 0    # Overlap in pixels / Chevauchement en pixels
       col: 0
 
   domain:
-    as_ids: ecodistrict
-    as_vec: geology
+    # Select domain files for IDs and Vectors (used by the model architecture).
+    # Sélectionnez les fichiers thématiques pour les ID et vecteurs (utilisés par le modèle).
+    as_ids: example_domain_1
+    as_vec: example_domain_2
 
+
+# -----------------------------------------------------------------------------
+# MODEL ARCHITECTURE / ARCHITECTURE DU MODÈLE
+# -----------------------------------------------------------------------------
 models:
   conditioning:
+    # Integration mode for domain data / Mode d'intégration des données thématiques
+    # Options: null | concat | film | hybrid
     mode: 'hybrid'
 
+
+# -----------------------------------------------------------------------------
+# TRAINING RUNTIME / PARAMÈTRES D’ÉXÉCUTION
+# Global settings for the training loop and performance monitoring.
+# Paramètres globaux pour la boucle d'entraînement et le suivi des performances.
+# -----------------------------------------------------------------------------
 trainer:
   runtime:
     data:
-      domain_ids_name: ecodist
-      domain_vec_name: geology
+      # Must match a filename defined in 'inputs.domain'.
+      # Doit correspondre à un nom de fichier défini dans 'inputs.domain'.
+      domain_ids_name: example_domain_1
+      domain_vec_name: example_domain_2
+    
     schedule:
-      patience: 10
-      min_delta: 0.0005
+      patience: 10      # Stop training if no improvement / Arrêt si aucune amélioration
+      min_delta: 0.0005 # Sensitivity for improvement / Sensibilité de l'amélioration
+    
     monitor:
+      # Metric or layer head to track for checkpoints.
+      # Métrique ou tête de couche à suivre pour les points de sauvegarde.
       track_head_name: layer1
 
+
+# -----------------------------------------------------------------------------
+# EXPERIMENT CONTROLLER / CONTRÔLEUR D'EXPÉRIMENTATION
+# Defines the specific sequence of training phases.
+# Définit la séquence spécifique des phases d'entraînement.
+# -----------------------------------------------------------------------------
 controller:
   phases:
-    - name: coarse_head
-      num_epochs: 100
+    - name: coarse_head # Phase name / Nom de la phase
+      num_epochs: 100   # Max iterations / Itérations maximales
+      
       heads:
+        # Layers to update / Couches à mettre à jour
         active_heads: [layer1]
+        # Layers to lock / Couches à verrouiller
         frozen_heads: null
+        # Classes to ignore in loss / Classes à ignorer dans la perte
         masked_classes: null
+        
       logit_adjust:
+        # Toggle class imbalance correction / Activer la correction du déséquilibre des classes
         train: False
         val: False
         test: False
-        alpha: 1.0
-      lr_scale: 1.0
+        alpha: 1.0  # Power of adjustment / Puissance de l'ajustement
+        
+      lr_scale: 1.0 # Learning rate multiplier / Multiplicateur du taux d'apprentissage
