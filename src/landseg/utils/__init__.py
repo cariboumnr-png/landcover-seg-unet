@@ -21,7 +21,6 @@
 
 '''Simple top-level namesapce for `landseg.utils`.'''
 
-from .cfg_access import ConfigAccess
 from .contxt import open_rasters
 from .funcs import(
     get_dir_size,
@@ -40,7 +39,6 @@ from .preview import export_previews
 
 __all__ = [
     # classes
-    'ConfigAccess',
     'Logger',
     'ParallelExecutor',
     # functions

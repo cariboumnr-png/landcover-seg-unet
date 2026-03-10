@@ -3,7 +3,7 @@ model_body: unetpp
 
 # loader config
 loader:
-  patch_dim_denom: 2
+  patch_size: 128
   batch_size: 16
 
 # loss config
