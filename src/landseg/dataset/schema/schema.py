@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Schema builders for dataprep artifacts. Emits a dataset-wide JSON schema
+Schema builders for dataset artifacts. Emits a dataset-wide JSON schema
 from cached blocks and grid metadata, and can derive a minimal schema
 from a single block (overfit mode).
 

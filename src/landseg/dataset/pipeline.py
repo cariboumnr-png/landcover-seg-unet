@@ -24,7 +24,7 @@ Data preparation pipeline that maps rasters to a grid, builds and
 normalizes blocks, splits datasets, and persists a versioned schema.
 
 Public APIs:
-    - prepare_data: Run the end-to-end dataprep workflow.
+    - prepare_data: Run the end-to-end dataset workflow.
 '''
 
 # local imports
@@ -48,7 +48,7 @@ def prepare_dataset(
     **kwargs
 ) -> core.SchemaOneBlock | None:
     '''
-    Run the dataprep workflow: map rasters, build/normalize blocks, split
+    Run the dataset workflow: map rasters, build/normalize blocks, split
     sets, and generate schema. Supports a single-block mode for testing.
 
     Args:

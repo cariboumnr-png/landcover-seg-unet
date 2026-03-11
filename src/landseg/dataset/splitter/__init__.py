@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.dataprep.splitter`.
+Top-level namespace for `landseg.dataset.splitter`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
