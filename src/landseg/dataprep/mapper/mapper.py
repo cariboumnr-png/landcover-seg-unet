@@ -36,9 +36,9 @@ import os
 import rasterio
 # local imports
 import landseg.alias as alias
+import landseg.core as core
 import landseg.dataprep as dataprep
 import landseg.dataprep.mapper as mapper
-import landseg.grid as grid
 import landseg.utils as utils
 
 # ------------------------------private dataclass------------------------------
@@ -51,7 +51,7 @@ class DataWindows:
 
 # -------------------------------Public Function-------------------------------
 def map_rasters(
-    world_grid: grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     config: dataprep.IOConfig,
     logger: utils.Logger,
     *,
@@ -87,7 +87,7 @@ def map_rasters(
         _map(world_grid, test_img, test_lbl, test_windows_fpath, logger)
 
 def _map(
-    world_grid: grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     image_fpath: str,
     label_fpath: str | None,
     windows_fpath: str,
@@ -118,7 +118,7 @@ def _map(
 
 # ------------------------------private  function------------------------------
 def _crop(
-    world_grid: grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     geom_summary: mapper.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
@@ -146,7 +146,7 @@ def _crop(
     return inside
 
 def _get_windows(
-    world_grid: grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     transform: rasterio.Affine | None,
     inside_idx: list[tuple[int, int]]
 ) -> alias.RasterWindowDict:

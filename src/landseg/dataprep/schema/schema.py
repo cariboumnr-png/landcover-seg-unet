@@ -35,12 +35,11 @@ import os
 import landseg.core as core
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
-import landseg.grid as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_schema_full(
-    world_grid: grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     data_cache_root: str,
     config: dataprep.DataprepConfigs
 ) -> None:

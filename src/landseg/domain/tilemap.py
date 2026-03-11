@@ -66,8 +66,8 @@ import numpy
 import rasterio
 # local imports
 import landseg.alias as alias
+import landseg.core as core
 import landseg.domain as domain
-import landseg.grid as grid
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -126,7 +126,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     def __init__(
         self,
         domain_fpath: str,
-        world_grid: grid.GridLayout,
+        world_grid: core.GridLayoutLike,
         context: DomainContext,
         logger: utils.Logger
     ) -> None:

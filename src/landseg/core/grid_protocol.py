@@ -19,44 +19,37 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.core`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+'''GridSpec protocol.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
-from __future__ import annotations
-import importlib
+# standard imports
+import collections.abc
 import typing
+# local imports
+import landseg.alias as alias
 
-__all__ = [
-    # classes
-    'DataSpecs',
-    'Meta',
-    'Heads',
-    'Splits',
-    'Domains',
-    # functions
-    # typing
-    'GridLayoutLike',
-    'SchemaFull',
-    'SchemaOneBlock',
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .dataprep_schema import SchemaFull, SchemaOneBlock
-    from .dataset_specs import DataSpecs, Meta, Heads, Splits, Domains
-    from .grid_protocol import GridLayoutLike
-
-def __getattr__(name: str):
-
-    if name in ['SchemaFull', 'SchemaOneBlock']:
-        return getattr(importlib.import_module('.dataprep_schema', __package__), name)
-    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
-        return getattr(importlib.import_module('.dataset_specs', __package__), name)
-    if name in ['GridSpecLike']:
-        return getattr(importlib.import_module('.grid_protocol', __package__), name)
-
-    raise AttributeError(name)
+# -------------------------------Public Protocol-------------------------------
+@typing.runtime_checkable
+class GridLayoutLike(typing.Protocol):
+    def keys(self) -> collections.abc.KeysView[tuple[int, int]]: ...
+    def items(self) -> collections.abc.ItemsView[tuple[int, int], alias.RasterWindow]: ...
+    def offset_from(self, src) -> None:...
+    @property
+    def gid(self) -> str:...
+    @property
+    def crs(self) -> str:...
+    @property
+    def origin(self) -> tuple[float, float]:...
+    @property
+    def pixel_size(self) -> tuple[float, float]:...
+    @property
+    def tile_size(self) -> tuple[int, int]:...
+    @property
+    def tile_overlap(self) -> tuple[int, int]:...
+    @property
+    def extent(self) -> tuple[int, int]:...
+    @property
+    def h(self) -> int:...
+    @property
+    def w(self) -> int:...

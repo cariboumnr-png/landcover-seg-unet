@@ -52,12 +52,12 @@ task-level feature assembly.
 
 # local imports
 import landseg.configs as configs
+import landseg.core as core
 import landseg.domain as domain
-import landseg.grid as grid
 import landseg.utils as utils
 
 def prepare_domain(
-    world_grid: grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     input_config: configs.InputDomainCfg,
     prep_config: configs.PrepDomainCfg,
     logger: utils.Logger
