@@ -253,10 +253,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
     @property
     def gid(self) -> str:
         '''Canonical grid identifier.'''
-        return f'''
-            grid_row_{self._spec.tile_size[0]}_{self._spec.tile_overlap[0]}_
-            col_{self._spec.tile_size[1]}_{self._spec.tile_overlap[0]}
-        '''
+        return (
+            f'grid_row_{self._spec.tile_size[0]}_{self._spec.tile_overlap[0]}_'
+            f'col_{self._spec.tile_size[1]}_{self._spec.tile_overlap[0]}'
+        )
 
     @property
     def crs(self) -> str:
