@@ -67,7 +67,7 @@ def build_blocks(
     builder.build_block_cache()
     builder.build_valid_block_index(config[thres_key], rebuild=rebuild)
 
-def build_a_block(
+def build_one_block(
     config: dataprep.BlockBuildingConfig,
     logger: utils.Logger,
     *,

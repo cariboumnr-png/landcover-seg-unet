@@ -33,11 +33,11 @@ Public APIs:
 
 # standard imports
 import math
-import typing
+import os
 # third-party imports
 import numpy
 # local imports
-import landseg.dataset as dataset
+import landseg.core as core
 import landseg.domain as domain
 import landseg.utils as utils
 
@@ -46,7 +46,7 @@ def build_dataspec(
     schema_fpath: str,
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
-) -> dataset.DataSpecs:
+) -> core.DataSpecs:
     '''
     Build a `DataSpecs` instance from dataset schema and optional domains.
 
@@ -65,16 +65,16 @@ def build_dataspec(
     '''
 
     # read schema
-    schema_dict: dict[str, typing.Any] = utils.load_json(schema_fpath)
+    schema_dict: core.SchemaFull = utils.load_json(schema_fpath)
     # build return the class instance
-    return dataset.DataSpecs(
+    return core.DataSpecs(
         meta=_get_meta(schema_dict),
         heads=_get_heads(schema_dict),
         splits=_get_split(schema_dict),
         domains=_get_domain(schema_dict, ids_domain, vec_domain)
     )
 
-def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> dataset.DataSpecs:
+def build_dataspec_from_a_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
     '''
     Build a minimal DataSpecs instance from a single block schema.
 
@@ -86,8 +86,8 @@ def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> dataset.DataSp
     '''
 
     # return directly from schema dict
-    return dataset.DataSpecs(
-        meta =dataset.Meta(
+    return core.DataSpecs(
+        meta =core.Meta(
             dataset_name=schema['dataset_name'],
             img_ch_num=schema['image_channel'],
             ignore_index=schema['ignore_index'],
@@ -96,17 +96,17 @@ def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> dataset.DataSp
             test_blks_grid=(0, 0),
             single_block_mode=True
         ),
-        heads=dataset.Heads(
+        heads=core.Heads(
             class_counts=schema['class_counts'],
             logits_adjust=schema['logit_adjust'],
             topology=schema['topology']
         ),
-        splits=dataset.Splits(
+        splits=core.Splits(
             train=schema['train_split'],
             val=schema['val_split'],
             test=None
         ),
-        domains=dataset.Domains(
+        domains=core.Domains(
             train={'ids_domain': None, 'vec_domain': None},
             val={'ids_domain': None, 'vec_domain': None},
             test={'ids_domain': None, 'vec_domain': None},
@@ -116,7 +116,7 @@ def build_dataspec_from_a_block(schema: dict[str, typing.Any]) -> dataset.DataSp
     )
 
 # ------------------------------private  function------------------------------
-def _get_meta(schema: dict[str, typing.Any]) -> dataset.Meta:
+def _get_meta(schema: core.SchemaFull) -> core.Meta:
     '''Populate `_Meta` dataclass from schema dictionary.'''
 
     # expected tensor sizes
@@ -132,7 +132,7 @@ def _get_meta(schema: dict[str, typing.Any]) -> dataset.Meta:
     if schema['dataset']['has_test_data']:
         # get block names sorted by col then row
         blks: dict[str, str]
-        blks = utils.load_json(schema['splits']['test_blocks']['fpath'])
+        blks = utils.load_json(schema['splits']['test_blocks'])
         sorted_blknames = sorted(blks.keys(), key=__name_to_xy)
         # get xy origin
         xmin, ymin = __name_to_xy(sorted_blknames[0])
@@ -143,7 +143,7 @@ def _get_meta(schema: dict[str, typing.Any]) -> dataset.Meta:
             row = max(row, (y - ymin) / schema['world_grid']['tile_step_y'])
 
     # return
-    return dataset.Meta(
+    return core.Meta(
         dataset_name=schema['dataset']['name'],
         img_ch_num=schema['tensor_shapes']['image']['C'],
         ignore_index=schema['io_conventions']['ignore_index'],
@@ -160,13 +160,13 @@ def __name_to_xy(key: str) -> tuple[int, int]:
     _, col, _, row = key.split('_')
     return int(col), int(row)
 
-def _get_heads(schema: dict[str, typing.Any]) -> dataset.Heads:
+def _get_heads(schema: core.SchemaFull) -> core.Heads:
     '''Populate `_Heads` dataclass from schema dictionary.'''
 
-    train_blks_path = schema['training_stats']['class_counts_train']['fpath']
+    train_blks_path = schema['training_stats']['class_counts_train']
     raw_counts: dict[str, list[int]] = utils.load_json(train_blks_path)
     counts = {k: v for k, v in raw_counts.items() if k != 'original_label'}
-    return dataset.Heads(
+    return core.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
         topology=schema['labels']['heads_topology']
@@ -180,38 +180,38 @@ def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_split(schema: dict[str, typing.Any]) -> dataset.Splits:
+def _get_split(schema: core.SchemaFull) -> core.Splits:
     '''Populate `_Split` dataclass from schema dictionary.'''
 
     # get file paths
-    train_fpath=schema['splits']['train_blocks']['fpath']
-    val_fpath=schema['splits']['val_blocks']['fpath']
-    test_fpath=schema['splits']['test_blocks'].get('fpath', None)
+    train_fpath=schema['splits']['train_blocks']
+    val_fpath=schema['splits']['val_blocks']
+    test_fpath=schema['splits']['test_blocks']
 
-    return dataset.Splits(
+    return core.Splits(
         train=utils.load_json(train_fpath),
         val=utils.load_json(val_fpath),
-        test=utils.load_json(test_fpath) if test_fpath else None
+        test=utils.load_json(test_fpath) if os.path.exists(test_fpath) else None
     )
 
 def _get_domain(
-    schema: dict[str, typing.Any],
+    schema: core.SchemaFull,
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
-) -> dataset.Domains:
+) -> core.Domains:
     '''Populate `_Domain` dataclass from schema dictionary.'''
 
     # get file paths
-    train_fpath=schema['splits']['train_blocks']['fpath']
-    val_fpath=schema['splits']['val_blocks']['fpath']
-    test_fpath=schema['splits']['test_blocks'].get('fpath', None)
+    train_fpath=schema['splits']['train_blocks']
+    val_fpath=schema['splits']['val_blocks']
+    test_fpath=schema['splits']['test_blocks']
 
     # format domains
     train_domain = __parse_domain(train_fpath, ids_domain, vec_domain)
     val_domain = __parse_domain(val_fpath, ids_domain, vec_domain)
     test_domain = __parse_domain(test_fpath, ids_domain, vec_domain)
 
-    return dataset.Domains(
+    return core.Domains(
         train=train_domain,
         val=val_domain,
         test=test_domain,
@@ -220,14 +220,14 @@ def _get_domain(
     )
 
 def __parse_domain(
-    blocks_fpath: str | None,
+    blocks_fpath: str,
     ids_domain: domain.DomainTileMap | None,
     vec_domain: domain.DomainTileMap | None
-) -> dataset.Domains.Dom:
+) -> core.Domains.Dom:
     '''Parse blocks into discrete and vector domain mappings.'''
 
     # early exit
-    if not blocks_fpath:
+    if not os.path.exists(blocks_fpath):
         return {'ids_domain': None, 'vec_domain': None}
 
     # prep

@@ -28,9 +28,7 @@ minimal model until convergence.
 import os
 # local imports
 import landseg.configs as configs
-import landseg.dataprep as dataprep
 import landseg.dataset as dataset
-import landseg.grid as grid
 import landseg.training as training
 import landseg.utils as utils
 
@@ -42,7 +40,13 @@ def overfit_test(config: configs.RootConfig) -> None:
     logger = utils.Logger('test', os.path.join(test_dir, 'test.log'))
 
     # create a single test block and derive dataspec for downstream
-    dataspecs = _single_block_dataspecs(config, test_dir, logger)
+    dataspecs = dataset.load_dataset(
+        config.inputs,
+        config.prep,
+        logger,
+        single_block_mode=True,
+        single_block_dir=test_dir
+    )
 
     # parse from config
     monitor_head = config.trainer.runtime.monitor.track_head_name
@@ -67,33 +71,3 @@ def overfit_test(config: configs.RootConfig) -> None:
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
             break
-
-def _single_block_dataspecs(
-    config: configs.RootConfig,
-    test_dir: str,
-    logger: utils.Logger
-) -> dataset.DataSpecs:
-    '''Create dataspecs from a single test block.'''
-
-    # load world grid
-    world_grid = grid.prep_world_grid(
-        config.inputs.extent,
-        config.prep.grid,
-        logger
-    )
-
-    # build a minimul schema dict from a single block
-    blk_path = os.path.join(test_dir, 'overfit_test_block.npz')
-    blk_schema = dataprep.prepare_data(
-        world_grid,
-        config.inputs.data,
-        config.prep.data,
-        logger,
-        build_a_block=True,
-        block_fpath=blk_path
-    )
-    assert blk_schema # sanity
-
-    # build a dataspec from the schema with essential values
-    dspecs = dataset.build_dataspec_from_a_block(blk_schema)
-    return dspecs

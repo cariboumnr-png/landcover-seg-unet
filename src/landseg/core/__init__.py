@@ -32,18 +32,27 @@ import typing
 
 __all__ = [
     # classes
+    'DataSpecs',
+    'Meta',
+    'Heads',
+    'Splits',
+    'Domains',
     # functions
     # typing
-    'DataSpecsLike'
+    'SchemaFull',
+    'SchemaOneBlock',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dataspec_protocols import DataSpecsLike
+    from .dataprep_schema import SchemaFull, SchemaOneBlock
+    from .dataset_specs import DataSpecs, Meta, Heads, Splits, Domains
 
 def __getattr__(name: str):
 
-    if name in ['DataSpecsLike']:
-        return getattr(importlib.import_module('.dataspec_protocols', __package__), name)
+    if name in ['SchemaFull', 'SchemaOneBlock']:
+        return getattr(importlib.import_module('.dataprep_schema', __package__), name)
+    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
+        return getattr(importlib.import_module('.dataset_specs', __package__), name)
 
     raise AttributeError(name)

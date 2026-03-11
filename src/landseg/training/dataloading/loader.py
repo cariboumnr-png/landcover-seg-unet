@@ -67,7 +67,7 @@ class _Meta:
 
 # -------------------------------Public Function-------------------------------
 def get_dataloaders(
-    data_specs: core.DataSpecsLike,
+    data_specs: core.DataSpecs,
     config: configs.LoaderConfig,
     logger: utils.Logger,
 ) -> DataLoaders:
@@ -127,7 +127,7 @@ def _load(
     mode: str,
     batch_size: int,
     patch_size: int,
-    data_specs: core.DataSpecsLike,
+    data_specs: core.DataSpecs,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -172,7 +172,7 @@ def _load(
 def _mode_configurator(
     mode: str,
     patch_size: int,
-    data_specs: core.DataSpecsLike
+    data_specs: core.DataSpecs
 ):
     '''Configure dataloading by mode.'''
 
@@ -196,7 +196,7 @@ def _mode_configurator(
         vec_domain=domain['vec_domain'] if domain else None
     )
 
-def _preload_option(data_specs: core.DataSpecsLike) -> dict[str, int | bool]:
+def _preload_option(data_specs: core.DataSpecs) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary

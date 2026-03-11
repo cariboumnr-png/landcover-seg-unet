@@ -38,7 +38,7 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_trainer(
-    data_specs: core.DataSpecsLike,
+    data_specs: core.DataSpecs,
     model_config: configs.ModelsCfg,
     trainer_config: configs.TrainerCfg,
     logger: utils.Logger,

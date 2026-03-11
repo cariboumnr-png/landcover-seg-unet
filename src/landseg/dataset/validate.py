@@ -30,8 +30,8 @@ Public APIs:
 
 # standard imoprts
 import os
-import typing
 # local imports
+import landseg.core as core
 import landseg.utils as utils
 
 def validate_schema(
@@ -64,7 +64,7 @@ def validate_schema(
         return 2
 
     # load schema into dict
-    schema: dict[str, typing.Any] = utils.load_json(schema_path)
+    schema: core.SchemaFull = utils.load_json(schema_path)
     # checks
     # dataset name match
     if os.path.basename(cache_root) != schema['dataset']['name']:
@@ -75,41 +75,60 @@ def validate_schema(
         logger.log('ERROR', 'World grid not matching')
         status = 1
     # fit data artifact integrity
-    if not _check_hash(schema['normalization']['fit_stats_file']):
+    if not _check_hash(
+        schema['normalization']['fit_stats_file'],
+        schema['checksums']['fit_stats_file']
+    ):
         logger.log('ERROR', 'Fit data stats missing/corrupted')
         status = 1
-    if not _check_hash(schema['splits']['train_blocks']):
+    if not _check_hash(
+        schema['splits']['train_blocks'],
+        schema['checksums']['train_blocks']
+    ):
         logger.log('ERROR', 'Train blocks index missing/corrupted')
         status = 1
-    if not _check_hash(schema['splits']['val_blocks']):
+    if not _check_hash(
+        schema['splits']['val_blocks'],
+        schema['checksums']['val_blocks']
+    ):
         logger.log('ERROR', 'Val blocks index missing/corrupted')
         status = 1
-    if not _check_hash(schema['training_stats']['class_counts_train']):
+    if not _check_hash(
+        schema['training_stats']['class_counts_train'],
+        schema['checksums']['class_counts_train']
+    ):
         logger.log('ERROR', 'Train class count missing/corrupted')
         status = 1
-    if not _check_hash(schema['training_stats']['class_counts_global']):
+    if not _check_hash(
+        schema['training_stats']['class_counts_global'],
+        schema['checksums']['class_counts_global']
+    ):
         logger.log('ERROR', 'Global class count missing/corrupted')
         status = 1
     # test data artifact integrity (if provided)
     if schema['dataset']['has_test_data']:
-        if not _check_hash(schema['normalization']['test_stats_file']):
+        if not _check_hash(
+            schema['normalization']['test_stats_file'],
+            schema['checksums']['test_stats_file']
+        ):
             logger.log('ERROR', 'Test data stats missing/corrupted')
             status = 1
-        if not _check_hash(schema['splits']['val_blocks']):
+        if not _check_hash(
+            schema['splits']['test_blocks'],
+            schema['checksums']['test_blocks']
+        ):
             logger.log('ERROR', 'Test blocks index missing/corrupted')
             status = 1
 
     # all passed
     return status
 
-def _check_hash(obj: dict[str, str]) -> bool:
+def _check_hash(fpath: str, checksum: str) -> bool:
     '''Return True if an artifact exists and matches recorded hash.'''
 
-    fpath = obj.get('fpath', '')
-    hash_rec = obj.get('sha256', '')
-    if not (os.path.exists(fpath) and hash_rec):
+    if not (os.path.exists(fpath) and checksum):
         return False
     hash_value = utils.hash_artifacts(fpath, write_to_record=False)
-    if hash_value != hash_rec:
+    if hash_value != checksum:
         return False
     return True

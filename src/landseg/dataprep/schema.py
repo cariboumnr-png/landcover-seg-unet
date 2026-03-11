@@ -25,21 +25,21 @@ from cached blocks and grid metadata, and can derive a minimal schema
 from a single block (overfit mode).
 
 Public APIs:
-    - build_schema: Generate and write the dataset schema JSON.
-    - schema_from_a_block: Build a minimal schema from one block.
+    - build_schema_full: Generate and write the dataset schema JSON.
+    - schema_from_one_block: Build a minimal schema from one block.
 '''
 
 # standard import
 import os
-import typing
 # local imports
+import landseg.core as core
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.grid as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
-def build_schema(
+def build_schema_full(
     world_grid: tuple[str, grid.GridLayout],
     data_cache_root: str,
     config: dataprep.DataprepConfigs
@@ -77,8 +77,8 @@ def build_schema(
     label_shape = sample_data.label_masked.shape
 
     # populate schema dict
-    schema = {
-        'schema_version': '1.0.1',
+    schema: core.SchemaFull = {
+        'schema_version': '1.1',
 
         'dataset': {
             'name': os.path.basename(data_cache_root), # dataset name
@@ -144,36 +144,44 @@ def build_schema(
         'labels': {
             'label_num_classes': sample_meta['label_num_classes'],
             'label_to_ignore': sample_meta['label_to_ignore'],
-            'heads_topology': _get_topology(sample_meta['label_count'])
+            'heads_topology': _get_topo(sample_meta['label_count'])
+        },
+
+        'splits': {
+            'train_blocks': config['train_blks'],
+            'val_blocks': config['val_blks'],
+            'test_blocks': config['test_valid_blks']
+        },
+
+        'training_stats': {
+            'class_counts_train': config['lbl_count_train'],
+            'class_counts_global': config['lbl_count_global']
         },
 
         'normalization': {
             'method': 'per-channel-zscore',
-            'fit_stats_file': _resolve(config['fit_img_stats']),
-            'test_stats_file': _resolve(config['test_img_stats'])
-            if has_test else {},
+            'fit_stats_file': config['fit_img_stats'],
+            'test_stats_file': config['test_img_stats'],
         },
 
-        'splits': {
+        'checksums': {
             'train_blocks': _resolve(config['train_blks']),
             'val_blocks': _resolve(config['val_blks']),
-            'test_blocks': _resolve(config['test_valid_blks'])
-            if has_test else {}
-        },
-
-        'training_stats': {
+            'test_blocks': _resolve(config['test_valid_blks']),
             'class_counts_train': _resolve(config['lbl_count_train']),
-            'class_counts_global': _resolve(config['lbl_count_global'])
+            'class_counts_global': _resolve(config['lbl_count_global']),
+            'fit_stats_file': _resolve(config['fit_img_stats']),
+            'test_stats_file': _resolve(config['test_img_stats'])
         }
     }
 
     # write schema to json
     utils.write_json(f'{data_cache_root}/schema.json', schema)
 
-def schema_from_a_block(
+def build_schema_one_block(
     block_fpath: str,
     block: blockbuilder.DataBlock
-) -> dict[str, typing.Any]:
+) -> core.SchemaOneBlock:
     '''
     Build a minimal schema from a single block for overfit tests.
 
@@ -190,21 +198,26 @@ def schema_from_a_block(
     meta = block.meta
     counts = meta['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
-    return {
+    schema: core.SchemaOneBlock = {
         'dataset_name': meta['block_name'],
         'image_channel': data.image_normalized.shape[0],
         'ignore_index': meta['ignore_label'],
         'block_size': data.image_normalized.shape[1], # here H==W
         'class_counts': cc,
         'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()},
-        'topology': _get_topology(meta['label_count']),
+        'topology': _get_topo(meta['label_count']),
         'train_split': {meta['block_name']: block_fpath},
         'val_split': {meta['block_name']: block_fpath}
     }
+    return schema
 
 # ------------------------------private  function------------------------------
-def _resolve(fpath: str) -> dict[str, str]:
+def _resolve(fpath: str) -> str:
     '''Resolve an artifact path to its recorded SHA-256 in hash.json.'''
+
+    # early exit if file does not exist
+    if not os.path.exists(fpath):
+        return ''
 
     # get file root and name
     root = os.path.dirname(fpath)
@@ -222,9 +235,9 @@ def _resolve(fpath: str) -> dict[str, str]:
         raise ValueError('File hash not in record')
 
     # return a dict
-    return {'fpath': fpath, 'sha256': hash_records[fname]}
+    return hash_records[fname]
 
-def _get_topology(label_count: dict[str, list[int]]):
+def _get_topo(label_count: dict[str, list[int]]) -> dict[str, dict[str, str | int | None]]:
     '''Derive head topology (parent-child) from label count naming.'''
 
     topology: dict[str, dict[str, str | int | None]] = {}

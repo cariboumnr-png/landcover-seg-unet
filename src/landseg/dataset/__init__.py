@@ -32,11 +32,6 @@ import typing
 
 __all__ = [
     # classes
-    'DataSpecs',
-    'Meta',
-    'Heads',
-    'Splits',
-    'Domains',
     # functions
     'build_dataspec',
     'build_dataspec_from_a_block',
@@ -49,7 +44,6 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .builder import build_dataspec, build_dataspec_from_a_block
     from .factory import load_dataset
-    from .specs import DataSpecs, Meta, Heads, Splits, Domains
     from .validate import validate_schema
 
 def __getattr__(name: str):
@@ -58,8 +52,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['load_dataset']:
         return getattr(importlib.import_module('.factory', __package__), name)
-    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
-        return getattr(importlib.import_module('.specs', __package__), name)
     if name in ['validate_schema']:
         return getattr(importlib.import_module('.validate', __package__), name)
 

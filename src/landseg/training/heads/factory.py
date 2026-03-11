@@ -57,7 +57,7 @@ class HeadSpecs:
 
 # Public API
 def build_headspecs(
-    data: core.DataSpecsLike,
+    data: core.DataSpecs,
     config: configs.LossConfig
 ) -> HeadSpecs:
     '''

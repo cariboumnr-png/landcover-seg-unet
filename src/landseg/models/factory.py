@@ -42,7 +42,7 @@ import landseg.models.multihead as multihead
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     body: str,
-    dataspecs: core.DataSpecsLike,
+    dataspecs: core.DataSpecs,
     config: configs.ModelsCfg,
 ) -> multihead.BaseMultiheadModel:
     '''

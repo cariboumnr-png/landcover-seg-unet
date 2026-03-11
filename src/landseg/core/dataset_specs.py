@@ -71,7 +71,7 @@ class Heads:
     '''Head-wise label statistics and topology.'''
     class_counts: dict[str, list[int]]
     logits_adjust: dict[str, list[float]]
-    topology: dict[str, dict[str, str | int | None]]
+    topology: dict[str, dict[str, typing.Any]] # TODO need better typing
 
     def __str__(self) -> str:
         def _ln(lst):

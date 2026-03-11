@@ -27,10 +27,9 @@ Public APIs:
     - prepare_data: Run the end-to-end dataprep workflow.
 '''
 
-# standard imports
-import typing
 # local imports
 import landseg.configs as configs
+import landseg.core as core
 import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.dataprep.mapper as mapper
@@ -46,7 +45,7 @@ def prepare_data(
     prep_config: configs.PrepDataCfg,
     logger: utils.Logger,
     **kwargs
-) -> dict[str, typing.Any] | None:
+) -> core.SchemaOneBlock | None:
     '''
     Run the dataprep workflow: map rasters, build/normalize blocks, split
     sets, and generate schema. Supports a single-block mode for testing.
@@ -99,9 +98,9 @@ def prepare_data(
         logger.log('INFO', 'Single data block preparation mode')
         block_fpath = kwargs.get('block_fpath')
         assert block_fpath, 'No block file path provided'
-        block = blockbuilder.build_a_block(cfg, logger)
+        block = blockbuilder.build_one_block(cfg, logger)
         block.save(block_fpath)
-        return dataprep.schema_from_a_block(block_fpath, block)
+        return dataprep.build_schema_one_block(block_fpath, block)
 
     # build/normalize/split fit blocks
     blockbuilder.build_blocks('fit', cfg, logger, rebuild=rebuild_blks)
@@ -114,7 +113,7 @@ def prepare_data(
         normalizer.normalize_blocks('test', cfg, logger, renormalize=renorm)
 
     # generate schema
-    dataprep.build_schema(world_grid, prep_config.output_dirpath, cfg)
+    dataprep.build_schema_full(world_grid, prep_config.output_dirpath, cfg)
     return None
 
 # ------------------------------private  function------------------------------
