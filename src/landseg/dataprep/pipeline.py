@@ -41,7 +41,7 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def prepare_data(
-    world_grid: tuple[str, grid.GridLayout],
+    world_grid: grid.GridLayout,
     input_config: configs.InputDataCfg,
     prep_config: configs.PrepDataCfg,
     logger: utils.Logger,
@@ -92,7 +92,7 @@ def prepare_data(
     cfg = _parse_configs(input_config, prep_config)
 
     # map rasters to world grid (alway map fit, map test if provided)
-    mapper.map_rasters(world_grid[1], cfg, logger, remap=remap)
+    mapper.map_rasters(world_grid, cfg, logger, remap=remap)
 
     # if single block mode - build and return the instance
     if kwargs.get('build_a_block', False):

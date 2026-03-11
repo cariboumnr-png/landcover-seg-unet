@@ -97,6 +97,7 @@ class GridSpec:
 # ---------------------------------Public Type---------------------------------
 class GridLayoutPayload(typing.TypedDict):
     '''GridLayout payload for controlled de-/serialization.'''
+    gid: str
     mode: str
     spec: dict[str, typing.Any]
     extent: tuple[int, int]
@@ -225,6 +226,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         '''Generate class payload for serialization.'''
 
         return {
+            'gid': self.gid,
             'mode': self._mode,
             'spec': dataclasses.asdict(self._spec),
             'extent': self._extent,
@@ -248,6 +250,14 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         return obj
 
     # ----- property
+    @property
+    def gid(self) -> str:
+        '''Canonical grid identifier.'''
+        return f'''
+            grid_row_{self._spec.tile_size[0]}_{self._spec.tile_overlap[0]}_
+            col_{self._spec.tile_size[1]}_{self._spec.tile_overlap[0]}
+        '''
+
     @property
     def crs(self) -> str:
         '''CRS of the layout.'''

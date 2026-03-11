@@ -66,13 +66,13 @@ def load_dataset(
     '''
 
     # load/create world grid
-    gid, world_grid = grid.prep_world_grid(inputs.extent, prep.grid, logger)
+    world_grid = grid.prep_world_grid(inputs.extent, prep.grid, logger)
 
     # if single block mode
     if single_block_mode:
         # build a minimul schema dict from a single block
         blk_schema = dataprep.prepare_data(
-            (gid, world_grid),
+            world_grid,
             inputs.data,
             prep.data,
             logger,
@@ -87,7 +87,6 @@ def load_dataset(
 
     # load/map domain
     domains = domain.prepare_domain(
-        gid,
         world_grid,
         inputs.domain,
         prep.domain,
@@ -97,13 +96,17 @@ def load_dataset(
     vec_domain = domains[prep.domain.as_vec] if prep.domain.as_vec else None
 
     # validate data blocks
-    status = dataset.validate_schema(gid, prep.data.output_dirpath, logger)
+    status = dataset.validate_schema(
+        world_grid.gid,
+        prep.data.output_dirpath,
+        logger
+    )
 
     # prompt data blocks rebuild
     if status == 1:
         logger.log('WARNING', 'Data schema check failed, rebuild data blocks')
         dataprep.prepare_data(
-            (gid, world_grid),
+            world_grid,
             inputs.data,
             prep.data,
             logger
@@ -112,7 +115,7 @@ def load_dataset(
     elif status == 2:
         logger.log('WARNING', 'Data schema not found, build data blocks')
         dataprep.prepare_data(
-            (gid, world_grid),
+            world_grid,
             inputs.data,
             prep.data,
             logger,

@@ -39,7 +39,6 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def save_grid(
-    grid_name: str,
     grid_obj: grid.GridLayout,
     dirpath: str
 ) -> None:
@@ -62,19 +61,20 @@ def save_grid(
 
     # get grid object payload and pickle
     payload = grid_obj.to_payload()
-    utils.write_pickle(f'{dirpath}/{grid_name}.pkl', payload)
+    utils.write_pickle(f'{dirpath}/{payload['gid']}.pkl', payload)
 
     # write meta to json
     canonical = _canonicalize(payload)
     meta = {
         'schema_id': getattr(grid_obj, 'SCHEMA_ID', 'unknown'),
         'sha256': utils.hash_payload(canonical),
+        'gid': payload['gid'],
         'mode': payload['mode'],
         'spec': payload['spec'],
         'extent': payload['extent'],
         'tiles count': len(payload['windows'])
     }
-    utils.write_json(f'{dirpath}/{grid_name}_meta.json', meta)
+    utils.write_json(f'{dirpath}/{payload['gid']}_meta.json', meta)
 
 def load_grid(
     grid_name: str,

@@ -40,7 +40,7 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_schema_full(
-    world_grid: tuple[str, grid.GridLayout],
+    world_grid: grid.GridLayout,
     data_cache_root: str,
     config: dataprep.DataprepConfigs
 ) -> None:
@@ -66,9 +66,6 @@ def build_schema_full(
     # has test data flag
     has_test = os.path.exists(config['test_windows'])
     test_data_has_label = os.path.exists(config['test_input_lbl'] or '')
-
-    # parse grid
-    gid, work_grid = world_grid
 
     # read a sample block to get meta
     sample = next(iter(utils.load_json(config['train_blks']).values()))
@@ -101,13 +98,13 @@ def build_schema_full(
         },
 
         'world_grid': {
-            'gid': gid,
-            'tile_size_x': work_grid.tile_size[0],
-            'tile_size_y': work_grid.tile_size[1],
-            'tile_overlap_x': work_grid.tile_overlap[0],
-            'tile_overlap_y': work_grid.tile_overlap[1],
-            'tile_step_x': work_grid.tile_size[0] - work_grid.tile_overlap[0],
-            'tile_step_y': work_grid.tile_size[1] - work_grid.tile_overlap[1]
+            'gid': world_grid.gid,
+            'tile_size_x': world_grid.tile_size[0],
+            'tile_size_y': world_grid.tile_size[1],
+            'tile_overlap_x': world_grid.tile_overlap[0],
+            'tile_overlap_y': world_grid.tile_overlap[1],
+            'tile_step_x': world_grid.tile_size[0] - world_grid.tile_overlap[0],
+            'tile_step_y': world_grid.tile_size[1] - world_grid.tile_overlap[1]
         },
 
         'io_conventions': {

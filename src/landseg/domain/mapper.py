@@ -57,7 +57,6 @@ import landseg.grid as grid
 import landseg.utils as utils
 
 def prepare_domain(
-    grid_id: str,
     world_grid: grid.GridLayout,
     input_config: configs.InputDomainCfg,
     prep_config: configs.PrepDomainCfg,
@@ -119,7 +118,7 @@ def prepare_domain(
             fp = f'{source_dir}/{file.filename}'
             dom = domain.DomainTileMap(fp, world_grid, ctx, logger)
             output[name] = dom
-            domain.save_domain(grid_id, name, dom, output_dir)
+            domain.save_domain(world_grid.gid, name, dom, output_dir)
 
     # return
     return output
