@@ -187,8 +187,9 @@ class DataBlock:
         }
 
     # -----------------------------public methods-----------------------------
+    @classmethod
     def build(
-        self,
+        cls,
         img_arr: numpy.ndarray,
         lbl_arr: numpy.ndarray | None,
         padded_dem: numpy.ndarray,
@@ -213,6 +214,7 @@ class DataBlock:
         label hierarchies, valid masks, and per-block statistics.
         '''
 
+        self = cls()
         # update meta with input
         self.meta.update(meta)
         # assign image
@@ -259,9 +261,9 @@ class DataBlock:
             DataBlock: The populated block instance.
         '''
 
+        self = cls()
         # load and set attributes
         loaded = numpy.load(fpath, allow_pickle=True)
-        self = cls()
         for key in loaded:
             value = loaded[key]
             # 'meta' is a pickled dict, convert from 0-d array

@@ -68,8 +68,8 @@ def build_schema_full(
 
     # read a sample block to get meta
     sample = next(iter(utils.load_json(config['train_blks']).values()))
-    sample_data = blockbuilder.DataBlock().load(sample).data
-    sample_meta = blockbuilder.DataBlock().load(sample).meta
+    sample_data = blockbuilder.DataBlock.load(sample).data
+    sample_meta = blockbuilder.DataBlock.load(sample).meta
 
     # image and label shape
     image_shape = sample_data.image_normalized.shape

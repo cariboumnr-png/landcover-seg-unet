@@ -233,7 +233,7 @@ class BlockCacheBuilder:
             padded = _read_w_pad(img, window, dem_band, pad)
 
         # create and return
-        return blockbuilder.DataBlock().build(img_arr, lbl_arr, padded, meta)
+        return blockbuilder.DataBlock.build(img_arr, lbl_arr, padded, meta)
 
     # -----------------------------internal method-----------------------------
     def _prepare_block_windows(self):
@@ -390,10 +390,9 @@ class BlockCacheBuilder:
 def _check_npz(blk_fpath: str) -> dict[str, str]:
     '''Check if a .npz block file can be loaded properly.'''
 
-    rb = blockbuilder.DataBlock()
     # pass if the npz file can be loaded properly
     try:
-        rb.load(blk_fpath)
+        blockbuilder.DataBlock.load(blk_fpath)
         return {'pass': blk_fpath}
     # flag absent/corrupted/damaged npz file
     except (FileNotFoundError, zipfile.error, zlib.error):
@@ -431,7 +430,7 @@ def _make_blk(contxt: _BlockCreationContext) -> None:
             meta['label_nodata'] = lbl.nodata
 
     # create and save
-    blk = blockbuilder.DataBlock().build(img_arr, lbl_arr, padded_dem, meta)
+    blk = blockbuilder.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
     blk.save(npz_fpath)
 
 def _read_w_pad(
@@ -476,7 +475,7 @@ def _eval_blk(
     # parse arguments
     name, fpath = block
     # get meta from block
-    meta = blockbuilder.DataBlock().load(fpath).meta
+    meta = blockbuilder.DataBlock.load(fpath).meta
     # valid pixel ratio threshold
     if meta['valid_pixel_ratio']['block'] < valid_px_threshold:
         return {'invalid': name}
