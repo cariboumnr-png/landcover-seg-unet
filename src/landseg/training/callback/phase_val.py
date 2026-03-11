@@ -29,7 +29,7 @@ class ValCallback(callback.Callback):
     '''Validation pipeline: parse - forward - compute metrics.'''
 
     def on_validation_begin(self) -> None:
-        model = self.trainer.comps.model
+        model = self.trainer.model
         flags = self.trainer.flags
         # set model to evaluation mode
         model.eval()
@@ -58,7 +58,7 @@ class ValCallback(callback.Callback):
         domain = self.state.batch_cxt.domain
         # forward with autocast context
         with self.trainer._val_ctx():
-            outputs = self.trainer.comps.model.forward(x, **domain)
+            outputs = self.trainer.model.forward(x, **domain)
         self.state.batch_out.preds = dict(outputs)
 
     def on_validation_batch_end(self) -> None:

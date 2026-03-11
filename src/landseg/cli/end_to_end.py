@@ -53,7 +53,13 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     model = models.build_multihead_unet(config.trainer.model_body, dataspecs, config.models)
 
     # build trainer
-    trainer = training.build_trainer(dataspecs, dataset.DataBlock, config.models, config.trainer, logger)
+    trainer = training.build_trainer(
+        model,
+        dataspecs,
+        dataset.DataBlock,
+        config.trainer,
+        logger
+    )
 
     # build controller
     runner = controller.build_controller(trainer, config.controller, exp_dir, logger)

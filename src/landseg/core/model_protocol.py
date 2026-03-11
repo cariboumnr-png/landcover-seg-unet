@@ -19,32 +19,31 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Collection of protocol-typed components used by the training loop.
-
-This small module exists to centralize the set of objects the trainer
-requires (model, dataloaders, losses, metrics, optimization, callbacks),
-while keeping their concrete implementations defined in other modules.
-'''
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+'''Multihead model protocol.'''
 
 # standard imports
-import dataclasses
-# local imports
-import landseg.training.common as common
+from __future__ import annotations
+import typing
 
-# ------------------------------Public  Dataclass------------------------------
-@dataclasses.dataclass
-class TrainerComponents:
-    '''
-    Container for all trainer-required components.
+if typing.TYPE_CHECKING:
+    import torch
+    import torch.nn
 
-    Each field uses a protocol type from `landseg.training.common`,
-    allowing different concrete implementations to be supplied while
-    keeping the trainer strongly typed and modular.
-    '''
-    dataloaders: common.DataLoadersLike
-    headspecs: common.HeadSpecsLike
-    headlosses: common.HeadLossesLike
-    headmetrics: common.HeadMetricsLike
-    optimization: common.OptimizationLike
-    callbacks: common.CallBacksLike
+class MultiheadModelLike(typing.Protocol):
+    '''Minimally required class methods.'''
+    def __call__(self, x: 'torch.Tensor', **kwargs) -> typing.Mapping[str, 'torch.Tensor']: ...
+    def forward(self, x: 'torch.Tensor', **kwargs) -> typing.Mapping[str, 'torch.Tensor']: ...
+    def parameters(self) -> typing.Iterable['torch.nn.Parameter']: ...
+    def to(self: typing.Self, device: 'torch.device | str') -> typing.Self: ...
+    def train(self: typing.Self, mode: bool = True) -> typing.Self: ...
+    def eval(self: typing.Self) -> typing.Self: ...
+    def set_active_heads(self, active_heads: list[str] | None) -> None: ...
+    def set_frozen_heads(self, frozen_heads: list[str] | None) -> None: ...
+    def reset_heads(self) -> None: ...
+    def set_logit_adjust_enabled(self, enabled: bool) -> None: ...
+    def set_logit_adjust_alpha(self, alpha: float) -> None: ...
+    def state_dict(self) -> typing.Mapping[str, 'torch.Tensor']: ...
+    def load_state_dict(self, state_dict: typing.Mapping[str, typing.Any]) -> typing.Any: ...

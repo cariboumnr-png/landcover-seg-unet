@@ -44,6 +44,7 @@ __all__ = [
     'GridLayoutLike',
     'SchemaFull',
     'SchemaOneBlock',
+    'MultiheadModelLike',
 ]
 
 # for static check
@@ -52,6 +53,7 @@ if typing.TYPE_CHECKING:
     from .dataprep_schema import SchemaFull, SchemaOneBlock
     from .dataset_specs import DataSpecs, Meta, Heads, Splits, Domains
     from .grid_protocol import GridLayoutLike
+    from .model_protocol import MultiheadModelLike
 
 def __getattr__(name: str):
 
@@ -63,5 +65,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.dataset_specs', __package__), name)
     if name in ['GridLayoutLike']:
         return getattr(importlib.import_module('.grid_protocol', __package__), name)
+    if name in ['MultiheadModelLike']:
+        return getattr(importlib.import_module('.model_protocol', __package__), name)
 
     raise AttributeError(name)

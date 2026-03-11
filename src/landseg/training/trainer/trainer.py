@@ -46,6 +46,7 @@ import typing
 # third-party imports
 import torch
 # local imports
+import landseg.core as core
 import landseg.training.trainer as trainer
 import landseg.utils as utils
 
@@ -75,6 +76,7 @@ class MultiHeadTrainer:
 
     def __init__(
         self,
+        model: core.MultiheadModelLike,
         components: trainer.TrainerComponents,
         config: trainer.RuntimeConfig,
         device: str,
@@ -101,7 +103,8 @@ class MultiHeadTrainer:
                 - enable_test_la: bool
         '''
 
-        # get model components
+        # get model and trainer components
+        self.model = model
         self.comps = components
         # move model to device
         self.device = device
@@ -738,11 +741,6 @@ class MultiHeadTrainer:
         )
 
     # -------------------------convenience properties-------------------------
-    @property
-    def model(self):
-        '''Shortcut to model.'''
-        return self.comps.model
-
     @property
     def dataloaders(self):
         '''Shortcut to dataloaders.'''

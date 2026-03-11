@@ -24,9 +24,8 @@
 # third-party imports
 import torch
 # local imports
-import landseg.core as core
 import landseg.configs as configs
-import landseg.models as models
+import landseg.core as core
 import landseg.training.callback as callback
 import landseg.training.dataloading as dataloading
 import landseg.training.heads as heads
@@ -38,21 +37,14 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_trainer(
+    model: core.MultiheadModelLike,
     data_specs: core.DataSpecs,
     datablock_cls: type[core.DataBlockLike],
-    model_config: configs.ModelsCfg,
     trainer_config: configs.TrainerCfg,
     logger: utils.Logger,
     **kwargs
  ) -> trainer.MultiHeadTrainer:
     '''Builder trainer.'''
-
-    # setup the model
-    model = models.build_multihead_unet(
-        body=trainer_config.model_body,
-        dataspecs=data_specs,
-        config=model_config
-    )
 
     # compile data loaders
     data_loaders = dataloading.get_dataloaders(
@@ -92,7 +84,6 @@ def build_trainer(
 
     # collect components
     trainer_components = trainer.TrainerComponents(
-        model=model,
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
@@ -109,6 +100,7 @@ def build_trainer(
 
     # build and return a trainer class
     return trainer.MultiHeadTrainer(
+        model,
         trainer_components,
         trainer_runtime_config,
         available_device,

@@ -29,7 +29,7 @@ class TrainCallback(callback.Callback):
     '''Training: parse - forward - compute loss - backward - step.'''
 
     def on_train_epoch_begin(self, epoch: int) -> None:
-        model = self.trainer.comps.model
+        model = self.trainer.model
         flags = self.trainer.flags
         # set model to train mode
         model.train()
@@ -57,7 +57,7 @@ class TrainCallback(callback.Callback):
         domain = self.state.batch_cxt.domain
         # forward with autocast context
         with self.trainer._autocast_ctx():
-            predictions = self.trainer.comps.model.forward(x, **domain)
+            predictions = self.trainer.model.forward(x, **domain)
         # assign predictions to batch output
         self.state.batch_out.preds = dict(predictions)
 
