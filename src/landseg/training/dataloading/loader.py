@@ -70,7 +70,6 @@ class _Meta:
 def get_dataloaders(
     data_specs: core.DataSpecs,
     config: configs.LoaderConfig,
-    datablock_cls: type[core.DataBlockLike],
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
@@ -115,7 +114,6 @@ def get_dataloaders(
         batch_size=batch_size,
         patch_size=patch_size,
         data_specs=data_specs,
-        datablock_cls=datablock_cls,
         logger=logger
     )
 
@@ -140,7 +138,6 @@ def _load(
     batch_size: int,
     patch_size: int,
     data_specs: core.DataSpecs,
-    datablock_cls: type[core.DataBlockLike],
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -167,7 +164,6 @@ def _load(
     dataset = dataloading.MultiBlockDataset(
         data_blocks,
         dataset_config,
-        datablock_cls.load,
         logger,
         preload=load_options[f'preload_{mode}'],
         blk_cache_num=load_options[f'cache_{mode}']

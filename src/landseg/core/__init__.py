@@ -38,9 +38,7 @@ __all__ = [
     'Splits',
     'Domains',
     # functions
-    'load_block',
     # typing
-    'DataBlockLike',
     'GridLayoutLike',
     'SchemaFull',
     'SchemaOneBlock',
@@ -49,7 +47,6 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .datablock_protocol import DataBlockLike, load_block
     from .dataprep_schema import SchemaFull, SchemaOneBlock
     from .dataset_specs import DataSpecs, Meta, Heads, Splits, Domains
     from .grid_protocol import GridLayoutLike
@@ -57,8 +54,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['DataBlockLike', 'load_block']:
-        return getattr(importlib.import_module('.datablock_protocol', __package__), name)
     if name in ['SchemaFull', 'SchemaOneBlock']:
         return getattr(importlib.import_module('.dataprep_schema', __package__), name)
     if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:

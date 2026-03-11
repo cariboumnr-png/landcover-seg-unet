@@ -39,7 +39,6 @@ import landseg.utils as utils
 def build_trainer(
     model: core.MultiheadModelLike,
     data_specs: core.DataSpecs,
-    datablock_cls: type[core.DataBlockLike],
     trainer_config: configs.TrainerCfg,
     logger: utils.Logger,
     **kwargs
@@ -50,7 +49,6 @@ def build_trainer(
     data_loaders = dataloading.get_dataloaders(
         data_specs=data_specs,
         config=trainer_config.loader,
-        datablock_cls=datablock_cls,
         logger=logger
     )
 
