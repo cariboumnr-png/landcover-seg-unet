@@ -71,7 +71,8 @@ class Heads:
     '''Head-wise label statistics and topology.'''
     class_counts: dict[str, list[int]]
     logits_adjust: dict[str, list[float]]
-    topology: dict[str, dict[str, typing.Any]] # TODO need better typing
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
 
     def __str__(self) -> str:
         def _ln(lst):

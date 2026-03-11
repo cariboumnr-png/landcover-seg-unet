@@ -74,7 +74,7 @@ def build_dataspec(
         domains=_get_domain(schema_dict, ids_domain, vec_domain)
     )
 
-def build_dataspec_from_a_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
+def build_dataspec_one_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
     '''
     Build a minimal DataSpecs instance from a single block schema.
 
@@ -99,7 +99,8 @@ def build_dataspec_from_a_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
         heads=core.Heads(
             class_counts=schema['class_counts'],
             logits_adjust=schema['logit_adjust'],
-            topology=schema['topology']
+            head_parent=schema['head_parent'],
+            head_parent_cls=schema['head_parent_cls']
         ),
         splits=core.Splits(
             train=schema['train_split'],
@@ -169,7 +170,8 @@ def _get_heads(schema: core.SchemaFull) -> core.Heads:
     return core.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
-        topology=schema['labels']['heads_topology']
+        head_parent=schema['labels']['head_parent'],
+        head_parent_cls=schema['labels']['head_parent_cls']
     )
 
 def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:

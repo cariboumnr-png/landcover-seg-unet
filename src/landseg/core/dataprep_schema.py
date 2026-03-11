@@ -35,7 +35,8 @@ class SchemaOneBlock(typing.TypedDict):
     block_size: int
     class_counts: dict[str, list[int]]
     logit_adjust: dict[str, list[float]]
-    topology: dict[str, dict[str, str | int | None]]
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
     train_split: dict[str, str]
     val_split: dict[str, str]
 
@@ -135,12 +136,8 @@ class _LabelsInfo(typing.TypedDict):
     '''Labeling metadata.'''
     label_num_classes: int
     label_to_ignore: list[int]
-    heads_topology: dict[str, dict[str, str | int | None]]
-
-class _HeadTopologyEntry(typing.TypedDict): # TODO
-    '''Topology of a label head, with parent info when applicable.'''
-    parent: str | None
-    parent_cls: int | None
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
 
 # ----- normalization
 class _NormalizationInfo(typing.TypedDict):

@@ -91,8 +91,8 @@ def build_headspecs(
             name=name,
             count=counts,
             loss_alpha=alpha_fn_registry[alpha_fn](list(counts), **fn_kwargs),
-            parent_head=data.heads.topology[name]['parent'],
-            parent_cls=data.heads.topology[name]['parent_cls'],
+            parent_head=data.heads.head_parent[name],
+            parent_cls=data.heads.head_parent_cls[name],
             weight=1.0,
             exclude_cls=()
         )

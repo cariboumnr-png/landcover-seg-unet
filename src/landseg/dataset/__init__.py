@@ -34,7 +34,7 @@ __all__ = [
     # classes
     # functions
     'build_dataspec',
-    'build_dataspec_from_a_block',
+    'build_dataspec_one_block',
     'load_dataset',
     'validate_schema'
     # typing
@@ -42,13 +42,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_dataspec, build_dataspec_from_a_block
+    from .builder import build_dataspec, build_dataspec_one_block
     from .factory import load_dataset
     from .validate import validate_schema
 
 def __getattr__(name: str):
 
-    if name in ['build_dataspec', 'build_dataspec_from_a_block']:
+    if name in ['build_dataspec', 'build_dataspec_one_block']:
         return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['load_dataset']:
         return getattr(importlib.import_module('.factory', __package__), name)

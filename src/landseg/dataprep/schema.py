@@ -76,6 +76,9 @@ def build_schema_full(
     image_shape = sample_data.image_normalized.shape
     label_shape = sample_data.label_masked.shape
 
+    # head topology
+    parent, parent_cls = _get_topo(sample_meta['label_count'])
+
     # populate schema dict
     schema: core.SchemaFull = {
         'schema_version': '1.1',
@@ -144,7 +147,8 @@ def build_schema_full(
         'labels': {
             'label_num_classes': sample_meta['label_num_classes'],
             'label_to_ignore': sample_meta['label_to_ignore'],
-            'heads_topology': _get_topo(sample_meta['label_count'])
+            'head_parent': parent,
+            'head_parent_cls': parent_cls,
         },
 
         'splits': {
@@ -198,6 +202,7 @@ def build_schema_one_block(
     meta = block.meta
     counts = meta['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
+    parent, parent_cls = _get_topo(counts)
     schema: core.SchemaOneBlock = {
         'dataset_name': meta['block_name'],
         'image_channel': data.image_normalized.shape[0],
@@ -205,7 +210,8 @@ def build_schema_one_block(
         'block_size': data.image_normalized.shape[1], # here H==W
         'class_counts': cc,
         'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()},
-        'topology': _get_topo(meta['label_count']),
+        'head_parent': parent,
+        'head_parent_cls': parent_cls,
         'train_split': {meta['block_name']: block_fpath},
         'val_split': {meta['block_name']: block_fpath}
     }
@@ -237,23 +243,27 @@ def _resolve(fpath: str) -> str:
     # return a dict
     return hash_records[fname]
 
-def _get_topo(label_count: dict[str, list[int]]) -> dict[str, dict[str, str | int | None]]:
+def _get_topo(label_count: dict[str, list[int]]):
     '''Derive head topology (parent-child) from label count naming.'''
 
-    topology: dict[str, dict[str, str | int | None]] = {}
+    head_parent: dict[str, str | None] = {}
+    head_parent_cls: dict[str, int | None] = {}
     # iterate through label counts
     for layer_name in label_count:
         if layer_name == 'original_label': # skip this
             continue
         # emit topology for current convention - from layer naming
         if layer_name == 'layer1':
-            topology[layer_name] = {'parent': None, 'parent_cls': None}
+            head_parent[layer_name] = None
+            head_parent_cls[layer_name] = None
         elif layer_name.startswith('layer2_'):
             cls_id = int(layer_name.split('layer2_')[1])
-            topology[layer_name] = {'parent': 'layer1', 'parent_cls': cls_id}
+            head_parent[layer_name] = 'layer1'
+            head_parent_cls[layer_name] = cls_id
         else:
             # if future names appear, one can decide to raise or set None
-            topology[layer_name] = {'parent': None, 'parent_cls': None}
+            head_parent[layer_name] = None
+            head_parent_cls[layer_name] = None
 
     # return the dicts
-    return topology
+    return head_parent, head_parent_cls

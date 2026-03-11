@@ -82,7 +82,7 @@ def load_dataset(
         assert blk_schema # sanity
 
         # build a dataspec from the schema with essential values
-        dspecs = dataset.build_dataspec_from_a_block(blk_schema)
+        dspecs = dataset.build_dataspec_one_block(blk_schema)
         return dspecs
 
     # load/map domain
