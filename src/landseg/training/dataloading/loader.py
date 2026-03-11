@@ -37,6 +37,7 @@ DataLoaders object containing train/val/test loaders and metadata.
 # standard imports
 from __future__ import annotations
 import dataclasses
+import functools
 # third-party imports
 import psutil
 import torch
@@ -69,6 +70,7 @@ class _Meta:
 def get_dataloaders(
     data_specs: core.DataSpecs,
     config: configs.LoaderConfig,
+    datablock_cls: type[core.DataBlockLike],
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
@@ -107,17 +109,27 @@ def get_dataloaders(
     # meta to be shipped
     meta = _Meta(batch_size, patch_per_blk, data_specs.meta.test_blks_grid)
 
+    # partial load function
+    load_partial = functools.partial(
+        _load,
+        batch_size=batch_size,
+        patch_size=patch_size,
+        data_specs=data_specs,
+        datablock_cls=datablock_cls,
+        logger=logger
+    )
+
     # if single block mode (for overfit test)
     if data_specs.meta.single_block_mode:
-        single_loader = _load('single', batch_size, patch_size, data_specs, logger)
+        single_loader = load_partial('single')
         # pass the same as val dataloader for minimal disturbance downstream
         assert single_loader
         return DataLoaders(single_loader, single_loader, None, meta)
 
     # otherwise (normal experiment)
-    train_loader = _load('train', batch_size, patch_size, data_specs, logger)
-    val_loader = _load('val', batch_size, patch_size, data_specs, logger)
-    test_loader = _load('test', batch_size, patch_size, data_specs, logger)
+    train_loader = load_partial('train')
+    val_loader = load_partial('val')
+    test_loader = load_partial('test')
     # sanity checks and return
     assert train_loader and val_loader
     return DataLoaders(train_loader, val_loader, test_loader, meta)
@@ -128,6 +140,7 @@ def _load(
     batch_size: int,
     patch_size: int,
     data_specs: core.DataSpecs,
+    datablock_cls: type[core.DataBlockLike],
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -146,14 +159,15 @@ def _load(
     # early exit if no data blocks are available, e.g., no test dataset
     if not data_blocks:
         return None
-
     # dataset configuration
-    dataset_config = _mode_configurator(mode, patch_size, data_specs)
+    dataset_config = _config_by_mode(mode, patch_size, data_specs)
     # preload/cache config
     load_options = _preload_option(data_specs)
+    # get multiblock dataset
     dataset = dataloading.MultiBlockDataset(
         data_blocks,
         dataset_config,
+        datablock_cls.load,
         logger,
         preload=load_options[f'preload_{mode}'],
         blk_cache_num=load_options[f'cache_{mode}']
@@ -169,7 +183,7 @@ def _load(
     # return dataloader
     return torch.utils.data.DataLoader(dataset, **dataloader_args)
 
-def _mode_configurator(
+def _config_by_mode(
     mode: str,
     patch_size: int,
     data_specs: core.DataSpecs

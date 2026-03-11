@@ -39,6 +39,7 @@ import landseg.utils as utils
 # -------------------------------Public Function-------------------------------
 def build_trainer(
     data_specs: core.DataSpecs,
+    datablock_cls: type[core.DataBlockLike],
     model_config: configs.ModelsCfg,
     trainer_config: configs.TrainerCfg,
     logger: utils.Logger,
@@ -57,6 +58,7 @@ def build_trainer(
     data_loaders = dataloading.get_dataloaders(
         data_specs=data_specs,
         config=trainer_config.loader,
+        datablock_cls=datablock_cls,
         logger=logger
     )
 

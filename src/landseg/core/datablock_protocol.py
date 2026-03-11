@@ -19,52 +19,57 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.dataset`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+'''`DataBlock` protocol.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    # classes
-    'DataBlock',
-    # functions
-    'prepare_dataset',
-    # typing
-    'BlockBuildingConfig',
-    'DataprepConfigs',
-    'InputConfig',
-    'IOConfig',
-    'OutputConfig',
-    'ProcessConfig',
-]
-
-# for static check
 if typing.TYPE_CHECKING:
-    from .blockbuilder import DataBlock
-    from .config import (
-        BlockBuildingConfig,
-        DataprepConfigs,
-        InputConfig,
-        IOConfig,
-        OutputConfig,
-        ProcessConfig,
-    )
-    from .pipeline import prepare_dataset
+    import numpy
 
-def __getattr__(name: str):
+# -------------------------------Public Protocol-------------------------------
+@typing.runtime_checkable
+class DataBlockLike(typing.Protocol):
+    @classmethod
+    def load(cls, fpath: str) -> typing.Self: ...
+    @property
+    def meta(self) -> _BlockMeta:...
+    @property
+    def data(self) -> _DataLike:...
 
-    if name in ['DataBlock']:
-        return getattr(importlib.import_module('.blockbuilder', __package__), name)
-    if name in ['BlockBuildingConfig', 'DataprepConfigs', 'InputConfig',
-                'IOConfig', 'OutputConfig', 'ProcessConfig',]:
-        return getattr(importlib.import_module('.config', __package__), name)
-    if name in ['prepare_dataset']:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+# private type
+class _BlockMeta(typing.TypedDict):
+    block_name: str
+    valid_pixel_ratio: dict[str, float]
+    has_label: bool
+    label_nodata: int
+    ignore_label: int
+    label_num_classes: int
+    label_to_ignore: list[int]
+    label_class_name: typing.NotRequired[dict[str, str]]
+    label_reclass_map: dict[str, list[int]]
+    label_reclass_name: typing.NotRequired[dict[str, str]]
+    label_count: dict[str, list[int]]
+    label_entropy: dict[str, float]
+    image_nodata: float
+    dem_pad: int
+    band_map: dict[str, int]
+    spectral_indices_added: list[str]
+    topo_metrics_added: list[str]
+    block_image_stats: dict[str, dict[str, int | float]]
 
-    raise AttributeError(name)
+# private protocol
+class _DataLike(typing.Protocol):
+    @property
+    def image_normalized(self) -> numpy.ndarray:...
+    @property
+    def label_masked(self) -> numpy.ndarray:...
+
+# factory
+T = typing.TypeVar('T', bound=DataBlockLike)
+def load_block(cls: type[T], fpath: str) -> T:
+    return cls().load(fpath)

@@ -31,6 +31,8 @@ import os
 import landseg.configs as configs
 import landseg.controller as controller
 import landseg.dataprep as dataprep
+import landseg.dataset as dataset
+import landseg.models as models
 import landseg.training as training
 import landseg.utils as utils
 
@@ -47,8 +49,11 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     # data preparation
     dataspecs = dataprep.load_data(config.inputs, config.prep, logger)
 
+    # setup the model
+    model = models.build_multihead_unet(config.trainer.model_body, dataspecs, config.models)
+
     # build trainer
-    trainer = training.build_trainer(dataspecs, config.models, config.trainer, logger)
+    trainer = training.build_trainer(dataspecs, dataset.DataBlock, config.models, config.trainer, logger)
 
     # build controller
     runner = controller.build_controller(trainer, config.controller, exp_dir, logger)

@@ -247,7 +247,8 @@ class DataBlock:
         self.data.validate(skip_attr='image_normalized') # to populate later
         return self
 
-    def load(self, fpath: str) -> 'DataBlock':
+    @classmethod
+    def load(cls, fpath: str) -> 'DataBlock':
         '''
         Load data from existing .npz file to populate a class instance.
 
@@ -255,12 +256,12 @@ class DataBlock:
             fpath: Path to a serialized block artifact.
 
         Returns:
-            DataBlock: The populated block instance (returned for
-                chaining).
+            DataBlock: The populated block instance.
         '''
 
         # load and set attributes
         loaded = numpy.load(fpath, allow_pickle=True)
+        self = cls()
         for key in loaded:
             value = loaded[key]
             # 'meta' is a pickled dict, convert from 0-d array
