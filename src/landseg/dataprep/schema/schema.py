@@ -26,7 +26,7 @@ from a single block (overfit mode).
 
 Public APIs:
     - build_schema_full: Generate and write the dataset schema JSON.
-    - schema_from_one_block: Build a minimal schema from one block.
+    - build_schema_one_block: Build a minimal schema from one block.
 '''
 
 # standard import
@@ -43,7 +43,7 @@ def build_schema_full(
     world_grid: tuple[str, grid.GridLayout],
     data_cache_root: str,
     config: dataprep.DataprepConfigs
-):
+) -> None:
     '''
     Generate and persist the dataset schema JSON from data and grid.
 
@@ -58,6 +58,9 @@ def build_schema_full(
     Raises:
         FileNotFoundError: If hash records for referenced artifacts are
             missing when resolving paths and checksums.
+
+    Note: this function does not return a schema dict, but write one as
+    JSON to disk.
     '''
 
     # has test data flag
@@ -207,9 +210,9 @@ def build_schema_one_block(
         'dataset_name': meta['block_name'],
         'image_channel': data.image_normalized.shape[0],
         'ignore_index': meta['ignore_label'],
-        'block_size': data.image_normalized.shape[1], # here H==W
-        'class_counts': cc,
-        'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()},
+        'block_size': data.image_normalized.shape[1], # here assume H==W
+        'class_counts': cc, # neutral
+        'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()}, # neutral
         'head_parent': parent,
         'head_parent_cls': parent_cls,
         'train_split': {meta['block_name']: block_fpath},

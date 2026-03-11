@@ -34,6 +34,7 @@ import landseg.dataprep as dataprep
 import landseg.dataprep.blockbuilder as blockbuilder
 import landseg.dataprep.mapper as mapper
 import landseg.dataprep.normalizer as normalizer
+import landseg.dataprep.schema as schema
 import landseg.dataprep.splitter as splitter
 import landseg.grid as grid
 import landseg.utils as utils
@@ -100,7 +101,7 @@ def prepare_data(
         assert block_fpath, 'No block file path provided'
         block = blockbuilder.build_one_block(cfg, logger)
         block.save(block_fpath)
-        return dataprep.build_schema_one_block(block_fpath, block)
+        return schema.build_schema_one_block(block_fpath, block)
 
     # build/normalize/split fit blocks
     blockbuilder.build_blocks('fit', cfg, logger, rebuild=rebuild_blks)
@@ -113,7 +114,7 @@ def prepare_data(
         normalizer.normalize_blocks('test', cfg, logger, renormalize=renorm)
 
     # generate schema
-    dataprep.build_schema_full(world_grid, prep_config.output_dirpath, cfg)
+    schema.build_schema_full(world_grid, prep_config.output_dirpath, cfg)
     return None
 
 # ------------------------------private  function------------------------------
