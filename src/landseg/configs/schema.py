@@ -302,6 +302,7 @@ class ModelFlags:
 # ----- MODELS
 @dataclasses.dataclass
 class ModelsCfg:
+    use_body: str = 'unet'
     body_registry: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {
             'unet': UnetBody(),
@@ -400,7 +401,6 @@ class RuntimeConfig:
 # ----- TRAINER
 @dataclasses.dataclass
 class TrainerCfg:
-    model_body: str = 'unetpp'
     loader: LoaderConfig = dataclasses.field(default_factory=LoaderConfig)
     loss: LossConfig = dataclasses.field(default_factory=LossConfig)
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)

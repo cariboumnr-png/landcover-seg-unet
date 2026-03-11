@@ -41,7 +41,6 @@ import landseg.models.multihead as multihead
 
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
-    body: str,
     dataspecs: core.DataSpecs,
     config: configs.ModelsCfg,
 ) -> multihead.BaseMultiheadModel:
@@ -72,16 +71,16 @@ def build_multihead_unet(
         'unet': backbones.UNet,
         'unetpp': backbones.UNetPP
     }
-    if not body in body_registry:
-        raise ValueError(f'Invalid base model: {body}')
+    if not config.use_body in body_registry:
+        raise ValueError(f'Invalid base model: {config.use_body}')
 
     # body configs
-    body_config = config.body_registry.get(body)
+    body_config = config.body_registry.get(config.use_body)
     assert body_config is not None # sanity
 
     # multihead model config
     multihead_config = multihead.ModelConfig(
-        body=body_registry[body],
+        body=body_registry[config.use_body],
         in_ch= dataspecs.meta.img_ch_num,
         base_ch=body_config.base_ch,
         logit_adjust=dataspecs.heads.logits_adjust,

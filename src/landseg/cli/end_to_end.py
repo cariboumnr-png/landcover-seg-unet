@@ -50,7 +50,7 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     dataspecs = dataprep.load_data(config.inputs, config.prep, logger)
 
     # setup the model
-    model = models.build_multihead_unet(config.trainer.model_body, dataspecs, config.models)
+    model = models.build_multihead_unet(dataspecs, config.models)
 
     # build trainer
     trainer = training.build_trainer(

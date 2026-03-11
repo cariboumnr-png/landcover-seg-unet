@@ -29,6 +29,8 @@ import os
 # local imports
 import landseg.configs as configs
 import landseg.dataprep as dataprep
+import landseg.dataset as dataset
+import landseg.models as models
 import landseg.training as training
 import landseg.utils as utils
 
@@ -52,10 +54,14 @@ def overfit_test(config: configs.RootConfig) -> None:
     monitor_head = config.trainer.runtime.monitor.track_head_name
     max_epoch = config.trainer.runtime.schedule.max_epoch
 
+    # setup the model
+    model = models.build_multihead_unet(dataspecs, config.models)
+
     # build a trainer with no logging
     trainer = training.build_trainer(
+        model,
         dataspecs,
-        config.models,
+        dataset.DataBlock,
         config.trainer,
         logger,
         skip_log=True
