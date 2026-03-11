@@ -81,7 +81,7 @@ def build_multihead_unet(
     # multihead model config
     multihead_config = multihead.ModelConfig(
         body=body_registry[config.use_body],
-        in_ch= dataspecs.meta.img_ch_num,
+        in_ch= dataspecs.meta.img_ch,
         base_ch=body_config.base_ch,
         logit_adjust=dataspecs.heads.logits_adjust,
         heads_w_counts=dataspecs.heads.class_counts,

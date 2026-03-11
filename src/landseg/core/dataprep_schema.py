@@ -31,8 +31,10 @@ class SchemaOneBlock(typing.TypedDict):
     '''
     dataset_name: str
     image_channel: int
+    image_h_w: int
     ignore_index: int
-    block_size: int
+    img_arr_key: str
+    lbl_arr_key: str
     class_counts: dict[str, list[int]]
     logit_adjust: dict[str, list[float]]
     head_parent: dict[str, str | None]

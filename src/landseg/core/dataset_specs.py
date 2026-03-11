@@ -32,6 +32,8 @@ import typing
 @dataclasses.dataclass
 class DataSpecs:
     '''Container for dataset specs used by trainers and models'''
+    name: str
+    mode: str
     meta: Meta         # general dataset metadata
     heads: Heads       # head-wise label statistics and topology
     splits: Splits     # train/val/test block file mappings
@@ -39,30 +41,30 @@ class DataSpecs:
 
     def __str__(self) -> str:
         return '\n'.join([
-            'Dataset summary:\n----------------------------------------',
+            'Data Specifications:\n----------------------------------------',
+            f'DataSpecs name: {self.name}',
+            f'DataSpecs mode: {self.mode}',
             str(self.meta),
             str(self.heads),
             str(self.splits),
             str(self.domains)
         ])
 
-# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class Meta:
     '''General dataset metadata.'''
-    dataset_name: str
-    img_ch_num: int
+    img_ch: int
+    img_h_w: int
     ignore_index: int
-    block_size: int
+    img_arr_key: str
+    lbl_arr_key: str
     fit_perblk_bytes: int
     test_blks_grid: tuple[int, int]
-    single_block_mode: bool
 
     def __str__(self) -> str:
         return '\n'.join([
             '[General Meta]',
-            f'Dataset name: {self.dataset_name}',
-            f'Number of image channels: {self.img_ch_num}',
+            f'Number of image channels: {self.img_ch}',
             f'Ignore index: {self.ignore_index}'
         ])
 

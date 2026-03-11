@@ -205,8 +205,10 @@ def build_schema_one_block(
     schema: core.SchemaOneBlock = {
         'dataset_name': meta['block_name'],
         'image_channel': data.image_normalized.shape[0],
+        'image_h_w': data.image_normalized.shape[1], # here assume H==W
         'ignore_index': meta['ignore_label'],
-        'block_size': data.image_normalized.shape[1], # here assume H==W
+        'img_arr_key': 'image_normalized', # as per convention
+        'lbl_arr_key': 'label_masked', # as per convention
         'class_counts': cc, # neutral
         'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()}, # neutral
         'head_parent': parent,

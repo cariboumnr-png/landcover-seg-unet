@@ -101,8 +101,8 @@ def get_dataloaders(
 
     # parse
     patch_size = config.patch_size
-    assert data_specs.meta.block_size % patch_size == 0 # sanity check
-    patch_per_blk = int(data_specs.meta.block_size / patch_size) ** 2
+    assert data_specs.meta.img_h_w % patch_size == 0 # sanity check
+    patch_per_blk = int(data_specs.meta.img_h_w / patch_size) ** 2
     batch_size = config.batch_size
 
     # meta to be shipped
@@ -118,7 +118,7 @@ def get_dataloaders(
     )
 
     # if single block mode (for overfit test)
-    if data_specs.meta.single_block_mode:
+    if data_specs.mode == 'single':
         single_loader = load_partial('single')
         # pass the same as val dataloader for minimal disturbance downstream
         assert single_loader
@@ -166,6 +166,7 @@ def _load(
         dataset_config,
         logger,
         preload=load_options[f'preload_{mode}'],
+        augment_flip=bool(mode == 'train'),
         blk_cache_num=load_options[f'cache_{mode}']
     )
 
@@ -197,11 +198,14 @@ def _config_by_mode(
 
     # return config by mode
     if mode == 'single':
-        patch_size = data_specs.meta.block_size # single block
+        patch_size = data_specs.meta.img_h_w # single block
     return dataloading.BlockConfig(
-        block_size=data_specs.meta.block_size,
+        block_size=data_specs.meta.img_h_w,
         patch_size=patch_size,
-        augment_flip=bool(mode == 'train'),
+        array_keys = {
+            'image_key': data_specs.meta.img_arr_key,
+            'label_key': data_specs.meta.lbl_arr_key
+        },
         ids_domain=domain['ids_domain'] if domain else None,
         vec_domain=domain['vec_domain'] if domain else None
     )

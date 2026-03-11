@@ -107,7 +107,7 @@ class BlockConfig:
 
     block_size: int
     patch_size: int
-    augment_flip: bool = False
+    array_keys: dict[str, str]
     ids_domain: dict[str, int] | None = None
     vec_domain: dict[str, list[float]] | None = None
     patch_per_dim: int = dataclasses.field(init=False)
@@ -170,7 +170,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         block_src: dict[str, str],
-        block_config: BlockConfig,
+        config: BlockConfig,
         logger: utils.Logger,
         **kwargs
     ):
@@ -190,36 +190,36 @@ class MultiBlockDataset(torch.utils.data.Dataset):
 
         # process args
         self.blks = block_src
-        self.blk_cfg = block_config
-        self.logger = logger
+        self.blk_cfg = config
         self.preload = kwargs.get('preload', False)
-        blk_cache_num = kwargs.get('blk_cache_num', 16)
+        self.aug_flip = kwargs.get('augment_flip', False)
 
         # init data container
         self.data = _MultiBlockData()
         # load all files into one dataset
         if self.preload:
-            self.logger.log('INFO', 'Preloading blocks into RAM')
-            self.logger.log('DEBUG', f'Config: {block_config}')
+            logger.log('INFO', 'Preloading blocks into RAM')
+            logger.log('DEBUG', f'Config: {config}')
             _imgs: list[numpy.ndarray] = []
             _lbls: list[numpy.ndarray] = []
             self.data.dom = []
             for blk_name, blk_fpath in tqdm.tqdm(block_src.items(), ncols=100):
                 dom = self._get_domain(blk_name)
-                blk_data = _BlockDataset(blk_fpath, block_config, dom)
+                blk_data = _BlockDataset(blk_fpath, config, dom, self.aug_flip)
                 _imgs.append(blk_data.imgs)
                 _lbls.append(blk_data.lbls)
-                self.data.dom.extend([blk_data.domain] * block_config.patch_per_blk)
+                self.data.dom.extend([blk_data.domain] * config.patch_per_blk)
             # concatenate
             self.data.img = numpy.concatenate(_imgs, axis=0)
             self.data.lbl = numpy.concatenate(_lbls, axis=0)
             self._len = int(self.data.img.shape[0])
-            self.logger.log('INFO', f'{len(block_src)} blocks preloaded into RAM')
+            logger.log('INFO', f'{len(block_src)} blocks preloaded into RAM')
 
         # otherwise streaming
         else:
-            self.logger.log('INFO', 'Setting up block streaming')
-            self.logger.log('DEBUG', f'Config: {block_config}')
+            logger.log('INFO', 'Setting up block streaming')
+            logger.log('DEBUG', f'Config: {config}')
+            blk_cache_num = kwargs.get('blk_cache_num', 16)
             self._len = self.blk_cfg.patch_per_blk * len(block_src)
             # below not needed for uniform n
             # n =  self.block_config.patch_per_block
@@ -227,7 +227,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self.data.img = _CacheDict(maxsize=blk_cache_num)
             self.data.lbl = _CacheDict(maxsize=blk_cache_num)
             self.data.dom = _CacheDict(maxsize=blk_cache_num)
-            self.logger.log('INFO', f'Streaming cache: {blk_cache_num} blocks')
+            logger.log('INFO', f'Streaming cache: {blk_cache_num} blocks')
 
     def __len__(self):
         return self._len
@@ -275,7 +275,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         blk_name = list(self.blks.keys())[blk_idx] # find blk name by block idx
         blk_fpath = self.blks[blk_name]
         dom = self._get_domain(blk_name)
-        blk_data = _BlockDataset(blk_fpath, self.blk_cfg, dom)
+        blk_data = _BlockDataset(blk_fpath, self.blk_cfg, dom, self.aug_flip)
         self.data.img[blk_idx] = blk_data.imgs.astype(numpy.float32)
         self.data.lbl[blk_idx] = blk_data.lbls.astype(numpy.int64)
         self.data.dom[blk_idx] = blk_data.domain
@@ -323,7 +323,8 @@ class _BlockDataset(torch.utils.data.Dataset):
         self,
         block_fpath: str,
         block_config: BlockConfig,
-        block_domain: dict[str, int | list[float] | None]
+        block_domain: dict[str, int | list[float] | None],
+        augment_flip: bool
     ):
         '''
         Initialize the per-block dataset and patchify arrays.
@@ -346,12 +347,16 @@ class _BlockDataset(torch.utils.data.Dataset):
         # process args
         self.config = block_config
         self.domain: alias.TorchDict = {}
+        self.augment_flip = augment_flip
 
         # load data directly from npz
         loaded = numpy.load(block_fpath, allow_pickle=True)
+        img_key = block_config.array_keys.get('image_key')
+        lbl_key = block_config.array_keys.get('label_key')
+        assert img_key in loaded and lbl_key in loaded
         try:
-            self.imgs = self._get_patches(loaded['image_normalized'])
-            self.lbls = self._get_patches(loaded['label_masked'])
+            self.imgs = self._get_patches(loaded[img_key])
+            self.lbls = self._get_patches(loaded[lbl_key])
         except ValueError:
             print(f'Bad patch at {block_fpath}')
             raise
@@ -375,7 +380,7 @@ class _BlockDataset(torch.utils.data.Dataset):
         else:
             y = torch.from_numpy(self.lbls[idx].astype(numpy.int64))
             # augment only when both image and label are present
-            if self.config.augment_flip:
+            if self.augment_flip:
                 # one decision for horizontal, one for vertical
                 if torch.rand(()) < 0.5:
                     x = torchvision.transforms.functional.hflip(x)

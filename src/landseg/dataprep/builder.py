@@ -68,6 +68,8 @@ def build_dataspec(
     schema_dict: core.SchemaFull = utils.load_json(schema_fpath)
     # build return the class instance
     return core.DataSpecs(
+        name=schema_dict['dataset']['name'],
+        mode='default',
         meta=_get_meta(schema_dict),
         heads=_get_heads(schema_dict),
         splits=_get_split(schema_dict),
@@ -87,14 +89,16 @@ def build_dataspec_one_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
 
     # return directly from schema dict
     return core.DataSpecs(
+        name=schema['dataset_name'],
+        mode='single',
         meta =core.Meta(
-            dataset_name=schema['dataset_name'],
-            img_ch_num=schema['image_channel'],
+            img_ch=schema['image_channel'],
+            img_h_w=schema['image_h_w'],
             ignore_index=schema['ignore_index'],
-            block_size=schema['block_size'],
+            img_arr_key=schema['img_arr_key'],
+            lbl_arr_key=schema['lbl_arr_key'],
             fit_perblk_bytes=0,
-            test_blks_grid=(0, 0),
-            single_block_mode=True
+            test_blks_grid=(0, 0)
         ),
         heads=core.Heads(
             class_counts=schema['class_counts'],
@@ -145,13 +149,13 @@ def _get_meta(schema: core.SchemaFull) -> core.Meta:
 
     # return
     return core.Meta(
-        dataset_name=schema['dataset']['name'],
-        img_ch_num=schema['tensor_shapes']['image']['C'],
+        img_ch=schema['tensor_shapes']['image']['C'],
+        img_h_w=schema['tensor_shapes']['image']['H'],
         ignore_index=schema['io_conventions']['ignore_index'],
-        block_size=schema['tensor_shapes']['image']['H'],
+        img_arr_key=schema['io_conventions']['keys']['image_key'],
+        lbl_arr_key=schema['io_conventions']['keys']['label_key'],
         fit_perblk_bytes=img_b * img_px + lbl_b * lbl_px,
         test_blks_grid=(int(col + 1), int(row + 1)),
-        single_block_mode=False
     )
 
 def __name_to_xy(key: str) -> tuple[int, int]:
