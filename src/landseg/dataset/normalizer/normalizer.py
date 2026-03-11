@@ -30,15 +30,15 @@ Public APIs:
 # third-party imports
 import numpy
 # local imports
-import landseg.dataprep as dataprep
-import landseg.dataprep.blockbuilder as blockbuilder
-import landseg.dataprep.normalizer as normalizer
+import landseg.dataset as dataset
+import landseg.dataset.blockbuilder as blockbuilder
+import landseg.dataset.normalizer as normalizer
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def normalize_blocks(
     input_type: str,
-    config: dataprep.OutputConfig,
+    config: dataset.OutputConfig,
     logger: utils.Logger,
     *,
     renormalize = False

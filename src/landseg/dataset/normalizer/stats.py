@@ -37,7 +37,7 @@ import random
 import numpy
 import tqdm
 # local imports
-import landseg.dataprep.blockbuilder as blockbuilder
+import landseg.dataset.blockbuilder as blockbuilder
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------

@@ -37,8 +37,8 @@ import rasterio
 # local imports
 import landseg.alias as alias
 import landseg.core as core
-import landseg.dataprep as dataprep
-import landseg.dataprep.mapper as mapper
+import landseg.dataset as dataset
+import landseg.dataset.mapper as mapper
 import landseg.utils as utils
 
 # ------------------------------private dataclass------------------------------
@@ -52,7 +52,7 @@ class DataWindows:
 # -------------------------------Public Function-------------------------------
 def map_rasters(
     world_grid: core.GridLayoutLike,
-    config: dataprep.IOConfig,
+    config: dataset.IOConfig,
     logger: utils.Logger,
     *,
     remap: bool = False

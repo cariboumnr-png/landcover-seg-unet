@@ -39,7 +39,7 @@ import os
 # third-party imports
 import numpy
 # local imports
-import landseg.dataprep.blockbuilder as blockbuilder
+import landseg.dataset.blockbuilder as blockbuilder
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

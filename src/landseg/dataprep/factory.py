@@ -34,14 +34,14 @@ import os
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.dataset as dataset
 import landseg.dataprep as dataprep
+import landseg.dataset as dataset
 import landseg.domain as domain
 import landseg.grid as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
-def load_dataset(
+def load_data(
     inputs: configs.Inputs,
     prep: configs.Prep,
     logger: utils.Logger,
@@ -71,7 +71,7 @@ def load_dataset(
     # if single block mode
     if single_block_mode:
         # build a minimul schema dict from a single block
-        blk_schema = dataprep.prepare_data(
+        blk_schema = dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -82,7 +82,7 @@ def load_dataset(
         assert blk_schema # sanity
 
         # build a dataspec from the schema with essential values
-        dspecs = dataset.build_dataspec_one_block(blk_schema)
+        dspecs = dataprep.build_dataspec_one_block(blk_schema)
         return dspecs
 
     # load/map domain
@@ -96,7 +96,7 @@ def load_dataset(
     vec_domain = domains[prep.domain.as_vec] if prep.domain.as_vec else None
 
     # validate data blocks
-    status = dataset.validate_schema(
+    status = dataprep.validate_schema(
         world_grid.gid,
         prep.data.output_dirpath,
         logger
@@ -105,7 +105,7 @@ def load_dataset(
     # prompt data blocks rebuild
     if status == 1:
         logger.log('WARNING', 'Data schema check failed, rebuild data blocks')
-        dataprep.prepare_data(
+        dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -114,7 +114,7 @@ def load_dataset(
     # prompt data blocks fresh build (all steps will be redone)
     elif status == 2:
         logger.log('WARNING', 'Data schema not found, build data blocks')
-        dataprep.prepare_data(
+        dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -126,7 +126,7 @@ def load_dataset(
         logger.log('INFO', 'Data schema check passed, proceed')
 
     # build dataspec
-    dataspec = dataset.build_dataspec(
+    dataspec = dataprep.build_dataspec(
         f'{prep.data.output_dirpath}/schema.json',
         ids_domain,
         vec_domain

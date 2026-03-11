@@ -30,7 +30,7 @@ import os
 # local imports
 import landseg.configs as configs
 import landseg.controller as controller
-import landseg.dataset as dataset
+import landseg.dataprep as dataprep
 import landseg.training as training
 import landseg.utils as utils
 
@@ -45,7 +45,7 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
     # data preparation
-    dataspecs = dataset.load_dataset(config.inputs, config.prep, logger)
+    dataspecs = dataprep.load_data(config.inputs, config.prep, logger)
 
     # build trainer
     trainer = training.build_trainer(dataspecs, config.models, config.trainer, logger)

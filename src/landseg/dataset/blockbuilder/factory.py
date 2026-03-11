@@ -33,14 +33,14 @@ import random
 # third-party imports
 import numpy
 # local imports
-import landseg.dataprep as dataprep
-import landseg.dataprep.blockbuilder as blockbuilder
-import landseg.dataprep.mapper as mapper
+import landseg.dataset as dataset
+import landseg.dataset.blockbuilder as blockbuilder
+import landseg.dataset.mapper as mapper
 import landseg.utils as utils
 
 def build_blocks(
     mode: str,
-    config: dataprep.BlockBuildingConfig,
+    config: dataset.BlockBuildingConfig,
     logger: utils.Logger,
     *,
     rebuild: bool = False,
@@ -68,7 +68,7 @@ def build_blocks(
     builder.build_valid_block_index(config[thres_key], rebuild=rebuild)
 
 def build_one_block(
-    config: dataprep.BlockBuildingConfig,
+    config: dataset.BlockBuildingConfig,
     logger: utils.Logger,
     *,
     valid_px_per: float = 0.8,
@@ -132,7 +132,7 @@ def build_one_block(
 def _get_blocks_builder(
     windows: mapper.DataWindows,
     mode: str,
-    config: dataprep.IOConfig,
+    config: dataset.IOConfig,
     logger: utils.Logger
 ) -> blockbuilder.BlockCacheBuilder:
     '''Return a block builder configured for the given mode.'''

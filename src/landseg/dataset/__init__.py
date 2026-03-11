@@ -33,26 +33,34 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_dataspec',
-    'build_dataspec_one_block',
-    'load_dataset',
-    'validate_schema'
+    'prepare_dataset',
     # typing
+    'BlockBuildingConfig',
+    'DataprepConfigs',
+    'InputConfig',
+    'IOConfig',
+    'OutputConfig',
+    'ProcessConfig',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_dataspec, build_dataspec_one_block
-    from .factory import load_dataset
-    from .validate import validate_schema
+    from .config import (
+        BlockBuildingConfig,
+        DataprepConfigs,
+        InputConfig,
+        IOConfig,
+        OutputConfig,
+        ProcessConfig,
+    )
+    from .pipeline import prepare_dataset
 
 def __getattr__(name: str):
 
-    if name in ['build_dataspec', 'build_dataspec_one_block']:
-        return getattr(importlib.import_module('.builder', __package__), name)
-    if name in ['load_dataset']:
-        return getattr(importlib.import_module('.factory', __package__), name)
-    if name in ['validate_schema']:
-        return getattr(importlib.import_module('.validate', __package__), name)
+    if name in ['BlockBuildingConfig', 'DataprepConfigs', 'InputConfig',
+                'IOConfig', 'OutputConfig', 'ProcessConfig',]:
+        return getattr(importlib.import_module('.config', __package__), name)
+    if name in ['prepare_dataset']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(name)
