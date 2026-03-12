@@ -41,3 +41,8 @@ class Spec:
         if bad:
             raise ValueError(f'Invalid indices to exclude: {bad}')
         self.exclude_cls = tuple(sorted(set(indices)))
+
+    @property
+    def num_classes(self) -> int:
+        '''Number of classes.'''
+        return len(self.count)

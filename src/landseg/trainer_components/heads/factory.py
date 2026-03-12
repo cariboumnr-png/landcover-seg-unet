@@ -25,7 +25,7 @@
 import numpy
 # local imports
 import landseg.core as core
-import landseg.training.heads as heads
+import landseg.trainer_components.heads as heads
 
 class HeadSpecs:
     '''
