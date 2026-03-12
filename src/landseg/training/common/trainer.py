@@ -31,10 +31,12 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.training.common as common
+import landseg.core as core
 
 # -------------------------------trainer class-------------------------------
 @typing.runtime_checkable
 class TrainerLike(typing.Protocol):
+    model: core.MultiheadModelLike
     comps: common.TrainerComponentsLike
     config: common.RuntimeConfigLike
     state: common.RuntimeStateLike

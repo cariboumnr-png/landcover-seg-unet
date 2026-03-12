@@ -38,28 +38,26 @@ __all__ = [
     'PrimitiveLoss',
     # functions
     'build_headlosses',
-    'is_loss_types',
+    # types
+    'LossTypes'
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .base import PrimitiveLoss
-    from .composite import CompositeLoss
+    from .composite import CompositeLoss, LossTypes
     from .factory import build_headlosses
     from .primitives import DiceLoss, FocalLoss
-    from .validator import is_loss_types
 
 
 def __getattr__(name: str):
 
     if name in ['PrimitiveLoss']:
         return getattr(importlib.import_module('.base', __package__), name)
-    if name in ['CompositeLoss']:
+    if name in ['CompositeLoss', 'LossTypes']:
         return getattr(importlib.import_module('.composite', __package__), name)
     if name in ['build_headlosses']:
         return getattr(importlib.import_module('.factory', __package__), name)
     if name in ['DiceLoss', 'FocalLoss']:
         return getattr(importlib.import_module('.primitives', __package__), name)
-    if name in ['is_loss_types']:
-        return getattr(importlib.import_module('.validator', __package__), name)
 
     raise AttributeError(name)

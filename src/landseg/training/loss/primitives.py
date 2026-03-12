@@ -79,12 +79,12 @@ class FocalLoss(loss.PrimitiveLoss):
         self.ignore_index = ignore_index
 
     def forward(
-            self,
-            logits: torch.Tensor,
-            targets: torch.Tensor,
-            *,
-            masks: dict[float, torch.Tensor] | None
-        ) -> torch.Tensor:
+        self,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        *,
+        masks: dict[float, torch.Tensor] | None
+    ) -> torch.Tensor:
         '''
         Compute focal loss over valid pixels.
 
@@ -186,12 +186,12 @@ class DiceLoss(loss.PrimitiveLoss):
         self.ignore_index = ignore_index
 
     def forward(
-            self,
-            logits: torch.Tensor,
-            targets: torch.Tensor,
-            *,
-            masks: dict[float, torch.Tensor] | None
-        ) -> torch.Tensor:
+        self,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        *,
+        masks: dict[float, torch.Tensor] | None
+    ) -> torch.Tensor:
         '''
         Compute soft Dice loss across classes.
 

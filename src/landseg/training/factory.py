@@ -24,9 +24,8 @@
 # third-party imports
 import torch
 # local imports
-import landseg.core as core
 import landseg.configs as configs
-import landseg.models as models
+import landseg.core as core
 import landseg.training.callback as callback
 import landseg.training.dataloading as dataloading
 import landseg.training.heads as heads
@@ -38,51 +37,50 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_trainer(
-    data_specs: core.DataSpecsLike,
-    model_config: configs.ModelsCfg,
-    trainer_config: configs.TrainerCfg,
+    model: core.MultiheadModelLike,
+    data_specs: core.DataSpecs,
+    config: configs.TrainerCfg,
     logger: utils.Logger,
     **kwargs
  ) -> trainer.MultiHeadTrainer:
     '''Builder trainer.'''
 
-    # setup the model
-    model = models.build_multihead_unet(
-        body=trainer_config.model_body,
-        dataspecs=data_specs,
-        config=model_config
-    )
-
     # compile data loaders
     data_loaders = dataloading.get_dataloaders(
-        data_specs=data_specs,
-        config=trainer_config.loader,
-        logger=logger
+        data_specs,
+        config.loader.batch_size,
+        config.loader.patch_size,
+        logger
     )
 
     # compile training heads basic specifications
     headspecs = heads.build_headspecs(
-        data=data_specs,
-        config=trainer_config.loss,
+        data_specs,
+        config.loss.alpha_fn,
+        en_beta=config.loss.en_beta
     )
 
     # compile training heads loss compute modules
     headlosses = loss.build_headlosses(
-        headspecs=headspecs,
-        config=trainer_config.loss,
-        ignore_index=data_specs.meta.ignore_index,
+        headspecs,
+        config.loss.types,
+        data_specs.meta.ignore_index,
     )
 
     # compile training heads metric compute modules
     headmetrics = metrics.build_headmetrics(
-        headspecs=headspecs,
-        ignore_index=data_specs.meta.ignore_index
+        headspecs,
+        data_specs.meta.ignore_index
     )
 
     # build optimizer and scheduler
     optimization = optim.build_optimization(
-        model=model,
-        config=trainer_config.optim
+        model,
+        config.optim.opt_cls,
+        config.optim.lr,
+        config.optim.weight_decay,
+        config.optim.sched_cls,
+        **config.optim.sched_args
     )
 
     # generate callback instances
@@ -90,7 +88,6 @@ def build_trainer(
 
     # collect components
     trainer_components = trainer.TrainerComponents(
-        model=model,
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
@@ -100,13 +97,14 @@ def build_trainer(
     )
 
     # generate runtime config dataclass from config
-    trainer_runtime_config = trainer.get_config(trainer_config.runtime)
+    trainer_runtime_config = trainer.get_config(config.runtime)
 
     # get currently avalaible device
     available_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # build and return a trainer class
     return trainer.MultiHeadTrainer(
+        model,
         trainer_components,
         trainer_runtime_config,
         available_device,

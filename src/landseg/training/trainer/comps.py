@@ -42,7 +42,6 @@ class TrainerComponents:
     allowing different concrete implementations to be supplied while
     keeping the trainer strongly typed and modular.
     '''
-    model: common.MultiheadModelLike
     dataloaders: common.DataLoadersLike
     headspecs: common.HeadSpecsLike
     headlosses: common.HeadLossesLike

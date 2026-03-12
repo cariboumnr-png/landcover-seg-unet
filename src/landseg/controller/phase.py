@@ -26,8 +26,6 @@ Training phase
 # standard imports
 from __future__ import annotations
 import dataclasses
-# local imports
-import landseg.configs as configs
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -35,8 +33,8 @@ class Phase:
     '''doc'''
     name: str
     num_epochs: int
-    heads: _HeadsConifg
-    la_scheme: _LogitAdjustScheme
+    heads: HeadsConifg
+    la_scheme: LogitAdjustScheme
     lr_scale: float = 1.0
     finished: bool = False
 
@@ -50,7 +48,7 @@ class Phase:
         ])
 
 @dataclasses.dataclass
-class _HeadsConifg:
+class HeadsConifg:
     '''Phase level heads-related config.'''
     active_heads: list[str]
     frozen_heads: list[str] | None
@@ -67,7 +65,7 @@ class _HeadsConifg:
         ])
 
 @dataclasses.dataclass
-class _LogitAdjustScheme:
+class LogitAdjustScheme:
     '''Logit adjustment scheme.'''
     logit_adjust_alpha: float
     enable_train_logit_adjustment: bool
@@ -84,33 +82,3 @@ class _LogitAdjustScheme:
             f'- Validation Stage:\t{self.enable_val_logit_adjustment}',
             f'- Inference Stage:\t{self.enable_test_logit_adjustment}',
         ])
-
-# -------------------------------Public Function-------------------------------
-def generate_phases(config: configs.ControllerCfg) -> list[Phase]:
-    '''doc'''
-
-    # config accesor
-    phases: list[Phase] = []
-    # iterate through phases in config (1-based)
-    for cfg in config.phases:
-        phases.append(
-            Phase(
-                name=cfg.name,
-                num_epochs=cfg.num_epochs,
-                heads=_HeadsConifg(
-                    cfg.heads.active_heads,
-                    cfg.heads.frozen_heads,
-                    cfg.heads.masked_classes
-                ),
-                la_scheme=_LogitAdjustScheme(
-                    cfg.logit_adjust.alpha,
-                    cfg.logit_adjust.train,
-                    cfg.logit_adjust.val,
-                    cfg.logit_adjust.test,
-                ),
-                lr_scale=cfg.lr_scale
-            )
-        )
-
-    # return
-    return phases

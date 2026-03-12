@@ -213,7 +213,7 @@ class Controller:
             'step': self.trainer.state.progress.global_step
         }
         trainer.save(
-            model=self.trainer.comps.model,
+            model=self.trainer.model,
             ckpt_meta=ckpt_meta,
             optimizer=self.trainer.comps.optimization.optimizer,
             scheduler=self.trainer.comps.optimization.scheduler,

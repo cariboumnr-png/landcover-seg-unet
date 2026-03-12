@@ -33,8 +33,14 @@ from __future__ import annotations
 import typing
 # third-party imports
 import torch
-# local imports
-import landseg.training.metrics as metrics
+
+# ---------------------------------Public Type---------------------------------
+class ConfusionMatricConfig(typing.TypedDict):
+    '''Typed configuration for confusion-matrix computation.'''
+    num_classes: int
+    ignore_index: int
+    parent_class_1b: int | None
+    exclude_class_1b: tuple[int, ...] | None
 
 # --------------------------------private  type--------------------------------
 class _Metrics(typing.TypedDict):
@@ -57,10 +63,7 @@ class ConfusionMatrix:
         - Excluding classes when reporting active-class IoUs.
     '''
 
-    def __init__(
-        self,
-        config: dict[str, int | None],
-    ):
+    def __init__(self, config: ConfusionMatricConfig):
         '''
         Initialize the confusion matrix and configuration.
 
@@ -74,10 +77,6 @@ class ConfusionMatrix:
                 - 'exclude_class_1b': classes (1-based) to exclude from
                     active-class metrics (list[int] or None)
         '''
-
-        # type guard on input config
-        if not metrics.is_cm_config(config):
-            raise ValueError(f'Invalid config: {config}')
 
         # assign attributes
         self.n_cls = config['num_classes']

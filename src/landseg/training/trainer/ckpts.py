@@ -31,7 +31,7 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.training.common as common
+import landseg.core as core
 
 # ---------------------------------Public Type---------------------------------
 class CheckpointMetaLike(typing.TypedDict):
@@ -42,7 +42,7 @@ class CheckpointMetaLike(typing.TypedDict):
 
 # -------------------------------Public Function-------------------------------
 def save(
-    model: common.MultiheadModelLike,
+    model: core.MultiheadModelLike,
     ckpt_meta: CheckpointMetaLike,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
@@ -71,7 +71,7 @@ def save(
     torch.save(state, fpath)
 
 def load(
-    model: common.MultiheadModelLike,
+    model: core.MultiheadModelLike,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
     fpath: str,

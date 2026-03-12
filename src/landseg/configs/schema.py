@@ -302,6 +302,7 @@ class ModelFlags:
 # ----- MODELS
 @dataclasses.dataclass
 class ModelsCfg:
+    use_body: str = 'unet'
     body_registry: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {
             'unet': UnetBody(),
@@ -332,7 +333,6 @@ class LoaderConfig:
 @dataclasses.dataclass
 class FocalLossConfig:
     weight: float = 0.5
-    alpha: list[float] | None = None
     gamma: float = 2.0
     reduction: str = 'mean'
 
@@ -400,7 +400,6 @@ class RuntimeConfig:
 # ----- TRAINER
 @dataclasses.dataclass
 class TrainerCfg:
-    model_body: str = 'unetpp'
     loader: LoaderConfig = dataclasses.field(default_factory=LoaderConfig)
     loss: LossConfig = dataclasses.field(default_factory=LossConfig)
     optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)

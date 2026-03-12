@@ -29,7 +29,7 @@ class InferCallback(callback.Callback):
     '''Inference: parse -> forward -> collect outputs (optional).'''
 
     def on_inference_begin(self) -> None:
-        model = self.trainer.comps.model
+        model = self.trainer.model
         flags = self.trainer.flags
         # set model to evaluation mode
         model.eval()
@@ -52,7 +52,7 @@ class InferCallback(callback.Callback):
         domain = self.state.batch_cxt.domain
         # forward with inference + autocast (same style as validation)
         with self.trainer._val_ctx():
-            outputs = self.trainer.comps.model.forward(x, **domain)
+            outputs = self.trainer.model.forward(x, **domain)
         # store raw predictions to batch output
         self.state.batch_out.preds = dict(outputs)
 

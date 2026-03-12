@@ -37,13 +37,13 @@ DataLoaders object containing train/val/test loaders and metadata.
 # standard imports
 from __future__ import annotations
 import dataclasses
+import functools
 # third-party imports
 import psutil
 import torch
 import torch.utils.data
 # local imports
 import landseg.alias as alias
-import landseg.configs as configs
 import landseg.core as core
 import landseg.training.dataloading as dataloading
 import landseg.utils as utils
@@ -67,8 +67,9 @@ class _Meta:
 
 # -------------------------------Public Function-------------------------------
 def get_dataloaders(
-    data_specs: core.DataSpecsLike,
-    config: configs.LoaderConfig,
+    data_specs: core.DataSpecs,
+    batch_size: int,
+    patch_size: int,
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
@@ -99,25 +100,32 @@ def get_dataloaders(
     logger = logger.get_child('dldrs')
 
     # parse
-    patch_size = config.patch_size
-    assert data_specs.meta.block_size % patch_size == 0 # sanity check
-    patch_per_blk = int(data_specs.meta.block_size / patch_size) ** 2
-    batch_size = config.batch_size
+    assert data_specs.meta.img_h_w % patch_size == 0 # sanity check
+    patch_per_blk = int(data_specs.meta.img_h_w / patch_size) ** 2
 
     # meta to be shipped
     meta = _Meta(batch_size, patch_per_blk, data_specs.meta.test_blks_grid)
 
+    # partial load function
+    load_partial = functools.partial(
+        _load,
+        batch_size=batch_size,
+        patch_size=patch_size,
+        data_specs=data_specs,
+        logger=logger
+    )
+
     # if single block mode (for overfit test)
-    if data_specs.meta.single_block_mode:
-        single_loader = _load('single', batch_size, patch_size, data_specs, logger)
+    if data_specs.mode == 'single':
+        single_loader = load_partial('single')
         # pass the same as val dataloader for minimal disturbance downstream
         assert single_loader
         return DataLoaders(single_loader, single_loader, None, meta)
 
     # otherwise (normal experiment)
-    train_loader = _load('train', batch_size, patch_size, data_specs, logger)
-    val_loader = _load('val', batch_size, patch_size, data_specs, logger)
-    test_loader = _load('test', batch_size, patch_size, data_specs, logger)
+    train_loader = load_partial('train')
+    val_loader = load_partial('val')
+    test_loader = load_partial('test')
     # sanity checks and return
     assert train_loader and val_loader
     return DataLoaders(train_loader, val_loader, test_loader, meta)
@@ -127,7 +135,7 @@ def _load(
     mode: str,
     batch_size: int,
     patch_size: int,
-    data_specs: core.DataSpecsLike,
+    data_specs: core.DataSpecs,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -146,16 +154,17 @@ def _load(
     # early exit if no data blocks are available, e.g., no test dataset
     if not data_blocks:
         return None
-
     # dataset configuration
-    dataset_config = _mode_configurator(mode, patch_size, data_specs)
+    dataset_config = _config_by_mode(mode, patch_size, data_specs)
     # preload/cache config
     load_options = _preload_option(data_specs)
+    # get multiblock dataset
     dataset = dataloading.MultiBlockDataset(
         data_blocks,
         dataset_config,
         logger,
         preload=load_options[f'preload_{mode}'],
+        augment_flip=bool(mode == 'train'),
         blk_cache_num=load_options[f'cache_{mode}']
     )
 
@@ -169,10 +178,10 @@ def _load(
     # return dataloader
     return torch.utils.data.DataLoader(dataset, **dataloader_args)
 
-def _mode_configurator(
+def _config_by_mode(
     mode: str,
     patch_size: int,
-    data_specs: core.DataSpecsLike
+    data_specs: core.DataSpecs
 ):
     '''Configure dataloading by mode.'''
 
@@ -187,16 +196,19 @@ def _mode_configurator(
 
     # return config by mode
     if mode == 'single':
-        patch_size = data_specs.meta.block_size # single block
+        patch_size = data_specs.meta.img_h_w # single block
     return dataloading.BlockConfig(
-        block_size=data_specs.meta.block_size,
+        block_size=data_specs.meta.img_h_w,
         patch_size=patch_size,
-        augment_flip=bool(mode == 'train'),
+        array_keys = {
+            'image_key': data_specs.meta.img_arr_key,
+            'label_key': data_specs.meta.lbl_arr_key
+        },
         ids_domain=domain['ids_domain'] if domain else None,
         vec_domain=domain['vec_domain'] if domain else None
     )
 
-def _preload_option(data_specs: core.DataSpecsLike) -> dict[str, int | bool]:
+def _preload_option(data_specs: core.DataSpecs) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary

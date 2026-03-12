@@ -1,6 +1,3 @@
-# model config
-model_body: unetpp
-
 # loader config
 loader:
   patch_size: 128
@@ -13,7 +10,6 @@ loss:
   types:
     focal:
       weight: 0.5
-      alpha: null
       gamma: 2.0
       reduction: 'mean'
     dice:
