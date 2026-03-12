@@ -37,7 +37,7 @@ import landseg.core as core
 import landseg.data_schema as data_schema
 import landseg.ingest_dataset as dataset
 import landseg.ingest_domain as domain
-import landseg.prep_grid as prep_grid
+import landseg.grid_generator as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
@@ -66,7 +66,7 @@ def load_data(
     '''
 
     # load/create world grid
-    world_grid = prep_grid.prep_world_grid(inputs.extent, prep.grid, logger)
+    world_grid = grid.prep_world_grid(inputs.extent, prep.grid, logger)
 
     # if single block mode
     if single_block_mode:

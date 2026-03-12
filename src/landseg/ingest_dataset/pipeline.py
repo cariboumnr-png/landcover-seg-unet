@@ -36,12 +36,11 @@ import landseg.ingest_dataset.mapper as mapper
 import landseg.ingest_dataset.normalizer as normalizer
 import landseg.ingest_dataset.schema as schema
 import landseg.ingest_dataset.splitter as splitter
-import landseg.prep_grid as prep_grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def prepare_dataset(
-    world_grid: prep_grid.GridLayout,
+    world_grid: core.GridLayoutLike,
     input_config: configs.InputDataCfg,
     prep_config: configs.PrepDataCfg,
     logger: utils.Logger,

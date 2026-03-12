@@ -46,7 +46,7 @@ import os
 import rasterio
 # local imports
 import landseg.configs as configs
-import landseg.prep_grid as prep_grid
+import landseg.grid_generator as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
@@ -54,7 +54,7 @@ def prep_world_grid(
     extent_config: configs.InputExtentCfg,
     grid_config: configs.PrepGridCfg,
     logger: utils.Logger
-) -> prep_grid.GridLayout:
+) -> grid.GridLayout:
     '''
     Build or load a persisted world grid.
 
@@ -80,7 +80,7 @@ def prep_world_grid(
     # if grid already exist, load and return
     try:
         logger.log('INFO', f'Try to load grid {gid}')
-        output_grid = prep_grid.load_grid(gid, outdir)
+        output_grid = grid.load_grid(gid, outdir)
         logger.log('INFO', 'World grid successfully loaded')
         return output_grid
     # otherwise create grid accordingly
@@ -101,13 +101,13 @@ def prep_world_grid(
         mode = 'bbox' if _mode in ['ref', 'aoi'] else 'tiles'
 
         # build - save - return
-        output_grid = prep_grid.GridLayout(mode, spec)
-        prep_grid.save_grid(output_grid, outdir)
+        output_grid = grid.GridLayout(mode, spec)
+        grid.save_grid(output_grid, outdir)
         logger.log('INFO', f'World grid {gid} created and saved at {outdir}')
         return output_grid
 
 # ------------------------------private  function------------------------------
-def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[prep_grid.GridSpec]:
+def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[grid.GridSpec]:
     '''Parse grid extent and returns a partially filled `GridSpec`.'''
 
     # from reference raster (auto)
@@ -122,7 +122,7 @@ def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[prep_grid.GridSpe
             l, b, r, t = src.bounds
             # assign to gridspec
             return functools.partial(
-                prep_grid.GridSpec,
+                grid.GridSpec,
                 crs=cfg.crs,
                 pixel_size=(px, py),        # pixel size in x, y
                 origin=(l, t),              # left, ,top as x, y
@@ -136,7 +136,7 @@ def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[prep_grid.GridSpe
         pixel_size = cfg.inputs.pixel_size
         grid_extent = cfg.inputs.grid_extent
         return functools.partial(
-            prep_grid.GridSpec,
+            grid.GridSpec,
             crs=cfg.crs,
             pixel_size=(pixel_size[0], pixel_size[1]),
             origin=(origin[0], origin[1]),
@@ -149,7 +149,7 @@ def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[prep_grid.GridSpe
         pixel_size = cfg.inputs.pixel_size
         grid_shape = cfg.inputs.grid_shape
         return functools.partial(
-            prep_grid.GridSpec,
+            grid.GridSpec,
             crs=cfg.crs,
             pixel_size=(pixel_size[0], pixel_size[1]),
             origin=(origin[0], origin[1]),
