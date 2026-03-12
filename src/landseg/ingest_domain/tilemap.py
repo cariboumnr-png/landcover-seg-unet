@@ -67,7 +67,7 @@ import rasterio
 # local imports
 import landseg.alias as alias
 import landseg.core as core
-import landseg.prep_domain as prep_domain
+import landseg.ingest_domain as domain
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -356,7 +356,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             coords, arr = all_tiles[i]
             freqs[coords] = _norm_freq(arr, self._range)
         # get full pca
-        z, evr, k = prep_domain.pca_transform(freqs, self._ctx.target_variance)
+        z, evr, k = domain.pca_transform(freqs, self._ctx.target_variance)
         self._ctx.explained_variance = evr
         self._ctx.pca_axes_n = k
         # assign to each valid tile

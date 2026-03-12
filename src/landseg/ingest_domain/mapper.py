@@ -53,7 +53,7 @@ task-level feature assembly.
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.prep_domain as prep_domain
+import landseg.ingest_domain as domain
 import landseg.utils as utils
 
 def prepare_domain(
@@ -61,7 +61,7 @@ def prepare_domain(
     input_config: configs.InputDomainCfg,
     prep_config: configs.PrepDomainCfg,
     logger: utils.Logger
-) -> dict[str, prep_domain.DomainTileMap]:
+) -> dict[str, domain.DomainTileMap]:
     '''
     Prepare and persist domain tile maps for categorical raster(s).
 
@@ -100,25 +100,25 @@ def prepare_domain(
 
     source_dir = input_config.input_dirpath
     output_dir = prep_config.output_dirpath
-    output: dict[str, prep_domain.DomainTileMap] = {}
+    output: dict[str, domain.DomainTileMap] = {}
     # prep each domain from configured list
     for file in input_config.files:
         name = file.filename.split('.', maxsplit=1)[0] # no suffix
         # if domain already exist, load and add to return
         try:
-            dom = prep_domain.load_domain(name, output_dir)
+            dom = domain.load_domain(name, output_dir)
             output[name] = dom
         # otherwise create domain accordingly
         except FileNotFoundError:
-            ctx = prep_domain.DomainContext(
+            ctx = domain.DomainContext(
                 index_base=file.index_base,
                 valid_threshold=prep_config.valid_threshold,
                 target_variance=prep_config.target_variance
             )
             fp = f'{source_dir}/{file.filename}'
-            dom = prep_domain.DomainTileMap(fp, world_grid, ctx, logger)
+            dom = domain.DomainTileMap(fp, world_grid, ctx, logger)
             output[name] = dom
-            prep_domain.save_domain(world_grid.gid, name, dom, output_dir)
+            domain.save_domain(world_grid.gid, name, dom, output_dir)
 
     # return
     return output
