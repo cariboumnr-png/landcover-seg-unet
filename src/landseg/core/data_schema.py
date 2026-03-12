@@ -27,8 +27,7 @@ import typing
 
 # ---------------------------------Public Type---------------------------------
 class SchemaOneBlock(typing.TypedDict):
-    '''Minimal schema emitted by build_schema_from_a_block(...).
-    '''
+    '''Minimal schema emitted by `build_schema_one_block(...)`.'''
     dataset_name: str
     image_channel: int
     image_h_w: int
@@ -43,7 +42,7 @@ class SchemaOneBlock(typing.TypedDict):
     val_split: dict[str, str]
 
 class SchemaFull(typing.TypedDict):
-    '''Dataset-wide schema emitted by build_schema(...).'''
+    '''Dataset-wide schema emitted by `build_schema_full(...)`.'''
     schema_version: str
     dataset: _DatasetInfo
     world_grid: _WorldGridInfo

@@ -31,7 +31,7 @@ import typing
 # -------------------------------Public Protocol-------------------------------
 @typing.runtime_checkable
 class DomainTileMapLike(typing.Protocol):
-    '''Used by `data_schema` module during Domain.'''
+    '''Used by `data_schema` module during Domain construction.'''
     def items(self) -> collections.abc.ItemsView[tuple[int, int], _DomainTile]:...
     @property
     def max_id(self) -> int:...
