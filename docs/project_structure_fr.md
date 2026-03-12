@@ -21,9 +21,6 @@ root/src/landseg
 ├── data_schema/               # fabrique : assemble et valide le schéma final d’entraînement
 │   └── builder.py             # ← API du module
 │
-├── dataset/                   # runtime : charge et valide les données via le schéma produit
-│   └── loader.py              # ← API du module
-│
 ├── models/                    # définitions des modèles et fabrique de modèles
 │   └── factory.py             # ← API du module
 │

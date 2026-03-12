@@ -21,9 +21,6 @@ root/src/landseg
 ├── data_schema/               # factory: assemble final training schema
 │   └── builder.py             # ← module API
 │
-├── dataset/                   # runtime: load dataset using produced schema
-│   └── loader.py              # ← module API
-│
 ├── models/                    # model architectures and model factory
 │   └── factory.py             # ← module API
 │
