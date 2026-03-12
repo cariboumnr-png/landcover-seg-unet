@@ -34,7 +34,7 @@ import os
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.data_schema as data_schema
+import landseg.ingest_schema as ingest_schema
 import landseg.ingest_dataset as dataset
 import landseg.ingest_domain as domain
 import landseg.grid_generator as grid
@@ -82,7 +82,7 @@ def load_data(
         assert blk_schema # sanity
 
         # build a dataspec from the schema with essential values
-        dspecs = data_schema.build_dataspec_one_block(blk_schema)
+        dspecs = ingest_schema.build_dataspec_one_block(blk_schema)
         return dspecs
 
     # load/map domain
@@ -96,7 +96,7 @@ def load_data(
     vec_domain = domains[prep.domain.as_vec] if prep.domain.as_vec else None
 
     # validate data blocks
-    status = data_schema.validate_schema(
+    status = ingest_schema.validate_schema(
         world_grid.gid,
         prep.data.output_dirpath,
         logger
@@ -126,7 +126,7 @@ def load_data(
         logger.log('INFO', 'Data schema check passed, proceed')
 
     # build dataspec
-    dataspec = data_schema.build_dataspec(
+    dataspec = ingest_schema.build_dataspec(
         f'{prep.data.output_dirpath}/schema.json',
         ids_domain,
         vec_domain
