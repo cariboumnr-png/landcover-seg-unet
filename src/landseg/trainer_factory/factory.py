@@ -19,60 +19,56 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Build a controller.'''
+'''Factory to build a trainer class'''
 
+# third-party imports
+import torch
 # local imports
 import landseg.configs as configs
-import landseg.controller as controller
+import landseg.core as core
+import landseg.trainer_components as components
 import landseg.trainer_engine as engine
 import landseg.utils as utils
 
-# -------------------------------Public Function-------------------------------
-def build_controller(
-    trainer: engine.MultiHeadTrainer,
-    config: configs.ControllerCfg,
-    experiment_dir: str,
-    logger: utils.Logger
-) -> controller.Controller:
-    '''Setup training controller.'''
+def build_trainer(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: configs.TrainerCfg,
+    logger: utils.Logger,
+    **kwargs
+) -> engine.MultiHeadTrainer:
+    '''
+    Build a trainer from model, components, and config.
 
-    # get phases
-    phases = _generate_phases(config)
+    Args:
+        kwargs:
+            runtime convenience flags
+            - skip_log: bool
+            - enable_train_la: bool
+            - enable_val_la: bool
+            - enable_test_la: bool
+    '''
 
-    # return a controller (as the main runner)
-    return controller.Controller(
-        trainer=trainer,
-        phases=phases,
-        exp_dir=experiment_dir,
-        logger=logger
+    # gather trainer components
+    runtime_components = components.build_trainer_components(
+        dataspecs,
+        model,
+        config,
+        logger
     )
 
-# ------------------------------private  function------------------------------
-def _generate_phases(config: configs.ControllerCfg) -> list[controller.Phase]:
-    '''doc'''
+    # get runtime traine config
+    runtime_config = engine.get_config(config.runtime)
 
-    # config accesor
-    phases: list[controller.Phase] = []
-    # iterate through phases in config (1-based)
-    for cfg in config.phases:
-        phases.append(
-            controller.Phase(
-                name=cfg.name,
-                num_epochs=cfg.num_epochs,
-                heads=controller.HeadsConifg(
-                    cfg.heads.active_heads,
-                    cfg.heads.frozen_heads,
-                    cfg.heads.masked_classes
-                ),
-                la_scheme=controller.LogitAdjustScheme(
-                    cfg.logit_adjust.alpha,
-                    cfg.logit_adjust.train,
-                    cfg.logit_adjust.val,
-                    cfg.logit_adjust.test,
-                ),
-                lr_scale=cfg.lr_scale
-            )
-        )
+    # get currently avalaible device
+    available_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    # return
-    return phases
+    trainer = engine.MultiHeadTrainer(
+        model,
+        runtime_components,
+        runtime_config,
+        available_device,
+        **kwargs
+    )
+
+    return trainer

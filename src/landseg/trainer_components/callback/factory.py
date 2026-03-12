@@ -19,60 +19,33 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Build a controller.'''
+'''Compose a list of callback classes in sequence for the trainer.'''
 
+# standard imports
+import dataclasses
 # local imports
-import landseg.configs as configs
-import landseg.controller as controller
-import landseg.trainer_engine as engine
+import landseg.trainer_components.callback as callback
 import landseg.utils as utils
 
-# -------------------------------Public Function-------------------------------
-def build_controller(
-    trainer: engine.MultiHeadTrainer,
-    config: configs.ControllerCfg,
-    experiment_dir: str,
-    logger: utils.Logger
-) -> controller.Controller:
-    '''Setup training controller.'''
+@dataclasses.dataclass
+class CallbackSet:
+    '''Collection of callback class contracts.'''
+    train: callback.TrainCallback
+    validate: callback.ValCallback
+    infer: callback.InferCallback
+    logging: callback.LoggingCallback
+    progress: callback.ProgressCallback
 
-    # get phases
-    phases = _generate_phases(config)
+    def __iter__(self):
+        return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
-    # return a controller (as the main runner)
-    return controller.Controller(
-        trainer=trainer,
-        phases=phases,
-        exp_dir=experiment_dir,
-        logger=logger
+def build_callbacks(logger: utils.Logger) -> CallbackSet:
+    '''Factory to generate a set of callback class instances.'''
+
+    return CallbackSet(
+        train=callback.TrainCallback(logger),
+        validate=callback.ValCallback(logger),
+        infer=callback.InferCallback(logger),
+        logging=callback.LoggingCallback(logger),
+        progress=callback.ProgressCallback(logger),
     )
-
-# ------------------------------private  function------------------------------
-def _generate_phases(config: configs.ControllerCfg) -> list[controller.Phase]:
-    '''doc'''
-
-    # config accesor
-    phases: list[controller.Phase] = []
-    # iterate through phases in config (1-based)
-    for cfg in config.phases:
-        phases.append(
-            controller.Phase(
-                name=cfg.name,
-                num_epochs=cfg.num_epochs,
-                heads=controller.HeadsConifg(
-                    cfg.heads.active_heads,
-                    cfg.heads.frozen_heads,
-                    cfg.heads.masked_classes
-                ),
-                la_scheme=controller.LogitAdjustScheme(
-                    cfg.logit_adjust.alpha,
-                    cfg.logit_adjust.train,
-                    cfg.logit_adjust.val,
-                    cfg.logit_adjust.test,
-                ),
-                lr_scale=cfg.lr_scale
-            )
-        )
-
-    # return
-    return phases

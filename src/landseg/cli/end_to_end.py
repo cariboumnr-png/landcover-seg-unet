@@ -32,7 +32,7 @@ import landseg.configs as configs
 import landseg.controller as controller
 import landseg.data_schema as data_schema
 import landseg.models as models
-import landseg.training as training
+import landseg.trainer_factory as factory
 import landseg.utils as utils
 
 def train_end_to_end(config: configs.RootConfig) -> None:
@@ -52,7 +52,7 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     model = models.build_multihead_unet(dataspecs, config.models)
 
     # build trainer
-    trainer = training.build_trainer(model, dataspecs, config.trainer, logger)
+    trainer = factory.build_trainer(dataspecs, model, config.trainer, logger)
 
     # build controller
     runner = controller.build_controller(trainer, config.controller, exp_dir, logger)

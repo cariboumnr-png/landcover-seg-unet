@@ -1,0 +1,72 @@
+# =========================================================================== #
+#           Copyright (c) His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+# pylint: disable=protected-access
+'''Validation phase callback class.'''
+
+# local imports
+import landseg.trainer_components.callback as callback
+
+class ValCallback(callback.Callback):
+    '''Validation pipeline: parse - forward - compute metrics.'''
+
+    def on_validation_begin(self) -> None:
+        model = self.trainer.model
+        flags = self.trainer.flags
+        # set model to evaluation mode
+        model.eval()
+        # set la status
+        model.set_logit_adjust_enabled(flags['enable_val_la'])
+        # reset per-head confusion matrix from active heads
+        assert self.trainer.state.heads.active_hmetrics is not None
+        for metrics_mod in self.trainer.state.heads.active_hmetrics.values():
+            metrics_mod.reset(self.trainer.device)
+        # reset validation loss and logs
+        self.state.epoch_sum.val_loss = 0.0 # currently not in use
+        self.state.epoch_sum.val_logs.head_metrics.clear()
+        self.state.epoch_sum.val_logs.head_metrics_str.clear()
+
+    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
+        # refresh batch context with new input batch (from validation data)
+        self.state.batch_cxt.refresh(bidx, batch)
+        # refresh batch results
+        self.state.batch_out.refresh(bidx)
+        # parse from the new batch
+        self.trainer._parse_batch()
+
+    def on_validation_batch_forward(self) -> None:
+        # get x and domain (optional)
+        x = self.state.batch_cxt.x
+        domain = self.state.batch_cxt.domain
+        # forward with autocast context
+        with self.trainer._val_ctx():
+            outputs = self.trainer.model.forward(x, **domain)
+        self.state.batch_out.preds = dict(outputs)
+
+    def on_validation_batch_end(self) -> None:
+        # update per-head confusion matrix
+        self.trainer._update_conf_matrix()
+
+    def on_validation_end(self) -> None:
+        # compute iou
+        self.trainer._compute_iou()
+        # update experimental level metrics
+        self.trainer._track_metrics()

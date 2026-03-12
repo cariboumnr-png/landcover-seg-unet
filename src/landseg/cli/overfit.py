@@ -30,7 +30,7 @@ import os
 import landseg.configs as configs
 import landseg.data_schema as data_schema
 import landseg.models as models
-import landseg.training as training
+import landseg.trainer_factory as factory
 import landseg.utils as utils
 
 def overfit_test(config: configs.RootConfig) -> None:
@@ -57,9 +57,9 @@ def overfit_test(config: configs.RootConfig) -> None:
     model = models.build_multihead_unet(dataspecs, config.models)
 
     # build a trainer with no logging
-    trainer = training.build_trainer(
-        model,
+    trainer = factory.build_trainer(
         dataspecs,
+        model,
         config.trainer,
         logger,
         skip_log=True

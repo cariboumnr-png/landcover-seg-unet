@@ -27,7 +27,7 @@ import os
 import typing
 # local imports
 import landseg.controller as controller
-import landseg.training.trainer as trainer
+import landseg.trainer_engine as engine
 import landseg.utils as utils
 
 # --------------------------------private  type--------------------------------
@@ -42,7 +42,7 @@ class Controller:
     '''doc'''
     def __init__(
         self,
-        engine: trainer.MultiHeadTrainer,
+        trainer: engine.MultiHeadTrainer,
         phases: list[controller.Phase],
         exp_dir: str,
         logger: utils.Logger
@@ -50,7 +50,7 @@ class Controller:
         '''Initialization'''
 
         # parse arguments
-        self.trainer = engine
+        self.trainer = trainer
         self.phases = phases
         self.logger = logger.get_child('phase') # a child from base logger
         # preview and checkpoint dir
@@ -195,7 +195,7 @@ class Controller:
 
         best_ckpt = f'{self.ckpts}/{phase}_best.pt'
         if os.path.exists(best_ckpt):
-            meta = trainer.load(
+            meta = engine.load(
                 model=self.trainer.model,
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
@@ -212,7 +212,7 @@ class Controller:
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }
-        trainer.save(
+        engine.save(
             model=self.trainer.model,
             ckpt_meta=ckpt_meta,
             optimizer=self.trainer.comps.optimization.optimizer,
