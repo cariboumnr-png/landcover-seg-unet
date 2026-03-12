@@ -32,25 +32,22 @@ import typing
 
 __all__ = [
     # classes
-    'Controller',
+    'Runner',
     'Phase',
     'HeadsConifg',
     'LogitAdjustScheme',
     # functions
-    'build_controller',
+    # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_controller
-    from .controller import Controller
+    from .runner import Runner
     from .phase import Phase, HeadsConifg, LogitAdjustScheme
 
 def __getattr__(name: str):
 
-    if name in ['build_controller']:
-        return getattr(importlib.import_module('.builder', __package__), name)
-    if name in ['Controller']:
-        return getattr(importlib.import_module('.controller', __package__), name)
+    if name in ['Runner']:
+        return getattr(importlib.import_module('.runner', __package__), name)
     if name in ['Phase', 'HeadsConifg', 'LogitAdjustScheme',]:
         return getattr(importlib.import_module('.phase', __package__), name)
 

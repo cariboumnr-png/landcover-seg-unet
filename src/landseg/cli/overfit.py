@@ -30,7 +30,7 @@ import os
 import landseg.configs as configs
 import landseg.data_schema as data_schema
 import landseg.models as models
-import landseg.trainer_factory as factory
+import landseg.factory as factory
 import landseg.utils as utils
 
 def overfit_test(config: configs.RootConfig) -> None:

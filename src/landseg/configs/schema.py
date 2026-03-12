@@ -411,7 +411,7 @@ class TrainerCfg:
             if 'T_max' not in self.optim.sched_args:
                 raise ValueError('missing T_max for CosAnneal')
 
-# -------------------------------CONTROLLER  CONFIGS---------------------------
+# ---------------------------------RUNNER  CONFIGS-----------------------------
 @dataclasses.dataclass
 class LogitAdjustConfig:
     train: bool = False
@@ -433,9 +433,9 @@ class PhaseConfig:
     logit_adjust: LogitAdjustConfig = dataclasses.field(default_factory=LogitAdjustConfig)
     lr_scale: float = 1.0
 
-# ----- CONTROLLER
+# ----- RUNNER
 @dataclasses.dataclass
-class ControllerCfg:
+class RunnerCfg:
     ckpt_dpath: str = '${exp_root}/checkpoints'
     preview_dpath: str = '${exp_root}/previews'
     phases: list[PhaseConfig] = dataclasses.field(default_factory=lambda: [PhaseConfig()])
@@ -458,7 +458,7 @@ class RootConfig:
     # trainer settings
     trainer: TrainerCfg = dataclasses.field(default_factory=TrainerCfg)
     # controller settings
-    controller: ControllerCfg = dataclasses.field(default_factory=ControllerCfg)
+    runner: RunnerCfg = dataclasses.field(default_factory=RunnerCfg)
     # optional profile overrides
     profile: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 

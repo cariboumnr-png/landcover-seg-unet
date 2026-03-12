@@ -26,7 +26,7 @@ import dataclasses
 import os
 import typing
 # local imports
-import landseg.controller as controller
+import landseg.trainer_runner as trainer_runner
 import landseg.trainer_engine as engine
 import landseg.utils as utils
 
@@ -38,12 +38,12 @@ class _CheckpointMeta(typing.TypedDict):
     step: int
 
 # --------------------------------Public  Class--------------------------------
-class Controller:
+class Runner:
     '''doc'''
     def __init__(
         self,
         trainer: engine.MultiHeadTrainer,
-        phases: list[controller.Phase],
+        phases: list[trainer_runner.Phase],
         exp_dir: str,
         logger: utils.Logger
     ):
@@ -66,7 +66,7 @@ class Controller:
         if os.path.exists(self.phase_status_path):
             scheme = utils.load_json(self.phase_status_path)
             for i, p in enumerate(scheme):
-                if controller.Phase(**p).finished:
+                if trainer_runner.Phase(**p).finished:
                     self.phases[i].finished = True
         else:
             self._record_progress() # write phase status.json

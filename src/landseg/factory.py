@@ -19,24 +19,28 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Factory to build a trainer class'''
+'''
+Project level factory.
+'''
 
 # third-party imports
 import torch
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.trainer_components as components
-import landseg.trainer_engine as engine
+import landseg.trainer_components as trainer_components
+import landseg.trainer_engine as trainer_engine
+import landseg.trainer_runner as trainer_runner
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def build_trainer(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: configs.TrainerCfg,
     logger: utils.Logger,
     **kwargs
-) -> engine.MultiHeadTrainer:
+) -> trainer_engine.MultiHeadTrainer:
     '''
     Build a trainer from model, components, and config.
 
@@ -50,7 +54,7 @@ def build_trainer(
     '''
 
     # gather trainer components
-    runtime_components = components.build_trainer_components(
+    runtime_components = trainer_components.build_trainer_components(
         dataspecs,
         model,
         config,
@@ -58,12 +62,12 @@ def build_trainer(
     )
 
     # get runtime traine config
-    runtime_config = engine.get_config(config.runtime)
+    runtime_config = trainer_engine.get_config(config.runtime)
 
     # get currently avalaible device
     available_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    trainer = engine.MultiHeadTrainer(
+    trainer = trainer_engine.MultiHeadTrainer(
         model,
         runtime_components,
         runtime_config,
@@ -72,3 +76,53 @@ def build_trainer(
     )
 
     return trainer
+
+def build_runner(
+    experiment_dir: str,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: configs.RootConfig,
+    logger: utils.Logger,
+    **kwargs
+) -> trainer_runner.Runner:
+    '''Setup training runner.'''
+
+    # build trainer
+    trainer = build_trainer(dataspecs, model, config.trainer, logger, **kwargs)
+
+    # get phases
+    phases = _generate_phases(config.runner)
+
+    # build and return runner
+    runner = trainer_runner.Runner(trainer, phases, experiment_dir, logger)
+    return runner
+
+# ------------------------------private  function------------------------------
+def _generate_phases(config: configs.RunnerCfg) -> list[trainer_runner.Phase]:
+    '''doc'''
+
+    # config accesor
+    phases: list[trainer_runner.Phase] = []
+    # iterate through phases in config (1-based)
+    for cfg in config.phases:
+        phases.append(
+            trainer_runner.Phase(
+                name=cfg.name,
+                num_epochs=cfg.num_epochs,
+                heads=trainer_runner.HeadsConifg(
+                    cfg.heads.active_heads,
+                    cfg.heads.frozen_heads,
+                    cfg.heads.masked_classes
+                ),
+                la_scheme=trainer_runner.LogitAdjustScheme(
+                    cfg.logit_adjust.alpha,
+                    cfg.logit_adjust.train,
+                    cfg.logit_adjust.val,
+                    cfg.logit_adjust.test,
+                ),
+                lr_scale=cfg.lr_scale
+            )
+        )
+
+    # return
+    return phases

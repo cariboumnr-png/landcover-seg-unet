@@ -46,7 +46,7 @@ __all__ = [
     'OptimConfig',
     'RuntimeConfig',
     'TrainerCfg',
-    'ControllerCfg',
+    'RunnerCfg',
     'RootConfig',
     # functions
     # typing
@@ -69,7 +69,7 @@ if typing.TYPE_CHECKING:
         OptimConfig,
         RuntimeConfig,
         TrainerCfg,
-        ControllerCfg,
+        RunnerCfg,
         RootConfig,
     )
 
@@ -79,7 +79,7 @@ def __getattr__(name: str):
                 'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
                 'ModelsCfg',
                 'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'ControllerCfg', 'TrainerCfg',
+                'RunnerCfg', 'TrainerCfg',
                 'RootConfig'
                 ]:
         return getattr(importlib.import_module('.schema', __package__), name)
