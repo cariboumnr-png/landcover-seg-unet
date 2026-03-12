@@ -34,10 +34,10 @@ import os
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.dataprep as dataprep
-import landseg.dataset as dataset
-import landseg.domain as domain
-import landseg.grid as grid
+import landseg.data_schema as data_schema
+import landseg.prep_raster as prep_raster
+import landseg.prep_domain as prep_domain
+import landseg.prep_grid as prep_grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
@@ -66,12 +66,12 @@ def load_data(
     '''
 
     # load/create world grid
-    world_grid = grid.prep_world_grid(inputs.extent, prep.grid, logger)
+    world_grid = prep_grid.prep_world_grid(inputs.extent, prep.grid, logger)
 
     # if single block mode
     if single_block_mode:
         # build a minimul schema dict from a single block
-        blk_schema = dataset.prepare_dataset(
+        blk_schema = prep_raster.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -82,11 +82,11 @@ def load_data(
         assert blk_schema # sanity
 
         # build a dataspec from the schema with essential values
-        dspecs = dataprep.build_dataspec_one_block(blk_schema)
+        dspecs = data_schema.build_dataspec_one_block(blk_schema)
         return dspecs
 
     # load/map domain
-    domains = domain.prepare_domain(
+    domains = prep_domain.prepare_domain(
         world_grid,
         inputs.domain,
         prep.domain,
@@ -96,7 +96,7 @@ def load_data(
     vec_domain = domains[prep.domain.as_vec] if prep.domain.as_vec else None
 
     # validate data blocks
-    status = dataprep.validate_schema(
+    status = data_schema.validate_schema(
         world_grid.gid,
         prep.data.output_dirpath,
         logger
@@ -105,7 +105,7 @@ def load_data(
     # prompt data blocks rebuild
     if status == 1:
         logger.log('WARNING', 'Data schema check failed, rebuild data blocks')
-        dataset.prepare_dataset(
+        prep_raster.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -114,7 +114,7 @@ def load_data(
     # prompt data blocks fresh build (all steps will be redone)
     elif status == 2:
         logger.log('WARNING', 'Data schema not found, build data blocks')
-        dataset.prepare_dataset(
+        prep_raster.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -126,7 +126,7 @@ def load_data(
         logger.log('INFO', 'Data schema check passed, proceed')
 
     # build dataspec
-    dataspec = dataprep.build_dataspec(
+    dataspec = data_schema.build_dataspec(
         f'{prep.data.output_dirpath}/schema.json',
         ids_domain,
         vec_domain

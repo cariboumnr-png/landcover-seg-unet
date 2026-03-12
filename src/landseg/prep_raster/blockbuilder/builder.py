@@ -48,8 +48,8 @@ import zlib
 import numpy
 # local imports
 import landseg.alias as alias
-import landseg.dataset.blockbuilder as blockbuilder
-import landseg.dataset.mapper as mapper
+import landseg.prep_raster.blockbuilder as blockbuilder
+import landseg.prep_raster.mapper as mapper
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

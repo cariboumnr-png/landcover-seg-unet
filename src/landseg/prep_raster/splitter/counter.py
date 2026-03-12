@@ -35,7 +35,7 @@ import os
 import numpy
 import tqdm
 # local imports
-import landseg.dataset.blockbuilder as blockbuilder
+import landseg.prep_raster.blockbuilder as blockbuilder
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------

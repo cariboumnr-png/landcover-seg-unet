@@ -38,14 +38,14 @@ import os
 import numpy
 # local imports
 import landseg.core as core
-import landseg.domain as domain
+import landseg.prep_domain as prep_domain
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
     schema_fpath: str,
-    ids_domain: domain.DomainTileMap | None,
-    vec_domain: domain.DomainTileMap | None
+    ids_domain: prep_domain.DomainTileMap | None,
+    vec_domain: prep_domain.DomainTileMap | None
 ) -> core.DataSpecs:
     '''
     Build a `DataSpecs` instance from dataset schema and optional domains.
@@ -202,8 +202,8 @@ def _get_split(schema: core.SchemaFull) -> core.Splits:
 
 def _get_domain(
     schema: core.SchemaFull,
-    ids_domain: domain.DomainTileMap | None,
-    vec_domain: domain.DomainTileMap | None
+    ids_domain: prep_domain.DomainTileMap | None,
+    vec_domain: prep_domain.DomainTileMap | None
 ) -> core.Domains:
     '''Populate `_Domain` dataclass from schema dictionary.'''
 
@@ -227,8 +227,8 @@ def _get_domain(
 
 def __parse_domain(
     blocks_fpath: str,
-    ids_domain: domain.DomainTileMap | None,
-    vec_domain: domain.DomainTileMap | None
+    ids_domain: prep_domain.DomainTileMap | None,
+    vec_domain: prep_domain.DomainTileMap | None
 ) -> core.Domains.Dom:
     '''Parse blocks into discrete and vector domain mappings.'''
 

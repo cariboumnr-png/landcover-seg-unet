@@ -32,14 +32,14 @@ compatibility and integrity on load.
 # standard imports
 import os
 # local imports
-import landseg.domain as domain
+import landseg.prep_domain as prep_domain
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def save_domain(
     grid_name: str,
     domain_name: str,
-    domain_obj: domain.DomainTileMap,
+    domain_obj: prep_domain.DomainTileMap,
     dirpath: str
 ) -> None:
     '''
@@ -75,7 +75,7 @@ def save_domain(
 def load_domain(
     domain_name: str,
     dirpath: str
-) -> domain.DomainTileMap:
+) -> prep_domain.DomainTileMap:
     '''
     Load a `DomainTileMap` from disk.
 
@@ -93,10 +93,10 @@ def load_domain(
     meta = utils.load_json(f'{dirpath}/{domain_name}_meta.json')
 
     # schema guard
-    expected = domain.DomainTileMap.SCHEMA_ID
+    expected = prep_domain.DomainTileMap.SCHEMA_ID
     found = meta.get('schema_id', None)
     if found != expected:
         raise ValueError(f'Unsupported schema: {found}; expected {expected}.')
 
     # otherwise return class object via class method
-    return domain.DomainTileMap.from_payload(payload)
+    return prep_domain.DomainTileMap.from_payload(payload)

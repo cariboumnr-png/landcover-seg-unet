@@ -30,15 +30,15 @@ Public APIs:
 # third-party imports
 import numpy
 # local imports
-import landseg.dataset as dataset
-import landseg.dataset.blockbuilder as blockbuilder
-import landseg.dataset.normalizer as normalizer
+import landseg.prep_raster as prep_raster
+import landseg.prep_raster.blockbuilder as blockbuilder
+import landseg.prep_raster.normalizer as normalizer
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def normalize_blocks(
     input_type: str,
-    config: dataset.OutputConfig,
+    config: prep_raster.OutputConfig,
     logger: utils.Logger,
     *,
     renormalize = False
