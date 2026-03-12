@@ -82,7 +82,7 @@ def build_headmetrics(
     # iterate through configs
     for hname, hspec in headspecs.as_dict().items():
         # attach to output list
-        config = {
+        config: metrics.ConfusionMatricConfig = {
             'num_classes': hspec.num_classes,
             'ignore_index': ignore_index,
             'parent_class_1b': hspec.parent_cls,

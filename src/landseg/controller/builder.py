@@ -27,6 +27,7 @@ import landseg.controller as controller
 import landseg.training as training
 import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def build_controller(
     engine: training.MultiHeadTrainer,
     config: configs.ControllerCfg,
@@ -36,7 +37,7 @@ def build_controller(
     '''Setup training controller.'''
 
     # get phases
-    phases = controller.generate_phases(config)
+    phases = _generate_phases(config)
 
     # return a controller (as the main runner)
     return controller.Controller(
@@ -45,3 +46,33 @@ def build_controller(
         exp_dir=experiment_dir,
         logger=logger
     )
+
+# ------------------------------private  function------------------------------
+def _generate_phases(config: configs.ControllerCfg) -> list[controller.Phase]:
+    '''doc'''
+
+    # config accesor
+    phases: list[controller.Phase] = []
+    # iterate through phases in config (1-based)
+    for cfg in config.phases:
+        phases.append(
+            controller.Phase(
+                name=cfg.name,
+                num_epochs=cfg.num_epochs,
+                heads=controller.HeadsConifg(
+                    cfg.heads.active_heads,
+                    cfg.heads.frozen_heads,
+                    cfg.heads.masked_classes
+                ),
+                la_scheme=controller.LogitAdjustScheme(
+                    cfg.logit_adjust.alpha,
+                    cfg.logit_adjust.train,
+                    cfg.logit_adjust.val,
+                    cfg.logit_adjust.test,
+                ),
+                lr_scale=cfg.lr_scale
+            )
+        )
+
+    # return
+    return phases

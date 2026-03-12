@@ -34,15 +34,16 @@ __all__ = [
     # classes
     'Controller',
     'Phase',
+    'HeadsConifg',
+    'LogitAdjustScheme',
     # functions
     'build_controller',
-    'generate_phases',
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import build_controller
     from .controller import Controller
-    from .phase import Phase, generate_phases
+    from .phase import Phase, HeadsConifg, LogitAdjustScheme
 
 def __getattr__(name: str):
 
@@ -50,7 +51,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['Controller']:
         return getattr(importlib.import_module('.controller', __package__), name)
-    if name in ['Phase', 'generate_phases']:
+    if name in ['Phase', 'HeadsConifg', 'LogitAdjustScheme',]:
         return getattr(importlib.import_module('.phase', __package__), name)
 
     raise AttributeError(name)

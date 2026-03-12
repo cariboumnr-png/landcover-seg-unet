@@ -44,7 +44,6 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.alias as alias
-import landseg.configs as configs
 import landseg.core as core
 import landseg.training.dataloading as dataloading
 import landseg.utils as utils
@@ -69,7 +68,8 @@ class _Meta:
 # -------------------------------Public Function-------------------------------
 def get_dataloaders(
     data_specs: core.DataSpecs,
-    config: configs.LoaderConfig,
+    batch_size: int,
+    patch_size: int,
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
@@ -100,10 +100,8 @@ def get_dataloaders(
     logger = logger.get_child('dldrs')
 
     # parse
-    patch_size = config.patch_size
     assert data_specs.meta.img_h_w % patch_size == 0 # sanity check
     patch_per_blk = int(data_specs.meta.img_h_w / patch_size) ** 2
-    batch_size = config.batch_size
 
     # meta to be shipped
     meta = _Meta(batch_size, patch_per_blk, data_specs.meta.test_blks_grid)

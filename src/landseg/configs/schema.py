@@ -333,7 +333,6 @@ class LoaderConfig:
 @dataclasses.dataclass
 class FocalLossConfig:
     weight: float = 0.5
-    alpha: list[float] | None = None
     gamma: float = 2.0
     reduction: str = 'mean'
 

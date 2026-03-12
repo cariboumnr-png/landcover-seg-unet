@@ -35,14 +35,9 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.configs as configs
+import landseg.core as core
 
 # ---------------------------------Public Type---------------------------------
-@typing.runtime_checkable
-class ModelWithParams(typing.Protocol):
-    '''Protocol for models exposing iterable torch parameters.'''
-    def parameters(self) -> typing.Iterable['torch.nn.Parameter']: ...
-
 # a callable that constructs an Optimizer (e.g., torch.optim.AdamW)
 p1 = typing.ParamSpec('p1')
 OptimizerFactory: typing.TypeAlias = typing.Callable[p1, "torch.optim.Optimizer"]
@@ -69,8 +64,12 @@ class Optimization:
 
 # -------------------------------Public Function-------------------------------
 def build_optimization(
-    model: ModelWithParams,
-    config: configs.OptimConfig
+    model: core.MultiheadModelLike,
+    opt_cls: str,
+    lr: float,
+    weight_decay: float,
+    sched_cls: str | None,
+    **sched_args
 ) -> Optimization:
     '''
     Build optimizer and scheduler from a config.
@@ -86,22 +85,13 @@ def build_optimization(
         Optimization(optimizer, scheduler_or_none).
     '''
 
-    optimizer = _build_optimizer(
-        model=model,
-        optim_cls=config.opt_cls,
-        lr=config.lr,
-        weight_decay=config.weight_decay
-    )
-    scheduler = _build_scheduler(
-        optimizer,
-        sched_cls=config.sched_cls,
-        sched_args=config.sched_args
-    )
+    optimizer = _build_optimizer(model, opt_cls, lr, weight_decay)
+    scheduler = _build_scheduler(optimizer, sched_cls, **sched_args)
     return Optimization(optimizer=optimizer, scheduler=scheduler)
 
 # ------------------------------private  function------------------------------
 def _build_optimizer(
-    model: ModelWithParams,
+    model: core.MultiheadModelLike,
     optim_cls: str,
     lr: float,
     weight_decay: float
@@ -120,7 +110,7 @@ def _build_optimizer(
 def _build_scheduler(
     optimizer: torch.optim.Optimizer,
     sched_cls: str | None,
-    sched_args: dict
+    **sched_args
 ) -> torch.optim.lr_scheduler.LRScheduler | None:
     '''Instantiate a scheduler from the registry if requested.'''
 
@@ -129,4 +119,4 @@ def _build_scheduler(
     scheduler = _SCHEDULERS.get(sched_cls)
     if scheduler is None:
         raise ValueError(f"Unknown scheduler: {sched_cls}")
-    return scheduler(optimizer=optimizer, **sched_args)
+    return scheduler(optimizer, **sched_args)

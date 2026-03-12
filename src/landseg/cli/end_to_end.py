@@ -46,22 +46,13 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
     # data preparation
-    dataspecs = dataprep.load_data(
-        inputs=config.inputs,
-        prep=config.prep,
-        logger=logger
-    )
+    dataspecs = dataprep.load_data(config.inputs, config.prep, logger)
 
     # setup the model
     model = models.build_multihead_unet(dataspecs, config.models)
 
     # build trainer
-    trainer = training.build_trainer(
-        model,
-        dataspecs,
-        config.trainer,
-        logger
-    )
+    trainer = training.build_trainer(model, dataspecs, config.trainer, logger)
 
     # build controller
     runner = controller.build_controller(trainer, config.controller, exp_dir, logger)

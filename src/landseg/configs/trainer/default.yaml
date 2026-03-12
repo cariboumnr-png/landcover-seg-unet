@@ -10,7 +10,6 @@ loss:
   types:
     focal:
       weight: 0.5
-      alpha: null
       gamma: 2.0
       reduction: 'mean'
     dice:

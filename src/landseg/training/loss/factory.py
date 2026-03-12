@@ -36,7 +36,6 @@ objects.
 '''
 
 # local imports
-import landseg.configs as configs
 import landseg.training.common as common
 import landseg.training.loss as loss
 
@@ -70,7 +69,7 @@ class HeadLosses:
 # -------------------------------Public Function-------------------------------
 def build_headlosses(
     headspecs: common.HeadSpecsLike,
-    config: configs.LossConfig,
+    config: loss.LossTypes,
     ignore_index: int
 ) -> HeadLosses:
     '''
@@ -105,10 +104,9 @@ def build_headlosses(
         h.name: h.loss_alpha for h in headspecs.as_dict().values()
     }
     for name in per_head_alphas.keys():
-        # if focal is used edit its alphas:
-        if config.types.focal.weight:
-            config.types.focal.alpha = per_head_alphas[name]
+        # update loss alpha dein head
+        alpha = per_head_alphas[name]
         # init loss compute module for each head
-        loss_cls = loss.CompositeLoss(config, ignore_index)
+        loss_cls = loss.CompositeLoss(config, ignore_index, alpha)
         loss_dict[name] = loss_cls
     return HeadLosses(loss_dict)

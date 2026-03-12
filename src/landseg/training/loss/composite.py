@@ -19,6 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 '''
 Composite loss manager for combining multiple primitive loss functions.
 
@@ -33,12 +36,36 @@ The main entry point is `CompositeLoss`, which handles:
     - Computing a weighted sum of all enabled losses
 '''
 
+# standard typing
+from __future__ import annotations
+import typing
 # third-party imports
 import torch
 import torch.nn
 # local imports
-import landseg.configs as configs
 import landseg.training.loss as loss
+
+# ---------------------------------Public Type---------------------------------
+class LossTypes(typing.Protocol):
+    @property
+    def focal(self) -> _FocalConfig:...
+    @property
+    def dice(self) -> _DiceConfig:...
+
+# --------------------------------private  type--------------------------------
+class _FocalConfig(typing.Protocol):
+    @property
+    def weight(self) -> float:...
+    @property
+    def gamma(self) -> float:...
+    @property
+    def reduction(self) -> str:...
+
+class _DiceConfig(typing.Protocol):
+    @property
+    def weight(self) -> float:...
+    @property
+    def smooth(self) -> float:...
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -78,8 +105,9 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: configs.LossConfig,
-        ignore_index: int
+        config: LossTypes,
+        ignore_index: int,
+        alpha: list[float] | None = None
     ):
         '''
         Initialize the composite loss from a configuration dictionary.
@@ -98,40 +126,33 @@ class CompositeLoss(torch.nn.Module):
 
         super().__init__()
 
-        # flexible registry of supported loss types
-        registry = {
-            "focal": loss.FocalLoss,
-            "dice": loss.DiceLoss,
-        }
-
-        # make ignore index public
+        # expose ignore index
         self.ignore_index = ignore_index
 
-        # iterate through input loss types and gather corresponding blocks
+        # iterate through currently support loss types
         self.losses = torch.nn.ModuleList()
         self.weights: list[float] = []
-        # loss function by type
+
         # focal loss
-        if config.types.focal.weight:
-            # add to sequences
-            loss_fn = registry['focal'](
-                    alpha=config.types.focal.alpha,
-                    gamma=config.types.focal.gamma,
-                    reduction=config.types.focal.reduction,
-                    ignore_index=ignore_index
-                )
-            self.losses.append(loss_fn)
-            self.weights.append(config.types.focal.weight)
-        # dice loss
-        if config.types.dice.weight:
-            weight = config.types.dice.weight
-            loss_fn = registry['dice'](
-                smooth=config.types.dice.smooth,
+        if config.focal.weight:
+            loss_fn = loss.FocalLoss(
+                alpha=alpha,
+                gamma=config.focal.gamma,
+                reduction=config.focal.reduction,
                 ignore_index=ignore_index
-                )
+            )
+            self.losses.append(loss_fn)
+            self.weights.append(config.focal.weight)
+
+        # dice loss
+        if config.dice.weight:
+            loss_fn = loss.DiceLoss(
+                smooth=config.dice.smooth,
+                ignore_index=ignore_index
+            )
             # add to sequences
             self.losses.append(loss_fn)
-            self.weights.append(weight)
+            self.weights.append(config.dice.weight)
 
     def forward(
         self,
