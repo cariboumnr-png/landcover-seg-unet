@@ -3,61 +3,46 @@
 ```
 root/src/landseg
 │
-├── core/               # project-level contracts
-│   └── protocols.py
-|
-├── grid/               # generate stable world grid
-│   ├── builder.py      <- module API
-│   ├── io.py
-│   └── layout.py
-|
-├── domain/             # map domain rasters to world grid
-│   ├── io.py
-│   ├── mapper.py       <- module API
-│   ├── tilemap.py
-│   └── transform.py
-|
-├── dataprep/           # process raw rasters to stable artifacts
-│   ├── blockbuilder/
-│   ├── mapper/
-│   ├── normalizer/
-│   ├── splitter/
-│   ├── utils/
-│   ├── pipeline.py     <- module API
-│   └── schema.py
+├── core/                      # project-level protocols and shared contracts
+│   ├── dataprep_schema.py
+│   ├── dataset_specs.py
+│   ├── grid_protocol.py
+│   └── model_protocol.py
 │
-├── dataset/            # consume data schema for traininig.dataloading
-│   ├── specs.py
-│   ├── loader.py       <- module API
-│   └── validate.py
+├── prep_grid/                 # factory: construct the stable world grid
+│   └── builder.py             # ← module API
 │
-├── models/             # defines model structure (current: UNet, UNet++)
-│   ├── backbones/
-│   ├── multihead/
-│   └── factory.py      <- module API
+├── prep_domain/               # factory: process domain rasters aligned to grid
+│   └── mapper.py              # ← module API
 │
-├── training/           # trainer and its components
-│   ├── callback/
-│   ├── common/
-│   ├── dataloading/
-│   ├── heads/
-│   ├── loss/
-│   ├── metrics/
-│   ├── optim/
-│   ├── trainer/
-│   └── factory.py      <- module API
+├── prep_raster/               # factory: process imagery + label rasters into artifacts
+│   └── pipeline.py            # ← module API
 │
-├── controller/         # build controller (experiment run from this)
-│   ├── builder.py      <- module API
-│   ├── controller.py
-│   └── phases.py
+├── data_schema/               # factory: assemble final training schema
+│   └── builder.py             # ← module API
 │
-├── utils/              # project-wide utilities
+├── dataset/                   # runtime: load dataset using produced schema
+│   └── loader.py              # ← module API
 │
-├── configs/            # hydra config tree shipped with package
+├── models/                    # model architectures and model factory
+│   └── factory.py             # ← module API
 │
-└── cli/                # CLI scripts
-    ├── main.py         <- module API
-    ├── end_to_end.py
-    └── overfit_test.py
+├── training/                  # training engine and runtime components
+│   └── factory.py             # ← module API
+│
+├── controller/                # experiment orchestration and controller phases
+│   └── builder.py             # ← module API
+│
+├── utils/                     # project-wide utilities
+│   ├── contxt.py
+│   ├── funcs.py
+│   ├── logger.py
+│   ├── multip.py
+│   ├── pca.py
+│   └── preview.py
+│
+├── configs/                   # hydra configuration tree
+│
+└── cli/                       # CLI entry points
+    └── main.py                # ← module API
   ```
