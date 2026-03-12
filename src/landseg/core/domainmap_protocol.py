@@ -19,52 +19,27 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.core`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+'''DomainTileMap protocol.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
+# standard imports
 from __future__ import annotations
-import importlib
+import collections.abc
 import typing
 
-__all__ = [
-    # classes
-    'DataSpecs',
-    'Meta',
-    'Heads',
-    'Splits',
-    'Domains',
-    # functions
-    # typing
-    'DomainTileMapLike',
-    'GridLayoutLike',
-    'SchemaFull',
-    'SchemaOneBlock',
-    'MultiheadModelLike',
-]
+# -------------------------------Public Protocol-------------------------------
+@typing.runtime_checkable
+class DomainTileMapLike(typing.Protocol):
+    '''Used by `data_schema` module during Domain.'''
+    def items(self) -> collections.abc.ItemsView[tuple[int, int], _DomainTile]:...
+    @property
+    def max_id(self) -> int:...
+    @property
+    def n_pca_ax(self) -> int:...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .data_schema import SchemaFull, SchemaOneBlock
-    from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
-    from .domainmap_protocol import DomainTileMapLike
-    from .grid_protocol import GridLayoutLike
-    from .model_protocol import MultiheadModelLike
-
-def __getattr__(name: str):
-
-    if name in ['SchemaFull', 'SchemaOneBlock']:
-        return getattr(importlib.import_module('.data_schema', __package__), name)
-    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
-        return getattr(importlib.import_module('.data_specs', __package__), name)
-    if name in ['DomainTileMapLike']:
-        return getattr(importlib.import_module('.domainmap_protocol', __package__), name)
-    if name in ['GridLayoutLike']:
-        return getattr(importlib.import_module('.grid_protocol', __package__), name)
-    if name in ['MultiheadModelLike']:
-        return getattr(importlib.import_module('.model_protocol', __package__), name)
-
-    raise AttributeError(name)
+class _DomainTile(typing.TypedDict):
+    '''Per-tile domain descriptors stored in a `DomainTileMap`.'''
+    majority: int | None
+    major_freq: float | None
+    pca_feature: list[float] | None

@@ -36,7 +36,7 @@ import landseg.configs as configs
 import landseg.core as core
 import landseg.data_schema as data_schema
 import landseg.prep_raster as prep_raster
-import landseg.prep_domain as prep_domain
+import landseg.ingest_domain as domain
 import landseg.prep_grid as prep_grid
 import landseg.utils as utils
 
@@ -86,7 +86,7 @@ def load_data(
         return dspecs
 
     # load/map domain
-    domains = prep_domain.prepare_domain(
+    domains = domain.prepare_domain(
         world_grid,
         inputs.domain,
         prep.domain,
