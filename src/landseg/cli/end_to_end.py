@@ -29,10 +29,9 @@ import dataclasses
 import os
 # local imports
 import landseg.configs as configs
-import landseg.controller as controller
-import landseg.data_schema as data_schema
+import landseg.ingest_schema as schema
 import landseg.models as models
-import landseg.training as training
+import landseg.factory as factory
 import landseg.utils as utils
 
 def train_end_to_end(config: configs.RootConfig) -> None:
@@ -46,16 +45,13 @@ def train_end_to_end(config: configs.RootConfig) -> None:
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
     # data preparation
-    dataspecs = data_schema.load_data(config.inputs, config.prep, logger)
+    dataspecs = schema.load_data(config.inputs, config.prep, logger)
 
     # setup the model
     model = models.build_multihead_unet(dataspecs, config.models)
 
-    # build trainer
-    trainer = training.build_trainer(model, dataspecs, config.trainer, logger)
-
     # build controller
-    runner = controller.build_controller(trainer, config.controller, exp_dir, logger)
+    runner = factory.build_runner(exp_dir, dataspecs, model, config, logger)
 
     # run via controller
     runner.fit()

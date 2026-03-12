@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for `landseg.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +32,31 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
+    'DataSpecs',
+    'Meta',
+    'Heads',
+    'Splits',
+    'Domains',
     # functions
     # typing
+    'DomainTileMapLike',
+    'SchemaFull',
+    'SchemaOneBlock',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .data_schema import SchemaFull, SchemaOneBlock
+    from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
+    from .domain_map import DomainTileMapLike
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['SchemaFull', 'SchemaOneBlock']:
+        return getattr(importlib.import_module('.data_schema', __package__), name)
+    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
+        return getattr(importlib.import_module('.data_specs', __package__), name)
+    if name in ['DomainTileMapLike']:
+        return getattr(importlib.import_module('.domain_map', __package__), name)
 
     raise AttributeError(name)

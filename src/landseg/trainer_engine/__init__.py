@@ -19,8 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-return-statements
+
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for training.trainer.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +34,34 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
+    'MultiHeadTrainer',
     'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
+    'RuntimeState',
     # functions
-    # typing
+    'export_previews',
+    'get_config',
+    'init_state',
+    'load',
+    'save',
+    'multihead_loss',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .engine_config import RuntimeConfig, get_config
+    from .engine_state import RuntimeState, init_state
+    from .engine import MultiHeadTrainer
+    from .utils import load, save,  multihead_loss, export_previews
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['RuntimeConfig', 'get_config']:
+        return getattr(importlib.import_module('.engine_config', __package__), name)
+    if name in ['RuntimeState', 'init_state']:
+        return getattr(importlib.import_module('.engine_state', __package__), name)
+    if name in ['MultiHeadTrainer']:
+        return getattr(importlib.import_module('.engine', __package__), name)
+    if name in ['load', 'save',  'multihead_loss', 'export_previews']:
+        return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(name)

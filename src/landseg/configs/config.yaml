@@ -14,7 +14,7 @@ defaults:
   # trainer
   - trainer: default
   # controller
-  - controller: demo
+  - runner: demo
   # profile
   - profile: default
 

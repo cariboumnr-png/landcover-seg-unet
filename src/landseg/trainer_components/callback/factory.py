@@ -19,69 +19,33 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.configs`.
+'''Compose a list of callback classes in sequence for the trainer.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# standard imports
+import dataclasses
+# local imports
+import landseg.trainer_components.callback as callback
+import landseg.utils as utils
 
-from __future__ import annotations
-import importlib
-import typing
+@dataclasses.dataclass
+class CallbackSet:
+    '''Collection of callback class contracts.'''
+    train: callback.TrainCallback
+    validate: callback.ValCallback
+    infer: callback.InferCallback
+    logging: callback.LoggingCallback
+    progress: callback.ProgressCallback
 
-__all__ = [
-    # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
-    # functions
-    # typing
-]
+    def __iter__(self):
+        return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
+def build_callbacks(logger: utils.Logger) -> CallbackSet:
+    '''Factory to generate a set of callback class instances.'''
+
+    return CallbackSet(
+        train=callback.TrainCallback(logger),
+        validate=callback.ValCallback(logger),
+        infer=callback.InferCallback(logger),
+        logging=callback.LoggingCallback(logger),
+        progress=callback.ProgressCallback(logger),
     )
-
-def __getattr__(name: str):
-
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
-
-    raise AttributeError(name)

@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for `landseg.training.dataloading`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +32,24 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
+    'BlockConfig',
+    'DataLoaders',
+    'MultiBlockDataset',
     # functions
-    # typing
+    'build_dataloaders',
+    # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .dataset import BlockConfig, MultiBlockDataset
+    from .loader import DataLoaders, build_dataloaders
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['BlockConfig', 'MultiBlockDataset']:
+        return getattr(importlib.import_module('.dataset', __package__), name)
+    if name in ['DataLoaders', 'build_dataloaders']:
+        return getattr(importlib.import_module('.loader', __package__), name)
 
     raise AttributeError(name)

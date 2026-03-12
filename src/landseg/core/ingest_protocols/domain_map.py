@@ -19,69 +19,27 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.configs`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+'''DomainTileMap protocol.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
+# standard imports
 from __future__ import annotations
-import importlib
+import collections.abc
 import typing
 
-__all__ = [
-    # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
-    # functions
-    # typing
-]
+# -------------------------------Public Protocol-------------------------------
+@typing.runtime_checkable
+class DomainTileMapLike(typing.Protocol):
+    '''Used by `data_schema` module during Domain construction.'''
+    def items(self) -> collections.abc.ItemsView[tuple[int, int], _DomainTile]:...
+    @property
+    def max_id(self) -> int:...
+    @property
+    def n_pca_ax(self) -> int:...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
-
-def __getattr__(name: str):
-
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
-
-    raise AttributeError(name)
+class _DomainTile(typing.TypedDict):
+    '''Per-tile domain descriptors stored in a `DomainTileMap`.'''
+    majority: int | None
+    major_freq: float | None
+    pca_feature: list[float] | None

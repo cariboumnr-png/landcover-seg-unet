@@ -19,8 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-return-statements
+
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for training.trainer.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +34,26 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
     # functions
-    # typing
+    'export_previews',
+    'load',
+    'save',
+    'multihead_loss',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .checkpoint import load, save
+    from .loss import multihead_loss
+    from .preview import export_previews
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['load', 'save']:
+        return getattr(importlib.import_module('.checkpoint', __package__), name)
+    if name in ['multihead_loss']:
+        return getattr(importlib.import_module('.loss', __package__), name)
+    if name in ['export_previews']:
+        return getattr(importlib.import_module('.preview', __package__), name)
 
     raise AttributeError(name)

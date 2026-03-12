@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for `landseg.training.loss`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +32,33 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
+    'CompositeLoss',
+    'DiceLoss',
+    'FocalLoss',
+    'HeadLosses',
+    'PrimitiveLoss',
     # functions
-    # typing
+    'build_headlosses',
+    # types
+    'LossTypes'
 ]
-
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .base import PrimitiveLoss
+    from .composite import CompositeLoss, LossTypes
+    from .factory import HeadLosses, build_headlosses
+    from .blocks import DiceLoss, FocalLoss
+
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['PrimitiveLoss']:
+        return getattr(importlib.import_module('.base', __package__), name)
+    if name in ['CompositeLoss', 'LossTypes']:
+        return getattr(importlib.import_module('.composite', __package__), name)
+    if name in ['HeadLosses', 'build_headlosses']:
+        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in ['DiceLoss', 'FocalLoss']:
+        return getattr(importlib.import_module('.blocks', __package__), name)
 
     raise AttributeError(name)

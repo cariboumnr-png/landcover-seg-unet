@@ -19,8 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-return-statements
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for training.callback.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +33,42 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
+    'Callback',
+    'CallbackSet',
+    'LoggingCallback',
+    'TrainCallback',
+    'ValCallback',
+    'InferCallback',
+    'ProgressCallback',
     # functions
-    # typing
+    'build_callbacks'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .base import Callback
+    from .factory import CallbackSet, build_callbacks
+    from .logging import LoggingCallback
+    from .phase_infer import InferCallback
+    from .phase_train import TrainCallback
+    from .phase_val import ValCallback
+    from .progress import ProgressCallback
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['Callback']:
+        return getattr(importlib.import_module('.base', __package__), name)
+    if name in ['CallbackSet', 'build_callbacks']:
+        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in ['LoggingCallback']:
+        return getattr(importlib.import_module('.logging', __package__), name)
+    if name in ['InferCallback']:
+        return getattr(importlib.import_module('.phase_infer', __package__), name)
+    if name in ['TrainCallback']:
+        return getattr(importlib.import_module('.phase_train', __package__), name)
+    if name in ['ValCallback']:
+        return getattr(importlib.import_module('.phase_val', __package__), name)
+    if name in ['ProgressCallback']:
+        return getattr(importlib.import_module('.progress', __package__), name)
 
     raise AttributeError(name)

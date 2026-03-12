@@ -19,8 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-return-statements
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for training module.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +33,46 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
+    'CallbackSet',
+    'DataLoaders',
+    'HeadSpecs',
+    'HeadLosses',
+    'HeadMetrics',
+    'Optimization',
     # functions
-    # typing
+    'build_callbacks',
+    'build_dataloaders',
+    'build_headspecs',
+    'build_headlosses',
+    'build_headmetrics',
+    'build_optimization',
+    'build_trainer_components',
 ]
-
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .callback import CallbackSet, build_callbacks
+    from .dataloading import DataLoaders, build_dataloaders
+    from .heads import HeadSpecs, build_headspecs
+    from .loss import HeadLosses, build_headlosses
+    from .metrics import HeadMetrics, build_headmetrics
+    from .optimization import Optimization, build_optimization
+    from .factory import build_trainer_components
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['CallbackSet', 'build_callbacks']:
+        return getattr(importlib.import_module('.callback', __package__), name)
+    if name in ['DataLoaders', 'build_dataloaders']:
+        return getattr(importlib.import_module('.dataloading', __package__), name)
+    if name in ['HeadSpecs', 'build_headspecs']:
+        return getattr(importlib.import_module('.heads', __package__), name)
+    if name in ['HeadLosses', 'build_headlosses']:
+        return getattr(importlib.import_module('.loss', __package__), name)
+    if name in ['HeadMetrics', 'build_headmetrics']:
+        return getattr(importlib.import_module('.metrics', __package__), name)
+    if name in ['Optimization', 'build_optimization']:
+        return getattr(importlib.import_module('.optimization', __package__), name)
+    if name in ['build_trainer_components']:
+        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(name)

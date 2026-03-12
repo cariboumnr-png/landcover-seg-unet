@@ -19,69 +19,46 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 '''
-Top-level namespace for `landseg.configs`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Callback-facing trainer runtime config protocols.
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
-    # functions
-    # typing
-]
+# ---------------------------trainer runtime config---------------------------
+@typing.runtime_checkable
+class RuntimeConfigLike(typing.Protocol):
+    schedule: ScheduleLike
+    precision: PrecisionLike
+    optim: OptimConfigLike
+    monitor: MonitorLike
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+@typing.runtime_checkable
+class ScheduleLike(typing.Protocol):
+    max_epoch: int
+    max_step: int | None
+    logging_interval: int
+    eval_interval: int | None
+    checkpoint_interval: int | None
+    patience_epochs: int | None
+    min_delta: float | None
 
-def __getattr__(name: str):
+@typing.runtime_checkable
+class MonitorLike(typing.Protocol):
+    enabled: tuple[str, ...]
+    metric: str
+    head: str
+    mode: str
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+@typing.runtime_checkable
+class PrecisionLike(typing.Protocol):
+    use_amp: bool
 
-    raise AttributeError(name)
+@typing.runtime_checkable
+class OptimConfigLike(typing.Protocol):
+    grad_clip_norm: float | None

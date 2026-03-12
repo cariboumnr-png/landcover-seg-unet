@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.configs`.
+Top-level namespace for `landseg.training.common`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,56 +32,60 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
     # functions
-    # typing
+    # types
+    'CallBacksLike',
+    'DataLoadersLike',
+    'HeadSpecsLike',
+    'SpecsLike',
+    'HeadLossesLike',
+    'CompositeLossLike',
+    'HeadMetricsLike',
+    'ConfusionMatrixLike',
+    'OptimizationLike',
+    'TrainerComponentsLike',
+    'RuntimeConfigLike',
+    'RuntimeStateLike',
+    'TrainerEngineLike',
 ]
-
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
+    from .trainer_engine import TrainerEngineLike
+    from .trainer_comps import (
+        CallBacksLike,
+        CompositeLossLike,
+        DataLoadersLike,
+        HeadLossesLike,
+        HeadMetricsLike,
+        HeadSpecsLike,
+        ConfusionMatrixLike,
+        OptimizationLike,
+        SpecsLike,
+        TrainerComponentsLike,
     )
+    from .trainer_config import RuntimeConfigLike
+    from .trainer_state import RuntimeStateLike
 
 def __getattr__(name: str):
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in ['TrainerEngineLike']:
+        return getattr(importlib.import_module('.trainer_engine', __package__), name)
+    if name in [
+        'CallBacksLike',
+        'DataLoadersLike',
+        'HeadSpecsLike',
+        'SpecsLike',
+        'HeadLossesLike',
+        'CompositeLossLike',
+        'HeadMetricsLike',
+        'ConfusionMatrixLike',
+        'OptimizationLike',
+        'TrainerComponentsLike',
+    ]:
+        return getattr(importlib.import_module('.trainer_comps', __package__), name)
+    if name in ['RuntimeConfigLike']:
+        return getattr(importlib.import_module('.trainer_config', __package__), name)
+    if name in ['RuntimeStateLike']:
+        return getattr(importlib.import_module('.trainer_state', __package__), name)
 
     raise AttributeError(name)

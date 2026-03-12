@@ -28,9 +28,9 @@ minimal model until convergence.
 import os
 # local imports
 import landseg.configs as configs
-import landseg.data_schema as data_schema
+import landseg.ingest_schema as schema
 import landseg.models as models
-import landseg.training as training
+import landseg.factory as factory
 import landseg.utils as utils
 
 def overfit_test(config: configs.RootConfig) -> None:
@@ -41,7 +41,7 @@ def overfit_test(config: configs.RootConfig) -> None:
     logger = utils.Logger('test', os.path.join(test_dir, 'test.log'))
 
     # create a single test block and derive dataspec for downstream
-    dataspecs = data_schema.load_data(
+    dataspecs = schema.load_data(
         config.inputs,
         config.prep,
         logger,
@@ -57,9 +57,9 @@ def overfit_test(config: configs.RootConfig) -> None:
     model = models.build_multihead_unet(dataspecs, config.models)
 
     # build a trainer with no logging
-    trainer = training.build_trainer(
-        model,
+    trainer = factory.build_trainer(
         dataspecs,
+        model,
         config.trainer,
         logger,
         skip_log=True

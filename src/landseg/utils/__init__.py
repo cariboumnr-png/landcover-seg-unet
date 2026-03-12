@@ -35,14 +35,12 @@ from .funcs import(
 from .logger import Logger
 from .multip import ParallelExecutor
 from .pca import pca_transform
-from .preview import export_previews
 
 __all__ = [
     # classes
     'Logger',
     'ParallelExecutor',
     # functions
-    'export_previews',
     'get_dir_size',
     'get_timestamp',
     'hash_artifacts',

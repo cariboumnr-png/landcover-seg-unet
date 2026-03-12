@@ -19,69 +19,30 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.configs`.
+'''Head specifications.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# standard imports
+import dataclasses
 
-from __future__ import annotations
-import importlib
-import typing
+@dataclasses.dataclass
+class Spec:
+    '''Specifications for a training head.'''
+    name: str
+    count: list[int]
+    loss_alpha: list[float]
+    parent_head: str | None
+    parent_cls: int | None # 1-based
+    weight: float
+    exclude_cls: tuple[int, ...]
 
-__all__ = [
-    # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
-    # functions
-    # typing
-]
+    def set_exclude(self, indices: tuple[int, ...]) -> None:
+        '''Curriculum fills this during training; validates range.'''
+        bad = [i for i in indices if i < 1 or i > len(self.count)]
+        if bad:
+            raise ValueError(f'Invalid indices to exclude: {bad}')
+        self.exclude_cls = tuple(sorted(set(indices)))
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
-
-def __getattr__(name: str):
-
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
-
-    raise AttributeError(name)
+    @property
+    def num_classes(self) -> int:
+        '''Number of classes.'''
+        return len(self.count)

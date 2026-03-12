@@ -19,69 +19,43 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.configs`.
+# pylint: disable=protected-access
+'''Progress increments callback class.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.trainer_components.callback as callback
 
-from __future__ import annotations
-import importlib
-import typing
+class ProgressCallback(callback.Callback):
+    '''Progress tracker.'''
 
-__all__ = [
-    # classes
-    'InputDataCfg',
-    'InputDomainCfg',
-    'InputExtentCfg',
-    'Inputs',
-    'PrepDataCfg',
-    'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'TrainerCfg',
-    'RunnerCfg',
-    'RootConfig',
-    # functions
-    # typing
-]
+    def on_train_epoch_begin(self, epoch: int) -> None:
+        self.state.progress.epoch = epoch   # get current epoch
+        self.state.progress.epoch_step = 0  # reset epoch step
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        InputDataCfg,
-        InputDomainCfg,
-        InputExtentCfg,
-        Inputs,
-        PrepDataCfg,
-        PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        TrainerCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    def on_train_batch_end(self) -> None:
+        self.state.progress.epoch_step += 1
+        self.state.progress.global_step += 1
 
-def __getattr__(name: str):
+    def on_train_epoch_end(self) -> None:
+        # increment epoch counter
+        epoch = self.state.progress.epoch
+        eval_interval = self.config.schedule.eval_interval
+        # already at max epoch
+        if epoch == self.config.schedule.max_epoch:
+            return
+        # if no validation after training, increment after this hook
+        if eval_interval is None or epoch % eval_interval != 0:
+            self.state.progress.epoch += 1
 
-    if name in ['InputDataCfg', 'InputDomainCfg', 'InputExtentCfg', 'Inputs',
-                'PrepDataCfg', 'PrepDomainCfg', 'PrepGridCfg', 'Prep',
-                'ModelsCfg',
-                'LoaderConfig', 'LossConfig', 'OptimConfig', 'RuntimeConfig',
-                'RunnerCfg', 'TrainerCfg',
-                'RootConfig'
-                ]:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    def on_validation_begin(self) -> None: ...
 
-    raise AttributeError(name)
+    def on_validation_end(self) -> None:
+        # increment epoch counter
+        epoch = self.state.progress.epoch
+        eval_interval = self.config.schedule.eval_interval
+        # already at max epoch
+        if epoch == self.config.schedule.max_epoch:
+            return
+        # if validation is done, increment after this hook
+        if eval_interval is not None and epoch % eval_interval == 0:
+            self.state.progress.epoch += 1
