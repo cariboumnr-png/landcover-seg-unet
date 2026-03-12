@@ -43,7 +43,7 @@ import psutil
 import torch
 import torch.utils.data
 # local imports
-import landseg.alias as alias
+import landseg.core.alias as alias
 import landseg.core.ingest_protocols as ingest_protocols
 import landseg.trainer_components.dataloading as dataloading
 import landseg.utils as utils

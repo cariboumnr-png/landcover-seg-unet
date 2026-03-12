@@ -72,7 +72,7 @@ import torch.utils.data
 import torchvision.transforms.functional
 import tqdm
 # local imports
-import landseg.alias as alias
+import landseg.core.alias as alias
 import landseg.utils as utils
 
 @dataclasses.dataclass

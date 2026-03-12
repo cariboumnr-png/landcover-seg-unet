@@ -27,7 +27,7 @@
 import collections.abc
 import typing
 # local imports
-import landseg.alias as alias
+import landseg.core.alias as alias
 
 # -------------------------------Public Protocol-------------------------------
 @typing.runtime_checkable

@@ -64,7 +64,7 @@ import typing
 import rasterio
 import rasterio.crs
 # local imports
-import landseg.alias as alias
+import landseg.core.alias as alias
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass

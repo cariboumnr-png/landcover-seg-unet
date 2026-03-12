@@ -35,8 +35,8 @@ import os
 # third-party imports
 import rasterio
 # local imports
-import landseg.alias as alias
 import landseg.core as core
+import landseg.core.alias as alias
 import landseg.ingest_dataset as dataset
 import landseg.ingest_dataset.mapper as mapper
 import landseg.utils as utils

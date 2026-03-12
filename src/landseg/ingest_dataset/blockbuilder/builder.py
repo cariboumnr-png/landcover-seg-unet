@@ -47,7 +47,7 @@ import zlib
 # third-party imports
 import numpy
 # local imports
-import landseg.alias as alias
+import landseg.core.alias as alias
 import landseg.ingest_dataset.blockbuilder as blockbuilder
 import landseg.ingest_dataset.mapper as mapper
 import landseg.utils as utils

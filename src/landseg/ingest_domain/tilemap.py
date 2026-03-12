@@ -65,8 +65,8 @@ import typing
 import numpy
 import rasterio
 # local imports
-import landseg.alias as alias
 import landseg.core as core
+import landseg.core.alias as alias
 import landseg.ingest_domain as domain
 import landseg.utils as utils
 

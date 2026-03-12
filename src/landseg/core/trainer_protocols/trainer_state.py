@@ -30,7 +30,7 @@ Callback-facing trainer runtime state protocols.
 from __future__ import annotations
 import typing
 # local imports
-import landseg.training.common as common
+import landseg.core.trainer_protocols.trainer_comps as trainer_comps
 
 if typing.TYPE_CHECKING:
     import torch
@@ -57,9 +57,9 @@ class Heads(typing.Protocol):
     all_heads: list[str]
     active_heads: list[str] | None
     frozen_heads: list[str] | None
-    active_hspecs: dict[str, common.SpecLike] | None
-    active_hloss: dict[str, common.CompositeLossLike] | None
-    active_hmetrics: dict[str, common.MetricLike] | None
+    active_hspecs: dict[str, trainer_comps.SpecsLike] | None
+    active_hloss: dict[str, trainer_comps.CompositeLossLike] | None
+    active_hmetrics: dict[str, trainer_comps.ConfusionMatrixLike] | None
 
 # ----- .batch_ctx (context)
 class BatchCtx(typing.Protocol):

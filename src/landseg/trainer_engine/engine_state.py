@@ -28,7 +28,7 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.alias as alias
+import landseg.core.alias as alias
 import landseg.core.trainer_protocols as trainer_protocols
 
 # ------------------------------Public  Dataclass------------------------------
