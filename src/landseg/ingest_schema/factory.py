@@ -33,10 +33,10 @@ Public APIs:
 import os
 # local imports
 import landseg.configs as configs
-import landseg.core as core
-import landseg.ingest_schema as ingest_schema
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.ingest_dataset as dataset
 import landseg.ingest_domain as domain
+import landseg.ingest_schema as schema
 import landseg.grid_generator as grid
 import landseg.utils as utils
 
@@ -48,7 +48,7 @@ def load_data(
     *,
     single_block_mode: bool = False,
     single_block_dir: str = ''
-) -> core.DataSpecs:
+) -> ingest_protocols.DataSpecs:
     '''
     Load dataset specifications after validating dataprep artifacts.
 
@@ -71,7 +71,7 @@ def load_data(
     # if single block mode
     if single_block_mode:
         # build a minimul schema dict from a single block
-        blk_schema = dataset.prepare_dataset(
+        dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -79,10 +79,11 @@ def load_data(
             build_a_block=True,
             block_fpath=os.path.join(single_block_dir, 'overfit_test_block.npz')
         )
-        assert blk_schema # sanity
+        # load schema
+        blk_schema = utils.load_json(f'{single_block_dir}/schema.json')
 
         # build a dataspec from the schema with essential values
-        dspecs = ingest_schema.build_dataspec_one_block(blk_schema)
+        dspecs = schema.build_dataspec_one_block(blk_schema)
         return dspecs
 
     # load/map domain
@@ -96,7 +97,7 @@ def load_data(
     vec_domain = domains[prep.domain.as_vec] if prep.domain.as_vec else None
 
     # validate data blocks
-    status = ingest_schema.validate_schema(
+    status = schema.validate_schema(
         world_grid.gid,
         prep.data.output_dirpath,
         logger
@@ -126,7 +127,7 @@ def load_data(
         logger.log('INFO', 'Data schema check passed, proceed')
 
     # build dataspec
-    dataspec = ingest_schema.build_dataspec(
+    dataspec = schema.build_dataspec(
         f'{prep.data.output_dirpath}/schema.json',
         ids_domain,
         vec_domain

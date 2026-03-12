@@ -26,6 +26,7 @@ import dataclasses
 # local imports
 import landseg.configs as configs
 import landseg.core as core
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.trainer_components as components
 import landseg.utils as utils
 
@@ -42,7 +43,7 @@ class TrainerComponents:
 
 # -------------------------------Public Function-------------------------------
 def build_trainer_components(
-    data_specs: core.DataSpecs,
+    data_specs: ingest_protocols.DataSpecs,
     model: core.MultiheadModelLike,
     config: configs.TrainerCfg,
     logger: utils.Logger,

@@ -33,6 +33,7 @@ Public APIs:
 import os
 # local imports
 import landseg.core as core
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.ingest_dataset as dataset
 import landseg.ingest_dataset.blockbuilder as blockbuilder
 import landseg.utils as utils
@@ -79,7 +80,7 @@ def build_schema_full(
     parent, parent_cls = _get_topo(sample_meta['label_count'])
 
     # populate schema dict
-    schema: core.SchemaFull = {
+    schema: ingest_protocols.SchemaFull = {
         'schema_version': '1.1',
 
         'dataset': {
@@ -184,7 +185,7 @@ def build_schema_full(
 def build_schema_one_block(
     block_fpath: str,
     block: blockbuilder.DataBlock
-) -> core.SchemaOneBlock:
+) -> None:
     '''
     Build a minimal schema from a single block for overfit tests.
 
@@ -202,7 +203,7 @@ def build_schema_one_block(
     counts = meta['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
     parent, parent_cls = _get_topo(counts)
-    schema: core.SchemaOneBlock = {
+    schema: ingest_protocols.SchemaOneBlock = {
         'dataset_name': meta['block_name'],
         'image_channel': data.image_normalized.shape[0],
         'image_h_w': data.image_normalized.shape[1], # here assume H==W
@@ -216,7 +217,10 @@ def build_schema_one_block(
         'train_split': {meta['block_name']: block_fpath},
         'val_split': {meta['block_name']: block_fpath}
     }
-    return schema
+
+    # write schema to json
+    root = os.path.dirname(block_fpath)
+    utils.write_json(f'{root}/schema.json', schema)
 
 # ------------------------------private  function------------------------------
 def _resolve(fpath: str) -> str:

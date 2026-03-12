@@ -32,22 +32,31 @@ import typing
 
 __all__ = [
     # classes
+    'DataSpecs',
+    'Meta',
+    'Heads',
+    'Splits',
+    'Domains',
     # functions
     # typing
-    'GridLayoutLike',
-    'MultiheadModelLike',
+    'DomainTileMapLike',
+    'SchemaFull',
+    'SchemaOneBlock',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .grid_protocol import GridLayoutLike
-    from .model_protocol import MultiheadModelLike
+    from .data_schema import SchemaFull, SchemaOneBlock
+    from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
+    from .domain_map import DomainTileMapLike
 
 def __getattr__(name: str):
 
-    if name in ['GridLayoutLike']:
-        return getattr(importlib.import_module('.grid_protocol', __package__), name)
-    if name in ['MultiheadModelLike']:
-        return getattr(importlib.import_module('.model_protocol', __package__), name)
+    if name in ['SchemaFull', 'SchemaOneBlock']:
+        return getattr(importlib.import_module('.data_schema', __package__), name)
+    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
+        return getattr(importlib.import_module('.data_specs', __package__), name)
+    if name in ['DomainTileMapLike']:
+        return getattr(importlib.import_module('.domain_map', __package__), name)
 
     raise AttributeError(name)

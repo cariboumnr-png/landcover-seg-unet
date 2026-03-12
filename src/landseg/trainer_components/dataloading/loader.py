@@ -44,7 +44,7 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.alias as alias
-import landseg.core as core
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.trainer_components.dataloading as dataloading
 import landseg.utils as utils
 
@@ -67,7 +67,7 @@ class _Meta:
 
 # -------------------------------Public Function-------------------------------
 def build_dataloaders(
-    data_specs: core.DataSpecs,
+    data_specs: ingest_protocols.DataSpecs,
     batch_size: int,
     patch_size: int,
     logger: utils.Logger,
@@ -135,7 +135,7 @@ def _load(
     mode: str,
     batch_size: int,
     patch_size: int,
-    data_specs: core.DataSpecs,
+    data_specs: ingest_protocols.DataSpecs,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -157,15 +157,15 @@ def _load(
     # dataset configuration
     dataset_config = _config_by_mode(mode, patch_size, data_specs)
     # preload/cache config
-    load_options = _preload_option(data_specs)
+    load_flags = _flags(data_specs)
     # get multiblock dataset
     dataset = dataloading.MultiBlockDataset(
         data_blocks,
         dataset_config,
         logger,
-        preload=load_options[f'preload_{mode}'],
+        preload=load_flags[f'preload_{mode}'],
         augment_flip=bool(mode == 'train'),
-        blk_cache_num=load_options[f'cache_{mode}']
+        blk_cache_num=load_flags[f'cache_{mode}']
     )
 
     # get dataloader
@@ -181,7 +181,7 @@ def _load(
 def _config_by_mode(
     mode: str,
     patch_size: int,
-    data_specs: core.DataSpecs
+    data_specs: ingest_protocols.DataSpecs
 ):
     '''Configure dataloading by mode.'''
 
@@ -208,7 +208,7 @@ def _config_by_mode(
         vec_domain=domain['vec_domain'] if domain else None
     )
 
-def _preload_option(data_specs: core.DataSpecs) -> dict[str, int | bool]:
+def _flags(data_specs: ingest_protocols.DataSpecs) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary

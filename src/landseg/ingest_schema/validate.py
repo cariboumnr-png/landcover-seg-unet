@@ -31,7 +31,7 @@ Public APIs:
 # standard imoprts
 import os
 # local imports
-import landseg.core as core
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.utils as utils
 
 def validate_schema(
@@ -64,7 +64,7 @@ def validate_schema(
         return 2
 
     # load schema into dict
-    schema: core.SchemaFull = utils.load_json(schema_path)
+    schema: ingest_protocols.SchemaFull = utils.load_json(schema_path)
     # checks
     # dataset name match
     if os.path.basename(cache_root) != schema['dataset']['name']:

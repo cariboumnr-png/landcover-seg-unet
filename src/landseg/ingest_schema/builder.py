@@ -37,15 +37,15 @@ import os
 # third-party imports
 import numpy
 # local imports
-import landseg.core as core
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_dataspec(
     schema_fpath: str,
-    ids_domain: core.DomainTileMapLike | None,
-    vec_domain: core.DomainTileMapLike | None
-) -> core.DataSpecs:
+    ids_domain: ingest_protocols.DomainTileMapLike | None,
+    vec_domain: ingest_protocols.DomainTileMapLike | None
+) -> ingest_protocols.DataSpecs:
     '''
     Build a `DataSpecs` instance from dataset schema and optional domains.
 
@@ -64,9 +64,9 @@ def build_dataspec(
     '''
 
     # read schema
-    schema_dict: core.SchemaFull = utils.load_json(schema_fpath)
+    schema_dict: ingest_protocols.SchemaFull = utils.load_json(schema_fpath)
     # build return the class instance
-    return core.DataSpecs(
+    return ingest_protocols.DataSpecs(
         name=schema_dict['dataset']['name'],
         mode='default',
         meta=_get_meta(schema_dict),
@@ -75,7 +75,9 @@ def build_dataspec(
         domains=_get_domain(schema_dict, ids_domain, vec_domain)
     )
 
-def build_dataspec_one_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
+def build_dataspec_one_block(
+        schema: ingest_protocols.SchemaOneBlock
+    ) -> ingest_protocols.DataSpecs:
     '''
     Build a minimal DataSpecs instance from a single block schema.
 
@@ -87,10 +89,10 @@ def build_dataspec_one_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
     '''
 
     # return directly from schema dict
-    return core.DataSpecs(
+    return ingest_protocols.DataSpecs(
         name=schema['dataset_name'],
         mode='single',
-        meta =core.Meta(
+        meta =ingest_protocols.Meta(
             img_ch=schema['image_channel'],
             img_h_w=schema['image_h_w'],
             ignore_index=schema['ignore_index'],
@@ -99,18 +101,18 @@ def build_dataspec_one_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
             fit_perblk_bytes=0,
             test_blks_grid=(0, 0)
         ),
-        heads=core.Heads(
+        heads=ingest_protocols.Heads(
             class_counts=schema['class_counts'],
             logits_adjust=schema['logit_adjust'],
             head_parent=schema['head_parent'],
             head_parent_cls=schema['head_parent_cls']
         ),
-        splits=core.Splits(
+        splits=ingest_protocols.Splits(
             train=schema['train_split'],
             val=schema['val_split'],
             test=None
         ),
-        domains=core.Domains(
+        domains=ingest_protocols.Domains(
             train={'ids_domain': None, 'vec_domain': None},
             val={'ids_domain': None, 'vec_domain': None},
             test={'ids_domain': None, 'vec_domain': None},
@@ -120,7 +122,7 @@ def build_dataspec_one_block(schema: core.SchemaOneBlock) -> core.DataSpecs:
     )
 
 # ------------------------------private  function------------------------------
-def _get_meta(schema: core.SchemaFull) -> core.Meta:
+def _get_meta(schema: ingest_protocols.SchemaFull) -> ingest_protocols.Meta:
     '''Populate `_Meta` dataclass from schema dictionary.'''
 
     # expected tensor sizes
@@ -147,7 +149,7 @@ def _get_meta(schema: core.SchemaFull) -> core.Meta:
             row = max(row, (y - ymin) / schema['world_grid']['tile_step_y'])
 
     # return
-    return core.Meta(
+    return ingest_protocols.Meta(
         img_ch=schema['tensor_shapes']['image']['C'],
         img_h_w=schema['tensor_shapes']['image']['H'],
         ignore_index=schema['io_conventions']['ignore_index'],
@@ -164,13 +166,13 @@ def __name_to_xy(key: str) -> tuple[int, int]:
     _, col, _, row = key.split('_')
     return int(col), int(row)
 
-def _get_heads(schema: core.SchemaFull) -> core.Heads:
+def _get_heads(schema: ingest_protocols.SchemaFull) -> ingest_protocols.Heads:
     '''Populate `_Heads` dataclass from schema dictionary.'''
 
     train_blks_path = schema['training_stats']['class_counts_train']
     raw_counts: dict[str, list[int]] = utils.load_json(train_blks_path)
     counts = {k: v for k, v in raw_counts.items() if k != 'original_label'}
-    return core.Heads(
+    return ingest_protocols.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
         head_parent=schema['labels']['head_parent'],
@@ -185,7 +187,7 @@ def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_split(schema: core.SchemaFull) -> core.Splits:
+def _get_split(schema: ingest_protocols.SchemaFull) -> ingest_protocols.Splits:
     '''Populate `_Split` dataclass from schema dictionary.'''
 
     # get file paths
@@ -193,17 +195,17 @@ def _get_split(schema: core.SchemaFull) -> core.Splits:
     val_fpath=schema['splits']['val_blocks']
     test_fpath=schema['splits']['test_blocks']
 
-    return core.Splits(
+    return ingest_protocols.Splits(
         train=utils.load_json(train_fpath),
         val=utils.load_json(val_fpath),
         test=utils.load_json(test_fpath) if os.path.exists(test_fpath) else None
     )
 
 def _get_domain(
-    schema: core.SchemaFull,
-    ids_domain: core.DomainTileMapLike | None,
-    vec_domain: core.DomainTileMapLike | None
-) -> core.Domains:
+    schema: ingest_protocols.SchemaFull,
+    ids_domain: ingest_protocols.DomainTileMapLike | None,
+    vec_domain: ingest_protocols.DomainTileMapLike | None
+) -> ingest_protocols.Domains:
     '''Populate `_Domain` dataclass from schema dictionary.'''
 
     # get file paths
@@ -216,7 +218,7 @@ def _get_domain(
     val_domain = __parse_domain(val_fpath, ids_domain, vec_domain)
     test_domain = __parse_domain(test_fpath, ids_domain, vec_domain)
 
-    return core.Domains(
+    return ingest_protocols.Domains(
         train=train_domain,
         val=val_domain,
         test=test_domain,
@@ -226,9 +228,9 @@ def _get_domain(
 
 def __parse_domain(
     blocks_fpath: str,
-    ids_domain: core.DomainTileMapLike | None,
-    vec_domain: core.DomainTileMapLike | None
-) -> core.Domains.Dom:
+    ids_domain: ingest_protocols.DomainTileMapLike | None,
+    vec_domain: ingest_protocols.DomainTileMapLike | None
+) -> ingest_protocols.Domains.Dom:
     '''Parse blocks into discrete and vector domain mappings.'''
 
     # early exit

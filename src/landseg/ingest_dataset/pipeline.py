@@ -45,7 +45,7 @@ def prepare_dataset(
     prep_config: configs.PrepDataCfg,
     logger: utils.Logger,
     **kwargs
-) -> core.SchemaOneBlock | None:
+) -> None:
     '''
     Run the dataset workflow: map rasters, build/normalize blocks, split
     sets, and generate schema. Supports a single-block mode for testing.
@@ -100,7 +100,8 @@ def prepare_dataset(
         assert block_fpath, 'No block file path provided'
         block = blockbuilder.build_one_block(cfg, logger)
         block.save(block_fpath)
-        return schema.build_schema_one_block(block_fpath, block)
+        schema.build_schema_one_block(block_fpath, block)
+        return
 
     # build/normalize/split fit blocks
     blockbuilder.build_blocks('fit', cfg, logger, rebuild=rebuild_blks)
@@ -114,7 +115,6 @@ def prepare_dataset(
 
     # generate schema
     schema.build_schema_full(world_grid, prep_config.output_dirpath, cfg)
-    return None
 
 # ------------------------------private  function------------------------------
 def _parse_configs(

@@ -24,7 +24,7 @@
 # third-party imports
 import numpy
 # local imports
-import landseg.core as core
+import landseg.core.ingest_protocols as ingest_protocols
 import landseg.trainer_components.heads as heads
 
 class HeadSpecs:
@@ -55,7 +55,7 @@ class HeadSpecs:
 
 # Public API
 def build_headspecs(
-    data: core.DataSpecs,
+    data: ingest_protocols.DataSpecs,
     alpha_fn: str,
     *,
     en_beta: float | None = None
