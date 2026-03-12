@@ -32,13 +32,13 @@ Public APIs:
 # standard imports
 import os
 # local imports
-import landseg.prep_raster as prep_raster
-import landseg.prep_raster.splitter as splitter
+import landseg.ingest_dataset as dataset
+import landseg.ingest_dataset.splitter as splitter
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def split_blocks(
-    process_config: prep_raster.ProcessConfig,
+    process_config: dataset.ProcessConfig,
     logger: utils.Logger,
     *,
     rebuild: bool = False

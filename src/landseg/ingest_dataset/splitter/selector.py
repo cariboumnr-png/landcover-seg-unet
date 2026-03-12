@@ -31,7 +31,7 @@ Public APIs:
 # standard imports
 import math
 # local imports
-import landseg.prep_raster.splitter as splitter
+import landseg.ingest_dataset.splitter as splitter
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------

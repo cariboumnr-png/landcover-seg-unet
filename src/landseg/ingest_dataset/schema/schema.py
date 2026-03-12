@@ -33,15 +33,15 @@ Public APIs:
 import os
 # local imports
 import landseg.core as core
-import landseg.prep_raster as prep_raster
-import landseg.prep_raster.blockbuilder as blockbuilder
+import landseg.ingest_dataset as dataset
+import landseg.ingest_dataset.blockbuilder as blockbuilder
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_schema_full(
     world_grid: core.GridLayoutLike,
     data_cache_root: str,
-    config: prep_raster.DataprepConfigs
+    config: dataset.DataprepConfigs
 ) -> None:
     '''
     Generate and persist the dataset schema JSON from data and grid.

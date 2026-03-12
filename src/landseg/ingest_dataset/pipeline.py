@@ -30,12 +30,12 @@ Public APIs:
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.prep_raster as prep_raster
-import landseg.prep_raster.blockbuilder as blockbuilder
-import landseg.prep_raster.mapper as mapper
-import landseg.prep_raster.normalizer as normalizer
-import landseg.prep_raster.schema as schema
-import landseg.prep_raster.splitter as splitter
+import landseg.ingest_dataset as dataset
+import landseg.ingest_dataset.blockbuilder as blockbuilder
+import landseg.ingest_dataset.mapper as mapper
+import landseg.ingest_dataset.normalizer as normalizer
+import landseg.ingest_dataset.schema as schema
+import landseg.ingest_dataset.splitter as splitter
 import landseg.prep_grid as prep_grid
 import landseg.utils as utils
 
@@ -121,10 +121,10 @@ def prepare_dataset(
 def _parse_configs(
     input_config: configs.InputDataCfg,
     prep_config: configs.PrepDataCfg,
-) -> prep_raster.DataprepConfigs:
+) -> dataset.DataprepConfigs:
     '''Parse and consolidate input configs into a typed config.'''
 
-    return_cfg: prep_raster.DataprepConfigs = {
+    return_cfg: dataset.DataprepConfigs = {
         # input - raw data paths
         'fit_input_img': input_config.filepaths.fit_image,
         'fit_input_lbl': input_config.filepaths.fit_label,

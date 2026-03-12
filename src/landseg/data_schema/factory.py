@@ -35,7 +35,7 @@ import os
 import landseg.configs as configs
 import landseg.core as core
 import landseg.data_schema as data_schema
-import landseg.prep_raster as prep_raster
+import landseg.ingest_dataset as dataset
 import landseg.ingest_domain as domain
 import landseg.prep_grid as prep_grid
 import landseg.utils as utils
@@ -71,7 +71,7 @@ def load_data(
     # if single block mode
     if single_block_mode:
         # build a minimul schema dict from a single block
-        blk_schema = prep_raster.prepare_dataset(
+        blk_schema = dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -105,7 +105,7 @@ def load_data(
     # prompt data blocks rebuild
     if status == 1:
         logger.log('WARNING', 'Data schema check failed, rebuild data blocks')
-        prep_raster.prepare_dataset(
+        dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
@@ -114,7 +114,7 @@ def load_data(
     # prompt data blocks fresh build (all steps will be redone)
     elif status == 2:
         logger.log('WARNING', 'Data schema not found, build data blocks')
-        prep_raster.prepare_dataset(
+        dataset.prepare_dataset(
             world_grid,
             inputs.data,
             prep.data,
