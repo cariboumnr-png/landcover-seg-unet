@@ -10,7 +10,7 @@ We intend to support multiple grids on the same rasters. Raw blocks should there
 ## Decision
 We adopt a **three‑module pipeline**:
 
-## Module — catalogue
+## Module — `catalogue`
 
 **Purpose:** produce immutable raw data blocks.
 
@@ -37,7 +37,7 @@ Additional outputs:
 
 ---
 
-## Module — split
+## Module — `split`
 
 **Purpose:** consume raw catalogue and produce dataset splits.
 
@@ -59,7 +59,7 @@ Additional outputs:
 
 ---
 
-## Module — extract
+## Module — `standardize`
 
 **Purpose:** generate model-ready data tailored to the chosen split, including normalization.
 
@@ -109,10 +109,8 @@ Build the **final schema** based solely on these extracted `.npz` files.
 ## Work Plan
 - Refactor existing blockbuilder into `catalogue`.
 - Implement `split` for all scoring/splitting logic.
-- Add `extract` for normalization + final dataset emission.
+- Add `standardize` for normalization + final dataset emission.
 - Update pipeline naming, ordering, and documentation.
 
 ## Note
-- Module names subject to change; ideally the names are alphabetically matching
-their module's repective location in the pipeline.
-- To avoid bloating at root, these modules are to be sub-modules under `landseg.ingest_dataset` and accessed by `landseg.ingenst_dataset.pipeline.py`.
+- To avoid bloating at root, these modules are to be sub-modules under `landseg.ingest_dataset/` and accessed by `landseg.ingenst_dataset/pipeline.py`.
