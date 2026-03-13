@@ -1,17 +1,20 @@
 ## Current workflow
 ```
-[configs/]
-└─> grid/builder.py                    (1 World Grid)
-    ├─> domain/mapper.py                   (2 DK → grid, optional)
-    └─> dataprep/pipeline.py               (3 Fit/Test → grid)
-        └─> dataprep/schema.py                 (4 Data Scheme)
-            ├─> models/factory.py                  (5.1 Model)
-            ├─> dataset/builder.py                 (5.2 Dataloaders)
-            ├─> training/heads                     (5.3 Data-influenced)
-            ├─> training/loss                      (5.4 Head-specified)
-            ├─. training/metrics                   (5.5 Head-specified)
-            └─> training/optim|callback|...        (5.6 Other)
-                └─> training/factory.py → Trainer      (6 Trainer 🗸)
-                    └─> controller/builder.py + phases     (7 Controller 🗸)
-                        └─> cli/main.py                    (8 Start ➝)
-```
+[grid_generator/generator]                  (1 World Grid)
+        |
+        +--> [ingest_domain/mapper]         (2 Domain → Grid, optional)
+        |
+        +--> [ingest_dataset/pipeline]      (3 Imagery/Labels → Blocks)
+                |
+                +--> [ingest_specs/factory] (4 Build Data Specs)
+                        |
+                        +--> [models/factory]            (5.1 Model Build)
+                        +--> [trainer_components/*]      (5.2 Heads/Loss/Optim)
+                        |        (dataloaders, metrics, callbacks, ...)
+                        |
+                        +--> [trainer_engine/engine]     (6 Trainer Engine)
+                                |
+                                +--> [trainer_runner/*]  (7 Phases/Runner)
+                                        |
+                                        +--> [cli/main]  (8 Run Profile)
+```                                        

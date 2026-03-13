@@ -1,17 +1,20 @@
 ## Flux de travail actuel
 ```
-[configs/]
-└─> grid/builder.py                    (1 Grille mondiale)
-    ├─> domain/mapper.py               (2 DK → grille, optionnel)
-    └─> dataprep/pipeline.py           (3 Fit/Test → grille)
-        └─> dataprep/schema.py         (4 Schéma de données)
-            ├─> models/factory.py      (5.1 Modèle)
-            ├─> dataset/builder.py     (5.2 Chargeurs de données)
-            ├─> training/heads         (5.3 Influencé par les données)
-            ├─> training/loss          (5.4 Spécifié par la tête)
-            ├─> training/metrics       (5.5 Spécifié par la tête)
-            └─> training/optim|callback|... (5.6 Autres)
-                └─> training/factory.py → Trainer      (6 Entraîneur 🗸)
-                    └─> controller/builder.py + phases (7 Contrôleur 🗸)
-                        └─> cli/main.py                (8 Démarrage ➝)
+[grid_generator/generator]                  (1 Grille globale)
+        |
+        +--> [ingest_domain/mapper]         (2 Domaine → Grille, optionnel)
+        |
+        +--> [ingest_dataset/pipeline]      (3 Imagerie/Labels → Blocs)
+                |
+                +--> [ingest_specs/factory] (4 Génération des specs)
+                        |
+                        +--> [models/factory]            (5.1 Modèle)
+                        +--> [trainer_components/*]      (5.2 Têtes/Perte/Optim)
+                        |        (dataloaders, métriques, callbacks, ...)
+                        |
+                        +--> [trainer_engine/engine]     (6 Moteur d’entraînement)
+                                |
+                                +--> [trainer_runner/*]  (7 Phases/Runner)
+                                        |
+                                        +--> [cli/main]  (8 Exécution)
 ```
