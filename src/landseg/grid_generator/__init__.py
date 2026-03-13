@@ -44,14 +44,14 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import prep_world_grid
+    from .generator import prep_world_grid
     from .io import load_grid, save_grid
     from .layout import GridLayout, GridLayoutPayload, GridSpec
 
 def __getattr__(name: str):
 
     if name in ['prep_world_grid']:
-        return getattr(importlib.import_module('.builder', __package__), name)
+        return getattr(importlib.import_module('.generator', __package__), name)
     if name in ['load_grid', 'save_grid']:
         return getattr(importlib.import_module('.io', __package__), name)
     if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:

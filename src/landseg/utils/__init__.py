@@ -34,7 +34,6 @@ from .funcs import(
 )
 from .logger import Logger
 from .multip import ParallelExecutor
-from .pca import pca_transform
 
 __all__ = [
     # classes
@@ -48,7 +47,6 @@ __all__ = [
     'load_json',
     'load_pickle',
     'open_rasters',
-    'pca_transform',
     'write_json',
     'write_pickle',
     # types
