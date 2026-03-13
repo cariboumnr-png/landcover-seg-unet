@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.dataset.schema`.
+Top-level namespace for `landseg.ingest_dataset.schema`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

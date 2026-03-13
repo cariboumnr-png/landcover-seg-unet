@@ -19,7 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Simple public namespace for models.backbones.blocks.'''
+'''
+Top-level namespace for `landseg.models.backbones.blocks`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
 from .conv import DoubleConv, Downsample, Upsample
 

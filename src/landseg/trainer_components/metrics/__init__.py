@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.training.metrics`.
+Top-level namespace for `landseg.trainer_components.metrics`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

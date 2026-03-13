@@ -19,7 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Simple top-level namesapce for `landseg.utils`.'''
+'''
+Top-level namespace for `landseg.utils`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
 from .contxt import open_rasters
 from .funcs import(

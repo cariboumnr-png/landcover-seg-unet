@@ -19,3 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''
+Top-level namespace for `landseg`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''

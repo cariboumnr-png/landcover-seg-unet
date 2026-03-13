@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for controller.
+Top-level namespace for `landseg.trainer_runner`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

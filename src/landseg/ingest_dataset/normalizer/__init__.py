@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.dataset.normalizer`.
+Top-level namespace for `landseg.ingest_dataset.normalizer`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

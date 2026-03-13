@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.training.heads`.
+Top-level namespace for `landseg.trainer_components.heads`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

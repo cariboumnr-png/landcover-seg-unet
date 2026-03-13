@@ -34,10 +34,10 @@ import os
 # local imports
 import landseg.configs as configs
 import landseg.core.ingest_protocols as ingest_protocols
+import landseg.grid_generator as grid
 import landseg.ingest_dataset as dataset
 import landseg.ingest_domain as domain
 import landseg.ingest_specs as spec
-import landseg.grid_generator as grid
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------

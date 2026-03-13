@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.training.common`.
+Top-level namespace for `landseg.core.trainer_protocols`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

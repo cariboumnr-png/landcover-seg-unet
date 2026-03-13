@@ -21,7 +21,7 @@
 
 # pylint: disable=too-many-return-statements
 '''
-Top-level namespace for training.callback.
+Top-level namespace for `landseg.trainer_components.callback`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
