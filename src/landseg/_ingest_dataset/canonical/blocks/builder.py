@@ -41,6 +41,7 @@ Notes:
 
 # standard imports
 from __future__ import annotations
+import copy
 import dataclasses
 import random
 import os
@@ -56,7 +57,8 @@ import landseg._ingest_dataset.canonical.blocks as blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
-class BuilderConfig(typing.TypedDict):
+@dataclasses.dataclass
+class BuilderConfig:
     '''
     I/O paths and configuration parameters used during block construction.
 
@@ -68,7 +70,7 @@ class BuilderConfig(typing.TypedDict):
     label_fpath: str | None     # path to input label data (.tiff)
     config_fpath: str           # path to input metadata (.json)
     catalog_root: str           # root directory to save related artifacts
-    grid_id: str          # world grid that the rasters are mapped to
+    grid_id: str                # world grid that the rasters are mapped to
     ignore_index: int           # global ignore label index
     dem_pad_px: int             # image DEM channel padding in pixels
 
@@ -126,13 +128,13 @@ class BlockBuilder:
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
 
-        root = self.config['catalog_root']
+        root = self.config.catalog_root
         # load catalog.json
         self.catalog = blocks.BlocksCatalog.from_json(f'{root}/catalog.json')
         self.logger.log('INFO', f'Read {len(self.catalog)} catalog entries')
 
         # load raster windows
-        windows_pkl = f'{root}/windows/windows_{self.config['grid_id']}.pkl'
+        windows_pkl = f'{root}/windows/windows_{self.config.grid_id}.pkl'
         try:
             self.windows = utils.load_pickle(windows_pkl)
             self.logger.log('INFO', 'Block windows loaded')
@@ -141,7 +143,7 @@ class BlockBuilder:
             raise
 
         # parse block meta dict (carried by each block)
-        meta_src = utils.load_json(self.config['config_fpath'])
+        meta_src = utils.load_json(self.config.config_fpath)
         keys = meta_src.keys() & blocks.BlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
         self.meta = typing.cast(blocks.BlockMeta, meta) # typing compliance
@@ -152,12 +154,12 @@ class BlockBuilder:
     @property
     def blks_dir(self) -> str:
         '''Directory to save `.npz` block files.'''
-        return f'{self.config['catalog_root']}/blocks'
+        return f'{self.config.catalog_root}/blocks'
 
     @property
     def has_label(self) -> bool:
         '''If current pipeline is supplied with a label raster.'''
-        label_fpath = self.config['label_fpath']
+        label_fpath = self.config.label_fpath
         return bool(label_fpath) and os.path.exists(label_fpath)
 
     def build_single_block(
@@ -322,12 +324,13 @@ class BlockBuilder:
         # prep block creation jobs
         jobs = []
         for c in self.coords_todo:
+            meta = copy.deepcopy(self.meta)
             co_contxt = self._get_context(c)
             save_args = {
                 'save': True,
                 'save_fpath': f'{self.blks_dir}/{_xy_name(c)}.npz'
             }
-            jobs.append((_build_a_blk, (self.meta, co_contxt,), save_args))
+            jobs.append((_build_a_blk, (meta, co_contxt,), save_args))
 
         # parallel processing through all raster windows
         utils.ParallelExecutor().run(jobs)
@@ -355,9 +358,9 @@ class BlockBuilder:
 
         self.logger.log('INFO', 'Creating/updating catalog.json...')
         # get hash values from input rasters
-        img_hash = utils.hash_artifacts(self.config['image_fpath'], False)
-        if self.config['label_fpath']:
-            lbl_hash = utils.hash_artifacts(self.config['label_fpath'], False)
+        img_hash = utils.hash_artifacts(self.config.image_fpath, False)
+        if self.config.label_fpath:
+            lbl_hash = utils.hash_artifacts(self.config.label_fpath, False)
         else:
             lbl_hash = None
 
@@ -376,23 +379,23 @@ class BlockBuilder:
                 'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
                 'sha_256': utils.hash_artifacts(fp, False),
                 'aligned_grid': 'grid_row_256_128_col_256_128',
-                'source_image': self.config['image_fpath'],
+                'source_image': self.config.image_fpath,
                 'source_image_sha_256': img_hash,
-                'source_label': self.config['label_fpath'],
+                'source_label': self.config.label_fpath,
                 'source_label_sha_256': lbl_hash,
             }
-        self.catalog.save_json(f'{self.config['catalog_root']}/catalog.json')
+        self.catalog.save_json(f'{self.config.catalog_root}/catalog.json')
 
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''
 
         return _BlockCreationContext(
             name=_xy_name(coords),
-            ignore_index=self.config['ignore_index'],
-            dem_pad_px=self.config['dem_pad_px'],
-            img_path=self.config['image_fpath'],
+            ignore_index=self.config.ignore_index,
+            dem_pad_px=self.config.dem_pad_px,
+            img_path=self.config.image_fpath,
             img_window=self.windows.image[coords],
-            lbl_path=self.config['label_fpath'],
+            lbl_path=self.config.label_fpath,
             lbl_window=self.windows.label[coords] if self.has_label else None
         )
 

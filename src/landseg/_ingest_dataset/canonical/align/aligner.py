@@ -32,7 +32,6 @@ Public APIs:
 import copy
 import dataclasses
 import os
-import typing
 # third-party imports
 import rasterio
 # local imports
@@ -50,8 +49,8 @@ class DataWindows:
     image: alias.RasterWindowDict   # indexed read windows
     label: alias.RasterWindowDict   # indexed read windows (can be empty)
 
-# ---------------------------------Public Type---------------------------------
-class AlignmentConfig(typing.TypedDict):
+@dataclasses.dataclass
+class AlignmentConfig:
     '''Typed configuration for `align_raster(...)`.'''
     input_img_fpath: str
     input_lbl_fpath: str
@@ -79,9 +78,9 @@ def align_rasters(
     '''
 
     # paths to artifacts from fit input
-    image = config['input_img_fpath']
-    label = config['input_lbl_fpath']
-    windows_dpath = config['output_windows_dpath']
+    image = config.input_img_fpath
+    label = config.input_lbl_fpath
+    windows_dpath = config.output_windows_dpath
     os.makedirs(windows_dpath, exist_ok=True)
     output_fpath = os.path.join(windows_dpath, f'windows_{world_grid.gid}.pkl')
     # map fit data

@@ -47,30 +47,30 @@ def build_catalogue_test(
     # align rasters to world grids
     for grid in world_grids:
         # fit rasters
-        fit_rasters_config: canonical.AlignmentConfig = {
-            'input_img_fpath': config.inputs.data.filepaths.fit_image,
-            'input_lbl_fpath': config.inputs.data.filepaths.fit_label,
-            'output_windows_dpath': f'{root}/fit/windows',
-        }
+        fit_rasters_config = canonical.AlignmentConfig(
+            input_img_fpath=config.inputs.data.filepaths.fit_image,
+            input_lbl_fpath=config.inputs.data.filepaths.fit_label,
+            output_windows_dpath=f'{root}/fit/windows',
+        )
         canonical.align_rasters(grid, fit_rasters_config, logger)
         # test rasters
-        test_rasters_config: canonical.AlignmentConfig = {
-            'input_img_fpath': config.inputs.data.filepaths.test_image,
-            'input_lbl_fpath': config.inputs.data.filepaths.test_label,
-            'output_windows_dpath': f'{root}/test/windows',
-        }
+        test_rasters_config = canonical.AlignmentConfig(
+            input_img_fpath=config.inputs.data.filepaths.test_image,
+            input_lbl_fpath=config.inputs.data.filepaths.test_label,
+            output_windows_dpath=f'{root}/test/windows',
+        )
         canonical.align_rasters(grid, test_rasters_config, logger)
 
     # build fit blocks to selected grid
-    fit_block_build_config: canonical.BuilderConfig = {
-        'image_fpath': config.inputs.data.filepaths.fit_image,
-        'label_fpath': config.inputs.data.filepaths.fit_label,
-        'config_fpath': config.inputs.data.filepaths.config,
-        'catalog_root': f'{root}/fit/',
-        'grid_id': 'grid_row_256_128_col_256_128',
-        'dem_pad_px': 8,
-        'ignore_index': 255
-    }
+    fit_block_build_config = canonical.BuilderConfig(
+        image_fpath=config.inputs.data.filepaths.fit_image,
+        label_fpath=config.inputs.data.filepaths.fit_label,
+        config_fpath=config.inputs.data.filepaths.config,
+        catalog_root=f'{root}/fit/',
+        grid_id='grid_row_256_128_col_256_128',
+        dem_pad_px=8,
+        ignore_index=255
+    )
     block_builder = canonical.BlockBuilder(fit_block_build_config, logger)
     # one block mode (from fit blocks)
     if kwargs.get('build_a_block', False):
@@ -80,14 +80,14 @@ def build_catalogue_test(
     block_builder.build_blocks()
 
     # build test blocks (currently requires a zero-overlap tilling)
-    test_block_build_config: canonical.BuilderConfig = {
-        'image_fpath': config.inputs.data.filepaths.test_image,
-        'label_fpath': config.inputs.data.filepaths.test_label,
-        'config_fpath': config.inputs.data.filepaths.config,
-        'catalog_root': f'{root}/test/',
-        'grid_id': 'grid_row_256_0_col_256_0',
-        'dem_pad_px': 8,
-        'ignore_index': 255
-    }
+    test_block_build_config = canonical.BuilderConfig(
+        image_fpath=config.inputs.data.filepaths.test_image,
+        label_fpath=config.inputs.data.filepaths.test_label,
+        config_fpath=config.inputs.data.filepaths.config,
+        catalog_root=f'{root}/test/',
+        grid_id='grid_row_256_0_col_256_0',
+        dem_pad_px=8,
+        ignore_index=255
+    )
     block_builder = canonical.BlockBuilder(test_block_build_config, logger)
     block_builder.build_blocks()
