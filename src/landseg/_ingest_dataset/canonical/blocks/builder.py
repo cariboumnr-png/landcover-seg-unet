@@ -51,9 +51,8 @@ import zlib
 import numpy
 # local imports
 import landseg.core.alias as alias
-import landseg.ingest_catalog.align as align
-import landseg.ingest_catalog.blocks.block as block
-import landseg.ingest_catalog.blocks.catalog as catalog
+import landseg._ingest_dataset.canonical.align as align
+import landseg._ingest_dataset.canonical.blocks as blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -122,14 +121,14 @@ class BlockBuilder:
         self.logger = logger
 
         # declare class attributes
-        self.catalog: catalog.BlocksCatalog
+        self.catalog: blocks.BlocksCatalog
         self.windows: align.DataWindows
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
 
         root = self.config['catalog_root']
         # load catalog.json
-        self.catalog = catalog.BlocksCatalog.from_json(f'{root}/catalog.json')
+        self.catalog = blocks.BlocksCatalog.from_json(f'{root}/catalog.json')
         self.logger.log('INFO', f'Read {len(self.catalog)} catalog entries')
 
         # load raster windows
@@ -143,9 +142,9 @@ class BlockBuilder:
 
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config['config_fpath'])
-        keys = meta_src.keys() & block.BlockMeta.__annotations__
+        keys = meta_src.keys() & blocks.BlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
-        self.meta = typing.cast(block.BlockMeta, meta) # typing compliance
+        self.meta = typing.cast(blocks.BlockMeta, meta) # typing compliance
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
@@ -179,7 +178,7 @@ class BlockBuilder:
 
         # iterate through till a valid block if found
         c: tuple[int, int] = (0, 0)
-        blk: block.DataBlock | None = None
+        blk: blocks.DataBlock | None = None
         for c in coords:
             print('Searching for a valid raster window...', end='\r', flush=True)
             try:
@@ -264,7 +263,7 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        blks_in_catalog: dict[tuple[int, int], catalog.CatalogEntry | None] = {}
+        blks_in_catalog: dict[tuple[int, int], blocks.CatalogEntry | None] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
             name = _xy_name(c)
@@ -365,7 +364,7 @@ class BlockBuilder:
         # add to current catalog dict
         for fname in to_catalog:
             fp = f'{self.blks_dir}/{fname}'
-            meta = block.DataBlock.load(fp).meta
+            meta = blocks.DataBlock.load(fp).meta
             col, row = _name_xy(meta['block_name'])
             self.catalog[(col, row)] = {
                 'block_name': meta['block_name'],
@@ -417,7 +416,7 @@ def _check_npz(
     ok = False
     # pass if the npz file can be loaded properly
     try:
-        block.DataBlock.load(fpath)
+        blocks.DataBlock.load(fpath)
         # branch out if deep check
         if deep_check:
             blk_sha_256 = utils.hash_artifacts(fpath, write_to_record=False)
@@ -433,12 +432,12 @@ def _check_npz(
     return {coord: ok}
 
 def _build_a_blk(
-    meta: block.BlockMeta,
+    meta: blocks.BlockMeta,
     contxt: _BlockCreationContext,
     *,
     save: bool = False,
     save_fpath: str | None = None
-) -> block.DataBlock:
+) -> blocks.DataBlock:
     '''Create a block from the input rasters for the given window.'''
 
     # meta i/o
@@ -463,7 +462,7 @@ def _build_a_blk(
             meta['label_nodata'] = lbl.nodata
 
     # create and return DataBlock instance
-    output_block = block.DataBlock.build(
+    output_block = blocks.DataBlock.build(
         img_arr,
         lbl_arr,
         padded_dem,

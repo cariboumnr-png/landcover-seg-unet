@@ -38,7 +38,7 @@ import rasterio
 # local imports
 import landseg.core as core
 import landseg.core.alias as alias
-import landseg.ingest_catalog.align as align
+import landseg._ingest_dataset.canonical.align as align
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

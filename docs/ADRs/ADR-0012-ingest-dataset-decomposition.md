@@ -9,6 +9,7 @@ We intend to support multiple grids on the same rasters. Raw blocks should there
 
 ## Decision
 We adopt a **four‑module pipeline**:
+> 2026-03-18: we are going to wrap `align` and `blocks` to `canonical`; `split` and `standardize` to `materialized`
 
 ## Module — `align`
 
@@ -24,7 +25,7 @@ a `DataWindows` instance
 
 ---
 
-## Module — `catalogue`
+## Module — `blocks`
 
 **Purpose:** produce immutable raw data blocks.
 
@@ -146,6 +147,10 @@ Build the **final schema** based solely on these extracted `.npz` files.
     └── test
         ├── grid_row_256_col_256
         |   ├── blocks/
+        |   ├── windows/
+        |   |   ├── windows_<gid>.pkl
+        |   |   ├── windows_<gid>.pkl
+        |   |   ...
         |   ├── metadata.json
         |   ├── catalog.json
         |   ...

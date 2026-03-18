@@ -18,6 +18,7 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
 Top-level namespace for `landseg._ingest_dataset`.
 
@@ -31,39 +32,18 @@ import typing
 
 __all__ = [
     # classes
-    'DataBlock',
     # functions
-    'catalogue_pipeline_test',
+    'build_catalogue_test',
     # typing
-    'BlockBuildingConfig',
-    'DataprepConfigs',
-    'InputConfig',
-    'IOConfig',
-    'OutputConfig',
-    'ProcessConfig',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .blocks import DataBlock
-    from .._ingest_dataset.config import (
-        BlockBuildingConfig,
-        DataprepConfigs,
-        InputConfig,
-        IOConfig,
-        OutputConfig,
-        ProcessConfig,
-    )
-    from .pipeline import catalogue_pipeline_test
+    from .canonical import build_catalogue_test
 
 def __getattr__(name: str):
 
-    if name in ['DataBlock']:
-        return getattr(importlib.import_module('.blocks', __package__), name)
-    if name in ['BlockBuildingConfig', 'DataprepConfigs', 'InputConfig',
-                'IOConfig', 'OutputConfig', 'ProcessConfig',]:
-        return getattr(importlib.import_module('.config', __package__), name)
-    if name in ['catalogue_pipeline_test']:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in ['build_catalogue_test']:
+        return getattr(importlib.import_module('.canonical', __package__), name)
 
     raise AttributeError(name)

@@ -20,46 +20,40 @@
 # =========================================================================== #
 
 '''
-Dev Test Ground
+Top-level namespace for `landseg._ingest_dataset`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# local imports
-import landseg.configs as configs
-import landseg.grid_generator as grid
-import landseg._ingest_dataset as dataset
-import landseg.utils as utils
+from __future__ import annotations
+import importlib
+import typing
 
-def dev_test(config: configs.RootConfig):
-    '''Test..'''
+__all__ = [
+    # classes
+    'AlignmentConfig',
+    'BlockBuilder',
+    # functions
+    'align_rasters',
+    'build_catalogue_test',
+    # typing
+    'BuilderConfig',
+]
 
-    logger = utils.Logger('test', './test.log')
+# for static check
+if typing.TYPE_CHECKING:
+    from .align import AlignmentConfig, align_rasters
+    from .blocks import BlockBuilder, BuilderConfig
+    from .pipeline import build_catalogue_test
 
-    # load/create world grid
-    config.prep.grid.id = 'grid_row_256_128_col_256_128'
-    config.prep.grid.tile_overlap.row = 128
-    config.prep.grid.tile_overlap.col = 128
-    g1 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
-    config.prep.grid.id = 'grid_row_256_0_col_256_0'
-    config.prep.grid.tile_overlap.row = 0
-    config.prep.grid.tile_overlap.col = 0
-    g2 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
+def __getattr__(name: str):
 
-    dataset.build_catalogue_test(
-        [g1, g2],
-        config,
-        logger,
-        build_a_block=False
-    )
+    if name in ['AlignmentConfig', 'align_rasters']:
+        return getattr(importlib.import_module('.align', __package__), name)
+    if name in ['BlockBuilder', 'BuilderConfig',]:
+        return getattr(importlib.import_module('.blocks', __package__), name)
+    if name in ['build_catalogue_test']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
-SAMPLE_CATALOG_EACH_BLOCK = {
-    "block_name": "row_000001_col_000001",
-    "file_path": "../blocks/row_000001_col_000001.npz",
-    "coordinates": [1, 1],
-    "valid_pixels": 0.0,
-    "creation_time": "2000-01-01-00:00:00",
-    "sha_256": "...",
-    "source_image": "./sample_image.tif",
-    "source_image_sha_256": "...",
-    "source_label": "./sample_label.tif",
-    "source_label_sha_256": "...",
-}
+    raise AttributeError(name)
