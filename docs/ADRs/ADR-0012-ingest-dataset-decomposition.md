@@ -8,7 +8,21 @@ In the current pipeline `landseg.ingest_dataset`, normalization is applied befor
 We intend to support multiple grids on the same rasters. Raw blocks should therefore be immutable, reusable across experiments, and independent of downstream normalization strategies.
 
 ## Decision
-We adopt a **three‑module pipeline**:
+We adopt a **four‑module pipeline**:
+
+## Module — `align`
+
+**Purpose:** align input image/label rasters to the grid.
+
+### Outputs
+
+a `DataWindows` instance
+
+### Note
+
+* simple migration of the old `ingest_dataset.mapper` module.
+
+---
 
 ## Module — `catalogue`
 
@@ -114,3 +128,26 @@ Build the **final schema** based solely on these extracted `.npz` files.
 
 ## Note
 - To avoid bloating at root, these modules are to be sub-modules under `landseg.ingest_dataset/` and accessed by `landseg.ingenst_dataset/pipeline.py`.
+- Expected artifacts output structure:
+```
+./experiment/artifacts/
+├── <dataset_name>/
+    ├── fit/
+    |   ├── grid_row_256_col_256
+    |   |   ├── blocks/
+    |   |   ├── windows/
+    |   |   |   ├── windows_<gid>.pkl
+    |   |   |   ├── windows_<gid>.pkl
+    |   |   |   ...
+    |   |   ├── metadata.json
+    |   |   ├── catalog.json
+    |   |   ...
+    |   └── grid_row_512_col_512
+    └── test
+        ├── grid_row_256_col_256
+        |   ├── blocks/
+        |   ├── metadata.json
+        |   ├── catalog.json
+        |   ...
+        └── grid_row_512_col_512
+```

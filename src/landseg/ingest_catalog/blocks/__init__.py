@@ -19,8 +19,40 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 '''
-Top-level namespace for `landseg._ingest_dataset`.
+Top-level namespace for `landseg._ingest_dataset.catelogue`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    'BlockBuilder',
+    'DataBlock',
+    # functions
+    # typing
+    'BlocksCatalog',
+    'BlockMeta',
+    'BuilderConfig',
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .block import BlockMeta, DataBlock
+    from .builder import BlockBuilder, BuilderConfig
+    from .catalog import BlocksCatalog
+
+def __getattr__(name: str):
+
+    if name in ['BlockMeta', 'DataBlock']:
+        return getattr(importlib.import_module('.block', __package__), name)
+    if name in ['BlockBuilder', 'BuilderConfig']:
+        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in ['BlocksCatalog']:
+        return getattr(importlib.import_module('.catalog', __package__), name)
+
+    raise AttributeError(name)

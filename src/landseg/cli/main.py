@@ -41,7 +41,8 @@ import landseg.utils as utils
 
 command_registry = {
     'default': cli.train_end_to_end,
-    'overfit_test': cli.overfit_test
+    'overfit_test': cli.overfit_test,
+    'dev_test': cli.dev_test
 }
 
 # main process

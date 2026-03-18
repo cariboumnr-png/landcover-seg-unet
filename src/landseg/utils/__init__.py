@@ -29,6 +29,7 @@ order simple and circular-free.
 from .contxt import open_rasters
 from .funcs import(
     get_dir_size,
+    get_file_ctime,
     get_timestamp,
     hash_artifacts,
     hash_payload,
@@ -46,6 +47,7 @@ __all__ = [
     'ParallelExecutor',
     # functions
     'get_dir_size',
+    'get_file_ctime',
     'get_timestamp',
     'hash_artifacts',
     'hash_payload',

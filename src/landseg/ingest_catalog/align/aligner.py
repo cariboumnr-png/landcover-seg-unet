@@ -38,32 +38,29 @@ import rasterio
 # local imports
 import landseg.core as core
 import landseg.core.alias as alias
-import landseg._ingest_dataset.align as align
+import landseg.ingest_catalog.align as align
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DataWindows:
     '''Container for input read windows and expected window shape.'''
-    image: alias.RasterWindowDict   # indexed read windows
-    label: alias.RasterWindowDict   # indexed read windows can be empty
     grid_id: str                    # world grid identifier
     tile_shape: tuple[int, int]     # expected window shape (W*H) in px
+    image: alias.RasterWindowDict   # indexed read windows
+    label: alias.RasterWindowDict   # indexed read windows (can be empty)
 
-# --------------------------------private  type--------------------------------
-class MappingConfig(typing.TypedDict):
-    '''Typed configuration for `map_raster(...)`.'''
-    fit_input_img_fpath: str
-    fit_input_lbl_fpath: str
-    fit_windows_dpath: str
-    test_input_img_fpath: str | None
-    test_input_lbl_fpath: str | None
-    test_windows_dpath: str
+# ---------------------------------Public Type---------------------------------
+class AlignmentConfig(typing.TypedDict):
+    '''Typed configuration for `align_raster(...)`.'''
+    input_img_fpath: str
+    input_lbl_fpath: str
+    output_windows_dpath: str
 
 # -------------------------------Public Function-------------------------------
-def map_rasters(
+def align_rasters(
     world_grid: core.GridLayoutLike,
-    config: MappingConfig,
+    config: AlignmentConfig,
     logger: utils.Logger,
     *,
     remap: bool = False
@@ -82,24 +79,14 @@ def map_rasters(
     '''
 
     # paths to artifacts from fit input
-    fit_img = config['fit_input_img_fpath']
-    fit_lbl = config['fit_input_lbl_fpath']
-    fit_windows_dpath = config['fit_windows_dpath']
-    os.makedirs(fit_windows_dpath, exist_ok=True)
-    fit_windows = os.path.join(fit_windows_dpath, f'windows_{world_grid.gid}.pkl')
+    image = config['input_img_fpath']
+    label = config['input_lbl_fpath']
+    windows_dpath = config['output_windows_dpath']
+    os.makedirs(windows_dpath, exist_ok=True)
+    output_fpath = os.path.join(windows_dpath, f'windows_{world_grid.gid}.pkl')
     # map fit data
-    if not os.path.exists(fit_windows) or remap:
-        _map(world_grid, fit_img, fit_lbl, fit_windows, logger)
-
-    # paths to artifacts from test input if provided
-    test_img = config['test_input_img_fpath']
-    test_lbl = config['test_input_lbl_fpath']
-    test_windows_dpath = config['test_windows_dpath']
-    os.makedirs(test_windows_dpath, exist_ok=True)
-    test_windows = os.path.join(test_windows_dpath, f'windows_{world_grid.gid}.pkl')
-    # map test data if provided
-    if test_img and (not os.path.exists(test_windows) or remap):
-        _map(world_grid, test_img, test_lbl, test_windows, logger)
+    if not os.path.exists(output_fpath) or remap:
+        _map(world_grid, image, label, output_fpath, logger)
 
 def _map(
     world_grid: core.GridLayoutLike,

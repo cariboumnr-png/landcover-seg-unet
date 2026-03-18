@@ -19,8 +19,51 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 '''
-Top-level namespace for `landseg._ingest_dataset.catelogue`.
+Top-level namespace for `landseg._ingest_dataset`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    'DataBlock',
+    # functions
+    'catalogue_pipeline_test',
+    # typing
+    'BlockBuildingConfig',
+    'DataprepConfigs',
+    'InputConfig',
+    'IOConfig',
+    'OutputConfig',
+    'ProcessConfig',
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .blocks import DataBlock
+    from .._ingest_dataset.config import (
+        BlockBuildingConfig,
+        DataprepConfigs,
+        InputConfig,
+        IOConfig,
+        OutputConfig,
+        ProcessConfig,
+    )
+    from .pipeline import catalogue_pipeline_test
+
+def __getattr__(name: str):
+
+    if name in ['DataBlock']:
+        return getattr(importlib.import_module('.blocks', __package__), name)
+    if name in ['BlockBuildingConfig', 'DataprepConfigs', 'InputConfig',
+                'IOConfig', 'OutputConfig', 'ProcessConfig',]:
+        return getattr(importlib.import_module('.config', __package__), name)
+    if name in ['catalogue_pipeline_test']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
+
+    raise AttributeError(name)

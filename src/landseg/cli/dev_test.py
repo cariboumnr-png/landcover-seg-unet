@@ -20,38 +20,46 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Dev Test Ground
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.configs as configs
+import landseg.grid_generator as grid
+import landseg.ingest_catalog as catalogue
+import landseg.utils as utils
 
-__all__ = [
-    # classes
-    # functions
-    'dev_test',
-    'train_end_to_end',
-    'overfit_test',
-    # typing
-]
+def dev_test(config: configs.RootConfig):
+    '''Test..'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dev_test import dev_test
-    from .end_to_end import train_end_to_end
-    from .overfit import overfit_test
+    logger = utils.Logger('test', './test.log')
 
-def __getattr__(name: str):
+    # load/create world grid
+    config.prep.grid.id = 'grid_row_256_128_col_256_128'
+    config.prep.grid.tile_overlap.row = 128
+    config.prep.grid.tile_overlap.col = 128
+    g1 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
+    config.prep.grid.id = 'grid_row_256_0_col_256_0'
+    config.prep.grid.tile_overlap.row = 0
+    config.prep.grid.tile_overlap.col = 0
+    g2 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
 
-    if name in ['dev_test']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
+    catalogue.catalogue_pipeline_test(
+        [g1, g2],
+        config,
+        logger,
+        build_a_block=False
+    )
 
-    raise AttributeError(name)
+SAMPLE_CATALOG_EACH_BLOCK = {
+    "block_name": "row_000001_col_000001",
+    "file_path": "../blocks/row_000001_col_000001.npz",
+    "coordinates": [1, 1],
+    "valid_pixels": 0.0,
+    "creation_time": "2000-01-01-00:00:00",
+    "sha_256": "...",
+    "source_image": "./sample_image.tif",
+    "source_image_sha_256": "...",
+    "source_label": "./sample_label.tif",
+    "source_label_sha_256": "...",
+}
