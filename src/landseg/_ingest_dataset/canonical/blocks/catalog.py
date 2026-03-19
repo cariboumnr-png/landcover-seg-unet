@@ -26,6 +26,7 @@ doc
 # standard imports
 from __future__ import annotations
 import collections.abc
+import json
 import typing
 # local imports
 import landseg.utils as utils
@@ -38,6 +39,7 @@ class CatalogEntry(typing.TypedDict):
     loc_x_px: int
     loc_y_px: int
     valid_px: float
+    class_count: list[int]
     schema_version: str
     creation_time: str
     sha_256: str
@@ -74,11 +76,26 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         return {k: v['file_path'] for k, v in self._data.items()}
 
     def save_json(self, fpath: str) -> None:
-        '''Save the catalog as a json with proper key type handling.'''
+        '''Save the catalog as a json with custom cosmetics.'''
 
+        # index entries and sort
         payload = {_xy_name(k): v for k, v in self._data.items()}
         sorted_payload = dict(sorted(payload.items()))
-        utils.write_json(fpath, sorted_payload)
+        # manual json writing
+        with open(fpath, 'w', encoding='UTF-8') as file:
+            file.write('{\n')
+            for i, (key, value) in enumerate(sorted_payload.items()):
+                blk_txt = json.dumps(value)
+                blk_txt = blk_txt.replace('{', '{\n\t\t')
+                blk_txt = blk_txt.replace(', "', ',\n\t\t"')
+                blk_txt = blk_txt.replace('}', '\n\t}')
+                file.write(f'\t"{key}": {blk_txt}')
+                if i == len(sorted_payload) - 1:
+                    file.write('\n')
+                else:
+                    file.write(',\n')
+            file.write('}\n')
+        # hash
         utils.hash_artifacts(fpath)
 
     @classmethod

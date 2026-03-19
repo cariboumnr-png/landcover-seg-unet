@@ -375,6 +375,7 @@ class BlockBuilder:
                 'loc_x_px': col,
                 'loc_y_px': row,
                 'valid_px': meta['valid_ratios']['layer1'],
+                'class_count': meta['label_count']['layer1'],
                 'schema_version': '1.0.0',
                 'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
                 'sha_256': utils.hash_artifacts(fp, False),
