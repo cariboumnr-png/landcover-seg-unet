@@ -465,14 +465,7 @@ def _build_a_blk(
             meta['label_nodata'] = lbl.nodata
 
     # create and return DataBlock instance
-    output_block = blocks.DataBlock.build(
-        img_arr,
-        lbl_arr,
-        padded_dem,
-        meta,
-        ignore_index=contxt.ignore_index,
-        dem_pad_px=contxt.dem_pad_px
-    )
+    output_block = blocks.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
     # by default save to provided target path
     if save:
         assert save_fpath

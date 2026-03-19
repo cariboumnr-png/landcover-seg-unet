@@ -67,8 +67,9 @@ class BlockMeta(typing.TypedDict):
     '''Defines the shape of a block meta dictionary.'''
     # general metadata
     block_name: str
-    valid_ratios: dict[str, float]
     has_label: bool
+    ignore_index: int
+    valid_ratios: dict[str, float]
     # label metadata
     label_nodata: int
     label_num_cls: int
@@ -78,21 +79,9 @@ class BlockMeta(typing.TypedDict):
     label_entropy: dict[str, float]
     # image metadata
     image_nodata: float
+    image_dem_pad: int
     image_band_map: dict[str, int]
-    image_stats: _ImageStats
-
-# --------------------------------private  type--------------------------------
-class _ImageStats(typing.TypedDict):
-    '''Block-level image stats used in Welford's Online Algorithm.'''
-    total_count: int
-    current_mean: float
-    accum_m2: float
-    std: float
-
-class _BlockConfig(typing.TypedDict):
-    '''Typed block config.'''
-    ignore_index: int
-    dem_pad_px: int
+    image_stats: dict[str, dict[str, int | float]]
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -103,28 +92,6 @@ class _BlockArrays:
     image: numpy.ndarray = dataclasses.field(init=False)
     image_dem_padded: numpy.ndarray = dataclasses.field(init=False)
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
-
-    def __str__(self) -> str:
-        lines = ['Block summary\n']
-        lines.append('-' * 70)
-        # iterate attributes from the dataclass
-        for field in dataclasses.fields(self):
-            value = getattr(self, field.name)
-            if isinstance(value, numpy.ndarray):
-                lines.append(f'{field.name}: ')
-                lines.append(f'Array shape: {value.shape}')
-                lines.append(f'Array dtype: {value.dtype}')
-                lines.append('-' * 70)
-            elif isinstance(value, dict):
-                lines.append(f'{field.name}: ')
-                lines.append(f'{json.dumps(value, indent=4)}')
-                lines.append('-' * 70)
-            else:
-                lines.append(f'{field.name}: ')
-                lines.append(f'{value}')
-                lines.append('-' * 70)
-        # return lines
-        return '\n'.join(lines)
 
     def validate(self):
         '''Validate if all attr has been populated.'''
@@ -151,7 +118,7 @@ class DataBlock:
       - `normalize_image()` for post hoc iamge normalization
     '''
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         '''
         Initialize an empty data block with placeholder data and meta.
 
@@ -161,16 +128,12 @@ class DataBlock:
 
         # init with empty block data
         self.data = _BlockArrays()
-        # default block config
-        self.config: _BlockConfig = {
-            'ignore_index': 255,
-            'dem_pad_px': 8,
-        }
         # meta dict with default foo values
         self.meta: BlockMeta = {
             'block_name': '',
-            'valid_ratios': {},
             'has_label': True,
+            'ignore_index': kwargs.get('ignore_index', 255),
+            'valid_ratios': {},
             'label_nodata': 0,
             'label_num_cls': 0,
             'label_ignore_cls': [],
@@ -178,13 +141,9 @@ class DataBlock:
             'label_count': {},
             'label_entropy': {},
             'image_nodata': numpy.nan,
+            'image_dem_pad': kwargs.get('dem_pad', 8),
             'image_band_map': {},
-            'image_stats': {
-                'total_count': 0,
-                'current_mean': 0.0,
-                'accum_m2': 0.0,
-                'std': 0.0
-            }
+            'image_stats': {}
         }
 
     # -----------------------------public methods-----------------------------
@@ -195,7 +154,6 @@ class DataBlock:
         lbl_arr: numpy.ndarray | None,
         padded_dem: numpy.ndarray,
         meta: BlockMeta,
-        **kwargs
     ) -> 'DataBlock':
         '''
         Create a data block from in-memory raster arrays.
@@ -207,10 +165,6 @@ class DataBlock:
             padded_dem: DEM array padded on all sides for neighborhood
                 calculations.
             meta: Block-level metadata and configuration.
-            kwargs:
-                - ignore_index (int): ignore label index (default: 255).
-                - dem_pad_px (int): number of pixels to padded around
-                    DEM image channel (default: 8).
 
         Returns:
             DataBlock: The populated block instance (returned for
@@ -221,8 +175,6 @@ class DataBlock:
         '''
 
         self = cls()
-        # update config from kwargs
-        self.config.update(**kwargs)
         # update meta with input
         self.meta.update(meta)
         # assign image
@@ -270,21 +222,18 @@ class DataBlock:
         '''
 
         self = cls()
-        # load and set attributes
-        loaded = numpy.load(fpath, allow_pickle=True)
+        # load npz file
+        loaded = numpy.load(fpath)
+        # populate self.data
         for key in loaded:
-            value = loaded[key]
-            # 'meta' is a pickled dict, convert from 0-d array
-            if key == 'meta' and isinstance(value, numpy.ndarray):
-                value = value.item()
-                self.meta = value # type: ignore
+            if key == 'meta_json':
                 continue
-            # set arrays to self.data
             try:
-                setattr(self.data, key, value)
+                setattr(self.data, key, loaded[key])
             except AttributeError:
-                continue # don't anything here yet
-
+                continue
+        # populate self.meta
+        self.meta = json.loads(loaded['meta_json'].item())
         # return self to allow chained calls
         return self
 
@@ -298,11 +247,12 @@ class DataBlock:
         # sanity check
         assert fpath.endswith('.npz')
         # convert self.data dataclass to dict
-        to_save = vars(self.data)
-        # add meta dict
-        to_save.update({'meta': self.meta})
+        to_save = vars(self.data).copy()
+        # add meta dict (json dumps to compact plain text)
+        meta_json = json.dumps(self.meta, separators=(',', ':'))
+        to_save.update({'meta_json': meta_json})
         # save file - allow pickle to write meta dict
-        numpy.savez_compressed(fpath, allow_pickle=True, **to_save)
+        numpy.savez_compressed(fpath, **to_save)
 
     # -----------------------------internal method-----------------------------
     def _add_spectral_indices(self) -> None:
@@ -351,11 +301,11 @@ class DataBlock:
         tpi = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
 
         # padding
-        pad = self.config['dem_pad_px']
+        pad = self.meta['image_dem_pad']
         # sanity check on image/padded image shape
         max_h, max_w = self.data.image_dem_padded.shape
-        assert self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad), \
-        f'{self.data.image[0].shape} {max_h}, {max_w}, {pad}'
+        if not self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad):
+            raise ValueError(f'{self.data.image[0].shape} {max_h}, {max_w}, {pad}')
 
         # iterate through pixels from the original block in padded dem
         for y in range(pad, max_h - pad):
@@ -390,7 +340,7 @@ class DataBlock:
             return
 
         # get value from meta
-        ignore_index = self.config['ignore_index']
+        ignore_index = self.meta['ignore_index']
         label_nodata = self.meta['label_nodata']
         label_to_ignore = self.meta['label_ignore_cls']
         reclass_map = self.meta['label_reclass_map']
@@ -507,7 +457,7 @@ class DataBlock:
         '''Get a valid mask for the whole block.'''
 
         # get image nodata and ignore label index
-        ignore_index = self.config['ignore_index']
+        ignore_index = self.meta['ignore_index']
         img_nodata = self.meta['image_nodata']
 
         # for label data
@@ -520,8 +470,10 @@ class DataBlock:
 
         # for image data
         # locs where image all bands are valid and not nodata
-        invalid_img = numpy.isnan(self.data.image) | \
+        invalid_img = (
+            numpy.isnan(self.data.image) |
             numpy.isclose(self.data.image, img_nodata)
+        )
         valid_img = ~numpy.any(invalid_img, axis=0) # shape (256, 256)
 
         # final mask (combined)
