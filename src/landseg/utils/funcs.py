@@ -102,7 +102,8 @@ def write_json(json_fpath: str, src_dict: list | dict | typing.Mapping) -> None:
 
     # make sure parent directory exsits before writing
     dirpath = os.path.dirname(json_fpath)
-    os.makedirs(dirpath, exist_ok=True)
+    if dirpath: # skip if write to root, e.g., ./file.json
+        os.makedirs(dirpath, exist_ok=True)
     with open(json_fpath, 'w', encoding='UTF-8') as file:
         json.dump(src_dict, file, indent=4)
 
@@ -111,7 +112,8 @@ def write_pickle(pickle_fpath: str, src_obj: typing.Any) -> None:
 
     # make sure parent directory exsits before writing
     dirpath = os.path.dirname(pickle_fpath)
-    os.makedirs(dirpath, exist_ok=True)
+    if dirpath: # skip if write to root, e.g., ./file.json
+        os.makedirs(dirpath, exist_ok=True)
     with open(pickle_fpath, 'wb') as file:
         pickle.dump(src_obj, file)
 
