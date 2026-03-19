@@ -379,7 +379,7 @@ class BlockBuilder:
                 'schema_version': '1.0.0',
                 'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
                 'sha_256': utils.hash_artifacts(fp, False),
-                'aligned_grid': 'grid_row_256_128_col_256_128',
+                'aligned_grid': self.config.grid_id,
                 'source_image': self.config.image_fpath,
                 'source_image_sha_256': img_hash,
                 'source_label': self.config.label_fpath,
