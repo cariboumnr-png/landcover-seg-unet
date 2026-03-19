@@ -43,12 +43,12 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .geometry import GeometrySummary, validate_geometry
     from .aligner import DataWindows, AlignmentConfig, align_rasters
+    from .geometry import GeometrySummary, validate_geometry
 
 def __getattr__(name: str):
 
-    if name in ['DataWindows', 'MappingConfig', 'align_rasters']:
+    if name in ['DataWindows', 'AlignmentConfig', 'align_rasters']:
         return getattr(importlib.import_module('.aligner', __package__), name)
     if name in ['GeometrySummary', 'validate_geometry']:
         return getattr(importlib.import_module('.geometry', __package__), name)

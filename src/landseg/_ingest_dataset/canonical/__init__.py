@@ -34,6 +34,7 @@ __all__ = [
     # classes
     'AlignmentConfig',
     'BlockBuilder',
+    'BlocksCatalog',
     'DataBlock',
     # functions
     'align_rasters',
@@ -45,14 +46,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .align import AlignmentConfig, align_rasters
-    from .blocks import BlockBuilder, BuilderConfig, DataBlock
+    from .blocks import BlockBuilder, BlocksCatalog, BuilderConfig, DataBlock
     from .pipeline import build_catalogue_test
 
 def __getattr__(name: str):
 
     if name in ['AlignmentConfig', 'align_rasters']:
         return getattr(importlib.import_module('.align', __package__), name)
-    if name in ['BlockBuilder', 'BuilderConfig', 'DataBlock']:
+    if name in ['BlockBuilder', 'BlocksCatalog', 'BuilderConfig', 'DataBlock']:
         return getattr(importlib.import_module('.blocks', __package__), name)
     if name in ['build_catalogue_test']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
