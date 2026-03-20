@@ -38,11 +38,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .splitter import stratified_splitter
+    from .split import stratified_splitter
 
 def __getattr__(name: str):
 
     if name in ['stratified_splitter']:
-        return getattr(importlib.import_module('.splitter', __package__), name)
+        return getattr(importlib.import_module('.split', __package__), name)
 
     raise AttributeError(name)
