@@ -40,13 +40,13 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .pipeline import materialize_dataset_test
-    from .split import stratified_splitter
+    from .partitioner import stratified_splitter
 
 def __getattr__(name: str):
 
     if name in ['materialize_dataset_test']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
     if name in ['stratified_splitter']:
-        return getattr(importlib.import_module('.split', __package__), name)
+        return getattr(importlib.import_module('.partitioner', __package__), name)
 
     raise AttributeError(name)
