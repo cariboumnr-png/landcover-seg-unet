@@ -18,31 +18,37 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
-Top-level namespace for `landseg._ingest_dataset.split`.
+Data preparation pipeline that maps rasters to a grid, builds and
+normalizes blocks, splits datasets, and persists a versioned schema.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Public APIs:
+    - build_catalogue_test: Run the end-to-end dataset workflow.
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# standard imports
 
-__all__ = [
-    # classes
-    'BlockScore'
-    # functions
-    # typing
-]
+# local imports
+import landseg.configs as configs
+import landseg._ingest_dataset.canonical as canonical
+import landseg._ingest_dataset.materialized as materialized
+import landseg.utils as utils
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .score import BlockScore
+def materialize_dataset_test(
+    config: configs.RootConfig,
+    logger: utils.Logger,
+):
+    '''doc'''
 
-def __getattr__(name: str):
+    root = './experiment/artifacts/data_cache/branch_test'
 
-    if name in ['BlockScore']:
-        return getattr(importlib.import_module('.score', __package__), name)
+    catalog = canonical.BlocksCatalog.from_json(f'{root}/fit/catalog.json')
 
-    raise AttributeError(name)
+
+    # score
+    materialized.count_label_class(
+        input_blocks=[v['file_path'] for v in catalog.values()],
+        output_fpath=f'{root}/fit/label_class_count.json',
+        logger=logger
+    )

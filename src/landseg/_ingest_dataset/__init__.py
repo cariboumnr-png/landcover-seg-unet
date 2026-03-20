@@ -34,16 +34,20 @@ __all__ = [
     # classes
     # functions
     'build_catalogue_test',
+    'materialize_dataset_test'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .canonical import build_catalogue_test
+    from .materialized import materialize_dataset_test
 
 def __getattr__(name: str):
 
     if name in ['build_catalogue_test']:
         return getattr(importlib.import_module('.canonical', __package__), name)
+    if name in ['materialize_dataset_test']:
+        return getattr(importlib.import_module('.materialized', __package__), name)
 
     raise AttributeError(name)

@@ -31,18 +31,18 @@ import typing
 
 __all__ = [
     # classes
-    'BlockScore'
+    'materialize_dataset_test'
     # functions
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .score import BlockScore
+    from .pipeline import materialize_dataset_test
 
 def __getattr__(name: str):
 
-    if name in ['BlockScore']:
-        return getattr(importlib.import_module('.score', __package__), name)
+    if name in ['materialize_dataset_test']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(name)

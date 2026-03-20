@@ -24,40 +24,47 @@
 # standard imports
 import typing
 # third-party imports
-import numpy
+import numpy.typing
 import rasterio.io
 import rasterio.windows
 import torch
 
-# typing aliases
-# generic
-ConfigType: typing.TypeAlias = typing.Mapping[str, typing.Any]
-'''
-Generic string-keyed config mapping, e.g., from omega dict.
-'''
+# numpy typing
+Int64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.int64]
+'''A generic `numpy` array with `Int64` dtype.'''
+
+Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
+'''A generic `numpy` array with `Float64` dtype.'''
+
 # batch context
 Tensor: typing.TypeAlias = torch.Tensor
+
 TorchDict: typing.TypeAlias = dict[str, Tensor]
+
 DatasetItem: typing.TypeAlias = tuple[Tensor, Tensor, TorchDict]
 '''
 A tuple from one sample of the dataset: x (always present), y (can be
 a placeholder during inference, e.g., `torch.Tensor([1])`) and domain
 (always present but can be empty).
 '''
+
 DatasetBatch: typing.TypeAlias = typing.Sequence[DatasetItem]
 '''
 A collection of `DatasetItem` objects.
 '''
+
 # from rasterio
 RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
+
 RasterWindow: typing.TypeAlias = rasterio.windows.Window
-#
+
 RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
 '''
 A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
 in pixels) from the world grid.
 '''
-RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.ndarray]
+
+RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
 '''
 Array read from a raster window with its top-left corner at specified
 coordinates (x, y in pixels) from the world grid.
