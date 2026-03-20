@@ -372,8 +372,7 @@ class BlockBuilder:
             self.catalog[(col, row)] = {
                 'block_name': meta['block_name'],
                 'file_path': fp,
-                'loc_x_px': col,
-                'loc_y_px': row,
+                'loc_col_row': [col, row],
                 'valid_px': meta['valid_ratios']['layer1'],
                 'class_count': meta['label_count']['layer1'],
                 'schema_version': '1.0.0',

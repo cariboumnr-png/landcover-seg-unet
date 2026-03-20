@@ -44,22 +44,11 @@ def dev_test(config: configs.RootConfig):
     config.prep.grid.tile_overlap.col = 0
     g2 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
 
-    dataset.build_catalogue_test(
-        [g1, g2],
-        config,
-        logger,
-        build_a_block=False
-    )
+    # dataset.build_catalogue_test(
+    #     [g1, g2],
+    #     config,
+    #     logger,
+    #     build_a_block=False
+    # )
 
-SAMPLE_CATALOG_EACH_BLOCK = {
-    "block_name": "row_000001_col_000001",
-    "file_path": "../blocks/row_000001_col_000001.npz",
-    "coordinates": [1, 1],
-    "valid_pixels": 0.0,
-    "creation_time": "2000-01-01-00:00:00",
-    "sha_256": "...",
-    "source_image": "./sample_image.tif",
-    "source_image_sha_256": "...",
-    "source_label": "./sample_label.tif",
-    "source_label_sha_256": "...",
-}
+    dataset.materialize_dataset_test(g1, config, logger)

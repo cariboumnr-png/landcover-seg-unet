@@ -36,8 +36,7 @@ class CatalogEntry(typing.TypedDict):
     '''Catalog entry per block.'''
     block_name: str
     file_path: str
-    loc_x_px: int
-    loc_y_px: int
+    loc_col_row: list[int]
     valid_px: float
     class_count: list[int]
     schema_version: str

@@ -31,18 +31,18 @@ import typing
 
 __all__ = [
     # classes
-    'BlockScore'
     # functions
+    'stratified_splitter'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .score import BlockScore
+    from .splitter import stratified_splitter
 
 def __getattr__(name: str):
 
-    if name in ['BlockScore']:
-        return getattr(importlib.import_module('.score', __package__), name)
+    if name in ['stratified_splitter']:
+        return getattr(importlib.import_module('.splitter', __package__), name)
 
     raise AttributeError(name)
