@@ -44,7 +44,6 @@ The main entry point is `stratified_splitter`, which returns a structured
 # standard imports
 import dataclasses
 import typing
-import math
 # third-party imports
 import numpy
 # local imports
@@ -57,14 +56,6 @@ class _SplitIndices:
     train: typing.Iterable[int]
     val: typing.Iterable[int]
     test: typing.Iterable[int]
-
-    def as_lists(self) -> typing.Self:
-        '''In-place set each indices to a sorted list.'''
-
-        self.train = sorted(list(self.train))
-        self.val = sorted(list(self.val))
-        self.test = sorted(list(self.test))
-        return self
 
 # -------------------------------Public Function-------------------------------
 def stratified_splitter(
@@ -130,8 +121,11 @@ def stratified_splitter(
     # rest goes to train
     idx.train = set(range(n_blks)) - (idx.val | idx.test)
 
+    # report
+    _report(counts, idx)
+
     # return as lists
-    return idx.as_lists()
+    return idx
 
 # ---------- internal helpers ----------
 def _block_budgets(
@@ -182,7 +176,7 @@ def _pick_subset(
     # selection process
     while len(selected) < budget and remaining:
         best_i = None
-        best_score = math.inf
+        best_score = float('inf')
         for i in remaining:
             vec = counts[i].astype(numpy.float64)
             score = numpy.sum(weights * numpy.abs((current + vec) - target))
@@ -199,3 +193,31 @@ def _pick_subset(
         current += counts[best_i].astype(numpy.float64)
 
     return set(selected)
+
+def _report(
+    counts: alias.Int64Array,
+    splits: _SplitIndices,
+):
+    '''Report class contribution in each split.'''
+
+    # class counts at each split
+    train_counts = counts[list(splits.train)]
+    val_counts = counts[list(splits.val)]
+    test_counts = counts[list(splits.test)]
+
+    # class distribution at each split
+    global_dist = numpy.sum(counts, axis=0) / counts.sum()
+    train_dist = numpy.sum(train_counts, axis=0) / train_counts.sum()
+    val_dist = numpy.sum(val_counts, axis=0) / val_counts.sum()
+    test_dist = numpy.sum(test_counts, axis=0) / test_counts.sum()
+
+    ncol = counts.shape[1]
+    # print out
+    print('=' * 70)
+    print('Class distributions:')
+    print('             ', '  '.join([f'cls_{i + 1}' for i in range(ncol)]))
+    print('Global:      ', ', '.join([f'{x:.3f}' for x in global_dist]))
+    print('Split_train: ', ', '.join([f'{x:.3f}' for x in train_dist]))
+    print('Split_val:   ', ', '.join([f'{x:.3f}' for x in val_dist]))
+    print('Split_test:  ', ', '.join([f'{x:.3f}' for x in test_dist]))
+    print('=' * 70)
