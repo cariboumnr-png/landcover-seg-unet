@@ -31,22 +31,24 @@ import typing
 
 __all__ = [
     # classes
-    'materialize_dataset_test',
-    'stratified_splitter'
+    'ScoreParams',
     # functions
+    'materialize_dataset_test',
+    'score_blocks',
+    'stratified_splitter'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .pipeline import materialize_dataset_test
-    from .partitioner import stratified_splitter
+    from .partitioner import ScoreParams, score_blocks, stratified_splitter
 
 def __getattr__(name: str):
 
     if name in ['materialize_dataset_test']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
-    if name in ['stratified_splitter']:
+    if name in ['ScoreParams', 'score_blocks', 'stratified_splitter']:
         return getattr(importlib.import_module('.partitioner', __package__), name)
 
     raise AttributeError(name)

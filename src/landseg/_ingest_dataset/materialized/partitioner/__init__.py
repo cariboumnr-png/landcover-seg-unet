@@ -31,17 +31,22 @@ import typing
 
 __all__ = [
     # classes
+    'ScoreParams',
     # functions
+    'score_blocks',
     'stratified_splitter'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .score import ScoreParams, score_blocks
     from .split import stratified_splitter
 
 def __getattr__(name: str):
 
+    if name in ['ScoreParams', 'score_blocks']:
+        return getattr(importlib.import_module('.score', __package__), name)
     if name in ['stratified_splitter']:
         return getattr(importlib.import_module('.split', __package__), name)
 
