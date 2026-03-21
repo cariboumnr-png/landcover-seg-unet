@@ -63,15 +63,16 @@ def materialize_dataset_test(
     print(len(train_indices), len(val_indices), len(test_indices))
 
     _counts = numpy.sum(counts, axis=0)
+    print(_counts)
     input_blocks = {v['block_name']: v['class_count'] for v in catalog.values()}
     materialized.score_blocks(
         _counts,
         input_blocks,
-        materialized.ScoreParams(
-            alpha=config.prep.data.scoring.alpha,
+        materialized.ScoringConfig(
+            alpha=1.0,
             beta=config.prep.data.scoring.beta,
             epsilon=config.prep.data.scoring.epsilon,
-            reward=config.prep.data.scoring.reward
+            reward=(2, 4)
         ),
         f'{root}/fit/scores.json'
     )
