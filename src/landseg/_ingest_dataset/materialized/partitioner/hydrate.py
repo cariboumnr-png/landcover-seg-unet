@@ -20,153 +20,171 @@
 # =========================================================================== #
 
 '''
-Hydrate training blocks for class rebalancing.
+Hydrating training blocks (greedy) to rebalance class counts.
+
+The main routine incrementally accepts score-sorted blocks that improve
+progress toward target class ratios using diminishing-returns reward, and
+stops early when all targets are met or recent additions skew too heavily
+toward non-target classes.
+
+Includes helpers for priority computation, reward checking, and skew
+detection.
 '''
 
 # standard imports
 import collections
+
+# global hyperparameters
+EPS = 1e-6          # safety
+LOOKBACK = 20       # rolling window size for skew tracking
 
 def hydrate_train_split(
     current_class_count: list[int],
     candidates: list[tuple[str, list[int]]],
     target_ratios: dict[int, float],
     *,
-    eps: float = 1e-6
-):
+    max_skew_rate: float = 5.0
+) -> tuple[list[str], list[int]]:
+    '''
+    Greedily select candidate blocks to move class counts toward targets.
 
-    '''Greedy hydration of train blocks to approach target class ratios.
+    The function scans candidates in their incoming (score-sorted) order
+    and accepts blocks that yield positive diminishing-returns reward:
+    reward = sum_k priority_k * block_k / (current_k + eps)
+    where priority_k is the normalized shortfall for class k.
 
-    The algorithm scans candidates in their given (score-sorted) order and
-    greedily accepts blocks that improve progress toward the target class
-    totals while applying diminishing returns:
-        reward = sum_k(
-            priority_k * block_count_k / (current_total_k + eps)
-        )
-    where priority_k is the normalized remaining shortfall for class k.
+    Early stop:
+    * All targeted classes meet their target totals.
+    * Recent additions skew toward non-targets beyond `skew_tol`.
 
-    Early stop conditions:
-      * All targeted classes reach their target totals.
-      * Recent additions start to skew toward non-target classes, i.e.,
-        non-target gains outpace target gains beyond a tolerance.
+    Module constants:
+    * EPS: numerical stability in diminishing returns.
+    * LOOKBACK: length of rolling window for skew detection.
 
-    Assumptions:
-      * `candidates` preserves insertion order (already sorted by score).
-      * Each candidate has a 'count' list aligned to class indices.
+    Args:
+        current_class_count: Current per-class counts (length defines
+            number of classes).
+        candidates: Sequence of (name, per-class counts) aligned to
+            class indices.
+        target_ratios: Multipliers per class index. Classes with
+            ratio > 1 are treated as targets to grow; classes with
+            ratio ≤ 1 are treated as non-targets.
+        max_skew_rate: Max recent non-target/target gain ratio before
+            stopping. e.g., `max_skew_rate=5.0` means stop if non-targets
+            grow 5x faster recently in the past `LOOKBACK` blocks.
 
     Returns:
-      A tuple (selected_names, updated_counts).
-
-    Notes:
-      Constants can be tuned inside the function:
-        - eps: numerical stability in diminishing returns.
-        - skew_tol: how much faster non-targets may grow before stopping.
-        - lookback: rolling window length for skew detection.
+        (selected_names, updated_counts).
     '''
 
-
-    # ---------- hyperparameters ----------
-    skew_tol = 1.5     # stop if non-targets grow >10% faster recently
-    lookback = 20       # rolling window size for skew tracking
-    # -------------------------------------
-
-    # Freeze initial counts to define fixed targets
-    init_counts = list(current_class_count)
-    k = len(init_counts) # number of classes
-    # sanity check
-    assert all(len(c) == k for _, c in candidates)
-    current = _pad_counts(init_counts, k)
+    # defensive copy to define the current count
+    current = list(current_class_count)
+    assert all(len(c) == len(current) for _, c in candidates) # sanity check
 
     # target total for each class is initial * ratio (default ratio = 1.0)
-    targets = [current[i] * target_ratios.get(i, 1.0) for i in range(k)]
-    target_set = {i for i, r in target_ratios.items() if r > 1.0} # only boost
+    targets = [current[i] * target_ratios.get(i, 1.0) for i in range(len(current))]
+    target_set = {i for i, r in target_ratios.items() if r > 1.0}
 
+    # selected blocks
     selected: list[str] = []
     # rolling history of (target_gain, non_target_gain)
-    recent = collections.deque[tuple[int, int]](maxlen=lookback)
+    recent = collections.deque[tuple[int, int]](maxlen=LOOKBACK)
 
     # early exits
     # if no targets requested
     if not target_set:
         return selected, current
     # if already meeting all targets
-    if all(current[i] + eps >= targets[i] for i in target_set):
+    if all(current[i] + EPS >= targets[i] for i in target_set):
         return selected, current
 
     # init priorities
-    pri = _priorities(k, targets, current, eps)
-
+    priorities = _priorities(targets, current, EPS)
     # iterate in given (score-sorted) order
-    for blk_name, blk_counts in candidates:
+    for blk_name, blk_count in candidates:
 
-        # compute diminishing-return reward toward targets
-        reward = 0.0
-        for i in range(k):
-            if pri[i] <= 0.0 or blk_counts[i] == 0:
-                continue
-            reward += pri[i] * (blk_counts[i] / (current[i] + eps))
-
-        # skip blocks that do not advance targets
-        if reward <= 0.0:
+        # compute reward
+        if _no_reward(priorities, blk_count, current):
             continue
 
         # prospective skew check (without committing the block)
-        tgt_gain = sum(blk_counts[i] for i in range(k) if i in target_set)
-        non_gain = sum(blk_counts[i] for i in range(k) if i not in target_set)
-
-        # compute rolling totals as if we add this block
-        roll_tgt = sum(t for t, _ in recent) + tgt_gain
-        roll_non = sum(n for _, n in recent) + non_gain
-
-        # if recent additions would skew back toward non-targets, stop search
-        if roll_tgt == 0 and roll_non > 0:
-            stop_reason = (
-                'skew stop: recent additions add non-targets but yield no '
-                'target-class gain'
-            )
-            print(stop_reason)
-            break
-        ratio = (roll_non / roll_tgt) if roll_tgt > 0 else float('inf')
-        if roll_tgt > 0 and ratio > skew_tol:
-            stop_reason = (
-                f'skew stop: non-target/target gain ratio {ratio:.2f} exceeds '
-                f'tolerance {skew_tol:.2f}'
-            )
-            print(stop_reason)
+        tgt_gain = sum(blk_count[i] for i in target_set)
+        non_gain = sum(blk_count) - tgt_gain
+        if _skew_stop(tgt_gain, non_gain, recent, max_skew_rate):
             break
 
         # accept block
         selected.append(blk_name)
-        for i in range(k):
-            current[i] += blk_counts[i]
-        recent.append((tgt_gain, non_gain))
 
-        # update priorities after state change
-        pri = _priorities(k, targets, current, eps)
+        # updates and tracking
+        current = [a + b for a, b in zip(current, blk_count)]
+        recent.append((tgt_gain, non_gain))
+        priorities = _priorities(targets, current, EPS)
 
         # stop if all targets are met
-        if all(current[i] + eps >= targets[i] for i in target_set):
+        if all(current[i] + EPS >= targets[i] for i in target_set):
             print('stop searching due to [all targets met]')
             break
 
+    # return
     return selected, current
 
-def _pad_counts(x: list[int], k: int) -> list[int]:
-    '''Pad/truncate a count vector to length k.'''
-
-    if len(x) >= k:
-        return x[:k]
-    return x + [0] * (k - len(x))
-
 def _priorities(
-    number_class: int,
     target_ratios: list[float],
     current_counts: list[int],
     eps: float
 ) -> list[float]:
-    '''Helper: compute priority (normalized shortfall 0..1)'''
+    '''Compute normalized shortfall priorities (range 0..1).'''
 
     p: list[float] = []
+    number_class = len(target_ratios)
     for i in range(number_class):
         short = max(0.0, target_ratios[i] - current_counts[i])
         p.append(short / (target_ratios[i] + eps))
     return p
+
+def _no_reward(priorities, blk_count, current_count) -> bool:
+    '''Return True when the block yields no reward toward targets.'''
+
+    reward = 0.0
+    k = len(priorities)
+    assert k == len(blk_count) == len(current_count) # sanity
+    for i in range(k):
+        # skip non-ops classes
+        if priorities[i] <= 0.0 or blk_count[i] == 0:
+            continue
+        reward += priorities[i] * (blk_count[i] / (current_count[i] + EPS))
+    # skip blocks that do not advance targets
+    if reward <= 0.0:
+        return True
+    return False
+
+def _skew_stop(
+    target_gain: int,
+    non_target_gain: int,
+    recent: collections.deque[tuple[int, int]],
+    skew_tol: float
+) -> bool:
+    '''Decide if recent additions skew too far toward non-targets.'''
+
+    # compute rolling totals as if we add this block
+    roll_tgt = sum(t for t, _ in recent) + target_gain
+    roll_non = sum(n for _, n in recent) + non_target_gain
+
+    # if recent additions would skew back toward non-targets, stop search
+    if roll_tgt == 0 and roll_non > 0:
+        stop_reason = (
+            'skew stop: recent additions add non-targets but yield no '
+            'target-class gain'
+        )
+        print(stop_reason)
+        return True
+    ratio = (roll_non / roll_tgt) if roll_tgt > 0 else float('inf')
+    if roll_tgt > 0 and ratio > skew_tol:
+        stop_reason = (
+            f'skew stop: non-target/target gain ratio {ratio:.2f} exceeds '
+            f'tolerance {skew_tol:.2f}'
+        )
+        print(stop_reason)
+        return True
+    return False
