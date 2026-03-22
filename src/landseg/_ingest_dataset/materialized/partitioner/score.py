@@ -83,12 +83,14 @@ def score_blocks(
     kws = {'mode': kwargs.get('mode', 'log_lift')}
     # score blocks from list with parallel processing
     jobs = [(_score, (k, v, p, config), kws) for k, v in input_blocks.items()]
-    scores: list[tuple[str, float]] = utils.ParallelExecutor().run(jobs)
+    scores: list[tuple[str, float | None, list[int]]]
+    scores = utils.ParallelExecutor().run(jobs)
     # sort blocks to rank in descending order
     sorted_scores = sorted(scores, key=lambda x: x[1] or -1e9, reverse=True)
+    score_dict = {n: {'score': s, 'count': c} for n, s, c in sorted_scores}
 
     # save sorted scores to a file
-    utils.write_json(scores_path, dict(sorted_scores))
+    utils.write_json(scores_path, score_dict)
     utils.hash_artifacts(scores_path)
 
 # ------------------------------private  function------------------------------
@@ -99,7 +101,7 @@ def _score(
     config: ScoringConfig,
     *,
     mode: typing.Literal['log_lift', 'weighted_l1']
-) -> tuple[str, float | None]:
+) -> tuple[str, float | None, list[int]]:
     '''Score a single block against the target distribution.'''
 
     # log lift on reward classes
@@ -124,7 +126,7 @@ def _score(
     else:
         raise ValueError(f'Invalid scoring mode: {mode}')
     # return
-    return blk_name, _score
+    return blk_name, _score, blk_count
 
 def _count_to_prob_w_temp(
     cls_counts: list[int],

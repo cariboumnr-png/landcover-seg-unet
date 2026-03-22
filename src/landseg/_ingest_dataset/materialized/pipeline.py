@@ -64,6 +64,7 @@ def materialize_dataset_test(
     test_indices = [tuple(catalog[catalog_keys[i]]['loc_col_row']) for i in splitted.test]
     print(len(train_indices), len(val_indices), len(test_indices))
     excluded_indices = [(x[0], x[1]) for x in val_indices + test_indices]
+    train_class_count = numpy.sum(counts[list(splitted.train)], axis=0)
 
     # train blocks hydration
     # filter overlapping tiles
@@ -78,13 +79,13 @@ def materialize_dataset_test(
     print(len(safe_train_indices))
 
     # scoring
-    _counts = numpy.sum(counts, axis=0)
+    global_class_count = numpy.sum(counts, axis=0)
     input_blocks = {
         v['block_name']: v['class_count'] for v in catalog.values()
         if tuple(v['loc_col_row']) in safe_train_indices
     }
     materialized.score_blocks(
-        _counts,
+        global_class_count,
         input_blocks,
         materialized.ScoringConfig(
             alpha=1.0,
@@ -96,3 +97,15 @@ def materialize_dataset_test(
     )
 
     # hydrate
+    print(global_class_count)
+    print(train_class_count)
+    scores = utils.load_json(f'{root}/fit/scores.json')
+    selected, current_count = materialized.hydrate_train_split(
+        list(train_class_count),
+        [(k, v['count']) for k, v in scores.items()],
+        {2: 5.0, 4: 5.0}
+    )
+    print(len(selected))
+    print([int(x) for x in current_count])
+
+    print(numpy.array(current_count) / train_class_count)
