@@ -60,6 +60,7 @@ class _SplitIndices:
 # -------------------------------Public Function-------------------------------
 def stratified_splitter(
     counts: alias.Int64Array,
+    *,
     val_ratio: float = 0.15,
     test_ratio: float = 0.0,
     weight_mode: typing.Literal['none', 'inverse'] = 'inverse',

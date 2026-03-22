@@ -33,34 +33,25 @@ Public APIs:
 '''
 
 # standard imports
-import dataclasses
 import math
-import os
-import typing
 # third-party imports
 import numpy
 # local imports
 import landseg.utils as utils
 
-# ------------------------------Public  Dataclass------------------------------
-@dataclasses.dataclass
-class ScoringConfig:
-    '''Score configuration.'''
-    alpha: float                    # exponent for transforming block counts
-    beta: float                     # reward weight for classes during L1
-    epsilon: float                  # small constant for numerical stability
-    reward: tuple[int, ...]         # class indices to reward (0-based)
+# global hyperparameters
+EPS = 1e-6 # safety
 
 # -------------------------------Public Function-------------------------------
 def score_blocks(
     global_class_count: list[int],
-    input_blocks: dict[str, list[int]],
-    config: ScoringConfig,
-    scores_path: str,
+    input_blocks: dict[tuple[int, int], list[int]],
     *,
-    rescore: bool = False,
+    reward: tuple[int, ...],    # class indices to reward (0-based)
+    alpha: float,               # exponent for transforming block counts
+    beta: float,                # reward weight for classes during L1
     **kwargs
-) -> None:
+) -> dict[tuple[int, int], list[int]]:
     '''
     Score input blocks based on label class distributions.
 
@@ -69,69 +60,71 @@ def score_blocks(
             the target distribution.
         input_blocks: Mapping from block names to file paths to score.
         params: Scoring parameters (head/alpha/beta/eps/reward classes).
-        scores_path: Output JSON path for persisted, sorted scores.
-        rescore: If True, recompute even if scores_path already exists.
+        mode: Scoring mode. Default to 'log_lift'.
     '''
 
-    # read saved scores if already exist
-    if os.path.exists(scores_path) and not rescore:
-        return
-
     # target inverse probability (p) from global class distribution
-    p = _count_to_prob_w_temp(global_class_count, 1.0, config.epsilon)
-    # scoring mode as kwargs
-    kws = {'mode': kwargs.get('mode', 'log_lift')}
+    p = _count_to_prob_w_temp(global_class_count, alpha=1.0)
+    # scoring kwargs
+    kws = {
+        'reward_class': reward,
+        'alpha': alpha,
+        'beta': beta,
+        'mode': kwargs.get('mode', 'log_lift')
+    }
     # score blocks from list with parallel processing
-    jobs = [(_score, (k, v, p, config), kws) for k, v in input_blocks.items()]
-    scores: list[tuple[str, float | None, list[int]]]
+    jobs = [(_score, (blk, p), kws) for blk in input_blocks.items()]
+    scores: list[tuple[tuple[int, int], float | None, list[int]]]
     scores = utils.ParallelExecutor().run(jobs)
     # sort blocks to rank in descending order
     sorted_scores = sorted(scores, key=lambda x: x[1] or -1e9, reverse=True)
-    score_dict = {n: {'score': s, 'count': c} for n, s, c in sorted_scores}
 
-    # save sorted scores to a file
-    utils.write_json(scores_path, score_dict)
-    utils.hash_artifacts(scores_path)
+    # return just the ranked blocks with count
+    return {n: c for n, _, c in sorted_scores}
 
 # ------------------------------private  function------------------------------
 def _score(
-    blk_name: str,
-    blk_count: list[int],
+    block: tuple[tuple[int, int], list[int]],
     target_p: numpy.ndarray,
-    config: ScoringConfig,
     *,
-    mode: typing.Literal['log_lift', 'weighted_l1']
-) -> tuple[str, float | None, list[int]]:
+    reward_class: tuple[int, ...],
+    alpha: float = 1.0,
+    beta: float = 0.8,
+    **kwargs
+) -> tuple[tuple[int, int], float | None, list[int]]:
     '''Score a single block against the target distribution.'''
+
+    # parse
+    blk_coord, blk_count = block
+    mode = kwargs.get('mode', 'log_lift')
 
     # log lift on reward classes
     if mode == 'log_lift':
-        block_p = _count_to_prob_w_temp(blk_count, config.alpha, config.epsilon)
+        block_p = _count_to_prob_w_temp(blk_count, alpha=alpha)
         _score = _log_lift_on_reward(
             target_p,
             block_p,
-            config.reward,
-            eps=config.epsilon
+            reward_cls=reward_class,
         )
     # L1 distance to measure pairwise closeness
     elif mode == 'weighted_l1':
-        block_p = _count_to_prob_w_temp(blk_count, config.alpha, config.epsilon)
+        block_p = _count_to_prob_w_temp(blk_count, alpha=alpha)
         _score = _weighted_l1_w_reward(
             target_p,
             block_p,
-            config.reward,
-            beta=config.beta,
-            eps=config.epsilon
+            reward_cls=reward_class,
+            beta=beta,
         )
     else:
         raise ValueError(f'Invalid scoring mode: {mode}')
+
     # return
-    return blk_name, _score, blk_count
+    return blk_coord, _score, blk_count
 
 def _count_to_prob_w_temp(
     cls_counts: list[int],
+    *,
     alpha: float,
-    eps: float
 ) -> numpy.ndarray:
     '''Counts to a smoothed prob. distrib. with temperature scaling.'''
 
@@ -142,7 +135,7 @@ def _count_to_prob_w_temp(
         return numpy.zeros_like(cls_counts)
     # re-normalize to have probability sum==1
     p = arr / total
-    p = numpy.clip(p, eps, None) # avoid downstream log(0)
+    p = numpy.clip(p, EPS, None) # avoid downstream log(0)
     p = p / p.sum()
     # inverse and return
     if alpha != 1.0:
@@ -153,9 +146,8 @@ def _count_to_prob_w_temp(
 def _log_lift_on_reward(
     p: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
     q: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
-    reward_cls: tuple[int, ...],
     *,
-    eps: float
+    reward_cls: tuple[int, ...]
 ) -> float | None:
     '''Mass-weighted log-lift.'''
 
@@ -163,16 +155,15 @@ def _log_lift_on_reward(
     # no-ops if q is all zeros
     if sum(q) == 0:
         return None
-    return sum(q[i] * math.log((q[i] + eps) / (p[i] + eps)) for i in reward_cls)
+    return sum(q[i] * math.log((q[i] + EPS) / (p[i] + EPS)) for i in reward_cls)
 
 # now legacy
 def _weighted_l1_w_reward(
     p: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
     q: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
-    reward_cls: tuple[int, ...],
     *,
+    reward_cls: tuple[int, ...],
     beta: float,
-    eps: float
 ) -> float:
     '''Weighted L1 distance with bonus on specified reward classes.'''
 
@@ -181,6 +172,6 @@ def _weighted_l1_w_reward(
     assert numpy.isclose(q.sum(), 1), q.sum()
     # p as target q as test
     # use log weight and bonus for reward classes > target classes
-    w_l1 = sum(abs(a - b) * (1 + abs(math.log(a + eps))) for a, b in zip(p, q))
+    w_l1 = sum(abs(a - b) * (1 + abs(math.log(a + EPS))) for a, b in zip(p, q))
     bonus = sum(max(0, q[i] - p[i]) for i in reward_cls) * beta
     return float(w_l1 - bonus)

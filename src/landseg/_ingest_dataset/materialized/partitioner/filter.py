@@ -28,13 +28,13 @@ configurable buffer can be applied in units of the candidate stride to
 reduce context leakage across splits.
 '''
 
-#
+# -------------------------------Public Function-------------------------------
 def filter_safe_tiles(
     candidates: list[tuple[int, int]],
     base_tiles: list[tuple[int, int]],
     *,
     block_size: int,
-    stride: int,
+    block_stride: int,
     buffer_steps: int = 1
 ) -> list[tuple[int, int]]:
     '''
@@ -88,7 +88,7 @@ def filter_safe_tiles(
     # sanity checks
     if block_size <= 0:
         raise ValueError('block_size must be positive')
-    if stride <= 0 or stride > block_size:
+    if block_stride <= 0 or block_stride > block_size:
         raise ValueError('candidate_stride must satisfy 0 < s ≤ block_size')
     if buffer_steps < 0:
         raise ValueError('buffer_steps must be non-negative')
@@ -98,7 +98,7 @@ def filter_safe_tiles(
     # iterate through all stridden tiles
     for c in candidates:
         # local search
-        if _overlaps_w_base(c, base_set, block_size, stride, buffer_steps):
+        if _overlaps_w_base(c, base_set, block_size, block_stride, buffer_steps):
             continue
         keep.append(c)
 

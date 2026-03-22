@@ -38,13 +38,14 @@ import collections
 EPS = 1e-6          # safety
 LOOKBACK = 20       # rolling window size for skew tracking
 
+# -------------------------------Public Function-------------------------------
 def hydrate_train_split(
     current_class_count: list[int],
-    candidates: list[tuple[str, list[int]]],
-    target_ratios: dict[int, float],
+    candidates: dict[tuple[int, int], list[int]],
     *,
-    max_skew_rate: float = 5.0
-) -> tuple[list[str], list[int]]:
+    target_ratios: dict[int, float],
+    max_skew_rate: float
+) -> tuple[list[tuple[int, int]], list[int]]:
     '''
     Greedily select candidate blocks to move class counts toward targets.
 
@@ -79,14 +80,14 @@ def hydrate_train_split(
 
     # defensive copy to define the current count
     current = list(current_class_count)
-    assert all(len(c) == len(current) for _, c in candidates) # sanity check
+    assert all(len(c) == len(current) for c in candidates.values()) # sanity check
 
     # target total for each class is initial * ratio (default ratio = 1.0)
     targets = [current[i] * target_ratios.get(i, 1.0) for i in range(len(current))]
     target_set = {i for i, r in target_ratios.items() if r > 1.0}
 
     # selected blocks
-    selected: list[str] = []
+    selected: list[tuple[int, int]] = []
     # rolling history of (target_gain, non_target_gain)
     recent = collections.deque[tuple[int, int]](maxlen=LOOKBACK)
 
@@ -101,7 +102,7 @@ def hydrate_train_split(
     # init priorities
     priorities = _priorities(targets, current, EPS)
     # iterate in given (score-sorted) order
-    for blk_name, blk_count in candidates:
+    for coords, blk_count in candidates.items():
 
         # compute reward
         if _no_reward(priorities, blk_count, current):
@@ -114,7 +115,7 @@ def hydrate_train_split(
             break
 
         # accept block
-        selected.append(blk_name)
+        selected.append(coords)
 
         # updates and tracking
         current = [a + b for a, b in zip(current, blk_count)]
