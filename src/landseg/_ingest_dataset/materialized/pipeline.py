@@ -58,19 +58,30 @@ def materialize_dataset_test(
     }
     base_counts = {k: v['class_count'] for k, v in base_catalog.items()}
 
+    # partition data blocks
     partition_config = materialized.PartitionConfig(
         val_ratio=0.1,
         test_ratio=0.1,
         buffer_step=1,
         reward_ratios={2: 5.0, 4: 5.0},
-        alpha=1.0,
-        beta=0.8,
+        alpha=config.prep.data.scoring.alpha,
+        beta=config.prep.data.scoring.beta,
         max_skew_rate=5.0
     )
-    materialized.partition_blocks(
+    partitions = materialized.partition_blocks(
         base_counts,
         catalog_counts,
         partition_config,
         logger,
         block_spec=(256, 128)
+    )
+
+    # normalize
+    train_blocks = [v['file_path'] for k, v in catalog.items() if k in partitions.train]
+    all_coords = partitions.train + partitions.val + partitions.test
+    all_blocks =  [v['file_path'] for k, v in catalog.items() if k in all_coords]
+    materialized.build_normalized_blocks(
+        train_blocks,
+        all_blocks,
+        f'{root}/test_blocks'
     )

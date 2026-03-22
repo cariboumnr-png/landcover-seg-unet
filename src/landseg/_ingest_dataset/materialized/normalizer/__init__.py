@@ -31,27 +31,26 @@ import typing
 
 __all__ = [
     # classes
-    'PartitionConfig',
     # functions
+    'aggregate_image_stats',
     'build_normalized_blocks',
-    'materialize_dataset_test',
-    'partition_blocks'
+    'extract_blocks'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import materialize_dataset_test
-    from .normalizer import build_normalized_blocks
-    from .partitioner import PartitionConfig, partition_blocks
+    from .extract import extract_blocks
+    from .aggregate import aggregate_image_stats
+    from .normalize import build_normalized_blocks
 
 def __getattr__(name: str):
 
-    if name in ['materialize_dataset_test']:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in ['aggregate_image_stats']:
+        return getattr(importlib.import_module('.aggregate', __package__), name)
+    if name in ['extract_blocks']:
+        return getattr(importlib.import_module('.extract', __package__), name)
     if name in ['build_normalized_blocks']:
-        return getattr(importlib.import_module('.normalizer', __package__), name)
-    if name in ['PartitionConfig', 'partition_blocks']:
-        return getattr(importlib.import_module('.partitioner', __package__), name)
+        return getattr(importlib.import_module('.normalize', __package__), name)
 
     raise AttributeError(name)

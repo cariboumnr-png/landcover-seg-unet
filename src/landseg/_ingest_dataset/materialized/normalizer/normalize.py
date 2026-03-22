@@ -18,9 +18,21 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-'''
-Top-level namespace for `landseg._ingest_dataset.standardize`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''doc'''
+
+# local imports
+import landseg._ingest_dataset.materialized.normalizer as normalizer
+
+def build_normalized_blocks(
+    train_blocks: list[str],
+    all_blocks: list[str],
+    output_dir: str
+):
+    '''doc'''
+
+    # aggregate stats on training blocks
+    global_stats = normalizer.aggregate_image_stats(train_blocks)
+
+    # build normalized blocks
+    normalizer.extract_blocks(all_blocks, global_stats, output_dir)

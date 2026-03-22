@@ -33,8 +33,14 @@ import torch
 Int64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.int64]
 '''A generic `numpy` array with `Int64` dtype.'''
 
+Float32Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float32]
+'''A generic `numpy` array with `Float32` dtype.'''
+
 Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
 '''A generic `numpy` array with `Float64` dtype.'''
+
+MaskArray: typing.TypeAlias = numpy.typing.NDArray[numpy.bool]
+'''A generic `numpy` array with `bool` dtype.'''
 
 # batch context
 Tensor: typing.TypeAlias = torch.Tensor
