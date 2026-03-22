@@ -44,27 +44,45 @@ def materialize_dataset_test(
 ):
     '''doc'''
 
+    logger.log('INFO', 'Test')
     root = './experiment/artifacts/data_cache/branch_test'
 
+    # from catalog.json and the base grid
     catalog = canonical.BlocksCatalog.from_json(f'{root}/fit/catalog.json')
-
+    catalog = {k: v for k, v in catalog.items() if v['valid_px']}
+    catalog_keys = list(catalog.keys())
     base_coords = list(base_grid.keys())
     base_catalog_entries = [
         v for v in catalog.values() if tuple(v['loc_col_row']) in base_coords
     ]
-
     counts = numpy.array([e['class_count'] for e in base_catalog_entries])
+
+    # splitting
     splitted = materialized.stratified_splitter(counts, 0.10, 0.10)
-
-    train_indices = [base_coords[i] for i in splitted.train]
-    val_indices = [base_coords[i] for i in splitted.val]
-    test_indices = [base_coords[i] for i in splitted.test]
-
+    train_indices = [tuple(catalog[catalog_keys[i]]['loc_col_row']) for i in splitted.train]
+    val_indices = [tuple(catalog[catalog_keys[i]]['loc_col_row']) for i in splitted.val]
+    test_indices = [tuple(catalog[catalog_keys[i]]['loc_col_row']) for i in splitted.test]
     print(len(train_indices), len(val_indices), len(test_indices))
+    excluded_indices = [(x[0], x[1]) for x in val_indices + test_indices]
 
+    # train blocks hydration
+    # filter overlapping tiles
+    catalouged_coords = [(v['loc_col_row'][0], v['loc_col_row'][1]) for v in catalog.values()]
+    safe_train_indices = materialized.filter_safe_tiles(
+        catalouged_coords,
+        excluded_indices,
+        block_size=base_grid.tile_size[0],
+        stride=128,
+        buffer_steps=1
+    )
+    print(len(safe_train_indices))
+
+    # scoring
     _counts = numpy.sum(counts, axis=0)
-    print(_counts)
-    input_blocks = {v['block_name']: v['class_count'] for v in catalog.values()}
+    input_blocks = {
+        v['block_name']: v['class_count'] for v in catalog.values()
+        if tuple(v['loc_col_row']) in safe_train_indices
+    }
     materialized.score_blocks(
         _counts,
         input_blocks,
@@ -76,3 +94,5 @@ def materialize_dataset_test(
         ),
         f'{root}/fit/scores.json'
     )
+
+    # hydrate

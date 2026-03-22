@@ -33,6 +33,7 @@ __all__ = [
     # classes
     'ScoringConfig',
     # functions
+    'filter_safe_tiles',
     'score_blocks',
     'stratified_splitter'
     # typing
@@ -40,11 +41,14 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .filter import filter_safe_tiles
     from .score import ScoringConfig, score_blocks
     from .split import stratified_splitter
 
 def __getattr__(name: str):
 
+    if name in ['filter_safe_tiles']:
+        return getattr(importlib.import_module('.filter', __package__), name)
     if name in ['ScoringConfig', 'score_blocks']:
         return getattr(importlib.import_module('.score', __package__), name)
     if name in ['stratified_splitter']:

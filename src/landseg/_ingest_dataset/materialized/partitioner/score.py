@@ -85,7 +85,7 @@ def score_blocks(
     jobs = [(_score, (k, v, p, config), kws) for k, v in input_blocks.items()]
     scores: list[tuple[str, float]] = utils.ParallelExecutor().run(jobs)
     # sort blocks to rank in descending order
-    sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)
+    sorted_scores = sorted(scores, key=lambda x: x[1] or -1e9, reverse=True)
 
     # save sorted scores to a file
     utils.write_json(scores_path, dict(sorted_scores))

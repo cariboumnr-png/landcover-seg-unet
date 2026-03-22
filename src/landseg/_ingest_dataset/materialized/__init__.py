@@ -33,6 +33,7 @@ __all__ = [
     # classes
     'ScoringConfig',
     # functions
+    'filter_safe_tiles',
     'materialize_dataset_test',
     'score_blocks',
     'stratified_splitter'
@@ -42,13 +43,13 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .pipeline import materialize_dataset_test
-    from .partitioner import ScoringConfig, score_blocks, stratified_splitter
+    from .partitioner import ScoringConfig, score_blocks, stratified_splitter, filter_safe_tiles
 
 def __getattr__(name: str):
 
     if name in ['materialize_dataset_test']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
-    if name in ['ScoringConfig', 'score_blocks', 'stratified_splitter']:
+    if name in ['filter_safe_tiles', 'ScoringConfig', 'score_blocks', 'stratified_splitter']:
         return getattr(importlib.import_module('.partitioner', __package__), name)
 
     raise AttributeError(name)
