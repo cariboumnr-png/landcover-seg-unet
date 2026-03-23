@@ -83,7 +83,6 @@ def align_rasters(
     windows_dpath = config.output_windows_dpath
     os.makedirs(windows_dpath, exist_ok=True)
     output_fpath = os.path.join(windows_dpath, f'windows_{world_grid.gid}.pkl')
-    # map fit data
     if not os.path.exists(output_fpath) or remap:
         _map(world_grid, image, label, output_fpath, logger)
 

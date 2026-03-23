@@ -31,23 +31,24 @@ import typing
 
 __all__ = [
     # classes
+    'DatasetBuildConfig',
     'PartitionConfig',
     # functions
     'build_normalized_blocks',
-    'materialize_dataset_test',
+    'build_dataset',
     'partition_blocks'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import materialize_dataset_test
+    from .pipeline import DatasetBuildConfig, build_dataset
     from .normalizer import build_normalized_blocks
     from .partitioner import PartitionConfig, partition_blocks
 
 def __getattr__(name: str):
 
-    if name in ['materialize_dataset_test']:
+    if name in ['DatasetBuildConfig', 'build_dataset']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
     if name in ['build_normalized_blocks']:
         return getattr(importlib.import_module('.normalizer', __package__), name)

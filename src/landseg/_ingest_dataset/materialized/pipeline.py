@@ -28,60 +28,67 @@ Public APIs:
 '''
 
 # standard imports
+import dataclasses
 # local imports
-import landseg.configs as configs
-import landseg.core as core
 import landseg._ingest_dataset.canonical as canonical
 import landseg._ingest_dataset.materialized as materialized
 import landseg.utils as utils
 
-def materialize_dataset_test(
-    base_grid: core.GridLayoutLike,
-    config: configs.RootConfig,
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class DatasetBuildConfig:
+    '''doc'''
+    val_test_ratios: tuple[float, float]
+    buffer_step: int
+    reward_ratios: dict[int, float]     # 0-based
+    scoring_alpha: float                # exponent for transforming block counts
+    scoring_beta: float                 # reward weight for classes during L1
+    max_skew_rate: float
+    block_spec: tuple[int, int]         # block_size, block_stride
+
+# -------------------------------Public Function-------------------------------
+def build_dataset(
+    catalog: canonical.BlocksCatalog,
+    config: DatasetBuildConfig,
+    output_root: str,
     logger: utils.Logger,
 ):
     '''doc'''
 
     logger.log('INFO', 'Test')
-    root = './experiment/artifacts/data_cache/branch_test'
 
-    # from catalog.json
-    catalog = canonical.BlocksCatalog.from_json(f'{root}/fit/catalog.json')
-    catalog = {k: v for k, v in catalog.items() if v['valid_px']}
-    catalog_counts = {k: v['class_count'] for k, v in catalog.items()}
+    # parse from catalog
+    work_catalog = {k: v for k, v in catalog.items() if v['valid_px']}
+    catalog_counts = {k: v['class_count'] for k, v in work_catalog.items()}
 
     # from base grid (no overlap)
-    base_coords = list(base_grid.keys())
+    block_size = config.block_spec[0]
     base_catalog = {
-        k: v for k, v in catalog.items()
-        if tuple(v['loc_col_row']) in base_coords
+        k: v for k, v in work_catalog.items()
+        if all(i % block_size == 0 for i in v['loc_col_row']) # both divisible
     }
     base_counts = {k: v['class_count'] for k, v in base_catalog.items()}
 
     # partition data blocks
     partition_config = materialized.PartitionConfig(
-        val_ratio=0.1,
-        test_ratio=0.1,
-        buffer_step=1,
-        reward_ratios={2: 5.0, 4: 5.0},
-        alpha=config.prep.data.scoring.alpha,
-        beta=config.prep.data.scoring.beta,
-        max_skew_rate=5.0
+        val_ratio=config.val_test_ratios[0],
+        test_ratio=config.val_test_ratios[1],
+        buffer_step=config.buffer_step,
+        reward_ratios=config.reward_ratios,
+        alpha=config.scoring_alpha,
+        beta=config.scoring_beta,
+        max_skew_rate=config.max_skew_rate
     )
     partitions = materialized.partition_blocks(
         base_counts,
         catalog_counts,
         partition_config,
         logger,
-        block_spec=(256, 128)
+        block_spec=config.block_spec
     )
 
     # normalize
     train_blocks = [v['file_path'] for k, v in catalog.items() if k in partitions.train]
     all_coords = partitions.train + partitions.val + partitions.test
     all_blocks =  [v['file_path'] for k, v in catalog.items() if k in all_coords]
-    materialized.build_normalized_blocks(
-        train_blocks,
-        all_blocks,
-        f'{root}/test_blocks'
-    )
+    materialized.build_normalized_blocks(train_blocks, all_blocks, f'{output_root}/blocks')

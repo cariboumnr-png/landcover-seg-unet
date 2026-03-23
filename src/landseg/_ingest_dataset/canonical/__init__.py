@@ -35,10 +35,11 @@ __all__ = [
     'AlignmentConfig',
     'BlockBuilder',
     'BlocksCatalog',
+    'CatalogueInputs',
     'DataBlock',
     # functions
     'align_rasters',
-    'build_catalogue_test',
+    'build_catalogue',
     # typing
     'BuilderConfig',
 ]
@@ -47,7 +48,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .align import AlignmentConfig, align_rasters
     from .blocks import BlockBuilder, BlocksCatalog, BuilderConfig, DataBlock
-    from .pipeline import build_catalogue_test
+    from .pipeline import CatalogueInputs, build_catalogue
 
 def __getattr__(name: str):
 
@@ -55,7 +56,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.align', __package__), name)
     if name in ['BlockBuilder', 'BlocksCatalog', 'BuilderConfig', 'DataBlock']:
         return getattr(importlib.import_module('.blocks', __package__), name)
-    if name in ['build_catalogue_test']:
+    if name in ['CatalogueInputs', 'build_catalogue']:
         return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(name)

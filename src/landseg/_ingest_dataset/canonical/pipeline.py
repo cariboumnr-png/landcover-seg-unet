@@ -27,65 +27,80 @@ Public APIs:
     - build_catalogue_test: Run the end-to-end dataset workflow.
 '''
 
+# standard imports
+import dataclasses
 # local imports
-import landseg.configs as configs
 import landseg.core as core
 import landseg._ingest_dataset.canonical as canonical
 import landseg.utils as utils
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class CatalogueInputs:
+    '''doc'''
+    fit_image_fpath: str
+    fit_label_fpath: str
+    test_image_fpath: str | None
+    test_label_fpath: str | None
+    data_config_fpath: str
+
 # -------------------------------Public Function-------------------------------
-def build_catalogue_test(
-    world_grids: list[core.GridLayoutLike],
-    config: configs.RootConfig,
+def build_catalogue(
+    world_grid: core.GridLayoutLike,
+    input_fpaths: CatalogueInputs,
+    output_root: str,
     logger: utils.Logger,
-    **kwargs
+    *,
+    single_block_mode: bool = False
 ):
     '''Test new pipeline.'''
 
-    root = './experiment/artifacts/data_cache/branch_test'
+    # align fit rasters to grid
+    fit_rasters_config = canonical.AlignmentConfig(
+        input_img_fpath=input_fpaths.fit_image_fpath,
+        input_lbl_fpath=input_fpaths.fit_label_fpath,
+        output_windows_dpath=f'{output_root}/fit/windows',
+    )
+    canonical.align_rasters(world_grid, fit_rasters_config, logger)
 
-    # align rasters to world grids
-    for grid in world_grids:
-        # fit rasters
-        fit_rasters_config = canonical.AlignmentConfig(
-            input_img_fpath=config.inputs.data.filepaths.fit_image,
-            input_lbl_fpath=config.inputs.data.filepaths.fit_label,
-            output_windows_dpath=f'{root}/fit/windows',
-        )
-        canonical.align_rasters(grid, fit_rasters_config, logger)
-        # test rasters
-        test_rasters_config = canonical.AlignmentConfig(
-            input_img_fpath=config.inputs.data.filepaths.test_image,
-            input_lbl_fpath=config.inputs.data.filepaths.test_label,
-            output_windows_dpath=f'{root}/test/windows',
-        )
-        canonical.align_rasters(grid, test_rasters_config, logger)
-
-    # build fit blocks to selected grid
+    # get a block builder instance from configuration
     fit_block_build_config = canonical.BuilderConfig(
-        image_fpath=config.inputs.data.filepaths.fit_image,
-        label_fpath=config.inputs.data.filepaths.fit_label,
-        config_fpath=config.inputs.data.filepaths.config,
-        catalog_root=f'{root}/fit/',
-        grid_id='grid_row_256_128_col_256_128',
+        image_fpath=input_fpaths.fit_image_fpath,
+        label_fpath=input_fpaths.fit_label_fpath,
+        config_fpath=input_fpaths.data_config_fpath,
+        catalog_root=f'{output_root}/fit/',
+        grid_id=world_grid.gid,
         dem_pad_px=8,
         ignore_index=255
     )
     block_builder = canonical.BlockBuilder(fit_block_build_config, logger)
-    # one block mode (from fit blocks)
-    if kwargs.get('build_a_block', False):
+
+    # build just one block, e.g., for overfit test
+    if single_block_mode:
         block_builder.build_single_block('./experiment/results/overfit_test')
         return
-    # all fit blocks
+    # build all fit blocks
     block_builder.build_blocks()
 
-    # build test blocks (currently requires a zero-overlap tilling)
+    # exit if test rasters are not provided
+    if not (input_fpaths.test_image_fpath and input_fpaths.test_label_fpath):
+        return
+
+    # align test rasters to grid
+    test_rasters_config = canonical.AlignmentConfig(
+        input_img_fpath=input_fpaths.test_image_fpath,
+        input_lbl_fpath=input_fpaths.test_label_fpath,
+        output_windows_dpath=f'{output_root}/test/windows',
+    )
+    canonical.align_rasters(world_grid, test_rasters_config, logger)
+
+    # build test blocks
     test_block_build_config = canonical.BuilderConfig(
-        image_fpath=config.inputs.data.filepaths.test_image,
-        label_fpath=config.inputs.data.filepaths.test_label,
-        config_fpath=config.inputs.data.filepaths.config,
-        catalog_root=f'{root}/test/',
-        grid_id='grid_row_256_0_col_256_0',
+        image_fpath=input_fpaths.test_image_fpath,
+        label_fpath=input_fpaths.test_label_fpath,
+        config_fpath=input_fpaths.data_config_fpath,
+        catalog_root=f'{output_root}/test/',
+        grid_id=world_grid.gid,
         dem_pad_px=8,
         ignore_index=255
     )

@@ -34,21 +34,13 @@ def dev_test(config: configs.RootConfig):
 
     logger = utils.Logger('test', './test.log')
 
-    # load/create world grid
+    # config overrides
     config.prep.grid.id = 'grid_row_256_128_col_256_128'
     config.prep.grid.tile_overlap.row = 128
     config.prep.grid.tile_overlap.col = 128
-    g1 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
-    config.prep.grid.id = 'grid_row_256_0_col_256_0'
-    config.prep.grid.tile_overlap.row = 0
-    config.prep.grid.tile_overlap.col = 0
-    g2 = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
 
-    # dataset.build_catalogue_test(
-    #     [g1, g2],
-    #     config,
-    #     logger,
-    #     build_a_block=False
-    # )
+    # prep world grid
+    g = grid.prep_world_grid(config.inputs.extent, config.prep.grid, logger)
 
-    dataset.materialize_dataset_test(g2, config, logger)
+    # dataset pipeline test
+    dataset.test_pipeline(g, config, logger)

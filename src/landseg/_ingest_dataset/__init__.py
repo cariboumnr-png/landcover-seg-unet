@@ -33,21 +33,17 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_catalogue_test',
-    'materialize_dataset_test'
+    'test_pipeline'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .canonical import build_catalogue_test
-    from .materialized import materialize_dataset_test
+    from .pipeline import test_pipeline
 
 def __getattr__(name: str):
 
-    if name in ['build_catalogue_test']:
-        return getattr(importlib.import_module('.canonical', __package__), name)
-    if name in ['materialize_dataset_test']:
-        return getattr(importlib.import_module('.materialized', __package__), name)
+    if name in ['test_pipeline']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(name)
