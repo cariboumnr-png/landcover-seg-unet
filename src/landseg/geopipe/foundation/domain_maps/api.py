@@ -56,7 +56,7 @@ import copy
 import dataclasses
 # local imports
 import landseg.geopipe.common as common
-import landseg.geopipe.datamake.domain_maps as domain_maps
+import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

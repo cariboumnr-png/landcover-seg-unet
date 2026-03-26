@@ -34,7 +34,7 @@ compatibility and integrity on load.
 # standard imports
 import os
 # local imports
-import landseg.geopipe.datamake.world_grids as world_grids
+import landseg.geopipe.foundation.world_grids as world_grids
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------

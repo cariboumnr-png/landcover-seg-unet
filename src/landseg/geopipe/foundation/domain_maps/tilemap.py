@@ -64,7 +64,7 @@ import typing
 import numpy
 # local imports
 import landseg.geopipe.common.alias as alias
-import landseg.geopipe.datamake.domain_maps as domain_maps
+import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------

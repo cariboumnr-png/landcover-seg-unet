@@ -22,7 +22,7 @@
 '''doc'''
 
 # local imports
-import landseg.geopipe.trainprep.normalize as normalize
+import landseg.geopipe.pipeline.transform.normal_blocks as normal_blocks
 
 def build_normalized_blocks(
     train_blocks: list[str],
@@ -32,7 +32,7 @@ def build_normalized_blocks(
     '''doc'''
 
     # aggregate stats on training blocks
-    global_stats = normalize.aggregate_image_stats(train_blocks)
+    global_stats = normal_blocks.aggregate_image_stats(train_blocks)
 
     # build normalized blocks
-    normalize.normalize_blocks(all_blocks, global_stats, output_dir)
+    normal_blocks.normalize_blocks(all_blocks, global_stats, output_dir)

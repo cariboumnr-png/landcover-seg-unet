@@ -41,8 +41,8 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .normalize import build_normalized_blocks
-    from .partition import PartitionConfig, partition_blocks
+    from .normal_blocks import build_normalized_blocks
+    from .data_partition import PartitionConfig, partition_blocks
 
 
 def __getattr__(name: str):

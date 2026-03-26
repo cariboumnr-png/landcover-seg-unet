@@ -35,7 +35,7 @@ import os
 # local imports
 import landseg.geopipe.common as common
 import landseg.geopipe.common.alias as alias
-import landseg.geopipe.datamake.data_blocks as data_blocks
+import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

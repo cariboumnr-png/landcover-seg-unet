@@ -31,7 +31,7 @@ Public APIs:
 import dataclasses
 # local imports
 import landseg.geopipe.common as common
-import landseg.geopipe.datamake.data_blocks as data_blocks
+import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

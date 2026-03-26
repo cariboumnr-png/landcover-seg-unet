@@ -28,7 +28,7 @@ import dataclasses
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.trainprep.partition as partition
+import landseg.geopipe.pipeline.transform.data_partition as data_partition
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -63,7 +63,7 @@ def partition_blocks(
 
     # split dataset
     base_count = numpy.array(list(base_class_counts.values()))
-    splits = partition.stratified_splitter(
+    splits = data_partition.stratified_splitter(
         base_count,
         val_ratio=config.val_test_ratios[0],
         test_ratio=config.val_test_ratios[1],
@@ -72,7 +72,7 @@ def partition_blocks(
     # filter candidate files (remove overlaps from val+test blocks)
     catalog_coords = list(catalog_class_counts.keys())
     exclude_coords = [catalog_coords[i] for i in [*splits.val, *splits.test]]
-    safe_candidates = partition.filter_safe_tiles(
+    safe_candidates = data_partition.filter_safe_tiles(
         catalog_coords,
         exclude_coords,
         block_size=block_spec[0],
@@ -83,7 +83,7 @@ def partition_blocks(
     # score and rank the safe candidate tiles
     global_class_count = numpy.sum(base_count, axis=0)
     blocks_to_score = {k: v for k, v in catalog_class_counts.items() if k in safe_candidates}
-    ranked_candidates = partition.score_blocks(
+    ranked_candidates = data_partition.score_blocks(
         global_class_count,
         blocks_to_score,
         reward=tuple(config.reward_ratios.keys()),
@@ -93,7 +93,7 @@ def partition_blocks(
 
     # hydrate
     train_class_count = list(numpy.sum(base_count[list(splits.train)], axis=0))
-    selected, current_count = partition.hydrate_train_split(
+    selected, current_count = data_partition.hydrate_train_split(
         train_class_count,
         ranked_candidates,
         target_ratios=config.reward_ratios,
