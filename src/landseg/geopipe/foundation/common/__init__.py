@@ -32,19 +32,19 @@ import typing
 
 __all__ = [
     # classes
-    'BlockMeta',
-    'DataBlock',
     # functions
     # typing
+    'GridLayoutLike',
+    'MappedRasterWindowsLike'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .block import BlockMeta, DataBlock
+    from .protocols import GridLayoutLike, MappedRasterWindowsLike
 
 def __getattr__(name: str):
 
-    if name in ['BlockMeta', 'DataBlock']:
-        return getattr(importlib.import_module('.block', __package__), name)
+    if name in ['GridLayoutLike', 'MappedRasterWindowsLike']:
+        return getattr(importlib.import_module('.protocols', __package__), name)
 
     raise AttributeError(name)

@@ -55,7 +55,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
@@ -78,7 +78,7 @@ class DomainFile:
 
 # -------------------------------Public Function-------------------------------
 def prepare_domain(
-    world_grid: core.GridLayoutLike,
+    world_grid: common.GridLayoutLike,
     config: DomainMappingConfig,
     logger: utils.Logger
 ) -> None:

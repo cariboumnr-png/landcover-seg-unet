@@ -64,7 +64,7 @@ import typing
 import rasterio
 import rasterio.crs
 # local imports
-import landseg.geopipe.core.alias as alias
+import landseg.geopipe.foundation.common.alias as alias
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass

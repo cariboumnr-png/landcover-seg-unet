@@ -52,7 +52,8 @@ import zlib
 import numpy
 # local imports
 import landseg.geopipe.core as core
-import landseg.geopipe.core.alias as alias
+import landseg.geopipe.foundation.common as common
+import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
@@ -105,7 +106,7 @@ class BlockBuilder:
 
     def __init__(
         self,
-        windows: core.MappedRasterWindowsLike,
+        windows: common.MappedRasterWindowsLike,
         config: BuilderConfig,
         logger: utils.Logger,
     ):

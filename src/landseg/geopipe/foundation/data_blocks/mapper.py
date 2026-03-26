@@ -33,8 +33,8 @@ import copy
 import dataclasses
 import os
 # local imports
-import landseg.geopipe.core as core
-import landseg.geopipe.core.alias as alias
+import landseg.geopipe.foundation.common as common
+import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
@@ -56,7 +56,7 @@ class MappedRasterWindows:
 
 # -------------------------------Public Function-------------------------------
 def map_rasters(
-    world_grid: core.GridLayoutLike,
+    world_grid: common.GridLayoutLike,
     config: MappingConfig,
     logger: utils.Logger,
     *,
@@ -89,7 +89,7 @@ def map_rasters(
     return windows
 
 def _map(
-    world_grid: core.GridLayoutLike,
+    world_grid: common.GridLayoutLike,
     image_fpath: str,
     label_fpath: str | None,
     logger: utils.Logger
@@ -120,7 +120,7 @@ def _map(
 
 # ------------------------------private  function------------------------------
 def _crop(
-    world_grid: core.GridLayoutLike,
+    world_grid: common.GridLayoutLike,
     geom_summary: data_blocks.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
@@ -148,7 +148,7 @@ def _crop(
     return inside
 
 def _get_windows(
-    world_grid: core.GridLayoutLike,
+    world_grid: common.GridLayoutLike,
     transform: alias.RasterTransform,
     inside_idx: list[tuple[int, int]]
 ) -> alias.RasterWindowDict:
