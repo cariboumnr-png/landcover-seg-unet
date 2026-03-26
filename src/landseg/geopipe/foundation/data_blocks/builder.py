@@ -128,11 +128,8 @@ class BlockBuilder:
         self.coords_todo: list[tuple[int, int]] = []
 
         # load catalog.json
-        self.catalog: core.BlocksCatalog
         self.catalog = core.BlocksCatalog.from_json(self.catalog_path)
         self.logger.log('INFO', f'Read {len(self.catalog)} catalog entries')
-
-        # load raster windows
 
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config.config_fpath)
