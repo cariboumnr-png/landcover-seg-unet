@@ -19,32 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Project-wide type aliases and lazy imports for type checking.'''
-
-# standard imports
-import typing
-# third-party imports
-import numpy.typing
-import rasterio.io
-import rasterio.windows
-
-# rasterio types
-RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
-
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
 '''
-A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
-in pixels) from the world grid.
-'''
+Top-level namespace for `landseg.core`.
 
-RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
-Array read from a raster window with its top-left corner at specified
-coordinates (x, y in pixels) from the world grid.
-'''
-
-RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
-
-RasterTransform: typing.TypeAlias = rasterio.Affine | None

@@ -25,26 +25,19 @@
 import typing
 # third-party imports
 import numpy.typing
-import rasterio.io
-import rasterio.windows
 
-# rasterio types
-RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
+# numpy types
+IntArray: typing.TypeAlias = numpy.typing.NDArray[numpy.integer]
+'''A generic `numpy` integer array.'''
 
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
+Int64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.int64]
+'''A generic `numpy` array with `Int64` dtype.'''
 
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
-'''
-A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
-in pixels) from the world grid.
-'''
+Float32Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float32]
+'''A generic `numpy` array with `Float32` dtype.'''
 
-RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
-'''
-Array read from a raster window with its top-left corner at specified
-coordinates (x, y in pixels) from the world grid.
-'''
+Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
+'''A generic `numpy` array with `Float64` dtype.'''
 
-RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
-
-RasterTransform: typing.TypeAlias = rasterio.Affine | None
+MaskArray: typing.TypeAlias = numpy.typing.NDArray[numpy.bool]
+'''A generic `numpy` array with `bool` dtype.'''

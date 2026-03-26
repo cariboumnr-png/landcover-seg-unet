@@ -27,7 +27,7 @@
 import collections.abc
 import typing
 # local imports
-import landseg.geopipe.core.alias as alias
+import landseg.geopipe.foundation.common.alias as alias
 
 # -------------------------------Public Protocol-------------------------------
 @typing.runtime_checkable
