@@ -200,7 +200,7 @@ class BlockBuilder:
         self.logger.log('DEBUG', f'Minimum valid pixel: {valid_px_per:.2f}')
         self.logger.log('DEBUG', f'Focused head: {monitor_head}')
         self.logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
-        fpath = f'{save_dpath}/{_xy_name(c)}.npz'
+        fpath = f'{save_dpath}/{_yx_name(c)}.npz'
         blk.save(fpath)
 
     def build_blocks(self) -> None:
@@ -265,7 +265,7 @@ class BlockBuilder:
         blks_in_catalog: dict[tuple[int, int], core.CatalogEntry | None] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
-            name = _xy_name(c)
+            name = _yx_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
             blks_in_catalog[c] = self.catalog.get(c)
 
@@ -325,7 +325,7 @@ class BlockBuilder:
             co_contxt = self._get_context(c)
             save_args = {
                 'save': True,
-                'save_fpath': f'{self.blks_dir}/{_xy_name(c)}.npz'
+                'save_fpath': f'{self.blks_dir}/{_yx_name(c)}.npz'
             }
             jobs.append((_build_a_blk, (meta, co_contxt,), save_args))
 
@@ -365,11 +365,11 @@ class BlockBuilder:
         for fname in to_catalog:
             fp = f'{self.blks_dir}/{fname}'
             meta = core.DataBlock.load(fp).meta
-            col, row = _name_xy(meta['block_name'])
+            row, col = _name_yx(meta['block_name'])
             self.catalog[(col, row)] = {
                 'block_name': meta['block_name'],
                 'file_path': fp,
-                'loc_col_row': [col, row],
+                'row_col': [row, col],
                 'valid_px': meta['valid_ratios']['layer1'],
                 'class_count': meta['label_count']['layer1'],
                 'schema_version': '1.0.0',
@@ -387,7 +387,7 @@ class BlockBuilder:
         '''Return a the immutable block-creation context.'''
 
         return _BlockCreationContext(
-            name=_xy_name(coords),
+            name=_yx_name(coords),
             ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,
@@ -507,17 +507,17 @@ def _read_w_pad(
     return expanded_padded
 
 # coords <-> name helpers
-def _xy_name(coords: tuple[int, int]) -> str:
-    '''Convert (x, y) coordinates to a canonical block name string.'''
+def _yx_name(coords: tuple[int, int]) -> str:
+    '''Convert (row, col) to a canonical block name string.'''
 
-    # e.g., (12, 34) -> col_000012_row_000034
-    x, y = coords
-    return f'col_{x:06d}_row_{y:06d}'
+    # e.g., (12, 34) -> row_000012_col_000034
+    y, x = coords
+    return f'row_{y:06d}_col_{x:06d}'
 
-def _name_xy(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to coordinates.'''
+def _name_yx(name: str) -> tuple[int, int]:
+    '''Convert a canonical block name back to (row, col).'''
 
-    # e.g.,  col_000012_row_000034 -> (12, 34)
+    # e.g.,  row_000012_col_000034 -> (12, 34)
     split = name.split('_')
-    x_str, y_str = split[1], split[3]
-    return int(x_str), int(y_str)
+    y_str, x_str = split[1], split[3]
+    return int(y_str), int(x_str)

@@ -45,7 +45,7 @@ class CatalogEntry(typing.TypedDict):
     '''Typed dictionary representing metadata for a single data block.'''
     block_name: str
     file_path: str
-    loc_col_row: list[int]
+    row_col: list[int]
     valid_px: float
     class_count: list[int]
     schema_version: str
