@@ -43,8 +43,8 @@ class Extent:
     filename: str = ''
     origin: tuple[float, float] = (0.0, 0.0)
     pixel_size: tuple[float, float] = (0.0, 0.0)
-    grid_extent: tuple[float, float] = (0.0, 0.0)
-    grid_shape: tuple[int, int] = (0, 0)
+    grid_extent: tuple[float, float] | None = None
+    grid_shape: tuple[int, int] | None = None
 
 @dataclasses.dataclass
 class InputExtentCfg:
@@ -70,12 +70,12 @@ class InputExtentCfg:
         elif self.mode == 'aoi':
             if not all(self.inputs.pixel_size):
                 raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.inputs.grid_extent):
+            if not all(self.inputs.grid_extent or ()):
                 raise ValueError('Mode=aoi but grid extent has zero(s)')
         elif self.mode == 'tiles':
             if not all(self.inputs.pixel_size):
                 raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.inputs.grid_shape):
+            if not all(self.inputs.grid_shape or ()):
                 raise ValueError('Mode=tiles but grid shape has zero(s)')
 
 # ----- domain

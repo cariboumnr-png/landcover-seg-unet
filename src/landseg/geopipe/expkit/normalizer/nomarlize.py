@@ -26,11 +26,11 @@ import os
 # third-party imports
 import numpy
 # local imports
-import landseg.core.alias as alias
-import landseg._ingest_dataset.canonical as canonical
+import landseg.geopipe.common as common
+import landseg.geopipe.common.alias as alias
 import landseg.utils as utils
 
-def extract_blocks(
+def normalize_blocks(
     blocks: list[str],
     stats: dict[str, dict[str, int | float]],
     target_dir: str
@@ -49,7 +49,7 @@ def _extract_one_block(
     '''doc'''
 
     # read block
-    data = canonical.DataBlock.load(block_fpath).data
+    data = common.DataBlock.load(block_fpath).data
 
     # prep dict of arrays to write
     to_write = {

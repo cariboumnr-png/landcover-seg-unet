@@ -32,38 +32,36 @@ Public APIs:
 import copy
 import dataclasses
 import os
-# third-party imports
-import rasterio
 # local imports
-import landseg.core as core
-import landseg.core.alias as alias
-import landseg._ingest_dataset.canonical.align as align
+import landseg.geopipe.common as common
+import landseg.geopipe.common.alias as alias
+import landseg.geopipe.datamake.datablocks as datablocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class DataWindows:
-    '''Container for input read windows and expected window shape.'''
+class MappingConfig:
+    '''Dataclass configuration for `align_raster(...)`.'''
+    input_img_fpath: str
+    input_lbl_fpath: str
+    output_root: str
+
+@dataclasses.dataclass
+class MappedRasterWindows:
+    '''Container for output raster read windows and meta.'''
     grid_id: str                    # world grid identifier
     tile_shape: tuple[int, int]     # expected window shape (W*H) in px
     image: alias.RasterWindowDict   # indexed read windows
     label: alias.RasterWindowDict   # indexed read windows (can be empty)
 
-@dataclasses.dataclass
-class AlignmentConfig:
-    '''Typed configuration for `align_raster(...)`.'''
-    input_img_fpath: str
-    input_lbl_fpath: str
-    output_windows_dpath: str
-
 # -------------------------------Public Function-------------------------------
-def align_rasters(
-    world_grid: core.GridLayoutLike,
-    config: AlignmentConfig,
+def map_rasters(
+    world_grid: common.GridLayoutLike,
+    config: MappingConfig,
     logger: utils.Logger,
     *,
     remap: bool = False
-) -> None:
+) -> MappedRasterWindows:
     '''
     Map input rasters to the world grid and serialize read windows.
 
@@ -80,49 +78,50 @@ def align_rasters(
     # paths to artifacts from fit input
     image = config.input_img_fpath
     label = config.input_lbl_fpath
-    windows_dpath = config.output_windows_dpath
-    os.makedirs(windows_dpath, exist_ok=True)
-    output_fpath = os.path.join(windows_dpath, f'windows_{world_grid.gid}.pkl')
+    os.makedirs(config.output_root, exist_ok=True)
+    output_fpath = f'{config.output_root}/windows_{world_grid.gid}.pkl'
     if not os.path.exists(output_fpath) or remap:
-        _map(world_grid, image, label, output_fpath, logger)
+        windows = _map(world_grid, image, label, logger)
+        utils.write_pickle(output_fpath, windows)
+        utils.hash_artifacts(output_fpath)
+    else:
+        windows: MappedRasterWindows = utils.load_pickle(output_fpath)
+    return windows
 
 def _map(
-    world_grid: core.GridLayoutLike,
+    world_grid: common.GridLayoutLike,
     image_fpath: str,
     label_fpath: str | None,
-    windows_fpath: str,
     logger: utils.Logger
-) -> None:
+) -> MappedRasterWindows:
     '''Create and persist windows for a raster pair (image & label).'''
 
     # get geometry summary
-    geom = align.validate_geometry(image_fpath, label_fpath, logger)
+    geom = datablocks.validate_geometry(image_fpath, label_fpath, logger)
 
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
     data_crs = geom['crs']
     if grid_crs != data_crs:
-        raise ValueError(f'Data CRS [{data_crs}] != world CRS [{grid_crs}]')
+        e = f'Data CRS [{data_crs}] != world CRS [{grid_crs}]'
+        logger.log('ERROR', e)
+        raise ValueError(e)
 
     # focus on tiles inside the intersected extent
     inside = _crop(world_grid, geom)
 
     # get image and optionally label reading windows
-    data = DataWindows(
+    return MappedRasterWindows(
         image=_get_windows(world_grid, geom['image_transform'], inside),
         label=_get_windows(world_grid, geom['label_transform'], inside),
         grid_id=world_grid.gid,
         tile_shape=world_grid.tile_size
     )
 
-    # pickle
-    utils.write_pickle(windows_fpath, data)
-    utils.hash_artifacts(windows_fpath)
-
 # ------------------------------private  function------------------------------
 def _crop(
-    world_grid: core.GridLayoutLike,
-    geom_summary: align.GeometrySummary,
+    world_grid: common.GridLayoutLike,
+    geom_summary: datablocks.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
 
@@ -149,8 +148,8 @@ def _crop(
     return inside
 
 def _get_windows(
-    world_grid: core.GridLayoutLike,
-    transform: rasterio.Affine | None,
+    world_grid: common.GridLayoutLike,
+    transform: alias.RasterTransform,
     inside_idx: list[tuple[int, int]]
 ) -> alias.RasterWindowDict:
     '''Return window dict for tiles inside the target area .'''

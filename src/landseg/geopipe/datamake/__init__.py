@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg._ingest_dataset`.
+Top-level namespace for `landseg.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,31 +32,32 @@ import typing
 
 __all__ = [
     # classes
-    'AlignmentConfig',
-    'BlockBuilder',
-    'BlocksCatalog',
-    'CatalogueInputs',
-    'DataBlock',
+    'BlockBuildingConfig',
+    'DomainMappingConfig',
+    'GridExtentConfig',
+    'GridGenerationConfig',
     # functions
-    'align_rasters',
-    'build_catalogue',
-    # typing
-    'BuilderConfig',
+    'build_blocks',
+    'prepare_domain',
+    'prep_world_grid',
+    # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .align import AlignmentConfig, align_rasters
-    from .blocks import BlockBuilder, BlocksCatalog, BuilderConfig, DataBlock
-    from .pipeline import CatalogueInputs, build_catalogue
+    from .datablocks import BlockBuildingConfig, build_blocks
+    from .domains import DomainMappingConfig, prepare_domain
+    from .grid import GridExtentConfig, GridGenerationConfig, prep_world_grid
 
 def __getattr__(name: str):
 
-    if name in ['AlignmentConfig', 'align_rasters']:
-        return getattr(importlib.import_module('.align', __package__), name)
-    if name in ['BlockBuilder', 'BlocksCatalog', 'BuilderConfig', 'DataBlock']:
-        return getattr(importlib.import_module('.blocks', __package__), name)
-    if name in ['CatalogueInputs', 'build_catalogue']:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in {'BlockBuildingConfig', 'build_blocks'}:
+        return getattr(importlib.import_module('.datablocks', __package__), name)
 
-    raise AttributeError(name)
+    if name in {'DomainMappingConfig', 'prepare_domain'}:
+        return getattr(importlib.import_module('.domains', __package__), name)
+
+    if name in {'GridExtentConfig', 'GridGenerationConfig', 'prep_world_grid'}:
+        return getattr(importlib.import_module('.grid', __package__), name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

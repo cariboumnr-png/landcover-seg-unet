@@ -18,8 +18,9 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
-Top-level namespace for `landseg._ingest_dataset.split`.
+Top-level namespace for `landseg.ingest_domain`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -31,26 +32,36 @@ import typing
 
 __all__ = [
     # classes
+    'DomainMappingConfig',
+    'DomainTileMap',
     # functions
-    'aggregate_image_stats',
-    'build_normalized_blocks',
-    'extract_blocks'
+    'load_domain',
+    'map_domain_to_grid',
+    'pca_transform',
+    'prepare_domain',
+    'save_domain',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .extract import extract_blocks
-    from .aggregate import aggregate_image_stats
-    from .normalize import build_normalized_blocks
+    from .api import DomainMappingConfig, prepare_domain
+    from .io import load_domain, save_domain
+    from .mapper import map_domain_to_grid
+    from .tilemap import DomainTileMap
+    from .transform import pca_transform
 
 def __getattr__(name: str):
 
-    if name in ['aggregate_image_stats']:
-        return getattr(importlib.import_module('.aggregate', __package__), name)
-    if name in ['extract_blocks']:
-        return getattr(importlib.import_module('.extract', __package__), name)
-    if name in ['build_normalized_blocks']:
-        return getattr(importlib.import_module('.normalize', __package__), name)
+    if name in ['DomainMappingConfig', 'prepare_domain']:
+        return getattr(importlib.import_module('.api', __package__), name)
+    if name in ['load_domain', 'save_domain']:
+        return getattr(importlib.import_module('.io', __package__), name)
+    if name in ['map_domain_to_grid']:
+        return getattr(importlib.import_module('.mapper', __package__), name)
+    if name in ['DomainTileMap']:
+        return getattr(importlib.import_module('.tilemap', __package__), name)
+    if name in ['pca_transform']:
+        return getattr(importlib.import_module('.transform', __package__), name)
 
     raise AttributeError(name)

@@ -20,24 +20,21 @@
 # =========================================================================== #
 
 '''
-Data preparation pipeline that maps rasters to a grid, builds and
-normalizes blocks, splits datasets, and persists a versioned schema.
-
-Public APIs:
-    - build_catalogue_test: Run the end-to-end dataset workflow.
+Dataset partioning pipeline.
 '''
 
 # standard imports
 import dataclasses
+# third-party imports
+import numpy
 # local imports
-import landseg._ingest_dataset.canonical as canonical
-import landseg._ingest_dataset.materialized as materialized
+import landseg.geopipe.expkit.partition as partition
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class DatasetBuildConfig:
-    '''doc'''
+class PartitionConfig:
+    '''Partition pipeline configuration.'''
     val_test_ratios: tuple[float, float]
     buffer_step: int
     reward_ratios: dict[int, float]     # 0-based
@@ -46,49 +43,71 @@ class DatasetBuildConfig:
     max_skew_rate: float
     block_spec: tuple[int, int]         # block_size, block_stride
 
+@dataclasses.dataclass
+class BlockPartitions:
+    '''Container for partioning results.'''
+    train: list[tuple[int, int]]
+    val: list[tuple[int, int]]
+    test: list[tuple[int, int]]
+
 # -------------------------------Public Function-------------------------------
-def build_dataset(
-    catalog: canonical.BlocksCatalog,
-    config: DatasetBuildConfig,
-    output_root: str,
+def partition_blocks(
+    base_class_counts: dict[tuple[int, int], list[int]],
+    catalog_class_counts: dict[tuple[int, int], list[int]],
+    config: PartitionConfig,
     logger: utils.Logger,
-):
+    *,
+    block_spec: tuple[int, int]
+) -> BlockPartitions:
     '''doc'''
 
-    logger.log('INFO', 'Test')
-
-    # parse from catalog
-    work_catalog = {k: v for k, v in catalog.items() if v['valid_px']}
-    catalog_counts = {k: v['class_count'] for k, v in work_catalog.items()}
-
-    # from base grid (no overlap)
-    block_size = config.block_spec[0]
-    base_catalog = {
-        k: v for k, v in work_catalog.items()
-        if all(i % block_size == 0 for i in v['loc_col_row']) # both divisible
-    }
-    base_counts = {k: v['class_count'] for k, v in base_catalog.items()}
-
-    # partition data blocks
-    partition_config = materialized.PartitionConfig(
+    # split dataset
+    base_count = numpy.array(list(base_class_counts.values()))
+    splits = partition.stratified_splitter(
+        base_count,
         val_ratio=config.val_test_ratios[0],
         test_ratio=config.val_test_ratios[1],
-        buffer_step=config.buffer_step,
-        reward_ratios=config.reward_ratios,
-        alpha=config.scoring_alpha,
-        beta=config.scoring_beta,
-        max_skew_rate=config.max_skew_rate
-    )
-    partitions = materialized.partition_blocks(
-        base_counts,
-        catalog_counts,
-        partition_config,
-        logger,
-        block_spec=config.block_spec
     )
 
-    # normalize
-    train_blocks = [v['file_path'] for k, v in catalog.items() if k in partitions.train]
-    all_coords = partitions.train + partitions.val + partitions.test
-    all_blocks =  [v['file_path'] for k, v in catalog.items() if k in all_coords]
-    materialized.build_normalized_blocks(train_blocks, all_blocks, f'{output_root}/blocks')
+    # filter candidate files (remove overlaps from val+test blocks)
+    catalog_coords = list(catalog_class_counts.keys())
+    exclude_coords = [catalog_coords[i] for i in [*splits.val, *splits.test]]
+    safe_candidates = partition.filter_safe_tiles(
+        catalog_coords,
+        exclude_coords,
+        block_size=block_spec[0],
+        block_stride=block_spec[1],
+        buffer_steps=config.buffer_step
+    )
+
+    # score and rank the safe candidate tiles
+    global_class_count = numpy.sum(base_count, axis=0)
+    blocks_to_score = {k: v for k, v in catalog_class_counts.items() if k in safe_candidates}
+    ranked_candidates = partition.score_blocks(
+        global_class_count,
+        blocks_to_score,
+        reward=tuple(config.reward_ratios.keys()),
+        alpha=config.scoring_alpha,
+        beta=config.scoring_beta
+    )
+
+    # hydrate
+    train_class_count = list(numpy.sum(base_count[list(splits.train)], axis=0))
+    selected, current_count = partition.hydrate_train_split(
+        train_class_count,
+        ranked_candidates,
+        target_ratios=config.reward_ratios,
+        max_skew_rate=config.max_skew_rate
+    )
+
+    # report
+    logger.log('INFO', f'Hydration complete with {len(selected)} additional blocks')
+    print([int(x) for x in current_count])
+    print(numpy.array(current_count) / train_class_count)
+
+    # return block coordinates for each split (train/val/test)
+    return BlockPartitions(
+        train=selected,
+        val=[catalog_coords[i] for i in splits.val],
+        test =[catalog_coords[i] for i in splits.test]
+    )

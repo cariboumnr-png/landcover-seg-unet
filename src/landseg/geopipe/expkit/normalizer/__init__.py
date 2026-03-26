@@ -18,21 +18,39 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+'''
+Top-level namespace for `landseg._ingest_dataset.split`.
 
-'''doc'''
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
-# local imports
-import landseg._ingest_dataset.materialized.normalizer as normalizer
+from __future__ import annotations
+import importlib
+import typing
 
-def build_normalized_blocks(
-    train_blocks: list[str],
-    all_blocks: list[str],
-    output_dir: str
-):
-    '''doc'''
+__all__ = [
+    # classes
+    # functions
+    'aggregate_image_stats',
+    'build_normalized_blocks',
+    'normalize_blocks'
+    # typing
+]
 
-    # aggregate stats on training blocks
-    global_stats = normalizer.aggregate_image_stats(train_blocks)
+# for static check
+if typing.TYPE_CHECKING:
+    from .nomarlize import normalize_blocks
+    from .stats import aggregate_image_stats
+    from .api import build_normalized_blocks
 
-    # build normalized blocks
-    normalizer.extract_blocks(all_blocks, global_stats, output_dir)
+def __getattr__(name: str):
+
+    if name in ['normalize_blocks']:
+        return getattr(importlib.import_module('.extract', __package__), name)
+    if name in ['build_normalized_blocks']:
+        return getattr(importlib.import_module('.normalize', __package__), name)
+    if name in ['aggregate_image_stats']:
+        return getattr(importlib.import_module('.stats', __package__), name)
+
+    raise AttributeError(name)

@@ -20,30 +20,8 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg._ingest_dataset`.
+Top-level namespace for `landseg.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
-
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    # classes
-    # functions
-    'test_pipeline'
-    # typing
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .pipeline import test_pipeline
-
-def __getattr__(name: str):
-
-    if name in ['test_pipeline']:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(name)

@@ -19,39 +19,41 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.cli`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+'''GridSpec protocol.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
-from __future__ import annotations
-import importlib
+# standard imports
+import collections.abc
 import typing
+# local imports
+import landseg.geopipe.common.alias as alias
 
-__all__ = [
-    # classes
-    # functions
-    'catalogue',
-    'train_end_to_end',
-    'overfit_test',
-    # typing
-]
+# -------------------------------Public Protocol-------------------------------
+@typing.runtime_checkable
+class GridLayoutLike(typing.Protocol):
+    '''Used by ingestion modules.'''
+    def keys(self) -> collections.abc.KeysView[tuple[int, int]]: ...
+    def items(self) -> collections.abc.ItemsView[tuple[int, int], alias.RasterWindow]: ...
+    def offset_from(self, src) -> None:...
+    @property
+    def gid(self) -> str:...
+    @property
+    def crs(self) -> str:...
+    @property
+    def origin(self) -> tuple[float, float]:...
+    @property
+    def tile_size(self) -> tuple[int, int]:...
+    @property
+    def tile_overlap(self) -> tuple[int, int]:...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dev_test import catalogue
-    from .end_to_end import train_end_to_end
-    from .overfit import overfit_test
-
-def __getattr__(name: str):
-
-    if name in ['catalogue']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
-
-    raise AttributeError(name)
+class MappedRasterWindowsLike(typing.Protocol):
+    '''From raster alignment to the grid.'''
+    @property
+    def grid_id(self) -> str:...
+    @property
+    def tile_shape(self) -> tuple[int, int]:...
+    @property
+    def image(self) -> alias.RasterWindowDict:...
+    @property
+    def label(self) -> alias.RasterWindowDict:...

@@ -18,9 +18,8 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 '''
-Top-level namespace for `landseg.ingest_dataset.mapper`.
+Top-level namespace for `landseg._ingest_dataset.split`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,25 +31,35 @@ import typing
 
 __all__ = [
     # classes
-    'DataWindows',
+    'PartitionConfig',
     # functions
-    'align_rasters',
-    'validate_geometry',
+    'filter_safe_tiles',
+    'hydrate_train_split',
+    'partition_blocks',
+    'score_blocks',
+    'stratified_splitter'
     # typing
-    'GeometrySummary',
-    'AlignmentConfig',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .aligner import DataWindows, AlignmentConfig, align_rasters
-    from .geometry import GeometrySummary, validate_geometry
+    from .api import PartitionConfig, partition_blocks
+    from .filter import filter_safe_tiles
+    from .hydrate import hydrate_train_split
+    from .score import score_blocks
+    from .split import stratified_splitter
 
 def __getattr__(name: str):
 
-    if name in ['DataWindows', 'AlignmentConfig', 'align_rasters']:
-        return getattr(importlib.import_module('.aligner', __package__), name)
-    if name in ['GeometrySummary', 'validate_geometry']:
-        return getattr(importlib.import_module('.geometry', __package__), name)
+    if name in ['PartitionConfig', 'partition_blocks']:
+        return getattr(importlib.import_module('.api', __package__), name)
+    if name in ['filter_safe_tiles']:
+        return getattr(importlib.import_module('.filter', __package__), name)
+    if name in ['hydrate_train_split']:
+        return getattr(importlib.import_module('.hydrate', __package__), name)
+    if name in ['score_blocks']:
+        return getattr(importlib.import_module('.score', __package__), name)
+    if name in ['stratified_splitter']:
+        return getattr(importlib.import_module('.split', __package__), name)
 
     raise AttributeError(name)

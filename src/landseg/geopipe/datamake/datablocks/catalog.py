@@ -20,7 +20,16 @@
 # =========================================================================== #
 
 '''
-doc
+Canonical data blocks catalog.
+
+This module defines a structured, dictionary-like container for managing
+metadata entries associated with spatial data blocks. Each `CatalogEntry`
+stores information such as file paths, spatial indices, validation stats,
+and provenance metadata (e.g., hashes and timestamps).
+
+The main class, BlocksCatalog, provides a mapping interface keyed by
+(x, y) block coordinates, along with utilities for serialization to and
+from JSON with deterministic ordering and formatting.
 '''
 
 # standard imports
@@ -33,7 +42,7 @@ import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
 class CatalogEntry(typing.TypedDict):
-    '''Catalog entry per block.'''
+    '''Typed dictionary representing metadata for a single data block.'''
     block_name: str
     file_path: str
     loc_col_row: list[int]
@@ -50,7 +59,25 @@ class CatalogEntry(typing.TypedDict):
 
 # --------------------------------Public  Class--------------------------------
 class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
-    '''doc'''
+    '''
+    A mapping container for managing catalog entries of spatial blocks.
+
+    This class behaves like a read-only mapping from (row, col) coordinate
+    tuples to `CatalogEntry` metadata dictionaries, while also supporting
+    mutation via item assignment.
+
+    Features:
+    - Stores block metadata indexed by (x, y) coordinates
+    - Provides dictionary-like access and iteration
+    - Exposes utility methods for retrieving indexed file paths
+    - Supports deterministic JSON serialization with custom formatting
+    - Supports reconstruction from JSON files
+
+    Notes:
+        The internal storage is a standard Python dictionary. While the
+        class implements the Mapping interface, it allows mutation
+        via `__setitem__`.
+    '''
 
     SCHEMA_ID: str = 'v_1.0'
 
@@ -75,7 +102,16 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         return {k: v['file_path'] for k, v in self._data.items()}
 
     def save_json(self, fpath: str) -> None:
-        '''Save the catalog as a json with custom cosmetics.'''
+        '''
+        Save to JSON with deterministic ordering and custom formatting.
+
+        The output is sorted by block coordinate keys and formatted with
+        consistent indentation for readability. After writing, the file
+        is hashed for integrity tracking.
+
+        Args:
+            fpath: Destination file path for the JSON output.
+        '''
 
         # index entries and sort
         payload = {_xy_name(k): v for k, v in self._data.items()}
@@ -99,7 +135,17 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
 
     @classmethod
     def from_json(cls, fpath: str) -> BlocksCatalog:
-        '''Load a .json file and instantiate a class instance.'''
+        '''
+        Create a `BlocksCatalog` instance from a JSON file.
+
+        If the file does not exist, an empty catalog is returned.
+
+        Args:
+            fpath: Path to the JSON file to load.
+
+        Returns:
+            A `BlocksCatalog` instance populated with the file contents.
+        '''
 
         obj = cls.__new__(cls)
         try:
@@ -110,23 +156,18 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         obj._data = {_name_xy(k): v for k, v in payload.items()}
         return obj
 
-
-# helpers
+# ------------------------------private  function------------------------------
 def _xy_name(coords: tuple[int, int]) -> str:
-    '''
-    Convert (x, y) coordinates to a canonical block name string:
-    `(12, 34)` -> `'col_000012_row_000034'`.
-    '''
+    '''Convert (x, y) coordinates to a canonical block name string.'''
 
+    # e.g., (12, 34) -> col_000012_row_000034
     x, y = coords
     return f'col_{x:06d}_row_{y:06d}'
 
 def _name_xy(name: str) -> tuple[int, int]:
-    '''
-    Convert a canonical block name back to coordinates:
-    `'col_000012_row_000034'` -> `(12, 34)`.
-    '''
+    '''Convert a canonical block name back to coordinates.'''
 
+    # e.g.,  col_000012_row_000034 -> (12, 34)
     split = name.split('_')
     x_str, y_str = split[1], split[3]
     return int(x_str), int(y_str)

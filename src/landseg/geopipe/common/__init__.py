@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli`.
+Top-level namespace for `landseg.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,26 +32,24 @@ import typing
 
 __all__ = [
     # classes
+    'BlockMeta',
+    'DataBlock',
     # functions
-    'catalogue',
-    'train_end_to_end',
-    'overfit_test',
     # typing
+    'GridLayoutLike',
+    'MappedRasterWindowsLike'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dev_test import catalogue
-    from .end_to_end import train_end_to_end
-    from .overfit import overfit_test
+    from .block import BlockMeta, DataBlock
+    from .protocols import GridLayoutLike, MappedRasterWindowsLike
 
 def __getattr__(name: str):
 
-    if name in ['catalogue']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
+    if name in ['BlockMeta', 'DataBlock']:
+        return getattr(importlib.import_module('.block', __package__), name)
+    if name in ['GridLayoutLike', 'MappedRasterWindowsLike']:
+        return getattr(importlib.import_module('.protocols', __package__), name)
 
     raise AttributeError(name)

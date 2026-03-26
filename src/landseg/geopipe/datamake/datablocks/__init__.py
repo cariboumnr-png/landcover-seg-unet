@@ -18,9 +18,8 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 '''
-Top-level namespace for `landseg.cli`.
+Top-level namespace for `landseg._ingest_dataset.catelogue`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,26 +31,39 @@ import typing
 
 __all__ = [
     # classes
+    'BlockBuilder',
+    'BlockBuildingConfig',
+    'CatalogEntry',
+    'MappingConfig',
     # functions
-    'catalogue',
-    'train_end_to_end',
-    'overfit_test',
+    'build_blocks',
+    'map_rasters',
+    'validate_geometry',
     # typing
+    'BlocksCatalog',
+    'BuilderConfig',
+    'GeometrySummary',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dev_test import catalogue
-    from .end_to_end import train_end_to_end
-    from .overfit import overfit_test
+    from .api import BlockBuildingConfig, build_blocks
+    from .builder import BlockBuilder, BuilderConfig
+    from .catalog import BlocksCatalog, CatalogEntry
+    from .geometry import GeometrySummary, validate_geometry
+    from .mapper import MappingConfig, map_rasters
 
 def __getattr__(name: str):
 
-    if name in ['catalogue']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
+    if name in ['BlockBuildingConfig', 'build_blocks']:
+        return getattr(importlib.import_module('.api', __package__), name)
+    if name in ['BlockBuilder', 'BuilderConfig']:
+        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in ['BlocksCatalog', 'CatalogEntry']:
+        return getattr(importlib.import_module('.catalog', __package__), name)
+    if name in ['GeometrySummary', 'validate_geometry']:
+        return getattr(importlib.import_module('.geometry', __package__), name)
+    if name in ['MappingConfig', 'map_rasters']:
+        return getattr(importlib.import_module('.mapper', __package__), name)
 
     raise AttributeError(name)

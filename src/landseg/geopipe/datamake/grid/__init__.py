@@ -18,8 +18,9 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
-Top-level namespace for `landseg._ingest_dataset.catelogue`.
+Top-level namespace for `landseg.grid_generator`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -31,28 +32,31 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuilder',
-    'DataBlock',
+    'GridExtentConfig',
+    'GridGenerationConfig',
+    'GridLayout',
+    'GridSpec',
     # functions
+    'load_grid',
+    'prep_world_grid',
+    'save_grid',
     # typing
-    'BlocksCatalog',
-    'BlockMeta',
-    'BuilderConfig',
+    'GridLayoutPayload',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .block import BlockMeta, DataBlock
-    from .builder import BlockBuilder, BuilderConfig
-    from .catalog import BlocksCatalog
+    from .api import GridExtentConfig, GridGenerationConfig, prep_world_grid
+    from .io import load_grid, save_grid
+    from .layout import GridLayout, GridLayoutPayload, GridSpec
 
 def __getattr__(name: str):
 
-    if name in ['BlockMeta', 'DataBlock']:
-        return getattr(importlib.import_module('.block', __package__), name)
-    if name in ['BlockBuilder', 'BuilderConfig']:
-        return getattr(importlib.import_module('.builder', __package__), name)
-    if name in ['BlocksCatalog']:
-        return getattr(importlib.import_module('.catalog', __package__), name)
+    if name in ['GridExtentConfig', 'GridGenerationConfig', 'prep_world_grid']:
+        return getattr(importlib.import_module('.api', __package__), name)
+    if name in ['load_grid', 'save_grid']:
+        return getattr(importlib.import_module('.io', __package__), name)
+    if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
+        return getattr(importlib.import_module('.layout', __package__), name)
 
     raise AttributeError(name)

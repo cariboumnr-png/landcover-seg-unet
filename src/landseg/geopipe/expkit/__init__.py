@@ -18,8 +18,9 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
-Top-level namespace for `landseg._ingest_dataset.split`.
+Top-level namespace for `landseg.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -31,28 +32,25 @@ import typing
 
 __all__ = [
     # classes
-    'DatasetBuildConfig',
     'PartitionConfig',
     # functions
     'build_normalized_blocks',
-    'build_dataset',
-    'partition_blocks'
-    # typing
+    'partition_blocks',
+    # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import DatasetBuildConfig, build_dataset
     from .normalizer import build_normalized_blocks
-    from .partitioner import PartitionConfig, partition_blocks
+    from .partition import PartitionConfig, partition_blocks
+
 
 def __getattr__(name: str):
 
-    if name in ['DatasetBuildConfig', 'build_dataset']:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-    if name in ['build_normalized_blocks']:
+    if name in {'build_normalized_blocks'}:
         return getattr(importlib.import_module('.normalizer', __package__), name)
-    if name in ['PartitionConfig', 'partition_blocks']:
-        return getattr(importlib.import_module('.partitioner', __package__), name)
 
-    raise AttributeError(name)
+    if name in {'PartitionConfig', 'partition_blocks'}:
+        return getattr(importlib.import_module('.partition', __package__), name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

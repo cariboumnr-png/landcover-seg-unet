@@ -19,39 +19,48 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.cli`.
+'''Project-wide type aliases and lazy imports for type checking.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
-from __future__ import annotations
-import importlib
+# standard imports
 import typing
+# third-party imports
+import numpy.typing
+import rasterio.io
+import rasterio.windows
 
-__all__ = [
-    # classes
-    # functions
-    'catalogue',
-    'train_end_to_end',
-    'overfit_test',
-    # typing
-]
+# numpy types
+IntArray: typing.TypeAlias = numpy.typing.NDArray[numpy.integer]
+'''A generic `numpy` integer array.'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dev_test import catalogue
-    from .end_to_end import train_end_to_end
-    from .overfit import overfit_test
+Int64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.int64]
+'''A generic `numpy` array with `Int64` dtype.'''
 
-def __getattr__(name: str):
+Float32Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float32]
+'''A generic `numpy` array with `Float32` dtype.'''
 
-    if name in ['catalogue']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
+Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
+'''A generic `numpy` array with `Float64` dtype.'''
 
-    raise AttributeError(name)
+MaskArray: typing.TypeAlias = numpy.typing.NDArray[numpy.bool]
+'''A generic `numpy` array with `bool` dtype.'''
+
+# rasterio types
+RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
+
+RasterWindow: typing.TypeAlias = rasterio.windows.Window
+
+RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
+'''
+A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
+in pixels) from the world grid.
+'''
+
+RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
+'''
+Array read from a raster window with its top-left corner at specified
+coordinates (x, y in pixels) from the world grid.
+'''
+
+RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
+
+RasterTransform: typing.TypeAlias = rasterio.Affine | None

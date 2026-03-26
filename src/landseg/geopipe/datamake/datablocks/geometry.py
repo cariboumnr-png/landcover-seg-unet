@@ -36,7 +36,7 @@ import typing
 import rasterio
 import rasterio.coords
 # local imports
-import landseg.core.alias as alias
+import landseg.geopipe.common.alias as alias
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------

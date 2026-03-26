@@ -51,9 +51,9 @@ import zlib
 # third-party imports
 import numpy
 # local imports
-import landseg.core.alias as alias
-import landseg._ingest_dataset.canonical.align as align
-import landseg._ingest_dataset.canonical.blocks as blocks
+import landseg.geopipe.common as common
+import landseg.geopipe.common.alias as alias
+import landseg.geopipe.datamake.datablocks as datablocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -69,8 +69,7 @@ class BuilderConfig:
     image_fpath: str            # path to input image data (.tiff)
     label_fpath: str | None     # path to input label data (.tiff)
     config_fpath: str           # path to input metadata (.json)
-    catalog_root: str           # root directory to save related artifacts
-    grid_id: str                # world grid that the rasters are mapped to
+    output_root: str            # path to output artifacts
     ignore_index: int           # global ignore label index
     dem_pad_px: int             # image DEM channel padding in pixels
 
@@ -106,6 +105,7 @@ class BlockBuilder:
 
     def __init__(
         self,
+        windows: common.MappedRasterWindowsLike,
         config: BuilderConfig,
         logger: utils.Logger,
     ):
@@ -119,34 +119,26 @@ class BlockBuilder:
         '''
 
         # intake arguments
+        self.windows = windows
         self.config = config
         self.logger = logger
 
         # declare class attributes
-        self.catalog: blocks.BlocksCatalog
-        self.windows: align.DataWindows
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
 
-        root = self.config.catalog_root
         # load catalog.json
-        self.catalog = blocks.BlocksCatalog.from_json(f'{root}/catalog.json')
+        self.catalog: datablocks.BlocksCatalog
+        self.catalog = datablocks.BlocksCatalog.from_json(self.catalog_path)
         self.logger.log('INFO', f'Read {len(self.catalog)} catalog entries')
 
         # load raster windows
-        windows_pkl = f'{root}/windows/windows_{self.config.grid_id}.pkl'
-        try:
-            self.windows = utils.load_pickle(windows_pkl)
-            self.logger.log('INFO', 'Block windows loaded')
-        except FileExistsError:
-            self.logger.log('ERROR', f'{windows_pkl} not found')
-            raise
 
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config.config_fpath)
-        keys = meta_src.keys() & blocks.BlockMeta.__annotations__
+        keys = meta_src.keys() & common.BlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
-        self.meta = typing.cast(blocks.BlockMeta, meta) # typing compliance
+        self.meta = typing.cast(common.BlockMeta, meta) # typing compliance
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
@@ -154,7 +146,12 @@ class BlockBuilder:
     @property
     def blks_dir(self) -> str:
         '''Directory to save `.npz` block files.'''
-        return f'{self.config.catalog_root}/blocks'
+        return f'{self.config.output_root}/blocks'
+
+    @property
+    def catalog_path(self) -> str:
+        '''File path where catalog JSON is to load/save.'''
+        return f'{self.config.output_root}/catalog.json'
 
     @property
     def has_label(self) -> bool:
@@ -166,9 +163,9 @@ class BlockBuilder:
         self,
         save_dpath: str,
         *,
-        valid_px_per: float = 0.8,
-        monitor_head: str = 'layer1',
-        need_all_classes: bool = True
+        valid_px_per: float,
+        monitor_head: str,
+        need_all_classes: bool
     ) -> None:
         '''
         Build and save a single data block with the given criteria.
@@ -180,7 +177,7 @@ class BlockBuilder:
 
         # iterate through till a valid block if found
         c: tuple[int, int] = (0, 0)
-        blk: blocks.DataBlock | None = None
+        blk: common.DataBlock | None = None
         for c in coords:
             print('Searching for a valid raster window...', end='\r', flush=True)
             try:
@@ -265,7 +262,7 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        blks_in_catalog: dict[tuple[int, int], blocks.CatalogEntry | None] = {}
+        blks_in_catalog: dict[tuple[int, int], datablocks.CatalogEntry | None] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
             name = _xy_name(c)
@@ -367,7 +364,7 @@ class BlockBuilder:
         # add to current catalog dict
         for fname in to_catalog:
             fp = f'{self.blks_dir}/{fname}'
-            meta = blocks.DataBlock.load(fp).meta
+            meta = common.DataBlock.load(fp).meta
             col, row = _name_xy(meta['block_name'])
             self.catalog[(col, row)] = {
                 'block_name': meta['block_name'],
@@ -378,13 +375,13 @@ class BlockBuilder:
                 'schema_version': '1.0.0',
                 'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
                 'sha_256': utils.hash_artifacts(fp, False),
-                'aligned_grid': self.config.grid_id,
+                'aligned_grid': self.windows.grid_id,
                 'source_image': self.config.image_fpath,
                 'source_image_sha_256': img_hash,
                 'source_label': self.config.label_fpath,
                 'source_label_sha_256': lbl_hash,
             }
-        self.catalog.save_json(f'{self.config.catalog_root}/catalog.json')
+        self.catalog.save_json(self.catalog_path)
 
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''
@@ -400,7 +397,7 @@ class BlockBuilder:
         )
 
 # ------------------------------private functions------------------------------
-# outside of class for the use in parallel processing
+# function outside of class for the use in parallel processing
 def _check_npz(
     coord: tuple[int, int],
     fpath: str,
@@ -419,7 +416,7 @@ def _check_npz(
     ok = False
     # pass if the npz file can be loaded properly
     try:
-        blocks.DataBlock.load(fpath)
+        common.DataBlock.load(fpath)
         # branch out if deep check
         if deep_check:
             blk_sha_256 = utils.hash_artifacts(fpath, write_to_record=False)
@@ -435,12 +432,12 @@ def _check_npz(
     return {coord: ok}
 
 def _build_a_blk(
-    meta: blocks.BlockMeta,
+    meta: common.BlockMeta,
     contxt: _BlockCreationContext,
     *,
     save: bool = False,
     save_fpath: str | None = None
-) -> blocks.DataBlock:
+) -> common.DataBlock:
     '''Create a block from the input rasters for the given window.'''
 
     # meta i/o
@@ -465,7 +462,7 @@ def _build_a_blk(
             meta['label_nodata'] = lbl.nodata
 
     # create and return DataBlock instance
-    output_block = blocks.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
+    output_block = common.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
     # by default save to provided target path
     if save:
         assert save_fpath
@@ -485,7 +482,11 @@ def _read_w_pad(
     nw_y = max(window.row_off - pad, 0)
     se_x = min(window.col_off + window.width + pad, img.width)
     se_y = min(window.row_off + window.height + pad, img.height)
-    _window = alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+    try:
+        _window = alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+    except ValueError:
+        print(nw_x, nw_y, se_x - nw_x, se_y - nw_y)
+        raise
 
     # get expanded array using the new window
     # band number in rasterio.read is 1-based
@@ -505,22 +506,18 @@ def _read_w_pad(
     )
     return expanded_padded
 
-# helpers
+# coords <-> name helpers
 def _xy_name(coords: tuple[int, int]) -> str:
-    '''
-    Convert (x, y) coordinates to a canonical block name string:
-    `(12, 34)` -> `'col_000012_row_000034'`.
-    '''
+    '''Convert (x, y) coordinates to a canonical block name string.'''
 
+    # e.g., (12, 34) -> col_000012_row_000034
     x, y = coords
     return f'col_{x:06d}_row_{y:06d}'
 
 def _name_xy(name: str) -> tuple[int, int]:
-    '''
-    Convert a canonical block name back to coordinates:
-    `'col_000012_row_000034'` -> `(12, 34)`.
-    '''
+    '''Convert a canonical block name back to coordinates.'''
 
+    # e.g.,  col_000012_row_000034 -> (12, 34)
     split = name.split('_')
     x_str, y_str = split[1], split[3]
     return int(x_str), int(y_str)
