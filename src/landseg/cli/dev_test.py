@@ -26,8 +26,14 @@ Dev Test Ground
 # local imports
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
-import landseg.geopipe.pipeline as pipeline
+import landseg.geopipe.pipeline.transform as transform
 import landseg.utils as utils
+
+def test_run(config: configs.RootConfig):
+    '''test'''
+
+    catalogue(config)
+    prep_train_data_test(config)
 
 def catalogue(config: configs.RootConfig):
     '''Catalogue pipeline.'''
@@ -71,46 +77,41 @@ def catalogue(config: configs.RootConfig):
         dem_pad=8,
         ignore_index=255
     )
-    blocks_dir = './experiment/artifacts/data_cache/branch_test'
+    blocks_dir = './experiment/artifacts/foundation'
     foundation.build_blocks(grid, blocks_config, blocks_dir, logger)
 
-# def prep_train_data_test(config: configs.RootConfig):
-#     '''Train data preparation pipeline.'''
+def prep_train_data_test(config: configs.RootConfig):
+    '''Train data preparation pipeline.'''
 
-#     # parse from catalog
-#     work_catalog = {k: v for k, v in catalog.items() if v['valid_px']}
-#     catalog_counts = {k: v['class_count'] for k, v in work_catalog.items()}
+    logger = utils.Logger('test', './test.log')
 
-#     # from base grid (no overlap)
-#     block_size = config.block_spec[0]
-#     base_catalog = {
-#         k: v for k, v in work_catalog.items()
-#         if all(i % block_size == 0 for i in v['loc_col_row']) # both divisible
-#     }
-#     base_counts = {k: v['class_count'] for k, v in base_catalog.items()}
+    catalog_fpath = './experiment/artifacts/foundation/model_dev/catalog.json'
+    parsed_catalog = transform.load_catalog(catalog_fpath, (256, 256))
 
-#     # datablocks partition
-#     part_config = trainprep.PartitionConfig(
-#         val_test_ratios=(0.1, 0),
-#         buffer_step=1,
-#         reward_ratios={2: 5.0, 4: 5.0},
-#         scoring_alpha=1.0,
-#         scoring_beta=0.8,
-#         max_skew_rate=5.0,
-#         block_spec=(256, 128)
-#     )
-#     trainprep.partition_blocks()
+    # datablocks partition
+    partition_config = transform.PartitionConfig(
+        val_test_ratios=(0.1, 0),
+        buffer_step=1,
+        reward_ratios={2: 5.0, 4: 5.0},
+        scoring_alpha=1.0,
+        scoring_beta=config.prep.data.scoring.beta,
+        max_skew_rate=5.0,
+        block_spec=(256, 128, 256, 128)
+    )
+    partitions = transform.partition_blocks(
+        parsed_catalog.base_class_counts,
+        parsed_catalog.valid_class_counts,
+        partition_config,
+        logger,
+    )
 
-#     # normalize
-#     train_blocks = [
-#         v['file_path'] for k, v in catalog.items() if k in partitions.train
-#     ]
-#     all_coords = partitions.train + partitions.val + partitions.test
-#     all_blocks =  [
-#         v['file_path'] for k, v in catalog.items() if k in all_coords
-#     ]
-#     materialized.build_normalized_blocks(
-#         train_blocks,
-#         all_blocks,
-#         f'{output_root}/blocks'
-#     )
+    # normalize
+    fpaths = parsed_catalog.valid_file_paths
+    train_blocks = [v for k, v in fpaths.items() if k in partitions.train]
+    all_coords = partitions.train + partitions.val + partitions.test
+    all_blocks =  [v for k, v in fpaths.items() if k in all_coords]
+    transform.build_normalized_blocks(
+        train_blocks,
+        all_blocks,
+        './experiment/artifacts/pipeline/blocks'
+    )

@@ -33,7 +33,7 @@ import typing
 __all__ = [
     # classes
     # functions
-    'catalogue',
+    'test_run',
     'train_end_to_end',
     'overfit_test',
     # typing
@@ -41,13 +41,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dev_test import catalogue
+    from .dev_test import test_run
     from .end_to_end import train_end_to_end
     from .overfit import overfit_test
 
 def __getattr__(name: str):
 
-    if name in ['catalogue']:
+    if name in ['test_run']:
         return getattr(importlib.import_module('.dev_test', __package__), name)
     if name in ['train_end_to_end']:
         return getattr(importlib.import_module('.end_to_end', __package__), name)

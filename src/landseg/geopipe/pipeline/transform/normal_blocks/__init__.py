@@ -40,15 +40,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .nomarlize import normalize_blocks
-    from .stats import aggregate_image_stats
     from .api import build_normalized_blocks
+    from .normalize import normalize_blocks
+    from .stats import aggregate_image_stats
 
 def __getattr__(name: str):
 
-    if name in ['normalize_blocks']:
-        return getattr(importlib.import_module('.extract', __package__), name)
     if name in ['build_normalized_blocks']:
+        return getattr(importlib.import_module('.api', __package__), name)
+    if name in ['normalize_blocks']:
         return getattr(importlib.import_module('.normalize', __package__), name)
     if name in ['aggregate_image_stats']:
         return getattr(importlib.import_module('.stats', __package__), name)

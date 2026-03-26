@@ -22,3 +22,46 @@
 '''
 Catalog adapter.
 '''
+
+# standard imports
+import dataclasses
+# local imports
+import landseg.geopipe.core as core
+
+@dataclasses.dataclass
+class ParsedCatalog:
+    '''Information parsed from the data blocks catalog.'''
+    valid_class_counts: dict[tuple[int, int], list[int]]
+    base_class_counts: dict[tuple[int, int], list[int]]
+    valid_file_paths: dict[tuple[int, int], str]
+
+def load_catalog(
+    fpath: str,
+    block_size: tuple[int, int]
+):
+    '''Load data blocks catalog.'''
+
+    # read catalog JSON to instantiate a class object
+    catalog = core.BlocksCatalog.from_json(fpath)
+
+    # all valid entries from catalog
+    work_catalog = {k: v for k, v in catalog.items() if v['valid_px']}
+    catalog_counts = {k: v['class_count'] for k, v in work_catalog.items()}
+
+    # entries on the base grid (no overlap)
+    row_size, col_size = block_size
+    base_catalog = {
+        k: v for k, v in work_catalog.items()
+        # both row and col are divisible
+        if v['row_col'][0] % row_size == 0 and v['row_col'][1] % col_size == 0
+    }
+    base_counts = {k: v['class_count'] for k, v in base_catalog.items()}
+
+    # all block file paths
+    valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
+
+    return ParsedCatalog(
+        base_class_counts=base_counts,
+        valid_class_counts=catalog_counts,
+        valid_file_paths=valid_file_paths
+    )

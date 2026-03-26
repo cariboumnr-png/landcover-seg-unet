@@ -47,7 +47,7 @@ import typing
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.core.alias as alias
+import landseg.geopipe.pipeline.common.alias as alias
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -84,7 +84,7 @@ def stratified_splitter(
 
     # input validations
     if counts.ndim != 2:
-        raise ValueError('counts must be 2D [n_blocks, n_classes].')
+        raise ValueError(f'counts must be 2D [n_blks, n_cls]: {counts.ndim}')
     if counts.shape[0] == 0 or counts.shape[1] == 0:
         raise ValueError('counts must be non-empty.')
     if not numpy.issubdtype(counts.dtype, numpy.integer):

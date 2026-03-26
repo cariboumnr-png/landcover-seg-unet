@@ -122,7 +122,7 @@ def _get_index_mapping(
     tiles: alias.RasterTileDict,
     nodata: int,
     index_base: int
-) -> alias.Int64Array:
+) -> numpy.ndarray:
     '''doc'''
 
     # iteration on all tiles to gather unique values (exclude nodata)
@@ -146,7 +146,7 @@ def _get_index_mapping(
 def _re_index(
     tiles: alias.RasterTileDict,
     nodata: int,
-    mapping: alias.Int64Array
+    mapping: numpy.ndarray
 ) -> alias.RasterTileDict:
     '''doc'''
 

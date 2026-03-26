@@ -41,7 +41,7 @@ class PartitionConfig:
     scoring_alpha: float                # exponent for transforming block counts
     scoring_beta: float                 # reward weight for classes during L1
     max_skew_rate: float
-    block_spec: tuple[int, int]         # block_size, block_stride
+    block_spec: tuple[int, int, int, int]  # row_size, row_stride, col_size, col_stride
 
 @dataclasses.dataclass
 class BlockPartitions:
@@ -56,10 +56,12 @@ def partition_blocks(
     catalog_class_counts: dict[tuple[int, int], list[int]],
     config: PartitionConfig,
     logger: utils.Logger,
-    *,
-    block_spec: tuple[int, int]
 ) -> BlockPartitions:
     '''doc'''
+
+    # current we only accept equal row and col sizes and strides
+    assert config.block_spec[0] == config.block_spec[2], 'Not a square block'
+    assert config.block_spec[1] == config.block_spec[3], 'Not a equal stride'
 
     # split dataset
     base_count = numpy.array(list(base_class_counts.values()))
@@ -75,8 +77,8 @@ def partition_blocks(
     safe_candidates = data_partition.filter_safe_tiles(
         catalog_coords,
         exclude_coords,
-        block_size=block_spec[0],
-        block_stride=block_spec[1],
+        block_size=config.block_spec[0],
+        block_stride=config.block_spec[1],
         buffer_steps=config.buffer_step
     )
 
