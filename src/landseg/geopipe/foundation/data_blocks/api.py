@@ -30,7 +30,7 @@ Public APIs:
 # standard imports
 import dataclasses
 # local imports
-import landseg.geopipe.common as common
+import landseg.geopipe.core as core
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
@@ -48,7 +48,7 @@ class BlockBuildingConfig:
 
 # -------------------------------Public Function-------------------------------
 def build_blocks(
-    world_grid: common.GridLayoutLike,
+    world_grid: core.GridLayoutLike,
     config: BlockBuildingConfig,
     output_root: str,
     logger: utils.Logger,

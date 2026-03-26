@@ -26,8 +26,8 @@ import os
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.common as common
-import landseg.geopipe.common.alias as alias
+import landseg.geopipe.core as core
+import landseg.geopipe.core.alias as alias
 import landseg.utils as utils
 
 def normalize_blocks(
@@ -49,7 +49,7 @@ def _normalize_one_block(
     '''doc'''
 
     # read block
-    data = common.DataBlock.load(block_fpath).data
+    data = core.DataBlock.load(block_fpath).data
 
     # prep dict of arrays to write
     to_write = {

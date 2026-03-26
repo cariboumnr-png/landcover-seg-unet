@@ -47,7 +47,7 @@ import typing
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.common.alias as alias
+import landseg.geopipe.core.alias as alias
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass

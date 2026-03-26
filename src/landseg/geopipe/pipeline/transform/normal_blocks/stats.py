@@ -32,7 +32,7 @@ Public APIs:
 # standard imports
 import math
 # local imports
-import landseg.geopipe.common as common
+import landseg.geopipe.core as core
 
 # -------------------------------Public Function-------------------------------
 def aggregate_image_stats(input_blocks: list[str]) -> dict[str, dict[str, int | float]]:
@@ -51,7 +51,7 @@ def aggregate_image_stats(input_blocks: list[str]) -> dict[str, dict[str, int | 
     '''
 
     # get image channel count from the first block
-    sample = common.DataBlock.load(input_blocks[0]).data
+    sample = core.DataBlock.load(input_blocks[0]).data
     num_bands = sample.image.shape[0]
 
     # define a return dict
@@ -67,7 +67,7 @@ def aggregate_image_stats(input_blocks: list[str]) -> dict[str, dict[str, int | 
     # iterate through provided block files
     for fpath in input_blocks:
         # prep
-        stats = common.DataBlock.load(fpath).meta['image_stats']
+        stats = core.DataBlock.load(fpath).meta['image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
             stats_dict[key] = _welfords_online(value_dict, stats_dict[key])

@@ -51,8 +51,8 @@ import zlib
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.common as common
-import landseg.geopipe.common.alias as alias
+import landseg.geopipe.core as core
+import landseg.geopipe.core.alias as alias
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
@@ -105,7 +105,7 @@ class BlockBuilder:
 
     def __init__(
         self,
-        windows: common.MappedRasterWindowsLike,
+        windows: core.MappedRasterWindowsLike,
         config: BuilderConfig,
         logger: utils.Logger,
     ):
@@ -136,9 +136,9 @@ class BlockBuilder:
 
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config.config_fpath)
-        keys = meta_src.keys() & common.BlockMeta.__annotations__
+        keys = meta_src.keys() & core.BlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
-        self.meta = typing.cast(common.BlockMeta, meta) # typing compliance
+        self.meta = typing.cast(core.BlockMeta, meta) # typing compliance
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
@@ -177,7 +177,7 @@ class BlockBuilder:
 
         # iterate through till a valid block if found
         c: tuple[int, int] = (0, 0)
-        blk: common.DataBlock | None = None
+        blk: core.DataBlock | None = None
         for c in coords:
             print('Searching for a valid raster window...', end='\r', flush=True)
             try:
@@ -364,7 +364,7 @@ class BlockBuilder:
         # add to current catalog dict
         for fname in to_catalog:
             fp = f'{self.blks_dir}/{fname}'
-            meta = common.DataBlock.load(fp).meta
+            meta = core.DataBlock.load(fp).meta
             col, row = _name_xy(meta['block_name'])
             self.catalog[(col, row)] = {
                 'block_name': meta['block_name'],
@@ -416,7 +416,7 @@ def _check_npz(
     ok = False
     # pass if the npz file can be loaded properly
     try:
-        common.DataBlock.load(fpath)
+        core.DataBlock.load(fpath)
         # branch out if deep check
         if deep_check:
             blk_sha_256 = utils.hash_artifacts(fpath, write_to_record=False)
@@ -432,12 +432,12 @@ def _check_npz(
     return {coord: ok}
 
 def _build_a_blk(
-    meta: common.BlockMeta,
+    meta: core.BlockMeta,
     contxt: _BlockCreationContext,
     *,
     save: bool = False,
     save_fpath: str | None = None
-) -> common.DataBlock:
+) -> core.DataBlock:
     '''Create a block from the input rasters for the given window.'''
 
     # meta i/o
@@ -462,7 +462,7 @@ def _build_a_blk(
             meta['label_nodata'] = lbl.nodata
 
     # create and return DataBlock instance
-    output_block = common.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
+    output_block = core.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
     # by default save to provided target path
     if save:
         assert save_fpath

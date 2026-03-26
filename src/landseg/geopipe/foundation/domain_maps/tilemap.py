@@ -63,7 +63,7 @@ import typing
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.common.alias as alias
+import landseg.geopipe.core.alias as alias
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 

@@ -28,8 +28,8 @@ import dataclasses
 import numpy
 import rasterio
 # local imports
-import landseg.geopipe.common as common
-import landseg.geopipe.common.alias as alias
+import landseg.geopipe.core as core
+import landseg.geopipe.core.alias as alias
 import landseg.utils as utils
 
 # ------------------------------private dataclass------------------------------
@@ -43,7 +43,7 @@ class _DomainTilesPackage:
 
 # -------------------------------Public Function-------------------------------
 def map_domain_to_grid(
-    grid: common.GridLayoutLike,
+    grid: core.GridLayoutLike,
     raster_path: str,
     logger: utils.Logger,
     *,
@@ -83,7 +83,7 @@ def map_domain_to_grid(
 
 # ------------------------------private  function------------------------------
 def _read_raster(
-    grid: common.GridLayoutLike,
+    grid: core.GridLayoutLike,
     raster_path: str,
 ) -> tuple[alias.RasterTileDict, int]:
     '''doc'''
