@@ -31,7 +31,7 @@ Public APIs:
 import dataclasses
 # local imports
 import landseg.geopipe.common as common
-import landseg.geopipe.datamake.datablocks as datablocks
+import landseg.geopipe.datamake.data_blocks as data_blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -75,16 +75,16 @@ def build_blocks(
 
     # map fit rasters to grid
     logger.log('INFO', 'Mapping rasters for model developement to grid')
-    dev_ras_cfg = datablocks.MappingConfig(
+    dev_ras_cfg = data_blocks.MappingConfig(
         input_img_fpath=config.dev_image_fpath,
         input_lbl_fpath=config.dev_label_fpath,
         output_root=f'{output_root}/model_dev/windows',
     )
-    ras_windows = datablocks.map_rasters(world_grid, dev_ras_cfg, logger)
+    ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Rasters for model developement mapped to grid')
 
     # block builder for fit rasters
-    builder_cfg = datablocks.BuilderConfig(
+    builder_cfg = data_blocks.BuilderConfig(
         image_fpath=config.dev_image_fpath,
         label_fpath=config.dev_label_fpath,
         config_fpath=config.data_config_fpath,
@@ -92,7 +92,7 @@ def build_blocks(
         dem_pad_px=config.dem_pad,
         ignore_index=config.ignore_index
     )
-    block_builder = datablocks.BlockBuilder(ras_windows, builder_cfg, logger)
+    block_builder = data_blocks.BlockBuilder(ras_windows, builder_cfg, logger)
 
     # build just one block, e.g., for overfit test
     if single_block_mode:
@@ -116,16 +116,16 @@ def build_blocks(
 
     # map test rasters to grid
     logger.log('INFO', 'Mapping holdout raters for evaluation to grid')
-    dev_ras_cfg = datablocks.MappingConfig(
+    dev_ras_cfg = data_blocks.MappingConfig(
         input_img_fpath=config.eval_image_fpath,
         input_lbl_fpath=config.eval_label_fpath,
         output_root=f'{output_root}/eval_holdout/windows',
     )
-    ras_windows = datablocks.map_rasters(world_grid, dev_ras_cfg, logger)
+    ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Holdout raters for evaluation mapped to grid')
 
     # block builder for test rasters
-    builder_cfg = datablocks.BuilderConfig(
+    builder_cfg = data_blocks.BuilderConfig(
         image_fpath=config.eval_image_fpath,
         label_fpath=config.eval_label_fpath,
         config_fpath=config.data_config_fpath,
@@ -133,6 +133,6 @@ def build_blocks(
         dem_pad_px=config.dem_pad,
         ignore_index=config.ignore_index
     )
-    block_builder = datablocks.BlockBuilder(ras_windows, builder_cfg, logger)
+    block_builder = data_blocks.BlockBuilder(ras_windows, builder_cfg, logger)
     logger.log('INFO', 'Build all holdout evaluation data blocks')
     block_builder.build_blocks()

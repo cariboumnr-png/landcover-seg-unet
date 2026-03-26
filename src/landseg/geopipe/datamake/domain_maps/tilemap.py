@@ -64,7 +64,7 @@ import typing
 import numpy
 # local imports
 import landseg.geopipe.common.alias as alias
-import landseg.geopipe.datamake.domains as domains
+import landseg.geopipe.datamake.domain_maps as domain_maps
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
@@ -314,7 +314,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             tile = raster_tiles[c]
             freqs[c] = _norm_freq(tile, (self.index_range))
         # get full pca
-        z, evr, k = domains.pca_transform(freqs, self._ctx.target_variance)
+        z, evr, k = domain_maps.pca_transform(freqs, self._ctx.target_variance)
         self._ctx.explained_variance = evr
         self._ctx.pca_axes_n = k
         # assign to each valid tile

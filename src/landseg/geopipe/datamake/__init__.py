@@ -45,9 +45,9 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .datablocks import BlockBuildingConfig, build_blocks
-    from .domains import DomainMappingConfig, prepare_domain
-    from .grid import GridExtentConfig, GridGenerationConfig, prep_world_grid
+    from .data_blocks import BlockBuildingConfig, build_blocks
+    from .domain_maps import DomainMappingConfig, prepare_domain
+    from .world_grids import GridExtentConfig, GridGenerationConfig, prep_world_grid
 
 def __getattr__(name: str):
 

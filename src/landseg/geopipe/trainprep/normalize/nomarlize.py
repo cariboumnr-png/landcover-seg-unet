@@ -38,10 +38,10 @@ def normalize_blocks(
     '''doc'''
 
     os.makedirs(target_dir, exist_ok=True)
-    jobs = [(_extract_one_block, (b, stats, target_dir), {}) for b in blocks]
+    jobs = [(_normalize_one_block, (b, stats, target_dir), {}) for b in blocks]
     utils.multip.ParallelExecutor().run(jobs)
 
-def _extract_one_block(
+def _normalize_one_block(
     block_fpath: str,
     global_stats: dict[str, dict[str, int | float]],
     target_dpath: str

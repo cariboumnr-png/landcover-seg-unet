@@ -28,7 +28,7 @@ import dataclasses
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.expkit.partition as partition
+import landseg.geopipe.trainprep.partition as partition
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

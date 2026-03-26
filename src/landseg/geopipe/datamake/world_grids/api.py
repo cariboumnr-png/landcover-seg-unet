@@ -40,7 +40,7 @@ import typing
 # third-party import
 import rasterio
 # local imports
-import landseg.geopipe.datamake.grid as grid
+import landseg.geopipe.datamake.world_grids as world_grids
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -67,7 +67,7 @@ def prep_world_grid(
     extent_config: GridExtentConfig,
     grid_config: GridGenerationConfig,
     logger: utils.Logger
-) -> grid.GridLayout:
+) -> world_grids.GridLayout:
     '''
     Build or load a persisted world grid.
 
@@ -91,7 +91,7 @@ def prep_world_grid(
     # if grid already exist, load and return
     try:
         logger.log('INFO', f'Try to load grid {gid}')
-        output_grid = grid.load_grid(gid, outdir)
+        output_grid = world_grids.load_grid(gid, outdir)
         logger.log('INFO', 'World grid successfully loaded')
         return output_grid
     # otherwise create grid accordingly
@@ -112,13 +112,13 @@ def prep_world_grid(
         mode = 'bbox' if _mode in ['ref', 'aoi'] else 'tiles'
 
         # build - save - return
-        output_grid = grid.GridLayout(mode, spec)
-        grid.save_grid(output_grid, outdir)
+        output_grid = world_grids.GridLayout(mode, spec)
+        world_grids.save_grid(output_grid, outdir)
         logger.log('INFO', f'World grid {gid} created and saved at {outdir}')
         return output_grid
 
 # ------------------------------private  function------------------------------
-def _get_ext(config: GridExtentConfig,) -> functools.partial[grid.GridSpec]:
+def _get_ext(config: GridExtentConfig,) -> functools.partial[world_grids.GridSpec]:
     '''Parse grid extent and returns a partially filled `GridSpec`.'''
 
     # from reference raster (auto)
@@ -132,7 +132,7 @@ def _get_ext(config: GridExtentConfig,) -> functools.partial[grid.GridSpec]:
             l, b, r, t = src.bounds
             # assign to gridspec
             return functools.partial(
-                grid.GridSpec,
+                world_grids.GridSpec,
                 crs=config.crs,
                 pixel_size=(px, py),        # pixel size in x, y
                 origin=(l, t),              # left, ,top as x, y
@@ -147,7 +147,7 @@ def _get_ext(config: GridExtentConfig,) -> functools.partial[grid.GridSpec]:
         grid_extent = config.grid_extent
         assert grid_extent
         return functools.partial(
-            grid.GridSpec,
+            world_grids.GridSpec,
             crs=config.crs,
             pixel_size=(pixel_size[0], pixel_size[1]),
             origin=(origin[0], origin[1]),
@@ -161,7 +161,7 @@ def _get_ext(config: GridExtentConfig,) -> functools.partial[grid.GridSpec]:
         grid_shape = config.grid_shape
         assert grid_shape
         return functools.partial(
-            grid.GridSpec,
+            world_grids.GridSpec,
             crs=config.crs,
             pixel_size=(pixel_size[0], pixel_size[1]),
             origin=(origin[0], origin[1]),

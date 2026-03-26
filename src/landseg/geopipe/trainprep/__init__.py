@@ -19,20 +19,38 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Top-level namespace for `landseg.core`.
 
-# local imports
-import landseg.geopipe.expkit.normalizer as normalizer
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
-def build_normalized_blocks(
-    train_blocks: list[str],
-    all_blocks: list[str],
-    output_dir: str
-):
-    '''doc'''
+from __future__ import annotations
+import importlib
+import typing
 
-    # aggregate stats on training blocks
-    global_stats = normalizer.aggregate_image_stats(train_blocks)
+__all__ = [
+    # classes
+    'PartitionConfig',
+    # functions
+    'build_normalized_blocks',
+    'partition_blocks',
+    # types
+]
 
-    # build normalized blocks
-    normalizer.normalize_blocks(all_blocks, global_stats, output_dir)
+# for static check
+if typing.TYPE_CHECKING:
+    from .normalize import build_normalized_blocks
+    from .partition import PartitionConfig, partition_blocks
+
+
+def __getattr__(name: str):
+
+    if name in {'build_normalized_blocks'}:
+        return getattr(importlib.import_module('.normalizer', __package__), name)
+
+    if name in {'PartitionConfig', 'partition_blocks'}:
+        return getattr(importlib.import_module('.partitioner', __package__), name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

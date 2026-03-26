@@ -19,38 +19,20 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.core`.
+'''doc'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.geopipe.trainprep.normalize as normalize
 
-from __future__ import annotations
-import importlib
-import typing
+def build_normalized_blocks(
+    train_blocks: list[str],
+    all_blocks: list[str],
+    output_dir: str
+):
+    '''doc'''
 
-__all__ = [
-    # classes
-    'PartitionConfig',
-    # functions
-    'build_normalized_blocks',
-    'partition_blocks',
-    # types
-]
+    # aggregate stats on training blocks
+    global_stats = normalize.aggregate_image_stats(train_blocks)
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .normalizer import build_normalized_blocks
-    from .partition import PartitionConfig, partition_blocks
-
-
-def __getattr__(name: str):
-
-    if name in {'build_normalized_blocks'}:
-        return getattr(importlib.import_module('.normalizer', __package__), name)
-
-    if name in {'PartitionConfig', 'partition_blocks'}:
-        return getattr(importlib.import_module('.partition', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    # build normalized blocks
+    normalize.normalize_blocks(all_blocks, global_stats, output_dir)

@@ -56,7 +56,7 @@ import copy
 import dataclasses
 # local imports
 import landseg.geopipe.common as common
-import landseg.geopipe.datamake.domains as domains
+import landseg.geopipe.datamake.domain_maps as domain_maps
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -119,7 +119,7 @@ def prepare_domain(
     logger = logger.get_child('dkmap')
 
     # prep output dict - domain maps indexed by filename without extension
-    output: dict[str, domains.DomainTileMap] = {}
+    output: dict[str, domain_maps.DomainTileMap] = {}
 
     # whether to create/update flag
     build = False
@@ -136,7 +136,7 @@ def prepare_domain(
         # if domain JSON already exist, load
         try:
             logger.log('INFO', f'Loading domain {name}')
-            dom = domains.load_domain(name, config.output_dir)
+            dom = domain_maps.load_domain(name, config.output_dir)
             dom.logger = logger # add logger
             # check if domain was mapped to a different grid
             if dom.blk_size != world_grid.tile_size:
@@ -153,7 +153,7 @@ def prepare_domain(
         except FileNotFoundError:
             logger.log('INFO', f'Domain {name} not found, create')
             build = True
-            dom = domains.DomainTileMap(
+            dom = domain_maps.DomainTileMap(
                 config.valid_threshold,
                 config.target_variance,
                 logger
@@ -161,7 +161,7 @@ def prepare_domain(
 
         # create or update
         if build:
-            domain_package = domains.map_domain_to_grid(
+            domain_package = domain_maps.map_domain_to_grid(
                 copy.deepcopy(world_grid),
                 raster_fpath,
                 logger,
@@ -174,5 +174,5 @@ def prepare_domain(
                 domain_package.tiles_dict
             )
             output[name] = dom
-            domains.save_domain(name, dom, config.output_dir)
+            domain_maps.save_domain(name, dom, config.output_dir)
             logger.log('INFO', f'Domain {file.filename} created/updated')

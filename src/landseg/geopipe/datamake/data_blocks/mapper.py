@@ -35,7 +35,7 @@ import os
 # local imports
 import landseg.geopipe.common as common
 import landseg.geopipe.common.alias as alias
-import landseg.geopipe.datamake.datablocks as datablocks
+import landseg.geopipe.datamake.data_blocks as data_blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -97,7 +97,7 @@ def _map(
     '''Create and persist windows for a raster pair (image & label).'''
 
     # get geometry summary
-    geom = datablocks.validate_geometry(image_fpath, label_fpath, logger)
+    geom = data_blocks.validate_geometry(image_fpath, label_fpath, logger)
 
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
@@ -121,7 +121,7 @@ def _map(
 # ------------------------------private  function------------------------------
 def _crop(
     world_grid: common.GridLayoutLike,
-    geom_summary: datablocks.GeometrySummary,
+    geom_summary: data_blocks.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
 
