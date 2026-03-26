@@ -54,7 +54,6 @@ import numpy
 import landseg.geopipe.core as core
 import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.common.alias as alias
-import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -129,8 +128,8 @@ class BlockBuilder:
         self.coords_todo: list[tuple[int, int]] = []
 
         # load catalog.json
-        self.catalog: data_blocks.BlocksCatalog
-        self.catalog = data_blocks.BlocksCatalog.from_json(self.catalog_path)
+        self.catalog: core.BlocksCatalog
+        self.catalog = core.BlocksCatalog.from_json(self.catalog_path)
         self.logger.log('INFO', f'Read {len(self.catalog)} catalog entries')
 
         # load raster windows
@@ -263,7 +262,7 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        blks_in_catalog: dict[tuple[int, int], data_blocks.CatalogEntry | None] = {}
+        blks_in_catalog: dict[tuple[int, int], core.CatalogEntry | None] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
             name = _xy_name(c)

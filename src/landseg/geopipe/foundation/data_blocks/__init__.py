@@ -33,15 +33,13 @@ __all__ = [
     # classes
     'BlockBuilder',
     'BlockBuildingConfig',
-    'CatalogEntry',
     'MappingConfig',
     # functions
     'build_blocks',
     'map_rasters',
     'validate_geometry',
     # typing
-    'BlocksCatalog',
-    'BuilderConfig',
+        'BuilderConfig',
     'GeometrySummary',
 ]
 
@@ -49,7 +47,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .api import BlockBuildingConfig, build_blocks
     from .builder import BlockBuilder, BuilderConfig
-    from .catalog import BlocksCatalog, CatalogEntry
+
     from .geometry import GeometrySummary, validate_geometry
     from .mapper import MappingConfig, map_rasters
 
@@ -59,8 +57,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.api', __package__), name)
     if name in ['BlockBuilder', 'BuilderConfig']:
         return getattr(importlib.import_module('.builder', __package__), name)
-    if name in ['BlocksCatalog', 'CatalogEntry']:
-        return getattr(importlib.import_module('.catalog', __package__), name)
     if name in ['GeometrySummary', 'validate_geometry']:
         return getattr(importlib.import_module('.geometry', __package__), name)
     if name in ['MappingConfig', 'map_rasters']:

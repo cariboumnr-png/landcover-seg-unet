@@ -33,18 +33,23 @@ import typing
 __all__ = [
     # classes
     'BlockMeta',
+    'CatalogEntry',
     'DataBlock',
     # functions
     # typing
+    'BlocksCatalog',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
+    from .catalog import BlocksCatalog, CatalogEntry
 
 def __getattr__(name: str):
 
     if name in ['BlockMeta', 'DataBlock']:
         return getattr(importlib.import_module('.block', __package__), name)
+    if name in ['BlocksCatalog', 'CatalogEntry']:
+        return getattr(importlib.import_module('.catalog', __package__), name)
 
     raise AttributeError(name)
