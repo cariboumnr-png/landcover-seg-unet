@@ -38,6 +38,7 @@ import collections.abc
 import json
 import typing
 # local imports
+import landseg.geopipe.core as core
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
@@ -190,7 +191,7 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         '''
 
         # index entries and sort
-        payload = {_yx_name(k): v for k, v in self._data.items()}
+        payload = {core.yx_name(k): v for k, v in self._data.items()}
         sorted_payload = dict(sorted(payload.items()))
         # manual json writing
         with open(fpath, 'w', encoding='UTF-8') as file:
@@ -229,22 +230,5 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         except FileNotFoundError:
             obj._data = {}
             return obj
-        obj._data = {_name_yx(k): v for k, v in payload.items()}
+        obj._data = {core.name_yx(k): v for k, v in payload.items()}
         return obj
-
-# ------------------------------private  function------------------------------
-# coords <-> name helpers
-def _yx_name(coords: tuple[int, int]) -> str:
-    '''Convert (row, col) to a canonical block name string.'''
-
-    # e.g., (12, 34) -> row_000012_col_000034
-    y, x = coords
-    return f'row_{y:06d}_col_{x:06d}'
-
-def _name_yx(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (row, col).'''
-
-    # e.g.,  row_000012_col_000034 -> (12, 34)
-    split = name.split('_')
-    y_str, x_str = split[1], split[3]
-    return int(y_str), int(x_str)

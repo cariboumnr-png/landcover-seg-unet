@@ -72,7 +72,7 @@ def update_catalog(
             logger.log('INFO', 'No new blocks provided, exit')
             return
         logger.log('INFO', f'Update {len(coords)} new blocks')
-        fnames = [f'{_yx_name(c)}.npz' for c in coords]
+        fnames = [f'{core.yx_name(c)}.npz' for c in coords]
     else:
         logger.log('INFO', f'catalog.json not found at {root_dir}')
         if not coords:
@@ -84,7 +84,7 @@ def update_catalog(
             logger.log('INFO', f'Found {len(fnames)} existing blocks, create')
         else:
             logger.log('INFO', f'Creat from {len(coords)} new blocks')
-            fnames = [f'{_yx_name(c)}.npz' for c in coords]
+            fnames = [f'{core.yx_name(c)}.npz' for c in coords]
 
     # get hash values from input rasters
     img_hash = utils.hash_artifacts(updated_blocks.source_image, False)
@@ -98,7 +98,7 @@ def update_catalog(
     for name in fnames:
         fp = f'{blks_dir}/{name}'
         meta = core.DataBlock.load(fp).meta
-        row, col = _name_yx(meta['block_name'])
+        row, col = core.name_yx(meta['block_name'])
         catalog[(col, row)] = {
             'block_name': meta['block_name'],
             'file_path': fp,
@@ -152,7 +152,7 @@ def update_meta(
     image_shape = sample_blk.data.image.shape
     label_shape = sample_blk.data.label_masked.shape
     # head topology
-    parent, parent_cls = _get_topology(sample_blk.meta['label_count'])
+    parent, parent_cls = core.get_topology(sample_blk.meta['label_count'])
 
     # create new
     meta_dict: core.CatalogMeta = {
@@ -212,45 +212,3 @@ def update_meta(
     utils.write_json(meta_fpath, meta_dict)
     utils.hash_artifacts(meta_fpath)
     return
-
-
-# coords <-> name helpers
-def _yx_name(coords: tuple[int, int]) -> str:
-    '''Convert (row, col) to a canonical block name string.'''
-
-    # e.g., (12, 34) -> row_000012_col_000034
-    y, x = coords
-    return f'row_{y:06d}_col_{x:06d}'
-
-def _name_yx(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (row, col).'''
-
-    # e.g.,  row_000012_col_000034 -> (12, 34)
-    split = name.split('_')
-    y_str, x_str = split[1], split[3]
-    return int(y_str), int(x_str)
-
-def _get_topology(label_count: dict[str, list[int]]):
-    '''Derive head topology (parent-child) from label count naming.'''
-
-    head_parent: dict[str, str | None] = {}
-    head_parent_cls: dict[str, int | None] = {}
-    # iterate through label counts
-    for layer_name in label_count:
-        if layer_name == 'original_label': # skip this
-            continue
-        # emit topology for current convention - from layer naming
-        if layer_name == 'layer1':
-            head_parent[layer_name] = None
-            head_parent_cls[layer_name] = None
-        elif layer_name.startswith('layer2_'):
-            cls_id = int(layer_name.split('layer2_')[1])
-            head_parent[layer_name] = 'layer1'
-            head_parent_cls[layer_name] = cls_id
-        else:
-            # if future names appear, one can decide to raise or set None
-            head_parent[layer_name] = None
-            head_parent_cls[layer_name] = None
-
-    # return the dicts
-    return head_parent, head_parent_cls

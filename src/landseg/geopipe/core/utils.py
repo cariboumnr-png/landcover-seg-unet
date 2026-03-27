@@ -20,43 +20,46 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.core`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Utility helper functions.
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# coords <-> name helpers
+def yx_name(coords: tuple[int, int]) -> str:
+    '''Convert (row, col) to a canonical block name string.'''
 
-__all__ = [
-    # classes
-    'BlockMeta',
-    'CatalogEntry',
-    'DataBlock',
-    # functions
-    'get_topology',
-    'name_yx',
-    'yx_name',
-    # typing
-    'BlocksCatalog',
-    'CatalogMeta'
-]
+    # e.g., (12, 34) -> row_000012_col_000034
+    y, x = coords
+    return f'row_{y:06d}_col_{x:06d}'
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .block import BlockMeta, DataBlock
-    from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
-    from .utils import get_topology, name_yx, yx_name
+def name_yx(name: str) -> tuple[int, int]:
+    '''Convert a canonical block name back to (row, col).'''
 
-def __getattr__(name: str):
+    # e.g.,  row_000012_col_000034 -> (12, 34)
+    split = name.split('_')
+    y_str, x_str = split[1], split[3]
+    return int(y_str), int(x_str)
 
-    if name in ['BlockMeta', 'DataBlock']:
-        return getattr(importlib.import_module('.block', __package__), name)
-    if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
-        return getattr(importlib.import_module('.catalog', __package__), name)
-    if name in ['get_topology', 'name_yx', 'yx_name',]:
-        return getattr(importlib.import_module('.utils', __package__), name)
+def get_topology(label_count: dict[str, list[int]]):
+    '''Derive head topology (parent-child) from label count naming.'''
 
-    raise AttributeError(name)
+    head_parent: dict[str, str | None] = {}
+    head_parent_cls: dict[str, int | None] = {}
+    # iterate through label counts
+    for layer_name in label_count:
+        if layer_name == 'original_label': # skip this
+            continue
+        # emit topology for current convention - from layer naming
+        if layer_name == 'layer1':
+            head_parent[layer_name] = None
+            head_parent_cls[layer_name] = None
+        elif layer_name.startswith('layer2_'):
+            cls_id = int(layer_name.split('layer2_')[1])
+            head_parent[layer_name] = 'layer1'
+            head_parent_cls[layer_name] = cls_id
+        else:
+            # if future names appear, one can decide to raise or set None
+            head_parent[layer_name] = None
+            head_parent_cls[layer_name] = None
+
+    # return the dicts
+    return head_parent, head_parent_cls

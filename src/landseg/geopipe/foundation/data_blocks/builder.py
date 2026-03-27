@@ -193,7 +193,7 @@ class BlockBuilder:
         self.logger.log('DEBUG', f'Minimum valid pixel: {valid_px_per:.2f}')
         self.logger.log('DEBUG', f'Focused head: {monitor_head}')
         self.logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
-        fpath = f'{save_dpath}/{_yx_name(c)}.npz'
+        fpath = f'{save_dpath}/{core.yx_name(c)}.npz'
         blk.save(fpath)
 
     def build_blocks(self) -> list[tuple[int, int]]:
@@ -258,7 +258,7 @@ class BlockBuilder:
         blks_to_check: dict[tuple[int, int], str] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
-            name = _yx_name(c)
+            name = core.yx_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
 
         # create checking jobs
@@ -306,7 +306,7 @@ class BlockBuilder:
             co_contxt = self._get_context(c)
             save_args = {
                 'save': True,
-                'save_fpath': f'{self.blks_dir}/{_yx_name(c)}.npz'
+                'save_fpath': f'{self.blks_dir}/{core.yx_name(c)}.npz'
             }
             jobs.append((_build_a_blk, (meta, co_contxt,), save_args))
 
@@ -317,7 +317,7 @@ class BlockBuilder:
         '''Return a the immutable block-creation context.'''
 
         return _BlockCreationContext(
-            name=_yx_name(coords),
+            name=core.yx_name(coords),
             ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,
@@ -418,19 +418,3 @@ def _read_w_pad(
         mode='reflect'
     )
     return expanded_padded
-
-# coords <-> name helpers
-def _yx_name(coords: tuple[int, int]) -> str:
-    '''Convert (row, col) to a canonical block name string.'''
-
-    # e.g., (12, 34) -> row_000012_col_000034
-    y, x = coords
-    return f'row_{y:06d}_col_{x:06d}'
-
-def _name_yx(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (row, col).'''
-
-    # e.g.,  row_000012_col_000034 -> (12, 34)
-    split = name.split('_')
-    y_str, x_str = split[1], split[3]
-    return int(y_str), int(x_str)
