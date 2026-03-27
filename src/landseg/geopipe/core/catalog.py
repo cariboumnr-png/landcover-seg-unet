@@ -57,6 +57,82 @@ class CatalogEntry(typing.TypedDict):
     source_label: str | None
     source_label_sha_256: str | None
 
+class CatalogMeta(typing.TypedDict):
+    '''Typed metadata dictionary for the current catalog.'''
+    dataset: _DatasetInfo
+    io_conventions: _IOConventions
+    tensor_shapes: _TensorShapes
+    labels: _LabelsInfo
+
+# --------------------------------private  type--------------------------------
+# ----- dataset
+class _DatasetInfo(typing.TypedDict):
+    '''Dataset identity and provenance metadata.'''
+    name: str
+    last_updated: str
+    dataprep_commit: str
+    mapped_grids: list[str]
+    data_source: _DataSource
+
+class _DataSource(typing.TypedDict):
+    '''Input paths for fit/test images and labels.'''
+    image_paths: list[str]
+    label_paths: list[str]
+
+# ----- io_conventions
+class _IOConventions(typing.TypedDict):
+    '''Block IO format, key names, shapes, dtypes, and ignore index.'''
+    block_format: str
+    keys: _IOKeys
+    shapes: _IOShapes
+    dtypes: _IODtypes
+    ignore_index: int
+
+class _IOKeys(typing.TypedDict):
+    '''NPZ key names for block serialization.'''
+    image_key: str
+    label_key: str
+
+class _IOShapes(typing.TypedDict):
+    '''Logical ordering conventions for tensors.'''
+    image_order: str  # e.g., 'C,H,W'
+    label_order: str  # e.g., 'L,H,W'
+
+class _IODtypes(typing.TypedDict):
+    '''Dtypes for serialized arrays.'''
+    image: str
+    label: str
+
+# ----- tensor_shapes
+class _TensorShapes(typing.TypedDict):
+    '''Tensor shapes for image and label.'''
+    image: _ImageTensorSpec
+    label: _LabelTensorSpec
+
+class _ImageTensorSpec(typing.TypedDict):
+    '''Image tensor shape spec.'''
+    order: str
+    shape: list[int]  # [C, H, W]
+    C: int
+    H: int
+    W: int
+
+class _LabelTensorSpec(typing.TypedDict):
+    '''Label tensor shape spec.'''
+    order: str
+    shape: list[int]  # [L, H, W]
+    L: int
+    H: int
+    W: int
+
+# ----- labels
+class _LabelsInfo(typing.TypedDict):
+    '''Labeling metadata.'''
+    label_num_classes: int
+    label_to_ignore: list[int]
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
+
 # --------------------------------Public  Class--------------------------------
 class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
     '''
@@ -114,7 +190,7 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         '''
 
         # index entries and sort
-        payload = {_xy_name(k): v for k, v in self._data.items()}
+        payload = {_yx_name(k): v for k, v in self._data.items()}
         sorted_payload = dict(sorted(payload.items()))
         # manual json writing
         with open(fpath, 'w', encoding='UTF-8') as file:
@@ -153,21 +229,22 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         except FileNotFoundError:
             obj._data = {}
             return obj
-        obj._data = {_name_xy(k): v for k, v in payload.items()}
+        obj._data = {_name_yx(k): v for k, v in payload.items()}
         return obj
 
 # ------------------------------private  function------------------------------
-def _xy_name(coords: tuple[int, int]) -> str:
-    '''Convert (x, y) coordinates to a canonical block name string.'''
+# coords <-> name helpers
+def _yx_name(coords: tuple[int, int]) -> str:
+    '''Convert (row, col) to a canonical block name string.'''
 
-    # e.g., (12, 34) -> col_000012_row_000034
-    x, y = coords
-    return f'col_{x:06d}_row_{y:06d}'
+    # e.g., (12, 34) -> row_000012_col_000034
+    y, x = coords
+    return f'row_{y:06d}_col_{x:06d}'
 
-def _name_xy(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to coordinates.'''
+def _name_yx(name: str) -> tuple[int, int]:
+    '''Convert a canonical block name back to (row, col).'''
 
-    # e.g.,  col_000012_row_000034 -> (12, 34)
+    # e.g.,  row_000012_col_000034 -> (12, 34)
     split = name.split('_')
-    x_str, y_str = split[1], split[3]
-    return int(x_str), int(y_str)
+    y_str, x_str = split[1], split[3]
+    return int(y_str), int(x_str)

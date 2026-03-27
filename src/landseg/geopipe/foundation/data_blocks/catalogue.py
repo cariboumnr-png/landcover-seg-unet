@@ -30,6 +30,8 @@ import os
 import landseg.geopipe.core as core
 import landseg.utils as utils
 
+T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
+
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class CatalogUpdateContext:
@@ -114,6 +116,104 @@ def update_catalog(
         }
     catalog.save_json(catalog_path)
 
+def update_meta(
+    updated_blocks: CatalogUpdateContext,
+    root_dir: str,
+    logger: utils.Logger
+) -> None:
+    '''Create/update catalog meta JSON.'''
+
+    # parse
+    grid_id = updated_blocks.mapped_grid_id
+    src_img = updated_blocks.source_image
+    src_lbl = updated_blocks.source_label
+
+    # try load the current meta dict
+    meta_fpath = f'{root_dir}/metadata.json'
+    try:
+        meta_dict = utils.load_json(meta_fpath)
+        meta_dict['dataset']['last_updated'] = utils.get_timestamp(T_FORMAT)
+        meta_dict['dataset']['mapped_grids'].append(grid_id)
+        meta_dict['dataset']['data_source']['image_paths'].append(src_img)
+        if src_lbl:
+            meta_dict['dataset']['data_source']['label_paths'].append(src_lbl)
+        # save and add hash to record
+        utils.write_json(meta_fpath, meta_dict)
+        utils.hash_artifacts(meta_fpath)
+        return
+    #
+    except FileNotFoundError:
+        logger.log('INFO', 'Metadata JSON not found, create one')
+
+    # read a sample block to required info
+    sample = next(iter(os.listdir(f'{root_dir}/blocks')))
+    sample_blk = core.DataBlock.load(f'{root_dir}/blocks/{sample}')
+    # image and label shape
+    image_shape = sample_blk.data.image.shape
+    label_shape = sample_blk.data.label_masked.shape
+    # head topology
+    parent, parent_cls = _get_topology(sample_blk.meta['label_count'])
+
+    # create new
+    meta_dict: core.CatalogMeta = {
+        'dataset': {
+            'name': os.path.basename(root_dir), # dataset name
+            'last_updated': utils.get_timestamp(T_FORMAT),
+            'dataprep_commit': 'dev', # to be fixed once branch stable
+            'mapped_grids': [grid_id],
+            'data_source': {
+                'image_paths': [src_img],
+                'label_paths': [src_lbl] if src_lbl else [],
+            },
+        },
+
+        'io_conventions': {
+            'block_format': 'npz',
+            'keys': {
+                'image_key': 'image',
+                'label_key': 'label',
+            },
+            'shapes': {
+                'image_order': 'C,H,W',
+                'label_order': 'L,H,W'
+            },
+            'dtypes': {
+                'image': 'float32',
+                'label': 'uint8',
+            },
+            'ignore_index': sample_blk.meta['ignore_index']
+        },
+
+        'tensor_shapes': {
+            'image': {
+                'order': 'C,H,W',
+                'shape': [image_shape[0], image_shape[1], image_shape[2]],
+                'C': image_shape[0],
+                'H': image_shape[1],
+                'W': image_shape[2]
+            },
+            'label': {
+                'order': 'L,H,W',
+                'shape': [label_shape[0], label_shape[1], label_shape[2]],
+                'L': label_shape[0],
+                'H': label_shape[1],
+                'W': label_shape[2]
+            }
+        },
+
+        'labels': {
+            'label_num_classes': sample_blk.meta['label_num_cls'],
+            'label_to_ignore': sample_blk.meta['label_ignore_cls'],
+            'head_parent': parent,
+            'head_parent_cls': parent_cls,
+        },
+    }
+    # save and add hash to record
+    utils.write_json(meta_fpath, meta_dict)
+    utils.hash_artifacts(meta_fpath)
+    return
+
+
 # coords <-> name helpers
 def _yx_name(coords: tuple[int, int]) -> str:
     '''Convert (row, col) to a canonical block name string.'''
@@ -129,3 +229,28 @@ def _name_yx(name: str) -> tuple[int, int]:
     split = name.split('_')
     y_str, x_str = split[1], split[3]
     return int(y_str), int(x_str)
+
+def _get_topology(label_count: dict[str, list[int]]):
+    '''Derive head topology (parent-child) from label count naming.'''
+
+    head_parent: dict[str, str | None] = {}
+    head_parent_cls: dict[str, int | None] = {}
+    # iterate through label counts
+    for layer_name in label_count:
+        if layer_name == 'original_label': # skip this
+            continue
+        # emit topology for current convention - from layer naming
+        if layer_name == 'layer1':
+            head_parent[layer_name] = None
+            head_parent_cls[layer_name] = None
+        elif layer_name.startswith('layer2_'):
+            cls_id = int(layer_name.split('layer2_')[1])
+            head_parent[layer_name] = 'layer1'
+            head_parent_cls[layer_name] = cls_id
+        else:
+            # if future names appear, one can decide to raise or set None
+            head_parent[layer_name] = None
+            head_parent_cls[layer_name] = None
+
+    # return the dicts
+    return head_parent, head_parent_cls

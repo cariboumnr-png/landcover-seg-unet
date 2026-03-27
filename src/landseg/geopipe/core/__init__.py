@@ -38,18 +38,19 @@ __all__ = [
     # functions
     # typing
     'BlocksCatalog',
+    'CatalogMeta'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
-    from .catalog import BlocksCatalog, CatalogEntry
+    from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
 
 def __getattr__(name: str):
 
     if name in ['BlockMeta', 'DataBlock']:
         return getattr(importlib.import_module('.block', __package__), name)
-    if name in ['BlocksCatalog', 'CatalogEntry']:
+    if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
         return getattr(importlib.import_module('.catalog', __package__), name)
 
     raise AttributeError(name)

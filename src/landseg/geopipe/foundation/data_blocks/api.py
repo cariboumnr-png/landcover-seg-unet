@@ -109,7 +109,7 @@ def build_blocks(
     logger.log('INFO', 'Build all model developement data blocks')
     new_blocks = block_builder.build_blocks()
 
-    # create/update catalog
+    # create/update catalog and metadata JSON
     updated = data_blocks.CatalogUpdateContext(
         coords=new_blocks,
         source_image=config.dev_image_fpath,
@@ -117,6 +117,7 @@ def build_blocks(
         mapped_grid_id=world_grid.gid
     )
     data_blocks.update_catalog(updated, f'{output_root}/model_dev/', logger)
+    data_blocks.update_meta(updated, f'{output_root}/model_dev/', logger)
 
     # exit if evaluation rasters are not provided
     if not (config.eval_image_fpath and config.eval_label_fpath):
@@ -146,7 +147,7 @@ def build_blocks(
     logger.log('INFO', 'Build all holdout evaluation data blocks')
     new_blocks = block_builder.build_blocks()
 
-    # create/update catalog
+    # create/update catalog and metadata JSON
     updated = data_blocks.CatalogUpdateContext(
         coords=new_blocks,
         source_image=config.eval_image_fpath,
@@ -154,3 +155,4 @@ def build_blocks(
         mapped_grid_id=world_grid.gid
     )
     data_blocks.update_catalog(updated, f'{output_root}/eval_holdout/', logger)
+    data_blocks.update_meta(updated, f'{output_root}/eval_holdout/', logger)
