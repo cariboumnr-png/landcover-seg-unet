@@ -20,16 +20,29 @@
 # =========================================================================== #
 
 '''
-Canonical data blocks catalog.
+Canonical data blocks catalog and metadata typing utilities.
 
-This module defines a structured, dictionary-like container for managing
-metadata entries associated with spatial data blocks. Each `CatalogEntry`
-stores information such as file paths, spatial indices, validation stats,
-and provenance metadata (e.g., hashes and timestamps).
+This module defines the core structures used to represent and manage a
+catalog of spatial data blocks produced by the data-preparation pipeline.
+It provides:
 
-The main class, BlocksCatalog, provides a mapping interface keyed by
-(x, y) block coordinates, along with utilities for serialization to and
-from JSON with deterministic ordering and formatting.
+- `CatalogEntry`: a typed dictionary describing per-block metadata such
+  as file paths, spatial indices, statistics, provenance hashes, and
+  timestamps.
+
+- `CatalogMeta` and related private TypedDicts: a structured schema
+  capturing dataset-level metadata, I/O conventions, tensor shapes, and
+  label specifications. These are used for describing the dataset as a
+  whole and for generating or validating `metadata.json` files.
+
+- `BlocksCatalog`: a dictionary-like container mapping (row, col) block
+  coordinates to `CatalogEntry` objects. The class supports deterministic
+  JSON serialization, reconstruction from disk, and standard mapping
+  operations while permitting controlled mutation.
+
+Together, these definitions provide a canonical representation for both
+block-level and dataset-level metadata, ensuring consistency, type safety,
+and reproducible serialization across the data pipeline.
 '''
 
 # standard imports

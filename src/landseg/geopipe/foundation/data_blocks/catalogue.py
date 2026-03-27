@@ -20,7 +20,12 @@
 # =========================================================================== #
 
 '''
-Maintain catalog JSON at given location.
+Utilities for maintaining dataset catalog and metadata files.
+
+This module provides functions to update or create `catalog.json` and
+`metadata.json` for a block-structured dataset. It inspects block files,
+records provenance information, and ensures catalog integrity during data
+preparation workflows.
 '''
 
 # standard imports
@@ -35,11 +40,11 @@ T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class CatalogUpdateContext:
-    '''Context for catalog updates.'''
-    coords: list[tuple[int, int]]
-    source_image: str
-    source_label: str | None
-    mapped_grid_id: str
+    '''Context object describing a catalog update operation.'''
+    coords: list[tuple[int, int]]   # grid coords for blocks that were created
+    source_image: str               # path to the source image raster
+    source_label: str | None        # optional path to the label raster
+    mapped_grid_id: str             # id for the grid the blocks are mapped to
 
 # -------------------------------Public Function-------------------------------
 def update_catalog(
@@ -47,11 +52,31 @@ def update_catalog(
     root_dir: str,
     logger: utils.Logger
 ) -> None:
-    '''
-    Update/create `catalog.json` to all valid block files on disk.
 
-    Any blocks found on disk but missing from the catalog are hashed,
-    loaded for metadata, and appended as new catalog entries.
+    '''
+    Create or update the dataset's `catalog.json`.
+
+    Behavior:
+    - Loads the existing catalog if present; otherwise starts a new one.
+    - Determines which block files (`*.npz`) to be cataloged based on:
+        * provided block coordinates, or
+        * scanning the `/blocks` directory if no coordinates exist.
+    - For each block:
+        * loads metadata from disk
+        * computes file-level SHA-256
+        * records source image/label provenance
+        * stores spatial indices and basic statistics
+
+    Args:
+        updated_blocks: A `CatalogUpdateContext` describing new or
+            updated blocks and their source provenance.
+        root_dir: Root directory of the dataset, containing `blocks/` and
+            optionally `catalog.json`.
+        logger: Logger used to report progress and warnings.
+
+    Raises:
+        FileNotFoundError: If `/blocks/` is missing or no block files are
+            found when attempting to create a new catalog.
     '''
 
     # check current directory
@@ -121,7 +146,25 @@ def update_meta(
     root_dir: str,
     logger: utils.Logger
 ) -> None:
-    '''Create/update catalog meta JSON.'''
+    '''
+    Create or update the dataset-level `metadata.json`.
+
+    Behavior:
+    - If a metadata file exists:
+        * updates `last_updated`
+        * appends new grid IDs and data sources
+        * rehashes the metadata file after writing
+    - If not:
+        * inspects a sample block to infer shapes, dtypes, and label info
+        * builds a full `CatalogMeta` structure from scratch
+        * writes and hashes the new metadata file
+
+    Args:
+        updated_blocks: Context with grid ID and source raster paths.
+        root_dir: Dataset directory containing `blocks/` and metadata
+            targets.
+        logger: Logger for status messages.
+    '''
 
     # parse
     grid_id = updated_blocks.mapped_grid_id
@@ -146,8 +189,8 @@ def update_meta(
         logger.log('INFO', 'Metadata JSON not found, create one')
 
     # read a sample block to required info
-    sample = next(iter(os.listdir(f'{root_dir}/blocks')))
-    sample_blk = core.DataBlock.load(f'{root_dir}/blocks/{sample}')
+    sample_file = next(iter(os.listdir(f'{root_dir}/blocks')))
+    sample_blk = core.DataBlock.load(f'{root_dir}/blocks/{sample_file}')
     # image and label shape
     image_shape = sample_blk.data.image.shape
     label_shape = sample_blk.data.label_stack.shape
@@ -181,14 +224,14 @@ def update_meta(
         'tensor_shapes': {
             'image': {
                 'order': 'C,H,W',
-                'shape': [image_shape[0], image_shape[1], image_shape[2]],
+                'shape': [*sample_blk.data.image.shape],
                 'C': image_shape[0],
                 'H': image_shape[1],
                 'W': image_shape[2]
             },
             'label': {
                 'order': 'L,H,W',
-                'shape': [label_shape[0], label_shape[1], label_shape[2]],
+                'shape': [*sample_blk.data.label_stack.shape],
                 'L': label_shape[0],
                 'H': label_shape[1],
                 'W': label_shape[2]
