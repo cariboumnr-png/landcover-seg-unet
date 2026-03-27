@@ -103,8 +103,8 @@ def update_catalog(
             'block_name': meta['block_name'],
             'file_path': fp,
             'row_col': [row, col],
-            'valid_px': meta['valid_ratios']['layer1'],
-            'class_count': meta['label_count']['layer1'],
+            'valid_px': meta['valid_ratios']['base'],
+            'class_count': meta['label_count']['base'],
             'schema_version': '1.0.0',
             'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
             'sha_256': utils.hash_artifacts(fp, False),
@@ -150,9 +150,7 @@ def update_meta(
     sample_blk = core.DataBlock.load(f'{root_dir}/blocks/{sample}')
     # image and label shape
     image_shape = sample_blk.data.image.shape
-    label_shape = sample_blk.data.label_masked.shape
-    # head topology
-    parent, parent_cls = core.get_topology(sample_blk.meta['label_count'])
+    label_shape = sample_blk.data.label_stack.shape
 
     # create new
     meta_dict: core.CatalogMeta = {
@@ -204,8 +202,8 @@ def update_meta(
         'labels': {
             'label_num_classes': sample_blk.meta['label_num_cls'],
             'label_to_ignore': sample_blk.meta['label_ignore_cls'],
-            'head_parent': parent,
-            'head_parent_cls': parent_cls,
+            'channel_parent': sample_blk.meta['label_ch_parent'],
+            'channel_parent_cls': sample_blk.meta['label_ch_parent_cls'],
         },
     }
     # save and add hash to record

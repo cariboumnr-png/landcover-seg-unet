@@ -36,7 +36,6 @@ __all__ = [
     'CatalogEntry',
     'DataBlock',
     # functions
-    'get_topology',
     'name_yx',
     'yx_name',
     # typing
@@ -48,7 +47,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
     from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
-    from .utils import get_topology, name_yx, yx_name
+    from .utils import name_yx, yx_name
 
 def __getattr__(name: str):
 
@@ -56,7 +55,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.block', __package__), name)
     if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
         return getattr(importlib.import_module('.catalog', __package__), name)
-    if name in ['get_topology', 'name_yx', 'yx_name',]:
+    if name in ['name_yx', 'yx_name',]:
         return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(name)

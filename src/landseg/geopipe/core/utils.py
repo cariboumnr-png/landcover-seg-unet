@@ -38,28 +38,3 @@ def name_yx(name: str) -> tuple[int, int]:
     split = name.split('_')
     y_str, x_str = split[1], split[3]
     return int(y_str), int(x_str)
-
-def get_topology(label_count: dict[str, list[int]]):
-    '''Derive head topology (parent-child) from label count naming.'''
-
-    head_parent: dict[str, str | None] = {}
-    head_parent_cls: dict[str, int | None] = {}
-    # iterate through label counts
-    for layer_name in label_count:
-        if layer_name == 'original_label': # skip this
-            continue
-        # emit topology for current convention - from layer naming
-        if layer_name == 'layer1':
-            head_parent[layer_name] = None
-            head_parent_cls[layer_name] = None
-        elif layer_name.startswith('layer2_'):
-            cls_id = int(layer_name.split('layer2_')[1])
-            head_parent[layer_name] = 'layer1'
-            head_parent_cls[layer_name] = cls_id
-        else:
-            # if future names appear, one can decide to raise or set None
-            head_parent[layer_name] = None
-            head_parent_cls[layer_name] = None
-
-    # return the dicts
-    return head_parent, head_parent_cls

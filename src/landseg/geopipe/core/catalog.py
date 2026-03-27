@@ -131,8 +131,8 @@ class _LabelsInfo(typing.TypedDict):
     '''Labeling metadata.'''
     label_num_classes: int
     label_to_ignore: list[int]
-    head_parent: dict[str, str | None]
-    head_parent_cls: dict[str, int | None]
+    channel_parent: dict[str, str | None]
+    channel_parent_cls: dict[str, int | None]
 
 # --------------------------------Public  Class--------------------------------
 class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):

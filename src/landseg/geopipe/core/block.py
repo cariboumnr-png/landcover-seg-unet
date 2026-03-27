@@ -75,6 +75,8 @@ class BlockMeta(typing.TypedDict):
     label_num_cls: int
     label_ignore_cls: list[int]
     label_reclass_map: dict[str, list[int]]
+    label_ch_parent: dict[str, str | None]
+    label_ch_parent_cls: dict[str, int | None]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
     # image metadata
@@ -88,7 +90,7 @@ class BlockMeta(typing.TypedDict):
 class _BlockArrays:
     '''Simple dataclass for block-wise image/label data.'''
     label: numpy.ndarray = dataclasses.field(init=False)
-    label_masked: numpy.ndarray = dataclasses.field(init=False)
+    label_stack: numpy.ndarray = dataclasses.field(init=False)
     image: numpy.ndarray = dataclasses.field(init=False)
     image_dem_padded: numpy.ndarray = dataclasses.field(init=False)
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
@@ -138,6 +140,8 @@ class DataBlock:
             'label_num_cls': 0,
             'label_ignore_cls': [],
             'label_reclass_map': {},
+            'label_ch_parent': {},
+            'label_ch_parent_cls': {},
             'label_count': {},
             'label_entropy': {},
             'image_nodata': numpy.nan,
@@ -191,16 +195,18 @@ class DataBlock:
         # otherwise give label related data a place holder
         else:
             self.data.label = numpy.array([1])
-            self.data.label_masked = numpy.array([1])
+            self.data.label_stack = numpy.array([1])
             self.meta['has_label'] = False
 
         # process data sequence
         # image bands related
         self._add_spectral_indices()
         self._add_topographical_metrics()
-        # labels related
-        self._build_label_hierarchy()
-        self._count_label_classes()
+        # labels related - only if labels are provided
+        if self.meta['has_label']:
+            self._build_label_stack()
+            self._get_topology()
+            self._count_label_classes()
         # block-wise
         self._get_block_valid_mask()
         self._get_block_image_stats()
@@ -332,70 +338,71 @@ class DataBlock:
             'tpi': n + 3
         })
 
-    def _build_label_hierarchy(self) -> None:
-        '''Prep the hierarchy of labels according to metadata.'''
+    def _build_label_stack(self) -> None:
+        '''Build the label stack and update its valid pixel ratios.'''
 
-        # skip if label is not provided
-        if not self.meta['has_label']:
-            return
-
-        # get value from meta
+        # get values from meta
         ignore_index = self.meta['ignore_index']
-        label_nodata = self.meta['label_nodata']
-        label_to_ignore = self.meta['label_ignore_cls']
         reclass_map = self.meta['label_reclass_map']
 
-        # fill invalid pixels with ignore label
-        label_to_ignore = list(label_to_ignore) # avoid modifying the meta
-        label_to_ignore.append(label_nodata)
-        label_to_ignore = [x for x in label_to_ignore if x is not None]
+        # get labels to be ignored
+        labels_to_ignore = list(self.meta['label_ignore_cls'])
+        labels_to_ignore.append(self.meta['label_nodata'])
+        labels_to_ignore = [x for x in labels_to_ignore if x is not None]
 
-        # collection of layers
-        layer1_mask = ~numpy.isin(self.data.label, label_to_ignore)
-        layer1_valid = numpy.where(layer1_mask, self.data.label, ignore_index)
-        fn_stack = [layer1_valid] # layer1 as the first element of the list
+        # base as the first element of the list
+        raw_mask = ~numpy.isin(self.data.label, labels_to_ignore)
+        raw_valid = numpy.where(raw_mask, self.data.label, ignore_index)
+        fn_stack = [raw_valid]
+        self.meta['valid_ratios'].update({
+            'base': float(numpy.sum(raw_mask) / raw_valid.size)
+        })
 
-        # if no reclass, only keep layer1 == original label
+        # if no reclass, assign the only base label channel to self.data
         if not reclass_map:
-            self.data.label_masked = numpy.stack(fn_stack, axis=0)
-            self.meta['valid_ratios'].update({
-                'layer1': float(numpy.sum(layer1_mask) / layer1_valid.size)
-            })
+            self.data.label_stack = numpy.stack(fn_stack, axis=0)
             return
 
-        # iterate through layer classes in reclass map
+        # iterate through reclass map
         for band_num, classes in reclass_map.items():
-            # mask to the current layer 1 class (as the layer2 subclasses)
+            # mask to the current base channel class IDs (parent)
             _mask = numpy.isin(self.data.label, classes)
             # in-place reclass relevant pixels in layer1
             fn_stack[0][_mask] = int(band_num)
-            # create a layer 2 array for current layer1 class
-            layer2_new = numpy.where(_mask, self.data.label, ignore_index)
+            # create a new array to add to stack
+            reclass_new = numpy.where(_mask, self.data.label, ignore_index)
             # reclass from 1 to n
             for i, cls in enumerate(classes, 1):
-                layer2_new[layer2_new == cls] = int(i)
-            # append the new layer 2 array to the stack
-            fn_stack.append(layer2_new)
+                reclass_new[reclass_new == cls] = int(i)
+            # append the to the stack
+            fn_stack.append(reclass_new)
+        # stack all the arrays and assign to self.data
+        self.data.label_stack = numpy.stack(fn_stack, axis=0)
 
-        # stack all the arrays and assign to attr
-        self.data.label_masked = numpy.stack(fn_stack, axis=0)
+        # update valid pixel ratios for the stack
+        for i in range(1, len(reclass_map)):
+            _valid = fn_stack[i] != ignore_index
+            _ratio = float(numpy.sum(_valid) / raw_valid.size)
+            self.meta['valid_ratios'].update({f'reclass_{i}': _ratio})
 
-        # add metadata
-        self.meta['valid_ratios'].update({
-            'layer1': float(numpy.sum(layer1_mask) / layer1_valid.size)
-        })
-        for i in range(len(reclass_map)):
-            _valid = fn_stack[i + 1] != ignore_index
-            self.meta['valid_ratios'].update({
-                f'layer2_{i + 1}': numpy.sum(_valid) / layer1_valid.size
-            })
+    def _get_topology(self) -> None:
+        '''Derive label topology (parent-child).'''
+
+        # iterate through label counts
+        for layer_name in self.meta['valid_ratios']:
+            # emit topology
+            if layer_name == 'base':
+                self.meta['label_ch_parent'][layer_name] = None
+                self.meta['label_ch_parent_cls'][layer_name] = None
+            elif layer_name.startswith('reclass_'):
+                cls_id = int(layer_name.split('reclass_')[1])
+                self.meta['label_ch_parent'][layer_name] = 'base'
+                self.meta['label_ch_parent_cls'][layer_name] = cls_id
+            else:
+                pass
 
     def _count_label_classes(self) -> None:
         '''Count present label values and calculate entropy.'''
-
-        # skip if label is not provided
-        if not self.meta['has_label']:
-            return
 
         # supposed number of classes for each label layer
         label_num = self.meta['label_num_cls']
@@ -411,15 +418,13 @@ class DataBlock:
             n_classes.extend([len(v) for v in reclass_map.values()])
 
         # all arrays to be counted
-        lyrs = numpy.concatenate(
-            [self.data.label[None, :, :], self.data.label_masked], axis=0
-        ) # e.g., (7, 256, 256)
-
-        # sanity check
-        assert len(n_classes) == len(lyrs)
+        channels = numpy.concatenate(
+            [self.data.label[None, :, :], self.data.label_stack], axis=0
+        ) # (L, H, W)
 
         # iterate label layers
-        for i, band in enumerate(lyrs):
+        assert len(n_classes) == len(channels) # sanity check
+        for i, band in enumerate(channels):
             # count unique values for each label layer
             label_unique = numpy.arange(1, n_classes[i] + 1) # start from 1
             filtered = band[numpy.isin(band, label_unique)]
@@ -429,7 +434,7 @@ class DataBlock:
             uniques = [int(_) for _ in uniques]
             counts = [int(_) for _ in counts]
 
-            # shannon entropy
+            # get shannon entropy
             ent = _Calc.entropy(counts)
 
             # assign zero count to no_show classes
@@ -444,42 +449,40 @@ class DataBlock:
 
             # add to metadata
             if i == 0:
-                self.meta['label_count'].update({'original_label': cc})
-                self.meta['label_entropy'].update({'original_label': ent})
+                self.meta['label_count'].update({'original': cc})
+                self.meta['label_entropy'].update({'original': ent})
             elif i == 1:
-                self.meta['label_count'].update({'layer1': cc})
-                self.meta['label_entropy'].update({'layer1': ent})
+                self.meta['label_count'].update({'base': cc})
+                self.meta['label_entropy'].update({'base': ent})
             else:
-                self.meta['label_count'].update({f'layer2_{i - 1}': cc})
-                self.meta['label_entropy'].update({f'layer2_{i - 1}': ent})
+                self.meta['label_count'].update({f'reclass_{i - 1}': cc})
+                self.meta['label_entropy'].update({f'reclass_{i - 1}': ent})
 
     def _get_block_valid_mask(self):
         '''Get a valid mask for the whole block.'''
 
         # get image nodata and ignore label index
         ignore_index = self.meta['ignore_index']
-        img_nodata = self.meta['image_nodata']
+        image_nodata = self.meta['image_nodata']
 
-        # for label data
-        # if provided, locs where label layer1 is valid (not ignore)
+        # for label data: if provided, True where label layer1 is valid
         if self.meta['has_label']:
-            valid_label = self.data.label_masked[0] != ignore_index
+            valid_label = self.data.label_stack[0] != ignore_index
         # otherwise no effect
         else:
             valid_label = True # easy broadcast
 
-        # for image data
-        # locs where image all bands are valid and not nodata
+        # for image data: True where all image bands are valid
         invalid_img = (
             numpy.isnan(self.data.image) |
-            numpy.isclose(self.data.image, img_nodata)
+            numpy.isclose(self.data.image, image_nodata)
         )
         valid_img = ~numpy.any(invalid_img, axis=0) # shape (256, 256)
 
-        # final mask (combined)
+        # final mask as combined
         self.data.valid_mask = valid_label & valid_img # (256, 256)
 
-        # add ratios to meta
+        # add to meta
         self.meta['valid_ratios'].update({
             'image': float((numpy.sum(valid_img) / valid_img.size)),
             'block': float((numpy.sum(self.data.valid_mask) / valid_img.size))
@@ -488,25 +491,20 @@ class DataBlock:
     def _get_block_image_stats(self):
         '''Per block stats for later aggregation using Welford's.'''
 
-        # parse
+        # image_nodata
         image_nodata = self.meta['image_nodata']
-
-        #
+        # iterate through image channels
         for i, band in enumerate(self.data.image):
-            # get where pixel is not valid
+            # get where pixel is invalid and inverse to get valid pixels
             if isinstance(image_nodata, float) and numpy.isnan(image_nodata):
                 mask = numpy.isnan(band)
             else:
                 mask = numpy.isclose(band, image_nodata)
-            # inverse to get valid pixels
             valid = band[~mask]
-            # 3 block stats to be done: nb, mb, m2b
+
             num = valid.size
-            # if no valid pixels
             if num == 0:
-                # safe neutral values for Welford aggregation
-                mean = 0.0
-                mean_sq = 0.0
+                mean = mean_sq = 0.0 # safe neutral values
             else:
                 # nan-safe ops in case stray NaNs remain
                 mean = numpy.nanmean(valid)
