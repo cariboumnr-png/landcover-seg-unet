@@ -127,10 +127,6 @@ class BlockBuilder:
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
 
-        # load catalog.json
-        self.catalog = core.BlocksCatalog.from_json(self.catalog_path)
-        self.logger.log('INFO', f'Read {len(self.catalog)} catalog entries')
-
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config.config_fpath)
         keys = meta_src.keys() & core.BlockMeta.__annotations__
@@ -176,7 +172,7 @@ class BlockBuilder:
         c: tuple[int, int] = (0, 0)
         blk: core.DataBlock | None = None
         for c in coords:
-            print('Searching for a valid raster window...', end='\r', flush=True)
+            print('Searching for a valid block...', end='\r', flush=True)
             try:
                 co_contxt = self._get_context(c)
                 blk = _build_a_blk(self.meta, co_contxt, save=False) # temp
@@ -200,7 +196,7 @@ class BlockBuilder:
         fpath = f'{save_dpath}/{_yx_name(c)}.npz'
         blk.save(fpath)
 
-    def build_blocks(self) -> None:
+    def build_blocks(self) -> list[tuple[int, int]]:
         '''
         Run the full construction sequence:
 
@@ -214,7 +210,8 @@ class BlockBuilder:
         self._prepare_block_windows()
         self._validate_existing_blocks()
         self._create_missing_blocks()
-        self._update_catalog()
+        # return coords where blocks were created
+        return self.coords_todo
 
     # -----------------------------internal method-----------------------------
     def _prepare_block_windows(self) -> None:
@@ -247,7 +244,7 @@ class BlockBuilder:
         n = len(self.common_coords)
         self.logger.log('DEBUG', f'Number of windows with expected shape: {n}')
 
-    def _validate_existing_blocks(self, *, deep_scan: bool = False) -> None:
+    def _validate_existing_blocks(self) -> None:
         '''
         Check integrity of expected block `.npz` files.
 
@@ -259,26 +256,13 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        blks_in_catalog: dict[tuple[int, int], core.CatalogEntry | None] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
             name = _yx_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
-            blks_in_catalog[c] = self.catalog.get(c)
 
         # create checking jobs
-        jobs = []
-        for coord, catalog_entry in blks_in_catalog.items():
-            if catalog_entry:
-                fpath = catalog_entry['file_path']
-                kwargs = {
-                    'sha_256': catalog_entry['sha_256'],
-                }
-                jobs.append((_check_npz, (coord, fpath, deep_scan), kwargs))
-            else:
-                fpath = blks_to_check[coord]
-                jobs.append((_check_npz, (coord, fpath, False), {}))
-
+        jobs = [(_check_npz, (c, fp), {}) for c, fp in blks_to_check.items()]
         # parallel processing
         raw_results: list[dict[tuple[int, int], bool]]
         raw_results = utils.ParallelExecutor().run(jobs)
@@ -329,57 +313,6 @@ class BlockBuilder:
         # parallel processing through all raster windows
         utils.ParallelExecutor().run(jobs)
 
-    def _update_catalog(self) -> None:
-        '''
-        Update/create `catalog.json` to all valid block files on disk.
-
-        Any blocks found on disk but missing from the catalog are hashed,
-        loaded for metadata, and appended as new catalog entries.
-        '''
-
-        # check existing block files on disk
-        on_disk = [p for p in os.listdir(self.blks_dir) if p.endswith('npz')]
-        assert on_disk, 'No .npz block files found' # quick sanity
-
-        # check existing blocks in catalog
-        in_catalog = [f'{p["block_name"]}.npz' for p in self.catalog.values()]
-
-        # get the difference as ones that need to be catalogued
-        to_catalog = set(on_disk) - set(in_catalog) # on disk but not in catalog
-        if not to_catalog:
-            self.logger.log('INFO', 'No update to catalog.json needed')
-            return
-
-        self.logger.log('INFO', 'Creating/updating catalog.json...')
-        # get hash values from input rasters
-        img_hash = utils.hash_artifacts(self.config.image_fpath, False)
-        if self.config.label_fpath:
-            lbl_hash = utils.hash_artifacts(self.config.label_fpath, False)
-        else:
-            lbl_hash = None
-
-        # add to current catalog dict
-        for fname in to_catalog:
-            fp = f'{self.blks_dir}/{fname}'
-            meta = core.DataBlock.load(fp).meta
-            row, col = _name_yx(meta['block_name'])
-            self.catalog[(col, row)] = {
-                'block_name': meta['block_name'],
-                'file_path': fp,
-                'row_col': [row, col],
-                'valid_px': meta['valid_ratios']['layer1'],
-                'class_count': meta['label_count']['layer1'],
-                'schema_version': '1.0.0',
-                'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
-                'sha_256': utils.hash_artifacts(fp, False),
-                'aligned_grid': self.windows.grid_id,
-                'source_image': self.config.image_fpath,
-                'source_image_sha_256': img_hash,
-                'source_label': self.config.label_fpath,
-                'source_label_sha_256': lbl_hash,
-            }
-        self.catalog.save_json(self.catalog_path)
-
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''
 
@@ -398,34 +331,17 @@ class BlockBuilder:
 def _check_npz(
     coord: tuple[int, int],
     fpath: str,
-    deep_check: bool = False,
-    *,
-    sha_256: str | None = None
 ) -> dict[tuple[int, int], bool]:
-    '''
-    Verify whether a `.npz` block file can be successfully loaded.
-
-    Optionally performs a deep check by comparing the file's SHA-256 hash.
-    Returns a mapping `{coord: is_valid}` indicating load/validation
-    status.
-    '''
+    '''Verify whether a `.npz` block file can be successfully loaded.'''
 
     ok = False
     # pass if the npz file can be loaded properly
     try:
         core.DataBlock.load(fpath)
-        # branch out if deep check
-        if deep_check:
-            blk_sha_256 = utils.hash_artifacts(fpath, write_to_record=False)
-            if blk_sha_256 == sha_256:
-                ok = True
-        else:
-            pass
         ok = True
     # flag absent/corrupted/damaged npz file
     except (FileNotFoundError, zipfile.error, zlib.error):
         ok = False
-
     return {coord: ok}
 
 def _build_a_blk(

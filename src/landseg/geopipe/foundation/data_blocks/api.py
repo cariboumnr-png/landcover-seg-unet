@@ -73,7 +73,7 @@ def build_blocks(
             single block file, e.g., for an overfit test.
     '''
 
-    # map fit rasters to grid
+    # map model dev rasters to grid
     logger.log('INFO', 'Mapping rasters for model developement to grid')
     dev_ras_cfg = data_blocks.MappingConfig(
         input_img_fpath=config.dev_image_fpath,
@@ -83,7 +83,7 @@ def build_blocks(
     ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Rasters for model developement mapped to grid')
 
-    # block builder for fit rasters
+    # block builder for model dev rasters
     builder_cfg = data_blocks.BuilderConfig(
         image_fpath=config.dev_image_fpath,
         label_fpath=config.dev_label_fpath,
@@ -105,16 +105,25 @@ def build_blocks(
             need_all_classes= kwargs.get('need_all_classes', True)
         )
         return
-    # build all fit blocks
+    # build all model dev blocks
     logger.log('INFO', 'Build all model developement data blocks')
-    block_builder.build_blocks()
+    new_blocks = block_builder.build_blocks()
 
-    # exit if test rasters are not provided
+    # create/update catalog
+    updated = data_blocks.CatalogUpdateContext(
+        coords=new_blocks,
+        source_image=config.dev_image_fpath,
+        source_label=config.dev_label_fpath,
+        mapped_grid_id=world_grid.gid
+    )
+    data_blocks.update_catalog(updated, f'{output_root}/model_dev/', logger)
+
+    # exit if evaluation rasters are not provided
     if not (config.eval_image_fpath and config.eval_label_fpath):
         logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
         return
 
-    # map test rasters to grid
+    # map evaluation rasters to grid
     logger.log('INFO', 'Mapping holdout raters for evaluation to grid')
     dev_ras_cfg = data_blocks.MappingConfig(
         input_img_fpath=config.eval_image_fpath,
@@ -124,7 +133,7 @@ def build_blocks(
     ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Holdout raters for evaluation mapped to grid')
 
-    # block builder for test rasters
+    # block builder for evaluation rasters
     builder_cfg = data_blocks.BuilderConfig(
         image_fpath=config.eval_image_fpath,
         label_fpath=config.eval_label_fpath,
@@ -135,4 +144,13 @@ def build_blocks(
     )
     block_builder = data_blocks.BlockBuilder(ras_windows, builder_cfg, logger)
     logger.log('INFO', 'Build all holdout evaluation data blocks')
-    block_builder.build_blocks()
+    new_blocks = block_builder.build_blocks()
+
+    # create/update catalog
+    updated = data_blocks.CatalogUpdateContext(
+        coords=new_blocks,
+        source_image=config.eval_image_fpath,
+        source_label=config.eval_label_fpath,
+        mapped_grid_id=world_grid.gid
+    )
+    data_blocks.update_catalog(updated, f'{output_root}/eval_holdout/', logger)
