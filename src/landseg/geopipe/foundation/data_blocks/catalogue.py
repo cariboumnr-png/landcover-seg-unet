@@ -176,9 +176,11 @@ def update_meta(
     try:
         meta_dict = utils.load_json(meta_fpath)
         meta_dict['dataset']['last_updated'] = utils.get_timestamp(T_FORMAT)
-        meta_dict['dataset']['mapped_grids'].append(grid_id)
-        meta_dict['dataset']['data_source']['image_paths'].append(src_img)
-        if src_lbl:
+        if not grid_id in meta_dict['dataset']['mapped_grids']:
+            meta_dict['dataset']['mapped_grids'].append(grid_id)
+        if not src_img in meta_dict['dataset']['data_source']['image_paths']:
+            meta_dict['dataset']['data_source']['image_paths'].append(src_img)
+        if src_lbl and not src_lbl in meta_dict['dataset']['data_source']['label_paths']:
             meta_dict['dataset']['data_source']['label_paths'].append(src_lbl)
         # save and add hash to record
         utils.write_json(meta_fpath, meta_dict)

@@ -31,11 +31,11 @@ import landseg.geopipe.core as core
 @dataclasses.dataclass
 class ParsedCatalog:
     '''Information parsed from the data blocks catalog.'''
-    valid_class_counts: dict[tuple[int, int], list[int]]
     base_class_counts: dict[tuple[int, int], list[int]]
+    valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
 
-def load_catalog(
+def parse_catalog(
     fpath: str,
     block_size: tuple[int, int]
 ):

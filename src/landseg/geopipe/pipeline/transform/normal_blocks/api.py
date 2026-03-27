@@ -23,16 +23,23 @@
 
 # local imports
 import landseg.geopipe.pipeline.transform.normal_blocks as normal_blocks
+import landseg.utils as utils
 
-def build_normalized_blocks(
-    train_blocks: list[str],
-    all_blocks: list[str],
-    output_dir: str
-):
+def build_normalized_blocks(root_dir: str):
     '''doc'''
 
-    # aggregate stats on training blocks
-    global_stats = normal_blocks.aggregate_image_stats(train_blocks)
+    # transform dir
+    out_dir = f'{root_dir}/transform'
 
-    # build normalized blocks
-    normal_blocks.normalize_blocks(all_blocks, global_stats, output_dir)
+    # load source blocks file lists
+    train = utils.load_json(f'{out_dir}/train_blocks.json')
+    val = utils.load_json(f'{out_dir}/val_blocks.json')
+    test = utils.load_json(f'{out_dir}/test_blocks.json')
+
+    # aggregate stats on training blocks
+    stats = normal_blocks.aggregate_image_stats(train)
+
+    # build normalized blocks for each split
+    normal_blocks.normalize_blocks(train, stats, f'{out_dir}/train_blocks')
+    normal_blocks.normalize_blocks(val, stats, f'{out_dir}/val_blocks')
+    normal_blocks.normalize_blocks(test, stats, f'{out_dir}/test_blocks')

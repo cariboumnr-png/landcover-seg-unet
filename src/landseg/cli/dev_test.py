@@ -53,7 +53,7 @@ def catalogue(config: configs.RootConfig):
     grid_gen_config = foundation.GridGenerationConfig(
         output_dir=config.prep.grid.output_dirpath,
         tile_size=(256, 256),
-        tile_overlap=(0, 0),
+        tile_overlap=(128, 128),
     )
     grid = foundation.prep_world_grid(grid_ext_config, grid_gen_config, logger)
 
@@ -84,12 +84,10 @@ def prep_train_data_test(config: configs.RootConfig):
     '''Train data preparation pipeline.'''
 
     logger = utils.Logger('test', './test.log')
-
-    catalog_fpath = './experiment/artifacts/foundation/model_dev/catalog.json'
-    parsed_catalog = transform.load_catalog(catalog_fpath, (256, 256))
+    artifacts_root = './experiment/artifacts/'
 
     # datablocks partition
-    partition_config = transform.PartitionConfig(
+    partition_cfg = transform.PartitionConfig(
         val_test_ratios=(0.1, 0),
         buffer_step=1,
         reward_ratios={2: 5.0, 4: 5.0},
@@ -98,20 +96,7 @@ def prep_train_data_test(config: configs.RootConfig):
         max_skew_rate=5.0,
         block_spec=(256, 128, 256, 128)
     )
-    partitions = transform.partition_blocks(
-        parsed_catalog.base_class_counts,
-        parsed_catalog.valid_class_counts,
-        partition_config,
-        logger,
-    )
+    transform.partition_blocks(artifacts_root, partition_cfg, logger)
 
     # normalize
-    fpaths = parsed_catalog.valid_file_paths
-    train_blocks = [v for k, v in fpaths.items() if k in partitions.train]
-    all_coords = partitions.train + partitions.val + partitions.test
-    all_blocks =  [v for k, v in fpaths.items() if k in all_coords]
-    transform.build_normalized_blocks(
-        train_blocks,
-        all_blocks,
-        './experiment/artifacts/pipeline/blocks'
-    )
+    transform.build_normalized_blocks(artifacts_root)

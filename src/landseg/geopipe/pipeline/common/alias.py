@@ -41,3 +41,7 @@ Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
 
 MaskArray: typing.TypeAlias = numpy.typing.NDArray[numpy.bool]
 '''A generic `numpy` array with `bool` dtype.'''
+
+# coordinates
+CoordsList: typing.TypeAlias = list[tuple[int, int]]
+'''A simple list of tuples of two integers represent coordinates.'''

@@ -31,14 +31,31 @@ import landseg.geopipe.pipeline.common.alias as alias
 import landseg.utils as utils
 
 def normalize_blocks(
-    blocks: list[str],
+    input_blocks: list[str],
     stats: dict[str, dict[str, int | float]],
-    target_dir: str
+    output_dir: str,
+    *,
+    rebuild: bool = False
 ):
     '''doc'''
 
-    os.makedirs(target_dir, exist_ok=True)
-    jobs = [(_normalize_one_block, (b, stats, target_dir), {}) for b in blocks]
+    # blocks not on disk
+    absent = []
+    for b in input_blocks:
+        fpath = f'{output_dir}/{os.path.basename(b)}'
+        if not os.path.exists(fpath):
+            absent.append(b)
+    # option to skip exisiting blocks
+    work = input_blocks if rebuild else absent
+
+    # purge blocks not belong
+    purged = _purge(work, output_dir)
+    if purged:
+        print(f'{purged} unwanted block files removed')
+
+    # normalize blocks
+    os.makedirs(output_dir, exist_ok=True)
+    jobs = [(_normalize_one_block, (b, stats, output_dir), {}) for b in work]
     utils.multip.ParallelExecutor().run(jobs)
 
 def _normalize_one_block(
@@ -54,7 +71,7 @@ def _normalize_one_block(
     # prep dict of arrays to write
     to_write = {
         'image': _normalize_image(data.image, data.valid_mask, global_stats),
-        'label': data.label_masked
+        'label': data.label_stack
     }
 
     # use the same file name
@@ -92,3 +109,26 @@ def _normalize_image(
 
     # return
     return image_normalized
+
+def _purge(
+    input_blocks: list[str],
+    target_dir: str
+) -> int:
+    '''
+    Remove files in target_dir that are not listed in input_blocks.
+
+    All paths in input_blocks are expected to be within target_dir.
+    Return the count of removed files.
+    '''
+
+    if not os.path.exists(target_dir) or not os.listdir(target_dir):
+        return 0
+
+    keep = {os.path.basename(p) for p in input_blocks}
+    removed = 0
+    for name in os.listdir(target_dir):
+        path = os.path.join(target_dir, name)
+        if os.path.isfile(path) and name not in keep:
+            os.remove(path)
+            removed += 1
+    return removed

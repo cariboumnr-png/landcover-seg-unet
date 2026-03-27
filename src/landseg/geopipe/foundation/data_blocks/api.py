@@ -129,7 +129,7 @@ def build_blocks(
     dev_ras_cfg = data_blocks.MappingConfig(
         input_img_fpath=config.eval_image_fpath,
         input_lbl_fpath=config.eval_label_fpath,
-        output_root=f'{output_root}/eval_holdout/windows',
+        output_root=f'{output_root}/test_holdout/windows',
     )
     ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Holdout raters for evaluation mapped to grid')
@@ -139,7 +139,7 @@ def build_blocks(
         image_fpath=config.eval_image_fpath,
         label_fpath=config.eval_label_fpath,
         config_fpath=config.data_config_fpath,
-        output_root=f'{output_root}/eval_holdout/',
+        output_root=f'{output_root}/test_holdout/',
         dem_pad_px=config.dem_pad,
         ignore_index=config.ignore_index
     )
@@ -154,5 +154,5 @@ def build_blocks(
         source_label=config.eval_label_fpath,
         mapped_grid_id=world_grid.gid
     )
-    data_blocks.update_catalog(updated, f'{output_root}/eval_holdout/', logger)
-    data_blocks.update_meta(updated, f'{output_root}/eval_holdout/', logger)
+    data_blocks.update_catalog(updated, f'{output_root}/test_holdout/', logger)
+    data_blocks.update_meta(updated, f'{output_root}/test_holdout/', logger)

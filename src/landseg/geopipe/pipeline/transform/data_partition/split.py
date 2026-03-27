@@ -210,7 +210,7 @@ def _report(
     global_dist = numpy.sum(counts, axis=0) / counts.sum()
     train_dist = numpy.sum(train_counts, axis=0) / train_counts.sum()
     val_dist = numpy.sum(val_counts, axis=0) / val_counts.sum()
-    test_dist = numpy.sum(test_counts, axis=0) / test_counts.sum()
+    test_dist = numpy.sum(test_counts, axis=0) / (test_counts.sum() or 1.0)
 
     ncol = counts.shape[1]
     # print out

@@ -88,8 +88,8 @@ def filter_safe_tiles(
     # sanity checks
     if block_size <= 0:
         raise ValueError('block_size must be positive')
-    if block_stride <= 0 or block_stride > block_size:
-        raise ValueError('candidate_stride must satisfy 0 < s ≤ block_size')
+    if block_stride < 0 or block_stride > block_size:
+        raise ValueError('candidate_stride must satisfy 0 ≤ s ≤ block_size')
     if buffer_steps < 0:
         raise ValueError('buffer_steps must be non-negative')
 
@@ -109,7 +109,7 @@ def _overlaps_w_base(
     coord: tuple[int, int],
     base_tiles: set[tuple[int, int]],
     block_size: int,
-    stride: int,
+    block_stride: int,
     buffer_steps: int
 ) -> bool:
     '''True if candidate tile overlaps any base tile within radius.'''
@@ -120,7 +120,7 @@ def _overlaps_w_base(
     j = yc // block_size
 
     # effective per-axis overlap threshold and search radius in base indices
-    thres = block_size + buffer_steps * stride
+    thres = block_size + buffer_steps * block_stride
     radius = 1 + (thres - 1) // block_size
 
     # iteration search within radius
