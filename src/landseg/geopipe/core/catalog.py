@@ -84,15 +84,9 @@ class _DataSource(typing.TypedDict):
 class _IOConventions(typing.TypedDict):
     '''Block IO format, key names, shapes, dtypes, and ignore index.'''
     block_format: str
-    keys: _IOKeys
     shapes: _IOShapes
     dtypes: _IODtypes
     ignore_index: int
-
-class _IOKeys(typing.TypedDict):
-    '''NPZ key names for block serialization.'''
-    image_key: str
-    label_key: str
 
 class _IOShapes(typing.TypedDict):
     '''Logical ordering conventions for tensors.'''

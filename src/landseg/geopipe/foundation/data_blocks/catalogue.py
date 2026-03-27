@@ -167,10 +167,6 @@ def update_meta(
 
         'io_conventions': {
             'block_format': 'npz',
-            'keys': {
-                'image_key': 'image',
-                'label_key': 'label',
-            },
             'shapes': {
                 'image_order': 'C,H,W',
                 'label_order': 'L,H,W'
