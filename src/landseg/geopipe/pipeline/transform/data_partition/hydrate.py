@@ -118,7 +118,7 @@ def hydrate_train_split(
         selected.append(coords)
 
         # updates and tracking
-        current = [a + b for a, b in zip(current, blk_count)]
+        current = [int(a + b) for a, b in zip(current, blk_count)]
         recent.append((tgt_gain, non_gain))
         priorities = _priorities(targets, current, EPS)
 

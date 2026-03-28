@@ -51,20 +51,21 @@ import landseg.geopipe.pipeline.common.alias as alias
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class _SplitIndices:
+class _Split:
     '''Container for block indices from a split.'''
-    train: typing.Iterable[int]
-    val: typing.Iterable[int]
-    test: typing.Iterable[int]
+    train: list[tuple[int, int]]
+    val: list[tuple[int, int]]
+    test: list[tuple[int, int]]
+    train_class_count: list[int]
 
 # -------------------------------Public Function-------------------------------
 def stratified_splitter(
-    counts: alias.Int64Array,
+    base_counts: dict[tuple[int, int], list[int]],
     *,
     val_ratio: float = 0.15,
     test_ratio: float = 0.0,
     weight_mode: typing.Literal['none', 'inverse'] = 'inverse',
-) -> _SplitIndices:
+) -> _Split:
     '''
     Stratified three-way splitter to generate train/val/test splits.
 
@@ -72,7 +73,7 @@ def stratified_splitter(
     proportions, and the remaining blocks are assigned to training.
 
     Args:
-        counts: Per-block integer class counts ([n_blocks, n_classes]).
+        base_counts: Per-block integer class counts indexed by coords.
         val_ratio: Target fraction of blocks in validation.
         test_ratio: Target fraction of blocks in test. Use 0.0 to skip.
         weight_mode: 'inverse' upweights rare classes via
@@ -81,6 +82,10 @@ def stratified_splitter(
     Returns:
         Indices of each split in a container `_SplitIndices`.
     '''
+
+    # from the base class counts dict
+    counts = numpy.array(list(base_counts.values())) # counts into an array
+    coords = list(base_counts.keys()) # coordinates - order matches with counts
 
     # input validations
     if counts.ndim != 2:
@@ -93,9 +98,6 @@ def stratified_splitter(
         raise ValueError('ratios must be non-negative.')
     if val_ratio + test_ratio >= 1.0:
         raise ValueError('val_ratio + test_ratio must be < 1.0.')
-
-    # init a returning container
-    idx = _SplitIndices(set(), set(), set())
 
     # first dim as the number of blocks
     n_blks = counts.shape[0]
@@ -113,20 +115,26 @@ def stratified_splitter(
     full = numpy.argsort(counts.sum(axis=1))[::-1].tolist() # reversed
 
     # validation selection
-    idx.val = _pick_subset(counts, full, val_budget, target_val, weights)
-    remain = [i for i in range(n_blks) if i not in idx.val] # remainder
+    val_idx = _pick_subset(counts, full, val_budget, target_val, weights)
+    remain = [i for i in range(n_blks) if i not in val_idx] # remainder
 
     # test selection - returns empty set if budget is zero
-    idx.test = _pick_subset(counts, remain, test_budget, target_test, weights)
+    test_idx = _pick_subset(counts, remain, test_budget, target_test, weights)
 
     # rest goes to train
-    idx.train = set(range(n_blks)) - (idx.val | idx.test)
+    train_idx = set(range(n_blks)) - (val_idx | test_idx)
+    train_class_count = list(numpy.sum(counts[list(train_idx)], axis=0))
 
     # report
-    _report(counts, idx)
+    _report(counts, list(train_idx), list(val_idx), list(test_idx))
 
-    # return as lists
-    return idx
+    # return lists coords for each split
+    return _Split(
+        train=[coords[i] for i in train_idx],
+        val=[coords[i] for i in val_idx],
+        test=[coords[i] for i in test_idx],
+        train_class_count=train_class_count
+    )
 
 # ---------- internal helpers ----------
 def _block_budgets(
@@ -197,14 +205,16 @@ def _pick_subset(
 
 def _report(
     counts: alias.Int64Array,
-    splits: _SplitIndices,
+    train_idx: list[int],
+    val_idx: list[int],
+    test_idx: list[int]
 ):
     '''Report class contribution in each split.'''
 
     # class counts at each split
-    train_counts = counts[list(splits.train)]
-    val_counts = counts[list(splits.val)]
-    test_counts = counts[list(splits.test)]
+    train_counts = counts[train_idx]
+    val_counts = counts[val_idx]
+    test_counts = counts[test_idx]
 
     # class distribution at each split
     global_dist = numpy.sum(counts, axis=0) / counts.sum()

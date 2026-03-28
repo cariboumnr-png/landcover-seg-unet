@@ -28,7 +28,6 @@ import dataclasses
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.pipeline.common.alias as alias
 import landseg.geopipe.pipeline.transform.data_partition as data_partition
 import landseg.utils as utils
 
@@ -48,6 +47,15 @@ class PartitionConfig:
         # current we only accept equal row and col sizes and strides
         assert self.block_spec[0] == self.block_spec[2], 'Not a square block'
         assert self.block_spec[1] == self.block_spec[3], 'Not a equal stride'
+
+# ------------------------------private dataclass------------------------------
+@dataclasses.dataclass
+class _SplitResults:
+    '''Container for data blocks split results.'''
+    train_coords: list[tuple[int, int]]
+    val_coords: list[tuple[int, int]]
+    test_coords: list[tuple[int, int]]
+    label_stats: dict[str, list[float | int]]
 
 # -------------------------------Public Function-------------------------------
 def partition_blocks(
@@ -78,8 +86,8 @@ def partition_blocks(
     # load model dev catalog
     dev = data_partition.parse_catalog(dev_catalog, blk_size)
 
-    # get split as block coordinates
-    splits = _process(
+    # get split blocks
+    r = _split(
         dev.base_class_counts,
         dev.valid_class_counts,
         partition_config,
@@ -88,52 +96,53 @@ def partition_blocks(
     )
 
     # file paths for each split from coords
-    train = set(dev.valid_file_paths[c] for c in splits[0])
-    val = set(dev.valid_file_paths[c] for c in splits[1])
-    test = ext_test_blks | set(dev.valid_file_paths[c] for c in splits[2])
+    train = set(dev.valid_file_paths[c] for c in r.train_coords)
+    val = set(dev.valid_file_paths[c] for c in r.val_coords)
+    test = ext_test_blks | set(dev.valid_file_paths[c] for c in r.test_coords)
+
     # data leakage sanity
     leak = train & val
     assert not leak, f'Data leaked between train and val! {leak}'
     leak = train & test
     assert not leak, f'Data leaked between train and test! {leak}'
 
-    # write the splits and metadata to JSON
+    # write JSON artifacts
     split_src = {'train': list(train), 'val': list(val), 'test': list(test)}
-    utils.write_json(f'{artifacts_root}/transform/sources.json', split_src)
-    utils.hash_artifacts(f'{artifacts_root}/transform/sources.json')
+    utils.write_json(f'{artifacts_root}/transform/block_source.json', split_src)
+    utils.hash_artifacts(f'{artifacts_root}/transform/block_source.json')
 
-def _process(
+    utils.write_json(f'{artifacts_root}/transform/label_stats.json', r.label_stats)
+    utils.hash_artifacts(f'{artifacts_root}/transform/label_stats.json')
+
+def _split(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
     config: PartitionConfig,
     logger: utils.Logger,
     *,
     external_test: bool
-) -> tuple[alias.CoordsList, alias.CoordsList, alias.CoordsList]:
+) -> _SplitResults:
     '''Process wrapper.'''
 
     # split dataset
-    base_counts = numpy.array(list(base_class_counts.values()))
     splits = data_partition.stratified_splitter(
-        base_counts,
+        base_class_counts,
         val_ratio=config.val_test_ratios[0],
         test_ratio=(0 if external_test else config.val_test_ratios[1]),
         weight_mode = 'inverse' # default
     )
 
-    # filter candidate files (remove overlaps from val+test blocks)
-    catalog_coords = list(valid_class_counts.keys())
-    base_coords = list(base_class_counts.keys())
-    exclude_coords = [base_coords[i] for i in [*splits.val, *splits.test]]
+    # filter candidate blocks for hydration
     safe_candidates = data_partition.filter_safe_tiles(
-        catalog_coords,
-        exclude_coords,
+        list(valid_class_counts.keys()),
+        splits.val + splits.test,
         block_size=config.block_spec[0],
         block_stride=config.block_spec[1],
         buffer_steps=config.buffer_step
     )
 
     # score and rank the safe candidate tiles
+    base_counts = numpy.array(list(base_class_counts.values()))
     global_class_count = numpy.sum(base_counts, axis=0)
     blocks_to_score = {
         k: v for k, v in valid_class_counts.items()
@@ -148,9 +157,8 @@ def _process(
     )
 
     # hydrate using the safe candidates
-    train_class_count = list(numpy.sum(base_counts[list(splits.train)], axis=0))
-    selected, cur_count = data_partition.hydrate_train_split(
-        train_class_count,
+    selected, current_count = data_partition.hydrate_train_split(
+        splits.train_class_count,
         ranked_candidates,
         target_ratios=config.reward_ratios,
         max_skew_rate=config.max_skew_rate
@@ -159,13 +167,19 @@ def _process(
     # log - TBD
     logger.log('INFO', 'Training blocks hydration complete')
     logger.log('INFO', f'Added {len(selected)} additional blocks')
-    logger.log('INFO', f'Previous class count: {[int(x) for x in train_class_count]}')
-    logger.log('INFO', f'Current class count: {[int(x) for x in cur_count]}')
-    logger.log('INFO', f'Class count increased: {numpy.array(cur_count) / train_class_count}')
+
+    # write label stats to file
+    label_stats = {
+        'original_counts': [int(c) for c in global_class_count],
+        'original_proportions': [float(c / sum(global_class_count)) for c in global_class_count],
+        'current_counts': current_count,
+        'current_proportions': [float(c / sum(current_count)) for c in current_count]
+    }
 
     # return coordinates of each split
-    return (
-        [base_coords[i] for i in splits.train] + selected,
-        [base_coords[i] for i in splits.val],
-        [base_coords[i] for i in splits.test],
+    return _SplitResults(
+        train_coords=splits.train + selected,
+        val_coords=splits.val,
+        test_coords=splits.test,
+        label_stats=label_stats
     )
