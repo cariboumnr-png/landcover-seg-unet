@@ -31,32 +31,39 @@ import landseg.geopipe.pipeline.common.alias as alias
 import landseg.utils as utils
 
 def normalize_blocks(
-    input_blocks: list[str],
+    input_blocks: set[str],
     stats: dict[str, dict[str, int | float]],
     output_dir: str,
     *,
     rebuild: bool = False
-):
+) -> list[str]:
     '''doc'''
 
-    # blocks not on disk
-    absent = []
+    #
+    names: list[str] = []
+    work: list[str] = []
     for b in input_blocks:
-        fpath = f'{output_dir}/{os.path.basename(b)}'
-        if not os.path.exists(fpath):
-            absent.append(b)
-    # option to skip exisiting blocks
-    work = input_blocks if rebuild else absent
+        name = os.path.basename(b)
+        names.append(name)
+        if rebuild:
+            work.append(b)
+        else:
+            if not os.path.exists(f'{output_dir}/{name}'):
+                work.append(b)
 
     # purge blocks not belong
-    purged = _purge(work, output_dir)
+    purged = _purge(names, output_dir)
     if purged:
         print(f'{purged} unwanted block files removed')
 
     # normalize blocks
     os.makedirs(output_dir, exist_ok=True)
     jobs = [(_normalize_one_block, (b, stats, output_dir), {}) for b in work]
-    utils.multip.ParallelExecutor().run(jobs)
+    if jobs:
+        utils.multip.ParallelExecutor().run(jobs)
+
+    # return current file paths
+    return [f'{output_dir}/{f}' for f in os.listdir(output_dir) if f.endswith('.npz')]
 
 def _normalize_one_block(
     block_fpath: str,
@@ -111,7 +118,7 @@ def _normalize_image(
     return image_normalized
 
 def _purge(
-    input_blocks: list[str],
+    filenames_to_keep: list[str],
     target_dir: str
 ) -> int:
     '''
@@ -124,11 +131,10 @@ def _purge(
     if not os.path.exists(target_dir) or not os.listdir(target_dir):
         return 0
 
-    keep = {os.path.basename(p) for p in input_blocks}
     removed = 0
     for name in os.listdir(target_dir):
         path = os.path.join(target_dir, name)
-        if os.path.isfile(path) and name not in keep:
+        if os.path.isfile(path) and name not in filenames_to_keep:
             os.remove(path)
             removed += 1
     return removed

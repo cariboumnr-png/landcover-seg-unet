@@ -35,7 +35,7 @@ import math
 import landseg.geopipe.core as core
 
 # -------------------------------Public Function-------------------------------
-def aggregate_image_stats(input_blocks: list[str]) -> dict[str, dict[str, int | float]]:
+def aggregate_image_stats(input_blocks: set[str]) -> dict[str, dict[str, int | float]]:
     '''
     Aggregate per-band image statistics across the input blocks.
 
@@ -51,7 +51,7 @@ def aggregate_image_stats(input_blocks: list[str]) -> dict[str, dict[str, int | 
     '''
 
     # get image channel count from the first block
-    sample = core.DataBlock.load(input_blocks[0]).data
+    sample = core.DataBlock.load(next(iter(input_blocks))).data
     num_bands = sample.image.shape[0]
 
     # define a return dict

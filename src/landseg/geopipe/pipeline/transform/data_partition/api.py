@@ -65,11 +65,11 @@ def partition_blocks(
     test_catalog = f'{artifacts_root}/foundation/test_holdout/catalog.json'
 
     # try load test catalog
-    ext_test_blks = []
+    ext_test_blks = set()
     try:
         test = data_partition.parse_catalog(test_catalog, blk_size)
         logger.log('INFO', 'Use external test blocks, no test blocks split')
-        ext_test_blks = list(test.valid_file_paths.values())
+        ext_test_blks = set(test.valid_file_paths.values())
     except FileNotFoundError:
         logger.log('INFO', 'No external test blocks provided')
         if not partition_config.val_test_ratios[1]:
@@ -88,24 +88,19 @@ def partition_blocks(
     )
 
     # file paths for each split from coords
-    train = [dev.valid_file_paths[c] for c in splits[0]]
-    val = [dev.valid_file_paths[c] for c in splits[1]]
-    test = ext_test_blks + [dev.valid_file_paths[c] for c in splits[2]]
+    train = set(dev.valid_file_paths[c] for c in splits[0])
+    val = set(dev.valid_file_paths[c] for c in splits[1])
+    test = ext_test_blks | set(dev.valid_file_paths[c] for c in splits[2])
     # data leakage sanity
-    leak = set(train) & set(val)
+    leak = train & val
     assert not leak, f'Data leaked between train and val! {leak}'
-    leak = set(train) & set(test)
+    leak = train & test
     assert not leak, f'Data leaked between train and test! {leak}'
 
     # write the splits and metadata to JSON
-    utils.write_json(f'{artifacts_root}/transform/train_blocks.json', train)
-    utils.write_json(f'{artifacts_root}/transform/val_blocks.json', val)
-    utils.write_json(f'{artifacts_root}/transform/test_blocks.json', test)
-
-    # hash JSON artifacts
-    utils.hash_artifacts(f'{artifacts_root}/transform/train_blocks.json')
-    utils.hash_artifacts(f'{artifacts_root}/transform/val_blocks.json')
-    utils.hash_artifacts(f'{artifacts_root}/transform/test_blocks.json')
+    split_src = {'train': list(train), 'val': list(val), 'test': list(test)}
+    utils.write_json(f'{artifacts_root}/transform/sources.json', split_src)
+    utils.hash_artifacts(f'{artifacts_root}/transform/sources.json')
 
 def _process(
     base_class_counts: dict[tuple[int, int], list[int]],

@@ -32,14 +32,27 @@ def build_normalized_blocks(root_dir: str):
     out_dir = f'{root_dir}/transform'
 
     # load source blocks file lists
-    train = utils.load_json(f'{out_dir}/train_blocks.json')
-    val = utils.load_json(f'{out_dir}/val_blocks.json')
-    test = utils.load_json(f'{out_dir}/test_blocks.json')
+    source: dict[str, list[str]] = utils.load_json(f'{out_dir}/sources.json')
+
+    # get source by split
+    train = set(source['train'])
+    val = set(source['val'])
+    test = set(source['test'])
 
     # aggregate stats on training blocks
     stats = normal_blocks.aggregate_image_stats(train)
+    utils.write_json(f'{out_dir}/stats.json', stats)
+    utils.hash_artifacts(f'{out_dir}/stats.json')
 
     # build normalized blocks for each split
-    normal_blocks.normalize_blocks(train, stats, f'{out_dir}/train_blocks')
-    normal_blocks.normalize_blocks(val, stats, f'{out_dir}/val_blocks')
-    normal_blocks.normalize_blocks(test, stats, f'{out_dir}/test_blocks')
+    train_fpaths = normal_blocks.normalize_blocks(train, stats, f'{out_dir}/train_blocks')
+    utils.write_json(f'{out_dir}/train_blocks.json', train_fpaths)
+    utils.hash_artifacts(f'{out_dir}/train_blocks.json')
+
+    val_fpaths = normal_blocks.normalize_blocks(val, stats, f'{out_dir}/val_blocks')
+    utils.write_json(f'{out_dir}/val_blocks.json', val_fpaths)
+    utils.hash_artifacts(f'{out_dir}/val_blocks.json')
+
+    test_fpaths = normal_blocks.normalize_blocks(test, stats, f'{out_dir}/test_blocks')
+    utils.write_json(f'{out_dir}/test_blocks.json', test_fpaths)
+    utils.hash_artifacts(f'{out_dir}/test_blocks.json')
