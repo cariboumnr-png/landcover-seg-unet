@@ -380,7 +380,7 @@ class DataBlock:
         self.data.label_stack = numpy.stack(fn_stack, axis=0)
 
         # update valid pixel ratios for the stack
-        for i in range(1, len(reclass_map)):
+        for i in range(1, len(reclass_map) + 1):
             _valid = fn_stack[i] != ignore_index
             _ratio = float(numpy.sum(_valid) / raw_valid.size)
             self.meta['valid_ratios'].update({f'reclass_{i}': _ratio})
