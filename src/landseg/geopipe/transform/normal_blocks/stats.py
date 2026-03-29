@@ -33,7 +33,7 @@ Public APIs:
 import math
 # local imports
 import landseg.geopipe.core as core
-import landseg.geopipe.pipeline.common as common
+import landseg.geopipe.transform.common as common
 
 # -------------------------------Public Function-------------------------------
 def aggregate_image_stats(

@@ -27,8 +27,8 @@ import os
 import numpy
 # local imports
 import landseg.geopipe.core as core
-import landseg.geopipe.pipeline.common as common
-import landseg.geopipe.pipeline.common.alias as alias
+import landseg.geopipe.transform.common as common
+import landseg.geopipe.transform.common.alias as alias
 import landseg.utils as utils
 
 def normalize_blocks(

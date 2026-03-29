@@ -26,7 +26,7 @@ Dev Test Ground
 # local imports
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
-import landseg.geopipe.pipeline.transform as transform
+import landseg.geopipe.transform as transform
 import landseg.utils as utils
 
 def test_run(config: configs.RootConfig):

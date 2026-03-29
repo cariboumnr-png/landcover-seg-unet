@@ -22,8 +22,8 @@
 '''doc'''
 
 # local imports
-import landseg.geopipe.pipeline.common as common
-import landseg.geopipe.pipeline.transform.normal_blocks as normal_blocks
+import landseg.geopipe.transform.common as common
+import landseg.geopipe.transform.normal_blocks as normal_blocks
 import landseg.utils as utils
 
 def build_normalized_blocks(root_dir: str):

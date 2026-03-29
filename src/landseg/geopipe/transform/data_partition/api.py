@@ -28,8 +28,8 @@ import dataclasses
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.pipeline.common as common
-import landseg.geopipe.pipeline.transform.data_partition as data_partition
+import landseg.geopipe.transform.common as common
+import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

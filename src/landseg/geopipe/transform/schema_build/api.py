@@ -33,7 +33,7 @@ Public APIs:
 import os
 # local imports
 import landseg.geopipe.core as core
-import landseg.geopipe.pipeline.common as common
+import landseg.geopipe.transform.common as common
 import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
