@@ -32,7 +32,7 @@ import landseg.utils as utils
 def test_run(config: configs.RootConfig):
     '''test'''
 
-    # catalogue(config)
+    catalogue(config)
     prep_train_data_test(config)
 
 def catalogue(config: configs.RootConfig):

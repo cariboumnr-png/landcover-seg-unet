@@ -52,7 +52,6 @@ import zlib
 import numpy
 # local imports
 import landseg.geopipe.core as core
-import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.utils as utils
 
@@ -72,6 +71,7 @@ class BuilderConfig:
     output_root: str            # path to output artifacts
     ignore_index: int           # global ignore label index
     dem_pad_px: int             # image DEM channel padding in pixels
+    block_size: tuple[int, int] # block size in row, col
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass(frozen=True)
@@ -105,7 +105,8 @@ class BlockBuilder:
 
     def __init__(
         self,
-        windows: common.MappedRasterWindowsLike,
+        image_windows: alias.RasterWindowDict,
+        label_windows: alias.RasterWindowDict,
         config: BuilderConfig,
         logger: utils.Logger,
     ):
@@ -119,7 +120,8 @@ class BlockBuilder:
         '''
 
         # intake arguments
-        self.windows = windows
+        self.img_windows = image_windows
+        self.lbl_windows = label_windows
         self.config = config
         self.logger = logger
 
@@ -165,7 +167,7 @@ class BlockBuilder:
         '''
 
         # get a deterministic coordinate sequence to iterate
-        coords = list(self.windows.image.keys()) # from image windows
+        coords = list(self.img_windows.keys()) # from image windows
         random.Random(42).shuffle(coords)
 
         # iterate through till a valid block if found
@@ -224,22 +226,22 @@ class BlockBuilder:
 
         # find shared coordinates between image and label read windows
         if self.has_label:
-            self.common_coords = set(self.windows.image.keys()) \
-                & set(self.windows.label.keys())
+            self.common_coords = set(self.img_windows.keys()) \
+                & set(self.lbl_windows.keys())
         else:
-            self.common_coords = set(self.windows.image.keys())
+            self.common_coords = set(self.img_windows.keys())
         n = len(self.common_coords)
         self.logger.log('DEBUG', f'Loaded {n} raster windows')
 
         # remove windows or irregular shapes, e.g., edge windows
         for coord in self.common_coords:
             # access image window
-            iw = self.windows.image[coord]
-            if (iw.width, iw.height) != self.windows.tile_shape:
+            iw = self.img_windows[coord]
+            if (iw.height, iw.width) != self.config.block_size:
                 self.common_coords.remove(coord)
             if self.has_label:
-                lw = self.windows.label[coord]
-                if (lw.width, lw.height) != self.windows.tile_shape:
+                lw = self.lbl_windows[coord]
+                if (lw.height, lw.width) != self.config.block_size:
                     self.common_coords.remove(coord)
         n = len(self.common_coords)
         self.logger.log('DEBUG', f'Number of windows with expected shape: {n}')
@@ -321,9 +323,9 @@ class BlockBuilder:
             ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,
-            img_window=self.windows.image[coords],
+            img_window=self.img_windows[coords],
             lbl_path=self.config.label_fpath,
-            lbl_window=self.windows.label[coords] if self.has_label else None
+            lbl_window=self.lbl_windows[coords] if self.has_label else None
         )
 
 # ------------------------------private functions------------------------------

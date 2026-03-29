@@ -30,7 +30,7 @@ Public APIs:
 # standard imports
 import dataclasses
 # local imports
-import landseg.geopipe.foundation.common as common
+import landseg.geopipe.core as core
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
@@ -48,7 +48,7 @@ class BlockBuildingConfig:
 
 # -------------------------------Public Function-------------------------------
 def build_blocks(
-    world_grid: common.GridLayoutLike,
+    world_grid: core.GridLayout,
     config: BlockBuildingConfig,
     output_root: str,
     logger: utils.Logger,
@@ -90,9 +90,15 @@ def build_blocks(
         config_fpath=config.data_config_fpath,
         output_root=f'{output_root}/model_dev/',
         dem_pad_px=config.dem_pad,
-        ignore_index=config.ignore_index
+        ignore_index=config.ignore_index,
+        block_size=ras_windows.tile_shape
     )
-    block_builder = data_blocks.BlockBuilder(ras_windows, builder_cfg, logger)
+    block_builder = data_blocks.BlockBuilder(
+        ras_windows.image,
+        ras_windows.label,
+        builder_cfg,
+        logger
+    )
 
     # build just one block, e.g., for overfit test
     if single_block_mode:
@@ -141,9 +147,15 @@ def build_blocks(
         config_fpath=config.data_config_fpath,
         output_root=f'{output_root}/test_holdout/',
         dem_pad_px=config.dem_pad,
-        ignore_index=config.ignore_index
+        ignore_index=config.ignore_index,
+        block_size=ras_windows.tile_shape
     )
-    block_builder = data_blocks.BlockBuilder(ras_windows, builder_cfg, logger)
+    block_builder = data_blocks.BlockBuilder(
+        ras_windows.image,
+        ras_windows.label,
+        builder_cfg,
+        logger
+    )
     logger.log('INFO', 'Build all holdout evaluation data blocks')
     new_blocks = block_builder.build_blocks()
 

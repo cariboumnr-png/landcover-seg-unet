@@ -180,6 +180,55 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
             f'Extent (height_px, width_px): {self.extent[0]}, {self.extent[1]}'
         ])
 
+    # ----- property
+    @property
+    def gid(self) -> str:
+        '''Canonical grid identifier.'''
+        return (
+            f'grid_row_{self._spec.tile_size[0]}_{self._spec.tile_overlap[0]}_'
+            f'col_{self._spec.tile_size[1]}_{self._spec.tile_overlap[0]}'
+        )
+
+    @property
+    def crs(self) -> str:
+        '''CRS of the layout.'''
+        return self._spec.crs
+
+    @property
+    def origin(self) -> tuple[float, float]:
+        '''Grid origin (x, y) in CRS units.'''
+        return self._spec.origin
+
+    @property
+    def pixel_size(self) -> tuple[float, float]:
+        '''Grid pixel size (x, -y) in CRS units.'''
+        return self._spec.pixel_size[0], -self._spec.pixel_size[1]
+
+    @property
+    def tile_size(self) -> tuple[int, int]:
+        '''Grid tile size (row, col) in pixels.'''
+        return self._spec.tile_size
+
+    @property
+    def tile_overlap(self) -> tuple[int, int]:
+        '''Grid tile overlap (row, col) in pixels.'''
+        return self._spec.tile_overlap
+
+    @property
+    def extent(self) -> tuple[int, int]:
+        '''Grid extent (height, width) in pixels.'''
+        return self._extent
+
+    @property
+    def h(self) -> int:
+        '''Grid extent height in pixels.'''
+        return self._extent[0]
+
+    @property
+    def w(self) -> int:
+        '''Grid extent width in pixels.'''
+        return self._extent[1]
+
     # ----- public method
     def offset_from(self, src: alias.RasterReader | rasterio.Affine) -> None:
         '''
@@ -248,55 +297,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
         obj._offset_px = (0, 0)
         # return class object
         return obj
-
-    # ----- property
-    @property
-    def gid(self) -> str:
-        '''Canonical grid identifier.'''
-        return (
-            f'grid_row_{self._spec.tile_size[0]}_{self._spec.tile_overlap[0]}_'
-            f'col_{self._spec.tile_size[1]}_{self._spec.tile_overlap[0]}'
-        )
-
-    @property
-    def crs(self) -> str:
-        '''CRS of the layout.'''
-        return self._spec.crs
-
-    @property
-    def origin(self) -> tuple[float, float]:
-        '''Grid origin (x, y) in CRS units.'''
-        return self._spec.origin
-
-    @property
-    def pixel_size(self) -> tuple[float, float]:
-        '''Grid pixel size (x, -y) in CRS units.'''
-        return self._spec.pixel_size[0], -self._spec.pixel_size[1]
-
-    @property
-    def tile_size(self) -> tuple[int, int]:
-        '''Grid tile size (row, col) in pixels.'''
-        return self._spec.tile_size
-
-    @property
-    def tile_overlap(self) -> tuple[int, int]:
-        '''Grid tile overlap (row, col) in pixels.'''
-        return self._spec.tile_overlap
-
-    @property
-    def extent(self) -> tuple[int, int]:
-        '''Grid extent (height, width) in pixels.'''
-        return self._extent
-
-    @property
-    def h(self) -> int:
-        '''Grid extent height in pixels.'''
-        return self._extent[0]
-
-    @property
-    def w(self) -> int:
-        '''Grid extent width in pixels.'''
-        return self._extent[1]
 
     # ----- private method
     def _generate(self) -> None:

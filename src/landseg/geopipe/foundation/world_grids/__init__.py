@@ -34,21 +34,17 @@ __all__ = [
     # classes
     'GridExtentConfig',
     'GridGenerationConfig',
-    'GridLayout',
-    'GridSpec',
     # functions
     'load_grid',
     'prep_world_grid',
     'save_grid',
     # typing
-    'GridLayoutPayload',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .api import GridExtentConfig, GridGenerationConfig, prep_world_grid
     from .io import load_grid, save_grid
-    from .layout import GridLayout, GridLayoutPayload, GridSpec
 
 def __getattr__(name: str):
 
@@ -56,7 +52,5 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.api', __package__), name)
     if name in ['load_grid', 'save_grid']:
         return getattr(importlib.import_module('.io', __package__), name)
-    if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
-        return getattr(importlib.import_module('.layout', __package__), name)
 
     raise AttributeError(name)

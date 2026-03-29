@@ -36,6 +36,8 @@ __all__ = [
     'CatalogEntry',
     'DataBlock',
     'DomainTileMap',
+    'GridLayout',
+    'GridSpec',
     # functions
     'name_yx',
     'yx_name',
@@ -46,6 +48,7 @@ __all__ = [
     'ImageBandStats',
     'LabelStats',
     'SchemaFull',
+    'GridLayoutPayload',
 ]
 
 # for static check
@@ -53,6 +56,7 @@ if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
     from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
     from .domains import DomainTileMap
+    from .layout import GridLayout, GridLayoutPayload, GridSpec
     from .transform import (
         BlockSplitPaths,
         ImageBandStats,
@@ -71,6 +75,9 @@ def __getattr__(name: str):
 
     if name in ['DomainTileMap']:
         return getattr(importlib.import_module('.domains', __package__), name)
+
+    if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
+        return getattr(importlib.import_module('.layout', __package__), name)
 
     if name in ['BlockSplitPaths', 'ImageBandStats', 'LabelStats',
                 'SchemaFull', 'SchemaOneBlock']:

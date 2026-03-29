@@ -56,7 +56,6 @@ import copy
 import dataclasses
 # local imports
 import landseg.geopipe.core as core
-import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
@@ -65,21 +64,21 @@ import landseg.utils as utils
 class DomainMappingConfig:
     '''Container for domain mapping configurations.'''
     source_dir: str
-    file_list: list[DomainFile]
+    file_list: list[_DomainFile]
     output_dir: str
     valid_threshold: float
     target_variance: float
 
 # --------------------------------private  type--------------------------------
 @dataclasses.dataclass
-class DomainFile:
+class _DomainFile:
     '''Typed domain file.'''
     filename: str
     index_base: int
 
 # -------------------------------Public Function-------------------------------
 def prepare_domain(
-    world_grid: common.GridLayoutLike,
+    world_grid: core.GridLayout,
     config: DomainMappingConfig,
     logger: utils.Logger
 ) -> None:
