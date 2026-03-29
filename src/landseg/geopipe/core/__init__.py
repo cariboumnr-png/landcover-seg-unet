@@ -53,35 +53,31 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .block import BlockMeta, DataBlock
-    from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
-    from .domains import DomainTileMap
-    from .grid import GridLayout, GridLayoutPayload, GridSpec
-    from .transform import (
-        BlockSplitPaths,
-        ImageBandStats,
-        LabelStats,
-        SchemaFull
-    )
+    from .foundation_catalog import BlocksCatalog, CatalogMeta, CatalogEntry
+    from .foundation_data_block import BlockMeta, DataBlock
+    from .foundation_domain_map import DomainTileMap
+    from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
+    from .transform_types import (BlockSplitPaths, ImageBandStats, LabelStats,
+                                  SchemaFull)
     from .utils import name_yx, yx_name
 
 def __getattr__(name: str):
 
     if name in ['BlockMeta', 'DataBlock']:
-        return getattr(importlib.import_module('.block', __package__), name)
+        return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
     if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
-        return getattr(importlib.import_module('.catalog', __package__), name)
+        return getattr(importlib.import_module('.foundation_catalog', __package__), name)
 
     if name in ['DomainTileMap']:
-        return getattr(importlib.import_module('.domains', __package__), name)
+        return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
 
     if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
-        return getattr(importlib.import_module('.grid', __package__), name)
+        return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
 
     if name in ['BlockSplitPaths', 'ImageBandStats', 'LabelStats',
                 'SchemaFull', 'SchemaOneBlock']:
-        return getattr(importlib.import_module('.transform', __package__), name)
+        return getattr(importlib.import_module('.transform_types', __package__), name)
 
     if name in ['name_yx', 'yx_name',]:
         return getattr(importlib.import_module('.utils', __package__), name)
