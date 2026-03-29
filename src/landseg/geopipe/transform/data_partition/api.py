@@ -28,7 +28,7 @@ import dataclasses
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.transform.common as common
+import landseg.geopipe.core as core
 import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
 
@@ -98,7 +98,7 @@ def partition_blocks(
     )
 
     # file paths for each split from coords
-    blks_src: common.BlockSplitPaths = {
+    blks_src: core.BlockSplitPaths = {
         'train': [dev.valid_file_paths[c] for c in r.train_coords],
         'val': [dev.valid_file_paths[c] for c in r.val_coords],
         'test': ext_test_blks + [dev.valid_file_paths[c] for c in r.test_coords]
@@ -113,7 +113,7 @@ def partition_blocks(
     # label stats dict
     ori = r.original_counts
     cur = r.current_counts
-    lbl_stats: common.LabelStats = {
+    lbl_stats: core.LabelStats = {
         'original_counts': [int(c) for c in ori],
         'original_proportions': [float(c / sum(ori)) for c in ori],
         'current_counts': cur,

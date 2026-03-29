@@ -22,7 +22,7 @@
 '''doc'''
 
 # local imports
-import landseg.geopipe.transform.common as common
+import landseg.geopipe.core as core
 import landseg.geopipe.transform.normal_blocks as normal_blocks
 import landseg.utils as utils
 
@@ -33,7 +33,7 @@ def build_normalized_blocks(root_dir: str):
     out = f'{root_dir}/transform'
 
     # load source blocks file lists
-    src: common.BlockSplitPaths = utils.load_json(f'{out}/block_source.json')
+    src: core.BlockSplitPaths = utils.load_json(f'{out}/block_source.json')
 
     # get source by split
     train = set(src['train'])
@@ -46,7 +46,7 @@ def build_normalized_blocks(root_dir: str):
     utils.hash_artifacts(f'{out}/image_stats.json')
 
     # build normalized blocks for each split
-    transform: common.BlockSplitPaths = {
+    transform: core.BlockSplitPaths = {
         'train': normal_blocks.normalize_blocks(train, stats, f'{out}/train_blocks'),
         'val': normal_blocks.normalize_blocks(val, stats, f'{out}/val_blocks'),
         'test': normal_blocks.normalize_blocks(test, stats, f'{out}/test_blocks')

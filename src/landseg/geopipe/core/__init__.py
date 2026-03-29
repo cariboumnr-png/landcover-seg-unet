@@ -40,21 +40,37 @@ __all__ = [
     'yx_name',
     # typing
     'BlocksCatalog',
-    'CatalogMeta'
+    'CatalogMeta',
+    'BlockSplitPaths',
+    'ImageBandStats',
+    'LabelStats',
+    'SchemaFull',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
     from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
+    from .transform import (
+        BlockSplitPaths,
+        ImageBandStats,
+        LabelStats,
+        SchemaFull
+    )
     from .utils import name_yx, yx_name
 
 def __getattr__(name: str):
 
     if name in ['BlockMeta', 'DataBlock']:
         return getattr(importlib.import_module('.block', __package__), name)
+
     if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
         return getattr(importlib.import_module('.catalog', __package__), name)
+
+    if name in ['BlockSplitPaths', 'ImageBandStats', 'LabelStats',
+                'SchemaFull', 'SchemaOneBlock']:
+        return getattr(importlib.import_module('.typed_dicts', __package__), name)
+
     if name in ['name_yx', 'yx_name',]:
         return getattr(importlib.import_module('.utils', __package__), name)
 
