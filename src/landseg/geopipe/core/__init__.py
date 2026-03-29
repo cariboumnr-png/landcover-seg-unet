@@ -39,8 +39,8 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
-    'name_yx',
-    'yx_name',
+    'name_xy',
+    'xy_name',
     # typing
     'BlocksCatalog',
     'CatalogMeta',
@@ -59,7 +59,7 @@ if typing.TYPE_CHECKING:
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
     from .transform_types import (BlockSplitPaths, ImageBandStats, LabelStats,
                                   SchemaFull)
-    from .utils import name_yx, yx_name
+    from .utils import name_xy, xy_name
 
 def __getattr__(name: str):
 
@@ -79,7 +79,7 @@ def __getattr__(name: str):
                 'SchemaFull', 'SchemaOneBlock']:
         return getattr(importlib.import_module('.transform_types', __package__), name)
 
-    if name in ['name_yx', 'yx_name',]:
+    if name in ['name_xy', 'xy_name',]:
         return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(name)

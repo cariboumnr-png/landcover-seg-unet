@@ -195,7 +195,7 @@ class BlockBuilder:
         self.logger.log('DEBUG', f'Minimum valid pixel: {valid_px_per:.2f}')
         self.logger.log('DEBUG', f'Focused head: {monitor_head}')
         self.logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
-        fpath = f'{save_dpath}/{core.yx_name(c)}.npz'
+        fpath = f'{save_dpath}/{core.xy_name(c)}.npz'
         blk.save(fpath)
 
     def build_blocks(self) -> list[tuple[int, int]]:
@@ -260,7 +260,7 @@ class BlockBuilder:
         blks_to_check: dict[tuple[int, int], str] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
-            name = core.yx_name(c)
+            name = core.xy_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
 
         # create checking jobs
@@ -308,7 +308,7 @@ class BlockBuilder:
             co_contxt = self._get_context(c)
             save_args = {
                 'save': True,
-                'save_fpath': f'{self.blks_dir}/{core.yx_name(c)}.npz'
+                'save_fpath': f'{self.blks_dir}/{core.xy_name(c)}.npz'
             }
             jobs.append((_build_a_blk, (meta, co_contxt,), save_args))
 
@@ -319,7 +319,7 @@ class BlockBuilder:
         '''Return a the immutable block-creation context.'''
 
         return _BlockCreationContext(
-            name=core.yx_name(coords),
+            name=core.xy_name(coords),
             ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,

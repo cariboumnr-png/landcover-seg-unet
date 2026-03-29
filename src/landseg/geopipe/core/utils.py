@@ -24,17 +24,17 @@ Utility helper functions.
 '''
 
 # coords <-> name helpers
-def yx_name(coords: tuple[int, int]) -> str:
-    '''Convert (row, col) to a canonical block name string.'''
+def xy_name(coords: tuple[int, int]) -> str:
+    '''Convert (x, y) to a canonical block name string.'''
 
-    # e.g., (12, 34) -> row_000012_col_000034
-    y, x = coords
+    # e.g., (12, 34) -> row_000034_col_000012
+    x, y = coords
     return f'row_{y:06d}_col_{x:06d}'
 
-def name_yx(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (row, col).'''
+def name_xy(name: str) -> tuple[int, int]:
+    '''Convert a canonical block name back to (x, y).'''
 
-    # e.g.,  row_000012_col_000034 -> (12, 34)
+    # e.g.,  row_000034_col_000012 -> (12, 34)
     split = name.split('_')
     y_str, x_str = split[1], split[3]
-    return int(y_str), int(x_str)
+    return int(x_str), int(y_str)

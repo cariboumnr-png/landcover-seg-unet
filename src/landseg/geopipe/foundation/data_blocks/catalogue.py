@@ -97,7 +97,7 @@ def update_catalog(
             logger.log('INFO', 'No new blocks provided, exit')
             return
         logger.log('INFO', f'Update {len(coords)} new blocks')
-        fnames = [f'{core.yx_name(c)}.npz' for c in coords]
+        fnames = [f'{core.xy_name(c)}.npz' for c in coords]
     else:
         logger.log('INFO', f'catalog.json not found at {root_dir}')
         if not coords:
@@ -109,7 +109,7 @@ def update_catalog(
             logger.log('INFO', f'Found {len(fnames)} existing blocks, create')
         else:
             logger.log('INFO', f'Creat from {len(coords)} new blocks')
-            fnames = [f'{core.yx_name(c)}.npz' for c in coords]
+            fnames = [f'{core.xy_name(c)}.npz' for c in coords]
 
     # get hash values from input rasters
     img_hash = utils.hash_artifacts(updated_blocks.source_image, False)
@@ -123,7 +123,7 @@ def update_catalog(
     for name in fnames:
         fp = f'{blks_dir}/{name}'
         meta = core.DataBlock.load(fp).meta
-        row, col = core.name_yx(meta['block_name'])
+        row, col = core.name_xy(meta['block_name'])
         catalog[(col, row)] = {
             'block_name': meta['block_name'],
             'file_path': fp,

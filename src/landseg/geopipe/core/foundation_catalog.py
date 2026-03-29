@@ -198,7 +198,7 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         '''
 
         # index entries and sort
-        payload = {core.yx_name(k): v for k, v in self._data.items()}
+        payload = {core.xy_name(k): v for k, v in self._data.items()}
         sorted_payload = dict(sorted(payload.items()))
         # manual json writing
         with open(fpath, 'w', encoding='UTF-8') as file:
@@ -237,5 +237,5 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         except FileNotFoundError:
             obj._data = {}
             return obj
-        obj._data = {core.name_yx(k): v for k, v in payload.items()}
+        obj._data = {core.name_xy(k): v for k, v in payload.items()}
         return obj
