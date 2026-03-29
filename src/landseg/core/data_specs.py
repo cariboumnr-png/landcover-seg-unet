@@ -92,9 +92,9 @@ class Heads:
 @dataclasses.dataclass
 class Splits:
     '''Train/val/test block file mappings.'''
-    train: dict[str, str]
-    val: dict[str, str]
-    test: dict[str, str] | None
+    train: list[str]
+    val: list[str]
+    test: list[str] | None
 
     def __str__(self) -> str:
         return '\n'.join([
