@@ -39,13 +39,6 @@ class ImageBandStats(typing.TypedDict):
     accum_m2: float
     std: float
 
-class LabelStats(typing.TypedDict):
-    '''Typed label stats.'''
-    original_counts: list[int]
-    original_proportions: list[float]
-    current_counts: list[int]
-    current_proportions: list[float]
-
 class SchemaFull(typing.TypedDict):
     '''Dataset-wide schema emitted by `build_schema_full(...)`.'''
     schema_version: str
@@ -55,7 +48,7 @@ class SchemaFull(typing.TypedDict):
     train_blocks: list[str]
     val_blocks: list[str]
     test_blocks: list[str]
-    label_stats: LabelStats
+    label_stats: dict[str, list[int]]
     image_stats: dict[str, ImageBandStats]
     image_array_key: str
     label_array_key: str

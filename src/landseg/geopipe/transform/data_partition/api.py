@@ -49,16 +49,6 @@ class PartitionConfig:
         assert self.block_spec[0] == self.block_spec[2], 'Not a square block'
         assert self.block_spec[1] == self.block_spec[3], 'Not a equal stride'
 
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _SplitResults:
-    '''Container for data blocks split results.'''
-    train_coords: list[tuple[int, int]]
-    val_coords: list[tuple[int, int]]
-    test_coords: list[tuple[int, int]]
-    original_counts: list[int]
-    current_counts: list[int]
-
 # -------------------------------Public Function-------------------------------
 def partition_blocks(
     artifacts_root: str,
@@ -83,42 +73,25 @@ def partition_blocks(
     except FileNotFoundError:
         logger.log('INFO', 'No external test blocks provided')
         if not partition_config.val_test_ratios[1]:
-            logger.log('WARNING', 'No test blocks is to splitted')
+            logger.log('WARNING', 'No test blocks is to be included')
 
     # load model dev catalog
     dev = data_partition.parse_catalog(dev_catalog, blk_size)
 
     # get split blocks
-    r = _split(
+    logger.log('INFO', 'Split data blocks')
+    blks_src, start_counts, end_counts = _split(
         dev.base_class_counts,
         dev.valid_class_counts,
+        dev.valid_file_paths,
         partition_config,
-        logger,
-        external_test=bool(ext_test_blks)
+        ext_test_blks=ext_test_blks
     )
+    logger.log('INFO', f'Training blocks: {len(blks_src['train'])} ')
+    _log_split_result(start_counts, end_counts, logger) # log more details
 
-    # file paths for each split from coords
-    blks_src: core.BlockSplitPaths = {
-        'train': [dev.valid_file_paths[c] for c in r.train_coords],
-        'val': [dev.valid_file_paths[c] for c in r.val_coords],
-        'test': ext_test_blks + [dev.valid_file_paths[c] for c in r.test_coords]
-    }
-
-    # data leakage sanity
-    leak = set(blks_src['train']) & set(blks_src['val'])
-    assert not leak, f'Data leaked between train and val! {leak}'
-    leak = set(blks_src['train']) & set(blks_src['test'])
-    assert not leak, f'Data leaked between train and test! {leak}'
-
-    # label stats dict
-    ori = r.original_counts
-    cur = r.current_counts
-    lbl_stats: core.LabelStats = {
-        'original_counts': [int(c) for c in ori],
-        'original_proportions': [float(c / sum(ori)) for c in ori],
-        'current_counts': cur,
-        'current_proportions': [float(c / sum(cur)) for c in cur]
-    }
+    # iterate current traing blocks to get label class counts
+    lbl_stats = _count_label(blks_src['train'])
 
     # write JSON artifacts
     utils.write_json(f'{artifacts_root}/transform/block_source.json', blks_src)
@@ -130,18 +103,18 @@ def partition_blocks(
 def _split(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
+    valid_blocks: dict[tuple[int, int], str],
     config: PartitionConfig,
-    logger: utils.Logger,
     *,
-    external_test: bool
-) -> _SplitResults:
+    ext_test_blks: list[str] | None
+) -> tuple[core.BlockSplitPaths, list[int], list[int]]:
     '''Process wrapper.'''
 
     # split dataset
     splits = data_partition.stratified_splitter(
         base_class_counts,
         val_ratio=config.val_test_ratios[0],
-        test_ratio=(0 if external_test else config.val_test_ratios[1]),
+        test_ratio=(0 if ext_test_blks else config.val_test_ratios[1]),
         weight_mode = 'inverse' # default
     )
 
@@ -155,14 +128,14 @@ def _split(
     )
 
     # score and rank the safe candidate tiles
-    base_counts = numpy.array(list(base_class_counts.values()))
-    global_class_count = numpy.sum(base_counts, axis=0)
+    global_count = numpy.sum(list(base_class_counts.values()), axis=0)
+    global_count = [int(x) for x in global_count] # type guard
     blocks_to_score = {
         k: v for k, v in valid_class_counts.items()
         if k in safe_candidates
     }
     ranked_candidates = data_partition.score_blocks(
-        global_class_count,
+        global_count,
         blocks_to_score,
         reward=tuple(config.reward_ratios.keys()),
         alpha=config.scoring_alpha,
@@ -177,15 +150,76 @@ def _split(
         max_skew_rate=config.max_skew_rate
     )
 
-    # log - TBD
-    logger.log('INFO', 'Training blocks hydration complete')
-    logger.log('INFO', f'Added {len(selected)} additional blocks')
+    # block fpaths for each split
+    blks_src: core.BlockSplitPaths = {
+        'train': [valid_blocks[c] for c in splits.train + selected],
+        'val': [valid_blocks[c] for c in splits.val],
+        'test': (ext_test_blks or []) + [valid_blocks[c] for c in splits.test]
+    }
+    _leak_check(blks_src) # data leakage sanity
 
-    # return coordinates of each split
-    return _SplitResults(
-        train_coords=splits.train + selected,
-        val_coords=splits.val,
-        test_coords=splits.test,
-        original_counts=global_class_count,
-        current_counts=current_count
-    )
+    # log and return coordinates of each split
+    return blks_src, global_count, current_count
+
+def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
+    '''Count label classes for each channel.'''
+
+    # iterate current traing blocks to get label class counts
+    lbl_stats: dict[str, list[int]] = {}
+    for fpath in block_file_list:
+        blk_meta = core.DataBlock.load(fpath).meta
+        for channel, counts in blk_meta['label_count'].items():
+            cls_count = numpy.asarray(counts)
+            if channel in lbl_stats:
+                lbl_stats[channel] += cls_count
+            else:
+                lbl_stats[channel] = list(cls_count)
+            lbl_stats[channel] = [int(x) for x in lbl_stats[channel]]
+    return lbl_stats
+
+def _leak_check(blks_src: core.BlockSplitPaths) -> None:
+    '''Sanity check on data leakage.'''
+
+    leak = set(blks_src['train']) & set(blks_src['val'])
+    assert not leak, f'Data leaked between train and val! {leak}'
+    leak = set(blks_src['train']) & set(blks_src['test'])
+    assert not leak, f'Data leaked between train and test! {leak}'
+
+def _log_split_result(
+    start: list[int],
+    current: list[int],
+    logger: utils.Logger
+) -> None:
+    '''Pretty log splitting results.'''
+
+    max_num_str_len = len(f'{max(start + current)}')
+    adjust_len = max_num_str_len + max_num_str_len // 3 + 1 # plus commas
+
+    def _per_w_sign(c: float, sign: bool = False) -> str:
+        if not sign:
+            return f'{abs(c) * 100:.02f}%'
+        if c > 0:
+            return f'+{abs(c) * 100:.02f}%'
+        if c == 0:
+            return 'n/a'
+        return f'-{abs(c) * 100:.02f}%'
+
+    def _join_per(inputs: list[float], sign: bool = False) -> str:
+        return ' '.join(_per_w_sign(c, sign).rjust(adjust_len) for c in inputs)
+
+    def _join_int(inputs: list[int]) -> str:
+        return ' '.join(f'{x:,}'.rjust(adjust_len) for x in inputs)
+
+    start_sum = sum(start) or 1.0
+    start_per = [float(x / start_sum) for x in start]
+    current_sum = sum(current) or 1.0
+    current_per = [float(x / current_sum) for x in current]
+    count_diff = [x - y for (x, y) in zip(current, start)]
+    per_diff = [float(x - y) for (x, y) in zip(current_per, start_per)]
+
+    logger.log('INFO', f'Prev. base label count: {_join_int(start)}')
+    logger.log('INFO', f'Curr. base label count: {_join_int(current)}')
+    logger.log('INFO', f'            - increase: {_join_int(count_diff)}')
+    logger.log('INFO', f'Prev. base label ratio: {_join_per(start_per)}')
+    logger.log('INFO', f'Curr. base label ratio: {_join_per(current_per)}')
+    logger.log('INFO', f'              - change: {_join_per(per_diff, True)}')
