@@ -27,6 +27,7 @@ Dev Test Ground
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
 import landseg.geopipe.transform as transform
+import landseg.geopipe.specification as specification
 import landseg.utils as utils
 
 def test_run(config: configs.RootConfig):
@@ -103,3 +104,12 @@ def prep_train_data_test(config: configs.RootConfig):
 
     # build schema
     transform.build_schema_full(f'{artifacts_root}/transform')
+
+    # build dataspsec
+    dataspecs = specification.build_dataspec(
+        f'{artifacts_root}/foundation/model_dev/metadata.json',
+        f'{artifacts_root}/domain_knowledge/ecodistrict.json',
+        f'{artifacts_root}/domain_knowledge/geology.json',
+        f'{artifacts_root}/transform/schema.json',
+    )
+    print(dataspecs)

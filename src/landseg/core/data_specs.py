@@ -58,8 +58,7 @@ class Meta:
     ignore_index: int
     img_arr_key: str
     lbl_arr_key: str
-    fit_perblk_bytes: int
-    test_blks_grid: tuple[int, int]
+    blk_bytes: int
 
     def __str__(self) -> str:
         return '\n'.join([
