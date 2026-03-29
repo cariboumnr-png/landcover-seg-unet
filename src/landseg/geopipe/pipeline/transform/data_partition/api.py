@@ -28,6 +28,7 @@ import dataclasses
 # third-party imports
 import numpy
 # local imports
+import landseg.geopipe.pipeline.common as common
 import landseg.geopipe.pipeline.transform.data_partition as data_partition
 import landseg.utils as utils
 
@@ -55,7 +56,8 @@ class _SplitResults:
     train_coords: list[tuple[int, int]]
     val_coords: list[tuple[int, int]]
     test_coords: list[tuple[int, int]]
-    label_stats: dict[str, list[float | int]]
+    original_counts: list[int]
+    current_counts: list[int]
 
 # -------------------------------Public Function-------------------------------
 def partition_blocks(
@@ -73,11 +75,11 @@ def partition_blocks(
     test_catalog = f'{artifacts_root}/foundation/test_holdout/catalog.json'
 
     # try load test catalog
-    ext_test_blks = set()
+    ext_test_blks: list[str] = []
     try:
         test = data_partition.parse_catalog(test_catalog, blk_size)
         logger.log('INFO', 'Use external test blocks, no test blocks split')
-        ext_test_blks = set(test.valid_file_paths.values())
+        ext_test_blks = list(test.valid_file_paths.values())
     except FileNotFoundError:
         logger.log('INFO', 'No external test blocks provided')
         if not partition_config.val_test_ratios[1]:
@@ -96,22 +98,33 @@ def partition_blocks(
     )
 
     # file paths for each split from coords
-    train = set(dev.valid_file_paths[c] for c in r.train_coords)
-    val = set(dev.valid_file_paths[c] for c in r.val_coords)
-    test = ext_test_blks | set(dev.valid_file_paths[c] for c in r.test_coords)
+    blks_src: common.BlockSplitPaths = {
+        'train': [dev.valid_file_paths[c] for c in r.train_coords],
+        'val': [dev.valid_file_paths[c] for c in r.val_coords],
+        'test': ext_test_blks + [dev.valid_file_paths[c] for c in r.test_coords]
+    }
 
     # data leakage sanity
-    leak = train & val
+    leak = set(blks_src['train']) & set(blks_src['val'])
     assert not leak, f'Data leaked between train and val! {leak}'
-    leak = train & test
+    leak = set(blks_src['train']) & set(blks_src['test'])
     assert not leak, f'Data leaked between train and test! {leak}'
 
+    # label stats dict
+    ori = r.original_counts
+    cur = r.current_counts
+    lbl_stats: common.LabelStats = {
+        'original_counts': [int(c) for c in ori],
+        'original_proportions': [float(c / sum(ori)) for c in ori],
+        'current_counts': cur,
+        'current_proportions': [float(c / sum(cur)) for c in cur]
+    }
+
     # write JSON artifacts
-    split_src = {'train': list(train), 'val': list(val), 'test': list(test)}
-    utils.write_json(f'{artifacts_root}/transform/block_source.json', split_src)
+    utils.write_json(f'{artifacts_root}/transform/block_source.json', blks_src)
     utils.hash_artifacts(f'{artifacts_root}/transform/block_source.json')
 
-    utils.write_json(f'{artifacts_root}/transform/label_stats.json', r.label_stats)
+    utils.write_json(f'{artifacts_root}/transform/label_stats.json', lbl_stats)
     utils.hash_artifacts(f'{artifacts_root}/transform/label_stats.json')
 
 def _split(
@@ -168,18 +181,11 @@ def _split(
     logger.log('INFO', 'Training blocks hydration complete')
     logger.log('INFO', f'Added {len(selected)} additional blocks')
 
-    # write label stats to file
-    label_stats = {
-        'original_counts': [int(c) for c in global_class_count],
-        'original_proportions': [float(c / sum(global_class_count)) for c in global_class_count],
-        'current_counts': current_count,
-        'current_proportions': [float(c / sum(current_count)) for c in current_count]
-    }
-
     # return coordinates of each split
     return _SplitResults(
         train_coords=splits.train + selected,
         val_coords=splits.val,
         test_coords=splits.test,
-        label_stats=label_stats
+        original_counts=global_class_count,
+        current_counts=current_count
     )

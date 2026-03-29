@@ -19,37 +19,56 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''Typed dictionaries for JSON based artifacts'''
 
-# local imports
-import landseg.geopipe.pipeline.common as common
-import landseg.geopipe.pipeline.transform.normal_blocks as normal_blocks
-import landseg.utils as utils
+# standard imports
+from __future__ import annotations
+import typing
 
-def build_normalized_blocks(root_dir: str):
-    '''doc'''
+# ---------------------------------Public Type---------------------------------
+class BlockSplitPaths(typing.TypedDict):
+    '''Original data block files from the catalog.'''
+    train: list[str]
+    val: list[str]
+    test: list[str]
 
-    # transform dir
-    out = f'{root_dir}/transform'
+class ImageBandStats(typing.TypedDict):
+    '''Per band image stats.'''
+    total_count: int
+    current_mean: float
+    accum_m2: float
+    std: float
 
-    # load source blocks file lists
-    src: common.BlockSplitPaths = utils.load_json(f'{out}/block_source.json')
+class LabelStats(typing.TypedDict):
+    '''Typed label stats.'''
+    original_counts: list[int]
+    original_proportions: list[float]
+    current_counts: list[int]
+    current_proportions: list[float]
 
-    # get source by split
-    train = set(src['train'])
-    val = set(src['val'])
-    test = set(src['test'])
+class SchemaFull(typing.TypedDict):
+    '''Dataset-wide schema emitted by `build_schema_full(...)`.'''
+    schema_version: str
+    creation_time: str
+    artifacts: dict[str, str]
+    checksums: dict[str, str]
+    train_blocks: list[str]
+    val_blocks: list[str]
+    test_blocks: list[str]
+    label_stats: LabelStats
+    image_stats: dict[str, ImageBandStats]
 
-    # aggregate stats on training blocks
-    stats = normal_blocks.aggregate_image_stats(train)
-    utils.write_json(f'{out}/image_stats.json', stats)
-    utils.hash_artifacts(f'{out}/image_stats.json')
-
-    # build normalized blocks for each split
-    transform: common.BlockSplitPaths = {
-        'train': normal_blocks.normalize_blocks(train, stats, f'{out}/train_blocks'),
-        'val': normal_blocks.normalize_blocks(val, stats, f'{out}/val_blocks'),
-        'test': normal_blocks.normalize_blocks(test, stats, f'{out}/test_blocks')
-    }
-    utils.write_json(f'{out}/block_splits.json', transform)
-    utils.hash_artifacts(f'{out}/block_splits.json')
+class SchemaOneBlock(typing.TypedDict):
+    '''Minimal schema emitted by `build_schema_one_block(...)`.'''
+    dataset_name: str
+    image_channel: int
+    image_h_w: int
+    ignore_index: int
+    img_arr_key: str
+    lbl_arr_key: str
+    class_counts: dict[str, list[int]]
+    logit_adjust: dict[str, list[float]]
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
+    train_split: dict[str, str]
+    val_split: dict[str, str]

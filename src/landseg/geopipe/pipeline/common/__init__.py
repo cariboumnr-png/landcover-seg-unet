@@ -20,8 +20,42 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.core`.
+Top-level namespace for `landseg.core.ingest_protocols`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    # functions
+    # typing
+    'BlockSplitPaths',
+    'ImageBandStats',
+    'LabelStats',
+    'SchemaFull',
+    # 'SchemaOneBlock',
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .typed_dicts import (
+        BlockSplitPaths,
+        ImageBandStats,
+        LabelStats,
+        SchemaFull
+    )
+
+def __getattr__(name: str):
+
+    if name in [
+        'BlockSplitPaths', 'ImageBandStats', 'LabelStats',
+        'SchemaFull', 'SchemaOneBlock'
+    ]:
+        return getattr(importlib.import_module('.typed_dicts', __package__), name)
+
+    raise AttributeError(name)

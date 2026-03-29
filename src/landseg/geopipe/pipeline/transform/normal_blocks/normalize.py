@@ -27,12 +27,13 @@ import os
 import numpy
 # local imports
 import landseg.geopipe.core as core
+import landseg.geopipe.pipeline.common as common
 import landseg.geopipe.pipeline.common.alias as alias
 import landseg.utils as utils
 
 def normalize_blocks(
     input_blocks: set[str],
-    stats: dict[str, dict[str, int | float]],
+    stats: dict[str, common.ImageBandStats],
     output_dir: str,
     *,
     rebuild: bool = False
@@ -67,7 +68,7 @@ def normalize_blocks(
 
 def _normalize_one_block(
     block_fpath: str,
-    global_stats: dict[str, dict[str, int | float]],
+    global_stats: dict[str, common.ImageBandStats],
     target_dpath: str
 ):
     '''doc'''
@@ -89,7 +90,7 @@ def _normalize_one_block(
 def _normalize_image(
     raw_image_arr: alias.Float32Array,
     valid_mask: alias.MaskArray,
-    global_stats: dict[str, dict[str, int | float]],
+    global_stats: dict[str, common.ImageBandStats],
 ) -> alias.Float32Array:
     '''doc'''
 

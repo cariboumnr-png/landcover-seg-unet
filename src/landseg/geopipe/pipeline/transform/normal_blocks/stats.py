@@ -33,9 +33,12 @@ Public APIs:
 import math
 # local imports
 import landseg.geopipe.core as core
+import landseg.geopipe.pipeline.common as common
 
 # -------------------------------Public Function-------------------------------
-def aggregate_image_stats(input_blocks: set[str]) -> dict[str, dict[str, int | float]]:
+def aggregate_image_stats(
+        input_blocks: set[str]
+) -> dict[str, common.ImageBandStats]:
     '''
     Aggregate per-band image statistics across the input blocks.
 
@@ -55,7 +58,7 @@ def aggregate_image_stats(input_blocks: set[str]) -> dict[str, dict[str, int | f
     num_bands = sample.image.shape[0]
 
     # define a return dict
-    stats_dict = {
+    stats_dict: dict[str, common.ImageBandStats] = {
         f'band_{_}': {
             'total_count': 0,
             'current_mean': 0.0,
@@ -81,14 +84,19 @@ def aggregate_image_stats(input_blocks: set[str]) -> dict[str, dict[str, int | f
 
 def _welfords_online(
     input_stats: dict[str, int | float],
-    current_results: dict[str, int | float]
-) -> dict[str, int | float]:
+    current_results: common.ImageBandStats
+) -> common.ImageBandStats:
     '''Combine per-block stats using Welford's online algorithm.'''
 
     # block stats from stats dict
+    # NOTE: see key and value type conventions at geopipe.core.block
     nb = input_stats['count']
     mb = input_stats['mean']
     m2b = input_stats['m2']
+    # type guards
+    assert isinstance(nb, int)
+    assert isinstance(mb, float)
+    assert isinstance(m2b, float)
     # current stats from the processed blocks
     nt = current_results['total_count']
     mt = current_results['current_mean']

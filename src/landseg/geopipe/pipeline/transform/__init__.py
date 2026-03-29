@@ -35,27 +35,27 @@ __all__ = [
     'PartitionConfig',
     # functions
     'build_normalized_blocks',
-    'load_catalog',
+    'build_schema_full',
     'partition_blocks',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .catalog_adapter import load_catalog
     from .data_partition import PartitionConfig, partition_blocks
     from .normal_blocks import build_normalized_blocks
+    from .schema_build import build_schema_full
 
 
 def __getattr__(name: str):
-
-    if name in {'load_catalog'}:
-        return getattr(importlib.import_module('.catalog_adapter', __package__), name)
 
     if name in {'PartitionConfig', 'partition_blocks'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
 
     if name in {'build_normalized_blocks'}:
         return getattr(importlib.import_module('.normal_blocks', __package__), name)
+
+    if name in {'build_schema_full'}:
+        return getattr(importlib.import_module('.schema_build', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

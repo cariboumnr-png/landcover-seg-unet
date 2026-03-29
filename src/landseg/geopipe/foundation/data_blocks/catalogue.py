@@ -131,7 +131,7 @@ def update_catalog(
             'valid_px': meta['valid_ratios']['base'],
             'class_count': meta['label_count']['base'],
             'schema_version': '1.0.0',
-            'creation_time': utils.get_file_ctime(fp, '%Y-%m-%dT%H:%M:%S'),
+            'creation_time': utils.get_file_ctime(fp, T_FORMAT),
             'sha_256': utils.hash_artifacts(fp, False),
             'aligned_grid': updated_blocks.mapped_grid_id,
             'source_image': updated_blocks.source_image,

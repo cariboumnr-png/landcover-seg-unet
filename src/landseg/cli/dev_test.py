@@ -32,7 +32,7 @@ import landseg.utils as utils
 def test_run(config: configs.RootConfig):
     '''test'''
 
-    catalogue(config)
+    # catalogue(config)
     prep_train_data_test(config)
 
 def catalogue(config: configs.RootConfig):
@@ -93,10 +93,13 @@ def prep_train_data_test(config: configs.RootConfig):
         reward_ratios={2: 5.0, 4: 5.0},
         scoring_alpha=1.0,
         scoring_beta=config.prep.data.scoring.beta,
-        max_skew_rate=5.0,
+        max_skew_rate=10.0,
         block_spec=(256, 128, 256, 128)
     )
     transform.partition_blocks(artifacts_root, partition_cfg, logger)
 
     # normalize
     transform.build_normalized_blocks(artifacts_root)
+
+    # build schema
+    transform.build_schema_full(f'{artifacts_root}/transform')
