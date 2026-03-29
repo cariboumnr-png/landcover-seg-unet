@@ -56,7 +56,7 @@ if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
     from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
     from .domains import DomainTileMap
-    from .layout import GridLayout, GridLayoutPayload, GridSpec
+    from .grid import GridLayout, GridLayoutPayload, GridSpec
     from .transform import (
         BlockSplitPaths,
         ImageBandStats,
@@ -77,7 +77,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.domains', __package__), name)
 
     if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
-        return getattr(importlib.import_module('.layout', __package__), name)
+        return getattr(importlib.import_module('.grid', __package__), name)
 
     if name in ['BlockSplitPaths', 'ImageBandStats', 'LabelStats',
                 'SchemaFull', 'SchemaOneBlock']:
