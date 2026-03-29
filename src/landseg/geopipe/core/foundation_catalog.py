@@ -60,8 +60,8 @@ class CatalogEntry(typing.TypedDict):
     block_name: str
     file_path: str
     row_col: list[int]
-    valid_px: float
-    class_count: list[int]
+    base_valid_px: float
+    base_class_count: list[int]
     schema_version: str
     creation_time: str
     sha_256: str

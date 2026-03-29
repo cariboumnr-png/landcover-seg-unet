@@ -45,8 +45,8 @@ def parse_catalog(
     catalog = core.BlocksCatalog.from_json(fpath)
 
     # all valid entries from catalog
-    work_catalog = {k: v for k, v in catalog.items() if v['valid_px']}
-    catalog_counts = {k: v['class_count'] for k, v in work_catalog.items()}
+    work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px']}
+    catalog_counts = {k: v['base_class_count'] for k, v in work_catalog.items()}
 
     # entries on the base grid (no overlap)
     row_size, col_size = block_size
@@ -55,7 +55,7 @@ def parse_catalog(
         # both row and col are divisible
         if v['row_col'][0] % row_size == 0 and v['row_col'][1] % col_size == 0
     }
-    base_counts = {k: v['class_count'] for k, v in base_catalog.items()}
+    base_counts = {k: v['base_class_count'] for k, v in base_catalog.items()}
 
     # all block file paths
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
