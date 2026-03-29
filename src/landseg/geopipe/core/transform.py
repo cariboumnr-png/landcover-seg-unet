@@ -57,6 +57,8 @@ class SchemaFull(typing.TypedDict):
     test_blocks: list[str]
     label_stats: LabelStats
     image_stats: dict[str, ImageBandStats]
+    image_array_key: str
+    label_array_key: str
 
 class SchemaOneBlock(typing.TypedDict):
     '''Minimal schema emitted by `build_schema_one_block(...)`.'''
