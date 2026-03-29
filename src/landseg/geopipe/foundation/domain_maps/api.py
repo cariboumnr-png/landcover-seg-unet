@@ -55,6 +55,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 # local imports
+import landseg.geopipe.core as core
 import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
@@ -119,7 +120,7 @@ def prepare_domain(
     logger = logger.get_child('dkmap')
 
     # prep output dict - domain maps indexed by filename without extension
-    output: dict[str, domain_maps.DomainTileMap] = {}
+    output: dict[str, core.DomainTileMap] = {}
 
     # whether to create/update flag
     build = False
@@ -153,7 +154,7 @@ def prepare_domain(
         except FileNotFoundError:
             logger.log('INFO', f'Domain {name} not found, create')
             build = True
-            dom = domain_maps.DomainTileMap(
+            dom = core.DomainTileMap(
                 config.valid_threshold,
                 config.target_variance,
                 logger

@@ -35,6 +35,7 @@ __all__ = [
     'BlockMeta',
     'CatalogEntry',
     'DataBlock',
+    'DomainTileMap',
     # functions
     'name_yx',
     'yx_name',
@@ -51,6 +52,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .block import BlockMeta, DataBlock
     from .catalog import BlocksCatalog, CatalogMeta, CatalogEntry
+    from .domains import DomainTileMap
     from .transform import (
         BlockSplitPaths,
         ImageBandStats,
@@ -67,9 +69,12 @@ def __getattr__(name: str):
     if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
         return getattr(importlib.import_module('.catalog', __package__), name)
 
+    if name in ['DomainTileMap']:
+        return getattr(importlib.import_module('.domains', __package__), name)
+
     if name in ['BlockSplitPaths', 'ImageBandStats', 'LabelStats',
                 'SchemaFull', 'SchemaOneBlock']:
-        return getattr(importlib.import_module('.typed_dicts', __package__), name)
+        return getattr(importlib.import_module('.transform', __package__), name)
 
     if name in ['name_yx', 'yx_name',]:
         return getattr(importlib.import_module('.utils', __package__), name)

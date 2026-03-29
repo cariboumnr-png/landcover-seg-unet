@@ -32,13 +32,13 @@ compatibility and integrity on load.
 # standard imports
 import os
 # local imports
-import landseg.geopipe.foundation.domain_maps as domain_maps
+import landseg.geopipe.core as core
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def save_domain(
     domain_name: str,
-    domain_obj: domain_maps.DomainTileMap,
+    domain_obj: core.DomainTileMap,
     dirpath: str
 ) -> None:
     '''
@@ -76,7 +76,7 @@ def save_domain(
 def load_domain(
     domain_name: str,
     dirpath: str
-) -> domain_maps.DomainTileMap:
+) -> core.DomainTileMap:
     '''
     Load a `DomainTileMap` from disk.
 
@@ -94,10 +94,10 @@ def load_domain(
     meta = utils.load_json(f'{dirpath}/{domain_name}_meta.json')
 
     # schema guard
-    expected = domain_maps.DomainTileMap.SCHEMA_ID
+    expected = core.DomainTileMap.SCHEMA_ID
     found = meta.get('schema_id', None)
     if found != expected:
         raise ValueError(f'Unsupported schema: {found}; expected {expected}.')
 
     # otherwise return class object via class method
-    return domain_maps.DomainTileMap.from_payload(payload)
+    return core.DomainTileMap.from_payload(payload)

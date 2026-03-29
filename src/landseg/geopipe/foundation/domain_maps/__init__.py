@@ -33,7 +33,6 @@ import typing
 __all__ = [
     # classes
     'DomainMappingConfig',
-    'DomainTileMap',
     # functions
     'load_domain',
     'map_domain_to_grid',
@@ -48,7 +47,6 @@ if typing.TYPE_CHECKING:
     from .api import DomainMappingConfig, prepare_domain
     from .io import load_domain, save_domain
     from .mapper import map_domain_to_grid
-    from .tilemap import DomainTileMap
     from .transform import pca_transform
 
 def __getattr__(name: str):
@@ -59,8 +57,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.io', __package__), name)
     if name in ['map_domain_to_grid']:
         return getattr(importlib.import_module('.mapper', __package__), name)
-    if name in ['DomainTileMap']:
-        return getattr(importlib.import_module('.tilemap', __package__), name)
     if name in ['pca_transform']:
         return getattr(importlib.import_module('.transform', __package__), name)
 
