@@ -15,8 +15,8 @@ defaults:
   - trainer: default
   # controller
   - runner: demo
-  # profile
-  - profile: default
+  # pipeline
+  - pipeline: default
 
 # experiment root
 exp_root: ./experiment

@@ -459,8 +459,8 @@ class RootConfig:
     trainer: TrainerCfg = dataclasses.field(default_factory=TrainerCfg)
     # controller settings
     runner: RunnerCfg = dataclasses.field(default_factory=RunnerCfg)
-    # optional profile overrides
-    profile: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
+    # pipeline overrides
+    pipeline: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 
     def validate_all(self) -> None:
         # delegated to subtrees.

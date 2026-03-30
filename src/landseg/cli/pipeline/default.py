@@ -20,38 +20,14 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Default
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.configs as configs
 
-__all__ = [
-    # classes
-    # functions
-    'test_run',
-    'train_end_to_end',
-    'overfit_test',
-    # typing
-]
+def default_action(config: configs.RootConfig):
+    '''place holder.'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dev_test import test_run
-    from .pipeline.end_to_end import train_end_to_end
-    from .pipeline.overfit import overfit_test
-
-def __getattr__(name: str):
-
-    if name in ['test_run']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
-
-    raise AttributeError(name)
+    config.validate_all()
+    print('This is the default action, currently doing nothing.')

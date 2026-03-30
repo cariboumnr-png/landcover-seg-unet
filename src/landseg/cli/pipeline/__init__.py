@@ -33,25 +33,32 @@ import typing
 __all__ = [
     # classes
     # functions
-    'test_run',
-    'train_end_to_end',
-    'overfit_test',
+    'default_action',
+    'ingest',
+    'prepare',
+    'train',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dev_test import test_run
-    from .pipeline.end_to_end import train_end_to_end
-    from .pipeline.overfit import overfit_test
+    from .default import default_action
+    from .ingest_data import ingest
+    from .prepare_data import prepare
+    from .train_model import train
 
 def __getattr__(name: str):
 
-    if name in ['test_run']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
+    if name in ['default_action']:
+        return getattr(importlib.import_module('.default', __package__), name)
+
+    if name in ['ingest']:
+        return getattr(importlib.import_module('.ingest_data', __package__), name)
+
+    if name in ['prepare']:
+        return getattr(importlib.import_module('.prepare_data', __package__), name)
+
+    if name in ['train']:
+        return getattr(importlib.import_module('.train_model', __package__), name)
 
     raise AttributeError(name)

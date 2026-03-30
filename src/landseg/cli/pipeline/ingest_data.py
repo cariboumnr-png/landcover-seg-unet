@@ -25,21 +25,10 @@ Dev Test Ground
 
 # local imports
 import landseg.configs as configs
-import landseg.factory as factory
 import landseg.geopipe.foundation as foundation
-import landseg.geopipe.transform as transform
-import landseg.geopipe.specification as specification
-import landseg.models as models
 import landseg.utils as utils
 
-def test_run(config: configs.RootConfig):
-    '''test'''
-
-    # catalogue(config)
-    # prep_train_data_test(config)
-    train_test(config)
-
-def catalogue(config: configs.RootConfig):
+def ingest(config: configs.RootConfig):
     '''Catalogue pipeline.'''
 
     logger = utils.Logger('test', './test.log')
@@ -83,51 +72,3 @@ def catalogue(config: configs.RootConfig):
     )
     blocks_dir = './experiment/artifacts/foundation'
     foundation.build_blocks(grid, blocks_config, blocks_dir, logger)
-
-def prep_train_data_test(config: configs.RootConfig):
-    '''Train data preparation pipeline.'''
-
-    logger = utils.Logger('test', './test.log')
-    artifacts_root = './experiment/artifacts/'
-
-    # datablocks partition
-    partition_cfg = transform.PartitionConfig(
-        val_test_ratios=(0.1, 0),
-        buffer_step=1,
-        reward_ratios={2: 5.0, 4: 5.0},
-        scoring_alpha=1.0,
-        scoring_beta=config.prep.data.scoring.beta,
-        max_skew_rate=10.0,
-        block_spec=(256, 128, 256, 128)
-    )
-    transform.partition_blocks(artifacts_root, partition_cfg, logger)
-
-    # normalize
-    transform.build_normalized_blocks(artifacts_root)
-
-    # build schema
-    transform.build_schema_full(f'{artifacts_root}/transform')
-
-def train_test(config: configs.RootConfig):
-    '''test'''
-
-    artifacts_root = './experiment/artifacts/'
-    logger = utils.Logger('test', './test.log')
-    # build dataspsec
-    dataspecs = specification.build_dataspec(
-        f'{artifacts_root}/foundation/model_dev/metadata.json',
-        f'{artifacts_root}/domain_knowledge/ecodistrict.json',
-        f'{artifacts_root}/domain_knowledge/geology.json',
-        f'{artifacts_root}/transform/schema.json',
-    )
-    print(dataspecs)
-
-    # setup the model
-    model = models.build_multihead_unet(dataspecs, config.models)
-
-    # build controller
-    exp_dir = './experiment'
-    runner = factory.build_runner(exp_dir, dataspecs, model, config, logger)
-
-    # run via controller
-    runner.fit()

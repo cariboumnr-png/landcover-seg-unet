@@ -20,38 +20,34 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Dev Test Ground
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.configs as configs
+import landseg.geopipe.transform as transform
+import landseg.utils as utils
 
-__all__ = [
-    # classes
-    # functions
-    'test_run',
-    'train_end_to_end',
-    'overfit_test',
-    # typing
-]
+def prepare(config: configs.RootConfig):
+    '''Train data preparation pipeline.'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dev_test import test_run
-    from .pipeline.end_to_end import train_end_to_end
-    from .pipeline.overfit import overfit_test
+    logger = utils.Logger('test', './test.log')
+    artifacts_root = './experiment/artifacts/'
 
-def __getattr__(name: str):
+    # datablocks partition
+    partition_cfg = transform.PartitionConfig(
+        val_test_ratios=(0.1, 0),
+        buffer_step=1,
+        reward_ratios={2: 5.0, 4: 5.0},
+        scoring_alpha=1.0,
+        scoring_beta=config.prep.data.scoring.beta,
+        max_skew_rate=10.0,
+        block_spec=(256, 128, 256, 128)
+    )
+    transform.partition_blocks(artifacts_root, partition_cfg, logger)
 
-    if name in ['test_run']:
-        return getattr(importlib.import_module('.dev_test', __package__), name)
-    if name in ['train_end_to_end']:
-        return getattr(importlib.import_module('.end_to_end', __package__), name)
-    if name in ['overfit_test']:
-        return getattr(importlib.import_module('.overfit', __package__), name)
+    # normalize
+    transform.build_normalized_blocks(artifacts_root)
 
-    raise AttributeError(name)
+    # build schema
+    transform.build_schema_full(f'{artifacts_root}/transform')

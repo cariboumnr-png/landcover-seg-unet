@@ -21,7 +21,7 @@
 
 # pylint: disable=no-value-for-parameter
 '''
-CLI entry that resolves Hydra configs, selects a profile, dispatches the
+CLI entry that resolves Hydra configs, selects a pipeline, dispatches the
 mapped command, and manages logging and error handling.
 '''
 
@@ -35,20 +35,21 @@ import hydra.core.hydra_config
 import hydra.utils
 import omegaconf
 # local imports
+import landseg.cli.pipeline as pipeline
 import landseg.configs as configs
-import landseg.cli as cli
 import landseg.utils as utils
 
 command_registry = {
-    'default': cli.train_end_to_end,
-    'overfit_test': cli.overfit_test,
-    'dev_test': cli.test_run
+    'default': pipeline.default_action,
+    'ingest-data': pipeline.ingest,
+    'prepare-data': pipeline.prepare,
+    'train-model': pipeline.train
 }
 
 # main process
 @hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
 def main(config: omegaconf.DictConfig) -> None:
-    '''Run the selected CLI profile with resolved configuration.'''
+    '''Run the selected CLI pipeline with resolved configuration.'''
 
     # resolve config
     root_config = _resolve_configs(config)
@@ -58,15 +59,15 @@ def main(config: omegaconf.DictConfig) -> None:
 
     # run specified mode with exceptions handling
     try:
-        # get running profile
+        # get running pipeline
         get = hydra.core.hydra_config.HydraConfig.get()
-        profile = get.runtime.choices['profile']
-        # get command from profile
-        command = command_registry[profile]
+        pipe = get.runtime.choices['pipeline']
+        # get command from pipeline
+        command = command_registry[pipe]
         # run command
-        logger.log('INFO', f'Runing profile: {profile} start')
+        logger.log('INFO', f'Runing pipeline: {pipe} start')
         command(root_config)
-        logger.log('INFO', f'Runing profile: {profile} finish')
+        logger.log('INFO', f'Runing pipeline: {pipe} finish')
     # manual keyboard interruption
     except KeyboardInterrupt:
         logger.log('INFO', '\nExperiment manually interrupted, exiting...')
@@ -103,9 +104,9 @@ def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
         assert isinstance(dev_settings, omegaconf.DictConfig)
         config_list.append(dev_settings)
 
-    # final profile overwrites (with sanity guard)
-    if isinstance(config.get('profile'), omegaconf.DictConfig):
-        config_list.append(config.profile)
+    # final pipeline overwrites (with sanity guard)
+    if isinstance(config.get('pipeline'), omegaconf.DictConfig):
+        config_list.append(config.pipeline)
 
     # merging overrides resolve
     with omegaconf.open_dict(config):
