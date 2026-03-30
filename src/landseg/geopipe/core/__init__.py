@@ -46,8 +46,7 @@ __all__ = [
     'CatalogMeta',
     'BlockSplitPaths',
     'ImageBandStats',
-    'LabelStats',
-    'SchemaFull',
+    'TransformSchema',
     'GridLayoutPayload',
 ]
 
@@ -57,8 +56,7 @@ if typing.TYPE_CHECKING:
     from .foundation_data_block import BlockMeta, DataBlock
     from .foundation_domain_map import DomainTileMap
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
-    from .transform_types import (BlockSplitPaths, ImageBandStats, LabelStats,
-                                  SchemaFull)
+    from .transform_types import BlockSplitPaths, ImageBandStats, TransformSchema
     from .utils import name_xy, xy_name
 
 def __getattr__(name: str):
@@ -75,8 +73,7 @@ def __getattr__(name: str):
     if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
         return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
 
-    if name in ['BlockSplitPaths', 'ImageBandStats', 'LabelStats',
-                'SchemaFull', 'SchemaOneBlock']:
+    if name in ['BlockSplitPaths', 'ImageBandStats', 'TransformSchema']:
         return getattr(importlib.import_module('.transform_types', __package__), name)
 
     if name in ['name_xy', 'xy_name',]:

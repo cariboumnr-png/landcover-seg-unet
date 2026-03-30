@@ -38,7 +38,7 @@ import landseg.utils as utils
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # -------------------------------Public Function-------------------------------
-def build_schema_full(root_dir: str) -> None:
+def build_schema(root_dir: str) -> None:
     '''
     Generate and persist the dataset schema JSON from data and grid.
 
@@ -84,7 +84,7 @@ def build_schema_full(root_dir: str) -> None:
     label_stats = utils.load_json(artifacts['label_stats'])
 
     # populate schema dict
-    schema: core.SchemaFull = {
+    schema: core.TransformSchema = {
         'schema_version': '1.0',
         'creation_time': utils.get_timestamp(T_FORMAT),
         'artifacts': artifacts,
@@ -101,45 +101,6 @@ def build_schema_full(root_dir: str) -> None:
     # write schema to json
     utils.write_json(f'{root_dir}/schema.json', schema)
     utils.hash_artifacts(f'{root_dir}/schema.json')
-
-def build_schema_one_block(
-    block_fpath: str,
-    block: core.DataBlock
-) -> None:
-    '''
-    Build a minimal schema from a single block for overfit tests.
-
-    Args:
-        block_fpath: Filesystem path to the serialized block artifact.
-        block: Loaded DataBlock instance corresponding to block_fpath.
-
-    Returns:
-        dict: Minimal schema including topology, splits, and per-head
-            counts inferred from the provided block.
-    '''
-
-    data = block.data
-    meta = block.meta
-    counts = meta['label_count']
-    cc = {k: [1] * len(counts[k]) for k in counts if k != 'original_label'}
-    schema = {
-        'dataset_name': meta['block_name'],
-        'image_channel': data.image.shape[0],
-        'image_h_w': data.label.shape[1], # here assume H==W
-        'ignore_index': meta['ignore_index'],
-        'img_arr_key': 'image', # as per convention
-        'lbl_arr_key': 'label', # as per convention
-        'class_counts': cc, # neutral
-        'logit_adjust': {k: [1.0] * len(v) for k, v in cc.items()}, # neutral
-        'head_parent': meta['label_ch_parent'],
-        'head_parent_cls': meta['label_ch_parent_cls'],
-        'train_split': {meta['block_name']: block_fpath},
-        'val_split': {meta['block_name']: block_fpath}
-    }
-
-    # write schema to json
-    root = os.path.dirname(block_fpath)
-    utils.write_json(f'{root}/schema.json', schema)
 
 # ------------------------------private  function------------------------------
 def _resolve(fpath: str) -> str:

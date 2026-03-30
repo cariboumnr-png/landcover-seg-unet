@@ -57,7 +57,7 @@ def build_dataspec(
     else:
         vec_domain = None
     # transform schema
-    schema: geocore.SchemaFull = utils.load_json(transform_schema_fpath)
+    schema: geocore.TransformSchema = utils.load_json(transform_schema_fpath)
 
     # return specs
     specs = core.DataSpecs(
@@ -77,7 +77,7 @@ def build_dataspec(
 # ------------------------------private  function------------------------------
 def _get_meta(
     meta: geocore.CatalogMeta,
-    schema: geocore.SchemaFull
+    schema: geocore.TransformSchema
 ) -> core.Meta:
     '''Populate `_Meta` dataclass from schema dictionary.'''
 
@@ -101,7 +101,7 @@ def _get_meta(
 
 def _get_heads(
     meta: geocore.CatalogMeta,
-    schema: geocore.SchemaFull
+    schema: geocore.TransformSchema
 ) -> core.Heads:
     '''Populate `_Heads` dataclass from schema dictionary.'''
 
@@ -122,7 +122,7 @@ def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_split(schema: geocore.SchemaFull) -> core.Splits:
+def _get_split(schema: geocore.TransformSchema) -> core.Splits:
     '''Populate `_Split` dataclass from schema dictionary.'''
 
     return core.Splits(
@@ -132,7 +132,7 @@ def _get_split(schema: geocore.SchemaFull) -> core.Splits:
     )
 
 def _get_domain(
-    schema: geocore.SchemaFull,
+    schema: geocore.TransformSchema,
     ids_domain: geocore.DomainTileMap | None,
     vec_domain: geocore.DomainTileMap | None
 ) -> core.Domains:

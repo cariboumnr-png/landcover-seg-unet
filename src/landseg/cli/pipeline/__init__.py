@@ -35,6 +35,7 @@ __all__ = [
     # functions
     'default_action',
     'ingest',
+    'overfit',
     'prepare',
     'train',
     # typing
@@ -46,6 +47,7 @@ if typing.TYPE_CHECKING:
     from .ingest_data import ingest
     from .prepare_data import prepare
     from .train_model import train
+    from .train_overfit import overfit
 
 def __getattr__(name: str):
 
@@ -60,5 +62,8 @@ def __getattr__(name: str):
 
     if name in ['train']:
         return getattr(importlib.import_module('.train_model', __package__), name)
+
+    if name in ['overfit']:
+        return getattr(importlib.import_module('.train_overfit', __package__), name)
 
     raise AttributeError(name)

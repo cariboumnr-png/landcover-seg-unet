@@ -43,7 +43,8 @@ command_registry = {
     'default': pipeline.default_action,
     'ingest-data': pipeline.ingest,
     'prepare-data': pipeline.prepare,
-    'train-model': pipeline.train
+    'train-model': pipeline.train,
+    'train-overfit': pipeline.overfit
 }
 
 # main process

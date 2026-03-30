@@ -35,7 +35,7 @@ __all__ = [
     'PartitionConfig',
     # functions
     'build_normalized_blocks',
-    'build_schema_full',
+    'build_schema',
     'partition_blocks',
     # types
 ]
@@ -44,7 +44,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .data_partition import PartitionConfig, partition_blocks
     from .normal_blocks import build_normalized_blocks
-    from .schema_build import build_schema_full
+    from .schema_build import build_schema
 
 
 def __getattr__(name: str):

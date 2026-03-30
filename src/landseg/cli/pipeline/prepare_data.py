@@ -65,4 +65,4 @@ def prepare(config: configs.RootConfig):
     transform.build_normalized_blocks(transform_root)
 
     # build schema
-    transform.build_schema_full(transform_root)
+    transform.build_schema(transform_root)

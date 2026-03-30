@@ -39,7 +39,7 @@ class ImageBandStats(typing.TypedDict):
     accum_m2: float
     std: float
 
-class SchemaFull(typing.TypedDict):
+class TransformSchema(typing.TypedDict):
     '''Dataset-wide schema emitted by `build_schema_full(...)`.'''
     schema_version: str
     creation_time: str
@@ -52,18 +52,3 @@ class SchemaFull(typing.TypedDict):
     image_stats: dict[str, ImageBandStats]
     image_array_key: str
     label_array_key: str
-
-class SchemaOneBlock(typing.TypedDict):
-    '''Minimal schema emitted by `build_schema_one_block(...)`.'''
-    dataset_name: str
-    image_channel: int
-    image_h_w: int
-    ignore_index: int
-    img_arr_key: str
-    lbl_arr_key: str
-    class_counts: dict[str, list[int]]
-    logit_adjust: dict[str, list[float]]
-    head_parent: dict[str, str | None]
-    head_parent_cls: dict[str, int | None]
-    train_split: dict[str, str]
-    val_split: dict[str, str]

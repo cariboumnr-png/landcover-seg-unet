@@ -161,7 +161,7 @@ class BlockBuilder:
         valid_px_per: float,
         monitor_head: str,
         need_all_classes: bool
-    ) -> None:
+    ) -> str | None:
         '''
         Build and save a single data block with the given criteria.
         '''
@@ -188,15 +188,24 @@ class BlockBuilder:
         # if no block found log a warning and return
         if not blk:
             self.logger.log('WARNING', 'No valid block for testing.')
-            return
-        # otherwise log and save block to location
+            return None
+
+        # normalize the image array
+        mean = numpy.mean(blk.data.image)
+        std = numpy.std(blk.data.image)
+        blk.data.image = (blk.data.image - mean) / (std or 1.0)
+
+        # log and save block to location
         self.logger.log('INFO', f'Fetched a valid block at coord: {c}')
         self.logger.log('DEBUG', 'Criteria:')
         self.logger.log('DEBUG', f'Minimum valid pixel: {valid_px_per:.2f}')
         self.logger.log('DEBUG', f'Focused head: {monitor_head}')
         self.logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
+        os.makedirs(save_dpath, exist_ok=True) # safety
         fpath = f'{save_dpath}/{core.xy_name(c)}.npz'
         blk.save(fpath)
+        # return the block fpath
+        return fpath
 
     def build_blocks(self) -> list[tuple[int, int]]:
         '''

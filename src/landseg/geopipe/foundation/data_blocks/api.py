@@ -55,7 +55,7 @@ def build_blocks(
     *,
     single_block_mode: bool = False,
     **kwargs
-) -> None:
+) -> str | None:
     '''
     Canonical data blocks building pipeline.
 
@@ -103,14 +103,12 @@ def build_blocks(
     # build just one block, e.g., for overfit test
     if single_block_mode:
         logger.log('INFO', 'Build a single block')
-        output_dir = f'{output_root}/single/'
-        block_builder.build_single_block(
-            output_dir,
-            valid_px_per= kwargs.get('valid_px_per', 0.8),
-            monitor_head= kwargs.get('monitor_head', 'layer1'),
-            need_all_classes= kwargs.get('need_all_classes', True)
+        return block_builder.build_single_block(
+            save_dpath=kwargs.get('save_dpath', f'{output_root}/single_block'),
+            valid_px_per=kwargs.get('valid_px_per', 0.8),
+            monitor_head=kwargs.get('monitor_head', 'base'),
+            need_all_classes=kwargs.get('need_all_classes', True)
         )
-        return
     # build all model dev blocks
     logger.log('INFO', 'Build all model developement data blocks')
     new_blocks = block_builder.build_blocks()
@@ -128,7 +126,7 @@ def build_blocks(
     # exit if evaluation rasters are not provided
     if not (config.eval_image_fpath and config.eval_label_fpath):
         logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
-        return
+        return None
 
     # map evaluation rasters to grid
     logger.log('INFO', 'Mapping holdout raters for evaluation to grid')
@@ -168,3 +166,4 @@ def build_blocks(
     )
     data_blocks.update_catalog(updated, f'{output_root}/test_holdout/', logger)
     data_blocks.update_meta(updated, f'{output_root}/test_holdout/', logger)
+    return None

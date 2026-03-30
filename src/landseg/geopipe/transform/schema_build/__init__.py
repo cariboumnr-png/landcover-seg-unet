@@ -33,17 +33,17 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_schema_full',
+    'build_schema',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .api import build_schema_full
+    from .api import build_schema
 
 def __getattr__(name: str):
 
-    if name in ['build_schema_full']:
+    if name in ['build_schema']:
         return getattr(importlib.import_module('.api', __package__), name)
 
     raise AttributeError(name)
