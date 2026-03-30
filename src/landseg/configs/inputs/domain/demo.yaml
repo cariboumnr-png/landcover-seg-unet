@@ -1,6 +1,0 @@
-# input dirpath
-input_dirpath: ${exp_root}/input/domain_knowledge
-# files - add more in the same format
-files:
-  - filename: ''
-    index_base: 1
