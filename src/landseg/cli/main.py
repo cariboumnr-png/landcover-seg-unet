@@ -35,16 +35,16 @@ import hydra.core.hydra_config
 import hydra.utils
 import omegaconf
 # local imports
-import landseg.cli.pipeline as pipeline
+import landseg.cli.pipelines as pipelines
 import landseg.configs as configs
 import landseg.utils as utils
 
 command_registry = {
-    'default': pipeline.default_action,
-    'ingest-data': pipeline.ingest,
-    'prepare-data': pipeline.prepare,
-    'train-model': pipeline.train,
-    'train-overfit': pipeline.overfit
+    'default': pipelines.default_action,
+    'ingest-data': pipelines.ingest,
+    'prepare-data': pipelines.prepare,
+    'train-model': pipelines.train,
+    'train-overfit': pipelines.overfit
 }
 
 # main process
