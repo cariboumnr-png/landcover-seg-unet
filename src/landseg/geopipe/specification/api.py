@@ -37,6 +37,8 @@ def build_dataspec(
     ids_domain_fpath: str | None,
     vec_domain_fpath: str | None,
     transform_schema_fpath: str,
+    *,
+    print_out: bool = False
 ):
     '''doc'''
 
@@ -57,7 +59,8 @@ def build_dataspec(
     # transform schema
     schema: geocore.SchemaFull = utils.load_json(transform_schema_fpath)
 
-    return core.DataSpecs(
+    # return specs
+    specs = core.DataSpecs(
         name=meta['dataset']['name'],
         mode='default',
         meta=_get_meta(meta, schema),
@@ -65,6 +68,11 @@ def build_dataspec(
         splits=_get_split(schema),
         domains=_get_domain(schema, ids_domain, vec_domain)
     )
+
+    # print to screen and return
+    if print_out:
+        print(specs)
+    return specs
 
 # ------------------------------private  function------------------------------
 def _get_meta(

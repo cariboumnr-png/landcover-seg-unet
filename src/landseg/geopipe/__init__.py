@@ -25,3 +25,25 @@ Top-level namespace for `landseg.core`.
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    # functions
+    'build_dataspec',
+    # typing
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .specification import build_dataspec
+
+def __getattr__(name: str):
+
+    if name in ['build_dataspec']:
+        return getattr(importlib.import_module('.specification', __package__), name)
+
+    raise AttributeError(name)
