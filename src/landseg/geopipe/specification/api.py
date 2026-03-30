@@ -98,7 +98,7 @@ def _get_heads(
     '''Populate `_Heads` dataclass from schema dictionary.'''
 
     raw_counts: dict[str, list[int]] = schema['label_stats']
-    counts = {k: v for k, v in raw_counts.items() if k != 'original_label'}
+    counts = {k: v for k, v in raw_counts.items() if k != 'original'}
     return core.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
@@ -149,7 +149,7 @@ def _get_domain(
     )
 
 def __parse_domain(
-    input_blocks: list[str],
+    input_blocks: dict[str, str],
     ids_domain: geocore.DomainTileMap | None,
     vec_domain: geocore.DomainTileMap | None
 ) -> core.Domains.Dom:

@@ -28,9 +28,9 @@ import typing
 # ---------------------------------Public Type---------------------------------
 class BlockSplitPaths(typing.TypedDict):
     '''Original data block files from the catalog.'''
-    train: list[str]
-    val: list[str]
-    test: list[str]
+    train: dict[str, str]
+    val: dict[str, str]
+    test: dict[str, str]
 
 class ImageBandStats(typing.TypedDict):
     '''Per band image stats.'''
@@ -45,9 +45,9 @@ class SchemaFull(typing.TypedDict):
     creation_time: str
     artifacts: dict[str, str]
     checksums: dict[str, str]
-    train_blocks: list[str]
-    val_blocks: list[str]
-    test_blocks: list[str]
+    train_blocks: dict[str, str]
+    val_blocks: dict[str, str]
+    test_blocks: dict[str, str]
     label_stats: dict[str, list[int]]
     image_stats: dict[str, ImageBandStats]
     image_array_key: str

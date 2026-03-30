@@ -36,7 +36,7 @@ def normalize_blocks(
     output_dir: str,
     *,
     rebuild: bool = False
-) -> list[str]:
+) -> dict[str, str]:
     '''doc'''
 
     #
@@ -63,7 +63,12 @@ def normalize_blocks(
         utils.multip.ParallelExecutor().run(jobs)
 
     # return current file paths
-    return [f'{output_dir}/{f}' for f in os.listdir(output_dir) if f.endswith('.npz')]
+    indexed_files: dict[str, str] = {}
+    for fpath in os.listdir(output_dir):
+        if fpath.endswith('.npz'):
+            name, _ = os.path.splitext(os.path.basename(fpath))
+            indexed_files[name] = f'{output_dir}/{fpath}'
+    return indexed_files
 
 def _normalize_one_block(
     block_fpath: str,

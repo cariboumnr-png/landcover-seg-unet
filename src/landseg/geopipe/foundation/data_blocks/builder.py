@@ -277,15 +277,17 @@ class BlockBuilder:
                 self.coords_todo.append(c)
                 rm.append(blks_to_check[c])
         # remove corrupted/damaged files if present
+        removed = 0
         for fpath in rm:
             try:
                 os.remove(fpath)
+                removed += 1
             except FileNotFoundError:
                 continue
 
         # log checking results
         self.logger.log('INFO', f'Found {len(self.coords_todo)} invalid blocks')
-        self.logger.log('INFO', f'Removed {len(rm)} damaged files')
+        self.logger.log('INFO', f'Removed {removed} damaged files')
 
     def _create_missing_blocks(self) -> None:
         '''

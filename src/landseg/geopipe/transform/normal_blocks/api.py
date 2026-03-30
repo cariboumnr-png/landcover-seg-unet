@@ -36,9 +36,9 @@ def build_normalized_blocks(root_dir: str):
     src: core.BlockSplitPaths = utils.load_json(f'{out}/block_source.json')
 
     # get source by split
-    train = set(src['train'])
-    val = set(src['val'])
-    test = set(src['test'])
+    train = set(src['train'].values())
+    val = set(src['val'].values())
+    test = set(src['test'].values())
 
     # aggregate stats on training blocks
     stats = normal_blocks.aggregate_image_stats(train)

@@ -25,6 +25,7 @@ Dataset partioning pipeline.
 
 # standard imports
 import dataclasses
+import os
 # third-party imports
 import numpy
 # local imports
@@ -91,7 +92,7 @@ def partition_blocks(
     _log_split_result(start_counts, end_counts, logger) # log more details
 
     # iterate current traing blocks to get label class counts
-    lbl_stats = _count_label(blks_src['train'])
+    lbl_stats = _count_label(list(blks_src['train'].values()))
 
     # write JSON artifacts
     utils.write_json(f'{artifacts_root}/transform/block_source.json', blks_src)
@@ -151,15 +152,37 @@ def _split(
     )
 
     # block fpaths for each split
+    ps: dict[str, list[str]] = {}
+    ps['train'] = [valid_blocks[c] for c in splits.train + selected]
+    ps['val'] = [valid_blocks[c] for c in splits.val]
+    ps['test'] = (ext_test_blks or []) + [valid_blocks[c] for c in splits.test]
     blks_src: core.BlockSplitPaths = {
-        'train': [valid_blocks[c] for c in splits.train + selected],
-        'val': [valid_blocks[c] for c in splits.val],
-        'test': (ext_test_blks or []) + [valid_blocks[c] for c in splits.test]
+        'train': _index_fpath(ps['train']),
+        'val': _index_fpath(ps['val']),
+        'test': _index_fpath(ps['test'])
     }
-    _leak_check(blks_src) # data leakage sanity
 
     # log and return coordinates of each split
+    _leak_check(blks_src) # data leakage sanity
     return blks_src, global_count, current_count
+
+def _index_fpath(fpaths: list[str]) -> dict[str, str]:
+    '''Index block file paths by their names (no extension).'''
+
+    indexed: dict[str, str] = {}
+    for fpath in fpaths:
+        filename = os.path.basename(fpath)
+        name, _ = os.path.splitext(filename)
+        indexed[name] = fpath # name is the same as core.xy_name()
+    return indexed
+
+def _leak_check(blks_src: core.BlockSplitPaths) -> None:
+    '''Sanity check on data leakage.'''
+
+    leak = set(blks_src['train']) & set(blks_src['val'])
+    assert not leak, f'Data leaked between train and val! {leak}'
+    leak = set(blks_src['train']) & set(blks_src['test'])
+    assert not leak, f'Data leaked between train and test! {leak}'
 
 def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
     '''Count label classes for each channel.'''
@@ -176,14 +199,6 @@ def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
                 lbl_stats[channel] = list(cls_count)
             lbl_stats[channel] = [int(x) for x in lbl_stats[channel]]
     return lbl_stats
-
-def _leak_check(blks_src: core.BlockSplitPaths) -> None:
-    '''Sanity check on data leakage.'''
-
-    leak = set(blks_src['train']) & set(blks_src['val'])
-    assert not leak, f'Data leaked between train and val! {leak}'
-    leak = set(blks_src['train']) & set(blks_src['test'])
-    assert not leak, f'Data leaked between train and test! {leak}'
 
 def _log_split_result(
     start: list[int],

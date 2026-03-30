@@ -36,7 +36,7 @@ import landseg.geopipe.core as core
 
 # -------------------------------Public Function-------------------------------
 def aggregate_image_stats(
-        input_blocks: set[str]
+    input_blocks: set[str]
 ) -> dict[str, core.ImageBandStats]:
     '''
     Aggregate per-band image statistics across the input blocks.

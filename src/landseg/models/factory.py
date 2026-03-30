@@ -35,13 +35,13 @@ user-supplied configuration.
 
 # local imports
 import landseg.configs as configs
-import landseg.core.ingest_protocols as ingest_protocols
+import landseg.core as core
 import landseg.models.backbones as backbones
 import landseg.models.multihead as multihead
 
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
-    dataspecs: ingest_protocols.DataSpecs,
+    dataspecs: core.DataSpecs,
     config: configs.ModelsCfg,
 ) -> multihead.BaseMultiheadModel:
     '''
