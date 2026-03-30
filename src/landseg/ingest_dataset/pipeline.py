@@ -125,8 +125,8 @@ def _parse_configs(
 
     return_cfg: dataset.DataprepConfigs = {
         # input - raw data paths
-        'fit_input_img': input_config.filepaths.fit_image,
-        'fit_input_lbl': input_config.filepaths.fit_label,
+        'fit_input_img': input_config.filepaths.dev_image,
+        'fit_input_lbl': input_config.filepaths.dev_label,
         'test_input_img': input_config.filepaths.test_image,
         'test_input_lbl': input_config.filepaths.test_label,
         'input_config': input_config.filepaths.config,

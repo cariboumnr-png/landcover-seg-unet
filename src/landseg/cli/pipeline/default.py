@@ -30,4 +30,5 @@ def default_action(config: configs.RootConfig):
     '''place holder.'''
 
     config.validate_all()
+    print(config)
     print('This is the default action, currently doing nothing.')

@@ -1,13 +1,13 @@
-output_dirpath: ${exp_root}/artifacts/data_cache/${inputs.data.name}
+output_dirpath: ${exp_root}/artifacts/foundation
 # derived paths for current dataset (dirname = dataset name)
-# fit input data
-fit_blocks:
+# model dev input data
+dev_blocks:
   # fit blocks building
   raster_windows: ${prep.data.output_dirpath}/fit/fit_raster_windows.pkl
   blocks_dir: ${prep.data.output_dirpath}/fit/blocks
   all_blocks: ${prep.data.output_dirpath}/fit/all_blocks.json
   valid_blocks: ${prep.data.output_dirpath}/fit/valid_blocks.json
-fit_post_blocks:
+dev_post_blocks:
   # fit blocks stats for normalization
   image_stats: ${prep.data.output_dirpath}/fit/image_stats.json
   # train/val split reltead
@@ -17,7 +17,7 @@ fit_post_blocks:
   val_blocks_split: ${prep.data.output_dirpath}/fit/val_blocks_split.json
   # train data label count for downstream, e.g., LA
   label_count_train: ${prep.data.output_dirpath}/fit/count_train.json
-# test input data (optional)
+# external test input data (optional)
 test_blocks:
   # test blocks building
   raster_windows: ${prep.data.output_dirpath}/test/test_raster_windows.pkl
@@ -27,6 +27,11 @@ test_blocks:
 test_post_blocks:
   # test blocks stats for normalization
   image_stats: ${prep.data.output_dirpath}/test/image_stats.json
+
+# general settings
+general:
+  ignore_index: 255
+  image_dem_pad: 8
 
 # filtering thresholds for valid blocks
 threshold:
@@ -38,12 +43,12 @@ threshold:
 # block scoring parameters
 scoring:
   # Layer to focus on
-  head: 'layer1'
+  head: 'base'
   # Inverse distribution alpha
-  alpha: 0.6
+  alpha: 1.0
   # L1 weight reward beta
-  beta: 0.8
+  beta: 0.0
   # L1 weight reward epsilon
   epsilon: 1e-12
   # classes to reward (1-based)
-  reward: [3, 5]
+  reward: []

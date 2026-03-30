@@ -3,8 +3,8 @@ crs: ''
 mode: ref # ref | aoi | tiles
 inputs:
   # when mode=ref provide:
-  dirpath: ${exp_root}/input/extent_reference
   filename: ''
+  filepath: ${exp_root}/input/extent_reference/${inputs.extent.inputs.filename}
   # when mode=(aoi | tiles) provide:
   origin: [0.0, 0.0] # x, y in CRS units
   pixel_size: [0.0, 0.0] # x, y positive magnitudes; we assume north up

@@ -77,8 +77,8 @@ inputs:
     name: dataset_name  # Folder name / Nom du dossier
     filenames:
       # Files in / Fichiers dans .../fit/
-      fit_image: 'example_image.tif'
-      fit_label: 'example_label.tif'
+      dev_image: 'example_image.tif'
+      dev_label: 'example_label.tif'
       # Files in / Fichiers dans .../test/
       test_image: 'example_image.tif'
       test_label: 'example_label.tif'

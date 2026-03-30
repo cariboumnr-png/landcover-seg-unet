@@ -39,8 +39,8 @@ import omegaconf
 # ----- extent
 @dataclasses.dataclass
 class Extent:
-    dirpath: str = '${exp_root}/input/extent_reference'
     filename: str = ''
+    filepath: str ='${exp_root}/input/extent_reference/${inputs.extent.inputs.filename}'
     origin: tuple[float, float] = (0.0, 0.0)
     pixel_size: tuple[float, float] = (0.0, 0.0)
     grid_extent: tuple[float, float] | None = None
@@ -64,8 +64,7 @@ class InputExtentCfg:
         if not _is_resolved(self.mode):
             return
         if self.mode == 'ref':
-            ref = os.path.join(self.inputs.dirpath, self.inputs.filename)
-            if not os.path.exists(ref):
+            if not os.path.exists(self.inputs.filepath):
                 raise FileNotFoundError('Mode=ref but ref raster not provided')
         elif self.mode == 'aoi':
             if not all(self.inputs.pixel_size):
@@ -98,22 +97,22 @@ class InputDomainCfg:
 # ----- data
 @dataclasses.dataclass
 class FileNames:
-    fit_image: str = omegaconf.MISSING
-    fit_label: str = omegaconf.MISSING
+    dev_image: str = omegaconf.MISSING
+    dev_label: str = omegaconf.MISSING
     test_image: str | None = omegaconf.MISSING
     test_label: str | None = omegaconf.MISSING
     config: str = omegaconf.MISSING
 
 @dataclasses.dataclass
 class Dirs:
-    fit: str = '${exp_root}/input/${inputs.data.name}/fit'
+    dev: str = '${exp_root}/input/${inputs.data.name}/dev'
     test: str = '${exp_root}/input/${inputs.data.name}/test'
     config: str = '${exp_root}/input/${inputs.data.name}/config'
 
 @dataclasses.dataclass
 class FilePaths:
-    fit_image: str = '${inputs.data.dirs.fit}/${inputs.data.filenames.fit_image}'
-    fit_label: str = '${inputs.data.dirs.fit}/${inputs.data.filenames.fit_label}'
+    dev_image: str = '${inputs.data.dirs.dev}/${inputs.data.filenames.dev_image}'
+    dev_label: str = '${inputs.data.dirs.dev}/${inputs.data.filenames.dev_label}'
     test_image: str = '${inputs.data.dirs.test}/${inputs.data.filenames.test_image}'
     test_label: str = '${inputs.data.dirs.test}/${inputs.data.filenames.test_label}'
     config: str = '${inputs.data.dirs.config}/${inputs.data.filenames.config}'
@@ -138,8 +137,8 @@ class InputDataCfg:
             if path and not os.path.exists(path):
                 raise FileNotFoundError(f'invalid {label}: {path}')
         # checks
-        _must_exist(self.filepaths.fit_image, 'fit image')
-        _must_exist(self.filepaths.fit_label, 'fit label')
+        _must_exist(self.filepaths.dev_image, 'fit image')
+        _must_exist(self.filepaths.dev_label, 'fit label')
         _must_exist(self.filepaths.test_image, 'test image')
         _must_exist(self.filepaths.test_label, 'test label')
         _must_exist(self.filepaths.config, 'config json')
@@ -190,14 +189,14 @@ class PrepDomainCfg:
 
 # ----- data
 @dataclasses.dataclass
-class FitBlocks:
+class DevBlocks:
     raster_windows: str = '${prep.data.output_dirpath}/fit/fit_raster_windows.pkl'
     blocks_dir: str = '${prep.data.output_dirpath}/fit/blocks'
     all_blocks: str = '${prep.data.output_dirpath}/fit/all_blocks.json'
     valid_blocks: str = '${prep.data.output_dirpath}/fit/valid_blocks.json'
 
 @dataclasses.dataclass
-class FitPostBlocks:
+class DevPostBlocks:
     image_stats: str = '${prep.data.output_dirpath}/fit/image_stats.json'
     label_count_global: str = '${prep.data.output_dirpath}/fit/count_global.json'
     block_scores: str = '${prep.data.output_dirpath}/fit/score.json'
@@ -218,6 +217,12 @@ class TestPostBlocks:
     image_stats: str = '${prep.data.output_dirpath}/test/image_stats.json'
 
 @dataclasses.dataclass
+class General:
+  # test blocks stats for normalization
+    ignore_index: int = 255
+    image_dem_pad: int = 8
+
+@dataclasses.dataclass
 class Thresholds:
     blk_thres_fit: float = 0.75
     blk_thres_test: float = 0.1
@@ -233,10 +238,11 @@ class Scoring:
 @dataclasses.dataclass
 class PrepDataCfg:
     output_dirpath: str = '${exp_root}/artifacts/data_cache/${inputs.data.name}'
-    fit_blocks: FitBlocks = dataclasses.field(default_factory=FitBlocks)
-    fit_post_blocks: FitPostBlocks = dataclasses.field(default_factory=FitPostBlocks)
+    dev_blocks: DevBlocks = dataclasses.field(default_factory=DevBlocks)
+    dev_post_blocks: DevPostBlocks = dataclasses.field(default_factory=DevPostBlocks)
     test_blocks: TestBlocks = dataclasses.field(default_factory=TestBlocks)
     test_post_blocks: TestPostBlocks = dataclasses.field(default_factory=TestPostBlocks)
+    general: General = dataclasses.field(default_factory=General)
     threshold: Thresholds = dataclasses.field(default_factory=Thresholds)
     scoring: Scoring = dataclasses.field(default_factory=Scoring)
 

@@ -20,23 +20,26 @@
 # =========================================================================== #
 
 '''
-Dev Test Ground
+Data ingestion pipeline.
 '''
 
+# standard imports
+import dataclasses
 # local imports
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
 import landseg.utils as utils
 
 def ingest(config: configs.RootConfig):
-    '''Catalogue pipeline.'''
+    '''Data ingestion pipeline.'''
 
-    logger = utils.Logger('test', './test.log')
+    # init a logger
+    logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')
 
     # world grid
     grid_ext_config = foundation.GridExtentConfig(
         mode=config.inputs.extent.mode, # type: ignore
-        ref_fpath='./experiment/input/extent_reference/on_3161_30m.tif',
+        ref_fpath=config.inputs.extent.inputs.filepath,
         crs=config.inputs.extent.crs,
         origin=config.inputs.extent.inputs.origin,
         pixel_size=config.inputs.extent.inputs.pixel_size,
@@ -45,8 +48,8 @@ def ingest(config: configs.RootConfig):
     )
     grid_gen_config = foundation.GridGenerationConfig(
         output_dir=config.prep.grid.output_dirpath,
-        tile_size=(256, 256),
-        tile_overlap=(128, 128),
+        tile_size=dataclasses.astuple(config.prep.grid.tile_size),
+        tile_overlap=dataclasses.astuple(config.prep.grid.tile_overlap)
     )
     grid = foundation.prep_world_grid(grid_ext_config, grid_gen_config, logger)
 
@@ -62,13 +65,13 @@ def ingest(config: configs.RootConfig):
 
     # datablocks building
     blocks_config = foundation.BlockBuildingConfig(
-        dev_image_fpath=config.inputs.data.filepaths.fit_image,
-        dev_label_fpath=config.inputs.data.filepaths.fit_label,
+        dev_image_fpath=config.inputs.data.filepaths.dev_image,
+        dev_label_fpath=config.inputs.data.filepaths.dev_label,
         eval_image_fpath=config.inputs.data.filepaths.test_image,
         eval_label_fpath=config.inputs.data.filepaths.test_label,
         data_config_fpath=config.inputs.data.filepaths.config,
-        dem_pad=8,
-        ignore_index=255
+        dem_pad=config.prep.data.general.image_dem_pad,
+        ignore_index=config.prep.data.general.ignore_index,
     )
-    blocks_dir = './experiment/artifacts/foundation'
+    blocks_dir = config.prep.data.output_dirpath
     foundation.build_blocks(grid, blocks_config, blocks_dir, logger)
