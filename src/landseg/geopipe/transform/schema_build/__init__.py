@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.core.ingest_protocols`.
+Top-level namespace for `landseg.geopipe.transform.schema_build`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

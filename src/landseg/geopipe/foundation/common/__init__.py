@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.core`.
+Top-level namespace for `landseg.geopipe.foundation.common`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

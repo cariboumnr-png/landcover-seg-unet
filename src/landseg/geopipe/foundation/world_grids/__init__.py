@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.grid_generator`.
+Top-level namespace for `landseg.geopipe.foundation.world_grids`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

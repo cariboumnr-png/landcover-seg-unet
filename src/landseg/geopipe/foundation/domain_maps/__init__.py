@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.ingest_domain`.
+Top-level namespace for `landseg.geopipe.foundation.domain_maps`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
