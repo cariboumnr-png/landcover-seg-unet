@@ -35,13 +35,14 @@ def prepare(config: configs.RootConfig):
     logger = utils.Logger('prep', f'{config.exp_root}/prep.log')
 
     # config aliases
-    # artifacts root dir
-    root = config.prep.data.artifacts
-    # partition config from RootConfig
-    partition = config.prep.data.partition
-    scoring = config.prep.data.scoring
-    hydration = config.prep.data.hydration
-    grid = config.prep.grid
+    # data foundation
+    foundation_root = f'{config.foundation.output_dpath}/data_blocks'
+    grid = config.foundation.grid
+    # data transform
+    transform_root = config.transform.output_dpath
+    partition = config.transform.partition
+    scoring = config.transform.scoring
+    hydration = config.transform.hydration
 
     # datablocks partition
     cfg = transform.PartitionConfig(
@@ -58,10 +59,10 @@ def prepare(config: configs.RootConfig):
             grid.tile_overlap.col
         )
     )
-    transform.partition_blocks(root.foundation, root.transform, cfg, logger)
+    transform.partition_blocks(foundation_root, transform_root, cfg, logger)
 
     # normalize
-    transform.build_normalized_blocks(root.transform)
+    transform.build_normalized_blocks(transform_root)
 
     # build schema
-    transform.build_schema_full(root.transform)
+    transform.build_schema_full(transform_root)

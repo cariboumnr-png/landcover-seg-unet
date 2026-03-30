@@ -43,7 +43,7 @@ import landseg.utils as utils
 # -------------------------------Public Function-------------------------------
 def load_data(
     inputs: configs.Inputs,
-    prep: configs.Prep,
+    prep: configs.DataTransform,
     logger: utils.Logger,
     *,
     single_block_mode: bool = False,

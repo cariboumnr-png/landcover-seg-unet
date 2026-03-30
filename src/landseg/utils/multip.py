@@ -36,9 +36,11 @@ class ParallelExecutor:
     '''Doc.'''
     def __init__(
             self,
-            max_workers=CORE_N,
-            use_threads=False,
-            show_progress=True
+            max_workers:int = CORE_N,
+            use_threads: bool= False,
+            show_progress: bool= True,
+            *,
+            progress_bar_len: int = 100
         ):
         '''
         Initialize the executor.
@@ -51,6 +53,7 @@ class ParallelExecutor:
         self.max_workers = max_workers
         self.use_threads = use_threads
         self.show_progress = show_progress
+        self.ncol = progress_bar_len
 
     def run(self, jobs: list) -> list[typing.Any]:
         '''
@@ -77,21 +80,21 @@ class ParallelExecutor:
                 exe.submit(self._safe_call, func, args, kwargs)
                 for func, args, kwargs in jobs
             ]
-            iterator = (f.result() for f in futures)
+            it = (f.result() for f in futures)
             if self.show_progress:
-                results = list(tqdm.tqdm(iterator, total=len(jobs)))
+                results = list(tqdm.tqdm(it, total=len(jobs), ncols=self.ncol))
             else:
-                results = list(iterator)
+                results = list(it)
         return results
 
     def _run_with_processes(self, jobs: list):
         '''Run jobs using multiprocessing Pool with error handling.'''
         with multiprocessing.Pool(self.max_workers) as pool:
-            iterator = pool.imap(self._wrapper_func, jobs)
+            it = pool.imap(self._wrapper_func, jobs)
             if self.show_progress:
-                results = list(tqdm.tqdm(iterator, total=len(jobs)))
+                results = list(tqdm.tqdm(it, total=len(jobs), ncols=self.ncol))
             else:
-                results = list(iterator)
+                results = list(it)
         return results
 
     @staticmethod

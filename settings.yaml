@@ -53,27 +53,33 @@ exp_root: ./experiment
 # Defines the spatial extent, domain layers, and raw dataset files.
 # Définit l'étendue spatiale, les couches thématiques et les fichiers de données.
 # -----------------------------------------------------------------------------
-inputs:
-  # STUDY AREA (REFERENCE EXTENT) / ZONE D’ÉTUDE (RÉFÉRENCE)
-  extent:
-    crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
+# PRE-PROCESSING & GRID / PRÉ-TRAITEMENT ET GRILLE
+foundation:
+  grid:
     mode: ref          # Fixed to 'ref' / Fixé à 'ref'
-    inputs:
+    crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
+    extent:
       # Located in / Situé dans : ${exp_root}/input/extent_ref/
       filename: 'example_extent.tif'
+    tile_size:
+      row: 256  # Height in pixels / Hauteur en pixels
+      col: 256  # Width in pixels / Largeur en pixels
+    tile_overlap:
+      row: 0    # Overlap in pixels / Chevauchement en pixels
+      col: 0
 
-  # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
-  # Place ANY NUMBER of domain rasters into / Placez AUTANT de rasters dans : ${exp_root}/input/domain/
-  domain:
+# DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
+# Place ANY NUMBER of domain rasters into / Placez AUTANT de rasters dans : ${exp_root}/input/domain/
+  domains:
     files:
-      - filename: 'example_domain_1.tif'
+      - name: 'example_domain_1.tif'
         index_base: 1
-      - filename: 'example_domain_2.tif'
+      - name: 'example_domain_2.tif'
         index_base: 1
 
-  # RAW DATASET / JEU DE DONNÉES BRUTES
-  # Located in / Situé dans : ${exp_root}/input/${inputs.data.name}/
-  data:
+# RAW DATASET / JEU DE DONNÉES BRUTES
+# Located in / Situé dans : ${exp_root}/input/${inputs.data.name}/
+  datablocks:
     name: dataset_name  # Folder name / Nom du dossier
     filenames:
       # Files in / Fichiers dans .../fit/
@@ -87,25 +93,24 @@ inputs:
 
 
 # -----------------------------------------------------------------------------
-# PRE-PROCESSING & GRID / PRÉ-TRAITEMENT ET GRILLE
 # Configuration for tiling and thematic layer assignment.
 # Configuration du découpage en tuiles et de l'assignation des couches thématiques.
 # -----------------------------------------------------------------------------
-prep:
-  grid:
-    tile_size:
-      row: 256  # Height in pixels / Hauteur en pixels
-      col: 256  # Width in pixels / Largeur en pixels
-    tile_overlap:
-      row: 0    # Overlap in pixels / Chevauchement en pixels
-      col: 0
+transform:
 
-  domain:
-    # Select domain files for IDs and Vectors (used by the model architecture).
-    # Sélectionnez les fichiers thématiques pour les ID et vecteurs (utilisés par le modèle).
-    as_ids: example_domain_1
-    as_vec: example_domain_2
+  # blocks partition
+  partition:
+    val_ratio: 0.1
+    test_ratio: 0.0
 
+  # block scoring parameters
+  scoring:
+    # classes to reward (1-based)
+    reward: {}
+
+  # hydration
+  hydration:
+    max_skew_rate: 10.0
 
 # -----------------------------------------------------------------------------
 # MODEL ARCHITECTURE / ARCHITECTURE DU MODÈLE

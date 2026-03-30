@@ -35,128 +35,18 @@ import typing
 # third-party imports
 import omegaconf
 
-# --------------------------------INPUT CONFIGS--------------------------------
-# ----- extent
+# -------------------------------DATA FOUNDATION-------------------------------
+# ----- grid
 @dataclasses.dataclass
 class Extent:
+    default_input_dpath: str = '${exp_root}/input/extent_reference'
     filename: str = ''
-    filepath: str ='${exp_root}/input/extent_reference/${inputs.extent.inputs.filename}'
+    filepath: str = ''
     origin: tuple[float, float] = (0.0, 0.0)
     pixel_size: tuple[float, float] = (0.0, 0.0)
     grid_extent: tuple[float, float] | None = None
     grid_shape: tuple[int, int] | None = None
 
-@dataclasses.dataclass
-class InputExtentCfg:
-    crs: str = omegaconf.MISSING
-    mode: str = 'ref'  # 'ref' | 'aoi' | 'tiles'
-    inputs: Extent = dataclasses.field(default_factory=Extent)
-
-    def __post_init__(self):
-        if not _is_resolved(self.crs) or not _is_resolved(self.mode):
-            return
-        if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
-            raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
-        if self.mode not in {'ref', 'aoi', 'tiles'}:
-            raise ValueError(f'Invalid mode: {self.mode}')
-
-    def validate(self) -> None:
-        if not _is_resolved(self.mode):
-            return
-        if self.mode == 'ref':
-            if not os.path.exists(self.inputs.filepath):
-                raise FileNotFoundError('Mode=ref but ref raster not provided')
-        elif self.mode == 'aoi':
-            if not all(self.inputs.pixel_size):
-                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.inputs.grid_extent or ()):
-                raise ValueError('Mode=aoi but grid extent has zero(s)')
-        elif self.mode == 'tiles':
-            if not all(self.inputs.pixel_size):
-                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.inputs.grid_shape or ()):
-                raise ValueError('Mode=tiles but grid shape has zero(s)')
-
-# ----- domain
-@dataclasses.dataclass
-class DomainFile:
-    filename: str = omegaconf.MISSING
-    index_base: int = omegaconf.MISSING
-
-@dataclasses.dataclass
-class InputDomainCfg:
-    input_dirpath: str = '${exp_root}/input/domain_knowledge'
-    files: list[DomainFile] = dataclasses.field(default_factory=lambda: [])
-
-    def validate(self):
-        for file in self.files:
-            fpath = os.path.join(self.input_dirpath, file.filename)
-            if file.filename and not os.path.exists(fpath):
-                raise FileNotFoundError(f'Invalid domain raster: {fpath}')
-
-# ----- data
-@dataclasses.dataclass
-class FileNames:
-    dev_image: str = omegaconf.MISSING
-    dev_label: str = omegaconf.MISSING
-    test_image: str | None = omegaconf.MISSING
-    test_label: str | None = omegaconf.MISSING
-    config: str = omegaconf.MISSING
-
-@dataclasses.dataclass
-class Dirs:
-    dev: str = '${exp_root}/input/${inputs.data.name}/dev'
-    test: str = '${exp_root}/input/${inputs.data.name}/test'
-    config: str = '${exp_root}/input/${inputs.data.name}/config'
-
-@dataclasses.dataclass
-class FilePaths:
-    dev_image: str = '${inputs.data.dirs.dev}/${inputs.data.filenames.dev_image}'
-    dev_label: str = '${inputs.data.dirs.dev}/${inputs.data.filenames.dev_label}'
-    test_image: str = '${inputs.data.dirs.test}/${inputs.data.filenames.test_image}'
-    test_label: str = '${inputs.data.dirs.test}/${inputs.data.filenames.test_label}'
-    config: str = '${inputs.data.dirs.config}/${inputs.data.filenames.config}'
-
-@dataclasses.dataclass
-class InputDataCfg:
-    name: str = omegaconf.MISSING
-    input_dirpath: str = '${exp_root}/input/${inputs.data.name}'
-    filenames: FileNames = dataclasses.field(default_factory=FileNames)
-    dirs: Dirs = dataclasses.field(default_factory=Dirs)
-    filepaths: FilePaths = dataclasses.field(default_factory=FilePaths)
-
-    def __post_init__(self):
-        # defer validation until config is composed and resolved
-        if not _is_resolved(self.name):
-            return
-        if not self.name:
-            raise ValueError('Input data name not provided')
-
-    def validate(self) -> None:
-        def _must_exist(path: str | None, label: str) -> None:
-            if path and not os.path.exists(path):
-                raise FileNotFoundError(f'invalid {label}: {path}')
-        # checks
-        _must_exist(self.filepaths.dev_image, 'fit image')
-        _must_exist(self.filepaths.dev_label, 'fit label')
-        _must_exist(self.filepaths.test_image, 'test image')
-        _must_exist(self.filepaths.test_label, 'test label')
-        _must_exist(self.filepaths.config, 'config json')
-
-# ----- INPUTS
-@dataclasses.dataclass
-class Inputs:
-    extent: InputExtentCfg = dataclasses.field(default_factory=InputExtentCfg)
-    domain: InputDomainCfg = dataclasses.field(default_factory=InputDomainCfg)
-    data: InputDataCfg = dataclasses.field(default_factory=InputDataCfg)
-
-    def validate(self) -> None:
-        self.extent.validate()
-        self.domain.validate()
-        self.data.validate()
-
-# ------------------------------DATAPREP  CONFIGS------------------------------
-# ----- grid
 @dataclasses.dataclass
 class TileSize:
     row: int = 256
@@ -168,41 +58,145 @@ class TileOverlap:
     col: int = 0
 
 @dataclasses.dataclass
-class PrepGridCfg:
-    id: str = (
-        'grid_row_${prep.grid.tile_size.row}_${prep.grid.tile_overlap.row}_'
-        'col_${prep.grid.tile_size.col}_${prep.grid.tile_overlap.col}'
-    )
-    output_dirpath: str = '${exp_root}/artifacts/world_grids'
-    version: str = 'v1'
+class Grid:
+    mode: str = 'ref'
+    crs: str = omegaconf.MISSING
+    extent: Extent = dataclasses.field(default_factory=Extent)
     tile_size: TileSize = dataclasses.field(default_factory=TileSize)
     tile_overlap: TileOverlap = dataclasses.field(default_factory=TileOverlap)
 
+    def __post_init__(self):
+        if not self.extent.filepath:
+            self.extent.filepath = os.path.join(
+                self.extent.default_input_dpath, self.extent.filename
+            )
+        if not _is_resolved(self.crs) or not _is_resolved(self.mode):
+            return
+        if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
+            raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
+        if self.mode not in {'ref', 'aoi', 'tiles'}:
+            raise ValueError(f'Invalid mode: {self.mode}')
+
+    def validate(self) -> None:
+        if not _is_resolved(self.mode):
+            return
+        if self.mode == 'ref':
+            if not os.path.exists(self.extent.filepath):
+                raise FileNotFoundError('Mode=ref but ref raster not provided')
+        elif self.mode == 'aoi':
+            if not all(self.extent.pixel_size):
+                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
+            if not all(self.extent.grid_extent or ()):
+                raise ValueError('Mode=aoi but grid extent has zero(s)')
+        elif self.mode == 'tiles':
+            if not all(self.extent.pixel_size):
+                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
+            if not all(self.extent.grid_shape or ()):
+                raise ValueError('Mode=tiles but grid shape has zero(s)')
+
 # ----- domain
 @dataclasses.dataclass
-class PrepDomainCfg:
-    output_dirpath: str = '${exp_root}/artifacts/domain'
-    as_ids: str | None = None
-    as_vec: str | None = None
+class DomainFile:
+    name: str = omegaconf.MISSING
+    path: str = ''
+    index_base: int = omegaconf.MISSING
+
+@dataclasses.dataclass
+class Domains:
+    default_input_dpath: str = '${exp_root}/input/domain_knowledge'
+    files: list[DomainFile] = dataclasses.field(default_factory=lambda: [])
     valid_threshold: float = 0.7
     target_variance: float = 0.9
 
+    def validate(self):
+        for file in self.files:
+            if not file.path:
+                file.path = os.path.join(self.default_input_dpath, file.name)
+            if not os.path.exists(file.path):
+                raise FileNotFoundError(f'Invalid domain raster: {file.path}')
+
 # ----- data
 @dataclasses.dataclass
-class ArtifactsDirs:
-  # test blocks stats for normalization
-    foundation: str = '${exp_root}/artifacts/foundation'
-    transform: str = '${exp_root}/artifacts/transform'
+class FileNames:
+    dev_image: str = omegaconf.MISSING
+    dev_label: str = omegaconf.MISSING
+    test_image: str = omegaconf.MISSING
+    test_label: str = omegaconf.MISSING
+    config: str = omegaconf.MISSING
+
+@dataclasses.dataclass
+class FilePaths:
+    dev_image: str = ''
+    dev_label: str = ''
+    test_image: str = ''
+    test_label: str = ''
+    config: str = ''
 
 @dataclasses.dataclass
 class General:
-  # test blocks stats for normalization
     ignore_index: int = 255
     image_dem_pad: int = 8
 
 @dataclasses.dataclass
+class DataBlocks:
+    name: str = omegaconf.MISSING
+    default_input_dpath: str = '${exp_root}/input/${inputs.data.name}'
+    filenames: FileNames = dataclasses.field(default_factory=FileNames)
+    filepaths: FilePaths = dataclasses.field(default_factory=FilePaths)
+    general: General = dataclasses.field(default_factory=General)
+
+    def __post_init__(self):
+        # compose file paths
+        root = self.default_input_dpath
+        paths = self.filepaths
+        names = self.filenames
+        # dev image
+        if not self.filepaths.dev_image:
+            paths.dev_image = os.path.join(root, 'dev', names.dev_image)
+        # dev label
+        if not self.filepaths.dev_label:
+            paths.dev_label = os.path.join(root, 'dev', names.dev_label)
+        # test image (optional)
+        if not self.filepaths.test_image:
+            paths.test_image = os.path.join(root, 'test', names.test_image)
+        # test label (optional)
+        if not self.filepaths.dev_label:
+            paths.dev_label = os.path.join(root, 'test', names.dev_label)
+        # config JSON
+        if not self.filepaths.config:
+            paths.config = os.path.join(root, names.config)
+        # defer validation until config is composed and resolved
+        if not _is_resolved(self.name):
+            return
+        if not self.name:
+            raise ValueError('Input data name not provided')
+
+    def validate(self) -> None:
+        def _must_exist(path: str | None, label: str) -> None:
+            if path and not os.path.exists(path):
+                raise FileNotFoundError(f'invalid {label}: {path}')
+        # checks
+        _must_exist(self.filepaths.dev_image, 'dev image')
+        _must_exist(self.filepaths.dev_label, 'dev label')
+        _must_exist(self.filepaths.config, 'config json')
+
+# ----- composite
+@dataclasses.dataclass
+class DataFoundation:
+    grid: Grid = dataclasses.field(default_factory=Grid)
+    domains: Domains = dataclasses.field(default_factory=Domains)
+    datablocks: DataBlocks = dataclasses.field(default_factory=DataBlocks)
+    output_dpath: str = '${exp_root}/artifacts/foundation'
+
+    def validate(self) -> None:
+        self.grid.validate()
+        self.domains.validate()
+        self.datablocks.validate()
+
+# -------------------------------DATA  TRANSFORM-------------------------------
+@dataclasses.dataclass
 class Thresholds:
-    blk_thres_fit: float = 0.75
+    blk_thres_dev: float = 0.75
     blk_thres_test: float = 0.1
 
 @dataclasses.dataclass
@@ -214,28 +208,23 @@ class Partition:
 @dataclasses.dataclass
 class Scoring:
     reward: dict[int, float] = dataclasses.field(default_factory=dict)
-    alpha: float = 0.6
-    beta: float = 0.8
+    alpha: float = 1.0
+    beta: float = 0.0
 
 @dataclasses.dataclass
 class Hydration:
     max_skew_rate: float = 10.0
 
 @dataclasses.dataclass
-class PrepDataCfg:
-    artifacts: ArtifactsDirs = dataclasses.field(default_factory=ArtifactsDirs)
-    general: General = dataclasses.field(default_factory=General)
+class DataTransform:
     threshold: Thresholds = dataclasses.field(default_factory=Thresholds)
     partition: Partition = dataclasses.field(default_factory=Partition)
     scoring: Scoring = dataclasses.field(default_factory=Scoring)
     hydration: Hydration = dataclasses.field(default_factory=Hydration)
+    output_dpath: str = '${exp_root}/artifacts/transform'
 
-# ----- PREP
-@dataclasses.dataclass
-class Prep:
-    grid: PrepGridCfg = dataclasses.field(default_factory=PrepGridCfg)
-    domain: PrepDomainCfg = dataclasses.field(default_factory=PrepDomainCfg)
-    data: PrepDataCfg = dataclasses.field(default_factory=PrepDataCfg)
+    def validate(self):
+        pass
 
 # ---------------------------------MODELS CONFIGS------------------------------
 @dataclasses.dataclass
@@ -440,9 +429,9 @@ class RootConfig:
     # dev override paths
     dev_settings_path: str | None = None
     # raw input data and configs
-    inputs: Inputs = dataclasses.field(default_factory=Inputs)
+    foundation: DataFoundation = dataclasses.field(default_factory=DataFoundation)
     # data preparation
-    prep: Prep = dataclasses.field(default_factory=Prep)
+    transform: DataTransform = dataclasses.field(default_factory=DataTransform)
     # model settings
     models: ModelsCfg = dataclasses.field(default_factory=ModelsCfg)
     # trainer settings
@@ -454,7 +443,8 @@ class RootConfig:
 
     def validate_all(self) -> None:
         # delegated to subtrees.
-        self.inputs.validate()
+        self.foundation.validate()
+        self.transform.validate()
         self.models.validate()
         self.trainer.validate()
         # future checks to be added below (e.g., controller phases)

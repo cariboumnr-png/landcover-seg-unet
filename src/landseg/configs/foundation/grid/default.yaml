@@ -1,0 +1,22 @@
+# study area extent definition
+mode: ref # ref | aoi | tiles
+crs: ''
+extent:
+  # when mode=ref provide:
+  default_input_dpath: '${exp_root}/input/extent_reference'
+  filename: ''
+  filepath: ''
+  # when mode=(aoi | tiles) provide:
+  origin: [0.0, 0.0] # x, y in CRS units
+  pixel_size: [0.0, 0.0] # x, y positive magnitudes; we assume north up
+  # when mode=aoi
+  grid_extent: [0.0, 0.0] # height and width in CRS units
+  # when mode=tiles
+  grid_shape: [0, 0] # rows and cols as number of tiles
+# specs
+tile_size:
+  row: 256
+  col: 256
+tile_overlap:
+  row: 0
+  col: 0

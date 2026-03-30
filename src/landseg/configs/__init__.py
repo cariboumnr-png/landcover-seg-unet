@@ -32,14 +32,14 @@ import typing
 
 __all__ = [
     # classes
-    'InputDataCfg',
+    'DataBlocks',
     'InputDomainCfg',
     'InputExtentCfg',
     'Inputs',
     'PrepDataCfg',
     'PrepDomainCfg',
-    'PrepGridCfg',
-    'Prep',
+    'TileSpec',
+    'DataTransform',
     'ModelsCfg',
     'LoaderConfig',
     'LossConfig',
@@ -55,14 +55,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .schema import (
-        InputDataCfg,
+        DataBlocks,
         InputDomainCfg,
         InputExtentCfg,
         Inputs,
         PrepDataCfg,
         PrepDomainCfg,
-        PrepGridCfg,
-        Prep,
+        TileSpec,
+        DataTransform,
         ModelsCfg,
         LoaderConfig,
         LossConfig,

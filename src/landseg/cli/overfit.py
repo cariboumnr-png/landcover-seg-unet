@@ -43,7 +43,7 @@ def overfit_test(config: configs.RootConfig) -> None:
     # create a single test block and derive dataspec for downstream
     dataspecs = spec.load_data(
         config.inputs,
-        config.prep,
+        config.transform,
         logger,
         single_block_mode=True,
         single_block_dir=test_dir

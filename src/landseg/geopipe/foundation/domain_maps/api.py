@@ -54,6 +54,7 @@ task-level feature assembly.
 from __future__ import annotations
 import copy
 import dataclasses
+import os
 # local imports
 import landseg.geopipe.core as core
 import landseg.geopipe.foundation.domain_maps as domain_maps
@@ -63,18 +64,10 @@ import landseg.utils as utils
 @dataclasses.dataclass
 class DomainMappingConfig:
     '''Container for domain mapping configurations.'''
-    source_dir: str
-    file_list: list[_DomainFile]
-    output_dir: str
+    file_list: list[tuple[str, int]]
     valid_threshold: float
     target_variance: float
-
-# --------------------------------private  type--------------------------------
-@dataclasses.dataclass
-class _DomainFile:
-    '''Typed domain file.'''
-    filename: str
-    index_base: int
+    output_dir: str
 
 # -------------------------------Public Function-------------------------------
 def prepare_domain(
@@ -124,14 +117,12 @@ def prepare_domain(
     # whether to create/update flag
     build = False
     # prep each domain
-    for file in config.file_list:
+    for  filepath, index_base in config.file_list:
 
-        # skip non raster files
-        if not file.filename.endswith(('.tif', '.tiff')):
+        if not filepath.endswith(('.tif', '.tiff')):
             continue
         # get filepath and filename without extension
-        raster_fpath = f'{config.source_dir}/{file.filename}'
-        name = file.filename.split('.', maxsplit=1)[0]
+        name, _ = os.path.splitext(os.path.basename(filepath))
 
         # if domain JSON already exist, load
         try:
@@ -163,9 +154,9 @@ def prepare_domain(
         if build:
             domain_package = domain_maps.map_domain_to_grid(
                 copy.deepcopy(world_grid),
-                raster_fpath,
+                filepath,
                 logger,
-                index_base=file.index_base,
+                index_base=index_base,
             )
             dom.build(
                 domain_package.block_size,
@@ -175,4 +166,4 @@ def prepare_domain(
             )
             output[name] = dom
             domain_maps.save_domain(name, dom, config.output_dir)
-            logger.log('INFO', f'Domain {file.filename} created/updated')
+            logger.log('INFO', f'Domain {filepath} created/updated')

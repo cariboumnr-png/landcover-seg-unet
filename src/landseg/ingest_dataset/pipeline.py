@@ -41,7 +41,7 @@ import landseg.utils as utils
 # -------------------------------Public Function-------------------------------
 def prepare_dataset(
     world_grid: core.GridLayoutLike,
-    input_config: configs.InputDataCfg,
+    input_config: configs.DataBlocks,
     prep_config: configs.PrepDataCfg,
     logger: utils.Logger,
     **kwargs
@@ -118,7 +118,7 @@ def prepare_dataset(
 
 # ------------------------------private  function------------------------------
 def _parse_configs(
-    input_config: configs.InputDataCfg,
+    input_config: configs.DataBlocks,
     prep_config: configs.PrepDataCfg,
 ) -> dataset.DataprepConfigs:
     '''Parse and consolidate input configs into a typed config.'''

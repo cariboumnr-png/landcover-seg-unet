@@ -35,45 +35,46 @@ def ingest(config: configs.RootConfig):
     logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')
 
     # config aliases
-    extent = config.inputs.extent
-    grid = config.prep.grid
+    grid_cfg = config.foundation.grid
+    domain_cfg = config.foundation.domains
+    datablocks_cfg = config.foundation.datablocks
+    out_root = config.foundation.output_dpath
 
     # world grid
-    grid_ext_config = foundation.GridExtentConfig(
-        mode=extent.mode, # type: ignore
-        crs=extent.crs,
-        ref_fpath=extent.inputs.filepath,
-        origin=extent.inputs.origin,
-        pixel_size=extent.inputs.pixel_size,
-        grid_extent=extent.inputs.grid_extent,
-        grid_shape=extent.inputs.grid_shape
+    _config = foundation.GridExtentConfig(
+        mode=grid_cfg.mode, # type: ignore
+        crs=grid_cfg.crs,
+        ref_fpath=grid_cfg.extent.filepath,
+        origin=grid_cfg.extent.origin,
+        pixel_size=grid_cfg.extent.pixel_size,
+        grid_extent=grid_cfg.extent.grid_extent,
+        grid_shape=grid_cfg.extent.grid_shape
     )
     grid_gen_config = foundation.GridGenerationConfig(
-        output_dir=grid.output_dirpath,
-        tile_size=(grid.tile_size.row, grid.tile_size.col),
-        tile_overlap=(grid.tile_overlap.row, grid.tile_overlap.col)
+        output_dir=f'{out_root}/world_grids',
+        tile_size=(grid_cfg.tile_size.row, grid_cfg.tile_size.col),
+        tile_overlap=(grid_cfg.tile_overlap.row, grid_cfg.tile_overlap.col)
     )
-    grid = foundation.prep_world_grid(grid_ext_config, grid_gen_config, logger)
+    grid = foundation.prep_world_grid(_config, grid_gen_config, logger)
 
     # domains
-    domain_config = foundation.DomainMappingConfig(
-        source_dir=config.inputs.domain.input_dirpath,
-        file_list=config.inputs.domain.files, # type: ignore
-        output_dir=config.prep.domain.output_dirpath,
-        valid_threshold=config.prep.domain.valid_threshold,
-        target_variance=config.prep.domain.target_variance
+    _config = foundation.DomainMappingConfig(
+        file_list=[(d.path, d.index_base) for d in domain_cfg.files],
+        valid_threshold=domain_cfg.valid_threshold,
+        target_variance=domain_cfg.target_variance,
+        output_dir=f'{out_root}/domain_knowledge',
     )
-    foundation.prepare_domain(grid, domain_config, logger)
+    foundation.prepare_domain(grid, _config, logger)
 
     # datablocks building
-    blocks_config = foundation.BlockBuildingConfig(
-        dev_image_fpath=config.inputs.data.filepaths.dev_image,
-        dev_label_fpath=config.inputs.data.filepaths.dev_label,
-        eval_image_fpath=config.inputs.data.filepaths.test_image,
-        eval_label_fpath=config.inputs.data.filepaths.test_label,
-        data_config_fpath=config.inputs.data.filepaths.config,
-        dem_pad=config.prep.data.general.image_dem_pad,
-        ignore_index=config.prep.data.general.ignore_index,
+    _config = foundation.BlockBuildingConfig(
+        dev_image_fpath=datablocks_cfg.filepaths.dev_image,
+        dev_label_fpath=datablocks_cfg.filepaths.dev_label,
+        eval_image_fpath=datablocks_cfg.filepaths.test_image,
+        eval_label_fpath=datablocks_cfg.filepaths.test_label,
+        data_config_fpath=datablocks_cfg.filepaths.config,
+        dem_pad=datablocks_cfg.general.image_dem_pad,
+        ignore_index=datablocks_cfg.general.ignore_index,
     )
-    blocks_dir = config.prep.data.artifacts.foundation
-    foundation.build_blocks(grid, blocks_config, blocks_dir, logger)
+    blocks_dir = f'{out_root}/data_blocks'
+    foundation.build_blocks(grid, _config, blocks_dir, logger)

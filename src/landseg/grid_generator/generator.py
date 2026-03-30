@@ -52,7 +52,7 @@ import landseg.utils as utils
 # -------------------------------Public Function-------------------------------
 def prep_world_grid(
     extent_config: configs.InputExtentCfg,
-    grid_config: configs.PrepGridCfg,
+    grid_config: configs.TileSpec,
     logger: utils.Logger
 ) -> grid.GridLayout:
     '''
@@ -112,7 +112,7 @@ def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[grid.GridSpec]:
 
     # from reference raster (auto)
     if cfg.mode == 'ref':
-        ref_raster = os.path.join(cfg.inputs.dirpath, cfg.inputs.filename)
+        ref_raster = os.path.join(cfg.extent.dirpath, cfg.extent.filename)
         # open reference raster
         with rasterio.open(ref_raster) as src:
             # get transform - pixel size
@@ -132,9 +132,9 @@ def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[grid.GridSpec]:
     # from aoi (manual)
     elif cfg.mode  == 'aoi':
         # retrieve inputs and validate
-        origin = cfg.inputs.origin
-        pixel_size = cfg.inputs.pixel_size
-        grid_extent = cfg.inputs.grid_extent
+        origin = cfg.extent.origin
+        pixel_size = cfg.extent.pixel_size
+        grid_extent = cfg.extent.grid_extent
         return functools.partial(
             grid.GridSpec,
             crs=cfg.crs,
@@ -145,9 +145,9 @@ def _get_ext(cfg: configs.InputExtentCfg) -> functools.partial[grid.GridSpec]:
 
     # from tiles count (manual)
     elif cfg.mode  == 'tiles':
-        origin = cfg.inputs.origin
-        pixel_size = cfg.inputs.pixel_size
-        grid_shape = cfg.inputs.grid_shape
+        origin = cfg.extent.origin
+        pixel_size = cfg.extent.pixel_size
+        grid_shape = cfg.extent.grid_shape
         return functools.partial(
             grid.GridSpec,
             crs=cfg.crs,

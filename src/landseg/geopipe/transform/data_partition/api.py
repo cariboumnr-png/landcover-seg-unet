@@ -79,6 +79,8 @@ def partition_blocks(
 
     # load model dev catalog
     dev = data_partition.parse_catalog(dev_catalog, blk_size)
+    if not dev.base_class_counts:
+        raise ValueError('No valid data catalog')
 
     # get split blocks
     logger.log('INFO', 'Split data blocks')
