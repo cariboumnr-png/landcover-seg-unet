@@ -49,8 +49,8 @@ import landseg.utils as utils
 class GridExtentConfig:
     '''Container for grid generation configuration.'''
     mode: typing.Literal['ref', 'aoi', 'tiles']
-    ref_fpath: str
     crs: str
+    ref_fpath: str
     origin: tuple[float, float]
     pixel_size: tuple[float, float]
     grid_extent: tuple[float, float] | None

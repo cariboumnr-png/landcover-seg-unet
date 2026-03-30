@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Dev Test Ground
+Data preparation pipeline.
 '''
 
 # local imports
@@ -29,25 +29,39 @@ import landseg.geopipe.transform as transform
 import landseg.utils as utils
 
 def prepare(config: configs.RootConfig):
-    '''Train data preparation pipeline.'''
+    '''Data preparation pipeline.'''
 
-    logger = utils.Logger('test', './test.log')
-    artifacts_root = './experiment/artifacts/'
+    # init a logger
+    logger = utils.Logger('prep', f'{config.exp_root}/prep.log')
+
+    # config aliases
+    # artifacts root dir
+    root = config.prep.data.artifacts
+    # partition config from RootConfig
+    partition = config.prep.data.partition
+    scoring = config.prep.data.scoring
+    hydration = config.prep.data.hydration
+    grid = config.prep.grid
 
     # datablocks partition
-    partition_cfg = transform.PartitionConfig(
-        val_test_ratios=(0.1, 0),
-        buffer_step=1,
-        reward_ratios={2: 5.0, 4: 5.0},
-        scoring_alpha=1.0,
-        scoring_beta=config.prep.data.scoring.beta,
-        max_skew_rate=10.0,
-        block_spec=(256, 128, 256, 128)
+    cfg = transform.PartitionConfig(
+        val_test_ratios=(partition.val_ratio, partition.test_ratio),
+        buffer_step=partition.buffer_step,
+        reward_ratios=scoring.reward,
+        scoring_alpha=scoring.alpha,
+        scoring_beta=scoring.beta,
+        max_skew_rate=hydration.max_skew_rate,
+        block_spec=(
+            grid.tile_size.row,
+            grid.tile_overlap.row,
+            grid.tile_size.col,
+            grid.tile_overlap.col
+        )
     )
-    transform.partition_blocks(artifacts_root, partition_cfg, logger)
+    transform.partition_blocks(root.foundation, root.transform, cfg, logger)
 
     # normalize
-    transform.build_normalized_blocks(artifacts_root)
+    transform.build_normalized_blocks(root.transform)
 
     # build schema
-    transform.build_schema_full(f'{artifacts_root}/transform')
+    transform.build_schema_full(root.transform)

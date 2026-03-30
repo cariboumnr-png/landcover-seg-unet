@@ -29,11 +29,8 @@ import landseg.utils as utils
 def build_normalized_blocks(root_dir: str):
     '''doc'''
 
-    # transform dir
-    out = f'{root_dir}/transform'
-
     # load source blocks file lists
-    src: core.BlockSplitPaths = utils.load_json(f'{out}/block_source.json')
+    src: core.BlockSplitPaths = utils.load_json(f'{root_dir}/block_source.json')
 
     # get source by split
     train = set(src['train'].values())
@@ -42,14 +39,14 @@ def build_normalized_blocks(root_dir: str):
 
     # aggregate stats on training blocks
     stats = normal_blocks.aggregate_image_stats(train)
-    utils.write_json(f'{out}/image_stats.json', stats)
-    utils.hash_artifacts(f'{out}/image_stats.json')
+    utils.write_json(f'{root_dir}/image_stats.json', stats)
+    utils.hash_artifacts(f'{root_dir}/image_stats.json')
 
     # build normalized blocks for each split
     transform: core.BlockSplitPaths = {
-        'train': normal_blocks.normalize_blocks(train, stats, f'{out}/train_blocks'),
-        'val': normal_blocks.normalize_blocks(val, stats, f'{out}/val_blocks'),
-        'test': normal_blocks.normalize_blocks(test, stats, f'{out}/test_blocks')
+        'train': normal_blocks.normalize_blocks(train, stats, f'{root_dir}/train_blocks'),
+        'val': normal_blocks.normalize_blocks(val, stats, f'{root_dir}/val_blocks'),
+        'test': normal_blocks.normalize_blocks(test, stats, f'{root_dir}/test_blocks')
     }
-    utils.write_json(f'{out}/block_splits.json', transform)
-    utils.hash_artifacts(f'{out}/block_splits.json')
+    utils.write_json(f'{root_dir}/block_splits.json', transform)
+    utils.hash_artifacts(f'{root_dir}/block_splits.json')

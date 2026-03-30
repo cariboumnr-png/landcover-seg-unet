@@ -1,32 +1,7 @@
-output_dirpath: ${exp_root}/artifacts/foundation
-# derived paths for current dataset (dirname = dataset name)
-# model dev input data
-dev_blocks:
-  # fit blocks building
-  raster_windows: ${prep.data.output_dirpath}/fit/fit_raster_windows.pkl
-  blocks_dir: ${prep.data.output_dirpath}/fit/blocks
-  all_blocks: ${prep.data.output_dirpath}/fit/all_blocks.json
-  valid_blocks: ${prep.data.output_dirpath}/fit/valid_blocks.json
-dev_post_blocks:
-  # fit blocks stats for normalization
-  image_stats: ${prep.data.output_dirpath}/fit/image_stats.json
-  # train/val split reltead
-  label_count_global: ${prep.data.output_dirpath}/fit/count_global.json
-  block_scores: ${prep.data.output_dirpath}/fit/score.json
-  train_blocks_split: ${prep.data.output_dirpath}/fit/train_blocks_split.json
-  val_blocks_split: ${prep.data.output_dirpath}/fit/val_blocks_split.json
-  # train data label count for downstream, e.g., LA
-  label_count_train: ${prep.data.output_dirpath}/fit/count_train.json
-# external test input data (optional)
-test_blocks:
-  # test blocks building
-  raster_windows: ${prep.data.output_dirpath}/test/test_raster_windows.pkl
-  blocks_dir: ${prep.data.output_dirpath}/test/blocks
-  all_blocks: ${prep.data.output_dirpath}/test/all_blocks.json
-  valid_blocks: ${prep.data.output_dirpath}/test/valid_blocks.json
-test_post_blocks:
-  # test blocks stats for normalization
-  image_stats: ${prep.data.output_dirpath}/test/image_stats.json
+# artifacts saving dirs
+artifacts:
+  foundation: ${exp_root}/artifacts/foundation
+  transform: ${exp_root}/artifacts/transform
 
 # general settings
 general:
@@ -40,15 +15,21 @@ threshold:
   # minimum valid pixel ratio threshold for test blocks
   blk_thres_test: 0.1
 
+# blocks partition
+partition:
+  val_ratio: 0.1
+  test_ratio: 0.0
+  buffer_step: 1
+
 # block scoring parameters
 scoring:
-  # Layer to focus on
-  head: 'base'
+  # classes to reward (1-based)
+  reward: {}
   # Inverse distribution alpha
   alpha: 1.0
   # L1 weight reward beta
   beta: 0.0
-  # L1 weight reward epsilon
-  epsilon: 1e-12
-  # classes to reward (1-based)
-  reward: []
+
+# hydration
+hydration:
+  max_skew_rate: 10.0

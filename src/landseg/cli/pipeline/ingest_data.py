@@ -23,8 +23,6 @@
 Data ingestion pipeline.
 '''
 
-# standard imports
-import dataclasses
 # local imports
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
@@ -36,20 +34,24 @@ def ingest(config: configs.RootConfig):
     # init a logger
     logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')
 
+    # config aliases
+    extent = config.inputs.extent
+    grid = config.prep.grid
+
     # world grid
     grid_ext_config = foundation.GridExtentConfig(
-        mode=config.inputs.extent.mode, # type: ignore
-        ref_fpath=config.inputs.extent.inputs.filepath,
-        crs=config.inputs.extent.crs,
-        origin=config.inputs.extent.inputs.origin,
-        pixel_size=config.inputs.extent.inputs.pixel_size,
-        grid_extent=config.inputs.extent.inputs.grid_extent,
-        grid_shape=config.inputs.extent.inputs.grid_shape
+        mode=extent.mode, # type: ignore
+        crs=extent.crs,
+        ref_fpath=extent.inputs.filepath,
+        origin=extent.inputs.origin,
+        pixel_size=extent.inputs.pixel_size,
+        grid_extent=extent.inputs.grid_extent,
+        grid_shape=extent.inputs.grid_shape
     )
     grid_gen_config = foundation.GridGenerationConfig(
-        output_dir=config.prep.grid.output_dirpath,
-        tile_size=dataclasses.astuple(config.prep.grid.tile_size),
-        tile_overlap=dataclasses.astuple(config.prep.grid.tile_overlap)
+        output_dir=grid.output_dirpath,
+        tile_size=(grid.tile_size.row, grid.tile_size.col),
+        tile_overlap=(grid.tile_overlap.row, grid.tile_overlap.col)
     )
     grid = foundation.prep_world_grid(grid_ext_config, grid_gen_config, logger)
 
@@ -73,5 +75,5 @@ def ingest(config: configs.RootConfig):
         dem_pad=config.prep.data.general.image_dem_pad,
         ignore_index=config.prep.data.general.ignore_index,
     )
-    blocks_dir = config.prep.data.output_dirpath
+    blocks_dir = config.prep.data.artifacts.foundation
     foundation.build_blocks(grid, blocks_config, blocks_dir, logger)

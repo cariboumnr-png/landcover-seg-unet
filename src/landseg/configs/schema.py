@@ -189,32 +189,10 @@ class PrepDomainCfg:
 
 # ----- data
 @dataclasses.dataclass
-class DevBlocks:
-    raster_windows: str = '${prep.data.output_dirpath}/fit/fit_raster_windows.pkl'
-    blocks_dir: str = '${prep.data.output_dirpath}/fit/blocks'
-    all_blocks: str = '${prep.data.output_dirpath}/fit/all_blocks.json'
-    valid_blocks: str = '${prep.data.output_dirpath}/fit/valid_blocks.json'
-
-@dataclasses.dataclass
-class DevPostBlocks:
-    image_stats: str = '${prep.data.output_dirpath}/fit/image_stats.json'
-    label_count_global: str = '${prep.data.output_dirpath}/fit/count_global.json'
-    block_scores: str = '${prep.data.output_dirpath}/fit/score.json'
-    train_blocks_split: str = '${prep.data.output_dirpath}/fit/train_blocks_split.json'
-    val_blocks_split: str = '${prep.data.output_dirpath}/fit/val_blocks_split.json'
-    label_count_train: str = '${prep.data.output_dirpath}/fit/count_train.json'
-
-@dataclasses.dataclass
-class TestBlocks:
-    raster_windows: str = '${prep.data.output_dirpath}/test/test_raster_windows.pkl'
-    blocks_dir: str = '${prep.data.output_dirpath}/test/blocks'
-    all_blocks: str = '${prep.data.output_dirpath}/test/all_blocks.json'
-    valid_blocks: str = '${prep.data.output_dirpath}/test/valid_blocks.json'
-
-@dataclasses.dataclass
-class TestPostBlocks:
+class ArtifactsDirs:
   # test blocks stats for normalization
-    image_stats: str = '${prep.data.output_dirpath}/test/image_stats.json'
+    foundation: str = '${exp_root}/artifacts/foundation'
+    transform: str = '${exp_root}/artifacts/transform'
 
 @dataclasses.dataclass
 class General:
@@ -228,23 +206,29 @@ class Thresholds:
     blk_thres_test: float = 0.1
 
 @dataclasses.dataclass
+class Partition:
+    val_ratio: float = 0.1
+    test_ratio: float = 0.0
+    buffer_step: int = 1
+
+@dataclasses.dataclass
 class Scoring:
-    head: str = 'layer1'
+    reward: dict[int, float] = dataclasses.field(default_factory=dict)
     alpha: float = 0.6
     beta: float = 0.8
-    epsilon: float = 1e-12
-    reward: tuple[int, ...] = ()
+
+@dataclasses.dataclass
+class Hydration:
+    max_skew_rate: float = 10.0
 
 @dataclasses.dataclass
 class PrepDataCfg:
-    output_dirpath: str = '${exp_root}/artifacts/data_cache/${inputs.data.name}'
-    dev_blocks: DevBlocks = dataclasses.field(default_factory=DevBlocks)
-    dev_post_blocks: DevPostBlocks = dataclasses.field(default_factory=DevPostBlocks)
-    test_blocks: TestBlocks = dataclasses.field(default_factory=TestBlocks)
-    test_post_blocks: TestPostBlocks = dataclasses.field(default_factory=TestPostBlocks)
+    artifacts: ArtifactsDirs = dataclasses.field(default_factory=ArtifactsDirs)
     general: General = dataclasses.field(default_factory=General)
     threshold: Thresholds = dataclasses.field(default_factory=Thresholds)
+    partition: Partition = dataclasses.field(default_factory=Partition)
     scoring: Scoring = dataclasses.field(default_factory=Scoring)
+    hydration: Hydration = dataclasses.field(default_factory=Hydration)
 
 # ----- PREP
 @dataclasses.dataclass

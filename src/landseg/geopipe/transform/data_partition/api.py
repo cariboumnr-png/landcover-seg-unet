@@ -52,7 +52,8 @@ class PartitionConfig:
 
 # -------------------------------Public Function-------------------------------
 def partition_blocks(
-    artifacts_root: str,
+    foundation_root: str,
+    transform_root: str,
     partition_config: PartitionConfig,
     logger: utils.Logger,
 ) -> None:
@@ -62,8 +63,8 @@ def partition_blocks(
     blk_size = (partition_config.block_spec[0], partition_config.block_spec[2])
 
     # locate catalog JSON files
-    dev_catalog = f'{artifacts_root}/foundation/model_dev/catalog.json'
-    test_catalog = f'{artifacts_root}/foundation/test_holdout/catalog.json'
+    dev_catalog = f'{foundation_root}/model_dev/catalog.json'
+    test_catalog = f'{foundation_root}/test_holdout/catalog.json'
 
     # try load test catalog
     ext_test_blks: list[str] = []
@@ -95,11 +96,11 @@ def partition_blocks(
     lbl_stats = _count_label(list(blks_src['train'].values()))
 
     # write JSON artifacts
-    utils.write_json(f'{artifacts_root}/transform/block_source.json', blks_src)
-    utils.hash_artifacts(f'{artifacts_root}/transform/block_source.json')
+    utils.write_json(f'{transform_root}/block_source.json', blks_src)
+    utils.hash_artifacts(f'{transform_root}/block_source.json')
 
-    utils.write_json(f'{artifacts_root}/transform/label_stats.json', lbl_stats)
-    utils.hash_artifacts(f'{artifacts_root}/transform/label_stats.json')
+    utils.write_json(f'{transform_root}/label_stats.json', lbl_stats)
+    utils.hash_artifacts(f'{transform_root}/label_stats.json')
 
 def _split(
     base_class_counts: dict[tuple[int, int], list[int]],
