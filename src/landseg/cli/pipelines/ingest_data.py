@@ -84,8 +84,8 @@ def ingest(config: configs.RootConfig):
     _config = foundation.BlockBuildingConfig(
         dev_image_fpath=datablocks_cfg.filepaths.dev_image,
         dev_label_fpath=datablocks_cfg.filepaths.dev_label,
-        eval_image_fpath=datablocks_cfg.filepaths.test_image,
-        eval_label_fpath=datablocks_cfg.filepaths.test_label,
+        test_image_fpath=datablocks_cfg.filepaths.test_image,
+        test_label_fpath=datablocks_cfg.filepaths.test_label,
         data_config_fpath=datablocks_cfg.filepaths.config,
         dem_pad=datablocks_cfg.general.image_dem_pad,
         ignore_index=datablocks_cfg.general.ignore_index,
