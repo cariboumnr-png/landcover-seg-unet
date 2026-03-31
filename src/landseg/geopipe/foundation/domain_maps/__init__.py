@@ -32,32 +32,35 @@ import typing
 
 __all__ = [
     # classes
-    'DomainMappingConfig',
+    'DomainBuildingParameters',
     # functions
+    'build_domains',
     'load_domain',
     'map_domain_to_grid',
     'pca_transform',
-    'prepare_domain',
     'save_domain',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .api import DomainMappingConfig, prepare_domain
+    from .factory import DomainBuildingParameters, build_domains
     from .io import load_domain, save_domain
     from .mapper import map_domain_to_grid
     from .transform import pca_transform
 
 def __getattr__(name: str):
 
-    if name in ['DomainMappingConfig', 'prepare_domain']:
-        return getattr(importlib.import_module('.api', __package__), name)
-    if name in ['load_domain', 'save_domain']:
+    if name in {'DomainBuildingParameters', 'build_domains'}:
+        return getattr(importlib.import_module('.factory', __package__), name)
+
+    if name in {'load_domain', 'save_domain'}:
         return getattr(importlib.import_module('.io', __package__), name)
-    if name in ['map_domain_to_grid']:
+
+    if name in {'map_domain_to_grid'}:
         return getattr(importlib.import_module('.mapper', __package__), name)
-    if name in ['pca_transform']:
+
+    if name in {'pca_transform'}:
         return getattr(importlib.import_module('.transform', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

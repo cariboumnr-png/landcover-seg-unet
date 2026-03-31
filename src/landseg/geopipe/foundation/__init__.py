@@ -32,32 +32,31 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuildingConfig',
-    'DomainMappingConfig',
-    'GridExtentConfig',
-    'GridGenerationConfig',
+    'BlockBuildingParameters',
+    'DomainBuildingParameters',
+    'GridParameters',
     # functions
-    'build_blocks',
-    'prepare_domain',
-    'prep_world_grid',
+    'build_domains',
+    'build_world_grid',
+    'run_blocks_building',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_blocks import BlockBuildingConfig, build_blocks
-    from .domain_maps import DomainMappingConfig, prepare_domain
-    from .world_grids import GridExtentConfig, GridGenerationConfig, prep_world_grid
+    from .data_blocks import BlockBuildingParameters, run_blocks_building
+    from .domain_maps import DomainBuildingParameters, build_domains
+    from .world_grids import GridParameters, build_world_grid
 
 def __getattr__(name: str):
 
-    if name in {'BlockBuildingConfig', 'build_blocks'}:
+    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(importlib.import_module('.data_blocks', __package__), name)
 
-    if name in {'DomainMappingConfig', 'prepare_domain'}:
+    if name in {'DomainBuildingParameters', 'build_domains'}:
         return getattr(importlib.import_module('.domain_maps', __package__), name)
 
-    if name in {'GridExtentConfig', 'GridGenerationConfig', 'prep_world_grid'}:
+    if name in {'GridParameters', 'build_world_grid'}:
         return getattr(importlib.import_module('.world_grids', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

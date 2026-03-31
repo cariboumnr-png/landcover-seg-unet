@@ -58,7 +58,7 @@ def prepare(config: configs.RootConfig):
     hydration = config.transform.hydration
 
     # datablocks partition
-    cfg = transform.PartitionConfig(
+    cfg = transform.PartitionParameters(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
         buffer_step=partition.buffer_step,
         reward_ratios=scoring.reward,
@@ -72,10 +72,10 @@ def prepare(config: configs.RootConfig):
             grid.tile_overlap.col
         )
     )
-    transform.partition_blocks(foundation_root, transform_root, cfg, logger)
+    transform.run_datablocks_partition(foundation_root, transform_root, cfg, logger)
 
     # normalize
-    transform.build_normalized_blocks(transform_root)
+    transform.run_normaliza_blocks(transform_root)
 
     # build schema
     transform.build_schema(transform_root)

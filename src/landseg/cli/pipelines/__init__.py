@@ -51,19 +51,19 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['default_action']:
+    if name in {'default_action'}:
         return getattr(importlib.import_module('.default', __package__), name)
 
-    if name in ['ingest']:
+    if name in {'ingest'}:
         return getattr(importlib.import_module('.ingest_data', __package__), name)
 
-    if name in ['prepare']:
+    if name in {'prepare'}:
         return getattr(importlib.import_module('.prepare_data', __package__), name)
 
-    if name in ['train']:
+    if name in {'train'}:
         return getattr(importlib.import_module('.train_model', __package__), name)
 
-    if name in ['overfit']:
+    if name in {'overfit'}:
         return getattr(importlib.import_module('.train_overfit', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

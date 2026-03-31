@@ -48,22 +48,18 @@ class Extent:
     grid_shape: tuple[int, int] | None = None
 
 @dataclasses.dataclass
-class TileSize:
-    row: int = 256
-    col: int = 256
-
-@dataclasses.dataclass
-class TileOverlap:
-    row: int = 0
-    col: int = 0
+class TileSpecs:
+    size_row: int = 256
+    size_col: int = 256
+    overlap_row: int = 0
+    overlap_col: int = 0
 
 @dataclasses.dataclass
 class Grid:
     mode: str = 'ref'
     crs: str = omegaconf.MISSING
     extent: Extent = dataclasses.field(default_factory=Extent)
-    tile_size: TileSize = dataclasses.field(default_factory=TileSize)
-    tile_overlap: TileOverlap = dataclasses.field(default_factory=TileOverlap)
+    tile_specs: TileSpecs = dataclasses.field(default_factory=TileSpecs)
 
     def __post_init__(self):
         if not self.extent.filepath:

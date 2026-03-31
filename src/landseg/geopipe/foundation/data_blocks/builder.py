@@ -57,7 +57,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class BuilderConfig:
+class BlockBuilderConfig:
     '''
     I/O paths and configuration parameters used during block construction.
 
@@ -107,7 +107,7 @@ class BlockBuilder:
         self,
         image_windows: alias.RasterWindowDict,
         label_windows: alias.RasterWindowDict,
-        config: BuilderConfig,
+        config: BlockBuilderConfig,
         logger: utils.Logger,
     ):
         '''
@@ -396,7 +396,7 @@ def _build_a_blk(
     dem_band = meta['image_band_map']['dem']
 
     # read rasters at given window and create blocks
-    with utils.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
+    with core.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
         # sanity check, image raster must be provided
         assert img is not None
         # read image array

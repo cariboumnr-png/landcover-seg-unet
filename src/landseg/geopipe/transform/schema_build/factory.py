@@ -72,7 +72,7 @@ def build_schema(root_dir: str) -> None:
     }
 
     # read blocks splits
-    block_splits: core.BlockSplitPaths
+    block_splits: core.BlocksPartition
     block_splits = utils.load_json(artifacts['block_splits'])
 
     # read image stats

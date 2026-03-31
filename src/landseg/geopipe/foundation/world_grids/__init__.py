@@ -32,24 +32,23 @@ import typing
 
 __all__ = [
     # classes
-    'GridExtentConfig',
-    'GridGenerationConfig',
+    'GridParameters',
     # functions
+    'build_world_grid',
     'load_grid',
-    'prep_world_grid',
     'save_grid',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .api import GridExtentConfig, GridGenerationConfig, prep_world_grid
+    from .factory import GridParameters, build_world_grid
     from .io import load_grid, save_grid
 
 def __getattr__(name: str):
 
-    if name in ['GridExtentConfig', 'GridGenerationConfig', 'prep_world_grid']:
-        return getattr(importlib.import_module('.api', __package__), name)
+    if name in ['GridParameters', 'build_world_grid']:
+        return getattr(importlib.import_module('.factory', __package__), name)
     if name in ['load_grid', 'save_grid']:
         return getattr(importlib.import_module('.io', __package__), name)
 

@@ -82,10 +82,10 @@ class GridSpec:
     the mode is determined.
     '''
     crs: str                                        # a projected CRS
+    origin: tuple[float, float]                     # x, y in CRS units
+    pixel_size: tuple[float, float]                 # xsize, ysize in CRS units
     tile_size: tuple[int, int]                      # rows, cols in pixels
     tile_overlap: tuple[int, int]                   # rows, cols in pixels
-    pixel_size: tuple[float, float]                 # xsize, ysize in CRS units
-    origin: tuple[float, float]                     # x, y in CRS units
     grid_extent: tuple[float, float] | None = None  # H_y, W_x in in CRS units
     grid_shape: tuple[int, int] | None = None       # rows, cols as n of tiles
 
@@ -119,7 +119,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], alias.RasterWindow]):
 
     def __init__(
         self,
-        mode: str,
+        mode: typing.Literal['bbox', 'tiles'],
         spec: GridSpec
     ):
         '''

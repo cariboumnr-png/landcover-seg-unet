@@ -55,40 +55,42 @@ def ingest(config: configs.RootConfig):
     out_root = config.foundation.output_dpath
 
     # world grid
-    _config = foundation.GridExtentConfig(
+    _config = foundation.GridParameters(
         mode=grid_cfg.mode, # type: ignore
         crs=grid_cfg.crs,
         ref_fpath=grid_cfg.extent.filepath,
         origin=grid_cfg.extent.origin,
         pixel_size=grid_cfg.extent.pixel_size,
         grid_extent=grid_cfg.extent.grid_extent,
-        grid_shape=grid_cfg.extent.grid_shape
+        grid_shape=grid_cfg.extent.grid_shape,
+        tile_specs=(
+            grid_cfg.tile_specs.size_row,
+            grid_cfg.tile_specs.size_col,
+            grid_cfg.tile_specs.overlap_row,
+            grid_cfg.tile_specs.overlap_row
+        ),
     )
-    grid_gen_config = foundation.GridGenerationConfig(
-        output_dir=f'{out_root}/world_grids',
-        tile_size=(grid_cfg.tile_size.row, grid_cfg.tile_size.col),
-        tile_overlap=(grid_cfg.tile_overlap.row, grid_cfg.tile_overlap.col)
-    )
-    grid = foundation.prep_world_grid(_config, grid_gen_config, logger)
+    grids_dir=f'{out_root}/world_grids'
+    grid = foundation.build_world_grid(_config, grids_dir, logger)
 
     # domains
-    _config = foundation.DomainMappingConfig(
+    _config = foundation.DomainBuildingParameters(
         file_list=[(d.path, d.index_base) for d in domain_cfg.files],
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
-        output_dir=f'{out_root}/domain_knowledge',
     )
-    foundation.prepare_domain(grid, _config, logger)
+    domains_dir=f'{out_root}/domain_knowledge'
+    foundation.build_domains(grid, _config, domains_dir, logger)
 
     # datablocks building
-    _config = foundation.BlockBuildingConfig(
+    _config = foundation.BlockBuildingParameters(
         dev_image_fpath=datablocks_cfg.filepaths.dev_image,
         dev_label_fpath=datablocks_cfg.filepaths.dev_label,
-        eval_image_fpath=datablocks_cfg.filepaths.test_image,
-        eval_label_fpath=datablocks_cfg.filepaths.test_label,
+        test_image_fpath=datablocks_cfg.filepaths.test_image,
+        test_label_fpath=datablocks_cfg.filepaths.test_label,
         data_config_fpath=datablocks_cfg.filepaths.config,
         dem_pad=datablocks_cfg.general.image_dem_pad,
         ignore_index=datablocks_cfg.general.ignore_index,
     )
     blocks_dir = f'{out_root}/data_blocks'
-    foundation.build_blocks(grid, _config, blocks_dir, logger)
+    foundation.run_blocks_building(grid, _config, blocks_dir, logger)
