@@ -24,14 +24,14 @@
 # third-party imports
 import torch
 # local imports
-import landseg.core.trainer_protocols as trainer_protocols
+import landseg.trainer.common as common
 
 # -------------------------------Public Function-------------------------------
 def multihead_loss(
     multihead_preds: dict[str, torch.Tensor],
     multihead_targets: dict[str, torch.Tensor],
-    headspecs: dict[str, trainer_protocols.SpecsLike],
-    headlosses: dict[str, trainer_protocols.CompositeLossLike],
+    headspecs: dict[str, common.SpecsLike],
+    headlosses: dict[str, common.CompositeLossLike],
 ) -> tuple[torch.Tensor, dict[str, float]]:
     '''
     Compose the total loss from per-head losses.
@@ -83,8 +83,8 @@ def multihead_loss(
 # ------------------------------private  function------------------------------
 def _prep_loss_compute(
     head_target: torch.Tensor,
-    head_spec: trainer_protocols.SpecsLike,
-    head_loss: trainer_protocols.CompositeLossLike,
+    head_spec: common.SpecsLike,
+    head_loss: common.CompositeLossLike,
     parent_tensor: torch.Tensor | None,
 ) -> tuple[torch.Tensor, dict[float, torch.Tensor] | None]:
     '''

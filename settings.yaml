@@ -157,11 +157,11 @@ runner:
 
       heads:
         # Layers to update / Couches à mettre à jour
-        active_heads: [layer1]
+        active_heads: ['base']
         # Layers to lock / Couches à verrouiller
-        frozen_heads: null
+        frozen_heads: []
         # Classes to ignore in loss / Classes à ignorer dans la perte
-        masked_classes: null
+        masked_classes: {}
 
       logit_adjust:
         # Toggle class imbalance correction / Activer la correction du déséquilibre des classes

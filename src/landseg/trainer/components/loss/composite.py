@@ -43,7 +43,7 @@ import typing
 import torch
 import torch.nn
 # local imports
-import landseg.trainer_components.loss as loss
+import landseg.trainer.components.loss as loss
 
 # ---------------------------------Public Type---------------------------------
 class LossTypes(typing.Protocol):

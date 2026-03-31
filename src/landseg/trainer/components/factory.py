@@ -26,7 +26,7 @@ import dataclasses
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.trainer_components as components
+import landseg.trainer.components as components
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

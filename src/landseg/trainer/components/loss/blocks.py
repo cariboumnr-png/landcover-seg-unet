@@ -37,7 +37,7 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.trainer_components.loss as loss
+import landseg.trainer.components.loss as loss
 
 # --------------------------------Public  Class--------------------------------
 class FocalLoss(loss.PrimitiveLoss):

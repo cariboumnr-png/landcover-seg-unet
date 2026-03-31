@@ -31,15 +31,15 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.core as core
-import landseg.core.trainer_protocols as trainer_protocols
+import landseg.trainer.common as common
 
 # -------------------------------trainer class-------------------------------
 @typing.runtime_checkable
 class TrainerEngineLike(typing.Protocol):
     model: core.MultiheadModelLike
-    comps: trainer_protocols.TrainerComponentsLike
-    config: trainer_protocols.RuntimeConfigLike
-    state: trainer_protocols.RuntimeStateLike
+    comps: common.TrainerComponentsLike
+    config: common.RuntimeConfigLike
+    state: common.RuntimeStateLike
     flags: dict[str, bool]
     device: str
     # batch extraction
