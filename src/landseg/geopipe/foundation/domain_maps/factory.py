@@ -70,7 +70,7 @@ class DomainMappingConfig:
     output_dir: str
 
 # -------------------------------Public Function-------------------------------
-def prepare_domain(
+def build_domains(
     world_grid: core.GridLayout,
     config: DomainMappingConfig,
     logger: utils.Logger

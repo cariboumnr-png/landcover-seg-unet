@@ -52,7 +52,7 @@ class BlockBuildingConfig:
     ignore_index: int
 
 # -------------------------------Public Function-------------------------------
-def build_blocks(
+def run_blocks_building(
     world_grid: core.GridLayout,
     config: BlockBuildingConfig,
     output_root: str,

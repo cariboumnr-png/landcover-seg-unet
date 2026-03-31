@@ -36,7 +36,7 @@ __all__ = [
     'filter_safe_tiles',
     'hydrate_train_split',
     'parse_catalog',
-    'partition_blocks',
+    'run_datablocks_partition',
     'score_blocks',
     'stratified_splitter'
     # typing
@@ -45,7 +45,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .adapter import parse_catalog
-    from .api import PartitionConfig, partition_blocks
+    from .pipeline import PartitionConfig, run_datablocks_partition
     from .filter import filter_safe_tiles
     from .hydrate import hydrate_train_split
     from .score import score_blocks
@@ -55,12 +55,12 @@ def __getattr__(name: str):
 
     if name in ['parse_catalog']:
         return getattr(importlib.import_module('.adapter', __package__), name)
-    if name in ['PartitionConfig', 'partition_blocks']:
-        return getattr(importlib.import_module('.api', __package__), name)
     if name in ['filter_safe_tiles']:
         return getattr(importlib.import_module('.filter', __package__), name)
     if name in ['hydrate_train_split']:
         return getattr(importlib.import_module('.hydrate', __package__), name)
+    if name in ['PartitionConfig', 'run_datablocks_partition']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
     if name in ['score_blocks']:
         return getattr(importlib.import_module('.score', __package__), name)
     if name in ['stratified_splitter']:

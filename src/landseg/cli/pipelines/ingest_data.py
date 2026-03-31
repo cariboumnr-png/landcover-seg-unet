@@ -69,7 +69,7 @@ def ingest(config: configs.RootConfig):
         tile_size=(grid_cfg.tile_size.row, grid_cfg.tile_size.col),
         tile_overlap=(grid_cfg.tile_overlap.row, grid_cfg.tile_overlap.col)
     )
-    grid = foundation.prep_world_grid(_config, grid_gen_config, logger)
+    grid = foundation.build_world_grid(_config, grid_gen_config, logger)
 
     # domains
     _config = foundation.DomainMappingConfig(
@@ -78,7 +78,7 @@ def ingest(config: configs.RootConfig):
         target_variance=domain_cfg.target_variance,
         output_dir=f'{out_root}/domain_knowledge',
     )
-    foundation.prepare_domain(grid, _config, logger)
+    foundation.build_domains(grid, _config, logger)
 
     # datablocks building
     _config = foundation.BlockBuildingConfig(
@@ -91,4 +91,4 @@ def ingest(config: configs.RootConfig):
         ignore_index=datablocks_cfg.general.ignore_index,
     )
     blocks_dir = f'{out_root}/data_blocks'
-    foundation.build_blocks(grid, _config, blocks_dir, logger)
+    foundation.run_blocks_building(grid, _config, blocks_dir, logger)

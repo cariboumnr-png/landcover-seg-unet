@@ -56,7 +56,7 @@ class PartitionConfig:
         assert self.block_spec[1] == self.block_spec[3], 'Not a equal stride'
 
 # -------------------------------Public Function-------------------------------
-def partition_blocks(
+def run_datablocks_partition(
     foundation_root: str,
     transform_root: str,
     partition_config: PartitionConfig,

@@ -36,8 +36,8 @@ __all__ = [
     'CatalogUpdateContext',
     'MappingConfig',
     # functions
-    'build_blocks',
     'map_rasters',
+    'run_blocks_building',
     'validate_geometry',
     'update_catalog',
     'update_meta',
@@ -48,7 +48,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .api import BlockBuildingConfig, build_blocks
+    from .pipeline import BlockBuildingConfig, run_blocks_building
     from .builder import BlockBuilder, BuilderConfig
     from .catalogue import CatalogUpdateContext, update_catalog, update_meta
     from .geometry import GeometrySummary, validate_geometry
@@ -56,8 +56,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['BlockBuildingConfig', 'build_blocks']:
-        return getattr(importlib.import_module('.api', __package__), name)
     if name in ['BlockBuilder', 'BuilderConfig']:
         return getattr(importlib.import_module('.builder', __package__), name)
     if name in ['CatalogUpdateContext', 'update_catalog', 'update_meta']:
@@ -66,5 +64,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.geometry', __package__), name)
     if name in ['MappingConfig', 'map_rasters']:
         return getattr(importlib.import_module('.mapper', __package__), name)
+    if name in ['BlockBuildingConfig', 'run_blocks_building']:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(name)

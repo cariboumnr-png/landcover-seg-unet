@@ -32,7 +32,7 @@ import landseg.geopipe.core as core
 import landseg.geopipe.transform.normal_blocks as normal_blocks
 import landseg.utils as utils
 
-def build_normalized_blocks(root_dir: str):
+def run_normaliza_blocks(root_dir: str):
     '''
     Build normalized data blocks from raw block splits.
 

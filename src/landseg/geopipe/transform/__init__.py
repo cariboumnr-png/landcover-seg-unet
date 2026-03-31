@@ -34,22 +34,22 @@ __all__ = [
     # classes
     'PartitionConfig',
     # functions
-    'build_normalized_blocks',
+    'run_normaliza_blocks',
     'build_schema',
-    'partition_blocks',
+    'run_datablocks_partition',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_partition import PartitionConfig, partition_blocks
-    from .normal_blocks import build_normalized_blocks
+    from .data_partition import PartitionConfig, run_datablocks_partition
+    from .normal_blocks import run_normaliza_blocks
     from .schema_build import build_schema
 
 
 def __getattr__(name: str):
 
-    if name in {'PartitionConfig', 'partition_blocks'}:
+    if name in {'PartitionConfig', 'run_datablocks_partition'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
 
     if name in {'build_normalized_blocks'}:

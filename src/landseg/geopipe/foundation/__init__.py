@@ -37,17 +37,17 @@ __all__ = [
     'GridExtentConfig',
     'GridGenerationConfig',
     # functions
-    'build_blocks',
-    'prepare_domain',
-    'prep_world_grid',
+    'build_domains',
+    'build_world_grid',
+    'run_blocks_building',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_blocks import BlockBuildingConfig, build_blocks
-    from .domain_maps import DomainMappingConfig, prepare_domain
-    from .world_grids import GridExtentConfig, GridGenerationConfig, prep_world_grid
+    from .data_blocks import BlockBuildingConfig, run_blocks_building
+    from .domain_maps import DomainMappingConfig, build_domains
+    from .world_grids import GridExtentConfig, GridGenerationConfig, build_world_grid
 
 def __getattr__(name: str):
 

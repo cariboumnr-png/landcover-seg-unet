@@ -64,7 +64,7 @@ class GridGenerationConfig:
     tile_overlap: tuple[int, int]
 
 # -------------------------------Public Function-------------------------------
-def prep_world_grid(
+def build_world_grid(
     extent_config: GridExtentConfig,
     grid_config: GridGenerationConfig,
     logger: utils.Logger

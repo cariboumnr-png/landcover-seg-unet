@@ -111,7 +111,7 @@ def _build_a_block(
         tile_size=(grid_cfg.tile_size.row, grid_cfg.tile_size.col),
         tile_overlap=(grid_cfg.tile_overlap.row, grid_cfg.tile_overlap.col)
     )
-    grid = foundation.prep_world_grid(_config, grid_gen_config, logger)
+    grid = foundation.build_world_grid(_config, grid_gen_config, logger)
 
     # build a single block
     _config = foundation.BlockBuildingConfig(
@@ -124,7 +124,7 @@ def _build_a_block(
         ignore_index=datablocks_cfg.general.ignore_index,
     )
     blocks_dir = f'{out_root}/data_blocks'
-    block_fpath = foundation.build_blocks(
+    block_fpath = foundation.run_blocks_building(
         grid,
         _config,
         blocks_dir,

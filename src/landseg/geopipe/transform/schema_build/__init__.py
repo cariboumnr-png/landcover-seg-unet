@@ -39,11 +39,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .api import build_schema
+    from .factory import build_schema
 
 def __getattr__(name: str):
 
     if name in ['build_schema']:
-        return getattr(importlib.import_module('.api', __package__), name)
+        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(name)
