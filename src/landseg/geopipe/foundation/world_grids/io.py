@@ -34,12 +34,12 @@ compatibility and integrity on load.
 # standard imports
 import os
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def save_grid(
-    grid_obj: core.GridLayout,
+    grid_obj: geo_core.GridLayout,
     dirpath: str
 ) -> None:
     '''
@@ -79,7 +79,7 @@ def save_grid(
 def load_grid(
     grid_name: str,
     dirpath: str
-) -> core.GridLayout:
+) -> geo_core.GridLayout:
     '''
     Load a `GridLayout` from disk.
 
@@ -102,16 +102,16 @@ def load_grid(
         raise ValueError(f'Grid {grid_name} might be altered/damaged.')
 
     # schema guard
-    expected = core.GridLayout.SCHEMA_ID
+    expected = geo_core.GridLayout.SCHEMA_ID
     found = meta.get('schema_id', None)
     if found != expected:
         raise ValueError(f'Unsupported schema: {found}; expected {expected}.')
 
     # otherwise return class object via class method
-    return core.GridLayout.from_payload(payload)
+    return geo_core.GridLayout.from_payload(payload)
 
 # ------------------------------private  function------------------------------
-def _canonicalize(payload: core.GridLayoutPayload) -> dict:
+def _canonicalize(payload: geo_core.GridLayoutPayload) -> dict:
     '''Get a canonical, deterministic representation of the payload.'''
 
     # logically equivalent inputs produce the same hash

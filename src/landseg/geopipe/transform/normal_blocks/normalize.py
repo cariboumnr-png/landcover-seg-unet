@@ -32,13 +32,13 @@ import os
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.common.alias as alias
 import landseg.utils as utils
 
 def normalize_blocks(
     input_blocks: set[str],
-    stats: dict[str, core.ImageBandStats],
+    stats: dict[str, geo_core.ImageBandStats],
     output_dir: str,
     *,
     rebuild: bool = False
@@ -96,13 +96,13 @@ def normalize_blocks(
 
 def _normalize_one_block(
     block_fpath: str,
-    global_stats: dict[str, core.ImageBandStats],
+    global_stats: dict[str, geo_core.ImageBandStats],
     target_dpath: str
 ):
     '''Normalize a single data block and write it to disk.'''
 
     # read block
-    data = core.DataBlock.load(block_fpath).data
+    data = geo_core.DataBlock.load(block_fpath).data
 
     # prep dict of arrays to write
     to_write = {
@@ -118,7 +118,7 @@ def _normalize_one_block(
 def _normalize_image(
     raw_image_arr: alias.Float32Array,
     valid_mask: alias.MaskArray,
-    global_stats: dict[str, core.ImageBandStats],
+    global_stats: dict[str, geo_core.ImageBandStats],
 ) -> alias.Float32Array:
     '''Apply per-band normalization using global stats.'''
 

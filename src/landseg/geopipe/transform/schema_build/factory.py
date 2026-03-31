@@ -32,7 +32,7 @@ Public APIs:
 # standard imports
 import os
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
@@ -72,19 +72,19 @@ def build_schema(root_dir: str) -> None:
     }
 
     # read blocks splits
-    block_splits: core.BlocksPartition
+    block_splits: geo_core.BlocksPartition
     block_splits = utils.load_json(artifacts['block_splits'])
 
     # read image stats
-    image_stats: dict[str, core.ImageBandStats]
+    image_stats: dict[str, geo_core.ImageBandStats]
     image_stats = utils.load_json(artifacts['image_stats'])
 
     # read label stats
-    label_stats: core.LabelStats
+    label_stats: dict[str, list[int]]
     label_stats = utils.load_json(artifacts['label_stats'])
 
     # populate schema dict
-    schema: core.TransformSchema = {
+    schema: geo_core.TransformSchema = {
         'schema_version': '1.0',
         'creation_time': utils.get_timestamp(T_FORMAT),
         'artifacts': artifacts,

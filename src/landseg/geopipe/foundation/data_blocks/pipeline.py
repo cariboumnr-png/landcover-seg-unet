@@ -35,7 +35,7 @@ Public API:
 # standard imports
 import dataclasses
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
@@ -53,7 +53,7 @@ class BlockBuildingParameters:
 
 # -------------------------------Public Function-------------------------------
 def run_blocks_building(
-    world_grid: core.GridLayout,
+    world_grid: geo_core.GridLayout,
     config: BlockBuildingParameters,
     output_root: str,
     logger: utils.Logger,

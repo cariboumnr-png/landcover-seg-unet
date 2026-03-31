@@ -26,14 +26,14 @@ from __future__ import annotations
 import copy
 import os
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def prepare_domain_maps(
-    world_grid: core.GridLayout,
+    world_grid: geo_core.GridLayout,
     domain_configs: list[domain_maps.DomainBuildingParameters],
     logger: utils.Logger,
     *,

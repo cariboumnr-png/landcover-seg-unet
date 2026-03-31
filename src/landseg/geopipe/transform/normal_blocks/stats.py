@@ -32,12 +32,12 @@ Public APIs:
 # standard imports
 import math
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 
 # -------------------------------Public Function-------------------------------
 def aggregate_image_stats(
     input_blocks: set[str]
-) -> dict[str, core.ImageBandStats]:
+) -> dict[str, geo_core.ImageBandStats]:
     '''
     Aggregate per-band image statistics across the input blocks.
 
@@ -53,11 +53,11 @@ def aggregate_image_stats(
     '''
 
     # get image channel count from the first block
-    sample = core.DataBlock.load(next(iter(input_blocks))).data
+    sample = geo_core.DataBlock.load(next(iter(input_blocks))).data
     num_bands = sample.image.shape[0]
 
     # define a return dict
-    stats_dict: dict[str, core.ImageBandStats] = {
+    stats_dict: dict[str, geo_core.ImageBandStats] = {
         f'band_{_}': {
             'total_count': 0,
             'current_mean': 0.0,
@@ -69,7 +69,7 @@ def aggregate_image_stats(
     # iterate through provided block files
     for fpath in input_blocks:
         # prep
-        stats = core.DataBlock.load(fpath).meta['image_stats']
+        stats = geo_core.DataBlock.load(fpath).meta['image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
             stats_dict[key] = _welfords_online(value_dict, stats_dict[key])
@@ -83,8 +83,8 @@ def aggregate_image_stats(
 
 def _welfords_online(
     input_stats: dict[str, int | float],
-    current_results: core.ImageBandStats
-) -> core.ImageBandStats:
+    current_results: geo_core.ImageBandStats
+) -> geo_core.ImageBandStats:
     '''Combine per-block stats using Welford's online algorithm.'''
 
     # block stats from stats dict

@@ -20,52 +20,38 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.foundation.domain_maps`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Context manager utility for rasterio.open(...).
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
+import contextlib
+import os
 import typing
+# third-party imports
+import rasterio
+import rasterio.io
 
-__all__ = [
-    # classes
-    'DomainBuildingParameters',
-    # functions
-    'build_domain',
-    'load_domain',
-    'map_domain_to_grid',
-    'pca_transform',
-    'prepare_domain_maps',
-    'save_domain',
-    # typing
-]
+@contextlib.contextmanager
+def open_rasters(
+        *rasters: str | None
+    ) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
+    '''
+    Open multiple rasters safely and yield a tuple of `DatasetReader`.
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .factory import DomainBuildingParameters, build_domain
-    from .io import load_domain, save_domain
-    from .lifecycle import prepare_domain_maps
-    from .mapper import map_domain_to_grid
-    from ...utils.pca import pca_transform
+    Accepts any number of filepaths (or None). Existing paths are opened
+    via rasterio, None values are preserved, and all files are closed
+    automatically on exit.
+    '''
 
-def __getattr__(name: str):
+    with contextlib.ExitStack() as stack:
+        opened_rasters: list[rasterio.io.DatasetReader | None] = []
 
-    if name in {'DomainBuildingParameters', 'build_domain'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+        for raster in rasters:
+            if isinstance(raster, str):
+                assert os.path.exists(raster), f'Raster not found: {raster}'
+                opened_raster = stack.enter_context(rasterio.open(raster))
+                opened_rasters.append(opened_raster)
+            else:
+                opened_rasters.append(None)
 
-    if name in {'load_domain', 'save_domain'}:
-        return getattr(importlib.import_module('.io', __package__), name)
-
-    if name in {'map_domain_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'pca_transform'}:
-        return getattr(importlib.import_module('.transform', __package__), name)
-
-    if name in {'prepare_domain_maps'}:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+        yield tuple(opened_rasters)

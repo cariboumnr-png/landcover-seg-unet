@@ -20,54 +20,41 @@
 # =========================================================================== #
 
 '''
-Utility helper functions.
+Top-level namespace for `landseg.geopipe.utils`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# standard imports
-import contextlib
-import os
+from __future__ import annotations
+import importlib
 import typing
-# third-party imports
-import rasterio
-import rasterio.io
 
-# coords <-> name helpers
-def xy_name(coords: tuple[int, int]) -> str:
-    '''Convert (x, y) to a canonical block name string.'''
+__all__ = [
+    # classes
+    # functions
+    'name_xy',
+    'open_rasters',
+    'pca_transform',
+    'xy_name',
+    # typing
+]
 
-    # e.g., (12, 34) -> row_000034_col_000012
-    x, y = coords
-    return f'row_{y:06d}_col_{x:06d}'
+# for static check
+if typing.TYPE_CHECKING:
+    from .funcs import name_xy, xy_name
+    from .pca import pca_transform
+    from .raster_context import open_rasters
 
-def name_xy(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (x, y).'''
+def __getattr__(name: str):
 
-    # e.g.,  row_000034_col_000012 -> (12, 34)
-    split = name.split('_')
-    y_str, x_str = split[1], split[3]
-    return int(x_str), int(y_str)
+    if name in {'name_xy', 'xy_name'}:
+        return getattr(importlib.import_module('.funcs', __package__), name)
 
-@contextlib.contextmanager
-def open_rasters(
-        *rasters: str | None
-    ) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
-    '''
-    Open multiple rasters safely and yield a tuple of `DatasetReader`.
+    if name in {'pca_transform'}:
+        return getattr(importlib.import_module('.pca', __package__), name)
 
-    Accepts any number of filepaths (or None). Existing paths are opened
-    via rasterio, None values are preserved, and all files are closed
-    automatically on exit.
-    '''
+    if name in {'open_rasters'}:
+        return getattr(importlib.import_module('.raster_context', __package__), name)
 
-    with contextlib.ExitStack() as stack:
-        opened_rasters: list[rasterio.io.DatasetReader | None] = []
-
-        for raster in rasters:
-            if isinstance(raster, str):
-                assert os.path.exists(raster), f'Raster not found: {raster}'
-                opened_raster = stack.enter_context(rasterio.open(raster))
-                opened_rasters.append(opened_raster)
-            else:
-                opened_rasters.append(None)
-
-        yield tuple(opened_rasters)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

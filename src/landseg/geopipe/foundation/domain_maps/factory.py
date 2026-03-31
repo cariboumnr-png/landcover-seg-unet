@@ -54,7 +54,7 @@ task-level feature assembly.
 from __future__ import annotations
 import dataclasses
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
@@ -69,10 +69,10 @@ class DomainBuildingParameters:
 
 # -------------------------------Public Function-------------------------------
 def build_domain(
-    world_grid: core.GridLayout,
+    world_grid: geo_core.GridLayout,
     config: DomainBuildingParameters,
     logger: utils.Logger
-) -> core.DomainTileMap:
+) -> geo_core.DomainTileMap:
     '''
     Prepare and persist domain tile maps for categorical raster(s).
 
@@ -105,7 +105,7 @@ def build_domain(
     '''
 
     # init a new domain map class object
-    domain_map = core.DomainTileMap(
+    domain_map = geo_core.DomainTileMap(
         config.valid_threshold,
         config.target_variance,
         logger

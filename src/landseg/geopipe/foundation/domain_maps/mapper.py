@@ -30,10 +30,10 @@ for downstream domain-feature constructio
 # third-party imports
 import dataclasses
 import numpy
-import rasterio
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
+import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
 # ------------------------------private dataclass------------------------------
@@ -47,7 +47,7 @@ class _DomainTilesPackage:
 
 # -------------------------------Public Function-------------------------------
 def map_domain_to_grid(
-    grid: core.GridLayout,
+    grid: geo_core.GridLayout,
     raster_path: str,
     logger: utils.Logger,
     *,
@@ -99,13 +99,14 @@ def map_domain_to_grid(
 
 # ------------------------------private  function------------------------------
 def _read_raster(
-    grid: core.GridLayout,
-    raster_path: str,
+    grid: geo_core.GridLayout,
+    raster_fpath: str,
 ) -> tuple[alias.RasterTileDict, int]:
     '''Read a raster over all grid windows.'''
 
     # open domain raster
-    with rasterio.open(raster_path) as src:
+    with geo_utils.open_rasters(raster_fpath) as (src,):
+        assert src
         # offset the world grid to align with input raster
         grid.offset_from(src)
         # infer dtype and nodata
@@ -117,7 +118,7 @@ def _read_raster(
         assert abs(nodata - round(nodata)) < 1e-9 # sanity check: nodata is int
 
     # read through all windows via multiprocessing
-    jobs = [(_read_window, (k, v, raster_path), {}) for k, v in grid.items()]
+    jobs = [(_read_window, (k, v, raster_fpath), {}) for k, v in grid.items()]
     all_tiles: list[alias.RasterTile] = utils.ParallelExecutor().run(jobs)
     return dict(all_tiles), nodata
 
@@ -129,7 +130,8 @@ def _read_window(
     '''Read a single raster window and return its first band.'''
 
     # read raster at window and return
-    with rasterio.open(raster_fpath, 'r') as src:
+    with geo_utils.open_rasters(raster_fpath) as (src,):
+        assert src
         arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
         arr = arr.astype(numpy.int16, copy=False) # avoids OOM
         return raster_window_id, arr

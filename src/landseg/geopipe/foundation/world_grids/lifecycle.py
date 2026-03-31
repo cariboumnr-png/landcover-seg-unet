@@ -22,7 +22,7 @@
 '''World grid artifacts lifecycle management.'''
 
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation.world_grids as world_grids
 import landseg.utils as utils
@@ -34,7 +34,7 @@ def prepare_world_grid(
     *,
     artifacts_dir: str,
     policy: artifacts.LifecyclePolicy,
-) -> core.GridLayout:
+) -> geo_core.GridLayout:
     '''
     Build or load a persisted world grid.
 

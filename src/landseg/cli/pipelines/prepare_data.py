@@ -66,10 +66,10 @@ def prepare(config: configs.RootConfig):
         scoring_beta=scoring.beta,
         max_skew_rate=hydration.max_skew_rate,
         block_spec=(
-            grid.tile_size.row,
-            grid.tile_overlap.row,
-            grid.tile_size.col,
-            grid.tile_overlap.col
+            grid.tile_specs.size_row,
+            grid.tile_specs.size_col,
+            grid.tile_specs.overlap_row,
+            grid.tile_specs.overlap_col
         )
     )
     transform.run_datablocks_partition(foundation_root, transform_root, cfg, logger)

@@ -51,8 +51,9 @@ import zlib
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
+import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -132,9 +133,9 @@ class BlockBuilder:
 
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config.config_fpath)
-        keys = meta_src.keys() & core.BlockMeta.__annotations__
+        keys = meta_src.keys() & geo_core.BlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
-        self.meta = typing.cast(core.BlockMeta, meta) # typing compliance
+        self.meta = typing.cast(geo_core.BlockMeta, meta) # typing compliance
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
@@ -195,7 +196,7 @@ class BlockBuilder:
 
         # iterate through till a valid block if found
         c: tuple[int, int] = (0, 0)
-        blk: core.DataBlock | None = None
+        blk: geo_core.DataBlock | None = None
         for c in coords:
             print('Searching for a valid block...', end='\r', flush=True)
             try:
@@ -225,7 +226,7 @@ class BlockBuilder:
         self.logger.log('DEBUG', f'Focused head: {monitor_head}')
         self.logger.log('DEBUG', f'Requires all classes: {need_all_classes}')
         os.makedirs(save_dpath, exist_ok=True) # safety
-        fpath = f'{save_dpath}/{core.xy_name(c)}.npz'
+        fpath = f'{save_dpath}/{geo_utils.xy_name(c)}.npz'
         blk.save(fpath)
         # return the block fpath
         return fpath
@@ -294,7 +295,7 @@ class BlockBuilder:
         blks_to_check: dict[tuple[int, int], str] = {}
         self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
-            name = core.xy_name(c)
+            name = geo_utils.xy_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
 
         # create checking jobs
@@ -344,7 +345,7 @@ class BlockBuilder:
             co_contxt = self._get_context(c)
             save_args = {
                 'save': True,
-                'save_fpath': f'{self.blks_dir}/{core.xy_name(c)}.npz'
+                'save_fpath': f'{self.blks_dir}/{geo_utils.xy_name(c)}.npz'
             }
             jobs.append((_build_a_blk, (meta, co_contxt,), save_args))
 
@@ -355,7 +356,7 @@ class BlockBuilder:
         '''Return a the immutable block-creation context.'''
 
         return _BlockCreationContext(
-            name=core.xy_name(coords),
+            name=geo_utils.xy_name(coords),
             ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,
@@ -375,7 +376,7 @@ def _check_npz(
     ok = False
     # pass if the npz file can be loaded properly
     try:
-        core.DataBlock.load(fpath)
+        geo_core.DataBlock.load(fpath)
         ok = True
     # flag absent/corrupted/damaged npz file
     except (FileNotFoundError, zipfile.error, zlib.error):
@@ -383,12 +384,12 @@ def _check_npz(
     return {coord: ok}
 
 def _build_a_blk(
-    meta: core.BlockMeta,
+    meta: geo_core.BlockMeta,
     contxt: _BlockCreationContext,
     *,
     save: bool = False,
     save_fpath: str | None = None
-) -> core.DataBlock:
+) -> geo_core.DataBlock:
     '''Create a block from the input rasters for the given window.'''
 
     # meta i/o
@@ -396,7 +397,7 @@ def _build_a_blk(
     dem_band = meta['image_band_map']['dem']
 
     # read rasters at given window and create blocks
-    with core.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
+    with geo_utils.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
         # sanity check, image raster must be provided
         assert img is not None
         # read image array
@@ -413,7 +414,7 @@ def _build_a_blk(
             meta['label_nodata'] = lbl.nodata
 
     # create and return DataBlock instance
-    output_block = core.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
+    output_block = geo_core.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
     # by default save to provided target path
     if save:
         assert save_fpath

@@ -20,52 +20,21 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.foundation.domain_maps`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Utility helper functions.
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# coords <-> name helpers
+def xy_name(coords: tuple[int, int]) -> str:
+    '''Convert (x, y) to a canonical block name string.'''
 
-__all__ = [
-    # classes
-    'DomainBuildingParameters',
-    # functions
-    'build_domain',
-    'load_domain',
-    'map_domain_to_grid',
-    'pca_transform',
-    'prepare_domain_maps',
-    'save_domain',
-    # typing
-]
+    # e.g., (12, 34) -> row_000034_col_000012
+    x, y = coords
+    return f'row_{y:06d}_col_{x:06d}'
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .factory import DomainBuildingParameters, build_domain
-    from .io import load_domain, save_domain
-    from .lifecycle import prepare_domain_maps
-    from .mapper import map_domain_to_grid
-    from ...utils.pca import pca_transform
+def name_xy(name: str) -> tuple[int, int]:
+    '''Convert a canonical block name back to (x, y).'''
 
-def __getattr__(name: str):
-
-    if name in {'DomainBuildingParameters', 'build_domain'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'load_domain', 'save_domain'}:
-        return getattr(importlib.import_module('.io', __package__), name)
-
-    if name in {'map_domain_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'pca_transform'}:
-        return getattr(importlib.import_module('.transform', __package__), name)
-
-    if name in {'prepare_domain_maps'}:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    # e.g.,  row_000034_col_000012 -> (12, 34)
+    split = name.split('_')
+    y_str, x_str = split[1], split[3]
+    return int(x_str), int(y_str)

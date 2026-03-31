@@ -32,7 +32,8 @@ preparation workflows.
 import dataclasses
 import os
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
@@ -87,7 +88,7 @@ def update_catalog(
 
     # load catalog.json
     catalog_path = f'{root_dir}/catalog.json'
-    catalog = core.BlocksCatalog.from_json(catalog_path) # empty {} if no file
+    catalog = geo_core.BlocksCatalog.from_json(catalog_path) # empty {} if no file
 
     # conditions
     coords = updated_blocks.coords
@@ -97,7 +98,7 @@ def update_catalog(
             logger.log('INFO', 'No new blocks provided, exit')
             return
         logger.log('INFO', f'Update {len(coords)} new blocks')
-        fnames = [f'{core.xy_name(c)}.npz' for c in coords]
+        fnames = [f'{geo_utils.xy_name(c)}.npz' for c in coords]
     else:
         logger.log('INFO', f'catalog.json not found at {root_dir}')
         if not coords:
@@ -109,7 +110,7 @@ def update_catalog(
             logger.log('INFO', f'Found {len(fnames)} existing blocks, create')
         else:
             logger.log('INFO', f'Creat from {len(coords)} new blocks')
-            fnames = [f'{core.xy_name(c)}.npz' for c in coords]
+            fnames = [f'{geo_utils.xy_name(c)}.npz' for c in coords]
 
     # get hash values from input rasters
     img_hash = utils.hash_artifacts(updated_blocks.source_image, False)
@@ -122,8 +123,8 @@ def update_catalog(
     # add to current catalog dict
     for name in fnames:
         fp = f'{blks_dir}/{name}'
-        meta = core.DataBlock.load(fp).meta
-        row, col = core.name_xy(meta['block_name'])
+        meta = geo_core.DataBlock.load(fp).meta
+        row, col = geo_utils.name_xy(meta['block_name'])
         catalog[(col, row)] = {
             'block_name': meta['block_name'],
             'file_path': fp,
@@ -192,13 +193,13 @@ def update_meta(
 
     # read a sample block to required info
     sample_file = next(iter(os.listdir(f'{root_dir}/blocks')))
-    sample_blk = core.DataBlock.load(f'{root_dir}/blocks/{sample_file}')
+    sample_blk = geo_core.DataBlock.load(f'{root_dir}/blocks/{sample_file}')
     # image and label shape
     image_shape = sample_blk.data.image.shape
     label_shape = sample_blk.data.label_stack.shape
 
     # create new
-    meta_dict: core.CatalogMeta = {
+    meta_dict: geo_core.CatalogMeta = {
         'dataset': {
             'name': os.path.basename(root_dir), # dataset name
             'last_updated': utils.get_timestamp(T_FORMAT),

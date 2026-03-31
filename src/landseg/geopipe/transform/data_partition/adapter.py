@@ -30,7 +30,7 @@ and analysis.
 # standard imports
 import dataclasses
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 
 @dataclasses.dataclass
 class ParsedCatalog:
@@ -60,7 +60,7 @@ def parse_catalog(
     '''
 
     # read catalog JSON to instantiate a class object
-    catalog = core.BlocksCatalog.from_json(fpath)
+    catalog = geo_core.BlocksCatalog.from_json(fpath)
 
     # all valid entries from catalog
     work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px']}

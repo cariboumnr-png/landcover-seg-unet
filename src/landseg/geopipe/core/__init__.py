@@ -37,9 +37,6 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
-    'name_xy',
-    'open_rasters',
-    'xy_name',
     # typing
     'BlockMeta',
     'BlocksCatalog',
@@ -58,7 +55,6 @@ if typing.TYPE_CHECKING:
     from .foundation_domain_map import DomainTileMap
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
     from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
-    from .utils import name_xy, xy_name, open_rasters
 
 def __getattr__(name: str):
 
@@ -76,8 +72,5 @@ def __getattr__(name: str):
 
     if name in {'BlocksPartition', 'ImageBandStats', 'TransformSchema'}:
         return getattr(importlib.import_module('.transform_types', __package__), name)
-
-    if name in {'name_xy', 'open_rasters', 'xy_name'}:
-        return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

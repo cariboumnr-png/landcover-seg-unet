@@ -34,7 +34,7 @@ import os
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
 
@@ -48,12 +48,13 @@ class PartitionParameters:
     scoring_alpha: float                # exponent for transforming block counts
     scoring_beta: float                 # reward weight for classes during L1
     max_skew_rate: float
-    block_spec: tuple[int, int, int, int]  # row_size, row_stride, col_size, col_stride
+    block_spec: tuple[int, int, int, int]
+    # row_size, col_size, row_stride, col_stride
 
     def __post_init__(self):
         # current we only accept equal row and col sizes and strides
-        assert self.block_spec[0] == self.block_spec[2], 'Not a square block'
-        assert self.block_spec[1] == self.block_spec[3], 'Not a equal stride'
+        assert self.block_spec[0] == self.block_spec[1], 'Not a square block'
+        assert self.block_spec[2] == self.block_spec[3], 'Not a equal stride'
 
 # -------------------------------Public Function-------------------------------
 def run_datablocks_partition(
@@ -84,7 +85,7 @@ def run_datablocks_partition(
     '''
 
     # block size (row, col)
-    blk_size = (partition_config.block_spec[0], partition_config.block_spec[2])
+    blk_size = (partition_config.block_spec[0], partition_config.block_spec[1])
 
     # locate catalog JSON files
     dev_catalog = f'{foundation_root}/model_dev/catalog.json'
@@ -135,7 +136,7 @@ def _split(
     config: PartitionParameters,
     *,
     ext_test_blks: list[str] | None
-) -> tuple[core.BlocksPartition, list[int], list[int]]:
+) -> tuple[geo_core.BlocksPartition, list[int], list[int]]:
     '''Split blocks with spatial safety and class balance.'''
 
     # split dataset
@@ -151,7 +152,7 @@ def _split(
         list(valid_class_counts.keys()),
         splits.val + splits.test,
         block_size=config.block_spec[0],
-        block_stride=config.block_spec[1],
+        block_stride=config.block_spec[2],
         buffer_steps=config.buffer_step
     )
 
@@ -183,7 +184,7 @@ def _split(
     ps['train'] = [valid_blocks[c] for c in splits.train + selected]
     ps['val'] = [valid_blocks[c] for c in splits.val]
     ps['test'] = (ext_test_blks or []) + [valid_blocks[c] for c in splits.test]
-    blks_src: core.BlocksPartition = {
+    blks_src: geo_core.BlocksPartition = {
         'train': _index_fpath(ps['train']),
         'val': _index_fpath(ps['val']),
         'test': _index_fpath(ps['test'])
@@ -203,7 +204,7 @@ def _index_fpath(fpaths: list[str]) -> dict[str, str]:
         indexed[name] = fpath # name is the same as core.xy_name()
     return indexed
 
-def _leak_check(blks_src: core.BlocksPartition) -> None:
+def _leak_check(blks_src: geo_core.BlocksPartition) -> None:
     '''Check if any blockshared across train, val, or test splits.'''
 
     leak = set(blks_src['train']) & set(blks_src['val'])
@@ -217,7 +218,7 @@ def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
     # iterate current traing blocks to get label class counts
     lbl_stats: dict[str, list[int]] = {}
     for fpath in block_file_list:
-        blk_meta = core.DataBlock.load(fpath).meta
+        blk_meta = geo_core.DataBlock.load(fpath).meta
         for channel, counts in blk_meta['label_count'].items():
             cls_count = numpy.asarray(counts)
             if channel in lbl_stats:
