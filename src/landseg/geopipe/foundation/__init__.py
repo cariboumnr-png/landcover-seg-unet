@@ -37,7 +37,7 @@ __all__ = [
     'GridParameters',
     # functions
     'build_domains',
-    'build_world_grid',
+    'prepare_world_grid',
     'run_blocks_building',
     # types
 ]
@@ -46,7 +46,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .data_blocks import BlockBuildingParameters, run_blocks_building
     from .domain_maps import DomainBuildingParameters, build_domains
-    from .world_grids import GridParameters, build_world_grid
+    from .world_grids import GridParameters, prepare_world_grid
 
 def __getattr__(name: str):
 
@@ -56,7 +56,7 @@ def __getattr__(name: str):
     if name in {'DomainBuildingParameters', 'build_domains'}:
         return getattr(importlib.import_module('.domain_maps', __package__), name)
 
-    if name in {'GridParameters', 'build_world_grid'}:
+    if name in {'GridParameters', 'prepare_world_grid'}:
         return getattr(importlib.import_module('.world_grids', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

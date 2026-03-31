@@ -28,6 +28,7 @@ the immutable raw block catalogue for later experiments.
 
 # local imports
 import landseg.configs as configs
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation as foundation
 import landseg.utils as utils
 
@@ -55,7 +56,7 @@ def ingest(config: configs.RootConfig):
     out_root = config.foundation.output_dpath
 
     # world grid
-    _config = foundation.GridParameters(
+    grid_config = foundation.GridParameters(
         mode=grid_cfg.mode, # type: ignore
         crs=grid_cfg.crs,
         ref_fpath=grid_cfg.extent.filepath,
@@ -70,8 +71,12 @@ def ingest(config: configs.RootConfig):
             grid_cfg.tile_specs.overlap_row
         ),
     )
-    grids_dir=f'{out_root}/world_grids'
-    grid = foundation.build_world_grid(_config, grids_dir, logger)
+    grid = foundation.prepare_world_grid(
+        grid_config,
+        logger,
+        artifacts_dir=f'{out_root}/world_grids',
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
 
     # domains
     _config = foundation.DomainBuildingParameters(
