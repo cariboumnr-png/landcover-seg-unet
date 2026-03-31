@@ -28,7 +28,6 @@ import torch
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.core.ingest_protocols as ingest_protocols
 import landseg.trainer_components as trainer_components
 import landseg.trainer_engine as trainer_engine
 import landseg.trainer_runner as trainer_runner
@@ -36,7 +35,7 @@ import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def build_trainer(
-    dataspecs: ingest_protocols.DataSpecs,
+    dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: configs.TrainerCfg,
     logger: utils.Logger,
@@ -80,7 +79,7 @@ def build_trainer(
 
 def build_runner(
     experiment_dir: str,
-    dataspecs: ingest_protocols.DataSpecs,
+    dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: configs.RootConfig,
     logger: utils.Logger,

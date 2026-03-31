@@ -43,8 +43,8 @@ import psutil
 import torch
 import torch.utils.data
 # local imports
+import landseg.core as core
 import landseg.core.alias as alias
-import landseg.core.ingest_protocols as ingest_protocols
 import landseg.trainer_components.dataloading as dataloading
 import landseg.utils as utils
 
@@ -67,7 +67,7 @@ class _Meta:
 
 # -------------------------------Public Function-------------------------------
 def build_dataloaders(
-    data_specs: ingest_protocols.DataSpecs,
+    data_specs: core.DataSpecs,
     batch_size: int,
     patch_size: int,
     logger: utils.Logger,
@@ -104,7 +104,7 @@ def build_dataloaders(
     patch_per_blk = int(data_specs.meta.img_h_w / patch_size) ** 2
 
     # meta to be shipped
-    meta = _Meta(batch_size, patch_per_blk, data_specs.meta.test_blks_grid)
+    meta = _Meta(batch_size, patch_per_blk, (1, 1))
 
     # partial load function
     load_partial = functools.partial(
@@ -135,7 +135,7 @@ def _load(
     mode: str,
     batch_size: int,
     patch_size: int,
-    data_specs: ingest_protocols.DataSpecs,
+    data_specs: core.DataSpecs,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -144,11 +144,11 @@ def _load(
     assert mode in ['train', 'val', 'test', 'single']
 
     # fetch data blocks by mode
-    data_blocks_registry = {
+    data_blocks_registry: dict[str, dict[str, str]] = {
         'train': data_specs.splits.train,
         'val': data_specs.splits.val,
         'test': data_specs.splits.test,
-        'single': data_specs.splits.train   # the single block will be here
+        'single': data_specs.splits.train
     }
     data_blocks = data_blocks_registry[mode]
     # early exit if no data blocks are available, e.g., no test dataset
@@ -181,7 +181,7 @@ def _load(
 def _config_by_mode(
     mode: str,
     patch_size: int,
-    data_specs: ingest_protocols.DataSpecs
+    data_specs: core.DataSpecs
 ):
     '''Configure dataloading by mode.'''
 
@@ -208,12 +208,12 @@ def _config_by_mode(
         vec_domain=domain['vec_domain'] if domain else None
     )
 
-def _flags(data_specs: ingest_protocols.DataSpecs) -> dict[str, int | bool]:
+def _flags(data_specs: core.DataSpecs) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
     # get dataset filepaths from DataSummary
     data = data_specs.splits
-    fbytes = data_specs.meta.fit_perblk_bytes     # fit block byte size
+    fbytes = data_specs.meta.blk_bytes    # fit block byte size
 
     # early exit for single block test (fbytes = 0)
     if not fbytes:

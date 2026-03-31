@@ -1,0 +1,22 @@
+name: demo_data
+
+default_input_dpath: ${exp_root}/input/${foundation.datablocks.name}
+
+filenames:
+  dev_image: image.tif
+  dev_label: label.tif
+  test_image: image.tif
+  test_label: label.tif
+  config: config.json
+
+filepaths:
+  dev_image: ''
+  dev_label: ''
+  test_image: ''
+  test_label: ''
+  config: ''
+
+# general settings
+general:
+  ignore_index: 255
+  image_dem_pad: 8

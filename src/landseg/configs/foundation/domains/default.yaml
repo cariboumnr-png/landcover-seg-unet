@@ -1,0 +1,10 @@
+# input dirpath
+default_input_dpath: ${exp_root}/input/domain_knowledge
+# files - add more in the same format
+files:
+  - name: ''
+    path: ''
+    index_base: 1
+# runtime config
+target_variance: 0.9
+valid_threshold: 0.7

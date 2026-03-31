@@ -1,0 +1,25 @@
+models:
+  conditioning:
+    mode: null
+
+trainer:
+  optim:
+    weight_decay: 0.0
+    sched_cls: null
+    sched_args: {}
+  loss:
+    types:
+      focal:
+        weight: 1.0
+        gamma: 0.0
+      dice:
+        weight: 0.0
+  runtime:
+    schedule:
+      max_epoch: 2000
+    monitor:
+      track_head_name: base
+    precision:
+      use_amp: False
+    optimization:
+      grad_clip_norm: null

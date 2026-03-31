@@ -1,0 +1,186 @@
+# =========================================================================== #
+#           Copyright (c) His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Canonical data-block construction pipeline.
+
+Maps input rasters onto a pre-built world grid, materializes immutable
+raw data blocks, and maintains the associated catalog and dataset
+metadata. This pipeline does **not** perform dataset splitting or
+normalization; it produces experiment-agnostic artifacts intended for
+reuse across downstream workflows.
+
+Public API:
+    - build_blocks: Build raw data blocks and update catalog/metadata.
+'''
+
+# standard imports
+import dataclasses
+# local imports
+import landseg.geopipe.core as core
+import landseg.geopipe.foundation.data_blocks as data_blocks
+import landseg.utils as utils
+
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class BlockBuildingConfig:
+    '''Config container for the canonical block-building pipeline.'''
+    dev_image_fpath: str
+    dev_label_fpath: str
+    eval_image_fpath: str | None
+    eval_label_fpath: str | None
+    data_config_fpath: str
+    dem_pad: int
+    ignore_index: int
+
+# -------------------------------Public Function-------------------------------
+def build_blocks(
+    world_grid: core.GridLayout,
+    config: BlockBuildingConfig,
+    output_root: str,
+    logger: utils.Logger,
+    *,
+    single_block_mode: bool = False,
+    **kwargs
+) -> str | None:
+    '''
+    Build canonical data blocks from rasters aligned to a world grid.
+
+    This function is the public entrypoint for constructing immutable
+    `.npz` block artifacts and their associated `catalog.json` and
+    `metadata.json`. Blocks are built directly from raster windows
+    without normalization or dataset splitting.
+
+    Workflow:
+    1) Map development rasters to the world grid.
+    2) Build raw data blocks and update the catalog.
+    3) Optionally repeat steps (1-2) for evaluation holdout rasters.
+    4) Optionally build a single block for debugging or overfit runs.
+
+    Args:
+        world_grid: World grid definition used to locate raster windows.
+        config: Configuration for block building inputs and parameters.
+        output_root: Root directory where block artifacts are written.
+        logger: Logger instance used for progress and status reporting.
+        single_block_mode: If True, build and persist only one valid
+            block (e.g., for overfit or debugging workflows).
+        **kwargs: Optional overrides for single-block mode behavior
+            (e.g., validity threshold, monitor head, output path).
+
+    Returns:
+        Path to the saved block when `single_block_mode` is enabled;
+        otherwise `None`.
+    '''
+
+    # map model dev rasters to grid
+    logger.log('INFO', 'Mapping rasters for model developement to grid')
+    dev_ras_cfg = data_blocks.MappingConfig(
+        input_img_fpath=config.dev_image_fpath,
+        input_lbl_fpath=config.dev_label_fpath,
+        output_root=f'{output_root}/model_dev/windows',
+    )
+    ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
+    logger.log('INFO', 'Rasters for model developement mapped to grid')
+
+    # block builder for model dev rasters
+    builder_cfg = data_blocks.BuilderConfig(
+        image_fpath=config.dev_image_fpath,
+        label_fpath=config.dev_label_fpath,
+        config_fpath=config.data_config_fpath,
+        output_root=f'{output_root}/model_dev/',
+        dem_pad_px=config.dem_pad,
+        ignore_index=config.ignore_index,
+        block_size=ras_windows.tile_shape
+    )
+    block_builder = data_blocks.BlockBuilder(
+        ras_windows.image,
+        ras_windows.label,
+        builder_cfg,
+        logger
+    )
+
+    # build just one block, e.g., for overfit test
+    if single_block_mode:
+        logger.log('INFO', 'Build a single block')
+        return block_builder.build_single_block(
+            save_dpath=kwargs.get('save_dpath', f'{output_root}/single_block'),
+            valid_px_per=kwargs.get('valid_px_per', 0.8),
+            monitor_head=kwargs.get('monitor_head', 'base'),
+            need_all_classes=kwargs.get('need_all_classes', True)
+        )
+    # build all model dev blocks
+    logger.log('INFO', 'Build all model developement data blocks')
+    new_blocks = block_builder.build_blocks()
+
+    # create/update catalog and metadata JSON
+    updated = data_blocks.CatalogUpdateContext(
+        coords=new_blocks,
+        source_image=config.dev_image_fpath,
+        source_label=config.dev_label_fpath,
+        mapped_grid_id=world_grid.gid
+    )
+    data_blocks.update_catalog(updated, f'{output_root}/model_dev/', logger)
+    data_blocks.update_meta(updated, f'{output_root}/model_dev/', logger)
+
+    # exit if evaluation rasters are not provided
+    if not (config.eval_image_fpath and config.eval_label_fpath):
+        logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
+        return None
+
+    # map evaluation rasters to grid
+    logger.log('INFO', 'Mapping holdout raters for evaluation to grid')
+    dev_ras_cfg = data_blocks.MappingConfig(
+        input_img_fpath=config.eval_image_fpath,
+        input_lbl_fpath=config.eval_label_fpath,
+        output_root=f'{output_root}/test_holdout/windows',
+    )
+    ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
+    logger.log('INFO', 'Holdout raters for evaluation mapped to grid')
+
+    # block builder for evaluation rasters
+    builder_cfg = data_blocks.BuilderConfig(
+        image_fpath=config.eval_image_fpath,
+        label_fpath=config.eval_label_fpath,
+        config_fpath=config.data_config_fpath,
+        output_root=f'{output_root}/test_holdout/',
+        dem_pad_px=config.dem_pad,
+        ignore_index=config.ignore_index,
+        block_size=ras_windows.tile_shape
+    )
+    block_builder = data_blocks.BlockBuilder(
+        ras_windows.image,
+        ras_windows.label,
+        builder_cfg,
+        logger
+    )
+    logger.log('INFO', 'Build all holdout evaluation data blocks')
+    new_blocks = block_builder.build_blocks()
+
+    # create/update catalog and metadata JSON
+    updated = data_blocks.CatalogUpdateContext(
+        coords=new_blocks,
+        source_image=config.eval_image_fpath,
+        source_label=config.eval_label_fpath,
+        mapped_grid_id=world_grid.gid
+    )
+    data_blocks.update_catalog(updated, f'{output_root}/test_holdout/', logger)
+    data_blocks.update_meta(updated, f'{output_root}/test_holdout/', logger)
+    return None

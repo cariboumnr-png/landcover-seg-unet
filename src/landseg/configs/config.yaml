@@ -1,22 +1,20 @@
 # Main entry to the config tree
 defaults:
   - _self_
-  # raw inputs
-  - inputs/extent: demo
-  - inputs/domain: demo
-  - inputs/data: demo
-  # preparation
-  - prep/grid: default
-  - prep/domain: default
-  - prep/data: default
+  # data foundation
+  - foundation/grid: default
+  - foundation/domains: default
+  - foundation/datablocks: default
+  # data transfrom
+  - transform: default
   # models
   - models: default
   # trainer
   - trainer: default
   # controller
   - runner: demo
-  # profile
-  - profile: default
+  # pipeline
+  - pipeline: default
 
 # experiment root
 exp_root: ./experiment

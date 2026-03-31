@@ -40,7 +40,7 @@ runtime:
     min_delta: 0.0005
   monitor:
     metric_name: iou
-    track_head_name: layer1
+    track_head_name: base
     track_mode: max
   precision:
     use_amp: True

@@ -32,21 +32,26 @@ import typing
 
 __all__ = [
     # classes
+    'DataSpecs',
+    'Meta',
+    'Heads',
+    'Splits',
+    'Domains',
     # functions
     # typing
-    'GridLayoutLike',
     'MultiheadModelLike',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .grid_protocol import GridLayoutLike
     from .model_protocol import MultiheadModelLike
+    from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
 
 def __getattr__(name: str):
 
-    if name in ['GridLayoutLike']:
-        return getattr(importlib.import_module('.grid_protocol', __package__), name)
+    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
+        return getattr(importlib.import_module('.data_specs', __package__), name)
+
     if name in ['MultiheadModelLike']:
         return getattr(importlib.import_module('.model_protocol', __package__), name)
 

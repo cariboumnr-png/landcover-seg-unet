@@ -1,6 +1,4 @@
-
 # ADR-0011: Factory Architecture for Raster, Domain, and Data Schema Preparation
-
 **Status:** Accepted
 **Date:** 2026-03-12
 **Supersedes:** ADR-0011 (2026-03-10 draft)
