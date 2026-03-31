@@ -156,8 +156,8 @@ class DataBlocks:
         if not self.filepaths.test_image:
             paths.test_image = os.path.join(root, 'test', names.test_image)
         # test label (optional)
-        if not self.filepaths.dev_label:
-            paths.dev_label = os.path.join(root, 'test', names.dev_label)
+        if not self.filepaths.test_label:
+            paths.test_label = os.path.join(root, 'test', names.test_label)
         # config JSON
         if not self.filepaths.config:
             paths.config = os.path.join(root, names.config)

@@ -34,6 +34,7 @@ import numpy
 # local imports
 import landseg.core as core
 import landseg.geopipe.core as geocore
+import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
 def build_dataspec(
@@ -199,7 +200,7 @@ def __parse_domain(
     # index domain if provided
     if ids_domain:
         for coord, dom in ids_domain.items():
-            blkname = geocore.xy_name(coord)
+            blkname = geo_utils.xy_name(coord)
             if blkname in input_blocks:
                 if dom['majority'] is None or dom['majority'] < 0:
                     output_ids_domain[blkname] = 0 # default value
@@ -209,7 +210,7 @@ def __parse_domain(
     # vector domain if provided
     if vec_domain:
         for coord, dom in vec_domain.items():
-            blkname = geocore.xy_name(coord)
+            blkname = geo_utils.xy_name(coord)
             if blkname in input_blocks:
                 if dom['pca_feature'] is None:
                     output_vec_domain[blkname] = [0.0] * vec_domain.n_pca_ax
