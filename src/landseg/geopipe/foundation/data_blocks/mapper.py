@@ -31,7 +31,6 @@ Public APIs:
 # standard imports
 import copy
 import dataclasses
-import os
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
@@ -40,15 +39,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class MappingConfig:
-    '''Dataclass configuration for `align_raster(...)`.'''
-    input_img_fpath: str
-    input_lbl_fpath: str
-    output_root: str
-
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _MappedRasterWindows:
+class MappedRasterWindows:
     '''Container for output raster read windows and meta.'''
     grid_id: str                    # world grid identifier
     tile_shape: tuple[int, int]     # expected window shape (W*H) in px
@@ -58,11 +49,10 @@ class _MappedRasterWindows:
 # -------------------------------Public Function-------------------------------
 def map_rasters(
     world_grid: geo_core.GridLayout,
-    config: MappingConfig,
+    image_fpath: str,
+    label_fpath: str,
     logger: utils.Logger,
-    *,
-    remap: bool = False
-) -> _MappedRasterWindows:
+) -> MappedRasterWindows:
     '''
     Map input rasters to the world grid and serialize read windows.
 
@@ -75,27 +65,6 @@ def map_rasters(
     Raises:
         ValueError: If the rasters' CRS does not match the world grid CRS.
     '''
-
-    # paths to artifacts from fit input
-    image = config.input_img_fpath
-    label = config.input_lbl_fpath
-    os.makedirs(config.output_root, exist_ok=True)
-    output_fpath = f'{config.output_root}/windows_{world_grid.gid}.pkl'
-    if not os.path.exists(output_fpath) or remap:
-        windows = _map(world_grid, image, label, logger)
-        utils.write_pickle(output_fpath, windows)
-        utils.hash_artifacts(output_fpath)
-    else:
-        windows: _MappedRasterWindows = utils.load_pickle(output_fpath)
-    return windows
-
-def _map(
-    world_grid: geo_core.GridLayout,
-    image_fpath: str,
-    label_fpath: str | None,
-    logger: utils.Logger
-) -> _MappedRasterWindows:
-    '''Create and persist windows for a raster pair (image & label).'''
 
     # get geometry summary
     geom = data_blocks.validate_geometry(image_fpath, label_fpath, logger)
@@ -112,7 +81,7 @@ def _map(
     inside = _crop(world_grid, geom)
 
     # get image and optionally label reading windows
-    return _MappedRasterWindows(
+    return MappedRasterWindows(
         image=_get_windows(world_grid, geom['image_transform'], inside),
         label=_get_windows(world_grid, geom['label_transform'], inside),
         grid_id=world_grid.gid,

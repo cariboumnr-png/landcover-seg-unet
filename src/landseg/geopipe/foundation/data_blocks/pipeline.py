@@ -35,6 +35,7 @@ Public API:
 # standard imports
 import dataclasses
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
@@ -90,14 +91,18 @@ def run_blocks_building(
         otherwise `None`.
     '''
 
+    # get a child logger
+    logger = logger.get_child('dblks')
+
     # map model dev rasters to grid
     logger.log('INFO', 'Mapping rasters for model developement to grid')
-    dev_ras_cfg = data_blocks.MappingConfig(
-        input_img_fpath=config.dev_image_fpath,
-        input_lbl_fpath=config.dev_label_fpath,
-        output_root=f'{output_root}/model_dev/windows',
+    ras_windows = data_blocks.prepare_mapped_raster_windows(
+        world_grid,
+        (config.dev_image_fpath, config.dev_label_fpath),
+        logger,
+        artifacts_dir=f'{output_root}/model_dev/windows',
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
-    ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Rasters for model developement mapped to grid')
 
     # block builder for model dev rasters
@@ -147,12 +152,13 @@ def run_blocks_building(
 
     # map test rasters to grid
     logger.log('INFO', 'Mapping holdout raters for test to grid')
-    dev_ras_cfg = data_blocks.MappingConfig(
-        input_img_fpath=config.test_image_fpath,
-        input_lbl_fpath=config.test_label_fpath,
-        output_root=f'{output_root}/test_holdout/windows',
+    ras_windows = data_blocks.prepare_mapped_raster_windows(
+        world_grid,
+        (config.test_image_fpath, config.test_label_fpath),
+        logger,
+        artifacts_dir=f'{output_root}/test_holdout/windows',
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
-    ras_windows = data_blocks.map_rasters(world_grid, dev_ras_cfg, logger)
     logger.log('INFO', 'Holdout raters for test mapped to grid')
 
     # block builder for test rasters
