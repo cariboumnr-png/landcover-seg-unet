@@ -21,6 +21,9 @@
 
 '''
 Data ingestion pipeline.
+
+Prepares the world grid, materializes domain knowledge, and builds
+the immutable raw block catalogue for later experiments.
 '''
 
 # local imports
@@ -29,7 +32,18 @@ import landseg.geopipe.foundation as foundation
 import landseg.utils as utils
 
 def ingest(config: configs.RootConfig):
-    '''Data ingestion pipeline.'''
+    '''
+    Run the ingestion pipeline.
+
+    Steps:
+    1) Build or load the world grid (`geopipe.foundation`).
+    2) Prepare domain knowledge aligned to the grid.
+    3) Build raw `.npz` data blocks and update `catalog.json` /
+    `metadata.json`.
+
+    Args:
+        config: RootConfig with foundation settings.
+    '''
 
     # init a logger
     logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')

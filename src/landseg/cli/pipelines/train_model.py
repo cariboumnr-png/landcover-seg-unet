@@ -20,7 +20,10 @@
 # =========================================================================== #
 
 '''
-Dev Test Ground
+Training entrypoint.
+
+Builds data specifications from produced artifacts, constructs the
+model, and runs the multi-phase training runner.
 '''
 
 # standard imports
@@ -34,7 +37,15 @@ import landseg.models as models
 import landseg.utils as utils
 
 def train(config: configs.RootConfig):
-    '''test'''
+    '''
+    Run a full training job.
+
+    Creates an experiment directory, builds `DataSpecs` from the prepared
+    artifacts and schema, instantiates the model, and executes the runner.
+
+    Args:
+        config: RootConfig with model, trainer, and runner settings.
+    '''
 
     # init experiment io folder tree
     exp_dir, log_dir = _init_experiment_folder(config)

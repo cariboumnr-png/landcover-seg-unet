@@ -20,7 +20,12 @@
 # =========================================================================== #
 
 '''
-Dataset partioning pipeline.
+Dataset partitioning pipeline.
+
+Consumes a canonical blocks catalog and produces experiment-specific
+dataset splits (train/val/test) based on stratified sampling, spatial
+buffering, and class-balance heuristics. Outputs split manifests and
+label statistics for downstream normalization and schema generation.
 '''
 
 # standard imports
@@ -36,7 +41,7 @@ import landseg.utils as utils
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class PartitionConfig:
-    '''Partition pipeline configuration.'''
+    '''Configuration for the dataset partitioning pipeline.'''
     val_test_ratios: tuple[float, float]# val split, test split
     buffer_step: int
     reward_ratios: dict[int, float]     # 0-based
@@ -57,7 +62,26 @@ def partition_blocks(
     partition_config: PartitionConfig,
     logger: utils.Logger,
 ) -> None:
-    '''doc'''
+    '''
+    Partition canonical data blocks into train/val/test splits.
+
+    Loads the foundation catalog, optionally incorporates external test
+    (holdout) blocks, and performs stratified splitting followed by
+    spatially safe hydration of training blocks. Writes split manifests
+    and aggregated label statistics to the transform directory.
+
+    Artifacts written:
+    - `block_source.json`: block file paths indexed by split
+    - `label_stats.json`: aggregated label counts over training blocks
+
+    Args:
+        foundation_root: Root directory containing canonical catalog
+            artifacts.
+        transform_root: Output directory for transform-stage artifacts.
+        partition_config: Parameters controlling split and balancing
+            behavior.
+        logger: Logger for progress and diagnostic output.
+    '''
 
     # block size (row, col)
     blk_size = (partition_config.block_spec[0], partition_config.block_spec[2])
@@ -112,7 +136,7 @@ def _split(
     *,
     ext_test_blks: list[str] | None
 ) -> tuple[core.BlockSplitPaths, list[int], list[int]]:
-    '''Process wrapper.'''
+    '''Split blocks with spatial safety and class balance.'''
 
     # split dataset
     splits = data_partition.stratified_splitter(
@@ -170,7 +194,7 @@ def _split(
     return blks_src, global_count, current_count
 
 def _index_fpath(fpaths: list[str]) -> dict[str, str]:
-    '''Index block file paths by their names (no extension).'''
+    '''Index block file paths by block name without file extension.'''
 
     indexed: dict[str, str] = {}
     for fpath in fpaths:
@@ -180,7 +204,7 @@ def _index_fpath(fpaths: list[str]) -> dict[str, str]:
     return indexed
 
 def _leak_check(blks_src: core.BlockSplitPaths) -> None:
-    '''Sanity check on data leakage.'''
+    '''Check if any blockshared across train, val, or test splits.'''
 
     leak = set(blks_src['train']) & set(blks_src['val'])
     assert not leak, f'Data leaked between train and val! {leak}'
@@ -188,7 +212,7 @@ def _leak_check(blks_src: core.BlockSplitPaths) -> None:
     assert not leak, f'Data leaked between train and test! {leak}'
 
 def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
-    '''Count label classes for each channel.'''
+    '''Aggregate label class counts across a list of block files.'''
 
     # iterate current traing blocks to get label class counts
     lbl_stats: dict[str, list[int]] = {}
@@ -208,7 +232,7 @@ def _log_split_result(
     current: list[int],
     logger: utils.Logger
 ) -> None:
-    '''Pretty log splitting results.'''
+    '''Pretty-log class count&ratio changes before/after splitting.'''
 
     max_num_str_len = len(f'{max(start + current)}')
     adjust_len = max_num_str_len + max_num_str_len // 3 + 1 # plus commas

@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Typed dictionaries for JSON based artifacts'''
+'''Typed dictionaries for JSON based artifacts in `geopipe.transform`.'''
 
 # standard imports
 from __future__ import annotations

@@ -21,6 +21,10 @@
 
 '''
 Domain raster mapping utilities.
+
+Reads a categorical domain raster, aligns it to a pre-built world grid,
+and remaps label values into a compact, zero-based index space suitable
+for downstream domain-feature constructio
 '''
 
 # third-party imports
@@ -35,7 +39,7 @@ import landseg.utils as utils
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _DomainTilesPackage:
-    '''doc'''
+    '''Container for domain tiles mapped to a world grid.'''
     block_size: tuple[int, int]
     block_overlap: tuple[int, int]
     index_range: tuple[int, int]
@@ -50,15 +54,27 @@ def map_domain_to_grid(
     index_base: int,
 ) -> _DomainTilesPackage:
     '''
-    Read the domain raster over all grid windows and remap labels.
+    Map a domain raster onto a world grid and re-index labels.
+
+    The raster is read window-by-window over all grid tiles after
+    aligning the grid to the raster via an integer pixel offset. All
+    unique, non-nodata label values are collected globally and remapped
+    to a contiguous index range starting at zero.
 
     Behavior:
-    - Align the deep-copied world grid to the raster by computing an
-    integer-pixel offset.
-    - Discover all unique labels across tiles (excluding nodata);
-    assert the set is non-empty and its minimum equals 'index_base'.
-    - Build a sorted 'remap' array and convert valid labels to
-    [0..K-1]; assign -1 to nodata.
+    - Align the world grid to the raster using pixel-exact offsets.
+    - Discover all unique label values excluding nodata.
+    - Validate that the minimum label equals `index_base`.
+    - Remap valid labels to the range [0 .. K-1]; assign -1 to nodata.
+
+    Args:
+        grid: World grid layout defining raster windows.
+        raster_path: Path to the categorical domain raster.
+        logger: Logger for progress reporting.
+        index_base: Expected minimum value of valid labels in the raster.
+
+    Returns:
+        _DomainTilesPackage containing re-indexed tiles and grid metadata.
     '''
 
     logger.log('INFO', 'Mapping domain onto input world grid')
@@ -86,7 +102,7 @@ def _read_raster(
     grid: core.GridLayout,
     raster_path: str,
 ) -> tuple[alias.RasterTileDict, int]:
-    '''doc'''
+    '''Read a raster over all grid windows.'''
 
     # open domain raster
     with rasterio.open(raster_path) as src:
@@ -110,7 +126,7 @@ def _read_window(
     raster_window: alias.RasterWindow,
     raster_fpath: str
 ) -> alias.RasterTile:
-    '''Read domain raster via a window and return the first channel.'''
+    '''Read a single raster window and return its first band.'''
 
     # read raster at window and return
     with rasterio.open(raster_fpath, 'r') as src:
@@ -123,7 +139,7 @@ def _get_index_mapping(
     nodata: int,
     index_base: int
 ) -> numpy.ndarray:
-    '''doc'''
+    '''Compute a global, sorted label remapping excluding nodata.'''
 
     # iteration on all tiles to gather unique values (exclude nodata)
     unique_values = set()
@@ -148,7 +164,7 @@ def _re_index(
     nodata: int,
     mapping: numpy.ndarray
 ) -> alias.RasterTileDict:
-    '''doc'''
+    '''Apply a global index remapping to all raster tiles in-place.'''
 
     for arr in tiles.values():
         mask_valid = arr != nodata

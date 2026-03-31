@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Block normalization utilities.
+
+Applies global image normalization to raw data blocks using statistics
+computed from training data. Produces normalized block artifacts and
+maintains split-indexed file mappings for downstream schema generation.
+'''
 
 # standard imports
 import os
@@ -37,7 +43,25 @@ def normalize_blocks(
     *,
     rebuild: bool = False
 ) -> dict[str, str]:
-    '''doc'''
+    '''
+    Normalize a collection of raw data blocks using global image stats.
+
+    Computes which blocks need to be processed, removes stale artifacts
+    in target directory, applies per-band normalization using provided
+    statistics, and writes normalized blocks to disk.
+
+    Args:
+        input_blocks: Set of file paths to raw block artifacts.
+        stats: Per-band global image statistics derived from training
+            data.
+        output_dir: Directory where normalized block files are written.
+        rebuild: If True, reprocess all input blocks regardless of
+            existence.
+
+    Returns:
+        Dictionary mapping block names (without extension) to normalized
+        block file paths.
+    '''
 
     #
     names: list[str] = []
@@ -75,7 +99,7 @@ def _normalize_one_block(
     global_stats: dict[str, core.ImageBandStats],
     target_dpath: str
 ):
-    '''doc'''
+    '''Normalize a single data block and write it to disk.'''
 
     # read block
     data = core.DataBlock.load(block_fpath).data
@@ -96,7 +120,7 @@ def _normalize_image(
     valid_mask: alias.MaskArray,
     global_stats: dict[str, core.ImageBandStats],
 ) -> alias.Float32Array:
-    '''doc'''
+    '''Apply per-band normalization using global stats.'''
 
     # assertion
     assert raw_image_arr.ndim == 3
@@ -127,10 +151,9 @@ def _purge(
     target_dir: str
 ) -> int:
     '''
-    Remove files in target_dir that are not listed in input_blocks.
+    Remove files in the target directory that are not expected to exist.
 
-    All paths in input_blocks are expected to be within target_dir.
-    Return the count of removed files.
+    Returns the number of removed files.
     '''
 
     if not os.path.exists(target_dir) or not os.listdir(target_dir):

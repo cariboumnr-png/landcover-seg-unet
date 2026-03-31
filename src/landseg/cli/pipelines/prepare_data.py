@@ -20,7 +20,10 @@
 # =========================================================================== #
 
 '''
-Data preparation pipeline.
+Data preparation (experiment-materialized) pipeline.
+
+Splits raw blocks into train/val(/test), computes train-only band
+statistics, normalizes all splits, and emits the final dataset schema.
 '''
 
 # local imports
@@ -29,7 +32,17 @@ import landseg.geopipe.transform as transform
 import landseg.utils as utils
 
 def prepare(config: configs.RootConfig):
-    '''Data preparation pipeline.'''
+    '''
+    Run the preparation pipeline for an experiment.
+
+    Outputs:
+    - `block_source.json`, `label_stats.json`
+    - `image_stats.json`, normalized `.npz` per split, `block_splits.json`
+    - `schema.json` referencing only normalized artifacts
+
+    Args:
+        config: RootConfig with transform settings.
+    '''
 
     # init a logger
     logger = utils.Logger('prep', f'{config.exp_root}/prep.log')

@@ -66,7 +66,7 @@ def filter_safe_tiles(
             The tile size in pixels for both candidate and base tiles.
             Tiles are axis-aligned squares of size block_size ** 2.
 
-        stride:
+        block_stride:
             The stride of the candidate tiles. Must satisfy
             0 < stride ≤ block_size. Used for computing the expanded
             non-overlap threshold when buffer_steps > 0.

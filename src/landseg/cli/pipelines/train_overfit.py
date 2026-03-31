@@ -21,6 +21,9 @@
 
 '''
 Overfit test pipeline.
+
+Constructs a single valid block, builds minimal data specifications,
+and trains until near-perfect IoU to validate the end-to-end stack.
 '''
 
 # local imports
@@ -33,7 +36,16 @@ import landseg.factory as factory
 import landseg.utils as utils
 
 def overfit(config: configs.RootConfig):
-    '''Overfit test pipeline.'''
+    '''
+    Run an overfit test on a single block.
+
+    Creates or loads a block, builds a small `DataSpecs`, instantiates
+    the model and a trainer with minimal logging, and trains until an IoU
+    threshold or the epoch limit is reached.
+
+    Args:
+        config: RootConfig with model/trainer settings.
+    '''
 
     # root dpath
     root = f'{config.exp_root}/results/overfit_test'
@@ -77,7 +89,7 @@ def _build_a_block(
     save_dpath: str,
     logger: utils.Logger
 ) -> str:
-    '''Build a single block'''
+    '''Build or select one valid block for the overfit test.'''
 
     # config aliases
     grid_cfg = config.foundation.grid
@@ -128,7 +140,7 @@ def _build_a_block(
     return block_fpath
 
 def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
-    '''doc'''
+    '''Build a minimal `DataSpecs` from a single saved block.'''
 
         # read bgeocore
     block = geocore.DataBlock.load(block_fpath)

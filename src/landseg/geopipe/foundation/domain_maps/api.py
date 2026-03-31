@@ -84,8 +84,6 @@ def prepare_domain(
     returns a dictionary keyed by domain name (filename without suffix).
 
     Args:
-        grid_id: Identifier of the world grid; written to domain metadata
-            to preserve traceability between grid and domain artifacts.
         world_grid: A grid.GridLayout instance describing the tiling to
             use. The domain rasters must share its CRS and pixel size;
             pixel origin alignment is handled internally.

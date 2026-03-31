@@ -19,7 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Project-wide type aliases and lazy imports for type checking.'''
+'''
+Type aliases for `geopipe.foundation` for raster I/O and grid windows.
+
+Centralizes third-party types from `rasterio` and `numpy.typing` so call sites
+have concise, consistent annotations.
+'''
 
 # standard imports
 import typing
@@ -30,8 +35,16 @@ import rasterio.windows
 
 # rasterio types
 RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
+'''
+A mapping of pixel-origin coordinates `(x_px, y_px)` to
+`rasterio.windows.Window` objects from the world grid.
+'''
 
 RasterWindow: typing.TypeAlias = rasterio.windows.Window
+'''
+Array read from a raster window with its top-left corner at the given
+pixel-origin coordinates `(x_px, y_px)` in world-grid space.
+'''
 
 RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
 '''
@@ -46,5 +59,12 @@ coordinates (x, y in pixels) from the world grid.
 '''
 
 RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
+'''
+A mapping from pixel-origin coordinates `(x_px, y_px)` to NumPy arrays
+holding the tile data read from corresponding raster windows.
+'''
 
 RasterTransform: typing.TypeAlias = rasterio.Affine | None
+'''
+Affine transform for a raster; `None` when a transform is unavailable.
+'''

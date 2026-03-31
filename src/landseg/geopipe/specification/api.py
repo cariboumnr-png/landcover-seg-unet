@@ -20,7 +20,11 @@
 # =========================================================================== #
 
 '''
-Load catalog from foundation and schema from transform.
+Load dataset catalog metadata from the foundation stage and the finalized
+schema from the transform stage to construct runtime data specifications.
+
+This module bridges persisted dataset artifacts and the training stack
+by assembling a `DataSpecs` object consumed by models and trainers.
 '''
 
 # standard imports
@@ -40,7 +44,28 @@ def build_dataspec(
     *,
     print_out: bool = False
 ):
-    '''doc'''
+    '''
+    Build a `DataSpecs` object from catalog metadata and transform schema.
+
+    Loads:
+    - Dataset-level catalog metadata from the foundation stage
+    - Optional categorical and vectorized domain tile maps
+    - The finalized transform schema that defines splits, heads, and
+    artifacts
+
+    These components are combined into a unified `DataSpecs` instance
+    used by loaders, losses, metrics, and model runners.
+
+    Args:
+        catalog_meta_fpath: Path to dataset-level catalog metadata JSON.
+        ids_domain_fpath: Optional path to categorical domain map JSON.
+        vec_domain_fpath: Optional path to vector domain map JSON.
+        transform_schema_fpath: Path to the transform schema JSON.
+        print_out: If True, print the constructed `DataSpecs` to stdout.
+
+    Returns:
+        DataSpecs instance describing dataset structure and artifacts.
+    '''
 
     # load artifacts
     # catalog meta

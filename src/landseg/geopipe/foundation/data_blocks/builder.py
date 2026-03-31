@@ -114,7 +114,8 @@ class BlockBuilder:
         Initialize the pipeline.
 
         Args:
-            windows: Image/label read windows and expected shape.
+            image_windows: Image read windows.
+            label_windows: Label read windows
             config: Block builder configuration.
             logger: Logger for progress and diagnostics.
         '''
@@ -163,7 +164,29 @@ class BlockBuilder:
         need_all_classes: bool
     ) -> str | None:
         '''
-        Build and save a single data block with the given criteria.
+        Build, normalize, and persist a single valid data block.
+
+        Iterates deterministically over grid coordinates to locate the
+        first block satisfying the requested validity and label-coverage
+        criteria. This path is intended for debugging and overfit testing
+        only.
+
+        Unlike the standard block-building pipeline, this method **does
+        apply in-place image normalization** using per-block mean and
+        standard deviation prior to saving. This behavior is intentional
+        and scoped exclusively to single-block workflows.
+
+        Args:
+            save_dpath: Directory where the selected block is written.
+            valid_px_per: Minimum fraction of valid pixels required for
+                acceptance.
+            monitor_head: Label head used to verify class presence.
+            need_all_classes: If True, require all classes to be present
+                in the monitored head.
+
+        Returns:
+            File path to the saved block if a valid block is found;
+            otherwise None.
         '''
 
         # get a deterministic coordinate sequence to iterate
@@ -214,7 +237,9 @@ class BlockBuilder:
         1) Intersect and filter the read windows by expected shape.
         2) Validate existing `.npz` blocks; remove corrupted ones.
         3) Create `.npz` files only for missing or invalid blocks.
-        4) Update `catalog.json` to include any newly created blocks.
+
+        Returns:
+            coordinatess where blocks were created.
         '''
 
         # run building sequence

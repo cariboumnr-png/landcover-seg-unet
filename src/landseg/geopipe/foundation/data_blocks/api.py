@@ -20,11 +20,16 @@
 # =========================================================================== #
 
 '''
-Data preparation pipeline that maps rasters to a grid, builds and
-normalizes blocks, splits datasets, and persists a versioned schema.
+Canonical data-block construction pipeline.
 
-Public APIs:
-    - build_catalog: Run the end-to-end dataset workflow.
+Maps input rasters onto a pre-built world grid, materializes immutable
+raw data blocks, and maintains the associated catalog and dataset
+metadata. This pipeline does **not** perform dataset splitting or
+normalization; it produces experiment-agnostic artifacts intended for
+reuse across downstream workflows.
+
+Public API:
+    - build_blocks: Build raw data blocks and update catalog/metadata.
 '''
 
 # standard imports
@@ -37,7 +42,7 @@ import landseg.utils as utils
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class BlockBuildingConfig:
-    '''Dataclass configuration for `build_catalog` pipeline.'''
+    '''Config container for the canonical block-building pipeline.'''
     dev_image_fpath: str
     dev_label_fpath: str
     eval_image_fpath: str | None
@@ -57,20 +62,32 @@ def build_blocks(
     **kwargs
 ) -> str | None:
     '''
-    Canonical data blocks building pipeline.
+    Build canonical data blocks from rasters aligned to a world grid.
 
-    This is current public interface for module `landseg.geopipe.blocks`
-    that read input world grid (see protocol `GridLayoutLike` at common/)
-    and data rasters to produce canonical data block files save as `.npz`
-    files. A catalog JSON is also generated.
+    This function is the public entrypoint for constructing immutable
+    `.npz` block artifacts and their associated `catalog.json` and
+    `metadata.json`. Blocks are built directly from raster windows
+    without normalization or dataset splitting.
+
+    Workflow:
+    1) Map development rasters to the world grid.
+    2) Build raw data blocks and update the catalog.
+    3) Optionally repeat steps (1-2) for evaluation holdout rasters.
+    4) Optionally build a single block for debugging or overfit runs.
 
     Args:
-        world_grid: Grid definition.
-        config: Catalog building configuration.
-        output_root: Root folder to store module artifacts.
-        logger: A custom Logger class for logging purposes.
-        single_block_mode: if True this pipeline only build and save a
-            single block file, e.g., for an overfit test.
+        world_grid: World grid definition used to locate raster windows.
+        config: Configuration for block building inputs and parameters.
+        output_root: Root directory where block artifacts are written.
+        logger: Logger instance used for progress and status reporting.
+        single_block_mode: If True, build and persist only one valid
+            block (e.g., for overfit or debugging workflows).
+        **kwargs: Optional overrides for single-block mode behavior
+            (e.g., validity threshold, monitor head, output path).
+
+    Returns:
+        Path to the saved block when `single_block_mode` is enabled;
+        otherwise `None`.
     '''
 
     # map model dev rasters to grid

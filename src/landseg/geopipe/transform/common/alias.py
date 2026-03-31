@@ -19,7 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Project-wide type aliases and lazy imports for type checking.'''
+'''
+Type aliases for `geopipe.transform` for static type checking.
+
+This module centralizes common NumPy and coordinate type definitions to
+keep annotations concise and consistent across the codebase.
+'''
 
 # standard imports
 import typing

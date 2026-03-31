@@ -20,7 +20,11 @@
 # =========================================================================== #
 
 '''
-Catalog adapter.
+Catalog adapter utilities.
+
+Provides helpers to load and filter a canonical blocks catalog and
+extract class counts and file paths needed for downstream sampling
+and analysis.
 '''
 
 # standard imports
@@ -30,7 +34,7 @@ import landseg.geopipe.core as core
 
 @dataclasses.dataclass
 class ParsedCatalog:
-    '''Information parsed from the data blocks catalog.'''
+    '''Parsed view of a blocks catalog with commonly used subsets.'''
     base_class_counts: dict[tuple[int, int], list[int]]
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
@@ -38,8 +42,22 @@ class ParsedCatalog:
 def parse_catalog(
     fpath: str,
     block_size: tuple[int, int]
-):
-    '''Load data blocks catalog.'''
+) -> ParsedCatalog:
+    '''
+    Parse a canonical blocks catalog and extract usable block metadata.
+
+    Loads the catalog JSON, filters out blocks without valid base pixels,
+    derives class counts for all valid blocks and for base grid blocks
+    (non-overlapping), and collects file paths for valid block artifacts.
+
+    Args:
+        fpath: Path to the blocks catalog JSON.
+        block_size: Block size (rows, cols) used to identify base grid
+            tiles.
+
+    Returns:
+        ParsedCatalog containing class counts and file paths.
+    '''
 
     # read catalog JSON to instantiate a class object
     catalog = core.BlocksCatalog.from_json(fpath)
