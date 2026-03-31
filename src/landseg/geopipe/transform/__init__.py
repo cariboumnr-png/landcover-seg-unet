@@ -52,10 +52,10 @@ def __getattr__(name: str):
     if name in {'PartitionConfig', 'run_datablocks_partition'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
 
-    if name in {'build_normalized_blocks'}:
+    if name in {'run_normaliza_blocks'}:
         return getattr(importlib.import_module('.normal_blocks', __package__), name)
 
-    if name in {'build_schema_full'}:
+    if name in {'build_schema'}:
         return getattr(importlib.import_module('.schema_build', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

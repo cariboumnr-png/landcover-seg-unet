@@ -51,13 +51,13 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'BlockBuildingConfig', 'build_blocks'}:
+    if name in {'BlockBuildingConfig', 'run_blocks_building'}:
         return getattr(importlib.import_module('.data_blocks', __package__), name)
 
-    if name in {'DomainMappingConfig', 'prepare_domain'}:
+    if name in {'DomainMappingConfig', 'build_domains'}:
         return getattr(importlib.import_module('.domain_maps', __package__), name)
 
-    if name in {'GridExtentConfig', 'GridGenerationConfig', 'prep_world_grid'}:
+    if name in {'GridExtentConfig', 'GridGenerationConfig', 'build_world_grid'}:
         return getattr(importlib.import_module('.world_grids', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
