@@ -27,7 +27,7 @@ import os
 import typing
 # local imports
 import landseg.trainer.engine as engine
-import landseg.trainer.runner as trainer_runner
+import landseg.trainer.runner as runner
 import landseg.utils as utils
 
 # --------------------------------private  type--------------------------------
@@ -43,7 +43,7 @@ class Runner:
     def __init__(
         self,
         trainer: engine.MultiHeadTrainer,
-        phases: list[trainer_runner.Phase],
+        phases: list[runner.Phase],
         exp_dir: str,
         logger: utils.Logger
     ):
@@ -66,7 +66,7 @@ class Runner:
         if os.path.exists(self.phase_status_path):
             scheme = utils.load_json(self.phase_status_path)
             for i, p in enumerate(scheme):
-                if trainer_runner.Phase(**p).finished:
+                if runner.Phase(**p).finished:
                     self.phases[i].finished = True
         else:
             self._record_progress() # write phase status.json

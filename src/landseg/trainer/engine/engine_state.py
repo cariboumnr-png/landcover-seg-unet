@@ -28,8 +28,8 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.core.alias as alias
 import landseg.trainer.common as common
+import landseg.trainer.common.alias as alias
 
 # ------------------------------Public  Dataclass------------------------------
 # ----- Runtime state (composite)

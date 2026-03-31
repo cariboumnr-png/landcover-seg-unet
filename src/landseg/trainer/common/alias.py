@@ -24,23 +24,7 @@
 # standard imports
 import typing
 # third-party imports
-import numpy.typing
-import rasterio.io
-import rasterio.windows
 import torch
-
-# numpy typing
-Int64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.int64]
-'''A generic `numpy` array with `Int64` dtype.'''
-
-Float32Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float32]
-'''A generic `numpy` array with `Float32` dtype.'''
-
-Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
-'''A generic `numpy` array with `Float64` dtype.'''
-
-MaskArray: typing.TypeAlias = numpy.typing.NDArray[numpy.bool]
-'''A generic `numpy` array with `bool` dtype.'''
 
 # batch context
 Tensor: typing.TypeAlias = torch.Tensor
@@ -57,21 +41,4 @@ a placeholder during inference, e.g., `torch.Tensor([1])`) and domain
 DatasetBatch: typing.TypeAlias = typing.Sequence[DatasetItem]
 '''
 A collection of `DatasetItem` objects.
-'''
-
-# from rasterio
-RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
-
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
-'''
-A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
-in pixels) from the world grid.
-'''
-
-RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
-'''
-Array read from a raster window with its top-left corner at specified
-coordinates (x, y in pixels) from the world grid.
 '''
