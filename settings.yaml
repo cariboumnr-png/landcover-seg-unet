@@ -61,12 +61,11 @@ foundation:
     extent:
       # Located in / Situé dans : ${exp_root}/input/extent_ref/
       filename: 'example_extent.tif'
-    tile_size:
-      row: 256  # Height in pixels / Hauteur en pixels
-      col: 256  # Width in pixels / Largeur en pixels
-    tile_overlap:
-      row: 0    # Overlap in pixels / Chevauchement en pixels
-      col: 0
+    tile_specs:
+      size_row: 256
+      size_col: 256
+      overlap_row: 0
+      overlap_col: 0
 
 # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
 # Place ANY NUMBER of domain rasters into / Placez AUTANT de rasters dans : ${exp_root}/input/domain/

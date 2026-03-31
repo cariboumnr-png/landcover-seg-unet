@@ -35,7 +35,6 @@ Supported extent modes:
 
 # standard imports
 import dataclasses
-import functools
 import typing
 # third-party import
 import rasterio
@@ -46,7 +45,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class GridExtentConfig:
+class GridParameters:
     '''Container for grid generation configuration.'''
     mode: typing.Literal['ref', 'aoi', 'tiles']
     crs: str
@@ -55,18 +54,12 @@ class GridExtentConfig:
     pixel_size: tuple[float, float]
     grid_extent: tuple[float, float] | None
     grid_shape: tuple[int, int] | None
-
-@dataclasses.dataclass
-class GridGenerationConfig:
-    '''Container for grid generation configuration.'''
-    output_dir: str
-    tile_size: tuple[int, int]
-    tile_overlap: tuple[int, int]
+    tile_specs: tuple[int, int, int, int]
 
 # -------------------------------Public Function-------------------------------
 def build_world_grid(
-    extent_config: GridExtentConfig,
-    grid_config: GridGenerationConfig,
+    config: GridParameters,
+    output_dir: str,
     logger: utils.Logger
 ) -> core.GridLayout:
     '''
@@ -84,15 +77,13 @@ def build_world_grid(
     logger = logger.get_child('wgrid')
 
     # get grid id and root dir
-    trow, tcol = grid_config.tile_size
-    orow, ocol = grid_config.tile_overlap
-    gid = f'grid_row_{trow}_{orow}_col_{tcol}_{ocol}'
-    outdir = grid_config.output_dir
+    srow, scol, orow, ocol = config.tile_specs
+    gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
 
     # if grid already exist, load and return
     try:
         logger.log('INFO', f'Try to load grid {gid}')
-        output_grid = world_grids.load_grid(gid, outdir)
+        output_grid = world_grids.load_grid(gid, output_dir)
         logger.log('INFO', 'World grid successfully loaded')
         return output_grid
     # otherwise create grid accordingly
@@ -100,27 +91,22 @@ def build_world_grid(
         logger.log('INFO', f'World grid {gid} not found, creating from config')
 
         # get gridspec from extent config
-        spec_from_extent = _get_ext(extent_config)
-        # finish gridspec from grid profile
-        spec = spec_from_extent(
-            tile_size=grid_config.tile_size,
-            tile_overlap=grid_config.tile_overlap
-        )
-
-        # get layout generation mode from extent mode
-        # - maybe should separate these
-        _mode  = extent_config.mode
-        mode = 'bbox' if _mode in ['ref', 'aoi'] else 'tiles'
+        grid_spec = _get_grid_spec(config)
 
         # build - save - return
-        output_grid = core.GridLayout(mode, spec)
-        world_grids.save_grid(output_grid, outdir)
-        logger.log('INFO', f'World grid {gid} created and saved at {outdir}')
+        _mode = 'bbox' if config.mode in ['ref', 'aoi'] else 'tiles' # temp solution
+        output_grid = core.GridLayout(_mode, grid_spec)
+        world_grids.save_grid(output_grid, output_dir)
+        logger.log('INFO', f'World grid {gid} saved to {output_dir}')
         return output_grid
 
 # ------------------------------private  function------------------------------
-def _get_ext(config: GridExtentConfig,) -> functools.partial[core.GridSpec]:
+def _get_grid_spec(config: GridParameters) -> core.GridSpec:
     '''Parse grid extent and returns a partially filled `GridSpec`.'''
+
+    # static tile size and overlap
+    tile_size = (config.tile_specs[0], config.tile_specs[1])
+    tile_overlap = (config.tile_specs[2], config.tile_specs[3])
 
     # from reference raster (auto)
     if config.mode == 'ref':
@@ -132,41 +118,40 @@ def _get_ext(config: GridExtentConfig,) -> functools.partial[core.GridSpec]:
             # get bounding box - origin and extent
             l, b, r, t = src.bounds
             # assign to gridspec
-            return functools.partial(
-                core.GridSpec,
+            return core.GridSpec(
                 crs=config.crs,
-                pixel_size=(px, py),        # pixel size in x, y
                 origin=(l, t),              # left, ,top as x, y
+                pixel_size=(px, py),        # pixel size in x, y
+                tile_size=tile_size,
+                tile_overlap=tile_overlap,
                 grid_extent=(t - b, r - l)  # top-bottom as H, right-left as W
             )
 
     # from aoi (manual)
     elif config.mode  == 'aoi':
         # retrieve inputs and validate
-        origin = config.origin
-        pixel_size = config.pixel_size
-        grid_extent = config.grid_extent
-        assert grid_extent
-        return functools.partial(
-            core.GridSpec,
+        assert config.grid_extent
+        assert all(isinstance(x, float) for x in config.grid_extent)
+        return core.GridSpec(
             crs=config.crs,
-            pixel_size=(pixel_size[0], pixel_size[1]),
-            origin=(origin[0], origin[1]),
-            grid_extent=(grid_extent[0], grid_extent[1])
+            origin=config.origin,
+            pixel_size=config.pixel_size,
+            tile_size=tile_size,
+            tile_overlap=tile_overlap,
+            grid_extent=config.grid_extent
         )
 
     # from tiles count (manual)
     elif config.mode  == 'tiles':
-        origin = config.origin
-        pixel_size = config.pixel_size
-        grid_shape = config.grid_shape
-        assert grid_shape
-        return functools.partial(
-            core.GridSpec,
+        assert config.grid_shape
+        assert all(isinstance(x, int) for x in config.grid_shape)
+        return core.GridSpec(
             crs=config.crs,
-            pixel_size=(pixel_size[0], pixel_size[1]),
-            origin=(origin[0], origin[1]),
-            grid_shape=(grid_shape[0], grid_shape[1])
+            origin=config.origin,
+            pixel_size=config.pixel_size,
+            tile_size=tile_size,
+            tile_overlap=tile_overlap,
+            grid_shape=config.grid_shape
         )
     #
     raise ValueError(f'Invalid extent mode: {config.mode}')

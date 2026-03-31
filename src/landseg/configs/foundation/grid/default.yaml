@@ -14,9 +14,8 @@ extent:
   # when mode=tiles
   grid_shape: [0, 0] # rows and cols as number of tiles
 # specs
-tile_size:
-  row: 256
-  col: 256
-tile_overlap:
-  row: 0
-  col: 0
+tile_specs:
+  size_row: 256
+  size_col: 256
+  overlap_row: 0
+  overlap_col: 0
