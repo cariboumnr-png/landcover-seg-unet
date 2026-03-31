@@ -1,11 +1,11 @@
 # ADR-0013: Consolidate Training Components into a First-Class `trainer` Module
 
-- **Status:** Proposed
-- **Date:** 2026-03-30
+- **Status:** Accepted 
+- **Date:** 2026-03-31
 
 ## Context
 
-The training stack is currently distributed across several closely related
+The training stack was previously distributed across several closely related
 modules:
 
 - `trainer_components`
@@ -13,38 +13,39 @@ modules:
 - `trainer_runner`
 
 Although each module has a clear local responsibility, they collectively
-implement a single conceptual concern: **model training orchestration and
-execution**. Their current separation is largely historical and increases
+implemented a single conceptual concern: **model training orchestration and
+execution**. Their separation was largely historical and increased
 navigation overhead, import indirection, and cognitive load when extending or
 reviewing training behavior.
 
 Following the successful consolidation of concrete data and domain primitives
-into `geopipe.core` (ADR‑0012), the training stack is now the primary area where
+into `geopipe.core` (ADR‑0012), the training stack was the primary area where
 related functionality remains fragmented.
 
 ## Decision
 
-We will consolidate `trainer_components`, `trainer_engine`, and
+We have consolidated `trainer_components`, `trainer_engine`, and
 `trainer_runner` into a single **first‑class `trainer` module** with a cohesive
 namespace and clearly scoped internal submodules.
 
-The target structure will resemble:
+The implemented structure is as below:
 
 ```
 geopipe/
-model/
+models/
 trainer/
+  common/ # local protocols and alias
   components/
   engine/
   runner/
   factory.py   # module API
 ```
 
-This change is intentionally **structural only**:
+This change was intentionally **structural only**:
 
-- No training logic will be modified
-- Execution order and semantics will remain unchanged
-- Configuration behavior will remain intact
+- No training logic was modified
+- Execution order and semantics unchanged
+- Configuration behavior remains intact
 
 ## Rationale
 
@@ -57,17 +58,15 @@ This change is intentionally **structural only**:
 
 ## Consequences
 
-- Import paths referencing training components will change and must be updated
-- Any external references to old module paths will need adjustment
-- No compatibility or artifact changes are expected at runtime
+- Import paths referencing training components have been updated
+- External references to old module paths were properly adjusted
+- No compatibility or artifact changes were encountered at runtime
 
 ## Scope Notes
 
-- This ADR explicitly excludes refactoring trainer logic, APIs, or behavior
-- Any functional changes to training workflows should be captured in a
-  subsequent ADR
+- This ADR explicitly excluded refactoring trainer logic, APIs, or behavior
+- Any functional changes to training workflows will be captured in a subsequent ADR
 
 ## Status Notes
 
-This ADR proposes a follow‑up architectural cleanup aligned with recent
-repository refactors. Implementation is expected to be mechanical and low risk.
+The refactoring is complete. The training stack now follows the recent repository architectural styles.
