@@ -23,7 +23,7 @@
 '''Train phase callback class.'''
 
 # local imports
-import landseg.trainer_components.callback as callback
+import landseg.trainer.components.callback as callback
 
 class TrainCallback(callback.Callback):
     '''Training: parse - forward - compute loss - backward - step.'''

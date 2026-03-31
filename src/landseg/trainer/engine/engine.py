@@ -47,8 +47,8 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.core.trainer_protocols as trainer_protocols
-import landseg.trainer_engine as engine
+import landseg.trainer.common as common
+import landseg.trainer.engine as engine
 
 class MultiHeadTrainer:
     '''
@@ -77,7 +77,7 @@ class MultiHeadTrainer:
     def __init__(
         self,
         model: core.MultiheadModelLike,
-        components: trainer_protocols.TrainerComponentsLike,
+        components: common.TrainerComponentsLike,
         config: engine.RuntimeConfig,
         device: str,
         **kwargs

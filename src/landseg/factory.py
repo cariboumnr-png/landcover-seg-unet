@@ -28,9 +28,9 @@ import torch
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.trainer_components as trainer_components
-import landseg.trainer_engine as trainer_engine
-import landseg.trainer_runner as trainer_runner
+import landseg.trainer.components as trainer_components
+import landseg.trainer.engine as trainer_engine
+import landseg.trainer.runner as trainer_runner
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------

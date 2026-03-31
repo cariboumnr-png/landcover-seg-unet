@@ -24,7 +24,7 @@
 # standard imports
 import dataclasses
 # local imports
-import landseg.trainer_components.callback as callback
+import landseg.trainer.components.callback as callback
 import landseg.utils as utils
 
 @dataclasses.dataclass

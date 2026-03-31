@@ -26,8 +26,8 @@ import dataclasses
 import os
 import typing
 # local imports
-import landseg.trainer_runner as trainer_runner
-import landseg.trainer_engine as engine
+import landseg.trainer.engine as engine
+import landseg.trainer.runner as trainer_runner
 import landseg.utils as utils
 
 # --------------------------------private  type--------------------------------

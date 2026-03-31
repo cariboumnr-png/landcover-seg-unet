@@ -45,7 +45,7 @@ import torch.utils.data
 # local imports
 import landseg.core as core
 import landseg.core.alias as alias
-import landseg.trainer_components.dataloading as dataloading
+import landseg.trainer.components.dataloading as dataloading
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------

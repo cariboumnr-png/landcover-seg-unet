@@ -29,7 +29,7 @@ import typing
 import torch
 # local imports
 import landseg.core.alias as alias
-import landseg.core.trainer_protocols as trainer_protocols
+import landseg.trainer.common as common
 
 # ------------------------------Public  Dataclass------------------------------
 # ----- Runtime state (composite)
@@ -79,9 +79,9 @@ class _Heads:
     all_heads: list[str]
     active_heads: list[str] | None
     frozen_heads: list[str] | None
-    active_hspecs: dict[str, trainer_protocols.SpecsLike] | None
-    active_hloss: dict[str, trainer_protocols.CompositeLossLike] | None
-    active_hmetrics: dict[str, trainer_protocols.ConfusionMatrixLike] | None
+    active_hspecs: dict[str, common.SpecsLike] | None
+    active_hloss: dict[str, common.CompositeLossLike] | None
+    active_hmetrics: dict[str, common.ConfusionMatrixLike] | None
 
     def __str__(self) -> str:
         return '\n'.join([

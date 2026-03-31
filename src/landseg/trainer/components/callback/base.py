@@ -25,21 +25,21 @@
 '''Base class for trainer callbacks.'''
 
 # local imports
-import landseg.core.trainer_protocols as trainer_protocols
+import landseg.trainer.common as common
 import landseg.utils as utils
 
 class Callback:
     '''Base class for callbacks; subclass to implement behaviors.'''
 
     def __init__(self, logger: utils.Logger):
-        self._trainer: trainer_protocols.TrainerEngineLike | None = None
+        self._trainer: common.TrainerEngineLike | None = None
         self.train_logger = logger.get_child('train')
         self.valdn_logger = logger.get_child('valdn')
         self.skip_log = False
 
     def setup(
             self,
-            trainer: trainer_protocols.TrainerEngineLike,
+            trainer: common.TrainerEngineLike,
             skip_log: bool
         ) -> None:
         if self._trainer is not None:
