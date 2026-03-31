@@ -31,7 +31,7 @@ import dataclasses
 import os
 # local imports
 import landseg.configs as configs
-import landseg.factory as factory
+import landseg.trainer as trainer
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.utils as utils
@@ -67,7 +67,7 @@ def train(config: configs.RootConfig):
     model = models.build_multihead_unet(dataspecs, config.models)
 
     # build controller
-    runner = factory.build_runner(exp_dir, dataspecs, model, config, logger)
+    runner = trainer.build_runner(exp_dir, dataspecs, model, config, logger)
 
     # run via controller
     runner.fit()

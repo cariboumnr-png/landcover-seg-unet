@@ -32,7 +32,7 @@ import landseg.core as core
 import landseg.geopipe.core as geocore
 import landseg.geopipe.foundation as foundation
 import landseg.models as models
-import landseg.factory as factory
+import landseg.trainer as trainer
 import landseg.utils as utils
 
 def overfit(config: configs.RootConfig):
@@ -64,21 +64,21 @@ def overfit(config: configs.RootConfig):
 
     # build a trainer with no logging
     monitor_head = config.trainer.runtime.monitor.track_head_name
-    trainer = factory.build_trainer(
+    _trainer = trainer.build_trainer(
         dataspecs,
         model,
         config.trainer,
         logger,
         skip_log=True
     )
-    trainer.set_head_state([monitor_head])
+    _trainer.set_head_state([monitor_head])
 
     # run trainer
     max_epoch = config.trainer.runtime.schedule.max_epoch
     logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
     for ep in range(1, max_epoch + 1):
-        los = trainer.train_one_epoch(ep)['Total_Loss']
-        iou = trainer.validate()[monitor_head]['mean']
+        los = _trainer.train_one_epoch(ep)['Total_Loss']
+        iou = _trainer.validate()[monitor_head]['mean']
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
