@@ -78,9 +78,9 @@ def ingest(config: configs.RootConfig):
         file_list=[(d.path, d.index_base) for d in domain_cfg.files],
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
-        output_dir=f'{out_root}/domain_knowledge',
     )
-    foundation.build_domains(grid, _config, logger)
+    domains_dir=f'{out_root}/domain_knowledge'
+    foundation.build_domains(grid, _config, domains_dir, logger)
 
     # datablocks building
     _config = foundation.BlockBuildingParameters(

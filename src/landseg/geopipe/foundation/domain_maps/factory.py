@@ -67,12 +67,12 @@ class DomainBuildingParameters:
     file_list: list[tuple[str, int]]
     valid_threshold: float
     target_variance: float
-    output_dir: str
 
 # -------------------------------Public Function-------------------------------
 def build_domains(
     world_grid: core.GridLayout,
     config: DomainBuildingParameters,
+    output_dir: str,
     logger: utils.Logger
 ) -> None:
     '''
@@ -125,7 +125,7 @@ def build_domains(
         # if domain JSON already exist, load
         try:
             logger.log('INFO', f'Loading domain {name}')
-            dom = domain_maps.load_domain(name, config.output_dir)
+            dom = domain_maps.load_domain(name, output_dir)
             dom.logger = logger # add logger
             # check if domain was mapped to a different grid
             if dom.blk_size != world_grid.tile_size:
@@ -163,5 +163,5 @@ def build_domains(
                 domain_package.tiles_dict
             )
             output[name] = dom
-            domain_maps.save_domain(name, dom, config.output_dir)
+            domain_maps.save_domain(name, dom, output_dir)
             logger.log('INFO', f'Domain {filepath} created/updated')
