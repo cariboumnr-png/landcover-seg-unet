@@ -41,6 +41,7 @@ __all__ = [
     # functions
     'name_xy',
     'xy_name',
+    'open_rasters',
     # typing
     'BlocksCatalog',
     'CatalogMeta',
@@ -57,7 +58,7 @@ if typing.TYPE_CHECKING:
     from .foundation_domain_map import DomainTileMap
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
     from .transform_types import BlockSplitPaths, ImageBandStats, TransformSchema
-    from .utils import name_xy, xy_name
+    from .utils import name_xy, xy_name, open_rasters
 
 def __getattr__(name: str):
 
@@ -76,7 +77,7 @@ def __getattr__(name: str):
     if name in ['BlockSplitPaths', 'ImageBandStats', 'TransformSchema']:
         return getattr(importlib.import_module('.transform_types', __package__), name)
 
-    if name in ['name_xy', 'xy_name',]:
+    if name in ['name_xy', 'xy_name', 'open_rasters']:
         return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(name)

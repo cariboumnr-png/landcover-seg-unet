@@ -36,6 +36,7 @@ import typing
 import rasterio
 import rasterio.coords
 # local imports
+import landseg.geopipe.core as core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.utils as utils
 
@@ -88,7 +89,7 @@ def validate_geometry(
     summary = {}
 
     # execute pipeline
-    with utils.open_rasters(image_fpath, label_fpath) as (_img, _lbl):
+    with core.open_rasters(image_fpath, label_fpath) as (_img, _lbl):
         # make sure at least image is present
         if _img is None:
             raise ValueError('A valid image raster is required')
