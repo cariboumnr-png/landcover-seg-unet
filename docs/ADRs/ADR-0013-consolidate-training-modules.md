@@ -32,13 +32,12 @@ The target structure will resemble:
 
 ```
 geopipe/
-  model/
-    trainer/
-      __init__.py
-      components.py
-      engine.py
-      runner.py
-      stages.py   # if applicable
+model/
+trainer/
+  components/
+  engine/
+  runner/
+  factory.py   # module API
 ```
 
 This change is intentionally **structural only**:
