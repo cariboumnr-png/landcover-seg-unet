@@ -32,7 +32,8 @@ import typing
 __all__ = [
     # classes
     'BlockBuilder',
-    'BlockBuildingConfig',
+    'BlockBuilderConfig',
+    'BlockBuildingParameters',
     'CatalogUpdateContext',
     'MappingConfig',
     # functions
@@ -42,29 +43,32 @@ __all__ = [
     'update_catalog',
     'update_meta',
     # typing
-    'BuilderConfig',
     'GeometrySummary',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import BlockBuildingConfig, run_blocks_building
-    from .builder import BlockBuilder, BuilderConfig
+    from .builder import BlockBuilder, BlockBuilderConfig
     from .catalogue import CatalogUpdateContext, update_catalog, update_meta
     from .geometry import GeometrySummary, validate_geometry
     from .mapper import MappingConfig, map_rasters
+    from .pipeline import BlockBuildingParameters, run_blocks_building
 
 def __getattr__(name: str):
 
-    if name in ['BlockBuilder', 'BuilderConfig']:
+    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
         return getattr(importlib.import_module('.builder', __package__), name)
-    if name in ['CatalogUpdateContext', 'update_catalog', 'update_meta']:
+
+    if name in {'CatalogUpdateContext', 'update_catalog', 'update_meta'}:
         return getattr(importlib.import_module('.catalogue', __package__), name)
-    if name in ['GeometrySummary', 'validate_geometry']:
+
+    if name in {'GeometrySummary', 'validate_geometry'}:
         return getattr(importlib.import_module('.geometry', __package__), name)
-    if name in ['MappingConfig', 'map_rasters']:
+
+    if name in {'MappingConfig', 'map_rasters'}:
         return getattr(importlib.import_module('.mapper', __package__), name)
-    if name in ['BlockBuildingConfig', 'run_blocks_building']:
+
+    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(importlib.import_module('.pipeline', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

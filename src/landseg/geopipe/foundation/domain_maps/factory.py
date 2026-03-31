@@ -62,7 +62,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class DomainMappingConfig:
+class DomainBuildingParameters:
     '''Container for domain mapping configurations.'''
     file_list: list[tuple[str, int]]
     valid_threshold: float
@@ -72,7 +72,7 @@ class DomainMappingConfig:
 # -------------------------------Public Function-------------------------------
 def build_domains(
     world_grid: core.GridLayout,
-    config: DomainMappingConfig,
+    config: DomainBuildingParameters,
     logger: utils.Logger
 ) -> None:
     '''

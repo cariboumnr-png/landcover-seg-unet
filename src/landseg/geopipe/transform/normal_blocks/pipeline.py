@@ -51,7 +51,7 @@ def run_normaliza_blocks(root_dir: str):
     '''
 
     # load source blocks file lists
-    src: core.BlockSplitPaths = utils.load_json(f'{root_dir}/block_source.json')
+    src: core.BlocksPartition = utils.load_json(f'{root_dir}/block_source.json')
 
     # get source by split
     train = set(src['train'].values())
@@ -69,7 +69,7 @@ def run_normaliza_blocks(root_dir: str):
     test_dpath = f'{root_dir}/test_blocks'
 
     # build normalized blocks for each split
-    transform: core.BlockSplitPaths = {
+    transform: core.BlocksPartition = {
         'train': normal_blocks.normalize_blocks(train, stats,train_dpath),
         'val': normal_blocks.normalize_blocks(val, stats, val_dpath),
         'test': normal_blocks.normalize_blocks(test, stats, test_dpath)

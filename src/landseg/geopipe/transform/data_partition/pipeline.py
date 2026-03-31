@@ -40,7 +40,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class PartitionConfig:
+class PartitionParameters:
     '''Configuration for the dataset partitioning pipeline.'''
     val_test_ratios: tuple[float, float]# val split, test split
     buffer_step: int
@@ -59,7 +59,7 @@ class PartitionConfig:
 def run_datablocks_partition(
     foundation_root: str,
     transform_root: str,
-    partition_config: PartitionConfig,
+    partition_config: PartitionParameters,
     logger: utils.Logger,
 ) -> None:
     '''
@@ -132,10 +132,10 @@ def _split(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
     valid_blocks: dict[tuple[int, int], str],
-    config: PartitionConfig,
+    config: PartitionParameters,
     *,
     ext_test_blks: list[str] | None
-) -> tuple[core.BlockSplitPaths, list[int], list[int]]:
+) -> tuple[core.BlocksPartition, list[int], list[int]]:
     '''Split blocks with spatial safety and class balance.'''
 
     # split dataset
@@ -183,7 +183,7 @@ def _split(
     ps['train'] = [valid_blocks[c] for c in splits.train + selected]
     ps['val'] = [valid_blocks[c] for c in splits.val]
     ps['test'] = (ext_test_blks or []) + [valid_blocks[c] for c in splits.test]
-    blks_src: core.BlockSplitPaths = {
+    blks_src: core.BlocksPartition = {
         'train': _index_fpath(ps['train']),
         'val': _index_fpath(ps['val']),
         'test': _index_fpath(ps['test'])
@@ -203,7 +203,7 @@ def _index_fpath(fpaths: list[str]) -> dict[str, str]:
         indexed[name] = fpath # name is the same as core.xy_name()
     return indexed
 
-def _leak_check(blks_src: core.BlockSplitPaths) -> None:
+def _leak_check(blks_src: core.BlocksPartition) -> None:
     '''Check if any blockshared across train, val, or test splits.'''
 
     leak = set(blks_src['train']) & set(blks_src['val'])

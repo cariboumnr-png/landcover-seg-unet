@@ -57,7 +57,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class BuilderConfig:
+class BlockBuilderConfig:
     '''
     I/O paths and configuration parameters used during block construction.
 
@@ -107,7 +107,7 @@ class BlockBuilder:
         self,
         image_windows: alias.RasterWindowDict,
         label_windows: alias.RasterWindowDict,
-        config: BuilderConfig,
+        config: BlockBuilderConfig,
         logger: utils.Logger,
     ):
         '''

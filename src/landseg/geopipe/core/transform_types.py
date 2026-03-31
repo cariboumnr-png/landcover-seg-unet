@@ -26,7 +26,7 @@ from __future__ import annotations
 import typing
 
 # ---------------------------------Public Type---------------------------------
-class BlockSplitPaths(typing.TypedDict):
+class BlocksPartition(typing.TypedDict):
     '''Original data block files from the catalog.'''
     train: dict[str, str]
     val: dict[str, str]

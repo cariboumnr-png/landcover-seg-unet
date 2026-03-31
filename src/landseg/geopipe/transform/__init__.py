@@ -32,7 +32,7 @@ import typing
 
 __all__ = [
     # classes
-    'PartitionConfig',
+    'PartitionParameters',
     # functions
     'run_normaliza_blocks',
     'build_schema',
@@ -42,14 +42,14 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_partition import PartitionConfig, run_datablocks_partition
+    from .data_partition import PartitionParameters, run_datablocks_partition
     from .normal_blocks import run_normaliza_blocks
     from .schema_build import build_schema
 
 
 def __getattr__(name: str):
 
-    if name in {'PartitionConfig', 'run_datablocks_partition'}:
+    if name in {'PartitionParameters', 'run_datablocks_partition'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
 
     if name in {'run_normaliza_blocks'}:

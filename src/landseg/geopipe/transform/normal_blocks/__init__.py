@@ -46,11 +46,13 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['normalize_blocks']:
+    if name in {'normalize_blocks'}:
         return getattr(importlib.import_module('.normalize', __package__), name)
-    if name in ['run_normaliza_blocks']:
+
+    if name in {'run_normaliza_blocks'}:
         return getattr(importlib.import_module('.pipeline', __package__), name)
-    if name in ['aggregate_image_stats']:
+
+    if name in {'aggregate_image_stats'}:
         return getattr(importlib.import_module('.stats', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -58,7 +58,7 @@ def prepare(config: configs.RootConfig):
     hydration = config.transform.hydration
 
     # datablocks partition
-    cfg = transform.PartitionConfig(
+    cfg = transform.PartitionParameters(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
         buffer_step=partition.buffer_step,
         reward_ratios=scoring.reward,

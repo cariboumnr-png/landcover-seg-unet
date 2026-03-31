@@ -43,7 +43,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['build_schema']:
+    if name in {'build_schema'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

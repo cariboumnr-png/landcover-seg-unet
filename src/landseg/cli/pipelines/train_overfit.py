@@ -114,7 +114,7 @@ def _build_a_block(
     grid = foundation.build_world_grid(_config, grid_gen_config, logger)
 
     # build a single block
-    _config = foundation.BlockBuildingConfig(
+    _config = foundation.BlockBuildingParameters(
         dev_image_fpath=datablocks_cfg.filepaths.dev_image,
         dev_label_fpath=datablocks_cfg.filepaths.dev_label,
         test_image_fpath=datablocks_cfg.filepaths.test_image,

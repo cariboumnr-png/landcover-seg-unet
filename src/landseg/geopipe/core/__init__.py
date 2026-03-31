@@ -32,52 +32,52 @@ import typing
 
 __all__ = [
     # classes
-    'BlockMeta',
-    'CatalogEntry',
     'DataBlock',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
     # functions
     'name_xy',
-    'xy_name',
     'open_rasters',
+    'xy_name',
     # typing
+    'BlockMeta',
     'BlocksCatalog',
+    'BlocksPartition',
+    'CatalogEntry',
     'CatalogMeta',
-    'BlockSplitPaths',
+    'GridLayoutPayload',
     'ImageBandStats',
     'TransformSchema',
-    'GridLayoutPayload',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .foundation_catalog import BlocksCatalog, CatalogMeta, CatalogEntry
+    from .foundation_catalog import BlocksCatalog,  CatalogEntry, CatalogMeta
     from .foundation_data_block import BlockMeta, DataBlock
     from .foundation_domain_map import DomainTileMap
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
-    from .transform_types import BlockSplitPaths, ImageBandStats, TransformSchema
+    from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
     from .utils import name_xy, xy_name, open_rasters
 
 def __getattr__(name: str):
 
-    if name in ['BlockMeta', 'DataBlock']:
+    if name in {'BlockMeta', 'DataBlock'}:
         return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
-    if name in ['BlocksCatalog', 'CatalogMeta', 'CatalogEntry']:
+    if name in {'BlocksCatalog', 'CatalogMeta', 'CatalogEntry'}:
         return getattr(importlib.import_module('.foundation_catalog', __package__), name)
 
-    if name in ['DomainTileMap']:
+    if name in {'DomainTileMap'}:
         return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
 
-    if name in ['GridLayout', 'GridLayoutPayload', 'GridSpec']:
+    if name in {'GridLayout', 'GridLayoutPayload', 'GridSpec'}:
         return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
 
-    if name in ['BlockSplitPaths', 'ImageBandStats', 'TransformSchema']:
+    if name in {'BlocksPartition', 'ImageBandStats', 'TransformSchema'}:
         return getattr(importlib.import_module('.transform_types', __package__), name)
 
-    if name in ['name_xy', 'xy_name', 'open_rasters']:
+    if name in {'name_xy', 'open_rasters', 'xy_name'}:
         return getattr(importlib.import_module('.utils', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

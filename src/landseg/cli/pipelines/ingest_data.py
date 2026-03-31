@@ -72,7 +72,7 @@ def ingest(config: configs.RootConfig):
     grid = foundation.build_world_grid(_config, grid_gen_config, logger)
 
     # domains
-    _config = foundation.DomainMappingConfig(
+    _config = foundation.DomainBuildingParameters(
         file_list=[(d.path, d.index_base) for d in domain_cfg.files],
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
@@ -81,7 +81,7 @@ def ingest(config: configs.RootConfig):
     foundation.build_domains(grid, _config, logger)
 
     # datablocks building
-    _config = foundation.BlockBuildingConfig(
+    _config = foundation.BlockBuildingParameters(
         dev_image_fpath=datablocks_cfg.filepaths.dev_image,
         dev_label_fpath=datablocks_cfg.filepaths.dev_label,
         test_image_fpath=datablocks_cfg.filepaths.test_image,

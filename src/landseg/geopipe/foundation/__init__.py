@@ -32,8 +32,8 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuildingConfig',
-    'DomainMappingConfig',
+    'BlockBuildingParameters',
+    'DomainBuildingParameters',
     'GridExtentConfig',
     'GridGenerationConfig',
     # functions
@@ -45,16 +45,16 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_blocks import BlockBuildingConfig, run_blocks_building
-    from .domain_maps import DomainMappingConfig, build_domains
+    from .data_blocks import BlockBuildingParameters, run_blocks_building
+    from .domain_maps import DomainBuildingParameters, build_domains
     from .world_grids import GridExtentConfig, GridGenerationConfig, build_world_grid
 
 def __getattr__(name: str):
 
-    if name in {'BlockBuildingConfig', 'run_blocks_building'}:
+    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(importlib.import_module('.data_blocks', __package__), name)
 
-    if name in {'DomainMappingConfig', 'build_domains'}:
+    if name in {'DomainBuildingParameters', 'build_domains'}:
         return getattr(importlib.import_module('.domain_maps', __package__), name)
 
     if name in {'GridExtentConfig', 'GridGenerationConfig', 'build_world_grid'}:

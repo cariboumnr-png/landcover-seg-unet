@@ -41,7 +41,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class BlockBuildingConfig:
+class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
     dev_image_fpath: str
     dev_label_fpath: str
@@ -54,7 +54,7 @@ class BlockBuildingConfig:
 # -------------------------------Public Function-------------------------------
 def run_blocks_building(
     world_grid: core.GridLayout,
-    config: BlockBuildingConfig,
+    config: BlockBuildingParameters,
     output_root: str,
     logger: utils.Logger,
     *,
@@ -101,7 +101,7 @@ def run_blocks_building(
     logger.log('INFO', 'Rasters for model developement mapped to grid')
 
     # block builder for model dev rasters
-    builder_cfg = data_blocks.BuilderConfig(
+    builder_cfg = data_blocks.BlockBuilderConfig(
         image_fpath=config.dev_image_fpath,
         label_fpath=config.dev_label_fpath,
         config_fpath=config.data_config_fpath,
@@ -156,7 +156,7 @@ def run_blocks_building(
     logger.log('INFO', 'Holdout raters for test mapped to grid')
 
     # block builder for test rasters
-    builder_cfg = data_blocks.BuilderConfig(
+    builder_cfg = data_blocks.BlockBuilderConfig(
         image_fpath=config.test_image_fpath,
         label_fpath=config.test_label_fpath,
         config_fpath=config.data_config_fpath,
