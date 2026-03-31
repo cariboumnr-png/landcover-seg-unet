@@ -75,7 +75,8 @@ def save_domain(
 
 def load_domain(
     domain_name: str,
-    dirpath: str
+    dirpath: str,
+    logger: utils.Logger
 ) -> core.DomainTileMap:
     '''
     Load a `DomainTileMap` from disk.
@@ -100,4 +101,4 @@ def load_domain(
         raise ValueError(f'Unsupported schema: {found}; expected {expected}.')
 
     # otherwise return class object via class method
-    return core.DomainTileMap.from_payload(payload)
+    return core.DomainTileMap.from_payload(payload, logger)

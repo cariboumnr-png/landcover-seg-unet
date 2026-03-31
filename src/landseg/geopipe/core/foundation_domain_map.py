@@ -216,7 +216,10 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         }
 
     @classmethod
-    def from_payload(cls, payload: DomainPayload) -> DomainTileMap:
+    def from_payload(
+        cls, payload: DomainPayload,
+        logger: utils.Logger
+    ) -> DomainTileMap:
         '''Instantiate the class with input payload.'''
 
         def _to_xy_tuple(inputs: list[int] | str) -> tuple[int, int]:
@@ -238,6 +241,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         obj._ctx = _DomainContext(**payload['context'])
         obj._valid = [_to_xy_tuple(x) for x in payload['valid_idx']]
         obj._data = {_to_xy_tuple(k): v for k, v in payload['tiles'].items()}
+        obj.logger = logger
         # return class object
         return obj
 

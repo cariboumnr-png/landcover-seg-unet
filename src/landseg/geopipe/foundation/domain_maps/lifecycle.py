@@ -19,60 +19,27 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Tools for preparing domain knowledge mapped onto a world grid.
-
-This module provides the public API for constructing per-domain
-DomainTileMap objects. It coordinates the following operations:
-
-    - Align the provided world grid to each domain raster using the
-        grid's pixel-offset calculation.
-    - Load an existing DomainTileMap artifact if present, validating its
-        schema and integrity.
-    - Otherwise, build a new DomainTileMap by reading all grid windows
-        from the categorical raster, filtering tiles by valid-pixel
-        fraction, computing majority statistics, deriving normalized
-        frequency vectors, and projecting them onto PCA components to
-        reach a target explained variance.
-    - Persist each new DomainTileMap as a JSON payload and a metadata
-        sidecar including schema_id, context, hash, and grid association.
-
-Configuration is supplied via a structured dictionary containing:
-    - 'dirpath': directory with domain rasters.
-    - 'files': list of domain raster entries ('name', 'index_base').
-    - 'valid_threshold': minimum fraction of valid pixels for tile
-        acceptance.
-    - 'target_variance': PCA target cumulative explained variance.
-    - 'output_dirpath': where DomainTileMap artifacts are written.
-
-The output is a mapping from domain base names (filename without suffix)
-to DomainTileMap instances, suitable for downstream model conditioning or
-task-level feature assembly.
-'''
+'''Domains artifacts lifecycle management.'''
 
 # standard imports
 from __future__ import annotations
-import dataclasses
+import copy
+import os
 # local imports
 import landseg.geopipe.core as core
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
-# ------------------------------Public  Dataclass------------------------------
-@dataclasses.dataclass
-class DomainBuildingParameters:
-    '''Container for domain mapping configurations.'''
-    src_path: str
-    index_base: int
-    valid_threshold: float
-    target_variance: float
-
 # -------------------------------Public Function-------------------------------
-def build_domain(
+def prepare_domain_maps(
     world_grid: core.GridLayout,
-    config: DomainBuildingParameters,
-    logger: utils.Logger
-) -> core.DomainTileMap:
+    domain_configs: list[domain_maps.DomainBuildingParameters],
+    logger: utils.Logger,
+    *,
+    artifacts_dir: str,
+    policy: artifacts.LifecyclePolicy
+) -> None:
     '''
     Prepare and persist domain tile maps for categorical raster(s).
 
@@ -104,27 +71,48 @@ def build_domain(
     schema id and integrity hash for compatibility checks.
     '''
 
-    # init a new domain map class object
-    domain_map = core.DomainTileMap(
-        config.valid_threshold,
-        config.target_variance,
-        logger
-    )
+    # get a child logger
+    logger = logger.get_child('dkmap')
 
-    # map domain source to world grid
-    domain_package = domain_maps.map_domain_to_grid(
-        world_grid,
-        config.src_path,
-        logger,
-        index_base=config.index_base,
-    )
+    # read provided domain rasters
+    for config in domain_configs:
 
-    # finish domain map building
-    domain_map.build(
-        domain_package.block_size,
-        domain_package.block_overlap,
-        domain_package.index_range,
-        domain_package.tiles_dict
-    )
+        # copy the world grid instance
+        grid = copy.deepcopy(world_grid)
+        # get filepath and filename without extension
+        name, _ = os.path.splitext(os.path.basename(config.src_path))
 
-    return domain_map
+        # rebuild if missing or outdated
+        if policy is artifacts.LifecyclePolicy.REBUILD_IF_STALE:
+            msg = '' # default status message
+            # try load the domain JSON
+            try:
+                logger.log('INFO', f'Loading domain {name}')
+                dom = domain_maps.load_domain(name, artifacts_dir, logger)
+                # assess domain JSON status
+                if not grid.tile_overlap in dom.blk_overlaps:
+                    msg = 'Found new tile stride from the input grid'
+                if dom.blk_size != grid.tile_size:
+                    msg = 'Domain was mapped to a grid of different tiles size'
+            except FileNotFoundError:
+                msg = 'Domain JSON not found'
+
+            if bool(msg):
+                logger.log('INFO', msg)
+                dom = domain_maps.build_domain(grid, config, logger)
+                domain_maps.save_domain(name, dom, artifacts_dir)
+                logger.log('INFO', f'Domain {name} created/updated')
+            else:
+                logger.log('INFO', f'Domain {name} loaded successfully')
+
+        # force rebuild
+        elif policy is artifacts.LifecyclePolicy.REBUILD:
+            dom = domain_maps.build_domain(grid, config, logger)
+            domain_maps.save_domain(name, dom, artifacts_dir)
+            logger.log('INFO', f'Domain {name} rebuilt')
+
+        # unsupported policy
+        else:
+            msg = f'Currently unsupported policy: {policy}'
+            logger.log('ERROR', msg)
+            raise NotImplementedError(msg)

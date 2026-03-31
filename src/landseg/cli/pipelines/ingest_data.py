@@ -79,13 +79,19 @@ def ingest(config: configs.RootConfig):
     )
 
     # domains
-    _config = foundation.DomainBuildingParameters(
-        file_list=[(d.path, d.index_base) for d in domain_cfg.files],
+    _config = [foundation.DomainBuildingParameters(
+        src_path=dom.path,
+        index_base=dom.index_base,
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
+    ) for dom in domain_cfg.files]
+    foundation.prepare_domain_maps(
+        grid,
+        _config,
+        logger,
+        artifacts_dir=f'{out_root}/domain_knowledge',
+        policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
     )
-    domains_dir=f'{out_root}/domain_knowledge'
-    foundation.build_domains(grid, _config, domains_dir, logger)
 
     # datablocks building
     _config = foundation.BlockBuildingParameters(

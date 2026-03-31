@@ -67,7 +67,15 @@ def prepare_world_grid(
             logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
             return output_grid
 
+    # force rebuild
+    elif policy is artifacts.LifecyclePolicy.REBUILD:
+        output_grid = world_grids.build_grid(config)
+        world_grids.save_grid(output_grid, artifacts_dir)
+        logger.log('INFO', f'World grid {gid} rebuilt to {artifacts_dir}')
+        return output_grid
+
     # unsupported policy
-    msg = f'Currently unsupported policy: {policy}'
-    logger.log('ERROR', msg)
-    raise NotImplementedError(msg)
+    else:
+        msg = f'Currently unsupported policy: {policy}'
+        logger.log('ERROR', msg)
+        raise NotImplementedError(msg)

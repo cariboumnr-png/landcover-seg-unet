@@ -36,7 +36,7 @@ __all__ = [
     'DomainBuildingParameters',
     'GridParameters',
     # functions
-    'build_domains',
+    'prepare_domain_maps',
     'prepare_world_grid',
     'run_blocks_building',
     # types
@@ -45,7 +45,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .data_blocks import BlockBuildingParameters, run_blocks_building
-    from .domain_maps import DomainBuildingParameters, build_domains
+    from .domain_maps import DomainBuildingParameters, prepare_domain_maps
     from .world_grids import GridParameters, prepare_world_grid
 
 def __getattr__(name: str):
@@ -53,7 +53,7 @@ def __getattr__(name: str):
     if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(importlib.import_module('.data_blocks', __package__), name)
 
-    if name in {'DomainBuildingParameters', 'build_domains'}:
+    if name in {'DomainBuildingParameters', 'prepare_domain_maps'}:
         return getattr(importlib.import_module('.domain_maps', __package__), name)
 
     if name in {'GridParameters', 'prepare_world_grid'}:
