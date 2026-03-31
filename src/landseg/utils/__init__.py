@@ -26,7 +26,6 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
-from .contxt import open_rasters
 from .funcs import(
     get_dir_size,
     get_file_ctime,
@@ -53,7 +52,6 @@ __all__ = [
     'hash_payload',
     'load_json',
     'load_pickle',
-    'open_rasters',
     'write_json',
     'write_pickle',
     # types
