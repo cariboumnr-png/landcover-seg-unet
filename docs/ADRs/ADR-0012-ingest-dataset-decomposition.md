@@ -1,158 +1,157 @@
-# ADR-0012: Dataset Ingestion Pipeline decomposition
-- **Status:** Proposed
-- **Date:** 2026-03-13
+# ADR-0012 (Updated): Dataset Ingestion Pipeline Decomposition
+
+- **Status:** Accepted / Implemented
+- **Date:** 2026-03-31
+- **Supersedes:** ADR-0012 (Proposed)
 
 ## Context
-In the current pipeline `landseg.ingest_dataset`, normalization is applied before dataset splitting using statistics from all fit blocks. This limits flexibility and introduces potential data leakage. Raw blocks also contain both unnormalized and normalized images, mixing permanent and experiment‑dependent content.
 
-We intend to support multiple grids on the same rasters. Raw blocks should therefore be immutable, reusable across experiments, and independent of downstream normalization strategies.
+The earlier ingestion pipeline computed normalization before dataset splitting
+and sometimes wrote normalized arrays into per-block artifacts, creating a risk
+of data leakage and tightly coupling the block catalogue to a particular
+experiment. The new implementation decomposes the pipeline so that raw block
+artifacts are immutable and experiment-independent, while normalization happens
+later using statistics derived **only from the training split**.
+
+While implementing this decomposition, module names diverged from the original
+ADR wording:
+
+- **Canonical layer** (ADR: *align* + *blocks*) is implemented under
+  `geopipe.foundation` (world grid alignment & raw block building).
+- **Materialized layer** (ADR: *split* + *standardize*) is implemented under
+  `geopipe.transform` (splitting, normalization, and schema emission).
+
+Additionally, previously implemented **domain knowledge** components were
+consolidated by extracting concrete class implementations into
+`geopipe.core` (e.g., `DataBlock`, `BlocksCatalog`, `DomainTileMap`,
+`GridLayout`), so they can be reused consistently across the pipeline and the
+trainer stack.
+
+A stage‑based training runner pipeline (multi‑phase schedule with head
+activation/logit‑adjust controls) was also added in this branch, improving
+training orchestration but orthogonal to data ingestion per se.
 
 ## Decision
-We adopt a **four‑module pipeline**:
-> 2026-03-18: we are going to wrap `align` and `blocks` to `canonical`; `split` and `standardize` to `materialized`
 
-## Module — `align`
+Adopt a **two‑layer, four‑stage** pipeline that maps directly to the original
+intent, with updated module naming to reflect the codebase:
 
-**Purpose:** align input image/label rasters to the grid.
+- **Canonical (read‑only, reusable across experiments)**
 
-### Outputs
+  1. **World‑grid alignment** → build/load a persisted `GridLayout` (windows)
+     and align rasters on demand (`offset_from`).
+  2. **Raw blocks** → build immutable `.npz` blocks with images/labels/metadata
+     but **no normalized arrays**; manage a read‑only catalogue.
 
-a `DataWindows` instance
+- **Materialized (experiment‑dependent)**
 
-### Note
+  3. **Split** → consume the raw catalogue to produce train/val/(optional test)
+     manifests; compute label distributions/metrics needed for scoring. No
+     normalization here.
+  4. **Standardize** → compute per‑band mean/std over **train only**, then
+     normalize all splits using these stats; emit a **final schema** tied to
+     the normalized artifacts.
 
-* simple migration of the old `ingest_dataset.mapper` module.
+## Module Mapping (Implemented)
 
----
+### Canonical layer — `geopipe.foundation`
 
-## Module — `blocks`
+- **World grid**: `grid_generator.GridLayout`/`GridSpec` build or load a
+  persisted grid; `offset_from` supplies raster alignment as an integer pixel
+  offset per dataset.
+- **Raw blocks**: `foundation_data_block.DataBlock` constructs per‑window data
+  and writes `.npz` without normalized arrays; catalogue/metadata are persisted
+  via `BlocksCatalog.save_json(...)` → `catalog.json` and dataset‑level
+  `metadata.json`. Existing blocks are **skipped** to avoid collisions.
 
-**Purpose:** produce immutable raw data blocks.
+### Materialized layer — `geopipe.transform`
 
-### Outputs
+- **Split**: `partition_blocks(...)` writes raw split manifests and label
+  stats (see *Artifacts*), operating purely on the raw catalogue.
+- **Standardize**: `build_normalized_blocks(...)` aggregates **train‑only**
+  band statistics and writes normalized blocks plus a normalized split registry;
+  `build_schema(...)` then emits the final `schema.json` pointing **only** to
+  normalized artifacts. citeturn1search4turn1search5turn1search6
 
-Raw `.npz` files containing:
+## Artifacts & Conventions
 
-* raw image channels (with spectral/topo features as desired)
-* label / hierarchical label arrays
-* valid mask
-* metadata including per-block stats
-* **no normalized image array**
+> File names reflect the implemented branch; they replace the earlier ADR’s
+> placeholders (e.g., `extract_stats.json`).
 
-Additional outputs:
+- **Raw catalogue (canonical)**
+  - `catalog.json`: grid‑indexed block registry with provenance, checksums,
+    and per‑block metadata.
+  - `metadata.json`: dataset‑level conventions (tensor shapes, dtypes, label
+    topology, ignore index, source paths, mapped grids).
+- **Split outputs (materialized)** — produced by `partition_blocks(...)` under
+  the transform root:
+  - `block_source.json`: *raw* block paths per split.
+  - `label_stats.json`: per‑head class counts used for scoring/diagnostics.
 
-* `catalogue.json` : block name → raw `.npz` path
-* `catalogue_meta.json` : grid signature, rasters used, creation timestamp, version, etc.
+- **Normalization outputs (materialized)** — produced by `build_normalized_blocks(...)`:
+  - `image_stats.json`: **train‑only** per‑band stats (count, mean, std, M2).
 
-### Requirements
+  - `block_splits.json`: *normalized* block paths per split.
 
-* Catalogue is **read-only after production**.
-* Multiple grids can coexist; if grids share origin + shape logic, filename collision is acceptable and the builder will skip existing blocks.
-* Catalogue **never contains experiment-dependent features such as normalization**.
+  - Normalized block files (`.npz`), using array keys:
+    - **image** → `'image'`
+    - **labels** → `'label_stack'` (hierarchical base/reclass channels)
 
----
+- **Final dataset schema (materialized)**
+  - `schema.json`: references **normalized** splits only; persists
+    array‑key conventions (`image`/`label_stack`), statistics, checksums, and
+    artifact paths for reproducibility. citeturn1search6
 
-## Module — `split`
+## Data Flow (Implemented)
 
-**Purpose:** consume raw catalogue and produce dataset splits.
+```
+# canonical (reusable)
+reference raster/extent → GridLayout (persisted) → map rasters to windows
+→ build DataBlock (.npz) per window → update catalog.json / metadata.json
 
-### Responsibilities
-
-* Read raw catalogue metadata.
-* Select a subset of blocks:
-
-  * filter by valid pixel ratio
-  * scoring
-  * geographic sampling
-* Produce `${train, val}.json` manifests pointing to raw blocks.
-* Compute any label distributions or per-split metrics needed for scoring.
-
-### Important Rules
-
-* **No normalization here.**
-* Splits can be recomputed arbitrarily without modifying the catalogue.
-
----
-
-## Module — `standardize`
-
-**Purpose:** generate model-ready data tailored to the chosen split, including normalization.
-
-### Responsibilities
-
-Compute per-channel mean/std on **train blocks only**.
-
-* Train-only statistics prevent leakage.
-* Statistics are stored in `extract_stats.json`.
-
-Normalize image arrays for train/val/test using train statistics and write:
-
-New `.npz` files containing:
-
-* `image_normalized`
-* `label_masked`
-* `meta` (shallow copy with updated extractor version)
-
-Files are stored under a **new directory versioned by extractor**.
-
-Build the **final schema** based solely on these extracted `.npz` files.
-
-### Advantages
-
-* Every experiment can choose a fresh training subset, run extract, and get fully leakage-free normalized blocks.
-* Raw catalogue remains untouched and reusable.
-* Extractor can change normalization techniques (e.g., robust z-score, histogram matching) without affecting catalogue stability.
+# materialized (experiment)
+partition_blocks → block_source.json + label_stats.json
+→ build_normalized_blocks (train-only stats → image_stats.json)
+→ normalized .npz + block_splits.json
+→ build_schema → schema.json (consumes block_splits.json)
+```
 
 ## Rationale
-- Prevents data leakage by computing normalization stats strictly from training split.
-- Enables multiple downstream experiments to reuse the same raw catalogue.
-- Maintains immutability and versioning guarantees of raw data.
-- Extraction becomes experiment‑dependent and repeatable.
 
-## Alternatives Considered
-### Option A — Keep normalization in catalogue (rejected)
-- Normalization would be tied to a specific “fit” subset. Any change in train selection forces catalogue rebuild. Violates reuse goal.
-### Option B — Fold extraction into split module (rejected)
-- Splitting and extraction have different lifecycles. Extraction depends on split, and splits may be recomputed many times. Keeping extraction separate avoids churn.
+- Prevents data leakage by computing normalization strictly from the **train**
+  split and materializing normalized artifacts per experiment. citeturn1search4
+- Keeps raw blocks stable, reproducible, and **reusable** across multiple
+  experiments and splits.
+- Allows changing normalization techniques or sampling/scoring strategies
+  without touching the raw catalogue.
 
 ## Consequences
-- Normalized arrays removed from raw blocks.
-- Catalogue is stable and grid‑dependent only.
-- Splits and extraction are reproducible and decoupled.
-- Final schema reflects only extracted, normalized blocks.
 
-## Work Plan
-- Refactor existing blockbuilder into `catalogue`.
-- Implement `split` for all scoring/splitting logic.
-- Add `standardize` for normalization + final dataset emission.
-- Update pipeline naming, ordering, and documentation.
+- Raw blocks **exclude** normalized arrays and remain versionable and portable.
 
-## Note
-- To avoid bloating at root, these modules are to be sub-modules under `landseg.ingest_dataset/` and accessed by `landseg.ingenst_dataset/pipeline.py`.
-- Expected artifacts output structure:
-```
-./experiment/artifacts/
-├── <dataset_name>/
-    ├── fit/
-    |   ├── grid_row_256_col_256
-    |   |   ├── blocks/
-    |   |   ├── windows/
-    |   |   |   ├── windows_<gid>.pkl
-    |   |   |   ├── windows_<gid>.pkl
-    |   |   |   ...
-    |   |   ├── metadata.json
-    |   |   ├── catalog.json
-    |   |   ...
-    |   └── grid_row_512_col_512
-    └── test
-        ├── grid_row_256_col_256
-        |   ├── blocks/
-        |   ├── windows/
-        |   |   ├── windows_<gid>.pkl
-        |   |   ├── windows_<gid>.pkl
-        |   |   ...
-        |   ├── metadata.json
-        |   ├── catalog.json
-        |   ...
-        └── grid_row_512_col_512
-```
+- Experiments depend only on normalized manifests and `schema.json`, enabling
+  deterministic training I/O and auditing.
+- Additional artifact files exist compared with the original ADR text (e.g.,
+  `image_stats.json`, `block_splits.json`), but they clarify responsibilities
+  between source vs. normalized splits.
+
+## Implementation Notes (This branch)
+
+- **Domain knowledge consolidation:** concrete implementations for domain tiles,
+  world grid, data blocks, and catalog were extracted into `geopipe.core` so
+  both data prep and the trainer stack rely on the same primitives.
+- **Catalogue behavior:** block creation skips existing artifacts to avoid
+  collisions; catalog writes are deterministic and hashed. (Full immutability
+  enforcement can be added via a future read‑only “frozen” marker.)
+- **Stage‑based training pipeline:** experiment runner supports multi‑phase
+  schedules (per‑phase heads, logit‑adjust scheme, LR scaling), implemented in
+  the branch’s runner/trainer stack.
+
+
+## Acceptance
+
+We will **accept this branch as it currently stands**. The implementation
+meets the intent of ADR‑0012 in substance, with the updated module naming and
+artifact conventions reflected in this document. Any remaining follow‑ups
+(e.g., adding a catalogue `frozen` guard or publishing JSON schemas) can be
+handled as incremental improvements without blocking adoption.
