@@ -88,7 +88,7 @@ def prepare_domain_maps(
             # try load the domain JSON
             try:
                 logger.log('INFO', f'Loading domain {name}')
-                dom = domain_maps.load_domain(name, artifacts_dir, logger)
+                dom = domain_maps.load_domain(name, artifacts_dir)
                 # assess domain JSON status
                 if not grid.tile_overlap in dom.blk_overlaps:
                     msg = 'Found new tile stride from the input grid'

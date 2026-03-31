@@ -40,8 +40,7 @@ import landseg.utils as utils
 @dataclasses.dataclass
 class _DomainTilesPackage:
     '''Container for domain tiles mapped to a world grid.'''
-    block_size: tuple[int, int]
-    block_overlap: tuple[int, int]
+    block_specs: tuple[int, int, int, int]
     index_range: tuple[int, int]
     tiles_dict: alias.RasterTileDict
 
@@ -91,8 +90,7 @@ def map_domain_to_grid(
 
     logger.log('INFO', 'Domain mapped onto input world grid')
     return _DomainTilesPackage(
-        block_size=grid.tile_size,
-        block_overlap=grid.tile_overlap,
+        block_specs=(*grid.tile_size, *grid.tile_overlap),
         index_range=(0, index_mapping.size - 1),
         tiles_dict=re_indexed_tiles
     )

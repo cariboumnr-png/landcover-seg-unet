@@ -120,7 +120,6 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         self,
         valid_threshold: float,
         target_variance: float,
-        logger: utils.Logger
     ) -> None:
         '''
         Build a `DomainTileMap` from categorical raster and world grid.
@@ -158,7 +157,6 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         self.blk_overlaps: list[tuple[int, int]]
         self._valid: list[tuple[int, int]] = []
         self._data: dict[tuple[int, int], DomainTile] = {}
-        self.logger = logger
 
     @property
     def max_id(self) -> int:
@@ -216,10 +214,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         }
 
     @classmethod
-    def from_payload(
-        cls, payload: DomainPayload,
-        logger: utils.Logger
-    ) -> DomainTileMap:
+    def from_payload(cls, payload: DomainPayload) -> DomainTileMap:
         '''Instantiate the class with input payload.'''
 
         def _to_xy_tuple(inputs: list[int] | str) -> tuple[int, int]:
@@ -241,15 +236,15 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         obj._ctx = _DomainContext(**payload['context'])
         obj._valid = [_to_xy_tuple(x) for x in payload['valid_idx']]
         obj._data = {_to_xy_tuple(k): v for k, v in payload['tiles'].items()}
-        obj.logger = logger
         # return class object
         return obj
 
-    def build(self,
-        block_size: tuple[int, int],
-        block_overlap: tuple[int, int],
+    def build(
+        self,
+        block_specs: tuple[int, int, int, int],
         index_range: tuple[int, int],
-        raster_tiles: alias.RasterTileDict
+        raster_tiles: alias.RasterTileDict,
+        logger: utils.Logger
     ) -> None:
         '''
         Compute per-tile statistics and PCA features, and fill the map.
@@ -266,22 +261,22 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
 
         # early exit if all input tiles are already in map
         if set(raster_tiles.keys()).issubset(set(self._data.keys())):
-            self.logger.log('INFO', 'Input tiles already mapped, exit build')
+            logger.log('INFO', 'Input tiles already mapped, exit build')
             return
 
         # args directly to attrs - if no attrs present this is a new map
         if not hasattr(self, 'index_range'):
             self.index_range = index_range
         if not hasattr(self, 'blk_size'):
-            self.blk_size = block_size
+            self.blk_size = (block_specs[0], block_specs[1])
         if not hasattr(self, 'blk_overlaps'):
-            self.blk_overlaps = [block_overlap]
+            self.blk_overlaps = [(block_specs[2], block_specs[3])]
         else:
-            self.blk_overlaps.append(block_overlap)
+            self.blk_overlaps.append((block_specs[2], block_specs[3]))
         print(self.blk_overlaps)
 
         # first iteration to get indices of valid tiles and index range
-        self.logger.log('INFO', 'Filter input raster tiles')
+        logger.log('INFO', 'Filter input raster tiles')
         for c, tile in raster_tiles.items():
             if c in self._data: # skip keys that already in data
                 continue
@@ -296,7 +291,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
                 self._valid.append(c)
 
         # get majority index for valid tiles - calc here
-        self.logger.log('INFO', 'Calculate majority class from new tiles')
+        logger.log('INFO', 'Calculate majority class from new tiles')
         for c in set(raster_tiles.keys()):
             if c in self._data: # skip keys that already in data
                 continue
@@ -312,7 +307,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         self._ctx.major_freq_mean /= len(self._valid)
 
         # get pca transform for valid tiles - calc delegated to transform.py
-        self.logger.log('INFO', 'PCA transforming all valid tiles')
+        logger.log('INFO', 'PCA transforming all valid tiles')
         freqs: dict[tuple[int, int], numpy.ndarray] = {}
         for c in self._valid: # calculate on all valid tiles
             tile = raster_tiles[c]

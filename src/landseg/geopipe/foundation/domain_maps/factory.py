@@ -107,8 +107,7 @@ def build_domain(
     # init a new domain map class object
     domain_map = geo_core.DomainTileMap(
         config.valid_threshold,
-        config.target_variance,
-        logger
+        config.target_variance
     )
 
     # map domain source to world grid
@@ -121,10 +120,10 @@ def build_domain(
 
     # finish domain map building
     domain_map.build(
-        domain_package.block_size,
-        domain_package.block_overlap,
+        domain_package.block_specs,
         domain_package.index_range,
-        domain_package.tiles_dict
+        domain_package.tiles_dict,
+        logger
     )
 
     return domain_map
