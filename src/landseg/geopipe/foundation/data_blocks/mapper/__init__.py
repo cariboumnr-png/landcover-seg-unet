@@ -34,6 +34,7 @@ __all__ = [
     'MappedRasterWindows',
     # functions
     'map_rasters',
+    'map_rasters_to_grid',
     'validate_geometry',
     # typing
     'GeometrySummary',
@@ -42,12 +43,16 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .geometry import GeometrySummary, validate_geometry
+    from .lifecycle import map_rasters_to_grid
     from .mapper import MappedRasterWindows, map_rasters
 
 def __getattr__(name: str):
 
     if name in {'GeometrySummary', 'validate_geometry'}:
         return getattr(importlib.import_module('.geometry', __package__), name)
+
+    if name in {'map_rasters_to_grid'}:
+        return getattr(importlib.import_module('.lifecycle', __package__), name)
 
     if name in {'MappedRasterWindows', 'map_rasters'}:
         return getattr(importlib.import_module('.mapper', __package__), name)

@@ -19,37 +19,58 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-I/O utilites for data_blocks.
-'''
+'''Data blocks artifacts lifecycle management.'''
 
-# standard imports
-import os
 # local imports
-import landseg.geopipe.foundation.data_blocks as data_blocks
+import landseg.geopipe.artifacts as artifacts
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
-def save_mapped_windows(
-    grid_id: str,
-    mapped_windows: data_blocks.MappedRasterWindows,
-    dirpath: str
-) -> None:
+def map_rasters_to_grid(
+    world_grid: geo_core.GridLayout,
+    image_label_fpaths: tuple[str, str],
+    logger: utils.Logger,
+    *,
+    artifacts_dir: str,
+    policy: artifacts.LifecyclePolicy
+) -> mapper.MappedRasterWindows:
     '''doc'''
 
-    # prepare output dir
-    os.makedirs(dirpath, exist_ok=True)
+    # aliases
+    gid = world_grid.gid
+    img, lbl = image_label_fpaths
 
-    save_path = f'{dirpath}/windows_{grid_id}.pkl'
-    utils.write_pickle(save_path, mapped_windows)
-    utils.hash_artifacts(save_path)
+    # mapped windows fpath
+    logger.log('INFO', f'Try to load mapped windows from {gid}')
+    windows_fpath = f'{artifacts_dir}/windows_{gid}.pkl'
+    mapped_windows: mapper.MappedRasterWindows
+    load_status, m, mapped_windows = artifacts.load_pickle_hash(windows_fpath)
+    if load_status: # non-zero status indicates false artifact -> rebuild
+        logger.log('INFO', f'Mapped windows loading error: {m}')
+        build = True
+    else:
+        logger.log('INFO', f'Mapped windows from {gid} loaded')
+        build = False
 
-def load_mapped_windows(
-    grid_id: str,
-    dirpath: str
-) -> data_blocks.MappedRasterWindows:
-    '''doc'''
+    # policy: build if missing
+    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
+        pass
+    # policy: force rebuild
+    elif policy is artifacts.LifecyclePolicy.REBUILD:
+        build = True
+    # unsupported policy
+    else:
+        msg = f'Currently unsupported policy: {policy}'
+        logger.log('ERROR', msg)
+        raise NotImplementedError(msg)
 
-    load_path = f'{dirpath}/windows_{grid_id}.pkl'
-    windows: data_blocks.MappedRasterWindows = utils.load_pickle(load_path)
-    return windows
+    # build if needed
+    if build:
+        mapped_windows = mapper.map_rasters(world_grid, img, lbl, logger)
+        artifacts.write_pickle_hash(windows_fpath, mapped_windows)
+        logger.log('INFO', f'Mapped windows from {gid} created')
+
+    # return
+    return mapped_windows

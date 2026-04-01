@@ -96,7 +96,7 @@ def run_blocks_building(
 
     # map model dev rasters to grid
     logger.log('INFO', 'Mapping rasters for model developement to grid')
-    ras_windows = data_blocks.prepare_mapped_raster_windows(
+    ras_windows = data_blocks.map_rasters_to_grid(
         world_grid,
         (config.dev_image_fpath, config.dev_label_fpath),
         logger,
@@ -136,19 +136,18 @@ def run_blocks_building(
     new_blocks = block_builder.build_blocks()
 
     # create/update catalog and metadata JSON
-    updated = data_blocks.CatalogUpdateContext(
+    updated = data_blocks.ManifestUpdateContext(
         updated_coords=new_blocks,
         source_image=config.dev_image_fpath,
         source_label=config.dev_label_fpath,
         mapped_grid_id=world_grid.gid
     )
-    data_blocks.update_blocks_catalog(
+    data_blocks.update_manifest(
         updated,
         logger,
         artifacts_dir=f'{output_root}/model_dev/',
         policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
     )
-    data_blocks.update_meta(updated, f'{output_root}/model_dev/', logger)
 
     # exit if test rasters are not provided
     if not (config.test_image_fpath and config.test_label_fpath):
@@ -157,7 +156,7 @@ def run_blocks_building(
 
     # map test rasters to grid
     logger.log('INFO', 'Mapping holdout raters for test to grid')
-    ras_windows = data_blocks.prepare_mapped_raster_windows(
+    ras_windows = data_blocks.map_rasters_to_grid(
         world_grid,
         (config.test_image_fpath, config.test_label_fpath),
         logger,
@@ -186,17 +185,16 @@ def run_blocks_building(
     new_blocks = block_builder.build_blocks()
 
     # create/update catalog and metadata JSON
-    updated = data_blocks.CatalogUpdateContext(
+    updated = data_blocks.ManifestUpdateContext(
         updated_coords=new_blocks,
         source_image=config.test_image_fpath,
         source_label=config.test_label_fpath,
         mapped_grid_id=world_grid.gid
     )
-    data_blocks.update_blocks_catalog(
+    data_blocks.update_manifest(
         updated,
         logger,
         artifacts_dir=f'{output_root}/test_holdout/',
         policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
     )
-    data_blocks.update_meta(updated, f'{output_root}/test_holdout/', logger)
     return None
