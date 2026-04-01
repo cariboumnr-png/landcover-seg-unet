@@ -34,14 +34,20 @@ __all__ = [
     # classes
     'LifecyclePolicy',
     # functions
+    'load_json_hash',
+    'write_json_hash',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .json_io import load_json_hash, write_json_hash
     from .policy import LifecyclePolicy
 
 def __getattr__(name: str):
+
+    if name in {'load_json_hash', 'write_json_hash'}:
+        return getattr(importlib.import_module('.json_io', __package__), name)
 
     if name in {'LifecyclePolicy'}:
         return getattr(importlib.import_module('.policy', __package__), name)
