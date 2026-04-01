@@ -133,9 +133,9 @@ class BlockBuilder:
 
         # parse block meta dict (carried by each block)
         meta_src = utils.load_json(self.config.config_fpath)
-        keys = meta_src.keys() & geo_core.BlockMeta.__annotations__
+        keys = meta_src.keys() & geo_core.DataBlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
-        self.meta = typing.cast(geo_core.BlockMeta, meta) # typing compliance
+        self.meta = typing.cast(geo_core.DataBlockMeta, meta) # typing compliance
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
@@ -388,7 +388,7 @@ def _check_npz(
     return {coord: ok}
 
 def _build_a_blk(
-    meta: geo_core.BlockMeta,
+    meta: geo_core.DataBlockMeta,
     contxt: _BlockCreationContext,
     *,
     save: bool = False,

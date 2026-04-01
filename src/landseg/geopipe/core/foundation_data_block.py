@@ -63,7 +63,7 @@ import typing
 import numpy
 
 # ---------------------------------Public Type---------------------------------
-class BlockMeta(typing.TypedDict):
+class DataBlockMeta(typing.TypedDict):
     '''Defines the shape of a block meta dictionary.'''
     # general metadata
     block_name: str
@@ -131,7 +131,7 @@ class DataBlock:
         # init with empty block data
         self.data = _BlockArrays()
         # meta dict with default foo values
-        self.meta: BlockMeta = {
+        self.meta: DataBlockMeta = {
             'block_name': '',
             'has_label': True,
             'ignore_index': kwargs.get('ignore_index', 255),
@@ -157,7 +157,7 @@ class DataBlock:
         img_arr: numpy.ndarray,
         lbl_arr: numpy.ndarray | None,
         padded_dem: numpy.ndarray,
-        meta: BlockMeta,
+        meta: DataBlockMeta,
     ) -> 'DataBlock':
         '''
         Create a data block from in-memory raster arrays.
