@@ -34,7 +34,7 @@ import dataclasses
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
-import landseg.geopipe.foundation.data_blocks as data_blocks
+import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -67,7 +67,7 @@ def map_rasters(
     '''
 
     # get geometry summary
-    geom = data_blocks.validate_geometry(image_fpath, label_fpath, logger)
+    geom = mapper.validate_geometry(image_fpath, label_fpath, logger)
 
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
@@ -91,7 +91,7 @@ def map_rasters(
 # ------------------------------private  function------------------------------
 def _crop(
     world_grid: geo_core.GridLayout,
-    geom_summary: data_blocks.GeometrySummary,
+    geom_summary: mapper.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
 
