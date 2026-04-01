@@ -42,17 +42,17 @@ T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 @dataclasses.dataclass
 class CatalogUpdateContext:
     '''Context object describing a catalog update operation.'''
-    coords: list[tuple[int, int]]   # grid coords for blocks that were created
+    updated_coords: list[tuple[int, int]]   # grid coords for blocks that were created
     source_image: str               # path to the source image raster
     source_label: str | None        # optional path to the label raster
     mapped_grid_id: str             # id for the grid the blocks are mapped to
 
 # -------------------------------Public Function-------------------------------
 def update_catalog(
-    updated_blocks: CatalogUpdateContext,
-    root_dir: str,
-    logger: utils.Logger
-) -> None:
+    input_block_fpaths: list[str],
+    update_context: CatalogUpdateContext,
+    current_catalog: geo_core.BlocksCatalog,
+) -> geo_core.BlocksCatalog:
 
     '''
     Create or update the dataset's `catalog.json`.
@@ -80,52 +80,18 @@ def update_catalog(
             found when attempting to create a new catalog.
     '''
 
-    # check current directory
-    blks_dir = f'{root_dir}/blocks'
-    if not os.path.exists(blks_dir):
-        logger.log('ERROR', f'No /blocks/ folder at {root_dir}')
-        raise FileNotFoundError
-
-    # load catalog.json
-    catalog_path = f'{root_dir}/catalog.json'
-    catalog = geo_core.BlocksCatalog.from_json(catalog_path) # empty {} if no file
-
-    # conditions
-    coords = updated_blocks.coords
-    if catalog:
-        logger.log('INFO', f'Found {len(catalog)} existing catalog entries')
-        if not coords:
-            logger.log('INFO', 'No new blocks provided, exit')
-            return
-        logger.log('INFO', f'Update {len(coords)} new blocks')
-        fnames = [f'{geo_utils.xy_name(c)}.npz' for c in coords]
-    else:
-        logger.log('INFO', f'catalog.json not found at {root_dir}')
-        if not coords:
-            logger.log('INFO', 'No new blocks provided, scan existing blocks')
-            fnames = [p for p in os.listdir(blks_dir) if p.endswith('npz')]
-            if not fnames:
-                logger.log('ERROR', f'No blocks found at {blks_dir}')
-                raise FileNotFoundError
-            logger.log('INFO', f'Found {len(fnames)} existing blocks, create')
-        else:
-            logger.log('INFO', f'Creat from {len(coords)} new blocks')
-            fnames = [f'{geo_utils.xy_name(c)}.npz' for c in coords]
-
     # get hash values from input rasters
-    img_hash = utils.hash_artifacts(updated_blocks.source_image, False)
-    if updated_blocks.source_label:
-        lbl_hash = utils.hash_artifacts(updated_blocks.source_label, False)
+    img_hash = utils.hash_artifacts(update_context.source_image, False)
+    if update_context.source_label:
+        lbl_hash = utils.hash_artifacts(update_context.source_label, False)
     else:
         lbl_hash = None
 
-    logger.log('INFO', 'Creating/updating catalog.json...')
     # add to current catalog dict
-    for name in fnames:
-        fp = f'{blks_dir}/{name}'
+    for fp in input_block_fpaths:
         meta = geo_core.DataBlock.load(fp).meta
         row, col = geo_utils.name_xy(meta['block_name'])
-        catalog[(col, row)] = {
+        current_catalog[(col, row)] = {
             'block_name': meta['block_name'],
             'file_path': fp,
             'row_col': [row, col],
@@ -134,13 +100,13 @@ def update_catalog(
             'schema_version': '1.0.0',
             'creation_time': utils.get_file_ctime(fp, T_FORMAT),
             'sha_256': utils.hash_artifacts(fp, False),
-            'aligned_grid': updated_blocks.mapped_grid_id,
-            'source_image': updated_blocks.source_image,
+            'aligned_grid': update_context.mapped_grid_id,
+            'source_image': update_context.source_image,
             'source_image_sha_256': img_hash,
-            'source_label': updated_blocks.source_label,
+            'source_label': update_context.source_label,
             'source_label_sha_256': lbl_hash,
         }
-    catalog.save_json(catalog_path)
+    return current_catalog
 
 def update_meta(
     updated_blocks: CatalogUpdateContext,

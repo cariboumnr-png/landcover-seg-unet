@@ -40,6 +40,7 @@ __all__ = [
     'map_rasters',
     'load_mapped_windows',
     'prepare_mapped_raster_windows',
+    'update_blocks_catalog',
     'run_blocks_building',
     'save_mapped_windows',
     'validate_geometry',
@@ -55,7 +56,7 @@ if typing.TYPE_CHECKING:
     from .catalogue import CatalogUpdateContext, update_catalog, update_meta
     from .geometry import GeometrySummary, validate_geometry
     from .io import load_mapped_windows, save_mapped_windows
-    from .lifecycle import prepare_mapped_raster_windows
+    from .lifecycle import prepare_mapped_raster_windows, update_blocks_catalog
     from .mapper import MappedRasterWindows, map_rasters
     from .pipeline import BlockBuildingParameters, run_blocks_building
 
@@ -73,7 +74,7 @@ def __getattr__(name: str):
     if name in {'load_mapped_windows', 'save_mapped_windows'}:
         return getattr(importlib.import_module('.io', __package__), name)
 
-    if name in {'prepare_mapped_raster_windows'}:
+    if name in {'prepare_mapped_raster_windows', 'update_blocks_catalog'}:
         return getattr(importlib.import_module('.lifecycle', __package__), name)
 
     if name in {'MappedRasterWindows', 'map_rasters'}:

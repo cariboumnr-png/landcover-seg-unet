@@ -137,12 +137,17 @@ def run_blocks_building(
 
     # create/update catalog and metadata JSON
     updated = data_blocks.CatalogUpdateContext(
-        coords=new_blocks,
+        updated_coords=new_blocks,
         source_image=config.dev_image_fpath,
         source_label=config.dev_label_fpath,
         mapped_grid_id=world_grid.gid
     )
-    data_blocks.update_catalog(updated, f'{output_root}/model_dev/', logger)
+    data_blocks.update_blocks_catalog(
+        updated,
+        logger,
+        artifacts_dir=f'{output_root}/model_dev/',
+        policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
+    )
     data_blocks.update_meta(updated, f'{output_root}/model_dev/', logger)
 
     # exit if test rasters are not provided
@@ -182,11 +187,16 @@ def run_blocks_building(
 
     # create/update catalog and metadata JSON
     updated = data_blocks.CatalogUpdateContext(
-        coords=new_blocks,
+        updated_coords=new_blocks,
         source_image=config.test_image_fpath,
         source_label=config.test_label_fpath,
         mapped_grid_id=world_grid.gid
     )
-    data_blocks.update_catalog(updated, f'{output_root}/test_holdout/', logger)
+    data_blocks.update_blocks_catalog(
+        updated,
+        logger,
+        artifacts_dir=f'{output_root}/test_holdout/',
+        policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
+    )
     data_blocks.update_meta(updated, f'{output_root}/test_holdout/', logger)
     return None
