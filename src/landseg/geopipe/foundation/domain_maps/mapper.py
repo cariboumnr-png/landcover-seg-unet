@@ -129,7 +129,7 @@ def _read_window(
 
     # read raster at window and return
     with geo_utils.open_rasters(raster_fpath) as (src,):
-        assert src
+        assert src, f'Invalid domain raster source: {raster_fpath}'
         arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
         arr = arr.astype(numpy.int16, copy=False) # avoids OOM
         return raster_window_id, arr

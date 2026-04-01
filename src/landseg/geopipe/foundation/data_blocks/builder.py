@@ -245,7 +245,7 @@ class BlockBuilder:
 
         # run building sequence
         self._prepare_block_windows()
-        self._validate_existing_blocks()
+        self._structural_validation()
         self._create_missing_blocks()
         # return coords where blocks were created
         return self.coords_todo
@@ -281,7 +281,7 @@ class BlockBuilder:
         n = len(self.common_coords)
         self.logger.log('DEBUG', f'Number of windows with expected shape: {n}')
 
-    def _validate_existing_blocks(self) -> None:
+    def _structural_validation(self) -> None:
         '''
         Check integrity of expected block `.npz` files.
 
@@ -290,6 +290,10 @@ class BlockBuilder:
         regeneration, and removed from disk. This step does not create
         new blocks.
         '''
+
+        # NOTE This performs structural validation only; deeper integrity
+        # checks (e.g., hash verification) are a separate policy concern and
+        # may be introduced later.
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
@@ -399,7 +403,7 @@ def _build_a_blk(
     # read rasters at given window and create blocks
     with geo_utils.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
         # sanity check, image raster must be provided
-        assert img is not None
+        assert img, f'Invalid image source: {contxt.img_path}'
         # read image array
         img_window = contxt.img_window
         img_arr: numpy.ndarray = img.read(window=img_window, boundless=True)
