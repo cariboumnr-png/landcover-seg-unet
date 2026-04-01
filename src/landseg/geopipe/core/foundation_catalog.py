@@ -52,7 +52,6 @@ import json
 import typing
 # local imports
 import landseg.geopipe.utils as geo_utils
-import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
 class CatalogEntry(typing.TypedDict):
@@ -70,76 +69,6 @@ class CatalogEntry(typing.TypedDict):
     source_image_sha_256: str
     source_label: str | None
     source_label_sha_256: str | None
-
-class CatalogMeta(typing.TypedDict):
-    '''Typed metadata dictionary for the current catalog.'''
-    dataset: _DatasetInfo
-    io_conventions: _IOConventions
-    tensor_shapes: _TensorShapes
-    labels: _LabelsInfo
-
-# --------------------------------private  type--------------------------------
-# ----- dataset
-class _DatasetInfo(typing.TypedDict):
-    '''Dataset identity and provenance metadata.'''
-    name: str
-    last_updated: str
-    dataprep_commit: str
-    mapped_grids: list[str]
-    data_source: _DataSource
-
-class _DataSource(typing.TypedDict):
-    '''Input paths for fit/test images and labels.'''
-    image_paths: list[str]
-    label_paths: list[str]
-
-# ----- io_conventions
-class _IOConventions(typing.TypedDict):
-    '''Block IO format, key names, shapes, dtypes, and ignore index.'''
-    block_format: str
-    shapes: _IOShapes
-    dtypes: _IODtypes
-    ignore_index: int
-
-class _IOShapes(typing.TypedDict):
-    '''Logical ordering conventions for tensors.'''
-    image_order: str  # e.g., 'C,H,W'
-    label_order: str  # e.g., 'L,H,W'
-
-class _IODtypes(typing.TypedDict):
-    '''Dtypes for serialized arrays.'''
-    image: str
-    label: str
-
-# ----- tensor_shapes
-class _TensorShapes(typing.TypedDict):
-    '''Tensor shapes for image and label.'''
-    image: _ImageTensorSpec
-    label: _LabelTensorSpec
-
-class _ImageTensorSpec(typing.TypedDict):
-    '''Image tensor shape spec.'''
-    order: str
-    shape: list[int]  # [C, H, W]
-    C: int
-    H: int
-    W: int
-
-class _LabelTensorSpec(typing.TypedDict):
-    '''Label tensor shape spec.'''
-    order: str
-    shape: list[int]  # [L, H, W]
-    L: int
-    H: int
-    W: int
-
-# ----- labels
-class _LabelsInfo(typing.TypedDict):
-    '''Labeling metadata.'''
-    label_num_classes: int
-    label_to_ignore: list[int]
-    channel_parent: dict[str, str | None]
-    channel_parent_cls: dict[str, int | None]
 
 # --------------------------------Public  Class--------------------------------
 class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
@@ -185,40 +114,8 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         '''Return the catalogued block file list.'''
         return {k: v['file_path'] for k, v in self._data.items()}
 
-    def save_json(self, fpath: str) -> None:
-        '''
-        Save to JSON with deterministic ordering and custom formatting.
-
-        The output is sorted by block coordinate keys and formatted with
-        consistent indentation for readability. After writing, the file
-        is hashed for integrity tracking.
-
-        Args:
-            fpath: Destination file path for the JSON output.
-        '''
-
-        # index entries and sort
-        payload = {geo_utils.xy_name(k): v for k, v in self._data.items()}
-        sorted_payload = dict(sorted(payload.items()))
-        # manual json writing
-        with open(fpath, 'w', encoding='UTF-8') as file:
-            file.write('{\n')
-            for i, (key, value) in enumerate(sorted_payload.items()):
-                blk_txt = json.dumps(value)
-                blk_txt = blk_txt.replace('{', '{\n\t\t')
-                blk_txt = blk_txt.replace(', "', ',\n\t\t"')
-                blk_txt = blk_txt.replace('}', '\n\t}')
-                file.write(f'\t"{key}": {blk_txt}')
-                if i == len(sorted_payload) - 1:
-                    file.write('\n')
-                else:
-                    file.write(',\n')
-            file.write('}\n')
-        # hash
-        utils.hash_artifacts(fpath)
-
     @classmethod
-    def from_json(cls, fpath: str) -> BlocksCatalog:
+    def from_dict(cls, source: dict[str, CatalogEntry]) -> BlocksCatalog:
         '''
         Create a `BlocksCatalog` instance from a JSON file.
 
@@ -232,10 +129,32 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         '''
 
         obj = cls.__new__(cls)
-        try:
-            payload: dict[str, CatalogEntry] = utils.load_json(fpath)
-        except FileNotFoundError:
-            obj._data = {}
-            return obj
-        obj._data = {geo_utils.name_xy(k): v for k, v in payload.items()}
+        obj._data = {geo_utils.name_xy(k): v for k, v in source.items()}
         return obj
+
+    def to_json_payload(self) -> str:
+        '''
+        Deterministically ordered and custom-formatted JSON string.
+
+        Returns:
+            A formatted JSON string.
+        '''
+
+        # sort self._data and start the line
+        payload = {geo_utils.xy_name(k): v for k, v in self._data.items()}
+        items = sorted(payload.items())
+        lines = ['{']
+        # manual formatting line-by-line
+        for i, (key, value) in enumerate(items):
+            blk_txt = json.dumps(value)
+            blk_txt = blk_txt.replace('{', '{\n\t\t')
+            blk_txt = blk_txt.replace(', "', ',\n\t\t"')
+            blk_txt = blk_txt.replace('}', '\n\t}')
+
+            line = f'\t"{key}": {blk_txt}'
+            if i < len(items) - 1:
+                line += ','
+            lines.append(line)
+
+        lines.append('}')
+        return '\n'.join(lines)

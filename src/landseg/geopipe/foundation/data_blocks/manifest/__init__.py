@@ -18,9 +18,8 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 '''
-Top-level namespace for `landseg.geopipe.core`.
+Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,49 +31,29 @@ import typing
 
 __all__ = [
     # classes
-    'DataBlock',
-    'DomainTileMap',
-    'GridLayout',
-    'GridSpec',
+    'ManifestUpdateContext',
     # functions
+    'build_catalog',
+    'build_metadata',
+    'update_manifest',
     # typing
-    'DataBlockMeta',
-    'BlocksCatalog',
-    'BlocksMetadata',
-    'BlocksPartition',
-    'CatalogEntry',
-    'GridLayoutPayload',
-    'ImageBandStats',
-    'TransformSchema',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .foundation_catalog import BlocksCatalog,  CatalogEntry
-    from .foundation_data_block import DataBlock, DataBlockMeta
-    from .foundation_domain_map import DomainTileMap
-    from .foundation_metadata import BlocksMetadata
-    from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
-    from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
+    from .catalog import build_catalog
+    from .lifecycle import ManifestUpdateContext, update_manifest
+    from .metadata import build_metadata
 
 def __getattr__(name: str):
 
-    if name in {'BlocksCatalog', 'CatalogEntry'}:
-        return getattr(importlib.import_module('.foundation_catalog', __package__), name)
+    if name in {'build_catalog'}:
+        return getattr(importlib.import_module('.catalog', __package__), name)
 
-    if name in {'DataBlockMeta', 'DataBlock'}:
-        return getattr(importlib.import_module('.foundation_data_block', __package__), name)
+    if name in {'ManifestUpdateContext', 'update_manifest'}:
+        return getattr(importlib.import_module('.lifecycle', __package__), name)
 
-    if name in {'DomainTileMap'}:
-        return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
-
-    if name in {'BlocksMetadata'}:
-        return getattr(importlib.import_module('.foundation_metadata', __package__), name)
-
-    if name in {'GridLayout', 'GridLayoutPayload', 'GridSpec'}:
-        return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
-
-    if name in {'BlocksPartition', 'ImageBandStats', 'TransformSchema'}:
-        return getattr(importlib.import_module('.transform_types', __package__), name)
+    if name in {'build_metadata'}:
+        return getattr(importlib.import_module('.metadata', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
