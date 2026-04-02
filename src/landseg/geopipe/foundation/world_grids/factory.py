@@ -38,7 +38,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.utils as geo_utils
+import landseg.geopipe.utils as geo_utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
