@@ -182,9 +182,11 @@ def _metadata_status(
 
     # policy: rebuild if stale (includes build if missing)
     if policy is artifacts.LifecyclePolicy.REBUILD_IF_STALE:
-        pass # let the builder decide whether to update
+        return original_meta # let the builder decide whether to update
     # policy: force rebuild all
     if policy is artifacts.LifecyclePolicy.REBUILD:
-        original_meta = None
-
-    return original_meta
+        return None
+    # unsupported policy
+    m = f'Currently unsupported policy: {policy}'
+    logger.log('ERROR', m)
+    raise NotImplementedError(m)
