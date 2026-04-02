@@ -273,7 +273,6 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             self.blk_overlaps = [(block_specs[2], block_specs[3])]
         else:
             self.blk_overlaps.append((block_specs[2], block_specs[3]))
-        print(self.blk_overlaps)
 
         # first iteration to get indices of valid tiles and index range
         logger.log('INFO', 'Filter input raster tiles')
@@ -293,7 +292,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         # get majority index for valid tiles - calc here
         logger.log('INFO', 'Calculate majority class from new tiles')
         for c in set(raster_tiles.keys()):
-            if c in self._data: # skip keys that already in data
+            if all(self._data[c].values()): # skip keys that already have data
                 continue
             tile = raster_tiles[c]
             values, counts = numpy.unique(tile, return_counts=True)
