@@ -38,7 +38,7 @@ import landseg.utils as utils
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class _DomainTilesPackage:
+class MappedDomainTiles:
     '''Container for domain tiles mapped to a world grid.'''
     block_specs: tuple[int, int, int, int]
     index_range: tuple[int, int]
@@ -48,10 +48,9 @@ class _DomainTilesPackage:
 def map_domain_to_grid(
     grid: geo_core.GridLayout,
     raster_path: str,
-    logger: utils.Logger,
-    *,
     index_base: int,
-) -> _DomainTilesPackage:
+    logger: utils.Logger,
+) -> MappedDomainTiles:
     '''
     Map a domain raster onto a world grid and re-index labels.
 
@@ -89,7 +88,7 @@ def map_domain_to_grid(
     re_indexed_tiles = _re_index(tiles, nodata, index_mapping)
 
     logger.log('INFO', 'Domain mapped onto input world grid')
-    return _DomainTilesPackage(
+    return MappedDomainTiles(
         block_specs=(*grid.tile_size, *grid.tile_overlap),
         index_range=(0, index_mapping.size - 1),
         tiles_dict=re_indexed_tiles

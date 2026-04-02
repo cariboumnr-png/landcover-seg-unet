@@ -29,9 +29,8 @@ A schema identifier and a SHA256 hash are used to validate payload
 compatibility and integrity on load.
 '''
 
-# standard imports
-import os
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.utils as utils
 
@@ -54,12 +53,9 @@ def save_domain(
         dirpath: Directory where artifacts are to be saved.
     '''
 
-    # prepare output dir
-    os.makedirs(dirpath, exist_ok=True)
-
-    # get domain object payload and pickle
+    # get domain object payload and write to JSON
     payload = domain_obj.to_payload()
-    utils.write_json(f'{dirpath}/{domain_name}.json', payload)
+    artifacts.write_json_hash(f'{dirpath}/{domain_name}.json', payload)
 
     # write meta to json
     meta = {
@@ -71,12 +67,12 @@ def save_domain(
         'context': payload['context'],
         'n_valid_tiles': len(domain_obj),
     }
-    utils.write_json(f'{dirpath}/{domain_name}_meta.json', meta)
+    artifacts.write_json_hash(f'{dirpath}/{domain_name}_meta.json', meta)
 
 def load_domain(
     domain_name: str,
     dirpath: str,
-) -> geo_core.DomainTileMap:
+) -> tuple[int, str, geo_core.DomainTileMap | None]:
     '''
     Load a `DomainTileMap` from disk.
 
@@ -90,14 +86,35 @@ def load_domain(
     '''
 
     # load payload and meta json
-    payload = utils.load_json(f'{dirpath}/{domain_name}.json')
-    meta = utils.load_json(f'{dirpath}/{domain_name}_meta.json')
+    payload_path = f'{dirpath}/{domain_name}.json'
+    meta_path = f'{dirpath}/{domain_name}_meta.json'
+    payload_status, payload_m, payload = artifacts.load_json_hash(payload_path)
+    meta_status, meta_m, meta = artifacts.load_json_hash(meta_path)
+
+    # loading status
+    status = {
+        (False, False): 0,
+        (True, False): 1,
+        (False, True): 2,
+        (True, True): 3
+    }[bool(payload_status), bool(meta_status)]
+
+    # combined summary message
+    msg = {
+        0: 'Domain JSON and domain metadata JSON loaded successfully',
+        1: f'Error loading domain JSON: {payload_m}',
+        2: f'Error loading domain metadata JSON: {meta_m}',
+        3: f'Error loading domain JSON: {payload_m} & metadata JSON: {meta_m}'
+    }[status]
 
     # schema guard
     expected = geo_core.DomainTileMap.SCHEMA_ID
     found = meta.get('schema_id', None)
     if found != expected:
-        raise ValueError(f'Unsupported schema: {found}; expected {expected}.')
+        status = 4
+        msg = f'Unsupported schema: {found}; expected {expected}.'
 
     # otherwise return class object via class method
-    return geo_core.DomainTileMap.from_payload(payload)
+    if status:
+        return status, msg, None
+    return status, msg, geo_core.DomainTileMap.from_payload(payload)

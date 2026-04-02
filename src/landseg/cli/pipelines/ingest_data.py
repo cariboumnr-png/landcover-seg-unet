@@ -90,7 +90,7 @@ def ingest(config: configs.RootConfig):
         _config,
         logger,
         artifacts_dir=f'{out_root}/domain_knowledge',
-        policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
     # datablocks building

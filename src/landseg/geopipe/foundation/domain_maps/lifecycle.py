@@ -24,6 +24,7 @@
 # standard imports
 from __future__ import annotations
 import copy
+import dataclasses
 import os
 # local imports
 import landseg.geopipe.core as geo_core
@@ -31,10 +32,19 @@ import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class DomainBuildingParameters:
+    '''Container for domain mapping configurations.'''
+    src_path: str
+    index_base: int
+    valid_threshold: float
+    target_variance: float
+
 # -------------------------------Public Function-------------------------------
 def prepare_domain_maps(
     world_grid: geo_core.GridLayout,
-    domain_configs: list[domain_maps.DomainBuildingParameters],
+    domain_configs: list[DomainBuildingParameters],
     logger: utils.Logger,
     *,
     artifacts_dir: str,
@@ -79,40 +89,93 @@ def prepare_domain_maps(
 
         # copy the world grid instance
         grid = copy.deepcopy(world_grid)
-        # get filepath and filename without extension
         name, _ = os.path.splitext(os.path.basename(config.src_path))
 
-        # rebuild if missing or outdated
-        if policy is artifacts.LifecyclePolicy.REBUILD_IF_STALE:
-            msg = '' # default status message
-            # try load the domain JSON
-            try:
-                logger.log('INFO', f'Loading domain {name}')
-                dom = domain_maps.load_domain(name, artifacts_dir)
-                # assess domain JSON status
-                if not grid.tile_overlap in dom.blk_overlaps:
-                    msg = 'Found new tile stride from the input grid'
-                if dom.blk_size != grid.tile_size:
-                    msg = 'Domain was mapped to a grid of different tiles size'
-            except FileNotFoundError:
-                msg = 'Domain JSON not found'
+        # check mapped windows
+        windows_fpath = f'{artifacts_dir}/{name}_windows_{grid.gid}.pkl'
+        mapped = _mapping_status(windows_fpath, logger, policy)
+        # create a new mapping if not valid
+        if not mapped:
+            mapped = domain_maps.map_domain_to_grid(
+                grid,
+                config.src_path,
+                config.index_base,
+                logger
+            )
+            logger.log('INFO', f'Mapped windows from {grid.gid} created')
 
-            if bool(msg):
-                logger.log('INFO', msg)
-                dom = domain_maps.build_domain(grid, config, logger)
-                domain_maps.save_domain(name, dom, artifacts_dir)
-                logger.log('INFO', f'Domain {name} created/updated')
-            else:
-                logger.log('INFO', f'Domain {name} loaded successfully')
+        # check domain artifacts
+        domain = _domain_map_status(grid, name, artifacts_dir, logger, policy)
+        # build if not valid
+        if not domain:
+            # build domain map
+            domain_maps.build_domain(
+                mapped,
+                config.valid_threshold,
+                config.target_variance,
+                logger
+            )
 
-        # force rebuild
-        elif policy is artifacts.LifecyclePolicy.REBUILD:
-            dom = domain_maps.build_domain(grid, config, logger)
-            domain_maps.save_domain(name, dom, artifacts_dir)
-            logger.log('INFO', f'Domain {name} rebuilt')
+#
+def _mapping_status(
+    windows_fpath: str,
+    logger: utils.Logger,
+    policy: artifacts.LifecyclePolicy
+) -> domain_maps.MappedDomainTiles | None:
+    '''doc'''
 
-        # unsupported policy
-        else:
-            msg = f'Currently unsupported policy: {policy}'
-            logger.log('ERROR', msg)
-            raise NotImplementedError(msg)
+    # load windows artifact
+    mapped_windows: domain_maps.MappedDomainTiles | None
+    load_status, m, mapped_windows = artifacts.load_pickle_hash(windows_fpath)
+    if load_status: # non-zero status indicates false artifact -> rebuild
+        mapped_windows = None
+        logger.log('INFO', f'Mapped windows loading error: {m}')
+    else:
+        logger.log('INFO', 'Mapped windows from loading successful')
+
+    # policy: build if missing
+    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
+        return mapped_windows
+    # policy: force rebuild
+    if policy is artifacts.LifecyclePolicy.REBUILD:
+        return None
+    # unsupported policy
+    m = f'Currently unsupported policy: {policy}'
+    logger.log('ERROR', m)
+    raise NotImplementedError(m)
+
+def _domain_map_status(
+    grid: geo_core.GridLayout,
+    name: str,
+    artifacts_dir: str,
+    logger: utils.Logger,
+    policy: artifacts.LifecyclePolicy
+) -> geo_core.DomainTileMap | None:
+    '''doc'''
+
+    # load domain
+    domain: geo_core.DomainTileMap | None
+    status, msg, domain = domain_maps.load_domain(name, artifacts_dir)
+    if status:
+        domain = None
+        logger.log('INFO', f'Errors encountered during loading: {msg}')
+    else:
+        assert isinstance(domain, geo_core.DomainTileMap) # typing guard
+        logger.log('INFO', f'Domain {name} loaded successfully')
+        if not grid.tile_overlap in domain.blk_overlaps:
+            domain = None
+            logger.log('INFO', 'Found new tile stride from the input grid')
+        elif domain.blk_size != grid.tile_size:
+            domain = None
+            logger.log('INFO', 'Mapped tiles size mismatch')
+
+    # policy: build if missing
+    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
+        return domain
+    # policy: force rebuild
+    if policy is artifacts.LifecyclePolicy.REBUILD:
+        return None
+    # unsupported policy
+    m = f'Currently unsupported policy: {policy}'
+    logger.log('ERROR', m)
+    raise NotImplementedError(m)

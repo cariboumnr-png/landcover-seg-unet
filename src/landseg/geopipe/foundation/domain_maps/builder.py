@@ -52,25 +52,16 @@ task-level feature assembly.
 
 # standard imports
 from __future__ import annotations
-import dataclasses
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
-# ------------------------------Public  Dataclass------------------------------
-@dataclasses.dataclass
-class DomainBuildingParameters:
-    '''Container for domain mapping configurations.'''
-    src_path: str
-    index_base: int
-    valid_threshold: float
-    target_variance: float
-
 # -------------------------------Public Function-------------------------------
 def build_domain(
-    world_grid: geo_core.GridLayout,
-    config: DomainBuildingParameters,
+    mapped_tiles: domain_maps.MappedDomainTiles,
+    valid_threshold: float,
+    target_variance: float,
     logger: utils.Logger
 ) -> geo_core.DomainTileMap:
     '''
@@ -105,25 +96,12 @@ def build_domain(
     '''
 
     # init a new domain map class object
-    domain_map = geo_core.DomainTileMap(
-        config.valid_threshold,
-        config.target_variance
-    )
-
-    # map domain source to world grid
-    domain_package = domain_maps.map_domain_to_grid(
-        world_grid,
-        config.src_path,
-        logger,
-        index_base=config.index_base,
-    )
-
+    domain_map = geo_core.DomainTileMap(valid_threshold, target_variance)
     # finish domain map building
     domain_map.build(
-        domain_package.block_specs,
-        domain_package.index_range,
-        domain_package.tiles_dict,
+        mapped_tiles.block_specs,
+        mapped_tiles.index_range,
+        mapped_tiles.tiles_dict,
         logger
     )
-
     return domain_map
