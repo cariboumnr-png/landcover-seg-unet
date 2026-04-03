@@ -33,6 +33,8 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
+    'DomainMetadata',
+    'DomainPayload',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
@@ -43,6 +45,7 @@ __all__ = [
     'BlocksMetadata',
     'BlocksPartition',
     'CatalogEntry',
+    'DomainTile',
     'GridLayoutPayload',
     'ImageBandStats',
     'TransformSchema',
@@ -52,7 +55,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .foundation_catalog import BlocksCatalog,  CatalogEntry
     from .foundation_data_block import DataBlock, DataBlockMeta
-    from .foundation_domain_map import DomainTileMap
+    from .foundation_domain_map import DomainMetadata, DomainPayload, DomainTile, DomainTileMap
     from .foundation_metadata import BlocksMetadata
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
     from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
@@ -65,7 +68,7 @@ def __getattr__(name: str):
     if name in {'DataBlockMeta', 'DataBlock'}:
         return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
-    if name in {'DomainTileMap'}:
+    if name in {'DomainMetadata', 'DomainPayload', 'DomainTile', 'DomainTileMap'}:
         return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
 
     if name in {'BlocksMetadata'}:
