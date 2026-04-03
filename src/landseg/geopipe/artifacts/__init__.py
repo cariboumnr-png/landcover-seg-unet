@@ -34,8 +34,10 @@ __all__ = [
     # classes
     'LifecyclePolicy',
     # functions
+    'load_dict_npz_hash',
     'load_json_hash',
     'load_pickle_hash',
+    'write_dict_npz_hash',
     'write_json_hash',
     'write_pickle_hash',
     # typing
@@ -44,6 +46,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .json_io import load_json_hash, write_json_hash
+    from .npz_io import load_dict_npz_hash, write_dict_npz_hash
     from .pickle_io import load_pickle_hash, write_pickle_hash
     from .policy import LifecyclePolicy
 
@@ -51,6 +54,9 @@ def __getattr__(name: str):
 
     if name in {'load_json_hash', 'write_json_hash'}:
         return getattr(importlib.import_module('.json_io', __package__), name)
+
+    if name in {'load_dict_npz_hash', 'write_dict_npz_hash'}:
+        return getattr(importlib.import_module('.npz_io', __package__), name)
 
     if name in {'load_pickle_hash', 'write_pickle_hash'}:
         return getattr(importlib.import_module('.pickle_io', __package__), name)
