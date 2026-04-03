@@ -40,12 +40,12 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .funcs import name_xy, xy_name
+    from .coords_str import name_xy, xy_name
 
 
 def __getattr__(name: str):
 
     if name in {'name_xy', 'xy_name'}:
-        return getattr(importlib.import_module('.funcs', __package__), name)
+        return getattr(importlib.import_module('.coords_str', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
