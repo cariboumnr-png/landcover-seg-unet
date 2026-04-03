@@ -29,6 +29,7 @@ import os
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.artifacts as artifacts
+import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
@@ -91,51 +92,58 @@ def prepare_domain_maps(
         grid = copy.deepcopy(world_grid)
         name, _ = os.path.splitext(os.path.basename(config.src_path))
 
-        # check mapped windows
-        windows_fpath = f'{artifacts_dir}/{name}_windows_{grid.gid}.pkl'
-        mapped = _mapping_status(windows_fpath, logger, policy)
-        # create a new mapping if not valid
-        if not mapped:
-            mapped = domain_maps.map_domain_to_grid(
-                grid,
-                config.src_path,
-                config.index_base,
-                logger
-            )
-            logger.log('INFO', f'Mapped windows from {grid.gid} created')
-
         # check domain artifacts
-        domain = _domain_map_status(grid, name, artifacts_dir, logger, policy)
-        # build if not valid
+        domain = _domain_map_status(name, artifacts_dir, logger, policy)
         if not domain:
+
+            # check mapped tiles before building
+            tiles_fpath = f'{artifacts_dir}/{name}_tiles_{grid.gid}.npz'
+            mapped = _mapping_status(tiles_fpath, logger, policy)
+            # create a new mapping if not valid
+            if not mapped:
+                mapped = domain_maps.map_domain_to_grid(
+                    grid,
+                    config.src_path,
+                    config.index_base,
+                    logger
+                )
+                logger.log('INFO', f'Mapped tiles from {grid.gid} created')
+                artifacts.write_dict_npz_hash(tiles_fpath, mapped)
+
             # build domain map
-            domain_maps.build_domain(
+            domain = domain_maps.build_domain(
+                grid.gid,
                 mapped,
                 config.valid_threshold,
                 config.target_variance,
                 logger
             )
-
+            payload = domain.to_json_payload()
+            domain_map_fpath = f'{artifacts_dir}/{name}.json'
+            domain_meta_fpath = f'{artifacts_dir}/{name}_meta.json'
+            #
+            artifacts.write_json_hash(domain_map_fpath, payload['tiles_dict'])
+            artifacts.write_json_hash(domain_meta_fpath, payload['meta'])
 #
 def _mapping_status(
-    windows_fpath: str,
+    tiles_fpath: str,
     logger: utils.Logger,
     policy: artifacts.LifecyclePolicy
-) -> domain_maps.MappedDomainTiles | None:
+) -> alias.RasterTileDict | None:
     '''doc'''
 
-    # load windows artifact
-    mapped_windows: domain_maps.MappedDomainTiles | None
-    load_status, m, mapped_windows = artifacts.load_pickle_hash(windows_fpath)
+    # load tiles artifact
+    mapped_tiles: alias.RasterTileDict | None
+    load_status, m, mapped_tiles = artifacts.load_dict_npz_hash(tiles_fpath)
     if load_status: # non-zero status indicates false artifact -> rebuild
-        mapped_windows = None
-        logger.log('INFO', f'Mapped windows loading error: {m}')
+        mapped_tiles = None
+        logger.log('INFO', f'Mapped tiles loading error: {m}')
     else:
-        logger.log('INFO', 'Mapped windows from loading successful')
+        logger.log('INFO', f'Mapped tiles loaded from {tiles_fpath}')
 
     # policy: build if missing
     if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-        return mapped_windows
+        return mapped_tiles
     # policy: force rebuild
     if policy is artifacts.LifecyclePolicy.REBUILD:
         return None
@@ -145,7 +153,6 @@ def _mapping_status(
     raise NotImplementedError(m)
 
 def _domain_map_status(
-    grid: geo_core.GridLayout,
     name: str,
     artifacts_dir: str,
     logger: utils.Logger,
@@ -162,12 +169,6 @@ def _domain_map_status(
     else:
         assert isinstance(domain, geo_core.DomainTileMap) # typing guard
         logger.log('INFO', f'Domain {name} loaded successfully')
-        if not grid.tile_overlap in domain.blk_overlaps:
-            domain = None
-            logger.log('INFO', 'Found new tile stride from the input grid')
-        elif domain.blk_size != grid.tile_size:
-            domain = None
-            logger.log('INFO', 'Mapped tiles size mismatch')
 
     # policy: build if missing
     if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:

@@ -33,7 +33,6 @@ import typing
 __all__ = [
     # classes
     'DomainBuildingParameters',
-    'MappedDomainTiles',
     # functions
     'build_domain',
     'load_domain',
@@ -48,7 +47,7 @@ if typing.TYPE_CHECKING:
     from .builder import build_domain
     from .domain_io import load_domain, save_domain
     from .lifecycle import DomainBuildingParameters, prepare_domain_maps
-    from .mapper import MappedDomainTiles, map_domain_to_grid
+    from .mapper import map_domain_to_grid
 
 def __getattr__(name: str):
 
@@ -58,7 +57,7 @@ def __getattr__(name: str):
     if name in {'load_domain', 'save_domain'}:
         return getattr(importlib.import_module('.domain_io', __package__), name)
 
-    if name in {'MappedDomainTiles', 'map_domain_to_grid'}:
+    if name in {'map_domain_to_grid'}:
         return getattr(importlib.import_module('.mapper', __package__), name)
 
     if name in {'DomainBuildingParameters', 'prepare_domain_maps'}:
