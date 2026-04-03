@@ -114,24 +114,6 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
         '''Return the catalogued block file list.'''
         return {k: v['file_path'] for k, v in self._data.items()}
 
-    @classmethod
-    def from_dict(cls, source: dict[str, CatalogEntry]) -> BlocksCatalog:
-        '''
-        Create a `BlocksCatalog` instance from a JSON file.
-
-        If the file does not exist, an empty catalog is returned.
-
-        Args:
-            fpath: Path to the JSON file to load.
-
-        Returns:
-            A `BlocksCatalog` instance populated with the file contents.
-        '''
-
-        obj = cls.__new__(cls)
-        obj._data = {geo_utils.name_xy(k): v for k, v in source.items()}
-        return obj
-
     def to_json_payload(self) -> str:
         '''
         Deterministically ordered and custom-formatted JSON string.
@@ -158,3 +140,21 @@ class BlocksCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
 
         lines.append('}')
         return '\n'.join(lines)
+
+    @classmethod
+    def from_dict(cls, source: dict[str, CatalogEntry]) -> BlocksCatalog:
+        '''
+        Create a `BlocksCatalog` instance from a JSON file.
+
+        If the file does not exist, an empty catalog is returned.
+
+        Args:
+            fpath: Path to the JSON file to load.
+
+        Returns:
+            A `BlocksCatalog` instance populated with the file contents.
+        '''
+
+        obj = cls.__new__(cls)
+        obj._data = {geo_utils.name_xy(k): v for k, v in source.items()}
+        return obj
