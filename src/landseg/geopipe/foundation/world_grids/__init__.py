@@ -44,7 +44,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .factory import GridParameters, build_grid
-    from .io import load_grid, save_grid
+    from .grid_io import load_grid, save_grid
     from .lifecycle import prepare_world_grid
 
 def __getattr__(name: str):
@@ -53,7 +53,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.factory', __package__), name)
 
     if name in {'load_grid', 'save_grid'}:
-        return getattr(importlib.import_module('.io', __package__), name)
+        return getattr(importlib.import_module('.grid_io', __package__), name)
 
     if name in {'prepare_world_grid'}:
         return getattr(importlib.import_module('.lifecycle', __package__), name)
