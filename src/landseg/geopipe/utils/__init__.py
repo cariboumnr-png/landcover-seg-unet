@@ -34,8 +34,6 @@ __all__ = [
     # classes
     # functions
     'name_xy',
-    'open_rasters',
-    'pca_transform',
     'xy_name',
     # typing
 ]
@@ -43,18 +41,11 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .funcs import name_xy, xy_name
-    from .pca import pca_transform
-    from .raster_context import open_rasters
+
 
 def __getattr__(name: str):
 
     if name in {'name_xy', 'xy_name'}:
         return getattr(importlib.import_module('.funcs', __package__), name)
-
-    if name in {'pca_transform'}:
-        return getattr(importlib.import_module('.pca', __package__), name)
-
-    if name in {'open_rasters'}:
-        return getattr(importlib.import_module('.raster_context', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
