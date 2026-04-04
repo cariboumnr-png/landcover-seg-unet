@@ -128,14 +128,16 @@ def _catalog_status(
     logger.log('INFO', f'Updated block files to disk count: {len(updated)}')
 
     # load catalog json and give it a status
-    catalog: geo_core.DataCatalog # type declaration
-    load_status, m, catalog = artifacts.load_json_hash(catalog_fpath)
+    catalog_dict: dict[str, geo_core.CatalogEntry] # type declaration
+    load_status, m, catalog_dict = artifacts.load_json_hash(catalog_fpath)
     if load_status: # non-zero status indicates false catalog.json -> rebuild
+        catalog = geo_core.DataCatalog() # empty
         cataloged = None
         catalog_status = 1
         logger.log('INFO', f'Catalog JSON loading error: {m}')
     else:
         # get filenames from the catalog
+        catalog = geo_core.DataCatalog.from_dict(catalog_dict)
         cataloged = [os.path.basename(c['file_path']) for c in catalog.values()]
         logger.log('INFO', f'Catalogued blocks files count: {len(cataloged)}')
         # determine status

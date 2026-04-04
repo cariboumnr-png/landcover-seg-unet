@@ -30,6 +30,7 @@ and analysis.
 # standard imports
 import dataclasses
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 
 @dataclasses.dataclass
@@ -60,7 +61,10 @@ def parse_catalog(
     '''
 
     # read catalog JSON to instantiate a class object
-    catalog = geo_core.DataCatalog.from_json(fpath)
+    load_status, m, catalog_dict = artifacts.load_json_hash(fpath)
+    catalog = geo_core.DataCatalog.from_dict(catalog_dict)
+    if load_status: # non-zero status indicates false catalog.json
+        raise ValueError('INFO', f'Catalog JSON loading error: {m}')
 
     # all valid entries from catalog
     work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px']}
