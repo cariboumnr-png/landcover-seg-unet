@@ -113,7 +113,7 @@ def _catalog_status(
     catalog_fpath: str,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
-) -> tuple[geo_core.BlocksCatalog, list[str]]:
+) -> tuple[geo_core.DataCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
 
     # get filenames from all current npz files in blks_dir
@@ -128,7 +128,7 @@ def _catalog_status(
     logger.log('INFO', f'Updated block files to disk count: {len(updated)}')
 
     # load catalog json and give it a status
-    catalog: geo_core.BlocksCatalog # type declaration
+    catalog: geo_core.DataCatalog # type declaration
     load_status, m, catalog = artifacts.load_json_hash(catalog_fpath)
     if load_status: # non-zero status indicates false catalog.json -> rebuild
         cataloged = None
@@ -168,11 +168,11 @@ def _metadata_status(
     metadata_fpath: str,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
-) -> geo_core.BlocksMetadata | None:
+) -> geo_core.DataSchema | None:
     '''Load and evaluate dataset metadata state.'''
 
     # load metadict
-    original_meta: geo_core.BlocksMetadata | None
+    original_meta: geo_core.DataSchema | None
     load_status, m, original_meta = artifacts.load_json_hash(metadata_fpath)
     if load_status: # non-zero status indicates false metadata.json -> rebuild
         original_meta = None

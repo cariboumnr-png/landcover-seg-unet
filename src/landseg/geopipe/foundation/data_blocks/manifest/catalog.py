@@ -39,12 +39,12 @@ T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # -------------------------------Public Function-------------------------------
 def build_catalog(
-    original_catalog: geo_core.BlocksCatalog,
+    original_catalog: geo_core.DataCatalog,
     input_block_fpaths: list[str],
     source_image: str,
     source_label: str | None,
     mapped_grid_id: str,
-) -> geo_core.BlocksCatalog:
+) -> geo_core.DataCatalog:
 
     '''
     Build a new dataset catalog or update an existing one.
@@ -110,4 +110,4 @@ def build_catalog(
         originals = {v['block_name']: v for v in original_catalog.values()}
         input_entries = {**originals, **input_entries}
     # otherwise just create from input entries
-    return geo_core.BlocksCatalog.from_dict(input_entries)
+    return geo_core.DataCatalog.from_dict(input_entries)

@@ -38,12 +38,12 @@ T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # -------------------------------Public Function-------------------------------
 def build_metadata(
-    original_meta: geo_core.BlocksMetadata | None,
+    original_meta: geo_core.DataSchema | None,
     source_image: str,
     source_label: str | None,
     mapped_grid_id: str,
     sample_block_fpath: str
-) -> geo_core.BlocksMetadata:
+) -> geo_core.DataSchema:
     '''
     Create or update the dataset-level `metadata.json`.
 
@@ -95,7 +95,7 @@ def build_metadata(
     label_shape = sample_blk.data.label_stack.shape
 
     # create route
-    new_meta: geo_core.BlocksMetadata = {
+    new_meta: geo_core.DataSchema = {
         'dataset': {
             'name': '', # TBD
             'last_updated': utils.get_timestamp(T_FORMAT),

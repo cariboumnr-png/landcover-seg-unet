@@ -22,35 +22,35 @@
 '''
 DataBlock: compile per-block arrays and metadata for geospatial ML.
 
-This module defines a lightweight container/builder for a single raster
-*block* (window). It accepts arrays already read elsewhere and augments
-them with derived features and block-level metadata—without performing
+This module defines a lightweight container and builder for a single
+raster *block* (window), designed for geospatial machine learning
+pipelines. It operates purely on in-memory NumPy arrays and enriches
+them with derived features and structured metadata, without performing
 any raster I/O.
 
-**Key responsibilities**
-- Ingest per-window arrays: image (C,H,W), optional label (1,H,W → H,W),
-  and a DEM padded on all sides (for neighborhood topo metrics).
-- Add derived channels: NDVI/NDMI/NBR (from band assignments) and slope,
-  cos(aspect), sin(aspect), TPI (from the padded DEM).
-- Build hierarchical labels (layer-1 and layer-2 reclasses), compute
-  class counts and Shannon entropy.
-- Compute a per-block valid mask, and per-band stats (count, mean, M2)
-  for global aggregation (e.g., Welford's online algorithm).
-- Save/load a block to/from a single .npz artifact.
+Key capabilities:
+- Ingest per-window arrays: multi-band image (C, H, W), optional label
+  ((1, H, W) → (H, W)), and a padded DEM for neighborhood-based
+  topographic analysis.
+- Compute derived spectral indices (e.g., NDVI, NDMI, NBR) and
+  topographic metrics (slope, aspect components, TPI).
+- Construct hierarchical label representations via configurable
+  reclassification mappings.
+- Generate per-block statistics, including class distributions, Shannon
+  entropy, valid pixel ratios, and per-band summary statistics (count,
+  mean, M2) suitable for streaming aggregation.
+- Serialize and deserialize complete blocks as compressed `.npz`
+  artifacts for efficient storage and reproducibility.
 
-**Assumptions**
-- Heavy lifting (reading rasters, windowing, padding) is done upstream;
-  this module only consumes NumPy arrays and metadata.
-- Shapes: image is (C,H,W); label, if provided, is (1,H,W) and squeezed
-  to (H,W); DEM is larger than (H,W) by 2*dem_pad in each dimension.
-- Required metadata includes (non-exhaustive):
-  * image_nodata, label_nodata, ignore_label, dem_pad
-  * band_assignment with at least: 'red', 'nir', 'swir1', 'swir2'
-  * label_num_classes, label_to_ignore, label_reclass_map
-  * block_name
-- Nodata handling relies on np.isnan / np.isclose and masked arrays;
-  ensure nodata values are correctly specified.
-- Topographic metrics use small neighborhoods and computed per pixel.
+Assumptions:
+- Input arrays are pre-aligned, windowed, and padded upstream.
+- Image arrays follow (C, H, W); labels are (1, H, W) or None.
+- DEM padding is sufficient for neighborhood operations.
+- Metadata provides required configuration (band mappings, nodata
+  values, label schema, etc.).
+
+This module serves as a canonical representation of block-level data,
+ensuring consistency and reproducibility across downstream workflows.
 '''
 
 # standard imports
@@ -64,7 +64,18 @@ import numpy
 
 # ---------------------------------Public Type---------------------------------
 class DataBlockMeta(typing.TypedDict):
-    '''Defines the shape of a block meta dictionary.'''
+    '''
+    Typed dictionary defining metadata for a single data block.
+
+    This structure captures configuration, provenance, and summary
+    statistics associated with a block, covering image, label, and
+    derived attributes.
+
+    Categories:
+        - General metadata (block identity, validity metrics)
+        - Label metadata (schema, hierarchy, distributions)
+        - Image metadata (band mapping, nodata handling, statistics)
+    '''
     # general metadata
     block_name: str
     has_label: bool
@@ -106,26 +117,39 @@ class DataBlock:
     '''
     Container for per-block raster data and derived metadata.
 
-    A `DataBlock` represents a single raster window compiled from arrays
-    read upstream. It augments raw inputs with derived spectral indices,
-    topographic metrics, label structures, and block-level statistics.
+    A `DataBlock` encapsulates a single raster window along with its
+    associated metadata and derived features. It augments raw input
+    arrays with spectral indices, topographic metrics, label
+    hierarchies, and statistical summaries.
 
-    This class performs no raster I/O during creation; all inputs are
-    provided as NumPy arrays. Blocks can be serialized to and restored
-    from a single `.npz` artifact.
+    The class is designed to be I/O-agnostic during construction,
+    operating entirely on NumPy arrays provided by upstream processes.
+    It supports efficient serialization to and from compressed `.npz`
+    artifacts.
 
-    Typical usage:
-      - `create()` to build a new block from arrays
-      - `save()` / `load()` for persistence
-      - `normalize_image()` for post hoc iamge normalization
+    Typical workflow:
+        - Use `build()` to construct a block from arrays and metadata
+        - Use `save()` to persist the block
+        - Use `load()` to restore a previously saved block
+
+    Notes:
+        The class implements a staged internal pipeline where image,
+        label, and block-level features are computed sequentially.
     '''
 
     def __init__(self, **kwargs):
         '''
-        Initialize an empty data block with placeholder data and meta.
+        nitialize an empty `DataBlock` instance.
 
-        A `DataBlock` can be instantiated without arguments and later
-        populated via `create()` or `load()`.
+        The instance is created with placeholder data structures and a
+        default metadata dictionary. It can be populated using either
+        `build()` (from arrays) or `load()` (from disk).
+
+        Args:
+            **kwargs:
+                Optional overrides for default metadata values such as:
+                - ignore_index: Label ignore value (default: 255)
+                - dem_pad: Padding size for DEM-based computations
         '''
 
         # init with empty block data
@@ -160,22 +184,34 @@ class DataBlock:
         meta: DataBlockMeta,
     ) -> 'DataBlock':
         '''
-        Create a data block from in-memory raster arrays.
+        Construct a `DataBlock` from in-memory arrays and metadata.
+
+        This method initializes a block, assigns input arrays, and
+        executes the full feature engineering pipeline, including:
+            - Spectral index computation
+            - Topographic metric derivation
+            - Label stack construction (if labels are provided)
+            - Valid mask generation
+            - Per-band statistical summaries
 
         Args:
-            img_arr: Image array of shape (C, H, W).
-            lbl_arr: Optional label array of shape (1, H, W). If None,
-                the block is treated as unlabeled.
-            padded_dem: DEM array padded on all sides for neighborhood
-                calculations.
-            meta: Block-level metadata and configuration.
+            img_arr:
+                Image array of shape (C, H, W).
+            lbl_arr:
+                Optional label array of shape (1, H, W). If None, the
+                block is treated as unlabeled.
+            padded_dem:
+                DEM array padded on all sides to support neighborhood
+                operations.
+            meta:
+                Dictionary containing block configuration and metadata.
 
         Returns:
-            DataBlock: The populated block instance (returned for
-                chaining).
-        ----------------------------------------------------------------
-        Notes: This method derives spectral indices, topographic metrics,
-        label hierarchies, valid masks, and per-block statistics.
+            DataBlock:
+                A fully populated block instance.
+
+        Notes: The method mutates internal state and returns the instance
+        to support chaining.
         '''
 
         self = cls()
@@ -218,13 +254,21 @@ class DataBlock:
     @classmethod
     def load(cls, fpath: str) -> 'DataBlock':
         '''
-        Load data from existing .npz file to populate a class instance.
+        Load a `DataBlock` from a serialized `.npz` file.
+
+        This method reconstructs both the data arrays and metadata
+        from a previously saved block artifact.
 
         Args:
-            fpath: Path to a serialized block artifact.
+            fpath:
+                Path to the `.npz` file containing serialized block data.
 
         Returns:
-            DataBlock: The populated block instance.
+            DataBlock:
+                A populated block instance with restored state.
+
+        Notes:
+            Unknown fields in the archive are ignored during loading.
         '''
 
         self = cls()
@@ -245,9 +289,18 @@ class DataBlock:
 
     def save(self, fpath: str) -> None:
         '''
-        Save the block data to a compressed `.npz` file.
+        Save the `DataBlock` to a compressed `.npz` file.
 
-        Args: Output file path. Existing files will be overwritten.
+        The method serializes all internal arrays along with metadata
+        (stored as a compact JSON string) into a single artifact.
+
+        Args:
+            fpath:
+                Output file path. Must end with `.npz`. Existing files
+                will be overwritten.
+
+        Notes:
+            Metadata is serialized using JSON to ensure portability.
         '''
 
         # sanity check

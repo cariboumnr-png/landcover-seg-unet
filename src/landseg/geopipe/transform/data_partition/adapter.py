@@ -60,7 +60,7 @@ def parse_catalog(
     '''
 
     # read catalog JSON to instantiate a class object
-    catalog = geo_core.BlocksCatalog.from_json(fpath)
+    catalog = geo_core.DataCatalog.from_json(fpath)
 
     # all valid entries from catalog
     work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px']}

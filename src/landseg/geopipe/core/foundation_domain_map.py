@@ -20,39 +20,29 @@
 # =========================================================================== #
 
 '''
-Domain-tile mapping utilities for categorical rasters aligned to a
-world-grid layout.
+Domain-tile mapping for categorical rasters to a world-grid layout.
 
-This module defines the `DomainTileMap` class, its supporting data
-structures, and the full pipeline for converting a categorical raster
-into stable, per-tile domain features:
+This module provides data structures and utilities for transforming a
+categorical raster into a stable, grid-aligned representation of per-
+tile domain features. It standardizes how spatial label distributions
+are summarized, filtered, and encoded for downstream modeling.
 
-    - Align a deep-copied world grid to the raster by computing an
-      integer pixel offset. The raster must share the grid's CRS and
-      pixel size.
-    - Read all grid windows (in parallel) and extract per-tile integer
-      label arrays, enforcing integer dtype and a well-defined nodata
-      value.
-    - Discover all unique valid labels globally; validate against the
-      configured index_base, then remap labels to a compact [0..K-1]
-      space for consistency across tiles.
-    - Filter tiles based on the fraction of valid pixels. For each valid
-      tile, compute majority-class id and frequency and update global
-      summary statistics in the `DomainContext`.
-    - Construct normalized class-frequency vectors for valid tiles and
-      apply PCA (via economical SVD) to produce low-dimensional float32
-      feature vectors that meet a target cumulative explained variance.
-    - Assemble a `DomainTileMap` containing majority statistics, PCA
-      features, and context metadata.
+Core functionality includes:
+- Alignment of a world grid to raster space using integer pixel offsets
+  (assuming shared CRS and resolution).
+- Extraction and validation of per-tile label arrays.
+- Global label discovery and remapping to a compact index space.
+- Tile filtering based on valid pixel ratios.
+- Computation of majority class statistics per tile.
+- Construction of normalized class-frequency vectors.
+- Dimensionality reduction via PCA to produce compact feature vectors.
 
-Persistence is handled through JSON payloads and JSON metadata files.
-A schema identifier ('domain_tile_map_payload/v1') and SHA256 hash ensure
-compatibility and integrity upon reload.
+The resulting `DomainTileMap` provides a reproducible mapping from grid
+coordinates to domain descriptors, enabling consistent conditioning,
+feature engineering, and cross-dataset alignment.
 
-Tile coordinates follow grid conventions: (x_px, y_px) pixel-origin
-coordinates relative to the grid origin. All mapping operations preserve
-this stable coordinate space, which enables reproducible conditioning and
-cross-dataset alignment.
+Persistence is supported via JSON payloads with schema versioning and
+integrity checks.
 '''
 
 # standard imports
@@ -62,14 +52,65 @@ import typing
 
 # ---------------------------------Public Type---------------------------------
 class DomainTile(typing.TypedDict):
-    '''Per-tile domain descriptors stored in a `DomainTileMap`.'''
+    '''
+    Typed dictionary representing per-tile domain descriptors.
+
+    Each tile captures summary statistics and optional feature vectors
+    derived from its underlying categorical label distribution.
+
+    Fields:
+
+    - **majority**:
+        Integer class ID of the dominant class in the tile, or None if
+        the tile is invalid or filtered out.
+
+    - **major_freq**:
+        Fraction of pixels belonging to the majority class, or None if
+        unavailable.
+
+    - **pca_feature**:
+        Low-dimensional feature vector derived from PCA on the tile's
+        normalized class-frequency distribution, or None if not computed.
+    '''
     majority: int | None
     major_freq: float | None
     pca_feature: list[float] | None
 
-class DomainMetadata(typing.TypedDict):
-    '''doc'''
+class DomainPayload(typing.TypedDict):
+    '''
+    Serializable artifact for `DomainTileMap`.
+
+    This follows the standard artifact contract:
+
+        {
+            "schema_id": str,
+            "artifact_meta": _DomainMetadata,
+            "data": dict[str, DomainTile]
+        }
+
+    The DomainTileMap stores per-tile domain features computed from a
+    categorical raster aligned to a world grid. The mapping is spatially
+    indexed and typically used for downstream conditioning or feature
+    extraction.
+
+    Fields:
+
+    - **schema_id**:
+        Versioned identifier describing the serialization contract.
+    - **artifact_meta**:
+        Lightweight derived metadata summarizing dataset-level statistics
+        and transformation results (e.g., PCA configuration and class
+        frequency summaries).
+    - **data**:
+        Mapping of string-encoded tile coordinates ('x,y') to `DomainTile`
+        feature descriptors.
+    '''
     schema_id: str
+    artifact_meta: _DomainMetadata
+    data: dict[str, DomainTile]
+
+class _DomainMetadata(typing.TypedDict):
+    '''Lightweight metadata describing a `DomainTileMap` artifact.'''
     world_grid_ids: list[str]
     valid_threshold: float
     target_variance: float
@@ -79,59 +120,47 @@ class DomainMetadata(typing.TypedDict):
     pca_axes_n: int
     explained_variance: float
 
-class DomainPayload(typing.TypedDict):
-    '''Serializable payload for `DomainTileMap` persistence.'''
-    meta: DomainMetadata
-    tiles_dict: dict[str, DomainTile]
-
 # --------------------------------Public  Class--------------------------------
 class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     '''
     Mapping from world-grid tile coordinates to per-tile domain features.
 
-    A `DomainTileMap` materializes domain knowledge over a fixed world
-    grid. It aligns the grid to a categorical raster, remaps raw labels
-    to a compact [0..K-1] space, filters tiles by valid-pixel fraction,
-    computes majority statistics, derives normalized class-frequency
-    vectors, and projects them via PCA to reach a target explained
-    variance.
+    A `DomainTileMap` represents a spatially indexed collection of
+    domain descriptors derived from a categorical raster. Each tile is
+    associated with summary statistics and optional feature vectors that
+    characterize its class distribution.
 
-    Key space:
-    - (x_px, y_px) pixel-origin coordinates relative to the grid origin.
+    Key characteristics:
+        - Stable coordinate system using (x_px, y_px) pixel origins
+        - Consistent label remapping to a compact index space
+        - Filtering of low-quality tiles based on valid pixel ratios
+        - Per-tile majority class statistics
+        - PCA-based dimensionality reduction of class distributions
 
-    Schema:
-        SCHEMA_ID = 'domain_tile_map_payload/v2'
+    The mapping behaves like a read-only dictionary from coordinate
+    tuples to `DomainTile` entries, while allowing controlled internal
+    population.
+
+    **Schema**: `SCHEMA_ID` = `'domain_tile_map_payload/v1'`
     '''
 
     # current schema
-    SCHEMA_ID: str = 'domain_tile_map_payload/v2'
+    SCHEMA_ID: str = 'domain_tile_map_payload/v1'
 
     def __init__(self) -> None:
         '''
-        Build a `DomainTileMap` from categorical raster and world grid.
+        Initialize an empty `DomainTileMap`.
 
-        Args:
-            domain_fpath: Path to a single-band integer raster of class
-                labels. Its CRS and pixel size must match those of
-                `world_grid`.
-            world_grid: A grid.GridLayout instance that defines tile
-                windows. The grid is deep-copied and aligned to
-                `domain_fpath` via an integer pixel offset before reads.
-            context: `DomainContext` carrying thresholds and PCA target
-                variance. This object is updated in-place with statistics
-                collected during build.
-            logger: Logger for progress and summary messages.
+        The instance is created with default metadata and an empty
+        internal mapping. Population is expected to occur via external
+        construction logic or helper class methods such as
+        `from_json_payload()` or `from_dict()`.
 
-        Notes:
-        The constructor reads all tile windows, performs label discovery
-        and remapping, filters tiles by 'valid_threshold', computes
-        majority statistics, runs PCA on normalized frequency vectors,
-        and stores results in the internal mapping.
+        Notes: This constructor does not perform any raster processing.
         '''
 
         # init attrs
-        self.meta: DomainMetadata = {
-            'schema_id': self.SCHEMA_ID,
+        self.meta: _DomainMetadata = {
             'world_grid_ids': [],
             'valid_threshold': 1.0,
             'target_variance': 1.0,
@@ -145,12 +174,12 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
 
     @property
     def max_id(self) -> int:
-        '''Gloabl max index.'''
+        '''Return the maximum label index across all tiles.'''
         return self.meta['max_index']
 
     @property
     def n_pca_ax(self) -> int:
-        '''Number of PCA axes that achieves target variance.'''
+        '''Return the number of PCA components retained.'''
         return self.meta['pca_axes_n']
 
     # ----- container protocol
@@ -182,7 +211,19 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
 
     # ----- public method
     def to_json_payload(self) -> DomainPayload:
-        '''Generate class payload for JSON serialization.'''
+        '''
+        Convert the mapping to a JSON-serializable payload.
+
+        This includes both global metadata and per-tile descriptors,
+        with tile coordinates encoded as strings.
+
+        Returns:
+            A `DomainPayload` dictionary suitable for JSON serialization.
+
+        Raises:
+            AssertionError:
+                If required metadata fields are not properly populated.
+        '''
 
         # sanity checks and return payload
         assert self.meta['major_freq_mean'] > 0.0
@@ -190,13 +231,26 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         assert self.meta['pca_axes_n'] > 0
         assert self.meta['explained_variance'] > 0.0
         return {
-            'meta': self.meta,
-            'tiles_dict': {f'{k[0]},{k[1]}': v for k, v in self._data.items()}
+            'schema_id': self.SCHEMA_ID,
+            'artifact_meta': self.meta,
+            'data': {f'{k[0]},{k[1]}': v for k, v in self._data.items()}
         }
 
     @classmethod
     def from_json_payload(cls, payload: DomainPayload) -> DomainTileMap:
-        '''Instantiate a class object with input JSON payload.'''
+        '''
+        Reconstruct a `DomainTileMap` from a JSON payload.
+
+        Args:
+            payload:
+                Dictionary containing serialized metadata and tile data.
+
+        Returns:
+            A populated `DomainTileMap` instance.
+
+        Notes: Tile coordinate keys are converted from "x,y" strings back
+        into (x, y) integer tuples.
+        '''
 
         def _xy_tuple(inputs: str) -> tuple[int, int]: # e.g., '1,2' -> (1, 2)
             output = tuple(int(x.strip()) for x in inputs.split(','))
@@ -206,14 +260,27 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         # create empty DomainTile instance
         obj = cls.__new__(cls) # skip __init__()
         # populate attributes from payload as needed
-        obj.meta = payload['meta']
-        obj._data = {_xy_tuple(k): v for k, v in payload['tiles_dict'].items()}
+        obj.meta = payload['artifact_meta']
+        obj._data = {_xy_tuple(k): v for k, v in payload['data'].items()}
         # return class object
         return obj
 
     @classmethod
     def from_dict(cls, tiles: dict[tuple[int, int], DomainTile]) -> DomainTileMap:
-        '''Instantiate a class object with an in-memory tile dict.'''
+        '''
+        Construct a `DomainTileMap` from an in-memory dictionary.
+
+        Args:
+            tiles:
+                Dictionary mapping (x, y) coordinate tuples to
+                `DomainTile` entries.
+
+        Returns:
+            A `DomainTileMap` instance containing the provided data.
+
+        Notes: Metadata is initialized with default values and should be
+        updated separately if needed.
+        '''
 
         # create empty DomainTile instance
         self = cls() # don't skip __init__() - need an empty meta dict

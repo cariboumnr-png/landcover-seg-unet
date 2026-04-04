@@ -33,7 +33,6 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
-    'DomainMetadata',
     'DomainPayload',
     'DomainTileMap',
     'GridLayout',
@@ -41,8 +40,8 @@ __all__ = [
     # functions
     # typing
     'DataBlockMeta',
-    'BlocksCatalog',
-    'BlocksMetadata',
+    'DataCatalog',
+    'DataSchema',
     'BlocksPartition',
     'CatalogEntry',
     'DomainTile',
@@ -53,26 +52,26 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .foundation_catalog import BlocksCatalog,  CatalogEntry
     from .foundation_data_block import DataBlock, DataBlockMeta
-    from .foundation_domain_map import DomainMetadata, DomainPayload, DomainTile, DomainTileMap
-    from .foundation_metadata import BlocksMetadata
+    from .foundation_data_catalog import DataCatalog, CatalogEntry
+    from .foundation_data_schema import DataSchema
+    from .foundation_domain_map import DomainPayload, DomainTile, DomainTileMap
     from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
     from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
 
 def __getattr__(name: str):
 
-    if name in {'BlocksCatalog', 'CatalogEntry'}:
-        return getattr(importlib.import_module('.foundation_catalog', __package__), name)
-
     if name in {'DataBlockMeta', 'DataBlock'}:
         return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
-    if name in {'DomainMetadata', 'DomainPayload', 'DomainTile', 'DomainTileMap'}:
-        return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
+    if name in {'DataCatalog', 'CatalogEntry'}:
+        return getattr(importlib.import_module('.foundation_data_catalog', __package__), name)
 
-    if name in {'BlocksMetadata'}:
-        return getattr(importlib.import_module('.foundation_metadata', __package__), name)
+    if name in {'DataSchema'}:
+        return getattr(importlib.import_module('.foundation_data_schema', __package__), name)
+
+    if name in {'DomainPayload', 'DomainTile', 'DomainTileMap'}:
+        return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
 
     if name in {'GridLayout', 'GridLayoutPayload', 'GridSpec'}:
         return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
