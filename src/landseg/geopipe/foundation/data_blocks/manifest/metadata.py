@@ -96,6 +96,7 @@ def build_metadata(
 
     # create route
     new_meta: geo_core.DataSchema = {
+        'schema_id': geo_core.foundation_data_schema.SCHEMA_ID,
         'dataset': {
             'name': '', # TBD
             'last_updated': utils.get_timestamp(T_FORMAT),

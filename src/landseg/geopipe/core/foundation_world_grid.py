@@ -97,7 +97,7 @@ class GridSpec:
             raise ValueError('Overlap must be smaller than block size.')
 
 # ---------------------------------Public Type---------------------------------
-class GridLayoutPayload(typing.TypedDict):
+class GridPayload(typing.TypedDict):
     '''
     Serializable artifact for `GridLayout`.
 
@@ -124,10 +124,10 @@ class GridLayoutPayload(typing.TypedDict):
         Mapping of tile coordinates to raster windows.
     '''
     schema_id: str
-    artifact_meta: _GridMeta
+    artifact_meta: GridMeta
     data: RasterWindowDict
 
-class _GridMeta(typing.TypedDict):
+class GridMeta(typing.TypedDict):
     '''Lightweight metadata describing a `GridLayout` artifact.'''
     gid: str
     mode: str
@@ -316,7 +316,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         dr = math.floor((gy - ry) / res_y)      # + down
         self._offset_px = (dc, dr)
 
-    def to_payload(self) -> GridLayoutPayload:
+    def to_payload(self) -> GridPayload:
         '''
         Convert the grid layout into a serializable payload.
 
@@ -336,8 +336,14 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
             'data': self._data
         }
 
+        # potentially serialize windows data
+        # 'windows': [
+        #     (k[0], k[1], w.col_off, w.row_off, w.width, w.height)
+        #     for k, w in sorted(payload['windows'].items())
+        # ]
+
     @classmethod
-    def from_payload(cls, payload: GridLayoutPayload) -> GridLayout:
+    def from_payload(cls, payload: GridPayload) -> GridLayout:
         '''
         Reconstruct a `GridLayout` from a serialized payload.
 

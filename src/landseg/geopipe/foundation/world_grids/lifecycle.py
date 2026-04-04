@@ -50,32 +50,29 @@ def prepare_world_grid(
     srow, scol, orow, ocol = config.tile_specs
     gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
 
-    # policy-driven
+    # load
+    output_grid: geo_core.GridLayout | None
+    load_status, m, output_grid = world_grids.load_grid(gid, artifacts_dir)
+    if load_status: # non-zero status indicates false artifact -> rebuild
+        output_grid = None
+        logger.log('INFO', f'World grid {gid} loading error: {m}')
+    else:
+        logger.log('INFO', f'World grid {gid} successfully loaded')
+
+    # policy: build if missing
     if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-
-        # if grid already exist, load and return
-        logger.log('INFO', f'Try to load grid {gid}')
-        try:
-            output_grid = world_grids.load_grid(gid, artifacts_dir)
-            logger.log('INFO', f'World grid {gid} successfully loaded')
+        if output_grid:
             return output_grid
-        # otherwise create grid accordingly
-        except FileNotFoundError:
-            logger.log('INFO', f'World grid {gid} not found, build from config')
-            output_grid = world_grids.build_grid(config)
-            world_grids.save_grid(output_grid, artifacts_dir)
-            logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
-            return output_grid
-
-    # force rebuild
-    elif policy is artifacts.LifecyclePolicy.REBUILD:
-        output_grid = world_grids.build_grid(config)
-        world_grids.save_grid(output_grid, artifacts_dir)
-        logger.log('INFO', f'World grid {gid} rebuilt to {artifacts_dir}')
-        return output_grid
-
+    # policy: force rebuild
+    if policy is artifacts.LifecyclePolicy.REBUILD:
+        pass
     # unsupported policy
     else:
-        msg = f'Currently unsupported policy: {policy}'
-        logger.log('ERROR', msg)
-        raise NotImplementedError(msg)
+        m = f'Currently unsupported policy: {policy}'
+        logger.log('ERROR', m)
+        raise NotImplementedError(m)
+
+    output_grid = world_grids.build_grid(config)
+    world_grids.save_grid(output_grid, artifacts_dir)
+    logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
+    return output_grid

@@ -34,8 +34,8 @@ compatibility and integrity on load.
 # standard imports
 import os
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def save_grid(
@@ -61,25 +61,19 @@ def save_grid(
 
     # get grid object payload and pickle
     payload = grid_obj.to_payload()
-    utils.write_pickle(f'{dirpath}/{payload['gid']}.pkl', payload)
-
-    # write meta to json
-    canonical = _canonicalize(payload)
-    meta = {
-        'schema_id': getattr(grid_obj, 'SCHEMA_ID', 'unknown'),
-        'sha256': utils.hash_payload(canonical),
-        'gid': payload['gid'],
-        'mode': payload['mode'],
-        'spec': payload['spec'],
-        'extent': payload['extent'],
-        'tiles count': len(payload['windows'])
-    }
-    utils.write_json(f'{dirpath}/{payload['gid']}_meta.json', meta)
+    # get gid as file name
+    name = payload['artifact_meta']['gid']
+    # get data (pop)
+    data = payload.pop('data')
+    # write domain tiles dict and write to JSON
+    artifacts.write_pickle_hash(f'{dirpath}/{name}.pkl', data)
+    # write meta dict and write to json
+    artifacts.write_json_hash(f'{dirpath}/{name}_meta.json',payload)
 
 def load_grid(
-    grid_name: str,
+    grid_id: str,
     dirpath: str
-) -> geo_core.GridLayout:
+) -> tuple[int, str, geo_core.GridLayout | None]:
     '''
     Load a `GridLayout` from disk.
 
@@ -93,34 +87,42 @@ def load_grid(
     '''
 
     # load payload and meta json
-    payload = utils.load_pickle(f'{dirpath}/{grid_name}.pkl')
-    meta = utils.load_json(f'{dirpath}/{grid_name}_meta.json')
+    grid_data_path = f'{dirpath}/{grid_id}.pkl'
+    meta_path = f'{dirpath}/{grid_id}_meta.json'
+    # types declaration
+    grid_status, grid_msg, tiles = artifacts.load_pickle_hash(grid_data_path)
+    meta_status, meta_msg, meta = artifacts.load_json_hash(meta_path)
 
-    # check hash
-    canonical = _canonicalize(payload)
-    if utils.hash_payload(canonical) != meta['sha256']:
-        raise ValueError(f'Grid {grid_name} might be altered/damaged.')
+    # loading status
+    status = {
+        (False, False): 0,
+        (True, False): 1,
+        (False, True): 2,
+        (True, True): 3
+    }[bool(grid_status), bool(meta_status)]
+
+    # combined summary message
+    msg = {
+        0: 'Grid .pkl and domain metadata JSON loaded successfully',
+        1: f'Error loading Grid .pkl: {grid_msg}',
+        2: f'Error loading domain metadata JSON: {meta_msg}',
+        3: f'Error loading Grid .pkl: {grid_msg} & metadata JSON: {meta_msg}'
+    }[status]
 
     # schema guard
-    expected = geo_core.GridLayout.SCHEMA_ID
-    found = meta.get('schema_id', None)
-    if found != expected:
-        raise ValueError(f'Unsupported schema: {found}; expected {expected}.')
+    if meta:
+        expected = geo_core.GridLayout.SCHEMA_ID
+        found = meta.get('schema_id', None)
+        if found != expected:
+            status = 4
+            msg = f'Unsupported schema: {found}; expected {expected}.'
 
     # otherwise return class object via class method
-    return geo_core.GridLayout.from_payload(payload)
-
-# ------------------------------private  function------------------------------
-def _canonicalize(payload: geo_core.GridLayoutPayload) -> dict:
-    '''Get a canonical, deterministic representation of the payload.'''
-
-    # logically equivalent inputs produce the same hash
-    return {
-        'mode': payload['mode'],
-        'spec': payload['spec'],
-        'extent': payload['extent'],
-        'windows': [
-            (k[0], k[1], w.col_off, w.row_off, w.width, w.height)
-            for k, w in sorted(payload['windows'].items())
-        ]
+    if status:
+        return status, msg, None
+    payload: geo_core.GridPayload = {
+        'schema_id': meta['schema_id'],
+        'artifact_meta': meta['artifact_meta'],
+        'data': tiles
     }
+    return status, msg, geo_core.GridLayout.from_payload(payload)

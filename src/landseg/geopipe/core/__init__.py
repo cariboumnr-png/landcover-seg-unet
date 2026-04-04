@@ -33,7 +33,6 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
-    'DomainPayload',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
@@ -44,8 +43,11 @@ __all__ = [
     'DataSchema',
     'BlocksPartition',
     'CatalogEntry',
+    'DomainMeta',
+    'DomainPayload',
     'DomainTile',
-    'GridLayoutPayload',
+    'GridPayload',
+    'GridMeta',
     'ImageBandStats',
     'TransformSchema',
 ]
@@ -55,8 +57,8 @@ if typing.TYPE_CHECKING:
     from .foundation_data_block import DataBlock, DataBlockMeta
     from .foundation_data_catalog import DataCatalog, CatalogEntry
     from .foundation_data_schema import DataSchema
-    from .foundation_domain_map import DomainPayload, DomainTile, DomainTileMap
-    from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
+    from .foundation_domain_map import DomainPayload, DomainMeta, DomainTile, DomainTileMap
+    from .foundation_world_grid import GridSpec, GridPayload, GridMeta, GridLayout
     from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
 
 def __getattr__(name: str):
@@ -70,10 +72,10 @@ def __getattr__(name: str):
     if name in {'DataSchema'}:
         return getattr(importlib.import_module('.foundation_data_schema', __package__), name)
 
-    if name in {'DomainPayload', 'DomainTile', 'DomainTileMap'}:
+    if name in {'DomainPayload', 'DomainMeta', 'DomainTile', 'DomainTileMap'}:
         return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
 
-    if name in {'GridLayout', 'GridLayoutPayload', 'GridSpec'}:
+    if name in {'GridSpec', 'GridPayload', 'GridMeta', 'GridLayout'}:
         return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
 
     if name in {'BlocksPartition', 'ImageBandStats', 'TransformSchema'}:

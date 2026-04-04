@@ -122,8 +122,9 @@ def prepare_domain_maps(
             domain_map_fpath = f'{artifacts_dir}/{name}.json'
             domain_meta_fpath = f'{artifacts_dir}/{name}_meta.json'
             #
-            artifacts.write_json_hash(domain_map_fpath, payload['tiles_dict'])
-            artifacts.write_json_hash(domain_meta_fpath, payload['meta'])
+            data = payload.pop('data')
+            artifacts.write_json_hash(domain_map_fpath, data)
+            artifacts.write_json_hash(domain_meta_fpath, payload)
 #
 def _mapping_status(
     tiles_fpath: str,

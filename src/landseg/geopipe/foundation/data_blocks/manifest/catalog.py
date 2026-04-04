@@ -96,7 +96,7 @@ def build_catalog(
             'base_class_count': meta['label_count']['base'],
             'schema_version': '1.0.0',
             'creation_time': utils.get_file_ctime(fp, T_FORMAT),
-            'sha_256': utils.hash_artifacts(fp),
+            'sha_256': utils.hash_artifacts(fp, write_to_record=False),
             'aligned_grid': mapped_grid_id,
             'source_image': source_image,
             'source_image_sha_256': img_hash,
@@ -106,7 +106,7 @@ def build_catalog(
         input_entries[meta['block_name']] = entry
 
     # if the current catalog is not empty, append
-    if len(original_catalog) > 0:
+    if original_catalog and len(original_catalog) > 0:
         originals = {v['block_name']: v for v in original_catalog.values()}
         input_entries = {**originals, **input_entries}
     # otherwise just create from input entries

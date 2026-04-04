@@ -29,6 +29,8 @@ A schema identifier and a SHA256 hash are used to validate payload
 compatibility and integrity on load.
 '''
 
+# standard imports
+import os
 # local imports
 import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -52,11 +54,17 @@ def save_domain(
         dirpath: Directory where artifacts are to be saved.
     '''
 
+    # prepare output dir
+    os.makedirs(dirpath, exist_ok=True)
+
+    # get payload from class object
     payload = obj.to_json_payload()
+    # get data (pop)
+    data = payload.pop('data')
     # write domain tiles dict and write to JSON
-    artifacts.write_json_hash(f'{dirpath}/{name}.json', payload['tiles_dict'])
+    artifacts.write_json_hash(f'{dirpath}/{name}.json', data)
     # write meta dict and write to json
-    artifacts.write_json_hash(f'{dirpath}/{name}_meta.json',payload['meta'])
+    artifacts.write_json_hash(f'{dirpath}/{name}_meta.json',payload)
 
 def load_domain(
     name: str,
@@ -75,12 +83,10 @@ def load_domain(
     '''
 
     # load payload and meta json
-    payload_path = f'{dirpath}/{name}.json'
+    tiles_data_path = f'{dirpath}/{name}.json'
     meta_path = f'{dirpath}/{name}_meta.json'
     # types declaration
-    tiles: dict[str, geo_core.DomainTile]
-    meta: geo_core.DomainMetadata
-    tiles_status, tiles_msg, tiles = artifacts.load_json_hash(payload_path)
+    tiles_status, tiles_msg, tiles = artifacts.load_json_hash(tiles_data_path)
     meta_status, meta_msg, meta = artifacts.load_json_hash(meta_path)
 
     # loading status
@@ -110,5 +116,9 @@ def load_domain(
     # otherwise return class object via class method
     if status:
         return status, msg, None
-    payload: geo_core.DomainPayload = {'meta': meta, 'tiles_dict': tiles}
+    payload: geo_core.DomainPayload = {
+        'schema_id': meta['schema_id'],
+        'artifact_meta': meta['artifact_meta'],
+        'data': tiles
+    }
     return status, msg, geo_core.DomainTileMap.from_json_payload(payload)

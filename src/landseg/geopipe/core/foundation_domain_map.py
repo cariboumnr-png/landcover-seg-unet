@@ -51,31 +51,6 @@ import collections.abc
 import typing
 
 # ---------------------------------Public Type---------------------------------
-class DomainTile(typing.TypedDict):
-    '''
-    Typed dictionary representing per-tile domain descriptors.
-
-    Each tile captures summary statistics and optional feature vectors
-    derived from its underlying categorical label distribution.
-
-    Fields:
-
-    - **majority**:
-        Integer class ID of the dominant class in the tile, or None if
-        the tile is invalid or filtered out.
-
-    - **major_freq**:
-        Fraction of pixels belonging to the majority class, or None if
-        unavailable.
-
-    - **pca_feature**:
-        Low-dimensional feature vector derived from PCA on the tile's
-        normalized class-frequency distribution, or None if not computed.
-    '''
-    majority: int | None
-    major_freq: float | None
-    pca_feature: list[float] | None
-
 class DomainPayload(typing.TypedDict):
     '''
     Serializable artifact for `DomainTileMap`.
@@ -106,10 +81,10 @@ class DomainPayload(typing.TypedDict):
         feature descriptors.
     '''
     schema_id: str
-    artifact_meta: _DomainMetadata
+    artifact_meta: DomainMeta
     data: dict[str, DomainTile]
 
-class _DomainMetadata(typing.TypedDict):
+class DomainMeta(typing.TypedDict):
     '''Lightweight metadata describing a `DomainTileMap` artifact.'''
     world_grid_ids: list[str]
     valid_threshold: float
@@ -119,6 +94,31 @@ class _DomainMetadata(typing.TypedDict):
     major_freq_min: float
     pca_axes_n: int
     explained_variance: float
+
+class DomainTile(typing.TypedDict):
+    '''
+    Typed dictionary representing per-tile domain descriptors.
+
+    Each tile captures summary statistics and optional feature vectors
+    derived from its underlying categorical label distribution.
+
+    Fields:
+
+    - **majority**:
+        Integer class ID of the dominant class in the tile, or None if
+        the tile is invalid or filtered out.
+
+    - **major_freq**:
+        Fraction of pixels belonging to the majority class, or None if
+        unavailable.
+
+    - **pca_feature**:
+        Low-dimensional feature vector derived from PCA on the tile's
+        normalized class-frequency distribution, or None if not computed.
+    '''
+    majority: int | None
+    major_freq: float | None
+    pca_feature: list[float] | None
 
 # --------------------------------Public  Class--------------------------------
 class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
@@ -160,7 +160,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         '''
 
         # init attrs
-        self.meta: _DomainMetadata = {
+        self.meta: DomainMeta = {
             'world_grid_ids': [],
             'valid_threshold': 1.0,
             'target_variance': 1.0,
