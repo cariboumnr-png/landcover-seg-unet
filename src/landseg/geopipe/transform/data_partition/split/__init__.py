@@ -33,22 +33,23 @@ __all__ = [
     # classes
     'PartitionParameters',
     # functions
-    'parse_catalog',
-    'run_datablocks_partition',
-    'create_blocks_partition'
+    'create_blocks_partition',
+    'filter_safe_tiles',
+    'hydrate_train_split',
+    'score_blocks',
+    'stratified_splitter'
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .adapter import parse_catalog
-    from .pipeline import run_datablocks_partition
-    from .split import PartitionParameters, create_blocks_partition
+    from .filter import filter_safe_tiles
+    from .hydrate import hydrate_train_split
+    from .pipeline import PartitionParameters, create_blocks_partition
+    from .score import score_blocks
+    from .split import stratified_splitter
 
 def __getattr__(name: str):
-
-    if name in {'parse_catalog'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
 
     if name in {'filter_safe_tiles'}:
         return getattr(importlib.import_module('.filter', __package__), name)
@@ -56,13 +57,13 @@ def __getattr__(name: str):
     if name in {'hydrate_train_split'}:
         return getattr(importlib.import_module('.hydrate', __package__), name)
 
-    if name in {'run_datablocks_partition'}:
+    if name in {'PartitionParameters', 'create_blocks_partition'}:
         return getattr(importlib.import_module('.pipeline', __package__), name)
 
     if name in {'score_blocks'}:
         return getattr(importlib.import_module('.score', __package__), name)
 
-    if name in {'PartitionParameters', 'create_blocks_partition'}:
+    if name in {'stratified_splitter'}:
         return getattr(importlib.import_module('.split', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
