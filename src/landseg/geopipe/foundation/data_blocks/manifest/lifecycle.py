@@ -20,13 +20,13 @@
 # =========================================================================== #
 
 '''
-Data block catalog and metadata artifact lifecycle management.
+Data block catalog and schema artifact lifecycle management.
 
 This module orchestrates creation, validation, and incremental updates of
-dataset manifest artifacts, including `catalog.json` and `metadata.json`.
+dataset manifest artifacts, including `catalog.json` and `schema.json`.
 It coordinates policy-driven rebuilds, detects newly created or modified
 data blocks, and ensures consistency between on-disk block artifacts and
-their recorded metadata throughout data preparation and update workflows.
+their recorded schema throughout data preparation and update workflows.
 '''
 
 # standard imports
@@ -60,7 +60,7 @@ def update_manifest(
     Update dataset manifest artifacts according to lifecycle policy.
 
     This function manages coordinated updates to the dataset-level
-    `catalog.json` and `metadata.json` files. It determines the current
+    `catalog.json` and `schema.json` files. It determines the current
     state of cataloged block artifacts relative to blocks present on
     disk, applies the specified lifecycle policy to decide whether to
     rebuild or append entries, and writes updated JSON artifacts with
@@ -72,7 +72,7 @@ def update_manifest(
         logger: Logger instance used to report status, decisions, and
             errors.
         artifacts_dir: Root dir containing `blocks/`, `catalog.json`,
-            and `metadata.json`.
+            and `schema.json`.
         policy: Lifecycle policy controlling whether manifests are
             rebuilt unconditionally or only when stale.
     '''
@@ -80,7 +80,7 @@ def update_manifest(
     # aliases
     blk_dir = f'{artifacts_dir}/blocks'
     cata_fp = f'{artifacts_dir}/catalog.json'
-    meta_fp = f'{artifacts_dir}/metadata.json'
+    meta_fp = f'{artifacts_dir}/schema.json'
 
     # catalog JSON
     catalog, to_add = _catalog_status(context, blk_dir, cata_fp, policy, logger)
@@ -95,17 +95,17 @@ def update_manifest(
         catalog_json = _catalog.to_json_payload()
         artifacts.write_json_hash(cata_fp, catalog_json)
 
-    # metadata JSON
+    # schema JSON
     sample_blk = f'{blk_dir}/{next(iter(os.listdir(blk_dir)))}'
-    current_metadata = _metadata_status(meta_fp, policy, logger)
-    meta_dict = manifest.build_metadata(
-        current_metadata,
+    current_schema = _schema_status(meta_fp, policy, logger)
+    schema_dict = manifest.build_schema(
+        current_schema,
         context.source_image,
         context.source_label,
         context.mapped_grid_id,
         sample_blk
     )
-    artifacts.write_json_hash(meta_fp, meta_dict)
+    artifacts.write_json_hash(meta_fp, schema_dict)
 
 def _catalog_status(
     context: ManifestUpdateContext,
@@ -166,17 +166,17 @@ def _catalog_status(
     logger.log('ERROR', m)
     raise NotImplementedError(m)
 
-def _metadata_status(
-    metadata_fpath: str,
+def _schema_status(
+    schema_fpath: str,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
 ) -> geo_core.DataSchema | None:
-    '''Load and evaluate dataset metadata state.'''
+    '''Load and evaluate dataset schema state.'''
 
     # load metadict
     original_meta: geo_core.DataSchema | None
-    load_status, m, original_meta = artifacts.load_json_hash(metadata_fpath)
-    if load_status: # non-zero status indicates false metadata.json -> rebuild
+    load_status, m, original_meta = artifacts.load_json_hash(schema_fpath)
+    if load_status: # non-zero status indicates false schema.json -> rebuild
         original_meta = None
         logger.log('INFO', f'Metadata JSON loading error: {m}')
     else:
