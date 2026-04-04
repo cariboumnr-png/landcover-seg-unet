@@ -51,28 +51,32 @@ def prepare_world_grid(
     gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
 
     # load
-    output_grid: geo_core.GridLayout | None
     load_status, m, output_grid = world_grids.load_grid(gid, artifacts_dir)
     if load_status: # non-zero status indicates false artifact -> rebuild
-        output_grid = None
         logger.log('INFO', f'World grid {gid} loading error: {m}')
+        build = True
     else:
         logger.log('INFO', f'World grid {gid} successfully loaded')
+        build = False
 
     # policy: build if missing
     if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-        if output_grid:
-            return output_grid
-    # policy: force rebuild
-    if policy is artifacts.LifecyclePolicy.REBUILD:
         pass
+    # policy: force rebuild
+    elif policy is artifacts.LifecyclePolicy.REBUILD:
+        build = True
     # unsupported policy
     else:
         m = f'Currently unsupported policy: {policy}'
         logger.log('ERROR', m)
         raise NotImplementedError(m)
 
-    output_grid = world_grids.build_grid(config)
-    world_grids.save_grid(output_grid, artifacts_dir)
-    logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
+    # build if needed
+    if build:
+        output_grid = world_grids.build_grid(config)
+        world_grids.save_grid(output_grid, artifacts_dir)
+        logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
+
+    # return
+    assert output_grid
     return output_grid

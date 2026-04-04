@@ -125,7 +125,7 @@ class GridPayload(typing.TypedDict):
     '''
     schema_id: str
     artifact_meta: GridMeta
-    data: RasterWindowDict
+    data: list[list[int]]
 
 class GridMeta(typing.TypedDict):
     '''Lightweight metadata describing a `GridLayout` artifact.'''
@@ -325,6 +325,13 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
             to reconstruct the layout.
         '''
 
+        # get canonical serialization of the data (JSON compatible)
+        canon: list[list[int]] = []
+        for k, w in sorted(self._data.items()):
+            canon.append(
+                [k[0], k[1], w.col_off, w.row_off, w.width, w.height]
+            )
+
         return {
             'schema_id': self.SCHEMA_ID,
             'artifact_meta': {
@@ -333,14 +340,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 'spec': dataclasses.asdict(self._spec),
                 'extent': self._extent,
             },
-            'data': self._data
+            'data': canon
         }
-
-        # potentially serialize windows data
-        # 'windows': [
-        #     (k[0], k[1], w.col_off, w.row_off, w.width, w.height)
-        #     for k, w in sorted(payload['windows'].items())
-        # ]
 
     @classmethod
     def from_payload(cls, payload: GridPayload) -> GridLayout:
@@ -358,6 +359,13 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         recomputed if needed.
         '''
 
+        # parse data from payload
+        parsed: RasterWindowDict = {}
+        for c in payload['data']:
+            x, y, col_off, row_off, w, h = c
+            window = RasterWindow(col_off, row_off, w, h) # type: ignore
+            parsed[(x, y)] = window
+
         # create empty GridLayout instance
         obj = cls.__new__(cls)
         # populate attributes from payload
@@ -365,7 +373,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         obj._mode = meta['mode']
         obj._spec = GridSpec(**meta['spec'])
         obj._extent = meta['extent']
-        obj._data = payload['data']
+        obj._data = parsed
         # init offset (runtime attribute)
         obj._offset_px = (0, 0)
         # return class object

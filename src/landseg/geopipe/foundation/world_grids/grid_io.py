@@ -66,7 +66,7 @@ def save_grid(
     # get data (pop)
     data = payload.pop('data')
     # write domain tiles dict and write to JSON
-    artifacts.write_pickle_hash(f'{dirpath}/{name}.pkl', data)
+    artifacts.write_json_hash(f'{dirpath}/{name}.json', data)
     # write meta dict and write to json
     artifacts.write_json_hash(f'{dirpath}/{name}_meta.json',payload)
 
@@ -87,10 +87,10 @@ def load_grid(
     '''
 
     # load payload and meta json
-    grid_data_path = f'{dirpath}/{grid_id}.pkl'
+    grid_data_path = f'{dirpath}/{grid_id}.json'
     meta_path = f'{dirpath}/{grid_id}_meta.json'
     # types declaration
-    grid_status, grid_msg, tiles = artifacts.load_pickle_hash(grid_data_path)
+    grid_status, grid_msg, tiles = artifacts.load_json_hash(grid_data_path)
     meta_status, meta_msg, meta = artifacts.load_json_hash(meta_path)
 
     # loading status
@@ -103,10 +103,10 @@ def load_grid(
 
     # combined summary message
     msg = {
-        0: 'Grid .pkl and domain metadata JSON loaded successfully',
-        1: f'Error loading Grid .pkl: {grid_msg}',
+        0: 'Grid JSON and domain metadata JSON loaded successfully',
+        1: f'Error loading Grid JSON: {grid_msg}',
         2: f'Error loading domain metadata JSON: {meta_msg}',
-        3: f'Error loading Grid .pkl: {grid_msg} & metadata JSON: {meta_msg}'
+        3: f'Error loading Grid JSON: {grid_msg} & metadata JSON: {meta_msg}'
     }[status]
 
     # schema guard
