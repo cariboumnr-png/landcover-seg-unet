@@ -20,37 +20,38 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.utils`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Context manager utility for rasterio.open(...).
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
+import contextlib
+import os
 import typing
+# third-party imports
+import rasterio
+import rasterio.io
 
-__all__ = [
-    # classes
-    # functions
-    'name_xy',
-    'open_rasters',
-    'xy_name',
-    # typing
-]
+@contextlib.contextmanager
+def open_rasters(
+        *rasters: str | None
+    ) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
+    '''
+    Open multiple rasters safely and yield a tuple of `DatasetReader`.
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .coords_str import name_xy, xy_name
-    from .raster_context import open_rasters
+    Accepts any number of filepaths (or None). Existing paths are opened
+    via rasterio, None values are preserved, and all files are closed
+    automatically on exit.
+    '''
 
+    with contextlib.ExitStack() as stack:
+        opened_rasters: list[rasterio.io.DatasetReader | None] = []
 
-def __getattr__(name: str):
+        for raster in rasters:
+            if isinstance(raster, str):
+                assert os.path.exists(raster), f'Raster not found: {raster}'
+                opened_raster = stack.enter_context(rasterio.open(raster))
+                opened_rasters.append(opened_raster)
+            else:
+                opened_rasters.append(None)
 
-    if name in {'name_xy', 'xy_name'}:
-        return getattr(importlib.import_module('.coords_str', __package__), name)
-
-    if name in {'open_rasters'}:
-        return getattr(importlib.import_module('.raster_context', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+        yield tuple(opened_rasters)
