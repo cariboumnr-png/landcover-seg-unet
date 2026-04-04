@@ -24,6 +24,7 @@
 # local imports
 import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.utils as utils
 
@@ -44,9 +45,8 @@ def map_rasters_to_grid(
 
     # mapped windows fpath
     logger.log('INFO', f'Try to load mapped windows from {gid}')
-    windows_fpath = f'{artifacts_dir}/windows_{gid}.pkl'
-    mapped_windows: mapper.MappedRasterWindows
-    load_status, m, mapped_windows = artifacts.load_pickle_hash(windows_fpath)
+    payload_fpath = f'{artifacts_dir}/windows_{gid}.json'
+    load_status, m, payload = artifacts.load_json_hash(payload_fpath)
     if load_status: # non-zero status indicates false artifact -> rebuild
         logger.log('INFO', f'Mapped windows loading error: {m}')
         build = True
@@ -69,8 +69,42 @@ def map_rasters_to_grid(
     # build if needed
     if build:
         mapped_windows = mapper.map_rasters(world_grid, img, lbl, logger)
-        artifacts.write_pickle_hash(windows_fpath, mapped_windows)
+        payload = {
+            'grid_id': mapped_windows.grid_id,
+            'tile_shape': list(mapped_windows.tile_shape),
+            'image': _canonicalize(mapped_windows.image),
+            'label': _canonicalize(mapped_windows.label)
+        }
+        artifacts.write_json_hash(payload_fpath, payload)
         logger.log('INFO', f'Mapped windows from {gid} created')
+
+    else:
+        mapped_windows = mapper.MappedRasterWindows(
+            grid_id=payload['grid_id'],
+            tile_shape=tuple(payload['tile_shape']),
+            image=_parse(payload['image']),
+            label=_parse(payload['label'])
+        )
 
     # return
     return mapped_windows
+
+def _canonicalize(mapped_windows: alias.RasterWindowDict) -> list[list[int]]:
+    '''Create a canonical serialization for mapped windows.'''
+
+    canon: list[list[int]] = []
+    for k, w in sorted(mapped_windows.items()):
+        canon.append(
+            [k[0], k[1], w.col_off, w.row_off, w.width, w.height]
+        )
+    return canon
+
+def _parse(payload: list[list[int]]) -> alias.RasterWindowDict:
+    '''Parse window dict from payload.'''
+
+    parsed: alias.RasterWindowDict = {}
+    for c in payload:
+        x, y, col_off, row_off, w, h = c
+        window = alias.RasterWindow(col_off, row_off, w, h) # type: ignore
+        parsed[(x, y)] = window
+    return parsed

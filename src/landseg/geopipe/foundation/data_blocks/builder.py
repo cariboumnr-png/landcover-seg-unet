@@ -270,14 +270,13 @@ class BlockBuilder:
 
         # remove windows or irregular shapes, e.g., edge windows
         for coord in self.common_coords:
-            # access image window
+            # get windows
             iw = self.img_windows[coord]
-            if (iw.height, iw.width) != self.config.block_size:
+            lw = self.lbl_windows[coord] if self.has_label else None
+            # if any has irregular shape remove the coord
+            if ((iw.height, iw.width) != self.config.block_size or
+                lw and (lw.height, lw.width) != self.config.block_size):
                 self.common_coords.remove(coord)
-            if self.has_label:
-                lw = self.lbl_windows[coord]
-                if (lw.height, lw.width) != self.config.block_size:
-                    self.common_coords.remove(coord)
         n = len(self.common_coords)
         self.logger.log('DEBUG', f'Number of windows with expected shape: {n}')
 
