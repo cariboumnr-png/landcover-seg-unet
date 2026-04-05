@@ -36,14 +36,59 @@ import landseg.geopipe.core as geo_core
 @dataclasses.dataclass
 class ParsedCatalog:
     '''Parsed view of a blocks catalog with commonly used subsets.'''
+    dev_base_class_counts: dict[tuple[int, int], list[int]]
+    dev_valid_class_counts: dict[tuple[int, int], list[int]]
+    dev_blocks: dict[tuple[int, int], str]
+    external_test_blocks: list[str] | None
+
+@dataclasses.dataclass
+class _Parsed:
+    '''Parsed view of a blocks catalog with commonly used subsets.'''
     base_class_counts: dict[tuple[int, int], list[int]]
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
 
 def parse_catalog(
+    dev_fpath: str,
+    test_fpath: str,
+    schema_fpath: str,
+    *,
+    valid_px_threshold: float,
+):
+    '''doc'''
+
+    # try load meta first
+    data_schema: geo_core.DataSchema
+    load_status, m, data_schema = artifacts.load_json_hash(schema_fpath)
+    if load_status: # non-zero status indicates false catalog.json
+        raise ValueError('INFO', f'Data schema JSON loading error: {m}')
+    # get block size from schema
+    image_shape = data_schema['tensor_shapes']['image']
+    block_size = (image_shape['H'], image_shape['W'])
+
+    # parse dev data catalog
+    t = valid_px_threshold
+    dev = _parse(dev_fpath, t, block_size)
+    # try parse test data catalog
+    try:
+        test = _parse(test_fpath, t, block_size)
+    except ValueError:
+        test = None
+    test_blocks = list(test.valid_file_paths.values()) if test else None
+
+    # return
+    return ParsedCatalog(
+        dev_base_class_counts=dev.base_class_counts,
+        dev_valid_class_counts=dev.valid_class_counts,
+        dev_blocks=dev.valid_file_paths,
+        external_test_blocks=test_blocks
+    )
+
+def _parse(
     fpath: str,
+    valid_px_threshold: float,
     block_size: tuple[int, int]
-) -> ParsedCatalog:
+):
     '''
     Parse a canonical blocks catalog and extract usable block metadata.
 
@@ -67,7 +112,8 @@ def parse_catalog(
         raise ValueError('INFO', f'Catalog JSON loading error: {m}')
 
     # all valid entries from catalog
-    work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px']}
+    t = valid_px_threshold
+    work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px'] > t}
     catalog_counts = {k: v['base_class_count'] for k, v in work_catalog.items()}
 
     # entries on the base grid (no overlap)
@@ -82,7 +128,7 @@ def parse_catalog(
     # all block file paths
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
 
-    return ParsedCatalog(
+    return _Parsed(
         base_class_counts=base_counts,
         valid_class_counts=catalog_counts,
         valid_file_paths=valid_file_paths

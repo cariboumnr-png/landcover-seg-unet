@@ -32,6 +32,7 @@ Public APIs:
 # standard imports
 import os
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.utils as utils
 
@@ -56,7 +57,7 @@ def build_schema(root_dir: str) -> None:
     '''
 
     # artifacts file paths
-    artifacts = {
+    _artifacts = {
         'block_source': f'{root_dir}/block_source.json',
         'block_splits': f'{root_dir}/block_splits.json',
         'label_stats': f'{root_dir}/label_stats.json',
@@ -65,29 +66,29 @@ def build_schema(root_dir: str) -> None:
 
     # checksum the artifacts
     checksums = {
-        'block_source': _resolve(artifacts['block_source']),
-        'block_splits': _resolve(artifacts['block_splits']),
-        'label_stats': _resolve(artifacts['label_stats']),
-        'image_stats': _resolve(artifacts['image_stats'])
+        'block_source': _resolve(_artifacts['block_source']),
+        'block_splits': _resolve(_artifacts['block_splits']),
+        'label_stats': _resolve(_artifacts['label_stats']),
+        'image_stats': _resolve(_artifacts['image_stats'])
     }
 
     # read blocks splits
     block_splits: geo_core.BlocksPartition
-    block_splits = utils.load_json(artifacts['block_splits'])
+    block_splits = utils.load_json(_artifacts['block_splits'])
 
     # read image stats
     image_stats: dict[str, geo_core.ImageBandStats]
-    image_stats = utils.load_json(artifacts['image_stats'])
+    image_stats = utils.load_json(_artifacts['image_stats'])
 
     # read label stats
     label_stats: dict[str, list[int]]
-    label_stats = utils.load_json(artifacts['label_stats'])
+    label_stats = utils.load_json(_artifacts['label_stats'])
 
     # populate schema dict
     schema: geo_core.TransformSchema = {
         'schema_version': '1.0',
         'creation_time': utils.get_timestamp(T_FORMAT),
-        'artifacts': artifacts,
+        'artifacts': _artifacts,
         'checksums': checksums,
         'train_blocks': block_splits['train'],
         'val_blocks': block_splits['val'],
@@ -99,8 +100,7 @@ def build_schema(root_dir: str) -> None:
     }
 
     # write schema to json
-    utils.write_json(f'{root_dir}/schema.json', schema)
-    utils.hash_artifacts(f'{root_dir}/schema.json')
+    artifacts.write_json_hash(f'{root_dir}/schema.json', schema)
 
 # ------------------------------private  function------------------------------
 def _resolve(fpath: str) -> str:
@@ -116,7 +116,7 @@ def _resolve(fpath: str) -> str:
 
     # default hash record at root
     try:
-        hash_records: dict[str, str] = utils.load_json(f'{root}/hash.json')
+        hash_records: dict[str, str] = utils.load_json(f'{root}/_hash.json')
     except FileNotFoundError as e:
         raise e
     # sanity checks

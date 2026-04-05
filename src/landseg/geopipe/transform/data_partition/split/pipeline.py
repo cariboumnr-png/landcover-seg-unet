@@ -63,7 +63,7 @@ def create_blocks_partition(
     config: PartitionParameters,
     *,
     ext_test_blks: list[str] | None
-) -> tuple[geo_core.BlocksPartition, list[str]]:
+) -> tuple[geo_core.BlocksPartition, dict[str, str]]:
     '''Split blocks with spatial safety and class balance.'''
 
     # split dataset
@@ -120,7 +120,13 @@ def create_blocks_partition(
     # data leakage sanity
     _leak_check(blks_src)
     # return splits and a formatted summary
-    summary = _summary_split_result(global_count, current_count)
+    summary = {
+        '----------Blocks Count': '',
+        '       Training blocks': f'{len(blks_src['train'])}',
+        '     Validation blocks': f'{len(blks_src['val'])}',
+        '           Test blocks': f'{len(blks_src['test'])}',
+    }
+    summary.update(_summary_split_result(global_count, current_count))
     return blks_src, summary
 
 def _index_fpath(fpaths: list[str]) -> dict[str, str]:
@@ -144,7 +150,7 @@ def _leak_check(blks_src: geo_core.BlocksPartition) -> None:
 def _summary_split_result(
     start: list[int],
     current: list[int],
-) -> list[str]:
+) -> dict[str, str]:
     '''Pretty-log class count&ratio changes before/after splitting.'''
 
     max_num_str_len = len(f'{max(start + current)}')
@@ -172,11 +178,12 @@ def _summary_split_result(
     count_diff = [x - y for (x, y) in zip(current, start)]
     per_diff = [float(x - y) for (x, y) in zip(current_per, start_per)]
 
-    return [
-        f'Prev. base label count: {_join_int(start)}',
-        f'Curr. base label count: {_join_int(current)}',
-        f'            - increase: {_join_int(count_diff)}',
-        f'Prev. base label ratio: {_join_per(start_per)}',
-        f'Curr. base label ratio: {_join_per(current_per)}',
-        f'              - change: {_join_per(per_diff, True)}',
-    ]
+    return {
+        '-----Hydration Results': '',
+        'Prev. base label count': f'{_join_int(start)}',
+        'Curr. base label count': f'{_join_int(current)}',
+        '            - increase': f'{_join_int(count_diff)}',
+        'Prev. base label ratio': f'{_join_per(start_per)}',
+        'Curr. base label ratio': f'{_join_per(current_per)}',
+        '              - change': f'{_join_per(per_diff, True)}',
+    }

@@ -28,9 +28,10 @@ writes normalized block artifacts along with updated split mappings.
 '''
 
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.normal_blocks as normal_blocks
-import landseg.utils as utils
+# import landseg.utils as utils
 
 def run_normaliza_blocks(root_dir: str):
     '''
@@ -51,7 +52,8 @@ def run_normaliza_blocks(root_dir: str):
     '''
 
     # load source blocks file lists
-    src: geo_core.BlocksPartition = utils.load_json(f'{root_dir}/block_source.json')
+    src: geo_core.BlocksPartition
+    _, _, src = artifacts.load_json_hash(f'{root_dir}/block_splits_source.json')
 
     # get source by split
     train = set(src['train'].values())
@@ -60,8 +62,7 @@ def run_normaliza_blocks(root_dir: str):
 
     # aggregate stats on training blocks
     stats = normal_blocks.aggregate_image_stats(train)
-    utils.write_json(f'{root_dir}/image_stats.json', stats)
-    utils.hash_artifacts(f'{root_dir}/image_stats.json')
+    artifacts.write_json_hash(f'{root_dir}/image_stats.json', stats)
 
     # save dirs
     train_dpath = f'{root_dir}/train_blocks'
@@ -76,5 +77,4 @@ def run_normaliza_blocks(root_dir: str):
     }
 
     # save and hash artifacts
-    utils.write_json(f'{root_dir}/block_splits.json', transform)
-    utils.hash_artifacts(f'{root_dir}/block_splits.json')
+    artifacts.write_json_hash(f'{root_dir}/block_splits_transformed.json', transform)

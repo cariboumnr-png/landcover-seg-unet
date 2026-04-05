@@ -49,7 +49,7 @@ def prepare(config: configs.RootConfig):
 
     # config aliases
     # data foundation
-    foundation_root = f'{config.foundation.output_dpath}/data_blocks'
+    blocks_src = f'{config.foundation.output_dpath}/data_blocks'
     grid = config.foundation.grid
     # data transform
     transform_root = config.transform.output_dpath
@@ -58,7 +58,15 @@ def prepare(config: configs.RootConfig):
     hydration = config.transform.hydration
 
     # datablocks partition
-    cfg = transform.PartitionParameters(
+    # parse catalog
+    parsed_catalog = transform.parse_catalog(
+        f'{blocks_src}/model_dev/catalog.json',
+        f'{blocks_src}/test_holdout/catalog.json',
+        f'{blocks_src}/model_dev/schema.json',
+        valid_px_threshold=0.8
+    )
+    # partition config
+    partition_config = transform.PartitionParameters(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
         buffer_step=partition.buffer_step,
         reward_ratios=scoring.reward,
@@ -72,7 +80,12 @@ def prepare(config: configs.RootConfig):
             grid.tile_specs.overlap_col
         )
     )
-    transform.run_datablocks_partition(foundation_root, transform_root, cfg, logger)
+    transform.run_datablocks_partition(
+        parsed_catalog,
+        partition_config,
+        logger,
+        output_dpath=transform_root
+    )
 
     # normalize
     transform.run_normaliza_blocks(transform_root)

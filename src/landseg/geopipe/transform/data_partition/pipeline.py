@@ -31,16 +31,19 @@ label statistics for downstream normalization and schema generation.
 # third-party imports
 import numpy
 # local imports
+import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
 
 # -------------------------------Public Function-------------------------------
 def run_datablocks_partition(
-    foundation_root: str,
-    transform_root: str,
+    parsed_catalog: data_partition.ParsedCatalog,
     partition_config: data_partition.PartitionParameters,
     logger: utils.Logger,
+    *,
+    output_dpath: str,
+    # policy: artifacts.LifecyclePolicy
 ) -> None:
     '''
     Partition canonical data blocks into train/val/test splits.
@@ -63,52 +66,34 @@ def run_datablocks_partition(
         logger: Logger for progress and diagnostic output.
     '''
 
-    # block size (row, col)
-    blk_size = (partition_config.block_spec[0], partition_config.block_spec[1])
+    # get a child logger
+    logger = logger.get_child('split')
 
-    # locate catalog JSON files
-    dev_catalog = f'{foundation_root}/model_dev/catalog.json'
-    test_catalog = f'{foundation_root}/test_holdout/catalog.json'
-
-    # try load test catalog
-    ext_test_blks: list[str] = []
-    try:
-        test = data_partition.parse_catalog(test_catalog, blk_size)
-        logger.log('INFO', 'Use external test blocks, no test blocks split')
-        ext_test_blks = list(test.valid_file_paths.values())
-    except FileNotFoundError:
-        logger.log('INFO', 'No external test blocks provided')
-        if not partition_config.val_test_ratios[1]:
-            logger.log('WARNING', 'No test blocks is to be included')
-
-    # load model dev catalog
-    dev = data_partition.parse_catalog(dev_catalog, blk_size)
-    if not dev.base_class_counts:
-        raise ValueError('No valid data catalog')
+    # output artifacts fpaths
+    split_src_fpath = f'{output_dpath}/block_splits_source.json'
+    split_sum_fpath = f'{output_dpath}/block_splits_summary.json'
+    lbl_stats_fpath = f'{output_dpath}/label_stats.json'
 
     # get split blocks
     logger.log('INFO', 'Split data blocks')
-    blks_src, summary = data_partition.create_blocks_partition(
-        dev.base_class_counts,
-        dev.valid_class_counts,
-        dev.valid_file_paths,
+    splits_src, splits_summary = data_partition.create_blocks_partition(
+        parsed_catalog.dev_base_class_counts,
+        parsed_catalog.dev_valid_class_counts,
+        parsed_catalog.dev_blocks,
         partition_config,
-        ext_test_blks=ext_test_blks
+        ext_test_blks=parsed_catalog.external_test_blocks
     )
-    # log
-    logger.log('INFO', f'Training blocks: {len(blks_src['train'])} ')
-    for m in summary:
-        logger.log('INFO', m)
-
-    # iterate current traing blocks to get label class counts
-    lbl_stats = _count_label(list(blks_src['train'].values()))
+    # log partition summary
+    for m in splits_summary.items():
+        logger.log('INFO', f'{m[0]}: {m[1]}')
 
     # write JSON artifacts
-    utils.write_json(f'{transform_root}/block_source.json', blks_src)
-    utils.hash_artifacts(f'{transform_root}/block_source.json')
+    artifacts.write_json_hash(split_src_fpath, splits_src)
+    artifacts.write_json_hash(split_sum_fpath, splits_summary)
 
-    utils.write_json(f'{transform_root}/label_stats.json', lbl_stats)
-    utils.hash_artifacts(f'{transform_root}/label_stats.json')
+    # iterate current traing blocks to get label class counts
+    lbl_stats = _count_label(list(splits_src['train'].values()))
+    artifacts.write_json_hash(lbl_stats_fpath, lbl_stats)
 
 def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
     '''Aggregate label class counts across a list of block files.'''
