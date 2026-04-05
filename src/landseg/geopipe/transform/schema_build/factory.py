@@ -74,19 +74,19 @@ def build_schema(root_dir: str) -> None:
 
     # read blocks splits
     block_splits: geo_core.BlocksPartition
-    block_splits = utils.load_json(_artifacts['block_splits'])
+    _, _, block_splits = artifacts.load_json_hash(_artifacts['block_splits'])
 
     # read image stats
     image_stats: dict[str, geo_core.ImageBandStats]
-    image_stats = utils.load_json(_artifacts['image_stats'])
+    _, _, image_stats = artifacts.load_json_hash(_artifacts['image_stats'])
 
     # read label stats
     label_stats: dict[str, list[int]]
-    label_stats = utils.load_json(_artifacts['label_stats'])
+    _, _, label_stats = artifacts.load_json_hash(_artifacts['label_stats'])
 
     # populate schema dict
     schema: geo_core.TransformSchema = {
-        'schema_version': '1.0',
+        'schema_version': geo_core.transform_types.SCHEMA_ID,
         'creation_time': utils.get_timestamp(T_FORMAT),
         'artifacts': _artifacts,
         'checksums': checksums,

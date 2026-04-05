@@ -31,9 +31,9 @@ import dataclasses
 import os
 # local imports
 import landseg.configs as configs
-import landseg.trainer as trainer
 import landseg.geopipe as geopipe
 import landseg.models as models
+import landseg.trainer as trainer
 import landseg.utils as utils
 
 def train(config: configs.RootConfig):
@@ -56,10 +56,10 @@ def train(config: configs.RootConfig):
 
     # collect artifacts and build dataspsec
     dataspecs = geopipe.build_dataspec(
-        f'{config.foundation.output_dpath}/data_blocks/model_dev/metadata.json',
-        f'{config.foundation.output_dpath}/domain_knowledge/ecodistrict.json',
-        f'{config.foundation.output_dpath}/domain_knowledge/geology.json',
-        f'{config.transform.output_dpath}/schema.json',
+        config.foundation.output_dpath,
+        config.transform.output_dpath,
+        ids_domain_name=config.trainer.runtime.data.domain_ids_name,
+        vec_domain_name=config.trainer.runtime.data.domain_vec_name,
         print_out=True
     )
 

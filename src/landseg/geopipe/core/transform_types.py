@@ -35,6 +35,8 @@ the transformation pipeline.
 from __future__ import annotations
 import typing
 
+SCHEMA_ID = 'transform_schema/v1'
+
 # ---------------------------------Public Type---------------------------------
 class BlocksPartition(typing.TypedDict):
     '''
@@ -89,7 +91,7 @@ class TransformSchema(typing.TypedDict):
     aggregated statistics for both labels and image bands.
 
     Fields:
-    
+
     - **schema_version**:
         Version identifier for the transformation schema.
     - **creation_time**:
