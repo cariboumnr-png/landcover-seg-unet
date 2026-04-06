@@ -77,6 +77,12 @@ class Controller(typing.Generic[T]):
         '''Return True if the artifact exists and its hash is valid.'''
         return os.path.exists(self.fp) and self._check_sha256()
 
+    @classmethod
+    def load_json_or_fail(cls, fp) -> 'Controller[T]':
+        '''Factory for a JSON controller that reads or fails.'''
+
+        return cls(fp, 'json', artifacts.LifecyclePolicy.LOAD_OR_FAIL)
+
     def fetch(self) -> T | None:
         '''
         Fetch the artifact according to the lifecycle policy.
