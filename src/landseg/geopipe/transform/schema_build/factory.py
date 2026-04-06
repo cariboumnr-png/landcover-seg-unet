@@ -32,14 +32,24 @@ Public APIs:
 # standard imports
 import os
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
+# typing aliases
+PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
+SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
+
 # -------------------------------Public Function-------------------------------
-def build_schema(root_dir: str) -> None:
+def build_schema(
+    root_dir: str,
+    *,
+    policy: artifacts.LifecyclePolicy
+) -> None:
     '''
     Generate and persist the dataset schema JSON from data and grid.
 
@@ -56,51 +66,57 @@ def build_schema(root_dir: str) -> None:
     JSON to disk.
     '''
 
-    # artifacts file paths
-    _artifacts = {
-        'block_source': f'{root_dir}/block_source.json',
-        'block_splits': f'{root_dir}/block_splits.json',
-        'label_stats': f'{root_dir}/label_stats.json',
-        'image_stats': f'{root_dir}/image_stats.json'
-    }
+    # schema artifact controller
+    schema_ctrl = SchemaCtrl(f'{root_dir}/schema.json', 'json', policy)
+    schema = schema_ctrl.fetch()
 
-    # checksum the artifacts
-    checksums = {
-        'block_source': _resolve(_artifacts['block_source']),
-        'block_splits': _resolve(_artifacts['block_splits']),
-        'label_stats': _resolve(_artifacts['label_stats']),
-        'image_stats': _resolve(_artifacts['image_stats'])
-    }
+    if not schema:
+        # artifacts file paths
+        _artifacts = {
+            'block_source': f'{root_dir}/block_splits_source.json',
+            'block_transform': f'{root_dir}/block_splits_transformed.json',
+            'label_stats': f'{root_dir}/label_stats.json',
+            'image_stats': f'{root_dir}/image_stats.json'
+        }
 
-    # read blocks splits
-    block_splits: geo_core.BlocksPartition
-    _, _, block_splits = artifacts.load_json_hash(_artifacts['block_splits'])
+        # checksum the artifacts
+        checksums = {
+            'block_source': _resolve(_artifacts['block_source']),
+            'block_transform': _resolve(_artifacts['block_transform']),
+            'label_stats': _resolve(_artifacts['label_stats']),
+            'image_stats': _resolve(_artifacts['image_stats'])
+        }
 
-    # read image stats
-    image_stats: dict[str, geo_core.ImageBandStats]
-    _, _, image_stats = artifacts.load_json_hash(_artifacts['image_stats'])
+        # read blocks splits
+        ctrl = PartitionCtrl.load_json_or_fail(_artifacts['block_transform'])
+        block_splits = ctrl.fetch()
+        assert block_splits # typing assertion
 
-    # read label stats
-    label_stats: dict[str, list[int]]
-    _, _, label_stats = artifacts.load_json_hash(_artifacts['label_stats'])
+        # read label stats
+        ctrl = LabelStatsCtrl.load_json_or_fail(_artifacts['label_stats'])
+        label_stats = ctrl.fetch()
+        assert label_stats # typing assertion
 
-    # populate schema dict
-    schema: geo_core.TransformSchema = {
-        'schema_version': geo_core.transform_types.SCHEMA_ID,
-        'creation_time': utils.get_timestamp(T_FORMAT),
-        'artifacts': _artifacts,
-        'checksums': checksums,
-        'train_blocks': block_splits['train'],
-        'val_blocks': block_splits['val'],
-        'test_blocks': block_splits['test'],
-        'label_stats': label_stats,
-        'image_stats': image_stats,
-        'image_array_key': 'image', # current convention
-        'label_array_key': 'label', # current convention
-    }
+        # read image stats
+        ctrl = ImageStatsCtrl.load_json_or_fail(_artifacts['image_stats'])
+        image_stats = ctrl.fetch()
+        assert image_stats # typing assertion
 
-    # write schema to json
-    artifacts.write_json_hash(f'{root_dir}/schema.json', schema)
+        # populate schema dict
+        schema = {
+            'schema_version': geo_core.transform_types.SCHEMA_ID,
+            'creation_time': utils.get_timestamp(T_FORMAT),
+            'artifacts': _artifacts,
+            'checksums': checksums,
+            'train_blocks': block_splits['train'],
+            'val_blocks': block_splits['val'],
+            'test_blocks': block_splits['test'],
+            'label_stats': label_stats,
+            'image_stats': image_stats,
+            'image_array_key': 'image', # current convention
+            'label_array_key': 'label', # current convention
+        }
+        schema_ctrl.persist(schema)
 
 # ------------------------------private  function------------------------------
 def _resolve(fpath: str) -> str:

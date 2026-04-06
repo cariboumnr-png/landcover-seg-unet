@@ -27,6 +27,7 @@ statistics, normalizes all splits, and emits the final dataset schema.
 '''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe.transform as transform
 import landseg.utils as utils
@@ -84,11 +85,18 @@ def prepare(config: configs.RootConfig):
         parsed_catalog,
         partition_config,
         logger,
-        output_dpath=transform_root
+        output_dpath=transform_root,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
     # normalize
-    transform.run_normaliza_blocks(transform_root)
+    transform.run_normaliza_blocks(
+        transform_root,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
 
     # build schema
-    transform.build_schema(transform_root)
+    transform.build_schema(
+        transform_root,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )

@@ -30,8 +30,12 @@ and analysis.
 # standard imports
 import dataclasses
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+
+# typing aliases
+CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
+SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 @dataclasses.dataclass
 class ParsedCatalog:
@@ -58,10 +62,9 @@ def parse_catalog(
     '''doc'''
 
     # try load meta first
-    data_schema: geo_core.DataSchema
-    load_status, m, data_schema = artifacts.load_json_hash(schema_fpath)
-    if load_status: # non-zero status indicates false catalog.json
-        raise ValueError('INFO', f'Data schema JSON loading error: {m}')
+    data_schema = SchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    assert data_schema # typing assertion
+
     # get block size from schema
     image_shape = data_schema['tensor_shapes']['image']
     block_size = (image_shape['H'], image_shape['W'])
@@ -72,7 +75,7 @@ def parse_catalog(
     # try parse test data catalog
     try:
         test = _parse(test_fpath, t, block_size)
-    except ValueError:
+    except artifacts.ArtifactError:
         test = None
     test_blocks = list(test.valid_file_paths.values()) if test else None
 
@@ -87,7 +90,7 @@ def parse_catalog(
 def _parse(
     fpath: str,
     valid_px_threshold: float,
-    block_size: tuple[int, int]
+    block_size: tuple[int, int],
 ):
     '''
     Parse a canonical blocks catalog and extract usable block metadata.
@@ -106,10 +109,9 @@ def _parse(
     '''
 
     # read catalog JSON to instantiate a class object
-    load_status, m, catalog_dict = artifacts.load_json_hash(fpath)
+    catalog_dict = CatalogDictCtrl.load_json_or_fail(fpath).fetch()
+    assert catalog_dict # typing assertion
     catalog = geo_core.DataCatalog.from_dict(catalog_dict)
-    if load_status: # non-zero status indicates false catalog.json
-        raise ValueError('INFO', f'Catalog JSON loading error: {m}')
 
     # all valid entries from catalog
     t = valid_px_threshold

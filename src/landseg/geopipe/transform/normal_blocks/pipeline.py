@@ -28,12 +28,19 @@ writes normalized block artifacts along with updated split mappings.
 '''
 
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.normal_blocks as normal_blocks
-# import landseg.utils as utils
 
-def run_normaliza_blocks(root_dir: str):
+# typing aliases
+PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+
+def run_normaliza_blocks(
+    root_dir: str,
+    *,
+    policy: artifacts.LifecyclePolicy
+):
     '''
     Build normalized data blocks from raw block splits.
 
@@ -52,8 +59,9 @@ def run_normaliza_blocks(root_dir: str):
     '''
 
     # load source blocks file lists
-    src: geo_core.BlocksPartition
-    _, _, src = artifacts.load_json_hash(f'{root_dir}/block_splits_source.json')
+    ctrl = PartitionCtrl.load_json_or_fail(f'{root_dir}/block_splits_source.json')
+    src = ctrl.fetch()
+    assert src # typing assertion
 
     # get source by split
     train = set(src['train'].values())
@@ -61,20 +69,25 @@ def run_normaliza_blocks(root_dir: str):
     test = set(src['test'].values())
 
     # aggregate stats on training blocks
-    stats = normal_blocks.aggregate_image_stats(train)
-    artifacts.write_json_hash(f'{root_dir}/image_stats.json', stats)
+    ctrl = ImageStatsCtrl(f'{root_dir}/image_stats.json', 'json', policy)
+    stats = ctrl.fetch()
+    if not stats:
+        stats = normal_blocks.aggregate_image_stats(train)
+        ctrl.persist(stats)
 
     # save dirs
     train_dpath = f'{root_dir}/train_blocks'
     val_dpath = f'{root_dir}/val_blocks'
     test_dpath = f'{root_dir}/test_blocks'
 
-    # build normalized blocks for each split
-    transform: geo_core.BlocksPartition = {
-        'train': normal_blocks.normalize_blocks(train, stats,train_dpath),
-        'val': normal_blocks.normalize_blocks(val, stats, val_dpath),
-        'test': normal_blocks.normalize_blocks(test, stats, test_dpath)
-    }
 
-    # save and hash artifacts
-    artifacts.write_json_hash(f'{root_dir}/block_splits_transformed.json', transform)
+    # build normalized blocks for each split
+    ctrl = PartitionCtrl(f'{root_dir}/block_splits_transformed.json', 'json', policy)
+    transform = ctrl.fetch()
+    if not transform:
+        transform = {
+            'train': normal_blocks.normalize_blocks(train, stats,train_dpath),
+            'val': normal_blocks.normalize_blocks(val, stats, val_dpath),
+            'test': normal_blocks.normalize_blocks(test, stats, test_dpath)
+        }
+        ctrl.persist(transform)

@@ -31,10 +31,14 @@ label statistics for downstream normalization and schema generation.
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
+
+# typing aliases
+PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 
 # -------------------------------Public Function-------------------------------
 def run_datablocks_partition(
@@ -43,7 +47,7 @@ def run_datablocks_partition(
     logger: utils.Logger,
     *,
     output_dpath: str,
-    # policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy
 ) -> None:
     '''
     Partition canonical data blocks into train/val/test splits.
@@ -71,29 +75,35 @@ def run_datablocks_partition(
 
     # output artifacts fpaths
     split_src_fpath = f'{output_dpath}/block_splits_source.json'
-    split_sum_fpath = f'{output_dpath}/block_splits_summary.json'
     lbl_stats_fpath = f'{output_dpath}/label_stats.json'
 
-    # get split blocks
-    logger.log('INFO', 'Split data blocks')
-    splits_src, splits_summary = data_partition.create_blocks_partition(
-        parsed_catalog.dev_base_class_counts,
-        parsed_catalog.dev_valid_class_counts,
-        parsed_catalog.dev_blocks,
-        partition_config,
-        ext_test_blks=parsed_catalog.external_test_blocks
-    )
-    # log partition summary
-    for m in splits_summary.items():
-        logger.log('INFO', f'{m[0]}: {m[1]}')
+    # partition results controller
+    ctrl = PartitionCtrl(split_src_fpath, 'json', policy)
+    splits_src = ctrl.fetch()
 
-    # write JSON artifacts
-    artifacts.write_json_hash(split_src_fpath, splits_src)
-    artifacts.write_json_hash(split_sum_fpath, splits_summary)
+    if not splits_src:
+        # get split blocks
+        logger.log('INFO', 'Split data blocks')
+        splits_src, splits_summary = data_partition.create_blocks_partition(
+            parsed_catalog.dev_base_class_counts,
+            parsed_catalog.dev_valid_class_counts,
+            parsed_catalog.dev_blocks,
+            partition_config,
+            ext_test_blks=parsed_catalog.external_test_blocks
+        )
+        # log partition summary
+        for m in splits_summary.items():
+            logger.log('INFO', f'{m[0]}: {m[1]}')
+        ctrl.persist(splits_src)
 
-    # iterate current traing blocks to get label class counts
-    lbl_stats = _count_label(list(splits_src['train'].values()))
-    artifacts.write_json_hash(lbl_stats_fpath, lbl_stats)
+    # label count results controller
+    ctrl = LabelStatsCtrl(lbl_stats_fpath, 'json', policy)
+    lbl_stats = ctrl.fetch()
+
+    if not lbl_stats:
+        # iterate current traing blocks to get label class counts
+        lbl_stats = _count_label(list(splits_src['train'].values()))
+        ctrl.persist(lbl_stats)
 
 def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
     '''Aggregate label class counts across a list of block files.'''
