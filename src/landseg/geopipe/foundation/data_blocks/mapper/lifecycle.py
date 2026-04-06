@@ -22,7 +22,7 @@
 '''Data blocks artifacts lifecycle management.'''
 
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
@@ -41,41 +41,26 @@ def map_rasters_to_grid(
 
     # aliases
     gid = world_grid.gid
-    img, lbl = image_label_fpaths
+    image, label = image_label_fpaths
+
+    # artifacts controller
+    ctrl_args = (f'{artifacts_dir}/windows_{gid}.json', 'json', policy)
+    ctrl = artifacts.Controller[dict](*ctrl_args)
 
     # mapped windows fpath
     logger.log('INFO', f'Try to load mapped windows from {gid}')
-    payload_fpath = f'{artifacts_dir}/windows_{gid}.json'
-    load_status, m, payload = artifacts.load_json_hash(payload_fpath)
-    if load_status: # non-zero status indicates false artifact -> rebuild
-        logger.log('INFO', f'Mapped windows loading error: {m}')
-        build = True
-    else:
-        logger.log('INFO', f'Mapped windows from {gid} loaded')
-        build = False
-
-    # policy: build if missing
-    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-        pass
-    # policy: force rebuild
-    elif policy is artifacts.LifecyclePolicy.REBUILD:
-        build = True
-    # unsupported policy
-    else:
-        msg = f'Currently unsupported policy: {policy}'
-        logger.log('ERROR', msg)
-        raise NotImplementedError(msg)
+    payload = ctrl.fetch()
 
     # build if needed
-    if build:
-        mapped_windows = mapper.map_rasters(world_grid, img, lbl, logger)
+    if not payload:
+        mapped_windows = mapper.map_rasters(world_grid, image, label, logger)
         payload = {
             'grid_id': mapped_windows.grid_id,
             'tile_shape': list(mapped_windows.tile_shape),
             'image': _canonicalize(mapped_windows.image),
             'label': _canonicalize(mapped_windows.label)
         }
-        artifacts.write_json_hash(payload_fpath, payload)
+        ctrl.persist(payload)
         logger.log('INFO', f'Mapped windows from {gid} created')
 
     else:

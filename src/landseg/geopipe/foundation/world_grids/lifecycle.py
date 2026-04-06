@@ -22,8 +22,8 @@
 '''World grid artifacts lifecycle management.'''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation.world_grids as world_grids
 import landseg.utils as utils
 
@@ -51,32 +51,17 @@ def prepare_world_grid(
     gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
 
     # load
-    load_status, m, output_grid = world_grids.load_grid(gid, artifacts_dir)
-    if load_status: # non-zero status indicates false artifact -> rebuild
-        logger.log('INFO', f'World grid {gid} loading error: {m}')
-        build = True
-    else:
-        logger.log('INFO', f'World grid {gid} successfully loaded')
-        build = False
-
-    # policy: build if missing
-    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-        pass
-    # policy: force rebuild
-    elif policy is artifacts.LifecyclePolicy.REBUILD:
-        build = True
-    # unsupported policy
-    else:
-        m = f'Currently unsupported policy: {policy}'
-        logger.log('ERROR', m)
-        raise NotImplementedError(m)
+    schema = geo_core.GridLayout.SCHEMA_ID
+    payload = artifacts.load_payload(gid, artifacts_dir, schema, policy)
+    if payload:
+        # TODO
+        output_grid = geo_core.GridLayout.from_payload(payload) # type: ignore
+        logger.log('INFO', f'World grid {gid} loaded successfully')
+        return output_grid
 
     # build if needed
-    if build:
-        output_grid = world_grids.build_grid(config)
-        world_grids.save_grid(output_grid, artifacts_dir)
-        logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
-
-    # return
-    assert output_grid
+    output_grid = world_grids.build_grid(config)
+    payload = output_grid.to_payload()
+    artifacts.save_payload(payload, gid, artifacts_dir)
+    logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
     return output_grid

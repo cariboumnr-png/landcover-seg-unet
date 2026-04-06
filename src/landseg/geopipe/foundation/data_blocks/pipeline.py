@@ -35,7 +35,7 @@ Public API:
 # standard imports
 import dataclasses
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
@@ -146,7 +146,7 @@ def run_blocks_building(
         updated,
         logger,
         artifacts_dir=f'{output_root}/model_dev/',
-        policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
     # exit if test rasters are not provided
@@ -195,6 +195,6 @@ def run_blocks_building(
         updated,
         logger,
         artifacts_dir=f'{output_root}/test_holdout/',
-        policy=artifacts.LifecyclePolicy.REBUILD_IF_STALE
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
     return None

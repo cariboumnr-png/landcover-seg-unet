@@ -27,8 +27,8 @@ import copy
 import dataclasses
 import os
 # local imports
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
@@ -93,12 +93,21 @@ def prepare_domain_maps(
         name, _ = os.path.splitext(os.path.basename(config.src_path))
 
         # check domain artifacts
-        domain = _domain_map_status(name, artifacts_dir, logger, policy)
-        if not domain:
+        schema = geo_core.DomainTileMap.SCHEMA_ID
+        payload = artifacts.load_payload(name, artifacts_dir, schema, policy)
+        logger.log('INFO', f'Domain {name} loaded successfully')
+        if not payload:
 
             # check mapped tiles before building
-            tiles_fpath = f'{artifacts_dir}/{name}_tiles_{grid.gid}.npz'
-            mapped = _mapping_status(tiles_fpath, logger, policy)
+            mapping_fp = f'{artifacts_dir}/{name}_tiles_{grid.gid}.npz'
+            ctrl_args = (mapping_fp, 'npz_dict', policy)
+            ctrl = artifacts.Controller[alias.RasterTileDict](*ctrl_args)
+            try:
+                mapped = ctrl.fetch()
+            except artifacts.ArtifactError as exc:
+                logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
+                raise artifacts.ArtifactError from exc
+
             # create a new mapping if not valid
             if not mapped:
                 mapped = domain_maps.map_domain_to_grid(
@@ -108,7 +117,7 @@ def prepare_domain_maps(
                     logger
                 )
                 logger.log('INFO', f'Mapped tiles from {grid.gid} created')
-                artifacts.write_dict_npz_hash(tiles_fpath, mapped)
+                ctrl.persist(mapped)
 
             # build domain map
             domain = domain_maps.build_domain(
@@ -119,65 +128,4 @@ def prepare_domain_maps(
                 logger
             )
             payload = domain.to_json_payload()
-            domain_map_fpath = f'{artifacts_dir}/{name}.json'
-            domain_meta_fpath = f'{artifacts_dir}/{name}_meta.json'
-            #
-            data = payload.pop('data')
-            artifacts.write_json_hash(domain_map_fpath, data)
-            artifacts.write_json_hash(domain_meta_fpath, payload)
-#
-def _mapping_status(
-    tiles_fpath: str,
-    logger: utils.Logger,
-    policy: artifacts.LifecyclePolicy
-) -> alias.RasterTileDict | None:
-    '''doc'''
-
-    # load tiles artifact
-    mapped_tiles: alias.RasterTileDict | None
-    load_status, m, mapped_tiles = artifacts.load_dict_npz_hash(tiles_fpath)
-    if load_status: # non-zero status indicates false artifact -> rebuild
-        mapped_tiles = None
-        logger.log('INFO', f'Mapped tiles loading error: {m}')
-    else:
-        logger.log('INFO', f'Mapped tiles loaded from {tiles_fpath}')
-
-    # policy: build if missing
-    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-        return mapped_tiles
-    # policy: force rebuild
-    if policy is artifacts.LifecyclePolicy.REBUILD:
-        return None
-    # unsupported policy
-    m = f'Currently unsupported policy: {policy}'
-    logger.log('ERROR', m)
-    raise NotImplementedError(m)
-
-def _domain_map_status(
-    name: str,
-    artifacts_dir: str,
-    logger: utils.Logger,
-    policy: artifacts.LifecyclePolicy
-) -> geo_core.DomainTileMap | None:
-    '''doc'''
-
-    # load domain
-    domain: geo_core.DomainTileMap | None
-    status, msg, domain = domain_maps.load_domain(name, artifacts_dir)
-    if status:
-        domain = None
-        logger.log('INFO', f'Errors encountered during loading: {msg}')
-    else:
-        assert isinstance(domain, geo_core.DomainTileMap) # typing guard
-        logger.log('INFO', f'Domain {name} loaded successfully')
-
-    # policy: build if missing
-    if policy is artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-        return domain
-    # policy: force rebuild
-    if policy is artifacts.LifecyclePolicy.REBUILD:
-        return None
-    # unsupported policy
-    m = f'Currently unsupported policy: {policy}'
-    logger.log('ERROR', m)
-    raise NotImplementedError(m)
+            artifacts.save_payload(payload, name, artifacts_dir)

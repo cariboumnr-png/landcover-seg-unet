@@ -33,24 +33,30 @@ import typing
 __all__ = [
     # classes
     'ArtifactError',
-    'ArtifactController',
+    'Controller',
     'LifecyclePolicy',
     # functions
+    'load_payload',
+    'save_payload',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .controller import ArtifactError, ArtifactController
+    from .controller import ArtifactError, Controller
+    from .payload_io import load_payload, save_payload
     from .policy import LifecyclePolicy
 
 def __getattr__(name: str):
 
-    if name in {'ArtifactError', 'ArtifactController'}:
+    if name in {'ArtifactError', 'Controller'}:
         return getattr(importlib.import_module('.controller', __package__), name)
 
     if name in {''}:
         return getattr(importlib.import_module('.paths', __package__), name)
+
+    if name in {'load_payload', 'save_payload'}:
+        return getattr(importlib.import_module('.payload_io', __package__), name)
 
     if name in {'LifecyclePolicy'}:
         return getattr(importlib.import_module('.policy', __package__), name)

@@ -30,95 +30,105 @@ compatibility and integrity on load.
 '''
 
 # standard imports
-import os
+import typing
 # local imports
-import landseg.geopipe.artifacts as artifacts
-import landseg.geopipe.core as geo_core
+import landseg.artifacts as artifacts
+
+class PayloadDict(typing.TypedDict):
+    '''
+    Generic serialization payload dictionary.
+    '''
+    schema_id: str
+    artifact_meta: typing.Mapping[str, typing.Any]
+    data: typing.Mapping[str, typing.Any]
 
 # -------------------------------Public Function-------------------------------
-def save_domain(
-    obj: geo_core.DomainTileMap,
+def save_payload(
+    payload: object,
     name: str,
     dirpath: str,
 ) -> None:
     '''
-    Serialize a `DomainTileMap` to disk.
-
-    Writes a JSON payload and a JSON metadata file containing schema
-    identifier, integrity hash, and summary fields.
-
-    Args:
-        grid_name: Name of the grid associated with this domain.
-        domain_name: Name of the domain in both JSON artifacts.
-        domain_obj: The `DomainTileMap` instance to be saved.
-        dirpath: Directory where artifacts are to be saved.
+    Serialize a payload to disk.
     '''
 
-    # prepare output dir
-    os.makedirs(dirpath, exist_ok=True)
+    # basic validation
+    if not isinstance(payload, dict):
+        raise TypeError("payload must be a dict")
 
-    # get payload from class object
-    payload = obj.to_json_payload()
-    # get data (pop)
+    required = {'schema_id', 'artifact_meta', 'data'}
+    missing = required - payload.keys()
+    if missing:
+        raise ValueError(f"Missing payload keys: {missing}")
+    # type casting
+    payload = typing.cast(PayloadDict, payload)
+
+    # get data (pop and rest goes to meta)
+    payload = dict(payload)  # shallow copy
     data = payload.pop('data')
-    # write domain tiles dict and write to JSON
-    artifacts.write_json_hash(f'{dirpath}/{name}.json', data)
-    # write meta dict and write to json
-    artifacts.write_json_hash(f'{dirpath}/{name}_meta.json',payload)
 
-def load_domain(
+    # payload and meta path
+    data_path = f'{dirpath}/{name}.json'
+    meta_path = f'{dirpath}/{name}_meta.json'
+
+    policy = artifacts.LifecyclePolicy.BUILD_IF_MISSING # dummy
+
+    # artifact controllers
+    data_ctrl = artifacts.Controller(data_path, 'json', policy)
+    meta_ctrl = artifacts.Controller(meta_path, 'json', policy)
+
+    # write domain tiles dict and write to JSON
+    data_ctrl.persist(data)
+    # write meta dict and write to json
+    meta_ctrl.persist(payload)
+
+def load_payload(
     name: str,
     dirpath: str,
-) -> tuple[int, str, geo_core.DomainTileMap | None]:
+    schema_id: str,
+    policy: artifacts.LifecyclePolicy
+) -> PayloadDict | None:
     '''
-    Load a `DomainTileMap` from disk.
-
-    Validates payload hash and schema identifier before reconstructing
-    the `DomainTileMap` instance. Raises if the payload is corrupted or the
-    schema is unsupported.
-
-    Args:
-        domain_name: Name of the domain in both JSON artifacts.
-        dirpath: Directory where artifacts are located.
+    doc
     '''
 
-    # load payload and meta json
-    tiles_data_path = f'{dirpath}/{name}.json'
+    # payload and meta path
+    data_path = f'{dirpath}/{name}.json'
     meta_path = f'{dirpath}/{name}_meta.json'
-    # types declaration
-    tiles_status, tiles_msg, tiles = artifacts.load_json_hash(tiles_data_path)
-    meta_status, meta_msg, meta = artifacts.load_json_hash(meta_path)
+
+    # artifact controllers
+    data_ctrl = artifacts.Controller[dict[str, typing.Any]](data_path, 'json', policy)
+    meta_ctrl = artifacts.Controller[dict[str, typing.Any]](meta_path, 'json', policy)
+
+    # fetch
+    try:
+        data = data_ctrl.fetch()
+    except artifacts.ArtifactError as exc:
+        raise artifacts.ArtifactError(
+            f'Error loading {data_path}: {exc}'
+        ) from exc
+    try:
+        meta = meta_ctrl.fetch()
+    except artifacts.ArtifactError as exc:
+        raise artifacts.ArtifactError(
+            f'Error loading {meta_path}: {exc}'
+        ) from exc
 
     # loading status
-    status = {
-        (False, False): 0,
-        (True, False): 1,
-        (False, True): 2,
-        (True, True): 3
-    }[bool(tiles_status), bool(meta_status)]
-
-    # combined summary message
-    msg = {
-        0: 'Domain JSON and domain metadata JSON loaded successfully',
-        1: f'Error loading domain JSON: {tiles_msg}',
-        2: f'Error loading domain metadata JSON: {meta_msg}',
-        3: f'Error loading domain JSON: {tiles_msg} & metadata JSON: {meta_msg}'
-    }[status]
+    if meta is None or data is None:
+        return None
 
     # schema guard
-    if meta:
-        expected = geo_core.DomainTileMap.SCHEMA_ID
-        found = meta.get('schema_id', None)
-        if found != expected:
-            status = 4
-            msg = f'Unsupported schema: {found}; expected {expected}.'
+    found = meta.get('schema_id', None)
+    if found != schema_id:
+        raise artifacts.ArtifactError(
+            f'Unsupported schema: {found}; expected {schema_id}.'
+        )
 
     # otherwise return class object via class method
-    if status:
-        return status, msg, None
-    payload: geo_core.DomainPayload = {
+    payload: PayloadDict = {
         'schema_id': meta['schema_id'],
         'artifact_meta': meta['artifact_meta'],
-        'data': tiles
+        'data': data
     }
-    return status, msg, geo_core.DomainTileMap.from_json_payload(payload)
+    return payload

@@ -75,7 +75,7 @@ def build_catalog(
     '''
 
     # return dict
-    input_entries: dict[str, geo_core.CatalogEntry] = {}
+    new_entries: dict[str, geo_core.CatalogEntry] = {}
 
     # get hash values from input rasters
     img_hash = utils.hash_artifacts(source_image)
@@ -103,11 +103,11 @@ def build_catalog(
             'source_label': source_label,
             'source_label_sha_256': lbl_hash,
         }
-        input_entries[meta['block_name']] = entry
+        new_entries[meta['block_name']] = entry
 
     # if the current catalog is not empty, append
     if original_catalog and len(original_catalog) > 0:
         originals = {v['block_name']: v for v in original_catalog.values()}
-        input_entries = {**originals, **input_entries}
+        new_entries = {**originals, **new_entries}
     # otherwise just create from input entries
-    return geo_core.DataCatalog.from_dict(input_entries)
+    return geo_core.DataCatalog.from_dict(new_entries)

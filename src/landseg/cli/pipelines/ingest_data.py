@@ -27,8 +27,8 @@ the immutable raw block catalogue for later experiments.
 '''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.foundation as foundation
 import landseg.utils as utils
 

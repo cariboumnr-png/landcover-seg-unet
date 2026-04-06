@@ -42,7 +42,7 @@ import landseg.artifacts as artifacts
 
 T = typing.TypeVar('T')
 
-class ArtifactController(typing.Generic[T]):
+class Controller(typing.Generic[T]):
     '''
     Manage loading, validation, and persistence of disk-based artifacts.
 
@@ -93,7 +93,9 @@ class ArtifactController(typing.Generic[T]):
         data: T | None
         try:
             data = self._load()
-        except ArtifactError as exc:
+        except _ArtifactMissing: # expect to build
+            data = None
+        except ArtifactError as exc: # propagate to let caller to decide
             raise ArtifactError from exc
 
         match self.policy:

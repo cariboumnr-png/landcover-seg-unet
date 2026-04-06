@@ -33,7 +33,7 @@ their recorded schema throughout data preparation and update workflows.
 import dataclasses
 import os
 # local imports
-import landseg.geopipe.artifacts as artifacts
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks.manifest as manifest
 import landseg.geopipe.utils as geo_utils
@@ -77,27 +77,40 @@ def update_manifest(
             rebuilt unconditionally or only when stale.
     '''
 
-    # aliases
+    # blocks dir
     blk_dir = f'{artifacts_dir}/blocks'
-    cata_fp = f'{artifacts_dir}/catalog.json'
-    meta_fp = f'{artifacts_dir}/schema.json'
 
-    # catalog JSON
-    catalog, to_add = _catalog_status(context, blk_dir, cata_fp, policy, logger)
-    if to_add:
-        _catalog = manifest.build_catalog(
-            catalog,
-            to_add,
+    # load catalog JSON
+    ctrl_args = (f'{artifacts_dir}/catalog.json', 'json', policy)
+    ctrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]](*ctrl_args)
+    try:
+        data = ctrl.fetch()
+    except artifacts.ArtifactError as exc:
+        logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
+        raise artifacts.ArtifactError from exc
+    # action
+    current, to_update = _catalog_status(data, context, blk_dir, policy, logger)
+    if to_update:
+        catalog = manifest.build_catalog(
+            current,
+            to_update,
             context.source_image,
             context.source_label,
             context.mapped_grid_id
         )
-        catalog_json = _catalog.to_json_payload()
-        artifacts.write_json_hash(cata_fp, catalog_json)
+        catalog_json = catalog.to_json_payload()
+        ctrl.persist(catalog_json)
 
-    # schema JSON
+    # load schema JSON
+    ctrl_args = (f'{artifacts_dir}/schema.json', 'json', policy)
+    ctrl = artifacts.Controller[geo_core.DataSchema](*ctrl_args)
+    try:
+        current_schema = ctrl.fetch()
+    except artifacts.ArtifactError as exc:
+        logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
+        raise artifacts.ArtifactError from exc
+    # action
     sample_blk = f'{blk_dir}/{next(iter(os.listdir(blk_dir)))}'
-    current_schema = _schema_status(meta_fp, policy, logger)
     schema_dict = manifest.build_schema(
         current_schema,
         context.source_image,
@@ -105,16 +118,22 @@ def update_manifest(
         context.mapped_grid_id,
         sample_blk
     )
-    artifacts.write_json_hash(meta_fp, schema_dict)
+    ctrl.persist(schema_dict)
 
 def _catalog_status(
+    data_dict: dict[str, geo_core.CatalogEntry] | None,
     context: ManifestUpdateContext,
     blocks_dir: str,
-    catalog_fpath: str,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
 ) -> tuple[geo_core.DataCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
+
+    # instantiate a catalog class from dict
+    if data_dict:
+        catalog = geo_core.DataCatalog.from_dict(data_dict)
+    else:
+        catalog = geo_core.DataCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
     # this include new/updated blocks
@@ -127,68 +146,31 @@ def _catalog_status(
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in context.updated_coords]
     logger.log('INFO', f'Updated block files to disk count: {len(updated)}')
 
-    # load catalog json and give it a status
-    catalog_dict: dict[str, geo_core.CatalogEntry] # type declaration
-    load_status, m, catalog_dict = artifacts.load_json_hash(catalog_fpath)
-    if load_status: # non-zero status indicates false catalog.json -> rebuild
-        catalog = geo_core.DataCatalog() # empty
-        cataloged = None
-        catalog_status = 1
-        logger.log('INFO', f'Catalog JSON loading error: {m}')
-    else:
-        # get filenames from the catalog
-        catalog = geo_core.DataCatalog.from_dict(catalog_dict)
-        cataloged = [os.path.basename(c['file_path']) for c in catalog.values()]
-        logger.log('INFO', f'Catalogued blocks files count: {len(cataloged)}')
-        # determine status
-        catalog_status = {
-            (True, False): 2,   # catalog present, no new blocks
-            (True, True): 3,    # catalog present, has new blocks
-            (False, False): 4,  # catalog absent, no new blocks
-            (False, True): 5,   # catalog absent, has new blocks
-        }[(bool(cataloged), bool(updated))]
+    # determine status
+    cataloged = [os.path.basename(c['file_path']) for c in catalog.values()]
+    logger.log('INFO', f'Catalogued blocks files count: {len(cataloged)}')
+    catalog_status = {
+        (True, False): 2,   # catalog present, no new blocks
+        (True, True): 3,    # catalog present, has new blocks
+        (False, False): 4,  # catalog absent, no new blocks
+        (False, True): 5,   # catalog absent, has new blocks
+    }[(bool(cataloged), bool(updated))]
     logger.log('INFO', f'Cataloging status: {catalog_status}')
 
-    # policy: rebuild if stale (includes build if missing)
-    if policy is artifacts.LifecyclePolicy.REBUILD_IF_STALE:
-        return catalog, {
-            1: [f'{blocks_dir}/{f}' for f in current],
-            2: [],
-            3: [f'{blocks_dir}/{f}' for f in updated],
-            4: [f'{blocks_dir}/{f}' for f in current],
-            5: [f'{blocks_dir}/{f}' for f in current]
-        }[catalog_status]
-    # policy: force rebuild all
-    if policy is artifacts.LifecyclePolicy.REBUILD:
-        return catalog, [f'{blocks_dir}/{f}' for f in current]
-    # unsupported policy
-    m = f'Currently unsupported policy: {policy}'
-    logger.log('ERROR', m)
-    raise NotImplementedError(m)
-
-def _schema_status(
-    schema_fpath: str,
-    policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
-) -> geo_core.DataSchema | None:
-    '''Load and evaluate dataset schema state.'''
-
-    # load metadict
-    original_meta: geo_core.DataSchema | None
-    load_status, m, original_meta = artifacts.load_json_hash(schema_fpath)
-    if load_status: # non-zero status indicates false schema.json -> rebuild
-        original_meta = None
-        logger.log('INFO', f'Metadata JSON loading error: {m}')
-    else:
-        logger.log('INFO', 'Metadata JSON loading successful')
-
-    # policy: rebuild if stale (includes build if missing)
-    if policy is artifacts.LifecyclePolicy.REBUILD_IF_STALE:
-        return original_meta # let the builder decide whether to update
-    # policy: force rebuild all
-    if policy is artifacts.LifecyclePolicy.REBUILD:
-        return None
-    # unsupported policy
-    m = f'Currently unsupported policy: {policy}'
-    logger.log('ERROR', m)
-    raise NotImplementedError(m)
+    # policy choices
+    match policy:
+        # policy: build if missing
+        case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
+            return catalog, {
+                1: [f'{blocks_dir}/{f}' for f in current],
+                2: [],
+                3: [f'{blocks_dir}/{f}' for f in updated],
+                4: [f'{blocks_dir}/{f}' for f in current],
+                5: [f'{blocks_dir}/{f}' for f in current]
+            }[catalog_status]
+        # policy: force rebuild all
+        case artifacts.LifecyclePolicy.REBUILD:
+            return catalog, [f'{blocks_dir}/{f}' for f in current]
+        # unsupported policy
+        case _:
+            raise NotImplementedError(f'Unsupported policy: {policy}')
