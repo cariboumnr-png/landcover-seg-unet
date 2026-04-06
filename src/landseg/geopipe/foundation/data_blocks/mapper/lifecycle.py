@@ -28,6 +28,9 @@ import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.utils as utils
 
+# typing aliases
+MappingCtrl = artifacts.Controller[dict]
+
 # -------------------------------Public Function-------------------------------
 def map_rasters_to_grid(
     world_grid: geo_core.GridLayout,
@@ -44,8 +47,7 @@ def map_rasters_to_grid(
     image, label = image_label_fpaths
 
     # artifacts controller
-    ctrl_args = (f'{artifacts_dir}/windows_{gid}.json', 'json', policy)
-    ctrl = artifacts.Controller[dict](*ctrl_args)
+    ctrl = MappingCtrl(f'{artifacts_dir}/windows_{gid}.json', 'json', policy)
 
     # mapped windows fpath
     logger.log('INFO', f'Try to load mapped windows from {gid}')

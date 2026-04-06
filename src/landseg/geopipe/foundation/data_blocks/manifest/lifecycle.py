@@ -39,6 +39,10 @@ import landseg.geopipe.foundation.data_blocks.manifest as manifest
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
+# typing aliases
+CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
+SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
+
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class ManifestUpdateContext:
@@ -81,8 +85,7 @@ def update_manifest(
     blk_dir = f'{artifacts_dir}/blocks'
 
     # load catalog JSON
-    ctrl_args = (f'{artifacts_dir}/catalog.json', 'json', policy)
-    ctrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]](*ctrl_args)
+    ctrl = CatalogDictCtrl(f'{artifacts_dir}/catalog.json', 'json', policy)
     try:
         data = ctrl.fetch()
     except artifacts.ArtifactError as exc:
@@ -102,8 +105,7 @@ def update_manifest(
         ctrl.persist(catalog_json)
 
     # load schema JSON
-    ctrl_args = (f'{artifacts_dir}/schema.json', 'json', policy)
-    ctrl = artifacts.Controller[geo_core.DataSchema](*ctrl_args)
+    ctrl = SchemaCtrl(f'{artifacts_dir}/schema.json', 'json', policy)
     try:
         current_schema = ctrl.fetch()
     except artifacts.ArtifactError as exc:
