@@ -95,10 +95,19 @@ class Controller(typing.Generic[T]):
             data = self._load()
         except _ArtifactMissing: # expect to build
             data = None
+            missing = True
         except ArtifactError as exc: # propagate to let caller to decide
+            # corrupted or hash mismatch: always fatal for now
             raise ArtifactError from exc
+        else:
+            missing = False
 
         match self.policy:
+            # policy: fail if can not load
+            case artifacts.LifecyclePolicy.LOAD_OR_FAIL:
+                if missing:
+                    raise ArtifactError('Required artifact is missing')
+                return data
             # policy: build if missing
             case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
                 return data
