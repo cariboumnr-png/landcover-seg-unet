@@ -27,6 +27,11 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.world_grids as world_grids
 import landseg.utils as utils
 
+# typing aliases
+D = list[list[int]]
+M = geo_core.GridMeta
+CTRL = artifacts.PayloadController[D, M]
+
 # -------------------------------Public Function-------------------------------
 def prepare_world_grid(
     config: world_grids.GridParameters,
@@ -50,18 +55,18 @@ def prepare_world_grid(
     srow, scol, orow, ocol = config.tile_specs
     gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
 
-    # load
+    # payload controller
     schema = geo_core.GridLayout.SCHEMA_ID
-    payload = artifacts.load_payload(gid, artifacts_dir, schema, policy)
+    ctrl = CTRL(gid, artifacts_dir, schema, policy)
+    payload = ctrl.load()
     if payload:
-        # TODO
-        output_grid = geo_core.GridLayout.from_payload(payload) # type: ignore
+        output_grid = geo_core.GridLayout.from_payload(payload)
         logger.log('INFO', f'World grid {gid} loaded successfully')
         return output_grid
 
     # build if needed
     output_grid = world_grids.build_grid(config)
     payload = output_grid.to_payload()
-    artifacts.save_payload(payload, gid, artifacts_dir)
+    ctrl.save(payload)
     logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
     return output_grid

@@ -33,6 +33,12 @@ import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.domain_maps as domain_maps
 import landseg.utils as utils
 
+# typing aliases
+D = dict[str, geo_core.DomainTile]
+M = geo_core.DomainMeta
+DomainCtrl = artifacts.PayloadController[D, M]
+MappingCtrl = artifacts.Controller[alias.RasterTileDict]
+
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DomainBuildingParameters:
@@ -94,30 +100,14 @@ def prepare_domain_maps(
 
         # check domain artifacts
         schema = geo_core.DomainTileMap.SCHEMA_ID
-        payload = artifacts.load_payload(name, artifacts_dir, schema, policy)
+        ctrl = DomainCtrl(name, artifacts_dir, schema, policy)
+        payload = ctrl.load()
         logger.log('INFO', f'Domain {name} loaded successfully')
         if not payload:
 
             # check mapped tiles before building
-            mapping_fp = f'{artifacts_dir}/{name}_tiles_{grid.gid}.npz'
-            ctrl_args = (mapping_fp, 'npz_dict', policy)
-            ctrl = artifacts.Controller[alias.RasterTileDict](*ctrl_args)
-            try:
-                mapped = ctrl.fetch()
-            except artifacts.ArtifactError as exc:
-                logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
-                raise artifacts.ArtifactError from exc
-
-            # create a new mapping if not valid
-            if not mapped:
-                mapped = domain_maps.map_domain_to_grid(
-                    grid,
-                    config.src_path,
-                    config.index_base,
-                    logger
-                )
-                logger.log('INFO', f'Mapped tiles from {grid.gid} created')
-                ctrl.persist(mapped)
+            fp = f'{artifacts_dir}/{name}_tiles_{grid.gid}.npz'
+            mapped = _prep_mapping(fp, grid, config, policy, logger)
 
             # build domain map
             domain = domain_maps.build_domain(
@@ -128,4 +118,34 @@ def prepare_domain_maps(
                 logger
             )
             payload = domain.to_json_payload()
-            artifacts.save_payload(payload, name, artifacts_dir)
+            ctrl.save(payload)
+
+# ------------------------------private  function------------------------------
+def _prep_mapping(
+    fp: str,
+    grid: geo_core.GridLayout,
+    config: DomainBuildingParameters,
+    policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
+) -> alias.RasterTileDict:
+    '''doc'''
+
+    # check mapped tiles before building
+    ctrl = MappingCtrl(fp, 'npz_dict', policy)
+    try:
+        mapped = ctrl.fetch()
+    except artifacts.ArtifactError as exc:
+        logger.log('ERROR', f'Error loading {fp}: {exc}')
+        raise artifacts.ArtifactError from exc
+    # create a new mapping if not valid
+    if not mapped:
+        mapped = domain_maps.map_domain_to_grid(
+            grid,
+            config.src_path,
+            config.index_base,
+            logger
+        )
+        ctrl.persist(mapped)
+        logger.log('INFO', f'Mapped tiles from {grid.gid} created')
+
+    return mapped

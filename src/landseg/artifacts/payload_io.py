@@ -34,101 +34,96 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 
-class PayloadDict(typing.TypedDict):
-    '''
-    Generic serialization payload dictionary.
-    '''
+# TypeVars
+D = typing.TypeVar('D') # 'data' payload, e.g., x.json
+M = typing.TypeVar('M') # 'meta' payload, e.g., x_meta.json
+
+class _PayloadDict(typing.TypedDict, typing.Generic[D, M]):
+    '''A strictly typed container for a split-file artifact.'''
     schema_id: str
-    artifact_meta: typing.Mapping[str, typing.Any]
-    data: typing.Mapping[str, typing.Any]
+    artifact_meta: M
+    data: D
 
-# -------------------------------Public Function-------------------------------
-def save_payload(
-    payload: object,
-    name: str,
-    dirpath: str,
-) -> None:
+class PayloadController(typing.Generic[D, M]):
     '''
-    Serialize a payload to disk.
+    Manages a pair of artifacts (data + meta) with strict typing.
     '''
 
-    # basic validation
-    if not isinstance(payload, dict):
-        raise TypeError("payload must be a dict")
+    def __init__(
+        self,
+        name: str,
+        dirpath: str,
+        schema_id: str,
+        policy: artifacts.LifecyclePolicy
+    ):
+        '''doc'''
 
-    required = {'schema_id', 'artifact_meta', 'data'}
-    missing = required - payload.keys()
-    if missing:
-        raise ValueError(f"Missing payload keys: {missing}")
-    # type casting
-    payload = typing.cast(PayloadDict, payload)
+        # init attrs
+        self.schema_id = schema_id
+        self.policy = policy
 
-    # get data (pop and rest goes to meta)
-    payload = dict(payload)  # shallow copy
-    data = payload.pop('data')
+        # compile file paths
+        self._data_path = f'{dirpath}/{name}.json'
+        self._meta_path = f'{dirpath}/{name}_meta.json'
 
-    # payload and meta path
-    data_path = f'{dirpath}/{name}.json'
-    meta_path = f'{dirpath}/{name}_meta.json'
+        # controllers
+        self.data_ctrl = artifacts.Controller(self._data_path, 'json', policy)
+        self.meta_ctrl = artifacts.Controller(self._meta_path, 'json', policy)
 
-    policy = artifacts.LifecyclePolicy.BUILD_IF_MISSING # dummy
+    def load(self) -> _PayloadDict[D, M] | None:
+        '''doc'''
 
-    # artifact controllers
-    data_ctrl = artifacts.Controller(data_path, 'json', policy)
-    meta_ctrl = artifacts.Controller(meta_path, 'json', policy)
+        # fetch
+        try:
+            data = self.data_ctrl.fetch()
+        except artifacts.ArtifactError as exc:
+            raise artifacts.ArtifactError(
+                f'Error loading {self._data_path}: {exc}'
+            ) from exc
+        try:
+            meta = self.meta_ctrl.fetch()
+        except artifacts.ArtifactError as exc:
+            raise artifacts.ArtifactError(
+                f'Error loading {self._meta_path}: {exc}'
+            ) from exc
 
-    # write domain tiles dict and write to JSON
-    data_ctrl.persist(data)
-    # write meta dict and write to json
-    meta_ctrl.persist(payload)
+        # loading status
+        if meta is None or data is None:
+            return None
 
-def load_payload(
-    name: str,
-    dirpath: str,
-    schema_id: str,
-    policy: artifacts.LifecyclePolicy
-) -> PayloadDict | None:
-    '''
-    doc
-    '''
+        # schema guard
+        found = meta.get('schema_id', None)
+        if found != self.schema_id:
+            _ = f'Mismatch schema: {found}; expected {self.schema_id}.'
+            raise artifacts.ArtifactError(_)
 
-    # payload and meta path
-    data_path = f'{dirpath}/{name}.json'
-    meta_path = f'{dirpath}/{name}_meta.json'
+        # otherwise return class object via class method
+        payload: _PayloadDict[D, M] = {
+            'schema_id': self.schema_id,
+            'artifact_meta': meta.get('artifact_meta'),
+            'data': data
+        }
+        return payload
 
-    # artifact controllers
-    data_ctrl = artifacts.Controller[dict[str, typing.Any]](data_path, 'json', policy)
-    meta_ctrl = artifacts.Controller[dict[str, typing.Any]](meta_path, 'json', policy)
+    def save(self, payload: _PayloadDict[D, M]) -> None:
+        '''
+        Serialize the split-file payload to disk.
+        '''
 
-    # fetch
-    try:
-        data = data_ctrl.fetch()
-    except artifacts.ArtifactError as exc:
-        raise artifacts.ArtifactError(
-            f'Error loading {data_path}: {exc}'
-        ) from exc
-    try:
-        meta = meta_ctrl.fetch()
-    except artifacts.ArtifactError as exc:
-        raise artifacts.ArtifactError(
-            f'Error loading {meta_path}: {exc}'
-        ) from exc
+        # basic validation
+        if not isinstance(payload, dict):
+            raise TypeError("payload must be a dict")
 
-    # loading status
-    if meta is None or data is None:
-        return None
+        required = {'schema_id', 'artifact_meta', 'data'}
+        missing = required - payload.keys()
+        if missing:
+            raise ValueError(f"Missing payload keys: {missing}")
 
-    # schema guard
-    found = meta.get('schema_id', None)
-    if found != schema_id:
-        raise artifacts.ArtifactError(
-            f'Unsupported schema: {found}; expected {schema_id}.'
-        )
+        # get data and meta
+        data = payload['data']
+        meta = {k: payload[k] for k in ['schema_id','artifact_meta']}
 
-    # otherwise return class object via class method
-    payload: PayloadDict = {
-        'schema_id': meta['schema_id'],
-        'artifact_meta': meta['artifact_meta'],
-        'data': data
-    }
-    return payload
+        # write domain tiles dict and write to JSON
+        self.data_ctrl.persist(data)
+        # write meta dict and write to json
+        self.meta_ctrl.persist(meta)
