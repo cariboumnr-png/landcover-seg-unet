@@ -174,7 +174,7 @@ class DataBlock:
             'image_stats': {}
         }
 
-    # -----------------------------public methods-----------------------------
+    # ----- alternative constructor
     @classmethod
     def build(
         cls,
@@ -287,6 +287,7 @@ class DataBlock:
         # return self to allow chained calls
         return self
 
+    # ----- public method
     def save(self, fpath: str) -> None:
         '''
         Save the `DataBlock` to a compressed `.npz` file.
@@ -313,7 +314,7 @@ class DataBlock:
         # save file - allow pickle to write meta dict
         numpy.savez_compressed(fpath, **to_save)
 
-    # -----------------------------internal method-----------------------------
+    # ----- private method
     def _add_spectral_indices(self) -> None:
         '''Add spectral indices using loaded Landsat bands.'''
 

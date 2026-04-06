@@ -128,6 +128,7 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
     def __init__(self) -> None:
         self._data: dict[tuple[int, int], CatalogEntry] = {}
 
+    # ----- container protocol
     def __getitem__(self, key: tuple[int, int]) -> CatalogEntry:
         return self._data[key]
 
@@ -140,10 +141,27 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
     def __len__(self) -> int:
         return len(self._data)
 
-    @property
-    def indexed_block_files(self) -> dict[tuple[int, int], str]:
-        '''Return the catalogued block file list.'''
-        return {k: v['file_path'] for k, v in self._data.items()}
+    # ----- alternative constructor
+    @classmethod
+    def from_dict(cls, source: dict[str, CatalogEntry]) -> DataCatalog:
+        '''
+        Construct a `BlocksCatalog` from a dictionary representation.
+
+        The input is expected to use string-encoded coordinate keys,
+        which are converted back into (row, col) tuples.
+
+        Args:
+            source:
+                Dictionary mapping string keys (e.g., "x_y") to
+                `CatalogEntry` objects.
+
+        Returns:
+            A populated `BlocksCatalog` instance.
+        '''
+
+        obj = cls.__new__(cls)
+        obj._data = {geo_utils.name_xy(k): v for k, v in source.items()}
+        return obj
 
     def to_json_payload(self) -> str:
         '''
@@ -174,24 +192,3 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
 
         lines.append('}')
         return '\n'.join(lines)
-
-    @classmethod
-    def from_dict(cls, source: dict[str, CatalogEntry]) -> DataCatalog:
-        '''
-        Construct a `BlocksCatalog` from a dictionary representation.
-
-        The input is expected to use string-encoded coordinate keys,
-        which are converted back into (row, col) tuples.
-
-        Args:
-            source:
-                Dictionary mapping string keys (e.g., "x_y") to
-                `CatalogEntry` objects.
-
-        Returns:
-            A populated `BlocksCatalog` instance.
-        '''
-
-        obj = cls.__new__(cls)
-        obj._data = {geo_utils.name_xy(k): v for k, v in source.items()}
-        return obj

@@ -144,7 +144,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     **Schema**: `SCHEMA_ID` = `'domain_tile_map_payload/v1'`
     '''
 
-    # current schema
+    # current payload schema
     SCHEMA_ID: str = 'domain_tile_map_payload/v1'
 
     def __init__(self) -> None:
@@ -171,16 +171,6 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             'explained_variance': 0.0,
         }
         self._data: dict[tuple[int, int], DomainTile] = {}
-
-    @property
-    def max_id(self) -> int:
-        '''Return the maximum label index across all tiles.'''
-        return self.meta['max_index']
-
-    @property
-    def n_pca_ax(self) -> int:
-        '''Return the number of PCA components retained.'''
-        return self.meta['pca_axes_n']
 
     # ----- container protocol
     def __getitem__(self, idx: tuple[int, int]) -> DomainTile:
@@ -209,33 +199,18 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             f'PCA variance explained:    {self.meta["explained_variance"]:.2f}'
         ])
 
-    # ----- public method
-    def to_json_payload(self) -> DomainPayload:
-        '''
-        Convert the mapping to a JSON-serializable payload.
+    # ----- property
+    @property
+    def max_id(self) -> int:
+        '''Return the maximum label index across all tiles.'''
+        return self.meta['max_index']
 
-        This includes both global metadata and per-tile descriptors,
-        with tile coordinates encoded as strings.
+    @property
+    def n_pca_ax(self) -> int:
+        '''Return the number of PCA components retained.'''
+        return self.meta['pca_axes_n']
 
-        Returns:
-            A `DomainPayload` dictionary suitable for JSON serialization.
-
-        Raises:
-            AssertionError:
-                If required metadata fields are not properly populated.
-        '''
-
-        # sanity checks and return payload
-        assert self.meta['major_freq_mean'] > 0.0
-        assert self.meta['major_freq_min'] < 1.0
-        assert self.meta['pca_axes_n'] > 0
-        assert self.meta['explained_variance'] > 0.0
-        return {
-            'schema_id': self.SCHEMA_ID,
-            'artifact_meta': self.meta,
-            'data': {f'{k[0]},{k[1]}': v for k, v in self._data.items()}
-        }
-
+    # ----- alternative constructor
     @classmethod
     def from_json_payload(cls, payload: DomainPayload) -> DomainTileMap:
         '''
@@ -288,3 +263,30 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         self._data = tiles
         # return class object
         return self
+
+    # ----- public method
+    def to_json_payload(self) -> DomainPayload:
+        '''
+        Convert the mapping to a JSON-serializable payload.
+
+        This includes both global metadata and per-tile descriptors,
+        with tile coordinates encoded as strings.
+
+        Returns:
+            A `DomainPayload` dictionary suitable for JSON serialization.
+
+        Raises:
+            AssertionError:
+                If required metadata fields are not properly populated.
+        '''
+
+        # sanity checks and return payload
+        assert self.meta['major_freq_mean'] > 0.0
+        assert self.meta['major_freq_min'] < 1.0
+        assert self.meta['pca_axes_n'] > 0
+        assert self.meta['explained_variance'] > 0.0
+        return {
+            'schema_id': self.SCHEMA_ID,
+            'artifact_meta': self.meta,
+            'data': {f'{k[0]},{k[1]}': v for k, v in self._data.items()}
+        }

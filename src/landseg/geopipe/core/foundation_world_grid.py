@@ -276,6 +276,43 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         '''Return the grid width in pixels.'''
         return self._extent[1]
 
+    # ----- alternative constructor
+    @classmethod
+    def from_payload(cls, payload: GridPayload) -> GridLayout:
+        '''
+        Reconstruct a `GridLayout` from a serialized payload.
+
+        Args:
+            payload:
+                Dictionary containing grid configuration and windows.
+
+        Returns:
+            A `GridLayout` instance with restored state.
+
+        Notes: Runtime attributes such as offsets are reset and must be
+        recomputed if needed.
+        '''
+
+        # parse data from payload
+        parsed: RasterWindowDict = {}
+        for c in payload['data']:
+            x, y, col_off, row_off, w, h = c
+            window = RasterWindow(col_off, row_off, w, h) # type: ignore
+            parsed[(x, y)] = window
+
+        # create empty GridLayout instance
+        obj = cls.__new__(cls)
+        # populate attributes from payload
+        meta = payload['artifact_meta']
+        obj._mode = meta['mode']
+        obj._spec = GridSpec(**meta['spec'])
+        obj._extent = meta['extent']
+        obj._data = parsed
+        # init offset (runtime attribute)
+        obj._offset_px = (0, 0)
+        # return class object
+        return obj
+
     # ----- public method
     def offset_from(self, src: RasterReader | rasterio.Affine) -> None:
         '''
@@ -342,42 +379,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
             },
             'data': canon
         }
-
-    @classmethod
-    def from_payload(cls, payload: GridPayload) -> GridLayout:
-        '''
-        Reconstruct a `GridLayout` from a serialized payload.
-
-        Args:
-            payload:
-                Dictionary containing grid configuration and windows.
-
-        Returns:
-            A `GridLayout` instance with restored state.
-
-        Notes: Runtime attributes such as offsets are reset and must be
-        recomputed if needed.
-        '''
-
-        # parse data from payload
-        parsed: RasterWindowDict = {}
-        for c in payload['data']:
-            x, y, col_off, row_off, w, h = c
-            window = RasterWindow(col_off, row_off, w, h) # type: ignore
-            parsed[(x, y)] = window
-
-        # create empty GridLayout instance
-        obj = cls.__new__(cls)
-        # populate attributes from payload
-        meta = payload['artifact_meta']
-        obj._mode = meta['mode']
-        obj._spec = GridSpec(**meta['spec'])
-        obj._extent = meta['extent']
-        obj._data = parsed
-        # init offset (runtime attribute)
-        obj._offset_px = (0, 0)
-        # return class object
-        return obj
 
     # ----- private method
     def _generate(self) -> None:
