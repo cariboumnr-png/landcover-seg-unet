@@ -59,6 +59,67 @@ class FoundationPaths:
     def data_blocks(self):
         return _DataBlocks(os.path.join(self.root, 'data_blocks'))
 
+@dataclasses.dataclass
+class _WorldGrids:
+    '''doc'''
+    root: str
+
+    def fpath(self, tile_specs: tuple[int, int, int, int]) -> str:
+        '''Return canonical grid artifact file path.'''
+        srow, scol, orow, ocol = tile_specs
+        gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
+        return os.path.join(self.root, f'{gid}.json')
+
+@dataclasses.dataclass
+class _DomainMaps:
+    '''doc'''
+    root: str
+
+    def domain_map_fpath(self, domain_name: str) -> str:
+        no_ext, _ = os.path.splitext(domain_name)
+        return os.path.join(self.root, f'{no_ext}.json')
+
+    def mapped_tiles_fpath(self, domain_name: str, gid: str) -> str:
+        no_ext, _ = os.path.splitext(domain_name)
+        return os.path.join(self.root, f'{no_ext}_tiles_{gid}.npz')
+
+@dataclasses.dataclass
+class _DataBlocks:
+    '''doc'''
+    root: str
+
+    @property
+    def dev(self):
+        return _DataBlockPaths(os.path.join(self.root, 'model_dev'))
+
+    @property
+    def test(self):
+        return _DataBlockPaths(os.path.join(self.root, 'test_holdout'))
+
+@dataclasses.dataclass
+class _DataBlockPaths:
+    '''doc'''
+    root: str
+
+    @property
+    def blocks(self) -> str:
+        return os.path.join(self.root, 'blocks')
+
+    @property
+    def windows(self) -> str:
+        return os.path.join(self.root, 'windows')
+
+    @property
+    def catalog(self) -> str:
+        return os.path.join(self.root, 'catalog.json')
+
+    @property
+    def schema(self) -> str:
+        return os.path.join(self.root, 'schema.json')
+
+    def mapped_window(self, gid: str) -> str:
+        return os.path.join(self.windows, f'windows_{gid}.json')
+
 
 @dataclasses.dataclass
 class TransformPaths:
@@ -76,43 +137,3 @@ class TransformPaths:
     @property
     def test_blocks(self) -> str:
         return os.path.join(self.root, 'test_blocks')
-
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _WorldGrids:
-    '''doc'''
-    root: str
-
-@dataclasses.dataclass
-class _DomainMaps:
-    '''doc'''
-    root: str
-
-@dataclasses.dataclass
-class _DataBlocks:
-    '''doc'''
-    root: str
-
-    @property
-    def dev_root(self) -> str:
-        return os.path.join(self.root, 'model_dev')
-
-    @property
-    def dev_blocks(self) -> str:
-        return os.path.join(self.dev_root, 'blocks')
-
-    @property
-    def dev_windows(self) -> str:
-        return os.path.join(self.dev_root, 'windows')
-
-    @property
-    def test_root(self) -> str:
-        return os.path.join(self.root, 'test_holdout')
-
-    @property
-    def test_blocks(self) -> str:
-        return os.path.join(self.test_root, 'blocks')
-
-    @property
-    def test_windows(self) -> str:
-        return os.path.join(self.test_root, 'windows')

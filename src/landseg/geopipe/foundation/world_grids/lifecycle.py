@@ -35,7 +35,7 @@ CTRL = artifacts.PayloadController[D, M]
 # -------------------------------Public Function-------------------------------
 def prepare_world_grid(
     logger: utils.Logger,
-    grids_dir: str,
+    grid_fpath: str,
     config: world_grids.GridParameters,
     *,
     policy: artifacts.LifecyclePolicy,
@@ -51,22 +51,18 @@ def prepare_world_grid(
     # get a child logger
     logger = logger.get_child('wgrid')
 
-    # get grid id from config
-    srow, scol, orow, ocol = config.tile_specs
-    gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
-
     # payload controller
     schema = geo_core.GridLayout.SCHEMA_ID
-    ctrl = CTRL(gid, grids_dir, schema, policy)
+    ctrl = CTRL(grid_fpath, schema, policy)
     payload = ctrl.load()
     if payload:
         output_grid = geo_core.GridLayout.from_payload(payload)
-        logger.log('INFO', f'World grid {gid} loaded successfully')
+        logger.log('INFO', f'World grid loaded successfully; {grid_fpath}')
         return output_grid
 
     # build if needed
     output_grid = world_grids.build_grid(config)
     payload = output_grid.to_payload()
     ctrl.save(payload)
-    logger.log('INFO', f'World grid {gid} saved to {grids_dir}')
+    logger.log('INFO', f'World grid saved {grid_fpath}')
     return output_grid

@@ -41,11 +41,13 @@ __all__ = [
     'run_blocks_building',
     'update_manifest',
     # typing
+    'PipelinePaths',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import BlockBuilder, BlockBuilderConfig
+    from .common import PipelinePaths
     from .manifest import ManifestUpdateContext, update_manifest
     from .mapper import MappedRasterWindows, map_rasters_to_grid
     from .pipeline import BlockBuildingParameters, run_blocks_building
@@ -54,6 +56,9 @@ def __getattr__(name: str):
 
     if name in {'BlockBuilder', 'BlockBuilderConfig'}:
         return getattr(importlib.import_module('.builder', __package__), name)
+
+    if name in {'PipelinePaths'}:
+        return getattr(importlib.import_module('.common', __package__), name)
 
     if name in {'ManifestUpdateContext', 'update_manifest'}:
         return getattr(importlib.import_module('.manifest', __package__), name)

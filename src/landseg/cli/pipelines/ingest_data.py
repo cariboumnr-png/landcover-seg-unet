@@ -70,7 +70,7 @@ def ingest(config: configs.RootConfig):
     )
     grid = foundation.prepare_world_grid(
         logger,
-        paths.grids.root,
+        paths.grids.fpath(grid_cfg.tile_specs_tuple),
         grid_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
@@ -78,7 +78,9 @@ def ingest(config: configs.RootConfig):
     # domain maps
     domain_config = [
         foundation.DomainBuildingParameters(
-        src_path=dom.path,
+        input_fpath=dom.path,
+        domain_fpath=paths.domains.domain_map_fpath(dom.name),
+        tiles_fpath=paths.domains.mapped_tiles_fpath(dom.name, grid.gid),
         index_base=dom.index_base,
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
@@ -87,17 +89,14 @@ def ingest(config: configs.RootConfig):
     foundation.prepare_domain_maps(
         logger,
         grid,
-        paths.domains.root,
         domain_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
-    # data blocks
+    # dev data blocks
     data_blocks_config = foundation.BlockBuildingParameters(
-        dev_image_fpath=datablocks_cfg.filepaths.dev_image,
-        dev_label_fpath=datablocks_cfg.filepaths.dev_label,
-        test_image_fpath=datablocks_cfg.filepaths.test_image,
-        test_label_fpath=datablocks_cfg.filepaths.test_label,
+        image_fpath=datablocks_cfg.filepaths.dev_image,
+        label_fpath=datablocks_cfg.filepaths.dev_label,
         data_config_fpath=datablocks_cfg.filepaths.config,
         dem_pad=datablocks_cfg.general.image_dem_pad,
         ignore_index=datablocks_cfg.general.ignore_index,
@@ -105,7 +104,27 @@ def ingest(config: configs.RootConfig):
     foundation.run_blocks_building(
         logger,
         grid,
-        paths,
+        paths.data_blocks.dev,
         data_blocks_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
+
+    # test data blocks - if provided
+    if datablocks_cfg.has_test_data:
+        logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
+        data_blocks_config = foundation.BlockBuildingParameters(
+        image_fpath=datablocks_cfg.filepaths.test_image,
+        label_fpath=datablocks_cfg.filepaths.test_label,
+        data_config_fpath=datablocks_cfg.filepaths.config,
+        dem_pad=datablocks_cfg.general.image_dem_pad,
+        ignore_index=datablocks_cfg.general.ignore_index,
+        )
+        foundation.run_blocks_building(
+            logger,
+            grid,
+            paths.data_blocks.test,
+            data_blocks_config,
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        )
+    else:
+        logger.log('INFO', 'Evaluation holdout rasters not provided, exit')

@@ -36,21 +36,20 @@ def map_rasters_to_grid(
     logger: utils.Logger,
     world_grid: geo_core.GridLayout,
     image_label_fpaths: tuple[str, str],
-    windows_dir: str,
+    mapped_windows_fapth: str,
     *,
     policy: artifacts.LifecyclePolicy
 ) -> mapper.MappedRasterWindows:
     '''doc'''
 
-    # aliases
-    gid = world_grid.gid
+    # parse
     image, label = image_label_fpaths
 
     # artifacts controller
-    ctrl = MappingCtrl(f'{windows_dir}/windows_{gid}.json', 'json', policy)
+    ctrl = MappingCtrl(mapped_windows_fapth, 'json', policy)
 
     # mapped windows fpath
-    logger.log('INFO', f'Try to load mapped windows from {gid}')
+    logger.log('INFO', f'Try to load mapped windows from {world_grid.gid}')
     payload = ctrl.fetch()
 
     # build if needed
@@ -63,7 +62,7 @@ def map_rasters_to_grid(
             'label': _canonicalize(mapped_windows.label)
         }
         ctrl.persist(payload)
-        logger.log('INFO', f'Mapped windows from {gid} created')
+        logger.log('INFO', f'Mapped windows from {world_grid.gid} created')
 
     else:
         mapped_windows = mapper.MappedRasterWindows(

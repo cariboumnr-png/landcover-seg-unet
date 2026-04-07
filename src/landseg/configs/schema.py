@@ -171,6 +171,13 @@ class DataBlocks:
         if not self.name:
             raise ValueError('Input data name not provided')
 
+    @property
+    def has_test_data(self) -> bool:
+        return (
+            os.path.exists(self.filepaths.test_image) and
+            os.path.exists(self.filepaths.test_label)
+        )
+
     def validate(self) -> None:
         def _must_exist(path: str | None, label: str) -> None:
             if path and not os.path.exists(path):

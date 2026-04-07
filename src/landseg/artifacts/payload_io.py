@@ -30,6 +30,7 @@ compatibility and integrity on load.
 '''
 
 # standard imports
+import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -51,8 +52,7 @@ class PayloadController(typing.Generic[D, M]):
 
     def __init__(
         self,
-        name: str,
-        dirpath: str,
+        data_fpath: str,
         schema_id: str,
         policy: artifacts.LifecyclePolicy
     ):
@@ -63,12 +63,13 @@ class PayloadController(typing.Generic[D, M]):
         self.policy = policy
 
         # compile file paths
-        self._data_path = f'{dirpath}/{name}.json'
-        self._meta_path = f'{dirpath}/{name}_meta.json'
+        no_ext, _ = os.path.splitext(data_fpath)
+        self.data_path = data_fpath
+        self.meta_path = f'{no_ext}_meta.json'
 
         # controllers
-        self.data_ctrl = artifacts.Controller(self._data_path, 'json', policy)
-        self.meta_ctrl = artifacts.Controller(self._meta_path, 'json', policy)
+        self.data_ctrl = artifacts.Controller(self.data_path, 'json', policy)
+        self.meta_ctrl = artifacts.Controller(self.meta_path, 'json', policy)
 
     def load(self) -> _PayloadDict[D, M] | None:
         '''doc'''
@@ -78,13 +79,13 @@ class PayloadController(typing.Generic[D, M]):
             data = self.data_ctrl.fetch()
         except artifacts.ArtifactError as exc:
             raise artifacts.ArtifactError(
-                f'Error loading {self._data_path}: {exc}'
+                f'Error loading {self.data_path}: {exc}'
             ) from exc
         try:
             meta = self.meta_ctrl.fetch()
         except artifacts.ArtifactError as exc:
             raise artifacts.ArtifactError(
-                f'Error loading {self._meta_path}: {exc}'
+                f'Error loading {self.meta_path}: {exc}'
             ) from exc
 
         # loading status

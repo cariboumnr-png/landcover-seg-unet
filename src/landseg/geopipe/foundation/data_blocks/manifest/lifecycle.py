@@ -51,12 +51,14 @@ class ManifestUpdateContext:
     source_image: str               # path to the source image raster
     source_label: str | None        # optional path to the label raster
     mapped_grid_id: str             # id for the grid the blocks are mapped to
+    blocks_dir: str                 # where data blocks are
+    catalog_fpath: str              # path to save catalog.json
+    schema_fpath: str               # path to save schema.json
 
 # -------------------------------Public Function-------------------------------
 def update_manifest(
     logger: utils.Logger,
     context: ManifestUpdateContext,
-    artifacts_dir: str,
     *,
     policy: artifacts.LifecyclePolicy
 ):
@@ -81,11 +83,9 @@ def update_manifest(
             rebuilt unconditionally or only when stale.
     '''
 
-    # blocks dir
-    blk_dir = f'{artifacts_dir}/blocks'
 
     # load catalog JSON
-    ctrl = CatalogDictCtrl(f'{artifacts_dir}/catalog.json', 'json', policy)
+    ctrl = CatalogDictCtrl(context.catalog_fpath, 'json', policy)
     try:
         data_dict = ctrl.fetch()
     except artifacts.ArtifactError as exc:
@@ -95,7 +95,6 @@ def update_manifest(
     current, to_update = _catalog_status(
         logger,
         context,
-        blk_dir,
         data_dict,
         policy=policy,
     )
@@ -111,14 +110,14 @@ def update_manifest(
         ctrl.persist(catalog_json)
 
     # load schema JSON
-    ctrl = SchemaCtrl(f'{artifacts_dir}/schema.json', 'json', policy)
+    ctrl = SchemaCtrl(context.schema_fpath, 'json', policy)
     try:
         current_schema = ctrl.fetch()
     except artifacts.ArtifactError as exc:
         logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
         raise artifacts.ArtifactError from exc
     # action
-    sample_blk = f'{blk_dir}/{next(iter(os.listdir(blk_dir)))}'
+    sample_blk = _sample(context.blocks_dir)
     schema_dict = manifest.build_schema(
         current_schema,
         context.source_image,
@@ -131,7 +130,6 @@ def update_manifest(
 def _catalog_status(
     logger: utils.Logger,
     context: ManifestUpdateContext,
-    blocks_dir: str,
     data_dict: dict[str, geo_core.CatalogEntry] | None,
     *,
     policy: artifacts.LifecyclePolicy,
@@ -146,6 +144,7 @@ def _catalog_status(
 
     # get filenames from all current npz files in blks_dir
     # this include new/updated blocks
+    blocks_dir = context.blocks_dir
     current = [f for f in os.listdir(blocks_dir) if f.endswith('npz')]
     if not current:
         raise FileNotFoundError('No block files found')
@@ -183,3 +182,9 @@ def _catalog_status(
         # unsupported policy
         case _:
             raise NotImplementedError(f'Unsupported policy: {policy}')
+
+def _sample(d: str) -> str:
+    for f in os.listdir(d):
+        if f.endswith('npz'):
+            return f'{d}/{f}'
+    raise ValueError(f'No .npz file found at {d}')

@@ -43,7 +43,9 @@ MappingCtrl = artifacts.Controller[alias.RasterTileDict]
 @dataclasses.dataclass
 class DomainBuildingParameters:
     '''Container for domain mapping configurations.'''
-    src_path: str
+    input_fpath: str
+    domain_fpath: str
+    tiles_fpath: str
     index_base: int
     valid_threshold: float
     target_variance: float
@@ -52,7 +54,6 @@ class DomainBuildingParameters:
 def prepare_domain_maps(
     logger: utils.Logger,
     world_grid: geo_core.GridLayout,
-    domains_dir: str,
     domain_configs: list[DomainBuildingParameters],
     *,
     policy: artifacts.LifecyclePolicy
@@ -96,18 +97,18 @@ def prepare_domain_maps(
 
         # copy the world grid instance
         grid = copy.deepcopy(world_grid)
-        name, _ = os.path.splitext(os.path.basename(config.src_path))
+        name, _ = os.path.splitext(os.path.basename(config.input_fpath))
 
         # check domain artifacts
         schema = geo_core.DomainTileMap.SCHEMA_ID
-        ctrl = DomainCtrl(name, domains_dir, schema, policy)
+        ctrl = DomainCtrl(config.domain_fpath, schema, policy)
         payload = ctrl.load()
-        logger.log('INFO', f'Domain {name} loaded successfully')
-        if not payload:
+        if payload:
+            logger.log('INFO', f'Domain {name} loaded successfully')
+        else:
 
             # check mapped tiles before building
-            fp = f'{domains_dir}/{name}_tiles_{grid.gid}.npz'
-            mapped = _prep_mapping(fp, grid, config, policy, logger)
+            mapped = _prep_mapping(grid, config, policy, logger)
 
             # build domain map
             domain = domain_maps.build_domain(
@@ -119,10 +120,10 @@ def prepare_domain_maps(
             )
             payload = domain.to_json_payload()
             ctrl.save(payload)
+            logger.log('INFO', f'Domain {name} created successfully')
 
 # ------------------------------private  function------------------------------
 def _prep_mapping(
-    fp: str,
     grid: geo_core.GridLayout,
     config: DomainBuildingParameters,
     policy: artifacts.LifecyclePolicy,
@@ -131,17 +132,17 @@ def _prep_mapping(
     '''doc'''
 
     # check mapped tiles before building
-    ctrl = MappingCtrl(fp, 'npz_dict', policy)
+    ctrl = MappingCtrl(config.tiles_fpath, 'npz_dict', policy)
     try:
         mapped = ctrl.fetch()
     except artifacts.ArtifactError as exc:
-        logger.log('ERROR', f'Error loading {fp}: {exc}')
+        logger.log('ERROR', f'Error loading {config.tiles_fpath}: {exc}')
         raise artifacts.ArtifactError from exc
     # create a new mapping if not valid
     if not mapped:
         mapped = domain_maps.map_domain_to_grid(
             grid,
-            config.src_path,
+            config.input_fpath,
             config.index_base,
             logger
         )

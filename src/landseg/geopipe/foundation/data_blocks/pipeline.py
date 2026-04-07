@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Canonical data-block construction pipeline.
 
@@ -34,20 +36,30 @@ Public API:
 
 # standard imports
 import dataclasses
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.utils as utils
 
+# --------------------------------private types--------------------------------
+class _PipelinePaths(typing.Protocol):
+    '''Typed pipeline-specific paths container.'''
+    @property
+    def blocks(self) -> str:...
+    @property
+    def catalog(self) -> str:...
+    @property
+    def schema(self) -> str:...
+    def mapped_window(self, gid: str) -> str:...
+
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
-    dev_image_fpath: str
-    dev_label_fpath: str
-    test_image_fpath: str | None
-    test_label_fpath: str | None
+    image_fpath: str
+    label_fpath: str
     data_config_fpath: str
     dem_pad: int
     ignore_index: int
@@ -56,7 +68,7 @@ class BlockBuildingParameters:
 def run_blocks_building(
     logger: utils.Logger,
     world_grid: geo_core.GridLayout,
-    artfact_paths: artifacts.FoundationPaths,
+    artfact_paths: _PipelinePaths,
     config: BlockBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy
@@ -94,21 +106,20 @@ def run_blocks_building(
     logger = logger.get_child('dblks')
 
     # map model dev rasters to grid
-    logger.log('INFO', 'Mapping rasters for model developement to grid')
     ras_windows = data_blocks.map_rasters_to_grid(
         logger,
         world_grid,
-        (config.dev_image_fpath, config.dev_label_fpath),
-        artfact_paths.data_blocks.dev_windows,
+        (config.image_fpath, config.label_fpath),
+        artfact_paths.mapped_window(world_grid.gid),
         policy=policy
     )
-    logger.log('INFO', 'Rasters for model developement mapped to grid')
+    logger.log('INFO', 'Rasters mapped to input world grid')
 
     # block builder for model dev rasters
     builder_config = data_blocks.BlockBuilderConfig(
-        output_root=artfact_paths.data_blocks.dev_blocks,
-        image_fpath=config.dev_image_fpath,
-        label_fpath=config.dev_label_fpath,
+        output_root=artfact_paths.blocks,
+        image_fpath=config.image_fpath,
+        label_fpath=config.label_fpath,
         config_fpath=config.data_config_fpath,
         dem_pad_px=config.dem_pad,
         ignore_index=config.ignore_index,
@@ -122,120 +133,73 @@ def run_blocks_building(
     )
 
     # build all model dev blocks
-    logger.log('INFO', 'Build all model developement data blocks')
+    logger.log('INFO', 'Data blocks building finished')
     new_blocks = block_builder.build_blocks()
 
     # create/update catalog and metadata JSON
     updated = data_blocks.ManifestUpdateContext(
         updated_coords=new_blocks,
-        source_image=config.dev_image_fpath,
-        source_label=config.dev_label_fpath,
-        mapped_grid_id=world_grid.gid
+        source_image=config.image_fpath,
+        source_label=config.label_fpath,
+        mapped_grid_id=world_grid.gid,
+        blocks_dir=artfact_paths.blocks,
+        catalog_fpath=artfact_paths.catalog,
+        schema_fpath=artfact_paths.schema
     )
     data_blocks.update_manifest(
         logger,
         updated,
-        artfact_paths.data_blocks.dev_root,
         policy=policy
     )
+    logger.log('INFO', 'Data blocks catalog and schema updated')
 
-    # exit if test rasters are not provided
-    if not (config.test_image_fpath and config.test_label_fpath):
-        logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
-        return None
+# def run_blocks_building_signle(
+#     logger: utils.Logger,
+#     artfact_paths: artifacts.FoundationPaths,
+#     world_grid: geo_core.GridLayout,
+#     config: BlockBuildingParameters,
+#     **kwargs
+# ) -> str | None:
+#     '''
+#     doc
+#     '''
 
-    # map test rasters to grid
-    logger.log('INFO', 'Mapping holdout raters for test to grid')
-    ras_windows = data_blocks.map_rasters_to_grid(
-        logger,
-        world_grid,
-        (config.test_image_fpath, config.test_label_fpath),
-        artfact_paths.data_blocks.test_windows,
-        policy=policy
-    )
-    logger.log('INFO', 'Holdout raters for test mapped to grid')
+    # # get a child logger
+    # logger = logger.get_child('dblks')
 
-    # block builder for test rasters
-    builder_config = data_blocks.BlockBuilderConfig(
-        output_root=artfact_paths.data_blocks.test_blocks,
-        image_fpath=config.test_image_fpath,
-        label_fpath=config.test_label_fpath,
-        config_fpath=config.data_config_fpath,
-        dem_pad_px=config.dem_pad,
-        ignore_index=config.ignore_index,
-        block_size=ras_windows.tile_shape
-    )
-    block_builder = data_blocks.BlockBuilder(
-        logger,
-        ras_windows.image,
-        ras_windows.label,
-        builder_config,
-    )
-    logger.log('INFO', 'Build all holdout test data blocks')
-    new_blocks = block_builder.build_blocks()
+    # # map model dev rasters to grid
+    # logger.log('INFO', 'Mapping rasters for model developement to grid')
+    # ras_windows = data_blocks.map_rasters_to_grid(
+    #     logger,
+    #     world_grid,
+    #     (config.image_fpath, config.label_fpath),
+    #     artfact_paths.windows,
+    #     policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    # )
+    # logger.log('INFO', 'Rasters for model developement mapped to grid')
 
-    # create/update catalog and metadata JSON
-    updated = data_blocks.ManifestUpdateContext(
-        updated_coords=new_blocks,
-        source_image=config.test_image_fpath,
-        source_label=config.test_label_fpath,
-        mapped_grid_id=world_grid.gid
-    )
-    data_blocks.update_manifest(
-        logger,
-        updated,
-        artfact_paths.data_blocks.test_root,
-        policy=policy
-    )
-    return None
+    # # block builder for model dev rasters
+    # builder_cfg = data_blocks.BlockBuilderConfig(
+    #     image_fpath=config.image_fpath,
+    #     label_fpath=config.label_fpath,
+    #     config_fpath=config.data_config_fpath,
+    #     output_root=artfact_paths.blocks,
+    #     dem_pad_px=config.dem_pad,
+    #     ignore_index=config.ignore_index,
+    #     block_size=ras_windows.tile_shape
+    # )
+    # block_builder = data_blocks.BlockBuilder(
+    #     logger,
+    #     ras_windows.image,
+    #     ras_windows.label,
+    #     builder_cfg,
+    # )
 
-def run_blocks_building_signle(
-    logger: utils.Logger,
-    artfact_paths: artifacts.FoundationPaths,
-    world_grid: geo_core.GridLayout,
-    config: BlockBuildingParameters,
-    **kwargs
-) -> str | None:
-    '''
-    doc
-    '''
-
-    # get a child logger
-    logger = logger.get_child('dblks')
-
-    # map model dev rasters to grid
-    logger.log('INFO', 'Mapping rasters for model developement to grid')
-    ras_windows = data_blocks.map_rasters_to_grid(
-        logger,
-        world_grid,
-        (config.dev_image_fpath, config.dev_label_fpath),
-        artfact_paths.data_blocks.dev_windows,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
-    )
-    logger.log('INFO', 'Rasters for model developement mapped to grid')
-
-    # block builder for model dev rasters
-    builder_cfg = data_blocks.BlockBuilderConfig(
-        image_fpath=config.dev_image_fpath,
-        label_fpath=config.dev_label_fpath,
-        config_fpath=config.data_config_fpath,
-        output_root=artfact_paths.data_blocks.dev_blocks,
-        dem_pad_px=config.dem_pad,
-        ignore_index=config.ignore_index,
-        block_size=ras_windows.tile_shape
-    )
-    block_builder = data_blocks.BlockBuilder(
-        logger,
-        ras_windows.image,
-        ras_windows.label,
-        builder_cfg,
-    )
-
-    # build just one block, e.g., for overfit test
-    logger.log('INFO', 'Build a single block')
-    return block_builder.build_single_block(
-        save_dpath=kwargs.get('save_dpath', './single_block'),
-        valid_px_per=kwargs.get('valid_px_per', 0.8),
-        monitor_head=kwargs.get('monitor_head', 'base'),
-        need_all_classes=kwargs.get('need_all_classes', True)
-    )
+    # # build just one block, e.g., for overfit test
+    # logger.log('INFO', 'Build a single block')
+    # return block_builder.build_single_block(
+    #     save_dpath=kwargs.get('save_dpath', './single_block'),
+    #     valid_px_per=kwargs.get('valid_px_per', 0.8),
+    #     monitor_head=kwargs.get('monitor_head', 'base'),
+    #     need_all_classes=kwargs.get('need_all_classes', True)
+    # )
