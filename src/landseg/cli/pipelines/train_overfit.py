@@ -29,13 +29,15 @@ and trains until near-perfect IoU to validate the end-to-end stack.
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.geopipe.core as geocore
-import landseg.geopipe.foundation as foundation
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.world_grids as world_grids
+import landseg.geopipe.foundation.data_blocks as data_blocks
+import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.models as models
 import landseg.trainer as trainer
 import landseg.utils as utils
 
-def overfit(config: configs.RootConfig):
+def overfit(config: configs.RootConfig) -> None:
     '''
     Run an overfit test on a single block.
 
@@ -54,7 +56,7 @@ def overfit(config: configs.RootConfig):
     logger = utils.Logger('overfit', f'{root}/log')
 
     # get a single block
-    block_fp = _build_a_block(config, root, logger)
+    block_fp = _build_a_block(logger,root, config)
 
     # build the dataspecs dataclass
     dataspecs = _build_dataspec_a_block(block_fp)
@@ -82,68 +84,82 @@ def overfit(config: configs.RootConfig):
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
-            break
+            return
+    # if overfit not reached
+    hint = 'pipeline=train-overfit trainer.runtime.schedule.max_epoch=<value>'
+    logger.log(
+        'WARNING',
+        f'IoU did not reach 99% after {max_epoch} epochs. '
+        f'Increase the limit via: {hint}'
+    )
 
 def _build_a_block(
-    config: configs.RootConfig,
+    logger: utils.Logger,
     save_dpath: str,
-    logger: utils.Logger
+    config: configs.RootConfig,
+    **kwargs
 ) -> str:
     '''Build or select one valid block for the overfit test.'''
 
-    # config aliases
+    logger.log('INFO', 'Preparing world grid')
+    # world grid
     grid_cfg = config.foundation.grid
-    datablocks_cfg = config.foundation.datablocks
-    out_root = config.foundation.output_dpath
-
-    # prep world grid
-    _config = foundation.GridExtentConfig(
+    grid_config = world_grids.GridParameters(
         mode=grid_cfg.mode, # type: ignore
         crs=grid_cfg.crs,
         ref_fpath=grid_cfg.extent.filepath,
         origin=grid_cfg.extent.origin,
         pixel_size=grid_cfg.extent.pixel_size,
         grid_extent=grid_cfg.extent.grid_extent,
-        grid_shape=grid_cfg.extent.grid_shape
+        grid_shape=grid_cfg.extent.grid_shape,
+        tile_specs=grid_cfg.tile_specs_tuple,
     )
-    grid_gen_config = foundation.GridGenerationConfig(
-        output_dir=f'{out_root}/world_grids',
-        tile_size=(grid_cfg.tile_size.row, grid_cfg.tile_size.col),
-        tile_overlap=(grid_cfg.tile_overlap.row, grid_cfg.tile_overlap.col)
-    )
-    grid = foundation.build_world_grid(_config, grid_gen_config, logger)
+    grid = world_grids.build_grid(grid_config)
 
-    # build a single block
-    _config = foundation.BlockBuildingParameters(
+    # map image unto world grid
+    logger.log('INFO', 'Mapping image unto the world grid')
+    datablocks_cfg = config.foundation.datablocks
+    mapped = mapper.map_rasters(
+        grid,
+        datablocks_cfg.filepaths.dev_image,
+        datablocks_cfg.filepaths.dev_label,
+        logger
+    )
+
+    logger.log('INFO', 'Building a single data block')
+    # search windows and build a single block
+    builder_config = data_blocks.BlockBuilderConfig(
         image_fpath=datablocks_cfg.filepaths.dev_image,
         label_fpath=datablocks_cfg.filepaths.dev_label,
-        test_image_fpath=datablocks_cfg.filepaths.test_image,
-        test_label_fpath=datablocks_cfg.filepaths.test_label,
-        data_config_fpath=datablocks_cfg.filepaths.config,
-        dem_pad=datablocks_cfg.general.image_dem_pad,
+        config_fpath=datablocks_cfg.filepaths.config,
+        output_root=save_dpath,
+        dem_pad_px=datablocks_cfg.general.image_dem_pad,
         ignore_index=datablocks_cfg.general.ignore_index,
+        block_size=mapped.tile_shape
     )
-    blocks_dir = f'{out_root}/data_blocks'
-    block_fpath = foundation.run_blocks_building(
-        grid,
-        _config,
-        blocks_dir,
+    block_builder = data_blocks.BlockBuilder(
         logger,
-        single_block_mode=True,
-        save_dpath=save_dpath,
-        valid_px_per=0.8,
-        monitor_head='base',
-        need_all_classes=True
+        mapped.image,
+        mapped.label,
+        builder_config
+    )
+    block_fpath = block_builder.build_single_block(
+        save_dpath,
+        valid_px_per=kwargs.get('valid_px_per', 0.8),
+        monitor_head=kwargs.get('monitor_head', 'base'),
+        need_all_classes=kwargs.get('need_all_classes', True)
     )
     if not block_fpath:
         raise ValueError('No valid block for testing is found')
+
+    logger.log('INFO', f'Single block successfully created: {block_fpath}')
     return block_fpath
 
 def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
     '''Build a minimal `DataSpecs` from a single saved block.'''
 
-        # read bgeocore
-    block = geocore.DataBlock.load(block_fpath)
+    # read the block
+    block = geo_core.DataBlock.load(block_fpath)
     counts = block.meta['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original'}
 

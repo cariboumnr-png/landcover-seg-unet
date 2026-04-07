@@ -198,8 +198,8 @@ class BlockBuilder:
                 co_contxt = self._get_context(c)
                 blk = _build_a_blk(self.meta, co_contxt, save=False) # temp
                 meta = blk.meta
-                block_ratio_ok = meta["valid_ratios"]["block"] >= valid_px_per
-                has_all_labels = all(meta["label_count"][monitor_head])
+                block_ratio_ok = meta['valid_ratios']['block'] >= valid_px_per
+                has_all_labels = all(meta['label_count'][monitor_head])
                 if block_ratio_ok and (has_all_labels or not need_all_classes):
                     break
             except ValueError: # likely an empty window for the rasters

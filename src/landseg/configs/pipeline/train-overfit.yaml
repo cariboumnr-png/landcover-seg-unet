@@ -1,9 +1,22 @@
+# @package _global_
+
 models:
   conditioning:
     mode: null
+    concat:
+      out_dim: 0
+      use_ids: False
+      use_vec: False
+      use_mlp: False
+    film:
+      embed_dim: 0
+      use_ids: False
+      use_vec: False
+      hidden: 128
 
 trainer:
   optim:
+    lr: 1e-3
     weight_decay: 0.0
     sched_cls: null
     sched_args: {}
@@ -16,7 +29,7 @@ trainer:
         weight: 0.0
   runtime:
     schedule:
-      max_epoch: 2000
+      max_epoch: 3000
     monitor:
       track_head_name: base
     precision:

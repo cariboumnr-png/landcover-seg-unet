@@ -105,10 +105,6 @@ def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
         assert isinstance(dev_settings, omegaconf.DictConfig)
         config_list.append(dev_settings)
 
-    # final pipeline overwrites (with sanity guard)
-    if isinstance(config.get('pipeline'), omegaconf.DictConfig):
-        config_list.append(config.pipeline)
-
     # merging overrides resolve
     with omegaconf.open_dict(config):
         merged = omegaconf.OmegaConf.merge(*config_list)
