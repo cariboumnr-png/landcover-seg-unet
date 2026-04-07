@@ -32,14 +32,13 @@ import math
 # third-party imports
 import numpy
 # local imports
+import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.geopipe.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
 def build_dataspec(
-    foundation_root: str,
-    transform_root: str,
+    artifact_paths: artifacts.ArtifactPaths,
     *,
     ids_domain_name: str | None = None,
     vec_domain_name: str | None = None,
@@ -69,22 +68,30 @@ def build_dataspec(
     '''
 
     # artifact fpaths
-    data_schema_fpath = f'{foundation_root}/data_blocks/model_dev/schema.json'
-    domain_dpath = f'{foundation_root}/domain_knowledge'
-    transform_schema_fpath = f'{transform_root}/schema.json'
+    data_schema_fpath = artifact_paths.foundation.data_blocks.dev.schema
+    transform_schema_fpath = artifact_paths.transform.schema
 
     # load artifacts
     # domains
-    ids_domain = _load_domain(ids_domain_name, domain_dpath)
-    vec_domain = _load_domain(vec_domain_name, domain_dpath)
+    _paths = artifact_paths.foundation.domains
+    if ids_domain_name:
+        ids_domain = _load_domain(_paths.domain_map_fpath(ids_domain_name))
+    else:
+        ids_domain = None
+    if vec_domain_name:
+        vec_domain = _load_domain(_paths.domain_map_fpath(vec_domain_name))
+    else:
+        vec_domain = None
 
     # data schema
-    data_schema: geo_core.DataSchema
-    _, _, data_schema = artifacts.load_json_hash(data_schema_fpath)
+    data_ctrl = artifacts.Controller[geo_core.DataSchema].load_json_or_fail
+    data_schema = data_ctrl(data_schema_fpath).fetch()
+    assert data_schema # typing assertion
 
     # transform schema
-    transform_schema: geo_core.TransformSchema
-    _, _, transform_schema = artifacts.load_json_hash(transform_schema_fpath)
+    transform_ctrl = artifacts.Controller[geo_core.TransformSchema].load_json_or_fail
+    transform_schema = transform_ctrl(transform_schema_fpath).fetch()
+    assert transform_schema # typing assertion
 
     # return specs
     specs = core.DataSpecs(
@@ -102,26 +109,17 @@ def build_dataspec(
     return specs
 
 # ------------------------------private  function------------------------------
-def _load_domain(
-    name: str | None,
-    dirpath: str
-) -> geo_core.DomainTileMap | None:
+def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
     '''doc'''
 
-    # early exit
-    if not name:
-        return None
-
     # load payload and meta json
-    tiles_data_path = f'{dirpath}/{name}.json'
-    meta_path = f'{dirpath}/{name}_meta.json'
-    _, _, tiles = artifacts.load_json_hash(tiles_data_path)
-    _, _, meta = artifacts.load_json_hash(meta_path)
-    payload: geo_core.DomainPayload = {
-        'schema_id': meta['schema_id'],
-        'artifact_meta': meta['artifact_meta'],
-        'data': tiles
-    }
+    D = dict[str, geo_core.DomainTile]
+    M = geo_core.DomainMeta
+    DomainCtrl = artifacts.PayloadController[D, M]
+    schema = geo_core.DomainTileMap.SCHEMA_ID
+    ctrl = DomainCtrl(fp, schema, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
+    payload = ctrl.load()
+    assert payload # typing assertion
     return geo_core.DomainTileMap.from_json_payload(payload)
 
 def _get_meta(

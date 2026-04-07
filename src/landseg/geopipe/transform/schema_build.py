@@ -89,7 +89,7 @@ def build_schema(
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl.load_json_or_fail(paths.splits_source_blocks)
+        ctrl = PartitionCtrl.load_json_or_fail(paths.splits_transformed_blocks)
         block_splits = ctrl.fetch()
         assert block_splits # typing assertion
 

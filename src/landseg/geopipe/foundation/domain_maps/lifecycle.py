@@ -132,7 +132,7 @@ def _prep_mapping(
     '''doc'''
 
     # check mapped tiles before building
-    ctrl = MappingCtrl(config.tiles_fpath, 'npz_dict', policy)
+    ctrl = MappingCtrl(config.tiles_fpath, policy)
     try:
         mapped = ctrl.fetch()
     except artifacts.ArtifactError as exc:

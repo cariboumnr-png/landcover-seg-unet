@@ -30,6 +30,7 @@ model, and runs the multi-phase training runner.
 import dataclasses
 import os
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
@@ -54,10 +55,12 @@ def train(config: configs.RootConfig):
     t_stamp = utils.get_timestamp()
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
+    # artifact fpaths manager
+    paths = artifacts.ArtifactPaths(f'{config.exp_root}/artifacts')
+
     # collect artifacts and build dataspsec
     dataspecs = geopipe.build_dataspec(
-        config.foundation.output_dpath,
-        config.transform.output_dpath,
+        paths,
         ids_domain_name=config.trainer.runtime.data.domain_ids_name,
         vec_domain_name=config.trainer.runtime.data.domain_vec_name,
         print_out=True

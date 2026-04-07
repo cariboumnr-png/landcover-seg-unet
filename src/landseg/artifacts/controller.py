@@ -187,9 +187,9 @@ class Controller(typing.Generic[T]):
 
     @staticmethod
     def _get_file_type(fp):
-        if fp.endwith('json'):
+        if fp.endswith('json'):
             return 'json'
-        if fp.endwith('npz'):
+        if fp.endswith('npz'):
             return 'npz_dict'
         raise ValueError(f'Unsupported file type: {fp}')
 
