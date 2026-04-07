@@ -1,5 +1,7 @@
 ## 📁 Structure actuelle du projet (affichant deux niveaux)
 
+Last updated: 2026-04-07
+
 ```
 ./src/landseg/
 ├── artifacts/                    [Cycle de vie et persistance des artefacts unifiés]
@@ -31,7 +33,7 @@
 |
 ├── models/                       [Architectures de modèles]
 │   ├── backbones/                # UNet, UNet++ etc.
-│   ├── multihead/                # têtes conditionnées par domaine
+│   ├── multihead/                # cadre de modèle multi-têtes
 │   └── factory.py                # construction des modèles
 |
 ├── trainer/                      [Système d’entraînement]
@@ -41,6 +43,6 @@
 |
 └── utils/                        [Utilitaires partagés]
     ├── logger.py                 # journalisation du projet
-    ├── funcs.py                  # hachage, JSON, fonctions utilitaires
+    ├── funcs.py                  # hachage, JSON et fonctions d’aide liées au temps
     └── multip.py                 # outils de multiprocessus
   ```

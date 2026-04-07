@@ -1,7 +1,8 @@
 ## 📁 Current Project Structure (showing two levels)
 
-```
+Dernière mise à jour : 2026-04-07
 
+```
 ./src/landseg/
 ├── artifacts/                    [Unified artifact lifecycle & persistence]
 │   ├── controller.py             # policy-driven load/build/rebuild logic
@@ -32,7 +33,7 @@
 |
 ├── models/                       [Model architectures]
 │   ├── backbones/                # UNet, UNet++, etc.
-│   ├── multihead/                # domain-conditioned heads
+│   ├── multihead/                # multihead model framework
 │   └── factory.py                # model construction
 |
 ├── trainer/                      [Training system]
@@ -41,7 +42,7 @@
 │   └── runner/                   # training orchestration
 |
 └── utils/                        [Shared utilities]
-├── logger.py                     # project logging
-├── funcs.py                      # hashing, JSON, helpers
-└── multip.py                     # multiprocessing helpers
+    ├── logger.py                 # project logging
+    ├── funcs.py                  # hashing, JSON, and time helpers
+    └── multip.py                 # multiprocessing helpers
   ```
