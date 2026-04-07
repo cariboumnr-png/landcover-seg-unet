@@ -85,7 +85,7 @@ def update_manifest(
 
 
     # load catalog JSON
-    ctrl = CatalogDictCtrl(context.catalog_fpath, 'json', policy)
+    ctrl = CatalogDictCtrl(context.catalog_fpath, policy)
     try:
         data_dict = ctrl.fetch()
     except artifacts.ArtifactError as exc:
@@ -110,7 +110,7 @@ def update_manifest(
         ctrl.persist(catalog_json)
 
     # load schema JSON
-    ctrl = SchemaCtrl(context.schema_fpath, 'json', policy)
+    ctrl = SchemaCtrl(context.schema_fpath, policy)
     try:
         current_schema = ctrl.fetch()
     except artifacts.ArtifactError as exc:

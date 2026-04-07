@@ -76,7 +76,7 @@ def run_datablocks_partition(
     logger = logger.get_child('split')
 
     # partition results controller
-    ctrl = PartitionCtrl(paths.splits_source_blocks, 'json', policy)
+    ctrl = PartitionCtrl(paths.splits_source_blocks, policy)
     splits_src = ctrl.fetch()
 
     if not splits_src:
@@ -91,13 +91,13 @@ def run_datablocks_partition(
         )
         ctrl.persist(splits_src)
         # if split is run persist a splits summary as well
-        artifacts.Controller(paths.splits_summary, 'json', policy).persist(summary)
+        artifacts.Controller(paths.splits_summary, policy).persist(summary)
         # log partition summary
         for m in summary.items():
             logger.log('INFO', f'{m[0]}: {m[1]}')
 
     # label count results controller
-    ctrl = LabelStatsCtrl(paths.label_stats, 'json', policy)
+    ctrl = LabelStatsCtrl(paths.label_stats, policy)
     lbl_stats = ctrl.fetch()
 
     if not lbl_stats:

@@ -53,7 +53,6 @@ class Controller(typing.Generic[T]):
     def __init__(
         self,
         file_path: str,
-        file_type: typing.Literal['json', 'npz_dict'],
         policy: artifacts.LifecyclePolicy,
     ):
         '''
@@ -61,7 +60,6 @@ class Controller(typing.Generic[T]):
 
         Args:
             file_path: Absolute or relative path to the artifact file.
-            file_type: Serialization format used for persistence.
             policy: Lifecycle policy governing load and rebuild behavior.
         '''
 
@@ -69,7 +67,7 @@ class Controller(typing.Generic[T]):
         self.dir = os.path.dirname(self.fp)
         self.fname = os.path.basename(file_path)
         self.hash_fpath = os.path.join(self.dir, '_hash.json')
-        self.type = file_type
+        self.type = self._get_file_type(file_path)
         self.policy = policy
 
     @property
@@ -81,7 +79,7 @@ class Controller(typing.Generic[T]):
     def load_json_or_fail(cls, fp) -> 'Controller[T]':
         '''Factory for a JSON controller that reads or fails.'''
 
-        return cls(fp, 'json', artifacts.LifecyclePolicy.LOAD_OR_FAIL)
+        return cls(fp, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
 
     def fetch(self) -> T | None:
         '''
@@ -186,6 +184,14 @@ class Controller(typing.Generic[T]):
             return sha256_value == sha256_record
         except (FileNotFoundError, json.JSONDecodeError):
             return False
+
+    @staticmethod
+    def _get_file_type(fp):
+        if fp.endwith('json'):
+            return 'json'
+        if fp.endwith('npz'):
+            return 'npz_dict'
+        raise ValueError(f'Unsupported file type: {fp}')
 
     @staticmethod
     def _get_sha256(fp):

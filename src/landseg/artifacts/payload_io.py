@@ -68,8 +68,8 @@ class PayloadController(typing.Generic[D, M]):
         self.meta_path = f'{no_ext}_meta.json'
 
         # controllers
-        self.data_ctrl = artifacts.Controller(self.data_path, 'json', policy)
-        self.meta_ctrl = artifacts.Controller(self.meta_path, 'json', policy)
+        self.data_ctrl = artifacts.Controller(self.data_path, policy)
+        self.meta_ctrl = artifacts.Controller(self.meta_path, policy)
 
     def load(self) -> _PayloadDict[D, M] | None:
         '''doc'''

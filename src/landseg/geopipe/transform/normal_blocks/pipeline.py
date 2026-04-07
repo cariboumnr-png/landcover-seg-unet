@@ -72,7 +72,7 @@ def run_normaliza_blocks(
     test = set(src['test'].values())
 
     # aggregate stats on training blocks
-    ctrl = ImageStatsCtrl(paths.image_stats, 'json', policy)
+    ctrl = ImageStatsCtrl(paths.image_stats, policy)
     stats = ctrl.fetch()
     if not stats:
         stats = normal_blocks.aggregate_image_stats(train)
@@ -85,7 +85,7 @@ def run_normaliza_blocks(
 
 
     # build normalized blocks for each split
-    ctrl = PartitionCtrl(paths.splits_transformed_blocks, 'json', policy)
+    ctrl = PartitionCtrl(paths.splits_transformed_blocks, policy)
     transform = ctrl.fetch()
     if not transform:
         transform = {

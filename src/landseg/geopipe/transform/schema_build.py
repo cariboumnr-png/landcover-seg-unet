@@ -68,7 +68,7 @@ def build_schema(
     '''
 
     # schema artifact controller
-    schema_ctrl = SchemaCtrl(paths.schema, 'json', policy)
+    schema_ctrl = SchemaCtrl(paths.schema, policy)
     schema = schema_ctrl.fetch()
 
     if not schema:

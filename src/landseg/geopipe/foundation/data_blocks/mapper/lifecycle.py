@@ -46,7 +46,7 @@ def map_rasters_to_grid(
     image, label = image_label_fpaths
 
     # artifacts controller
-    ctrl = MappingCtrl(mapped_windows_fapth, 'json', policy)
+    ctrl = MappingCtrl(mapped_windows_fapth, policy)
 
     # mapped windows fpath
     logger.log('INFO', f'Try to load mapped windows from {world_grid.gid}')
