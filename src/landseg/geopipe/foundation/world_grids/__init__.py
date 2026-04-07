@@ -35,22 +35,19 @@ __all__ = [
     'GridParameters',
     # functions
     'build_grid',
-    'load_grid',
     'prepare_world_grid',
-    'save_grid',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import GridParameters, build_grid
-    from .grid_io import load_grid, save_grid
+    from .builder import GridParameters, build_grid
     from .lifecycle import prepare_world_grid
 
 def __getattr__(name: str):
 
     if name in {'GridParameters', 'build_grid'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+        return getattr(importlib.import_module('.builder', __package__), name)
 
     if name in {'load_grid', 'save_grid'}:
         return getattr(importlib.import_module('.grid_io', __package__), name)
