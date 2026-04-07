@@ -31,10 +31,8 @@ import typing
 
 __all__ = [
     # classes
-    'ParsedCatalog',
     'PartitionParameters',
     # functions
-    'parse_catalog',
     'run_datablocks_partition',
     'create_blocks_partition'
     # typing
@@ -42,14 +40,10 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .adapter import ParsedCatalog, parse_catalog
     from .pipeline import run_datablocks_partition
     from .split import PartitionParameters, create_blocks_partition
 
 def __getattr__(name: str):
-
-    if name in {'ParsedCatalog', 'parse_catalog'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
 
     if name in {'filter_safe_tiles'}:
         return getattr(importlib.import_module('.filter', __package__), name)

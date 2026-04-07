@@ -19,31 +19,37 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.geopipe.transform.schema_build`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Image normalization and block materialization pipeline.
+
+Consumes raw block split manifests, aggregates image statistics from
+training blocks only, normalizes all splits using these statistics, and
+writes normalized block artifacts along with updated split mappings.
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
 import typing
 
-__all__ = [
-    # classes
-    # functions
-    'build_schema',
-    # typing
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .factory import build_schema
-
-def __getattr__(name: str):
-
-    if name in {'build_schema'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+# private type
+class TransformPaths(typing.Protocol):
+    '''Typed pipeline-specific paths container.'''
+    @property
+    def train_blocks(self) -> str:...
+    @property
+    def val_blocks(self) -> str:...
+    @property
+    def test_blocks(self) -> str:...
+    @property
+    def splits_source_blocks(self) -> str:...
+    @property
+    def splits_summary(self) -> str:...
+    @property
+    def label_stats(self) -> str:...
+    @property
+    def image_stats(self) -> str:...
+    @property
+    def splits_transformed_blocks(self) -> str:...
+    @property
+    def schema(self) -> str:...

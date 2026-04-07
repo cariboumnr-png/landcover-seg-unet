@@ -32,6 +32,7 @@ import typing
 
 __all__ = [
     # classes
+    'ParsedCatalog',
     'PartitionParameters',
     # functions
     'build_schema',
@@ -43,15 +44,19 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_partition import PartitionParameters, parse_catalog, run_datablocks_partition
+    from .data_partition import PartitionParameters, run_datablocks_partition
+    from .foundation_adapter import ParsedCatalog, parse_catalog
     from .normal_blocks import run_normaliza_blocks
     from .schema_build import build_schema
 
 
 def __getattr__(name: str):
 
-    if name in {'PartitionParameters', 'parse_catalog', 'run_datablocks_partition'}:
+    if name in {'PartitionParameters', 'run_datablocks_partition'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
+
+    if name in {'ParsedCatalog', 'parse_catalog'}:
+        return getattr(importlib.import_module('.foundation_adapter', __package__), name)
 
     if name in {'run_normaliza_blocks'}:
         return getattr(importlib.import_module('.normal_blocks', __package__), name)

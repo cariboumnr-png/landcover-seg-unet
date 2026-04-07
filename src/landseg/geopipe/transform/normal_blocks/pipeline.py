@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Image normalization and block materialization pipeline.
 
@@ -30,6 +32,7 @@ writes normalized block artifacts along with updated split mappings.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.transform.common as common
 import landseg.geopipe.transform.normal_blocks as normal_blocks
 
 # typing aliases
@@ -37,7 +40,7 @@ PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
 def run_normaliza_blocks(
-    root_dir: str,
+    paths: common.TransformPaths,
     *,
     policy: artifacts.LifecyclePolicy
 ):
@@ -59,7 +62,7 @@ def run_normaliza_blocks(
     '''
 
     # load source blocks file lists
-    ctrl = PartitionCtrl.load_json_or_fail(f'{root_dir}/block_splits_source.json')
+    ctrl = PartitionCtrl.load_json_or_fail(paths.splits_source_blocks)
     src = ctrl.fetch()
     assert src # typing assertion
 
@@ -69,24 +72,24 @@ def run_normaliza_blocks(
     test = set(src['test'].values())
 
     # aggregate stats on training blocks
-    ctrl = ImageStatsCtrl(f'{root_dir}/image_stats.json', 'json', policy)
+    ctrl = ImageStatsCtrl(paths.image_stats, 'json', policy)
     stats = ctrl.fetch()
     if not stats:
         stats = normal_blocks.aggregate_image_stats(train)
         ctrl.persist(stats)
 
     # save dirs
-    train_dpath = f'{root_dir}/train_blocks'
-    val_dpath = f'{root_dir}/val_blocks'
-    test_dpath = f'{root_dir}/test_blocks'
+    train_dpath = paths.train_blocks
+    val_dpath = paths.val_blocks
+    test_dpath = paths.test_blocks
 
 
     # build normalized blocks for each split
-    ctrl = PartitionCtrl(f'{root_dir}/block_splits_transformed.json', 'json', policy)
+    ctrl = PartitionCtrl(paths.splits_transformed_blocks, 'json', policy)
     transform = ctrl.fetch()
     if not transform:
         transform = {
-            'train': normal_blocks.normalize_blocks(train, stats,train_dpath),
+            'train': normal_blocks.normalize_blocks(train, stats, train_dpath),
             'val': normal_blocks.normalize_blocks(val, stats, val_dpath),
             'test': normal_blocks.normalize_blocks(test, stats, test_dpath)
         }

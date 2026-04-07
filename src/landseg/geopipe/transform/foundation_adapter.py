@@ -53,16 +53,16 @@ class _Parsed:
     valid_file_paths: dict[tuple[int, int], str]
 
 def parse_catalog(
-    dev_fpath: str,
-    test_fpath: str,
-    schema_fpath: str,
+    dev_catalog: str,
+    dev_schema: str,
+    test_catalog: str,
     *,
     valid_px_threshold: float,
 ):
     '''doc'''
 
     # try load meta first
-    data_schema = SchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    data_schema = SchemaCtrl.load_json_or_fail(dev_schema).fetch()
     assert data_schema # typing assertion
 
     # get block size from schema
@@ -71,10 +71,10 @@ def parse_catalog(
 
     # parse dev data catalog
     t = valid_px_threshold
-    dev = _parse(dev_fpath, t, block_size)
+    dev = _parse(dev_catalog, t, block_size)
     # try parse test data catalog
     try:
-        test = _parse(test_fpath, t, block_size)
+        test = _parse(test_catalog, t, block_size)
     except artifacts.ArtifactError:
         test = None
     test_blocks = list(test.valid_file_paths.values()) if test else None

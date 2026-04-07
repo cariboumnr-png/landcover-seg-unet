@@ -40,7 +40,7 @@ class ArtifactPaths:
 
     @property
     def transform(self):
-        return FoundationPaths(os.path.join(self.root, 'transform'))
+        return TransformPaths(os.path.join(self.root, 'transform'))
 
 @dataclasses.dataclass
 class FoundationPaths:
@@ -137,3 +137,27 @@ class TransformPaths:
     @property
     def test_blocks(self) -> str:
         return os.path.join(self.root, 'test_blocks')
+
+    @property
+    def splits_source_blocks(self) -> str:
+        return os.path.join(self.root, 'block_splits_source.json')
+
+    @property
+    def splits_summary(self) -> str:
+        return os.path.join(self.root, 'block_splits_summary.json')
+
+    @property
+    def label_stats(self) -> str:
+        return os.path.join(self.root, 'label_stats.json')
+
+    @property
+    def image_stats(self) -> str:
+        return os.path.join(self.root, 'image_stats.json')
+
+    @property
+    def splits_transformed_blocks(self) -> str:
+        return os.path.join(self.root, 'block_splits_transformed.json')
+
+    @property
+    def schema(self) -> str:
+        return os.path.join(self.root, 'schema.json')

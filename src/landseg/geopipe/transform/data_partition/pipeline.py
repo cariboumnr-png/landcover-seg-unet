@@ -33,6 +33,8 @@ import numpy
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.transform as transform
+import landseg.geopipe.transform.common as common
 import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
 
@@ -42,11 +44,11 @@ LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 
 # -------------------------------Public Function-------------------------------
 def run_datablocks_partition(
-    parsed_catalog: data_partition.ParsedCatalog,
-    partition_config: data_partition.PartitionParameters,
     logger: utils.Logger,
+    paths: common.TransformPaths,
+    parsed_catalog: transform.ParsedCatalog,
+    partition_config: data_partition.PartitionParameters,
     *,
-    output_dpath: str,
     policy: artifacts.LifecyclePolicy
 ) -> None:
     '''
@@ -73,31 +75,29 @@ def run_datablocks_partition(
     # get a child logger
     logger = logger.get_child('split')
 
-    # output artifacts fpaths
-    split_src_fpath = f'{output_dpath}/block_splits_source.json'
-    lbl_stats_fpath = f'{output_dpath}/label_stats.json'
-
     # partition results controller
-    ctrl = PartitionCtrl(split_src_fpath, 'json', policy)
+    ctrl = PartitionCtrl(paths.splits_source_blocks, 'json', policy)
     splits_src = ctrl.fetch()
 
     if not splits_src:
-        # get split blocks
+        # get split blocks and persist the main results
         logger.log('INFO', 'Split data blocks')
-        splits_src, splits_summary = data_partition.create_blocks_partition(
+        splits_src, summary = data_partition.create_blocks_partition(
             parsed_catalog.dev_base_class_counts,
             parsed_catalog.dev_valid_class_counts,
             parsed_catalog.dev_blocks,
             partition_config,
             ext_test_blks=parsed_catalog.external_test_blocks
         )
-        # log partition summary
-        for m in splits_summary.items():
-            logger.log('INFO', f'{m[0]}: {m[1]}')
         ctrl.persist(splits_src)
+        # if split is run persist a splits summary as well
+        artifacts.Controller(paths.splits_summary, 'json', policy).persist(summary)
+        # log partition summary
+        for m in summary.items():
+            logger.log('INFO', f'{m[0]}: {m[1]}')
 
     # label count results controller
-    ctrl = LabelStatsCtrl(lbl_stats_fpath, 'json', policy)
+    ctrl = LabelStatsCtrl(paths.label_stats, 'json', policy)
     lbl_stats = ctrl.fetch()
 
     if not lbl_stats:

@@ -50,20 +50,22 @@ def prepare(config: configs.RootConfig):
 
     # config aliases
     # data foundation
-    blocks_src = f'{config.foundation.output_dpath}/data_blocks'
     grid = config.foundation.grid
     # data transform
-    transform_root = config.transform.output_dpath
     partition = config.transform.partition
     scoring = config.transform.scoring
     hydration = config.transform.hydration
 
+    # artifact paths
+    foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
+    transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
+
     # datablocks partition
     # parse catalog
     parsed_catalog = transform.parse_catalog(
-        f'{blocks_src}/model_dev/catalog.json',
-        f'{blocks_src}/test_holdout/catalog.json',
-        f'{blocks_src}/model_dev/schema.json',
+        foundation_paths.data_blocks.dev.catalog,
+        foundation_paths.data_blocks.dev.schema,
+        foundation_paths.data_blocks.test.catalog,
         valid_px_threshold=0.8
     )
     # partition config
@@ -74,29 +76,24 @@ def prepare(config: configs.RootConfig):
         scoring_alpha=scoring.alpha,
         scoring_beta=scoring.beta,
         max_skew_rate=hydration.max_skew_rate,
-        block_spec=(
-            grid.tile_specs.size_row,
-            grid.tile_specs.size_col,
-            grid.tile_specs.overlap_row,
-            grid.tile_specs.overlap_col
-        )
+        block_spec=grid.tile_specs_tuple
     )
     transform.run_datablocks_partition(
+        logger,
+        transform_paths,
         parsed_catalog,
         partition_config,
-        logger,
-        output_dpath=transform_root,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
     )
 
     # normalize
     transform.run_normaliza_blocks(
-        transform_root,
+        transform_paths,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
     # build schema
     transform.build_schema(
-        transform_root,
+        transform_paths,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )

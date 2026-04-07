@@ -34,6 +34,7 @@ import os
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.transform.common as common
 import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
@@ -46,7 +47,7 @@ SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
 
 # -------------------------------Public Function-------------------------------
 def build_schema(
-    root_dir: str,
+    paths: common.TransformPaths,
     *,
     policy: artifacts.LifecyclePolicy
 ) -> None:
@@ -67,38 +68,38 @@ def build_schema(
     '''
 
     # schema artifact controller
-    schema_ctrl = SchemaCtrl(f'{root_dir}/schema.json', 'json', policy)
+    schema_ctrl = SchemaCtrl(paths.schema, 'json', policy)
     schema = schema_ctrl.fetch()
 
     if not schema:
         # artifacts file paths
-        _artifacts = {
-            'block_source': f'{root_dir}/block_splits_source.json',
-            'block_transform': f'{root_dir}/block_splits_transformed.json',
-            'label_stats': f'{root_dir}/label_stats.json',
-            'image_stats': f'{root_dir}/image_stats.json'
+        collected_artifacts = {
+            'block_source': paths.splits_source_blocks,
+            'block_transform': paths.splits_transformed_blocks,
+            'label_stats': paths.label_stats,
+            'image_stats': paths.image_stats
         }
 
         # checksum the artifacts
         checksums = {
-            'block_source': _resolve(_artifacts['block_source']),
-            'block_transform': _resolve(_artifacts['block_transform']),
-            'label_stats': _resolve(_artifacts['label_stats']),
-            'image_stats': _resolve(_artifacts['image_stats'])
+            'block_source': _resolve(paths.splits_source_blocks),
+            'block_transform': _resolve(paths.splits_transformed_blocks),
+            'label_stats': _resolve(paths.label_stats),
+            'image_stats': _resolve(paths.image_stats)
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl.load_json_or_fail(_artifacts['block_transform'])
+        ctrl = PartitionCtrl.load_json_or_fail(paths.splits_source_blocks)
         block_splits = ctrl.fetch()
         assert block_splits # typing assertion
 
         # read label stats
-        ctrl = LabelStatsCtrl.load_json_or_fail(_artifacts['label_stats'])
+        ctrl = LabelStatsCtrl.load_json_or_fail(paths.label_stats)
         label_stats = ctrl.fetch()
         assert label_stats # typing assertion
 
         # read image stats
-        ctrl = ImageStatsCtrl.load_json_or_fail(_artifacts['image_stats'])
+        ctrl = ImageStatsCtrl.load_json_or_fail(paths.image_stats)
         image_stats = ctrl.fetch()
         assert image_stats # typing assertion
 
@@ -106,7 +107,7 @@ def build_schema(
         schema = {
             'schema_version': geo_core.transform_types.SCHEMA_ID,
             'creation_time': utils.get_timestamp(T_FORMAT),
-            'artifacts': _artifacts,
+            'artifacts': collected_artifacts,
             'checksums': checksums,
             'train_blocks': block_splits['train'],
             'val_blocks': block_splits['val'],
