@@ -34,27 +34,79 @@ Documentation détaillée :
 
 ---
 
+
 ## ▶️ Utilisation
 
-Avant d’exécuter une expérience, vous devez préparer vos rasters d’entrée et organiser correctement votre dossier de projet. Veuillez commencer par lire le guide de préparation des données:
+Avant de lancer une expérience, vous devez préparer vos rasters d’entrée et
+organiser correctement la structure de votre projet. Veuillez commencer par lire
+le guide de préparation des données :
 
-📄 [**Guide de préparation des données**](./docs/data_preparation_fr.md)
+📄 ./docs/data_preparation.md
 
-Une fois vos rasters et dossiers prêts, configurez votre expérience en utilisant le fichier settings.yaml à la racine du projet. Ce fichier fournit un emplacement sécurisé pour que les utilisateurs puissent préciser leurs entrées sans modifier l’arborescence interne de configurations Hydra.
+Une fois vos rasters et dossiers prêts, configurez votre projet à l’aide du
+fichier `settings.yaml` à la racine. Ce fichier constitue un point d’entrée
+stable pour spécifier les entrées et les options de traitement, sans modifier
+l’arborescence interne de configuration Hydra.
 
-Installez le framework:
+Installer le framework :
 
     pip install .
 
-Exécuter une expérience complète:
+---
 
-    experiment_run profile=end_to_end
+### Étapes du pipeline
 
-Exécuter un test d’ajustement excessif:
+Ce projet s’exécute selon des **étapes de pipeline explicites et consécutives**.
+Chaque étape produit ou consomme des artefacts bien définis, régis par des
+politiques de cycle de vie explicites.
 
-    experiment_run profile=overfit_test
+#### 1. Ingestion des données
 
-Ces commandes exécutent les configurations Hydra depuis `src/landseg/configs/`. Pour la plupart des utilisateurs, il est recommandé de fournir les paramètres via le fichier racine `settings.yaml`, conçu pour une personnalisation sécurisée sans modifier l’arborescence interne des configurations.
+Traiter les rasters bruts pour produire des **blocs de données catalogués et
+stables**, alignés sur une grille mondiale et persistés comme artefacts de base
+réutilisables :
+
+    experiment_run pipeline=ingest-data
+
+Cette étape doit généralement être exécutée **une seule fois par jeu de données**,
+sauf si les rasters d’entrée ou la configuration de la grille changent.
+
+---
+
+#### 2. Préparation des données à l’échelle de l’expérience
+
+Préparer les artefacts spécifiques à une expérience (partitionnement du jeu de
+données, normalisation, statistiques, schémas) à partir des blocs de données
+préalablement ingérés :
+
+    experiment_run pipeline=prepare-data
+
+Cette étape peut être relancée avec différentes configurations d’expérience sans
+ré‑ingérer les données brutes.
+
+---
+
+#### 3. Entraînement du modèle
+
+Lancer un entraînement complet en utilisant les artefacts de données actuellement
+préparés :
+
+    experiment_run pipeline=train-model
+
+Cette étape consomme les artefacts préparés mais ne modifie pas les données de base.
+
+---
+
+#### 4. Test « overfit » en silo (optionnel)
+
+Exécuter un test minimal d’overfitting sur un sous‑ensemble restreint afin de
+valider la chaîne de traitement de bout en bout. Ce pipeline **ne nécessite pas
+d’ingestion ni de préparation préalables** :
+
+    experiment_run pipeline=train-overfit
+
+
+>🔔 Ces commandes exécutent les configurations Hydra depuis `src/landseg/configs/`. Pour la plupart des utilisateurs, il est recommandé de fournir les paramètres via le fichier racine `settings.yaml`, conçu pour une personnalisation sécurisée sans modifier l’arborescence interne des configurations.
 
 ---
 
