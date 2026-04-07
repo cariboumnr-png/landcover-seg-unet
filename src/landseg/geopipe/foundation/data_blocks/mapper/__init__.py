@@ -18,56 +18,43 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 '''
-Utility helper functions.
+Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# standard imports
-import contextlib
-import os
+from __future__ import annotations
+import importlib
 import typing
-# third-party imports
-import rasterio
-import rasterio.io
 
-# coords <-> name helpers
-def xy_name(coords: tuple[int, int]) -> str:
-    '''Convert (x, y) to a canonical block name string.'''
+__all__ = [
+    # classes
+    'MappedRasterWindows',
+    # functions
+    'map_rasters',
+    'map_rasters_to_grid',
+    'validate_geometry',
+    # typing
+    'GeometrySummary',
+]
 
-    # e.g., (12, 34) -> row_000034_col_000012
-    x, y = coords
-    return f'row_{y:06d}_col_{x:06d}'
+# for static check
+if typing.TYPE_CHECKING:
+    from .geometry import GeometrySummary, validate_geometry
+    from .lifecycle import map_rasters_to_grid
+    from .mapper import MappedRasterWindows, map_rasters
 
-def name_xy(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (x, y).'''
+def __getattr__(name: str):
 
-    # e.g.,  row_000034_col_000012 -> (12, 34)
-    split = name.split('_')
-    y_str, x_str = split[1], split[3]
-    return int(x_str), int(y_str)
+    if name in {'GeometrySummary', 'validate_geometry'}:
+        return getattr(importlib.import_module('.geometry', __package__), name)
 
-@contextlib.contextmanager
-def open_rasters(
-        *rasters: str | None
-    ) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
-    '''
-    Open multiple rasters safely and yield a tuple of `DatasetReader`.
+    if name in {'map_rasters_to_grid'}:
+        return getattr(importlib.import_module('.lifecycle', __package__), name)
 
-    Accepts any number of filepaths (or None). Existing paths are opened
-    via rasterio, None values are preserved, and all files are closed
-    automatically on exit.
-    '''
+    if name in {'MappedRasterWindows', 'map_rasters'}:
+        return getattr(importlib.import_module('.mapper', __package__), name)
 
-    with contextlib.ExitStack() as stack:
-        opened_rasters: list[rasterio.io.DatasetReader | None] = []
-
-        for raster in rasters:
-            if isinstance(raster, str):
-                assert os.path.exists(raster), f'Raster not found: {raster}'
-                opened_raster = stack.enter_context(rasterio.open(raster))
-                opened_rasters.append(opened_raster)
-            else:
-                opened_rasters.append(None)
-
-        yield tuple(opened_rasters)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

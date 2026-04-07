@@ -26,17 +26,11 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
-from .contxt import open_rasters
 from .funcs import(
-    get_dir_size,
     get_file_ctime,
-    get_timestamp,
-    hash_artifacts,
-    hash_payload,
+    hash_sha256,
     load_json,
-    load_pickle,
     write_json,
-    write_pickle,
 )
 from .logger import Logger
 from .multip import ParallelExecutor
@@ -46,15 +40,9 @@ __all__ = [
     'Logger',
     'ParallelExecutor',
     # functions
-    'get_dir_size',
     'get_file_ctime',
-    'get_timestamp',
-    'hash_artifacts',
-    'hash_payload',
+    'hash_sha256',
     'load_json',
-    'load_pickle',
-    'open_rasters',
     'write_json',
-    'write_pickle',
     # types
 ]

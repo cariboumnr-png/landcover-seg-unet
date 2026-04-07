@@ -20,155 +20,157 @@
 # =========================================================================== #
 
 '''
-Domain-tile mapping utilities for categorical rasters aligned to a
-world-grid layout.
+Domain-tile mapping for categorical rasters to a world-grid layout.
 
-This module defines the `DomainTileMap` class, its supporting data
-structures, and the full pipeline for converting a categorical raster
-into stable, per-tile domain features:
+This module provides data structures and utilities for transforming a
+categorical raster into a stable, grid-aligned representation of per-
+tile domain features. It standardizes how spatial label distributions
+are summarized, filtered, and encoded for downstream modeling.
 
-    - Align a deep-copied world grid to the raster by computing an
-      integer pixel offset. The raster must share the grid's CRS and
-      pixel size.
-    - Read all grid windows (in parallel) and extract per-tile integer
-      label arrays, enforcing integer dtype and a well-defined nodata
-      value.
-    - Discover all unique valid labels globally; validate against the
-      configured index_base, then remap labels to a compact [0..K-1]
-      space for consistency across tiles.
-    - Filter tiles based on the fraction of valid pixels. For each valid
-      tile, compute majority-class id and frequency and update global
-      summary statistics in the `DomainContext`.
-    - Construct normalized class-frequency vectors for valid tiles and
-      apply PCA (via economical SVD) to produce low-dimensional float32
-      feature vectors that meet a target cumulative explained variance.
-    - Assemble a `DomainTileMap` containing majority statistics, PCA
-      features, and context metadata.
+Core functionality includes:
+- Alignment of a world grid to raster space using integer pixel offsets
+  (assuming shared CRS and resolution).
+- Extraction and validation of per-tile label arrays.
+- Global label discovery and remapping to a compact index space.
+- Tile filtering based on valid pixel ratios.
+- Computation of majority class statistics per tile.
+- Construction of normalized class-frequency vectors.
+- Dimensionality reduction via PCA to produce compact feature vectors.
 
-Persistence is handled through JSON payloads and JSON metadata files.
-A schema identifier ('domain_tile_map_payload/v1') and SHA256 hash ensure
-compatibility and integrity upon reload.
+The resulting `DomainTileMap` provides a reproducible mapping from grid
+coordinates to domain descriptors, enabling consistent conditioning,
+feature engineering, and cross-dataset alignment.
 
-Tile coordinates follow grid conventions: (x_px, y_px) pixel-origin
-coordinates relative to the grid origin. All mapping operations preserve
-this stable coordinate space, which enables reproducible conditioning and
-cross-dataset alignment.
+Persistence is supported via JSON payloads with schema versioning and
+integrity checks.
 '''
 
 # standard imports
 from __future__ import annotations
 import collections.abc
-import dataclasses
 import typing
-# third-party imports
-import numpy
-# local imports
-import landseg.geopipe.foundation.common.alias as alias
-import landseg.geopipe.foundation.domain_maps as domain_maps
-import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
-class DomainTile(typing.TypedDict):
-    '''Per-tile domain descriptors stored in a `DomainTileMap`.'''
-    majority: int | None
-    major_freq: float | None
-    pca_feature: list[float] | None
-
 class DomainPayload(typing.TypedDict):
-    '''Serializable payload for `DomainTileMap` persistence.'''
-    blk_size: list[int]
-    blk_overlap: list[list[int]]
-    idx_range: list[int]
-    context: dict[str, typing.Any]
-    valid_idx: list[list[int]]
-    tiles: dict[str, typing.Any]
+    '''
+    Serializable artifact for `DomainTileMap`.
 
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _DomainContext:
-    '''Run-time context and summary statistics for a `DomainTileMap`.'''
+    This follows the standard artifact contract:
+
+        {
+            "schema_id": str,
+            "artifact_meta": _DomainMetadata,
+            "data": dict[str, DomainTile]
+        }
+
+    The DomainTileMap stores per-tile domain features computed from a
+    categorical raster aligned to a world grid. The mapping is spatially
+    indexed and typically used for downstream conditioning or feature
+    extraction.
+
+    Fields:
+
+    - **schema_id**:
+        Versioned identifier describing the serialization contract.
+    - **artifact_meta**:
+        Lightweight derived metadata summarizing dataset-level statistics
+        and transformation results (e.g., PCA configuration and class
+        frequency summaries).
+    - **data**:
+        Mapping of string-encoded tile coordinates ('x,y') to `DomainTile`
+        feature descriptors.
+    '''
+    schema_id: str
+    artifact_meta: DomainMeta
+    data: dict[str, DomainTile]
+
+class DomainMeta(typing.TypedDict):
+    '''Lightweight metadata describing a `DomainTileMap` artifact.'''
+    world_grid_ids: list[str]
     valid_threshold: float
     target_variance: float
+    max_index: int
     major_freq_mean: float
     major_freq_min: float
     pca_axes_n: int
     explained_variance: float
+
+class DomainTile(typing.TypedDict):
+    '''
+    Typed dictionary representing per-tile domain descriptors.
+
+    Each tile captures summary statistics and optional feature vectors
+    derived from its underlying categorical label distribution.
+
+    Fields:
+
+    - **majority**:
+        Integer class ID of the dominant class in the tile, or None if
+        the tile is invalid or filtered out.
+
+    - **major_freq**:
+        Fraction of pixels belonging to the majority class, or None if
+        unavailable.
+
+    - **pca_feature**:
+        Low-dimensional feature vector derived from PCA on the tile's
+        normalized class-frequency distribution, or None if not computed.
+    '''
+    majority: int | None
+    major_freq: float | None
+    pca_feature: list[float] | None
 
 # --------------------------------Public  Class--------------------------------
 class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     '''
     Mapping from world-grid tile coordinates to per-tile domain features.
 
-    A `DomainTileMap` materializes domain knowledge over a fixed world
-    grid. It aligns the grid to a categorical raster, remaps raw labels
-    to a compact [0..K-1] space, filters tiles by valid-pixel fraction,
-    computes majority statistics, derives normalized class-frequency
-    vectors, and projects them via PCA to reach a target explained
-    variance.
+    A `DomainTileMap` represents a spatially indexed collection of
+    domain descriptors derived from a categorical raster. Each tile is
+    associated with summary statistics and optional feature vectors that
+    characterize its class distribution.
 
-    Key space:
-    - (x_px, y_px) pixel-origin coordinates relative to the grid origin.
+    Key characteristics:
+        - Stable coordinate system using (x_px, y_px) pixel origins
+        - Consistent label remapping to a compact index space
+        - Filtering of low-quality tiles based on valid pixel ratios
+        - Per-tile majority class statistics
+        - PCA-based dimensionality reduction of class distributions
 
-    Schema:
-        SCHEMA_ID = 'domain_tile_map_payload/v2'
+    The mapping behaves like a read-only dictionary from coordinate
+    tuples to `DomainTile` entries, while allowing controlled internal
+    population.
+
+    **Schema**: `SCHEMA_ID` = `'domain_tile_map_payload/v1'`
     '''
 
-    # current schema
-    SCHEMA_ID: str = 'domain_tile_map_payload/v2'
+    # current payload schema
+    SCHEMA_ID: str = 'domain_tile_map_payload/v1'
 
-    def __init__(
-        self,
-        valid_threshold: float,
-        target_variance: float,
-        logger: utils.Logger
-    ) -> None:
+    def __init__(self) -> None:
         '''
-        Build a `DomainTileMap` from categorical raster and world grid.
+        Initialize an empty `DomainTileMap`.
 
-        Args:
-            domain_fpath: Path to a single-band integer raster of class
-                labels. Its CRS and pixel size must match those of
-                `world_grid`.
-            world_grid: A grid.GridLayout instance that defines tile
-                windows. The grid is deep-copied and aligned to
-                `domain_fpath` via an integer pixel offset before reads.
-            context: `DomainContext` carrying thresholds and PCA target
-                variance. This object is updated in-place with statistics
-                collected during build.
-            logger: Logger for progress and summary messages.
+        The instance is created with default metadata and an empty
+        internal mapping. Population is expected to occur via external
+        construction logic or helper class methods such as
+        `from_json_payload()` or `from_dict()`.
 
-        Notes:
-        The constructor reads all tile windows, performs label discovery
-        and remapping, filters tiles by 'valid_threshold', computes
-        majority statistics, runs PCA on normalized frequency vectors,
-        and stores results in the internal mapping.
+        Notes: This constructor does not perform any raster processing.
         '''
 
         # init attrs
-        self._ctx = _DomainContext(
-            valid_threshold=valid_threshold,
-            target_variance=target_variance,
-            major_freq_mean = 0.0,
-            major_freq_min = 1.0,
-            pca_axes_n = 0,
-            explained_variance = 0.0
-        )
-        self.index_range: tuple[int, int]
-        self.blk_size: tuple[int, int]
-        self.blk_overlaps: list[tuple[int, int]]
-        self._valid: list[tuple[int, int]] = []
+        self.meta: DomainMeta = {
+            'world_grid_ids': [],
+            'valid_threshold': 1.0,
+            'target_variance': 1.0,
+            'max_index': -1,
+            'major_freq_mean': 0.0,
+            'major_freq_min': 1.0,
+            'pca_axes_n': 0,
+            'explained_variance': 0.0,
+        }
         self._data: dict[tuple[int, int], DomainTile] = {}
-        self.logger = logger
-
-    @property
-    def max_id(self) -> int:
-        '''Gloabl max index.'''
-        return self.index_range[1]
-
-    @property
-    def n_pca_ax(self) -> int:
-        '''Number of PCA axes that achieves target variance.'''
-        return self._ctx.pca_axes_n
 
     # ----- container protocol
     def __getitem__(self, idx: tuple[int, int]) -> DomainTile:
@@ -182,169 +184,109 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         return iter(self._data)
 
     def __len__(self) -> int:
-        return len(self._valid)
+        return len(self._data)
 
     # ----- representation
     def __str__(self) -> str:
         return '\n'.join([
             'Domain details:',
-            f'Tile filtering threshold: {self._ctx.valid_threshold:.2f}',
-            f'Number of valid domain tiles: {len(self)}',
-            f'Mean frequency of major class: {self._ctx.major_freq_mean:.2f}',
-            f'Min frequency of major class {self._ctx.major_freq_min:.2f}',
-            f'Target PCA variance: {self._ctx.target_variance}',
-            f'PCA axes count: {self._ctx.pca_axes_n}',
-            f'PCA variance explained: {self._ctx.explained_variance:.2f}',
+            f'Tile filtering threshold:  {self.meta["valid_threshold"]:.2f}',
+            f'Number of domain tiles:    {len(self)}',
+            f'Mean freq. of major class: {self.meta["major_freq_mean"]:.2f}',
+            f'Min freq. of major class   {self.meta["major_freq_min"]:.2f}',
+            f'Target PCA variance:       {self.meta["target_variance"]}',
+            f'PCA axes count:            {self.meta["pca_axes_n"]}',
+            f'PCA variance explained:    {self.meta["explained_variance"]:.2f}'
         ])
 
-    # ----- public method
-    def to_payload(self) -> DomainPayload:
-        '''Generate class payload for json dump.'''
+    # ----- property
+    @property
+    def max_id(self) -> int:
+        '''Return the maximum label index across all tiles.'''
+        return self.meta['max_index']
 
-        # sanity checks and return payload
-        assert self._ctx.major_freq_mean > 0.0
-        assert self._ctx.major_freq_min < 1.0
-        assert self._ctx.pca_axes_n > 0
-        assert self._ctx.explained_variance > 0.0
-        return {
-            'blk_size': list(self.blk_size),
-            'blk_overlap': [list(o) for o in self.blk_overlaps],
-            'idx_range': list(self.index_range),
-            'context': dataclasses.asdict(self._ctx),
-            'valid_idx': [list(x) for x in self._valid],
-            'tiles': {f'{k[0]},{k[1]}': v for k, v in self._data.items()}
-        }
+    @property
+    def n_pca_ax(self) -> int:
+        '''Return the number of PCA components retained.'''
+        return self.meta['pca_axes_n']
 
+    # ----- alternative constructor
     @classmethod
-    def from_payload(cls, payload: DomainPayload) -> DomainTileMap:
-        '''Instantiate the class with input payload.'''
+    def from_json_payload(cls, payload: DomainPayload) -> DomainTileMap:
+        '''
+        Reconstruct a `DomainTileMap` from a JSON payload.
 
-        def _to_xy_tuple(inputs: list[int] | str) -> tuple[int, int]:
-            # [1, 2] | '1,2' -> (1, 2)
-            if isinstance(inputs, str):
-                output = tuple(int(x.strip()) for x in inputs.split(','))
-                assert len(output) == 2
-                return output
-            assert len(inputs) == 2
-            assert all(isinstance(x, int) for x in inputs)
-            return inputs[0], inputs[1]
+        Args:
+            payload:
+                Dictionary containing serialized metadata and tile data.
 
-        # create empty GridLayout instance
+        Returns:
+            A populated `DomainTileMap` instance.
+
+        Notes: Tile coordinate keys are converted from "x,y" strings back
+        into (x, y) integer tuples.
+        '''
+
+        def _xy_tuple(inputs: str) -> tuple[int, int]: # e.g., '1,2' -> (1, 2)
+            output = tuple(int(x.strip()) for x in inputs.split(','))
+            assert len(output) == 2
+            return output
+
+        # create empty DomainTile instance
         obj = cls.__new__(cls) # skip __init__()
         # populate attributes from payload as needed
-        obj.blk_size = _to_xy_tuple(payload['blk_size'])
-        obj.blk_overlaps = [_to_xy_tuple(o) for o in payload['blk_overlap']]
-        obj.index_range = _to_xy_tuple(payload['idx_range'])
-        obj._ctx = _DomainContext(**payload['context'])
-        obj._valid = [_to_xy_tuple(x) for x in payload['valid_idx']]
-        obj._data = {_to_xy_tuple(k): v for k, v in payload['tiles'].items()}
+        obj.meta = payload['artifact_meta']
+        obj._data = {_xy_tuple(k): v for k, v in payload['data'].items()}
         # return class object
         return obj
 
-    def build(self,
-        block_size: tuple[int, int],
-        block_overlap: tuple[int, int],
-        index_range: tuple[int, int],
-        raster_tiles: alias.RasterTileDict
-    ) -> None:
+    @classmethod
+    def from_dict(cls, tiles: dict[tuple[int, int], DomainTile]) -> DomainTileMap:
         '''
-        Compute per-tile statistics and PCA features, and fill the map.
+        Construct a `DomainTileMap` from an in-memory dictionary.
 
-        Steps:
-        1) Initialize a DomainTile template for each tile.
-        2) Select valid tiles using 'valid_threshold'.
-        3) For valid tiles, compute 'majority' and 'major_freq' and
-            update 'major_freq_min' and 'major_freq_mean' in the context.
-        4) Build normalized frequency vectors for valid tiles, run
-            PCA to reach 'target_variance', and store 'pca_feature' per
-            valid tile.
+        Args:
+            tiles:
+                Dictionary mapping (x, y) coordinate tuples to
+                `DomainTile` entries.
+
+        Returns:
+            A `DomainTileMap` instance containing the provided data.
+
+        Notes: Metadata is initialized with default values and should be
+        updated separately if needed.
         '''
 
-        # early exit if all input tiles are already in map
-        if set(raster_tiles.keys()).issubset(set(self._data.keys())):
-            self.logger.log('INFO', 'Input tiles already mapped, exit build')
-            return
+        # create empty DomainTile instance
+        self = cls() # don't skip __init__() - need an empty meta dict
+        # populate self._data
+        self._data = tiles
+        # return class object
+        return self
 
-        # args directly to attrs - if no attrs present this is a new map
-        if not hasattr(self, 'index_range'):
-            self.index_range = index_range
-        if not hasattr(self, 'blk_size'):
-            self.blk_size = block_size
-        if not hasattr(self, 'blk_overlaps'):
-            self.blk_overlaps = [block_overlap]
-        else:
-            self.blk_overlaps.append(block_overlap)
-        print(self.blk_overlaps)
+    # ----- public method
+    def to_json_payload(self) -> DomainPayload:
+        '''
+        Convert the mapping to a JSON-serializable payload.
 
-        # first iteration to get indices of valid tiles and index range
-        self.logger.log('INFO', 'Filter input raster tiles')
-        for c, tile in raster_tiles.items():
-            if c in self._data: # skip keys that already in data
-                continue
-            # add all to self._data
-            self._data[c] = {
-                'majority': None,
-                'major_freq': None,
-                'pca_feature': None,
-            }
-            if _is_valid(tile, self._ctx.valid_threshold):
-                # add to valid coordinates list
-                self._valid.append(c)
+        This includes both global metadata and per-tile descriptors,
+        with tile coordinates encoded as strings.
 
-        # get majority index for valid tiles - calc here
-        self.logger.log('INFO', 'Calculate majority class from new tiles')
-        for c in set(raster_tiles.keys()):
-            if c in self._data: # skip keys that already in data
-                continue
-            tile = raster_tiles[c]
-            values, counts = numpy.unique(tile, return_counts=True)
-            # update domain tile dict
-            major = values[numpy.argmax(counts)].item() # serializable
-            freq = counts[numpy.argmax(counts)] / sum(counts)
-            self._data[c].update({'majority': major, 'major_freq': freq})
-            # update major_freq stats
-            self._ctx.major_freq_min = min(self._ctx.major_freq_min, freq)
-            self._ctx.major_freq_mean += freq
-        self._ctx.major_freq_mean /= len(self._valid)
+        Returns:
+            A `DomainPayload` dictionary suitable for JSON serialization.
 
-        # get pca transform for valid tiles - calc delegated to transform.py
-        self.logger.log('INFO', 'PCA transforming all valid tiles')
-        freqs: dict[tuple[int, int], numpy.ndarray] = {}
-        for c in self._valid: # calculate on all valid tiles
-            tile = raster_tiles[c]
-            freqs[c] = _norm_freq(tile, (self.index_range))
-        # get full pca
-        z, evr, k = domain_maps.pca_transform(freqs, self._ctx.target_variance)
-        self._ctx.explained_variance = evr
-        self._ctx.pca_axes_n = k
-        # assign to each valid tile
-        for c in self._valid:
-            tile = raster_tiles[c]
-            self._data[c].update({'pca_feature': [float(x) for x in z[c]]})
+        Raises:
+            AssertionError:
+                If required metadata fields are not properly populated.
+        '''
 
-# ------------------------------private  function------------------------------
-def _norm_freq(
-    arr: numpy.ndarray,
-    index_range: tuple[int, int],
-) -> numpy.ndarray:
-    '''Get a normalized class frequency vector from the array.'''
-
-    # get frequencies of valid elements
-    valid = arr[arr != -1]
-    values, counts = numpy.unique(valid, return_counts=True)
-    frequencies = counts / counts.sum()
-    # map class value to frequency
-    freq_map = dict(zip(values, frequencies))
-    i, j = index_range
-    return numpy.array([freq_map.get(idx, 0.0) for idx in range(i, j + 1)])
-
-def _is_valid(
-    arr: numpy.ndarray,
-    threshold: float
-) -> bool:
-    '''Return True if fraction of valid pixels >= threshold.'''
-
-    valid = arr != -1
-    if valid.size == 0:
-        return False
-    return float(valid.mean()) >= float(threshold)
+        # sanity checks and return payload
+        assert self.meta['major_freq_mean'] > 0.0
+        assert self.meta['major_freq_min'] < 1.0
+        assert self.meta['pca_axes_n'] > 0
+        assert self.meta['explained_variance'] > 0.0
+        return {
+            'schema_id': self.SCHEMA_ID,
+            'artifact_meta': self.meta,
+            'data': {f'{k[0]},{k[1]}': v for k, v in self._data.items()}
+        }

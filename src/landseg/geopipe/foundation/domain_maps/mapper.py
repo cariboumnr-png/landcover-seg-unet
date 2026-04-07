@@ -28,31 +28,20 @@ for downstream domain-feature constructio
 '''
 
 # third-party imports
-import dataclasses
 import numpy
-import rasterio
 # local imports
-import landseg.geopipe.core as core
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
+import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
-
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _DomainTilesPackage:
-    '''Container for domain tiles mapped to a world grid.'''
-    block_size: tuple[int, int]
-    block_overlap: tuple[int, int]
-    index_range: tuple[int, int]
-    tiles_dict: alias.RasterTileDict
 
 # -------------------------------Public Function-------------------------------
 def map_domain_to_grid(
-    grid: core.GridLayout,
+    world_grid: geo_core.GridLayout,
     raster_path: str,
-    logger: utils.Logger,
-    *,
     index_base: int,
-) -> _DomainTilesPackage:
+    logger: utils.Logger,
+) -> alias.RasterTileDict:
     '''
     Map a domain raster onto a world grid and re-index labels.
 
@@ -79,33 +68,34 @@ def map_domain_to_grid(
 
     logger.log('INFO', 'Mapping domain onto input world grid')
     # read domain raster and get arrays indexed to the grid tiles
-    tiles, nodata = _read_raster(grid, raster_path)
+    tiles, nodata = _read_raster(world_grid, raster_path)
 
     logger.log('INFO', 'Generating index mapping')
     # global mapping: raw i..K  ->  0..K-1 ----
-    index_mapping = _get_index_mapping(tiles, nodata, index_base)
+    idx_map = _get_index_mapping(tiles, nodata, index_base)
 
     logger.log('INFO', 'Re-indexing domain to [0...k-1]')
     # Map each block: valid raw -> index in [0..K-1], nodata -> -1
-    re_indexed_tiles = _re_index(tiles, nodata, index_mapping)
+    _tiles = _re_index(tiles, nodata, idx_map)
+
+    # encode the max index (k-1) to the return dict for later quick access
+    shape = world_grid.tile_size
+    max_idx = idx_map.size - 1
+    _tiles[(-999, -999)] = numpy.full(shape, max_idx, dtype=numpy.int16)
 
     logger.log('INFO', 'Domain mapped onto input world grid')
-    return _DomainTilesPackage(
-        block_size=grid.tile_size,
-        block_overlap=grid.tile_overlap,
-        index_range=(0, index_mapping.size - 1),
-        tiles_dict=re_indexed_tiles
-    )
+    return _tiles
 
 # ------------------------------private  function------------------------------
 def _read_raster(
-    grid: core.GridLayout,
-    raster_path: str,
+    grid: geo_core.GridLayout,
+    fpath: str,
 ) -> tuple[alias.RasterTileDict, int]:
     '''Read a raster over all grid windows.'''
 
     # open domain raster
-    with rasterio.open(raster_path) as src:
+    with geo_utils.open_rasters(fpath) as (src,):
+        assert src
         # offset the world grid to align with input raster
         grid.offset_from(src)
         # infer dtype and nodata
@@ -117,19 +107,26 @@ def _read_raster(
         assert abs(nodata - round(nodata)) < 1e-9 # sanity check: nodata is int
 
     # read through all windows via multiprocessing
-    jobs = [(_read_window, (k, v, raster_path), {}) for k, v in grid.items()]
+    jobs = [(_read, (k, v, fpath, grid.tile_size), {})for k, v in grid.items()]
     all_tiles: list[alias.RasterTile] = utils.ParallelExecutor().run(jobs)
+    all_tiles = [(_, t) for (_, t) in all_tiles if t.sum() != 0] # filter
     return dict(all_tiles), nodata
 
-def _read_window(
+def _read(
     raster_window_id: tuple[int, int],
     raster_window: alias.RasterWindow,
-    raster_fpath: str
+    raster_fpath: str,
+    expected_h_w: tuple[int, int]
 ) -> alias.RasterTile:
     '''Read a single raster window and return its first band.'''
 
+    # if arr is not of expected H, W return an empty array
+    if not (raster_window.height, raster_window.width) == expected_h_w:
+        return raster_window_id, numpy.array([])
+
     # read raster at window and return
-    with rasterio.open(raster_fpath, 'r') as src:
+    with geo_utils.open_rasters(raster_fpath) as (src,):
+        assert src, f'Invalid domain raster source: {raster_fpath}'
         arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
         arr = arr.astype(numpy.int16, copy=False) # avoids OOM
         return raster_window_id, arr

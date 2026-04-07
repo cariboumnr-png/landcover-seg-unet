@@ -34,6 +34,7 @@ More detailed documentation available here:
 
 ---
 
+
 ## ▶️ Usage
 
 Before running any experiment, you must prepare your input rasters and organize
@@ -41,21 +42,64 @@ your project folder correctly. Please start by reading the data‑preparation gu
 
 📄 [**Data preparation guide**](./docs/data_preparation.md)
 
-Once your rasters and folders are ready, configure your experiment using the
-root‑level `settings.yaml`. This file provides a safe place for users to specify
-inputs without modifying the internal Hydra configuration tree.
+Once your rasters and folders are ready, configure your project using the
+root‑level `settings.yaml`. This file provides a stable entry point for specifying
+inputs and processing options without modifying the internal Hydra configuration
+tree.
 
 Install the framework:
 
     pip install .
 
-Run a full experiment:
+---
 
-    experiment_run profile=end_to_end
+### Pipeline stages
 
-Run an overfit silo test:
+This project runs through **explicit, consecutive pipeline stages**.
+Each stage produces or consumes well‑defined artifacts governed by explicit
+lifecycle policies.
 
-    experiment_run profile=overfit_test
+#### 1. Data ingestion
+
+Process raw rasters into **stable, catalogued data blocks** aligned to a world
+grid and persisted as reusable foundation artifacts:
+
+    experiment_run pipeline=ingest-data
+
+This stage typically needs to be run **once per dataset**, unless the input
+rasters or grid configuration change.
+
+---
+
+#### 2. Experiment‑scoped data preparation
+
+Prepare experiment‑specific artifacts (dataset splits, normalization, statistics,
+schemas) from previously ingested data blocks:
+
+    experiment_run pipeline=prepare-data
+
+This stage may be rerun with different experiment configurations without
+re‑ingesting raw data.
+
+---
+
+#### 3. Model training
+
+Run a complete training job using the currently prepared dataset artifacts:
+
+    experiment_run pipeline=train-model
+
+This stage consumes prepared artifacts but does not modify foundation data.
+
+---
+
+#### 4. Overfit silo test (optional)
+
+Run a minimal overfit test on a small subset to validate the end‑to‑end stack.
+This pipeline **does not require prior ingestion or preparation**:
+
+    experiment_run pipeline=train-overfit
+
 
 >🔔 These commands execute Hydra configurations from `src/landseg/configs/`. These
 internal files control the framework’s behavior and should only be modified by

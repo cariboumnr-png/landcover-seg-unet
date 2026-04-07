@@ -27,6 +27,7 @@ the immutable raw block catalogue for later experiments.
 '''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
 import landseg.utils as utils
@@ -49,13 +50,15 @@ def ingest(config: configs.RootConfig):
     logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')
 
     # config aliases
-    grid_cfg = config.foundation.grid
     domain_cfg = config.foundation.domains
+    grid_cfg = config.foundation.grid
     datablocks_cfg = config.foundation.datablocks
-    out_root = config.foundation.output_dpath
+
+    # artifact paths
+    paths = artifacts.FoundationPaths(config.foundation.output_dpath)
 
     # world grid
-    _config = foundation.GridParameters(
+    grid_config = foundation.GridParameters(
         mode=grid_cfg.mode, # type: ignore
         crs=grid_cfg.crs,
         ref_fpath=grid_cfg.extent.filepath,
@@ -63,34 +66,65 @@ def ingest(config: configs.RootConfig):
         pixel_size=grid_cfg.extent.pixel_size,
         grid_extent=grid_cfg.extent.grid_extent,
         grid_shape=grid_cfg.extent.grid_shape,
-        tile_specs=(
-            grid_cfg.tile_specs.size_row,
-            grid_cfg.tile_specs.size_col,
-            grid_cfg.tile_specs.overlap_row,
-            grid_cfg.tile_specs.overlap_row
-        ),
+        tile_specs=grid_cfg.tile_specs_tuple,
     )
-    grids_dir=f'{out_root}/world_grids'
-    grid = foundation.build_world_grid(_config, grids_dir, logger)
+    grid = foundation.prepare_world_grid(
+        logger,
+        paths.grids.fpath(grid_cfg.tile_specs_tuple),
+        grid_config,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
 
-    # domains
-    _config = foundation.DomainBuildingParameters(
-        file_list=[(d.path, d.index_base) for d in domain_cfg.files],
+    # domain maps
+    domain_config = [
+        foundation.DomainBuildingParameters(
+        input_fpath=dom.path,
+        domain_fpath=paths.domains.domain_map_fpath(dom.name),
+        tiles_fpath=paths.domains.mapped_tiles_fpath(dom.name, grid.gid),
+        index_base=dom.index_base,
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
+        ) for dom in domain_cfg.files
+    ]
+    foundation.prepare_domain_maps(
+        logger,
+        grid,
+        domain_config,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
-    domains_dir=f'{out_root}/domain_knowledge'
-    foundation.build_domains(grid, _config, domains_dir, logger)
 
-    # datablocks building
-    _config = foundation.BlockBuildingParameters(
-        dev_image_fpath=datablocks_cfg.filepaths.dev_image,
-        dev_label_fpath=datablocks_cfg.filepaths.dev_label,
-        test_image_fpath=datablocks_cfg.filepaths.test_image,
-        test_label_fpath=datablocks_cfg.filepaths.test_label,
+    # dev data blocks
+    data_blocks_config = foundation.BlockBuildingParameters(
+        image_fpath=datablocks_cfg.filepaths.dev_image,
+        label_fpath=datablocks_cfg.filepaths.dev_label,
         data_config_fpath=datablocks_cfg.filepaths.config,
         dem_pad=datablocks_cfg.general.image_dem_pad,
         ignore_index=datablocks_cfg.general.ignore_index,
     )
-    blocks_dir = f'{out_root}/data_blocks'
-    foundation.run_blocks_building(grid, _config, blocks_dir, logger)
+    foundation.run_blocks_building(
+        logger,
+        grid,
+        paths.data_blocks.dev,
+        data_blocks_config,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
+
+    # test data blocks - if provided
+    if datablocks_cfg.has_test_data:
+        logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
+        data_blocks_config = foundation.BlockBuildingParameters(
+        image_fpath=datablocks_cfg.filepaths.test_image,
+        label_fpath=datablocks_cfg.filepaths.test_label,
+        data_config_fpath=datablocks_cfg.filepaths.config,
+        dem_pad=datablocks_cfg.general.image_dem_pad,
+        ignore_index=datablocks_cfg.general.ignore_index,
+        )
+        foundation.run_blocks_building(
+            logger,
+            grid,
+            paths.data_blocks.test,
+            data_blocks_config,
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        )
+    else:
+        logger.log('INFO', 'Evaluation holdout rasters not provided, exit')

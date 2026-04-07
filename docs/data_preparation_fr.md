@@ -2,7 +2,7 @@
 
 [English](./data_preparation.md) | [Français](./data_preparation_fr.md)
 
-Dernière mise à jour : 2026-03-07
+Dernière mise à jour : 2026-04-07
 
 ---
 
@@ -39,7 +39,7 @@ L’emprise de la grille peut être fournie de deux manières :
 - Définition manuelle utilisant une origine haut‑gauche et un nombre spécifié de tuiles horizontalement et verticalement.
 - Définition via un raster de référence (préférée), où un raster créé dans des outils SIG courants (QGIS, ArcGIS, GDAL) fournit le SCR, la résolution des pixels, l’emprise et l’origine pour construire la grille.
 
-Après la définition de l’emprise du projet, les grilles mondiales sont dérivées de celle‑ci dans le pipeline (module `landseg.grid`) afin de former des schémas de tuilage reproductibles et versionnés utilisés pour toute expérimentation et production.
+Après la définition de l’emprise du projet, les grilles mondiales sont dérivées de celle‑ci dans le pipeline (module `landseg.geopipe.foundation.world_grids`) afin de former des schémas de tuilage reproductibles et versionnés utilisés pour toute expérimentation et production.
 
 [Aller](#tutoriel---créer-un-raster-de-référence) au tutoriel expliquant comment créer un raster de référence dans QGIS.
 
@@ -128,7 +128,6 @@ Ce fichier JSON accompagne les rasters d’entrée. Il définit l’ordre des ba
 | band_map | Définit l’ordre des bandes de l’image composite | Doit être basé sur une indexation à partir de 0 |
 | label_num_classes | Nombre d’identifiants bruts de labels | Tout schéma de numérotation est accepté |
 | label_to_ignore | Labels bruts à exclure | Sera remappé vers ignore_label |
-| ignore_label | Identifiant unifié de la classe ignorée | Typiquement 255 |
 | label_reclass_map | Regroupement parent→enfant des classes (optionnel) | Permet l’apprentissage hiérarchique |
 
 **Exemple:**
@@ -140,7 +139,6 @@ Ce fichier JSON accompagne les rasters d’entrée. Il définit l’ordre des ba
   },
   "label_num_classes": 8,
   "label_to_ignore": [7, 8],
-  "ignore_label": 255,
   "label_reclass_map": {
     "1": [1, 2],
     "2": [3, 4],
@@ -207,16 +205,16 @@ Le système attend **exactement** la structure suivante :
 ```
 <exp_root>/                           # emplacement choisi par l'utilisateur
 ├── input/
-│   ├── extent_ref/
+│   ├── extent_reference/
 │   │    └── example_extent.tif
 │   │
-│   ├── domain/
+│   ├── domain_knowledge/
 │   │    └── example_domain_1.tif
 │   │    └── example_domain_2.tif
 │   │    └── ... (vous pouvez en ajouter d'autres)
 │   │
 │   └── <dataset_name>/               # nom de dataset défini par l'utilisateur
-│        ├── fit/
+│        ├── dev/
 │        │    ├── example_image.tif
 │        │    └── example_label.tif
 │        │
@@ -224,33 +222,33 @@ Le système attend **exactement** la structure suivante :
 │        │    ├── example_image.tif
 │        │    └── example_label.tif
 │        │
-│        └── configs/
-│             └── example_config.json
+│        └── example_config.json
+...
 ```
 
 Cette structure prévisible permet au pipeline de **localiser automatiquement** les données d’entraînement, les labels, les rasters de domaine et les fichiers de configuration, sans que l’utilisateur ait à spécifier manuellement les chemins.
 
 ### Résumé du rôle des dossiers
 
-- **extent_ref/**
+- **extent_reference/**
   Contient un raster de référence unique qui définit le **SCR (CRS) du projet, la taille des pixels, l’origine et l’étendue**.
   Tous les autres rasters doivent être **alignés sur ce fichier**.
 
-- **domain/**
+- **domain_knowledge/**
   Contient un nombre quelconque de *rasters de domaine* utilisés comme couches **catégorielles ou contextuelles**.
   Ces fichiers sont traités comme une bibliothèque ; le modèle n’en utilise qu’un pour les **valeurs d’ID** et un pour les **valeurs vectorielles**, sélectionnés ultérieurement dans le fichier de configuration.
 
 - **<dataset_name>/**
   Un dossier nommé par l’utilisateur contenant les rasters utilisés pour **l’entraînement et les tests**.
 
-  - **fit/**
+  - **dev/**
     Contient les rasters d’image et de label utilisés pour **l’entraînement du modèle**.
 
   - **test/** (optionnel)
     Contient les rasters d’image et de label utilisés pour **l’évaluation ou la validation**.
 
-  - **configs/**
-    Contient la **configuration JSON** qui définit l’ordre des bandes, la gestion des labels et l’éventuel **regroupement hiérarchique parent–enfant des classes**.
+  - **/config.json**
+    La **configuration JSON** qui définit l’ordre des bandes, la gestion des labels et l’éventuel **regroupement hiérarchique parent–enfant des classes**.
 
 ### Règles importantes
 

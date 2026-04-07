@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.transform.schema_build`.
+Top-level namespace for `landseg.geopipe.utils`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -33,17 +33,24 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_schema',
+    'name_xy',
+    'open_rasters',
+    'xy_name',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_schema
+    from .coords_str import name_xy, xy_name
+    from .raster_context import open_rasters
+
 
 def __getattr__(name: str):
 
-    if name in {'build_schema'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'name_xy', 'xy_name'}:
+        return getattr(importlib.import_module('.coords_str', __package__), name)
+
+    if name in {'open_rasters'}:
+        return getattr(importlib.import_module('.raster_context', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -37,47 +37,48 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
-    'name_xy',
-    'open_rasters',
-    'xy_name',
     # typing
-    'BlockMeta',
-    'BlocksCatalog',
+    'DataBlockMeta',
+    'DataCatalog',
+    'DataSchema',
     'BlocksPartition',
     'CatalogEntry',
-    'CatalogMeta',
-    'GridLayoutPayload',
+    'DomainMeta',
+    'DomainPayload',
+    'DomainTile',
+    'GridPayload',
+    'GridMeta',
     'ImageBandStats',
     'TransformSchema',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .foundation_catalog import BlocksCatalog,  CatalogEntry, CatalogMeta
-    from .foundation_data_block import BlockMeta, DataBlock
-    from .foundation_domain_map import DomainTileMap
-    from .foundation_world_grid import GridLayout, GridLayoutPayload, GridSpec
+    from .foundation_data_block import DataBlock, DataBlockMeta
+    from .foundation_data_catalog import DataCatalog, CatalogEntry
+    from .foundation_data_schema import DataSchema
+    from .foundation_domain_map import DomainPayload, DomainMeta, DomainTile, DomainTileMap
+    from .foundation_world_grid import GridSpec, GridPayload, GridMeta, GridLayout
     from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
-    from .utils import name_xy, xy_name, open_rasters
 
 def __getattr__(name: str):
 
-    if name in {'BlockMeta', 'DataBlock'}:
+    if name in {'DataBlockMeta', 'DataBlock'}:
         return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
-    if name in {'BlocksCatalog', 'CatalogMeta', 'CatalogEntry'}:
-        return getattr(importlib.import_module('.foundation_catalog', __package__), name)
+    if name in {'DataCatalog', 'CatalogEntry'}:
+        return getattr(importlib.import_module('.foundation_data_catalog', __package__), name)
 
-    if name in {'DomainTileMap'}:
+    if name in {'DataSchema'}:
+        return getattr(importlib.import_module('.foundation_data_schema', __package__), name)
+
+    if name in {'DomainPayload', 'DomainMeta', 'DomainTile', 'DomainTileMap'}:
         return getattr(importlib.import_module('.foundation_domain_map', __package__), name)
 
-    if name in {'GridLayout', 'GridLayoutPayload', 'GridSpec'}:
+    if name in {'GridSpec', 'GridPayload', 'GridMeta', 'GridLayout'}:
         return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
 
     if name in {'BlocksPartition', 'ImageBandStats', 'TransformSchema'}:
         return getattr(importlib.import_module('.transform_types', __package__), name)
-
-    if name in {'name_xy', 'open_rasters', 'xy_name'}:
-        return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

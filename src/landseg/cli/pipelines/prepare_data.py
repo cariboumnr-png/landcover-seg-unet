@@ -27,6 +27,7 @@ statistics, normalizes all splits, and emits the final dataset schema.
 '''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe.transform as transform
 import landseg.utils as utils
@@ -49,33 +50,50 @@ def prepare(config: configs.RootConfig):
 
     # config aliases
     # data foundation
-    foundation_root = f'{config.foundation.output_dpath}/data_blocks'
     grid = config.foundation.grid
     # data transform
-    transform_root = config.transform.output_dpath
     partition = config.transform.partition
     scoring = config.transform.scoring
     hydration = config.transform.hydration
 
+    # artifact paths
+    foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
+    transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
+
     # datablocks partition
-    cfg = transform.PartitionParameters(
+    # parse catalog
+    parsed_catalog = transform.parse_catalog(
+        foundation_paths.data_blocks.dev.catalog,
+        foundation_paths.data_blocks.dev.schema,
+        foundation_paths.data_blocks.test.catalog,
+        valid_px_threshold=0.8
+    )
+    # partition config
+    partition_config = transform.PartitionParameters(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
         buffer_step=partition.buffer_step,
         reward_ratios=scoring.reward,
         scoring_alpha=scoring.alpha,
         scoring_beta=scoring.beta,
         max_skew_rate=hydration.max_skew_rate,
-        block_spec=(
-            grid.tile_size.row,
-            grid.tile_overlap.row,
-            grid.tile_size.col,
-            grid.tile_overlap.col
-        )
+        block_spec=grid.tile_specs_tuple
     )
-    transform.run_datablocks_partition(foundation_root, transform_root, cfg, logger)
+    transform.run_datablocks_partition(
+        logger,
+        transform_paths,
+        parsed_catalog,
+        partition_config,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+    )
 
     # normalize
-    transform.run_normaliza_blocks(transform_root)
+    transform.run_normaliza_blocks(
+        transform_paths,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
 
     # build schema
-    transform.build_schema(transform_root)
+    transform.build_schema(
+        transform_paths,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )

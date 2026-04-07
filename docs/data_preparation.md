@@ -2,7 +2,7 @@
 
 [English](./data_preparation.md) | [Français](./data_preparation_fr.md)
 
-Last updated: 2026-03-07
+Last updated: 2026-04-07
 
 ---
 
@@ -40,7 +40,7 @@ The grid extent can be provided in two ways:
   - Manual definition using a top‑left origin and a specified number of tiles in    the horizontal and vertical directions.
   - Reference‑raster definition (preferred), where a raster created in common GIS tools (QGIS, ArcGIS, GDAL) that supplies the CRS, pixel resolution, extent, and origin to build grid
 
-After project extent is defined, world grids are derived from it during the pipeline (module `landseg.grid`) to form reproducible, versioned tiling schemes used throughout experimentation and production.
+After project extent is defined, world grids are derived from it during the pipeline (module `landseg.geopipe.foundation.world_grids`) to form reproducible, versioned tiling schemes used throughout experimentation and production.
 
 [Jump](#tutorial---create-a-reference-raster) to the tutorial on how to create reference raster in QGIS.
 
@@ -146,7 +146,6 @@ It defines band ordering, label behavior, and (optionally) parent–child groupi
 | band_map | Defines band order of the composite image | Must be 0‑based |
 | label_num_classes | Number of raw label IDs | Any numbering scheme allowed |
 | label_to_ignore | Raw labels to exclude | Will be mapped to ignore_label |
-| ignore_label | Unified ignore class ID | Typically 255 |
 | label_reclass_map | Parent→child class grouping (optional) | Enables hierarchical training |
 
 **Example:**
@@ -158,7 +157,6 @@ It defines band ordering, label behavior, and (optionally) parent–child groupi
   },
   "label_num_classes": 8,
   "label_to_ignore": [7, 8],
-  "ignore_label": 255,
   "label_reclass_map": {
     "1": [1, 2],
     "2": [3, 4],
@@ -225,16 +223,16 @@ they are expected to follows a fixed and predictable folder structure. The syste
 ```
 <exp_root>/                                 # user-picked location
 ├── input/
-│   ├── extent_ref/
+│   ├── extent_reference/
 │   │    └── example_extent.tif
 │   │
-│   ├── domain/
+│   ├── domain_knowledge/
 │   │    └── example_domain_1.tif
 │   │    └── example_domain_2.tif
 │   │    └── ... (you may add more)
 │   │
 │   └── <dataset_name>/                     # user-defined dataset name
-│        ├── fit/
+│        ├── dev/
 │        │    ├── example_image.tif
 │        │    └── example_label.tif
 │        │
@@ -242,8 +240,8 @@ they are expected to follows a fixed and predictable folder structure. The syste
 │        │    ├── example_image.tif
 │        │    └── example_label.tif
 │        │
-│        └── configs/
-│             └── example_config.json
+│        └── example_config.json
+...
 ```
 
 This predictable structure allows the pipeline to automatically locate training
@@ -252,11 +250,11 @@ manually specify paths.
 
 ### Folder Purpose Summary
 
-- **extent_ref/**
+- **extent_reference/**
   Contains a single reference raster that defines the project CRS, pixel size,
   origin, and extent. All other rasters must be aligned to this file.
 
-- **domain/**
+- **domain_knowledge/**
   Contains any number of *domain rasters* used as categorical or contextual
   layers. These files are treated as a library; the model uses only one for ID
   values and one for vector values, selected later in the configuration file.
@@ -264,15 +262,14 @@ manually specify paths.
 - **\<dataset_name\>/**
   A user-named folder containing the rasters used for training and testing.
 
-  - **fit/**
+  - **dev/**
     Contains the image and label rasters used for model training.
 
   - **test/** (optional)
     Contains the image and label rasters for evaluation or validation.
 
-  - **configs/**
-    Contains the JSON configuration that defines band order, label handling, and
-    optional parent–child class grouping.
+  - **/config.json**
+    The JSON configuration that defines band order, label handling, and optional parent–child class grouping.
 
 ### Key Rules
 

@@ -32,16 +32,16 @@ import math
 # third-party imports
 import numpy
 # local imports
+import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.geopipe.core as geocore
-import landseg.utils as utils
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.utils as geo_utils
 
 def build_dataspec(
-    catalog_meta_fpath: str,
-    ids_domain_fpath: str | None,
-    vec_domain_fpath: str | None,
-    transform_schema_fpath: str,
+    artifact_paths: artifacts.ArtifactPaths,
     *,
+    ids_domain_name: str | None = None,
+    vec_domain_name: str | None = None,
     print_out: bool = False
 ):
     '''
@@ -67,31 +67,40 @@ def build_dataspec(
         DataSpecs instance describing dataset structure and artifacts.
     '''
 
+    # artifact fpaths
+    data_schema_fpath = artifact_paths.foundation.data_blocks.dev.schema
+    transform_schema_fpath = artifact_paths.transform.schema
+
     # load artifacts
-    # catalog meta
-    meta: geocore.CatalogMeta = utils.load_json(catalog_meta_fpath)
     # domains
-    if ids_domain_fpath:
-        payload = utils.load_json(ids_domain_fpath)
-        ids_domain = geocore.DomainTileMap.from_payload(payload)
+    _paths = artifact_paths.foundation.domains
+    if ids_domain_name:
+        ids_domain = _load_domain(_paths.domain_map_fpath(ids_domain_name))
     else:
         ids_domain = None
-    if vec_domain_fpath:
-        payload = utils.load_json(vec_domain_fpath)
-        vec_domain = geocore.DomainTileMap.from_payload(payload)
+    if vec_domain_name:
+        vec_domain = _load_domain(_paths.domain_map_fpath(vec_domain_name))
     else:
         vec_domain = None
+
+    # data schema
+    data_ctrl = artifacts.Controller[geo_core.DataSchema].load_json_or_fail
+    data_schema = data_ctrl(data_schema_fpath).fetch()
+    assert data_schema # typing assertion
+
     # transform schema
-    schema: geocore.TransformSchema = utils.load_json(transform_schema_fpath)
+    transform_ctrl = artifacts.Controller[geo_core.TransformSchema].load_json_or_fail
+    transform_schema = transform_ctrl(transform_schema_fpath).fetch()
+    assert transform_schema # typing assertion
 
     # return specs
     specs = core.DataSpecs(
-        name=meta['dataset']['name'],
+        name=data_schema['dataset']['name'],
         mode='default',
-        meta=_get_meta(meta, schema),
-        heads=_get_heads(meta, schema),
-        splits=_get_split(schema),
-        domains=_get_domain(schema, ids_domain, vec_domain)
+        meta=_get_meta(data_schema, transform_schema),
+        heads=_get_heads(data_schema, transform_schema),
+        splits=_get_split(transform_schema),
+        domains=_get_domain(transform_schema, ids_domain, vec_domain)
     )
 
     # print to screen and return
@@ -100,33 +109,46 @@ def build_dataspec(
     return specs
 
 # ------------------------------private  function------------------------------
+def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
+    '''doc'''
+
+    # load payload and meta json
+    D = dict[str, geo_core.DomainTile]
+    M = geo_core.DomainMeta
+    DomainCtrl = artifacts.PayloadController[D, M]
+    schema = geo_core.DomainTileMap.SCHEMA_ID
+    ctrl = DomainCtrl(fp, schema, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
+    payload = ctrl.load()
+    assert payload # typing assertion
+    return geo_core.DomainTileMap.from_json_payload(payload)
+
 def _get_meta(
-    meta: geocore.CatalogMeta,
-    schema: geocore.TransformSchema
+    data_schema: geo_core.DataSchema,
+    schema: geo_core.TransformSchema
 ) -> core.Meta:
     '''Populate `_Meta` dataclass from schema dictionary.'''
 
     # expected tensor sizes
     # per-pixel byte size
-    img_b = numpy.dtype(meta['io_conventions']['dtypes']['image']).itemsize
-    lbl_b = numpy.dtype(meta['io_conventions']['dtypes']['label']).itemsize
+    img_b = numpy.dtype(data_schema['io_conventions']['dtypes']['image']).itemsize
+    lbl_b = numpy.dtype(data_schema['io_conventions']['dtypes']['label']).itemsize
     # total pixels per tensor
-    img_px = math.prod(meta['tensor_shapes']['image']['shape'])
-    lbl_px = math.prod(meta['tensor_shapes']['label']['shape'])
+    img_px = math.prod(data_schema['tensor_shapes']['image']['shape'])
+    lbl_px = math.prod(data_schema['tensor_shapes']['label']['shape'])
 
     # return
     return core.Meta(
-        img_ch=meta['tensor_shapes']['image']['C'],
-        img_h_w=meta['tensor_shapes']['image']['H'],
-        ignore_index=meta['io_conventions']['ignore_index'],
+        img_ch=data_schema['tensor_shapes']['image']['C'],
+        img_h_w=data_schema['tensor_shapes']['image']['H'],
+        ignore_index=data_schema['io_conventions']['ignore_index'],
         img_arr_key=schema['image_array_key'],
         lbl_arr_key=schema['label_array_key'],
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
     )
 
 def _get_heads(
-    meta: geocore.CatalogMeta,
-    schema: geocore.TransformSchema
+    data_schema: geo_core.DataSchema,
+    schema: geo_core.TransformSchema
 ) -> core.Heads:
     '''Populate `_Heads` dataclass from schema dictionary.'''
 
@@ -135,8 +157,8 @@ def _get_heads(
     return core.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
-        head_parent=meta['labels']['channel_parent'],
-        head_parent_cls=meta['labels']['channel_parent_cls']
+        head_parent=data_schema['labels']['channel_parent'],
+        head_parent_cls=data_schema['labels']['channel_parent_cls']
     )
 
 def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
@@ -147,26 +169,26 @@ def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_split(schema: geocore.TransformSchema) -> core.Splits:
+def _get_split(transform_schema: geo_core.TransformSchema) -> core.Splits:
     '''Populate `_Split` dataclass from schema dictionary.'''
 
     return core.Splits(
-        train=schema['train_blocks'],
-        val=schema['val_blocks'],
-        test=schema['test_blocks']
+        train=transform_schema['train_blocks'],
+        val=transform_schema['val_blocks'],
+        test=transform_schema['test_blocks']
     )
 
 def _get_domain(
-    schema: geocore.TransformSchema,
-    ids_domain: geocore.DomainTileMap | None,
-    vec_domain: geocore.DomainTileMap | None
+    transform_schema: geo_core.TransformSchema,
+    ids_domain: geo_core.DomainTileMap | None,
+    vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:
     '''Populate `_Domain` dataclass from schema dictionary.'''
 
     # get file paths
-    train_blocks=schema['train_blocks']
-    val_blocks=schema['val_blocks']
-    test_blocks=schema['test_blocks']
+    train_blocks=transform_schema['train_blocks']
+    val_blocks=transform_schema['val_blocks']
+    test_blocks=transform_schema['test_blocks']
 
     # format domains
     train_domain = __parse_domain(train_blocks, ids_domain, vec_domain)
@@ -183,8 +205,8 @@ def _get_domain(
 
 def __parse_domain(
     input_blocks: dict[str, str],
-    ids_domain: geocore.DomainTileMap | None,
-    vec_domain: geocore.DomainTileMap | None
+    ids_domain: geo_core.DomainTileMap | None,
+    vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains.Dom:
     '''Parse blocks into discrete and vector domain mappings.'''
 
@@ -199,7 +221,7 @@ def __parse_domain(
     # index domain if provided
     if ids_domain:
         for coord, dom in ids_domain.items():
-            blkname = geocore.xy_name(coord)
+            blkname = geo_utils.xy_name(coord)
             if blkname in input_blocks:
                 if dom['majority'] is None or dom['majority'] < 0:
                     output_ids_domain[blkname] = 0 # default value
@@ -209,7 +231,7 @@ def __parse_domain(
     # vector domain if provided
     if vec_domain:
         for coord, dom in vec_domain.items():
-            blkname = geocore.xy_name(coord)
+            blkname = geo_utils.xy_name(coord)
             if blkname in input_blocks:
                 if dom['pca_feature'] is None:
                     output_vec_domain[blkname] = [0.0] * vec_domain.n_pca_ax

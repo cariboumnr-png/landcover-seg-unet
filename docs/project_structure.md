@@ -1,81 +1,48 @@
 ## 📁 Current Project Structure (showing two levels)
 
+Dernière mise à jour : 2026-04-07
+
 ```
 ./src/landseg/
-├── cli/                          [CLI scripts]
-│   ├── main.py                   <- CLI entry point
-│   ├── end_to_end.py             # default profile
-│   └── overfit_test.py           # overfit profile
+├── artifacts/                    [Unified artifact lifecycle & persistence]
+│   ├── controller.py             # policy-driven load/build/rebuild logic
+│   ├── payload_io.py             # structured payload + metadata I/O
+│   ├── paths.py                  # canonical artifact path layout
+│   └── policy.py                 # artifact lifecycle policies
 |
-├── configs/                      [Hydra-based config tree]
-│   ├── inputs/
-│   ├── models/
-│   ├── prep/
-│   ├── profile/
-│   ├── runner/
-│   ├── trainer/
-│   ├── config.yaml               # Hydra configs entry point
-│   └── schema.py                 # dataclass schema with runtim validation
+├── cli/                          [CLI entry point and pipeline dispatch]
+│   ├── main.py                   <- Hydra-based CLI entry
+│   └── pipelines/                # explicit pipeline stages
 |
-├── core/                         [Project level contracts]
-│   ├── ingest_protocols/         # protocols for data schema/domain/data specs
-│   ├── trainer_protocols/        # protocols for trainer componenents/engine
-│   ├── alias.py                  # type aliases
-│   ├── grid_protocol.py          # protocol for grid layout
-│   └── model_protocol.py         # protocol for multihead model framework
+├── configs/                      [Hydra configuration tree]
+│   ├── foundation/               # grid, domain, data-block configs
+│   ├── pipeline/                 # ingest / prepare / train pipelines
+│   ├── models/                   # model configuration
+│   ├── trainer/                  # training runtime configuration
+│   └── schema.py                 # config dataclass validation
 |
-├── grid_generator/               [Generates immutable world grids]
-│   ├── generator.py              <- public module interface
-│   ├── io.py                     # grid artifacts save/load
-│   └── layout.py                 # grid definition
+├── core/                         [Project-level contracts]
+│   ├── data_specs.py             # runtime dataset specification
+│   └── model_protocol.py         # model interface contracts
 |
-├── ingest_dataset/               [Ingest image/label rasters]
-│   ├── blockbuilder/             # build data blocks artifacts (.npz files)
-│   ├── mapper/                   # map input raster to world grid
-│   ├── normalizer/               # normalize image arrays across data blocks
-│   ├── schema/                   # dataset schema JSON definition
-│   ├── splitter/                 # split data blocks into train/val etc.
-│   ├── config.py                 # module runtime config
-│   └── pipeline.py               <- public module interface
-|
-├── ingest_domain/                [Ingest domain knowledge rasters]
-│   ├── io.py                     # domain artifacts save/load
-│   ├── mapper.py                 # map domain rasters to world grid
-│   ├── tilemap.py                # domain map definition
-│   └── transform.py              # domain vector PCA transform utilities
-|
-├── ingest_specs/                 [Generates data specs for trainer dataloader]
-│   ├── builder.py                # data spec building functions
-│   ├── factory.py                <- public module interface
-│   └── validate.py               # validate present schema/prompt to run ingest
+├── geopipe/                      [Geospatial data preparation pipeline]
+│   ├── core/                     # immutable core data structures
+│   ├── foundation/               # grid, domain, block preparation
+│   ├── transform/                # experiment-scoped data transforms
+│   └── specification/            # DataSpecs construction
 |
 ├── models/                       [Model architectures]
-│   ├── backbones/                # currently implemented: UNet, UNet++
+│   ├── backbones/                # UNet, UNet++, etc.
 │   ├── multihead/                # multihead model framework
-│   └── factory.py                <- public module interface
+│   └── factory.py                # model construction
 |
-├── trainer_components/           [Build trainier runtime components]
-│   ├── callback/                 # callback system
-│   ├── dataloading/              # get dataloaders, e.g., train/val/test
-│   ├── heads/                    # get specs for each training head
-│   ├── loss/                     # config loss compute for each head
-│   ├── metrics/                  # config metrics compute for each head
-│   ├── optimization/             # config optimizer & scheduler
-│   └── factory.py                <- public module interface
+├── trainer/                      [Training system]
+│   ├── components/               # losses, metrics, dataloaders
+│   ├── engine/                   # core training loop
+│   └── runner/                   # training orchestration
 |
-├── trainer_engine/               [Core training loop/stage definitions]
-│   ├── utils/                    # utilities, e.g., checkpointing
-│   ├── engine_config.py/         # runtime configuration
-│   ├── engine_state.py/          # runtime state
-│   └── engine.py                 <- public module interface
-|
-├── trainer_runner/               [Training orchestrator]
-│   ├── phase.py/                 # curriculum phases
-│   └── runner.py                 <- public module interface
-|
-└── utils/                        [Project-wide utilities]
-    ├── context.py                # rasterio open raster context
-    ├── funcs.py                  # useful conveniences
-    ├── logger.py                 # custom project logger
-    └── multip.py                 # multiprocessing wrapper
+└── utils/                        [Shared utilities]
+    ├── logger.py                 # project logging
+    ├── funcs.py                  # hashing, JSON, and time helpers
+    └── multip.py                 # multiprocessing helpers
   ```

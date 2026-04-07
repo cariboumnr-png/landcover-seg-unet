@@ -34,24 +34,22 @@ __all__ = [
     'BlockBuilder',
     'BlockBuilderConfig',
     'BlockBuildingParameters',
-    'CatalogUpdateContext',
-    'MappingConfig',
+    'ManifestUpdateContext',
+    'MappedRasterWindows',
     # functions
-    'map_rasters',
+    'map_rasters_to_grid',
     'run_blocks_building',
-    'validate_geometry',
-    'update_catalog',
-    'update_meta',
+    'update_manifest',
     # typing
-    'GeometrySummary',
+    'PipelinePaths',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import BlockBuilder, BlockBuilderConfig
-    from .catalogue import CatalogUpdateContext, update_catalog, update_meta
-    from .geometry import GeometrySummary, validate_geometry
-    from .mapper import MappingConfig, map_rasters
+    from .common import PipelinePaths
+    from .manifest import ManifestUpdateContext, update_manifest
+    from .mapper import MappedRasterWindows, map_rasters_to_grid
     from .pipeline import BlockBuildingParameters, run_blocks_building
 
 def __getattr__(name: str):
@@ -59,13 +57,13 @@ def __getattr__(name: str):
     if name in {'BlockBuilder', 'BlockBuilderConfig'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
-    if name in {'CatalogUpdateContext', 'update_catalog', 'update_meta'}:
-        return getattr(importlib.import_module('.catalogue', __package__), name)
+    if name in {'PipelinePaths'}:
+        return getattr(importlib.import_module('.common', __package__), name)
 
-    if name in {'GeometrySummary', 'validate_geometry'}:
-        return getattr(importlib.import_module('.geometry', __package__), name)
+    if name in {'ManifestUpdateContext', 'update_manifest'}:
+        return getattr(importlib.import_module('.manifest', __package__), name)
 
-    if name in {'MappingConfig', 'map_rasters'}:
+    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
         return getattr(importlib.import_module('.mapper', __package__), name)
 
     if name in {'BlockBuildingParameters', 'run_blocks_building'}:

@@ -73,6 +73,10 @@ class Grid:
         if self.mode not in {'ref', 'aoi', 'tiles'}:
             raise ValueError(f'Invalid mode: {self.mode}')
 
+    @property
+    def tile_specs_tuple(self) -> tuple[int, int, int, int]:
+        return dataclasses.astuple(self.tile_specs)
+
     def validate(self) -> None:
         if not _is_resolved(self.mode):
             return
@@ -156,8 +160,8 @@ class DataBlocks:
         if not self.filepaths.test_image:
             paths.test_image = os.path.join(root, 'test', names.test_image)
         # test label (optional)
-        if not self.filepaths.dev_label:
-            paths.dev_label = os.path.join(root, 'test', names.dev_label)
+        if not self.filepaths.test_label:
+            paths.test_label = os.path.join(root, 'test', names.test_label)
         # config JSON
         if not self.filepaths.config:
             paths.config = os.path.join(root, names.config)
@@ -166,6 +170,13 @@ class DataBlocks:
             return
         if not self.name:
             raise ValueError('Input data name not provided')
+
+    @property
+    def has_test_data(self) -> bool:
+        return (
+            os.path.exists(self.filepaths.test_image) and
+            os.path.exists(self.filepaths.test_label)
+        )
 
     def validate(self) -> None:
         def _must_exist(path: str | None, label: str) -> None:
@@ -434,8 +445,6 @@ class RootConfig:
     trainer: TrainerCfg = dataclasses.field(default_factory=TrainerCfg)
     # controller settings
     runner: RunnerCfg = dataclasses.field(default_factory=RunnerCfg)
-    # pipeline overrides
-    pipeline: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 
     def validate_all(self) -> None:
         # delegated to subtrees.

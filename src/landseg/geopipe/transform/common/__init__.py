@@ -25,3 +25,25 @@ Top-level namespace for `landseg.geopipe.transform.common`.
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    # functions
+    # typing
+    'TransformPaths',
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .protocol import TransformPaths
+
+def __getattr__(name: str):
+
+    if name in {'TransformPaths'}:
+        return getattr(importlib.import_module('.protocol', __package__), name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
