@@ -50,10 +50,12 @@ def ingest(config: configs.RootConfig):
     logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')
 
     # config aliases
-    grid_cfg = config.foundation.grid
     domain_cfg = config.foundation.domains
+    grid_cfg = config.foundation.grid
     datablocks_cfg = config.foundation.datablocks
-    out_root = config.foundation.output_dpath
+
+    # artifact paths
+    paths = artifacts.FoundationPaths(config.foundation.output_dpath)
 
     # world grid
     grid_config = foundation.GridParameters(
@@ -64,37 +66,34 @@ def ingest(config: configs.RootConfig):
         pixel_size=grid_cfg.extent.pixel_size,
         grid_extent=grid_cfg.extent.grid_extent,
         grid_shape=grid_cfg.extent.grid_shape,
-        tile_specs=(
-            grid_cfg.tile_specs.size_row,
-            grid_cfg.tile_specs.size_col,
-            grid_cfg.tile_specs.overlap_row,
-            grid_cfg.tile_specs.overlap_row
-        ),
+        tile_specs=grid_cfg.tile_specs_tuple,
     )
     grid = foundation.prepare_world_grid(
-        grid_config,
         logger,
-        artifacts_dir=f'{out_root}/world_grids',
+        paths.grids.root,
+        grid_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
-    # domains
-    _config = [foundation.DomainBuildingParameters(
+    # domain maps
+    domain_config = [
+        foundation.DomainBuildingParameters(
         src_path=dom.path,
         index_base=dom.index_base,
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
-    ) for dom in domain_cfg.files]
+        ) for dom in domain_cfg.files
+    ]
     foundation.prepare_domain_maps(
-        grid,
-        _config,
         logger,
-        artifacts_dir=f'{out_root}/domain_knowledge',
+        grid,
+        paths.domains.root,
+        domain_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
-    # datablocks building
-    _config = foundation.BlockBuildingParameters(
+    # data blocks
+    data_blocks_config = foundation.BlockBuildingParameters(
         dev_image_fpath=datablocks_cfg.filepaths.dev_image,
         dev_label_fpath=datablocks_cfg.filepaths.dev_label,
         test_image_fpath=datablocks_cfg.filepaths.test_image,
@@ -103,5 +102,10 @@ def ingest(config: configs.RootConfig):
         dem_pad=datablocks_cfg.general.image_dem_pad,
         ignore_index=datablocks_cfg.general.ignore_index,
     )
-    blocks_dir = f'{out_root}/data_blocks'
-    foundation.run_blocks_building(grid, _config, blocks_dir, logger)
+    foundation.run_blocks_building(
+        logger,
+        grid,
+        paths,
+        data_blocks_config,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )

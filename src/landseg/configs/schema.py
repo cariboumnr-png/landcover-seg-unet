@@ -73,6 +73,10 @@ class Grid:
         if self.mode not in {'ref', 'aoi', 'tiles'}:
             raise ValueError(f'Invalid mode: {self.mode}')
 
+    @property
+    def tile_specs_tuple(self) -> tuple[int, int, int, int]:
+        return dataclasses.astuple(self.tile_specs)
+
     def validate(self) -> None:
         if not _is_resolved(self.mode):
             return

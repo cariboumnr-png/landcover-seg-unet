@@ -50,11 +50,11 @@ class DomainBuildingParameters:
 
 # -------------------------------Public Function-------------------------------
 def prepare_domain_maps(
-    world_grid: geo_core.GridLayout,
-    domain_configs: list[DomainBuildingParameters],
     logger: utils.Logger,
+    world_grid: geo_core.GridLayout,
+    domains_dir: str,
+    domain_configs: list[DomainBuildingParameters],
     *,
-    artifacts_dir: str,
     policy: artifacts.LifecyclePolicy
 ) -> None:
     '''
@@ -100,13 +100,13 @@ def prepare_domain_maps(
 
         # check domain artifacts
         schema = geo_core.DomainTileMap.SCHEMA_ID
-        ctrl = DomainCtrl(name, artifacts_dir, schema, policy)
+        ctrl = DomainCtrl(name, domains_dir, schema, policy)
         payload = ctrl.load()
         logger.log('INFO', f'Domain {name} loaded successfully')
         if not payload:
 
             # check mapped tiles before building
-            fp = f'{artifacts_dir}/{name}_tiles_{grid.gid}.npz'
+            fp = f'{domains_dir}/{name}_tiles_{grid.gid}.npz'
             mapped = _prep_mapping(fp, grid, config, policy, logger)
 
             # build domain map

@@ -33,11 +33,11 @@ MappingCtrl = artifacts.Controller[dict]
 
 # -------------------------------Public Function-------------------------------
 def map_rasters_to_grid(
+    logger: utils.Logger,
     world_grid: geo_core.GridLayout,
     image_label_fpaths: tuple[str, str],
-    logger: utils.Logger,
+    windows_dir: str,
     *,
-    artifacts_dir: str,
     policy: artifacts.LifecyclePolicy
 ) -> mapper.MappedRasterWindows:
     '''doc'''
@@ -47,7 +47,7 @@ def map_rasters_to_grid(
     image, label = image_label_fpaths
 
     # artifacts controller
-    ctrl = MappingCtrl(f'{artifacts_dir}/windows_{gid}.json', 'json', policy)
+    ctrl = MappingCtrl(f'{windows_dir}/windows_{gid}.json', 'json', policy)
 
     # mapped windows fpath
     logger.log('INFO', f'Try to load mapped windows from {gid}')

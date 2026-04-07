@@ -54,10 +54,10 @@ class ManifestUpdateContext:
 
 # -------------------------------Public Function-------------------------------
 def update_manifest(
-    context: ManifestUpdateContext,
     logger: utils.Logger,
-    *,
+    context: ManifestUpdateContext,
     artifacts_dir: str,
+    *,
     policy: artifacts.LifecyclePolicy
 ):
     '''
@@ -87,12 +87,18 @@ def update_manifest(
     # load catalog JSON
     ctrl = CatalogDictCtrl(f'{artifacts_dir}/catalog.json', 'json', policy)
     try:
-        data = ctrl.fetch()
+        data_dict = ctrl.fetch()
     except artifacts.ArtifactError as exc:
         logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
         raise artifacts.ArtifactError from exc
     # action
-    current, to_update = _catalog_status(data, context, blk_dir, policy, logger)
+    current, to_update = _catalog_status(
+        logger,
+        context,
+        blk_dir,
+        data_dict,
+        policy=policy,
+    )
     if to_update:
         catalog = manifest.build_catalog(
             current,
@@ -123,11 +129,12 @@ def update_manifest(
     ctrl.persist(schema_dict)
 
 def _catalog_status(
-    data_dict: dict[str, geo_core.CatalogEntry] | None,
+    logger: utils.Logger,
     context: ManifestUpdateContext,
     blocks_dir: str,
+    data_dict: dict[str, geo_core.CatalogEntry] | None,
+    *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
 ) -> tuple[geo_core.DataCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
 

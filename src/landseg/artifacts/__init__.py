@@ -33,16 +33,20 @@ import typing
 __all__ = [
     # classes
     'ArtifactError',
+    'ArtifactPaths',
     'Controller',
+    'FoundationPaths',
     'LifecyclePolicy',
     'PayloadController',
+    'TransformPaths',
     # functions
-   # typing
+    # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .controller import ArtifactError, Controller
+    from .paths import ArtifactPaths, FoundationPaths, TransformPaths
     from .payload_io import PayloadController
     from .policy import LifecyclePolicy
 
@@ -51,7 +55,7 @@ def __getattr__(name: str):
     if name in {'ArtifactError', 'Controller'}:
         return getattr(importlib.import_module('.controller', __package__), name)
 
-    if name in {''}:
+    if name in {'ArtifactPaths', 'FoundationPaths', 'TransformPaths'}:
         return getattr(importlib.import_module('.paths', __package__), name)
 
     if name in {'PayloadController'}:

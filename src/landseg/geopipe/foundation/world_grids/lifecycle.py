@@ -34,10 +34,10 @@ CTRL = artifacts.PayloadController[D, M]
 
 # -------------------------------Public Function-------------------------------
 def prepare_world_grid(
-    config: world_grids.GridParameters,
     logger: utils.Logger,
+    grids_dir: str,
+    config: world_grids.GridParameters,
     *,
-    artifacts_dir: str,
     policy: artifacts.LifecyclePolicy,
 ) -> geo_core.GridLayout:
     '''
@@ -57,7 +57,7 @@ def prepare_world_grid(
 
     # payload controller
     schema = geo_core.GridLayout.SCHEMA_ID
-    ctrl = CTRL(gid, artifacts_dir, schema, policy)
+    ctrl = CTRL(gid, grids_dir, schema, policy)
     payload = ctrl.load()
     if payload:
         output_grid = geo_core.GridLayout.from_payload(payload)
@@ -68,5 +68,5 @@ def prepare_world_grid(
     output_grid = world_grids.build_grid(config)
     payload = output_grid.to_payload()
     ctrl.save(payload)
-    logger.log('INFO', f'World grid {gid} saved to {artifacts_dir}')
+    logger.log('INFO', f'World grid {gid} saved to {grids_dir}')
     return output_grid

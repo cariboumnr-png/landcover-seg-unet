@@ -66,10 +66,10 @@ class BlockBuilderConfig:
     output catalog root. All values here are treated as static parameters
     for the block-building pipeline.
     '''
+    output_root: str            # path to output artifacts
     image_fpath: str            # path to input image data (.tiff)
     label_fpath: str | None     # path to input label data (.tiff)
     config_fpath: str           # path to input metadata (.json)
-    output_root: str            # path to output artifacts
     ignore_index: int           # global ignore label index
     dem_pad_px: int             # image DEM channel padding in pixels
     block_size: tuple[int, int] # block size in row, col
@@ -106,10 +106,10 @@ class BlockBuilder:
 
     def __init__(
         self,
+        logger: utils.Logger,
         image_windows: alias.RasterWindowDict,
         label_windows: alias.RasterWindowDict,
         config: BlockBuilderConfig,
-        logger: utils.Logger,
     ):
         '''
         Initialize the pipeline.
@@ -122,10 +122,10 @@ class BlockBuilder:
         '''
 
         # intake arguments
+        self.logger = logger
         self.img_windows = image_windows
         self.lbl_windows = label_windows
         self.config = config
-        self.logger = logger
 
         # declare class attributes
         self.common_coords: set[tuple[int, int]] = set()
@@ -143,12 +143,7 @@ class BlockBuilder:
     @property
     def blks_dir(self) -> str:
         '''Directory to save `.npz` block files.'''
-        return f'{self.config.output_root}/blocks'
-
-    @property
-    def catalog_path(self) -> str:
-        '''File path where catalog JSON is to load/save.'''
-        return f'{self.config.output_root}/catalog.json'
+        return self.config.output_root
 
     @property
     def has_label(self) -> bool:
@@ -269,7 +264,8 @@ class BlockBuilder:
         self.logger.log('DEBUG', f'Loaded {n} raster windows')
 
         # remove windows or irregular shapes, e.g., edge windows
-        for coord in self.common_coords:
+        _common = copy.deepcopy(self.common_coords) # for safe iteration
+        for coord in _common:
             # get windows
             iw = self.img_windows[coord]
             lw = self.lbl_windows[coord] if self.has_label else None

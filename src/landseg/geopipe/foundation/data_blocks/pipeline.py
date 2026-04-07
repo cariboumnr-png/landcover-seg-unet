@@ -54,13 +54,12 @@ class BlockBuildingParameters:
 
 # -------------------------------Public Function-------------------------------
 def run_blocks_building(
-    world_grid: geo_core.GridLayout,
-    config: BlockBuildingParameters,
-    output_root: str,
     logger: utils.Logger,
+    world_grid: geo_core.GridLayout,
+    artfact_paths: artifacts.FoundationPaths,
+    config: BlockBuildingParameters,
     *,
-    single_block_mode: bool = False,
-    **kwargs
+    policy: artifacts.LifecyclePolicy
 ) -> str | None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
@@ -97,40 +96,31 @@ def run_blocks_building(
     # map model dev rasters to grid
     logger.log('INFO', 'Mapping rasters for model developement to grid')
     ras_windows = data_blocks.map_rasters_to_grid(
+        logger,
         world_grid,
         (config.dev_image_fpath, config.dev_label_fpath),
-        logger,
-        artifacts_dir=f'{output_root}/model_dev/windows',
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        artfact_paths.data_blocks.dev_windows,
+        policy=policy
     )
     logger.log('INFO', 'Rasters for model developement mapped to grid')
 
     # block builder for model dev rasters
-    builder_cfg = data_blocks.BlockBuilderConfig(
+    builder_config = data_blocks.BlockBuilderConfig(
+        output_root=artfact_paths.data_blocks.dev_blocks,
         image_fpath=config.dev_image_fpath,
         label_fpath=config.dev_label_fpath,
         config_fpath=config.data_config_fpath,
-        output_root=f'{output_root}/model_dev/',
         dem_pad_px=config.dem_pad,
         ignore_index=config.ignore_index,
         block_size=ras_windows.tile_shape
     )
     block_builder = data_blocks.BlockBuilder(
+        logger,
         ras_windows.image,
         ras_windows.label,
-        builder_cfg,
-        logger
+        builder_config,
     )
 
-    # build just one block, e.g., for overfit test
-    if single_block_mode:
-        logger.log('INFO', 'Build a single block')
-        return block_builder.build_single_block(
-            save_dpath=kwargs.get('save_dpath', f'{output_root}/single_block'),
-            valid_px_per=kwargs.get('valid_px_per', 0.8),
-            monitor_head=kwargs.get('monitor_head', 'base'),
-            need_all_classes=kwargs.get('need_all_classes', True)
-        )
     # build all model dev blocks
     logger.log('INFO', 'Build all model developement data blocks')
     new_blocks = block_builder.build_blocks()
@@ -143,10 +133,10 @@ def run_blocks_building(
         mapped_grid_id=world_grid.gid
     )
     data_blocks.update_manifest(
-        updated,
         logger,
-        artifacts_dir=f'{output_root}/model_dev/',
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        updated,
+        artfact_paths.data_blocks.dev_root,
+        policy=policy
     )
 
     # exit if test rasters are not provided
@@ -157,29 +147,29 @@ def run_blocks_building(
     # map test rasters to grid
     logger.log('INFO', 'Mapping holdout raters for test to grid')
     ras_windows = data_blocks.map_rasters_to_grid(
+        logger,
         world_grid,
         (config.test_image_fpath, config.test_label_fpath),
-        logger,
-        artifacts_dir=f'{output_root}/test_holdout/windows',
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        artfact_paths.data_blocks.test_windows,
+        policy=policy
     )
     logger.log('INFO', 'Holdout raters for test mapped to grid')
 
     # block builder for test rasters
-    builder_cfg = data_blocks.BlockBuilderConfig(
+    builder_config = data_blocks.BlockBuilderConfig(
+        output_root=artfact_paths.data_blocks.test_blocks,
         image_fpath=config.test_image_fpath,
         label_fpath=config.test_label_fpath,
         config_fpath=config.data_config_fpath,
-        output_root=f'{output_root}/test_holdout/',
         dem_pad_px=config.dem_pad,
         ignore_index=config.ignore_index,
         block_size=ras_windows.tile_shape
     )
     block_builder = data_blocks.BlockBuilder(
+        logger,
         ras_windows.image,
         ras_windows.label,
-        builder_cfg,
-        logger
+        builder_config,
     )
     logger.log('INFO', 'Build all holdout test data blocks')
     new_blocks = block_builder.build_blocks()
@@ -192,9 +182,60 @@ def run_blocks_building(
         mapped_grid_id=world_grid.gid
     )
     data_blocks.update_manifest(
-        updated,
         logger,
-        artifacts_dir=f'{output_root}/test_holdout/',
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        updated,
+        artfact_paths.data_blocks.test_root,
+        policy=policy
     )
     return None
+
+def run_blocks_building_signle(
+    logger: utils.Logger,
+    artfact_paths: artifacts.FoundationPaths,
+    world_grid: geo_core.GridLayout,
+    config: BlockBuildingParameters,
+    **kwargs
+) -> str | None:
+    '''
+    doc
+    '''
+
+    # get a child logger
+    logger = logger.get_child('dblks')
+
+    # map model dev rasters to grid
+    logger.log('INFO', 'Mapping rasters for model developement to grid')
+    ras_windows = data_blocks.map_rasters_to_grid(
+        logger,
+        world_grid,
+        (config.dev_image_fpath, config.dev_label_fpath),
+        artfact_paths.data_blocks.dev_windows,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
+    logger.log('INFO', 'Rasters for model developement mapped to grid')
+
+    # block builder for model dev rasters
+    builder_cfg = data_blocks.BlockBuilderConfig(
+        image_fpath=config.dev_image_fpath,
+        label_fpath=config.dev_label_fpath,
+        config_fpath=config.data_config_fpath,
+        output_root=artfact_paths.data_blocks.dev_blocks,
+        dem_pad_px=config.dem_pad,
+        ignore_index=config.ignore_index,
+        block_size=ras_windows.tile_shape
+    )
+    block_builder = data_blocks.BlockBuilder(
+        logger,
+        ras_windows.image,
+        ras_windows.label,
+        builder_cfg,
+    )
+
+    # build just one block, e.g., for overfit test
+    logger.log('INFO', 'Build a single block')
+    return block_builder.build_single_block(
+        save_dpath=kwargs.get('save_dpath', './single_block'),
+        valid_px_per=kwargs.get('valid_px_per', 0.8),
+        monitor_head=kwargs.get('monitor_head', 'base'),
+        need_all_classes=kwargs.get('need_all_classes', True)
+    )
