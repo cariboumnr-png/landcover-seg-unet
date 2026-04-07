@@ -75,6 +75,11 @@ class Controller(typing.Generic[T]):
         '''Return True if the artifact exists and its hash is valid.'''
         return os.path.exists(self.fp) and self._check_sha256()
 
+    @property
+    def sha256(self) -> str:
+        '''Return SHA-256 hash value of the artifact file.'''
+        return self._get_sha256(self.fp)
+
     @classmethod
     def load_json_or_fail(cls, fp) -> 'Controller[T]':
         '''Factory for a JSON controller that reads or fails.'''
@@ -145,9 +150,6 @@ class Controller(typing.Generic[T]):
             case 'npz_dict':
                 self._npz_write_dict(self.fp, src)
 
-        # get hash after file is written
-        sha256 = self._get_sha256(self.fp)
-
         # load hash record with some error handling (create new if so)
         try:
             records = self._json_read(self.hash_fpath)
@@ -156,7 +158,7 @@ class Controller(typing.Generic[T]):
             records = self._json_read(self.hash_fpath)
 
         # append/update hash in record and save
-        records[self.fname] = sha256
+        records[self.fname] = self.sha256 # get hash after file is written
         self._json_write(self.hash_fpath, records)
 
     def _load(self) -> typing.Any:
@@ -178,10 +180,9 @@ class Controller(typing.Generic[T]):
     def _check_sha256(self) -> bool:
         '''Check artifact hash against the recorded value.'''
 
-        sha256_value = self._get_sha256(self.fp)
         try:
             sha256_record = self._json_read(self.hash_fpath).get(self.fname)
-            return sha256_value == sha256_record
+            return self.sha256 == sha256_record
         except (FileNotFoundError, json.JSONDecodeError):
             return False
 

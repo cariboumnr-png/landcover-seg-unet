@@ -78,9 +78,9 @@ def build_catalog(
     new_entries: dict[str, geo_core.CatalogEntry] = {}
 
     # get hash values from input rasters
-    img_hash = utils.hash_artifacts(source_image)
+    img_hash = utils.hash_sha256(source_image)
     if source_label:
-        lbl_hash = utils.hash_artifacts(source_label)
+        lbl_hash = utils.hash_sha256(source_label)
     else:
         lbl_hash = None
 
@@ -96,7 +96,7 @@ def build_catalog(
             'base_class_count': meta['label_count']['base'],
             'schema_version': '1.0.0',
             'creation_time': utils.get_file_ctime(fp, T_FORMAT),
-            'sha_256': utils.hash_artifacts(fp, write_to_record=False),
+            'sha_256': utils.hash_sha256(fp),
             'aligned_grid': mapped_grid_id,
             'source_image': source_image,
             'source_image_sha_256': img_hash,

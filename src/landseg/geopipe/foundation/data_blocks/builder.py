@@ -43,6 +43,7 @@ Notes:
 from __future__ import annotations
 import copy
 import dataclasses
+import json
 import random
 import os
 import typing
@@ -132,7 +133,8 @@ class BlockBuilder:
         self.coords_todo: list[tuple[int, int]] = []
 
         # parse block meta dict (carried by each block)
-        meta_src = utils.load_json(self.config.config_fpath)
+        with open (self.config.config_fpath, 'r', encoding='UTF-8') as src:
+            meta_src = json.load(src)
         keys = meta_src.keys() & geo_core.DataBlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
         self.meta = typing.cast(geo_core.DataBlockMeta, meta) # typing compliance

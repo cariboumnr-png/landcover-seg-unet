@@ -28,6 +28,7 @@ model, and runs the multi-phase training runner.
 
 # standard imports
 import dataclasses
+import datetime
 import os
 # local imports
 import landseg.artifacts as artifacts
@@ -52,7 +53,7 @@ def train(config: configs.RootConfig):
     exp_dir, log_dir = _init_experiment_folder(config)
 
     # create a centralized main logger
-    t_stamp = utils.get_timestamp()
+    t_stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S') # 20001234_567
     logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
 
     # artifact fpaths manager

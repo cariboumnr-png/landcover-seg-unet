@@ -30,9 +30,10 @@ history, and standardizes I/O conventions required for reproducible data
 preparation and downstream model consumption.
 '''
 
+# standard imports
+import datetime
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
@@ -73,6 +74,9 @@ def build_schema(
         newly created dataset schema.
     '''
 
+    # current time
+    t = datetime.datetime.now().strftime(T_FORMAT)
+
     # update route
     if original:
         # aliases
@@ -80,7 +84,7 @@ def build_schema(
         images = original['dataset']['data_source']['image_paths']
         labels = original['dataset']['data_source']['label_paths']
         # update
-        original['dataset']['last_updated'] = utils.get_timestamp(T_FORMAT)
+        original['dataset']['last_updated'] = t
         if not mapped_grid_id in grids:
             grids.append(mapped_grid_id)
         if not source_image in images:
@@ -99,7 +103,7 @@ def build_schema(
         'schema_id': geo_core.foundation_data_schema.SCHEMA_ID,
         'dataset': {
             'name': '', # TBD
-            'last_updated': utils.get_timestamp(T_FORMAT),
+            'last_updated': t,
             'dataprep_commit': 'dev', # to be fixed once branch stable
             'mapped_grids': [mapped_grid_id],
             'data_source': {
