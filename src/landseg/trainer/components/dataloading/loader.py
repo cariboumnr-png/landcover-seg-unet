@@ -99,12 +99,13 @@ def build_dataloaders(
     # get a child from the base logger
     logger = logger.get_child('dldrs')
 
-    # parse
-    assert data_specs.meta.img_h_w % patch_size == 0 # sanity check
-    patch_per_blk = int(data_specs.meta.img_h_w / patch_size) ** 2
-
     # meta to be shipped
-    meta = _Meta(batch_size, patch_per_blk, (1, 1))
+    assert data_specs.meta.img_h_w % patch_size == 0 # sanity check
+    meta = _Meta(
+        batch_size=batch_size,
+        patch_per_blk=int(data_specs.meta.img_h_w / patch_size) ** 2,
+        test_blks_grid=data_specs.meta.test_blks_grid
+    )
 
     # partial load function
     load_partial = functools.partial(
