@@ -62,7 +62,7 @@ def prepare(config: configs.RootConfig):
 
     # datablocks partition
     # parse catalog
-    parsed_catalog = transform.parse_catalog(
+    parsed_catalog = transform.data_blocks_adapter(
         foundation_paths.data_blocks.dev.catalog,
         foundation_paths.data_blocks.dev.schema,
         foundation_paths.data_blocks.test.catalog,

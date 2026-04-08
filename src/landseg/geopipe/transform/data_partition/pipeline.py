@@ -45,7 +45,7 @@ LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 def run_datablocks_partition(
     logger: utils.Logger,
     paths: artifacts.TransformPaths,
-    parsed_catalog: transform.ParsedCatalog,
+    parsed_catalog: transform.DataBlocksView,
     partition_config: data_partition.PartitionParameters,
     *,
     policy: artifacts.LifecyclePolicy

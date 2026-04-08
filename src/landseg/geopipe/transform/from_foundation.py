@@ -38,7 +38,7 @@ CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 @dataclasses.dataclass
-class ParsedCatalog:
+class DataBlocksView:
     '''Parsed view of a blocks catalog with commonly used subsets.'''
     dev_base_class_counts: dict[tuple[int, int], list[int]]
     dev_valid_class_counts: dict[tuple[int, int], list[int]]
@@ -52,12 +52,13 @@ class _Parsed:
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
 
-def parse_catalog(
+def data_blocks_adapter(
     dev_catalog: str,
     dev_schema: str,
     test_catalog: str,
     *,
     valid_px_threshold: float,
+    non_overlapping_test_grid: bool = True
 ):
     '''doc'''
 
@@ -77,10 +78,22 @@ def parse_catalog(
         test = _parse(test_catalog, t, block_size)
     except artifacts.ArtifactError:
         test = None
-    test_blocks = list(test.valid_file_paths.values()) if test else None
+
+    # get test blocks
+    if not test:
+        test_blocks = None
+    else:
+    # whether filter test blocks only on a non-overlapping grid (base)
+        if non_overlapping_test_grid:
+            test_blocks = list(
+                v for k, v in test.valid_file_paths.items()
+                if k in test.base_class_counts
+            )
+        else:
+            test_blocks = list(test.valid_file_paths.values())
 
     # return
-    return ParsedCatalog(
+    return DataBlocksView(
         dev_base_class_counts=dev.base_class_counts,
         dev_valid_class_counts=dev.valid_class_counts,
         dev_blocks=dev.valid_file_paths,
