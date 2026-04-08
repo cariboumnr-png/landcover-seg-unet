@@ -1,14 +1,14 @@
 # ADR-0015: Refine `models/` Module Boundaries and Remove External Config Coupling
 
-- **Status:** Proposed
-- **Date:** 2026-04-07
+- **Status:** Accepted
+- **Date:** 2026-04-08
 
 ## Context
-We noticed that the current `landseg.models` package mixes concerns between:
+We noticed that the `landseg.models` package previously mixed concerns between:
 - pure model construction logic, and
 - experiment/runtime configuration driven by the Hydra-based `configs` module.
 
-In particular, `models.factory` depends directly on `configs.ModelsCfg`, which couples model construction to a specific configuration system. This makes models harder to reuse, test, and evolve independently of the CLI and experiment layer.
+In particular, `models.factory` depended directly on `configs.ModelsCfg`, which coupled model construction to a specific configuration system. This coupling made models harder to reuse, test, and evolve independently of the CLI and experiment layer.
 
 In contrast, the `geopipe` package demonstrates a cleaner separation of responsibilities:
 - each module owns its internal logic and configuration semantics,
@@ -16,32 +16,39 @@ In contrast, the `geopipe` package demonstrates a cleaner separation of responsi
 - factories are thin, stateless, and free of global config dependencies.
 
 ## Decision
-We plan to realign `landseg.models` with the same boundary discipline used in `geopipe`.
+We have realigned `landseg.models` with the same boundary discipline used in `geopipe`.
 
-Specifically, we will:
+Specifically, we have:
 
-1. Remove all imports of `landseg.configs` from `landseg.models`.
-2. Move model-side configuration dataclasses (e.g., backbone parameters, head definitions, conditioning options) into the `models` package itself.
-3. Refactor `models.factory` into a small API layer that:
+1. Removed all imports of `landseg.configs` from `landseg.models`.
+2. Introduced protocol-based structural contracts for model configuration inputs,
+   allowing Hydra-backed dataclasses to be supplied without creating a hard
+   dependency.
+3. Refactored `models.factory` into a small API layer that:
    - owns no global configuration state,
-   - receives explicit, typed arguments,
-   - builds models deterministically from those arguments.
-4. Keep the dependency on `core.DataSpecs`, as this object is runtime-derived, immutable, and correctly represents dataset-specific constraints.
+   - receives explicit, keyword-only, typed arguments,
+   - constructs models deterministically from those arguments.
+4. Retained the dependency on `core.DataSpecs`, as this object is runtime-derived,
+   immutable, and correctly represents dataset-specific constraints.
 
-The Hydra/CLI layer will remain responsible for:
+The Hydra / CLI layer remains responsible for:
 - loading YAML configuration files,
-- instantiating config dataclasses,
-- calling the model factory with explicit arguments.
+- instantiating configuration dataclasses,
+- invoking the model factory with explicit arguments.
 
-## Expected Consequences
+## Consequences
+
 ### Positive
 - Clear separation between model logic and experiment configuration.
-- Models become reusable outside Hydra (e.g., unit tests, notebooks, scripted runs).
+- Models are reusable outside Hydra (e.g., unit tests, notebooks, scripted runs).
 - Improved testability and readability of model construction paths.
 - Stronger alignment across `models`, `trainer`, and `geopipe` packages.
+- A stable, explicit public API for model construction.
 
 ### Negative
-- A one-time refactor cost to update factory signatures and call sites.
-- Slightly more verbosity in the CLI layer due to explicit argument passing.
+- One-time refactor cost to update factory signatures and call sites.
+- Slightly more verbosity at the CLI layer due to explicit argument passing.
 
-Overall, we expect this change to reduce long-term maintenance cost and make future architectural extensions (e.g., new backbones, export paths) significantly easier.
+Overall, this change reduces long-term maintenance cost and establishes a
+clear architectural boundary that supports future extensions (e.g., new
+backbones, export paths, or alternative configuration systems).
