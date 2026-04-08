@@ -191,7 +191,7 @@ class FilmConditioner(torch.nn.Module):
         return self.film_bottleneck(xb, z)
 
 def get_film(
-    config: multihead.CondConfig,
+    config: multihead.ConditioningConfig,
     base_ch: int
 ) -> FilmConditioner | None:
     '''

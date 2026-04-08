@@ -32,12 +32,12 @@ import typing
 
 __all__ = [
     # classes
+    'BackboneConfig',
     'BaseMultiheadModel',
     'ConcatConfig',
-    'CondConfig',
+    'ConditioningConfig',
     'FilmConfig',
-    'HeadsState',
-    'ModelConfig',
+     'ModelConfig',
     'MultiHeadUNet',
     # functions
     'get_concat',
@@ -49,13 +49,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import BaseMultiheadModel
     from .concat import get_concat
-    from .config import (
-        ConcatConfig,
-        CondConfig,
-        FilmConfig,
-        HeadsState,
-        ModelConfig,
-    )
+    from .config import BackboneConfig, ConcatConfig, ConditioningConfig, FilmConfig, ModelConfig
     from .film import get_film
     from .frame import MultiHeadUNet
 
@@ -65,8 +59,8 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.base', __package__), name)
     if name in ['get_concat']:
         return getattr(importlib.import_module('.concat', __package__), name)
-    if name in ['ConcatConfig', 'CondConfig', 'FilmConfig', 'HeadsState',
-                'ModelConfig']:
+    if name in ['BackboneConfig', 'ConcatConfig', 'ConditioningConfig',
+                'FilmConfig', 'ModelConfig']:
         return getattr(importlib.import_module('.config', __package__), name)
     if name in ['get_film']:
         return getattr(importlib.import_module('.film', __package__), name)

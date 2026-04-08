@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Factory for constructing multihead UNet models.
 
@@ -33,82 +35,167 @@ initialized `MultiHeadUNet` instance based on dataset specs and a
 user-supplied configuration.
 '''
 
+# standard imports
+from __future__ import annotations
+import typing
 # local imports
-import landseg.configs as configs
 import landseg.core as core
-import landseg.models.backbones as backbones
 import landseg.models.multihead as multihead
+
+# --------------------------------private  type--------------------------------
+class _BackeboneConfig(typing.Protocol):
+    '''Typed container for model backbone configuration.'''
+    @property
+    def body(self) -> str:...
+    @property
+    def base_ch(self) -> int:...
+    @property
+    def conv_params(self) -> dict[str, typing.Any]:...
+
+class _ConditioningConfig(typing.Protocol):
+    '''Typed container for model conditioning configuration.'''
+    @property
+    def mode(self) -> str | None:...
+    @property
+    def concat(self) -> _ConcatConfig:...
+    @property
+    def film(self) -> _FilmConfig:...
+
+class _ConcatConfig(typing.Protocol):
+    '''Typed container for configuring concatenation adapter.'''
+    @property
+    def out_dim(self) -> int:...
+    @property
+    def use_ids(self) -> bool:...
+    @property
+    def use_vec(self) -> bool:...
+    @property
+    def use_mlp(self) -> bool:...
+
+class _FilmConfig(typing.Protocol):
+    '''Typed container for configuring FiLM conditioner.'''
+    @property
+    def embed_dim(self) -> int:...
+    @property
+    def use_ids(self) -> bool:...
+    @property
+    def use_vec(self) -> bool:...
+    @property
+    def hidden(self) -> int:...
 
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
+    *,
     dataspecs: core.DataSpecs,
-    config: configs.ModelsCfg,
+    backbone_config: _BackeboneConfig,
+    conditioning_config: _ConditioningConfig,
+    **kwargs
 ) -> multihead.BaseMultiheadModel:
     '''
-    Build a configured MultiHeadUNet instance.
+    Construct a configured MultiHeadUNet from explicit inputs.
+
+    This factory assembles a complete multi-head UNet model using:
+    - dataset-derived runtime specifications (`DataSpecs`), and
+    - explicitly supplied configuration objects describing backbone
+      structure and domain conditioning behavior.
+
+    The factory is intentionally decoupled from any global or external
+    configuration system (e.g., Hydra). Configuration inputs are treated
+    as structural contracts (via Protocols) and may originate from
+    Hydra-backed dataclasses, plain dataclasses, or other compatible
+    objects defined at the application / CLI layer.
+
+    Responsibilities of this factory:
+        - Translate dataset metadata into model-level configuration
+          (input channels, head definitions, logit-adjust priors).
+        - Normalize backbone and conditioning configuration into the
+          internal `multihead.*Config` dataclasses owned by the models
+          module.
+        - Instantiate and return a fully initialized `MultiHeadUNet`.
 
     Args:
-        body: Backbone type (currently 'unet' or 'unetpp').
-        dataspecs: Dataset specs containing image channels, domain, and
-            per-head class counts.
-        model_config: User configuration describing backbone parameters,
-            conditioning options, clamping/logit-adjust flags, and other
-            model settings.
+        dataspecs:
+            Dataset specifications carrying runtime information derived
+            from the data pipeline, including:
+                - image channel count,
+                - per-head class counts,
+                - optional logit-adjust priors,
+                - domain cardinalities and vector dimensions.
+        backbone_config:
+            Backbone configuration describing:
+                - backbone body name (e.g., 'unet', 'unetpp'),
+                - base channel width,
+                - convolutional block parameters forwarded to the
+                  backbone constructor.
+        conditioning_config:
+            Domain conditioning configuration describing how categorical
+            domain IDs and/or continuous domain vectors are routed to:
+                - input-level concatenation, and/or
+                - bottleneck-level FiLM conditioning.
+        **kwargs:
+            Optional runtime overrides forwarded to `MultiHeadUNet`,
+            such as:
+                - `enable_logit_adjust`,
+                - `enable_clamp`,
+                - `clamp_range`.
 
     Returns:
-        MultiHeadUNet:
-            - Selected backbone,
-            - Multihead outputs,
-            - Input concatenation and/or FiLM conditioning (if enabled),
-            - Optional numeric safety and logit-adjust behaviour.
+        BaseMultiheadModel:
+            A fully configured `MultiHeadUNet` instance composed of:
+                - the selected UNet backbone,
+                - multihead output blocks,
+                - optional domain conditioning (concat / FiLM),
+                - numeric safety and logit-adjust mechanisms.
 
     Raises:
-        ValueError: If an unsupported backbone name is provided.
+        ValueError:
+            If an unsupported backbone identifier is provided.
+
+    Notes:
+        - All arguments are keyword-only to make configuration boundaries
+          explicit and order-independent.
+        - This factory assumes configuration objects are already
+          validated by the application layer.
+        - No Hydra or experiment-level configuration is imported or
+          accessed within this module by design.
     '''
 
-    # model body registry
-    body_registry = {
-        'unet': backbones.UNet,
-        'unetpp': backbones.UNetPP
-    }
-    if not config.use_body in body_registry:
-        raise ValueError(f'Invalid base model: {config.use_body}')
-
-    # body configs
-    body_config = config.body_registry.get(config.use_body)
-    assert body_config is not None # sanity
+    # model backbone config
+    backbone_config = multihead.BackboneConfig(
+        body=backbone_config.body,
+        base_ch=backbone_config.base_ch,
+        conv_params=backbone_config.conv_params
+    )
 
     # multihead model config
-    multihead_config = multihead.ModelConfig(
-        body=body_registry[config.use_body],
+    model_config = multihead.ModelConfig(
         in_ch= dataspecs.meta.img_ch,
-        base_ch=body_config.base_ch,
         logit_adjust=dataspecs.heads.logits_adjust,
         heads_w_counts=dataspecs.heads.class_counts,
-        clamp_range=config.clamp_range,
-        conditioning=multihead.CondConfig(
-            mode=config.conditioning.mode,
+    )
+
+    conditioning=multihead.ConditioningConfig(
+            mode=conditioning_config.mode,
             domain_ids_num=dataspecs.domains.ids_max + 1,
             domain_vec_dim=dataspecs.domains.vec_dim,
             concat=multihead.ConcatConfig(
-                out_dim=config.conditioning.concat.out_dim,
-                use_ids=config.conditioning.concat.use_ids,
-                use_vec=config.conditioning.concat.use_vec,
-                use_mlp=config.conditioning.concat.use_mlp
+                out_dim=conditioning_config.concat.out_dim,
+                use_ids=conditioning_config.concat.use_ids,
+                use_vec=conditioning_config.concat.use_vec,
+                use_mlp=conditioning_config.concat.use_mlp
             ),
             film=multihead.FilmConfig(
-                embed_dim=config.conditioning.film.embed_dim,
-                use_ids=config.conditioning.film.use_ids,
-                use_vec=config.conditioning.film.use_vec,
-                hidden=config.conditioning.film.hidden
+                embed_dim=conditioning_config.film.embed_dim,
+                use_ids=conditioning_config.film.use_ids,
+                use_vec=conditioning_config.film.use_vec,
+                hidden=conditioning_config.film.hidden
             )
         )
-    )
 
     # return model instance
     return multihead.MultiHeadUNet(
-        multihead_config,
-        conv_params=body_config.conv_params,
-        enable_logit_adjust=config.flags.enable_logit_adjust,
-        enable_clamp=config.flags.enable_clamp
+        backbone_config=backbone_config,
+        model_config=model_config,
+        conditioning=conditioning,
+        **kwargs
     )

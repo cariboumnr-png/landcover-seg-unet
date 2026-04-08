@@ -174,7 +174,7 @@ class ConcatAdapter(torch.nn.Module):
         return torch.cat([x, dv], dim=1)
 
 
-def get_concat(config: multihead.CondConfig) -> ConcatAdapter | None:
+def get_concat(config: multihead.ConditioningConfig) -> ConcatAdapter | None:
     '''
     Build a ConcatAdapter from a conditional-config, if enabled.
 
