@@ -24,24 +24,27 @@
 from __future__ import annotations
 # standard imports
 import dataclasses
-# local imports
-import landseg.models.backbones as backbones
+import typing
+
+#
+@dataclasses.dataclass
+class BackboneConfig:
+    '''General configuration'''
+    body: str
+    base_ch: int
+    conv_params: dict[str, typing.Any]
 
 # -------------------------model general configuration-------------------------
 @dataclasses.dataclass
 class ModelConfig:
     '''General configuration'''
-    body: backbones.Backbone
     in_ch: int
-    base_ch: int
     logit_adjust: dict[str, list[float]]
     heads_w_counts: dict[str, list[int]]
-    clamp_range: tuple[float, float]
-    conditioning: CondConfig
 
 # ----------------------model conditioning configuration----------------------
 @dataclasses.dataclass
-class CondConfig:
+class ConditioningConfig:
     '''Conditioning configuration.'''
 
     mode: str | None        # mode ['concat', 'film', 'hybrid']
@@ -65,10 +68,3 @@ class FilmConfig:
     use_ids: bool
     use_vec: bool
     hidden: int
-
-# -----------------------model head state configuration-----------------------
-@dataclasses.dataclass
-class HeadsState:
-    '''Multihead status.'''
-    active: list[str] | None = dataclasses.field(init=False)
-    frozen: list[str] | None = dataclasses.field(init=False)

@@ -68,6 +68,7 @@ The design cleanly separates concerns:
 import torch
 import torch.nn
 # local imports
+import landseg.models.backbones as backbones
 import landseg.models.multihead as multihead
 
 class MultiHeadUNet(multihead.BaseMultiheadModel):
@@ -89,12 +90,12 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
 
     def __init__(
         self,
-        config: multihead.ModelConfig,
         *,
-        conv_params: dict,
-        enable_logit_adjust: bool,
-        enable_clamp: bool,
-    ):
+        backbone_config: multihead.BackboneConfig,
+        model_config: multihead.ModelConfig,
+        conditioning: multihead.ConditioningConfig,
+        **kwargs
+      ):
         '''
         Initialize a multihead UNet with optional domain conditioning.
 
@@ -119,39 +120,42 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         super().__init__()
 
         # channels
-        in_ch = config.in_ch
-        base_ch = config.base_ch
+        in_ch = model_config.in_ch
+        base_ch = backbone_config.base_ch
 
         # logit adjustments
         # scalar strength alpha (1.0 = as-provided priors) for logit adjust
         self.register_buffer('la_alpha', torch.tensor(1.0, dtype=torch.float32))
         # register perhead logit adjustment as buffers (NOT parameters)
-        if config.logit_adjust:
-            for h, v in config.logit_adjust.items():
+        if model_config.logit_adjust:
+            for h, v in model_config.logit_adjust.items():
                 t = torch.tensor(v, dtype=torch.float32).view(1, -1, 1, 1)
                 self.register_buffer(f'la_{h}', t)
         # runtime toggle whether to use la for inference (init state)
-        self.enable_logit_adjust = bool(enable_logit_adjust)
+        self.enable_logit_adjust = kwargs.get('enable_logit_adjust', True)
 
         # multihead management
-        heads_w_num_cls = {k: len(v) for k, v in config.heads_w_counts.items()}
-        self.heads = _HeadManager(in_ch=base_ch, heads=heads_w_num_cls)
+        heads = {k: len(v) for k, v in model_config.heads_w_counts.items()}
+        self.heads = _HeadManager(base_ch, heads)
 
         # domain knowledge router
-        self.domain_router = _DomainRouter(config.conditioning)
+        self.domain_router = _DomainRouter(conditioning)
 
         # domain concatenation if proviced
-        self.concat = multihead.get_concat(config.conditioning)
+        self.concat = multihead.get_concat(conditioning)
         add = self.concat.output_dim if self.concat is not None else 0
 
         # core UNet body
-        self.body = config.body(in_ch + add, base_ch, **conv_params)
+        body = self._get_model_body(backbone_config.body)
+        self.body = body(in_ch + add, base_ch, **backbone_config.conv_params)
 
         # conditioner
-        self.film = multihead.get_film(config.conditioning, base_ch)
+        self.film = multihead.get_film(conditioning, base_ch)
 
         # safety utilities
-        self.safety = _NumericSafety(enable_clamp, config.clamp_range)
+        enable_clamp = kwargs.get('enable_clamp', True)
+        clamp_range = kwargs.get('clamp_range', (1e-4, 1e4))
+        self.safety = _NumericSafety(enable_clamp, clamp_range)
 
     def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
         '''Compute per-head logits with optional domain info.'''
@@ -192,7 +196,7 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         # return head outputs
         return self.heads.forward(
             x,
-            self.heads.state.active,
+            self.heads.active,
             self.logit_adjust,
             self.logit_adjust_alpha,
             enable_la=self.enable_logit_adjust
@@ -201,19 +205,19 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
     def set_active_heads(self, active_heads: list[str] | None=None) -> None:
         '''Set the list of active heads used during forward.'''
 
-        self.heads.state.active = active_heads
+        self.heads.active = active_heads
 
     def set_frozen_heads(self, frozen_heads: list[str] | None=None) -> None:
         '''Freeze parameters for selected heads.'''
 
-        self.heads.state.frozen = frozen_heads
+        self.heads.frozen = frozen_heads
         self.heads.freeze(frozen_heads)
 
     def reset_heads(self):
         '''Clear active/frozen head selections.'''
 
-        self.heads.state.active = None
-        self.heads.state.frozen = None
+        self.heads.active = None
+        self.heads.frozen = None
 
     def set_logit_adjust_enabled(self, enabled: bool):
         '''External toggle on logit adjustment'''
@@ -225,6 +229,19 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
 
         la_alpha: torch.Tensor = getattr(self, 'la_alpha')
         la_alpha.fill_(float(alpha))
+
+    @staticmethod
+    def _get_model_body(body: str) -> backbones.Backbone:
+        '''Retrieve model body by name.'''
+
+        # model body registry
+        body_registry = {
+            'unet': backbones.UNet,
+            'unetpp': backbones.UNetPP
+        }
+        if not body in body_registry:
+            raise ValueError(f'Invalid base model: {body}')
+        return body_registry[body]
 
     @property
     def logit_adjust_alpha(self) -> float:
@@ -269,9 +286,8 @@ class _HeadManager(torch.nn.Module):
             head_name: torch.nn.Conv2d(in_ch, num_classes, kernel_size=1)
             for head_name, num_classes in heads.items()
         })
-        self.state = multihead.HeadsState()
-        self.state.active = list(self.outc.keys())
-        self.state.frozen = None
+        self.active: list[str] | None = list(self.outc.keys())
+        self.frozen: list[str] | None = None
 
     def forward(
         self,
@@ -285,16 +301,16 @@ class _HeadManager(torch.nn.Module):
 
         # if external active heads provided
         if active_heads is not None:
-            self.state.active = active_heads
+            self.active = active_heads
         # reset logic
-        if self.state.active is None:
-            self.state.active = list(self.outc.keys())
+        if self.active is None:
+            self.active = list(self.outc.keys())
         # parse from kwargs
         use_la = bool(kwargs.get('enable_la', False))
 
         # iterate through active heads
         output_logits: dict[str, torch.Tensor] = {}
-        for head in self.state.active:
+        for head in self.active:
             conv = self.outc[head]
             logits = conv(x)
             logits = torch.nan_to_num(logits, nan=0.0, posinf=1e4, neginf=-1e4)
@@ -353,7 +369,7 @@ class _DomainRouter(torch.nn.Module):
     configured to use it.
     '''
 
-    def __init__(self, cfg: multihead.CondConfig):
+    def __init__(self, cfg: multihead.ConditioningConfig):
         '''
         Initialize optional projections and record routing policy.
 

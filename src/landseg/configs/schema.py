@@ -242,6 +242,7 @@ class ConvParams:
 
 @dataclasses.dataclass
 class UnetBody:
+    body: str = 'unet'
     base_ch: int = 32
     conv_params: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {
@@ -252,6 +253,7 @@ class UnetBody:
 
 @dataclasses.dataclass
 class UnetPPBody:
+    body: str = 'unetpp'
     base_ch: int = 32
     conv_params: dict[str, typing.Any] = dataclasses.field(
         default_factory=lambda: {

@@ -3,6 +3,7 @@ use_body: unet
 
 body_registry:
   unet:
+    body: unet
     base_ch: 32
     conv_params:
       downs:
@@ -14,6 +15,7 @@ body_registry:
         gn_groups: 8
         p_drop: 0.0
   unetpp:
+    body: unetpp
     base_ch: 32
     conv_params:
       downs:
