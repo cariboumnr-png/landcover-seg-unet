@@ -22,8 +22,8 @@
 '''
 Catalog adapter utilities.
 
-Provides helpers to load and filter a canonical blocks catalog and
-extract class counts and file paths needed for downstream sampling
+Provides helpers to load and filter a canonical blocks catalog and schema
+to extract class counts and file paths needed for downstream sampling
 and analysis.
 '''
 
@@ -39,7 +39,7 @@ SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 @dataclasses.dataclass
 class DataBlocksView:
-    '''Parsed view of a blocks catalog with commonly used subsets.'''
+    '''High-level view of data blocks from dev and optional test data.'''
     dev_base_class_counts: dict[tuple[int, int], list[int]]
     dev_valid_class_counts: dict[tuple[int, int], list[int]]
     dev_blocks: dict[tuple[int, int], str]
@@ -47,7 +47,7 @@ class DataBlocksView:
 
 @dataclasses.dataclass
 class _Parsed:
-    '''Parsed view of a blocks catalog with commonly used subsets.'''
+    '''Internal parsed representation of a blocks catalog.'''
     base_class_counts: dict[tuple[int, int], list[int]]
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
@@ -60,9 +60,28 @@ def data_blocks_adapter(
     valid_px_threshold: float,
     non_overlapping_test_grid: bool = True
 ):
-    '''doc'''
+    '''
+    Load and adapt development and test blocks into a structured view.
 
-    # try load meta first
+    Filters blocks based on a minimum valid-pixel threshold, derives
+    class counts, and optionally restricts test blocks to the base grid
+    (non-overlapping).
+
+    Args:
+        dev_catalog: Path to development blocks catalog JSON.
+        dev_schema: Path to dataset schema JSON.
+        test_catalog: Path to external test blocks catalog JSON.
+        valid_px_threshold: Minimum fraction/amount of valid pixels
+            required for a block to be included.
+        non_overlapping_test_grid: If True, restrict test blocks to the
+            base non-overlapping grid aligned with schema block size.
+
+    Returns:
+        DataBlocksView containing filtered dev metadata and optional
+        test blocks.
+    '''
+
+    # try load schema first
     data_schema = SchemaCtrl.load_json_or_fail(dev_schema).fetch()
     assert data_schema # typing assertion
 
@@ -83,7 +102,7 @@ def data_blocks_adapter(
     if not test:
         test_blocks = None
     else:
-    # whether filter test blocks only on a non-overlapping grid (base)
+    # whether to filter test blocks only on a non-overlapping grid (base)
         if non_overlapping_test_grid:
             test_blocks = list(
                 v for k, v in test.valid_file_paths.items()
@@ -105,21 +124,7 @@ def _parse(
     valid_px_threshold: float,
     block_size: tuple[int, int],
 ):
-    '''
-    Parse a canonical blocks catalog and extract usable block metadata.
-
-    Loads the catalog JSON, filters out blocks without valid base pixels,
-    derives class counts for all valid blocks and for base grid blocks
-    (non-overlapping), and collects file paths for valid block artifacts.
-
-    Args:
-        fpath: Path to the blocks catalog JSON.
-        block_size: Block size (rows, cols) used to identify base grid
-            tiles.
-
-    Returns:
-        ParsedCatalog containing class counts and file paths.
-    '''
+    '''Parse acatalog JSON into filtered class counts and file paths.'''
 
     # read catalog JSON to instantiate a class object
     catalog_dict = CatalogDictCtrl.load_json_or_fail(fpath).fetch()
