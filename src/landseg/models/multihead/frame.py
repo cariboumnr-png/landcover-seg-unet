@@ -97,26 +97,60 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         **kwargs
       ):
         '''
-        Initialize a multihead UNet with optional domain conditioning.
+        Initialize a multihead UNet-based model.
+
+        This initializer constructs a complete multi-head UNet model from
+        pre-validated configuration objects supplied by the application
+        layer (e.g., CLI / experiment runner). The model itself does not
+        depend on any global or external configuration system.
+
+        The configuration inputs are treated as *structural contracts*
+        (typically via Protocols) and may originate from Hydra-backed
+        dataclasses, plain dataclasses, or other compatible objects.
 
         Initializes:
-            - Per-head Conv2d blocks via _HeadManager.
-            - Optional ConcatAdapter for input-level conditioning.
-            - Optional FilmConditioner for bottleneck modulation.
-            - Optional projection router for domain IDs / vectors.
-            - Autocast and clamping utilities.
-            - Logit-adjust buffers (non-trainable).
+        - UNet backbone specified by `backbone_config`.
+        - Per-head Conv2d blocks and head routing via `_HeadManager`.
+        - Optional input-level domain concatenation (`ConcatAdapter`).
+        - Optional bottleneck-level FiLM conditioning (`FilmConditioner`).
+        - Domain routing logic for IDs and vectors (`_DomainRouter`).
+        - Numeric safety utilities (autocast and value clamping).
+        - Per-head logit adjustment buffers (non-trainable).
 
         Args:
-            config:
-                Full model configuration, see `multihead.ModelConfig`.
-            conv_params:
-                Keyword arguments forwarded to the UNet body constructor.
-            enable_logit_adjust:
-                Enable or disable per-head logit adjustment at runtime.
-            enable_clamp:
-                Enable numeric clamping inside the UNet body.
+            backbone_config:
+                Backbone-level configuration describing:
+                - backbone variant (e.g., 'unet', 'unetpp'),
+                - base channel width,
+                - convolutional block parameters forwarded to backbone.
+            model_config:
+                Model-level configuration defining:
+                - input channel count,
+                - head definitions and class counts,
+                - per-head logit adjustment priors (optional).
+            conditioning:
+                Domain conditioning configuration specifying how
+                categorical IDs and/or continuous vectors are routed to:
+                - input concatenation,
+                - bottleneck FiLM modulation.
+            **kwargs:
+                Optional runtime flags and overrides, including:
+                - `enable_logit_adjust` (bool): runtime toggle for logit
+                  adjustment (default: True).
+                - `enable_clamp` (bool): enable numeric clamping
+                  (default: True).
+                - `clamp_range` (tuple[float, float]): numeric clamp
+                  bounds (default: (1e-4, 1e4)).
+
+        Notes:
+            - All parameters are keyword-only by design to make configuration
+              boundaries explicit and order-independent.
+            - Configuration ownership resides outside the model module;
+              this class assumes inputs are already validated.
+            - The model body must expose a `.encode()` / `.decode()` interface
+              compatible with UNet-style backbones.
         '''
+
         super().__init__()
 
         # channels
@@ -156,6 +190,24 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         enable_clamp = kwargs.get('enable_clamp', True)
         clamp_range = kwargs.get('clamp_range', (1e-4, 1e4))
         self.safety = _NumericSafety(enable_clamp, clamp_range)
+
+    @property
+    def logit_adjust_alpha(self) -> float:
+        '''Global logit adjust alpha scalar.'''
+        return float(getattr(self, 'la_alpha').item())
+
+    @property
+    def logit_adjust(self) -> dict[str, torch.Tensor]:
+        '''
+        Lazily gather per-head logit adjustment buffers. Buffers are
+        named 'la_{head}'. Excludes the scalar 'la_alpha'.
+        '''
+        out: dict[str, torch.Tensor] = {}
+        for name, buf in self.named_buffers():
+            if name.startswith('la_') and name != 'la_alpha':
+                head = name.removeprefix('la_')
+                out[head] = buf
+        return out
 
     def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
         '''Compute per-head logits with optional domain info.'''
@@ -242,24 +294,6 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         if not body in body_registry:
             raise ValueError(f'Invalid base model: {body}')
         return body_registry[body]
-
-    @property
-    def logit_adjust_alpha(self) -> float:
-        '''Global logit adjust alpha scalar.'''
-        return float(getattr(self, 'la_alpha').item())
-
-    @property
-    def logit_adjust(self) -> dict[str, torch.Tensor]:
-        '''
-        Lazily gather per-head logit adjustment buffers. Buffers are
-        named 'la_{head}'. Excludes the scalar 'la_alpha'.
-        '''
-        out: dict[str, torch.Tensor] = {}
-        for name, buf in self.named_buffers():
-            if name.startswith('la_') and name != 'la_alpha':
-                head = name.removeprefix('la_')
-                out[head] = buf
-        return out
 
 # internal pieces
 class _HeadManager(torch.nn.Module):

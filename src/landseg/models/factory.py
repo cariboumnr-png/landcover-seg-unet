@@ -89,30 +89,75 @@ def build_multihead_unet(
     dataspecs: core.DataSpecs,
     backbone_config: _BackeboneConfig,
     conditioning_config: _ConditioningConfig,
-    enable_logit_adjust: bool,
-    enable_clamp: bool,
-    clamp_range: tuple[float, float],
+    **kwargs
 ) -> multihead.BaseMultiheadModel:
     '''
-    Build a configured MultiHeadUNet instance.
+    Construct a configured MultiHeadUNet from explicit inputs.
+
+    This factory assembles a complete multi-head UNet model using:
+    - dataset-derived runtime specifications (`DataSpecs`), and
+    - explicitly supplied configuration objects describing backbone
+      structure and domain conditioning behavior.
+
+    The factory is intentionally decoupled from any global or external
+    configuration system (e.g., Hydra). Configuration inputs are treated
+    as structural contracts (via Protocols) and may originate from
+    Hydra-backed dataclasses, plain dataclasses, or other compatible
+    objects defined at the application / CLI layer.
+
+    Responsibilities of this factory:
+        - Translate dataset metadata into model-level configuration
+          (input channels, head definitions, logit-adjust priors).
+        - Normalize backbone and conditioning configuration into the
+          internal `multihead.*Config` dataclasses owned by the models
+          module.
+        - Instantiate and return a fully initialized `MultiHeadUNet`.
 
     Args:
-        body: Backbone type (currently 'unet' or 'unetpp').
-        dataspecs: Dataset specs containing image channels, domain, and
-            per-head class counts.
-        model_config: User configuration describing backbone parameters,
-            conditioning options, clamping/logit-adjust flags, and other
-            model settings.
+        dataspecs:
+            Dataset specifications carrying runtime information derived
+            from the data pipeline, including:
+                - image channel count,
+                - per-head class counts,
+                - optional logit-adjust priors,
+                - domain cardinalities and vector dimensions.
+        backbone_config:
+            Backbone configuration describing:
+                - backbone body name (e.g., 'unet', 'unetpp'),
+                - base channel width,
+                - convolutional block parameters forwarded to the
+                  backbone constructor.
+        conditioning_config:
+            Domain conditioning configuration describing how categorical
+            domain IDs and/or continuous domain vectors are routed to:
+                - input-level concatenation, and/or
+                - bottleneck-level FiLM conditioning.
+        **kwargs:
+            Optional runtime overrides forwarded to `MultiHeadUNet`,
+            such as:
+                - `enable_logit_adjust`,
+                - `enable_clamp`,
+                - `clamp_range`.
 
     Returns:
-        MultiHeadUNet:
-            - Selected backbone,
-            - Multihead outputs,
-            - Input concatenation and/or FiLM conditioning (if enabled),
-            - Optional numeric safety and logit-adjust behaviour.
+        BaseMultiheadModel:
+            A fully configured `MultiHeadUNet` instance composed of:
+                - the selected UNet backbone,
+                - multihead output blocks,
+                - optional domain conditioning (concat / FiLM),
+                - numeric safety and logit-adjust mechanisms.
 
     Raises:
-        ValueError: If an unsupported backbone name is provided.
+        ValueError:
+            If an unsupported backbone identifier is provided.
+
+    Notes:
+        - All arguments are keyword-only to make configuration boundaries
+          explicit and order-independent.
+        - This factory assumes configuration objects are already
+          validated by the application layer.
+        - No Hydra or experiment-level configuration is imported or
+          accessed within this module by design.
     '''
 
     # model backbone config
@@ -152,7 +197,5 @@ def build_multihead_unet(
         backbone_config=backbone_config,
         model_config=model_config,
         conditioning=conditioning,
-        enable_logit_adjust=enable_logit_adjust,
-        enable_clamp=enable_clamp,
-        clamp_range=clamp_range,
+        **kwargs
     )
