@@ -32,7 +32,6 @@ writes normalized block artifacts along with updated split mappings.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.transform.common as common
 import landseg.geopipe.transform.normal_blocks as normal_blocks
 
 # typing aliases
@@ -40,7 +39,7 @@ PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
 def run_normaliza_blocks(
-    paths: common.TransformPaths,
+    paths: artifacts.TransformPaths,
     *,
     policy: artifacts.LifecyclePolicy
 ):

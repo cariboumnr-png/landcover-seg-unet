@@ -34,7 +34,6 @@ import datetime
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.transform.common as common
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
@@ -47,7 +46,7 @@ Resolver = artifacts.Controller.load_json_or_fail
 
 # -------------------------------Public Function-------------------------------
 def build_schema(
-    paths: common.TransformPaths,
+    paths: artifacts.TransformPaths,
     *,
     policy: artifacts.LifecyclePolicy
 ) -> None:

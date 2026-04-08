@@ -34,7 +34,6 @@ import numpy
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform as transform
-import landseg.geopipe.transform.common as common
 import landseg.geopipe.transform.data_partition as data_partition
 import landseg.utils as utils
 
@@ -45,7 +44,7 @@ LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 # -------------------------------Public Function-------------------------------
 def run_datablocks_partition(
     logger: utils.Logger,
-    paths: common.TransformPaths,
+    paths: artifacts.TransformPaths,
     parsed_catalog: transform.ParsedCatalog,
     partition_config: data_partition.PartitionParameters,
     *,
