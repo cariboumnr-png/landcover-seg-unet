@@ -124,7 +124,7 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
 
 def _get_meta(
     data_schema: geo_core.DataSchema,
-    schema: geo_core.TransformSchema
+    transform_schema: geo_core.TransformSchema
 ) -> core.Meta:
     '''Populate `_Meta` dataclass from schema dictionary.'''
 
@@ -136,23 +136,43 @@ def _get_meta(
     img_px = math.prod(data_schema['tensor_shapes']['image']['shape'])
     lbl_px = math.prod(data_schema['tensor_shapes']['label']['shape'])
 
+    # get the patch grid of the test blocks if provided
+    col, row = 0, 0
+    # get block names sorted by col then row
+    sorted_blknames = sorted(transform_schema['test_blocks'].keys(), key=geo_utils.name_xy)
+    # get xy origin
+    xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
+    # track max col and row number (0-based)
+    for blkname in sorted_blknames:
+        x, y = geo_utils.name_xy(blkname)
+        col = max(col, (x - xmin) / data_schema['tensor_shapes']['image']['W'])
+        row = max(row, (y - ymin) / data_schema['tensor_shapes']['image']['H'])
+    col, row = int(col + 1), int(row + 1)
+    # Simple checker if test blocks form a continuous array, e.g., no gaps.
+    # This typically is the case if the test blocks are extracted from external
+    # image/label. Here we consider only to produce the preview image if this
+    # condition is true
+    if col * row != len(sorted_blknames):
+        col, row = 0, 0 # empty grid for downstream
+
     # return
     return core.Meta(
         img_ch=data_schema['tensor_shapes']['image']['C'],
         img_h_w=data_schema['tensor_shapes']['image']['H'],
         ignore_index=data_schema['io_conventions']['ignore_index'],
-        img_arr_key=schema['image_array_key'],
-        lbl_arr_key=schema['label_array_key'],
+        img_arr_key=transform_schema['image_array_key'],
+        lbl_arr_key=transform_schema['label_array_key'],
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
+        test_blks_grid=(col, row)
     )
 
 def _get_heads(
     data_schema: geo_core.DataSchema,
-    schema: geo_core.TransformSchema
+    transform_schema: geo_core.TransformSchema
 ) -> core.Heads:
     '''Populate `_Heads` dataclass from schema dictionary.'''
 
-    raw_counts: dict[str, list[int]] = schema['label_stats']
+    raw_counts: dict[str, list[int]] = transform_schema['label_stats']
     counts = {k: v for k, v in raw_counts.items() if k != 'original'}
     return core.Heads(
         class_counts=counts,

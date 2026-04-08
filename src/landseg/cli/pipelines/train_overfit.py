@@ -62,7 +62,11 @@ def overfit(config: configs.RootConfig) -> None:
     dataspecs = _build_dataspec_a_block(block_fp)
 
     # setup the model
-    model = models.build_multihead_unet(dataspecs, config.models)
+    model = models.build_multihead_unet(
+        dataspecs=dataspecs,
+        backbone_config=config.models.body_registry[config.models.use_body],
+        conditioning_config=config.models.conditioning,
+    )
 
     # build a trainer with no logging
     monitor_head = config.trainer.runtime.monitor.track_head_name
@@ -174,6 +178,7 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
             img_arr_key='image', # as per convention (already normalized)
             lbl_arr_key='label_stack', # as per convention (unchanged)
             blk_bytes=0,
+            test_blks_grid=(0, 0)
         ),
         heads=core.Heads(
             class_counts=cc, # neutral

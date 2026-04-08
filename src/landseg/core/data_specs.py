@@ -59,12 +59,16 @@ class Meta:
     img_arr_key: str
     lbl_arr_key: str
     blk_bytes: int
+    test_blks_grid: tuple[int, int]
 
     def __str__(self) -> str:
         return '\n'.join([
             '[General Meta]',
             f'Number of image channels: {self.img_ch}',
-            f'Ignore index: {self.ignore_index}'
+            f'Data block size (H==W): {self.img_h_w, self.img_h_w}',
+            f'Ignore index: {self.ignore_index}',
+            f'Per-block byte size: {self.blk_bytes:,}',
+            f'Test blocks grid: {self.test_blks_grid}'
         ])
 
 @dataclasses.dataclass

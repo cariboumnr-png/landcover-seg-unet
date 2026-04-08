@@ -62,4 +62,6 @@ class InferCallback(callback.Callback):
 
     def on_inference_end(self, out_dir: str) -> None:
         # stitch all blocks together and output a preview
-        self.trainer._preview_monitor_head(out_dir)
+        # only if the patch grid is of valid shape, e.e, non-zero dims
+        if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
+            self.trainer._preview_monitor_head(out_dir)

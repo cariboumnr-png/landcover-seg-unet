@@ -163,9 +163,9 @@ class Runner:
             if self.trainer.config.schedule.eval_interval is not None and \
                 epoch % self.trainer.config.schedule.eval_interval == 0:
                 v_logs = self.trainer.validate()
-                # # update preview if test data provided
-                # if self.trainer.dataloaders.test:
-                #     self.trainer.infer(self.previews)
+                # update preview if test data provided
+                if self.trainer.dataloaders.test:
+                    self.trainer.infer(self.previews)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
                 fpath = f'{self.ckpts}/{phase.name}_best.pt'
