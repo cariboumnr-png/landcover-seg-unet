@@ -264,6 +264,7 @@ class MultiHeadTrainer:
             self._emit('on_inference_batch_end')
 
         # inference phase end
+        # - produce a preview image if the test blocks grid is valid
         self._emit('on_inference_end', out_dir)
 
     def set_head_state(

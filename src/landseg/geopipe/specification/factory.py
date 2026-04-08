@@ -147,6 +147,13 @@ def _get_meta(
         x, y = geo_utils.name_xy(blkname)
         col = max(col, (x - xmin) / data_schema['tensor_shapes']['image']['W'])
         row = max(row, (y - ymin) / data_schema['tensor_shapes']['image']['H'])
+    col, row = int(col + 1), int(row + 1)
+    # Simple checker if test blocks form a continuous array, e.g., no gaps.
+    # This typically is the case if the test blocks are extracted from external
+    # image/label. Here we consider only to produce the preview image if this
+    # condition is true
+    if col * row != len(sorted_blknames):
+        col, row = 0, 0 # empty grid for downstream
 
     # return
     return core.Meta(
@@ -156,7 +163,7 @@ def _get_meta(
         img_arr_key=transform_schema['image_array_key'],
         lbl_arr_key=transform_schema['label_array_key'],
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
-        test_blks_grid=(int(col + 1), int(row + 1))
+        test_blks_grid=(col, row)
     )
 
 def _get_heads(
