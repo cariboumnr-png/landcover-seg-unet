@@ -46,17 +46,17 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .engine_state import RuntimeState, init_state
-    from .engine import MultiHeadTrainer
+    from .core import MultiHeadTrainer
+    from .state import RuntimeState, init_state
     from .utils import load, save,  multihead_loss, export_previews
 
 def __getattr__(name: str):
 
-    if name in ['RuntimeState', 'init_state']:
-        return getattr(importlib.import_module('.engine_state', __package__), name)
-
     if name in ['MultiHeadTrainer']:
-        return getattr(importlib.import_module('.engine', __package__), name)
+        return getattr(importlib.import_module('.core', __package__), name)
+
+    if name in ['RuntimeState', 'init_state']:
+        return getattr(importlib.import_module('.state', __package__), name)
 
     if name in ['load', 'save',  'multihead_loss', 'export_previews']:
         return getattr(importlib.import_module('.utils', __package__), name)
