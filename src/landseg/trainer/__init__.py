@@ -32,18 +32,36 @@ import typing
 
 __all__ = [
     # classes
+    'HeadsConifg',
+    'LogitAdjustScheme',
+    'MultiHeadTrainer',
+    'Phase',
+    'Runner',
     # functions
-    'build_trainer',
-    'build_runner'
+    'build_trainer_components',
     # types
+    'TrainerConfigShape',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_trainer, build_runner
+    from .common import TrainerConfigShape
+    from .components import build_trainer_components
+    from .engine import MultiHeadTrainer
+    from .runner import Phase, HeadsConifg, LogitAdjustScheme, Runner
 
 def __getattr__(name: str):
 
-    if name in ['build_trainer', 'build_runner']:
-        return getattr(importlib.import_module('.factory', __package__), name)
-    raise AttributeError(name)
+    if name in {'TrainerConfigShape'}:
+        return getattr(importlib.import_module('.common', __package__), name)
+
+    if name in {'Phase', 'HeadsConifg', 'LogitAdjustScheme', 'Runner'}:
+        return getattr(importlib.import_module('.runner', __package__), name)
+
+    if name in {'MultiHeadTrainer'}:
+        return getattr(importlib.import_module('.engine', __package__), name)
+
+    if name in {'build_trainer_components',}:
+        return getattr(importlib.import_module('.components', __package__), name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

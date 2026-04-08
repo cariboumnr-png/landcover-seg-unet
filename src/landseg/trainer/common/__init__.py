@@ -44,7 +44,7 @@ __all__ = [
     'ConfusionMatrixLike',
     'OptimizationLike',
     'TrainerComponentsLike',
-    'RuntimeConfigLike',
+    'TrainerConfigShape',
     'RuntimeStateLike',
     'TrainerEngineLike',
 ]
@@ -63,7 +63,7 @@ if typing.TYPE_CHECKING:
         SpecsLike,
         TrainerComponentsLike,
     )
-    from .trainer_config import RuntimeConfigLike
+    from .trainer_config import TrainerConfigShape
     from .trainer_state import RuntimeStateLike
 
 def __getattr__(name: str):
@@ -83,7 +83,7 @@ def __getattr__(name: str):
         'TrainerComponentsLike',
     ]:
         return getattr(importlib.import_module('.trainer_comps', __package__), name)
-    if name in ['RuntimeConfigLike']:
+    if name in ['TrainerConfigShape']:
         return getattr(importlib.import_module('.trainer_config', __package__), name)
     if name in ['RuntimeStateLike']:
         return getattr(importlib.import_module('.trainer_state', __package__), name)

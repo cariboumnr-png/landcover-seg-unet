@@ -361,7 +361,7 @@ class RuntimeSchedule:
 @dataclasses.dataclass
 class RuntimeMonitor:
     metric_name: str = 'iou'
-    track_head_name: str = 'layer1'
+    track_head_name: str = 'base'
     track_mode: str = 'max'
 
 @dataclasses.dataclass

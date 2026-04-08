@@ -19,15 +19,48 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+
 '''Factory to build the trainer components.'''
 
 # standard imports
 import dataclasses
+import typing
 # local imports
-import landseg.configs as configs
 import landseg.core as core
 import landseg.trainer.components as components
 import landseg.utils as utils
+
+#
+class _LoaderConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def batch_size(self) -> int: ...
+    @property
+    def patch_size(self) -> int: ...
+
+class _LossConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def alpha_fn(self) -> str: ...
+    @property
+    def en_beta(self) -> float: ...
+    @property
+    def types(self) -> typing.Any: ...
+
+class _OptimConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def opt_cls(self) -> str: ...
+    @property
+    def lr(self) -> float: ...
+    @property
+    def weight_decay(self) -> float: ...
+    @property
+    def sched_cls(self) -> str | None: ...
+    @property
+    def sched_args(self) -> dict[str, typing.Any]: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -42,10 +75,13 @@ class TrainerComponents:
 
 # -------------------------------Public Function-------------------------------
 def build_trainer_components(
+    logger: utils.Logger,
+    *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    config: configs.TrainerCfg,
-    logger: utils.Logger,
+    loader_config: _LoaderConfig,
+    loss_config: _LossConfig,
+    optim_config: _OptimConfig
  ) -> TrainerComponents:
     '''Builder trainer.'''
 
@@ -55,22 +91,22 @@ def build_trainer_components(
     # compile data loaders
     data_loaders = components.build_dataloaders(
         data_specs,
-        config.loader.batch_size,
-        config.loader.patch_size,
+        loader_config.batch_size,
+        loader_config.patch_size,
         logger
     )
 
     # compile training heads basic specifications
     headspecs = components.build_headspecs(
         data_specs,
-        config.loss.alpha_fn,
-        en_beta=config.loss.en_beta
+        loss_config.alpha_fn,
+        en_beta=loss_config.en_beta
     )
 
     # compile training heads loss compute modules
     headlosses = components.build_headlosses(
         headspecs,
-        config.loss.types,
+        loss_config.types,
         data_specs.meta.ignore_index,
     )
 
@@ -83,11 +119,11 @@ def build_trainer_components(
     # build optimizer and scheduler
     optimization = components.build_optimization(
         model,
-        config.optim.opt_cls,
-        config.optim.lr,
-        config.optim.weight_decay,
-        config.optim.sched_cls,
-        **config.optim.sched_args
+        optim_config.opt_cls,
+        optim_config.lr,
+        optim_config.weight_decay,
+        optim_config.sched_cls,
+        **optim_config.sched_args
     )
 
     # collect components

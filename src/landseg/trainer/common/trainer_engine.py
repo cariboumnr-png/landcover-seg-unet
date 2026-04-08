@@ -38,7 +38,7 @@ import landseg.trainer.common as common
 class TrainerEngineLike(typing.Protocol):
     model: core.MultiheadModelLike
     comps: common.TrainerComponentsLike
-    config: common.RuntimeConfigLike
+    config: common.TrainerConfigShape
     state: common.RuntimeStateLike
     flags: dict[str, bool]
     device: str

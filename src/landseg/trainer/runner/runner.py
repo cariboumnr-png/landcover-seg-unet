@@ -42,10 +42,11 @@ class Runner:
     '''doc'''
     def __init__(
         self,
+        logger: utils.Logger,
+        *,
+        exp_dir: str,
         trainer: engine.MultiHeadTrainer,
         phases: list[runner.Phase],
-        exp_dir: str,
-        logger: utils.Logger
     ):
         '''Initialization'''
 
@@ -130,9 +131,6 @@ class Runner:
         t_logs = {}
         v_logs = {}
 
-        # align trainer config with phase specs
-        self.trainer.config.schedule.max_epoch = num_epoch
-
         # set trainer logit adjustments
         la_scheme = phase.la_scheme
         self.trainer.model.set_logit_adjust_alpha(la_scheme.logit_adjust_alpha)
@@ -145,7 +143,7 @@ class Runner:
             # - patience can be None = no early stop
             # - stop when patience reached
             # - first 10 epochs not affected
-            patience = self.trainer.config.schedule.patience_epochs
+            patience = self.trainer.config.schedule.patience
             patience_counter = self.trainer.state.metrics.patience_n
             if patience and patience_counter >= patience and epoch >= 10:
                 self.logger.log('INFO', 'Patience limit reached, stopping')
@@ -160,8 +158,8 @@ class Runner:
             # train the current epoch
             t_logs = self.trainer.train_one_epoch(epoch)
             # validate at set interval
-            if self.trainer.config.schedule.eval_interval is not None and \
-                epoch % self.trainer.config.schedule.eval_interval == 0:
+            if self.trainer.config.schedule.val_every is not None and \
+                epoch % self.trainer.config.schedule.val_every == 0:
                 v_logs = self.trainer.validate()
                 # update preview if test data provided
                 if self.trainer.dataloaders.test:

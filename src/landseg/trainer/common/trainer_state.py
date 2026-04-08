@@ -30,7 +30,7 @@ Callback-facing trainer runtime state protocols.
 from __future__ import annotations
 import typing
 # local imports
-import landseg.core.trainer_protocols.trainer_comps as trainer_comps
+import landseg.trainer.common.trainer_comps as trainer_comps
 
 if typing.TYPE_CHECKING:
     import torch

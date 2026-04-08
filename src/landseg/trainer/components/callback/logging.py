@@ -55,7 +55,7 @@ class LoggingCallback(callback.Callback):
 
     def on_validation_end(self) -> None:
         epoch = self.state.progress.epoch
-        target_head = self.config.monitor.head
+        target_head = self.config.monitor.track_head_name
         v = self.trainer.state.metrics.best_value
         e = self.trainer.state.metrics.best_epoch
         for t in self.state.epoch_sum.val_logs.head_metrics_str[target_head]:

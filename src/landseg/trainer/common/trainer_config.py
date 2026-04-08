@@ -22,8 +22,13 @@
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
+
 '''
-Callback-facing trainer runtime config protocols.
+Internal runtime configuration structures for the trainer.
+
+Defines typed dataclasses for scheduling, monitoring, precision, and
+optimization settings, along with a factory that constructs a unified
+RuntimeConfig from user configuration files.
 '''
 
 # standard imports
@@ -31,34 +36,50 @@ from __future__ import annotations
 import typing
 
 # ---------------------------trainer runtime config---------------------------
-@typing.runtime_checkable
-class RuntimeConfigLike(typing.Protocol):
-    schedule: ScheduleLike
-    precision: PrecisionLike
-    optim: OptimConfigLike
-    monitor: MonitorLike
+class TrainerConfigShape(typing.Protocol):
+    '''Container holding all trainer runtime configuration sections.'''
+    @property
+    def schedule(self) -> '_Schedule': ...
+    @property
+    def monitor(self) -> '_Monitor': ...
+    @property
+    def precision(self) -> '_Precision': ...
+    @property
+    def optimization(self) -> '_OptimConfig': ...
 
-@typing.runtime_checkable
-class ScheduleLike(typing.Protocol):
-    max_epoch: int
-    max_step: int | None
-    logging_interval: int
-    eval_interval: int | None
-    checkpoint_interval: int | None
-    patience_epochs: int | None
-    min_delta: float | None
+# ------------------------------private dataclass------------------------------
+class _Schedule(typing.Protocol):
+    '''Training schedule related: epochs/logging/eval/ckpt/patience.'''
+    @property
+    def max_epoch(self) -> int: ...
+    @property
+    def max_step(self) -> int | None: ...
+    @property
+    def log_every(self) -> int: ...
+    @property
+    def val_every(self) -> int | None: ...
+    @property
+    def ckpt_every(self) -> int | None: ...
+    @property
+    def patience(self) -> int | None: ...
+    @property
+    def min_delta(self) -> float | None: ...
 
-@typing.runtime_checkable
-class MonitorLike(typing.Protocol):
-    enabled: tuple[str, ...]
-    metric: str
-    head: str
-    mode: str
+class _Monitor(typing.Protocol):
+    '''Metric tracking configuration for validation/early stopping.'''
+    @property
+    def metric_name(self) -> str: ...
+    @property
+    def track_head_name(self) -> str: ...
+    @property
+    def track_mode(self) -> str: ...
 
-@typing.runtime_checkable
-class PrecisionLike(typing.Protocol):
-    use_amp: bool
+class _Precision(typing.Protocol):
+    '''AMP/numerical precision settings.'''
+    @property
+    def use_amp(self) -> bool: ...
 
-@typing.runtime_checkable
-class OptimConfigLike(typing.Protocol):
-    grad_clip_norm: float | None
+class _OptimConfig(typing.Protocol):
+    '''Optimization-related runtime settings.'''
+    @property
+    def grad_clip_norm(self) -> float | None: ...

@@ -39,7 +39,7 @@ class ProgressCallback(callback.Callback):
     def on_train_epoch_end(self) -> None:
         # increment epoch counter
         epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.eval_interval
+        eval_interval = self.config.schedule.val_every
         # already at max epoch
         if epoch == self.config.schedule.max_epoch:
             return
@@ -52,7 +52,7 @@ class ProgressCallback(callback.Callback):
     def on_validation_end(self) -> None:
         # increment epoch counter
         epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.eval_interval
+        eval_interval = self.config.schedule.val_every
         # already at max epoch
         if epoch == self.config.schedule.max_epoch:
             return

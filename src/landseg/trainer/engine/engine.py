@@ -78,7 +78,7 @@ class MultiHeadTrainer:
         self,
         model: core.MultiheadModelLike,
         components: common.TrainerComponentsLike,
-        config: engine.RuntimeConfig,
+        config: common.TrainerConfigShape,
         device: str,
         **kwargs
     ):
@@ -588,10 +588,10 @@ class MultiHeadTrainer:
 
     def _clip_grad(self):
         '''Clip gradients by global norm when set.'''
-        if self.config.optim.grad_clip_norm is not None:
+        if self.config.optimization.grad_clip_norm is not None:
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(),
-                self.config.optim.grad_clip_norm
+                self.config.optimization.grad_clip_norm
             )
 
     def _update_train_logs(self, flush: bool=False):
@@ -606,7 +606,7 @@ class MultiHeadTrainer:
         # create log dict
         logs = {}
         # update log at interval
-        if flush or bidx % self.config.schedule.logging_interval == 0:
+        if flush or bidx % self.config.schedule.log_every == 0:
             # average total loss so far
             avg_loss = self.state.epoch_sum.train_loss / max(1, bidx)
             logs['Total_Loss'] = avg_loss
@@ -669,7 +669,7 @@ class MultiHeadTrainer:
         '''Track the best metric and count patience epochs.'''
 
         # get metric from validation metrics dictionary
-        track_head = self.config.monitor.head
+        track_head = self.config.monitor.track_head_name
         val = self.state.epoch_sum.val_logs.head_metrics[track_head]
         met = val['ac_mean'] if val['has_active'] else val['mean']
 
@@ -685,7 +685,7 @@ class MultiHeadTrainer:
         delta = self.config.schedule.min_delta or 0.0 # None -> 0.0 (no delta)
         assert delta >= 0.0 # sanity
         # maximize tracking metrics
-        if self.config.monitor.mode == 'max':
+        if self.config.monitor.track_mode == 'max':
             # update tracking numbers
             if met >= self.state.metrics.best_value + delta:
                 self.state.metrics.best_value = met
@@ -738,7 +738,7 @@ class MultiHeadTrainer:
             self.state.epoch_sum.infer_ctx.maps,
             self.state.epoch_sum.infer_ctx.patch_grid_shape,
             out_dir=out_dir,
-            heads=[self.config.monitor.head] # as list
+            heads=[self.config.monitor.track_head_name] # as list
         )
 
     # -------------------------convenience properties-------------------------
