@@ -18,53 +18,34 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-'''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''Compose a list of callback classes in sequence for the trainer.'''
 
-from __future__ import annotations
-import importlib
-import typing
+# standard imports
+import dataclasses
+# local imports
+import landseg.session.components.callback as callback
+import landseg.utils as utils
 
-__all__ = [
-    # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
-    # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
-]
+@dataclasses.dataclass
+class CallbackSet:
+    '''Collection of callback class contracts.'''
+    train: callback.TrainCallback
+    validate: callback.ValCallback
+    infer: callback.InferCallback
+    logging: callback.LoggingCallback
+    progress: callback.ProgressCallback
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+    def __iter__(self):
+        return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
-def __getattr__(name: str):
+def build_callbacks(logger: utils.Logger) -> CallbackSet:
+    '''Factory to generate a set of callback class instances.'''
 
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
-
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return CallbackSet(
+        train=callback.TrainCallback(logger),
+        validate=callback.ValCallback(logger),
+        infer=callback.InferCallback(logger),
+        logging=callback.LoggingCallback(logger),
+        progress=callback.ProgressCallback(logger),
+    )

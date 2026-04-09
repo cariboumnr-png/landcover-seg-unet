@@ -18,8 +18,10 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
+# pylint: disable=too-many-return-statements
 '''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
+Top-level namespace for `landseg.trainer_components`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -31,40 +33,35 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
+    'HeadSpecs',
+    'HeadLosses',
+    'HeadMetrics',
     # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
+    'build_headspecs',
+    'build_headlosses',
+    'build_headmetrics',
+    # types
+    'TaskConfig',
 ]
-
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+    from .config import TaskConfig
+    from .heads import HeadSpecs, build_headspecs
+    from .loss import HeadLosses, build_headlosses
+    from .metrics import HeadMetrics, build_headmetrics
 
 def __getattr__(name: str):
 
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in ['TaskConfig']:
+        return getattr(importlib.import_module('.config', __package__), name)
 
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
+    if name in ['HeadSpecs', 'build_headspecs']:
+        return getattr(importlib.import_module('.heads', __package__), name)
 
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
+    if name in ['HeadLosses', 'build_headlosses']:
+        return getattr(importlib.import_module('.loss', __package__), name)
 
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
+    if name in ['HeadMetrics', 'build_headmetrics']:
+        return getattr(importlib.import_module('.metrics', __package__), name)
 
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(name)

@@ -18,53 +18,43 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-'''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+'''
+Callback-facing trainer class protocols. Mimics related behaviours.
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg.core as core
+import landseg.session.common as common
 
-__all__ = [
-    # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
-    # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
-
-def __getattr__(name: str):
-
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
-
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+# -------------------------------trainer class-------------------------------
+@typing.runtime_checkable
+class TrainerEngineLike(typing.Protocol):
+    model: core.MultiheadModelLike
+    comps: common.TrainerComponentsLike
+    config: common.TrainerConfigShape
+    state: common.RuntimeStateLike
+    flags: dict[str, bool]
+    device: str
+    # batch extraction
+    def _parse_batch(self) -> None: ...
+    # context
+    def _autocast_ctx(self) -> typing.ContextManager: ...
+    def _val_ctx(self) -> typing.ContextManager: ...
+    # training pahse
+    def _compute_loss(self) -> None: ...
+    def _clip_grad(self) -> None: ...
+    def _update_train_logs(self, flush: bool=True) -> bool: ...
+    # validation phase
+    def _update_conf_matrix(self) -> None: ...
+    def _compute_iou(self) -> None: ...
+    def _track_metrics(self) -> None: ...
+    # inference phase
+    def _aggregate_batch_predictions(self) -> None: ...
+    def _preview_monitor_head(self, out_dir: str) -> None: ...

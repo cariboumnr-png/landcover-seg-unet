@@ -18,53 +18,45 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-'''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
+'''
+Common types for task module.
 '''
 
+# standard typing
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
-    # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
-]
+# ---------------------------------Public Type---------------------------------
+class TaskConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def alpha_fn(self) -> str: ...
+    @property
+    def en_beta(self) -> float: ...
+    @property
+    def types(self) -> _LossTypes: ...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+# --------------------------------private  type--------------------------------
+class _LossTypes(typing.Protocol):
+    @property
+    def focal(self) -> _FocalConfig:...
+    @property
+    def dice(self) -> _DiceConfig:...
 
-def __getattr__(name: str):
+class _FocalConfig(typing.Protocol):
+    @property
+    def weight(self) -> float:...
+    @property
+    def gamma(self) -> float:...
+    @property
+    def reduction(self) -> str:...
 
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
-
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+class _DiceConfig(typing.Protocol):
+    @property
+    def weight(self) -> float:...
+    @property
+    def smooth(self) -> float:...

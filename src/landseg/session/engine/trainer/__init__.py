@@ -18,8 +18,11 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
+# pylint: disable=too-many-return-statements
+
 '''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
+Top-level namespace for `landseg.trainer_engine`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -31,40 +34,31 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
+    'MultiHeadTrainer',
+    'RuntimeState',
     # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
+    'export_previews',
+    'init_state',
+    'load',
+    'save',
+    'multihead_loss',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+    from .core import MultiHeadTrainer
+    from .state import RuntimeState, init_state
+    from .utils import load, save,  multihead_loss, export_previews
 
 def __getattr__(name: str):
 
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in ['MultiHeadTrainer']:
+        return getattr(importlib.import_module('.core', __package__), name)
 
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
+    if name in ['RuntimeState', 'init_state']:
+        return getattr(importlib.import_module('.state', __package__), name)
 
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
+    if name in ['load', 'save',  'multihead_loss', 'export_previews']:
+        return getattr(importlib.import_module('.utils', __package__), name)
 
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(name)

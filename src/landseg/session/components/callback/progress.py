@@ -18,53 +18,44 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-'''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# pylint: disable=protected-access
+'''Progress increments callback class.'''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.session.components.callback as callback
 
-__all__ = [
-    # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
-    # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
-]
+class ProgressCallback(callback.Callback):
+    '''Progress tracker.'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+    def on_train_epoch_begin(self, epoch: int) -> None:
+        self.state.progress.epoch = epoch   # get current epoch
+        self.state.progress.epoch_step = 0  # reset epoch step
 
-def __getattr__(name: str):
+    def on_train_batch_end(self) -> None:
+        self.state.progress.epoch_step += 1
+        self.state.progress.global_step += 1
 
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    def on_train_epoch_end(self) -> None:
+        # increment epoch counter
+        epoch = self.state.progress.epoch
+        eval_interval = self.config.schedule.val_every
+        # already at max epoch
+        if epoch == self.config.schedule.max_epoch:
+            return
+        # if no validation after training, increment after this hook
+        if eval_interval is None or epoch % eval_interval != 0:
+            self.state.progress.epoch += 1
 
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
+    def on_validation_begin(self) -> None: ...
 
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
-
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    def on_validation_end(self) -> None:
+        # increment epoch counter
+        epoch = self.state.progress.epoch
+        eval_interval = self.config.schedule.val_every
+        # already at max epoch
+        if epoch == self.config.schedule.max_epoch:
+            return
+        # if validation is done, increment after this hook
+        if eval_interval is not None and epoch % eval_interval == 0:
+            self.state.progress.epoch += 1

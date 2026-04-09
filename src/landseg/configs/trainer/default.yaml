@@ -17,7 +17,7 @@ loss:
       smooth: 1.0
 
 # optimizer and scheduler config
-optim:
+optimization:
   opt_cls: 'AdamW'
   lr: 1e-4
   weight_decay: 1e-3

@@ -18,53 +18,44 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-'''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+# pylint: disable=missing-function-docstring
+
+'''
+Training phase
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
+import dataclasses
 import typing
 
-__all__ = [
-    # classes
-    'BlockBuilder',
-    'BlockBuilderConfig',
-    'BlockBuildingParameters',
-    'ManifestUpdateContext',
-    'MappedRasterWindows',
-    # functions
-    'map_rasters_to_grid',
-    'run_blocks_building',
-    'update_manifest',
-    # typing
-]
+@dataclasses.dataclass
+class Phase:
+    '''doc'''
+    name: str
+    num_epochs: int
+    heads: HeadsConfigProto
+    logit_adjust: LogitAdjustSchemeProto
+    lr_scale: float
+    finished: bool
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .builder import BlockBuilder, BlockBuilderConfig
-    from .manifest import ManifestUpdateContext, update_manifest
-    from .mapper import MappedRasterWindows, map_rasters_to_grid
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+class LogitAdjustSchemeProto(typing.Protocol):
+    '''doc'''
+    @property
+    def logit_adjust_alpha(self) -> float: ...
+    @property
+    def enable_train_logit_adjustment(self) -> bool: ...
+    @property
+    def enable_val_logit_adjustment(self) -> bool: ...
+    @property
+    def enable_test_logit_adjustment(self) -> bool: ...
 
-def __getattr__(name: str):
-
-    if name in {'BlockBuilder', 'BlockBuilderConfig'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'PipelinePaths'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.manifest', __package__), name)
-
-    if name in {'MappedRasterWindows', 'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+class HeadsConfigProto(typing.Protocol):
+    '''doc'''
+    @property
+    def active_heads(self) -> list[str]: ...
+    @property
+    def frozen_heads(self) -> list[str] | None: ...
+    @property
+    def excluded_cls(self) -> dict[str, list[int]] | None: ...

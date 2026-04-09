@@ -30,12 +30,14 @@ model, and runs the multi-phase training runner.
 import dataclasses
 import datetime
 import os
+# third-party imports
+import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
-import landseg.trainer as trainer
+import landseg.session as session
 import landseg.utils as utils
 
 def train(config: configs.RootConfig):
@@ -77,10 +79,37 @@ def train(config: configs.RootConfig):
         clamp_range=config.models.clamp_range
     )
 
-    # build controller
-    runner = trainer.build_runner(exp_dir, dataspecs, model, config, logger)
+    # trainer components
+    components = session.build_trainer_components(
+        data_specs=dataspecs,
+        model=model,
+        data_config=config.trainer.loader,
+        task_config=config.trainer.loss,
+        optim_config=config.trainer.optimization,
+        logger=logger,
+    )
+    # trainer engine
+    engine = session.MultiHeadTrainer(
+        model=model,
+        components=components,
+        config=config.trainer.runtime,
+        device='cuda' if torch.cuda.is_available() else 'cpu',
+    )
 
-    # run via controller
+    # get phases
+    phases = [
+        session.Phase(
+            name=cfg.name,
+            num_epochs=cfg.num_epochs,
+            heads=cfg.heads,
+            logit_adjust=cfg.logit_adjust,
+            lr_scale=cfg.lr_scale,
+            finished=False
+        ) for cfg in config.runner.phases
+    ]
+
+    # build controller and run
+    runner = session.Runner(engine, phases, exp_dir, logger=logger)
     runner.fit()
 
 def _init_experiment_folder(config: configs.RootConfig) -> tuple[str, str]:

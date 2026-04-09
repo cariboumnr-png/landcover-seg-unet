@@ -160,13 +160,13 @@ runner:
         # Layers to lock / Couches à verrouiller
         frozen_heads: []
         # Classes to ignore in loss / Classes à ignorer dans la perte
-        masked_classes: {}
+        excluded_cls: {}
 
       logit_adjust:
         # Toggle class imbalance correction / Activer la correction du déséquilibre des classes
-        train: False
-        val: False
-        test: False
-        alpha: 1.0  # Power of adjustment / Puissance de l'ajustement
+        logit_adjust_alpha: 1.0  # Power of adjustment / Puissance de l'ajustement
+        enable_train_logit_adjustment: False
+        enable_val_logit_adjustment: False
+        enable_test_logit_adjustment: False
 
       lr_scale: 1.0 # Learning rate multiplier / Multiplicateur du taux d'apprentissage
