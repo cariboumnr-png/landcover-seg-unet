@@ -34,11 +34,11 @@ CTRL = artifacts.PayloadController[D, M]
 
 # -------------------------------Public Function-------------------------------
 def prepare_world_grid(
-    logger: utils.Logger,
     grid_fpath: str,
     config: world_grids.GridParameters,
     *,
     policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ) -> geo_core.GridLayout:
     '''
     Build or load a persisted world grid.
