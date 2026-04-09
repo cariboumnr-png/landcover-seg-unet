@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Training phase
 '''
@@ -26,59 +28,34 @@ Training phase
 # standard imports
 from __future__ import annotations
 import dataclasses
+import typing
 
-# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class Phase:
     '''doc'''
     name: str
     num_epochs: int
-    heads: HeadsConifg
-    la_scheme: LogitAdjustScheme
-    lr_scale: float = 1.0
-    finished: bool = False
+    heads: HeadsConfigProto
+    logist_adjust: LogitAdjustSchemeProto
+    lr_scale: float
+    finished: bool
 
-    def __str__(self) -> str:
-        return '\n'.join([
-            f'- Phase Name:\t{self.name}',
-            f'- Max Epochs:\t{self.num_epochs}',
-            str(self.heads),
-            str(self.la_scheme),
-            f'- LR Scale:\t{self.lr_scale}'
-        ])
+class LogitAdjustSchemeProto(typing.Protocol):
+    '''doc'''
+    @property
+    def logit_adjust_alpha(self) -> float: ...
+    @property
+    def enable_train_logit_adjustment(self) -> bool: ...
+    @property
+    def enable_val_logit_adjustment(self) -> bool: ...
+    @property
+    def enable_test_logit_adjustment(self) -> bool: ...
 
-@dataclasses.dataclass
-class HeadsConifg:
-    '''Phase level heads-related config.'''
-    active_heads: list[str]
-    frozen_heads: list[str] | None
-    excluded_cls: dict[str, list[int]] | None
-
-    def __str__(self) -> str:
-        indent: int=2
-        s = ' ' * indent
-        return f'\n{s}'.join([
-            '- Heads Specs',
-            f'- Active Heads:\t{self.active_heads}',
-            f'- Frozen Heads:\t{self.frozen_heads}',
-            f'- Excld. Class:\t{self.excluded_cls}',
-        ])
-
-@dataclasses.dataclass
-class LogitAdjustScheme:
-    '''Logit adjustment scheme.'''
-    logit_adjust_alpha: float
-    enable_train_logit_adjustment: bool
-    enable_val_logit_adjustment: bool
-    enable_test_logit_adjustment: bool
-
-    def __str__(self) -> str:
-        indent: int=2
-        s = ' ' * indent
-        return f'\n{s}'.join([
-            '- Logit Adjustment',
-            f'- Global Alpha:\t{self.logit_adjust_alpha:.2f}',
-            f'- Training Stage:\t{self.enable_train_logit_adjustment}',
-            f'- Validation Stage:\t{self.enable_val_logit_adjustment}',
-            f'- Inference Stage:\t{self.enable_test_logit_adjustment}',
-        ])
+class HeadsConfigProto(typing.Protocol):
+    '''doc'''
+    @property
+    def active_heads(self) -> list[str]: ...
+    @property
+    def frozen_heads(self) -> list[str] | None: ...
+    @property
+    def excluded_cls(self) -> dict[str, list[int]] | None: ...

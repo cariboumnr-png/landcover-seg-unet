@@ -96,18 +96,20 @@ def train(config: configs.RootConfig):
         device='cuda' if torch.cuda.is_available() else 'cpu',
     )
 
-    # phases
-    phases = _generate_phases(config.runner)
+    # get phases
+    phases = [
+        trainer.Phase(
+            name=cfg.name,
+            num_epochs=cfg.num_epochs,
+            heads=cfg.heads,
+            logist_adjust=cfg.logit_adjust,
+            lr_scale=cfg.lr_scale,
+            finished=False
+        ) for cfg in config.runner.phases
+    ]
 
-    # build controller
-    runner = trainer.Runner(
-        logger,
-        exp_dir=exp_dir,
-        trainer=engine,
-        phases=phases
-    )
-
-    # run via controller
+    # build controller and run
+    runner = trainer.Runner(engine, phases, exp_dir, logger=logger)
     runner.fit()
 
 def _init_experiment_folder(config: configs.RootConfig) -> tuple[str, str]:
@@ -144,32 +146,3 @@ def _init_experiment_folder(config: configs.RootConfig) -> tuple[str, str]:
 
     # return experiment dir and log dir
     return exp_dir, logs_dir
-
-def _generate_phases(config: configs.RunnerCfg) -> list[trainer.Phase]:
-    '''doc'''
-
-    # config accesor
-    phases: list[trainer.Phase] = []
-    # iterate through phases in config (1-based)
-    for cfg in config.phases:
-        phases.append(
-            trainer.Phase(
-                name=cfg.name,
-                num_epochs=cfg.num_epochs,
-                heads=trainer.HeadsConifg(
-                    cfg.heads.active_heads,
-                    cfg.heads.frozen_heads,
-                    cfg.heads.masked_classes
-                ),
-                la_scheme=trainer.LogitAdjustScheme(
-                    cfg.logit_adjust.alpha,
-                    cfg.logit_adjust.train,
-                    cfg.logit_adjust.val,
-                    cfg.logit_adjust.test,
-                ),
-                lr_scale=cfg.lr_scale
-            )
-        )
-
-    # return
-    return phases

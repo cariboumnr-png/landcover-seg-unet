@@ -33,22 +33,20 @@ import typing
 __all__ = [
     # classes
     'Runner',
-    'Phase',
-    'HeadsConifg',
-    'LogitAdjustScheme',
     # functions
     # types
+    'Phase'
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .runner import Runner
-    from .phase import Phase, HeadsConifg, LogitAdjustScheme
+    from .phase import Phase
 
 def __getattr__(name: str):
 
     if name in ['Runner']:
         return getattr(importlib.import_module('.runner', __package__), name)
-    if name in ['Phase', 'HeadsConifg', 'LogitAdjustScheme',]:
+    if name in ['Phase',]:
         return getattr(importlib.import_module('.phase', __package__), name)
 
     raise AttributeError(name)

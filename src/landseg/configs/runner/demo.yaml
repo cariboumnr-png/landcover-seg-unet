@@ -10,10 +10,10 @@ phases:
       heads:
         active_heads: [layer1]
         frozen_heads: null
-        masked_classes: null
+        excluded_cls: null
       logit_adjust:
-        train: False
-        val: False
-        test: False
-        alpha: 1.0
+        logit_adjust_alpha: 1.0
+        enable_train_logit_adjustment: False
+        enable_val_logit_adjustment: False
+        enable_test_logit_adjustment: False
       lr_scale: 1.0

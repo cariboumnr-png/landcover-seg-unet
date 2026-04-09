@@ -42,16 +42,16 @@ class Runner:
     '''doc'''
     def __init__(
         self,
-        logger: utils.Logger,
-        *,
-        exp_dir: str,
-        trainer: trainer.MultiHeadTrainer,
+        engine: trainer.MultiHeadTrainer,
         phases: list[runner.Phase],
+        exp_dir: str,
+        *,
+        logger: utils.Logger,
     ):
         '''Initialization'''
 
         # parse arguments
-        self.trainer = trainer
+        self.trainer = engine
         self.phases = phases
         self.logger = logger.get_child('phase') # a child from base logger
         # preview and checkpoint dir
@@ -132,9 +132,13 @@ class Runner:
         v_logs = {}
 
         # set trainer logit adjustments
-        la_scheme = phase.la_scheme
+        la_scheme = phase.logist_adjust
         self.trainer.model.set_logit_adjust_alpha(la_scheme.logit_adjust_alpha)
-        self.trainer.config_logit_adjustment(**dataclasses.asdict(la_scheme))
+        self.trainer.config_logit_adjustment(
+            enable_train_logit_adjustment=la_scheme.enable_train_logit_adjustment,
+            enable_val_logit_adjustment=la_scheme.enable_val_logit_adjustment,
+            enable_test_logit_adjustment=la_scheme.enable_test_logit_adjustment,
+        )
 
         # train
         print(f'__Phase [{phase.name}] started__')
