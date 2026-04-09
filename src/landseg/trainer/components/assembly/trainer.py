@@ -20,13 +20,11 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
 
 '''Factory to build the trainer components.'''
 
 # standard imports
 import dataclasses
-import typing
 # local imports
 import landseg.core as core
 import landseg.trainer.components.callback as callback
@@ -34,36 +32,6 @@ import landseg.trainer.components.data as data
 import landseg.trainer.components.optim as optim
 import landseg.trainer.components.task as task
 import landseg.utils as utils
-
-#
-class _LoaderConfig(typing.Protocol):
-    '''doc'''
-    @property
-    def batch_size(self) -> int: ...
-    @property
-    def patch_size(self) -> int: ...
-
-class _LossConfig(typing.Protocol):
-    '''doc'''
-    @property
-    def alpha_fn(self) -> str: ...
-    @property
-    def en_beta(self) -> float: ...
-    @property
-    def types(self) -> typing.Any: ...
-
-class _OptimConfig(typing.Protocol):
-    '''doc'''
-    @property
-    def opt_cls(self) -> str: ...
-    @property
-    def lr(self) -> float: ...
-    @property
-    def weight_decay(self) -> float: ...
-    @property
-    def sched_cls(self) -> str | None: ...
-    @property
-    def sched_args(self) -> dict[str, typing.Any]: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -81,52 +49,43 @@ def build_trainer_components(
     *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    loader_config: _LoaderConfig,
-    loss_config: _LossConfig,
-    optim_config: _OptimConfig,
+    data_config: data.LoaderConfig,
+    task_config: task.TaskConfig,
+    optim_config: optim.OptimConfig,
     logger: utils.Logger,
  ) -> TrainerComponents:
     '''Builder trainer.'''
 
-    # compile data loaders
+    # data
     data_loaders = data.build_dataloaders(
         data_specs,
-        loader_config.batch_size,
-        loader_config.patch_size,
+        data_config,
         logger=logger,
     )
 
-    # compile training heads basic specifications
+    # task
+    # heads specifications
     headspecs = task.build_headspecs(
         data_specs,
-        alpha_fn=loss_config.alpha_fn,
-        en_beta=loss_config.en_beta
+        alpha_fn=task_config.alpha_fn,
+        en_beta=task_config.en_beta
     )
-
-    # compile training heads loss compute modules
+    # heads loss modules
     headlosses = task.build_headlosses(
         headspecs,
-        config=loss_config.types,
+        config=task_config.types,
         ignore_index=data_specs.meta.ignore_index,
     )
-
-    # compile training heads metric compute modules
+    # heads metric modules
     headmetrics = task.build_headmetrics(
         headspecs,
         ignore_index=data_specs.meta.ignore_index
     )
 
-    # build optimizer and scheduler
-    optimization = optim.build_optimization(
-        model,
-        optim_config.opt_cls,
-        optim_config.lr,
-        optim_config.weight_decay,
-        optim_config.sched_cls,
-        **optim_config.sched_args
-    )
+    # optimizer and scheduler
+    optimization = optim.build_optimization(model, optim_config)
 
-    # generate callback instances
+    # callback system
     callbacks = callback.build_callbacks(logger)
 
     # collect components

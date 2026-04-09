@@ -83,9 +83,9 @@ def train(config: configs.RootConfig):
     components = trainer.build_trainer_components(
         data_specs=dataspecs,
         model=model,
-        loader_config=config.trainer.loader,
-        loss_config=config.trainer.loss,
-        optim_config=config.trainer.optim,
+        data_config=config.trainer.loader,
+        task_config=config.trainer.loss,
+        optim_config=config.trainer.optimization,
         logger=logger,
     )
     # trainer engine

@@ -40,14 +40,20 @@ __all__ = [
     'build_headspecs',
     'build_headlosses',
     'build_headmetrics',
+    # types
+    'TaskConfig',
 ]
 # for static check
 if typing.TYPE_CHECKING:
+    from .config import TaskConfig
     from .heads import HeadSpecs, build_headspecs
     from .loss import HeadLosses, build_headlosses
     from .metrics import HeadMetrics, build_headmetrics
 
 def __getattr__(name: str):
+
+    if name in ['TaskConfig']:
+        return getattr(importlib.import_module('.config', __package__), name)
 
     if name in ['HeadSpecs', 'build_headspecs']:
         return getattr(importlib.import_module('.heads', __package__), name)

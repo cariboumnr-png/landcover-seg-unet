@@ -19,32 +19,44 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.trainer_components.optimization`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Common types for task module.
 '''
 
+# standard typing
 from __future__ import annotations
-import importlib
 import typing
-__all__ = [
-    # classes
-    'Optimization',
-    # functions
-    'build_optimization',
-    # types
-    'OptimConfig'
-]
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .optimizer import OptimConfig, Optimization, build_optimization
+# ---------------------------------Public Type---------------------------------
+class TaskConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def alpha_fn(self) -> str: ...
+    @property
+    def en_beta(self) -> float: ...
+    @property
+    def types(self) -> _LossTypes: ...
 
-def __getattr__(name: str):
+# --------------------------------private  type--------------------------------
+class _LossTypes(typing.Protocol):
+    @property
+    def focal(self) -> _FocalConfig:...
+    @property
+    def dice(self) -> _DiceConfig:...
 
-    if name in ['OptimConfig', 'Optimization', 'build_optimization']:
-        return getattr(importlib.import_module('.optimizer', __package__), name)
+class _FocalConfig(typing.Protocol):
+    @property
+    def weight(self) -> float:...
+    @property
+    def gamma(self) -> float:...
+    @property
+    def reduction(self) -> str:...
 
-    raise AttributeError(name)
+class _DiceConfig(typing.Protocol):
+    @property
+    def weight(self) -> float:...
+    @property
+    def smooth(self) -> float:...

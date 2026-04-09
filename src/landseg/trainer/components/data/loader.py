@@ -34,10 +34,13 @@ The main entry point is `get_dataloaders`, returning a structured
 DataLoaders object containing train/val/test loaders and metadata.
 '''
 
+# pylint: disable=missing-function-docstring
+
 # standard imports
 from __future__ import annotations
 import dataclasses
 import functools
+import typing
 # third-party imports
 import psutil
 import torch
@@ -47,6 +50,14 @@ import landseg.core as core
 import landseg.trainer.common.alias as alias
 import landseg.trainer.components.data as data
 import landseg.utils as utils
+
+# ---------------------------------Public Type---------------------------------
+class LoaderConfig(typing.Protocol):
+    '''Shape of a container for configuring data loading.'''
+    @property
+    def batch_size(self) -> int: ...
+    @property
+    def patch_size(self) -> int: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -68,8 +79,7 @@ class _Meta:
 # -------------------------------Public Function-------------------------------
 def build_dataloaders(
     data_specs: core.DataSpecs,
-    batch_size: int,
-    patch_size: int,
+    config: LoaderConfig,
     *,
     logger: utils.Logger,
 ) -> DataLoaders:
@@ -107,10 +117,10 @@ def build_dataloaders(
     logger = logger.get_child('dldrs')
 
     # meta to be shipped
-    assert data_specs.meta.img_h_w % patch_size == 0 # sanity check
+    assert data_specs.meta.img_h_w % config.patch_size == 0 # sanity check
     meta = _Meta(
-        batch_size=batch_size,
-        patch_per_blk=int(data_specs.meta.img_h_w / patch_size) ** 2,
+        batch_size=config.batch_size,
+        patch_per_blk=int(data_specs.meta.img_h_w / config.patch_size) ** 2,
         test_blks_grid=data_specs.meta.test_blks_grid
     )
 
@@ -118,8 +128,8 @@ def build_dataloaders(
     load_partial = functools.partial(
         _load,
         data_specs=data_specs,
-        batch_size=batch_size,
-        patch_size=patch_size,
+        batch_size=config.batch_size,
+        patch_size=config.patch_size,
         logger=logger
     )
 

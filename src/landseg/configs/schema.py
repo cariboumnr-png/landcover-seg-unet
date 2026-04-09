@@ -313,11 +313,13 @@ class ModelsCfg:
             raise ValueError('invalid clamp_range ordering or non-positive')
 
 # -------------------------------TRAINER CONFIGS-------------------------------
+# ----- data loader
 @dataclasses.dataclass
 class LoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
+# ----- loss config
 @dataclasses.dataclass
 class FocalLossConfig:
     weight: float = 0.5
@@ -340,6 +342,7 @@ class LossConfig:
     en_beta: float = 0.999
     types: LossTypesConfig = dataclasses.field(default_factory=LossTypesConfig)
 
+# ----- optimization config
 @dataclasses.dataclass
 class OptimConfig:
     opt_cls: str = 'AdamW'
@@ -348,6 +351,7 @@ class OptimConfig:
     sched_cls: str | None = 'CosAnneal'
     sched_args: dict[str, typing.Any] = dataclasses.field(default_factory=lambda: {'T_max': 50})
 
+# ----- runtime config
 @dataclasses.dataclass
 class RuntimeSchedule:
     max_epoch: int = 50
@@ -390,13 +394,13 @@ class RuntimeConfig:
 class TrainerCfg:
     loader: LoaderConfig = dataclasses.field(default_factory=LoaderConfig)
     loss: LossConfig = dataclasses.field(default_factory=LossConfig)
-    optim: OptimConfig = dataclasses.field(default_factory=OptimConfig)
+    optimization: OptimConfig = dataclasses.field(default_factory=OptimConfig)
     runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
 
     def validate(self) -> None:
         # Example: scheduler-specific requirements
-        if self.optim.sched_cls == 'CosAnneal':
-            if 'T_max' not in self.optim.sched_args:
+        if self.optimization.sched_cls == 'CosAnneal':
+            if 'T_max' not in self.optimization.sched_args:
                 raise ValueError('missing T_max for CosAnneal')
 
 # ---------------------------------RUNNER  CONFIGS-----------------------------

@@ -38,18 +38,20 @@ __all__ = [
     # functions
     'build_dataloaders',
     # types
+    'LoaderConfig'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .dataset import BlockConfig, MultiBlockDataset
-    from .loader import DataLoaders, build_dataloaders
+    from .loader import LoaderConfig, DataLoaders, build_dataloaders
 
 def __getattr__(name: str):
 
     if name in ['BlockConfig', 'MultiBlockDataset']:
         return getattr(importlib.import_module('.dataset', __package__), name)
-    if name in ['DataLoaders', 'build_dataloaders']:
+    
+    if name in ['LoaderConfig', 'DataLoaders', 'build_dataloaders']:
         return getattr(importlib.import_module('.loader', __package__), name)
 
     raise AttributeError(name)

@@ -36,36 +36,12 @@ The main entry point is `CompositeLoss`, which handles:
     - Computing a weighted sum of all enabled losses
 '''
 
-# standard typing
-from __future__ import annotations
-import typing
 # third-party imports
 import torch
 import torch.nn
 # local imports
+import landseg.trainer.components.task as task
 import landseg.trainer.components.task.loss as loss
-
-# ---------------------------------Public Type---------------------------------
-class LossTypes(typing.Protocol):
-    @property
-    def focal(self) -> _FocalConfig:...
-    @property
-    def dice(self) -> _DiceConfig:...
-
-# --------------------------------private  type--------------------------------
-class _FocalConfig(typing.Protocol):
-    @property
-    def weight(self) -> float:...
-    @property
-    def gamma(self) -> float:...
-    @property
-    def reduction(self) -> str:...
-
-class _DiceConfig(typing.Protocol):
-    @property
-    def weight(self) -> float:...
-    @property
-    def smooth(self) -> float:...
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -105,7 +81,7 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: LossTypes,
+        config: task.TaskConfig,
         ignore_index: int,
         alpha: list[float] | None = None
     ):
@@ -134,25 +110,25 @@ class CompositeLoss(torch.nn.Module):
         self.weights: list[float] = []
 
         # focal loss
-        if config.focal.weight:
+        if config.types.focal.weight:
             loss_fn = loss.FocalLoss(
                 alpha=alpha,
-                gamma=config.focal.gamma,
-                reduction=config.focal.reduction,
+                gamma=config.types.focal.gamma,
+                reduction=config.types.focal.reduction,
                 ignore_index=ignore_index
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.focal.weight)
+            self.weights.append(config.types.focal.weight)
 
         # dice loss
-        if config.dice.weight:
+        if config.types.dice.weight:
             loss_fn = loss.DiceLoss(
-                smooth=config.dice.smooth,
+                smooth=config.types.dice.smooth,
                 ignore_index=ignore_index
             )
             # add to sequences
             self.losses.append(loss_fn)
-            self.weights.append(config.dice.weight)
+            self.weights.append(config.types.dice.weight)
 
     def forward(
         self,

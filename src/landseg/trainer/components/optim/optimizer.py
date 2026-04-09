@@ -38,6 +38,19 @@ import torch
 import landseg.core as core
 
 # ---------------------------------Public Type---------------------------------
+class OptimConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def opt_cls(self) -> str: ...
+    @property
+    def lr(self) -> float: ...
+    @property
+    def weight_decay(self) -> float: ...
+    @property
+    def sched_cls(self) -> str | None: ...
+    @property
+    def sched_args(self) -> dict[str, typing.Any]: ...
+
 # a callable that constructs an Optimizer (e.g., torch.optim.AdamW)
 p1 = typing.ParamSpec('p1')
 OptimizerFactory = typing.Callable[p1, "torch.optim.Optimizer"]
@@ -65,11 +78,7 @@ class Optimization:
 # -------------------------------Public Function-------------------------------
 def build_optimization(
     model: core.MultiheadModelLike,
-    opt_cls: str,
-    lr: float,
-    weight_decay: float,
-    sched_cls: str | None,
-    **sched_args
+    config: OptimConfig
 ) -> Optimization:
     '''
     Build optimizer and scheduler from a config.
@@ -85,13 +94,23 @@ def build_optimization(
         Optimization(optimizer, scheduler_or_none).
     '''
 
-    optimizer = _build_optimizer(model, opt_cls, lr, weight_decay)
-    scheduler = _build_scheduler(optimizer, sched_cls, **sched_args)
+    optimizer = _build_optimizer(
+        model,
+        optim_cls=config.opt_cls,
+        lr=config.lr,
+        weight_decay=config.weight_decay
+    )
+    scheduler = _build_scheduler(
+        optimizer,
+        sched_cls=config.sched_cls,
+        **config.sched_args
+    )
     return Optimization(optimizer=optimizer, scheduler=scheduler)
 
 # ------------------------------private  function------------------------------
 def _build_optimizer(
     model: core.MultiheadModelLike,
+    *,
     optim_cls: str,
     lr: float,
     weight_decay: float
@@ -109,6 +128,7 @@ def _build_optimizer(
 
 def _build_scheduler(
     optimizer: torch.optim.Optimizer,
+    *,
     sched_cls: str | None,
     **sched_args
 ) -> torch.optim.lr_scheduler.LRScheduler | None:
