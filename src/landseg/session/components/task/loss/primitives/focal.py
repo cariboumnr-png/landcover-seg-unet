@@ -103,7 +103,7 @@ class FocalLoss(primitives.PrimitiveLoss):
         _, c, _, _ = logits.shape # get number of classes (c)
 
         # get per-pixel weights
-        w = primitives.compose_pixel_weights(
+        w = self._compose_pixel_weights(
             masks=masks,
             targets=targets,
             ignore_index=self.ignore_index,

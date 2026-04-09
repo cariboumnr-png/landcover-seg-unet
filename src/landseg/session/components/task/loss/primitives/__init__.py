@@ -36,7 +36,6 @@ __all__ = [
     'FocalLoss',
     'PrimitiveLoss',
     # functions
-    'compose_pixel_weights',
     # types
 ]
 # for static check
@@ -44,7 +43,6 @@ if typing.TYPE_CHECKING:
     from .base import PrimitiveLoss
     from .dice import DiceLoss
     from .focal import FocalLoss
-    from .utils import compose_pixel_weights
 
 
 def __getattr__(name: str):
@@ -57,8 +55,5 @@ def __getattr__(name: str):
 
     if name in {'FocalLoss'}:
         return getattr(importlib.import_module('.focal', __package__), name)
-
-    if name in {'compose_pixel_weights'}:
-        return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
