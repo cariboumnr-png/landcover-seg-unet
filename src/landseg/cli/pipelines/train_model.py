@@ -81,12 +81,12 @@ def train(config: configs.RootConfig):
 
     # trainer components
     components = trainer.build_trainer_components(
-        logger,
         data_specs=dataspecs,
         model=model,
         loader_config=config.trainer.loader,
         loss_config=config.trainer.loss,
-        optim_config=config.trainer.optim
+        optim_config=config.trainer.optim,
+        logger=logger,
     )
     # trainer engine
     engine = trainer.MultiHeadTrainer(

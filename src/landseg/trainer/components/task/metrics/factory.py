@@ -32,7 +32,7 @@ Used by the trainer to compute IoU-based metrics for each prediction head.
 '''
 
 # local imports
-import landseg.trainer.components as components
+import landseg.trainer.components.task as task
 import landseg.trainer.components.task.metrics as metrics
 
 class HeadMetrics:
@@ -62,7 +62,8 @@ class HeadMetrics:
         return dict(self._hmetrics)
 
 def build_headmetrics(
-    headspecs: components.HeadSpecs,
+    headspecs: task.HeadSpecs,
+    *,
     ignore_index: int
 ) -> HeadMetrics:
     '''

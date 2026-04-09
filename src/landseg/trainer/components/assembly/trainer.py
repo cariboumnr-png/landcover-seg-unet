@@ -78,18 +78,15 @@ class TrainerComponents:
 
 # -------------------------------Public Function-------------------------------
 def build_trainer_components(
-    logger: utils.Logger,
     *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
     loader_config: _LoaderConfig,
     loss_config: _LossConfig,
-    optim_config: _OptimConfig
+    optim_config: _OptimConfig,
+    logger: utils.Logger,
  ) -> TrainerComponents:
     '''Builder trainer.'''
-
-    # generate callback instances
-    callbacks = callback.build_callbacks(logger)
 
     # compile data loaders
     data_loaders = data.build_dataloaders(
@@ -102,21 +99,21 @@ def build_trainer_components(
     # compile training heads basic specifications
     headspecs = task.build_headspecs(
         data_specs,
-        loss_config.alpha_fn,
+        alpha_fn=loss_config.alpha_fn,
         en_beta=loss_config.en_beta
     )
 
     # compile training heads loss compute modules
     headlosses = task.build_headlosses(
         headspecs,
-        loss_config.types,
-        data_specs.meta.ignore_index,
+        config=loss_config.types,
+        ignore_index=data_specs.meta.ignore_index,
     )
 
     # compile training heads metric compute modules
     headmetrics = task.build_headmetrics(
         headspecs,
-        data_specs.meta.ignore_index
+        ignore_index=data_specs.meta.ignore_index
     )
 
     # build optimizer and scheduler
@@ -128,6 +125,9 @@ def build_trainer_components(
         optim_config.sched_cls,
         **optim_config.sched_args
     )
+
+    # generate callback instances
+    callbacks = callback.build_callbacks(logger)
 
     # collect components
     return TrainerComponents(

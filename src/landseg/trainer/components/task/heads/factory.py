@@ -56,8 +56,8 @@ class HeadSpecs:
 # Public API
 def build_headspecs(
     data: core.DataSpecs,
-    alpha_fn: str,
     *,
+    alpha_fn: str,
     en_beta: float | None = None
 ) -> HeadSpecs:
     '''
