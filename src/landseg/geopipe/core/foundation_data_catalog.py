@@ -46,8 +46,6 @@ from __future__ import annotations
 import collections.abc
 import json
 import typing
-# local imports
-import landseg.geopipe.utils as geo_utils
 
 # ---------------------------------Public Type---------------------------------
 class CatalogEntry(typing.TypedDict):
@@ -159,8 +157,14 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
             A populated `BlocksCatalog` instance.
         '''
 
+        def _name_xy(name: str) -> tuple[int, int]:
+            # e.g.,  row_000034_col_000012 -> (12, 34)
+            split = name.split('_')
+            y_str, x_str = split[1], split[3]
+            return int(x_str), int(y_str)
+
         obj = cls.__new__(cls)
-        obj._data = {geo_utils.name_xy(k): v for k, v in source.items()}
+        obj._data = {_name_xy(k): v for k, v in source.items()}
         return obj
 
     def to_json_payload(self) -> str:
@@ -174,8 +178,13 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
             A formatted JSON string representing the catalog.
         '''
 
+        def _xy_name(coords: tuple[int, int]) -> str:
+            # e.g., (12, 34) -> row_000034_col_000012
+            x, y = coords
+            return f'row_{y:06d}_col_{x:06d}'
+
         # sort self._data and start the line
-        data = {geo_utils.xy_name(k): v for k, v in self._data.items()}
+        data = {_xy_name(k): v for k, v in self._data.items()}
         items = sorted(data.items())
         lines = ['{']
         # manual formatting line-by-line

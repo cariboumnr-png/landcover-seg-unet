@@ -104,7 +104,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_version': geo_core.transform_types.SCHEMA_ID,
+            'schema_version': geo_core.transform_types.TRANSFORM_SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(T_FORMAT),
             'artifacts': collected_artifacts,
             'checksums': checksums,
