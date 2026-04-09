@@ -26,7 +26,7 @@ import dataclasses
 import os
 import typing
 # local imports
-import landseg.trainer.engine as engine
+import landseg.trainer.engine.trainer as trainer
 import landseg.trainer.runner as runner
 import landseg.utils as utils
 
@@ -45,7 +45,7 @@ class Runner:
         logger: utils.Logger,
         *,
         exp_dir: str,
-        trainer: engine.MultiHeadTrainer,
+        trainer: trainer.MultiHeadTrainer,
         phases: list[runner.Phase],
     ):
         '''Initialization'''
@@ -193,7 +193,7 @@ class Runner:
 
         best_ckpt = f'{self.ckpts}/{phase}_best.pt'
         if os.path.exists(best_ckpt):
-            meta = engine.load(
+            meta = trainer.load(
                 model=self.trainer.model,
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
@@ -210,7 +210,7 @@ class Runner:
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }
-        engine.save(
+        trainer.save(
             model=self.trainer.model,
             ckpt_meta=ckpt_meta,
             optimizer=self.trainer.comps.optimization.optimizer,

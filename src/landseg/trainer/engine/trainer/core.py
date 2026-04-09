@@ -48,7 +48,7 @@ import torch
 # local imports
 import landseg.core as core
 import landseg.trainer.common as common
-import landseg.trainer.engine as engine
+import landseg.trainer.engine.trainer as trainer
 
 class MultiHeadTrainer:
     '''
@@ -407,11 +407,11 @@ class MultiHeadTrainer:
 
     # ----------------------------internal methods----------------------------
     # ----- runtime state initialization
-    def _init_state(self) -> engine.RuntimeState:
+    def _init_state(self) -> trainer.RuntimeState:
         '''Instantiate the runtime state aligned with trainer config.'''
 
         # instantiate a state
-        state = engine.init_state()
+        state = trainer.init_state()
         # state - full batch size:
         state.batch_cxt.batch_size_full = self.dataloaders.meta.batch_size
         # state - heads
@@ -576,7 +576,7 @@ class MultiHeadTrainer:
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
         # call loss function
-        total, perhead = engine.multihead_loss(
+        total, perhead = trainer.multihead_loss(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             headspecs=self.state.heads.active_hspecs,
@@ -734,7 +734,7 @@ class MultiHeadTrainer:
     def _preview_monitor_head(self, out_dir: str) -> None:
         '''Generate a preview image for `self.config.monitor.head`.'''
 
-        engine.export_previews(
+        trainer.export_previews(
             self.state.epoch_sum.infer_ctx.maps,
             self.state.epoch_sum.infer_ctx.patch_grid_shape,
             out_dir=out_dir,
