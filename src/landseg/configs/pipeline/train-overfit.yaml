@@ -29,7 +29,7 @@ trainer:
         weight: 0.0
   runtime:
     schedule:
-      max_epoch: 3000
+      max_epoch: 1000
     monitor:
       track_head_name: base
     precision:

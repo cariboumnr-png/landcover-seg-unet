@@ -74,7 +74,6 @@ def overfit(config: configs.RootConfig) -> None:
     )
 
     # build a trainer with no logging
-    monitor_head = config.trainer.runtime.monitor.track_head_name
     # trainer components
     components = session.build_trainer_components(
         data_specs=dataspecs,
@@ -90,7 +89,9 @@ def overfit(config: configs.RootConfig) -> None:
         components=components,
         config=config.trainer.runtime,
         device='cuda' if torch.cuda.is_available() else 'cpu',
+        skip_log=True
     )
+    monitor_head = config.trainer.runtime.monitor.track_head_name
     engine.set_head_state([monitor_head])
 
     # run trainer
