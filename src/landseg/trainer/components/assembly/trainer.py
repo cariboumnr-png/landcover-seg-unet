@@ -96,7 +96,7 @@ def build_trainer_components(
         data_specs,
         loader_config.batch_size,
         loader_config.patch_size,
-        logger
+        logger=logger,
     )
 
     # compile training heads basic specifications

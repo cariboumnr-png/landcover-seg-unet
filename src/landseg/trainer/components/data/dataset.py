@@ -75,6 +75,7 @@ import tqdm
 import landseg.trainer.common.alias as alias
 import landseg.utils as utils
 
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class BlockConfig:
     '''
@@ -122,6 +123,7 @@ class BlockConfig:
     def __repr__(self):
         return repr(dataclasses.asdict(self))
 
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _MultiBlockData:
     '''Small container for multiblock data.'''
@@ -129,6 +131,7 @@ class _MultiBlockData:
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     dom: list[alias.TorchDict] | _CacheDict = dataclasses.field(init=False)
 
+# --------------------------------Public  Class--------------------------------
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
     Unified dataset over multiple block .npz files with patch extraction
@@ -291,7 +294,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             vec = self.blk_cfg.vec_domain[name]
         return {'ids': ids, 'vec': vec}
 
-# internal pieces
+# --------------------------------priavte class--------------------------------
 class _BlockDataset(torch.utils.data.Dataset):
     '''
     Prepare per-patch `(x, y, dom)` samples from a single data block.

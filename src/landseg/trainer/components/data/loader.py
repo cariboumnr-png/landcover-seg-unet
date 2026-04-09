@@ -70,30 +70,37 @@ def build_dataloaders(
     data_specs: core.DataSpecs,
     batch_size: int,
     patch_size: int,
+    *,
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
-    Build dataloaders based on dataset metadata and configuration.
+    Build PyTorch-style dataloaders from dataset metadata and config.
+
+    This function constructs training, validation, and optionally test
+    dataloaders from the dataset specification. It dynamically decides
+    caching and preloading strategies based on available system resources.
 
     Args:
         data_specs: Dataset specification containing block paths, domain
             information, split definitions, and global metadata.
-        loader_config: Configuration describing batch size, block/patch
-            size, and dataloading behaviour (shuffle, caching, etc.).
-        logger: Base logger used to create a child logger for logging.
+        batch_size: Number of samples per batch in each dataloader.
+        patch_size: Size of each data patch/block used for batching.
+        logger: Logger instance for progress and status reporting.
 
     Returns:
-        A `DataLoaders` instance containing:
-            - train: DataLoader for training blocks,
-            - val:   DataLoader for validation blocks,
-            - test:  DataLoader for test blocks (or None),
-            - meta:  Small metadata bundle (see `_Meta`).
+        DataLoaders: An object containing dataloaders and metadata:
+            - train: DataLoader for training data
+            - val: DataLoader for validation data
+            - test: DataLoader for test data, or None if not available
+            - meta: Metadata bundle (see `_Meta`)
 
     Notes:
-        - In single-block mode, a single loader is built and reused for
-          both train and val.
-        - Preload and caching decisions are computed dynamically based
-          on available system memory.
+    - In single-block mode, a single loader may be reused for both train
+        and val.
+    - Preloading and caching decisions are computed dynamically based on
+        available memory.
+    - All dataloaders are configured to match the dataset specification
+        and batch/patch parameters provided.
     '''
 
     # get a child from the base logger
@@ -110,9 +117,9 @@ def build_dataloaders(
     # partial load function
     load_partial = functools.partial(
         _load,
+        data_specs=data_specs,
         batch_size=batch_size,
         patch_size=patch_size,
-        data_specs=data_specs,
         logger=logger
     )
 
@@ -134,9 +141,10 @@ def build_dataloaders(
 # ------------------------------private  function------------------------------
 def _load(
     mode: str,
+    data_specs: core.DataSpecs,
     batch_size: int,
     patch_size: int,
-    data_specs: core.DataSpecs,
+    *,
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
@@ -156,7 +164,7 @@ def _load(
     if not data_blocks:
         return None
     # dataset configuration
-    dataset_config = _config_by_mode(mode, patch_size, data_specs)
+    dataset_config = _config_by_mode(mode, data_specs, patch_size)
     # preload/cache config
     load_flags = _flags(data_specs)
     # get multiblock dataset
@@ -181,8 +189,8 @@ def _load(
 
 def _config_by_mode(
     mode: str,
+    data_specs: core.DataSpecs,
     patch_size: int,
-    data_specs: core.DataSpecs
 ):
     '''Configure dataloading by mode.'''
 

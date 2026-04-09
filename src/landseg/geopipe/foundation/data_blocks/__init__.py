@@ -41,13 +41,11 @@ __all__ = [
     'run_blocks_building',
     'update_manifest',
     # typing
-    'PipelinePaths',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import BlockBuilder, BlockBuilderConfig
-    from .common import PipelinePaths
     from .manifest import ManifestUpdateContext, update_manifest
     from .mapper import MappedRasterWindows, map_rasters_to_grid
     from .pipeline import BlockBuildingParameters, run_blocks_building
