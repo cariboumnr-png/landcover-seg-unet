@@ -37,7 +37,7 @@ objects.
 
 # local imports
 import landseg.trainer.components as components
-import landseg.trainer.components.loss as loss
+import landseg.trainer.components.task.loss as loss
 
 # --------------------------------Public  Class--------------------------------
 class HeadLosses:

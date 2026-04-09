@@ -33,7 +33,7 @@ Used by the trainer to compute IoU-based metrics for each prediction head.
 
 # local imports
 import landseg.trainer.components as components
-import landseg.trainer.components.metrics as metrics
+import landseg.trainer.components.task.metrics as metrics
 
 class HeadMetrics:
     '''

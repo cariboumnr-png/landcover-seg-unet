@@ -45,7 +45,7 @@ import torch.utils.data
 # local imports
 import landseg.core as core
 import landseg.trainer.common.alias as alias
-import landseg.trainer.components.dataloading as dataloading
+import landseg.trainer.components.data as data
 import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
@@ -160,7 +160,7 @@ def _load(
     # preload/cache config
     load_flags = _flags(data_specs)
     # get multiblock dataset
-    dataset = dataloading.MultiBlockDataset(
+    dataset = data.MultiBlockDataset(
         data_blocks,
         dataset_config,
         logger,
@@ -198,7 +198,7 @@ def _config_by_mode(
     # return config by mode
     if mode == 'single':
         patch_size = data_specs.meta.img_h_w # single block
-    return dataloading.BlockConfig(
+    return data.BlockConfig(
         block_size=data_specs.meta.img_h_w,
         patch_size=patch_size,
         array_keys = {
@@ -212,10 +212,8 @@ def _config_by_mode(
 def _flags(data_specs: core.DataSpecs) -> dict[str, int | bool]:
     '''Get dataset loading flags.'''
 
-    # get dataset filepaths from DataSummary
-    data = data_specs.splits
-    fbytes = data_specs.meta.blk_bytes    # fit block byte size
-
+    # fit block byte size
+    fbytes = data_specs.meta.blk_bytes
     # early exit for single block test (fbytes = 0)
     if not fbytes:
         return {
@@ -224,8 +222,8 @@ def _flags(data_specs: core.DataSpecs) -> dict[str, int | bool]:
         }
 
     # get dataset sizes
-    train_bytes = len(data.train or {}) * fbytes
-    val_bytes = len(data.val or {}) * fbytes
+    train_bytes = len(data_specs.splits.train or {}) * fbytes
+    val_bytes = len(data_specs.splits.val or {}) * fbytes
 
     # decision on preload and cache size
     mem = psutil.virtual_memory().available

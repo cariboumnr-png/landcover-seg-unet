@@ -39,11 +39,11 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .assembly import build_trainer_components
+    from .trainer import build_trainer_components
 
 def __getattr__(name: str):
 
     if name in ['build_trainer_components']:
-        return getattr(importlib.import_module('.assembly', __package__), name)
+        return getattr(importlib.import_module('.trainer', __package__), name)
 
     raise AttributeError(name)

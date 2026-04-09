@@ -29,7 +29,10 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.trainer.components as components
+import landseg.trainer.components.callback as callback
+import landseg.trainer.components.data as data
+import landseg.trainer.components.optim as optim
+import landseg.trainer.components.task as task
 import landseg.utils as utils
 
 #
@@ -66,12 +69,12 @@ class _OptimConfig(typing.Protocol):
 @dataclasses.dataclass
 class TrainerComponents:
     '''Collection of trainer components.'''
-    callbacks: components.CallbackSet
-    dataloaders: components.DataLoaders
-    headspecs: components.HeadSpecs
-    headlosses: components.HeadLosses
-    headmetrics: components.HeadMetrics
-    optimization: components.Optimization
+    callbacks: callback.CallbackSet
+    dataloaders: data.DataLoaders
+    headspecs: task.HeadSpecs
+    headlosses: task.HeadLosses
+    headmetrics: task.HeadMetrics
+    optimization: optim.Optimization
 
 # -------------------------------Public Function-------------------------------
 def build_trainer_components(
@@ -86,10 +89,10 @@ def build_trainer_components(
     '''Builder trainer.'''
 
     # generate callback instances
-    callbacks = components.build_callbacks(logger)
+    callbacks = callback.build_callbacks(logger)
 
     # compile data loaders
-    data_loaders = components.build_dataloaders(
+    data_loaders = data.build_dataloaders(
         data_specs,
         loader_config.batch_size,
         loader_config.patch_size,
@@ -97,27 +100,27 @@ def build_trainer_components(
     )
 
     # compile training heads basic specifications
-    headspecs = components.build_headspecs(
+    headspecs = task.build_headspecs(
         data_specs,
         loss_config.alpha_fn,
         en_beta=loss_config.en_beta
     )
 
     # compile training heads loss compute modules
-    headlosses = components.build_headlosses(
+    headlosses = task.build_headlosses(
         headspecs,
         loss_config.types,
         data_specs.meta.ignore_index,
     )
 
     # compile training heads metric compute modules
-    headmetrics = components.build_headmetrics(
+    headmetrics = task.build_headmetrics(
         headspecs,
         data_specs.meta.ignore_index
     )
 
     # build optimizer and scheduler
-    optimization = components.build_optimization(
+    optimization = optim.build_optimization(
         model,
         optim_config.opt_cls,
         optim_config.lr,

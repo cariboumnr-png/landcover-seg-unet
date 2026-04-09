@@ -33,17 +33,29 @@ import typing
 
 __all__ = [
     # classes
+    'HeadSpecs',
+    'HeadLosses',
+    'HeadMetrics',
     # functions
-    'build_trainer_components',
-    # types
+    'build_headspecs',
+    'build_headlosses',
+    'build_headmetrics',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .assembly import build_trainer_components
+    from .heads import HeadSpecs, build_headspecs
+    from .loss import HeadLosses, build_headlosses
+    from .metrics import HeadMetrics, build_headmetrics
 
 def __getattr__(name: str):
 
-    if name in ['build_trainer_components']:
-        return getattr(importlib.import_module('.assembly', __package__), name)
+    if name in ['HeadSpecs', 'build_headspecs']:
+        return getattr(importlib.import_module('.heads', __package__), name)
+
+    if name in ['HeadLosses', 'build_headlosses']:
+        return getattr(importlib.import_module('.loss', __package__), name)
+
+    if name in ['HeadMetrics', 'build_headmetrics']:
+        return getattr(importlib.import_module('.metrics', __package__), name)
 
     raise AttributeError(name)
