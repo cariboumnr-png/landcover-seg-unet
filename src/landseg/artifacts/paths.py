@@ -28,6 +28,51 @@ from __future__ import annotations
 import dataclasses
 import os
 
+# artifacts file structure from data ingestion and preparation piplines
+# <exp_root>/artifacts/
+# │
+# ├── foundation/
+# │   │
+# │   ├── world_grids/
+# │   │   └── grid_row_<srow>_<orow>_col_<scol>_<ocol>.json *
+# │   │
+# │   ├── domain_knowledge/
+# │   │   ├── <domain_name>.json *
+# │   │   └── <domain_name>_tiles_<gid>.npz
+# │   │
+# │   └── data_blocks/
+# │       │
+# │       ├── model_dev/
+# │       │   ├── blocks/
+# │       │   ├── windows/
+# │       │   │   └── windows_<gid>.json
+# │       │   ├── catalog.json
+# │       │   └── schema.json
+# │       │
+# │       └── test_holdout/
+# │           ├── blocks/
+# │           ├── windows/
+# │           │   └── windows_<gid>.json
+# │           ├── catalog.json
+# │           └── schema.json
+# │
+# └── transform/
+#     │
+#     ├── train_blocks/
+#     ├── val_blocks/
+#     ├── test_blocks/
+#     │
+#     ├── block_splits_source.json
+#     ├── block_splits_summary.json
+#     ├── block_splits_transformed.json
+#     │
+#     ├── label_stats.json
+#     ├── image_stats.json
+#     │
+#     └── schema.json
+#
+#   *: a **_meta.json sidecar file will be generated as well
+
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class ArtifactPaths:
