@@ -37,7 +37,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
-import landseg.trainer as trainer
+import landseg.session as session
 import landseg.utils as utils
 
 def train(config: configs.RootConfig):
@@ -80,7 +80,7 @@ def train(config: configs.RootConfig):
     )
 
     # trainer components
-    components = trainer.build_trainer_components(
+    components = session.build_trainer_components(
         data_specs=dataspecs,
         model=model,
         data_config=config.trainer.loader,
@@ -89,7 +89,7 @@ def train(config: configs.RootConfig):
         logger=logger,
     )
     # trainer engine
-    engine = trainer.MultiHeadTrainer(
+    engine = session.MultiHeadTrainer(
         model=model,
         components=components,
         config=config.trainer.runtime,
@@ -98,7 +98,7 @@ def train(config: configs.RootConfig):
 
     # get phases
     phases = [
-        trainer.Phase(
+        session.Phase(
             name=cfg.name,
             num_epochs=cfg.num_epochs,
             heads=cfg.heads,
@@ -109,7 +109,7 @@ def train(config: configs.RootConfig):
     ]
 
     # build controller and run
-    runner = trainer.Runner(engine, phases, exp_dir, logger=logger)
+    runner = session.Runner(engine, phases, exp_dir, logger=logger)
     runner.fit()
 
 def _init_experiment_folder(config: configs.RootConfig) -> tuple[str, str]:

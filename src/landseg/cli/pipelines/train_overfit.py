@@ -34,7 +34,7 @@ import landseg.geopipe.foundation.world_grids as world_grids
 import landseg.geopipe.foundation.data_blocks as data_blocks
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.models as models
-import landseg.trainer as trainer
+import landseg.session as session
 import landseg.utils as utils
 
 def overfit(config: configs.RootConfig) -> None:
@@ -70,7 +70,7 @@ def overfit(config: configs.RootConfig) -> None:
 
     # build a trainer with no logging
     monitor_head = config.trainer.runtime.monitor.track_head_name
-    _trainer = trainer.build_trainer(
+    _trainer = session.build_trainer(
         dataspecs,
         model,
         config.trainer,
