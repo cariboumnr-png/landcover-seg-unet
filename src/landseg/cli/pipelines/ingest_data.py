@@ -87,10 +87,10 @@ def ingest(config: configs.RootConfig):
         ) for dom in domain_cfg.files
     ]
     foundation.prepare_domain_maps(
-        logger,
         grid,
         domain_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
     # build dev data blocks

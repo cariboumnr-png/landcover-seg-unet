@@ -39,6 +39,7 @@ import landseg.utils as utils
 def map_domain_to_grid(
     world_grid: geo_core.GridLayout,
     raster_path: str,
+    *,
     index_base: int,
     logger: utils.Logger,
 ) -> alias.RasterTileDict:

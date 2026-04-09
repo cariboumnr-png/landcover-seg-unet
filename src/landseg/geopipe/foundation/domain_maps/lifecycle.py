@@ -52,11 +52,11 @@ class DomainBuildingParameters:
 
 # -------------------------------Public Function-------------------------------
 def prepare_domain_maps(
-    logger: utils.Logger,
     world_grid: geo_core.GridLayout,
     domain_configs: list[DomainBuildingParameters],
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ) -> None:
     '''
     Prepare and persist domain tile maps for categorical raster(s).
@@ -111,15 +111,15 @@ def prepare_domain_maps(
         else:
 
             # check mapped tiles before building
-            mapped = _prep_mapping(grid, config, policy, logger)
+            mapped = _prep_mapping(grid, config, policy=policy, logger=logger)
 
             # build domain map
             domain = domain_maps.build_domain(
                 grid.gid,
                 mapped,
-                config.valid_threshold,
-                config.target_variance,
-                logger
+                valid_threshold=config.valid_threshold,
+                target_variance=config.target_variance,
+                logger=logger
             )
             payload = domain.to_json_payload()
             ctrl.save(payload)
@@ -129,6 +129,7 @@ def prepare_domain_maps(
 def _prep_mapping(
     grid: geo_core.GridLayout,
     config: DomainBuildingParameters,
+    *,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
 ) -> alias.RasterTileDict:
@@ -146,8 +147,8 @@ def _prep_mapping(
         mapped = domain_maps.map_domain_to_grid(
             grid,
             config.input_fpath,
-            config.index_base,
-            logger
+            index_base=config.index_base,
+            logger=logger
         )
         ctrl.persist(mapped)
         logger.log('INFO', f'Mapped tiles from {grid.gid} created')
