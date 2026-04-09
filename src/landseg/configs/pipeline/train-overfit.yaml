@@ -15,7 +15,7 @@ models:
       hidden: 128
 
 trainer:
-  optim:
+  optimization:
     lr: 1e-3
     weight_decay: 0.0
     sched_cls: null
