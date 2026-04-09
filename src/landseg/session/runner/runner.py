@@ -72,10 +72,7 @@ class Runner:
         else:
             self._record_progress() # write phase status.json
 
-    def fit(
-        self,
-        stopat: str | None=None
-    ) -> None:
+    def fit(self) -> None:
         '''Main entry.'''
 
         # iterate from the starting phase (default to first phase)
@@ -101,14 +98,8 @@ class Runner:
                 print('__Experiment Complete__')
                 self.logger.log('INFO', 'All training phases finished')
                 break
-            if isinstance(stopat, str) and stopat == phase.name:
-                print('__Experiment Complete__')
-                self.logger.log('INFO', f'Training stopped@{stopat}')
-                break
 
     def _record_progress(self):
-        '''doc'''
-
         scheme = [dataclasses.asdict(p) for p in self.phases]
         utils.write_json(self.phase_status_path, scheme) # overwrite
 

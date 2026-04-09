@@ -736,8 +736,8 @@ class MultiHeadTrainer:
 
         trainer.export_previews(
             self.state.epoch_sum.infer_ctx.maps,
-            self.state.epoch_sum.infer_ctx.patch_grid_shape,
-            out_dir=out_dir,
+            out_dir,
+            map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
             heads=[self.config.monitor.track_head_name] # as list
         )
 

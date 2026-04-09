@@ -32,16 +32,25 @@ import typing
 
 @dataclasses.dataclass
 class Phase:
-    '''doc'''
+    '''Training phase container'''
     name: str
     num_epochs: int
     heads: HeadsConfigProto
     logit_adjust: LogitAdjustSchemeProto
     lr_scale: float
-    finished: bool
+    finished: bool = False
+
+class HeadsConfigProto(typing.Protocol):
+    '''Shape of the heads configuration container.'''
+    @property
+    def active_heads(self) -> list[str]: ...
+    @property
+    def frozen_heads(self) -> list[str] | None: ...
+    @property
+    def excluded_cls(self) -> dict[str, list[int]] | None: ...
 
 class LogitAdjustSchemeProto(typing.Protocol):
-    '''doc'''
+    '''Shape of the logit adjustment configuration container'''
     @property
     def logit_adjust_alpha(self) -> float: ...
     @property
@@ -50,12 +59,3 @@ class LogitAdjustSchemeProto(typing.Protocol):
     def enable_val_logit_adjustment(self) -> bool: ...
     @property
     def enable_test_logit_adjustment(self) -> bool: ...
-
-class HeadsConfigProto(typing.Protocol):
-    '''doc'''
-    @property
-    def active_heads(self) -> list[str]: ...
-    @property
-    def frozen_heads(self) -> list[str] | None: ...
-    @property
-    def excluded_cls(self) -> dict[str, list[int]] | None: ...

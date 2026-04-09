@@ -28,6 +28,7 @@ import landseg.session.common as common
 
 # -------------------------------Public Function-------------------------------
 def multihead_loss(
+    *,
     multihead_preds: dict[str, torch.Tensor],
     multihead_targets: dict[str, torch.Tensor],
     headspecs: dict[str, common.SpecsLike],
@@ -82,6 +83,7 @@ def multihead_loss(
 
 # ------------------------------private  function------------------------------
 def _prep_loss_compute(
+    *,
     head_target: torch.Tensor,
     head_spec: common.SpecsLike,
     head_loss: common.CompositeLossLike,
@@ -108,6 +110,7 @@ def _prep_loss_compute(
     return target_0, masks
 
 def _get_masks(
+    *,
     raw: torch.Tensor,
     masked_cls: tuple[int, ...] | None=None,
     parent_tensor: torch.Tensor | None=None,
