@@ -66,12 +66,12 @@ class BlockBuildingParameters:
 
 # -------------------------------Public Function-------------------------------
 def run_blocks_building(
-    logger: utils.Logger,
     world_grid: geo_core.GridLayout,
     artfact_paths: _PipelinePaths,
     config: BlockBuildingParameters,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ) -> str | None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.

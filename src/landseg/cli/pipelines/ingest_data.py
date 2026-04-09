@@ -102,11 +102,11 @@ def ingest(config: configs.RootConfig):
         ignore_index=datablocks_cfg.general.ignore_index,
     )
     foundation.run_blocks_building(
-        logger,
         grid,
         paths.data_blocks.dev,
         data_blocks_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
     # build test data blocks - if provided
@@ -120,11 +120,11 @@ def ingest(config: configs.RootConfig):
         ignore_index=datablocks_cfg.general.ignore_index,
         )
         foundation.run_blocks_building(
-            logger,
             grid,
             paths.data_blocks.test,
             data_blocks_config,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            logger=logger,
         )
     else:
         logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
