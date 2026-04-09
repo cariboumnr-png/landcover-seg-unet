@@ -73,7 +73,7 @@ def build_trainer_components(
     # heads loss modules
     headlosses = task.build_headlosses(
         headspecs,
-        config=task_config.types,
+        config=task_config,
         ignore_index=data_specs.meta.ignore_index,
     )
     # heads metric modules

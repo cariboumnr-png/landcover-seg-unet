@@ -19,9 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
 Composite loss manager for combining multiple primitive loss functions.
 

@@ -40,12 +40,11 @@ __all__ = [
     # functions
     'build_headlosses',
     # types
-    'LossTypes'
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .base import PrimitiveLoss
-    from .composite import CompositeLoss, LossTypes
+    from .composite import CompositeLoss
     from .factory import HeadLosses, build_headlosses
     from .blocks import DiceLoss, FocalLoss
 
@@ -54,7 +53,7 @@ def __getattr__(name: str):
 
     if name in ['PrimitiveLoss']:
         return getattr(importlib.import_module('.base', __package__), name)
-    if name in ['CompositeLoss', 'LossTypes']:
+    if name in ['CompositeLoss']:
         return getattr(importlib.import_module('.composite', __package__), name)
     if name in ['HeadLosses', 'build_headlosses']:
         return getattr(importlib.import_module('.factory', __package__), name)

@@ -70,7 +70,7 @@ class HeadLosses:
 def build_headlosses(
     headspecs: task.HeadSpecs,
     *,
-    config: loss.LossTypes,
+    config: task.TaskConfig,
     ignore_index: int
 ) -> HeadLosses:
     '''
