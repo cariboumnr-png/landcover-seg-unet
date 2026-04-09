@@ -67,7 +67,10 @@ def overfit(config: configs.RootConfig) -> None:
     model = models.build_multihead_unet(
         dataspecs=dataspecs,
         backbone_config=config.models.body_registry[config.models.use_body],
-        conditioning_config=config.models.conditioning,
+        conditioning=config.models.conditioning,
+        enable_logit_adjust=config.models.flags.enable_logit_adjust,
+        enable_clamp=config.models.flags.enable_clamp,
+        clamp_range=config.models.clamp_range
     )
 
     # build a trainer with no logging
@@ -129,16 +132,16 @@ def _build_a_block(
         grid_shape=grid_cfg.extent.grid_shape,
         tile_specs=grid_cfg.tile_specs_tuple,
     )
-    grid = world_grids.build_grid(grid_config)
+    world_grid = world_grids.build_grid(grid_config)
 
     # map image unto world grid
     logger.log('INFO', 'Mapping image unto the world grid')
     datablocks_cfg = config.foundation.datablocks
     mapped = mapper.map_rasters(
-        grid,
+        world_grid,
         datablocks_cfg.filepaths.dev_image,
         datablocks_cfg.filepaths.dev_label,
-        logger
+        logger=logger
     )
 
     logger.log('INFO', 'Building a single data block')
@@ -153,10 +156,10 @@ def _build_a_block(
         block_size=mapped.tile_shape
     )
     block_builder = data_blocks.BlockBuilder(
-        logger,
         mapped.image,
         mapped.label,
-        builder_config
+        builder_config,
+        logger=logger,
     )
     block_fpath = block_builder.build_single_block(
         save_dpath,
