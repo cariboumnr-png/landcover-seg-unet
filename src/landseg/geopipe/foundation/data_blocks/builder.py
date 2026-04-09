@@ -107,10 +107,11 @@ class BlockBuilder:
 
     def __init__(
         self,
-        logger: utils.Logger,
         image_windows: alias.RasterWindowDict,
         label_windows: alias.RasterWindowDict,
         config: BlockBuilderConfig,
+        *,
+        logger: utils.Logger,
     ):
         '''
         Initialize the pipeline.

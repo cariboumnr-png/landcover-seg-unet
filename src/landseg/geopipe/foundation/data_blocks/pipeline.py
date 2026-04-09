@@ -127,10 +127,10 @@ def run_blocks_building(
         block_size=ras_windows.tile_shape
     )
     block_builder = data_blocks.BlockBuilder(
-        logger,
         ras_windows.image,
         ras_windows.label,
         builder_config,
+        logger=logger,
     )
 
     # build all model dev blocks
