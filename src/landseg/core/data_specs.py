@@ -20,7 +20,23 @@
 # =========================================================================== #
 
 '''
-DataSpecs interface
+Data specifications interface.
+
+This module defines the `DataSpecs` dataclass, a canonical, structured
+representation of dataset configuration and statistics used across the
+project.
+
+`DataSpecs` objects are:
+    - **Produced** by data preparation pipelines in the `geopipe` module,
+      where raw data is processed into model-ready artifacts.
+    - **Consumed** during model construction, providing required shape,
+      label topology, and domain information.
+    - **Used at runtime** by trainers and evaluators to ensure consistent
+      interpretation of inputs, outputs, and dataset splits.
+
+As part of the `./core/` package, this interface serves as a stable
+contract between data pipelines and downstream training/inference
+components.
 '''
 
 # standard imports
