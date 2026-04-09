@@ -100,8 +100,11 @@ def prepare_domain_maps(
         name, _ = os.path.splitext(os.path.basename(config.input_fpath))
 
         # check domain artifacts
-        schema = geo_core.DomainTileMap.SCHEMA_ID
-        ctrl = DomainCtrl(config.domain_fpath, schema, policy)
+        ctrl = DomainCtrl(
+            config.domain_fpath,
+            schema_id=geo_core.DomainTileMap.SCHEMA_ID,
+            policy=policy
+        )
         payload = ctrl.load()
         if payload:
             logger.log('INFO', f'Domain {name} loaded successfully')
