@@ -57,10 +57,10 @@ class ManifestUpdateContext:
 
 # -------------------------------Public Function-------------------------------
 def update_manifest(
-    logger: utils.Logger,
     context: ManifestUpdateContext,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ):
     '''
     Update dataset manifest artifacts according to lifecycle policy.
@@ -93,18 +93,18 @@ def update_manifest(
         raise artifacts.ArtifactError from exc
     # action
     current, to_update = _catalog_status(
-        logger,
-        context,
         data_dict,
+        context,
         policy=policy,
+        logger=logger,
     )
     if to_update:
         catalog = manifest.build_catalog(
-            current,
             to_update,
-            context.source_image,
-            context.source_label,
-            context.mapped_grid_id
+            original_catalog=current,
+            mapped_grid_id=context.mapped_grid_id,
+            source_image=context.source_image,
+            source_label=context.source_label,
         )
         catalog_json = catalog.to_json_payload()
         ctrl.persist(catalog_json)
@@ -117,22 +117,22 @@ def update_manifest(
         logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
         raise artifacts.ArtifactError from exc
     # action
-    sample_blk = _sample(context.blocks_dir)
+    sample_block = _sample(context.blocks_dir)
     schema_dict = manifest.build_schema(
-        current_schema,
-        context.source_image,
-        context.source_label,
-        context.mapped_grid_id,
-        sample_blk
+        sample_block,
+        original=current_schema,
+        mapped_grid_id=context.mapped_grid_id,
+        source_image=context.source_image,
+        source_label=context.source_label,
     )
     ctrl.persist(schema_dict)
 
 def _catalog_status(
-    logger: utils.Logger,
-    context: ManifestUpdateContext,
     data_dict: dict[str, geo_core.CatalogEntry] | None,
+    context: ManifestUpdateContext,
     *,
     policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ) -> tuple[geo_core.DataCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
 

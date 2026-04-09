@@ -39,11 +39,12 @@ T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # -------------------------------Public Function-------------------------------
 def build_schema(
+    sample_block_fpath: str,
+    *,
     original: geo_core.DataSchema | None,
+    mapped_grid_id: str,
     source_image: str,
     source_label: str | None,
-    mapped_grid_id: str,
-    sample_block_fpath: str
 ) -> geo_core.DataSchema:
     '''
     Create or update the dataset-level `schema.json`.
@@ -57,17 +58,17 @@ def build_schema(
     complete schema specification from scratch.
 
     Args:
+        sample_block_fpath: File path to a representative block artifact
+            used to infer dataset-wide shapes, dtypes, and label settings
+            when initializing schema.
         original_meta: Existing `BlocksMetadata` object if present,
             otherwise `None` when creating new schema.
+        mapped_grid_id: Identifier of the spatial grid to which blocks
+            are aligned.
         source_image: File path or identifier of the source image used
             to generate dataset blocks.
         source_label: File path or identifier of the source label data,
             if applicable. May be `None` for image-only datasets.
-        mapped_grid_id: Identifier of the spatial grid to which blocks
-            are aligned.
-        sample_block_fpath: File path to a representative block artifact
-            used to infer dataset-wide shapes, dtypes, and label settings
-            when initializing schema.
 
     Returns:
         A fully populated `BlocksMetadata` object reflecting updated or

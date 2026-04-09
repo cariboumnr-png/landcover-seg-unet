@@ -146,9 +146,5 @@ def run_blocks_building(
         catalog_fpath=artfact_paths.catalog,
         schema_fpath=artfact_paths.schema
     )
-    data_blocks.update_manifest(
-        logger,
-        updated,
-        policy=policy
-    )
+    data_blocks.update_manifest(updated, policy=policy, logger=logger)
     logger.log('INFO', 'Data blocks catalog and schema updated')
