@@ -102,7 +102,7 @@ def train(config: configs.RootConfig):
             name=cfg.name,
             num_epochs=cfg.num_epochs,
             heads=cfg.heads,
-            logist_adjust=cfg.logit_adjust,
+            logit_adjust=cfg.logit_adjust,
             lr_scale=cfg.lr_scale,
             finished=False
         ) for cfg in config.runner.phases

@@ -36,7 +36,7 @@ class Phase:
     name: str
     num_epochs: int
     heads: HeadsConfigProto
-    logist_adjust: LogitAdjustSchemeProto
+    logit_adjust: LogitAdjustSchemeProto
     lr_scale: float
     finished: bool
 

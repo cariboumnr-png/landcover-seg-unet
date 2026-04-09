@@ -45,7 +45,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .common import TrainerConfigShape
     from .components import build_trainer_components
-    from .engine.trainer import MultiHeadTrainer
+    from .engine import MultiHeadTrainer
     from .runner import Phase, Runner
 
 def __getattr__(name: str):

@@ -26,6 +26,8 @@ Constructs a single valid block, builds minimal data specifications,
 and trains until near-perfect IoU to validate the end-to-end stack.
 '''
 
+# third-party imports
+import torch
 # local imports
 import landseg.configs as configs
 import landseg.core as core
@@ -70,21 +72,30 @@ def overfit(config: configs.RootConfig) -> None:
 
     # build a trainer with no logging
     monitor_head = config.trainer.runtime.monitor.track_head_name
-    _trainer = session.build_trainer(
-        dataspecs,
-        model,
-        config.trainer,
-        logger,
-        skip_log=True
+    # trainer components
+    components = session.build_trainer_components(
+        data_specs=dataspecs,
+        model=model,
+        data_config=config.trainer.loader,
+        task_config=config.trainer.loss,
+        optim_config=config.trainer.optimization,
+        logger=logger,
     )
-    _trainer.set_head_state([monitor_head])
+    # trainer engine
+    engine = session.MultiHeadTrainer(
+        model=model,
+        components=components,
+        config=config.trainer.runtime,
+        device='cuda' if torch.cuda.is_available() else 'cpu',
+    )
+    engine.set_head_state([monitor_head])
 
     # run trainer
     max_epoch = config.trainer.runtime.schedule.max_epoch
     logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
     for ep in range(1, max_epoch + 1):
-        los = _trainer.train_one_epoch(ep)['Total_Loss']
-        iou = _trainer.validate()[monitor_head]['mean']
+        los = engine.train_one_epoch(ep)['Total_Loss']
+        iou = engine.validate()[monitor_head]['mean']
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')

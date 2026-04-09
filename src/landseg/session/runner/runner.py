@@ -132,7 +132,7 @@ class Runner:
         v_logs = {}
 
         # set trainer logit adjustments
-        la_scheme = phase.logist_adjust
+        la_scheme = phase.logit_adjust
         self.trainer.model.set_logit_adjust_alpha(la_scheme.logit_adjust_alpha)
         self.trainer.config_logit_adjustment(
             enable_train_logit_adjustment=la_scheme.enable_train_logit_adjustment,
