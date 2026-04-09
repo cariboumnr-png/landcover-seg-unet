@@ -38,7 +38,7 @@ import torch
 import torch.nn
 # local imports
 import landseg.session.components.task as task
-import landseg.session.components.task.loss as loss
+import landseg.session.components.task.loss.primitives as primitives
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -108,7 +108,7 @@ class CompositeLoss(torch.nn.Module):
 
         # focal loss
         if config.types.focal.weight:
-            loss_fn = loss.FocalLoss(
+            loss_fn = primitives.FocalLoss(
                 alpha=alpha,
                 gamma=config.types.focal.gamma,
                 reduction=config.types.focal.reduction,
@@ -119,7 +119,7 @@ class CompositeLoss(torch.nn.Module):
 
         # dice loss
         if config.types.dice.weight:
-            loss_fn = loss.DiceLoss(
+            loss_fn = primitives.DiceLoss(
                 smooth=config.types.dice.smooth,
                 ignore_index=ignore_index
             )

@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.components.task.loss`.
+Top-level namespace for `landseg.session.components.task.loss.primitives`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,24 +32,33 @@ import typing
 
 __all__ = [
     # classes
-    'CompositeLoss',
-    'HeadLosses',
+    'DiceLoss',
+    'FocalLoss',
+    'PrimitiveLoss',
     # functions
-    'build_headlosses',
+    'compose_pixel_weights',
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .composite import CompositeLoss
-    from .factory import HeadLosses, build_headlosses
+    from .base import PrimitiveLoss
+    from .dice import DiceLoss
+    from .focal import FocalLoss
+    from .utils import compose_pixel_weights
 
 
 def __getattr__(name: str):
 
-    if name in {'CompositeLoss'}:
-        return getattr(importlib.import_module('.composite', __package__), name)
+    if name in {'PrimitiveLoss'}:
+        return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'HeadLosses', 'build_headlosses'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'DiceLoss'}:
+        return getattr(importlib.import_module('.dice', __package__), name)
+
+    if name in {'FocalLoss'}:
+        return getattr(importlib.import_module('.focal', __package__), name)
+
+    if name in {'compose_pixel_weights'}:
+        return getattr(importlib.import_module('.utils', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
