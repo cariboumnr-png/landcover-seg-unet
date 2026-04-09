@@ -19,52 +19,63 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Multihead model configuration dataclasses.'''
+# pylint: disable=missing-function-docstring
+
+'''Multihead model typed configuration.'''
 
 from __future__ import annotations
 # standard imports
-import dataclasses
 import typing
 
-#
-@dataclasses.dataclass
-class BackboneConfig:
+class DataSpecsConfig(typing.Protocol):
     '''General configuration'''
-    body: str
-    base_ch: int
-    conv_params: dict[str, typing.Any]
+    @property
+    def in_ch(self) -> int: ...
+    @property
+    def logit_adjust(self) -> dict[str, list[float]]: ...
+    @property
+    def heads_w_counts(self) -> dict[str, list[int]]: ...
+    @property
+    def domain_ids_num(self) -> int: ...     # id categories
+    @property
+    def domain_vec_dim(self) -> int: ...     # vector dims
 
-# -------------------------model general configuration-------------------------
-@dataclasses.dataclass
-class ModelConfig:
-    '''General configuration'''
-    in_ch: int
-    logit_adjust: dict[str, list[float]]
-    heads_w_counts: dict[str, list[int]]
+class BackboneConfig(typing.Protocol):
+    '''Typed container for model backbone configuration.'''
+    @property
+    def body(self) -> str: ...
+    @property
+    def base_ch(self) -> int: ...
+    @property
+    def conv_params(self) -> dict[str, typing.Any]:...
 
-# ----------------------model conditioning configuration----------------------
-@dataclasses.dataclass
-class ConditioningConfig:
-    '''Conditioning configuration.'''
+class ConditioningConfig(typing.Protocol):
+    '''Typed container for model conditioning configuration.'''
+    @property
+    def mode(self) -> str | None: ...
+    @property
+    def concat(self) -> _ConcatConfig: ...
+    @property
+    def film(self) -> _FilmConfig: ...
 
-    mode: str | None        # mode ['concat', 'film', 'hybrid']
-    domain_ids_num: int     # id categories
-    domain_vec_dim: int     # vector dims
-    concat: ConcatConfig    # Concat
-    film: FilmConfig        # FiLM
+class _ConcatConfig(typing.Protocol):
+    '''Typed container for configuring concatenation adapter.'''
+    @property
+    def out_dim(self) -> int: ...
+    @property
+    def use_ids(self) -> bool: ...
+    @property
+    def use_vec(self) -> bool: ...
+    @property
+    def use_mlp(self) -> bool: ...
 
-@dataclasses.dataclass
-class ConcatConfig:
-    '''Concatenation adapter configuration.'''
-    out_dim: int
-    use_ids: bool
-    use_vec: bool
-    use_mlp: bool
-
-@dataclasses.dataclass
-class FilmConfig:
-    '''FiLM conditioner configuration'''
-    embed_dim: int
-    use_ids: bool
-    use_vec: bool
-    hidden: int
+class _FilmConfig(typing.Protocol):
+    '''Typed container for configuring FiLM conditioner.'''
+    @property
+    def embed_dim(self) -> int:...
+    @property
+    def use_ids(self) -> bool: ...
+    @property
+    def use_vec(self) -> bool: ...
+    @property
+    def hidden(self) -> int: ...

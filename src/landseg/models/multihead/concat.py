@@ -59,6 +59,7 @@ class ConcatAdapter(torch.nn.Module):
 
     def __init__(
         self,
+        *,
         out_dom: int,
         dim_continuous: int,
         num_categories: int,
@@ -174,7 +175,12 @@ class ConcatAdapter(torch.nn.Module):
         return torch.cat([x, dv], dim=1)
 
 
-def get_concat(config: multihead.ConditioningConfig) -> ConcatAdapter | None:
+def get_concat(
+    config: multihead.ConditioningConfig,
+    *,
+    domain_vec_dim: int,
+    domain_ids_num: int
+) -> ConcatAdapter | None:
     '''
     Build a ConcatAdapter from a conditional-config, if enabled.
 
@@ -189,8 +195,8 @@ def get_concat(config: multihead.ConditioningConfig) -> ConcatAdapter | None:
     if config.mode in ['concat', 'hybrid'] and config.concat.out_dim > 0:
         return ConcatAdapter(
             out_dom=config.concat.out_dim,
-            dim_continuous=config.domain_vec_dim,
-            num_categories=config.domain_ids_num,
+            dim_continuous=domain_vec_dim,
+            num_categories=domain_ids_num,
             use_mlp=config.concat.use_mlp
         )
     return None

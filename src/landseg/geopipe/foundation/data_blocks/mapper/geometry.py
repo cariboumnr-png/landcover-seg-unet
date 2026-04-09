@@ -56,6 +56,7 @@ class GeometrySummary(typing.TypedDict):
 def validate_geometry(
     image_fpath: str,
     label_fpath: str | None,
+    *,
     logger: utils.Logger
 ) -> GeometrySummary:
     '''
@@ -103,11 +104,11 @@ def validate_geometry(
         else:
             summary['label_transform'] = None
         # check if both rasters have the same projection system
-        summary['crs'] = _check_raster_proj(img, lbl, logger)
+        summary['crs'] = _check_raster_proj(img, lbl, logger=logger)
         # check if both rasters have the same squared pixels
-        summary['pixel_size'] = _check_raster_pixels(img, lbl, logger)
+        summary['pixel_size'] = _check_raster_pixels(img, lbl, logger=logger)
         # get the overlapping extent from the input rasters
-        bbox = _compute_overlap_extent(img, lbl, logger)
+        bbox = _compute_overlap_extent(img, lbl, logger=logger)
         summary.update(**bbox)
 
     # return a summary
@@ -117,6 +118,7 @@ def validate_geometry(
 def _check_raster_proj(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
+    *,
     logger: utils.Logger
 ) -> str:
     '''
@@ -156,6 +158,7 @@ def _check_raster_proj(
 def _check_raster_pixels(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
+    *,
     logger: utils.Logger
 ) -> tuple[float, float]:
     '''
@@ -195,6 +198,7 @@ def _check_raster_pixels(
 def _compute_overlap_extent(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
+    *,
     logger: utils.Logger
 ) -> dict[str, typing.Any]:
     '''

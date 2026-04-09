@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.trainer_components.loss`.
+Top-level namespace for `landseg.session.components.task.loss`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -51,13 +51,16 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['PrimitiveLoss']:
+    if name in {'PrimitiveLoss'}:
         return getattr(importlib.import_module('.base', __package__), name)
-    if name in ['CompositeLoss']:
+
+    if name in {'CompositeLoss'}:
         return getattr(importlib.import_module('.composite', __package__), name)
-    if name in ['HeadLosses', 'build_headlosses']:
+
+    if name in {'HeadLosses', 'build_headlosses'}:
         return getattr(importlib.import_module('.factory', __package__), name)
-    if name in ['DiceLoss', 'FocalLoss']:
+
+    if name in {'DiceLoss', 'FocalLoss'}:
         return getattr(importlib.import_module('.blocks', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

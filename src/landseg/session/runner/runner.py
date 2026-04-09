@@ -19,7 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Curriculum controller class.'''
+'''
+Curriculum-based training controller for multi-phase model execution.
+
+The Runner orchestrates sequential training phases over a shared trainer
+engine. Each phase can configure active heads, logit adjustments, and
+training schedules, and supports checkpointing, resumption, validation,
+and early stopping.
+
+Phase progress is persisted to disk so experiments can be resumed safely
+across interruptions.
+'''
 
 # standard imports
 import dataclasses
@@ -39,7 +49,14 @@ class _CheckpointMeta(typing.TypedDict):
 
 # --------------------------------Public  Class--------------------------------
 class Runner:
-    '''doc'''
+    '''
+    Orchestrates multi-phase curriculum training for a model engine.
+
+    The Runner executes a sequence of training phases, where each phase
+    can configure model heads, training behavior, and logit adjustments.
+    It supports checkpoint resumption, validation scheduling, inference
+    previews, and persistent phase tracking across runs.
+    '''
     def __init__(
         self,
         engine: trainer.MultiHeadTrainer,
@@ -48,7 +65,24 @@ class Runner:
         *,
         logger: utils.Logger,
     ):
-        '''Initialization'''
+        '''
+        Initialize the curriculum runner.
+
+        Behavior:
+            - Initializes checkpoint and preview directories.
+            - Restores phase completion state from disk if available.
+            - Sets the first active phase.
+
+        Args:
+            engine:
+                Multi-head trainer instance used for all phases.
+            phases:
+                Ordered list of training phases defining curriculum flow.
+            exp_dir:
+                Experiment root directory for checkpoints and previews.
+            logger:
+                Logger instance used for phase-level logging.
+        '''
 
         # parse arguments
         self.trainer = engine
@@ -72,11 +106,21 @@ class Runner:
         else:
             self._record_progress() # write phase status.json
 
-    def fit(
-        self,
-        stopat: str | None=None
-    ) -> None:
-        '''Main entry.'''
+    def fit(self) -> None:
+        '''
+        Execute full curriculum training across all phases.
+
+        Iterates through phases in order, skipping completed ones,
+        resuming from checkpoints when available, and saving progress
+        after each phase.
+
+        Behavior:
+            - Loads checkpoint state per phase if present.
+            - Runs training loop for each active phase.
+            - Performs validation and optional inference previews.
+            - Persists phase completion status after each phase.
+            - Stops early when all phases are complete.
+        '''
 
         # iterate from the starting phase (default to first phase)
         for phase in self.phases:
@@ -101,19 +145,14 @@ class Runner:
                 print('__Experiment Complete__')
                 self.logger.log('INFO', 'All training phases finished')
                 break
-            if isinstance(stopat, str) and stopat == phase.name:
-                print('__Experiment Complete__')
-                self.logger.log('INFO', f'Training stopped@{stopat}')
-                break
 
     def _record_progress(self):
-        '''doc'''
-
+        '''Persist current phase completion status to disk.'''
         scheme = [dataclasses.asdict(p) for p in self.phases]
         utils.write_json(self.phase_status_path, scheme) # overwrite
 
     def _train_phase(self, meta) -> tuple[dict, dict]:
-        '''Train the current phase.'''
+        '''Run training loop for a single phase and return logs.'''
 
         # if loaded from previous
         if meta:
@@ -180,7 +219,7 @@ class Runner:
         return t_logs, v_logs
 
     def _next_phase(self) -> None:
-        '''Move on to the next phase.'''
+        '''Advance to the next training phase and reset trainer state.'''
 
         # advance phase idx
         self.current_phase_idx += 1
@@ -193,7 +232,7 @@ class Runner:
         self.trainer.reset_head_state()
 
     def _load_progress(self, phase: str):
-        '''Load previous best checkpoint'''
+        '''Load checkpoint metadata for a given phase if available.'''
 
         best_ckpt = f'{self.ckpts}/{phase}_best.pt'
         if os.path.exists(best_ckpt):
@@ -207,7 +246,7 @@ class Runner:
         return None
 
     def _save_progress(self, fpath: str) -> None:
-        '''Save at the current phase.'''
+        '''Save model checkpoint and training metadata to disk.'''
 
         ckpt_meta: _CheckpointMeta = {
             'metric': self.trainer.state.metrics.curr_value,
@@ -225,5 +264,5 @@ class Runner:
 
     @property
     def done(self) -> bool:
-        '''Returns whether controller has reached the final phase.'''
+        '''Return whether all curriculum phases have completed.'''
         return self.current_phase_idx >= len(self.phases)

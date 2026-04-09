@@ -19,10 +19,31 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
-'''Multihead model protocol.'''
+
+'''
+Multihead model protocol.
+
+This module defines the structural interface for multihead models used
+throughout the project.
+
+The `MultiheadModelLike` protocol specifies the expected behavior and API
+surface of models that expose multiple prediction heads (e.g., for
+multi-task or hierarchical learning).
+
+Models conforming to this protocol are:
+    - **Constructed** in `models` module, where concrete architectures
+      implement this interface.
+    - **Passed across the CLI boundary** at runtime into trainers and
+      evaluators.
+    - **Consumed** by training and evaluation pipelines, which rely on
+      this protocol for consistent interaction (forward pass, head
+      control, state management, etc.).
+
+As part of the `./core/` package, this protocol acts as a contract
+between model implementations and downstream runtime components,
+enabling decoupled development and interchangeability of model backends.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -32,10 +53,31 @@ if typing.TYPE_CHECKING:
     import torch
     import torch.nn
 
+    # aliases
+    Tensor: typing.TypeAlias = torch.Tensor
+
+# ---------------------------------Public Type---------------------------------
 class MultiheadModelLike(typing.Protocol):
-    '''With all current public class methods.'''
-    def __call__(self, x: 'torch.Tensor', **kwargs) -> typing.Mapping[str, 'torch.Tensor']: ...
-    def forward(self, x: 'torch.Tensor', **kwargs) -> typing.Mapping[str, 'torch.Tensor']: ...
+    '''
+    Protocol defining the required interface for multihead models.
+
+    A conforming model exposes multiple output heads, each producing a
+    tensor keyed by head name. The protocol standardizes how models are
+    invoked, configured, and managed during training and evaluation.
+
+    Key capabilities include:
+        - Forward execution returning a mapping of head names to outputs
+        - Device placement and training/evaluation mode control
+        - Selective activation and freezing of heads
+        - Optional logit adjustment configuration for imbalance handling
+        - Compatibility with PyTorch state management (`state_dict`)
+
+    This interface enables trainers and evaluators to operate on any
+    compliant model without depending on specific implementations,
+    ensuring flexibility and modularity across the system.
+    '''
+    def __call__(self, x: 'Tensor', **kwargs) -> typing.Mapping[str, 'Tensor']: ...
+    def forward(self, x: 'Tensor', **kwargs) -> typing.Mapping[str, 'Tensor']: ...
     def parameters(self) -> typing.Iterable['torch.nn.Parameter']: ...
     def to(self: typing.Self, device: 'torch.device | str') -> typing.Self: ...
     def train(self: typing.Self, mode: bool = True) -> typing.Self: ...
@@ -45,5 +87,5 @@ class MultiheadModelLike(typing.Protocol):
     def reset_heads(self) -> None: ...
     def set_logit_adjust_enabled(self, enabled: bool) -> None: ...
     def set_logit_adjust_alpha(self, alpha: float) -> None: ...
-    def state_dict(self) -> typing.Mapping[str, 'torch.Tensor']: ...
+    def state_dict(self) -> typing.Mapping[str, 'Tensor']: ...
     def load_state_dict(self, state_dict: typing.Mapping[str, typing.Any]) -> typing.Any: ...

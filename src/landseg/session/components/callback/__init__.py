@@ -20,8 +20,9 @@
 # =========================================================================== #
 
 # pylint: disable=too-many-return-statements
+
 '''
-Top-level namespace for `landseg.trainer_components.callback`.
+Top-level namespace for `landseg.session.components.callback`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -56,19 +57,25 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['Callback']:
+    if name in {'Callback'}:
         return getattr(importlib.import_module('.base', __package__), name)
-    if name in ['CallbackSet', 'build_callbacks']:
+
+    if name in {'CallbackSet', 'build_callbacks'}:
         return getattr(importlib.import_module('.factory', __package__), name)
-    if name in ['LoggingCallback']:
+
+    if name in {'LoggingCallback'}:
         return getattr(importlib.import_module('.logging', __package__), name)
-    if name in ['InferCallback']:
+
+    if name in {'InferCallback'}:
         return getattr(importlib.import_module('.phase_infer', __package__), name)
-    if name in ['TrainCallback']:
+
+    if name in {'TrainCallback'}:
         return getattr(importlib.import_module('.phase_train', __package__), name)
-    if name in ['ValCallback']:
+
+    if name in {'ValCallback'}:
         return getattr(importlib.import_module('.phase_val', __package__), name)
-    if name in ['ProgressCallback']:
+
+    if name in {'ProgressCallback'}:
         return getattr(importlib.import_module('.progress', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

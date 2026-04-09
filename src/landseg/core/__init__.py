@@ -49,10 +49,10 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains']:
+    if name in {'DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains'}:
         return getattr(importlib.import_module('.data_specs', __package__), name)
 
-    if name in ['MultiheadModelLike']:
+    if name in {'MultiheadModelLike'}:
         return getattr(importlib.import_module('.model_protocol', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -35,7 +35,7 @@ the transformation pipeline.
 from __future__ import annotations
 import typing
 
-SCHEMA_ID = 'transform_schema/v1'
+TRANSFORM_SCHEMA_ID = 'transform_schema/v1'
 
 # ---------------------------------Public Type---------------------------------
 class BlocksPartition(typing.TypedDict):

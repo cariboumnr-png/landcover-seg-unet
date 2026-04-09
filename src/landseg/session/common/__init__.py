@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.core.trainer_protocols`.
+Top-level namespace for `landseg.session.common`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -68,9 +68,10 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['TrainerEngineLike']:
+    if name in {'TrainerEngineLike'}:
         return getattr(importlib.import_module('.trainer_engine', __package__), name)
-    if name in [
+
+    if name in {
         'CallBacksLike',
         'DataLoadersLike',
         'HeadSpecsLike',
@@ -81,11 +82,13 @@ def __getattr__(name: str):
         'ConfusionMatrixLike',
         'OptimizationLike',
         'TrainerComponentsLike',
-    ]:
+    }:
         return getattr(importlib.import_module('.trainer_comps', __package__), name)
-    if name in ['TrainerConfigShape']:
+
+    if name in {'TrainerConfigShape'}:
         return getattr(importlib.import_module('.trainer_config', __package__), name)
-    if name in ['RuntimeStateLike']:
+
+    if name in {'RuntimeStateLike'}:
         return getattr(importlib.import_module('.trainer_state', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

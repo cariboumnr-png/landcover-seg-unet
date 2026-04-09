@@ -37,10 +37,10 @@ def ingest(config: configs.RootConfig):
     Run the ingestion pipeline.
 
     Steps:
-    1) Build or load the world grid (`geopipe.foundation`).
+    1) Build or load the world grid.
     2) Prepare domain knowledge aligned to the grid.
-    3) Build raw `.npz` data blocks and update `catalog.json` /
-    `metadata.json`.
+    3) Build raw `.npz` data blocks, and update `catalog.json` and
+    `schema.json`.
 
     Args:
         config: RootConfig with foundation settings.
@@ -68,11 +68,11 @@ def ingest(config: configs.RootConfig):
         grid_shape=grid_cfg.extent.grid_shape,
         tile_specs=grid_cfg.tile_specs_tuple,
     )
-    grid = foundation.prepare_world_grid(
-        logger,
+    world_grid = foundation.prepare_world_grid(
         paths.grids.fpath(grid_cfg.tile_specs_tuple),
         grid_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
     # domain maps
@@ -80,20 +80,20 @@ def ingest(config: configs.RootConfig):
         foundation.DomainBuildingParameters(
         input_fpath=dom.path,
         domain_fpath=paths.domains.domain_map_fpath(dom.name),
-        tiles_fpath=paths.domains.mapped_tiles_fpath(dom.name, grid.gid),
+        tiles_fpath=paths.domains.mapped_tiles_fpath(dom.name, world_grid.gid),
         index_base=dom.index_base,
         valid_threshold=domain_cfg.valid_threshold,
         target_variance=domain_cfg.target_variance,
         ) for dom in domain_cfg.files
     ]
     foundation.prepare_domain_maps(
-        logger,
-        grid,
+        world_grid,
         domain_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
-    # dev data blocks
+    # build dev data blocks
     data_blocks_config = foundation.BlockBuildingParameters(
         image_fpath=datablocks_cfg.filepaths.dev_image,
         label_fpath=datablocks_cfg.filepaths.dev_label,
@@ -102,14 +102,14 @@ def ingest(config: configs.RootConfig):
         ignore_index=datablocks_cfg.general.ignore_index,
     )
     foundation.run_blocks_building(
-        logger,
-        grid,
+        world_grid,
         paths.data_blocks.dev,
         data_blocks_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
-    # test data blocks - if provided
+    # build test data blocks - if provided
     if datablocks_cfg.has_test_data:
         logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
         data_blocks_config = foundation.BlockBuildingParameters(
@@ -120,11 +120,11 @@ def ingest(config: configs.RootConfig):
         ignore_index=datablocks_cfg.general.ignore_index,
         )
         foundation.run_blocks_building(
-            logger,
-            grid,
+            world_grid,
             paths.data_blocks.test,
             data_blocks_config,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            logger=logger,
         )
     else:
         logger.log('INFO', 'Evaluation holdout rasters not provided, exit')

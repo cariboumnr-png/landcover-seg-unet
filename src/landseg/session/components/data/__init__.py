@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.trainer_components.dataloading`.
+Top-level namespace for `landseg.session.components.data`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -48,10 +48,10 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['BlockConfig', 'MultiBlockDataset']:
+    if name in {'BlockConfig', 'MultiBlockDataset'}:
         return getattr(importlib.import_module('.dataset', __package__), name)
 
-    if name in ['LoaderConfig', 'DataLoaders', 'build_dataloaders']:
+    if name in {'LoaderConfig', 'DataLoaders', 'build_dataloaders'}:
         return getattr(importlib.import_module('.loader', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

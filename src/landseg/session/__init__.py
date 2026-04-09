@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.trainer`.
+Top-level namespace for `landseg.session`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -62,4 +62,4 @@ def __getattr__(name: str):
     if name in {'build_trainer_components',}:
         return getattr(importlib.import_module('.components', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

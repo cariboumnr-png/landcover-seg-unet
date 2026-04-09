@@ -50,7 +50,8 @@ class MappedRasterWindows:
 def map_rasters(
     world_grid: geo_core.GridLayout,
     image_fpath: str,
-    label_fpath: str,
+    label_fpath: str | None,
+    *,
     logger: utils.Logger,
 ) -> MappedRasterWindows:
     '''
@@ -67,7 +68,7 @@ def map_rasters(
     '''
 
     # get geometry summary
-    geom = mapper.validate_geometry(image_fpath, label_fpath, logger)
+    geom = mapper.validate_geometry(image_fpath, label_fpath, logger=logger)
 
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs

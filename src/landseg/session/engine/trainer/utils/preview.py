@@ -31,8 +31,9 @@ import torch
 # -------------------------------Public Function-------------------------------
 def export_previews(
     maps: dict[str, dict[tuple[int, int], torch.Tensor]],
-    map_grid_shape: tuple[int, int],
     out_dir: str,
+    *,
+    map_grid_shape: tuple[int, int] = (0, 0),
     heads: list[str] | None = None,
     palettes: dict[str, numpy.ndarray] | None = None,
 ) -> dict[str, str]:
@@ -50,6 +51,10 @@ def export_previews(
     Returns:
         { head: path_to_png }
     '''
+
+    # no ops if input shape is (0, 0) - dummy values from caller
+    if not all(x > 0 for x in map_grid_shape):
+        return {}
 
     # make output dir if not already
     os.makedirs(out_dir, exist_ok=True)
@@ -138,6 +143,7 @@ def _save_index_mosaic_png(
 
 def _default_palette(
     num_classes: int,
+    *,
     seed: int = 123
 ) -> numpy.ndarray:
     '''

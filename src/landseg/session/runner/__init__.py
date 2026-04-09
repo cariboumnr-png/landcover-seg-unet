@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.trainer_runner`.
+Top-level namespace for `landseg.session.runner`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -44,9 +44,9 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['Runner']:
+    if name in {'Runner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
-    if name in ['Phase',]:
+    if name in {'Phase'}:
         return getattr(importlib.import_module('.phase', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

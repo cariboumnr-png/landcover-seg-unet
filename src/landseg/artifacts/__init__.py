@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.artifacts`.
+Top-level namespace for `landseg.artifacts`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -64,4 +64,4 @@ def __getattr__(name: str):
     if name in {'LifecyclePolicy'}:
         return getattr(importlib.import_module('.policy', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

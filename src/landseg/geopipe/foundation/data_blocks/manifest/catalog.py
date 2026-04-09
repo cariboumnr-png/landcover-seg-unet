@@ -39,11 +39,12 @@ T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # -------------------------------Public Function-------------------------------
 def build_catalog(
-    original_catalog: geo_core.DataCatalog,
     input_block_fpaths: list[str],
+    *,
+    original_catalog: geo_core.DataCatalog,
+    mapped_grid_id: str,
     source_image: str,
     source_label: str | None,
-    mapped_grid_id: str,
 ) -> geo_core.DataCatalog:
 
     '''
@@ -58,16 +59,16 @@ def build_catalog(
     name while preserving all other entries.
 
     Args:
-        original_catalog: An existing :class:`BlocksCatalog`. May be
-            empty if creating a new catalog from scratch.
         input_block_fpaths: A list of file paths to block artifacts to
             be cataloged.
+        original_catalog: An existing :class:`BlocksCatalog`. May be
+            empty if creating a new catalog from scratch.
+        mapped_grid_id: Identifier of the aligned spatial grid used to
+            generate the blocks.
         source_image: File path or identifier of the source image from
             which the blocks were generated.
         source_label: File path or identifier of the source label data,
             if applicable. May be ``None`` for unlabeled datasets.
-        mapped_grid_id: Identifier of the aligned spatial grid used to
-            generate the blocks.
 
     Returns:
         `BlocksCatalog` containing merged catalog entries for all provided

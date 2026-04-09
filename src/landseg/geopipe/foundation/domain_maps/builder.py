@@ -62,7 +62,7 @@ import landseg.utils as utils
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _BuildingContext:
-    '''doc'''
+    '''Context container for domain tile map dictionary building.'''
     max_index: int
     major_freq_mean: float
     major_freq_min: float
@@ -74,6 +74,7 @@ class _BuildingContext:
 def build_domain(
     grid_id: str,
     mapped_tiles: alias.RasterTileDict,
+    *,
     valid_threshold: float,
     target_variance: float,
     logger: utils.Logger,
@@ -83,9 +84,9 @@ def build_domain(
     # get domain tiles dict
     context, domain_dict = _get_domain_dict(
         mapped_tiles,
-        valid_threshold,
-        target_variance,
-        logger
+        valid_threshold=valid_threshold,
+        target_variance=target_variance,
+        logger=logger
     )
     # instantiate class object from dict
     domain_map = geo_core.DomainTileMap.from_dict(domain_dict)
@@ -106,6 +107,7 @@ def build_domain(
 # ------------------------------private  function------------------------------
 def _get_domain_dict(
     raster_tiles: alias.RasterTileDict,
+    *,
     valid_threshold: float,
     target_variance: float,
     logger: utils.Logger
@@ -294,10 +296,10 @@ def _k_from_target_evr(
     return k
 
 def _transform(
-        x: numpy.ndarray,
-        mean: numpy.ndarray,
-        components: numpy.ndarray
-    ) -> numpy.ndarray:
+    x: numpy.ndarray,
+    mean: numpy.ndarray,
+    components: numpy.ndarray
+) -> numpy.ndarray:
     '''Project rows of X onto PCA components (k x D).'''
 
     xc = x - mean

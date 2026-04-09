@@ -91,8 +91,8 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
     def __init__(
         self,
         *,
+        dataspecs_config: multihead.DataSpecsConfig,
         backbone_config: multihead.BackboneConfig,
-        model_config: multihead.ModelConfig,
         conditioning: multihead.ConditioningConfig,
         **kwargs
       ):
@@ -123,7 +123,7 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
                 - backbone variant (e.g., 'unet', 'unetpp'),
                 - base channel width,
                 - convolutional block parameters forwarded to backbone.
-            model_config:
+            dataspecs_config:
                 Model-level configuration defining:
                 - input channel count,
                 - head definitions and class counts,
@@ -154,53 +154,64 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         super().__init__()
 
         # channels
-        in_ch = model_config.in_ch
+        in_ch = dataspecs_config.in_ch
         base_ch = backbone_config.base_ch
 
         # logit adjustments
         # scalar strength alpha (1.0 = as-provided priors) for logit adjust
         self.register_buffer('la_alpha', torch.tensor(1.0, dtype=torch.float32))
         # register perhead logit adjustment as buffers (NOT parameters)
-        if model_config.logit_adjust:
-            for h, v in model_config.logit_adjust.items():
+        if dataspecs_config.logit_adjust:
+            for h, v in dataspecs_config.logit_adjust.items():
                 t = torch.tensor(v, dtype=torch.float32).view(1, -1, 1, 1)
                 self.register_buffer(f'la_{h}', t)
         # runtime toggle whether to use la for inference (init state)
         self.enable_logit_adjust = kwargs.get('enable_logit_adjust', True)
 
         # multihead management
-        heads = {k: len(v) for k, v in model_config.heads_w_counts.items()}
+        heads = {k: len(v) for k, v in dataspecs_config.heads_w_counts.items()}
         self.heads = _HeadManager(base_ch, heads)
 
         # domain knowledge router
-        self.domain_router = _DomainRouter(conditioning)
+        self.domain_router = _DomainRouter(dataspecs_config, conditioning)
 
         # domain concatenation if proviced
-        self.concat = multihead.get_concat(conditioning)
+        self.concat = multihead.get_concat(
+            conditioning,
+            domain_ids_num=dataspecs_config.domain_ids_num,
+            domain_vec_dim=dataspecs_config.domain_vec_dim
+        )
         add = self.concat.output_dim if self.concat is not None else 0
 
         # core UNet body
         body = self._get_model_body(backbone_config.body)
         self.body = body(in_ch + add, base_ch, **backbone_config.conv_params)
 
-        # conditioner
-        self.film = multihead.get_film(conditioning, base_ch)
+        # film conditioner
+        self.film = multihead.get_film(
+            base_ch,
+            conditioning,
+            domain_ids_num=dataspecs_config.domain_ids_num,
+            domain_vec_dim=dataspecs_config.domain_vec_dim
+        )
 
         # safety utilities
-        enable_clamp = kwargs.get('enable_clamp', True)
-        clamp_range = kwargs.get('clamp_range', (1e-4, 1e4))
-        self.safety = _NumericSafety(enable_clamp, clamp_range)
+        self.safety = _NumericSafety(
+            enable_clamp=kwargs.get('enable_clamp', True),
+            clamp_range=kwargs.get('clamp_range', (1e-4, 1e4))
+        )
 
     @property
     def logit_adjust_alpha(self) -> float:
-        '''Global logit adjust alpha scalar.'''
+        '''Returns Global logit adjust alpha scalar.'''
         return float(getattr(self, 'la_alpha').item())
 
     @property
     def logit_adjust(self) -> dict[str, torch.Tensor]:
         '''
-        Lazily gather per-head logit adjustment buffers. Buffers are
-        named 'la_{head}'. Excludes the scalar 'la_alpha'.
+        Returns Lazily gather per-head logit adjustment buffers.
+
+        Buffers are named 'la_{head}'. Excludes the scalar 'la_alpha'.
         '''
         out: dict[str, torch.Tensor] = {}
         for name, buf in self.named_buffers():
@@ -403,7 +414,11 @@ class _DomainRouter(torch.nn.Module):
     configured to use it.
     '''
 
-    def __init__(self, cfg: multihead.ConditioningConfig):
+    def __init__(
+        self,
+        dataspecs_config: multihead.DataSpecsConfig,
+        conditioning_config: multihead.ConditioningConfig
+    ):
         '''
         Initialize optional projections and record routing policy.
 
@@ -414,16 +429,16 @@ class _DomainRouter(torch.nn.Module):
         '''
 
         super().__init__()
-        self.cfg = cfg
+        self.cfg = conditioning_config
         # set concat and film projection
         self.concat_proj = torch.nn.Linear(
-            in_features=cfg.domain_vec_dim,
-            out_features=cfg.concat.out_dim
-        ) if cfg.domain_vec_dim else None
+            in_features=dataspecs_config.domain_vec_dim,
+            out_features=conditioning_config.concat.out_dim
+        ) if dataspecs_config.domain_vec_dim else None
         self.film_proj = torch.nn.Linear(
-            in_features=cfg.domain_vec_dim,
-            out_features=cfg.film.embed_dim
-        ) if cfg.domain_vec_dim else None
+            in_features=dataspecs_config.domain_vec_dim,
+            out_features=conditioning_config.film.embed_dim
+        ) if dataspecs_config.domain_vec_dim else None
 
     def forward(
         self,
@@ -461,6 +476,7 @@ class _NumericSafety():
     '''Autocast and clamping utilities for numerical stability.'''
     def __init__(
         self,
+        *,
         enable_clamp: bool,
         clamp_range: tuple[float, float]
     ):

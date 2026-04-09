@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
 '''
-Top-level namespace for `landseg.trainer_components`.
+Top-level namespace for `landseg.session.components`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -43,7 +42,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['build_trainer_components']:
+    if name in {'build_trainer_components'}:
         return getattr(importlib.import_module('.assembly', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -51,13 +51,16 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['Backbone']:
+    if name in {'Backbone'}:
         return getattr(importlib.import_module('.base', __package__), name)
-    if name in ['DoubleConv', 'Downsample', 'Upsample']:
+
+    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
         return getattr(importlib.import_module('.blocks', __package__), name)
-    if name in ['UNet']:
+
+    if name in {'UNet'}:
         return getattr(importlib.import_module('.unet', __package__), name)
-    if name in ['UNetPP']:
+
+    if name in {'UNetPP'}:
         return getattr(importlib.import_module('.unetpp', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

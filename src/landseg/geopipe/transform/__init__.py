@@ -64,4 +64,4 @@ def __getattr__(name: str):
     if name in {'build_schema'}:
         return getattr(importlib.import_module('.schema_build', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

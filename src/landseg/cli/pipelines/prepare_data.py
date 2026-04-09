@@ -36,10 +36,11 @@ def prepare(config: configs.RootConfig):
     '''
     Run the preparation pipeline for an experiment.
 
-    Outputs:
-    - `block_source.json`, `label_stats.json`
-    - `image_stats.json`, normalized `.npz` per split, `block_splits.json`
-    - `schema.json` referencing only normalized artifacts
+    Steps:
+    1) Parse current data blocks catalog and schema by config.
+    2) Split the blocks into train/val/test with configured hydration.
+    3) Normalize all blocks using image stats from the train split.
+    4) Build schame for downstream consumption.
 
     Args:
         config: RootConfig with transform settings.
@@ -48,26 +49,23 @@ def prepare(config: configs.RootConfig):
     # init a logger
     logger = utils.Logger('prep', f'{config.exp_root}/prep.log')
 
-    # config aliases
-    # data foundation
-    grid = config.foundation.grid
-    # data transform
-    partition = config.transform.partition
-    scoring = config.transform.scoring
-    hydration = config.transform.hydration
-
     # artifact paths
     foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
     transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
 
-    # datablocks partition
-    # parse catalog
+    # parse catalog from data foundation
     parsed_catalog = transform.data_blocks_adapter(
         foundation_paths.data_blocks.dev.catalog,
         foundation_paths.data_blocks.dev.schema,
         foundation_paths.data_blocks.test.catalog,
         valid_px_threshold=0.8
     )
+
+    # datablocks partition
+    # data transform config aliases
+    partition = config.transform.partition
+    scoring = config.transform.scoring
+    hydration = config.transform.hydration
     # partition config
     partition_config = transform.PartitionParameters(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
@@ -76,14 +74,14 @@ def prepare(config: configs.RootConfig):
         scoring_alpha=scoring.alpha,
         scoring_beta=scoring.beta,
         max_skew_rate=hydration.max_skew_rate,
-        block_spec=grid.tile_specs_tuple
+        block_spec=config.foundation.grid.tile_specs_tuple
     )
     transform.run_datablocks_partition(
-        logger,
-        transform_paths,
         parsed_catalog,
+        transform_paths,
         partition_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
     # normalize

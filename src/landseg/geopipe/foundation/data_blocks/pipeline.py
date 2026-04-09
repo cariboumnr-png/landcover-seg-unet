@@ -59,19 +59,19 @@ class _PipelinePaths(typing.Protocol):
 class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
     image_fpath: str
-    label_fpath: str
+    label_fpath: str | None
     data_config_fpath: str
     dem_pad: int
     ignore_index: int
 
 # -------------------------------Public Function-------------------------------
 def run_blocks_building(
-    logger: utils.Logger,
     world_grid: geo_core.GridLayout,
     artfact_paths: _PipelinePaths,
     config: BlockBuildingParameters,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ) -> str | None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
@@ -107,11 +107,12 @@ def run_blocks_building(
 
     # map model dev rasters to grid
     ras_windows = data_blocks.map_rasters_to_grid(
-        logger,
         world_grid,
-        (config.image_fpath, config.label_fpath),
+        config.image_fpath,
+        config.label_fpath,
         artfact_paths.mapped_window(world_grid.gid),
-        policy=policy
+        policy=policy,
+        logger=logger,
     )
     logger.log('INFO', 'Rasters mapped to input world grid')
 
@@ -126,10 +127,10 @@ def run_blocks_building(
         block_size=ras_windows.tile_shape
     )
     block_builder = data_blocks.BlockBuilder(
-        logger,
         ras_windows.image,
         ras_windows.label,
         builder_config,
+        logger=logger,
     )
 
     # build all model dev blocks
@@ -146,9 +147,5 @@ def run_blocks_building(
         catalog_fpath=artfact_paths.catalog,
         schema_fpath=artfact_paths.schema
     )
-    data_blocks.update_manifest(
-        logger,
-        updated,
-        policy=policy
-    )
+    data_blocks.update_manifest(updated, policy=policy, logger=logger)
     logger.log('INFO', 'Data blocks catalog and schema updated')

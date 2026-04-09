@@ -19,10 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
-
 '''
-Top-level namespace for `landseg.trainer_engine`.
+Top-level namespace for `landseg.session.engine`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -45,7 +43,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['MultiHeadTrainer']:
+    if name in {'MultiHeadTrainer'}:
         return getattr(importlib.import_module('.trainer', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
