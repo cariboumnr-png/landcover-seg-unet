@@ -37,10 +37,10 @@ def ingest(config: configs.RootConfig):
     Run the ingestion pipeline.
 
     Steps:
-    1) Build or load the world grid (`geopipe.foundation`).
+    1) Build or load the world grid.
     2) Prepare domain knowledge aligned to the grid.
-    3) Build raw `.npz` data blocks and update `catalog.json` /
-    `metadata.json`.
+    3) Build raw `.npz` data blocks, and update `catalog.json` and
+    `schema.json`.
 
     Args:
         config: RootConfig with foundation settings.
@@ -93,7 +93,7 @@ def ingest(config: configs.RootConfig):
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
-    # dev data blocks
+    # build dev data blocks
     data_blocks_config = foundation.BlockBuildingParameters(
         image_fpath=datablocks_cfg.filepaths.dev_image,
         label_fpath=datablocks_cfg.filepaths.dev_label,
@@ -109,7 +109,7 @@ def ingest(config: configs.RootConfig):
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
-    # test data blocks - if provided
+    # build test data blocks - if provided
     if datablocks_cfg.has_test_data:
         logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
         data_blocks_config = foundation.BlockBuildingParameters(

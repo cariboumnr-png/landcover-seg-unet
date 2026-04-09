@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=no-value-for-parameter
+
 '''
 CLI entry that resolves Hydra configs, selects a pipeline, dispatches the
 mapped command, and manages logging and error handling.
