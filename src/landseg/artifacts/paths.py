@@ -21,7 +21,14 @@
 
 # pylint: disable=missing-function-docstring
 
-'''Project level artifact canonical file paths.'''
+'''
+Canonical filesystem paths for project artifacts.
+
+Defines structured access to dataset artifacts produced by ingestion,
+preprocessing, and transformation pipelines. Provides strongly-typed
+path builders for foundation data, model dev/test blocks, and
+transformed outputs.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -73,10 +80,10 @@ import os
 #
 #   *: a **_meta.json sidecar file will be generated as well
 
-# ------------------------------Public  Dataclass------------------------------
+# artifacts/
 @dataclasses.dataclass
 class ArtifactPaths:
-    '''Doc'''
+    '''Root entrypoint for all artifact path namespaces.'''
     root: str
 
     @property
@@ -87,9 +94,10 @@ class ArtifactPaths:
     def transform(self):
         return TransformPaths(os.path.join(self.root, 'transform'))
 
+# artifacts/foundation/
 @dataclasses.dataclass
 class FoundationPaths:
-    '''doc'''
+    '''Paths for foundational datasets and knowledge artifacts.'''
     root: str
 
     @property
@@ -104,9 +112,10 @@ class FoundationPaths:
     def data_blocks(self):
         return _DataBlocks(os.path.join(self.root, 'data_blocks'))
 
+# artifacts/foundation/world_grids/
 @dataclasses.dataclass
 class _WorldGrids:
-    '''doc'''
+    '''Paths for spatial grid tile artifacts.'''
     root: str
 
     def fpath(self, tile_specs: tuple[int, int, int, int]) -> str:
@@ -115,9 +124,10 @@ class _WorldGrids:
         gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
         return os.path.join(self.root, f'{gid}.json')
 
+# artifacts/foundation/domain_maps/
 @dataclasses.dataclass
 class _DomainMaps:
-    '''doc'''
+    '''Paths for domain knowledge maps and tile mappings.'''
     root: str
 
     def domain_map_fpath(self, domain_name: str) -> str:
@@ -128,9 +138,10 @@ class _DomainMaps:
         no_ext, _ = os.path.splitext(domain_name)
         return os.path.join(self.root, f'{no_ext}_tiles_{gid}.npz')
 
+# artifacts/foundation/data_blocks/
 @dataclasses.dataclass
 class _DataBlocks:
-    '''doc'''
+    '''Root container for model dev and test data blocks.'''
     root: str
 
     @property
@@ -143,7 +154,7 @@ class _DataBlocks:
 
 @dataclasses.dataclass
 class _DataBlockPaths:
-    '''doc'''
+    '''Paths for a single data block partition (dev/test).'''
     root: str
 
     @property
@@ -165,10 +176,10 @@ class _DataBlockPaths:
     def mapped_window(self, gid: str) -> str:
         return os.path.join(self.windows, f'windows_{gid}.json')
 
-
+# artifacts/transform
 @dataclasses.dataclass
 class TransformPaths:
-    '''doc'''
+    '''Paths for transformed datasets and split artifacts.'''
     root: str
 
     @property
