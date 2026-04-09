@@ -116,8 +116,11 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
     D = dict[str, geo_core.DomainTile]
     M = geo_core.DomainMeta
     DomainCtrl = artifacts.PayloadController[D, M]
-    schema = geo_core.DomainTileMap.SCHEMA_ID
-    ctrl = DomainCtrl(fp, schema, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
+    ctrl = DomainCtrl(
+        fp,
+        schema_id=geo_core.DomainTileMap.SCHEMA_ID,
+        policy=artifacts.LifecyclePolicy.LOAD_OR_FAIL
+    )
     payload = ctrl.load()
     assert payload # typing assertion
     return geo_core.DomainTileMap.from_json_payload(payload)
