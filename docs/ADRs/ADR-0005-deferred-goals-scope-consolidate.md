@@ -1,82 +1,149 @@
-# ADR‑0005 — Consolidation of Deferred Goals & Scope Update
-- **Status:** Proposed
-- **Date:** 2026‑02‑22
+# ADR‑0005 — Consolidation of Deferred Goals & Scope Update (Updated)
+
+- **Status:** Accepted — Implemented
+- **Original Date:** 2026‑02‑22
+- **Updated:** 2026‑04‑09
+- **Supersedes / Consolidates:** ADR‑0002, ADR‑0003, ADR‑0004 (remaining open items only)
+
+---
 
 ## Context
-ADR‑0002/0003/0004 introduced several intentions that remain partially or
-wholly unimplemented following the recent merge. The merged branch achieves
-the overarching goals—reproducibility, grid/domain first‑classing, and a
-clean pipeline—but some mechanisms differ from the originals and a few are
-no longer strictly necessary.
 
-This ADR consolidates the deferred/changed items and updates scope to match
-the current architecture and codebase.
+ADR‑0002/0003/0004 originally introduced several architectural intentions
+around caching, reporting, and manifests. Following the merge and subsequent
+stabilization of `landseg.geopipe`, the pipeline has reached a mature state
+that **meets the original goals**, though in some cases via different (and
+simpler) mechanisms.
 
-- Current pipeline already guarantees reproducibility and integrity via
-  per‑artifact hashing, schema validation, and rebuild on failure.
-- The architecture emphasizes grid/domain as reusable artifacts and a
-  schema that effectively acts as the manifest of record.
+This ADR was introduced to consolidate deferred or changed intentions and to
+realign scope with the **actual, shipped architecture**. As of April 2026,
+the architecture and codebase now fully reflect the revised stance outlined
+here.
+
+The current pipeline emphasizes:
+- Deterministic, artifact‑driven reproducibility
+- Grid and domain as first‑class, reusable spatial artifacts
+- Generated schemas as the canonical manifest of record
+- Explicit lifecycle management over implicit orchestration
+
+---
 
 ## Restated Intent (from ADR‑0002/0003/0004)
-- **ADR‑0002 (cache & catalog):** Global cache layout keyed by
-  `(grid_id, grid_version, domain_version, imagery_hash)` + discovery catalog.
-- **ADR‑0003 (tile reporting):** Standard per‑tile/AOI EDA & QA summaries,
-  including class histograms, valid‑pixel ratios, domain PCA distributions,
-  and raster QA checks.
-- **ADR‑0004 (task manifest):** One manifest to reference grid/domain/dataset
-  and model configuration; JSON‑Schema‑validated; single entrypoint.
 
-## What Is Already Achieved (via merged branch)
-- **Reproducibility & integrity:** Schema‑gated loading, artifact hashing,
-  and automatic rebuild on missing/corrupted artifacts.
-- **First‑class grid/domain:** Persisted artifacts with alignment invariants
-  and hash‑guarded loading.
-- **Manifest‑like behavior:** `schema.json` functions as the effective
-  manifest for downstream training/inference (even if not a user‑authored
-  manifest).
+- **ADR‑0002 (cache & catalog):**
+  Deterministic reuse of data blocks via stable identifiers and hashing.
 
-## Deferred or Changed Items (and revised stance)
-1) **Global cache catalog (ADR‑0002)**
-   - *Not implemented:* No central catalog keyed by the grid/domain/version tuple;
-     caching remains per‑dataset cache roots with hash records.
-   - *Revised scope:* Defer catalog until there is a real need to reuse the same
-     blocks across **multiple datasets or tasks**; the current schema + hashing
-     already gives determinism for single‑dataset pipelines.
+- **ADR‑0003 (tile reporting):**
+  Availability of per‑tile / per‑AOI statistics and QA signals derived from
+  underlying block metadata.
 
-2) **Standardized tile/AOI reporting (ADR‑0003)**
-   - *Not implemented:* No reporting exporter that aggregates per‑block
-     metrics into per‑tile/AOI reports and QA bundles.
-   - *Revised scope:* Treat reporting as a thin, optional layer on top of existing
-     block metadata (counts, entropy, valid ratios, stats, domain PCA), producing
-     JSON/Parquet (and optional plots) colocated with artifacts.
+- **ADR‑0004 (task manifest):**
+  A single, authoritative description of dataset structure, provenance, and
+  configuration for downstream consumption.
 
-3) **Formal user‑authored task manifest (ADR‑0004)**
-   - *Not implemented:* No explicit top‑level manifest file, schema, or CLI that
-     consumes it.
-   - *Revised scope:* Recognize `schema.json` as the **generated manifest of record**.
-     Introduce a *lightweight* user manifest later only if/when external scheduling
-     or CI/CD needs require a single declarative file.
+---
+
+## What Is Now Fully Achieved
+
+### Reproducibility & Integrity
+- All persisted artifacts (grids, mapped windows, blocks, catalogs, schemas,
+  domains, transforms) are hash‑tracked and lifecycle‑managed.
+- Schema‑gated loading and deterministic rebuild policies ensure integrity.
+- Downstream stages consume only persisted, validated artifacts.
+
+### First‑Class Grid & Domain
+- World grids are immutable, persisted artifacts (`GridSpec` / `GridLayout`)
+  with explicit metadata and alignment invariants.
+- Domain knowledge is represented as persisted, grid‑aligned
+  `DomainTileMap` artifacts, including validated tile selection, class
+  frequencies, and PCA‑reduced features.
+- Both grids and domains are reusable across datasets by construction.
+
+### Manifest of Record
+- `schema.json` (foundation and transform stages) functions as the
+  **generated manifest of record**.
+- All downstream consumers (partitioning, normalization, training spec
+  assembly) derive configuration exclusively from persisted schema artifacts.
+- No user‑authored top‑level manifest is required for local or standard
+  workflows.
+
+---
+
+## Deferred or Revised Items (Final Stance)
+
+### 1) Global Cache Catalog (ADR‑0002)
+- **Status:** Intentionally not implemented.
+- **Rationale:**
+  Caching and determinism are guaranteed via per‑dataset catalogs combined
+  with artifact hashing and explicit grid/domain identifiers.
+- **Decision:**
+  A global, cross‑dataset catalog keyed by
+  `(grid_id, grid_version, domain_version, imagery_hash)` is postponed until a
+  concrete multi‑dataset reuse requirement emerges.
+- **Forward compatibility:**
+  Existing `CatalogEntry` structure, hashing, and metadata are sufficient to
+  introduce such a catalog later without refactoring.
+
+### 2) Standardized Tile / AOI Reporting (ADR‑0003)
+- **Status:** Data model satisfied; exporter is optional.
+- **Current state:**
+  All required metrics already exist at the block and domain levels:
+  class histograms, valid‑pixel ratios, entropy, per‑band stats, and domain PCA.
+- **Decision:**
+  Reporting is treated as a *thin, optional exporter layer* that aggregates
+  existing metadata into per‑tile / per‑AOI JSON or Parquet artifacts, with
+  optional visualizations.
+- **Implementation:**
+  Not required for pipeline correctness; tracked as an optional follow‑up
+  tooling concern.
+
+### 3) User‑Authored Task Manifest (ADR‑0004)
+- **Status:** Explicitly declined.
+- **Decision:**
+  Generated schemas (`schema.json`) are canonical and sufficient.
+  A lightweight user‑authored manifest may be introduced only if required
+  by external schedulers or CI/CD systems.
+- **Rationale:**
+  Avoids duplication, drift, and manual configuration errors.
+
+---
 
 ## Decision
-- Accept the revised stance above. The pipeline’s current approach delivers the
-  intended outcomes and keeps complexity low. We will:
-  - Postpone a global cache catalog until multi‑dataset reuse is required.
-  - Add a small “reporting exporter” that aggregates existing metrics into a
-    standard per‑tile/AOI artifact set.
-  - Treat the generated `schema.json` as canonical; revisit a user‑authored
-    manifest if external orchestration demands it.
+
+The revised stance outlined in the original ADR‑0005 is **fully implemented
+and validated** by the current `geopipe` architecture.
+
+We therefore:
+- ✅ Accept the absence of a global cache catalog as intentional.
+- ✅ Treat reporting as an optional, downstream aggregation concern.
+- ✅ Recognize generated schemas as the sole manifest of record.
+- ✅ Preserve forward compatibility for future orchestration or cataloging
+  needs without adding premature complexity.
+
+---
 
 ## Consequences
-- Simpler near‑term maintenance and fewer moving parts.
-- We preserve forward compatibility to add a catalog and a formal manifest later.
-- A reporting exporter is straightforward with the metadata already in blocks.
+
+- The pipeline remains simpler, deterministic, and artifact‑driven.
+- Maintenance burden and conceptual surface area are minimized.
+- Future extensions (global catalogs, reporting CLIs, external orchestration)
+  can be added cleanly without re‑architecting existing stages.
+
+---
 
 ## Out of Scope / No Longer Applicable
-- Hard requirement for a global catalog in all runs.
-- Mandatory user‑authored manifests for local pipelines.
 
-## Status & Follow‑ups
-- Status: Proposed (to replace the “pending parts” of ADR‑0002/0003/0004).
-- Follow‑ups:
-  1) Implement the reporting exporter CLI (tile/AOI JSON/Parquet + optional PNGs).
-  2) Add minimal hooks for future catalog indexing (behind a feature flag).
+- Mandatory global catalogs for all runs.
+- Required user‑authored manifests for local or single‑dataset pipelines.
+- Built‑in reporting exporters as part of the critical path.
+
+---
+
+## Status & Follow‑Ups
+
+- **Status:** Accepted — Implemented.
+- **Optional Follow‑Ups (Non‑Blocking):**
+  1. Implement an optional reporting exporter CLI (tile/AOI JSON/Parquet +
+     optional plots).
+  2. Introduce a global catalog index only if multi‑dataset block reuse becomes
+     operationally necessary.

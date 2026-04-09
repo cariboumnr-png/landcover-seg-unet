@@ -71,7 +71,7 @@ intent, with updated module naming to reflect the codebase:
 - **Standardize**: `build_normalized_blocks(...)` aggregates **train‑only**
   band statistics and writes normalized blocks plus a normalized split registry;
   `build_schema(...)` then emits the final `schema.json` pointing **only** to
-  normalized artifacts. citeturn1search4turn1search5turn1search6
+  normalized artifacts.
 
 ## Artifacts & Conventions
 
@@ -100,7 +100,7 @@ intent, with updated module naming to reflect the codebase:
 - **Final dataset schema (materialized)**
   - `schema.json`: references **normalized** splits only; persists
     array‑key conventions (`image`/`label_stack`), statistics, checksums, and
-    artifact paths for reproducibility. citeturn1search6
+    artifact paths for reproducibility.
 
 ## Data Flow (Implemented)
 
@@ -119,7 +119,7 @@ partition_blocks → block_source.json + label_stats.json
 ## Rationale
 
 - Prevents data leakage by computing normalization strictly from the **train**
-  split and materializing normalized artifacts per experiment. citeturn1search4
+  split and materializing normalized artifacts per experiment.
 - Keeps raw blocks stable, reproducible, and **reusable** across multiple
   experiments and splits.
 - Allows changing normalization techniques or sampling/scoring strategies

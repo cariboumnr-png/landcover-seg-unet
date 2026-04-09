@@ -36,10 +36,11 @@ Last updated: 2026-04-07
 │   ├── multihead/                # cadre de modèle multi-têtes
 │   └── factory.py                # construction des modèles
 |
-├── trainer/                      [Système d’entraînement]
+├── session/                      [système d’exécution]
+|   ├── common/                   # types partagés dans le module
 │   ├── components/               # pertes, métriques, dataloaders
 │   ├── engine/                   # boucle d’entraînement principale
-│   └── runner/                  # orchestration de l’entraînement
+│   └── runner/                   # orchestration de l’entraînement
 |
 └── utils/                        [Utilitaires partagés]
     ├── logger.py                 # journalisation du projet

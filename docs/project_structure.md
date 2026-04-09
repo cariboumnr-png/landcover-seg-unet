@@ -36,7 +36,8 @@ Dernière mise à jour : 2026-04-07
 │   ├── multihead/                # multihead model framework
 │   └── factory.py                # model construction
 |
-├── trainer/                      [Training system]
+├── session/                      [runtime system]
+│   ├── commmon/                  # shared types in the module
 │   ├── components/               # losses, metrics, dataloaders
 │   ├── engine/                   # core training loop
 │   └── runner/                   # training orchestration

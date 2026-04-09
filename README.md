@@ -16,17 +16,45 @@ The pipeline is powered by PyTorch U‑Net architectures and a fully specificati
 
 ---
 
-## 📖 Overview
 
-This repository provides an end‑to‑end workflow for preparing datasets and
-training landcover segmentation models:
+# 📖 Overview
 
-- **Grid & Domain Artifacts:** Deterministic world‑grid tiling and domain raster alignment.
-- **Dataprep Pipeline:** Window mapping → raster block caching → spectral/topo feature derivation → label hierarchy → normalization → scoring & dataset split → schema generation.
-- **Dataset Specs:** A unified representation (`DataSpecs`) describing shapes, class topology, splits, and normalization.
-- **Model Architectures:** Multi‑head U‑Net / U‑Net with optional domain conditioning.
-- **Training Runner:** A unified training/inference controller with callbacks, metrics, losses, and preview generation.
-- **Reproducibility:** Strict artifact hashing, schema validation, and rebuild‑on‑mismatch behavior.
+This repository provides an end‑to‑end, artifact‑driven workflow for preparing
+datasets and training land‑cover segmentation models.
+
+- **Grid & Domain Artifacts**
+  Deterministic world‑grid tiling and grid‑aligned domain raster mapping,
+  persisted as reusable, hash‑guarded artifacts.
+
+- **Dataprep Pipeline**
+  Raster geometry validation → grid/window mapping → raw block caching →
+  spectral and topographic feature derivation → label hierarchy construction →
+  dataset partitioning and scoring → normalization → schema generation.
+
+- **Schemas as Manifest of Record**
+  Generated `**schema.json` artifacts serve as the authoritative description of
+  dataset structure, provenance, splits, tensor shapes, label topology, and
+  normalization. No user‑authored manifest is required for standard workflows.
+
+- **Dataset Specs (`DataSpecs`)**
+  A unified runtime representation derived from persisted schemas and catalogs,
+  describing model inputs, class structure, splits, normalization, and optional
+  domain conditioning.
+
+- **Model Architectures**
+  Multi‑head U‑Net and U‑Net variants with optional grid‑aligned domain
+  conditioning.
+
+- **Training, Evaluation & Inference Runner**
+  A phase‑driven execution layer built around a callback‑based multi‑head
+  engine, supporting training, validation, inference, curriculum scheduling,
+  metrics, losses, checkpointing, and preview generation. Designed to cleanly
+  extend to a dedicated evaluation engine.
+
+- **Reproducibility by Construction**
+  Training and inference consume only persisted artifacts (schemas, checkpoints)
+  under strict hashing, schema‑gated loading, explicit  runtime state, and
+  deterministic rebuild‑on‑mismatch policies, ensuring auditable and restartable experiments across runs and environments.
 
 More detailed documentation available here:
 - [Repository Structure](./docs/project_structure.md)

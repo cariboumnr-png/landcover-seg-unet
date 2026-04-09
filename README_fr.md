@@ -17,16 +17,52 @@ Le pipeline utilise des architectures U‑Net PyTorch et un flux de préparation
 
 ---
 
-## 📖 Aperçu
+# 📖 Aperçu
 
-Ce dépôt fournit un flux complet pour la préparation des jeux de données et l’entraînement de modèles de segmentation de la couverture terrestre :
+Ce dépôt fournit un flux de travail **de bout en bout, piloté par les artefacts**,
+pour la préparation des jeux de données et l’entraînement de modèles de
+segmentation de l’occupation du sol.
 
-- **Artéfacts de grille et de domaine :** Découpage déterministe du globe et alignement des rasters du domaine.
-- **Pipeline de préparation des données :** Mappage de fenêtres → mise en cache de blocs raster → dérivation de caractéristiques spectrales/topographiques → hiérarchie d’étiquettes → normalisation → évaluation et division du jeu de données → génération de schéma.
-- **Spécifications de jeu de données :** Une représentation unifiée (`DataSpecs`) décrivant les formes, la topologie des classes, les divisions et les paramètres de normalisation.
-- **Architectures de modèles :** U‑Net multi‑tête et variantes U‑Net avec conditionnement optionnel basé sur le domaine.
-- **Gestionnaire d’entraînement :** Interface unifiée pour l’entraînement, l’inférence, les métriques, les callbacks et la génération d’aperçus.
-- **Reproductibilité :** Hachage strict des artéfacts, validation des schémas et reconstruction automatique en cas de divergence.
+- **Artefacts de grille & de domaine**
+  Tuilage déterministe sur une grille mondiale et alignement de rasters de
+  domaine sur la grille, persistés sous forme d’artefacts réutilisables et
+  protégés par hachage.
+
+- **Pipeline de préparation des données**
+  Validation de la géométrie des rasters → cartographie grille/fenêtres →
+  mise en cache des blocs bruts → dérivation de caractéristiques spectrales et
+  topographiques → construction de hiérarchies d’étiquettes → partitionnement
+  et notation du jeu de données → normalisation → génération des schémas.
+
+- **Schémas comme manifeste de référence**
+  Les artefacts `schema.json` générés constituent la description canonique de la
+  structure du jeu de données, de la provenance, des partitions, des formes de
+  tenseurs, de la topologie des classes et de la normalisation. Aucun manifeste
+  rédigé par l’utilisateur n’est requis pour les flux standards.
+
+- **Spécifications de jeu de données (`DataSpecs`)**
+  Une représentation d’exécution unifiée, dérivée des schémas et catalogues
+  persistés, décrivant les entrées du modèle, la structure des classes, les
+  partitions, la normalisation et le conditionnement de domaine optionnel.
+
+- **Architectures de modèles**
+  Variantes U‑Net multi‑têtes et U‑Net avec conditionnement de domaine aligné sur
+  la grille en option.
+
+- **Moteur d’entraînement, d’évaluation et d’inférence**
+  Une couche d’exécution pilotée par phases, fondée sur un moteur multi‑têtes
+  et des callbacks, prenant en charge l’entraînement, la validation,
+  l’inférence, l’ordonnancement curriculaire, les métriques, les pertes, la
+  gestion des points de contrôle et la génération d’aperçus. Conçue pour
+  évoluer proprement vers un moteur d’évaluation dédié.
+
+- **Reproductibilité par construction**
+  L’entraînement et l’inférence ne consomment que des artefacts persistés
+  (schémas, points de contrôle), avec hachage strict, chargement validé par
+  schéma, état d’exécution explicite et politiques déterministes de
+  reconstruction en cas de divergence, garantissant des expériences
+  auditables et redémarrables à travers les exécutions et environnements.
+
 
 Documentation détaillée :
 - [Structure du dépôt](./docs/project_structure_fr.md)
