@@ -54,6 +54,7 @@ class FilmConditioner(torch.nn.Module):
 
     def __init__(
         self,
+        *,
         embed_dim: int,
         num_categories: int,
         dim_continuous: int,
@@ -114,8 +115,8 @@ class FilmConditioner(torch.nn.Module):
 
     def embed(
         self,
-        domain_ids: torch.Tensor | None=None,
-        domain_vec: torch.Tensor | None=None
+        domain_ids: torch.Tensor | None = None,
+        domain_vec: torch.Tensor | None = None
     ) -> torch.Tensor | None:
         '''
         Build domain embedding z (shape [B, embed_dim]) from:
@@ -142,7 +143,7 @@ class FilmConditioner(torch.nn.Module):
     def film_bottleneck(
         self,
         xb: torch.Tensor,
-        z: torch.Tensor | None=None
+        z: torch.Tensor | None = None
     ) -> torch.Tensor:
         '''
         Apply FiLM to bottleneck features xb using embedding z.
@@ -170,8 +171,8 @@ class FilmConditioner(torch.nn.Module):
     def forward(
         self,
         xb: torch.Tensor,
-        domain_ids: torch.Tensor | None=None,
-        domain_vec: torch.Tensor | None=None,
+        domain_ids: torch.Tensor | None = None,
+        domain_vec: torch.Tensor | None = None,
     ) -> torch.Tensor:
         '''
         One-call interface:
@@ -191,8 +192,11 @@ class FilmConditioner(torch.nn.Module):
         return self.film_bottleneck(xb, z)
 
 def get_film(
+    base_ch: int,
     config: multihead.ConditioningConfig,
-    base_ch: int
+    *,
+    domain_vec_dim: int,
+    domain_ids_num: int,
 ) -> FilmConditioner | None:
     '''
     Build a FilmAdapter from a conditional-config, if enabled.
@@ -208,8 +212,8 @@ def get_film(
     if config.mode in ['film', 'hybrid'] and config.film.embed_dim > 0:
         return FilmConditioner(
             embed_dim=config.film.embed_dim,
-            num_categories=config.domain_ids_num,
-            dim_continuous=config.domain_vec_dim,
+            num_categories=domain_ids_num,
+            dim_continuous=domain_vec_dim,
             bottleneck_ch=base_ch * 16,
             hidden=config.film.hidden
         )

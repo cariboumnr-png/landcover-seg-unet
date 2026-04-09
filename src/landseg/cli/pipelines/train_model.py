@@ -73,7 +73,7 @@ def train(config: configs.RootConfig):
     model = models.build_multihead_unet(
         dataspecs=dataspecs,
         backbone_config=config.models.body_registry[config.models.use_body],
-        conditioning_config=config.models.conditioning,
+        conditioning=config.models.conditioning,
         enable_logit_adjust=config.models.flags.enable_logit_adjust,
         enable_clamp=config.models.flags.enable_clamp,
         clamp_range=config.models.clamp_range

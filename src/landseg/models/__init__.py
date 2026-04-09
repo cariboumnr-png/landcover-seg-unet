@@ -41,6 +41,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .factory import build_multihead_unet
 
+
 def __getattr__(name: str):
 
     if name in {'build_multihead_unet'}:
