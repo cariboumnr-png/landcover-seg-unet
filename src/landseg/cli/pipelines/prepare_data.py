@@ -77,11 +77,11 @@ def prepare(config: configs.RootConfig):
         block_spec=config.foundation.grid.tile_specs_tuple
     )
     transform.run_datablocks_partition(
-        logger,
-        transform_paths,
         parsed_catalog,
+        transform_paths,
         partition_config,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        logger=logger,
     )
 
     # normalize

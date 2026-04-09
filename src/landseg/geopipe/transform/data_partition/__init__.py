@@ -34,8 +34,8 @@ __all__ = [
     # classes
     'PartitionParameters',
     # functions
+    'create_blocks_partition',
     'run_datablocks_partition',
-    'create_blocks_partition'
     # typing
 ]
 

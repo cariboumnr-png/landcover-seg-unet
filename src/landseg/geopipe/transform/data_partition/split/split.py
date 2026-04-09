@@ -125,8 +125,8 @@ def stratified_splitter(
     train_idx = set(range(n_blks)) - (val_idx | test_idx)
     train_class_count = list(numpy.sum(counts[list(train_idx)], axis=0))
 
-    # # report
-    # _report(counts, list(train_idx), list(val_idx), list(test_idx))
+    # report
+    _report(counts, list(train_idx), list(val_idx), list(test_idx))
 
     # return lists coords for each split
     return _Split(

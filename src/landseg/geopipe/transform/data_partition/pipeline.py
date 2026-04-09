@@ -43,12 +43,12 @@ LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 
 # -------------------------------Public Function-------------------------------
 def run_datablocks_partition(
-    logger: utils.Logger,
-    paths: artifacts.TransformPaths,
     parsed_catalog: transform.DataBlocksView,
+    paths: artifacts.TransformPaths,
     partition_config: data_partition.PartitionParameters,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: utils.Logger,
 ) -> None:
     '''
     Partition canonical data blocks into train/val/test splits.
