@@ -59,7 +59,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in [
+    if name in {
         'ModelsCfg',
         'LoaderConfig',
         'LossConfig',
@@ -68,7 +68,7 @@ def __getattr__(name: str):
         'TrainerCfg',
         'RunnerCfg',
         'RootConfig'
-    ]:
+    }:
         return getattr(importlib.import_module('.schema', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

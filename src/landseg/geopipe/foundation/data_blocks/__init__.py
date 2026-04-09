@@ -67,4 +67,4 @@ def __getattr__(name: str):
     if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(importlib.import_module('.pipeline', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
 '''
-Top-level namespace for `landseg.trainer_components`.
+Top-level namespace for `landseg.session.components.task`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -52,16 +51,16 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['TaskConfig']:
+    if name in {'TaskConfig'}:
         return getattr(importlib.import_module('.config', __package__), name)
 
-    if name in ['HeadSpecs', 'build_headspecs']:
+    if name in {'HeadSpecs', 'build_headspecs'}:
         return getattr(importlib.import_module('.heads', __package__), name)
 
-    if name in ['HeadLosses', 'build_headlosses']:
+    if name in {'HeadLosses', 'build_headlosses'}:
         return getattr(importlib.import_module('.loss', __package__), name)
 
-    if name in ['HeadMetrics', 'build_headmetrics']:
+    if name in {'HeadMetrics', 'build_headmetrics'}:
         return getattr(importlib.import_module('.metrics', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

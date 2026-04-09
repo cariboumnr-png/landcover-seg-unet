@@ -18,8 +18,9 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
-Top-level namespace for `landseg.geopipe.foundation.data_blocks`.
+Top-level namespace for `landseg.geopipe.foundation.data_blocks.manifest`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -56,4 +57,4 @@ def __getattr__(name: str):
     if name in {'build_schema'}:
         return getattr(importlib.import_module('.schema', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

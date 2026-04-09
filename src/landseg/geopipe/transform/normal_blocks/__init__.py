@@ -18,6 +18,7 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
 Top-level namespace for `landseg.geopipe.transform.normal_blocks`.
 
@@ -55,4 +56,4 @@ def __getattr__(name: str):
     if name in {'aggregate_image_stats'}:
         return getattr(importlib.import_module('.stats', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

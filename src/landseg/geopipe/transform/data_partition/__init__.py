@@ -18,6 +18,7 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
 Top-level namespace for `landseg.geopipe.transform.data_partition`.
 
@@ -60,4 +61,4 @@ def __getattr__(name: str):
     if name in {'PartitionParameters', 'create_blocks_partition'}:
         return getattr(importlib.import_module('.split', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

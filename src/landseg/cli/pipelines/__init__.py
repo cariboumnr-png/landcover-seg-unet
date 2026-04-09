@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli.pipeline`.
+Top-level namespace for `landseg.cli.pipelines`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -66,4 +66,4 @@ def __getattr__(name: str):
     if name in {'overfit'}:
         return getattr(importlib.import_module('.train_overfit', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

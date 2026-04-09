@@ -18,8 +18,9 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
 '''
-Top-level namespace for `landseg.geopipe.transform.data_partition`.
+Top-level namespace for `landseg.geopipe.transform.data_partition.split`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -66,4 +67,4 @@ def __getattr__(name: str):
     if name in {'stratified_splitter'}:
         return getattr(importlib.import_module('.split', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

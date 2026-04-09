@@ -59,4 +59,4 @@ def __getattr__(name: str):
     if name in {'GridParameters', 'prepare_world_grid'}:
         return getattr(importlib.import_module('.world_grids', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

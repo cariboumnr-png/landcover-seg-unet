@@ -53,4 +53,4 @@ def __getattr__(name: str):
     if name in {'open_rasters'}:
         return getattr(importlib.import_module('.raster_context', __package__), name)
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

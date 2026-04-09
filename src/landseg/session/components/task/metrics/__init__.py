@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.trainer_components.metrics`.
+Top-level namespace for `landseg.session.components.task.metrics`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -47,9 +47,10 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['ConfusionMatrix', 'ConfusionMatricConfig']:
+    if name in {'ConfusionMatrix', 'ConfusionMatricConfig'}:
         return getattr(importlib.import_module('.conf_matrix', __package__), name)
-    if name in ['HeadMetrics', 'build_headmetrics']:
+
+    if name in {'HeadMetrics', 'build_headmetrics'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

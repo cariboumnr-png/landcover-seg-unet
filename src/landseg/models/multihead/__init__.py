@@ -55,16 +55,20 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in ['BaseMultiheadModel']:
+    if name in {'BaseMultiheadModel'}:
         return getattr(importlib.import_module('.base', __package__), name)
-    if name in ['get_concat']:
+
+    if name in {'get_concat'}:
         return getattr(importlib.import_module('.concat', __package__), name)
+
     if name in ['BackboneConfig', 'ConcatConfig', 'ConditioningConfig',
                 'FilmConfig', 'ModelConfig']:
         return getattr(importlib.import_module('.config', __package__), name)
-    if name in ['get_film']:
+
+    if name in {'get_film'}:
         return getattr(importlib.import_module('.film', __package__), name)
-    if name in ['MultiHeadUNet']:
+
+    if name in {'MultiHeadUNet'}:
         return getattr(importlib.import_module('.frame', __package__), name)
 
-    raise AttributeError(name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
