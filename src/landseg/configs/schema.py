@@ -21,6 +21,7 @@
 
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
+
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
 suitable for OmegaConf structured configs.
@@ -34,6 +35,9 @@ import re
 import typing
 # third-party imports
 import omegaconf
+
+# alias
+field = dataclasses.field
 
 # -------------------------------DATA FOUNDATION-------------------------------
 # ----- grid
@@ -58,8 +62,8 @@ class TileSpecs:
 class Grid:
     mode: str = 'ref'
     crs: str = omegaconf.MISSING
-    extent: Extent = dataclasses.field(default_factory=Extent)
-    tile_specs: TileSpecs = dataclasses.field(default_factory=TileSpecs)
+    extent: Extent = field(default_factory=Extent)
+    tile_specs: TileSpecs = field(default_factory=TileSpecs)
 
     def __post_init__(self):
         if not self.extent.filepath:
@@ -104,7 +108,7 @@ class DomainFile:
 @dataclasses.dataclass
 class Domains:
     default_input_dpath: str = '${exp_root}/input/domain_knowledge'
-    files: list[DomainFile] = dataclasses.field(default_factory=lambda: [])
+    files: list[DomainFile] = field(default_factory=lambda: [])
     valid_threshold: float = 0.7
     target_variance: float = 0.9
 
@@ -141,9 +145,9 @@ class General:
 class DataBlocks:
     name: str = omegaconf.MISSING
     default_input_dpath: str = '${exp_root}/input/${inputs.data.name}'
-    filenames: FileNames = dataclasses.field(default_factory=FileNames)
-    filepaths: FilePaths = dataclasses.field(default_factory=FilePaths)
-    general: General = dataclasses.field(default_factory=General)
+    filenames: FileNames = field(default_factory=FileNames)
+    filepaths: FilePaths = field(default_factory=FilePaths)
+    general: General = field(default_factory=General)
 
     def __post_init__(self):
         # compose file paths
@@ -190,9 +194,9 @@ class DataBlocks:
 # ----- composite
 @dataclasses.dataclass
 class DataFoundation:
-    grid: Grid = dataclasses.field(default_factory=Grid)
-    domains: Domains = dataclasses.field(default_factory=Domains)
-    datablocks: DataBlocks = dataclasses.field(default_factory=DataBlocks)
+    grid: Grid = field(default_factory=Grid)
+    domains: Domains = field(default_factory=Domains)
+    datablocks: DataBlocks = field(default_factory=DataBlocks)
     output_dpath: str = '${exp_root}/artifacts/foundation'
 
     def validate(self) -> None:
@@ -214,7 +218,7 @@ class Partition:
 
 @dataclasses.dataclass
 class Scoring:
-    reward: dict[int, float] = dataclasses.field(default_factory=dict)
+    reward: dict[int, float] = field(default_factory=dict)
     alpha: float = 1.0
     beta: float = 0.0
 
@@ -224,10 +228,10 @@ class Hydration:
 
 @dataclasses.dataclass
 class DataTransform:
-    threshold: Thresholds = dataclasses.field(default_factory=Thresholds)
-    partition: Partition = dataclasses.field(default_factory=Partition)
-    scoring: Scoring = dataclasses.field(default_factory=Scoring)
-    hydration: Hydration = dataclasses.field(default_factory=Hydration)
+    threshold: Thresholds = field(default_factory=Thresholds)
+    partition: Partition = field(default_factory=Partition)
+    scoring: Scoring = field(default_factory=Scoring)
+    hydration: Hydration = field(default_factory=Hydration)
     output_dpath: str = '${exp_root}/artifacts/transform'
 
     def validate(self):
@@ -244,7 +248,7 @@ class ConvParams:
 class UnetBody:
     body: str = 'unet'
     base_ch: int = 32
-    conv_params: dict[str, typing.Any] = dataclasses.field(
+    conv_params: dict[str, typing.Any] = field(
         default_factory=lambda: {
             'downs': dataclasses.asdict(ConvParams()),
             'ups': dataclasses.asdict(ConvParams())
@@ -255,7 +259,7 @@ class UnetBody:
 class UnetPPBody:
     body: str = 'unetpp'
     base_ch: int = 32
-    conv_params: dict[str, typing.Any] = dataclasses.field(
+    conv_params: dict[str, typing.Any] = field(
         default_factory=lambda: {
             'downs': dataclasses.asdict(ConvParams()),
             'nodes': dataclasses.asdict(ConvParams())
@@ -279,8 +283,8 @@ class FiLM:
 @dataclasses.dataclass
 class CondCfg:
     mode: str | None = None  #  'concat' | 'film' | 'hybrid'
-    concat: Concat = dataclasses.field(default_factory=Concat)
-    film: FiLM = dataclasses.field(default_factory=FiLM)
+    concat: Concat = field(default_factory=Concat)
+    film: FiLM = field(default_factory=FiLM)
 
 @dataclasses.dataclass
 class ModelFlags:
@@ -291,15 +295,15 @@ class ModelFlags:
 @dataclasses.dataclass
 class ModelsCfg:
     use_body: str = 'unet'
-    body_registry: dict[str, typing.Any] = dataclasses.field(
+    body_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
             'unet': UnetBody(),
             'unetpp': UnetPPBody(),
         }
     )
-    conditioning: CondCfg = dataclasses.field(default_factory=CondCfg)
+    conditioning: CondCfg = field(default_factory=CondCfg)
     clamp_range: tuple[float, float] = (1e-4, 1e4)
-    flags: ModelFlags = dataclasses.field(default_factory=ModelFlags)
+    flags: ModelFlags = field(default_factory=ModelFlags)
 
     def __post_init__(self):
         mode = self.conditioning.mode
@@ -333,14 +337,14 @@ class DiceLossConfig:
 
 @dataclasses.dataclass
 class LossTypesConfig:
-    focal: FocalLossConfig = dataclasses.field(default_factory=FocalLossConfig)
-    dice: DiceLossConfig = dataclasses.field(default_factory=DiceLossConfig)
+    focal: FocalLossConfig = field(default_factory=FocalLossConfig)
+    dice: DiceLossConfig = field(default_factory=DiceLossConfig)
 
 @dataclasses.dataclass
 class LossConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
-    types: LossTypesConfig = dataclasses.field(default_factory=LossTypesConfig)
+    types: LossTypesConfig = field(default_factory=LossTypesConfig)
 
 # ----- optimization config
 @dataclasses.dataclass
@@ -349,7 +353,9 @@ class OptimConfig:
     lr: float = 1e-4
     weight_decay: float = 1e-3
     sched_cls: str | None = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = dataclasses.field(default_factory=lambda: {'T_max': 50})
+    sched_args: dict[str, typing.Any] = field(
+        default_factory=lambda: {'T_max': 50}
+    )
 
 # ----- runtime config
 @dataclasses.dataclass
@@ -373,7 +379,7 @@ class RuntimePrecision:
     use_amp: bool = True
 
 @dataclasses.dataclass
-class RuntimeOptimization:
+class RuntimeOptim:
     grad_clip_norm: float | None = 1.0
 
 @dataclasses.dataclass
@@ -383,19 +389,19 @@ class RuntimeData:
 
 @dataclasses.dataclass
 class RuntimeConfig:
-    data: RuntimeData = dataclasses.field(default_factory=RuntimeData)
-    schedule: RuntimeSchedule = dataclasses.field(default_factory=RuntimeSchedule)
-    monitor: RuntimeMonitor = dataclasses.field(default_factory=RuntimeMonitor)
-    precision: RuntimePrecision = dataclasses.field(default_factory=RuntimePrecision)
-    optimization: RuntimeOptimization = dataclasses.field(default_factory=RuntimeOptimization)
+    data: RuntimeData = field(default_factory=RuntimeData)
+    schedule: RuntimeSchedule = field(default_factory=RuntimeSchedule)
+    monitor: RuntimeMonitor = field(default_factory=RuntimeMonitor)
+    precision: RuntimePrecision = field(default_factory=RuntimePrecision)
+    optimization: RuntimeOptim = field(default_factory=RuntimeOptim)
 
 # ----- TRAINER
 @dataclasses.dataclass
 class TrainerCfg:
-    loader: LoaderConfig = dataclasses.field(default_factory=LoaderConfig)
-    loss: LossConfig = dataclasses.field(default_factory=LossConfig)
-    optimization: OptimConfig = dataclasses.field(default_factory=OptimConfig)
-    runtime: RuntimeConfig = dataclasses.field(default_factory=RuntimeConfig)
+    loader: LoaderConfig = field(default_factory=LoaderConfig)
+    loss: LossConfig = field(default_factory=LossConfig)
+    optimization: OptimConfig = field(default_factory=OptimConfig)
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
 
     def validate(self) -> None:
         # Example: scheduler-specific requirements
@@ -424,7 +430,7 @@ class LogitAdjustConfig:
 
 @dataclasses.dataclass
 class PhaseHeads:
-    active_heads: list[str] = dataclasses.field(default_factory=lambda: ['layer1'])
+    active_heads: list[str] = field(default_factory=lambda: ['layer1'])
     frozen_heads: list[str] | None = None
     excluded_cls: dict[str, list[int]] | None = None
 
@@ -442,8 +448,8 @@ class PhaseHeads:
 class PhaseConfig:
     name: str = 'coarse_head'
     num_epochs: int = 50
-    heads: PhaseHeads = dataclasses.field(default_factory=PhaseHeads)
-    logit_adjust: LogitAdjustConfig = dataclasses.field(default_factory=LogitAdjustConfig)
+    heads: PhaseHeads = field(default_factory=PhaseHeads)
+    logit_adjust: LogitAdjustConfig = field(default_factory=LogitAdjustConfig)
     lr_scale: float = 1.0
 
     def __str__(self) -> str:
@@ -460,7 +466,7 @@ class PhaseConfig:
 class RunnerCfg:
     ckpt_dpath: str = '${exp_root}/checkpoints'
     preview_dpath: str = '${exp_root}/previews'
-    phases: list[PhaseConfig] = dataclasses.field(default_factory=lambda: [PhaseConfig()])
+    phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
 # --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass
@@ -472,15 +478,15 @@ class RootConfig:
     # dev override paths
     dev_settings_path: str | None = None
     # raw input data and configs
-    foundation: DataFoundation = dataclasses.field(default_factory=DataFoundation)
+    foundation: DataFoundation = field(default_factory=DataFoundation)
     # data preparation
-    transform: DataTransform = dataclasses.field(default_factory=DataTransform)
+    transform: DataTransform = field(default_factory=DataTransform)
     # model settings
-    models: ModelsCfg = dataclasses.field(default_factory=ModelsCfg)
+    models: ModelsCfg = field(default_factory=ModelsCfg)
     # trainer settings
-    trainer: TrainerCfg = dataclasses.field(default_factory=TrainerCfg)
+    trainer: TrainerCfg = field(default_factory=TrainerCfg)
     # controller settings
-    runner: RunnerCfg = dataclasses.field(default_factory=RunnerCfg)
+    runner: RunnerCfg = field(default_factory=RunnerCfg)
 
     def validate_all(self) -> None:
         # delegated to subtrees.
