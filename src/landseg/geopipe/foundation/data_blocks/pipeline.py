@@ -59,7 +59,7 @@ class _PipelinePaths(typing.Protocol):
 class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
     image_fpath: str
-    label_fpath: str
+    label_fpath: str | None
     data_config_fpath: str
     dem_pad: int
     ignore_index: int
@@ -107,11 +107,12 @@ def run_blocks_building(
 
     # map model dev rasters to grid
     ras_windows = data_blocks.map_rasters_to_grid(
-        logger,
         world_grid,
-        (config.image_fpath, config.label_fpath),
+        config.image_fpath,
+        config.label_fpath,
         artfact_paths.mapped_window(world_grid.gid),
-        policy=policy
+        policy=policy,
+        logger=logger,
     )
     logger.log('INFO', 'Rasters mapped to input world grid')
 
