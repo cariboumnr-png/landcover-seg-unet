@@ -44,6 +44,17 @@ from __future__ import annotations
 import dataclasses
 import typing
 
+# CONSTANTS
+SPEC_BAND_NAMES = {
+    'red', 'green', 'blue', 'nir', 'swir1', 'swir2', 'ndvi', 'ndmi', 'nbr'
+}
+TOPO_BAND_NAMES = {
+    'dem', 'slope', 'cos_aspect', 'sin_aspect', 'tpi'
+}
+
+# alias
+field = dataclasses.field
+
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DataSpecs:
@@ -69,20 +80,46 @@ class DataSpecs:
 @dataclasses.dataclass
 class Meta:
     '''General dataset metadata.'''
-    img_ch: int
-    img_h_w: int
-    ignore_index: int
-    img_arr_key: str
-    lbl_arr_key: str
+
+    @dataclasses.dataclass
+    class Image:
+        '''Image related.'''
+        num_channels: int
+        height_width: int
+        array_key: str
+        band_map: dict[str, int]
+        spec_channels: list[int] = []
+        topo_channels: list[int] = []
+
+        def __post_int__(self):
+            # simple grouping by name for now
+            for k, v in self.band_map.items():
+                if k.lower() in SPEC_BAND_NAMES:
+                    self.spec_channels.append(v)
+                elif k.lower in TOPO_BAND_NAMES:
+                    self.topo_channels.append(v)
+
+    @dataclasses.dataclass
+    class Label:
+        '''Label related.'''
+        ignore_index: int
+        array_key: str
+
+    # general - currently unclassified
     blk_bytes: int
     test_blks_grid: tuple[int, int]
+    # image specs
+    image_specs: Image
+    # lable specs
+    label_specs: Label
 
     def __str__(self) -> str:
+        s = self.image_specs.height_width
         return '\n'.join([
             '[General Meta]',
-            f'Number of image channels: {self.img_ch}',
-            f'Data block size (H==W): {self.img_h_w, self.img_h_w}',
-            f'Ignore index: {self.ignore_index}',
+            f'Number of image channels: {self.image_specs.num_channels}',
+            f'Data block size (H==W): {s, s}',
+            f'Ignore index: {self.label_specs.ignore_index}',
             f'Per-block byte size: {self.blk_bytes:,}',
             f'Test blocks grid: {self.test_blks_grid}'
         ])

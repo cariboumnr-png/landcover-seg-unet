@@ -158,15 +158,20 @@ def _get_meta(
     if col * row != len(sorted_blknames):
         col, row = 0, 0 # empty grid for downstream
 
-    # return
+    # return a meta dataclass
     return core.Meta(
-        img_ch=data_schema['tensor_shapes']['image']['C'],
-        img_h_w=data_schema['tensor_shapes']['image']['H'],
-        ignore_index=data_schema['io_conventions']['ignore_index'],
-        img_arr_key=transform_schema['image_array_key'],
-        lbl_arr_key=transform_schema['label_array_key'],
+        test_blks_grid=(col, row),
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
-        test_blks_grid=(col, row)
+        image_specs=core.Meta.Image(
+            num_channels=data_schema['tensor_shapes']['image']['C'],
+            height_width=data_schema['tensor_shapes']['image']['H'],
+            array_key=transform_schema['image_array_key'],
+            band_map=data_schema['io_conventions']['image_band_map'],
+        ),
+        label_specs=core.Meta.Label(
+           array_key=transform_schema['label_array_key'],
+            ignore_index=data_schema['io_conventions']['ignore_index']
+        )
     )
 
 def _get_heads(

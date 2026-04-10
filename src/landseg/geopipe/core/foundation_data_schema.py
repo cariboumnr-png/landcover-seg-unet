@@ -36,7 +36,7 @@ reproducibility across the data pipeline.
 from __future__ import annotations
 import typing
 
-SCHEMA_ID = 'data_schema/v1'
+SCHEMA_ID = 'data_schema/v1.1'
 
 # ---------------------------------Public Type---------------------------------
 class DataSchema(typing.TypedDict):
@@ -88,6 +88,7 @@ class _IOConventions(typing.TypedDict):
     block_format: str
     shapes: _IOShapes
     dtypes: _IODtypes
+    image_band_map: dict[str, int]
     ignore_index: int
 
 class _IOShapes(typing.TypedDict):

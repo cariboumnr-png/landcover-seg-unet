@@ -123,6 +123,7 @@ def build_schema(
                 'image': 'float32',
                 'label': 'uint8',
             },
+            'image_band_map': sample_blk.meta['image_band_map'],
             'ignore_index': sample_blk.meta['ignore_index']
         },
 
