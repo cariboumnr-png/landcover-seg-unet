@@ -26,6 +26,8 @@ Constructs a single valid block, builds minimal data specifications,
 and trains until near-perfect IoU to validate the end-to-end stack.
 '''
 
+# standard imports
+import os
 # third-party imports
 import torch
 # local imports
@@ -58,7 +60,7 @@ def overfit(config: configs.RootConfig) -> None:
     logger = utils.Logger('overfit', f'{root}/log')
 
     # get a single block
-    block_fp = _build_a_block(logger,root, config)
+    block_fp = _build_a_block(root, config, logger=logger)
 
     # build the dataspecs dataclass
     dataspecs = _build_dataspec_a_block(block_fp)
@@ -113,12 +115,20 @@ def overfit(config: configs.RootConfig) -> None:
     )
 
 def _build_a_block(
-    logger: utils.Logger,
     save_dpath: str,
     config: configs.RootConfig,
+    *,
+    logger: utils.Logger,
     **kwargs
 ) -> str:
     '''Build or select one valid block for the overfit test.'''
+
+    # early return if there is already a block, e.g., an .npz file
+    for f in os.listdir(save_dpath):
+        if f.endswith('.npz'):
+            block_fpath = os.path.join(save_dpath, f)
+            logger.log('INFO', f'Using existing block" {block_fpath}')
+            return block_fpath
 
     logger.log('INFO', 'Preparing world grid')
     # world grid
