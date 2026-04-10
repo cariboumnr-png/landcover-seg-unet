@@ -97,7 +97,7 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
 
         # Normalize features along channel dimension.
         features = self._is_valid_inputs(features, logits, targets)
-        features = torch.nn.functional.normalize(features, p=2, dim=1)
+        features = torch.nn.functional.normalize(features, p=2, dim=1) # L2
 
         # Convert logits to probabilities.
         probs = torch.nn.functional.softmax(logits, dim=1)

@@ -150,9 +150,10 @@ class CompositeLoss(torch.nn.Module):
 
         # get mask
         masks = kwargs.get('masks', None)
+        features = kwargs.get('features', None)
         # accumulate included losses
         total_loss = p.new_zeros(())
         for loss_fn, weight in zip(self.losses, self.weights):
-            loss_val = loss_fn(p, t, masks=masks)
+            loss_val = loss_fn(p, t, masks=masks, features=features)
             total_loss += weight * loss_val
         return total_loss

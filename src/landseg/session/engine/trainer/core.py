@@ -579,6 +579,7 @@ class MultiHeadTrainer:
         total, perhead = trainer.multihead_loss(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
+            features=self.state.batch_cxt.x,
             headspecs=self.state.heads.active_hspecs,
             headlosses=self.state.heads.active_hloss
         )
