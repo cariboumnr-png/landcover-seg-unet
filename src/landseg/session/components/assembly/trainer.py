@@ -74,12 +74,13 @@ def build_trainer_components(
     headlosses = task.build_headlosses(
         headspecs,
         config=task_config,
-        ignore_index=data_specs.meta.ignore_index,
+        ignore_index=data_specs.meta.label_specs.ignore_index,
+        spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
     # heads metric modules
     headmetrics = task.build_headmetrics(
         headspecs,
-        ignore_index=data_specs.meta.ignore_index
+        ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
     # optimizer and scheduler

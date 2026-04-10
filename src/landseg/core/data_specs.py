@@ -88,10 +88,10 @@ class Meta:
         height_width: int
         array_key: str
         band_map: dict[str, int]
-        spec_channels: list[int] = []
-        topo_channels: list[int] = []
+        spec_channels: list[int] = field(default_factory=list)
+        topo_channels: list[int] = field(default_factory=list)
 
-        def __post_int__(self):
+        def __post_init__(self):
             # simple grouping by name for now
             for k, v in self.band_map.items():
                 if k.lower() in SPEC_BAND_NAMES:

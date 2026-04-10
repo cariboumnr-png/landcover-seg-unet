@@ -193,17 +193,22 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original'}
 
     # returgeocorerectly from schema dict
-    return core.DataSpecs(
+    specs = core.DataSpecs(
         name='',
         mode='single',
         meta =core.Meta(
-            img_ch=block.data.image.shape[0],
-            img_h_w=block.data.label.shape[1], # here assume H==W
-            ignore_index=block.meta['ignore_index'],
-            img_arr_key='image', # as per convention (already normalized)
-            lbl_arr_key='label_stack', # as per convention (unchanged)
             blk_bytes=0,
-            test_blks_grid=(0, 0)
+            test_blks_grid=(0, 0),
+            image_specs=core.Meta.Image(
+                num_channels=block.data.image.shape[0],
+                height_width=block.data.label.shape[1], # here assume H==W
+                array_key='image',
+                band_map=block.meta['image_band_map'],
+            ),
+            label_specs=core.Meta.Label(
+                array_key='label_stack',
+                ignore_index=block.meta['ignore_index']
+            )
         ),
         heads=core.Heads(
             class_counts=cc, # neutral
@@ -224,3 +229,4 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
             vec_dim=0
         )
     )
+    return specs

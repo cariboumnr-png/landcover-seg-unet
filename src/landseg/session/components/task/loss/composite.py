@@ -79,8 +79,10 @@ class CompositeLoss(torch.nn.Module):
     def __init__(
         self,
         config: task.TaskConfig,
+        *,
         ignore_index: int,
-        alpha: list[float] | None = None
+        focal_alpha: list[float] | None = None,
+        spectral_band_indices: list[int] | None = None
     ):
         '''
         Initialize the composite loss from a configuration dictionary.
@@ -108,7 +110,7 @@ class CompositeLoss(torch.nn.Module):
         # focal loss
         if config.types.focal.weight:
             loss_fn = primitives.FocalLoss(
-                alpha=alpha,
+                alpha=focal_alpha,
                 gamma=config.types.focal.gamma,
                 reduction=config.types.focal.reduction,
                 ignore_index=ignore_index
@@ -130,6 +132,7 @@ class CompositeLoss(torch.nn.Module):
             loss_fn = primitives.SpectralSmoothnessLoss(
                 alpha=config.types.spectral.alpha,
                 neighbour=config.types.spectral.neighbour,
+                spectral_bands=spectral_band_indices,
                 ignore_index=ignore_index,
             )
             self.losses.append(loss_fn)

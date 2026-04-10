@@ -342,11 +342,13 @@ class DataBlock:
 
         # add to band map
         n = len(self.meta['image_band_map'])
+        print(n)
         self.meta['image_band_map'].update({
             'NDVI': n,
             'NDMI': n + 1,
             'NBR': n + 2
         })
+        print(self.meta['image_band_map'])
 
     def _add_topographical_metrics(self) -> None:
         '''Add topographical metrics to the image array.'''

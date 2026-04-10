@@ -73,8 +73,9 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
     def __init__(
         self,
         *,
-        alpha: float = 1,
-        neighbour: int = 4,
+        alpha: float,
+        neighbour: int,
+        spectral_bands: list[int] | None,
         ignore_index: int,
     ) -> None:
         '''
@@ -92,7 +93,7 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
         '''
         super().__init__()
 
-        self.ignore_index = ignore_index
+        # assign attributes
         self.alpha = alpha
         # neighbourhood
         match neighbour:
@@ -100,6 +101,11 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
             case 8: self.offsets = [(0, 1), (1, 0), (0, -1), (-1, 0),
                                     (1, 1), (1, -1), (-1, 1), (-1, -1)]
             case _: raise ValueError('Neighbourhood must be 4 or 8.')
+        self.ignore_index = ignore_index
+        if spectral_bands:
+            self.spec_idx = torch.as_tensor(spectral_bands,dtype=torch.long)
+        else:
+            self.spec_idx = None
 
     def forward(
         self,
@@ -127,8 +133,13 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
             A scalar loss tensor.
         '''
 
-        # Normalize features along channel dimension.
+        # validate inputs
         features = self._is_valid_inputs(features, logits, targets)
+        # filter feature channels if provided
+        if self.spec_idx is not None:
+            self.spec_idx = self.spec_idx.to(features.device)
+            features = features.index_select(1, self.spec_idx)
+        # Normalize features along channel dimension.
         features = torch.nn.functional.normalize(features, p=2, dim=1) # L2
 
         # Convert logits to probabilities.
