@@ -73,7 +73,8 @@ class DiceLoss(primitives.PrimitiveLoss):
         logits: torch.Tensor,
         targets: torch.Tensor,
         *,
-        masks: dict[float, torch.Tensor] | None
+        masks: dict[float, torch.Tensor] | None,
+        features: torch.Tensor | None = None
     ) -> torch.Tensor:
         '''
         Compute soft Dice loss across classes.

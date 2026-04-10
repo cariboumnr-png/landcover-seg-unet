@@ -50,6 +50,7 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
         targets: torch.Tensor,
         *,
         masks: dict[float, torch.Tensor] | None,
+        features: torch.Tensor | None = None
     ) -> torch.Tensor:
         '''
         Compute the loss from model logits and targets.
@@ -62,6 +63,9 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
             masks: Optional mapping from weights (floats) to boolean or
                 float masks of the same spatial shape as targets, used
                 to apply selective weighting.
+            features: Optional feature tensor (e.g., encoder output or
+                input image) of shape (B, D, H, W), used by certain
+                losses (e.g., smoothness, contrastive).
 
         Returns:
             A scalar tensor representing the computed loss.
