@@ -28,7 +28,7 @@ trainer:
       dice:
         weight: 0.0
       spectral:
-        weight: 0.1
+        weight: 0.0
   runtime:
     schedule:
       max_epoch: 1000

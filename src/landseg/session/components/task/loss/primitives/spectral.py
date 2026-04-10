@@ -282,5 +282,6 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
 # same single block - row_028032_col_025088.npz
 # CE is the focal with gamma=0
 # CE*1.0             : Epoch: 0582|Loss: 0.011668|IoU: 0.991210
-# CE*1.0+spectral*0.1: Epoch: 0487|Loss: 0.024920|IoU: 0.991482 (faster)
+# CE*1.0+spectral*0.1: Epoch: 0487|Loss: 0.024920|IoU: 0.991482 # all 14 chs
+# CE*1.0+spectral*0.1: Epoch: 0515|Loss: 0.020206|IoU: 0.990011 # only spec chs
 # CE*1.0+spectral*1.0: Epoch: 1000|Loss: 0.087507|IoU: 0.826833 (cannot overfit)

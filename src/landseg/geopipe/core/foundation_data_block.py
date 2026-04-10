@@ -55,6 +55,7 @@ ensuring consistency and reproducibility across downstream workflows.
 
 # standard imports
 from __future__ import annotations
+import copy
 import dataclasses
 import json
 import math
@@ -216,7 +217,7 @@ class DataBlock:
 
         self = cls()
         # update meta with input
-        self.meta.update(meta)
+        self.meta.update(copy.deepcopy(meta))
         # assign image
         self.data.image = img_arr.astype(numpy.float32) # remote sensing default
         self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
@@ -342,13 +343,11 @@ class DataBlock:
 
         # add to band map
         n = len(self.meta['image_band_map'])
-        print(n)
         self.meta['image_band_map'].update({
             'NDVI': n,
             'NDMI': n + 1,
             'NBR': n + 2
         })
-        print(self.meta['image_band_map'])
 
     def _add_topographical_metrics(self) -> None:
         '''Add topographical metrics to the image array.'''
