@@ -336,9 +336,16 @@ class DiceLossConfig:
     smooth: float = 1.0
 
 @dataclasses.dataclass
+class SpectralLossConfig:
+    weight: float = 1e-3
+    alpha: float = 1.0
+    neighbour: int = 4
+
+@dataclasses.dataclass
 class LossTypesConfig:
     focal: FocalLossConfig = field(default_factory=FocalLossConfig)
     dice: DiceLossConfig = field(default_factory=DiceLossConfig)
+    spectral: SpectralLossConfig = field(default_factory=SpectralLossConfig)
 
 @dataclasses.dataclass
 class LossConfig:

@@ -26,10 +26,11 @@ This loss encourages neighboring pixels with similar features to have
 similar predicted class probabilities.
 '''
 
+# third-party imports
 import torch
 import torch.nn.functional
+# local imports
 import landseg.session.components.task.loss.primitives as primitives
-
 
 class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
     '''
@@ -38,14 +39,43 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
     The loss penalizes prediction differences between neighboring pixels,
     weighted by feature similarity. Optional masks are converted into a
     per-pixel weight map and then applied pairwise.
+
+    The goal is to encourage neighboring pixels with similar spectral
+    signals to have similar predicted class probabilities.
+
+    For each pixel i and each spatial neighbor j, the loss computes:
+
+        s(i, j) = exp(-alpha * ||f_i - f_j||^2) # similarity
+        d(i, j) = ||p_i - p_j||^2               # disagreement
+
+    where:
+        - f_i and f_j are the feature vectors at pixels i and j
+        - p_i and p_j are the softmax class-probability vectors at pixels
+            i and j
+        - alpha controls how quickly the similarity weight decays with
+        feature distance
+
+    The total loss is the weighted average of pairwise probability
+    disagreement over valid neighboring pixel pairs:
+
+        L_smooth = sum_ij [w_ij * s(i, j) * d(i, j)] / sum_ij [w_ij]
+
+    where w_ij is the pairwise mask/weight for the pixel pair and invalid
+    border pairs are excluded.
+
+    Note:
+    - Lower alpha makes the similarity weight stay closer to 1, forcing
+      aggressive smoothing across different-looking pixels;
+    - higher alpha makes the weight decay rapidly, restricting smoothing
+      to only nearly identical spectral signatures.
     '''
 
     def __init__(
         self,
-        ignore_index: int,
         *,
-        alpha: float,
+        alpha: float = 1,
         neighbour: int = 4,
+        ignore_index: int,
     ) -> None:
         '''
         Initialize the smoothness loss.
@@ -55,6 +85,8 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
                 Label to exclude entirely from the loss.
             alpha:
                 Controls the sharpness of the feature-similarity weight.
+                Lower alpha = stronger/higher penalty for predicting
+                different classes over similar pixels.
             neighbour:
                 Neighborhood connectivity, either 4 or 8.
         '''
@@ -234,3 +266,10 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
             )
 
         return features
+
+# overfit test to show implementation success
+# same single block - row_028032_col_025088.npz
+# CE is the focal with gamma=0
+# CE*1.0             : Epoch: 0582|Loss: 0.011668|IoU: 0.991210
+# CE*1.0+spectral*0.1: Epoch: 0487|Loss: 0.024920|IoU: 0.991482 (faster)
+# CE*1.0+spectral*1.0: Epoch: 1000|Loss: 0.087507|IoU: 0.826833 (cannot overfit)

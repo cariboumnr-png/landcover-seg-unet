@@ -27,6 +27,8 @@ trainer:
         gamma: 0.0
       dice:
         weight: 0.0
+      spectral:
+        weight: 1.0
   runtime:
     schedule:
       max_epoch: 1000

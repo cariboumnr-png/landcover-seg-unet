@@ -99,13 +99,12 @@ class CompositeLoss(torch.nn.Module):
 
         super().__init__()
 
-        # expose ignore index
+        # prep
         self.ignore_index = ignore_index
-
-        # iterate through currently support loss types
         self.losses = torch.nn.ModuleList()
         self.weights: list[float] = []
 
+        # iterate through support loss types and add loss of non-zero weight
         # focal loss
         if config.types.focal.weight:
             loss_fn = primitives.FocalLoss(
@@ -123,9 +122,18 @@ class CompositeLoss(torch.nn.Module):
                 smooth=config.types.dice.smooth,
                 ignore_index=ignore_index
             )
-            # add to sequences
             self.losses.append(loss_fn)
             self.weights.append(config.types.dice.weight)
+
+        # spectral smoothness loss as regularizer
+        if config.types.spectral.weight:
+            loss_fn = primitives.SpectralSmoothnessLoss(
+                alpha=config.types.spectral.alpha,
+                neighbour=config.types.spectral.neighbour,
+                ignore_index=ignore_index,
+            )
+            self.losses.append(loss_fn)
+            self.weights.append(config.types.spectral.weight)
 
     def forward(
         self,

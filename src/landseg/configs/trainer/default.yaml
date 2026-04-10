@@ -15,6 +15,10 @@ loss:
     dice:
       weight: 0.5
       smooth: 1.0
+    spectral:
+      weight: 1e-3
+      alpha: 1.0
+      neighbour: 4
 
 # optimizer and scheduler config
 optimization:
