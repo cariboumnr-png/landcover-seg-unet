@@ -1,43 +1,72 @@
-# ADR-0017: Introduce Spectral and Spatial Regularization Losses
+# ADR-0017: Spectral and Spatial Regularization Losses
 
-- **Status:** Proposed
-- **Date:** 2026-04-07
+- **Status:** Accepted (Implemented)
+- **Date:** 2026-04-10
+- **Supersedes:** ADR-0017 (Proposed, 2026-04-07)
 
 ## Context
-The current training setup relies primarily on focal loss and Dice loss to address class imbalance and region overlap stability.
 
-While effective, we observed that these losses do not explicitly encourage:
-- spectral coherence between neighboring pixels, or
-- spatial smoothness in predicted segmentation maps.
+Training previously relied on focal and Dice losses, which address class
+imbalance and region overlap but do not explicitly encode expected
+spectral–spatial structure present in multispectral and hyperspectral
+remote-sensing imagery.
 
-For multispectral and hyperspectral remote-sensing data, encouraging such structure is desirable and aligns well with known properties of the data.
+Empirically, this manifested as:
+- Salt-and-pepper artifacts in predictions
+- Reduced class consistency in spectrally homogeneous regions
 
 ## Decision
-We plan to introduce two new, optional loss components in an incremental and non-disruptive manner:
 
-1. **Spectral Smoothness Loss (L_spectral)**
-   - Penalizes differences in predicted class probabilities between neighboring pixels that are spectrally similar.
-   - Uses the input image spectra to compute fixed similarity weights (no gradient through inputs).
-2. **Total Variation Loss (L_tv)**
-   - Penalizes abrupt spatial changes in predicted probability maps.
-   - Acts as a weak spatial prior to reduce salt-and-pepper noise.
+Two optional regularization losses have been introduced and integrated
+into the training stack:
 
-Both losses will be:
-- implemented as `PrimitiveLoss` subclasses,
-- placed under `trainer/components/loss/` alongside existing focal and Dice losses,
-- optional and controlled entirely via configuration weights.
+### 1. Spectral Smoothness Loss
 
-They will be composed using the existing `CompositeLoss` mechanism, allowing weighted summation with focal and Dice losses.
+- Penalizes disagreement between neighboring pixels with similar input
+  spectra
+- Uses fixed similarity weights computed from input features
+- Does not backpropagate gradients through the input image
+- Implemented as `SpectralSmoothnessLoss`, a `PrimitiveLoss` subclass
 
-## Expected Consequences
+### 2. Total Variation (TV) Loss
+
+- Penalizes abrupt spatial variation in predicted class probabilities
+- Acts as a weak spatial prior to reduce noise
+- Independent of spectral content
+- Implemented as `TotalVariationLoss`, a `PrimitiveLoss` subclass
+
+Both losses:
+- Live under `session/components/task/loss/primitives/`
+- Are composed via the existing `CompositeLoss`
+- Are fully optional and controlled by configuration weights
+- Can be disabled by setting weights to zero
+
+## Implementation Notes
+
+- Loss primitives were refactored into an explicit `primitives` namespace
+- Existing Focal and Dice losses were migrated to the same architecture
+- Trainer, factory, and config schemas were updated accordingly
+- Overfit experiments confirm:
+  - Base losses still overfit cleanly
+  - Moderate spectral/TV weights preserve convergence
+  - Excessive weights correctly prevent overfitting, as expected
+
+## Consequences
+
 ### Positive
-- Explicit encouragement of spectral-spatial coherence in predictions.
-- No required changes to model architectures.
-- Fully reversible and easy to disable (set weights to zero).
-- Per-loss logging and diagnostics via existing trainer mechanisms.
+
+- Explicit spectral–spatial regularization without architectural changes
+- Configuration-driven and backwards-compatible
+- Improved qualitative smoothness in predictions
+- Clean extensibility for future regularizers
 
 ### Negative
-- Slight increase in training-time computation.
-- Additional hyperparameters (loss weights) requiring tuning.
 
-We expect these losses to improve segmentation smoothness and class consistency, particularly in spectrally homogeneous regions, while preserving the stability of the existing training pipeline.
+- Slight increase in training-time computation
+- Additional hyperparameters requiring tuning
+
+## Outcome
+
+The decision has been fully implemented, validated in overfit tests, and
+integrated into the training pipeline without disruption. This ADR is
+considered complete and closed.
