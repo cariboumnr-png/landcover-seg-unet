@@ -15,7 +15,7 @@ models:
       hidden: 128
 
 trainer:
-  optim:
+  optimization:
     lr: 1e-3
     weight_decay: 0.0
     sched_cls: null
@@ -27,9 +27,13 @@ trainer:
         gamma: 0.0
       dice:
         weight: 0.0
+      spectral:
+        weight: 0.0
+      tv:
+        weight: 0.0
   runtime:
     schedule:
-      max_epoch: 3000
+      max_epoch: 1000
     monitor:
       track_head_name: base
     precision:

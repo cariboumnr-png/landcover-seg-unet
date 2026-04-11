@@ -38,7 +38,7 @@ import torch
 import torch.nn
 # local imports
 import landseg.session.components.task as task
-import landseg.session.components.task.loss as loss
+import landseg.session.components.task.loss.primitives as primitives
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -79,8 +79,10 @@ class CompositeLoss(torch.nn.Module):
     def __init__(
         self,
         config: task.TaskConfig,
+        *,
         ignore_index: int,
-        alpha: list[float] | None = None
+        focal_alpha: list[float] | None = None,
+        spectral_band_indices: list[int] | None = None
     ):
         '''
         Initialize the composite loss from a configuration dictionary.
@@ -99,17 +101,16 @@ class CompositeLoss(torch.nn.Module):
 
         super().__init__()
 
-        # expose ignore index
+        # prep
         self.ignore_index = ignore_index
-
-        # iterate through currently support loss types
         self.losses = torch.nn.ModuleList()
         self.weights: list[float] = []
 
+        # iterate through support loss types and add loss of non-zero weight
         # focal loss
         if config.types.focal.weight:
-            loss_fn = loss.FocalLoss(
-                alpha=alpha,
+            loss_fn = primitives.FocalLoss(
+                alpha=focal_alpha,
                 gamma=config.types.focal.gamma,
                 reduction=config.types.focal.reduction,
                 ignore_index=ignore_index
@@ -119,13 +120,29 @@ class CompositeLoss(torch.nn.Module):
 
         # dice loss
         if config.types.dice.weight:
-            loss_fn = loss.DiceLoss(
+            loss_fn = primitives.DiceLoss(
                 smooth=config.types.dice.smooth,
                 ignore_index=ignore_index
             )
-            # add to sequences
             self.losses.append(loss_fn)
             self.weights.append(config.types.dice.weight)
+
+        # spectral smoothness loss as regularizer
+        if config.types.spectral.weight:
+            loss_fn = primitives.SpectralSmoothnessLoss(
+                alpha=config.types.spectral.alpha,
+                neighbour=config.types.spectral.neighbour,
+                spectral_bands=spectral_band_indices,
+                ignore_index=ignore_index,
+            )
+            self.losses.append(loss_fn)
+            self.weights.append(config.types.spectral.weight)
+
+        # total variation
+        if config.types.tv.weight:
+            loss_fn = primitives.TotalVariationLoss(ignore_index=ignore_index)
+            self.losses.append(loss_fn)
+            self.weights.append(config.types.tv.weight)
 
     def forward(
         self,
@@ -150,9 +167,10 @@ class CompositeLoss(torch.nn.Module):
 
         # get mask
         masks = kwargs.get('masks', None)
+        features = kwargs.get('features', None)
         # accumulate included losses
         total_loss = p.new_zeros(())
         for loss_fn, weight in zip(self.losses, self.weights):
-            loss_val = loss_fn(p, t, masks=masks)
+            loss_val = loss_fn(p, t, masks=masks, features=features)
             total_loss += weight * loss_val
         return total_loss

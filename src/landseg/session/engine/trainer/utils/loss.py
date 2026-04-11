@@ -31,6 +31,7 @@ def multihead_loss(
     *,
     multihead_preds: dict[str, torch.Tensor],
     multihead_targets: dict[str, torch.Tensor],
+    features: torch.Tensor,
     headspecs: dict[str, common.SpecsLike],
     headlosses: dict[str, common.CompositeLossLike],
 ) -> tuple[torch.Tensor, dict[str, float]]:
@@ -72,7 +73,12 @@ def multihead_loss(
         # sanity check
         assert head_pred.shape[-2:] == multihead_targets[head_name].shape[-2:]
         # calculate loss
-        loss = headlosses[head_name].forward(head_pred, targets_0b, masks=masks)
+        loss = headlosses[head_name].forward(
+            head_pred,
+            targets_0b,
+            masks=masks,
+            features=features
+        )
         total += headspecs[head_name].weight * loss
         # per_head losses are detached scalars for logging only
         per_head[head_name] = float(loss.item())

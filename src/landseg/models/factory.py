@@ -131,7 +131,7 @@ def build_multihead_unet(
 
     # parse from data specs
     dataspecs_config = _FromDataSpecs(
-        in_ch=dataspecs.meta.img_ch,
+        in_ch=dataspecs.meta.image_specs.num_channels,
         logit_adjust=dataspecs.heads.logits_adjust,
         heads_w_counts=dataspecs.heads.class_counts,
         domain_ids_num=dataspecs.domains.ids_max + 1, # from 0-based

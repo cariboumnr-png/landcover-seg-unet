@@ -117,10 +117,11 @@ def build_dataloaders(
     logger = logger.get_child('dldrs')
 
     # meta to be shipped
-    assert data_specs.meta.img_h_w % config.patch_size == 0 # sanity check
+    h_w = data_specs.meta.image_specs.height_width
+    assert h_w % config.patch_size == 0
     meta = _Meta(
         batch_size=config.batch_size,
-        patch_per_blk=int(data_specs.meta.img_h_w / config.patch_size) ** 2,
+        patch_per_blk=int(h_w / config.patch_size) ** 2,
         test_blks_grid=data_specs.meta.test_blks_grid
     )
 
@@ -215,13 +216,13 @@ def _config_by_mode(
 
     # return config by mode
     if mode == 'single':
-        patch_size = data_specs.meta.img_h_w # single block
+        patch_size = data_specs.meta.image_specs.height_width # single block
     return data.BlockConfig(
-        block_size=data_specs.meta.img_h_w,
+        block_size=data_specs.meta.image_specs.height_width,
         patch_size=patch_size,
         array_keys = {
-            'image_key': data_specs.meta.img_arr_key,
-            'label_key': data_specs.meta.lbl_arr_key
+            'image_key': data_specs.meta.image_specs.array_key,
+            'label_key': data_specs.meta.label_specs.array_key
         },
         ids_domain=domain['ids_domain'] if domain else None,
         vec_domain=domain['vec_domain'] if domain else None

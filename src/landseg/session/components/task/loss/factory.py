@@ -71,7 +71,8 @@ def build_headlosses(
     headspecs: task.HeadSpecs,
     *,
     config: task.TaskConfig,
-    ignore_index: int
+    ignore_index: int,
+    spectral_band_indices: list[int] | None = None
 ) -> HeadLosses:
     '''
     Construct a mapping of head names to configured `CompositeLoss`
@@ -106,8 +107,12 @@ def build_headlosses(
     }
     for name in per_head_alphas.keys():
         # update loss alpha dein head
-        alpha = per_head_alphas[name]
         # init loss compute module for each head
-        loss_cls = loss.CompositeLoss(config, ignore_index, alpha)
+        loss_cls = loss.CompositeLoss(
+            config,
+            ignore_index=ignore_index,
+            focal_alpha=per_head_alphas[name],
+            spectral_band_indices=spectral_band_indices
+        )
         loss_dict[name] = loss_cls
     return HeadLosses(loss_dict)

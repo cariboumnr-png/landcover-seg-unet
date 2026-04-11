@@ -20,49 +20,50 @@
 # =========================================================================== #
 
 '''
-Base classes for primitive loss components.
+Top-level namespace for `landseg.session.components.task.loss.primitives`.
 
-Defines an abstract interface for loss modules operating on model logits,
-targets, and optional per-pixel or per-class masks. Concrete loss
-implementations should inherit from `PrimitiveLoss` and implement
-`forward()`.
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# standard imports
-import abc
-# third-party imports
-import torch
-import torch.nn
+from __future__ import annotations
+import importlib
+import typing
 
-# --------------------------------Public  Class--------------------------------
-class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
-    '''
-    Abstract base class for loss computation modules.
+__all__ = [
+    # classes
+    'PrimitiveLoss',
+    'DiceLoss',
+    'FocalLoss',
+    'SpectralSmoothnessLoss',
+    'TotalVariationLoss',
+    # functions
+    # types
+]
+# for static check
+if typing.TYPE_CHECKING:
+    from .base import PrimitiveLoss
+    from .dice import DiceLoss
+    from .focal import FocalLoss
+    from .spectral import SpectralSmoothnessLoss
+    from .tv import TotalVariationLoss
 
-    Subclasses must implement `forward()` and return a scalar loss
-    tensor. The interface supports optional mask dictionaries for
-    selective weighting of pixels or classes.
-    '''
-    @abc.abstractmethod
-    def forward(
-        self,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
-        *,
-        masks: dict[float, torch.Tensor] | None,
-    ) -> torch.Tensor:
-        '''
-        Compute the loss from model logits and targets.
 
-        Args:
-            logits: Prediction logits of shape [...], typically
-                (B, C, H, W) or (B, C).
-            targets: Ground-truth labels with a shape compatible with
-                logits.
-            masks: Optional mapping from weights (floats) to boolean or
-                float masks of the same spatial shape as targets, used
-                to apply selective weighting.
+def __getattr__(name: str):
 
-        Returns:
-            A scalar tensor representing the computed loss.
-        '''
+    if name in {'PrimitiveLoss'}:
+        return getattr(importlib.import_module('.base', __package__), name)
+
+    if name in {'DiceLoss'}:
+        return getattr(importlib.import_module('.dice', __package__), name)
+
+    if name in {'FocalLoss'}:
+        return getattr(importlib.import_module('.focal', __package__), name)
+
+    if name in {'SpectralSmoothnessLoss'}:
+        return getattr(importlib.import_module('.spectral', __package__), name)
+
+    if name in {'TotalVariationLoss'}:
+        return getattr(importlib.import_module('.tv', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
