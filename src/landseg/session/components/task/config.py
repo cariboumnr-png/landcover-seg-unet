@@ -21,6 +21,7 @@
 
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 
 '''
 Common types for task module.
@@ -48,6 +49,8 @@ class _LossTypes(typing.Protocol):
     def dice(self) -> _DiceLoss: ...
     @property
     def spectral(self) -> _SpectralLoss: ...
+    @property
+    def tv(self) -> _TotalVariationLoss: ...
 
 class _FocalLoss(typing.Protocol):
     @property
@@ -70,3 +73,7 @@ class _SpectralLoss(typing.Protocol):
     def alpha(self) -> float: ...
     @property
     def neighbour(self) -> int: ...
+
+class _TotalVariationLoss(typing.Protocol):
+    @property
+    def weight(self) -> float: ...

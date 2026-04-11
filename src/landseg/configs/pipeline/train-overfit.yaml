@@ -29,6 +29,8 @@ trainer:
         weight: 0.0
       spectral:
         weight: 0.0
+      tv:
+        weight: 0.0
   runtime:
     schedule:
       max_epoch: 1000

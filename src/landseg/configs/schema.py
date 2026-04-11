@@ -342,10 +342,15 @@ class SpectralLossConfig:
     neighbour: int = 4
 
 @dataclasses.dataclass
+class TVLossConfig:
+    weight: float = 1e-4
+
+@dataclasses.dataclass
 class LossTypesConfig:
     focal: FocalLossConfig = field(default_factory=FocalLossConfig)
     dice: DiceLossConfig = field(default_factory=DiceLossConfig)
     spectral: SpectralLossConfig = field(default_factory=SpectralLossConfig)
+    tv: TVLossConfig = field(default_factory=TVLossConfig)
 
 @dataclasses.dataclass
 class LossConfig:

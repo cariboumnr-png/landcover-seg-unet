@@ -19,6 +19,8 @@ loss:
       weight: 1e-3
       alpha: 1.0
       neighbour: 4
+    tv:
+      weight: 1e-4
 
 # optimizer and scheduler config
 optimization:

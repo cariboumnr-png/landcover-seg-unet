@@ -36,6 +36,7 @@ __all__ = [
     'DiceLoss',
     'FocalLoss',
     'SpectralSmoothnessLoss',
+    'TotalVariationLoss',
     # functions
     # types
 ]
@@ -45,6 +46,7 @@ if typing.TYPE_CHECKING:
     from .dice import DiceLoss
     from .focal import FocalLoss
     from .spectral import SpectralSmoothnessLoss
+    from .tv import TotalVariationLoss
 
 
 def __getattr__(name: str):
@@ -60,5 +62,8 @@ def __getattr__(name: str):
 
     if name in {'SpectralSmoothnessLoss'}:
         return getattr(importlib.import_module('.spectral', __package__), name)
+
+    if name in {'TotalVariationLoss'}:
+        return getattr(importlib.import_module('.tv', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

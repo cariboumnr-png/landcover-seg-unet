@@ -138,6 +138,12 @@ class CompositeLoss(torch.nn.Module):
             self.losses.append(loss_fn)
             self.weights.append(config.types.spectral.weight)
 
+        # total variation
+        if config.types.tv.weight:
+            loss_fn = primitives.TotalVariationLoss(ignore_index=ignore_index)
+            self.losses.append(loss_fn)
+            self.weights.append(config.types.tv.weight)
+
     def forward(
         self,
         p: torch.Tensor,
