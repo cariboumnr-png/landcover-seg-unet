@@ -113,11 +113,11 @@ def ingest(config: configs.RootConfig):
     if datablocks_cfg.has_test_data:
         logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
         data_blocks_config = foundation.BlockBuildingParameters(
-        image_fpath=datablocks_cfg.filepaths.test_image,
-        label_fpath=datablocks_cfg.filepaths.test_label,
-        data_config_fpath=datablocks_cfg.filepaths.config,
-        dem_pad=datablocks_cfg.general.image_dem_pad,
-        ignore_index=datablocks_cfg.general.ignore_index,
+            image_fpath=datablocks_cfg.filepaths.test_image,
+            label_fpath=datablocks_cfg.filepaths.test_label,
+            data_config_fpath=datablocks_cfg.filepaths.config,
+            dem_pad=datablocks_cfg.general.image_dem_pad,
+            ignore_index=datablocks_cfg.general.ignore_index,
         )
         foundation.run_blocks_building(
             world_grid,

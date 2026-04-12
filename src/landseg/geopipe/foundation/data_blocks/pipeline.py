@@ -134,8 +134,8 @@ def run_blocks_building(
     )
 
     # build all model dev blocks
-    logger.log('INFO', 'Data blocks building finished')
     new_blocks = block_builder.build_blocks()
+    logger.log('INFO', 'Data blocks building finished')
 
     # create/update catalog and metadata JSON
     updated = data_blocks.ManifestUpdateContext(

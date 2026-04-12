@@ -115,15 +115,13 @@ def map_rasters_to_grid(
         ctrl.persist(payload)
         logger.log('INFO', f'Mapped windows from {world_grid.gid} created')
 
-    else:
-        mapped_windows = mapper.MappedRasterWindows(
-            grid_id=payload['grid_id'],
-            tile_shape=tuple(payload['tile_shape']),
-            image=_parse(payload['image']),
-            label=_parse(payload['label'])
-        )
-
-    # return
+    # build from payload and return
+    mapped_windows = mapper.MappedRasterWindows(
+        grid_id=payload['grid_id'],
+        tile_shape=tuple(payload['tile_shape']),
+        image=_parse(payload['image']),
+        label=_parse(payload['label'])
+    )
     return mapped_windows
 
 def _canonicalize(mapped_windows: alias.RasterWindowDict) -> list[list[int]]:

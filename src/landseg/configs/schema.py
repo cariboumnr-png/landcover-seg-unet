@@ -178,7 +178,9 @@ class DataBlocks:
     @property
     def has_test_data(self) -> bool:
         return (
+            os.path.isfile(self.filepaths.test_image) and
             os.path.exists(self.filepaths.test_image) and
+            os.path.isfile(self.filepaths.test_label) and
             os.path.exists(self.filepaths.test_label)
         )
 
