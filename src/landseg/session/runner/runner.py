@@ -54,7 +54,7 @@ class Runner:
         self,
         engine: trainer.MultiHeadTrainer,
         phases: list[runner.Phase],
-        exp_dir: str,
+        run_paths: artifacts.ResultsPaths,
         *,
         logger: utils.Logger,
     ):
@@ -80,19 +80,16 @@ class Runner:
         # parse arguments
         self.trainer = engine
         self.phases = phases
+        self.paths = run_paths
         self.logger = logger.get_child('phase') # a child from base logger
-        # preview and checkpoint dir
-        self.previews = os.path.join(exp_dir, 'previews')
-        self.ckpts = os.path.join(exp_dir, 'checkpoints')
 
         # init phase counter
         self.current_phase_idx = 0
         self.current_phase = self.phases[self.current_phase_idx]
 
         # check which phases have already finished
-        self.phase_status_path = f'{self.ckpts}/status.json'
-        if os.path.exists(self.phase_status_path):
-            scheme = utils.load_json(self.phase_status_path)
+        if os.path.exists(self.paths.phase_status):
+            scheme = utils.load_json(self.paths.phase_status)
             for i, p in enumerate(scheme):
                 if runner.Phase(**p).finished:
                     self.phases[i].finished = True
@@ -142,7 +139,7 @@ class Runner:
     def _record_progress(self):
         '''Persist current phase completion status to disk.'''
         scheme = [dataclasses.asdict(p) for p in self.phases]
-        utils.write_json(self.phase_status_path, scheme) # overwrite
+        utils.write_json(self.paths.phase_status, scheme) # overwrite
 
     def _train_phase(self, meta) -> tuple[dict, dict]:
         '''Run training loop for a single phase and return logs.'''
@@ -199,13 +196,12 @@ class Runner:
                 v_logs = self.trainer.validate()
                 # update preview if test data provided
                 if self.trainer.dataloaders.test:
-                    self.trainer.infer(self.previews)
+                    self.trainer.infer(self.paths.previews)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
-                fpath = f'{self.ckpts}/{phase.name}_best.pt'
+                self._save_progress(self.paths.best_checkpoint(phase.name))
             else:
-                fpath = f'{self.ckpts}/{phase.name}_last.pt'
-            self._save_progress(fpath)
+                self._save_progress(self.paths.last_checkpoint(phase.name))
         print(f'__Phase [{phase.name}] finished__')
 
         # return training and validation logs
@@ -224,10 +220,10 @@ class Runner:
         #  reset trainer state and continue
         self.trainer.reset_head_state()
 
-    def _load_progress(self, phase: str):
+    def _load_progress(self, phase_name: str):
         '''Load checkpoint metadata for a given phase if available.'''
 
-        best_ckpt = f'{self.ckpts}/{phase}_best.pt'
+        best_ckpt = self.paths.best_checkpoint(phase_name)
         if os.path.exists(best_ckpt):
             meta = artifacts.load_checkpoint(
                 model=self.trainer.model,

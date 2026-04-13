@@ -33,6 +33,7 @@ transformed outputs.
 # standard imports
 from __future__ import annotations
 import dataclasses
+import datetime
 import os
 
 # artifacts file structure from data ingestion and preparation piplines
@@ -79,6 +80,24 @@ import os
 #     └── schema.json
 #
 #   *: a **_meta.json sidecar file will be generated as well
+#
+# -----------------------------------------------------------------------------
+# results file structure from each training run
+# <exp_root>/results/
+# │
+# ├── exp_0001/
+# │   │
+# │   ├── checkpoints/
+# │   │
+# │   ├── logs/
+# │   │
+# │   ├── plots/
+# │   │
+# │   ├── preivews/
+# │   │
+# |   └── config.json
+# |
+# ...
 
 # artifacts/
 @dataclasses.dataclass
@@ -217,3 +236,66 @@ class TransformPaths:
     @property
     def schema(self) -> str:
         return os.path.join(self.root, 'schema.json')
+
+# results
+@dataclasses.dataclass
+class ResultsPaths:
+    '''Root entry of a training run.'''
+
+    results_root: str
+    run_folder: str = ''
+
+    @property
+    def checkpoints(self) -> str:
+        return os.path.join(self.run_folder, 'checkpoints')
+
+    @property
+    def phase_status(self) -> str:
+        return os.path.join(self.checkpoints, 'status.json')
+
+    @property
+    def logs(self) -> str:
+        return os.path.join(self.run_folder, 'logs')
+
+    @property
+    def main_log_file(self) -> str:
+        # e.g., 20001234_567
+        t_stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        return os.path.join(self.logs, f'main_{t_stamp}.log')
+
+    @property
+    def plots(self) -> str:
+        return os.path.join(self.run_folder, 'plots')
+
+    @property
+    def previews(self) -> str:
+        return os.path.join(self.run_folder, 'previews')
+
+    @property
+    def config(self) -> str:
+        return os.path.join(self.run_folder, 'config.json')
+
+    def init(self):
+        '''Initialize a results folder.'''
+
+        # find the latest run number
+        i = 1
+        while True:
+            self.run_folder = os.path.join(self.results_root, f'exp_{i:04d}')
+            try:
+                os.makedirs(self.run_folder)
+                break
+            except FileExistsError:
+                i += 1
+
+        # create all subfolders if not already exist
+        os.makedirs(self.checkpoints, exist_ok=True)
+        os.makedirs(self.logs, exist_ok=True)
+        os.makedirs(self.plots, exist_ok=True)
+        os.makedirs(self.previews, exist_ok=True)
+
+    def best_checkpoint(self, phase_name) -> str:
+        return os.path.join(self.checkpoints, f'{phase_name}_best.pt')
+
+    def last_checkpoint(self, phase_name) -> str:
+        return os.path.join(self.checkpoints, f'{phase_name}_last.pt')
