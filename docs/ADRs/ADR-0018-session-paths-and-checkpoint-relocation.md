@@ -1,187 +1,89 @@
 # ADR-0018: Checkpoint Ownership and Experiment Path Centralization
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-11
+- **Implemented:** 2026-04-13
 
 ## Context
 
-The project already defines a canonical artifact path system under
-`project/artifacts/`, with structured access to persisted outputs from
-data ingestion and transformation pipelines (e.g., `foundation/`,
-`transform/`).
+At the time of this ADR, session-related filesystem concerns were split across
+multiple layers. The training CLI constructed experiment and run directories
+ad hoc, while checkpoint save/load logic lived inside trainer utilities. The
+artifact path system did not define any session-related paths, despite
+checkpoints being persisted outputs.
 
-However, session-related concerns are currently split across multiple
-layers:
+At the same time, we intentionally distinguished between:
 
-- The training CLI constructs experiment directories via
-  `_init_experiment_folder`
-- Checkpoint saving/loading logic lives inside trainer/session utilities
-- The artifact path system does **not** currently define session-related paths
+- **Geopipe artifacts**: structured, stable, versioned outputs
+- **Session run outputs**: ephemeral, iterative products of training runs
 
-This creates two concrete issues:
+## Decision (Implemented)
 
-1. **Checkpoint logic is not owned by the artifact subsystem**, even though
-   checkpoints are persisted outputs.
-2. **Experiment directory structure is defined ad hoc in the CLI**, rather
-   than through a canonical path layer.
+We implemented two focused structural changes:
 
-At the same time, not all session outputs should be treated the same as
-data artifacts:
+### 1. Checkpoint logic moved to the artifact subsystem
 
-- Geopipe artifacts (foundation/transform) are structured, stable, and
-  version-controlled.
-- Training run outputs (logs, previews, intermediate checkpoints) are
-  **ephemeral run results**, not strict artifacts in the same sense.
+- Checkpoint save/load utilities were relocated from trainer/session utilities
+  into `landseg.artifacts.checkpoint`.
+- The artifact layer now owns checkpoint path resolution and persistence.
+- Trainer and runner code no longer constructs checkpoint paths directly.
+- Checkpoints are treated as artifact-like outputs without enforcing full
+  artifact lifecycle or versioning semantics.
 
-## Decision
+### 2. Experiment folder initialization moved to `artifacts/paths.py`
 
-This ADR makes two focused changes:
+- Experiment/run directory structure is now defined centrally in the artifact
+  path layer.
+- Per-run subdirectories (checkpoints, logs, plots, previews) are specified via
+  artifact-managed path builders.
+- The training CLI no longer creates filesystem structures manually and instead
+  consumes artifact path APIs.
 
-### 1. Checkpoint logic moves to the artifact subsystem
+## Explicit Non-Decision (Preserved)
 
-Checkpoint persistence (save/load path resolution) will be owned by the
-artifact layer.
+### Session outputs remain outside canonical artifacts
 
-- The artifact system becomes responsible for defining **where checkpoints live**
-- Trainer/session code will **no longer construct checkpoint paths directly**
-- Checkpoints are treated as **artifact-like outputs**, but without imposing
-  full artifact lifecycle or versioning semantics
+- Session run outputs continue to live under `results/`.
+- They are treated as run results rather than canonical, versioned artifacts.
+- The distinction between geopipe artifacts and session outputs remains
+  explicit and enforced in code.
 
-### 2. Experiment folder initialization moves to `artifacts/paths.py`
+## Implementation Evidence
 
-The logic currently implemented in `_init_experiment_folder` will be
-relocated into the artifact path layer.
+The following changes satisfy this ADR:
 
-- `artifacts/paths.py` will define:
-  - experiment root creation (e.g., `results/exp_0001/`)
-  - subdirectories (`logs/`, `checkpoints/`, `previews/`, `plots/`)
-- The training CLI will:
-  - call into the artifact path API
-  - stop constructing directory structures manually
-
-## Explicit Non-Decision
-
-### Session outputs remain outside `artifacts/`
-
-We explicitly **do not** move session outputs under `artifacts/` at this time.
-
-- The `results/` (or equivalent) directory remains separate from
-  `artifacts/`
-- Session outputs are **run results**, not canonical data artifacts
-- They are not required to follow the same structure, stability, or
-  version-control expectations as geopipe outputs
-
-This preserves a clear distinction:
-
-| Type                | Location      | Characteristics                      |
-|---------------------|--------------|--------------------------------------|
-| Geopipe artifacts   | `artifacts/` | canonical, structured, versioned     |
-| Session run outputs | `results/`   | ephemeral, iterative, non-canonical  |
-
-## Scope
-
-This ADR applies only to:
-
-- checkpoint path ownership
-- experiment folder creation
-
-This ADR does **not** define:
-
-- full session artifact taxonomy
-- evaluator output structure
-- artifact controller integration
-- retention or lifecycle policies
-
-## Rationale
-
-### Why move checkpoint logic
-
-Checkpointing is shared across:
-
-- training (save)
-- resume (load)
-- future evaluation
-
-Keeping path ownership inside trainer code makes this harder to reason
-about and reuse. Moving it to the artifact layer centralizes path logic
-without forcing full artifact semantics.
-
-### Why move experiment folder creation
-
-The current `_init_experiment_folder` duplicates responsibility that
-belongs in a path-definition layer. Centralizing this:
-
-- removes path construction from CLI code
-- ensures consistent structure across all session tools
-- prepares for reuse by evaluators and other runners
-
-### Why keep sessions outside artifacts
-
-Session outputs:
-
-- are iterative and frequently overwritten
-- do not require strict reproducibility guarantees
-- differ fundamentally from geopipe artifacts
-
-Forcing them into `artifacts/` would blur this distinction and introduce
-unnecessary constraints.
+- `src/landseg/session/engine/trainer/utils/checkpoint.py` was moved to
+  `src/landseg/artifacts/checkpoint.py`, and re-exported via the artifact module.
+- Trainer and runner code now imports checkpoint utilities from
+  `landseg.artifacts`.
+- `_init_experiment_folder` was removed from the training CLI.
+- `ResultsPaths` and per-run directory structure were defined in
+  `src/landseg/artifacts/paths.py`.
+- The CLI constructs no filesystem paths directly for runs or checkpoints.
 
 ## Consequences
 
 ### Positive
 
-- checkpoint paths become centrally defined and reusable
-- CLI becomes thinner and less responsible for filesystem structure
-- consistent experiment directory layout across tools
-- clearer separation between **data artifacts** and **run outputs**
+- Checkpoint ownership is centralized and reusable across training, resume, and
+  future evaluation paths.
+- The training CLI is thinner and no longer responsible for filesystem layout.
+- Run directory structure is consistent across all session tooling.
+- The conceptual boundary between **canonical artifacts** and **run outputs** is
+  maintained.
 
-### Negative / Costs
+### Costs
 
-- requires refactoring `_init_experiment_folder` into artifact paths
-- requires updating checkpoint save/load call sites
-- introduces a conceptual split (artifacts vs results) that must be
-  maintained consistently
+- Required coordinated refactors across CLI, trainer, runner, and artifact
+  modules.
+- Artifact paths now cover both long-lived and ephemeral outputs, requiring
+  discipline in lifecycle handling.
 
-### Risks
+## Outcome
 
-- partial migration may temporarily leave dual checkpoint logic paths
-- unclear boundaries between “artifact-like” and “run-only” outputs may
-  need refinement in future ADRs
-
-## Alternatives Considered
-
-### 1. Move sessions fully under `artifacts/`
-
-Rejected. Session outputs are not equivalent to geopipe artifacts and do
-not require strict versioning or canonical structure.
-
-### 2. Keep everything in trainer/CLI
-
-Rejected. This continues duplication and prevents reuse across training,
-evaluation, and future tooling.
-
-### 3. Only move checkpoints, keep init logic in CLI
-
-Rejected. Path ownership would remain split, defeating the purpose of a
-central path layer.
-
-## Implementation Notes
-
-Follow-up work:
-
-1. Extend `artifacts/paths.py` with:
-   - experiment root creation utilities
-   - subdirectory path builders (`logs`, `checkpoints`, etc.)
-2. Replace `_init_experiment_folder` with artifact path APIs
-3. Move checkpoint path resolution into artifact-owned utilities
-4. Update trainer/session code to consume these APIs
-
-## Related Code Areas
-
-- `project/artifacts/paths.py`
-- training CLI (`train_model.py`)
-- trainer checkpoint utilities
-- session runner and engine
+This ADR has been fully satisfied. The codebase now reflects the intended
+ownership model and path centralization, and this ADR is retained primarily
+for architectural record-keeping.
 
 ## Following ADRs
 
