@@ -40,6 +40,24 @@ class Phase:
     lr_scale: float
     finished: bool = False
 
+    def __str__(self) -> str:
+        la = self.logit_adjust
+        heads = self.heads
+        return '\n'.join([
+            f'- Phase Name:\t{self.name}',
+            f'- Max Epochs:\t{self.num_epochs}',
+            '- Logit Adjustment',
+            f'  - Global Alpha:\t{la.logit_adjust_alpha:.2f}',
+            f'  - Training Stage:\t{la.enable_train_logit_adjustment}',
+            f'  - Validation Stage:\t{la.enable_val_logit_adjustment}',
+            f'  - Inference Stage:\t{la.enable_test_logit_adjustment}',
+            '- Heads Specs',
+            f'  - Active Heads:\t{heads.active_heads}',
+            f'  - Frozen Heads:\t{heads.frozen_heads}',
+            f'  - Excld. Class:\t{heads.excluded_cls}',
+            f'- LR Scale:\t{self.lr_scale}'
+        ])
+
 class HeadsConfigProto(typing.Protocol):
     '''Shape of the heads configuration container.'''
     @property
