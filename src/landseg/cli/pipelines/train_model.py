@@ -54,7 +54,8 @@ def train(config: configs.RootConfig):
     run_paths.init()
 
     # save running config per run
-    utils.write_json(run_paths.config, dataclasses.asdict(config))
+    ctrl = artifacts.Controller[dict](run_paths.config) # generic, no policy
+    ctrl.persist(dataclasses.asdict(config))
 
     # create a centralized main logger
     logger = utils.Logger('main', run_paths.main_log_file)

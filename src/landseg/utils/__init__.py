@@ -29,8 +29,6 @@ order simple and circular-free.
 from .funcs import(
     get_file_ctime,
     hash_sha256,
-    load_json,
-    write_json,
 )
 from .logger import Logger
 from .multip import ParallelExecutor
@@ -42,7 +40,5 @@ __all__ = [
     # functions
     'get_file_ctime',
     'hash_sha256',
-    'load_json',
-    'write_json',
     # types
 ]

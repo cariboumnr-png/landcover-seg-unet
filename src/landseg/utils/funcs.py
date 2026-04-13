@@ -26,11 +26,8 @@ General utility functions used throughout this project.
 # standard imports
 import datetime
 import hashlib
-import json
 import os
 import sys
-import typing
-
 # -------------------------------Public Function-------------------------------
 def get_file_ctime(filepath: str, t_format: str='%Y%m%d_%H%M%S') -> str:
     '''
@@ -46,22 +43,6 @@ def get_file_ctime(filepath: str, t_format: str='%Y%m%d_%H%M%S') -> str:
     creation_time = os.path.getctime(filepath)
     # format and return
     return datetime.datetime.fromtimestamp(creation_time).strftime(t_format)
-
-def load_json(json_fpath: str) -> typing.Any:
-    '''Generic helper to load a json config file.'''
-
-    with open(json_fpath, 'r', encoding='UTF-8') as src:
-        return json.load(src)
-
-def write_json(json_fpath: str, src_dict: list | dict | typing.Mapping) -> None:
-    '''Generic helper to write a JSON from a python dict or list.'''
-
-    # make sure parent directory exsits before writing
-    dirpath = os.path.dirname(json_fpath)
-    if dirpath: # skip if write to root, e.g., ./file.json
-        os.makedirs(dirpath, exist_ok=True)
-    with open(json_fpath, 'w', encoding='UTF-8') as file:
-        json.dump(src_dict, file, indent=4)
 
 def hash_sha256(fpath: str) -> str:
     '''Hash an artifact and write to a hash file.'''

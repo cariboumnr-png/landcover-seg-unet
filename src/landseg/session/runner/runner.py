@@ -88,12 +88,15 @@ class Runner:
         self.current_phase = self.phases[self.current_phase_idx]
 
         # check which phases have already finished
-        if os.path.exists(self.paths.phase_status):
-            scheme = utils.load_json(self.paths.phase_status)
-            for i, p in enumerate(scheme):
+        c = artifacts.Controller[list[dict]].load_json_or_fail
+        self.progress = c(self.paths.phase_status)
+        try:
+            status = self.progress.fetch()
+            assert status # typing assertion
+            for i, p in enumerate(status):
                 if runner.Phase(**p).finished:
                     self.phases[i].finished = True
-        else:
+        except artifacts.ArtifactError:
             self._record_progress() # write phase status.json
 
     def fit(self) -> None:
@@ -138,8 +141,8 @@ class Runner:
 
     def _record_progress(self):
         '''Persist current phase completion status to disk.'''
-        scheme = [dataclasses.asdict(p) for p in self.phases]
-        utils.write_json(self.paths.phase_status, scheme) # overwrite
+        status = [dataclasses.asdict(p) for p in self.phases]
+        self.progress.persist(status)
 
     def _train_phase(self, meta) -> tuple[dict, dict]:
         '''Run training loop for a single phase and return logs.'''
