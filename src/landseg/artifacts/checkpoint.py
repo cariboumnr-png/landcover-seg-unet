@@ -34,16 +34,16 @@ import torch
 import landseg.core as core
 
 # ---------------------------------Public Type---------------------------------
-class CheckpointMetaLike(typing.TypedDict):
+class CheckpointMeta(typing.TypedDict):
     '''Typed metadata stored alongside checkpoint state.'''
     metric: float
     epoch: int
     step: int
 
 # -------------------------------Public Function-------------------------------
-def save(
+def save_checkpoint(
     model: core.MultiheadModelLike,
-    ckpt_meta: CheckpointMetaLike,
+    ckpt_meta: CheckpointMeta,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
     fpath: str
@@ -70,13 +70,13 @@ def save(
     }
     torch.save(state, fpath)
 
-def load(
+def load_checkpoint(
     model: core.MultiheadModelLike,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
     fpath: str,
     device: str
-) -> CheckpointMetaLike:
+) -> CheckpointMeta:
     '''
     Load model, optimizer, and scheduler state dicts from file.
 

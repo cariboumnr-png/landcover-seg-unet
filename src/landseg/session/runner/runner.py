@@ -34,18 +34,11 @@ across interruptions.
 # standard imports
 import dataclasses
 import os
-import typing
 # local imports
+import landseg.artifacts as artifacts
 import landseg.session.engine.trainer as trainer
 import landseg.session.runner as runner
 import landseg.utils as utils
-
-# --------------------------------private  type--------------------------------
-class _CheckpointMeta(typing.TypedDict):
-    '''Checkpont metadata'''
-    metric: float
-    epoch: int
-    step: int
 
 # --------------------------------Public  Class--------------------------------
 class Runner:
@@ -236,7 +229,7 @@ class Runner:
 
         best_ckpt = f'{self.ckpts}/{phase}_best.pt'
         if os.path.exists(best_ckpt):
-            meta = trainer.load(
+            meta = artifacts.load_checkpoint(
                 model=self.trainer.model,
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
@@ -248,12 +241,12 @@ class Runner:
     def _save_progress(self, fpath: str) -> None:
         '''Save model checkpoint and training metadata to disk.'''
 
-        ckpt_meta: _CheckpointMeta = {
+        ckpt_meta: artifacts.CheckpointMeta = {
             'metric': self.trainer.state.metrics.curr_value,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }
-        trainer.save(
+        artifacts.save_checkpoint(
             model=self.trainer.model,
             ckpt_meta=ckpt_meta,
             optimizer=self.trainer.comps.optimization.optimizer,
