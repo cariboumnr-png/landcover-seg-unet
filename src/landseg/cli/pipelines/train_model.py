@@ -28,8 +28,6 @@ model, and runs the multi-phase training runner.
 
 # standard imports
 import dataclasses
-import datetime
-import os
 # third-party imports
 import torch
 # local imports
@@ -44,26 +42,28 @@ def train(config: configs.RootConfig):
     '''
     Run a full training job.
 
-    Creates an experiment directory, builds `DataSpecs` from the prepared
+    Creates an run directory, builds `DataSpecs` from the prepared
     artifacts and schema, instantiates the model, and executes the runner.
 
     Args:
         config: RootConfig with model, trainer, and runner settings.
     '''
 
-    # init experiment io folder tree
-    exp_dir, log_dir = _init_experiment_folder(config)
+    # init run io folder tree
+    run_paths = artifacts.ResultsPaths(f'{config.exp_root}/results')
+    run_paths.init()
+
+    # save running config per run
+    ctrl = artifacts.Controller[dict](run_paths.config) # generic, no policy
+    ctrl.persist(dataclasses.asdict(config))
 
     # create a centralized main logger
-    t_stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S') # 20001234_567
-    logger = utils.Logger('main', os.path.join(log_dir, f'main_{t_stamp}.log'))
-
-    # artifact fpaths manager
-    paths = artifacts.ArtifactPaths(f'{config.exp_root}/artifacts')
+    logger = utils.Logger('main', run_paths.main_log_file)
 
     # collect artifacts and build dataspsec
+    artifact_paths=artifacts.ArtifactPaths(f'{config.exp_root}/artifacts')
     dataspecs = geopipe.build_dataspec(
-        paths,
+        artifact_paths,
         ids_domain_name=config.trainer.runtime.data.domain_ids_name,
         vec_domain_name=config.trainer.runtime.data.domain_vec_name,
         print_out=True
@@ -109,40 +109,5 @@ def train(config: configs.RootConfig):
     ]
 
     # build controller and run
-    runner = session.Runner(engine, phases, exp_dir, logger=logger)
+    runner = session.Runner(engine, phases, run_paths, logger=logger)
     runner.fit()
-
-def _init_experiment_folder(config: configs.RootConfig) -> tuple[str, str]:
-    '''Initialize experiment directories.'''
-
-    # get from config
-    exp_root = config.exp_root
-
-    # ensure output folders exist (e.g, for fresh experiment)
-    # top-level
-    results = os.path.join(exp_root, 'results')
-    os.makedirs(results, exist_ok=True)
-    # experiment root - natural counter from 0001 to 9999
-    i = 1
-    while True:
-        exp_dir = os.path.join(results, f'exp_{i:04d}')
-        try:
-            os.makedirs(exp_dir)
-            break
-        except FileExistsError:
-            i += 1
-    # save running config per experiment
-    config_dict = dataclasses.asdict(config)
-    utils.write_json(os.path.join(exp_dir, 'config.json'), config_dict)
-    # experiment components
-    logs_dir = os.path.join(exp_dir, 'logs')
-    ckpt_dir = os.path.join(exp_dir, 'checkpoints')
-    prev_dir = os.path.join(exp_dir, 'previews')
-    plot_dir = os.path.join(exp_dir, 'plots')
-    os.makedirs(logs_dir, exist_ok=True)
-    os.makedirs(ckpt_dir, exist_ok=True)
-    os.makedirs(prev_dir, exist_ok=True)
-    os.makedirs(plot_dir, exist_ok=True)
-
-    # return experiment dir and log dir
-    return exp_dir, logs_dir

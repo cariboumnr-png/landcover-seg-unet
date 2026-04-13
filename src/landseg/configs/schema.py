@@ -431,32 +431,11 @@ class LogitAdjustConfig:
     enable_val_logit_adjustment: bool = False
     enable_test_logit_adjustment: bool = False
 
-    def __str__(self) -> str:
-        indent: int=2
-        s = ' ' * indent
-        return f'\n{s}'.join([
-            '- Logit Adjustment',
-            f'- Global Alpha:\t{self.logit_adjust_alpha:.2f}',
-            f'- Training Stage:\t{self.enable_train_logit_adjustment}',
-            f'- Validation Stage:\t{self.enable_val_logit_adjustment}',
-            f'- Inference Stage:\t{self.enable_test_logit_adjustment}',
-        ])
-
 @dataclasses.dataclass
 class PhaseHeads:
     active_heads: list[str] = field(default_factory=lambda: ['layer1'])
     frozen_heads: list[str] | None = None
     excluded_cls: dict[str, list[int]] | None = None
-
-    def __str__(self) -> str:
-        indent: int=2
-        s = ' ' * indent
-        return f'\n{s}'.join([
-            '- Heads Specs',
-            f'- Active Heads:\t{self.active_heads}',
-            f'- Frozen Heads:\t{self.frozen_heads}',
-            f'- Excld. Class:\t{self.excluded_cls}',
-        ])
 
 @dataclasses.dataclass
 class PhaseConfig:
@@ -465,15 +444,6 @@ class PhaseConfig:
     heads: PhaseHeads = field(default_factory=PhaseHeads)
     logit_adjust: LogitAdjustConfig = field(default_factory=LogitAdjustConfig)
     lr_scale: float = 1.0
-
-    def __str__(self) -> str:
-        return '\n'.join([
-            f'- Phase Name:\t{self.name}',
-            f'- Max Epochs:\t{self.num_epochs}',
-            str(self.heads),
-            str(self.logit_adjust),
-            f'- LR Scale:\t{self.lr_scale}'
-        ])
 
 # ----- RUNNER
 @dataclasses.dataclass

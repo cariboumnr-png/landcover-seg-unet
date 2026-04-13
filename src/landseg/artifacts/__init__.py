@@ -39,23 +39,31 @@ __all__ = [
     'LifecyclePolicy',
     'PayloadController',
     'TransformPaths',
+    'ResultsPaths',
     # functions
+    'load_checkpoint',
+    'save_checkpoint',
     # typing
+    'CheckpointMeta'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .checkpoint import CheckpointMeta, load_checkpoint, save_checkpoint
     from .controller import ArtifactError, Controller
-    from .paths import ArtifactPaths, FoundationPaths, TransformPaths
+    from .paths import ArtifactPaths, FoundationPaths, TransformPaths, ResultsPaths
     from .payload_io import PayloadController
     from .policy import LifecyclePolicy
 
 def __getattr__(name: str):
 
+    if name in {'CheckpointMeta', 'load_checkpoint', 'save_checkpoint'}:
+        return getattr(importlib.import_module('.checkpoint', __package__), name)
+
     if name in {'ArtifactError', 'Controller'}:
         return getattr(importlib.import_module('.controller', __package__), name)
 
-    if name in {'ArtifactPaths', 'FoundationPaths', 'TransformPaths'}:
+    if name in {'ArtifactPaths', 'FoundationPaths', 'TransformPaths', 'ResultsPaths'}:
         return getattr(importlib.import_module('.paths', __package__), name)
 
     if name in {'PayloadController'}:

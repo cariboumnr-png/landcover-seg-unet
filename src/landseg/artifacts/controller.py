@@ -53,7 +53,7 @@ class Controller(typing.Generic[T]):
     def __init__(
         self,
         file_path: str,
-        policy: artifacts.LifecyclePolicy,
+        policy: artifacts.LifecyclePolicy | None = None,
     ):
         '''
         Initialize the controller for a single artifact.
@@ -123,6 +123,9 @@ class Controller(typing.Generic[T]):
             # policy: force rebuild
             case artifacts.LifecyclePolicy.REBUILD:
                 return None
+            # no policy
+            case None:
+                return data
             # unsupported policy
             case _:
                 raise NotImplementedError(f'Unsupported policy: {self.policy}')

@@ -34,21 +34,15 @@ __all__ = [
     # classes
     # functions
     'export_previews',
-    'load',
-    'save',
     'multihead_loss',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .checkpoint import load, save
     from .loss import multihead_loss
     from .preview import export_previews
 
 def __getattr__(name: str):
-
-    if name in {'load', 'save'}:
-        return getattr(importlib.import_module('.checkpoint', __package__), name)
 
     if name in {'multihead_loss'}:
         return getattr(importlib.import_module('.loss', __package__), name)
