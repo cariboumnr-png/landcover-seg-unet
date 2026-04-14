@@ -29,6 +29,7 @@ and support for JSON and NumPy-based storage formats.
 
 # standard imports
 from __future__ import annotations
+import datetime
 import hashlib
 import json
 import os
@@ -40,6 +41,10 @@ import numpy
 # local imports
 import landseg.artifacts as artifacts
 
+# constant
+T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
+
+# type
 T = typing.TypeVar('T')
 
 class Controller(typing.Generic[T]):
@@ -78,14 +83,22 @@ class Controller(typing.Generic[T]):
     @property
     def sha256(self) -> str:
         '''Return SHA-256 hash value of the artifact file.'''
-        return self._get_sha256(self.fp)
+        return self.get_sha256(self.fp)
 
+    @property
+    def creation_time(self) -> str:
+        '''Return a formatted artifact file creation times string.'''
+        t = os.path.getctime(self.fp)
+        return datetime.datetime.fromtimestamp(t).strftime(T_FORMAT)
+
+    # ----- alternative constructor
     @classmethod
     def load_json_or_fail(cls, fp) -> 'Controller[T]':
         '''Factory for a JSON controller that reads or fails.'''
 
         return cls(fp, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
 
+    # ----- public method
     def fetch(self) -> T | None:
         '''
         Fetch the artifact according to the lifecycle policy.
@@ -164,6 +177,16 @@ class Controller(typing.Generic[T]):
         records[self.fname] = self.sha256 # get hash after file is written
         self._json_write(self.hash_fpath, records)
 
+    @staticmethod
+    def get_sha256(fp):
+        '''Compute SHA256 checksum of a file.'''
+        with open(fp, 'rb') as file:
+            sha256 = hashlib.sha256()
+            for chunk in iter(lambda: file.read(8192), b''):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+
+    # ----- private method
     def _load(self) -> typing.Any:
         '''Load an artifact and verify its integrity.'''
 
@@ -196,15 +219,6 @@ class Controller(typing.Generic[T]):
         if fp.endswith('npz'):
             return 'npz_dict'
         raise ValueError(f'Unsupported file type: {fp}')
-
-    @staticmethod
-    def _get_sha256(fp):
-        '''Compute SHA256 checksum of a file.'''
-        with open(fp, 'rb') as file:
-            sha256 = hashlib.sha256()
-            for chunk in iter(lambda: file.read(8192), b''):
-                sha256.update(chunk)
-        return sha256.hexdigest()
 
     @staticmethod
     def _json_read(fp):

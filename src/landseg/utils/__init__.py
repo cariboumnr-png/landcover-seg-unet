@@ -26,19 +26,29 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
-from .funcs import(
-    get_file_ctime,
-    hash_sha256,
-)
-from .logger import Logger
-from .multip import ParallelExecutor
+from __future__ import annotations
+import importlib
+import typing
 
 __all__ = [
     # classes
     'Logger',
     'ParallelExecutor',
     # functions
-    'get_file_ctime',
-    'hash_sha256',
     # types
 ]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .logger import Logger
+    from .multip import ParallelExecutor
+
+def __getattr__(name: str):
+
+    if name in {'Logger'}:
+        return getattr(importlib.import_module('.logger', __package__), name)
+
+    if name in {'ParallelExecutor'}:
+        return getattr(importlib.import_module('.multip', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

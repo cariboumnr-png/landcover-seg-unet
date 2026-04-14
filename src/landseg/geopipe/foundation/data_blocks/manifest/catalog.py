@@ -31,9 +31,9 @@ reproducibility in data preparation workflows.
 '''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
-import landseg.utils as utils
 
 T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
@@ -79,14 +79,15 @@ def build_catalog(
     new_entries: dict[str, geo_core.CatalogEntry] = {}
 
     # get hash values from input rasters
-    img_hash = utils.hash_sha256(source_image)
+    img_hash = artifacts.Controller.get_sha256(source_image)
     if source_label:
-        lbl_hash = utils.hash_sha256(source_label)
+        lbl_hash = artifacts.Controller.get_sha256(source_label)
     else:
         lbl_hash = None
 
     # add to current catalog dict
     for fp in input_block_fpaths:
+        ctrl = artifacts.Controller(fp) # with no policy here
         meta = geo_core.DataBlock.load(fp).meta
         row, col = geo_utils.name_xy(meta['block_name'])
         entry: geo_core.CatalogEntry = {
@@ -96,8 +97,8 @@ def build_catalog(
             'base_valid_px': meta['valid_ratios']['base'],
             'base_class_count': meta['label_count']['base'],
             'schema_version': '1.0.0',
-            'creation_time': utils.get_file_ctime(fp, T_FORMAT),
-            'sha_256': utils.hash_sha256(fp),
+            'creation_time': ctrl.creation_time,
+            'sha_256': ctrl.sha256,
             'aligned_grid': mapped_grid_id,
             'source_image': source_image,
             'source_image_sha_256': img_hash,
