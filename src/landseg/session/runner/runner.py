@@ -36,7 +36,7 @@ import dataclasses
 import os
 # local imports
 import landseg.artifacts as artifacts
-import landseg.session.engine.trainer as trainer
+import landseg.session.engine as engine
 import landseg.session.runner as runner
 import landseg.utils as utils
 
@@ -52,7 +52,7 @@ class Runner:
     '''
     def __init__(
         self,
-        engine: trainer.MultiHeadTrainer,
+        trainer: engine.MultiHeadTrainer,
         phases: list[runner.Phase],
         run_paths: artifacts.ResultsPaths,
         *,
@@ -78,7 +78,7 @@ class Runner:
         '''
 
         # parse arguments
-        self.trainer = engine
+        self.trainer = trainer
         self.phases = phases
         self.paths = run_paths
         self.logger = logger.get_child('phase') # a child from base logger

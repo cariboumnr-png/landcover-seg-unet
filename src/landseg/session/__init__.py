@@ -32,11 +32,13 @@ import typing
 
 __all__ = [
     # classes
+    'BatchExecutionEngine',
     'MultiHeadTrainer',
     'Phase',
     'Runner',
     # functions
     'build_trainer_components',
+    'init_state',
     # types
     'TrainerConfigShape',
 ]
@@ -45,7 +47,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .common import TrainerConfigShape
     from .components import build_trainer_components
-    from .engine import MultiHeadTrainer
+    from .engine import MultiHeadTrainer, BatchExecutionEngine, init_state
     from .runner import Phase, Runner
 
 def __getattr__(name: str):
@@ -56,7 +58,7 @@ def __getattr__(name: str):
     if name in {'Phase', 'HeadsConifg', 'LogitAdjustScheme', 'Runner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
-    if name in {'MultiHeadTrainer'}:
+    if name in {'BatchExecutionEngine', 'MultiHeadTrainer', 'init_state'}:
         return getattr(importlib.import_module('.engine', __package__), name)
 
     if name in {'build_trainer_components',}:

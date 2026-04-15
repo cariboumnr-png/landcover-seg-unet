@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.trainer.utils`.
+Top-level namespace for `landseg.session.engine.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,22 +32,33 @@ import typing
 
 __all__ = [
     # classes
+    'BatchExecutionEngine',
+    'RuntimeState',
     # functions
     'export_previews',
+    'init_state',
     'multihead_loss',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .batch_exe import BatchExecutionEngine
     from .loss import multihead_loss
     from .preview import export_previews
+    from .state import RuntimeState, init_state
 
 def __getattr__(name: str):
+
+    if name in {'BatchExecutionEngine'}:
+        return getattr(importlib.import_module('.batch_exe', __package__), name)
 
     if name in {'multihead_loss'}:
         return getattr(importlib.import_module('.loss', __package__), name)
 
     if name in {'export_previews'}:
         return getattr(importlib.import_module('.preview', __package__), name)
+
+    if name in {'RuntimeState', 'init_state'}:
+        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -88,14 +88,29 @@ def train(config: configs.RootConfig):
         optim_config=config.trainer.optimization,
         logger=logger,
     )
-    # trainer engine
-    engine = session.MultiHeadTrainer(
+    # shared runtime state
+    state = session.init_state(
+        components,
+        use_amp=config.trainer.runtime.precision.use_amp,
+        device='cuda' if torch.cuda.is_available() else 'cpu'
+    )
+    # batch engine
+    engine = session.BatchExecutionEngine(
         model=model,
+        state=state,
+        parent_map={k: v.parent_head for k, v in components.headspecs.as_dict().items()},
+        use_amp=config.trainer.runtime.precision.use_amp,
+        device='cuda' if torch.cuda.is_available() else 'cpu'
+    )
+    # trainer
+    trainer = session.MultiHeadTrainer(
+        engine=engine,
+        state=state,
         components=components,
         config=config.trainer.runtime,
         device='cuda' if torch.cuda.is_available() else 'cpu',
+        skip_log=True # no loggine
     )
-
     # get phases
     phases = [
         session.Phase(
@@ -109,5 +124,5 @@ def train(config: configs.RootConfig):
     ]
 
     # build controller and run
-    runner = session.Runner(engine, phases, run_paths, logger=logger)
+    runner = session.Runner(trainer, phases, run_paths, logger=logger)
     runner.fit()

@@ -241,7 +241,7 @@ class _MetricsTracker:
 @dataclasses.dataclass
 class _OptimState:
     '''Optimization state (e.g., AMP GradScaler).'''
-    scaler: torch.GradScaler = dataclasses.field(init=False)
+    scaler: torch.GradScaler
 
     def __str__(self) -> str:
         if self.scaler is None:
@@ -259,17 +259,21 @@ class _OptimState:
         ])
 
 # -------------------------------Public Function-------------------------------
-def init_state() -> RuntimeState:
+def init_state(
+    components: common.TrainerComponentsLike,
+    use_amp: bool,
+    device: str,
+) -> RuntimeState:
     '''Instantiate a trainer state dataclass with placeholder values.'''
 
-    return RuntimeState(
+    state = RuntimeState(
         progress=_Progress(
             epoch=0,
             epoch_step=0,
             global_step=0,
         ),
         heads=_Heads(
-            all_heads=[],
+            all_heads=list(components.headspecs.as_dict().keys()),
             active_heads=None,
             frozen_heads=None,
             active_hspecs=None,
@@ -279,7 +283,7 @@ def init_state() -> RuntimeState:
         batch_cxt=_BatchContex(
             bidx=0,
             pidx_start=0,
-            batch_size_full=0,
+            batch_size_full=components.dataloaders.meta.batch_size,
             batch=None,
             x=torch.empty(0),
             y_dict={},
@@ -318,5 +322,27 @@ def init_state() -> RuntimeState:
             best_epoch=-1,
             patience_n=0
         ),
-        optim=_OptimState()
+        optim=_OptimState(
+            scaler=torch.GradScaler(
+                device=device,
+                enabled=use_amp
+            )
+        )
     )
+
+    # if test dataset if provided, setup inference context
+    if components.dataloaders.test:
+        # resolve patch-block layout
+        per_blk = components.dataloaders.meta.patch_per_blk
+        per_dim = int(per_blk ** 0.5)
+        assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
+        state.epoch_sum.infer_ctx.patch_per_blk = per_blk
+        state.epoch_sum.infer_ctx.patch_per_dim = per_dim
+        # resolve block col/row numbers
+        blk_col, blk_row = components.dataloaders.meta.test_blks_grid
+        state.epoch_sum.infer_ctx.block_columns = blk_col
+        # resolve patch col/row numbers
+        pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
+        state.epoch_sum.infer_ctx.patch_grid_shape = pch_col, pch_row
+    # return
+    return state
