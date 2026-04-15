@@ -24,17 +24,12 @@
 
 # local imports
 import landseg.session.components.callback as callback
+import landseg.session.engine.core as engine_core
 
 class InferCallback(callback.Callback):
     '''Inference: parse -> forward -> collect outputs (optional).'''
 
     def on_inference_begin(self) -> None:
-        model = self.trainer.model
-        flags = self.trainer.flags
-        # set model to evaluation mode
-        model.eval()
-        # set la status
-        model.set_logit_adjust_enabled(flags['enable_test_la'])
         # reset infer outputs
         self.state.epoch_sum.infer_ctx.maps.clear()
 
@@ -43,25 +38,18 @@ class InferCallback(callback.Callback):
         self.state.batch_cxt.refresh(bidx, batch)
         # refresh batch results
         self.state.batch_out.refresh(bidx)
-        # parse the batch (x, domain), y may be empty [B, 0]
-        self.trainer._parse_batch()
 
-    def on_inference_batch_forward(self) -> None:
-        # get x and (optional) domain
-        x = self.state.batch_cxt.x
-        domain = self.state.batch_cxt.domain
-        # forward with inference + autocast (same style as validation)
-        with self.trainer._val_ctx():
-            outputs = self.trainer.model.forward(x, **domain)
-        # store raw predictions to batch output
-        self.state.batch_out.preds = dict(outputs)
+    def on_inference_batch_forward(self) -> None: ...
 
-    def on_inference_batch_end(self) -> None:
-        # aggregate to epoch storage (CPU detach)
-        self.trainer._aggregate_batch_predictions()
+    def on_inference_batch_end(self) -> None: ...
 
     def on_inference_end(self, out_dir: str) -> None:
         # stitch all blocks together and output a preview
         # only if the patch grid is of valid shape, e.e, non-zero dims
         if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
-            self.trainer._preview_monitor_head(out_dir)
+            engine_core.export_previews(
+                self.state.epoch_sum.infer_ctx.maps,
+                out_dir,
+                map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
+                heads=[self.config.monitor.track_head_name] # as list
+            )
