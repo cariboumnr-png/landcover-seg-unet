@@ -125,7 +125,6 @@ class EngineBase:
             callback.setup(self, self.flags['skip_log'])
 
     # ----- convenience properties
-
     @property
     def dataloaders(self):
         '''Access configured dataloaders.'''

@@ -132,7 +132,7 @@ class MultiHeadTrainer(engine.EngineBase):
             # batch start
             self._emit('on_train_batch_begin', bidx, batch)
             # reset optimizer gradient
-            self.comps.optimization.optimizer.zero_grad(set_to_none=True)
+            self.optimization.optimizer.zero_grad(set_to_none=True)
 
             # delegate batch to engine (forward and compute loss)
             self.engine.run_train_batch(bidx)
@@ -146,7 +146,7 @@ class MultiHeadTrainer(engine.EngineBase):
             self._emit('on_train_backward')
 
             # gradient clipping
-            optimizer = self.comps.optimization.optimizer
+            optimizer = self.optimization.optimizer
             # unscale if use AMP
             if self.use_amp:
                 self.state.optim.scaler.unscale_(optimizer)
@@ -154,14 +154,14 @@ class MultiHeadTrainer(engine.EngineBase):
             self._emit('on_train_before_optimizer_step')
 
             # optimizer step
-            optimizer = self.comps.optimization.optimizer
+            optimizer = self.optimization.optimizer
             # use AMP
             if self.use_amp:
                 self.state.optim.scaler.step(optimizer)
                 self.state.optim.scaler.update() # update scaler
             # no AMP
             else:
-                self.comps.optimization.optimizer.step()
+                self.optimization.optimizer.step()
             self._emit('on_train_optimizer_step')
 
             # batch end

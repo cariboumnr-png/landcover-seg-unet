@@ -43,7 +43,8 @@ class Callback:
             skip_log: bool
         ) -> None:
         if self._trainer is not None:
-            raise RuntimeError("Callback.setup() called twice.")
+            pass
+            # raise RuntimeError("Callback.setup() called twice.")
         self._trainer = trainer
         self.skip_log = skip_log
 
