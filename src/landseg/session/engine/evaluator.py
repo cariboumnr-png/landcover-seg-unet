@@ -20,32 +20,31 @@
 # =========================================================================== #
 
 '''
-Multi-head training and evaluation policy for hierarchical segmentation.
+Multi-head evaluation policy for hierarchical segmentation.
 
-This module defines `MultiHeadTrainer`, which provides epoch-level
-training, validation, and inference policies on top of a shared
-batch execution engine.
+This module defines `MultiHeadEvaluator`, which provides epoch-level
+validation and inference policies on top of a shared batch execution
+engine.
 
-The trainer is responsible for:
-- Defining training, validation, and inference workflows
-- Managing optimizer, scheduler, and gradient handling
-- Controlling active and frozen heads across phases
-- Applying per-head class exclusions
-- Aggregating epoch-level statistics and metrics
-- Tracking best validation metrics and early-stopping state
+The evaluator is responsible for:
+- Defining validation and inference workflows
+- Controlling evaluation-time head configuration
+- Aggregating and formatting epoch-level metrics
+- Tracking best validation metrics and patience state
 - Emitting lifecycle callbacks as semantic markers
 
-The trainer deliberately does NOT:
+The evaluator deliberately does NOT:
 - Perform batch-level execution (forward, loss, metrics)
 - Parse input batches
 - Compute losses or metrics incrementally
+- Manage optimizer or gradient state
 
-Those responsibilities are delegated to `BatchExecutionEngine`,
-which mutates shared runtime state during batch execution.
+Those responsibilities are delegated to `BatchExecutionEngine`, which
+mutates shared runtime state during batch execution.
 
 In short:
 - The batch executor answers: "What happened in this batch?"
-- The trainer answers: "How should batch results be used over time?"
+- The evaluator answers: "How should batch results be interpreted?"
 '''
 
 # local imports
@@ -53,19 +52,17 @@ import landseg.session.engine as engine
 
 class MultiHeadEvaluator(engine.EngineBase):
     '''
-    Training and evaluation policy controller.
+    Evaluation and inference policy controller.
 
-    This class defines epoch-level behavior for training, validation,
-    and inference by orchestrating:
+    This class defines epoch-level behavior for validation and inference
+    by orchestrating:
 
     - Batch execution via a shared BatchExecutionEngine
-    - Optimizer and scheduler behavior
-    - Gradient scaling and clipping
-    - Head activation, freezing, and exclusion rules
-    - Epoch-level loss aggregation and metric finalization
-    - Experimental metric tracking and early-stopping state
+    - Evaluation-time head activation and exclusions
+    - Epoch-level metric aggregation and finalization
+    - Best-metric tracking and patience updates
 
-    The trainer operates on a shared RuntimeState object that persists
+    The evaluator operates on a shared RuntimeState object that persists
     across Runner, Trainer/Evaluator, and the batch execution engine.
 
     Batch-level mathematical execution is delegated entirely to
@@ -77,23 +74,22 @@ class MultiHeadEvaluator(engine.EngineBase):
     visualization), but do not invoke or control execution logic.
     '''
 
-# -------------------------------Public  Methods-------------------------------
+    # -------------------------------Public  Methods-------------------------------
     def validate(self) -> dict[str, dict]:
         '''
-        Execute validation over the validation dataset and return
-        epoch-level metrics.
+        Execute a full validation epoch and return finalized metrics.
 
-        This method defines the validation policy, including:
+        This method defines validation policy, including:
 
-        - Model evaluation mode and logit-adjustment configuration
-        - Delegation of batch execution to the batch execution engine
-        - Finalization and formatting of validation metrics
-        - Tracking of best metrics and patience state
+        - Switching the model to evaluation mode
+        - Configuring validation-time logit adjustment
+        - Delegating batch execution to the execution engine
+        - Finalizing and formatting epoch-level metrics
+        - Updating best-metric tracking and patience state
 
         Batch-level metric accumulation (e.g., confusion matrices) is
         performed by the batch execution engine during validation batches.
-        Epoch-level metric computation and interpretation are performed
-        here.
+        Epoch-level computation and interpretation are performed here.
 
         Lifecycle callback hooks (e.g., `on_validation_begin`,
         `on_validation_batch_begin`, `on_validation_end`) are emitted
@@ -121,9 +117,7 @@ class MultiHeadEvaluator(engine.EngineBase):
             self.engine.run_validate_batch()
 
         # val phase end
-        # compute iou
         self._compute_iou()
-        # update experimental level metrics
         self._track_metrics()
         self._emit('on_validation_end')
         return self.state.epoch_sum.val_logs.head_metrics
@@ -134,9 +128,10 @@ class MultiHeadEvaluator(engine.EngineBase):
 
         This method defines inference policy, including:
 
-        - Model evaluation mode and logit-adjustment configuration
-        - Delegation of batch execution to the batch execution engine
-        - Emission of inference lifecycle events for side effects
+        - Switching the model to evaluation mode
+        - Configuring inference-time logit adjustment
+        - Delegating batch execution to the execution engine
+        - Emitting inference lifecycle callbacks for side effects
 
         Batch-level inference execution and aggregation are handled by
         the batch execution engine. This method does not interpret or
@@ -161,28 +156,28 @@ class MultiHeadEvaluator(engine.EngineBase):
             self.engine.run_infer_batch()
 
         # inference phase end
-        # - produce a preview image if the test blocks grid is valid
         self._emit('on_inference_end', out_dir)
 
     # ----- validation phase
     def _compute_iou(self) -> None:
         '''
-        Finalize IoU metrics after validation batches.
+        Finalize IoU and related validation metrics.
 
-        This method performs phase-level aggregation and formatting
-        of metrics accumulated during batch execution. It deliberately
-        lives at the Trainer/Evaluator layer rather than in EngineCore.
+        This method performs phase-level aggregation and formatting of
+        metrics accumulated during validation batches. It deliberately
+        lives at the evaluator policy layer rather than in the execution
+        core, which remains metric-agnostic.
         '''
 
-        # sanity
         assert self.state.heads.active_hmetrics is not None
         val_logs: dict[str, dict] = {}
         val_logs_text: dict[str, list[str]] = {}
-        # calculate IoU related metrics for each head
+
         for head, metrics_module in self.state.heads.active_hmetrics.items():
-            metrics_module.compute() # final metrics from batch accumulations
+            metrics_module.compute()
             val_logs[head] = metrics_module.metrics_dict
             val_logs_text[head] = metrics_module.metrics_text
+
         self.state.epoch_sum.val_logs.head_metrics = val_logs
         self.state.epoch_sum.val_logs.head_metrics_str = val_logs_text
 
@@ -191,8 +186,12 @@ class MultiHeadEvaluator(engine.EngineBase):
         Track best validation metrics and update patience counters.
 
         This method interprets finalized validation metrics according to
-        tracking configuration and updates experiment-level monitoring
-        state (best value, best epoch, patience counter).
+        monitoring configuration and updates experiment-level tracking
+        state, including:
+
+        - best metric value
+        - best epoch
+        - patience counter
         '''
 
         # get metric from validation metrics dictionary
@@ -208,16 +207,14 @@ class MultiHeadEvaluator(engine.EngineBase):
             self.state.metrics.last_value = self.state.metrics.curr_value
             self.state.metrics.curr_value = met
 
-        # determine the best metrics
-        delta = self.config.schedule.min_delta or 0.0 # None -> 0.0 (no delta)
-        assert delta >= 0.0 # sanity
-        # maximize tracking metrics
+        delta = self.config.schedule.min_delta or 0.0
+        assert delta >= 0.0
+
         if self.config.monitor.track_mode == 'max':
             # update tracking numbers
             if met >= self.state.metrics.best_value + delta:
                 self.state.metrics.best_value = met
                 self.state.metrics.best_epoch = self.state.progress.epoch
-                self.state.metrics.patience_n = 0 # reset patience
-            # otherwise increment patience counter
+                self.state.metrics.patience_n = 0
             else:
                 self.state.metrics.patience_n += 1
