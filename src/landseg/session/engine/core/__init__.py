@@ -35,6 +35,7 @@ __all__ = [
     'BatchExecutionEngine',
     'RuntimeState',
     # functions
+    'export_previews',
     'init_state',
     'multihead_loss',
 ]
@@ -43,6 +44,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .batch_exe import BatchExecutionEngine
     from .loss import multihead_loss
+    from .preview import export_previews
     from .state import RuntimeState, init_state
 
 def __getattr__(name: str):
@@ -52,6 +54,9 @@ def __getattr__(name: str):
 
     if name in {'multihead_loss'}:
         return getattr(importlib.import_module('.loss', __package__), name)
+
+    if name in {'export_previews'}:
+        return getattr(importlib.import_module('.preview', __package__), name)
 
     if name in {'RuntimeState', 'init_state'}:
         return getattr(importlib.import_module('.state', __package__), name)
