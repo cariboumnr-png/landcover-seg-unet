@@ -1,7 +1,7 @@
 # ADR-0019: Shared Execution Core Extraction from Trainer
 
-- **Status:** Proposed
-- **Date:** 2026-04-13
+- **Status:** Accepted
+- **Date:** 2026-04-15
 
 ## Context
 
@@ -12,8 +12,7 @@ The current session architecture distinguishes between:
 - **MultiHeadTrainer**: executes training, validation, and inference logic
   using callbacks, runtime state, and trainer components
 
-Although this separation exists conceptually, the `MultiHeadTrainer`
-currently mixes two responsibilities:
+Prior to this change, `MultiHeadTrainer` mixed two responsibilities:
 
 1. **Generic execution mechanics**
    - batch parsing
@@ -28,7 +27,7 @@ currently mixes two responsibilities:
    - head activation / freezing semantics
    - metric tracking and patience logic
 
-At the same time, the codebase already anticipates reuse of execution
+At the same time, the codebase already anticipated reuse of execution
 logic beyond training:
 
 - Validation and inference follow the same batch lifecycle with different
@@ -42,41 +41,48 @@ reuse, testing, and extension.
 
 ## Decision
 
-We will extract a **shared execution core** from `MultiHeadTrainer` and
-treat it as a reusable engine responsible for **step-level execution and
-callback orchestration**.
+We extracted a **shared execution core** from `MultiHeadTrainer` and treat it
+as a reusable, policy-agnostic component responsible for **batch-level execution**.
 
-Specifically:
+### 1. Shared execution core
 
-### 1. Introduce a shared execution core
+A new internal execution component:
 
-- A new internal component (e.g., `ExecutionCore` or equivalent) will:
-  - own the batch lifecycle (`parse → forward → loss / metrics → callbacks`)
-  - manage context managers (AMP, eval/train modes)
-  - mutate `RuntimeState` in a consistent, centralized way
-- This core will be **policy-agnostic** and unaware of:
-  - curriculum logic
-  - checkpointing
-  - phase scheduling
-  - early stopping criteria
+- owns the batch lifecycle (parse → forward → loss / metrics → state mutation)
+- manages precision and evaluation contexts (AMP, train/eval modes)
+- mutates `RuntimeState` deterministically
+- performs no optimizer, scheduler, or epoch-level logic
 
-### 2. Re-scope `MultiHeadTrainer`
+The execution core is deliberately **unaware of**:
 
-- `MultiHeadTrainer` becomes a **training policy layer** that:
-  - configures optimization behavior
-  - supplies training-specific hooks to the execution core
-  - wires trainer components, runtime state, and model together
-- It delegates execution sequencing to the shared core rather than
-  implementing it directly.
+- curriculum and phase scheduling
+- optimization policy
+- checkpointing
+- early stopping
+- logging cadence or aggregation
 
-### 3. Prepare for multiple session engines
+### 2. Re-scoped MultiHeadTrainer
 
-- The shared execution core will be reusable by:
-  - training
-  - validation-only evaluators
-  - inference-only evaluators
-- This establishes a stable foundation for ADR-0020
-  (Dedicated Evaluator Engine).
+`MultiHeadTrainer` now acts as a **training policy layer**:
+
+- defines epoch-level workflows (train / validate / infer)
+- owns optimizer, scheduler, and gradient management
+- controls active/frozen heads and class exclusions
+- aggregates epoch-level statistics and best-metric tracking
+- emits semantic lifecycle callbacks
+
+Batch-level execution is delegated entirely to the shared core.
+
+### 3. Architectural preparation
+
+This separation establishes a stable foundation for:
+
+- training
+- validation-only evaluators
+- inference-only evaluators
+
+and directly enables ADR-0020 (Dedicated Evaluator Engine).
+
 
 ## Explicit Non-Decisions
 
@@ -89,36 +95,6 @@ This ADR does **not**:
 - Redesign optimization or metric policies
 
 Those concerns are deferred to follow-up ADRs.
-
-## Rationale
-
-### Why extract execution mechanics
-
-Execution logic is currently:
-
-- large
-- stateful
-- difficult to reason about in isolation
-- duplicated conceptually across train/val/infer paths
-
-Extracting a shared core:
-
-- centralizes correctness-critical sequencing
-- reduces cognitive load in `MultiHeadTrainer`
-- makes execution behavior testable without training policy
-- enables reuse across future session engines
-
-### Why keep policy in `MultiHeadTrainer`
-
-Training remains special due to:
-
-- optimization steps
-- gradient management
-- early stopping logic
-- curriculum-driven head control
-
-Keeping these as a thin policy layer preserves clarity while avoiding
-premature generalization.
 
 ## Consequences
 
@@ -135,12 +111,15 @@ premature generalization.
 - Introduces an additional abstraction layer
 - Demands careful definition of execution-core boundaries
 
-### Risks
+### Known Gaps / Transitional State
 
-- Over-generalizing the execution core may prematurely constrain future
-  features
-- Partial extraction may leave responsibility split across layers if not
-  completed cleanly
+As a consequence of extracting execution mechanics, existing trainer logging
+paths are temporarily disrupted.
+
+This is an intentional transitional state. Logging behavior will be revisited
+once the dedicated evaluator engine (ADR-0020) is introduced, so that logging
+can be re-anchored at a consistent policy layer shared across trainer and
+evaluator implementations.
 
 ## Follow-up Work
 
