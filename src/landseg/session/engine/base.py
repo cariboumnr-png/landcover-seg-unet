@@ -20,7 +20,12 @@
 # =========================================================================== #
 
 '''
-Engine base class
+Shared engine policy base class.
+
+This module defines an abstract policy layer shared by concrete session
+engines (e.g., trainer and evaluator). It provides common orchestration,
+state interpretation, and callback wiring while delegating all batch-level
+execution mechanics to a shared execution core.
 '''
 
 # standard imports
@@ -31,7 +36,22 @@ import landseg.session.engine.core as engine_core
 
 class EngineBase:
     '''
-    Engine base class
+    Base class for session engines.
+
+    An engine defines *policy* and *orchestration* on top of a shared
+    batch execution core. Concrete engines (e.g., trainer, evaluator)
+    differ in how they interpret execution results over time, but
+    share:
+
+    - runtime state interpretation
+    - head configuration logic
+    - callback wiring
+    - device placement
+
+    This class deliberately does **not** implement:
+    - batch execution
+    - optimizer or scheduler logic
+    - epoch or phase control
     '''
 
     def __init__(
@@ -44,132 +64,154 @@ class EngineBase:
         **kwargs
     ):
         '''
-        Initialize the trainer.
+        Initialize an engine policy instance.
 
-        The trainer is constructed with an already-initialized batch
-        execution engine and a shared RuntimeState. Runtime state is not
-        owned by the trainer but is interpreted and mutated according
-        to training and evaluation policy.
+        The engine is constructed with an already-initialized batch
+        execution core and a shared RuntimeState. Runtime state is not
+        owned by the engine; it is deterministically mutated by the
+        execution core and interpreted according to engine-specific
+        policy (training, evaluation, or inference).
 
         Args:
             engine:
-                BatchExecutionEngine responsible for batch-level execution.
+                BatchExecutionEngine responsible for all batch-level
+                execution mechanics.
             state:
-                Shared RuntimeState instance updated by the batch executor
-                and consumed by the trainer.
+                Shared RuntimeState instance updated by the execution
+                core and consumed by the engine.
             components:
-                Trainer components including dataloaders, callbacks,
-                optimizer, loss modules, and metric modules.
+                Engine components including dataloaders, callbacks,
+                loss modules, metric modules, and (if applicable)
+                optimization components.
             config:
-                Runtime configuration controlling training schedule,
+                Runtime configuration controlling scheduling,
                 precision, and monitoring behavior.
             device:
-                Device identifier (e.g., 'cpu', 'cuda', 'cuda:0') applied
-                at the trainer level.
+                Device identifier (e.g., 'cpu', 'cuda', 'cuda:0') to
+                which the model is moved at engine construction.
             kwargs:
                 Runtime control flags:
-                - skip_log: Disable logging callbacks
-                - enable_train_la: Enable logit adjustment during training
-                - enable_val_la: Enable logit adjustment during validation
-                - enable_test_la: Enable logit adjustment during inference
+                - skip_log:
+                    Disable logging callbacks.
+                - enable_train_la:
+                    Enable logit adjustment during training.
+                - enable_val_la:
+                    Enable logit adjustment during validation.
+                - enable_test_la:
+                    Enable logit adjustment during inference.
         '''
 
-        # get attributes from engine
+        # execution core and shared state
         self.engine = engine
         self.model = engine.model
         self.state = state
+
+        # engine components and configuration
         self.comps = components
-        # move model to device
+        self.config = config
+
+        # device placement
         self.device = device
         self.model.to(self.device)
-        # get model runtime config
-        self.config = config
-        # populate runtime flags from kwargs
+
+        # runtime flags
         self.flags = {
             'skip_log': kwargs.get('skip_log', False),
             'enable_train_la': kwargs.get('enable_train_la', False),
             'enable_val_la': kwargs.get('enable_val_la', False),
             'enable_test_la': kwargs.get('enable_test_la', False),
         }
-        # setup callback classes
+
+        # setup callbacks
         for callback in self.callbacks:
             callback.setup(self, self.flags['skip_log'])
 
-    # ----- property
+    # ----- convenience properties
+
     @property
     def dataloaders(self):
-        '''Shortcut to dataloaders.'''
+        '''Access configured dataloaders.'''
         return self.comps.dataloaders
 
     @property
     def headspecs(self):
-        '''Shortcut to headspecs.'''
+        '''Access head specifications.'''
         return self.comps.headspecs
 
     @property
     def headlosses(self):
-        '''Shortcut to headlosses.'''
+        '''Access head-specific loss modules.'''
         return self.comps.headlosses
 
     @property
     def optimization(self):
-        '''Shortcut to optimization.'''
+        '''Access optimization configuration and components.'''
         return self.comps.optimization
 
     @property
     def headmetrics(self):
-        '''Shortcut to headmetrics.'''
+        '''Access head-specific metric modules.'''
         return self.comps.headmetrics
 
     @property
     def callbacks(self):
-        '''Shortcut to callbacks.'''
+        '''Access registered callbacks.'''
         return self.comps.callbacks
 
+    # ----- head configuration helpers
     def set_head_state(
         self,
-        active_heads: list[str] | None=None,
-        frozen_heads: list[str] | None=None,
-        excluded_cls: dict[str, list[int]] | None=None
+        active_heads: list[str] | None = None,
+        frozen_heads: list[str] | None = None,
+        excluded_cls: dict[str, list[int]] | None = None
     ) -> None:
         '''
-        Set active/frozen heads and per-head class exclusions.
+        Configure active and frozen heads and apply class exclusions.
+
+        This method updates both the model and runtime state to reflect
+        the current head configuration. Per-head specifications, loss
+        modules, and metrics are deep-copied into runtime state to
+        ensure isolation across phases.
 
         Side effects:
-            - Updates model active/frozen heads.
-            - Deep-copies and installs per-head specs, loss, and metrics
-                into `self.state`.
-            - Applies per-head class exclusions to specs and metrics.
+            - Updates model active and frozen heads.
+            - Installs active head specs, losses, and metrics into
+              RuntimeState.
+            - Applies per-head class exclusions where specified.
 
         Args:
-            active_heads: Heads to activate. Defaults to all heads when
-                set to `None`.
-            frozen_heads: Heads to freeze (if provided).
-            excluded_cls: Mapping of head -> tuple of class indices to
-                exclude from loss and validation metrics.
+            active_heads:
+                Heads to activate. Defaults to all available heads when
+                set to None.
+            frozen_heads:
+                Heads to freeze at the model level.
+            excluded_cls:
+                Mapping of head name to class indices to exclude from
+                loss computation and validation metrics.
         '''
 
         # if no active heads provided, make all heads active
         if active_heads is None:
             active_heads = self.state.heads.all_heads
 
-        # set active and frozen heads
+        # update runtime state
         self.state.heads.active_heads = active_heads
         self.state.heads.frozen_heads = frozen_heads
 
-        # set active heads at model
+        # configure model
         self.model.set_active_heads(active_heads)
-        # set active heads specs
+
+        # deep-copy per-head components into state
         self.state.heads.active_hspecs = {
-            k: copy.deepcopy(self.headspecs[k]) for k in active_heads
+            h: copy.deepcopy(self.headspecs[h]) for h in active_heads
         }
         # set loss module for active heads
         self.state.heads.active_hloss = {
-            k: copy.deepcopy(self.headlosses[k]) for k in active_heads
+            h: copy.deepcopy(self.headlosses[h]) for h in active_heads
         }
         # set metric module for active heads
         self.state.heads.active_hmetrics = {
-            k: copy.deepcopy(self.headmetrics[k]) for k in active_heads
+            h: copy.deepcopy(self.headmetrics[h]) for h in active_heads
         }
 
         # set frozen heads to model if provided
@@ -184,13 +226,12 @@ class EngineBase:
                     self.state.heads.active_hspecs[h].set_exclude(tuple(excl))
                     self.state.heads.active_hmetrics[h].exclude_class_1b = tuple(excl)
 
-    def reset_head_state(self):
+    def reset_head_state(self) -> None:
         '''
-        Reset runtime training heads.
+        Reset all runtime head configuration.
 
-        Side effects:
-        - Calls `model.reset_heads()`.
-        - Clears active/frozen heads and related per-head modules.
+        This restores the model and runtime state to an unconfigured
+        head state (no active or frozen heads, no per-head overrides).
         '''
 
         self.model.reset_heads()
@@ -200,6 +241,7 @@ class EngineBase:
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
 
+    # ----- runtime configuration helpers
     def config_logit_adjustment(
         self,
         *,
@@ -209,7 +251,10 @@ class EngineBase:
         **kwargs
     ) -> None:
         '''
-        Simple helper to set logit adjustment use flags.
+        Configure logit adjustment usage flags.
+
+        This helper exists to centralize runtime flag manipulation and
+        provide a stable interface for trainer and evaluator policy.
         '''
 
         # assign flags
@@ -220,15 +265,9 @@ class EngineBase:
         if kwargs:
             pass
 
+    # ----- callback dispatch
     def _emit(self, hook: str, *args, **kwargs) -> None:
-        '''
-        Invoke a named hook from callbacks with the provided arguments.
-
-        Args:
-            hook: Hook method to call (e.g., 'on_train_batch_begin').
-            *args: Positional arguments passed to the callback method.
-            **kwargs: Keyword arguments passed to the callback method.
-        '''
+        '''Emit a lifecycle hook to all registered callbacks.'''
 
         for callback in self.callbacks:
             method = getattr(callback, hook, None)
