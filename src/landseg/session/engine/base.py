@@ -59,7 +59,6 @@ class EngineBase:
         engine: engine_core.BatchExecutionEngine,
         state: engine_core.RuntimeState,
         components: common.TrainerComponentsLike,
-        config: common.TrainerConfigShape,
         device: str,
         **kwargs
     ):
@@ -108,7 +107,6 @@ class EngineBase:
 
         # engine components and configuration
         self.comps = components
-        self.config = config
 
         # device placement
         self.device = device

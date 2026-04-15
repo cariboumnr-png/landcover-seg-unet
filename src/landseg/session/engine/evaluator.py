@@ -74,6 +74,18 @@ class MultiHeadEvaluator(engine.EngineBase):
     visualization), but do not invoke or control execution logic.
     '''
 
+    def __init__(self,
+        *,
+        track_mode: str,
+        track_head_name: str,
+        min_delta: float | None,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.track_mode = track_mode
+        self.track_head_name = track_head_name
+        self.min_delta = min_delta
+
     # -------------------------------Public  Methods-------------------------------
     def validate(self) -> dict[str, dict]:
         '''
@@ -195,7 +207,7 @@ class MultiHeadEvaluator(engine.EngineBase):
         '''
 
         # get metric from validation metrics dictionary
-        track_head = self.config.monitor.track_head_name
+        track_head = self.track_head_name
         val = self.state.epoch_sum.val_logs.head_metrics[track_head]
         met = val['ac_mean'] if val['has_active'] else val['mean']
 
@@ -207,10 +219,10 @@ class MultiHeadEvaluator(engine.EngineBase):
             self.state.metrics.last_value = self.state.metrics.curr_value
             self.state.metrics.curr_value = met
 
-        delta = self.config.schedule.min_delta or 0.0
+        delta = self.min_delta or 0.0
         assert delta >= 0.0
 
-        if self.config.monitor.track_mode == 'max':
+        if self.track_mode == 'max':
             # update tracking numbers
             if met >= self.state.metrics.best_value + delta:
                 self.state.metrics.best_value = met

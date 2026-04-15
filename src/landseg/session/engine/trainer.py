@@ -77,7 +77,19 @@ class MultiHeadTrainer(engine.EngineBase):
     visualization), but do not invoke or control execution logic.
     '''
 
-# -------------------------------Public  Methods-------------------------------
+    def __init__(
+        self,
+        *,
+        use_amp: bool,
+        grad_clip_norm: float | None,
+        log_every: int,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.use_amp = use_amp
+        self.grad_clip_norm = grad_clip_norm
+        self.log_every = log_every
+
     def train_one_epoch(self, epoch: int) -> dict[str, float]:
         '''
         Execute one training epoch and return epoch-level training logs.
@@ -127,7 +139,7 @@ class MultiHeadTrainer(engine.EngineBase):
 
             # batch backward
             loss = self.state.batch_out.total_loss
-            if self.config.precision.use_amp:
+            if self.use_amp:
                 self.state.optim.scaler.scale(loss).backward()
             else:
                 loss.backward()
@@ -136,7 +148,7 @@ class MultiHeadTrainer(engine.EngineBase):
             # gradient clipping
             optimizer = self.comps.optimization.optimizer
             # unscale if use AMP
-            if self.config.precision.use_amp:
+            if self.use_amp:
                 self.state.optim.scaler.unscale_(optimizer)
             self._clip_grad()
             self._emit('on_train_before_optimizer_step')
@@ -144,7 +156,7 @@ class MultiHeadTrainer(engine.EngineBase):
             # optimizer step
             optimizer = self.comps.optimization.optimizer
             # use AMP
-            if self.config.precision.use_amp:
+            if self.use_amp:
                 self.state.optim.scaler.step(optimizer)
                 self.state.optim.scaler.update() # update scaler
             # no AMP
@@ -169,11 +181,11 @@ class MultiHeadTrainer(engine.EngineBase):
     # ----- training phase
     def _clip_grad(self):
         '''Clip gradients by global norm when set.'''
-        
-        if self.config.optimization.grad_clip_norm is not None:
+
+        if self.grad_clip_norm is not None:
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(),
-                self.config.optimization.grad_clip_norm
+                self.grad_clip_norm
             )
 
     def _update_train_logs(self, flush: bool=False):
@@ -188,7 +200,7 @@ class MultiHeadTrainer(engine.EngineBase):
         # create log dict
         logs = {}
         # update log at interval
-        if flush or bidx % self.config.schedule.log_every == 0:
+        if flush or bidx % self.log_every == 0:
             # average total loss so far
             avg_loss = self.state.epoch_sum.train_loss / max(1, bidx)
             logs['Total_Loss'] = avg_loss
