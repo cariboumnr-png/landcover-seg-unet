@@ -52,10 +52,11 @@ class Runner:
     '''
     def __init__(
         self,
+        *,
         trainer: engine.MultiHeadTrainer,
+        evaluator: engine.MultiHeadEvaluator,
         phases: list[runner.Phase],
         run_paths: artifacts.ResultsPaths,
-        *,
         logger: utils.Logger,
     ):
         '''
@@ -79,6 +80,7 @@ class Runner:
 
         # parse arguments
         self.trainer = trainer
+        self.evaluator = evaluator
         self.phases = phases
         self.paths = run_paths
         self.logger = logger.get_child('phase') # a child from base logger
@@ -196,10 +198,10 @@ class Runner:
             # validate at set interval
             if self.trainer.config.schedule.val_every is not None and \
                 epoch % self.trainer.config.schedule.val_every == 0:
-                v_logs = self.trainer.validate()
+                v_logs = self.evaluator.validate()
                 # update preview if test data provided
                 if self.trainer.dataloaders.test:
-                    self.trainer.infer(self.paths.previews)
+                    self.evaluator.infer(self.paths.previews)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
                 self._save_progress(self.paths.best_checkpoint(phase.name))
