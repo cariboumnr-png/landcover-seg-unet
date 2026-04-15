@@ -122,7 +122,7 @@ class MultiHeadEvaluator(engine.EngineBase):
         self._emit('on_validation_end')
         return self.state.epoch_sum.val_logs.head_metrics
 
-    def infer(self, out_dir: str):
+    def infer(self, out_dir: str) -> None:
         '''
         Execute inference over the test dataset.
 
