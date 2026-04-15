@@ -41,14 +41,14 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .execution import BatchExecutionEngine
+    from .batch_exe import BatchExecutionEngine
     from .loss import multihead_loss
     from .state import RuntimeState, init_state
 
 def __getattr__(name: str):
 
     if name in {'BatchExecutionEngine'}:
-        return getattr(importlib.import_module('.execution', __package__), name)
+        return getattr(importlib.import_module('.batch_exe', __package__), name)
 
     if name in {'multihead_loss'}:
         return getattr(importlib.import_module('.loss', __package__), name)
