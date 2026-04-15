@@ -33,6 +33,7 @@ import typing
 __all__ = [
     # classes
     'BatchExecutionEngine',
+    'EngineBase',
     'MultiHeadTrainer',
     # functions
     'init_state'
@@ -41,10 +42,14 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .base import EngineBase
     from .core import BatchExecutionEngine, init_state
     from .trainer import MultiHeadTrainer
 
 def __getattr__(name: str):
+
+    if name in {'EngineBase'}:
+        return getattr(importlib.import_module('.base', __package__), name)
 
     if name in {'BatchExecutionEngine', 'init_state'}:
         return getattr(importlib.import_module('.core', __package__), name)
