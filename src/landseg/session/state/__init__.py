@@ -19,10 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
-
 '''
-Top-level namespace for `landseg.session.components.callback`.
+Top-level namespace for `landseg.session.engine.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -34,48 +32,17 @@ import typing
 
 __all__ = [
     # classes
-    'Callback',
-    'CallbackSet',
-    'LoggingCallback',
-    'TrainCallback',
-    'ValCallback',
-    'InferCallback',
-    'ProgressCallback',
     # functions
-    'build_callbacks'
+    'initialize',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import Callback
-    from .factory import CallbackSet, build_callbacks
-    from .logging import LoggingCallback
-    from .phase_infer import InferCallback
-    from .phase_train import TrainCallback
-    from .phase_val import ValCallback
-    from .progress import ProgressCallback
+    from .state import initialize
 
 def __getattr__(name: str):
 
-    if name in {'Callback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'CallbackSet', 'build_callbacks'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
-
-    if name in {'InferCallback'}:
-        return getattr(importlib.import_module('.phase_infer', __package__), name)
-
-    if name in {'TrainCallback'}:
-        return getattr(importlib.import_module('.phase_train', __package__), name)
-
-    if name in {'ValCallback'}:
-        return getattr(importlib.import_module('.phase_val', __package__), name)
-
-    if name in {'ProgressCallback'}:
-        return getattr(importlib.import_module('.progress', __package__), name)
+    if name in {'initialize'}:
+        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

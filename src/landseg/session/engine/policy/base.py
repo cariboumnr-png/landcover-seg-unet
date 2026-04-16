@@ -32,7 +32,7 @@ execution mechanics to a shared execution core.
 import copy
 # local imports
 import landseg.session.common as common
-import landseg.session.engine.core as engine_core
+import landseg.session.engine.batch as batch
 
 class EngineBase:
     '''
@@ -56,9 +56,11 @@ class EngineBase:
 
     def __init__(
         self,
-        engine: engine_core.BatchExecutionEngine,
-        state: engine_core.RuntimeState,
+        engine: batch.BatchExecutionEngine,
+        state: common.StateLike,
         components: common.ComponentsLike,
+        callbacks: common.CallBacksLike,
+        *,
         device: str,
         **kwargs
     ):
@@ -105,8 +107,11 @@ class EngineBase:
         self.model = engine.model
         self.state = state
 
-        # engine components and configuration
+        # engine components
         self.comps = components
+
+        # callback system
+        self.callbacks = callbacks
 
         # device placement
         self.device = device
@@ -144,11 +149,6 @@ class EngineBase:
     def optimization(self):
         '''Access optimization configuration and components.'''
         return self.comps.optimization
-
-    @property
-    def callbacks(self):
-        '''Access registered callbacks.'''
-        return self.comps.callbacks
 
     # ----- head configuration helpers
     def set_head_state(

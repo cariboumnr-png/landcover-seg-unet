@@ -14,23 +14,26 @@ models:
       use_vec: False
       hidden: 128
 
-trainer:
-  optimization:
-    lr: 1e-3
-    weight_decay: 0.0
-    sched_cls: null
-    sched_args: {}
-  loss:
-    types:
-      focal:
-        weight: 1.0
-        gamma: 0.0
-      dice:
-        weight: 0.0
-      spectral:
-        weight: 0.0
-      tv:
-        weight: 0.0
+session:
+
+  components:
+    task:
+      types:
+        focal:
+          weight: 1.0
+          gamma: 0.0
+        dice:
+          weight: 0.0
+        spectral:
+          weight: 0.0
+        tv:
+          weight: 0.0
+    optimization:
+      lr: 1e-3
+      weight_decay: 0.0
+      sched_cls: null
+      sched_args: {}
+
   runtime:
     schedule:
       max_epoch: 1000

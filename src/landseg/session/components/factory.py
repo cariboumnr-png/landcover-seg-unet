@@ -21,23 +21,32 @@
 
 # pylint: disable=missing-function-docstring
 
-'''Factory to build the trainer components.'''
+'''Factory to build the session-owned components.'''
 
 # standard imports
 import dataclasses
+import typing
 # local imports
 import landseg.core as core
-import landseg.session.components.callback as callback
 import landseg.session.components.data as data
 import landseg.session.components.optim as optim
 import landseg.session.components.task as task
 import landseg.utils as utils
 
-# ------------------------------Public  Dataclass------------------------------
+# --------------------------------private  type--------------------------------
+class ComponentsConfig(typing.Protocol):
+    '''Shape of the components building configuration.'''
+    @property
+    def loader(self) -> data.LoaderConfig: ...
+    @property
+    def task(self) -> task.TaskConfig: ...
+    @property
+    def optimization(self) -> optim.OptimConfig: ...
+
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class EngineComponents:
+class _SessionComponents:
     '''Collection of trainer components.'''
-    callbacks: callback.CallbackSet
     dataloaders: data.DataLoaders
     headspecs: task.HeadSpecs
     headlosses: task.HeadLosses
@@ -45,56 +54,49 @@ class EngineComponents:
     optimization: optim.Optimization
 
 # -------------------------------Public Function-------------------------------
-def build_engine_components(
-    *,
+def build_session_components(
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    data_config: data.LoaderConfig,
-    task_config: task.TaskConfig,
-    optim_config: optim.OptimConfig,
+    config: ComponentsConfig,
+    *,
     logger: utils.Logger,
- ) -> EngineComponents:
-    '''Builder engine components from data shape and configs.'''
+ ) -> _SessionComponents:
+    '''Builder session components from data shape and configs.'''
 
-    # data
+    # data loader
     data_loaders = data.build_dataloaders(
         data_specs,
-        data_config,
+        config.loader,
         logger=logger,
     )
 
-    # task
-    # heads specifications
+    # task - heads specifications
     headspecs = task.build_headspecs(
         data_specs,
-        alpha_fn=task_config.alpha_fn,
-        en_beta=task_config.en_beta
+        alpha_fn=config.task.alpha_fn,
+        en_beta=config.task.en_beta
     )
-    # heads loss modules
+    # task - heads loss modules
     headlosses = task.build_headlosses(
         headspecs,
-        config=task_config,
+        config=config.task,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
-    # heads metric modules
+    # task - heads metric modules
     headmetrics = task.build_headmetrics(
         headspecs,
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
     # optimizer and scheduler
-    optimization = optim.build_optimization(model, optim_config)
-
-    # callback system
-    callbacks = callback.build_callbacks(logger)
+    optimization = optim.build_optimization(model, config.optimization)
 
     # collect components
-    return EngineComponents(
+    return _SessionComponents(
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
         optimization=optimization,
-        callbacks=callbacks,
     )

@@ -21,44 +21,28 @@
 
 # pylint: disable=missing-function-docstring
 
-'''
-Training phase
-'''
+'''Training-focused phase protocol.'''
 
 # standard imports
 from __future__ import annotations
-import dataclasses
 import typing
 
-@dataclasses.dataclass
-class Phase:
+class PhaseLike(typing.Protocol):
     '''Training phase container'''
-    name: str
-    num_epochs: int
-    heads: HeadsConfigProto
-    logit_adjust: LogitAdjustSchemeProto
-    lr_scale: float
     finished: bool = False
+    @property
+    def name(self)-> str: ...
+    @property
+    def num_epochs(self)-> int: ...
+    @property
+    def heads(self)-> HeadsConfigLike: ...
+    @property
+    def logit_adjust(self)-> LogitAdjustSchemeLike: ...
+    @property
+    def lr_scale(self)-> float: ...
+    def as_dict(self) -> dict[str, typing.Any]: ...
 
-    def __str__(self) -> str:
-        la = self.logit_adjust
-        heads = self.heads
-        return '\n'.join([
-            f'- Phase Name:\t{self.name}',
-            f'- Max Epochs:\t{self.num_epochs}',
-            '- Logit Adjustment',
-            f'  - Global Alpha:\t{la.logit_adjust_alpha:.2f}',
-            f'  - Training Stage:\t{la.enable_train_logit_adjustment}',
-            f'  - Validation Stage:\t{la.enable_val_logit_adjustment}',
-            f'  - Inference Stage:\t{la.enable_test_logit_adjustment}',
-            '- Heads Specs',
-            f'  - Active Heads:\t{heads.active_heads}',
-            f'  - Frozen Heads:\t{heads.frozen_heads}',
-            f'  - Excld. Class:\t{heads.excluded_cls}',
-            f'- LR Scale:\t{self.lr_scale}'
-        ])
-
-class HeadsConfigProto(typing.Protocol):
+class HeadsConfigLike(typing.Protocol):
     '''Shape of the heads configuration container.'''
     @property
     def active_heads(self) -> list[str]: ...
@@ -67,7 +51,7 @@ class HeadsConfigProto(typing.Protocol):
     @property
     def excluded_cls(self) -> dict[str, list[int]] | None: ...
 
-class LogitAdjustSchemeProto(typing.Protocol):
+class LogitAdjustSchemeLike(typing.Protocol):
     '''Shape of the logit adjustment configuration container'''
     @property
     def logit_adjust_alpha(self) -> float: ...

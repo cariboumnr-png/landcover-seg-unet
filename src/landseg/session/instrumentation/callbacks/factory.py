@@ -19,33 +19,50 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Compose a list of callback classes in sequence for the trainer.'''
+'''Compose a list of callback classes in sequence for the engines.'''
 
 # standard imports
 import dataclasses
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.common as common
+import landseg.session.instrumentation.callbacks as callbacks
 import landseg.utils as utils
 
 @dataclasses.dataclass
-class CallbackSet:
+class _CallbackSet:
     '''Collection of callback class contracts.'''
-    train: callback.TrainCallback
-    validate: callback.ValCallback
-    infer: callback.InferCallback
-    logging: callback.LoggingCallback
-    progress: callback.ProgressCallback
+    train: callbacks.TrainCallback
+    validate: callbacks.ValCallback
+    infer: callbacks.InferCallback
+    logging: callbacks.LoggingCallback
+    progress: callbacks.ProgressCallback
 
     def __iter__(self):
         return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
-def build_callbacks(logger: utils.Logger) -> CallbackSet:
+def build_callbacks(
+    state: common.StateLike,
+    config: common.ConfigLike,
+    logger: utils.Logger,
+    *,
+    device: str,
+    skip_log: bool = False
+) -> _CallbackSet:
     '''Factory to generate a set of callback class instances.'''
 
-    return CallbackSet(
-        train=callback.TrainCallback(logger),
-        validate=callback.ValCallback(logger),
-        infer=callback.InferCallback(logger),
-        logging=callback.LoggingCallback(logger),
-        progress=callback.ProgressCallback(logger),
+    # build set
+    callback_set = _CallbackSet(
+        train=callbacks.TrainCallback(logger),
+        validate=callbacks.ValCallback(logger),
+        infer=callbacks.InferCallback(logger),
+        logging=callbacks.LoggingCallback(logger),
+        progress=callbacks.ProgressCallback(logger),
     )
+    # set up all callback instances
+    callback_set.train.setup(state, config, device=device, skip_log=skip_log)
+    callback_set.validate.setup(state, config, device=device, skip_log=skip_log)
+    callback_set.infer.setup(state, config, device=device, skip_log=skip_log)
+    callback_set.logging.setup(state, config, device=device, skip_log=skip_log)
+    callback_set.progress.setup(state, config, device=device, skip_log=skip_log)
+    # return
+    return callback_set

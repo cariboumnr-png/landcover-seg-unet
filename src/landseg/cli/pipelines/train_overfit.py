@@ -75,64 +75,21 @@ def overfit(config: configs.RootConfig) -> None:
         clamp_range=config.models.clamp_range
     )
 
-    # trainer components
-    components = session.build_engine_components(
-        data_specs=dataspecs,
-        model=model,
-        data_config=config.trainer.loader,
-        task_config=config.trainer.loss,
-        optim_config=config.trainer.optimization,
+    # build trainer and evaluator
+    trainer, evaluator = session.build_engines(
+        dataspecs,
+        model,
+        config.session,
+        device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
+        skip_log=True
     )
-    # shared runtime state
-    state = session.init_state(
-        components,
-        use_amp=config.trainer.runtime.precision.use_amp,
-        device='cuda' if torch.cuda.is_available() else 'cpu'
-    )
-    # set callback up
-    for c in components.callbacks:
-        c.setup(
-            state,
-            config.trainer.runtime,
-            device='cuda' if torch.cuda.is_available() else 'cpu',
-            skip_log=True
-        )
-    # batch engine
-    engine = session.BatchExecutionEngine(
-        model=model,
-        state=state,
-        parent_map={k: v.parent_head for k, v in components.headspecs.as_dict().items()},
-        use_amp=config.trainer.runtime.precision.use_amp,
-        device='cuda' if torch.cuda.is_available() else 'cpu'
-    )
-    # trainer
-    trainer = session.MultiHeadTrainer(
-        engine=engine,
-        state=state,
-        components=components,
-        config=config.trainer.runtime,
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        use_amp=config.trainer.runtime.precision.use_amp,
-        grad_clip_norm=config.trainer.runtime.optimization.grad_clip_norm,
-        log_every=config.trainer.runtime.schedule.log_every,
-    )
-    # evaluator
-    evaluator = session.MultiHeadEvaluator(
-        engine=engine,
-        state=state,
-        components=components,
-        config=config.trainer.runtime,
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        track_mode=config.trainer.runtime.monitor.track_mode,
-        track_head_name=config.trainer.runtime.monitor.track_head_name,
-        min_delta=config.trainer.runtime.schedule.min_delta
-    )
-    monitor_head = config.trainer.runtime.monitor.track_head_name
+
+    monitor_head = config.session.runtime.monitor.track_head_name
     trainer.set_head_state([monitor_head])
 
     # run trainer
-    max_epoch = config.trainer.runtime.schedule.max_epoch
+    max_epoch = config.session.runtime.schedule.max_epoch
     logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
     for ep in range(1, max_epoch + 1):
         los = trainer.train_one_epoch(ep)['Total_Loss']

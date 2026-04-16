@@ -35,18 +35,18 @@ __all__ = [
     'Runner',
     # functions
     # types
-    'Phase'
+    'PhaseLike'
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .runner import Runner
-    from .phase import Phase
+    from .phase import PhaseLike
 
 def __getattr__(name: str):
 
     if name in {'Runner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
-    if name in {'Phase'}:
+    if name in {'PhaseLike'}:
         return getattr(importlib.import_module('.phase', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

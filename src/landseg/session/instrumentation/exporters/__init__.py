@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session`.
+Top-level namespace for `landseg.session.engine.core`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -33,19 +33,16 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_engines',
-    'build_session_runner',
-    # types
+    'export_previews',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_engines, build_session_runner
-
+    from .preview import export_previews
 
 def __getattr__(name: str):
 
-    if name in {'build_engines', 'build_session_runner',}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'export_previews'}:
+        return getattr(importlib.import_module('.preview', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

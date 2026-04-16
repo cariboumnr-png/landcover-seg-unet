@@ -19,33 +19,30 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-'''Validation phase callback class.'''
+'''
+Top-level namespace for `landseg.session.components`.
 
-# local imports
-import landseg.session.components.callback as callback
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
-class ValCallback(callback.Callback):
-    '''Validation pipeline: parse - forward - compute metrics.'''
+from __future__ import annotations
+import importlib
+import typing
 
-    def on_validation_begin(self) -> None:
-        # reset per-head confusion matrix from active heads
-        assert self.state.heads.active_hmetrics is not None
-        for metrics_mod in self.state.heads.active_hmetrics.values():
-            metrics_mod.reset(self.device)
-        # reset validation loss and logs
-        self.state.epoch_sum.val_loss = 0.0 # currently not in use
-        self.state.epoch_sum.val_logs.head_metrics.clear()
-        self.state.epoch_sum.val_logs.head_metrics_str.clear()
+__all__ = [
+    # classes
+    # functions
+    'build_callbacks',
+    # types
+]
+# for static check
+if typing.TYPE_CHECKING:
+    from .callbacks import build_callbacks
 
-    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch context with new input batch (from validation data)
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
+def __getattr__(name: str):
 
-    def on_validation_batch_forward(self) -> None: ...
+    if name in {'build_callbacks'}:
+        return getattr(importlib.import_module('.callbacks', __package__), name)
 
-    def on_validation_batch_end(self) -> None: ...
-
-    def on_validation_end(self) -> None: ...
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

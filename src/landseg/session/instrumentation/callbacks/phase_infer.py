@@ -20,37 +20,37 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
-'''Train phase callback class.'''
+
+'''Inference phase callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.exporters as exporters
 
-class TrainCallback(callback.Callback):
-    '''Training: parse - forward - compute loss - backward - step.'''
+class InferCallback(callbacks.Callback):
+    '''Inference: parse -> forward -> collect outputs (optional).'''
 
-    def on_train_epoch_begin(self, epoch: int) -> None:
-        # reset train loss and logs
-        self.state.epoch_sum.train_loss = 0.0
-        self.state.epoch_sum.train_logs.head_losses.clear()
-        self.state.epoch_sum.train_logs.head_losses_str = ''
-        self.state.epoch_sum.train_logs.updated = False
+    def on_inference_begin(self) -> None:
+        # reset infer outputs
+        self.state.epoch_sum.infer_ctx.maps.clear()
 
-    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch context with new input batch (from training data)
+    def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
+        # refresh batch ctx
         self.state.batch_cxt.refresh(bidx, batch)
         # refresh batch results
         self.state.batch_out.refresh(bidx)
 
-    def on_train_batch_forward(self) -> None: ...
+    def on_inference_batch_forward(self) -> None: ...
 
-    def on_train_batch_compute_loss(self) -> None: ...
+    def on_inference_batch_end(self) -> None: ...
 
-    def on_train_batch_end(self) -> None: ...
-
-    def on_train_backward(self) -> None: ...
-
-    def on_train_before_optimizer_step(self) -> None: ...
-
-    def on_train_optimizer_step(self) -> None: ...
-
-    def on_train_epoch_end(self) -> None: ...
+    def on_inference_end(self, out_dir: str) -> None:
+        # stitch all blocks together and output a preview
+        # only if the patch grid is of valid shape, e.e, non-zero dims
+        if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
+            exporters.export_previews(
+                self.state.epoch_sum.infer_ctx.maps,
+                out_dir,
+                map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
+                heads=[self.config.monitor.track_head_name] # as list
+            )

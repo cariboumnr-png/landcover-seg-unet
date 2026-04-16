@@ -22,7 +22,7 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Curriculum-based training controller for multi-phase model execution.
+Curriculum-based training runner for multi-phase model execution.
 
 The Runner orchestrates sequential training phases over a shared trainer
 engine. Each phase can configure active heads, logit adjustments, and
@@ -34,7 +34,6 @@ across interruptions.
 '''
 
 # standard imports
-import dataclasses
 import os
 import typing
 # local imports
@@ -46,9 +45,9 @@ import landseg.utils as utils
 class _RunnerScheduleShape(typing.Protocol):
     '''doc'''
     @property
-    def patience(self) -> int: ...
+    def patience(self) -> int | None: ...
     @property
-    def val_every(self) -> int: ...
+    def val_every(self) -> int | None: ...
 
 # --------------------------------Public  Class--------------------------------
 class Runner:
@@ -66,8 +65,8 @@ class Runner:
         trainer: engine.MultiHeadTrainer,
         evaluator: engine.MultiHeadEvaluator,
         schedule: _RunnerScheduleShape,
-        phases: list[runner.Phase],
-        run_paths: artifacts.ResultsPaths,
+        phases: typing.Sequence[runner.PhaseLike],
+        paths: artifacts.ResultsPaths,
         logger: utils.Logger,
     ):
         '''
@@ -94,7 +93,7 @@ class Runner:
         self.evaluator = evaluator
         self.schedule = schedule
         self.phases = phases
-        self.paths = run_paths
+        self.paths = paths
         self.logger = logger.get_child('phase') # a child from base logger
 
         # init phase counter
@@ -102,16 +101,21 @@ class Runner:
         self.current_phase = self.phases[self.current_phase_idx]
 
         # check which phases have already finished
-        c = artifacts.Controller[list[dict]].load_json_or_fail
+        c = artifacts.Controller[list[dict[str, typing.Any]]].load_json_or_fail
         self.progress = c(self.paths.phase_status)
         try:
             status = self.progress.fetch()
             assert status # typing assertion
             for i, p in enumerate(status):
-                if runner.Phase(**p).finished:
+                if p.get('finished'):
                     self.phases[i].finished = True
         except artifacts.ArtifactError:
             self._record_progress() # write phase status.json
+
+    @property
+    def done(self) -> bool:
+        '''Return whether all curriculum phases have completed.'''
+        return self.current_phase_idx >= len(self.phases)
 
     def fit(self) -> None:
         '''
@@ -135,8 +139,7 @@ class Runner:
             if phase.finished:
                 self._next_phase() # progress
                 continue
-            print('__Phase details__')
-            print(phase)
+            self._print_phase(phase)
             # try load from previous checkpoint
             meta = self._load_progress(phase.name)
             # main execution
@@ -155,7 +158,7 @@ class Runner:
 
     def _record_progress(self):
         '''Persist current phase completion status to disk.'''
-        status = [dataclasses.asdict(p) for p in self.phases]
+        status = [p.as_dict() for p in self.phases]
         self.progress.persist(status)
 
     def _train_phase(self, meta) -> tuple[dict, dict]:
@@ -224,6 +227,7 @@ class Runner:
         # return training and validation logs
         return t_logs, v_logs
 
+
     def _next_phase(self) -> None:
         '''Advance to the next training phase and reset trainer state.'''
 
@@ -268,7 +272,25 @@ class Runner:
         )
         self.logger.log('INFO', f'Checkpoint saved: {fpath}')
 
-    @property
-    def done(self) -> bool:
-        '''Return whether all curriculum phases have completed.'''
-        return self.current_phase_idx >= len(self.phases)
+    @staticmethod
+    def _print_phase(phase: runner.PhaseLike):
+        '''Pretty print a phase to console.'''
+
+        print('__Phase details__')
+        la = phase.logit_adjust
+        heads = phase.heads
+        ss = '\n'.join([
+            f'- Phase Name:\t{phase.name}',
+            f'- Max Epochs:\t{phase.num_epochs}',
+            '- Logit Adjustment',
+            f'  - Global Alpha:\t{la.logit_adjust_alpha:.2f}',
+            f'  - Training Stage:\t{la.enable_train_logit_adjustment}',
+            f'  - Validation Stage:\t{la.enable_val_logit_adjustment}',
+            f'  - Inference Stage:\t{la.enable_test_logit_adjustment}',
+            '- Heads Specs',
+            f'  - Active Heads:\t{heads.active_heads}',
+            f'  - Frozen Heads:\t{heads.frozen_heads}',
+            f'  - Excld. Class:\t{heads.excluded_cls}',
+            f'- LR Scale:\t{phase.lr_scale}'
+        ])
+        print(ss)

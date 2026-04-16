@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Internal: trainer runtime state containers and pretty printers.'''
+'''Initiate a shared session-level runtime state object (mutable).'''
 
 # standard imports
 from __future__ import annotations
@@ -31,10 +31,9 @@ import torch
 import landseg.session.common as common
 import landseg.session.common.alias as alias
 
-# ------------------------------Public  Dataclass------------------------------
 # ----- Runtime state (composite)
 @dataclasses.dataclass
-class RuntimeState:
+class _RuntimeState:
     '''Composite training state with sensible defaults.'''
     progress: _Progress
     heads: _Heads
@@ -55,7 +54,6 @@ class RuntimeState:
             f'{str(self.optim)}'
         ])
 
-# ------------------------------private dataclass------------------------------
 # ----- .progress
 @dataclasses.dataclass
 class _Progress:
@@ -259,14 +257,14 @@ class _OptimState:
         ])
 
 # -------------------------------Public Function-------------------------------
-def init_state(
+def initialize(
     components: common.ComponentsLike,
     use_amp: bool,
     device: str,
-) -> RuntimeState:
+) -> _RuntimeState:
     '''Instantiate a trainer state dataclass with placeholder values.'''
 
-    state = RuntimeState(
+    state = _RuntimeState(
         progress=_Progress(
             epoch=0,
             epoch_step=0,

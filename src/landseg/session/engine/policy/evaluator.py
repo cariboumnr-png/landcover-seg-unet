@@ -74,7 +74,8 @@ class MultiHeadEvaluator(engine.EngineBase):
     visualization), but do not invoke or control execution logic.
     '''
 
-    def __init__(self,
+    def __init__(
+        self,
         *,
         track_mode: str,
         track_head_name: str,

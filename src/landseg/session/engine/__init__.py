@@ -37,29 +37,20 @@ __all__ = [
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
     # functions
-    'init_state'
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import EngineBase
-    from .core import BatchExecutionEngine, init_state
-    from .evaluator import MultiHeadEvaluator
-    from .trainer import MultiHeadTrainer
+    from .batch import BatchExecutionEngine
+    from .policy import EngineBase, MultiHeadEvaluator, MultiHeadTrainer
 
 def __getattr__(name: str):
 
-    if name in {'EngineBase'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    if name in {'BatchExecutionEngine'}:
+        return getattr(importlib.import_module('.batch', __package__), name)
 
-    if name in {'BatchExecutionEngine', 'init_state'}:
-        return getattr(importlib.import_module('.core', __package__), name)
-
-    if name in {'MultiHeadEvaluator'}:
-        return getattr(importlib.import_module('.evaluator', __package__), name)
-
-    if name in {'MultiHeadTrainer'}:
-        return getattr(importlib.import_module('.trainer', __package__), name)
+    if name in {'EngineBase', 'MultiHeadEvaluator', 'MultiHeadTrainer'}:
+        return getattr(importlib.import_module('.policy', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

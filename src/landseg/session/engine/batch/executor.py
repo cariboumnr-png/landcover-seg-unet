@@ -54,7 +54,8 @@ import contextlib
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.core as engine_core
+import landseg.session.common as common
+import landseg.session.engine.batch as batch
 
 class BatchExecutionEngine:
     '''
@@ -91,7 +92,7 @@ class BatchExecutionEngine:
         self,
         *,
         model: core.MultiheadModelLike,
-        state: engine_core.RuntimeState,
+        state: common.StateLike,
         parent_map: dict[str, str | None],
         use_amp: bool,
         device: str,
@@ -126,7 +127,7 @@ class BatchExecutionEngine:
         self.model.to(self.device)
 
     # ----- Public Method
-    def run_train_batch(self, bidx: int) -> None:
+    def run_train_batch(self) -> None:
         '''
         Execute one training batch.
 
@@ -148,8 +149,6 @@ class BatchExecutionEngine:
         consumes values written into RuntimeState after this method
         completes.
         '''
-
-        print(f'Training Batch_{bidx}', end='\r', flush=True)
 
         # ----- batch start
         # get new batch and parse into x, y_dict and domain
@@ -357,7 +356,7 @@ class BatchExecutionEngine:
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
         # call loss function
-        total, perhead = engine_core.multihead_loss(
+        total, perhead = batch.multihead_loss(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features

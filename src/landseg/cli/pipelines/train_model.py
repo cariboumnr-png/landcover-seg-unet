@@ -50,22 +50,22 @@ def train(config: configs.RootConfig):
     '''
 
     # init run io folder tree
-    run_paths = artifacts.ResultsPaths(f'{config.exp_root}/results')
-    run_paths.init()
+    session_paths = artifacts.ResultsPaths(f'{config.exp_root}/results')
+    session_paths.init()
 
     # save running config per run
-    ctrl = artifacts.Controller[dict](run_paths.config) # generic, no policy
+    ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
     ctrl.persist(dataclasses.asdict(config))
 
     # create a centralized main logger
-    logger = utils.Logger('main', run_paths.main_log_file)
+    logger = utils.Logger('main', session_paths.main_log_file)
 
     # collect artifacts and build dataspsec
     artifact_paths=artifacts.ArtifactPaths(f'{config.exp_root}/artifacts')
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
-        ids_domain_name=config.trainer.runtime.data.domain_ids_name,
-        vec_domain_name=config.trainer.runtime.data.domain_vec_name,
+        ids_domain_name=config.dataspecs.domain_ids_name,
+        vec_domain_name=config.dataspecs.domain_vec_name,
         print_out=True
     )
 
@@ -79,78 +79,15 @@ def train(config: configs.RootConfig):
         clamp_range=config.models.clamp_range
     )
 
-    # trainer components
-    components = session.build_engine_components(
-        data_specs=dataspecs,
-        model=model,
-        data_config=config.trainer.loader,
-        task_config=config.trainer.loss,
-        optim_config=config.trainer.optimization,
-        logger=logger,
-    )
-    # shared runtime state
-    state = session.init_state(
-        components,
-        use_amp=config.trainer.runtime.precision.use_amp,
-        device='cuda' if torch.cuda.is_available() else 'cpu'
-    )
-    # set callback up
-    for c in components.callbacks:
-        c.setup(
-            state,
-            config.trainer.runtime,
-            device='cuda' if torch.cuda.is_available() else 'cpu',
-            skip_log=False
-        )
-    # batch engine
-    engine = session.BatchExecutionEngine(
-        model=model,
-        state=state,
-        parent_map={k: v.parent_head for k, v in components.headspecs.as_dict().items()},
-        use_amp=config.trainer.runtime.precision.use_amp,
-        device='cuda' if torch.cuda.is_available() else 'cpu'
-    )
-    # trainer
-    trainer = session.MultiHeadTrainer(
-        engine=engine,
-        state=state,
-        components=components,
-        config=config.trainer.runtime,
+    # build session runner
+    runner = session.build_session_runner(
+        dataspecs,
+        model,
+        config.session,
+        session_paths,
         device='cuda' if torch.cuda.is_available() else 'cpu',
-        use_amp=config.trainer.runtime.precision.use_amp,
-        grad_clip_norm=config.trainer.runtime.optimization.grad_clip_norm,
-        log_every=config.trainer.runtime.schedule.log_every,
-    )
-    # evaluator
-    evaluator = session.MultiHeadEvaluator(
-        engine=engine,
-        state=state,
-        components=components,
-        config=config.trainer.runtime,
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        track_mode=config.trainer.runtime.monitor.track_mode,
-        track_head_name=config.trainer.runtime.monitor.track_head_name,
-        min_delta=config.trainer.runtime.schedule.min_delta
-    )
-    # get phases
-    phases = [
-        session.Phase(
-            name=cfg.name,
-            num_epochs=cfg.num_epochs,
-            heads=cfg.heads,
-            logit_adjust=cfg.logit_adjust,
-            lr_scale=cfg.lr_scale,
-            finished=False
-        ) for cfg in config.runner.phases
-    ]
-
-    # build controller and run
-    runner = session.Runner(
-        trainer=trainer,
-        evaluator=evaluator,
-        schedule=config.trainer.runtime.schedule,
-        phases=phases,
-        run_paths=run_paths,
         logger=logger
     )
+
+    # run session
     runner.fit()

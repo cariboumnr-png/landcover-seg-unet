@@ -34,6 +34,7 @@ __all__ = [
     # classes
     # functions
     # types
+    'CallBacksLike',
     'SpecsLike',
     'CompositeLossLike',
     'ConfusionMatrixLike',
@@ -43,20 +44,23 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
-
-    from .engine_comps import CompositeLossLike, ConfusionMatrixLike, SpecsLike, ComponentsLike
-    from .engine_config import ConfigLike
-    from .engine_state import StateLike
+    from .callbacks import CallBacksLike
+    from .comps import CompositeLossLike, ConfusionMatrixLike, SpecsLike, ComponentsLike
+    from .config import ConfigLike
+    from .state import StateLike
 
 def __getattr__(name: str):
 
+    if name in {'CallBacksLike'}:
+        return getattr(importlib.import_module('.callbacks', __package__), name)
+
     if name in {'CompositeLossLike', 'ConfusionMatrixLike', 'SpecsLike', 'ComponentsLike'}:
-        return getattr(importlib.import_module('.engine_comps', __package__), name)
+        return getattr(importlib.import_module('.comps', __package__), name)
 
     if name in {'ConfigLike'}:
-        return getattr(importlib.import_module('.engine_config', __package__), name)
+        return getattr(importlib.import_module('.config', __package__), name)
 
     if name in {'StateLike'}:
-        return getattr(importlib.import_module('.engine_state', __package__), name)
+        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

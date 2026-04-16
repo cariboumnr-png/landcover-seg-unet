@@ -37,7 +37,7 @@ __all__ = [
     'LossConfig',
     'OptimConfig',
     'RuntimeConfig',
-    'TrainerCfg',
+    'ComponentsCfg',
     'RunnerCfg',
     'RootConfig',
     # functions
@@ -52,7 +52,7 @@ if typing.TYPE_CHECKING:
         LossConfig,
         OptimConfig,
         RuntimeConfig,
-        TrainerCfg,
+        ComponentsCfg,
         RunnerCfg,
         RootConfig,
     )

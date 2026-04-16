@@ -19,48 +19,47 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-many-public-methods
-# pylint: disable=unused-argument
-'''Base class for trainer callbacks.'''
+# pylint: disable=too-few-public-methods
 
-# local imports
-import landseg.session.common as common
-import landseg.utils as utils
+'''
+Callback classes protocols
+'''
 
-class Callback:
-    '''Base class for callbacks; subclass to implement behaviors.'''
+# standard imports
+from __future__ import annotations
+import typing
 
-    def __init__(self, logger: utils.Logger):
-        self._state: common.StateLike | None = None
-        self._config: common.ConfigLike | None = None
-        self._device: str | None
-        self.skip_log = False
-        self.train_logger = logger.get_child('train')
-        self.valdn_logger = logger.get_child('valdn')
+# ----------------------------------callbacks----------------------------------
+@typing.runtime_checkable
+class CallBacksLike(typing.Protocol):
+    @property
+    def train(self) -> _TrainCallbackLike:...
+    @property
+    def validate(self) -> _ValCallbackLike:...
+    @property
+    def infer(self) -> _InferCallbackLike:...
+    @property
+    def logging(self) -> _LoggingCallbackLike:...
+    @property
+    def progress(self) -> _ProgressCallbackLike:...
+    def __iter__(self) -> typing.Iterator[_CallBackBaseLike]: ...
 
-    def setup(
-        self,
-        state: common.StateLike,
-        config: common.ConfigLike,
-        *,
-        device: str,
-        skip_log: bool
-    ) -> None:
-        self._state = state
-        self._config = config
-        self._device = device
-        self.skip_log = skip_log
+@typing.runtime_checkable
+class _CallBackBaseLike(typing.Protocol):
+    def setup(self, state, config, *, device, skip_log: bool) -> None: ...
 
-    def log_train(self, level: str, message: str) -> None:
-        '''Centralized callback logging'''
-        self.train_logger.log(level, message, self.skip_log)
+@typing.runtime_checkable
+class _ProgressCallbackLike(typing.Protocol):
+    def on_train_epoch_begin(self, epoch: int) -> None: ...
+    def on_train_batch_end(self) -> None: ...
+    def on_train_epoch_end(self) -> None: ...
+    def on_validation_begin(self) -> None: ...
+    def on_validation_end(self) -> None: ...
 
-    def log_valdn(self, level: str, message: str) -> None:
-        '''Centralized callback logging'''
-        self.valdn_logger.log(level, message, self.skip_log)
-
-    # -----------------------------training phase-----------------------------
+@typing.runtime_checkable
+class _TrainCallbackLike(typing.Protocol):
     def on_train_epoch_begin(self, epoch: int) -> None: ...
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None: ...
     def on_train_batch_forward(self) -> None: ...
@@ -71,35 +70,28 @@ class Callback:
     def on_train_batch_end(self) -> None: ...
     def on_train_epoch_end(self) -> None: ...
 
-    # ----------------------------validation phase----------------------------
+@typing.runtime_checkable
+class _ValCallbackLike(typing.Protocol):
     def on_validation_begin(self) -> None: ...
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None: ...
     def on_validation_batch_forward(self) -> None: ...
     def on_validation_batch_end(self) -> None: ...
     def on_validation_end(self) -> None: ...
 
-    # -----------------------------inference phase-----------------------------
+@typing.runtime_checkable
+class _InferCallbackLike(typing.Protocol):
     def on_inference_begin(self) -> None: ...
     def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None: ...
     def on_inference_batch_forward(self) -> None: ...
     def on_inference_batch_end(self) -> None: ...
     def on_inference_end(self, out_dir: str) -> None: ...
 
-    # -------------------------convenience properties-------------------------
-    @property
-    def state(self) -> common.StateLike:
-        if self._state is None:
-            raise RuntimeError('Runtime State accessed before setup.')
-        return self._state
-
-    @property
-    def config(self) -> common.ConfigLike:
-        if self._config is None:
-            raise RuntimeError('Engine config accessed before setup.')
-        return self._config\
-
-    @property
-    def device(self) -> str:
-        if self._device is None:
-            raise RuntimeError('Engine config accessed before setup.')
-        return self._device
+@typing.runtime_checkable
+class _LoggingCallbackLike(typing.Protocol):
+    def on_train_epoch_begin(self, epoch: int) -> None: ...
+    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None: ...
+    def on_train_batch_end(self) -> None: ...
+    def on_train_epoch_end(self) -> None: ...
+    def on_validation_begin(self) -> None: ...
+    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None: ...
+    def on_validation_end(self) -> None: ...

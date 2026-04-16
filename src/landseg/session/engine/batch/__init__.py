@@ -19,37 +19,36 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-'''Inference phase callback class.'''
+'''
+Top-level namespace for `landseg.session.engine.core`.
 
-# local imports
-import landseg.session.components.callback as callback
-import landseg.session.engine.core as engine_core
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
-class InferCallback(callback.Callback):
-    '''Inference: parse -> forward -> collect outputs (optional).'''
+from __future__ import annotations
+import importlib
+import typing
 
-    def on_inference_begin(self) -> None:
-        # reset infer outputs
-        self.state.epoch_sum.infer_ctx.maps.clear()
+__all__ = [
+    # classes
+    'BatchExecutionEngine',
+    # functions
+    'multihead_loss',
+]
 
-    def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch ctx
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
+# for static check
+if typing.TYPE_CHECKING:
+    from .executor import BatchExecutionEngine
+    from .loss import multihead_loss
 
-    def on_inference_batch_forward(self) -> None: ...
 
-    def on_inference_batch_end(self) -> None: ...
+def __getattr__(name: str):
 
-    def on_inference_end(self, out_dir: str) -> None:
-        # stitch all blocks together and output a preview
-        # only if the patch grid is of valid shape, e.e, non-zero dims
-        if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
-            engine_core.export_previews(
-                self.state.epoch_sum.infer_ctx.maps,
-                out_dir,
-                map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
-                heads=[self.config.monitor.track_head_name] # as list
-            )
+    if name in {'BatchExecutionEngine'}:
+        return getattr(importlib.import_module('.executor', __package__), name)
+
+    if name in {'multihead_loss'}:
+        return getattr(importlib.import_module('.loss', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

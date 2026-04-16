@@ -20,42 +20,33 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
-'''Progress increments callback class.'''
+
+'''Validation phase callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 
-class ProgressCallback(callback.Callback):
-    '''Progress tracker.'''
+class ValCallback(callbacks.Callback):
+    '''Validation pipeline: parse - forward - compute metrics.'''
 
-    def on_train_epoch_begin(self, epoch: int) -> None:
-        self.state.progress.epoch = epoch   # get current epoch
-        self.state.progress.epoch_step = 0  # reset epoch step
+    def on_validation_begin(self) -> None:
+        # reset per-head confusion matrix from active heads
+        assert self.state.heads.active_hmetrics is not None
+        for metrics_mod in self.state.heads.active_hmetrics.values():
+            metrics_mod.reset(self.device)
+        # reset validation loss and logs
+        self.state.epoch_sum.val_loss = 0.0 # currently not in use
+        self.state.epoch_sum.val_logs.head_metrics.clear()
+        self.state.epoch_sum.val_logs.head_metrics_str.clear()
 
-    def on_train_batch_end(self) -> None:
-        self.state.progress.epoch_step += 1
-        self.state.progress.global_step += 1
+    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
+        # refresh batch context with new input batch (from validation data)
+        self.state.batch_cxt.refresh(bidx, batch)
+        # refresh batch results
+        self.state.batch_out.refresh(bidx)
 
-    def on_train_epoch_end(self) -> None:
-        # increment epoch counter
-        epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.val_every
-        # already at max epoch
-        if epoch == self.config.schedule.max_epoch:
-            return
-        # if no validation after training, increment after this hook
-        if eval_interval is None or epoch % eval_interval != 0:
-            self.state.progress.epoch += 1
+    def on_validation_batch_forward(self) -> None: ...
 
-    def on_validation_begin(self) -> None: ...
+    def on_validation_batch_end(self) -> None: ...
 
-    def on_validation_end(self) -> None:
-        # increment epoch counter
-        epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.val_every
-        # already at max epoch
-        if epoch == self.config.schedule.max_epoch:
-            return
-        # if validation is done, increment after this hook
-        if eval_interval is not None and epoch % eval_interval == 0:
-            self.state.progress.epoch += 1
+    def on_validation_end(self) -> None: ...

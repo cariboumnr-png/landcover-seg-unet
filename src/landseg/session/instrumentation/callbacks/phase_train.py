@@ -19,46 +19,39 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.engine.core`.
+# pylint: disable=protected-access
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''Train phase callback class.'''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.session.instrumentation.callbacks as callbacks
 
-__all__ = [
-    # classes
-    'BatchExecutionEngine',
-    'RuntimeState',
-    # functions
-    'export_previews',
-    'init_state',
-    'multihead_loss',
-]
+class TrainCallback(callbacks.Callback):
+    '''Training: parse - forward - compute loss - backward - step.'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .batch_exe import BatchExecutionEngine
-    from .loss import multihead_loss
-    from .preview import export_previews
-    from .state import RuntimeState, init_state
+    def on_train_epoch_begin(self, epoch: int) -> None:
+        # reset train loss and logs
+        self.state.epoch_sum.train_loss = 0.0
+        self.state.epoch_sum.train_logs.head_losses.clear()
+        self.state.epoch_sum.train_logs.head_losses_str = ''
+        self.state.epoch_sum.train_logs.updated = False
 
-def __getattr__(name: str):
+    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
+        # refresh batch context with new input batch (from training data)
+        self.state.batch_cxt.refresh(bidx, batch)
+        # refresh batch results
+        self.state.batch_out.refresh(bidx)
 
-    if name in {'BatchExecutionEngine'}:
-        return getattr(importlib.import_module('.batch_exe', __package__), name)
+    def on_train_batch_forward(self) -> None: ...
 
-    if name in {'multihead_loss'}:
-        return getattr(importlib.import_module('.loss', __package__), name)
+    def on_train_batch_compute_loss(self) -> None: ...
 
-    if name in {'export_previews'}:
-        return getattr(importlib.import_module('.preview', __package__), name)
+    def on_train_batch_end(self) -> None: ...
 
-    if name in {'RuntimeState', 'init_state'}:
-        return getattr(importlib.import_module('.state', __package__), name)
+    def on_train_backward(self) -> None: ...
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    def on_train_before_optimizer_step(self) -> None: ...
+
+    def on_train_optimizer_step(self) -> None: ...
+
+    def on_train_epoch_end(self) -> None: ...
