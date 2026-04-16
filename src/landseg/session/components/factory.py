@@ -34,7 +34,7 @@ import landseg.session.components.task as task
 import landseg.utils as utils
 
 # --------------------------------private  type--------------------------------
-class _ComponentsConfig(typing.Protocol):
+class ComponentsConfig(typing.Protocol):
     '''doc'''
     @property
     def loader_cfg(self) -> data.LoaderConfig: ...
@@ -55,10 +55,10 @@ class _SessionComponents:
 
 # -------------------------------Public Function-------------------------------
 def build_session_components(
-    *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    config: _ComponentsConfig,
+    config: ComponentsConfig,
+    *,
     logger: utils.Logger,
  ) -> _SessionComponents:
     '''Builder session components from data shape and configs.'''
