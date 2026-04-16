@@ -59,6 +59,8 @@ class EngineBase:
         engine: batch.BatchExecutionEngine,
         state: common.StateLike,
         components: common.ComponentsLike,
+        callbacks: common.CallBacksLike,
+        *,
         device: str,
         **kwargs
     ):
@@ -105,8 +107,11 @@ class EngineBase:
         self.model = engine.model
         self.state = state
 
-        # engine components and configuration
+        # engine components
         self.comps = components
+
+        # callback system
+        self.callbacks = callbacks
 
         # device placement
         self.device = device
@@ -144,11 +149,6 @@ class EngineBase:
     def optimization(self):
         '''Access optimization configuration and components.'''
         return self.comps.optimization
-
-    @property
-    def callbacks(self):
-        '''Access registered callbacks.'''
-        return self.comps.callbacks
 
     # ----- head configuration helpers
     def set_head_state(
