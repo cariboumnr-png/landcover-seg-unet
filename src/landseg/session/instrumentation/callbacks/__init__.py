@@ -35,7 +35,6 @@ import typing
 __all__ = [
     # classes
     'Callback',
-    'CallbackSet',
     'LoggingCallback',
     'TrainCallback',
     'ValCallback',
@@ -48,7 +47,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import Callback
-    from .factory import CallbackSet, build_callbacks
+    from .factory import build_callbacks
     from .logging import LoggingCallback
     from .phase_infer import InferCallback
     from .phase_train import TrainCallback
@@ -60,7 +59,7 @@ def __getattr__(name: str):
     if name in {'Callback'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'CallbackSet', 'build_callbacks'}:
+    if name in {'build_callbacks'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     if name in {'LoggingCallback'}:
