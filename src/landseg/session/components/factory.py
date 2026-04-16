@@ -21,13 +21,12 @@
 
 # pylint: disable=missing-function-docstring
 
-'''Factory to build the trainer components.'''
+'''Factory to build the session-owned components.'''
 
 # standard imports
 import dataclasses
 # local imports
 import landseg.core as core
-import landseg.session.components.callback as callback
 import landseg.session.components.data as data
 import landseg.session.components.optim as optim
 import landseg.session.components.task as task
@@ -35,9 +34,8 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class EngineComponents:
+class SessionComponents:
     '''Collection of trainer components.'''
-    callbacks: callback.CallbackSet
     dataloaders: data.DataLoaders
     headspecs: task.HeadSpecs
     headlosses: task.HeadLosses
@@ -45,7 +43,7 @@ class EngineComponents:
     optimization: optim.Optimization
 
 # -------------------------------Public Function-------------------------------
-def build_engine_components(
+def build_session_components(
     *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
@@ -53,7 +51,7 @@ def build_engine_components(
     task_config: task.TaskConfig,
     optim_config: optim.OptimConfig,
     logger: utils.Logger,
- ) -> EngineComponents:
+ ) -> SessionComponents:
     '''Builder engine components from data shape and configs.'''
 
     # data
@@ -86,15 +84,11 @@ def build_engine_components(
     # optimizer and scheduler
     optimization = optim.build_optimization(model, optim_config)
 
-    # callback system
-    callbacks = callback.build_callbacks(logger)
-
     # collect components
-    return EngineComponents(
+    return SessionComponents(
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
         optimization=optimization,
-        callbacks=callbacks,
     )

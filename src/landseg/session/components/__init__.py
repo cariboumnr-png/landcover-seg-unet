@@ -33,16 +33,16 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_engine_components',
+    'build_session_components',
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_engine_components
+    from .factory import build_session_components
 
 def __getattr__(name: str):
 
-    if name in {'build_engine_components'}:
+    if name in {'build_session_components'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

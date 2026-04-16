@@ -80,7 +80,7 @@ def train(config: configs.RootConfig):
     )
 
     # trainer components
-    components = session.build_engine_components(
+    components = session.build_session_components(
         data_specs=dataspecs,
         model=model,
         data_config=config.trainer.loader,

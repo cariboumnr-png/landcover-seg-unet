@@ -38,7 +38,7 @@ __all__ = [
     'Phase',
     'Runner',
     # functions
-    'build_engine_components',
+    'build_session_components',
     # types
     'ConfigLike',
 ]
@@ -46,7 +46,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .common import ConfigLike
-    from .components import build_engine_components
+    from .components import build_session_components
     from .engine import BatchExecutionEngine, MultiHeadEvaluator, MultiHeadTrainer
     from .runner import Phase, Runner
 
