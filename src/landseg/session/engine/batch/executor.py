@@ -55,7 +55,7 @@ import torch
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.engine.core as engine_core
+import landseg.session.engine.batch as batch
 
 class BatchExecutionEngine:
     '''
@@ -358,7 +358,7 @@ class BatchExecutionEngine:
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
         # call loss function
-        total, perhead = engine_core.multihead_loss(
+        total, perhead = batch.multihead_loss(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features

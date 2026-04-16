@@ -32,7 +32,7 @@ execution mechanics to a shared execution core.
 import copy
 # local imports
 import landseg.session.common as common
-import landseg.session.engine.core as engine_core
+import landseg.session.engine.batch as batch
 
 class EngineBase:
     '''
@@ -56,7 +56,7 @@ class EngineBase:
 
     def __init__(
         self,
-        engine: engine_core.BatchExecutionEngine,
+        engine: batch.BatchExecutionEngine,
         state: common.StateLike,
         components: common.ComponentsLike,
         device: str,

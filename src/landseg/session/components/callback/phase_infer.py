@@ -24,7 +24,7 @@
 
 # local imports
 import landseg.session.components.callback as callback
-import landseg.session.engine.core as engine_core
+import landseg.session.engine.batch as batch
 
 class InferCallback(callback.Callback):
     '''Inference: parse -> forward -> collect outputs (optional).'''
@@ -47,7 +47,7 @@ class InferCallback(callback.Callback):
         # stitch all blocks together and output a preview
         # only if the patch grid is of valid shape, e.e, non-zero dims
         if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
-            engine_core.export_previews(
+            batch.export_previews(
                 self.state.epoch_sum.infer_ctx.maps,
                 out_dir,
                 map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,

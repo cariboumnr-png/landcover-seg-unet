@@ -37,14 +37,13 @@ __all__ = [
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
     # functions
-    'init_state'
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .base import EngineBase
-    from .core import BatchExecutionEngine, init_state
+    from .batch import BatchExecutionEngine
     from .evaluator import MultiHeadEvaluator
     from .trainer import MultiHeadTrainer
 
@@ -53,8 +52,8 @@ def __getattr__(name: str):
     if name in {'EngineBase'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'BatchExecutionEngine', 'init_state'}:
-        return getattr(importlib.import_module('.core', __package__), name)
+    if name in {'BatchExecutionEngine'}:
+        return getattr(importlib.import_module('.batch', __package__), name)
 
     if name in {'MultiHeadEvaluator'}:
         return getattr(importlib.import_module('.evaluator', __package__), name)
