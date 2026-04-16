@@ -1,113 +1,123 @@
 # ADR-0020: Dedicated Evaluator Engine and Policy Model
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-15
 
 ## Context
 
-Following ADR-0019, batch-level execution mechanics have been extracted into a
-shared, policy-agnostic execution core. `MultiHeadTrainer` now focuses purely on
-training policy and epoch-level orchestration.
+Following ADR-0019, batch-level execution mechanics were extracted into a shared,
+policy-agnostic execution core. This refactor reduced duplication and clarified
+execution semantics, but left evaluation logic either embedded in
+`MultiHeadTrainer` or implicitly coupled to training-centric assumptions.
 
-The codebase requires a **non-training session engine** that can:
-
-- run validation-only or evaluation-only workflows
-- share execution correctness with training
-- interpret batch results without optimizer or gradient semantics
-- provide a stable anchor for metric aggregation and logging
-
-Currently, evaluation behavior is either:
-
-- embedded in `MultiHeadTrainer`, or
-- implicitly coupled to training-centric assumptions
-
-This coupling obscures intent and complicates logging, reuse, and extension.
+As training and evaluation workflows continued to diverge, this coupling
+obscured intent, complicated logging, and limited reuse of evaluation-only
+workflows such as validation-only runs, inference, or benchmarking.
 
 ## Decision
 
-We will introduce a **Dedicated Evaluator Engine** that defines evaluation policy
-on top of the shared execution core, analogous to how `MultiHeadTrainer` defines
-training policy.
+### Dedicated Evaluator Engine
 
-### 1. Evaluator as a policy layer
+The system now **adopts a Dedicated Evaluator Engine** that defines evaluation
+policy on top of the shared execution core, analogous to how
+`MultiHeadTrainer` defines training policy.
 
-The evaluator will:
+The evaluator:
 
-- orchestrate epoch-level evaluation workflows
-- control evaluation-specific head configuration
-- aggregate batch-level metrics into epoch summaries
-- manage evaluation-specific runtime state interpretation
-- emit lifecycle callbacks as semantic markers
+- Orchestrates epoch-level evaluation and inference workflows
+- Controls evaluation-time head configuration
+- Aggregates batch-level outputs into epoch summaries
+- Interprets runtime state without training assumptions
+- Emits lifecycle callbacks as semantic markers for logging and observability
 
-The evaluator will **not**:
+The evaluator explicitly does **not**:
 
-- own batch execution logic
-- perform backward passes or optimization steps
-- manage training state or early stopping logic
+- Own batch execution logic
+- Perform backward passes or optimization
+- Manage training state, early stopping, or schedules
 
-### 2. Shared execution, divergent policy
+### Shared execution, divergent policy
 
-Both trainer and evaluator will:
+Both trainer and evaluator:
 
-- consume the same execution core
-- operate on the same `RuntimeState` structure
-- emit callbacks with phase-specific semantics
+- Consume the same shared `BatchExecutionEngine`
+- Operate on the same unified runtime `State`
+- Share component contracts and callback wiring
 
-They will differ only in **policy interpretation**, not execution mechanics.
+They differ **only** in policy interpretation and orchestration, not
+execution mechanics.
 
-### 3. Logging consolidation point
+### Logging consolidation
 
-With trainer and evaluator symmetry established, logging will be:
+With trainer/evaluator symmetry established:
 
-- redefined as a **policy-level concern**
-- implemented consistently across trainer and evaluator
-- driven by lifecycle callbacks and finalized epoch summaries
+- Logging is treated as a **policy-level concern**
+- Callbacks observe lifecycle signals emitted by engines
+- Epoch summaries are finalized by policy layers, not execution code
 
-This explicitly resolves the logging disruption introduced during ADR-0019 by
-providing a single architectural layer where logging semantics belong.
+This resolves the logging ambiguity introduced during ADR-0019 by providing
+a single architectural layer where logging semantics belong.
 
-## Explicit Non-Decisions
+## Results
 
-This ADR does **not**:
+The following outcomes have been achieved:
 
-- define a public CLI or UX for evaluation
-- mandate specific logging backends or formats
-- redesign callback interfaces
-- define ranking, comparison, or benchmarking workflows
+- Evaluation logic has been fully removed from `MultiHeadTrainer`
+- A new `MultiHeadEvaluator` engine exists as a first-class policy layer
+- Execution core, runtime state, and component boundaries are unified
+- Callbacks and logging now depend on policy-emitted lifecycle signals
+- The Runner remains training-focused but is evaluator-ready without refactor
 
-Those concerns may be addressed in future ADRs as needed.
+This work establishes a clean and extensible architectural foundation for
+evaluation-only sessions and future workflows.
+
+## Non-Goals (Confirmed)
+
+This ADR did **not** introduce:
+
+- A public CLI or UX for evaluation sessions
+- Prescriptive logging backends or formats
+- Callback interface redesign
+- Ranking, benchmarking, or comparison workflows
+
+These remain intentionally out of scope.
 
 ## Consequences
 
 ### Positive
 
 - Clear separation between training and evaluation concerns
-- Elimination of training-centric assumptions in evaluation code
-- Natural, centralized ownership for logging and metric aggregation
-- Improved architectural symmetry and clarity
+- Elimination of training-centric assumptions from evaluation
+- Centralized ownership of logging and metric aggregation
+- Improved architectural symmetry and long-term maintainability
 
-### Costs
+### Trade-offs
 
 - Additional engine abstraction
-- Minor duplication of orchestration logic across trainer and evaluator
-- Initial implementation overhead
+- Some duplication of orchestration structure between trainer and evaluator
 
-### Risks
+These costs were deemed acceptable given the clarity gained.
 
-- Over-aligning evaluator policy too closely with trainer abstractions
-- Allowing evaluator scope to grow beyond evaluation concerns
+## Current State
 
-## Follow-up Work
+The `Runner` currently functions as an end-to-end **training orchestration
+runner**. Evaluation capability is now architecturally enabled but will be
+explicitly integrated in subsequent work without restructuring existing engines.
 
-- Implement evaluator engine using shared execution core
-- Refactor existing validation flows to use evaluator
-- Reintroduce and consolidate logging at the policy layer
-- Document lifecycle expectations for trainer vs evaluator
+## Next ADRs
+
+Per ADR-0018, this ADR is followed by:
+
+- **ADR-0021: Session Component and Runtime-State Boundaries**
+
+ADR-0021 will formalize component ownership, runtime-state lifetimes, and
+session-level API boundaries building on the trainer/evaluator split.
 
 ## Related Code Areas
 
 - `session/engine/core/`
+- `session/engine/base.py`
 - `session/engine/trainer.py`
-- `session/engine/evaluator.py` (new)
+- `session/engine/evaluator.py`
 - `session/components/callback/*`
 - `session/runner/runner.py`
