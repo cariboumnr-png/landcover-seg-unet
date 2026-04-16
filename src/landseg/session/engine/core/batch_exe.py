@@ -54,6 +54,7 @@ import contextlib
 import torch
 # local imports
 import landseg.core as core
+import landseg.session.common as common
 import landseg.session.engine.core as engine_core
 
 class BatchExecutionEngine:
@@ -91,7 +92,7 @@ class BatchExecutionEngine:
         self,
         *,
         model: core.MultiheadModelLike,
-        state: engine_core.RuntimeState,
+        state: common.StateLike,
         parent_map: dict[str, str | None],
         use_amp: bool,
         device: str,

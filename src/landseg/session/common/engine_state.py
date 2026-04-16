@@ -30,7 +30,8 @@ Callback-facing trainer runtime state protocols.
 from __future__ import annotations
 import typing
 # local imports
-import landseg.session.common.engine_comps as engine_comps
+import landseg.session.common as common
+import landseg.session.common.alias as alias
 
 if typing.TYPE_CHECKING:
     import torch
@@ -40,10 +41,10 @@ if typing.TYPE_CHECKING:
 class StateLike(typing.Protocol):
     progress: _Progress
     heads: _Heads
-    batch_cxt: _BatchCtx
-    batch_out: _BatchOut
-    epoch_sum: _Epoch
-    metrics: _Metrics
+    batch_cxt: _BatchContex
+    batch_out: _BatchOutput
+    epoch_sum: _EpochSummary
+    metrics: _MetricsTracker
     optim: _OptimState
 
 # ----- .progress
@@ -57,15 +58,15 @@ class _Heads(typing.Protocol):
     all_heads: list[str]
     active_heads: list[str] | None
     frozen_heads: list[str] | None
-    active_hspecs: dict[str, engine_comps.SpecsLike] | None
-    active_hloss: dict[str, engine_comps.CompositeLossLike] | None
-    active_hmetrics: dict[str, engine_comps.ConfusionMatrixLike] | None
+    active_hspecs: dict[str, common.SpecsLike] | None
+    active_hloss: dict[str, common.CompositeLossLike] | None
+    active_hmetrics: dict[str, common.ConfusionMatrixLike] | None
 
 # ----- .batch_ctx (context)
-class _BatchCtx(typing.Protocol):
+class _BatchContex(typing.Protocol):
     bidx: int
     pidx_start: int
-    batch: tuple['torch.Tensor', dict, dict] | None
+    batch: alias.DatasetItem | None
     batch_size_full: int
     x: 'torch.Tensor'
     y_dict: dict[str, 'torch.Tensor']
@@ -73,7 +74,7 @@ class _BatchCtx(typing.Protocol):
     def refresh(self, bidx: int, batch: tuple) -> None: ...
 
 # ----- .batch_out (output)
-class _BatchOut(typing.Protocol):
+class _BatchOutput(typing.Protocol):
     bdix: int
     preds: dict[str, 'torch.Tensor']
     total_loss: 'torch.Tensor'
@@ -81,7 +82,7 @@ class _BatchOut(typing.Protocol):
     def refresh(self, bidx) -> None: ...
 
 # ----- .epoch_sum (summary)
-class _Epoch(typing.Protocol):
+class _EpochSummary(typing.Protocol):
     train_loss: float
     val_loss: float
     train_logs: _TrainLogs
@@ -105,7 +106,7 @@ class _InferContext(typing.Protocol):
     maps: dict[str, dict[tuple[int, int], torch.Tensor]]
 
 # ----- .metrics
-class _Metrics(typing.Protocol):
+class _MetricsTracker(typing.Protocol):
     last_value: float
     curr_value: float
     best_value: float

@@ -57,7 +57,7 @@ class EngineBase:
     def __init__(
         self,
         engine: engine_core.BatchExecutionEngine,
-        state: engine_core.RuntimeState,
+        state: common.StateLike,
         components: common.ComponentsLike,
         device: str,
         **kwargs
