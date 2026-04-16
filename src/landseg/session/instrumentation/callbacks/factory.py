@@ -37,6 +37,9 @@ class _CallbackSet:
     logging: callbacks.LoggingCallback
     progress: callbacks.ProgressCallback
 
+    def __iter__(self):
+        return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
+
 def build_callbacks(
     state: common.StateLike,
     config: common.ConfigLike,
