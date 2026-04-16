@@ -31,6 +31,7 @@ import typing
 
 class PhaseLike(typing.Protocol):
     '''Training phase container'''
+    finished: bool = False
     @property
     def name(self)-> str: ...
     @property
@@ -42,7 +43,6 @@ class PhaseLike(typing.Protocol):
     @property
     def lr_scale(self)-> float: ...
     def as_dict(self) -> dict[str, typing.Any]: ...
-    finished: bool = False
 
 class HeadsConfigLike(typing.Protocol):
     '''Shape of the heads configuration container.'''

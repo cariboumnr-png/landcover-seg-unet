@@ -37,11 +37,11 @@ import landseg.utils as utils
 class ComponentsConfig(typing.Protocol):
     '''doc'''
     @property
-    def loader_cfg(self) -> data.LoaderConfig: ...
+    def loader(self) -> data.LoaderConfig: ...
     @property
-    def task_cfg(self) -> task.TaskConfig: ...
+    def task(self) -> task.TaskConfig: ...
     @property
-    def optim_cfg(self) -> optim.OptimConfig: ...
+    def optimization(self) -> optim.OptimConfig: ...
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -66,20 +66,20 @@ def build_session_components(
     # data loader
     data_loaders = data.build_dataloaders(
         data_specs,
-        config.loader_cfg,
+        config.loader,
         logger=logger,
     )
 
     # task - heads specifications
     headspecs = task.build_headspecs(
         data_specs,
-        alpha_fn=config.task_cfg.alpha_fn,
-        en_beta=config.task_cfg.en_beta
+        alpha_fn=config.task.alpha_fn,
+        en_beta=config.task.en_beta
     )
     # task - heads loss modules
     headlosses = task.build_headlosses(
         headspecs,
-        config=config.task_cfg,
+        config=config.task,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
@@ -90,7 +90,7 @@ def build_session_components(
     )
 
     # optimizer and scheduler
-    optimization = optim.build_optimization(model, config.optim_cfg)
+    optimization = optim.build_optimization(model, config.optimization)
 
     # collect components
     return _SessionComponents(

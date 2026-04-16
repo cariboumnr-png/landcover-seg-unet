@@ -32,36 +32,19 @@ import typing
 
 __all__ = [
     # classes
-    'BatchExecutionEngine',
-    'MultiHeadEvaluator',
-    'MultiHeadTrainer',
-    'PhaseLike',
-    'Runner',
     # functions
-    'build_session_components',
+    'build_session_runner',
     # types
-    'ConfigLike',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import ConfigLike
-    from .components import build_session_components
-    from .engine import BatchExecutionEngine, MultiHeadEvaluator, MultiHeadTrainer
-    from .runner import PhaseLike, Runner
+    from .factory import build_session_runner
+
 
 def __getattr__(name: str):
 
-    if name in {'ConfigLike'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'build_engine_components',}:
-        return getattr(importlib.import_module('.components', __package__), name)
-
-    if name in {'BatchExecutionEngine', 'MultiHeadEvaluator', 'MultiHeadTrainer'}:
-        return getattr(importlib.import_module('.engine', __package__), name)
-
-    if name in {'Phase', 'Runner'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+    if name in {'build_session_runner',}:
+        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

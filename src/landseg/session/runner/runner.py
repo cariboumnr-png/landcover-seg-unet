@@ -65,7 +65,7 @@ class Runner:
         trainer: engine.MultiHeadTrainer,
         evaluator: engine.MultiHeadEvaluator,
         schedule: _RunnerScheduleShape,
-        phases: list[runner.PhaseLike],
+        phases: typing.Sequence[runner.PhaseLike],
         paths: artifacts.ResultsPaths,
         logger: utils.Logger,
     ):

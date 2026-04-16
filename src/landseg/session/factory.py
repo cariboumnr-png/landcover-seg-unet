@@ -34,9 +34,9 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.components as components
+import landseg.session.components as comps
 import landseg.session.engine as engine
-import landseg.session.instrumentation as instrumentation
+import landseg.session.instrumentation as instrument
 import landseg.session.runner as runner
 import landseg.session.state as state
 import landseg.utils as utils
@@ -45,11 +45,11 @@ import landseg.utils as utils
 class _SessionConfig(typing.Protocol):
     '''doc'''
     @property
-    def comps(self) -> components.ComponentsConfig: ...
+    def components(self) -> comps.ComponentsConfig: ...
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def phases(self) -> list[runner.PhaseLike]: ...
+    def phases(self) -> typing.Sequence[runner.PhaseLike]: ...
 
 def build_session_runner(
     dataspecs: core.DataSpecs,
@@ -72,10 +72,10 @@ def build_session_runner(
     '''
 
     # build session components
-    session_components = components.build_session_components(
+    session_components = comps.build_session_components(
         dataspecs,
         model,
-        config.comps,
+        config.components,
         logger=logger,
     )
 
@@ -87,7 +87,7 @@ def build_session_runner(
     )
 
     # build callbacks
-    callbacks = instrumentation.build_callbacks(
+    callbacks = instrument.build_callbacks(
         runtime_state, # type: ignore
         config.runtime,
         logger,
