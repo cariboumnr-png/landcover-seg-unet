@@ -25,6 +25,7 @@
 
 # standard imports
 import dataclasses
+import typing
 # local imports
 import landseg.core as core
 import landseg.session.components.data as data
@@ -32,9 +33,19 @@ import landseg.session.components.optim as optim
 import landseg.session.components.task as task
 import landseg.utils as utils
 
-# ------------------------------Public  Dataclass------------------------------
+# --------------------------------private  type--------------------------------
+class _ComponentsConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def loader_cfg(self) -> data.LoaderConfig: ...
+    @property
+    def task_cfg(self) -> task.TaskConfig: ...
+    @property
+    def optim_cfg(self) -> optim.OptimConfig: ...
+
+# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class SessionComponents:
+class _SessionComponents:
     '''Collection of trainer components.'''
     dataloaders: data.DataLoaders
     headspecs: task.HeadSpecs
@@ -47,45 +58,42 @@ def build_session_components(
     *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    data_config: data.LoaderConfig,
-    task_config: task.TaskConfig,
-    optim_config: optim.OptimConfig,
+    config: _ComponentsConfig,
     logger: utils.Logger,
- ) -> SessionComponents:
-    '''Builder engine components from data shape and configs.'''
+ ) -> _SessionComponents:
+    '''Builder session components from data shape and configs.'''
 
-    # data
+    # data loader
     data_loaders = data.build_dataloaders(
         data_specs,
-        data_config,
+        config.loader_cfg,
         logger=logger,
     )
 
-    # task
-    # heads specifications
+    # task - heads specifications
     headspecs = task.build_headspecs(
         data_specs,
-        alpha_fn=task_config.alpha_fn,
-        en_beta=task_config.en_beta
+        alpha_fn=config.task_cfg.alpha_fn,
+        en_beta=config.task_cfg.en_beta
     )
-    # heads loss modules
+    # task - heads loss modules
     headlosses = task.build_headlosses(
         headspecs,
-        config=task_config,
+        config=config.task_cfg,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
-    # heads metric modules
+    # task - heads metric modules
     headmetrics = task.build_headmetrics(
         headspecs,
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
     # optimizer and scheduler
-    optimization = optim.build_optimization(model, optim_config)
+    optimization = optim.build_optimization(model, config.optim_cfg)
 
     # collect components
-    return SessionComponents(
+    return _SessionComponents(
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
