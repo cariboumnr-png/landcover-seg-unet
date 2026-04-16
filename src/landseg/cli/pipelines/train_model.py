@@ -80,7 +80,7 @@ def train(config: configs.RootConfig):
     )
 
     # trainer components
-    components = session.build_trainer_components(
+    components = session.build_engine_components(
         data_specs=dataspecs,
         model=model,
         data_config=config.trainer.loader,
@@ -94,6 +94,14 @@ def train(config: configs.RootConfig):
         use_amp=config.trainer.runtime.precision.use_amp,
         device='cuda' if torch.cuda.is_available() else 'cpu'
     )
+    # set callback up
+    for c in components.callbacks:
+        c.setup(
+            state,
+            config.trainer.runtime,
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            skip_log=False
+        )
     # batch engine
     engine = session.BatchExecutionEngine(
         model=model,
@@ -109,7 +117,20 @@ def train(config: configs.RootConfig):
         components=components,
         config=config.trainer.runtime,
         device='cuda' if torch.cuda.is_available() else 'cpu',
-        skip_log=True # no loggine
+        use_amp=config.trainer.runtime.precision.use_amp,
+        grad_clip_norm=config.trainer.runtime.optimization.grad_clip_norm,
+        log_every=config.trainer.runtime.schedule.log_every,
+    )
+    # evaluator
+    evaluator = session.MultiHeadEvaluator(
+        engine=engine,
+        state=state,
+        components=components,
+        config=config.trainer.runtime,
+        device='cuda' if torch.cuda.is_available() else 'cpu',
+        track_mode=config.trainer.runtime.monitor.track_mode,
+        track_head_name=config.trainer.runtime.monitor.track_head_name,
+        min_delta=config.trainer.runtime.schedule.min_delta
     )
     # get phases
     phases = [
@@ -124,5 +145,12 @@ def train(config: configs.RootConfig):
     ]
 
     # build controller and run
-    runner = session.Runner(trainer, phases, run_paths, logger=logger)
+    runner = session.Runner(
+        trainer=trainer,
+        evaluator=evaluator,
+        schedule=config.trainer.runtime.schedule,
+        phases=phases,
+        run_paths=run_paths,
+        logger=logger
+    )
     runner.fit()

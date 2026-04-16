@@ -33,25 +33,25 @@ import typing
 if typing.TYPE_CHECKING:
     import torch
 
-# -----------------------------trainer components-----------------------------
+# -----------------------------Engine components-----------------------------
 @typing.runtime_checkable
-class TrainerComponentsLike(typing.Protocol):
+class ComponentsLike(typing.Protocol):
     @property
-    def callbacks(self) -> CallBacksLike:...
+    def callbacks(self) -> _CallBacksLike:...
     @property
-    def dataloaders(self) -> DataLoadersLike:...
+    def dataloaders(self) -> _DataLoadersLike:...
     @property
-    def headspecs(self) -> HeadSpecsLike:...
+    def headspecs(self) -> _HeadSpecsLike:...
     @property
-    def headlosses(self) -> HeadLossesLike:...
+    def headlosses(self) -> _HeadLossesLike:...
     @property
-    def headmetrics(self) -> HeadMetricsLike:...
+    def headmetrics(self) -> _HeadMetricsLike:...
     @property
-    def optimization(self) -> OptimizationLike:...
+    def optimization(self) -> _OptimizationLike:...
 
 # ---------------------------------dataloaders---------------------------------
 @typing.runtime_checkable
-class DataLoadersLike(typing.Protocol):
+class _DataLoadersLike(typing.Protocol):
     @property
     def train(self) -> 'torch.utils.data.DataLoader':...
     @property
@@ -68,7 +68,7 @@ class _LoaderMetaLike(typing.Protocol):
 
 # ---------------------------------head  specs---------------------------------
 @typing.runtime_checkable
-class HeadSpecsLike(typing.Protocol):
+class _HeadSpecsLike(typing.Protocol):
     def __getitem__(self, key: str) -> SpecsLike: ...
     def __len__(self) -> int: ...
     def as_dict(self) -> typing.Mapping[str, SpecsLike]: ...
@@ -95,7 +95,7 @@ class SpecsLike(typing.Protocol):
 
 # ----------------------------------head loss----------------------------------
 @typing.runtime_checkable
-class HeadLossesLike(typing.Protocol):
+class _HeadLossesLike(typing.Protocol):
     def __getitem__(self, key: str) -> CompositeLossLike: ...
     def __len__(self) -> int: ...
     def as_dict(self) -> typing.Mapping[str, CompositeLossLike]: ...
@@ -108,7 +108,7 @@ class CompositeLossLike(typing.Protocol):
 
 # --------------------------------head  metrics--------------------------------
 @typing.runtime_checkable
-class HeadMetricsLike(typing.Protocol):
+class _HeadMetricsLike(typing.Protocol):
     def __getitem__(self, key: str) -> ConfusionMatrixLike: ...
     def __len__(self) -> int: ...
     def as_dict(self) -> typing.Mapping[str, ConfusionMatrixLike]: ...
@@ -126,13 +126,13 @@ class ConfusionMatrixLike(typing.Protocol):
 
 # ------------------------------------optim------------------------------------
 @typing.runtime_checkable
-class OptimizationLike(typing.Protocol):
+class _OptimizationLike(typing.Protocol):
     optimizer: torch.optim.Optimizer
     scheduler: torch.optim.lr_scheduler.LRScheduler | None
 
 # ----------------------------------callbacks----------------------------------
 @typing.runtime_checkable
-class CallBacksLike(typing.Protocol):
+class _CallBacksLike(typing.Protocol):
     @property
     def train(self) -> _TrainCallbackLike:...
     @property
@@ -147,7 +147,7 @@ class CallBacksLike(typing.Protocol):
 
 @typing.runtime_checkable
 class _CallBackBaseLike(typing.Protocol):
-    def setup(self, trainer, skip_log: bool) -> None: ...
+    def setup(self, state, config, *, device, skip_log: bool) -> None: ...
 
 @typing.runtime_checkable
 class _ProgressCallbackLike(typing.Protocol):

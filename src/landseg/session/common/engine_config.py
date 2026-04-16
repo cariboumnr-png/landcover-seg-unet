@@ -36,7 +36,7 @@ from __future__ import annotations
 import typing
 
 # ---------------------------trainer runtime config---------------------------
-class TrainerConfigShape(typing.Protocol):
+class ConfigLike(typing.Protocol):
     '''Container holding all trainer runtime configuration sections.'''
     @property
     def schedule(self) -> '_Schedule': ...

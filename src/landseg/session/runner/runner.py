@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Curriculum-based training controller for multi-phase model execution.
 
@@ -34,11 +36,19 @@ across interruptions.
 # standard imports
 import dataclasses
 import os
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.session.engine as engine
 import landseg.session.runner as runner
 import landseg.utils as utils
+
+class _RunnerScheduleShape(typing.Protocol):
+    '''doc'''
+    @property
+    def patience(self) -> int: ...
+    @property
+    def val_every(self) -> int: ...
 
 # --------------------------------Public  Class--------------------------------
 class Runner:
@@ -52,10 +62,12 @@ class Runner:
     '''
     def __init__(
         self,
+        *,
         trainer: engine.MultiHeadTrainer,
+        evaluator: engine.MultiHeadEvaluator,
+        schedule: _RunnerScheduleShape,
         phases: list[runner.Phase],
         run_paths: artifacts.ResultsPaths,
-        *,
         logger: utils.Logger,
     ):
         '''
@@ -79,6 +91,8 @@ class Runner:
 
         # parse arguments
         self.trainer = trainer
+        self.evaluator = evaluator
+        self.schedule = schedule
         self.phases = phases
         self.paths = run_paths
         self.logger = logger.get_child('phase') # a child from base logger
@@ -179,7 +193,7 @@ class Runner:
             # - patience can be None = no early stop
             # - stop when patience reached
             # - first 10 epochs not affected
-            patience = self.trainer.config.schedule.patience
+            patience = self.schedule.patience
             patience_counter = self.trainer.state.metrics.patience_n
             if patience and patience_counter >= patience and epoch >= 10:
                 self.logger.log('INFO', 'Patience limit reached, stopping')
@@ -194,12 +208,12 @@ class Runner:
             # train the current epoch
             t_logs = self.trainer.train_one_epoch(epoch)
             # validate at set interval
-            if self.trainer.config.schedule.val_every is not None and \
-                epoch % self.trainer.config.schedule.val_every == 0:
-                v_logs = self.trainer.validate()
+            if self.schedule.val_every is not None and \
+                epoch % self.schedule.val_every == 0:
+                v_logs = self.evaluator.validate()
                 # update preview if test data provided
                 if self.trainer.dataloaders.test:
-                    self.trainer.infer(self.paths.previews)
+                    self.evaluator.infer(self.paths.previews)
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
                 self._save_progress(self.paths.best_checkpoint(phase.name))

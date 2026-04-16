@@ -30,39 +30,39 @@ Callback-facing trainer runtime state protocols.
 from __future__ import annotations
 import typing
 # local imports
-import landseg.session.common.trainer_comps as trainer_comps
+import landseg.session.common.engine_comps as engine_comps
 
 if typing.TYPE_CHECKING:
     import torch
 
 # ----- Runtime state (composite)
 @typing.runtime_checkable
-class RuntimeStateLike(typing.Protocol):
-    progress: Progress
-    heads: Heads
-    batch_cxt: BatchCtx
-    batch_out: BatchOut
-    epoch_sum: Epoch
-    metrics: Metrics
-    optim: OptimState
+class StateLike(typing.Protocol):
+    progress: _Progress
+    heads: _Heads
+    batch_cxt: _BatchCtx
+    batch_out: _BatchOut
+    epoch_sum: _Epoch
+    metrics: _Metrics
+    optim: _OptimState
 
 # ----- .progress
-class Progress(typing.Protocol):
+class _Progress(typing.Protocol):
     epoch: int
     epoch_step: int
     global_step: int
 
 # ----- .heads
-class Heads(typing.Protocol):
+class _Heads(typing.Protocol):
     all_heads: list[str]
     active_heads: list[str] | None
     frozen_heads: list[str] | None
-    active_hspecs: dict[str, trainer_comps.SpecsLike] | None
-    active_hloss: dict[str, trainer_comps.CompositeLossLike] | None
-    active_hmetrics: dict[str, trainer_comps.ConfusionMatrixLike] | None
+    active_hspecs: dict[str, engine_comps.SpecsLike] | None
+    active_hloss: dict[str, engine_comps.CompositeLossLike] | None
+    active_hmetrics: dict[str, engine_comps.ConfusionMatrixLike] | None
 
 # ----- .batch_ctx (context)
-class BatchCtx(typing.Protocol):
+class _BatchCtx(typing.Protocol):
     bidx: int
     pidx_start: int
     batch: tuple['torch.Tensor', dict, dict] | None
@@ -73,7 +73,7 @@ class BatchCtx(typing.Protocol):
     def refresh(self, bidx: int, batch: tuple) -> None: ...
 
 # ----- .batch_out (output)
-class BatchOut(typing.Protocol):
+class _BatchOut(typing.Protocol):
     bdix: int
     preds: dict[str, 'torch.Tensor']
     total_loss: 'torch.Tensor'
@@ -81,7 +81,7 @@ class BatchOut(typing.Protocol):
     def refresh(self, bidx) -> None: ...
 
 # ----- .epoch_sum (summary)
-class Epoch(typing.Protocol):
+class _Epoch(typing.Protocol):
     train_loss: float
     val_loss: float
     train_logs: _TrainLogs
@@ -105,7 +105,7 @@ class _InferContext(typing.Protocol):
     maps: dict[str, dict[tuple[int, int], torch.Tensor]]
 
 # ----- .metrics
-class Metrics(typing.Protocol):
+class _Metrics(typing.Protocol):
     last_value: float
     curr_value: float
     best_value: float
@@ -113,5 +113,5 @@ class Metrics(typing.Protocol):
     patience_n: int
 
 # ----- .optim (optimization state)
-class OptimState(typing.Protocol):
+class _OptimState(typing.Protocol):
     scaler: 'torch.GradScaler'

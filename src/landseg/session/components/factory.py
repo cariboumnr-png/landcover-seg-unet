@@ -35,7 +35,7 @@ import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class TrainerComponents:
+class EngineComponents:
     '''Collection of trainer components.'''
     callbacks: callback.CallbackSet
     dataloaders: data.DataLoaders
@@ -45,7 +45,7 @@ class TrainerComponents:
     optimization: optim.Optimization
 
 # -------------------------------Public Function-------------------------------
-def build_trainer_components(
+def build_engine_components(
     *,
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
@@ -53,8 +53,8 @@ def build_trainer_components(
     task_config: task.TaskConfig,
     optim_config: optim.OptimConfig,
     logger: utils.Logger,
- ) -> TrainerComponents:
-    '''Builder trainer.'''
+ ) -> EngineComponents:
+    '''Builder engine components from data shape and configs.'''
 
     # data
     data_loaders = data.build_dataloaders(
@@ -90,7 +90,7 @@ def build_trainer_components(
     callbacks = callback.build_callbacks(logger)
 
     # collect components
-    return TrainerComponents(
+    return EngineComponents(
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
