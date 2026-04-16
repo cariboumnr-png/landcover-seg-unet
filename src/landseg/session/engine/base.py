@@ -114,7 +114,6 @@ class EngineBase:
 
         # runtime flags
         self.flags = {
-            'skip_log': kwargs.get('skip_log', False),
             'enable_train_la': kwargs.get('enable_train_la', False),
             'enable_val_la': kwargs.get('enable_val_la', False),
             'enable_test_la': kwargs.get('enable_test_la', False),
@@ -137,14 +136,14 @@ class EngineBase:
         return self.comps.headlosses
 
     @property
-    def optimization(self):
-        '''Access optimization configuration and components.'''
-        return self.comps.optimization
-
-    @property
     def headmetrics(self):
         '''Access head-specific metric modules.'''
         return self.comps.headmetrics
+
+    @property
+    def optimization(self):
+        '''Access optimization configuration and components.'''
+        return self.comps.optimization
 
     @property
     def callbacks(self):

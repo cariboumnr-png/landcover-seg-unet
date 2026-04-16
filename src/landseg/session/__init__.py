@@ -38,7 +38,7 @@ __all__ = [
     'Phase',
     'Runner',
     # functions
-    'build_trainer_components',
+    'build_engine_components',
     'init_state',
     # types
     'ConfigLike',
@@ -47,7 +47,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .common import ConfigLike
-    from .components import build_trainer_components
+    from .components import build_engine_components
     from .engine import (MultiHeadTrainer, MultiHeadEvaluator,
                          BatchExecutionEngine, init_state)
     from .runner import Phase, Runner
@@ -60,11 +60,11 @@ def __getattr__(name: str):
     if name in {'Phase', 'HeadsConifg', 'LogitAdjustScheme', 'Runner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
-    if name in {'BatchExecutionEngine', 'MultiHeadEvaluator',
-                'MultiHeadTrainer', 'init_state'}:
+    if name in {'BatchExecutionEngine', 'MultiHeadEvaluator', 'MultiHeadTrainer',
+                'init_state'}:
         return getattr(importlib.import_module('.engine', __package__), name)
 
-    if name in {'build_trainer_components',}:
+    if name in {'build_engine_components',}:
         return getattr(importlib.import_module('.components', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

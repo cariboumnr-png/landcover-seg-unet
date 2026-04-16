@@ -76,7 +76,7 @@ def overfit(config: configs.RootConfig) -> None:
     )
 
     # trainer components
-    components = session.build_trainer_components(
+    components = session.build_engine_components(
         data_specs=dataspecs,
         model=model,
         data_config=config.trainer.loader,
@@ -90,6 +90,14 @@ def overfit(config: configs.RootConfig) -> None:
         use_amp=config.trainer.runtime.precision.use_amp,
         device='cuda' if torch.cuda.is_available() else 'cpu'
     )
+    # set callback up
+    for c in components.callbacks:
+        c.setup(
+            state,
+            config.trainer.runtime,
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            skip_log=True
+        )
     # batch engine
     engine = session.BatchExecutionEngine(
         model=model,
@@ -105,7 +113,20 @@ def overfit(config: configs.RootConfig) -> None:
         components=components,
         config=config.trainer.runtime,
         device='cuda' if torch.cuda.is_available() else 'cpu',
-        skip_log=True # no loggine
+        use_amp=config.trainer.runtime.precision.use_amp,
+        grad_clip_norm=config.trainer.runtime.optimization.grad_clip_norm,
+        log_every=config.trainer.runtime.schedule.log_every,
+    )
+    # evaluator
+    evaluator = session.MultiHeadEvaluator(
+        engine=engine,
+        state=state,
+        components=components,
+        config=config.trainer.runtime,
+        device='cuda' if torch.cuda.is_available() else 'cpu',
+        track_mode=config.trainer.runtime.monitor.track_mode,
+        track_head_name=config.trainer.runtime.monitor.track_head_name,
+        min_delta=config.trainer.runtime.schedule.min_delta
     )
     monitor_head = config.trainer.runtime.monitor.track_head_name
     trainer.set_head_state([monitor_head])
@@ -115,7 +136,7 @@ def overfit(config: configs.RootConfig) -> None:
     logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
     for ep in range(1, max_epoch + 1):
         los = trainer.train_one_epoch(ep)['Total_Loss']
-        iou = trainer.validate()[monitor_head]['mean']
+        iou = evaluator.validate()[monitor_head]['mean']
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')

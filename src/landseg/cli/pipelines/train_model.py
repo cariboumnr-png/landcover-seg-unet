@@ -80,7 +80,7 @@ def train(config: configs.RootConfig):
     )
 
     # trainer components
-    components = session.build_trainer_components(
+    components = session.build_engine_components(
         data_specs=dataspecs,
         model=model,
         data_config=config.trainer.loader,
@@ -120,7 +120,6 @@ def train(config: configs.RootConfig):
         use_amp=config.trainer.runtime.precision.use_amp,
         grad_clip_norm=config.trainer.runtime.optimization.grad_clip_norm,
         log_every=config.trainer.runtime.schedule.log_every,
-        skip_log=True # no loggine
     )
     # evaluator
     evaluator = session.MultiHeadEvaluator(
