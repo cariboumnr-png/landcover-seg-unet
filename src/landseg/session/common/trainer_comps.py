@@ -147,7 +147,7 @@ class CallBacksLike(typing.Protocol):
 
 @typing.runtime_checkable
 class _CallBackBaseLike(typing.Protocol):
-    def setup(self, trainer, skip_log: bool) -> None: ...
+    def setup(self, state, config, *, device, skip_log: bool) -> None: ...
 
 @typing.runtime_checkable
 class _ProgressCallbackLike(typing.Protocol):

@@ -32,20 +32,24 @@ class Callback:
     '''Base class for callbacks; subclass to implement behaviors.'''
 
     def __init__(self, logger: utils.Logger):
-        self._trainer: common.TrainerEngineLike | None = None
+        self._state: common.RuntimeStateLike | None = None
+        self._config: common.TrainerConfigShape | None = None
+        self._device: str | None
+        self.skip_log = False
         self.train_logger = logger.get_child('train')
         self.valdn_logger = logger.get_child('valdn')
-        self.skip_log = False
 
     def setup(
-            self,
-            trainer: common.TrainerEngineLike,
-            skip_log: bool
-        ) -> None:
-        if self._trainer is not None:
-            pass
-            # raise RuntimeError("Callback.setup() called twice.")
-        self._trainer = trainer
+        self,
+        state: common.RuntimeStateLike,
+        config: common.TrainerConfigShape,
+        *,
+        device: str,
+        skip_log: bool
+    ) -> None:
+        self._state = state
+        self._config = config
+        self._device = device
         self.skip_log = skip_log
 
     def log_train(self, level: str, message: str) -> None:
@@ -83,15 +87,19 @@ class Callback:
 
     # -------------------------convenience properties-------------------------
     @property
-    def trainer(self):
-        if self._trainer is None:
-            raise RuntimeError('Trainer accessed before setup.')
-        return self._trainer
+    def state(self) -> common.RuntimeStateLike:
+        if self._state is None:
+            raise RuntimeError('Runtime State accessed before setup.')
+        return self._state
 
     @property
-    def config(self):
-        return self.trainer.config
+    def config(self) -> common.TrainerConfigShape:
+        if self._config is None:
+            raise RuntimeError('Engine config accessed before setup.')
+        return self._config\
 
     @property
-    def state(self):
-        return self.trainer.state
+    def device(self) -> str:
+        if self._device is None:
+            raise RuntimeError('Engine config accessed before setup.')
+        return self._device

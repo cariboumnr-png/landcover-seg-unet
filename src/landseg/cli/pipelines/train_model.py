@@ -94,6 +94,14 @@ def train(config: configs.RootConfig):
         use_amp=config.trainer.runtime.precision.use_amp,
         device='cuda' if torch.cuda.is_available() else 'cpu'
     )
+    # set callback up
+    for c in components.callbacks:
+        c.setup(
+            state,
+            config.trainer.runtime,
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            skip_log=False
+        )
     # batch engine
     engine = session.BatchExecutionEngine(
         model=model,

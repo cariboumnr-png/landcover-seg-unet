@@ -30,9 +30,9 @@ class ValCallback(callback.Callback):
 
     def on_validation_begin(self) -> None:
         # reset per-head confusion matrix from active heads
-        assert self.trainer.state.heads.active_hmetrics is not None
-        for metrics_mod in self.trainer.state.heads.active_hmetrics.values():
-            metrics_mod.reset(self.trainer.device)
+        assert self.state.heads.active_hmetrics is not None
+        for metrics_mod in self.state.heads.active_hmetrics.values():
+            metrics_mod.reset(self.device)
         # reset validation loss and logs
         self.state.epoch_sum.val_loss = 0.0 # currently not in use
         self.state.epoch_sum.val_logs.head_metrics.clear()

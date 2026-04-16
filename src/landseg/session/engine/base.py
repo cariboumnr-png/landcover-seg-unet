@@ -120,10 +120,6 @@ class EngineBase:
             'enable_test_la': kwargs.get('enable_test_la', False),
         }
 
-        # setup callbacks
-        for callback in self.callbacks:
-            callback.setup(self, self.flags['skip_log'])
-
     # ----- convenience properties
     @property
     def dataloaders(self):
