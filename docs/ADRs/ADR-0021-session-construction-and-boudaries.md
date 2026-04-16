@@ -1,140 +1,154 @@
 # ADR-0021: Session Construction, Component Ownership, and Runtime-State Boundaries
 
-- **Status:** Proposed
+- **Status:** Accepted (Implemented with Deferred Extensions)
 - **Date:** 2026-04-15
 - **Related ADRs:** ADR-0019, ADR-0020
 
 ## Context
 
 Following ADR-0019 (Shared Execution Core) and ADR-0020 (Dedicated Evaluator Engine),
-core execution mechanics and policy-level orchestration have been successfully
-separated. Trainer and evaluator engines now act as thin policy layers over a
-shared batch execution core, with unified runtime state and component contracts.
+core execution mechanics and policy-level orchestration have been separated.
+Trainer and evaluator engines now act as thin policy layers over a shared batch
+execution core, with unified runtime state and component contracts.
 
-However, this refactor has exposed a new architectural tension at the *session
-construction* layer:
+This refactor surfaced architectural pressure at the *session construction* layer.
+Historically, the CLI pipelines were responsible for assembling sessions end-to-end,
+including component construction, runtime-state initialization, callback wiring,
+and engine instantiation. This resulted in implicit ordering constraints, tight
+coupling to configuration shape, and limited testability.
 
-- The CLI training pipeline is currently responsible for assembling the entire
-  session end-to-end.
-- Session component construction, runtime-state initialization, callback wiring,
-  and engine instantiation are explicitly orchestrated at the CLI call site.
-- Runtime configuration (`RootConfig`) is threaded through nearly every step of
-  session assembly, creating implicit coupling and order sensitivity.
+The work in this branch addresses those issues by introducing an explicit
+*session-owned construction boundary*, while intentionally deferring higher-level
+session orchestration unification (e.g., normal training vs. overfit workflows).
 
-In practice, the CLI currently performs the following responsibilities:
-
-1. Constructing the engine component bundle (data, callbacks, heads, losses,
-   metrics, optimization)
-2. Initializing the runtime state from components and runtime flags
-3. Wiring callbacks to runtime state, configuration, and device
-4. Constructing the batch execution engine from the initialized state
-5. Instantiating trainer and evaluator policy engines
-
-This makes the CLI pipeline difficult to reason about, hard to test in isolation,
-and unsuitable as a stable public entrypoint.
-
-### Contributing factor: configuration-driven session shape
-
-A key reason for this situation is historical:
-
-- The project previously relied on a **Hydra + dataclass-based configuration
-  system**, where configuration dataclasses and YAML structure were treated as
-  the primary source of truth.
-- During recent refactors, care was taken not to modify the configuration module
-  structure, resulting in the *session module being shaped to match the existing
-  config layout*.
-- This inverted the intended dependency direction: runtime architecture was made
-  to conform to configuration shape, rather than configuration expressing the
-  needs of the runtime system.
-
-This ADR formally acknowledges that mismatch and establishes a new direction.
+---
 
 ## Decision
 
 ### Session-first construction boundary
 
-The system will adopt a **session-first architecture**, where:
+The system adopts a **session-first architecture** where:
 
-- The `session` module owns the construction and assembly of runtime elements
-- The CLI is reduced to a thin entrypoint that *requests* a session, rather than
-  assembling one
-- Configuration objects serve as *inputs* to session construction, not as
-  structural drivers of runtime shape
+- The session module owns construction and assembly of runtime elements
+- The CLI is reduced to a thin entrypoint that *requests* a session
+- Configuration objects serve as *inputs* to session construction, not as drivers
+  of runtime wiring
 
-Concretely:
+Session assembly responsibilities now include:
 
-- Session assembly (components, state, callbacks, engines) is moved behind a
-  single, well-defined construction boundary
-- The CLI no longer performs stepwise wiring of runtime internals
+- Component construction (data, task, optimization)
+- Runtime state initialization
+- Callback instantiation and binding
+- Batch execution engine construction
+- Trainer and evaluator instantiation
+- (Optionally) runner construction
+
+All of the above occur behind a session-level factory boundary.
 
 ### Explicit ownership and lifecycle boundaries
 
-This ADR establishes clear ownership rules:
+This ADR establishes the following ownership rules:
 
 - **Components** are constructed once and owned by the session
 - **Runtime state** is initialized exactly once per session from components
 - **Callbacks** are bound to runtime state and configuration during session
-  construction, not lazily or implicitly
+  construction
 - **Execution and policy engines** receive fully-initialized state and do not
   participate in assembly
 
 This removes construction order dependencies and makes lifecycle transitions
 explicit and auditable.
 
-### Configuration refactoring (anticipated)
+### Configuration direction
 
-To support this change, we explicitly acknowledge that **major refactoring of the
-`configs/` module is expected** in follow-up work:
+Configuration modeling has been refactored to align with session-level concerns:
 
-- Hydra YAML structure and dataclass shapes will be revisited
-- Configuration will be reorganized to reflect *session-level concerns*, rather
-  than mirroring historical builder order
-- The session module will define what configuration it consumes, rather than
-  adapting itself to existing config layout
+- Legacy trainer- and runner-centric configuration shapes are removed
+- A unified `SessionConfig` expresses components, runtime, and phases
+- Configuration no longer dictates builder order; it is consumed by the session
+  factory as input
 
-This ADR does not prescribe the new configuration structure, but establishes the
-architectural intent to reverse the current dependency direction.
+This reverses the historical dependency direction where runtime architecture was
+forced to conform to configuration layout.
+
+---
+
+## Deferred Scope: Session Variants and Orchestration
+
+This ADR intentionally **does not unify all training workflows under a single
+session execution model**.
+
+Specifically:
+
+- The system currently supports multiple pipelines (e.g., full end-to-end
+  curriculum training and overfit-style training)
+- These pipelines have different orchestration needs, and not all require a
+  session runner
+- Introducing a single, configurable *session execution mode* abstraction would
+  require a clearer roadmap of supported session types
+
+As a result:
+
+- The session factory exposes composable construction steps (e.g., engine-only vs.
+  engine+runner)
+- A single `build_session(...)` convenience API is intentionally deferred
+- This ADR focuses on **correct construction boundaries and ownership**, not on
+  exhaustively modeling all session variants
+
+This limitation is accepted as a conscious scoping decision, not an architectural
+inconsistency.
+
+---
 
 ## Consequences
 
 ### Positive
 
-- CLI pipelines become thin, declarative entrypoints
-- Session construction is centralized, testable, and consistent
-- Component and state lifecycles are clearly defined
-- Trainer and evaluator engines remain focused on policy, not wiring
-- Configuration becomes an expression of runtime needs, not a driver of
-  architecture
+- CLI pipelines are thin and declarative
+- Session construction is centralized and testable
+- Component, state, and callback lifecycles are explicit
+- Engines remain policy-only and free of wiring concerns
+- Configuration reflects runtime needs rather than build order
 
 ### Costs
 
-- Refactoring effort in `session/` and `configs/`
-- Temporary duplication or adapter layers during migration
-- Short-term churn in CLI training and evaluation scripts
+- Some duplication remains between session construction paths
+- A unified session execution abstraction is deferred
+- Follow-up design work will be required to generalize session variants
 
-These costs are accepted as necessary to stabilize the architecture long-term.
+These costs are accepted to avoid premature abstraction and to allow informed
+future design.
+
+---
 
 ## Non-Goals
 
 This ADR does **not**:
 
 - Redesign batch execution or policy engines
+- Mandate a single session execution model
 - Introduce new training or evaluation behaviors
-- Mandate a specific configuration backend (Hydra remains acceptable)
 - Define a public evaluation CLI
 
-## Follow-up Work
+---
 
-- Introduce a session-level construction API (e.g. `build_training_session`)
-- Migrate existing CLI pipelines to use the new session boundary
-- Refactor `configs/` to align with session-level concerns
-- Remove legacy implicit wiring between configuration, components, and state
+## Follow-up Work (Deferred)
+
+- Define a taxonomy of supported session types (e.g., curriculum, overfit,
+  evaluation-only)
+- Introduce a unified `build_session(...)` API once session variants are
+  well-understood
+- Further simplify session factory surface area after orchestration convergence
+
+---
 
 ## Related Code Areas
 
 - `session/`
 - `session/components/`
+- `session/state/`
 - `session/engine/`
 - `session/runner/`
+- `session/instrumentation/`
 - `cli/pipelines/`
 - `configs/`
