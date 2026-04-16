@@ -32,18 +32,17 @@ import typing
 
 __all__ = [
     # classes
-    'RuntimeState',
     # functions
-    'init_state',
+    'initialize',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .state import RuntimeState, init_state
+    from .state import initialize
 
 def __getattr__(name: str):
 
-    if name in {'RuntimeState', 'init_state'}:
+    if name in {'initialize'}:
         return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

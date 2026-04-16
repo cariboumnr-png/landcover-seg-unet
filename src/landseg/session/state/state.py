@@ -259,7 +259,7 @@ class _OptimState:
         ])
 
 # -------------------------------Public Function-------------------------------
-def init_state(
+def initialize(
     components: common.ComponentsLike,
     use_amp: bool,
     device: str,
