@@ -51,11 +51,10 @@ class _SessionConfig(typing.Protocol):
     @property
     def phases(self) -> typing.Sequence[runner.PhaseLike]: ...
 
-def build_session_runner(
+def build_engines(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: _SessionConfig,
-    session_paths: artifacts.ResultsPaths,
     *,
     device: str,
     logger: utils.Logger,
@@ -124,6 +123,37 @@ def build_session_runner(
         track_mode=config.runtime.monitor.track_mode,
         track_head_name=config.runtime.monitor.track_head_name,
         min_delta=config.runtime.schedule.min_delta
+    )
+    # return
+    return trainer, evaluator
+
+def build_session_runner(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: _SessionConfig,
+    session_paths: artifacts.ResultsPaths,
+    *,
+    device: str,
+    logger: utils.Logger,
+    **kwargs
+):
+    '''
+    Run a full training job.
+
+    Creates an run directory, builds `DataSpecs` from the prepared
+    artifacts and schema, instantiates the model, and executes the runner.
+
+    Args:
+        config: RootConfig with model, trainer, and runner settings.
+    '''
+
+    trainer, evaluator = build_engines(
+        dataspecs,
+        model,
+        config,
+        device=device,
+        logger=logger,
+        **kwargs
     )
 
     # build controller and return
