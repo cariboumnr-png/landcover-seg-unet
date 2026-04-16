@@ -22,6 +22,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-many-public-methods
 # pylint: disable=unused-argument
+
 '''Base class for trainer callbacks.'''
 
 # local imports

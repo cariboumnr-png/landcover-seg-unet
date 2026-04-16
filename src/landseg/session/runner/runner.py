@@ -22,7 +22,7 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Curriculum-based training controller for multi-phase model execution.
+Curriculum-based training runner for multi-phase model execution.
 
 The Runner orchestrates sequential training phases over a shared trainer
 engine. Each phase can configure active heads, logit adjustments, and

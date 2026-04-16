@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
+
 '''Inference phase callback class.'''
 
 # local imports

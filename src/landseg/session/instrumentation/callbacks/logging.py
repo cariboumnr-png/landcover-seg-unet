@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
+
 '''Logging callback class.'''
 
 # local imports

@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Compose a list of callback classes in sequence for the trainer.'''
+'''Compose a list of callback classes in sequence for the engines.'''
 
 # standard imports
 import dataclasses

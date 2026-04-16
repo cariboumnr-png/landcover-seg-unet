@@ -22,8 +22,9 @@
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
+
 '''
-Callback-facing trainer runtime state protocols.
+Shared runtime state for a session.
 '''
 
 # standard imports

@@ -22,16 +22,14 @@
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
+
 '''
-Trainer building facing components protocols.
+Callback classes protocols
 '''
 
 # standard imports
 from __future__ import annotations
 import typing
-
-if typing.TYPE_CHECKING:
-    import torch
 
 # ----------------------------------callbacks----------------------------------
 @typing.runtime_checkable

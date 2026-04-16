@@ -21,9 +21,7 @@
 
 # pylint: disable=missing-function-docstring
 
-'''
-Training phase
-'''
+'''Training-focused phase protocol.'''
 
 # standard imports
 from __future__ import annotations

@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
+
 '''Validation phase callback class.'''
 
 # local imports

@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
+
 '''Progress increments callback class.'''
 
 # local imports

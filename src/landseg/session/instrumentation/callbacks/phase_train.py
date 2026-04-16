@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
+
 '''Train phase callback class.'''
 
 # local imports

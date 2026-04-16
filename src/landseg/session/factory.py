@@ -22,10 +22,7 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Training entrypoint.
-
-Builds data specifications from produced artifacts, constructs the
-model, and runs the multi-phase training runner.
+Session-level factory.
 '''
 
 # standard imports
@@ -59,15 +56,9 @@ def build_engines(
     device: str,
     logger: utils.Logger,
     **kwargs
-):
+) -> tuple[engine.MultiHeadTrainer, engine.MultiHeadEvaluator]:
     '''
-    Run a full training job.
-
-    Creates an run directory, builds `DataSpecs` from the prepared
-    artifacts and schema, instantiates the model, and executes the runner.
-
-    Args:
-        config: RootConfig with model, trainer, and runner settings.
+    Build training and evaluating engines.
     '''
 
     # build session components
@@ -138,13 +129,7 @@ def build_session_runner(
     **kwargs
 ):
     '''
-    Run a full training job.
-
-    Creates an run directory, builds `DataSpecs` from the prepared
-    artifacts and schema, instantiates the model, and executes the runner.
-
-    Args:
-        config: RootConfig with model, trainer, and runner settings.
+    Build session-level runner.
     '''
 
     trainer, evaluator = build_engines(

@@ -27,14 +27,14 @@ import typing
 import torch
 
 # batch context
-_Tensor: typing.TypeAlias = torch.Tensor
+Tensor: typing.TypeAlias = torch.Tensor
 
-TorchDict: typing.TypeAlias = dict[str, _Tensor]
+TorchDict: typing.TypeAlias = dict[str, Tensor]
 '''
 A tyical string-indexed torch Tensor dictionary.
 '''
 
-DatasetItem: typing.TypeAlias = tuple[_Tensor, _Tensor, TorchDict]
+DatasetItem: typing.TypeAlias = tuple[Tensor, Tensor, TorchDict]
 '''
 A tuple from one sample of the dataset: x (always present), y (can be
 a placeholder during inference, e.g., `torch.Tensor([1])`) and domain

@@ -35,7 +35,7 @@ import landseg.utils as utils
 
 # --------------------------------private  type--------------------------------
 class ComponentsConfig(typing.Protocol):
-    '''doc'''
+    '''Shape of the components building configuration.'''
     @property
     def loader(self) -> data.LoaderConfig: ...
     @property
