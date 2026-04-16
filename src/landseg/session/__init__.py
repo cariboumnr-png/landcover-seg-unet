@@ -39,7 +39,6 @@ __all__ = [
     'Runner',
     # functions
     'build_engine_components',
-    'init_state',
     # types
     'ConfigLike',
 ]
@@ -48,23 +47,21 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .common import ConfigLike
     from .components import build_engine_components
-    from .engine import (MultiHeadTrainer, MultiHeadEvaluator,
-                         BatchExecutionEngine, init_state)
+    from .engine import BatchExecutionEngine, MultiHeadEvaluator, MultiHeadTrainer
     from .runner import Phase, Runner
 
 def __getattr__(name: str):
 
-    if name in {'TrainerConfigShape'}:
+    if name in {'ConfigLike'}:
         return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'Phase', 'HeadsConifg', 'LogitAdjustScheme', 'Runner'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
-
-    if name in {'BatchExecutionEngine', 'MultiHeadEvaluator', 'MultiHeadTrainer',
-                'init_state'}:
-        return getattr(importlib.import_module('.engine', __package__), name)
 
     if name in {'build_engine_components',}:
         return getattr(importlib.import_module('.components', __package__), name)
+
+    if name in {'BatchExecutionEngine', 'MultiHeadEvaluator', 'MultiHeadTrainer'}:
+        return getattr(importlib.import_module('.engine', __package__), name)
+
+    if name in {'Phase', 'Runner'}:
+        return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
