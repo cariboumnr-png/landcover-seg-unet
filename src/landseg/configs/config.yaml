@@ -7,12 +7,14 @@ defaults:
   - foundation/datablocks: default
   # data transfrom
   - transform: default
+  # data specs
+  - dataspecs: default
   # models
   - models: default
-  # trainer
-  - trainer: default
-  # controller
-  - runner: demo
+  # session
+  - session/components: default
+  - session/runtime: default
+  - session/phases: default
   # pipeline
   - pipeline: default
 

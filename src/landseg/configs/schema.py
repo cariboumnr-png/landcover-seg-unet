@@ -228,6 +228,7 @@ class Scoring:
 class Hydration:
     max_skew_rate: float = 10.0
 
+# ----- composite
 @dataclasses.dataclass
 class DataTransform:
     threshold: Thresholds = field(default_factory=Thresholds)
@@ -238,6 +239,12 @@ class DataTransform:
 
     def validate(self):
         pass
+
+# -----------------------------DATA  SPECIFICATION-----------------------------
+@dataclasses.dataclass
+class DataSpecs:
+    domain_ids_name: str | None = None
+    domain_vec_name: str | None = None
 
 # ---------------------------------MODELS CONFIGS------------------------------
 @dataclasses.dataclass
@@ -318,14 +325,13 @@ class ModelsCfg:
         if lo <= 0 or hi <= 0 or lo >= hi:
             raise ValueError('invalid clamp_range ordering or non-positive')
 
-# -------------------------------TRAINER CONFIGS-------------------------------
-# ----- data loader
+# -------------------------------SESSION CONFIGS-------------------------------
+# ----- COMPONENTS
 @dataclasses.dataclass
 class LoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
-# ----- loss config
 @dataclasses.dataclass
 class FocalLossConfig:
     weight: float = 0.5
@@ -360,7 +366,6 @@ class LossConfig:
     en_beta: float = 0.999
     types: LossTypesConfig = field(default_factory=LossTypesConfig)
 
-# ----- optimization config
 @dataclasses.dataclass
 class OptimConfig:
     opt_cls: str = 'AdamW'
@@ -371,9 +376,21 @@ class OptimConfig:
         default_factory=lambda: {'T_max': 50}
     )
 
-# ----- runtime config
 @dataclasses.dataclass
-class RuntimeSchedule:
+class ComponentsCfg:
+    loader: LoaderConfig = field(default_factory=LoaderConfig)
+    task: LossConfig = field(default_factory=LossConfig)
+    optimization: OptimConfig = field(default_factory=OptimConfig)
+
+    def validate(self) -> None:
+        # Example: scheduler-specific requirements
+        if self.optimization.sched_cls == 'CosAnneal':
+            if 'T_max' not in self.optimization.sched_args:
+                raise ValueError('missing T_max for CosAnneal')
+
+# ----- RUNTIME
+@dataclasses.dataclass
+class Schedule:
     max_epoch: int = 50
     max_step: int = 1_000_000
     log_every: int = 50
@@ -383,47 +400,27 @@ class RuntimeSchedule:
     min_delta: float = 0.0005
 
 @dataclasses.dataclass
-class RuntimeMonitor:
+class Monitor:
     metric_name: str = 'iou'
     track_head_name: str = 'base'
     track_mode: str = 'max'
 
 @dataclasses.dataclass
-class RuntimePrecision:
+class Precision:
     use_amp: bool = True
 
 @dataclasses.dataclass
-class RuntimeOptim:
+class Optimization:
     grad_clip_norm: float | None = 1.0
 
 @dataclasses.dataclass
-class RuntimeData:
-    domain_ids_name: str | None = None
-    domain_vec_name: str | None = None
-
-@dataclasses.dataclass
 class RuntimeConfig:
-    data: RuntimeData = field(default_factory=RuntimeData)
-    schedule: RuntimeSchedule = field(default_factory=RuntimeSchedule)
-    monitor: RuntimeMonitor = field(default_factory=RuntimeMonitor)
-    precision: RuntimePrecision = field(default_factory=RuntimePrecision)
-    optimization: RuntimeOptim = field(default_factory=RuntimeOptim)
+    schedule: Schedule = field(default_factory=Schedule)
+    monitor: Monitor = field(default_factory=Monitor)
+    precision: Precision = field(default_factory=Precision)
+    optimization: Optimization = field(default_factory=Optimization)
 
-# ----- TRAINER
-@dataclasses.dataclass
-class TrainerCfg:
-    loader: LoaderConfig = field(default_factory=LoaderConfig)
-    loss: LossConfig = field(default_factory=LossConfig)
-    optimization: OptimConfig = field(default_factory=OptimConfig)
-    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
-
-    def validate(self) -> None:
-        # Example: scheduler-specific requirements
-        if self.optimization.sched_cls == 'CosAnneal':
-            if 'T_max' not in self.optimization.sched_args:
-                raise ValueError('missing T_max for CosAnneal')
-
-# ---------------------------------RUNNER  CONFIGS-----------------------------
+# ----- PHASES
 @dataclasses.dataclass
 class LogitAdjustConfig:
     logit_adjust_alpha: float = 1.0
@@ -439,17 +436,23 @@ class PhaseHeads:
 
 @dataclasses.dataclass
 class PhaseConfig:
+    finished: bool = False
     name: str = 'coarse_head'
     num_epochs: int = 50
     heads: PhaseHeads = field(default_factory=PhaseHeads)
     logit_adjust: LogitAdjustConfig = field(default_factory=LogitAdjustConfig)
     lr_scale: float = 1.0
 
-# ----- RUNNER
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Dict representation.'''
+        return dataclasses.asdict(self)
+
+# session composite
 @dataclasses.dataclass
-class RunnerCfg:
-    ckpt_dpath: str = '${exp_root}/checkpoints'
-    preview_dpath: str = '${exp_root}/previews'
+class SessionConfig:
+    '''doc'''
+    components: ComponentsCfg = field(default_factory=ComponentsCfg)
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
 # --------------------------------ROOT  CONFIGS--------------------------------
@@ -465,19 +468,18 @@ class RootConfig:
     foundation: DataFoundation = field(default_factory=DataFoundation)
     # data preparation
     transform: DataTransform = field(default_factory=DataTransform)
+    # data specfication
+    dataspecs: DataSpecs = field(default_factory=DataSpecs)
     # model settings
     models: ModelsCfg = field(default_factory=ModelsCfg)
-    # trainer settings
-    trainer: TrainerCfg = field(default_factory=TrainerCfg)
-    # controller settings
-    runner: RunnerCfg = field(default_factory=RunnerCfg)
+    # session settings
+    session: SessionConfig = field(default_factory=SessionConfig)
 
     def validate_all(self) -> None:
         # delegated to subtrees.
         self.foundation.validate()
         self.transform.validate()
         self.models.validate()
-        self.trainer.validate()
         # future checks to be added below (e.g., controller phases)
 
 # ------------------------------private  function------------------------------

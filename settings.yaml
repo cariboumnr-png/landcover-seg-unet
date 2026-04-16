@@ -121,18 +121,15 @@ models:
     mode: 'hybrid'
 
 
+dataspecs:
+  domain_ids_name: example_domain_1
+  domain_vec_name: example_domain_2
+
 # -----------------------------------------------------------------------------
-# TRAINING RUNTIME / PARAMÈTRES D’ÉXÉCUTION
-# Global settings for the training loop and performance monitoring.
-# Paramètres globaux pour la boucle d'entraînement et le suivi des performances.
+
 # -----------------------------------------------------------------------------
-trainer:
+session:
   runtime:
-    data:
-      # Must match a filename defined in 'inputs.domain'.
-      # Doit correspondre à un nom de fichier défini dans 'inputs.domain'.
-      domain_ids_name: example_domain_1
-      domain_vec_name: example_domain_2
 
     schedule:
       patience: 10      # Stop training if no improvement / Arrêt si aucune amélioration
@@ -145,11 +142,8 @@ trainer:
 
 
 # -----------------------------------------------------------------------------
-# EXPERIMENT CONTROLLER / CONTRÔLEUR D'EXPÉRIMENTATION
-# Defines the specific sequence of training phases.
-# Définit la séquence spécifique des phases d'entraînement.
 # -----------------------------------------------------------------------------
-runner:
+
   phases:
     - name: coarse_head # Phase name / Nom de la phase
       num_epochs: 100   # Max iterations / Itérations maximales

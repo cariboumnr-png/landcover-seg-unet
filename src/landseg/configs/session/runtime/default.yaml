@@ -1,0 +1,16 @@
+schedule:
+  max_epoch: 50
+  max_step: 1000000
+  log_every: 50
+  val_every: 1
+  ckpt_every: 5
+  patience: 10
+  min_delta: 0.0005
+monitor:
+  metric_name: iou
+  track_head_name: base
+  track_mode: max
+precision:
+  use_amp: True
+optimization:
+  grad_clip_norm: 1.0

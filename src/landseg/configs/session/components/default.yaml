@@ -3,8 +3,8 @@ loader:
   patch_size: 128
   batch_size: 16
 
-# loss config
-loss:
+# task: loss config
+task:
   alpha_fn: 'effective_n'
   en_beta: 0.999
   types:
@@ -30,25 +30,3 @@ optimization:
   sched_cls: 'CosAnneal'
   sched_args:
     T_max: 50
-
-# runtime config
-runtime:
-  data:
-    domain_ids_name: ecodist
-    domain_vec_name: geology
-  schedule:
-    max_epoch: 50
-    max_step: 1000000
-    log_every: 50
-    val_every: 1
-    ckpt_every: 5
-    patience: 10
-    min_delta: 0.0005
-  monitor:
-    metric_name: iou
-    track_head_name: base
-    track_mode: max
-  precision:
-    use_amp: True
-  optimization:
-    grad_clip_norm: 1.0
