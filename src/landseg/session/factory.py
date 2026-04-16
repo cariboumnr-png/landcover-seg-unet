@@ -106,7 +106,7 @@ def build_session_runner(
     # trainer
     trainer = engine.MultiHeadTrainer(
         engine=batch_executor,
-        state=runtime_state, # type: ignore
+        state=runtime_state,
         components=session_components,
         callbacks=callbacks,
         device=device,
@@ -117,7 +117,7 @@ def build_session_runner(
     # evaluator
     evaluator = engine.MultiHeadEvaluator(
         engine=batch_executor,
-        state=state,
+        state=runtime_state,
         components=session_components,
         callbacks=callbacks,
         device=device,
