@@ -32,8 +32,8 @@ class Callback:
     '''Base class for callbacks; subclass to implement behaviors.'''
 
     def __init__(self, logger: utils.Logger):
-        self._state: common.RuntimeStateLike | None = None
-        self._config: common.TrainerConfigShape | None = None
+        self._state: common.StateLike | None = None
+        self._config: common.ConfigLike | None = None
         self._device: str | None
         self.skip_log = False
         self.train_logger = logger.get_child('train')
@@ -41,8 +41,8 @@ class Callback:
 
     def setup(
         self,
-        state: common.RuntimeStateLike,
-        config: common.TrainerConfigShape,
+        state: common.StateLike,
+        config: common.ConfigLike,
         *,
         device: str,
         skip_log: bool
@@ -87,13 +87,13 @@ class Callback:
 
     # -------------------------convenience properties-------------------------
     @property
-    def state(self) -> common.RuntimeStateLike:
+    def state(self) -> common.StateLike:
         if self._state is None:
             raise RuntimeError('Runtime State accessed before setup.')
         return self._state
 
     @property
-    def config(self) -> common.TrainerConfigShape:
+    def config(self) -> common.ConfigLike:
         if self._config is None:
             raise RuntimeError('Engine config accessed before setup.')
         return self._config\

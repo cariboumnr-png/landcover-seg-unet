@@ -34,61 +34,29 @@ __all__ = [
     # classes
     # functions
     # types
-    'CallBacksLike',
-    'DataLoadersLike',
-    'HeadSpecsLike',
     'SpecsLike',
-    'HeadLossesLike',
     'CompositeLossLike',
-    'HeadMetricsLike',
     'ConfusionMatrixLike',
-    'OptimizationLike',
-    'TrainerComponentsLike',
-    'TrainerConfigShape',
-    'RuntimeStateLike',
-    'TrainerEngineLike',
+    'ComponentsLike',
+    'ConfigLike',
+    'StateLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .trainer_engine import TrainerEngineLike
-    from .trainer_comps import (
-        CallBacksLike,
-        CompositeLossLike,
-        DataLoadersLike,
-        HeadLossesLike,
-        HeadMetricsLike,
-        HeadSpecsLike,
-        ConfusionMatrixLike,
-        OptimizationLike,
-        SpecsLike,
-        TrainerComponentsLike,
-    )
-    from .trainer_config import TrainerConfigShape
-    from .trainer_state import RuntimeStateLike
+
+    from .engine_comps import CompositeLossLike, ConfusionMatrixLike, SpecsLike, ComponentsLike
+    from .engine_config import ConfigLike
+    from .engine_state import StateLike
 
 def __getattr__(name: str):
 
-    if name in {'TrainerEngineLike'}:
-        return getattr(importlib.import_module('.trainer_engine', __package__), name)
+    if name in {'CompositeLossLike', 'ConfusionMatrixLike', 'SpecsLike', 'ComponentsLike'}:
+        return getattr(importlib.import_module('.engine_comps', __package__), name)
 
-    if name in {
-        'CallBacksLike',
-        'DataLoadersLike',
-        'HeadSpecsLike',
-        'SpecsLike',
-        'HeadLossesLike',
-        'CompositeLossLike',
-        'HeadMetricsLike',
-        'ConfusionMatrixLike',
-        'OptimizationLike',
-        'TrainerComponentsLike',
-    }:
-        return getattr(importlib.import_module('.trainer_comps', __package__), name)
+    if name in {'ConfigLike'}:
+        return getattr(importlib.import_module('.engine_config', __package__), name)
 
-    if name in {'TrainerConfigShape'}:
-        return getattr(importlib.import_module('.trainer_config', __package__), name)
-
-    if name in {'RuntimeStateLike'}:
-        return getattr(importlib.import_module('.trainer_state', __package__), name)
+    if name in {'StateLike'}:
+        return getattr(importlib.import_module('.engine_state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

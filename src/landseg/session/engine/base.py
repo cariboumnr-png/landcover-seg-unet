@@ -58,7 +58,7 @@ class EngineBase:
         self,
         engine: engine_core.BatchExecutionEngine,
         state: engine_core.RuntimeState,
-        components: common.TrainerComponentsLike,
+        components: common.ComponentsLike,
         device: str,
         **kwargs
     ):

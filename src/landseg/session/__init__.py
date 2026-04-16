@@ -41,12 +41,12 @@ __all__ = [
     'build_trainer_components',
     'init_state',
     # types
-    'TrainerConfigShape',
+    'ConfigLike',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import TrainerConfigShape
+    from .common import ConfigLike
     from .components import build_trainer_components
     from .engine import (MultiHeadTrainer, MultiHeadEvaluator,
                          BatchExecutionEngine, init_state)
