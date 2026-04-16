@@ -34,6 +34,7 @@ __all__ = [
     # classes
     # functions
     # types
+    'CallBacksLike',
     'SpecsLike',
     'CompositeLossLike',
     'ConfusionMatrixLike',
@@ -43,12 +44,15 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
-
+    from .callbacks import CallBacksLike
     from .comps import CompositeLossLike, ConfusionMatrixLike, SpecsLike, ComponentsLike
     from .config import ConfigLike
     from .state import StateLike
 
 def __getattr__(name: str):
+
+    if name in {'CallBacksLike'}:
+        return getattr(importlib.import_module('.callbacks', __package__), name)
 
     if name in {'CompositeLossLike', 'ConfusionMatrixLike', 'SpecsLike', 'ComponentsLike'}:
         return getattr(importlib.import_module('.comps', __package__), name)
