@@ -23,9 +23,9 @@
 '''Validation phase callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 
-class ValCallback(callback.Callback):
+class ValCallback(callbacks.Callback):
     '''Validation pipeline: parse - forward - compute metrics.'''
 
     def on_validation_begin(self) -> None:

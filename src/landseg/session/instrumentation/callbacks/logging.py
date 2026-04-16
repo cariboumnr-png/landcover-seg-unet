@@ -23,9 +23,9 @@
 '''Logging callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 
-class LoggingCallback(callback.Callback):
+class LoggingCallback(callbacks.Callback):
     '''Controlled console logging.'''
 
     def on_train_epoch_begin(self, epoch: int) -> None:

@@ -24,17 +24,17 @@
 # standard imports
 import dataclasses
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 import landseg.utils as utils
 
 @dataclasses.dataclass
 class CallbackSet:
     '''Collection of callback class contracts.'''
-    train: callback.TrainCallback
-    validate: callback.ValCallback
-    infer: callback.InferCallback
-    logging: callback.LoggingCallback
-    progress: callback.ProgressCallback
+    train: callbacks.TrainCallback
+    validate: callbacks.ValCallback
+    infer: callbacks.InferCallback
+    logging: callbacks.LoggingCallback
+    progress: callbacks.ProgressCallback
 
     def __iter__(self):
         return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
@@ -43,9 +43,9 @@ def build_callbacks(logger: utils.Logger) -> CallbackSet:
     '''Factory to generate a set of callback class instances.'''
 
     return CallbackSet(
-        train=callback.TrainCallback(logger),
-        validate=callback.ValCallback(logger),
-        infer=callback.InferCallback(logger),
-        logging=callback.LoggingCallback(logger),
-        progress=callback.ProgressCallback(logger),
+        train=callbacks.TrainCallback(logger),
+        validate=callbacks.ValCallback(logger),
+        infer=callbacks.InferCallback(logger),
+        logging=callbacks.LoggingCallback(logger),
+        progress=callbacks.ProgressCallback(logger),
     )

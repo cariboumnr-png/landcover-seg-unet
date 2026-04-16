@@ -23,10 +23,10 @@
 '''Inference phase callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 import landseg.session.instrumentation.exporters as exporters
 
-class InferCallback(callback.Callback):
+class InferCallback(callbacks.Callback):
     '''Inference: parse -> forward -> collect outputs (optional).'''
 
     def on_inference_begin(self) -> None:

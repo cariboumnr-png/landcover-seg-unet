@@ -23,9 +23,9 @@
 '''Progress increments callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 
-class ProgressCallback(callback.Callback):
+class ProgressCallback(callbacks.Callback):
     '''Progress tracker.'''
 
     def on_train_epoch_begin(self, epoch: int) -> None:

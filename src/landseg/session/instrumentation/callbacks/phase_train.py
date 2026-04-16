@@ -23,9 +23,9 @@
 '''Train phase callback class.'''
 
 # local imports
-import landseg.session.components.callback as callback
+import landseg.session.instrumentation.callbacks as callbacks
 
-class TrainCallback(callback.Callback):
+class TrainCallback(callbacks.Callback):
     '''Training: parse - forward - compute loss - backward - step.'''
 
     def on_train_epoch_begin(self, epoch: int) -> None:
