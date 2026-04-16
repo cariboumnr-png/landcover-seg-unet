@@ -127,7 +127,7 @@ class BatchExecutionEngine:
         self.model.to(self.device)
 
     # ----- Public Method
-    def run_train_batch(self, bidx: int) -> None:
+    def run_train_batch(self) -> None:
         '''
         Execute one training batch.
 
@@ -149,8 +149,6 @@ class BatchExecutionEngine:
         consumes values written into RuntimeState after this method
         completes.
         '''
-
-        print(f'Training Batch_{bidx}', end='\r', flush=True)
 
         # ----- batch start
         # get new batch and parse into x, y_dict and domain

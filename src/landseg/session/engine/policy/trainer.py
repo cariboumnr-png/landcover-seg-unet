@@ -135,7 +135,7 @@ class MultiHeadTrainer(engine.EngineBase):
             self.optimization.optimizer.zero_grad(set_to_none=True)
 
             # delegate batch to engine (forward and compute loss)
-            self.engine.run_train_batch(bidx)
+            self.engine.run_train_batch()
 
             # batch backward
             loss = self.state.batch_out.total_loss
