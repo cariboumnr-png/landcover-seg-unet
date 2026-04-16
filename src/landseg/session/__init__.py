@@ -35,7 +35,7 @@ __all__ = [
     'BatchExecutionEngine',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
-    'Phase',
+    'PhaseLike',
     'Runner',
     # functions
     'build_session_components',
@@ -48,7 +48,7 @@ if typing.TYPE_CHECKING:
     from .common import ConfigLike
     from .components import build_session_components
     from .engine import BatchExecutionEngine, MultiHeadEvaluator, MultiHeadTrainer
-    from .runner import Phase, Runner
+    from .runner import PhaseLike, Runner
 
 def __getattr__(name: str):
 
