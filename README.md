@@ -12,7 +12,10 @@ The pipeline is powered by PyTorch U‑Net architectures and a fully specificati
 > **Project Status:**
 > This repository is currently in **research / experimental** mode.
 > Module boundaries and APIs are **not yet stable**.
-> A production‑leaning runtime (`engine/`) is planned for future milestones but **not yet included**.
+> Runtime construction is now **session‑owned**, with execution engines acting as
+> policy layers over a shared batch core. Public session and engine APIs are still
+> evolving and should not yet be considered stable.
+
 
 ---
 
@@ -45,11 +48,11 @@ datasets and training land‑cover segmentation models.
   Multi‑head U‑Net and U‑Net variants with optional grid‑aligned domain
   conditioning.
 
-- **Training, Evaluation & Inference Runner**
-  A phase‑driven execution layer built around a callback‑based multi‑head
-  engine, supporting training, validation, inference, curriculum scheduling,
-  metrics, losses, checkpointing, and preview generation. Designed to cleanly
-  extend to a dedicated evaluation engine.
+- **Training, Evaluation & Inference**
+  Runtime construction is owned by a session layer that assembles components,
+  runtime state, callbacks, and execution engines. Training and evaluation are
+  driven by policy‑only engines over a shared batch executor, with an optional
+  phase‑based runner providing higher‑level orchestration when required.
 
 - **Reproducibility by Construction**
   Training and inference consume only persisted artifacts (schemas, checkpoints)
@@ -117,6 +120,9 @@ Run a complete training job using the currently prepared dataset artifacts:
 
     experiment_run pipeline=train-model
 
+This stage constructs a full training session, including runtime state,
+execution engines, and a phase‑driven runner, from prepared dataset artifacts.
+
 This stage consumes prepared artifacts but does not modify foundation data.
 
 ---
@@ -124,7 +130,8 @@ This stage consumes prepared artifacts but does not modify foundation data.
 #### 4. Overfit silo test (optional)
 
 Run a minimal overfit test on a small subset to validate the end‑to‑end stack.
-This pipeline **does not require prior ingestion or preparation**:
+This pipeline constructs a session **without a runner**, exercising the shared
+execution engine directly. It does not require prior ingestion or preparation:
 
     experiment_run pipeline=train-overfit
 
@@ -138,15 +145,21 @@ advanced users familiar with Hydra and the project structure. For most workflows
 ## 🚀 Roadmap
 
 ### Near‑Term
-- Improve documentation and examples (active)
+- Documentation refresh reflecting session‑first runtime architecture (active)
+- Workflow diagrams and ADR cross‑references
+- Improved examples for training and overfit pipelines
 
 ### Medium‑Term
-- Optional user‑authored task manifest
+- Clarify and formalize supported session types (e.g. curriculum, overfit,
+  evaluation‑only)
+- Optional user‑authored task / phase manifest
+- Incremental hardening of session and engine public APIs
 
 ### Long‑Term
 - Additional model architectures
-- Evaluation & export utilities
-- Gradual promotion of stable components into `engine/training`
+- Evaluation, export, and reporting utilities
+- Consolidation of stable runtime components into a production‑leaning
+  execution surface (session / engine)
 
 ---
 

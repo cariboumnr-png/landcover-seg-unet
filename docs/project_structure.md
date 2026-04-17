@@ -5,6 +5,7 @@ Dernière mise à jour : 2026-04-07
 ```
 ./src/landseg/
 ├── artifacts/                    [Unified artifact lifecycle & persistence]
+│   ├── checkpoint.py             # model checkpointing utilities
 │   ├── controller.py             # policy-driven load/build/rebuild logic
 │   ├── payload_io.py             # structured payload + metadata I/O
 │   ├── paths.py                  # canonical artifact path layout
@@ -15,10 +16,13 @@ Dernière mise à jour : 2026-04-07
 │   └── pipelines/                # explicit pipeline stages
 |
 ├── configs/                      [Hydra configuration tree]
+│   ├── dataspecs/                # data specification
 │   ├── foundation/               # grid, domain, data-block configs
-│   ├── pipeline/                 # ingest / prepare / train pipelines
 │   ├── models/                   # model configuration
-│   ├── trainer/                  # training runtime configuration
+│   ├── pipeline/                 # ingest / prepare / train pipelines
+│   ├── session/                  # session configuration
+│   ├── transform/                # data transform configs
+│   ├── config.yaml               # hydra config tree entry point
 │   └── schema.py                 # config dataclass validation
 |
 ├── core/                         [Project-level contracts]
@@ -29,7 +33,8 @@ Dernière mise à jour : 2026-04-07
 │   ├── core/                     # immutable core data structures
 │   ├── foundation/               # grid, domain, block preparation
 │   ├── transform/                # experiment-scoped data transforms
-│   └── specification/            # DataSpecs construction
+│   ├── specification/            # DataSpecs construction
+│   └── utils/                    # module level utilities
 |
 ├── models/                       [Model architectures]
 │   ├── backbones/                # UNet, UNet++, etc.
@@ -39,11 +44,12 @@ Dernière mise à jour : 2026-04-07
 ├── session/                      [runtime system]
 │   ├── commmon/                  # shared types in the module
 │   ├── components/               # losses, metrics, dataloaders
-│   ├── engine/                   # core training loop
-│   └── runner/                   # training orchestration
+│   ├── engine/                   # batch and policy engines
+│   ├── instrumentation/          # callbacks, preview utility
+│   ├── runner/                   # session orchestration
+│   └── factory.py                # session builders
 |
 └── utils/                        [Shared utilities]
     ├── logger.py                 # project logging
-    ├── funcs.py                  # hashing, JSON, and time helpers
     └── multip.py                 # multiprocessing helpers
   ```

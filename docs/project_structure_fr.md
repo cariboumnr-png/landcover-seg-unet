@@ -5,6 +5,7 @@ Last updated: 2026-04-07
 ```
 ./src/landseg/
 ├── artifacts/                    [Cycle de vie et persistance des artefacts unifiés]
+│   ├── checkpoint.py             # utilitaires de sauvegarde des modèles (checkpoints)
 │   ├── controller.py             # logique de chargement/assemblage/reconstruction pilotée par politiques
 │   ├── payload_io.py             # E/S de payload structuré et métadonnées
 │   ├── paths.py                  # structure canonique des chemins d’artefacts
@@ -15,10 +16,13 @@ Last updated: 2026-04-07
 │   └── pipelines/                # étapes explicites de pipeline
 |
 ├── configs/                      [Arbre de configuration Hydra]
+│   ├── dataspecs/                # spécification des données
 │   ├── foundation/               # grille, domaine, blocs de données
-│   ├── pipeline/                 # pipelines d’ingestion / préparation / entraînement
 │   ├── models/                   # configuration des modèles
-│   ├── trainer/                  # configuration d’exécution d’entraînement
+│   ├── pipeline/                 # pipelines d’ingestion / préparation / entraînement
+│   ├── session/                  # configuration de session
+│   ├── transform/                # configurations de transformation des données
+│   ├── config.yaml               # point d’entrée de l’arbre de configuration Hydra
 │   └── schema.py                 # validation des dataclasses de configuration
 |
 ├── core/                         [Contrats au niveau du projet]
@@ -29,7 +33,8 @@ Last updated: 2026-04-07
 │   ├── core/                     # structures de données immuables
 │   ├── foundation/               # préparation de grille, domaine et blocs
 │   ├── transform/                # transformations liées aux expériences
-│   └── specification/            # construction des DataSpecs
+│   ├── specification/            # construction des DataSpecs
+│   └── utils/                    # utilitaires au niveau du module
 |
 ├── models/                       [Architectures de modèles]
 │   ├── backbones/                # UNet, UNet++ etc.
@@ -39,11 +44,12 @@ Last updated: 2026-04-07
 ├── session/                      [système d’exécution]
 |   ├── common/                   # types partagés dans le module
 │   ├── components/               # pertes, métriques, dataloaders
-│   ├── engine/                   # boucle d’entraînement principale
-│   └── runner/                   # orchestration de l’entraînement
+│   ├── engine/                   # moteurs de batch et politiques
+│   ├── instrumentation/          # callbacks, utilitaire de prévisualisation
+│   ├── runner/                   # orchestration des sessions
+│   └── factory.py                # constructeurs de sessions
 |
 └── utils/                        [Utilitaires partagés]
     ├── logger.py                 # journalisation du projet
-    ├── funcs.py                  # hachage, JSON et fonctions d’aide liées au temps
     └── multip.py                 # outils de multiprocessus
   ```

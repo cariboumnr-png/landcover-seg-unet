@@ -11,9 +11,13 @@ Le système combine **imagerie spectrale Landsat**, **métriques topographiques 
 Le pipeline utilise des architectures U‑Net PyTorch et un flux de préparation de données entièrement basé sur des spécifications.
 
 > **Statut du projet :**
-> Ce dépôt est actuellement en phase **recherche / expérimental**.
-> Les limites des modules et les API **ne sont pas encore stables**.
-> Une exécution orientée production (`engine/`) est prévue pour de futurs jalons mais **n’est pas encore incluse**.
+> Ce dépôt est actuellement en **phase de recherche / expérimentale**.
+> Les frontières de modules et les API ne sont **pas encore stables**.
+> La construction du runtime est désormais **pilotée par la session**, les
+> moteurs d’exécution agissant comme des couches de politique au‑dessus d’un
+> noyau batch partagé. Les API publiques de session et de moteur sont encore en
+> évolution et ne doivent pas être considérées comme stables.
+``
 
 ---
 
@@ -49,12 +53,13 @@ segmentation de l’occupation du sol.
   Variantes U‑Net multi‑têtes et U‑Net avec conditionnement de domaine aligné sur
   la grille en option.
 
-- **Moteur d’entraînement, d’évaluation et d’inférence**
-  Une couche d’exécution pilotée par phases, fondée sur un moteur multi‑têtes
-  et des callbacks, prenant en charge l’entraînement, la validation,
-  l’inférence, l’ordonnancement curriculaire, les métriques, les pertes, la
-  gestion des points de contrôle et la génération d’aperçus. Conçue pour
-  évoluer proprement vers un moteur d’évaluation dédié.
+- **Entraînement, évaluation et inférence**
+  La construction du runtime est prise en charge par une couche de session qui
+  assemble les composants, l’état runtime, les callbacks et les moteurs
+  d’exécution. L’entraînement et l’évaluation sont pilotés par des moteurs
+  limités à la politique (policy‑only) au‑dessus d’un exécuteur batch partagé,
+  avec un runner optionnel basé sur des phases pour l’orchestration de plus haut
+  niveau lorsque nécessaire.
 
 - **Reproductibilité par construction**
   L’entraînement et l’inférence ne consomment que des artefacts persistés
@@ -129,15 +134,20 @@ préparés :
 
     experiment_run pipeline=train-model
 
+Cette étape construit une session d’entraînement complète, incluant l’état
+runtime, les moteurs d’exécution et un runner piloté par phases, à partir des
+artefacts de données préparés.
+
 Cette étape consomme les artefacts préparés mais ne modifie pas les données de base.
 
 ---
 
 #### 4. Test « overfit » en silo (optionnel)
 
-Exécuter un test minimal d’overfitting sur un sous‑ensemble restreint afin de
-valider la chaîne de traitement de bout en bout. Ce pipeline **ne nécessite pas
-d’ingestion ni de préparation préalables** :
+Exécute un test minimal de sur‑apprentissage sur un sous‑ensemble réduit afin de
+valider la chaîne de bout en bout. Ce pipeline construit une session **sans
+runner**, en exerçant directement le moteur d’exécution partagé. Il ne nécessite
+aucune ingestion ou préparation préalable:
 
     experiment_run pipeline=train-overfit
 
@@ -149,15 +159,22 @@ d’ingestion ni de préparation préalables** :
 ## 🚀 Feuille de route
 
 ### Court terme
-- Amélioration de la documentation et des exemples (en cours)
+- Mise à jour de la documentation pour refléter l’architecture runtime
+  pilotée par la session (en cours)
+- Diagrammes de workflow et références explicites aux ADR
+- Exemples améliorés pour les pipelines d’entraînement et de sur‑apprentissage
 
 ### Moyen terme
-- Manifeste optionnel rédigé par l’utilisateur
+- Clarification et formalisation des types de sessions supportées
+  (p. ex. entraînement curriculaire, overfit, évaluation seule)
+- Manifeste optionnel de tâches / phases défini par l’utilisateur
+- Durcissement progressif des API publiques de session et de moteur
 
 ### Long terme
 - Architectures de modèles supplémentaires
-- Outils d’évaluation et d’exportation
-- Promotion graduelle des composants stables dans `engine/training`
+- Outils d’évaluation, d’export et de génération de rapports
+- Consolidation des composants runtime stables vers une surface
+  d’exécution orientée production (session / engine)
 
 ---
 

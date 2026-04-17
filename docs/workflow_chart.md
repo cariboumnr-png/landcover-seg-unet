@@ -23,26 +23,46 @@
 |
 +--> [geopipe/specification/factory]        (4 Build DataSpecs)
 |
-+--> [models/factory]                       (5.1 Model construction)
++--> [models/factory]                       (5 Model construction)
 |
-+--> [trainer/components/]                 (5.2 Heads / Loss / Optim dataloaders, metrics, callbacks)
++--> [session/factory]                     (6 Session construction boundary)
+|        |
+|        +--> [session/components]          (components: loaders, heads, loss, optim)
+|        |
+|        +--> [session/state]               (runtime state initialization)
+|        |
+|        +--> [session/instrumentation]     (callbacks, exporters)
+|        |
+|        +--> [session/engine/batch]        (shared batch execution engine)
+|        |
+|        +--> [session/engine/policy]       (trainer / evaluator policies)
+|        |
+|        +--> [session/runner]              (optional: phases & runner)
 |
-+--> [trainer/engine/engine]                (6 Training engine)
-|
-+--> [trainer/runner/]            (7 Phases / Runner)
-|
-+--> [cli/pipelines/*]    (8 Pipeline execution)
++--> [cli/pipelines/*]                      (7 Pipeline execution)
 ```
 ---
 
-### Interpretation notes
+### Interpretation notes (updated)
 
-- All **build steps** (grid, domain, blocks) are now **pure and deterministic**.
-- All reuse, overwrite, and validation logic flows through:
-  **`artifacts.Controller` / `PayloadController`**.
-- The CLI executes **explicit pipeline stages** rather than a single
-  end‑to‑end implicit run.
+- All foundation build steps (grid, domain, blocks) remain pure and deterministic.
+- All reuse, overwrite, and validation logic flows through artifacts.Controller /
+PayloadController.
+- DataSpecs and Model construction occur before the session boundary and are
+treated as inputs to session construction.
+- Session construction is centralized in session/factory and owns:
+
+  - component construction
+  - runtime state initialization
+  - callback binding
+  - engine instantiation
+  - optional runner assembly
+
+- Engines are policy-only and receive fully initialized state and components.
+- The CLI executes explicit pipeline stages and requests a session; it does 
+not assemble runtime internals.
 - The workflow cleanly separates:
-  - **foundation artifacts** (ingest)
-  - **experiment artifacts** (transform)
-  - **training runtime**
+
+  - foundation artifacts (ingest & preparation)
+  - experiment artifacts (specs, model)
+  - training runtime (session-owned lifecycle)
