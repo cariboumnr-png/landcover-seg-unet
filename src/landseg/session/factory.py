@@ -26,6 +26,7 @@ Session-level factory.
 '''
 
 # standard imports
+import dataclasses
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -34,7 +35,7 @@ import landseg.session.common as common
 import landseg.session.components as comps
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
-import landseg.session.runner as runner
+import landseg.session.orchestration as orchestration
 import landseg.session.state as state
 import landseg.utils as utils
 
@@ -46,19 +47,30 @@ class _SessionConfig(typing.Protocol):
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def phases(self) -> typing.Sequence[runner.PhaseLike]: ...
+    def phases(self) -> typing.Sequence[orchestration.TrainingPhaseLike]: ...
 
-def build_engines(
+#
+@dataclasses.dataclass
+class _Session:
+    '''doc'''
+    trainer: engine.MultiHeadTrainer
+    evaluator: engine.MultiHeadEvaluator
+    training_runner: orchestration.TrainingRunner | None
+
+#
+def build_session(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: _SessionConfig,
     *,
     device: str,
     logger: utils.Logger,
-    **kwargs
-) -> tuple[engine.MultiHeadTrainer, engine.MultiHeadEvaluator]:
+    skip_log: bool = False,
+    build_w_training_runner: bool = False,
+    session_paths: artifacts.ResultsPaths | None = None,
+) -> _Session:
     '''
-    Build training and evaluating engines.
+    Build a session.
     '''
 
     # build session components
@@ -82,7 +94,7 @@ def build_engines(
         config.runtime,
         logger,
         device=device,
-        skip_log=kwargs.get('skip_log', False)
+        skip_log=skip_log
     )
 
     # batch engine
@@ -115,39 +127,18 @@ def build_engines(
         track_head_name=config.runtime.monitor.track_head_name,
         min_delta=config.runtime.schedule.min_delta
     )
-    # return
-    return trainer, evaluator
 
-def build_session_runner(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: _SessionConfig,
-    session_paths: artifacts.ResultsPaths,
-    *,
-    device: str,
-    logger: utils.Logger,
-    **kwargs
-):
-    '''
-    Build session-level runner.
-    '''
-
-    trainer, evaluator = build_engines(
-        dataspecs,
-        model,
-        config,
-        device=device,
-        logger=logger,
-        **kwargs
-    )
-
-    # build controller and return
-    session_runner = runner.Runner(
-        trainer=trainer,
-        evaluator=evaluator,
-        schedule=config.runtime.schedule,
-        phases=config.phases,
-        paths=session_paths,
-        logger=logger
-    )
-    return session_runner
+    # return depending on whether to build a runner
+    if build_w_training_runner:
+        assert session_paths, 'Session artifacts paths not defined'
+        # build controller and return
+        training_runner = orchestration.TrainingRunner(
+            trainer=trainer,
+            evaluator=evaluator,
+            schedule=config.runtime.schedule,
+            phases=config.phases,
+            paths=session_paths,
+            logger=logger
+        )
+        return _Session(trainer, evaluator, training_runner)
+    return _Session(trainer, evaluator, None)

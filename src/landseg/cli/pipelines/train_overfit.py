@@ -76,28 +76,34 @@ def overfit(config: configs.RootConfig) -> None:
     )
 
     # build trainer and evaluator
-    trainer, evaluator = session.build_engines(
+    s = session.build_session(
         dataspecs,
         model,
         config.session,
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
-        skip_log=True
+        skip_log=True,
+        build_w_training_runner=False
     )
 
+    # set monitor head
     monitor_head = config.session.runtime.monitor.track_head_name
-    trainer.set_head_state([monitor_head])
+    s.trainer.set_head_state([monitor_head])
 
-    # run trainer
+    # run trainer and evaluator
     max_epoch = config.session.runtime.schedule.max_epoch
-    logger.log('INFO', f'Starting overfit test for maximum {max_epoch} epochs')
+    lr = config.session.components.optimization.lr
+    logger.log('INFO', 'Starting overfit test')
+    logger.log('INFO', f'Maximum epoch: {max_epoch}')
+    logger.log('INFO', f'Learning rate: {lr}')
     for ep in range(1, max_epoch + 1):
-        los = trainer.train_one_epoch(ep)['Total_Loss']
-        iou = evaluator.validate()[monitor_head]['mean']
+        los = s.trainer.train_one_epoch(ep)['Total_Loss']
+        iou = s.evaluator.validate()[monitor_head]['mean']
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
             return
+
     # if overfit not reached
     hint = 'pipeline=train-overfit trainer.runtime.schedule.max_epoch=<value>'
     logger.log(

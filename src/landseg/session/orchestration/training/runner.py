@@ -39,7 +39,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.session.engine as engine
-import landseg.session.runner as runner
+import landseg.session.orchestration.training as training
 import landseg.utils as utils
 
 class _RunnerScheduleShape(typing.Protocol):
@@ -50,7 +50,7 @@ class _RunnerScheduleShape(typing.Protocol):
     def val_every(self) -> int | None: ...
 
 # --------------------------------Public  Class--------------------------------
-class Runner:
+class TrainingRunner:
     '''
     Orchestrates multi-phase curriculum training for a model engine.
 
@@ -65,7 +65,7 @@ class Runner:
         trainer: engine.MultiHeadTrainer,
         evaluator: engine.MultiHeadEvaluator,
         schedule: _RunnerScheduleShape,
-        phases: typing.Sequence[runner.PhaseLike],
+        phases: typing.Sequence[training.TrainingPhaseLike],
         paths: artifacts.ResultsPaths,
         logger: utils.Logger,
     ):
@@ -273,7 +273,7 @@ class Runner:
         self.logger.log('INFO', f'Checkpoint saved: {fpath}')
 
     @staticmethod
-    def _print_phase(phase: runner.PhaseLike):
+    def _print_phase(phase: training.TrainingPhaseLike):
         '''Pretty print a phase to console.'''
 
         print('__Phase details__')

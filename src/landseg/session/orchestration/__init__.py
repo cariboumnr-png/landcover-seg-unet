@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session`.
+Top-level namespace for `landseg.session.orchestration`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,19 +32,18 @@ import typing
 
 __all__ = [
     # classes
+    'TrainingRunner',
     # functions
-    'build_session',
     # types
+    'TrainingPhaseLike'
 ]
-
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_session
-
+    from .training import TrainingRunner, TrainingPhaseLike
 
 def __getattr__(name: str):
 
-    if name in {'build_session'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'TrainingRunner', 'TrainingPhaseLike'}:
+        return getattr(importlib.import_module('.training', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

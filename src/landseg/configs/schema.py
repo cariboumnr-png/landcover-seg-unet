@@ -482,6 +482,10 @@ class RootConfig:
         self.models.validate()
         # future checks to be added below (e.g., controller phases)
 
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Dict representation.'''
+        return dataclasses.asdict(self)
+
 # ------------------------------private  function------------------------------
 def _is_resolved(value: typing.Any) -> bool:
     '''Return True if not omegaconf.MISSING and not an interpolation.'''

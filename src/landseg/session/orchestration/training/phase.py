@@ -27,7 +27,7 @@
 from __future__ import annotations
 import typing
 
-class PhaseLike(typing.Protocol):
+class TrainingPhaseLike(typing.Protocol):
     '''Training phase container'''
     finished: bool = False
     @property
