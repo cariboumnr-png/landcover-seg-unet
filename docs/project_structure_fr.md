@@ -46,7 +46,7 @@ Last updated: 2026-04-07
 │   ├── components/               # pertes, métriques, dataloaders
 │   ├── engine/                   # moteurs de batch et politiques
 │   ├── instrumentation/          # callbacks, utilitaire de prévisualisation
-│   ├── runner/                   # orchestration des sessions
+│   ├── orchestration/            # orchestration des sessions
 │   └── factory.py                # constructeurs de sessions
 |
 └── utils/                        [Utilitaires partagés]
