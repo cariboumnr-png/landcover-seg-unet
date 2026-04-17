@@ -26,6 +26,7 @@ Session-level factory.
 '''
 
 # standard imports
+import dataclasses
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -48,6 +49,15 @@ class _SessionConfig(typing.Protocol):
     @property
     def phases(self) -> typing.Sequence[orchestration.TrainingPhaseLike]: ...
 
+#
+@dataclasses.dataclass
+class _Session:
+    '''doc'''
+    trainer: engine.MultiHeadTrainer
+    evaluator: engine.MultiHeadEvaluator
+    training_runner: orchestration.TrainingRunner | None
+
+#
 def build_session(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
@@ -58,11 +68,7 @@ def build_session(
     skip_log: bool = False,
     build_w_training_runner: bool = False,
     session_paths: artifacts.ResultsPaths | None = None,
-) -> tuple[
-        engine.MultiHeadTrainer,
-        engine.MultiHeadEvaluator,
-        orchestration.TrainingRunner | None
-    ]:
+) -> _Session:
     '''
     Build a session.
     '''
@@ -134,5 +140,5 @@ def build_session(
             paths=session_paths,
             logger=logger
         )
-        return trainer, evaluator, training_runner
-    return trainer, evaluator, None
+        return _Session(trainer, evaluator, training_runner)
+    return _Session(trainer, evaluator, None)

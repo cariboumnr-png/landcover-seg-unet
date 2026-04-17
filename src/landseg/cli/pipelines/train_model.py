@@ -78,7 +78,7 @@ def train(config: configs.RootConfig):
     )
 
     # build session runner
-    _, _, runner = session.build_session(
+    runner = session.build_session(
         dataspecs,
         model,
         config.session,
@@ -86,7 +86,7 @@ def train(config: configs.RootConfig):
         logger=logger,
         build_w_training_runner=True,
         session_paths=session_paths,
-    )
+    ).training_runner
     assert runner, 'Training runner not properly built' # sanity
 
     # run session
