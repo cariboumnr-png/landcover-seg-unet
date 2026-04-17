@@ -48,17 +48,23 @@ class _SessionConfig(typing.Protocol):
     @property
     def phases(self) -> typing.Sequence[orchestration.TrainingPhaseLike]: ...
 
-def build_engines(
+def build_session(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: _SessionConfig,
     *,
     device: str,
     logger: utils.Logger,
-    **kwargs
-) -> tuple[engine.MultiHeadTrainer, engine.MultiHeadEvaluator]:
+    skip_log: bool = False,
+    build_w_training_runner: bool = False,
+    session_paths: artifacts.ResultsPaths | None = None,
+) -> tuple[
+        engine.MultiHeadTrainer,
+        engine.MultiHeadEvaluator,
+        orchestration.TrainingRunner | None
+    ]:
     '''
-    Build training and evaluating engines.
+    Build a session.
     '''
 
     # build session components
@@ -82,7 +88,7 @@ def build_engines(
         config.runtime,
         logger,
         device=device,
-        skip_log=kwargs.get('skip_log', False)
+        skip_log=skip_log
     )
 
     # batch engine
@@ -115,39 +121,18 @@ def build_engines(
         track_head_name=config.runtime.monitor.track_head_name,
         min_delta=config.runtime.schedule.min_delta
     )
-    # return
-    return trainer, evaluator
 
-def build_session_runner(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: _SessionConfig,
-    session_paths: artifacts.ResultsPaths,
-    *,
-    device: str,
-    logger: utils.Logger,
-    **kwargs
-):
-    '''
-    Build session-level runner.
-    '''
-
-    trainer, evaluator = build_engines(
-        dataspecs,
-        model,
-        config,
-        device=device,
-        logger=logger,
-        **kwargs
-    )
-
-    # build controller and return
-    session_runner = orchestration.TrainingRunner(
-        trainer=trainer,
-        evaluator=evaluator,
-        schedule=config.runtime.schedule,
-        phases=config.phases,
-        paths=session_paths,
-        logger=logger
-    )
-    return session_runner
+    # return depending on whether to build a runner
+    if build_w_training_runner:
+        assert session_paths, 'Session artifacts paths not defined'
+        # build controller and return
+        training_runner = orchestration.TrainingRunner(
+            trainer=trainer,
+            evaluator=evaluator,
+            schedule=config.runtime.schedule,
+            phases=config.phases,
+            paths=session_paths,
+            logger=logger
+        )
+        return trainer, evaluator, training_runner
+    return trainer, evaluator, None

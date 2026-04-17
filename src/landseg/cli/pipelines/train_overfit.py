@@ -76,13 +76,14 @@ def overfit(config: configs.RootConfig) -> None:
     )
 
     # build trainer and evaluator
-    trainer, evaluator = session.build_engines(
+    trainer, evaluator, _ = session.build_session(
         dataspecs,
         model,
         config.session,
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
-        skip_log=True
+        skip_log=True,
+        build_w_training_runner=False
     )
 
     monitor_head = config.session.runtime.monitor.track_head_name

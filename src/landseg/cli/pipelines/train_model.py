@@ -80,14 +80,16 @@ def train(config: configs.RootConfig):
     )
 
     # build session runner
-    runner = session.build_session_runner(
+    _, _, runner = session.build_session(
         dataspecs,
         model,
         config.session,
-        session_paths,
         device='cuda' if torch.cuda.is_available() else 'cpu',
-        logger=logger
+        logger=logger,
+        build_w_training_runner=True,
+        session_paths=session_paths,
     )
+    assert runner, 'Training runner not properly built' # sanity
 
     # run session
     runner.fit()
