@@ -26,8 +26,6 @@ Builds data specifications from produced artifacts, constructs the
 model, and runs the multi-phase training runner.
 '''
 
-# standard imports
-import dataclasses
 # third-party imports
 import torch
 # local imports
@@ -55,7 +53,7 @@ def train(config: configs.RootConfig):
 
     # save running config per run
     ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
-    ctrl.persist(dataclasses.asdict(config))
+    ctrl.persist(config.as_dict())
 
     # create a centralized main logger
     logger = utils.Logger('main', session_paths.main_log_file)
