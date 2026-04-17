@@ -34,7 +34,7 @@ import landseg.session.common as common
 import landseg.session.components as comps
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
-import landseg.session.runner as runner
+import landseg.session.orchestration as orchestration
 import landseg.session.state as state
 import landseg.utils as utils
 
@@ -46,7 +46,7 @@ class _SessionConfig(typing.Protocol):
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def phases(self) -> typing.Sequence[runner.PhaseLike]: ...
+    def phases(self) -> typing.Sequence[orchestration.TrainingPhaseLike]: ...
 
 def build_engines(
     dataspecs: core.DataSpecs,
@@ -142,7 +142,7 @@ def build_session_runner(
     )
 
     # build controller and return
-    session_runner = runner.Runner(
+    session_runner = orchestration.TrainingRunner(
         trainer=trainer,
         evaluator=evaluator,
         schedule=config.runtime.schedule,
