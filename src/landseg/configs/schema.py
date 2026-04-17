@@ -455,6 +455,23 @@ class SessionConfig:
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
+# ------------------------------PIPELINE  CONFIGS------------------------------
+@dataclasses.dataclass
+class TrainModelConfig:
+    pass  # training uses session config only (for now)
+
+@dataclasses.dataclass
+class EvaluateModelConfig:
+    checkpoint: str | None = None
+    split: str = 'test'
+    export_previews: bool = False
+
+@dataclasses.dataclass
+class PipelineConfig:
+    name: str = 'default'
+    train_model: TrainModelConfig = field(default_factory=TrainModelConfig)
+    evaluate_model: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
+
 # --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass
 class RootConfig:
@@ -474,6 +491,8 @@ class RootConfig:
     models: ModelsCfg = field(default_factory=ModelsCfg)
     # session settings
     session: SessionConfig = field(default_factory=SessionConfig)
+    # pipeline specific CLI flags
+    pipeline: PipelineConfig = field(default_factory=PipelineConfig)
 
     def validate_all(self) -> None:
         # delegated to subtrees.
