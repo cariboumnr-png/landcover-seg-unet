@@ -1,7 +1,8 @@
+
 # ADR-0023: Public Session Construction API
 
-- **Status:** Proposed
-- **Date:** 2026-04-16
+- **Status:** Accepted
+- **Date:** 2026-04-18
 - **Related ADRs:** ADR-0021, ADR-0022
 
 ---
@@ -13,23 +14,21 @@ boundary for runtime execution. ADR-0022 clarified that sessions may serve
 different **intents** (training, overfit, evaluation-only), without introducing
 distinct session types or classes.
 
-At present, session construction is exposed through multiple factory functions
-(e.g. engine construction, optional runner construction), which are correct
-internally but ambiguous as a *public* API. Callers must understand which
-functions to combine and in what order.
+Prior to this ADR, session construction was exposed through multiple factory
+functions (e.g. engine builders, runner builders). While correct internally,
+this made the *public* usage ambiguous: callers needed to understand which
+pieces to assemble and in what order.
 
-This ADR defines a **public session construction surface** that is stable,
-intent-aware, and minimal, while explicitly deferring orchestration unification
-and higher-level experiment control.
+This ADR formalizes a **single public session construction API** and constrains
+all runtime assembly behind that boundary.
 
 ---
 
 ## Decision
 
-### Define a single public session construction entrypoint
+### A single public session construction entrypoint
 
-The system will expose **one public session construction API** intended for use
-by CLI pipelines and external callers:
+The system exposes **one public API** for constructing a session:
 
     build_session(...)
 
@@ -37,6 +36,7 @@ This function represents the **official session boundary**. All other session
 factory helpers are considered internal implementation details.
 
 The public API is responsible for:
+
 - constructing session-owned components
 - initializing runtime state
 - assembling execution engines
@@ -45,85 +45,94 @@ The public API is responsible for:
 
 ---
 
-### Scope of the public API
+## Public API Surface
 
-The public session construction API:
+### Inputs
 
-- **Accepts**
+The public session construction API accepts:
+
   - prepared `DataSpecs`
   - a constructed model
   - session configuration (components, runtime, phases)
   - execution context (device, logger, paths)
 
-- **Returns**
-  - a session object encapsulating:
-    - trainer
-    - evaluator
-    - optional runner
-    - runtime metadata
+### Outputs
 
-- **Does not**
-  - perform artifact ingestion or data preparation
-  - perform model selection or hyperparameter search
-  - manage multiple runs or compare results across sessions
+The API returns a **typed session result object** encapsulating:
+
+  - trainer
+  - evaluator
+  - optional orchestration (e.g. training runner)
+  - session-level metadata
+
+This result object is the only supported integration surface for callers.
 
 ---
 
-### Session intent handling
+## Session Intent and Orchestration
 
 Session intent (as defined in ADR-0022) influences *what is assembled*, not the
-existence of multiple APIs.
+shape of the public API.
 
 Examples:
-- **Training intent** → trainer + evaluator + runner
-- **Overfit intent** → trainer + evaluator, runner optional or omitted
+
+- **Training intent** → trainer + evaluator + training orchestration
+- **Overfit intent** → trainer + evaluator, orchestration omitted
 - **Evaluation-only intent** → evaluator only (deferred)
 
-Intent may be expressed via configuration or pipeline selection, but does not
-require separate construction functions.
+Orchestration is optional and strategy-specific. It is not the definition of a
+session and is not required for all session intents.
 
 ---
 
-### What remains internal
+## Explicit Non-Goals
 
-The following remain **non-public** and may change without notice:
+The public session construction API does **not**:
 
-- engine-level builders (trainer/evaluator instantiation)
-- callback wiring and instrumentation details
+- perform artifact ingestion or data preparation
+- perform model selection or hyperparameter search
+- manage multiple runs or compare results across sessions
+- define experiment-level or optimization workflows
+
+These concerns are intentionally outside the session boundary.
+
+---
+
+## Internal vs Public Guarantees
+
+Only the following are considered **public and stable**:
+
+- the `build_session(...)` entrypoint
+- the returned session result object and its fields
+
+The following remain **internal** and may change without notice:
+
+- engine-level builders
+- orchestration internals
+- callback wiring and instrumentation
 - runtime state initialization helpers
-- intermediate factory functions used by `build_session`
+- intermediate factory functions
 
-This preserves refactoring freedom inside the session module.
+This preserves refactoring freedom within the session module.
 
 ---
 
 ## Consequences
 
 ### Positive
+
 - Establishes a clear, minimal public API boundary
-- Reduces cognitive load for CLI and external callers
-- Prevents session internals from leaking into pipelines
-- Creates a stable foundation for future orchestration layers
+- Makes orchestration explicitly optional
+- Removes ambiguity in CLI and pipeline usage
+- Aligns code structure with session-first architecture
 
 ### Costs
-- Requires light refactoring to funnel construction through the public API
-- Some flexibility is deferred in favor of clarity
+
+- Requires funneling all construction through the public API
+- Defers some flexibility in favor of clarity
 
 These costs are accepted to stabilize the session boundary before introducing
-higher-level abstractions.
-
----
-
-## What this ADR does *not* do
-
-This ADR intentionally does **not**:
-
-- define an experiment or study abstraction
-- formalize evaluation-only sessions
-- unify all execution workflows
-- guarantee long-term API stability beyond the session boundary
-
-Those concerns are explicitly deferred.
+higher-level orchestration or optimization layers.
 
 ---
 
@@ -134,14 +143,15 @@ The following items are expected to be addressed by future ADRs:
 - Clarify and formalize **evaluation-only sessions** and reporting outputs
 - Introduce an **experiment / study layer** for hyperparameter sweeps,
   model comparison, and final model selection
-- Define how session results are aggregated and compared
-- Further simplify internal session factory structure once orchestration
-  patterns converge
+- Define a session-level result reporting contract for downstream consumers
+- Further simplify internal session construction once orchestration patterns
+  converge
 
 ---
 
 ## Summary
 
-This ADR defines a **single, explicit public API** for session construction,
-solidifying the session as a stable execution boundary while preserving
-flexibility for future orchestration and optimization layers.
+This ADR establishes a **single, explicit public API** for session construction
+and enforces the session as the authoritative runtime boundary. With the public
+surface implemented and typed, future orchestration and optimization layers can
+be introduced without destabilizing core execution semantics.
