@@ -34,6 +34,7 @@ __all__ = [
     # classes
     # functions
     'default_action',
+    'evaluate',
     'ingest',
     'overfit',
     'prepare',
@@ -44,6 +45,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .default import default_action
+    from .evaluate_model import evaluate
     from .ingest_data import ingest
     from .prepare_data import prepare
     from .train_model import train
@@ -53,6 +55,9 @@ def __getattr__(name: str):
 
     if name in {'default_action'}:
         return getattr(importlib.import_module('.default', __package__), name)
+
+    if name in {'evaluate'}:
+        return getattr(importlib.import_module('.evaluate_model', __package__), name)
 
     if name in {'ingest'}:
         return getattr(importlib.import_module('.ingest_data', __package__), name)

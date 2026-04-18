@@ -42,10 +42,11 @@ import landseg.utils as utils
 
 command_registry = {
     'default': pipelines.default_action,
+    'evaluate-model':pipelines.evaluate,
     'ingest-data': pipelines.ingest,
     'prepare-data': pipelines.prepare,
     'train-model': pipelines.train,
-    'train-overfit': pipelines.overfit
+    'train-overfit': pipelines.overfit,
 }
 
 # main process
