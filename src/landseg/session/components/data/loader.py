@@ -144,19 +144,34 @@ def build_dataloaders(
             assert single_loader
             return DataLoaders(single_loader, single_loader, None, meta)
 
+        # val only mode
+        case 'val_only':
+            val_loader = load_partial('val')
+            return DataLoaders(
+                train=None,
+                val=val_loader,
+                test=None,
+                meta=meta
+            )
+
         # test only mode
         case 'test_only':
             test_loader = load_partial('test')
-            return DataLoaders(None, None, test_loader, meta)
+            return DataLoaders(
+                train=None,
+                val=None,
+                test=test_loader,
+                meta=meta
+            )
 
         # defualt normal experiment
         case 'default':
-            train_loader = load_partial('train')
-            val_loader = load_partial('val')
-            test_loader = load_partial('test')
-            # sanity checks and return
-            assert train_loader and val_loader
-            return DataLoaders(train_loader, val_loader, test_loader, meta)
+            return DataLoaders(
+                train=load_partial('train'),
+                val=load_partial('val'),
+                test=load_partial('test'),
+                meta=meta
+            )
 
         # catch
         case _:

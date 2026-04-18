@@ -60,7 +60,7 @@ field = dataclasses.field
 class DataSpecs:
     '''Container for dataset specs used by trainers and models'''
     name: str
-    mode: typing.Literal['default', 'single', 'test_only']
+    mode: typing.Literal['default', 'single', 'val_only', 'test_only']
     meta: Meta         # general dataset metadata
     heads: Heads       # head-wise label statistics and topology
     splits: Splits     # train/val/test block file mappings

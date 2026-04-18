@@ -41,7 +41,7 @@ import landseg.geopipe.utils as geo_utils
 def build_dataspec(
     artifact_paths: artifacts.ArtifactPaths,
     *,
-    mode: typing.Literal['default', 'single', 'test_only'] = 'default',
+    mode: typing.Literal['default', 'single', 'val_only', 'test_only'],
     ids_domain_name: str | None = None,
     vec_domain_name: str | None = None,
     print_out: bool = False
