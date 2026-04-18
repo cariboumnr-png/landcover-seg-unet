@@ -281,7 +281,7 @@ class ResultsPaths:
         # find the latest run number
         i = 1
         while True:
-            self.run_folder = os.path.join(self.results_root, f'exp_{i:04d}')
+            self.run_folder = os.path.join(self.results_root, f'run_{i:04d}')
             try:
                 os.makedirs(self.run_folder)
                 break
