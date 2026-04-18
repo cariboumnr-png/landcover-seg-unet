@@ -53,8 +53,8 @@ class _SessionConfig(typing.Protocol):
 @dataclasses.dataclass
 class _Session:
     '''doc'''
-    trainer: engine.MultiHeadTrainer
     evaluator: engine.MultiHeadEvaluator
+    trainer: engine.MultiHeadTrainer | None
     training_runner: orchestration.TrainingRunner | None
 
 #
@@ -63,11 +63,11 @@ def build_session(
     model: core.MultiheadModelLike,
     config: _SessionConfig,
     *,
+    mode: typing.Literal['train', 'evaluate', 'overfit'],
     device: str,
     logger: utils.Logger,
-    skip_log: bool = False,
+    skip_callback_logging: bool = False,
     eval_dataset: typing.Literal['val', 'test'] = 'val',
-    build_w_training_runner: bool = False,
     session_paths: artifacts.ResultsPaths | None = None,
 ) -> _Session:
     '''
@@ -95,7 +95,7 @@ def build_session(
         config.runtime,
         logger,
         device=device,
-        skip_log=skip_log
+        skip_log=skip_callback_logging
     )
 
     # batch engine
@@ -106,18 +106,8 @@ def build_session(
         use_amp=config.runtime.precision.use_amp,
         device=device
     )
-    # trainer
-    trainer = engine.MultiHeadTrainer(
-        engine=batch_executor,
-        state=runtime_state,
-        components=session_components,
-        callbacks=callbacks,
-        device=device,
-        use_amp=config.runtime.precision.use_amp,
-        grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-        log_every=config.runtime.schedule.log_every,
-    )
-    # evaluator
+
+    # evaluator is always needed
     evaluator = engine.MultiHeadEvaluator(
         engine=batch_executor,
         state=runtime_state,
@@ -130,17 +120,43 @@ def build_session(
         dataset=eval_dataset
     )
 
-    # return depending on whether to build a runner
-    if build_w_training_runner:
-        assert session_paths, 'Session artifacts paths not defined'
-        # build controller and return
-        training_runner = orchestration.TrainingRunner(
-            trainer=trainer,
-            evaluator=evaluator,
-            schedule=config.runtime.schedule,
-            phases=config.phases,
-            paths=session_paths,
-            logger=logger
-        )
-        return _Session(trainer, evaluator, training_runner)
-    return _Session(trainer, evaluator, None)
+    # build trainer/runner depending on mode
+    match mode:
+        case 'evaluate':
+            return _Session(evaluator, None, None)
+
+        case 'train':
+            trainer = engine.MultiHeadTrainer(
+                engine=batch_executor,
+                state=runtime_state,
+                components=session_components,
+                callbacks=callbacks,
+                device=device,
+                use_amp=config.runtime.precision.use_amp,
+                grad_clip_norm=config.runtime.optimization.grad_clip_norm,
+                log_every=config.runtime.schedule.log_every,
+            )
+            # build controller and return
+            assert session_paths, 'Session artifacts paths not defined'
+            training_runner = orchestration.TrainingRunner(
+                trainer=trainer,
+                evaluator=evaluator,
+                schedule=config.runtime.schedule,
+                phases=config.phases,
+                paths=session_paths,
+                logger=logger
+            )
+            return _Session(evaluator, trainer, training_runner)
+
+        case 'overfit':
+            trainer = engine.MultiHeadTrainer(
+                engine=batch_executor,
+                state=runtime_state,
+                components=session_components,
+                callbacks=callbacks,
+                device=device,
+                use_amp=config.runtime.precision.use_amp,
+                grad_clip_norm=config.runtime.optimization.grad_clip_norm,
+                log_every=config.runtime.schedule.log_every,
+            )
+            return _Session(evaluator, trainer, None)

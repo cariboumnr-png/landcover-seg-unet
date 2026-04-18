@@ -80,11 +80,12 @@ def overfit(config: configs.RootConfig) -> None:
         dataspecs,
         model,
         config.session,
+        mode='overfit',
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
-        skip_log=True,
-        build_w_training_runner=False
+        skip_callback_logging=True
     )
+    assert s.trainer # sanity
 
     # set monitor head
     monitor_head = config.session.runtime.monitor.track_head_name

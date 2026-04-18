@@ -109,10 +109,10 @@ def evaluate(config: configs.RootConfig):
         dataspecs,
         model,
         config.session,
+        mode='evaluate',
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
         eval_dataset=split,
-        build_w_training_runner=False,
     ).evaluator
 
     # load checkpoint

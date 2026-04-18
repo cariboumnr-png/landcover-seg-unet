@@ -95,14 +95,14 @@ def train(config: configs.RootConfig):
         clamp_range=config.models.clamp_range
     )
 
-    # build session runner
+    # build a full session with a runner
     runner = session.build_session(
         dataspecs,
         model,
         config.session,
+        mode='train',
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
-        build_w_training_runner=True,
         session_paths=session_paths,
     ).training_runner
     assert runner, 'Training runner not properly built' # sanity
