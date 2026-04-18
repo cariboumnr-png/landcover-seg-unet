@@ -275,6 +275,10 @@ class ResultsPaths:
     def config(self) -> str:
         return os.path.join(self.run_folder, 'config.json')
 
+    @property
+    def meta(self) -> str:
+        return os.path.join(self.run_folder, 'metadata.json')
+
     def init(self):
         '''Initialize a results folder.'''
 
