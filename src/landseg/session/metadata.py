@@ -36,5 +36,5 @@ class SessionMetadata(typing.TypedDict):
     pipeline: str
     created_at: str
     completed_at: str | None
-    inputs: dict[str, object]   # liberal dicts for now
-    summary: dict[str, object]  # liberal dicts for now
+    inputs: typing.Mapping[str, object]   # liberal dicts for now
+    summary: typing.Mapping[str, object]  # liberal dicts for now
