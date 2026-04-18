@@ -62,6 +62,7 @@ def train(config: configs.RootConfig):
     artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
+        mode='default',
         ids_domain_name=config.dataspecs.domain_ids_name,
         vec_domain_name=config.dataspecs.domain_vec_name,
         print_out=True
