@@ -472,15 +472,19 @@ class PipelineConfig:
     train_model: TrainModelConfig = field(default_factory=TrainModelConfig)
     evaluate_model: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
 
+# ------------------------------EXECUTION CONFIGS------------------------------
+@dataclasses.dataclass
+class ExecutionContext:
+    exp_root: str = './experiment' # root directory for this experiment run
+    dev_settings: str | None = None # developer-only override config
+
 # --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass
 class RootConfig:
     '''Root structured config for landseg.'''
 
-    # root dir for an experiment run
-    exp_root: str = './experiment'
-    # dev override paths
-    dev_settings_path: str | None = None
+    # execution configs
+    execution: ExecutionContext = field(default_factory=ExecutionContext)
     # raw input data and configs
     foundation: DataFoundation = field(default_factory=DataFoundation)
     # data preparation

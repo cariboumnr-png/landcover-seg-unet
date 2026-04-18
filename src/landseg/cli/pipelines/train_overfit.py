@@ -54,7 +54,7 @@ def overfit(config: configs.RootConfig) -> None:
     '''
 
     # root dpath
-    root = f'{config.exp_root}/results/overfit_test'
+    root = f'{config.execution.exp_root}/results/overfit_test'
 
     # init a logger
     logger = utils.Logger('overfit', f'{root}/log')

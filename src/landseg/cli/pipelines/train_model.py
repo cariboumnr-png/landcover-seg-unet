@@ -48,7 +48,7 @@ def train(config: configs.RootConfig):
     '''
 
     # init run io folder tree
-    session_paths = artifacts.ResultsPaths(f'{config.exp_root}/results')
+    session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     session_paths.init()
 
     # save running config per run
@@ -59,7 +59,7 @@ def train(config: configs.RootConfig):
     logger = utils.Logger('main', session_paths.main_log_file)
 
     # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(f'{config.exp_root}/artifacts')
+    artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
         ids_domain_name=config.dataspecs.domain_ids_name,

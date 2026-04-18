@@ -47,7 +47,7 @@ def prepare(config: configs.RootConfig):
     '''
 
     # init a logger
-    logger = utils.Logger('prep', f'{config.exp_root}/prep.log')
+    logger = utils.Logger('prep', f'{config.execution.exp_root}/prep.log')
 
     # artifact paths
     foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
