@@ -82,7 +82,7 @@ def evaluate(config: configs.RootConfig):
     ctrl.persist(config.as_dict())
 
     # create a logger
-    logger = utils.Logger('eval_test', './eval_test.log')
+    logger = utils.Logger('main', session_paths.main_log_file)
 
     # collect artifacts and build dataspsec
     artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
