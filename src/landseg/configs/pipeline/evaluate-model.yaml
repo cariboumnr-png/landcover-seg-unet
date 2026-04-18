@@ -1,0 +1,6 @@
+# @package pipeline
+
+evaluate_model:
+  checkpoint: null
+  split: test
+  export_previews: false

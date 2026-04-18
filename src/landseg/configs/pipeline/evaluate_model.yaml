@@ -1,7 +1,0 @@
-# @package _global_
-
-name: evaluate-model
-
-checkpoint: null
-split: test
-export_previews: false
