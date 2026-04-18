@@ -66,6 +66,7 @@ def build_session(
     device: str,
     logger: utils.Logger,
     skip_log: bool = False,
+    eval_dataset: typing.Literal['val', 'test'] = 'val',
     build_w_training_runner: bool = False,
     session_paths: artifacts.ResultsPaths | None = None,
 ) -> _Session:
@@ -125,7 +126,8 @@ def build_session(
         device=device,
         track_mode=config.runtime.monitor.track_mode,
         track_head_name=config.runtime.monitor.track_head_name,
-        min_delta=config.runtime.schedule.min_delta
+        min_delta=config.runtime.schedule.min_delta,
+        dataset=eval_dataset
     )
 
     # return depending on whether to build a runner
