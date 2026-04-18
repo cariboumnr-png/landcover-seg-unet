@@ -36,6 +36,9 @@ import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
 
+# constant
+T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
+
 def train(config: configs.RootConfig):
     '''
     Run a full training job.
@@ -51,9 +54,23 @@ def train(config: configs.RootConfig):
     session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     session_paths.init()
 
+    # create the session metadata dict
+    meta_ctrl = artifacts.Controller[dict](session_paths.meta)
+    meta: session.SessionMetadata = {
+        'status': 'running',
+        'run_id': session_paths.run_id,
+        'intent': 'training',
+        'pipeline': config.pipeline.name,
+        'created_at': session_paths.time(T_FORMAT),
+        'completed_at': None,
+        'inputs': {},
+        'summary': {}
+    }
+    meta_ctrl.persist(meta)
+
     # save running config per run
-    ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
-    ctrl.persist(config.as_dict())
+    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
+    config_ctrl.persist(config.as_dict())
 
     # create a centralized main logger
     logger = utils.Logger('main', session_paths.main_log_file)
@@ -92,3 +109,7 @@ def train(config: configs.RootConfig):
 
     # run session
     runner.fit()
+
+    # update metadata
+    meta['completed_at'] = session_paths.time(T_FORMAT)
+    meta_ctrl.persist(meta)

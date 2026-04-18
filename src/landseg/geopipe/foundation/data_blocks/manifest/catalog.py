@@ -35,8 +35,6 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
-
 # -------------------------------Public Function-------------------------------
 def build_catalog(
     input_block_fpaths: list[str],
