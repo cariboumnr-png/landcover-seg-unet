@@ -47,6 +47,8 @@ In short:
 - The evaluator answers: "How should batch results be interpreted?"
 '''
 
+# standard imports
+import typing
 # local imports
 import landseg.session.engine as engine
 
@@ -80,12 +82,14 @@ class MultiHeadEvaluator(engine.EngineBase):
         track_mode: str,
         track_head_name: str,
         min_delta: float | None,
+        dataset: typing.Literal['val', 'test'] = 'val',
         **kwargs
     ):
         super().__init__(**kwargs)
         self.track_mode = track_mode
         self.track_head_name = track_head_name
         self.min_delta = min_delta
+        self.dataset = dataset
 
     # -------------------------------Public  Methods-------------------------------
     def validate(self) -> dict[str, dict]:
@@ -119,9 +123,15 @@ class MultiHeadEvaluator(engine.EngineBase):
         self.model.set_logit_adjust_enabled(self.flags['enable_val_la'])
         self._emit('on_validation_begin')
 
+        # set target dataset
+        match self.dataset:
+            case 'val': dataloader = self.dataloaders.val
+            case 'test': dataloader = self.dataloaders.test
+            case _: raise ValueError(f'Invalid dataset type: {self.dataset}')
+
         # iterate through validation dataset
-        assert self.dataloaders.val, 'Validation dataset not provided'
-        for bidx, batch in enumerate(self.dataloaders.val, start=1):
+        assert dataloader, 'Target dataset not provided'
+        for bidx, batch in enumerate(dataloader, start=1):
 
             # batch start
             self._emit('on_validation_batch_begin', bidx, batch)
