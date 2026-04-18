@@ -127,7 +127,23 @@ This stage consumes prepared artifacts but does not modify foundation data.
 
 ---
 
-#### 4. Overfit silo test (optional)
+#### 4. Model evaluation
+Run a standalone evaluation job using the currently prepared dataset artifacts
+and a trained checkpoint:
+
+    experiment_run pipeline=evaluate-model \
+      pipeline.evaluate_model.checkpoint=path/to/checkpoint
+
+This stage constructs an evaluation-only session from prepared dataset
+artifacts and the supplied checkpoint, then runs inference and metric
+computation on the configured evaluation split (for example, `val` or `test`)
+without performing training, optimization, or checkpoint creation. It is
+intended for post-training assessment and reporting, and consumes prepared
+artifacts without modifying foundation data.
+
+---
+
+#### 5. Overfit silo test (optional)
 
 Run a minimal overfit test on a small subset to validate the end‑to‑end stack.
 This pipeline constructs a session **without a runner**, exercising the shared

@@ -142,7 +142,21 @@ Cette étape consomme les artefacts préparés mais ne modifie pas les données 
 
 ---
 
-#### 4. Test « overfit » en silo (optionnel)
+#### 4. Évaluation du modèle
+Exécutez une tâche d’évaluation autonome en utilisant les artefacts de jeu de
+données déjà préparés ainsi qu’un point de contrôle (checkpoint) entraîné:
+
+    experiment_run pipeline=evaluate-model \
+      pipeline.evaluate_model.checkpoint=path/to/checkpoint
+
+Cette étape construit une session d’évaluation uniquement à partir des artefacts
+de données préparés et du checkpoint fourni, puis exécute l’inférence et le calcul
+des métriques sur le partitionnement d’évaluation configuré (par exemple `val` ou
+`test`), sans effectuer d’entraînement, d’optimisation ni de création de checkpoint.
+
+---
+
+#### 5. Test « overfit » en silo (optionnel)
 
 Exécute un test minimal de sur‑apprentissage sur un sous‑ensemble réduit afin de
 valider la chaîne de bout en bout. Ce pipeline construit une session **sans
