@@ -1,1 +1,3 @@
 # @package pipeline
+
+name: train-model

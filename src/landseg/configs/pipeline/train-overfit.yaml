@@ -43,3 +43,6 @@ session:
       use_amp: False
     optimization:
       grad_clip_norm: null
+
+pipeline:
+  name: train-overfit
