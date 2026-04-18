@@ -63,7 +63,7 @@ def build_session(
     model: core.MultiheadModelLike,
     config: _SessionConfig,
     *,
-    mode: typing.Literal['train', 'evaluate', 'overfit'],
+    intent: typing.Literal['training', 'evaluation', 'overfit'],
     device: str,
     logger: utils.Logger,
     skip_callback_logging: bool = False,
@@ -121,11 +121,11 @@ def build_session(
     )
 
     # build trainer/runner depending on mode
-    match mode:
-        case 'evaluate':
+    match intent:
+        case 'evaluation':
             return _Session(evaluator, None, None)
 
-        case 'train':
+        case 'training':
             trainer = engine.MultiHeadTrainer(
                 engine=batch_executor,
                 state=runtime_state,

@@ -100,7 +100,7 @@ def train(config: configs.RootConfig):
         dataspecs,
         model,
         config.session,
-        mode='train',
+        intent='training',
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
         session_paths=session_paths,

@@ -109,7 +109,7 @@ def evaluate(config: configs.RootConfig):
         dataspecs,
         model,
         config.session,
-        mode='evaluate',
+        intent='evaluation',
         device='cuda' if torch.cuda.is_available() else 'cpu',
         logger=logger,
         eval_dataset=split,
