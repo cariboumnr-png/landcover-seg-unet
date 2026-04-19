@@ -18,11 +18,10 @@ defaults:
   # pipeline
   - pipeline: default
 
-# experiment root
-exp_root: ./experiment
-
-# dev-facing local override; optional and untracked
-dev_settings_path: ${oc.env:AUX_SETTINGS_PATH, null}
+# execution options
+execution:
+  exp_root: ./experiment
+  dev_settings: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
 
 # hydra settings
 hydra:

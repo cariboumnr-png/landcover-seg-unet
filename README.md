@@ -3,11 +3,15 @@
 [English](README.md) | [Français](README_fr.md)
 
 >***Plain‑language summary:***<br>
->*This project provides tools for preparing satellite imagery and training models that classify land cover. It helps users organize data, run deep‑learning models, and reproduce results consistently.*
+>*This project provides tools for preparing satellite imagery and training*
+>*models that classify land cover. It helps users organize data, run deep‑learning*
+>*models, and reproduce results consistently.*
 
 A modular, reproducible deep-learning framework for pixel‑level landcover mapping.
-The system fuses **Landsat spectral imagery**, **DEM‑derived topographical metrics**, and **domain‑knowledge features** under stable **grid** and **domain** artifacts.
-The pipeline is powered by PyTorch U‑Net architectures and a fully specification‑driven data preparation workflow.
+The system fuses **Landsat spectral imagery**, **DEM‑derived topographical metrics**,
+and **domain‑knowledge features** under stable **grid** and **domain** artifacts.
+The pipeline is powered by PyTorch U‑Net architectures and a fully specification‑driven
+data preparation workflow.
 
 > **Project Status:**
 > This repository is currently in **research / experimental** mode.
@@ -57,7 +61,8 @@ datasets and training land‑cover segmentation models.
 - **Reproducibility by Construction**
   Training and inference consume only persisted artifacts (schemas, checkpoints)
   under strict hashing, schema‑gated loading, explicit  runtime state, and
-  deterministic rebuild‑on‑mismatch policies, ensuring auditable and restartable experiments across runs and environments.
+  deterministic rebuild‑on‑mismatch policies, ensuring auditable and restartable
+  experiments across runs and environments.
 
 More detailed documentation available here:
 - [Repository Structure](./docs/project_structure.md)
@@ -127,7 +132,23 @@ This stage consumes prepared artifacts but does not modify foundation data.
 
 ---
 
-#### 4. Overfit silo test (optional)
+#### 4. Model evaluation
+Run a standalone evaluation job using the currently prepared dataset artifacts
+and a trained checkpoint:
+
+    experiment_run pipeline=evaluate-model \
+      pipeline.evaluate_model.checkpoint=path/to/checkpoint
+
+This stage constructs an evaluation-only session from prepared dataset
+artifacts and the supplied checkpoint, then runs inference and metric
+computation on the configured evaluation split (for example, `val` or `test`)
+without performing training, optimization, or checkpoint creation. It is
+intended for post-training assessment and reporting, and consumes prepared
+artifacts without modifying foundation data.
+
+---
+
+#### 5. Overfit silo test (optional)
 
 Run a minimal overfit test on a small subset to validate the end‑to‑end stack.
 This pipeline constructs a session **without a runner**, exercising the shared
@@ -138,34 +159,45 @@ execution engine directly. It does not require prior ingestion or preparation:
 
 >🔔 These commands execute Hydra configurations from `src/landseg/configs/`. These
 internal files control the framework’s behavior and should only be modified by
-advanced users familiar with Hydra and the project structure. For most workflows, all required inputs should be provided through the root‑level `settings.yaml`.
+advanced users familiar with Hydra and the project structure. For most workflows,
+all required inputs should be provided through the root‑level `settings.yaml`.
 
 ---
 
 ## 🚀 Roadmap
 
 ### Near‑Term
-- Documentation refresh reflecting session‑first runtime architecture (active)
-- Workflow diagrams and ADR cross‑references
-- Improved examples for training and overfit pipelines
+- Documentation refresh reflecting the session‑first runtime architecture
+  and current pipeline layout (training, overfit, evaluation-only)
+- Workflow diagrams and ADR cross‑references for session construction,
+  runtime ownership, and evaluation/reporting boundaries
+- Improved examples for training, overfit, and standalone evaluation
+  pipelines
 
 ### Medium‑Term
-- Clarify and formalize supported session types (e.g. curriculum, overfit,
-  evaluation‑only)
-- Optional user‑authored task / phase manifest
+- Refine and stabilize the public session construction surface around
+  explicit session intents and supported runtime guarantees
+- Standardize evaluation result outputs and downstream reporting schemas
+- Optional user‑authored task / phase manifest for more declarative
+  training workflows
 - Incremental hardening of session and engine public APIs
 
 ### Long‑Term
 - Additional model architectures
-- Evaluation, export, and reporting utilities
+- Expanded evaluation, export, and reporting utilities built on top of
+  the session/evaluator boundary
+- Experiment / study‑level workflows for cross‑session comparison,
+  selection, and higher‑level orchestration
 - Consolidation of stable runtime components into a production‑leaning
-  execution surface (session / engine)
+  execution surface centered on the session / engine boundary
 
 ---
 
 ## 🤝 Contributing
 
-This project is in an experimental phase. Module structure, naming, and CLI behaviour may evolve. Contributions should focus on research usability unless aligned with an approved Architecture Decision Record (ADR).
+This project is in an experimental phase. Module structure, naming, and CLI
+behaviour may evolve. Contributions should focus on research usability unless
+aligned with an approved Architecture Decision Record (ADR).
 
 Please review active ADRs in `docs/ADRs/` to understand current design decisions.
 

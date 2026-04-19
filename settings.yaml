@@ -1,6 +1,6 @@
 # =============================================================================
 # USER SETTINGS / PARAMÈTRES UTILISATEUR
-# This file allows you to configure the project without touching internal code.
+# This file lets you configure the project without modifying internal code.
 # Adjust only the items needed for your analysis.
 #
 # Ce fichier vous permet de configurer le projet sans modifier le code interne.
@@ -42,22 +42,29 @@
 
 # -----------------------------------------------------------------------------
 # PROJECT ROOT / RACINE DU PROJET
-# Folder chosen by the user containing all inputs and outputs.
-# Dossier choisi par l’utilisateur contenant toutes les entrées et sorties.
+# User-selected folder containing all project inputs, prepared artifacts,
+# run outputs, logs, and results.
+#
+# Dossier choisi par l’utilisateur contenant toutes les entrées du projet,
+# les artefacts préparés, les sorties d’exécution, les journaux et les résultats.
 # -----------------------------------------------------------------------------
 exp_root: ./experiment
 
 
 # -----------------------------------------------------------------------------
 # INPUT DEFINITIONS / DÉFINITION DES ENTRÉES
-# Defines the spatial extent, domain layers, and raw dataset files.
-# Définit l'étendue spatiale, les couches thématiques et les fichiers de données.
+# Defines the spatial extent reference, domain rasters, and raw dataset files
+# used to build prepared artifacts for training and evaluation.
+#
+# Définit la référence d’étendue spatiale, les rasters thématiques et les
+# fichiers bruts du jeu de données utilisés pour construire les artefacts
+# préparés pour l’entraînement et l’évaluation.
 # -----------------------------------------------------------------------------
 # PRE-PROCESSING & GRID / PRÉ-TRAITEMENT ET GRILLE
 foundation:
   grid:
     mode: ref          # Fixed to 'ref' / Fixé à 'ref'
-    crs: 'EPSG:3161'   # Coordinate system / Système de coordonnées
+    crs: 'EPSG:3161'   # Coordinate reference system / Système de coordonnées
     extent:
       # Located in / Situé dans : ${exp_root}/input/extent_ref/
       filename: 'example_extent.tif'
@@ -68,7 +75,12 @@ foundation:
       overlap_col: 0
 
 # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
-# Place ANY NUMBER of domain rasters into / Placez AUTANT de rasters dans : ${exp_root}/input/domain/
+# Place ANY NUMBER of domain rasters in / Placez AUTANT de rasters que voulu dans :
+# ${exp_root}/input/domain/
+#
+# These rasters are optional model inputs used for domain conditioning.
+# Ces rasters sont des entrées optionnelles du modèle utilisées pour le
+# conditionnement thématique.
   domains:
     files:
       - name: 'example_domain_1.tif'
@@ -76,10 +88,19 @@ foundation:
       - name: 'example_domain_2.tif'
         index_base: 1
 
-# RAW DATASET / JEU DE DONNÉES BRUTES
-# Located in / Situé dans : ${exp_root}/input/${inputs.data.name}/
+# RAW DATASET / JEU DE DONNÉES BRUT
+# Located in / Situé dans : ${exp_root}/input/${foundation.datablocks.name}/
+#
+# - fit/  : required development data used to create train/validation artifacts
+# - test/ : optional holdout data used for standalone evaluation
+# - configs/ : dataset-specific metadata/configuration
+#
+# - fit/  : données de développement requises pour créer les artefacts
+#           d’entraînement/validation
+# - test/ : données de réserve optionnelles utilisées pour l’évaluation autonome
+# - configs/ : métadonnées / configuration propres au jeu de données
   datablocks:
-    name: dataset_name  # Folder name / Nom du dossier
+    name: dataset_name  # Dataset folder name / Nom du dossier du jeu de données
     filenames:
       # Files in / Fichiers dans .../fit/
       dev_image: 'example_image.tif'
@@ -92,27 +113,50 @@ foundation:
 
 
 # -----------------------------------------------------------------------------
-# Configuration for tiling and thematic layer assignment.
-# Configuration du découpage en tuiles et de l'assignation des couches thématiques.
+# DATA PREPARATION SETTINGS / PARAMÈTRES DE PRÉPARATION DES DONNÉES
+# Controls how raw blocks are partitioned and balanced when building prepared
+# dataset artifacts for training and evaluation.
+#
+# Contrôle la façon dont les blocs bruts sont partitionnés et équilibrés lors
+# de la création des artefacts préparés pour l’entraînement et l’évaluation.
 # -----------------------------------------------------------------------------
 transform:
 
-  # blocks partition
+  # BLOCK PARTITION / PARTITION DES BLOCS
+  # Proportions used to split prepared development data into validation and test.
+  # The remaining data is assigned to training.
+  #
+  # Proportions utilisées pour séparer les données préparées de développement
+  # en validation et en test. Le reste est attribué à l’entraînement.
   partition:
     val_ratio: 0.1
     test_ratio: 0.0
 
-  # block scoring parameters
+  # BLOCK SCORING PARAMETERS / PARAMÈTRES DE PONDÉRATION DES BLOCS
+  # Optional class-priority weights used during block selection.
+  # Class indices are 1-based in this user file.
+  #
+  # Poids optionnels de priorité par classe utilisés lors de la sélection
+  # des blocs. Les indices de classe sont basés sur 1 dans ce fichier utilisateur.
   scoring:
-    # classes to reward (1-based)
     reward: {}
 
-  # hydration
+  # HYDRATION / HYDRATATION
+  # Controls how aggressively extra training blocks are added to improve
+  # class balance.
+  #
+  # Contrôle à quel point des blocs d’entraînement supplémentaires sont ajoutés
+  # pour améliorer l’équilibre entre les classes.
   hydration:
     max_skew_rate: 10.0
 
+
 # -----------------------------------------------------------------------------
 # MODEL ARCHITECTURE / ARCHITECTURE DU MODÈLE
+# Controls how the model uses optional domain information.
+#
+# Contrôle la manière dont le modèle utilise les informations thématiques
+# optionnelles.
 # -----------------------------------------------------------------------------
 models:
   conditioning:
@@ -121,46 +165,64 @@ models:
     mode: 'hybrid'
 
 
+# -----------------------------------------------------------------------------
+# DATA SPECIFICATION / SPÉCIFICATION DES DONNÉES
+# Selects which domain layer is used as discrete IDs and which one is used
+# as continuous feature vectors.
+#
+# Sélectionne quelle couche thématique est utilisée comme identifiants discrets
+# et laquelle est utilisée comme vecteurs de caractéristiques continus.
+# -----------------------------------------------------------------------------
 dataspecs:
   domain_ids_name: example_domain_1
   domain_vec_name: example_domain_2
 
-# -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# SESSION RUNTIME / EXÉCUTION DE SESSION
+# Controls monitoring and stopping behavior during model training.
+#
+# Contrôle le suivi et les conditions d’arrêt pendant l’entraînement du modèle.
 # -----------------------------------------------------------------------------
 session:
   runtime:
 
     schedule:
-      patience: 10      # Stop training if no improvement / Arrêt si aucune amélioration
-      min_delta: 0.0005 # Sensitivity for improvement / Sensibilité de l'amélioration
+      patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
+      min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
 
     monitor:
-      # Metric or layer head to track for checkpoints.
-      # Métrique ou tête de couche à suivre pour les points de sauvegarde.
+      # Head used for validation tracking, early stopping, and best-checkpoint
+      # selection.
+      #
+      # Tête utilisée pour le suivi en validation, l’arrêt anticipé et la
+      # sélection du meilleur point de sauvegarde.
       track_head_name: layer1
 
 
 # -----------------------------------------------------------------------------
+# TRAINING PHASES / PHASES D’ENTRAÎNEMENT
+# Defines the curriculum used by the training session.
+#
+# Définit la progression (curriculum) utilisée par la session d’entraînement.
 # -----------------------------------------------------------------------------
-
   phases:
-    - name: coarse_head # Phase name / Nom de la phase
-      num_epochs: 100   # Max iterations / Itérations maximales
+    - name: coarse_head   # Phase name / Nom de la phase
+      num_epochs: 100     # Maximum number of epochs / Nombre maximal d’époques
 
       heads:
-        # Layers to update / Couches à mettre à jour
+        # Heads updated during this phase / Têtes mises à jour pendant cette phase
         active_heads: ['base']
-        # Layers to lock / Couches à verrouiller
+        # Heads frozen during this phase / Têtes gelées pendant cette phase
         frozen_heads: []
-        # Classes to ignore in loss / Classes à ignorer dans la perte
+        # Classes ignored in the loss by head / Classes ignorées dans la perte par tête
         excluded_cls: {}
 
       logit_adjust:
-        # Toggle class imbalance correction / Activer la correction du déséquilibre des classes
-        logit_adjust_alpha: 1.0  # Power of adjustment / Puissance de l'ajustement
+        # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
+        logit_adjust_alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
         enable_train_logit_adjustment: False
         enable_val_logit_adjustment: False
         enable_test_logit_adjustment: False
 
-      lr_scale: 1.0 # Learning rate multiplier / Multiplicateur du taux d'apprentissage
+      lr_scale: 1.0 # Learning-rate multiplier for this phase / Multiplicateur du taux d’apprentissage pour cette phase

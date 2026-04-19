@@ -47,7 +47,7 @@ def ingest(config: configs.RootConfig):
     '''
 
     # init a logger
-    logger = utils.Logger('ingest', f'{config.exp_root}/ingest.log')
+    logger = utils.Logger('ingest', f'{config.execution.exp_root}/ingest.log')
 
     # config aliases
     domain_cfg = config.foundation.domains

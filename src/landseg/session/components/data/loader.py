@@ -63,8 +63,8 @@ class LoaderConfig(typing.Protocol):
 @dataclasses.dataclass
 class DataLoaders:
     '''Train/Val/Test dataloader for the trainer.'''
-    train: torch.utils.data.DataLoader
-    val: torch.utils.data.DataLoader
+    train: torch.utils.data.DataLoader | None
+    val: torch.utils.data.DataLoader | None
     test: torch.utils.data.DataLoader | None
     meta: _Meta
 
@@ -134,20 +134,48 @@ def build_dataloaders(
         logger=logger
     )
 
-    # if single block mode (for overfit test)
-    if data_specs.mode == 'single':
-        single_loader = load_partial('single')
-        # pass the same as val dataloader for minimal disturbance downstream
-        assert single_loader
-        return DataLoaders(single_loader, single_loader, None, meta)
+    # return by mode
+    match data_specs.mode:
 
-    # otherwise (normal experiment)
-    train_loader = load_partial('train')
-    val_loader = load_partial('val')
-    test_loader = load_partial('test')
-    # sanity checks and return
-    assert train_loader and val_loader
-    return DataLoaders(train_loader, val_loader, test_loader, meta)
+        # if single block mode (for overfit test)
+        case 'single':
+            single_loader = load_partial('single')
+            # pass the same as val dataloader for minimal disturbance downstream
+            assert single_loader
+            return DataLoaders(single_loader, single_loader, None, meta)
+
+        # val only mode
+        case 'val_only':
+            val_loader = load_partial('val')
+            return DataLoaders(
+                train=None,
+                val=val_loader,
+                test=None,
+                meta=meta
+            )
+
+        # test only mode
+        case 'test_only':
+            test_loader = load_partial('test')
+            return DataLoaders(
+                train=None,
+                val=None,
+                test=test_loader,
+                meta=meta
+            )
+
+        # defualt normal experiment
+        case 'default':
+            return DataLoaders(
+                train=load_partial('train'),
+                val=load_partial('val'),
+                test=load_partial('test'),
+                meta=meta
+            )
+
+        # catch
+        case _:
+            raise ValueError(f'Invalid mode: {data_specs.mode}')
 
 # ------------------------------private  function------------------------------
 def _load(

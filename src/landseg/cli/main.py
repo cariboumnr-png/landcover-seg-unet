@@ -42,10 +42,11 @@ import landseg.utils as utils
 
 command_registry = {
     'default': pipelines.default_action,
+    'evaluate-model':pipelines.evaluate,
     'ingest-data': pipelines.ingest,
     'prepare-data': pipelines.prepare,
     'train-model': pipelines.train,
-    'train-overfit': pipelines.overfit
+    'train-overfit': pipelines.overfit,
 }
 
 # main process
@@ -57,7 +58,8 @@ def main(config: omegaconf.DictConfig) -> None:
     root_config = _resolve_configs(config)
 
     # master logger
-    logger = utils.Logger('cli', os.path.join(root_config.exp_root, 'cli.log'))
+    log_fpath = os.path.join(root_config.execution.exp_root, 'cli.log')
+    logger = utils.Logger('cli', log_fpath)
 
     # run specified mode with exceptions handling
     try:
@@ -100,7 +102,7 @@ def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
         config_list.append(user_settings)
 
     # get dev settings (untracked)
-    dev = config.get('dev_settings_path')
+    dev = config['execution'].get('dev_settings')
     if dev and os.path.exists(dev):
         dev_settings = omegaconf.OmegaConf.load(dev)
         assert isinstance(dev_settings, omegaconf.DictConfig)

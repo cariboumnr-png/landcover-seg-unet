@@ -32,13 +32,6 @@ import typing
 
 __all__ = [
     # classes
-    'ModelsCfg',
-    'LoaderConfig',
-    'LossConfig',
-    'OptimConfig',
-    'RuntimeConfig',
-    'ComponentsCfg',
-    'RunnerCfg',
     'RootConfig',
     # functions
     # typing
@@ -46,29 +39,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .schema import (
-        ModelsCfg,
-        LoaderConfig,
-        LossConfig,
-        OptimConfig,
-        RuntimeConfig,
-        ComponentsCfg,
-        RunnerCfg,
-        RootConfig,
-    )
+    from .schema import RootConfig
 
 def __getattr__(name: str):
 
-    if name in {
-        'ModelsCfg',
-        'LoaderConfig',
-        'LossConfig',
-        'OptimConfig',
-        'RuntimeConfig',
-        'TrainerCfg',
-        'RunnerCfg',
-        'RootConfig'
-    }:
+    if name in {'RootConfig'}:
         return getattr(importlib.import_module('.schema', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

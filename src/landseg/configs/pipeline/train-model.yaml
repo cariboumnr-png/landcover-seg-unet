@@ -1,1 +1,3 @@
-# @package _global_
+# @package pipeline
+
+name: train-model

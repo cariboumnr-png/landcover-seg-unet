@@ -20,55 +20,21 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli.pipelines`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Typed session metadata dictionary
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    # classes
-    # functions
-    'default_action',
-    'evaluate',
-    'ingest',
-    'overfit',
-    'prepare',
-    'train',
-    # typing
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .default import default_action
-    from .evaluate_model import evaluate
-    from .ingest_data import ingest
-    from .prepare_data import prepare
-    from .train_model import train
-    from .train_overfit import overfit
-
-def __getattr__(name: str):
-
-    if name in {'default_action'}:
-        return getattr(importlib.import_module('.default', __package__), name)
-
-    if name in {'evaluate'}:
-        return getattr(importlib.import_module('.evaluate_model', __package__), name)
-
-    if name in {'ingest'}:
-        return getattr(importlib.import_module('.ingest_data', __package__), name)
-
-    if name in {'prepare'}:
-        return getattr(importlib.import_module('.prepare_data', __package__), name)
-
-    if name in {'train'}:
-        return getattr(importlib.import_module('.train_model', __package__), name)
-
-    if name in {'overfit'}:
-        return getattr(importlib.import_module('.train_overfit', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+#
+class SessionMetadata(typing.TypedDict):
+    '''Typed session metadata'''
+    status: typing.Literal['running', 'finished']
+    run_id: str
+    intent: str
+    pipeline: str
+    created_at: str
+    completed_at: str | None
+    inputs: typing.Mapping[str, object]   # liberal dicts for now
+    summary: typing.Mapping[str, object]  # liberal dicts for now

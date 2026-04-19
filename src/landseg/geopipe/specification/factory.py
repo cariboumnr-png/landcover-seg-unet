@@ -29,6 +29,7 @@ by assembling a `DataSpecs` object consumed by models and trainers.
 
 # standard imports
 import math
+import typing
 # third-party imports
 import numpy
 # local imports
@@ -40,6 +41,7 @@ import landseg.geopipe.utils as geo_utils
 def build_dataspec(
     artifact_paths: artifacts.ArtifactPaths,
     *,
+    mode: typing.Literal['default', 'single', 'val_only', 'test_only'],
     ids_domain_name: str | None = None,
     vec_domain_name: str | None = None,
     print_out: bool = False
@@ -96,7 +98,7 @@ def build_dataspec(
     # return specs
     specs = core.DataSpecs(
         name=data_schema['dataset']['name'],
-        mode='default',
+        mode=mode,
         meta=_get_meta(data_schema, transform_schema),
         heads=_get_heads(data_schema, transform_schema),
         splits=_get_split(transform_schema),
