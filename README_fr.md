@@ -3,12 +3,18 @@
 [Français](README_fr.md) | [English](README.md)
 
 > ***Résumé en langage clair :***<br>
-> *Ce projet fournit des outils pour préparer des images satellitaires et entraîner des modèles qui classifient la couverture terrestre. Il aide les utilisateurs à organiser leurs données, exécuter des modèles d’apprentissage profond et reproduire les résultats de manière cohérente.*
+> *Ce projet fournit des outils pour préparer des images satellitaires et*
+> *entraîner des modèles qui classifient la couverture terrestre. Il aide *les*
+> *utilisateurs à organiser leurs données, exécuter des modèles d’apprentissage*
+> *profond et reproduire les résultats de manière cohérente.*
 
 
-Un cadre modulaire et reproductible d’apprentissage profond pour la cartographie de la couverture terrestre au niveau du pixel.
-Le système combine **imagerie spectrale Landsat**, **métriques topographiques dérivées du MNE** et **caractéristiques fondées sur l’expertise métier**, dans des artéfacts stables de **grille** et de **domaine**.
-Le pipeline utilise des architectures U‑Net PyTorch et un flux de préparation de données entièrement basé sur des spécifications.
+Un cadre modulaire et reproductible d’apprentissage profond pour la cartographie
+de la couverture terrestre au niveau du pixel. Le système combine
+**imagerie spectrale Landsat**, **métriques topographiques dérivées du MNE** et
+**caractéristiques fondées sur l’expertise métier**, dans des artéfacts stables de
+**grille** et de **domaine**. Le pipeline utilise des architectures U‑Net
+PyTorch et un flux de préparation de données entièrement basé sur des spécifications.
 
 > **Statut du projet :**
 > Ce dépôt est actuellement en **phase de recherche / expérimentale**.
@@ -166,36 +172,46 @@ aucune ingestion ou préparation préalable:
     experiment_run pipeline=train-overfit
 
 
->🔔 Ces commandes exécutent les configurations Hydra depuis `src/landseg/configs/`. Pour la plupart des utilisateurs, il est recommandé de fournir les paramètres via le fichier racine `settings.yaml`, conçu pour une personnalisation sécurisée sans modifier l’arborescence interne des configurations.
+>🔔 Ces commandes exécutent les configurations Hydra depuis `src/landseg/configs/`.
+Pour la plupart des utilisateurs, il est recommandé de fournir les paramètres
+via le fichier racine `settings.yaml`, conçu pour une personnalisation sécurisée
+sans modifier l’arborescence interne des configurations.
 
 ---
 
 ## 🚀 Feuille de route
 
 ### Court terme
-- Mise à jour de la documentation pour refléter l’architecture runtime
-  pilotée par la session (en cours)
-- Diagrammes de workflow et références explicites aux ADR
-- Exemples améliorés pour les pipelines d’entraînement et de sur‑apprentissage
+- Mise à jour de la documentation reflétant l’architecture d’exécution centrée sur les sessions
+  et l’organisation actuelle des pipelines (entraînement, overfit, évaluation seule)
+- Diagrammes de workflow et références croisées ADR pour la construction des sessions,
+  la responsabilité du runtime, et les limites évaluation/reporting
+- Exemples améliorés pour les pipelines d’entraînement, d’overfit et d’évaluation autonome
 
 ### Moyen terme
-- Clarification et formalisation des types de sessions supportées
-  (p. ex. entraînement curriculaire, overfit, évaluation seule)
-- Manifeste optionnel de tâches / phases défini par l’utilisateur
-- Durcissement progressif des API publiques de session et de moteur
+- Affiner et stabiliser l’interface publique de construction de session autour
+  d’intentions de session explicites et de garanties de runtime supportées
+- Standardiser les sorties des résultats d’évaluation et les schémas de reporting en aval
+- Support optionnel de manifestes de tâches/phases définis par l’utilisateur pour des workflows
+  d’entraînement plus déclaratifs
+- Renforcement progressif des API publiques des sessions et du moteur (engine)
 
 ### Long terme
-- Architectures de modèles supplémentaires
-- Outils d’évaluation, d’export et de génération de rapports
-- Consolidation des composants runtime stables vers une surface
-  d’exécution orientée production (session / engine)
+- Ajout de nouvelles architectures de modèles
+- Extension des outils d’évaluation, d’export et de reporting basés sur la frontière session/évaluateur
+- Workflows au niveau expérience/étude pour la comparaison inter-sessions,
+  la sélection et l’orchestration de plus haut niveau
+- Consolidation des composants runtime stables vers une surface d’exécution orientée production,
+  centrée sur la frontière session / moteur
 
 ---
 
 ## 🤝 Contribution
 
-Ce projet est en phase expérimentale. La structure des modules, les noms et le comportement de la CLI peuvent évoluer.
-Les contributions doivent se concentrer sur l’utilisabilité en recherche, sauf si elles s’alignent sur une Décision Architecturale (ADR) approuvée.
+Ce projet est en phase expérimentale. La structure des modules, les noms et le
+comportement de la CLI peuvent évoluer. Les contributions doivent se concentrer
+sur l’utilisabilité en recherche, sauf si elles s’alignent sur une Décision
+Architecturale (ADR) approuvée.
 
 Veuillez consulter les ADR actives dans `docs/ADRs/` pour comprendre les décisions actuelles.
 
