@@ -469,8 +469,8 @@ class EvaluateModelConfig:
 @dataclasses.dataclass
 class PipelineConfig:
     name: str = 'default'
-    train_model: TrainModelConfig = field(default_factory=TrainModelConfig)
-    evaluate_model: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
+    model_train: TrainModelConfig = field(default_factory=TrainModelConfig)
+    model_evaluate: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
 
 # ------------------------------EXECUTION CONFIGS------------------------------
 @dataclasses.dataclass

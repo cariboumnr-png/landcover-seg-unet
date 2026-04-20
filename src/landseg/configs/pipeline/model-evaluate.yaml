@@ -1,8 +1,8 @@
 # @package pipeline
 
-name: evaluate-model
+name: model-evaluate
 
-evaluate_model:
+model_evaluate:
   checkpoint: null
   split: test
   export_previews: false
