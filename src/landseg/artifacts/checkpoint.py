@@ -99,7 +99,7 @@ def load_checkpoint(
 
     # load optimizer and scheduler only if they are provided
     if optimizer is not None and checkpoint.get('optimizer'):
-    optimizer.load_state_dict(checkpoint['optimizer'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
         
     if scheduler is not None and checkpoint.get('scheduler'):
         scheduler.load_state_dict(checkpoint['scheduler'])
