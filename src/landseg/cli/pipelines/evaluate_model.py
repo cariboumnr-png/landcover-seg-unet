@@ -126,7 +126,10 @@ def evaluate(config: configs.RootConfig):
     evaluator.set_head_state()
     val_logs = evaluator.validate()
 
+    # persist the validation log as the current outputs
+    output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
+    output_ctrl.persist(val_logs)
+
     # update metadata
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
-    meta['summary'] = val_logs
     meta_ctrl.persist(meta)
