@@ -127,7 +127,8 @@ def evaluate(config: configs.RootConfig):
     val_logs = evaluator.validate()
 
     # produce previews on all the heads
-    evaluator.infer(session_paths.previews)
+    if eval_config.export_previews:
+        evaluator.infer(session_paths.previews)
 
     # persist the validation log as the current outputs
     output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
