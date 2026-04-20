@@ -32,10 +32,9 @@ Public APIs:
 # standard imports
 import datetime
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
@@ -105,7 +104,7 @@ def build_schema(
         # populate schema dict
         schema = {
             'schema_version': geo_core.transform_types.TRANSFORM_SCHEMA_ID,
-            'creation_time': datetime.datetime.now().strftime(T_FORMAT),
+            'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,
             'train_blocks': block_splits['train'],

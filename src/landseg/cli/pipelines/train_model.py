@@ -26,18 +26,14 @@ Builds data specifications from produced artifacts, constructs the
 model, and runs the multi-phase training runner.
 '''
 
-# third-party imports
-import torch
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
-
-# constant
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 def train(config: configs.RootConfig):
     '''
@@ -61,7 +57,7 @@ def train(config: configs.RootConfig):
         'run_id': session_paths.run_id,
         'intent': 'training',
         'pipeline': config.pipeline.name,
-        'created_at': session_paths.time(T_FORMAT),
+        'created_at': session_paths.time(c.TF_ISO8601),
         'completed_at': None,
         'inputs': {},
         'summary': {}
@@ -102,7 +98,7 @@ def train(config: configs.RootConfig):
         config.session,
         context=session.SessionBuildContext(
             intent='training',
-            device='cuda' if torch.cuda.is_available() else 'cpu',
+            device=c.DEVICE,
             logger=logger,
             session_paths=session_paths,
         )
@@ -113,5 +109,5 @@ def train(config: configs.RootConfig):
     runner.fit()
 
     # update metadata
-    meta['completed_at'] = session_paths.time(T_FORMAT)
+    meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta_ctrl.persist(meta)

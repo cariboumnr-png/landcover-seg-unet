@@ -20,31 +20,12 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Namespace for project environmental constants.
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# third-party imports
+import torch
 
-__all__ = [
-    # classes
-    # functions
-    # types
-    'DEVICE',
-    'TF_ISO8601'
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from ._constants import DEVICE, TF_ISO8601
-
-def __getattr__(name: str):
-
-    if name in {'DEVICE', 'TF_ISO8601'}:
-        return getattr(importlib.import_module('._constants', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+# constants
+DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601

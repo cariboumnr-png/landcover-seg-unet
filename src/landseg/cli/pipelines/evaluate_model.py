@@ -25,18 +25,14 @@ Evaluating a model.
 
 # standard imports
 import typing
-# third-party imports
-import torch
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
-
-# constant
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 def evaluate(config: configs.RootConfig):
     '''
@@ -67,7 +63,7 @@ def evaluate(config: configs.RootConfig):
         'run_id': session_paths.run_id,
         'intent': 'evaluation',
         'pipeline': config.pipeline.name,
-        'created_at': session_paths.time(T_FORMAT),
+        'created_at': session_paths.time(c.TF_ISO8601),
         'completed_at': None,
         'inputs': {
             'checkpoint': eval_config.checkpoint,
@@ -108,7 +104,7 @@ def evaluate(config: configs.RootConfig):
     artifacts.load_checkpoint(
         model=model,
         fpath=eval_config.checkpoint,
-        map_device='cuda',
+        map_device=c.DEVICE,
         optimizer=None,
         scheduler=None,
     )
@@ -120,7 +116,7 @@ def evaluate(config: configs.RootConfig):
         config.session,
         context=session.SessionBuildContext(
             intent='evaluation',
-            device='cuda' if torch.cuda.is_available() else 'cpu',
+            device=c.DEVICE,
             logger=logger,
             eval_dataset=split
         )
@@ -131,6 +127,6 @@ def evaluate(config: configs.RootConfig):
     val_logs = evaluator.validate()
 
     # update metadata
-    meta['completed_at'] = session_paths.time(T_FORMAT)
+    meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = val_logs
     meta_ctrl.persist(meta)

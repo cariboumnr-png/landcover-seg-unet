@@ -28,9 +28,8 @@ and trains until near-perfect IoU to validate the end-to-end stack.
 
 # standard imports
 import os
-# third-party imports
-import torch
 # local imports
+import landseg._constants as c
 import landseg.configs as configs
 import landseg.core as core
 import landseg.geopipe.core as geo_core
@@ -82,7 +81,7 @@ def overfit(config: configs.RootConfig) -> None:
         config.session,
         context=session.SessionBuildContext(
             intent='overfit',
-            device='cuda' if torch.cuda.is_available() else 'cpu',
+            device=c.DEVICE,
             logger=logger,
             skip_callback_logging=True
         )

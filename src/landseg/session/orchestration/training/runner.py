@@ -248,7 +248,7 @@ class TrainingRunner:
             meta = artifacts.load_checkpoint(
                 model=self.trainer.model,
                 fpath=best_ckpt,
-                map_device='cuda',
+                map_device=self.trainer.device,
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
             )

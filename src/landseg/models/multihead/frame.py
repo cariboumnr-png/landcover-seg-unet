@@ -68,6 +68,7 @@ The design cleanly separates concerns:
 import torch
 import torch.nn
 # local imports
+import landseg._constants as c
 import landseg.models.backbones as backbones
 import landseg.models.multihead as multihead
 
@@ -492,8 +493,7 @@ class _NumericSafety():
     ) -> torch.autocast:
         '''Create an AMP autocast context for the current device.'''
 
-        device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
-        return torch.autocast(device_type, dtype, enable)
+        return torch.autocast(c.DEVICE, dtype, enable)
 
 
     def clamp(self, x: torch.Tensor) -> torch.Tensor:
