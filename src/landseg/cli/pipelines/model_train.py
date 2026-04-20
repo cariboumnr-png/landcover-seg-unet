@@ -35,7 +35,7 @@ import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
 
-def train(config: configs.RootConfig):
+def train(config: configs.RootConfig) -> session.SessionMetadata:
     '''
     Run a full training job.
 
@@ -108,6 +108,9 @@ def train(config: configs.RootConfig):
     # run session
     runner.fit()
 
-    # update metadata
+    # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
+    meta['summary'] = {}
+    meta['summary']['checkpoint'] = runner.final_checkpoint # best of the final
     meta_ctrl.persist(meta)
+    return meta

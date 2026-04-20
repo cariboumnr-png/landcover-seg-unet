@@ -133,6 +133,9 @@ def evaluate(config: configs.RootConfig):
     output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
     output_ctrl.persist(val_logs)
 
-    # update metadata
+    # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
+    meta['summary'] = {}
+    meta['summary']['final'] = evaluator.state.metrics.best_value
     meta_ctrl.persist(meta)
+    return evaluator.state.metrics.best_value
