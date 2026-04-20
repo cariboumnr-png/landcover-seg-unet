@@ -23,8 +23,6 @@
 Run one study trial.
 '''
 
-# standard imports
-import os
 # local imports
 import landseg.cli.pipelines as pipelines
 import landseg.configs as configs
@@ -38,18 +36,9 @@ def trial(config: configs.RootConfig) -> float:
     '''
 
     # train
-    checkpoint = pipelines.train(config)
-    # simple sanity check
-    if not os.path.exists(checkpoint):
-        raise ValueError('Invalid checkpoint from training session')
-
-    # evaluate settings
-    config.pipeline.model_evaluate.checkpoint = checkpoint
-    config.pipeline.model_evaluate.split = 'val' # note: not on test
-    config.pipeline.model_evaluate.export_previews = False
-
-    # evaluate
-    best = pipelines.evaluate(config)
+    meta = pipelines.train(config)
 
     # return the best value
+    best = meta['summary'].get('best_value') # tighten later
+    assert isinstance(best, float)
     return best
