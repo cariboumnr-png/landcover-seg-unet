@@ -50,7 +50,7 @@ def evaluate(config: configs.RootConfig):
     session_paths.init()
 
     # parse evaluation pipeline configs
-    eval_config = config.pipeline.evaluate_model
+    eval_config = config.pipeline.model_evaluate
     assert eval_config.checkpoint
     if eval_config.split not in ('val', 'test'):
         raise ValueError(f"Invalid split: {eval_config.split}")
