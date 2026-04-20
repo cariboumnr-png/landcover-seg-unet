@@ -117,6 +117,11 @@ class TrainingRunner:
         '''Return whether all curriculum phases have completed.'''
         return self.current_phase_idx >= len(self.phases)
 
+    @property
+    def final_checkpoint(self) -> str:
+        '''Return path to the best checkpoint of the final phase.'''
+        return self.paths.best_checkpoint(self.phases[-1].name)
+
     def fit(self) -> None:
         '''
         Execute full curriculum training across all phases.
