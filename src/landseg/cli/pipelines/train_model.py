@@ -100,10 +100,12 @@ def train(config: configs.RootConfig):
         dataspecs,
         model,
         config.session,
-        intent='training',
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        logger=logger,
-        session_paths=session_paths,
+        context=session.SessionBuildContext(
+            intent='training',
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            logger=logger,
+            session_paths=session_paths,
+        )
     ).training_runner
     assert runner, 'Training runner not properly built' # sanity
 

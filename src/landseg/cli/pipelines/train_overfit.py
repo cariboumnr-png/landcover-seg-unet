@@ -80,10 +80,12 @@ def overfit(config: configs.RootConfig) -> None:
         dataspecs,
         model,
         config.session,
-        intent='overfit',
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        logger=logger,
-        skip_callback_logging=True
+        context=session.SessionBuildContext(
+            intent='overfit',
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            logger=logger,
+            skip_callback_logging=True
+        )
     )
     assert s.trainer # sanity
 
