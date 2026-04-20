@@ -216,7 +216,10 @@ class TrainingRunner:
                 v_logs = self.evaluator.validate()
                 # update preview if test data provided
                 if self.trainer.dataloaders.test:
-                    self.evaluator.infer(self.paths.previews)
+                    self.evaluator.infer(
+                        self.paths.previews,
+                        preview_heads=phase.heads.active_heads
+                    )
             # save progress
             if epoch == self.trainer.state.metrics.best_epoch:
                 self._save_progress(self.paths.best_checkpoint(phase.name))

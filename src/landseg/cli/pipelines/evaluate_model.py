@@ -126,6 +126,9 @@ def evaluate(config: configs.RootConfig):
     evaluator.set_head_state()
     val_logs = evaluator.validate()
 
+    # produce previews on all the heads
+    evaluator.infer(session_paths.previews)
+
     # persist the validation log as the current outputs
     output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
     output_ctrl.persist(val_logs)
