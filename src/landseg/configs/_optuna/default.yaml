@@ -1,0 +1,24 @@
+# @package _global_
+
+session:
+
+  components:
+    task:
+      types:
+        focal:
+          weight: 1.0
+          gamma: 0.0
+        dice:
+          weight: 0.0
+        spectral:
+          weight: 0.0
+        tv:
+          weight: 0.0
+    optimization:
+      lr:
+        distribution: loguniform
+        low: 1e-5
+        high: 1e-2
+      weight_decay: 0.0
+      sched_cls: null
+      sched_args: {}

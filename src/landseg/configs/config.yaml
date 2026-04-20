@@ -17,6 +17,8 @@ defaults:
   - session/phases: default
   # pipeline
   - pipeline: default
+  # optuna sweeper
+  - _optuna: default
 
 # execution options
 execution:
@@ -28,3 +30,13 @@ hydra:
   run:
     dir: .
   output_subdir: null
+  sweeper:
+    _target_: hydra_plugins.hydra_optuna_sweeper.OptunaSweeper
+    direction: maximize # or minimize
+    n_trials: 50
+    sampler:
+      _target_: optuna.samplers.TPESampler
+      seed: 42
+    storage: sqlite:///optuna.db
+    study_name: my_experiment
+    load_if_exists: true
