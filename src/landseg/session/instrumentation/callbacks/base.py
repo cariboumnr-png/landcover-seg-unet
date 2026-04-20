@@ -32,13 +32,14 @@ import landseg.utils as utils
 class Callback:
     '''Base class for callbacks; subclass to implement behaviors.'''
 
-    def __init__(self, logger: utils.Logger):
+    def __init__(self, logger: utils.Logger, **kwargs):
         self._state: common.StateLike | None = None
         self._config: common.ConfigLike | None = None
         self._device: str | None
         self.skip_log = False
         self.train_logger = logger.get_child('train')
         self.valdn_logger = logger.get_child('valdn')
+        self.kwargs = kwargs
 
     def setup(
         self,

@@ -45,12 +45,18 @@ class InferCallback(callbacks.Callback):
     def on_inference_batch_end(self) -> None: ...
 
     def on_inference_end(self, out_dir: str) -> None:
-        # stitch all blocks together and output a preview
+        # stitch all blocks together and output previews
         # only if the patch grid is of valid shape, e.e, non-zero dims
+
+        # determine which heads to produce preview images
+        heads = self.kwargs.get('preview_heads', [])
+        # if no specifics provided, preview all heads
+        if not heads:
+            heads = self.state.heads.all_heads
         if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
             exporters.export_previews(
                 self.state.epoch_sum.infer_ctx.maps,
                 out_dir,
                 map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
-                heads=[self.config.monitor.track_head_name] # as list
+                heads=heads
             )
