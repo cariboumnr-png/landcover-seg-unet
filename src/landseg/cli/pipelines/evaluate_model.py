@@ -106,9 +106,9 @@ def evaluate(config: configs.RootConfig):
 
     # load checkpoint with no optimizer nor scheduler
     artifacts.load_checkpoint(
-        model,
-        eval_config.checkpoint,
-        device='cuda',
+        model=model,
+        fpath=eval_config.checkpoint,
+        map_device='cuda',
         optimizer=None,
         scheduler=None,
     )

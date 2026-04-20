@@ -42,11 +42,12 @@ class CheckpointMeta(typing.TypedDict):
 
 # -------------------------------Public Function-------------------------------
 def save_checkpoint(
+    *,
     model: core.MultiheadModelLike,
+    fpath: str,
     ckpt_meta: CheckpointMeta,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
-    fpath: str
 ) -> None:
     '''
     Save model, optimizer, scheduler (if present), and metadata to file.
@@ -71,9 +72,10 @@ def save_checkpoint(
     torch.save(state, fpath)
 
 def load_checkpoint(
+    *,
     model: core.MultiheadModelLike,
     fpath: str,
-    device: str,
+    map_device: str,
     optimizer: torch.optim.Optimizer | None = None,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
 ) -> CheckpointMeta:
@@ -92,7 +94,7 @@ def load_checkpoint(
     '''
 
     # load states dict from file
-    checkpoint = torch.load(fpath, map_location=device)
+    checkpoint = torch.load(fpath, map_location=map_device)
 
     # load model first
     model.load_state_dict(checkpoint['model'])
@@ -100,7 +102,7 @@ def load_checkpoint(
     # load optimizer and scheduler only if they are provided
     if optimizer is not None and checkpoint.get('optimizer'):
         optimizer.load_state_dict(checkpoint['optimizer'])
-        
+
     if scheduler is not None and checkpoint.get('scheduler'):
         scheduler.load_state_dict(checkpoint['scheduler'])
 

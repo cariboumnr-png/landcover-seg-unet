@@ -227,7 +227,6 @@ class TrainingRunner:
         # return training and validation logs
         return t_logs, v_logs
 
-
     def _next_phase(self) -> None:
         '''Advance to the next training phase and reset trainer state.'''
 
@@ -248,10 +247,11 @@ class TrainingRunner:
         if os.path.exists(best_ckpt):
             meta = artifacts.load_checkpoint(
                 model=self.trainer.model,
+                fpath=best_ckpt,
+                map_device='cuda',
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
-                fpath=best_ckpt,
-                device='cuda')
+            )
             return meta
         return None
 
@@ -265,10 +265,10 @@ class TrainingRunner:
         }
         artifacts.save_checkpoint(
             model=self.trainer.model,
+            fpath=fpath,
             ckpt_meta=ckpt_meta,
             optimizer=self.trainer.comps.optimization.optimizer,
             scheduler=self.trainer.comps.optimization.scheduler,
-            fpath=fpath
         )
         self.logger.log('INFO', f'Checkpoint saved: {fpath}')
 
