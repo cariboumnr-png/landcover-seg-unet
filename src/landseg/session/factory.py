@@ -120,7 +120,7 @@ class SessionBuildContext:
     session_paths: artifacts.ResultsPaths | None = None
 
 @dataclasses.dataclass
-class SessionExcutables:
+class SessionExecutables:
     '''
     Container for executable session components.
 
@@ -140,7 +140,7 @@ def build_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext
-) -> SessionExcutables:
+) -> SessionExecutables:
     '''
     Construct and initialize a session execution pipeline.
 
@@ -225,7 +225,7 @@ def build_session(
     # build trainer/runner depending on mode
     match context.intent:
         case 'evaluation':
-            return SessionExcutables(evaluator, None, None)
+            return SessionExecutables(evaluator, None, None)
 
         case 'training':
             trainer = engine.MultiHeadTrainer(
@@ -248,7 +248,7 @@ def build_session(
                 paths=context.session_paths,
                 logger=context.logger
             )
-            return SessionExcutables(evaluator, trainer, training_runner)
+            return SessionExecutables(evaluator, trainer, training_runner)
 
         case 'overfit':
             trainer = engine.MultiHeadTrainer(
@@ -261,4 +261,4 @@ def build_session(
                 grad_clip_norm=config.runtime.optimization.grad_clip_norm,
                 log_every=config.runtime.schedule.log_every,
             )
-            return SessionExcutables(evaluator, trainer, None)
+            return SessionExecutables(evaluator, trainer, None)
