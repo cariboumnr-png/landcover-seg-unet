@@ -3,7 +3,7 @@ mode: ref # ref | aoi | tiles
 crs: ''
 extent:
   # when mode=ref provide:
-  default_input_dpath: '${exp_root}/input/extent_reference'
+  default_input_dpath: '${execution.exp_root}/input/extent_reference'
   filename: ''
   filepath: ''
   # when mode=(aoi | tiles) provide:

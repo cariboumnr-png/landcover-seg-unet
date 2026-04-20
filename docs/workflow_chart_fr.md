@@ -39,7 +39,76 @@
 |        |
 |        +--> [session/runner]              (optionnel : phases et runner)
 |
-+--> [cli/pipelines/*]                      (7 Exécution du pipeline)
+|
++--> [cli/pipelines/*]                              (7 Exécution des pipelines)
+         (orchestration explicite des étapes de commande seulement ;
+          résout la configuration, sélectionne un pipeline, puis
+          délègue la construction et l’exécution aux couches en aval)
+
+    +--> [cli/pipelines/train_model]               (7a Pipeline d’entraînement)
+    |        (exécution complète d’une expérience)
+    |        |
+    |        +--> valider / résoudre les artefacts d’expérience requis
+    |        |        (artefacts de jeu de données préparé, manifestes,
+    |        |         schéma)
+    |        |
+    |        +--> [geopipe/specification/factory]
+    |        |        (construire les DataSpecs à partir des artefacts
+    |        |         préparés)
+    |        |
+    |        +--> [models/factory]
+    |        |        (construire le modèle d’entraînement)
+    |        |
+    |        +--> [session/factory]
+    |        |        (assembler la session d’entraînement :
+    |        |         composants, état, callbacks, moteurs, runner)
+    |        |
+    |        +--> [session/runner]
+    |                 (exécuter le cycle multi-phases
+    |                  entraînement / validation)
+    |
+    +--> [cli/pipelines/evaluate_model]            (7b Pipeline d’évaluation)
+    |        (exécution d’une évaluation unique)
+    |        |
+    |        +--> valider / résoudre les artefacts d’expérience requis
+    |        |        (artefacts de jeu de données préparé, manifestes,
+    |        |         schéma, entrées d’évaluation / source du modèle)
+    |        |
+    |        +--> [geopipe/specification/factory]
+    |        |        (construire les DataSpecs d’évaluation)
+    |        |
+    |        +--> [models/factory]
+    |        |        (construire le modèle d’évaluation)
+    |        |
+    |        +--> [session/factory]
+    |        |        (assembler la session d’évaluation :
+    |        |         composants, état, callbacks, moteur d’évaluation)
+    |        |
+    |        +--> [session/engine/policy]
+    |                 (exécuter un passage unique d’évaluation et
+    |                  produire métriques / exports)
+    |
+    +--> [cli/pipelines/train_overfit]             (7c Pipeline d’overfit)
+             (validation de la chaîne complète sur un seul bloc)
+             |
+             +--> construire / sélectionner un seul bloc valide
+             |        (chemin minimal d’acquisition de bloc pour la
+             |         validation de débogage)
+             |
+             +--> construire des DataSpecs minimaux
+             |        (spécification à bloc unique / portée réduite)
+             |
+             +--> [models/factory]
+             |        (construire le modèle de débogage / overfit)
+             |
+             +--> [session/factory]
+             |        (assembler une session d’entraînement compacte
+             |         pour le test d’overfit)
+             |
+             +--> [session/engine/policy]
+                      (entraîner de manière répétée sur le même bloc
+                       jusqu’à atteindre un ajustement quasi parfait /
+                       la cible attendue pour le débogage)
 ``
 ```
 

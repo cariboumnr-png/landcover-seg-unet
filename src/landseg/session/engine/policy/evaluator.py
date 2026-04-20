@@ -145,7 +145,7 @@ class MultiHeadEvaluator(engine.EngineBase):
         self._emit('on_validation_end')
         return self.state.epoch_sum.val_logs.head_metrics
 
-    def infer(self, out_dir: str) -> None:
+    def infer(self, out_dir: str, **kwargs) -> None:
         '''
         Execute inference over the test dataset.
 
@@ -179,7 +179,7 @@ class MultiHeadEvaluator(engine.EngineBase):
             self.engine.run_infer_batch()
 
         # inference phase end
-        self._emit('on_inference_end', out_dir)
+        self._emit('on_inference_end', out_dir, **kwargs)
 
     # ----- validation phase
     def _compute_iou(self) -> None:

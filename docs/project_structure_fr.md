@@ -47,9 +47,12 @@ Last updated: 2026-04-07
 │   ├── engine/                   # moteurs de batch et politiques
 │   ├── instrumentation/          # callbacks, utilitaire de prévisualisation
 │   ├── orchestration/            # orchestration des sessions
-│   └── factory.py                # constructeurs de sessions
+│   ├── factory.py                # constructeurs de sessions
+│   └── metadata.py               # métadonnées de session
 |
-└── utils/                        [Utilitaires partagés]
-    ├── logger.py                 # journalisation du projet
-    └── multip.py                 # outils de multiprocessus
+├── utils/                        [Shared utilities]
+|   ├── logger.py                 # journalisation du projet
+|   └── multip.py                 # outils de multiprocessus
+|
+└── _constants.py                 # constantes globales du projet
   ```

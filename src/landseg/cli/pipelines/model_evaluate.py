@@ -20,15 +20,13 @@
 # =========================================================================== #
 
 '''
-Training entrypoint.
-
-Builds data specifications from produced artifacts, constructs the
-model, and runs the multi-phase training runner.
+Evaluating a model.
 '''
 
-# third-party imports
-import torch
+# standard imports
+import typing
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
@@ -36,12 +34,9 @@ import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
 
-# constant
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
-
-def train(config: configs.RootConfig):
+def evaluate(config: configs.RootConfig):
     '''
-    Run a full training job.
+    Run a single evaluation pass.
 
     Creates an run directory, builds `DataSpecs` from the prepared
     artifacts and schema, instantiates the model, and executes the runner.
@@ -54,35 +49,45 @@ def train(config: configs.RootConfig):
     session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     session_paths.init()
 
+    # parse evaluation pipeline configs
+    eval_config = config.pipeline.model_evaluate
+    assert eval_config.checkpoint
+    if eval_config.split not in ('val', 'test'):
+        raise ValueError(f"Invalid split: {eval_config.split}")
+    split: typing.Literal['val', 'test'] = eval_config.split
+
     # create the session metadata dict
     meta_ctrl = artifacts.Controller[dict](session_paths.meta)
     meta: session.SessionMetadata = {
         'status': 'running',
         'run_id': session_paths.run_id,
-        'intent': 'training',
+        'intent': 'evaluation',
         'pipeline': config.pipeline.name,
-        'created_at': session_paths.time(T_FORMAT),
+        'created_at': session_paths.time(c.TF_ISO8601),
         'completed_at': None,
-        'inputs': {},
+        'inputs': {
+            'checkpoint': eval_config.checkpoint,
+            'split': split
+        },
         'summary': {}
     }
     meta_ctrl.persist(meta)
 
     # save running config per run
-    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
-    config_ctrl.persist(config.as_dict())
+    ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
+    ctrl.persist(config.as_dict())
 
-    # create a centralized main logger
+    # create a logger
     logger = utils.Logger('main', session_paths.main_log_file)
 
     # collect artifacts and build dataspsec
     artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
-        mode='default',
+        mode='test_only' if split == 'test' else 'val_only',
         ids_domain_name=config.dataspecs.domain_ids_name,
         vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=True
+        print_out=False
     )
 
     # setup the model
@@ -95,21 +100,39 @@ def train(config: configs.RootConfig):
         clamp_range=config.models.clamp_range
     )
 
-    # build a full session with a runner
-    runner = session.build_session(
+    # load checkpoint with no optimizer nor scheduler
+    artifacts.load_checkpoint(
+        model=model,
+        fpath=eval_config.checkpoint,
+        map_device=c.DEVICE,
+        optimizer=None,
+        scheduler=None,
+    )
+
+    # build session runner
+    evaluator = session.build_session(
         dataspecs,
         model,
         config.session,
-        intent='training',
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        logger=logger,
-        session_paths=session_paths,
-    ).training_runner
-    assert runner, 'Training runner not properly built' # sanity
+        context=session.SessionBuildContext(
+            intent='evaluation',
+            device=c.DEVICE,
+            logger=logger,
+            eval_dataset=split
+        )
+    ).evaluator
 
-    # run session
-    runner.fit()
+    # evaluate
+    evaluator.set_head_state()
+    val_logs = evaluator.validate()
+
+    # produce previews on all the heads
+    evaluator.infer(session_paths.previews)
+
+    # persist the validation log as the current outputs
+    output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
+    output_ctrl.persist(val_logs)
 
     # update metadata
-    meta['completed_at'] = session_paths.time(T_FORMAT)
+    meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta_ctrl.persist(meta)

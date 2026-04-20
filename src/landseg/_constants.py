@@ -19,44 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
+'''
+Namespace for project environmental constants.
+'''
 
-'''Inference phase callback class.'''
+# third-party imports
+import torch
 
-# local imports
-import landseg.session.instrumentation.callbacks as callbacks
-import landseg.session.instrumentation.exporters as exporters
-
-class InferCallback(callbacks.Callback):
-    '''Inference: parse -> forward -> collect outputs (optional).'''
-
-    def on_inference_begin(self) -> None:
-        # reset infer outputs
-        self.state.epoch_sum.infer_ctx.maps.clear()
-
-    def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch ctx
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
-
-    def on_inference_batch_forward(self) -> None: ...
-
-    def on_inference_batch_end(self) -> None: ...
-
-    def on_inference_end(self, out_dir: str, **kwargs) -> None:
-        # stitch all blocks together and output previews
-        # only if the patch grid is of valid shape, e.e, non-zero dims
-
-        # determine which heads to produce preview images
-        heads = kwargs.get('preview_heads', [])
-        # if no specifics provided, preview all heads
-        if not heads:
-            heads = self.state.heads.all_heads
-        if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
-            exporters.export_previews(
-                self.state.epoch_sum.infer_ctx.maps,
-                out_dir,
-                map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
-                heads=heads
-            )
+# constants
+DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601

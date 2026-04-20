@@ -39,10 +39,8 @@ import zlib
 # third-party imports
 import numpy
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
-
-# constant
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # type
 T = typing.TypeVar('T')
@@ -89,7 +87,7 @@ class Controller(typing.Generic[T]):
     def creation_time(self) -> str:
         '''Return a formatted artifact file creation times string.'''
         t = os.path.getctime(self.fp)
-        return datetime.datetime.fromtimestamp(t).strftime(T_FORMAT)
+        return datetime.datetime.fromtimestamp(t).strftime(c.TF_ISO8601)
 
     # ----- alternative constructor
     @classmethod

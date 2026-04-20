@@ -33,9 +33,8 @@ preparation and downstream model consumption.
 # standard imports
 import datetime
 # local imports
+import landseg._constants as c
 import landseg.geopipe.core as geo_core
-
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 
 # -------------------------------Public Function-------------------------------
 def build_schema(
@@ -76,7 +75,7 @@ def build_schema(
     '''
 
     # current time
-    t = datetime.datetime.now().strftime(T_FORMAT)
+    t = datetime.datetime.now().strftime(c.TF_ISO8601)
 
     # update route
     if original:

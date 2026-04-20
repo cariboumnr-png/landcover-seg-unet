@@ -47,9 +47,12 @@ Dernière mise à jour : 2026-04-07
 │   ├── engine/                   # batch and policy engines
 │   ├── instrumentation/          # callbacks, preview utility
 │   ├── orchestration/            # session orchestration
-│   └── factory.py                # session builders
+│   ├── factory.py                # session builders
+│   └── metadata.py               # session metadata
 |
-└── utils/                        [Shared utilities]
-    ├── logger.py                 # project logging
-    └── multip.py                 # multiprocessing helpers
+├── utils/                        [Shared utilities]
+|   ├── logger.py                 # project logging
+|   └── multip.py                 # multiprocessing helpers
+|
+└── _constants.py                 # project wide constants
   ```

@@ -42,11 +42,12 @@ class CheckpointMeta(typing.TypedDict):
 
 # -------------------------------Public Function-------------------------------
 def save_checkpoint(
+    *,
     model: core.MultiheadModelLike,
+    fpath: str,
     ckpt_meta: CheckpointMeta,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
-    fpath: str
 ) -> None:
     '''
     Save model, optimizer, scheduler (if present), and metadata to file.
@@ -71,36 +72,38 @@ def save_checkpoint(
     torch.save(state, fpath)
 
 def load_checkpoint(
+    *,
     model: core.MultiheadModelLike,
-    optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
     fpath: str,
-    device: str
+    map_device: str,
+    optimizer: torch.optim.Optimizer | None = None,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
 ) -> CheckpointMeta:
     '''
     Load model, optimizer, and scheduler state dicts from file.
 
     Args:
         model: Model instance to load parameters into.
-        optimizer: Optimizer instance to receive restored state.
-        scheduler: Optional scheduler whose state should be restored.
         fpath: Checkpoint file path.
         device: Device mapping for loading ('cpu', 'cuda', etc.).
+        optimizer: Optional optimizer instance. Not needed for evaluation.
+        scheduler: Optional scheduler instance. Not needed for evaluation.
 
     Returns:
         A metadata dict containing metric, epoch, and step fields.
     '''
 
     # load states dict from file
-    checkpoint = torch.load(fpath, map_location=device)
+    checkpoint = torch.load(fpath, map_location=map_device)
 
     # load model first
     model.load_state_dict(checkpoint['model'])
 
-    # load optimizer and scheduler if present
-    if checkpoint.get('optimizer'):
+    # load optimizer and scheduler only if they are provided
+    if optimizer is not None and checkpoint.get('optimizer'):
         optimizer.load_state_dict(checkpoint['optimizer'])
-    if checkpoint.get('scheduler') and scheduler is not None:
+
+    if scheduler is not None and checkpoint.get('scheduler'):
         scheduler.load_state_dict(checkpoint['scheduler'])
 
     # return meta dict

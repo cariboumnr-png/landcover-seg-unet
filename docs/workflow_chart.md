@@ -39,7 +39,69 @@
 |        |
 |        +--> [session/runner]              (optional: phases & runner)
 |
-+--> [cli/pipelines/*]                      (7 Pipeline execution)
+|
++--> [cli/pipelines/*]                              (7 Pipeline execution)
+         (explicit command-stage orchestration only;
+          resolves config, selects a pipeline, and delegates
+          construction/runtime ownership downstream)
+
+    +--> [cli/pipelines/train_model]               (7a Train pipeline)
+    |        (full experiment execution)
+    |        |
+    |        +--> validate / resolve required experiment artifacts
+    |        |        (prepared dataset artifacts, manifests, schema)
+    |        |
+    |        +--> [geopipe/specification/factory]
+    |        |        (build DataSpecs from prepared artifacts)
+    |        |
+    |        +--> [models/factory]
+    |        |        (construct training model)
+    |        |
+    |        +--> [session/factory]
+    |        |        (assemble training session:
+    |        |         components, state, callbacks, engines, runner)
+    |        |
+    |        +--> [session/runner]
+    |                 (execute multi-phase train/validate lifecycle)
+    |
+    +--> [cli/pipelines/evaluate_model]            (7b Evaluate pipeline)
+    |        (single evaluation execution)
+    |        |
+    |        +--> validate / resolve required experiment artifacts
+    |        |        (prepared dataset artifacts, manifests, schema,
+    |        |         evaluation inputs / model source)
+    |        |
+    |        +--> [geopipe/specification/factory]
+    |        |        (build evaluation DataSpecs)
+    |        |
+    |        +--> [models/factory]
+    |        |        (construct evaluation model)
+    |        |
+    |        +--> [session/factory]
+    |        |        (assemble evaluation session:
+    |        |         components, state, callbacks, evaluator engine)
+    |        |
+    |        +--> [session/engine/policy]
+    |                 (run single evaluation pass and emit metrics/exports)
+    |
+    +--> [cli/pipelines/train_overfit]             (7c Overfit pipeline)
+             (end-to-end stack validation on one block)
+             |
+             +--> build / select one valid block
+             |        (minimal block acquisition path for debug validation)
+             |
+             +--> build minimal DataSpecs
+             |        (single-block / tiny-scope specification)
+             |
+             +--> [models/factory]
+             |        (construct debug/overfit model)
+             |
+             +--> [session/factory]
+             |        (assemble compact training session for overfit test)
+             |
+             +--> [session/engine/policy]
+                      (train repeatedly on the same block until
+                       near-perfect fit / expected debug target)
 ```
 ---
 
@@ -59,7 +121,7 @@ treated as inputs to session construction.
   - optional runner assembly
 
 - Engines are policy-only and receive fully initialized state and components.
-- The CLI executes explicit pipeline stages and requests a session; it does 
+- The CLI executes explicit pipeline stages and requests a session; it does
 not assemble runtime internals.
 - The workflow cleanly separates:
 

@@ -43,7 +43,7 @@ field = dataclasses.field
 # ----- grid
 @dataclasses.dataclass
 class Extent:
-    default_input_dpath: str = '${exp_root}/input/extent_reference'
+    default_input_dpath: str = '${execution.exp_root}/input/extent_reference'
     filename: str = ''
     filepath: str = ''
     origin: tuple[float, float] = (0.0, 0.0)
@@ -107,7 +107,7 @@ class DomainFile:
 
 @dataclasses.dataclass
 class Domains:
-    default_input_dpath: str = '${exp_root}/input/domain_knowledge'
+    default_input_dpath: str = '${execution.exp_root}/input/domain_knowledge'
     files: list[DomainFile] = field(default_factory=lambda: [])
     valid_threshold: float = 0.7
     target_variance: float = 0.9
@@ -144,7 +144,7 @@ class General:
 @dataclasses.dataclass
 class DataBlocks:
     name: str = omegaconf.MISSING
-    default_input_dpath: str = '${exp_root}/input/${inputs.data.name}'
+    default_input_dpath: str = '${execution.exp_root}/input/${inputs.data.name}'
     filenames: FileNames = field(default_factory=FileNames)
     filepaths: FilePaths = field(default_factory=FilePaths)
     general: General = field(default_factory=General)
@@ -199,7 +199,7 @@ class DataFoundation:
     grid: Grid = field(default_factory=Grid)
     domains: Domains = field(default_factory=Domains)
     datablocks: DataBlocks = field(default_factory=DataBlocks)
-    output_dpath: str = '${exp_root}/artifacts/foundation'
+    output_dpath: str = '${execution.exp_root}/artifacts/foundation'
 
     def validate(self) -> None:
         self.grid.validate()
@@ -235,7 +235,7 @@ class DataTransform:
     partition: Partition = field(default_factory=Partition)
     scoring: Scoring = field(default_factory=Scoring)
     hydration: Hydration = field(default_factory=Hydration)
-    output_dpath: str = '${exp_root}/artifacts/transform'
+    output_dpath: str = '${execution.exp_root}/artifacts/transform'
 
     def validate(self):
         pass
@@ -469,8 +469,8 @@ class EvaluateModelConfig:
 @dataclasses.dataclass
 class PipelineConfig:
     name: str = 'default'
-    train_model: TrainModelConfig = field(default_factory=TrainModelConfig)
-    evaluate_model: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
+    model_train: TrainModelConfig = field(default_factory=TrainModelConfig)
+    model_evaluate: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
 
 # ------------------------------EXECUTION CONFIGS------------------------------
 @dataclasses.dataclass

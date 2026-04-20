@@ -45,4 +45,4 @@ session:
       grad_clip_norm: null
 
 pipeline:
-  name: train-overfit
+  name: diagnose-overfit

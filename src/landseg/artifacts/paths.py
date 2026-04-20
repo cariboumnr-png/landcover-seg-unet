@@ -95,7 +95,11 @@ import os
 # │   │
 # │   ├── preivews/
 # │   │
-# |   └── config.json
+# │   ├── config.json
+# │   │
+# │   ├── evaluation.json (if intent is evaluation)
+# │   │
+# |   └── metadata.json
 # |
 # ...
 
@@ -274,6 +278,10 @@ class ResultsPaths:
     @property
     def config(self) -> str:
         return os.path.join(self.run_folder, 'config.json')
+
+    @property
+    def evaluation(self) -> str:
+        return os.path.join(self.run_folder, 'evaluation.json')
 
     @property
     def meta(self) -> str:

@@ -45,30 +45,30 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .default import default_action
-    from .evaluate_model import evaluate
-    from .ingest_data import ingest
-    from .prepare_data import prepare
-    from .train_model import train
-    from .train_overfit import overfit
+    from .data_ingest import ingest
+    from .data_prepare import prepare
+    from .diagnose_overfit import overfit
+    from .model_evaluate import evaluate
+    from .model_train import train
 
 def __getattr__(name: str):
 
     if name in {'default_action'}:
         return getattr(importlib.import_module('.default', __package__), name)
 
-    if name in {'evaluate'}:
-        return getattr(importlib.import_module('.evaluate_model', __package__), name)
+    if name in {'overfit'}:
+        return getattr(importlib.import_module('.diagnose_overfit', __package__), name)
 
     if name in {'ingest'}:
-        return getattr(importlib.import_module('.ingest_data', __package__), name)
+        return getattr(importlib.import_module('.data_ingest', __package__), name)
 
     if name in {'prepare'}:
-        return getattr(importlib.import_module('.prepare_data', __package__), name)
+        return getattr(importlib.import_module('.data_prepare', __package__), name)
+
+    if name in {'evaluate'}:
+        return getattr(importlib.import_module('.model_evaluate', __package__), name)
 
     if name in {'train'}:
-        return getattr(importlib.import_module('.train_model', __package__), name)
-
-    if name in {'overfit'}:
-        return getattr(importlib.import_module('.train_overfit', __package__), name)
+        return getattr(importlib.import_module('.model_train', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

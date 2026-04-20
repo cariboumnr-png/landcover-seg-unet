@@ -20,14 +20,14 @@
 # =========================================================================== #
 
 '''
-Evaluating a model.
+Training entrypoint.
+
+Builds data specifications from produced artifacts, constructs the
+model, and runs the multi-phase training runner.
 '''
 
-# standard imports
-import typing
-# third-party imports
-import torch
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe as geopipe
@@ -35,12 +35,9 @@ import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
 
-# constant
-T_FORMAT = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
-
-def evaluate(config: configs.RootConfig):
+def train(config: configs.RootConfig):
     '''
-    Run a single evaluation pass.
+    Run a full training job.
 
     Creates an run directory, builds `DataSpecs` from the prepared
     artifacts and schema, instantiates the model, and executes the runner.
@@ -53,45 +50,35 @@ def evaluate(config: configs.RootConfig):
     session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     session_paths.init()
 
-    # parse evaluation pipeline configs
-    eval_config = config.pipeline.evaluate_model
-    assert eval_config.checkpoint
-    if eval_config.split not in ('val', 'test'):
-        raise ValueError(f"Invalid split: {eval_config.split}")
-    split: typing.Literal['val', 'test'] = eval_config.split
-
     # create the session metadata dict
     meta_ctrl = artifacts.Controller[dict](session_paths.meta)
     meta: session.SessionMetadata = {
         'status': 'running',
         'run_id': session_paths.run_id,
-        'intent': 'evaluation',
+        'intent': 'training',
         'pipeline': config.pipeline.name,
-        'created_at': session_paths.time(T_FORMAT),
+        'created_at': session_paths.time(c.TF_ISO8601),
         'completed_at': None,
-        'inputs': {
-            'checkpoint': eval_config.checkpoint,
-            'split': split
-        },
+        'inputs': {},
         'summary': {}
     }
     meta_ctrl.persist(meta)
 
     # save running config per run
-    ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
-    ctrl.persist(config.as_dict())
+    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
+    config_ctrl.persist(config.as_dict())
 
-    # create a logger
+    # create a centralized main logger
     logger = utils.Logger('main', session_paths.main_log_file)
 
     # collect artifacts and build dataspsec
     artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
-        mode='test_only' if split == 'test' else 'val_only',
+        mode='default',
         ids_domain_name=config.dataspecs.domain_ids_name,
         vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=False
+        print_out=True
     )
 
     # setup the model
@@ -104,31 +91,23 @@ def evaluate(config: configs.RootConfig):
         clamp_range=config.models.clamp_range
     )
 
-    # build session runner
-    evaluator = session.build_session(
+    # build a full session with a runner
+    runner = session.build_session(
         dataspecs,
         model,
         config.session,
-        intent='evaluation',
-        device='cuda' if torch.cuda.is_available() else 'cpu',
-        logger=logger,
-        eval_dataset=split,
-    ).evaluator
+        context=session.SessionBuildContext(
+            intent='training',
+            device=c.DEVICE,
+            logger=logger,
+            session_paths=session_paths,
+        )
+    ).training_runner
+    assert runner, 'Training runner not properly built' # sanity
 
-    # load checkpoint
-    _ = artifacts.load_checkpoint(
-        model=evaluator.model,
-        optimizer=evaluator.optimization.optimizer,
-        scheduler=evaluator.optimization.scheduler,
-        fpath=eval_config.checkpoint,
-        device='cuda'
-    )
-
-    # evaluate
-    evaluator.set_head_state()
-    val_logs = evaluator.validate()
+    # run session
+    runner.fit()
 
     # update metadata
-    meta['completed_at'] = session_paths.time(T_FORMAT)
-    meta['summary'] = val_logs
+    meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta_ctrl.persist(meta)
