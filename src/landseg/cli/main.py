@@ -32,7 +32,6 @@ import sys
 import typing
 # third-party imports
 import hydra
-import hydra.core.hydra_config
 import hydra.utils
 import omegaconf
 # local imports
