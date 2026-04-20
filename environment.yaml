@@ -12,6 +12,5 @@ dependencies:
   - tqdm
   - psutil
   - hydra-core
-  - hydra-optuna-sweeper,
   - optuna,
   - pip
