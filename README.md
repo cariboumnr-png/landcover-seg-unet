@@ -100,7 +100,7 @@ lifecycle policies.
 Process raw rasters into **stable, catalogued data blocks** aligned to a world
 grid and persisted as reusable foundation artifacts:
 
-    experiment_run pipeline=ingest-data
+    experiment_run pipeline=data-ingest
 
 This stage typically needs to be run **once per dataset**, unless the input
 rasters or grid configuration change.
@@ -112,7 +112,7 @@ rasters or grid configuration change.
 Prepare experiment‑specific artifacts (dataset splits, normalization, statistics,
 schemas) from previously ingested data blocks:
 
-    experiment_run pipeline=prepare-data
+    experiment_run pipeline=data-prepare
 
 This stage may be rerun with different experiment configurations without
 re‑ingesting raw data.
@@ -123,7 +123,7 @@ re‑ingesting raw data.
 
 Run a complete training job using the currently prepared dataset artifacts:
 
-    experiment_run pipeline=train-model
+    experiment_run pipeline=model-train
 
 This stage constructs a full training session, including runtime state,
 execution engines, and a phase‑driven runner, from prepared dataset artifacts.
@@ -136,8 +136,8 @@ This stage consumes prepared artifacts but does not modify foundation data.
 Run a standalone evaluation job using the currently prepared dataset artifacts
 and a trained checkpoint:
 
-    experiment_run pipeline=evaluate-model \
-      pipeline.evaluate_model.checkpoint=path/to/checkpoint
+    experiment_run pipeline=model-evaluate \
+      pipeline.model_evaluate.checkpoint=path/to/checkpoint
 
 This stage constructs an evaluation-only session from prepared dataset
 artifacts and the supplied checkpoint, then runs inference and metric
@@ -154,7 +154,7 @@ Run a minimal overfit test on a small subset to validate the end‑to‑end stac
 This pipeline constructs a session **without a runner**, exercising the shared
 execution engine directly. It does not require prior ingestion or preparation:
 
-    experiment_run pipeline=train-overfit
+    experiment_run pipeline=diagnose-overfit
 
 
 >🔔 These commands execute Hydra configurations from `src/landseg/configs/`. These
