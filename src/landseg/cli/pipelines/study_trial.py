@@ -1,0 +1,55 @@
+# =========================================================================== #
+#           Copyright (c) His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Run one study trial.
+'''
+
+# standard imports
+import os
+# local imports
+import landseg.cli.pipelines as pipelines
+import landseg.configs as configs
+
+def trial(config: configs.RootConfig) -> float:
+    '''
+    Run one trial with training and evaluation.
+
+    Args:
+        config: RootConfig with model, trainer, and runner settings.
+    '''
+
+    # train
+    checkpoint = pipelines.train(config)
+    # simple sanity check
+    if not os.path.exists(checkpoint):
+        raise ValueError('Invalid checkpoint from training session')
+
+    # evaluate settings
+    config.pipeline.model_evaluate.checkpoint = checkpoint
+    config.pipeline.model_evaluate.split = 'val' # note: not on test
+    config.pipeline.model_evaluate.export_previews = False
+
+    # evaluate
+    best = pipelines.evaluate(config)
+
+    # return the best value
+    return best
