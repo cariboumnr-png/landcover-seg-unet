@@ -104,6 +104,15 @@ def evaluate(config: configs.RootConfig):
         clamp_range=config.models.clamp_range
     )
 
+    # load checkpoint with no optimizer nor scheduler
+    artifacts.load_checkpoint(
+        model,
+        eval_config.checkpoint,
+        device='cuda',
+        optimizer=None,
+        scheduler=None,
+    )
+
     # build session runner
     evaluator = session.build_session(
         dataspecs,
@@ -116,15 +125,6 @@ def evaluate(config: configs.RootConfig):
             eval_dataset=split
         )
     ).evaluator
-
-    # load checkpoint
-    _ = artifacts.load_checkpoint(
-        model=evaluator.model,
-        optimizer=evaluator.optimization.optimizer,
-        scheduler=evaluator.optimization.scheduler,
-        fpath=eval_config.checkpoint,
-        device='cuda'
-    )
 
     # evaluate
     evaluator.set_head_state()
