@@ -48,7 +48,8 @@
 # Dossier choisi par l’utilisateur contenant toutes les entrées du projet,
 # les artefacts préparés, les sorties d’exécution, les journaux et les résultats.
 # -----------------------------------------------------------------------------
-exp_root: ./experiment
+execution:
+  exp_root: ./experiment
 
 
 # -----------------------------------------------------------------------------

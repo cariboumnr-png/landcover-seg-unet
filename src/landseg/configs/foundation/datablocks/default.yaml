@@ -1,6 +1,6 @@
 name: demo_data
 
-default_input_dpath: ${exp_root}/input/${foundation.datablocks.name}
+default_input_dpath: ${execution.exp_root}/input/${foundation.datablocks.name}
 
 filenames:
   dev_image: image.tif

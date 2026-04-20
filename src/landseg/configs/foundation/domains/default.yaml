@@ -1,5 +1,5 @@
 # input dirpath
-default_input_dpath: ${exp_root}/input/domain_knowledge
+default_input_dpath: ${execution.exp_root}/input/domain_knowledge
 # files - add more in the same format
 files:
   - name: ''
