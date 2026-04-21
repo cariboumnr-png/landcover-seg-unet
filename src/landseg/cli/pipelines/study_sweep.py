@@ -48,6 +48,9 @@ def trial(config: configs.RootConfig) -> float:
         config: RootConfig with model, trainer, and runner settings.
     '''
 
+    # set training runner to silent
+    config.execution.verbosity = 'silent'
+
     # train
     meta = pipelines.train(config)
 

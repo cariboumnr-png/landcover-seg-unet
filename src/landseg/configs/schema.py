@@ -484,6 +484,7 @@ class PipelineConfig:
 @dataclasses.dataclass
 class ExecutionContext:
     exp_root: str = './experiment' # root directory for this experiment run
+    verbosity: str = 'full' # 'full', 'logging_only', 'silent'
     dev_settings: str | None = None # developer-only override config
 
 # --------------------------------ROOT  CONFIGS--------------------------------

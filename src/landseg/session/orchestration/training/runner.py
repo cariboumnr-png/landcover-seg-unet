@@ -68,6 +68,7 @@ class TrainingRunner:
         phases: typing.Sequence[training.TrainingPhaseLike],
         paths: artifacts.ResultsPaths,
         logger: utils.Logger,
+        **kwargs
     ):
         '''
         Initialize the curriculum runner.
@@ -95,6 +96,7 @@ class TrainingRunner:
         self.phases = phases
         self.paths = paths
         self.logger = logger.get_child('phase') # a child from base logger
+        self.verbose = kwargs.get('verbose', True)
 
         # init phase counter
         self.current_phase_idx = 0
@@ -144,7 +146,8 @@ class TrainingRunner:
             if phase.finished:
                 self._next_phase() # progress
                 continue
-            self._print_phase(phase)
+            if self.verbose:
+                self._print_phase(phase)
             # try load from previous checkpoint
             meta = self._load_progress(phase.name)
             # main execution
@@ -157,7 +160,7 @@ class TrainingRunner:
 
             # check completion status
             if self.done:
-                print('__Experiment Complete__')
+                self.logger.log('INFO', '__Experiment Complete__')
                 self.logger.log('INFO', 'All training phases finished')
                 break
 
@@ -195,7 +198,7 @@ class TrainingRunner:
         )
 
         # train
-        print(f'__Phase [{phase.name}] started__')
+        self.logger.log('INFO', f'__Phase [{phase.name}] started__')
         for epoch in range(start, num_epoch + 1):
             # early stop check
             # - patience can be None = no early stop
@@ -206,7 +209,7 @@ class TrainingRunner:
             if patience and patience_counter >= patience and epoch >= 10:
                 self.logger.log('INFO', 'Patience limit reached, stopping')
                 break
-            print(f'__Epoch: {epoch}/{num_epoch}__')
+            self.logger.log('INFO', f'__Epoch: {epoch}/{num_epoch}__')
             # set trainer heads
             self.trainer.set_head_state(
                 phase.heads.active_heads,
@@ -230,7 +233,7 @@ class TrainingRunner:
                 self._save_progress(self.paths.best_checkpoint(phase.name))
             else:
                 self._save_progress(self.paths.last_checkpoint(phase.name))
-        print(f'__Phase [{phase.name}] finished__')
+        self.logger.log('INFO', f'__Phase [{phase.name}] finished__')
 
         # return training and validation logs
         return t_logs, v_logs

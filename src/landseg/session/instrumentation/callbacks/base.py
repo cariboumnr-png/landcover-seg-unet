@@ -37,6 +37,7 @@ class Callback:
         self._config: common.ConfigLike | None = None
         self._device: str | None
         self.skip_log = False
+        self.verbose = not logger.silent
         self.train_logger = logger.get_child('train')
         self.valdn_logger = logger.get_child('valdn')
 

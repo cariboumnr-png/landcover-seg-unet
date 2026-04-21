@@ -68,8 +68,26 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
     config_ctrl.persist(config.as_dict())
 
+    # verbosity
+    match config.execution.verbosity:
+        case 'full':
+            console_level = 10
+            print_out = True
+        case 'select':
+            console_level = 20
+            print_out = True
+        case 'silent':
+            console_level = None
+            print_out = False
+        case _:
+            raise ValueError(f'Invalid option: {config.execution.verbosity}')
+
     # create a centralized main logger
-    logger = utils.Logger('main', session_paths.main_log_file)
+    logger = utils.Logger(
+        name='main',
+        log_file=session_paths.main_log_file,
+        console_lvl=console_level
+    )
 
     # collect artifacts and build dataspsec
     artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
@@ -78,7 +96,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         mode='default',
         ids_domain_name=config.dataspecs.domain_ids_name,
         vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=True
+        print_out=print_out
     )
 
     # setup the model
@@ -100,6 +118,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
             intent='training',
             device=c.DEVICE,
             logger=logger,
+            verbose_runner=print_out,
             session_paths=session_paths,
         )
     ).training_runner
