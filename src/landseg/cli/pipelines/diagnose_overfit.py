@@ -114,6 +114,9 @@ def overfit(config: configs.RootConfig) -> None:
         f'Increase the limit via: {hint}'
     )
 
+    # close logger
+    logger.close()
+
 def _build_a_block(
     save_dpath: str,
     config: configs.RootConfig,

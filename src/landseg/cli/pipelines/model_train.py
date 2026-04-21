@@ -127,6 +127,9 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     # run session
     runner.fit()
 
+    # close logger
+    logger.close()
+
     # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = {}

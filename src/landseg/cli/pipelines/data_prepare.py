@@ -95,3 +95,6 @@ def prepare(config: configs.RootConfig):
         transform_paths,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
+
+    # close logger
+    logger.close()

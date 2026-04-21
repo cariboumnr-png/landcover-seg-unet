@@ -134,6 +134,9 @@ def evaluate(config: configs.RootConfig):
     output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
     output_ctrl.persist(val_logs)
 
+    # close logger
+    logger.close()
+
     # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = {}

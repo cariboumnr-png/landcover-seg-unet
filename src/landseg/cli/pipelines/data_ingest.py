@@ -128,3 +128,6 @@ def ingest(config: configs.RootConfig):
         )
     else:
         logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
+
+    # close logger
+    logger.close()
