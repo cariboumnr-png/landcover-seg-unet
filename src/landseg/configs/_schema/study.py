@@ -34,5 +34,12 @@ field = dataclasses.field
 
 # --------------------------------STUDY CONFIGS--------------------------------
 @dataclasses.dataclass
+class _BaseObjectives:
+    learning_rate: tuple[float, float] = (1e-5, 1e-1)   # low, high
+    weight_decay: tuple[float, float] = (1e-6, 1e-2)    # low, high
+    patch_size: tuple[int, int, int] = (64, 128, 64)    # low, high, step
+    batch_size: tuple[int, int, int] = (16, 64, 16)     # low, high, step
+
+@dataclasses.dataclass
 class StudyConfig:
-    pass
+    base: _BaseObjectives = field(default_factory=_BaseObjectives)

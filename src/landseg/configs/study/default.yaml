@@ -1,0 +1,6 @@
+# base objectives
+base:
+  learning_rate: [1e-5, 1e-1]   # low, high
+  weight_decay: [1e-6, 1e-2]    # low, high
+  patch_size: [64, 128, 64]    # low, high, step
+  batch_size: [16, 64, 16]     # low, high, step

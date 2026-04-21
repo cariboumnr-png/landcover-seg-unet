@@ -39,17 +39,43 @@ def make_objective(
 
     def objective(trial: optuna.Trial) -> float:
 
-        # independent cfg instance
-        trial_cfg = copy.deepcopy(cfg)
-        # minimal example, hardcoded for now.
-        # optimize learning rate
-        trial_cfg.session.components.optimization.lr = trial.suggest_float(
-            name='lr',
-            low=1e-5,
-            high=1e-1,
-            log=True
-        )
+        trial_cfg = _from_base_objectives(cfg, trial)
 
         return base_runner(trial_cfg)
 
     return objective
+
+def _from_base_objectives(cfg, trial: optuna.Trial):
+    '''doc'''
+
+    _cfg = copy.deepcopy(cfg)
+    # learning rate
+    _cfg.session.components.optimization.lr = trial.suggest_float(
+        name='lr',
+        low=cfg.study.base.learning_rate[0],
+        high=cfg.study.base.learning_rate[1],
+        log=True
+    )
+    # weight decay
+    _cfg.session.components.optimization.weight_decay = trial.suggest_float(
+        name='weight_decay',
+        low=cfg.study.base.weight_decay[0],
+        high=cfg.study.base.weight_decay[1],
+        log=True
+    )
+    # patch size
+    _cfg.session.components.loader.patch_size = trial.suggest_int(
+        name='patch_size',
+        low=cfg.study.base.patch_size[0],
+        high=cfg.study.base.patch_size[1],
+        step=cfg.study.base.patch_size[2],
+    )
+    # batch size
+    _cfg.session.components.loader.batch_size = trial.suggest_int(
+        name='batch_size',
+        low=cfg.study.base.batch_size[0],
+        high=cfg.study.base.batch_size[1],
+        step=cfg.study.base.batch_size[2],
+    )
+
+    return _cfg
