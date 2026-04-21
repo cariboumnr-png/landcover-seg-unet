@@ -455,6 +455,14 @@ class SessionConfig:
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
+# --------------------------------STUDY CONFIGS--------------------------------
+@dataclasses.dataclass
+class StudyConfig:
+    '''Study config'''
+    direction: str = 'maximize'
+    n_trials: int = 50
+    seed: int = 42
+
 # ------------------------------PIPELINE  CONFIGS------------------------------
 @dataclasses.dataclass
 class TrainModelConfig:
@@ -495,6 +503,8 @@ class RootConfig:
     models: ModelsCfg = field(default_factory=ModelsCfg)
     # session settings
     session: SessionConfig = field(default_factory=SessionConfig)
+    # study settings
+    study: StudyConfig = field(default_factory=StudyConfig)
     # pipeline specific CLI flags
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
 

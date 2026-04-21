@@ -20,25 +20,35 @@
 # =========================================================================== #
 
 '''
-Run one study trial.
+Top-level namespace for `landseg.tuning`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# local imports
-import landseg.cli.pipelines as pipelines
-import landseg.configs as configs
+from __future__ import annotations
+import importlib
+import typing
 
-def trial(config: configs.RootConfig) -> float:
-    '''
-    Run one trial with training and evaluation.
+__all__ = [
+    # classes
+    # functions
+    'make_objective',
+    'run_study'
+    # types
+]
 
-    Args:
-        config: RootConfig with model, trainer, and runner settings.
-    '''
+# for static check
+if typing.TYPE_CHECKING:
+    from .objectives import make_objective
+    from .study import run_study
 
-    # train
-    meta = pipelines.train(config)
+def __getattr__(name: str):
 
-    # return the best value
-    best = meta['summary'].get('best_value') # tighten later
-    assert isinstance(best, float)
-    return best
+    if name in {'make_objective'}:
+        return getattr(importlib.import_module('.objectives', __package__), name)
+
+    if name in {'run_study'}:
+        return getattr(importlib.import_module('.study', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

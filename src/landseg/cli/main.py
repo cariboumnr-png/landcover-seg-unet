@@ -46,7 +46,7 @@ command_registry = {
     'diagnose-overfit': pipelines.overfit,
     'model-evaluate':pipelines.evaluate,
     'model-train': pipelines.train,
-    'study-trial': pipelines.trial
+    'study-sweep': pipelines.sweep
 }
 
 # main process

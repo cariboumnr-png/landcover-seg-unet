@@ -1,0 +1,3 @@
+direction: maximize
+n_trials: 50
+seed: 42
