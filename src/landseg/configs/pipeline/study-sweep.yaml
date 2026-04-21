@@ -4,6 +4,8 @@ name: study-sweep
 
 # optuna
 study_sweep:
+  study_name: 'default_study'
+  objective: 'base'
   direction: maximize
   n_trials: 50
   seed: 42

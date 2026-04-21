@@ -28,24 +28,47 @@ import optuna
 # local imports
 import landseg.tuning as tuning
 
-
+# -------------------------------Public Function-------------------------------
 def run_study(
     runner,
-    cfg
-):
+    root_config: tuning.RootConfigShape,
+) -> optuna.Study:
     '''doc'''
-    sampler = optuna.samplers.TPESampler(seed=cfg.pipeline.study_sweep.seed)
 
-    study = optuna.create_study(
-        direction=cfg.pipeline.study_sweep.direction,
-        sampler=sampler,
+    # sweep config
+    config = root_config.pipeline.study_sweep
+
+    # storage (enables resume)
+    storage = config.storage if config.storage is not None else None
+
+    # sampler
+    sampler = optuna.samplers.TPESampler(seed=config.seed)
+
+    # pruner (default for TPE)
+    pruner = optuna.pruners.MedianPruner(
+        n_startup_trials=5,   # no pruning early trials
+        n_warmup_steps=10,    # allow some learning signal
     )
 
-    objective = tuning.make_objective(runner, cfg)
+    # create study
+    study = optuna.create_study(
+        storage=storage,
+        sampler=sampler,
+        pruner=pruner,
+        study_name=config.study_name,
+        direction=config.direction,
+        load_if_exists=True,
+    )
 
+    # get objective
+    objective = tuning.make_objective(runner, root_config)
+
+    # run optimization
     study.optimize(
         objective,
-        n_trials=cfg.pipeline.study_sweep.n_trials,
+        n_trials=config.n_trials,
+        show_progress_bar=True
     )
 
+    # return the study instance
     return study

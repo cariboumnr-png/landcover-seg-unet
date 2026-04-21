@@ -30,52 +30,71 @@ import copy
 import typing
 # third-party imports
 import optuna
+# local imports
+import landseg.tuning as tuning
 
+# -------------------------------Public Function-------------------------------
 def make_objective(
     base_runner: typing.Callable[[typing.Any], float],
-    cfg, # need a base type here
-):
+    cfg: tuning.RootConfigShape,
+) -> typing.Callable[[optuna.Trial], float]:
     '''doc'''
 
+    # optuna objective function
     def objective(trial: optuna.Trial) -> float:
-
-        trial_cfg = _from_base_objectives(cfg, trial)
-
+        # get trial config depending on objectives
+        obj = cfg.pipeline.study_sweep.objective
+        match obj:
+            case 'base': trial_cfg = _from_base_objectives(cfg, trial)
+            case _: raise ValueError(f'Invalid objective: {obj}')
+        # return objective
         return base_runner(trial_cfg)
 
     return objective
 
-def _from_base_objectives(cfg, trial: optuna.Trial):
+# ------------------------------private  function------------------------------
+def _from_base_objectives(
+    cfg: tuning.RootConfigShape,
+    trial: optuna.Trial
+) -> tuning.RootConfigShape:
     '''doc'''
 
-    _cfg = copy.deepcopy(cfg)
+    trial_cfg = copy.deepcopy(cfg)
     # learning rate
-    _cfg.session.components.optimization.lr = trial.suggest_float(
-        name='lr',
-        low=cfg.study.base.learning_rate[0],
-        high=cfg.study.base.learning_rate[1],
-        log=True
+    trial_cfg.set_lr(
+        lr=trial.suggest_float(
+            name='lr',
+            low=cfg.study.base.learning_rate[0],
+            high=cfg.study.base.learning_rate[1],
+            log=True
+        )
     )
     # weight decay
-    _cfg.session.components.optimization.weight_decay = trial.suggest_float(
-        name='weight_decay',
-        low=cfg.study.base.weight_decay[0],
-        high=cfg.study.base.weight_decay[1],
-        log=True
+    trial_cfg.set_weight_decay(
+        weight_decay=trial.suggest_float(
+            name='weight_decay',
+            low=cfg.study.base.weight_decay[0],
+            high=cfg.study.base.weight_decay[1],
+            log=True
+        )
     )
     # patch size
-    _cfg.session.components.loader.patch_size = trial.suggest_int(
-        name='patch_size',
-        low=cfg.study.base.patch_size[0],
-        high=cfg.study.base.patch_size[1],
-        step=cfg.study.base.patch_size[2],
+    trial_cfg.set_patch_size(
+        patch_size=trial.suggest_int(
+            name='patch_size',
+            low=cfg.study.base.patch_size[0],
+            high=cfg.study.base.patch_size[1],
+            step=cfg.study.base.patch_size[2],
+        )
     )
     # batch size
-    _cfg.session.components.loader.batch_size = trial.suggest_int(
-        name='batch_size',
-        low=cfg.study.base.batch_size[0],
-        high=cfg.study.base.batch_size[1],
-        step=cfg.study.base.batch_size[2],
+    trial_cfg.set_batch_size(
+        batch_size=trial.suggest_int(
+            name='batch_size',
+            low=cfg.study.base.batch_size[0],
+            high=cfg.study.base.batch_size[1],
+            step=cfg.study.base.batch_size[2],
+        )
     )
 
-    return _cfg
+    return trial_cfg

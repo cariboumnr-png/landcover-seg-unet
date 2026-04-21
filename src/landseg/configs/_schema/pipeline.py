@@ -45,6 +45,9 @@ class _EvaluateModel:
 
 @dataclasses.dataclass
 class _StudySweep:
+    study_name: str = 'default_study'
+    objective: str = 'base'
+    storage: str = 'sqlite:///optuna.db'
     direction: str = 'maximize'
     n_trials: int = 50
     seed: int = 42
