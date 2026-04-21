@@ -65,7 +65,7 @@ Example usage:
 import logging
 import os
 
-class Logger():
+class Logger:
     '''
     A class to handle logging messages to a file and optionally to the
     console.
@@ -159,6 +159,8 @@ class Logger():
         child.log_file = getattr(self, 'log_file', None)
         # attach the child logger
         child.logger = child_logging_logger
+        # child logger console loggine level
+        child.console_lvl = self.console_lvl
 
         # no handlers here. let the child propagate to the parent
         # base has handlers and propagate=False only stops base->root).
