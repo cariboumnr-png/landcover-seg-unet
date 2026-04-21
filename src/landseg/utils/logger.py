@@ -144,7 +144,7 @@ class Logger:
     @property
     def silent(self) -> bool:
         '''Return true is console logging is disabled.'''
-        return bool(self.console_lvl)
+        return bool(not self.console_lvl)
 
     def get_child(self, suffix: str) -> 'Logger':
         '''Return a new Logger wrapper around a child logger.'''
