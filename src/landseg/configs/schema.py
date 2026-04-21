@@ -66,14 +66,32 @@ class RootConfig:
     # pipeline specific CLI flags
     pipeline: s.PipelineConfig = field(default_factory=s.PipelineConfig)
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Dict representation.'''
+        return dataclasses.asdict(self)
+
     def validate_all(self) -> None:
         '''Validation'''
         # delegated to subtrees.
         self.foundation.validate()
         self.transform.validate()
         self.models.validate()
-        # future checks to be added below (e.g., controller phases)
+        # TBD
 
-    def as_dict(self) -> dict[str, typing.Any]:
-        '''Dict representation.'''
-        return dataclasses.asdict(self)
+    # set parameters
+    def set_lr(self, lr: float) -> None:
+        '''Set learning rate.'''
+        self.session.components.optimization.lr = lr
+
+    def set_weight_decay(self, weight_decay: float) -> None:
+        '''Set weight decay.'''
+        self.session.components.optimization.weight_decay = weight_decay
+
+    def set_patch_size(self, patch_size: int) -> None:
+        '''Set patch size'''
+        self.session.components.loader.patch_size = patch_size
+
+    def set_batch_size(self, batch_size: int) -> None:
+        '''Set batch size'''
+        self.session.components.loader.batch_size = batch_size

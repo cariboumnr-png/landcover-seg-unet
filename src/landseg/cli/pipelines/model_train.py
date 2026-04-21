@@ -66,7 +66,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
 
     # save running config per run
     config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
-    config_ctrl.persist(config.as_dict())
+    config_ctrl.persist(config.as_dict)
 
     # verbosity
     match config.execution.verbosity:
