@@ -23,6 +23,8 @@
 Optuna study.
 '''
 
+# standard imports
+import typing
 # third-party imports
 import optuna
 # local imports
@@ -30,7 +32,7 @@ import landseg.tuning as tuning
 
 # -------------------------------Public Function-------------------------------
 def run_study(
-    runner,
+    runner: typing.Callable[[typing.Any], float],
     root_config: tuning.RootConfigShape,
 ) -> optuna.Study:
     '''doc'''
