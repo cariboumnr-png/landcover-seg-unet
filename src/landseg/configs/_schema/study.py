@@ -19,7 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
 
 '''
 Study schema.
@@ -34,7 +35,4 @@ field = dataclasses.field
 # --------------------------------STUDY CONFIGS--------------------------------
 @dataclasses.dataclass
 class StudyConfig:
-    '''Study config'''
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
+    pass

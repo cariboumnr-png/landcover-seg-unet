@@ -34,10 +34,10 @@ def run_study(
     cfg
 ):
     '''doc'''
-    sampler = optuna.samplers.TPESampler(seed=cfg.study.seed)
+    sampler = optuna.samplers.TPESampler(seed=cfg.pipeline.study_sweep.seed)
 
     study = optuna.create_study(
-        direction=cfg.study.direction,
+        direction=cfg.pipeline.study_sweep.direction,
         sampler=sampler,
     )
 
@@ -45,7 +45,7 @@ def run_study(
 
     study.optimize(
         objective,
-        n_trials=cfg.study.n_trials,
+        n_trials=cfg.pipeline.study_sweep.n_trials,
     )
 
     return study

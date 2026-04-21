@@ -34,17 +34,24 @@ field = dataclasses.field
 
 # ------------------------------PIPELINE  CONFIGS------------------------------
 @dataclasses.dataclass
-class _TrainModelConfig:
+class _TrainModel:
     pass  # training uses session config only (for now)
 
 @dataclasses.dataclass
-class _EvaluateModelConfig:
+class _EvaluateModel:
     checkpoint: str | None = None
     split: str = 'test'
     export_previews: bool = False
 
 @dataclasses.dataclass
+class _StudySweep:
+    direction: str = 'maximize'
+    n_trials: int = 50
+    seed: int = 42
+
+@dataclasses.dataclass
 class PipelineConfig:
     name: str = 'default'
-    model_train: _TrainModelConfig = field(default_factory=_TrainModelConfig)
-    model_evaluate: _EvaluateModelConfig = field(default_factory=_EvaluateModelConfig)
+    model_train: _TrainModel = field(default_factory=_TrainModel)
+    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
+    study_sweep: _StudySweep = field(default_factory=_StudySweep)
