@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.tuning.analysis`.
+Top-level namespace for `landseg.study.analysis`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

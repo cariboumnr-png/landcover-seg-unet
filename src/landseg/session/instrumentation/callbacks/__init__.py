@@ -22,7 +22,7 @@
 # pylint: disable=too-many-return-statements
 
 '''
-Top-level namespace for `landseg.session.components.callback`.
+Top-level namespace for `landseg.session.instrumentation.callbacks`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
