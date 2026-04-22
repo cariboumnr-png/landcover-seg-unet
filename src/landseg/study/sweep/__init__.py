@@ -43,7 +43,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .config import RootConfigShape
     from .objectives import make_objective
-    from .runner import run_sweep
+    from .optimize import run_sweep
 
 def __getattr__(name: str):
 
@@ -54,6 +54,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.objectives', __package__), name)
 
     if name in {'run_sweep'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+        return getattr(importlib.import_module('.optimize', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
