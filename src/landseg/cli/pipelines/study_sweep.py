@@ -20,7 +20,15 @@
 # =========================================================================== #
 
 '''
-Run one study trial.
+Study sweep execution entrypoints.
+
+This module provides CLI-facing helpers for running Optuna-based sweep
+studies and executing individual trials. It bridges project pipelines
+with Optuna while preserving the invariant that each trial evaluates to
+a single scalar objective.
+
+Sweep orchestration is delegated to Optuna; study-level aggregation and
+analysis are handled elsewhere.
 '''
 
 # local imports
@@ -30,19 +38,31 @@ import landseg.study as study
 
 
 def sweep(config: configs.RootConfig):
-    '''doc'''
+    '''
+    Execute a configured study sweep.
 
-    s = study.run_sweep(trial, config)
+    This function runs an Optuna study using the provided configuration
+    and returns a small summary of the best observed result for CLI
+    consumption. Full study inspection is performed separately by the
+    study analysis pipeline.
+    '''
 
+    # run sweep and return
+    s = study.run_sweep(_trial, config)
     return {
         'best_value': s.best_value,
         'best_params': s.best_params,
     }
 
 
-def trial(config: configs.RootConfig) -> float:
+def _trial(config: configs.RootConfig) -> float:
     '''
-    Run one trial with training and evaluation.
+    Run a single sweep trial.
+
+    This function executes one end-to-end training run using the provided
+    configuration and returns a scalar objective value suitable for
+    optimization. All detailed outputs are persisted as normal run
+    artifacts and are not returned directly.
 
     Args:
         config: RootConfig with model, trainer, and runner settings.

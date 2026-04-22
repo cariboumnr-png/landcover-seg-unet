@@ -20,7 +20,12 @@
 # =========================================================================== #
 
 '''
-Optuna study.
+Optuna study execution utilities.
+
+This module defines the thin integration layer between the project and
+Optuna's study API. It is responsible for creating or resuming an Optuna
+study with standard sampling and pruning policies, executing a bounded
+number of trials, and returning the resulting Study object.
 '''
 
 # standard imports
@@ -35,7 +40,19 @@ def run_sweep(
     runner: typing.Callable[[typing.Any], float],
     root_config: sweep.RootConfigShape,
 ) -> optuna.Study:
-    '''doc'''
+    '''
+    Create and execute an Optuna study using the configured sweep policy.
+
+    This function constructs an Optuna Study using parameters defined in
+    the pipeline study-sweep configuration, including storage, sampler,
+    pruner, optimization direction, and trial count. It then executes
+    the optimization loop by binding the project runner to an Optuna
+    objective function.
+
+    The returned Study object provides access to completed trials and
+    metadata but does not perform any post hoc aggregation or ranking;
+    such responsibilities belong to the study analysis layer.
+    '''
 
     # sweep config
     config = root_config.pipeline.study_sweep

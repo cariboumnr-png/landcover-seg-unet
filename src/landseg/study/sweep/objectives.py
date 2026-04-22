@@ -20,7 +20,17 @@
 # =========================================================================== #
 
 '''
-Optuna objectives
+Optuna objective construction utilities.
+
+This module defines the minimal contract between Optuna-based sweep
+orchestration and the project runtime. It translates a static root
+configuration into per-trial variants by applying parameter suggestions
+from an Optuna Trial, while preserving the invariant that each trial
+evaluates to a single scalar objective.
+
+Richer cross-run analysis, multi-metric reporting, and study-level
+aggregation are intentionally out of scope and belong to the study
+analysis layer defined in ADR-0026.
 '''
 
 # landseg/tuning/objective.py
@@ -38,9 +48,21 @@ def make_objective(
     base_runner: typing.Callable[[typing.Any], float],
     cfg: sweep.RootConfigShape,
 ) -> typing.Callable[[optuna.Trial], float]:
-    '''doc'''
+    '''
+    Build an Optuna-compatible objective function from a base runner.
 
-    # optuna objective function
+    This function binds a project-specific execution callable
+    (`base_runner`) to an Optuna Trial by generating a trial-specific
+    configuration according to the configured study objective. The
+    resulting callable conforms to Optuna's `(Trial) -> float`
+    interface and returns a single scalar value used for optimization.
+
+    Parameter selection logic is intentionally minimal and delegated to
+    objective-specific helpers to avoid coupling sweep orchestration
+    with runtime or analysis concerns.
+    '''
+
+    # Optuna objective invoked once per trial
     def objective(trial: optuna.Trial) -> float:
         # get trial config depending on objectives
         obj = cfg.pipeline.study_sweep.objective
@@ -57,7 +79,7 @@ def _from_base_objectives(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial
 ) -> sweep.RootConfigShape:
-    '''doc'''
+    '''Derive a trial-specific config from base study objectives.'''
 
     trial_cfg = copy.deepcopy(cfg)
     # learning rate

@@ -20,7 +20,11 @@
 # =========================================================================== #
 
 '''
-Analyze trials
+Study-level trial analysis.
+
+This module performs lightweight, post hoc analysis over completed sweep
+trials. It operates strictly on persisted Optuna study metadata and
+materializes simple ranked summaries for downstream inspect
 '''
 
 # local imports
@@ -30,7 +34,14 @@ import landseg.study as study
 
 
 def analyze(config: configs.RootConfig):
-    '''doc'''
+    '''
+    Analyze and rank completed sweep trials.
+
+    This function loads an existing Optuna study using the configured
+    study name and storage backend, ranks completed trials according to
+    their objective values, and persists a small ranked summary as a
+    study-level artifact.
+    '''
 
     # load and rank
     sweep_config = config.pipeline.study_sweep
