@@ -33,7 +33,8 @@ class LoggingCallback(callbacks.Callback):
         self.log_train('INFO', f'Epoch_{epoch:03d} training started')
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
-        print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
+        if self.verbose:
+            print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
 
     def on_train_batch_end(self) -> None:
         # train logs to console if updated
@@ -52,7 +53,8 @@ class LoggingCallback(callbacks.Callback):
         self.log_valdn('INFO', f'Epoch_{epoch:03d} validating started')
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
-        print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
+        if self.verbose:
+            print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
 
     def on_validation_end(self) -> None:
         epoch = self.state.progress.epoch

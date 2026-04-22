@@ -19,8 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-return-statements
+
 '''
-Top-level namespace for `landseg.session.instrumentation`.
+Top-level namespace for `landseg.configs._schema`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,17 +34,48 @@ import typing
 
 __all__ = [
     # classes
+    'DataFoundation',
+    'DataTransform',
+    'DataSpecs',
+    'ModelsConfig',
+    'SessionConfig',
+    'StudyConfig',
+    'PipelineConfig',
     # functions
-    'build_callbacks',
-    # types
+    # typing
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
+    from .foundation import DataFoundation
+    from .transform import DataTransform
+    from .dataspecs import DataSpecs
+    from .models import ModelsConfig
+    from .session import SessionConfig
+    from .study import StudyConfig
+    from .pipeline import PipelineConfig
 
 def __getattr__(name: str):
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+    if name in {'DataFoundation'}:
+        return getattr(importlib.import_module('.foundation', __package__), name)
+
+    if name in {'DataTransform'}:
+        return getattr(importlib.import_module('.transform', __package__), name)
+
+    if name in {'DataSpecs'}:
+        return getattr(importlib.import_module('.dataspecs', __package__), name)
+
+    if name in {'ModelsConfig'}:
+        return getattr(importlib.import_module('.models', __package__), name)
+
+    if name in {'SessionConfig'}:
+        return getattr(importlib.import_module('.session', __package__), name)
+
+    if name in {'StudyConfig'}:
+        return getattr(importlib.import_module('.study', __package__), name)
+
+    if name in {'PipelineConfig'}:
+        return getattr(importlib.import_module('.pipeline', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -19,30 +19,27 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 '''
-Top-level namespace for `landseg.session.instrumentation`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Study schema.
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# standard imports
+import dataclasses
 
-__all__ = [
-    # classes
-    # functions
-    'build_callbacks',
-    # types
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
+# alias
+field = dataclasses.field
 
-def __getattr__(name: str):
+# --------------------------------STUDY CONFIGS--------------------------------
+@dataclasses.dataclass
+class _BaseObjectives:
+    learning_rate: tuple[float, float] = (1e-5, 1e-1)   # low, high
+    weight_decay: tuple[float, float] = (1e-6, 1e-2)    # low, high
+    patch_size: tuple[int, int, int] = (64, 128, 64)    # low, high, step
+    batch_size: tuple[int, int, int] = (16, 64, 16)     # low, high, step
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+@dataclasses.dataclass
+class StudyConfig:
+    base: _BaseObjectives = field(default_factory=_BaseObjectives)

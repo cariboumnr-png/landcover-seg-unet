@@ -127,12 +127,19 @@ def evaluate(config: configs.RootConfig):
     val_logs = evaluator.validate()
 
     # produce previews on all the heads
-    evaluator.infer(session_paths.previews)
+    if eval_config.export_previews:
+        evaluator.infer(session_paths.previews)
 
     # persist the validation log as the current outputs
     output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
     output_ctrl.persist(val_logs)
 
-    # update metadata
+    # close logger
+    logger.close()
+
+    # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
+    meta['summary'] = {}
+    meta['summary']['final'] = evaluator.state.metrics.best_value
     meta_ctrl.persist(meta)
+    return evaluator.state.metrics.best_value

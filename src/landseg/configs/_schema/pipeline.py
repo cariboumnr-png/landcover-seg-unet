@@ -19,30 +19,42 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 '''
-Top-level namespace for `landseg.session.instrumentation`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Pipieline schema
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# standard imports
+import dataclasses
 
-__all__ = [
-    # classes
-    # functions
-    'build_callbacks',
-    # types
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
+# alias
+field = dataclasses.field
 
-def __getattr__(name: str):
+# ------------------------------PIPELINE  CONFIGS------------------------------
+@dataclasses.dataclass
+class _TrainModel:
+    pass  # training uses session config only (for now)
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+@dataclasses.dataclass
+class _EvaluateModel:
+    checkpoint: str | None = None
+    split: str = 'test'
+    export_previews: bool = False
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+@dataclasses.dataclass
+class _StudySweep:
+    study_name: str = 'default_study'
+    objective: str = 'base'
+    storage: str = 'sqlite:///optuna.db'
+    direction: str = 'maximize'
+    n_trials: int = 50
+    seed: int = 42
+
+@dataclasses.dataclass
+class PipelineConfig:
+    name: str = 'default'
+    model_train: _TrainModel = field(default_factory=_TrainModel)
+    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
+    study_sweep: _StudySweep = field(default_factory=_StudySweep)

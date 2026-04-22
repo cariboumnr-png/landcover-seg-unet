@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.instrumentation`.
+Top-level namespace for `landseg.study`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -33,16 +33,22 @@ import typing
 __all__ = [
     # classes
     # functions
-    'build_callbacks',
+    'rank_trials',
+    'run_sweep',
     # types
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
+    from .analysis import rank_trials
+    from .sweep import run_sweep
 
 def __getattr__(name: str):
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+    if name in {'rank_trials'}:
+        return getattr(importlib.import_module('.analysis', __package__), name)
+
+    if name in {'run_sweep'}:
+        return getattr(importlib.import_module('.sweep', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

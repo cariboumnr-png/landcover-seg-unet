@@ -113,7 +113,7 @@ Traiter les rasters bruts pour produire des **blocs de données catalogués et
 stables**, alignés sur une grille mondiale et persistés comme artefacts de base
 réutilisables :
 
-    experiment_run pipeline=data-ingest
+    landseg pipeline=data-ingest
 
 Cette étape doit généralement être exécutée **une seule fois par jeu de données**,
 sauf si les rasters d’entrée ou la configuration de la grille changent.
@@ -126,7 +126,7 @@ Préparer les artefacts spécifiques à une expérience (partitionnement du jeu 
 données, normalisation, statistiques, schémas) à partir des blocs de données
 préalablement ingérés :
 
-    experiment_run pipeline=data-prepare
+    landseg pipeline=data-prepare
 
 Cette étape peut être relancée avec différentes configurations d’expérience sans
 ré‑ingérer les données brutes.
@@ -138,7 +138,7 @@ ré‑ingérer les données brutes.
 Lancer un entraînement complet en utilisant les artefacts de données actuellement
 préparés :
 
-    experiment_run pipeline=model-train
+    landseg pipeline=model-train
 
 Cette étape construit une session d’entraînement complète, incluant l’état
 runtime, les moteurs d’exécution et un runner piloté par phases, à partir des
@@ -152,7 +152,7 @@ Cette étape consomme les artefacts préparés mais ne modifie pas les données 
 Exécutez une tâche d’évaluation autonome en utilisant les artefacts de jeu de
 données déjà préparés ainsi qu’un point de contrôle (checkpoint) entraîné:
 
-    experiment_run pipeline=model-evaluate  \
+    landseg pipeline=model-evaluate  \
       pipeline.model_evaluate.checkpoint=path/to/checkpoint
 
 Cette étape construit une session d’évaluation uniquement à partir des artefacts
@@ -169,7 +169,7 @@ valider la chaîne de bout en bout. Ce pipeline construit une session **sans
 runner**, en exerçant directement le moteur d’exécution partagé. Il ne nécessite
 aucune ingestion ou préparation préalable:
 
-    experiment_run pipeline=train-overfit
+    landseg pipeline=train-overfit
 
 
 >🔔 Ces commandes exécutent les configurations Hydra depuis `src/landseg/configs/`.

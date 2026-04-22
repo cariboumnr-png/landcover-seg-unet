@@ -62,11 +62,10 @@ Example usage:
 '''
 
 # standard imports
-# import datetime
 import logging
 import os
 
-class Logger():
+class Logger:
     '''
     A class to handle logging messages to a file and optionally to the
     console.
@@ -76,12 +75,12 @@ class Logger():
     '''
 
     def __init__(
-            self,
-            name: str | None=None,
-            log_file: str | None=None,
-            log_lvl: int=logging.DEBUG,
-            console_lvl: int | None=logging.INFO
-        ):
+        self,
+        name: str | None = None,
+        log_file: str | None = None,
+        log_lvl: int = logging.DEBUG,
+        console_lvl: int | None = logging.INFO
+    ):
         '''
         Initializes the Logger instance.
 
@@ -112,6 +111,7 @@ class Logger():
         # assign attributes for potential access
         self.name = name
         self.log_file = log_file
+        self.console_lvl = console_lvl
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
 
         # init logger attribute
@@ -141,6 +141,11 @@ class Logger():
                 console_handler.setFormatter(formatter)
                 self.logger.addHandler(console_handler)
 
+    @property
+    def silent(self) -> bool:
+        '''Return true is console logging is disabled.'''
+        return bool(not self.console_lvl)
+
     def get_child(self, suffix: str) -> 'Logger':
         '''Return a new Logger wrapper around a child logger.'''
 
@@ -154,6 +159,8 @@ class Logger():
         child.log_file = getattr(self, 'log_file', None)
         # attach the child logger
         child.logger = child_logging_logger
+        # child logger console loggine level
+        child.console_lvl = self.console_lvl
 
         # no handlers here. let the child propagate to the parent
         # base has handlers and propagate=False only stops base->root).
@@ -164,7 +171,7 @@ class Logger():
         self,
         level: str,
         message: str,
-        skip_log: bool=False,
+        skip_log: bool = False,
         exc_info: bool = False
     ) -> None:
         '''
@@ -195,7 +202,7 @@ class Logger():
         log_method = log_levels.get(level.lower(), self.logger.info)
         log_method(message, exc_info=exc_info)
 
-    def log_sep(self, sep: str='=', ln: int=90) -> None:
+    def log_sep(self, sep: str = '=', ln: int=90) -> None:
         '''
         Log a separator with a length of repeated string.
 

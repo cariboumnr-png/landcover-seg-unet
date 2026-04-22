@@ -35,7 +35,7 @@ import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
 
-def train(config: configs.RootConfig):
+def train(config: configs.RootConfig) -> session.SessionMetadata:
     '''
     Run a full training job.
 
@@ -66,10 +66,28 @@ def train(config: configs.RootConfig):
 
     # save running config per run
     config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
-    config_ctrl.persist(config.as_dict())
+    config_ctrl.persist(config.as_dict)
+
+    # verbosity
+    match config.execution.verbosity:
+        case 'full':
+            console_level = 10
+            print_out = True
+        case 'select':
+            console_level = 20
+            print_out = True
+        case 'silent':
+            console_level = None
+            print_out = False
+        case _:
+            raise ValueError(f'Invalid option: {config.execution.verbosity}')
 
     # create a centralized main logger
-    logger = utils.Logger('main', session_paths.main_log_file)
+    logger = utils.Logger(
+        name='main',
+        log_file=session_paths.main_log_file,
+        console_lvl=console_level
+    )
 
     # collect artifacts and build dataspsec
     artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
@@ -78,7 +96,7 @@ def train(config: configs.RootConfig):
         mode='default',
         ids_domain_name=config.dataspecs.domain_ids_name,
         vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=True
+        print_out=print_out
     )
 
     # setup the model
@@ -100,6 +118,7 @@ def train(config: configs.RootConfig):
             intent='training',
             device=c.DEVICE,
             logger=logger,
+            verbose_runner=print_out,
             session_paths=session_paths,
         )
     ).training_runner
@@ -108,6 +127,13 @@ def train(config: configs.RootConfig):
     # run session
     runner.fit()
 
-    # update metadata
+    # close logger
+    logger.close()
+
+    # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
+    meta['summary'] = {}
+    meta['summary']['best_value'] = runner.evaluator.state.metrics.best_value
+    meta['summary']['checkpoint'] = runner.final_checkpoint # best of the final
     meta_ctrl.persist(meta)
+    return meta

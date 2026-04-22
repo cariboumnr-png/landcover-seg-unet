@@ -20,29 +20,41 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.instrumentation`.
+Study-level trial analysis.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+This module performs lightweight, post hoc analysis over completed sweep
+trials. It operates strictly on persisted Optuna study metadata and
+materializes simple ranked summaries for downstream inspect
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.artifacts as artifacts
+import landseg.configs as configs
+import landseg.study as study
 
-__all__ = [
-    # classes
-    # functions
-    'build_callbacks',
-    # types
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
 
-def __getattr__(name: str):
+def analyze(config: configs.RootConfig):
+    '''
+    Analyze and rank completed sweep trials.
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+    This function loads an existing Optuna study using the configured
+    study name and storage backend, ranks completed trials according to
+    their objective values, and persists a small ranked summary as a
+    study-level artifact.
+    '''
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    # load and rank
+    sweep_config = config.pipeline.study_sweep
+    ranked = study.rank_trials(
+        sweep_config.study_name,
+        sweep_config.storage,
+        top_k=5,
+        ascending=False
+    )
+
+    # persist artifacts
+    analysis_json = f'{config.execution.exp_root}/analysis/{sweep_config.study_name}.json'
+    ctrl = artifacts.Controller[list[dict]](analysis_json)
+    ctrl.persist(ranked)
+
+    print(ranked)

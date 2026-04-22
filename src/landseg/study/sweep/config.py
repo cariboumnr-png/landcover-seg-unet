@@ -19,30 +19,62 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.instrumentation`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Protocols for root config dataclass.
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    # classes
-    # functions
-    'build_callbacks',
-    # types
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
+#
+class RootConfigShape(typing.Protocol):
+    '''doc'''
+    @property
+    def pipeline(self) -> _Pipeline: ...
+    @property
+    def study(self) -> _StudyObjectives: ...
+    # methods
+    def set_lr(self, lr: float) -> None: ...
+    def set_weight_decay(self, weight_decay: float) -> None: ...
+    def set_patch_size(self, patch_size: int) -> None: ...
+    def set_batch_size(self, batch_size: int) -> None: ...
 
-def __getattr__(name: str):
+#
+class _Pipeline(typing.Protocol):
+    '''doc'''
+    @property
+    def study_sweep(self) -> _StudySweep: ...
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+class _StudySweep(typing.Protocol):
+    '''doc'''
+    @property
+    def study_name(self) -> str: ...
+    @property
+    def objective(self) -> str: ...
+    @property
+    def storage(self) -> str: ...
+    @property
+    def direction(self) -> str: ...
+    @property
+    def n_trials(self) -> int: ...
+    @property
+    def seed(self) -> int: ...
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class _StudyObjectives(typing.Protocol):
+    '''doc'''
+    @property
+    def base(self) -> _BaseObjectives: ...
+
+class _BaseObjectives(typing.Protocol):
+    '''doc'''
+    @property
+    def learning_rate(self) -> tuple[float, float]: ...
+    @property
+    def weight_decay(self) -> tuple[float, float]: ...
+    @property
+    def patch_size(self) -> tuple[int, int, int]: ...
+    @property
+    def batch_size(self) -> tuple[int, int, int]: ...

@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-return-statements
+
 '''
 Top-level namespace for `landseg.cli.pipelines`.
 
@@ -38,7 +40,9 @@ __all__ = [
     'ingest',
     'overfit',
     'prepare',
+    'sweep',
     'train',
+    'analyze'
     # typing
 ]
 
@@ -50,6 +54,8 @@ if typing.TYPE_CHECKING:
     from .diagnose_overfit import overfit
     from .model_evaluate import evaluate
     from .model_train import train
+    from .study_sweep import sweep
+    from .study_analysis import analyze
 
 def __getattr__(name: str):
 
@@ -70,5 +76,11 @@ def __getattr__(name: str):
 
     if name in {'train'}:
         return getattr(importlib.import_module('.model_train', __package__), name)
+
+    if name in {'sweep'}:
+        return getattr(importlib.import_module('.study_sweep', __package__), name)
+
+    if name in {'analyze'}:
+        return getattr(importlib.import_module('.study_analysis', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

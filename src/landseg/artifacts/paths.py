@@ -307,10 +307,10 @@ class ResultsPaths:
         os.makedirs(self.plots, exist_ok=True)
         os.makedirs(self.previews, exist_ok=True)
 
-    def best_checkpoint(self, phase_name) -> str:
+    def best_checkpoint(self, phase_name: str) -> str:
         return os.path.join(self.checkpoints, f'{phase_name}_best.pt')
 
-    def last_checkpoint(self, phase_name) -> str:
+    def last_checkpoint(self, phase_name: str) -> str:
         return os.path.join(self.checkpoints, f'{phase_name}_last.pt')
 
     @staticmethod

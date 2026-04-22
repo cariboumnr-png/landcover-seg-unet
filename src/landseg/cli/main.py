@@ -32,7 +32,6 @@ import sys
 import typing
 # third-party imports
 import hydra
-import hydra.core.hydra_config
 import hydra.utils
 import omegaconf
 # local imports
@@ -47,11 +46,13 @@ command_registry = {
     'diagnose-overfit': pipelines.overfit,
     'model-evaluate':pipelines.evaluate,
     'model-train': pipelines.train,
+    'study-sweep': pipelines.sweep,
+    'study-analysis': pipelines.analyze,
 }
 
 # main process
 @hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
-def main(config: omegaconf.DictConfig) -> None:
+def main(config: omegaconf.DictConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
 
     # resolve config
@@ -64,14 +65,13 @@ def main(config: omegaconf.DictConfig) -> None:
     # run specified mode with exceptions handling
     try:
         # get running pipeline
-        get = hydra.core.hydra_config.HydraConfig.get()
-        pipe = get.runtime.choices['pipeline']
+        pipeline_name = root_config.pipeline.name
         # get command from pipeline
-        command = command_registry[pipe]
+        command = command_registry[pipeline_name]
         # run command
-        logger.log('INFO', f'Runing pipeline: {pipe} start')
-        command(root_config)
-        logger.log('INFO', f'Runing pipeline: {pipe} finish')
+        logger.log('INFO', f'Runing pipeline: {pipeline_name} start')
+        result = command(root_config)
+        logger.log('INFO', f'Runing pipeline: {pipeline_name} finish')
     # manual keyboard interruption
     except KeyboardInterrupt:
         logger.log('INFO', '\nExperiment manually interrupted, exiting...')
@@ -80,6 +80,9 @@ def main(config: omegaconf.DictConfig) -> None:
     except Exception: # pylint: disable=broad-exception-caught
         logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
         sys.exit(1)
+
+    # return from the command
+    return result
 
 def _resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
     '''Resolve configs from difference sources'''

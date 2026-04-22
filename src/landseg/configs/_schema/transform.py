@@ -19,30 +19,49 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 '''
-Top-level namespace for `landseg.session.instrumentation`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Data transform schema
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# standard imports
+import dataclasses
 
-__all__ = [
-    # classes
-    # functions
-    'build_callbacks',
-    # types
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .callbacks import build_callbacks
+# alias
+field = dataclasses.field
 
-def __getattr__(name: str):
+# -------------------------------DATA  TRANSFORM-------------------------------
+@dataclasses.dataclass
+class _Thresholds:
+    blk_thres_dev: float = 0.75
+    blk_thres_test: float = 0.1
 
-    if name in {'build_callbacks'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+@dataclasses.dataclass
+class _Partition:
+    val_ratio: float = 0.1
+    test_ratio: float = 0.0
+    buffer_step: int = 1
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+@dataclasses.dataclass
+class _Scoring:
+    reward: dict[int, float] = field(default_factory=dict)
+    alpha: float = 1.0
+    beta: float = 0.0
+
+@dataclasses.dataclass
+class _Hydration:
+    max_skew_rate: float = 10.0
+
+# ----- composite
+@dataclasses.dataclass
+class DataTransform:
+    threshold: _Thresholds = field(default_factory=_Thresholds)
+    partition: _Partition = field(default_factory=_Partition)
+    scoring: _Scoring = field(default_factory=_Scoring)
+    hydration: _Hydration = field(default_factory=_Hydration)
+    output_dpath: str = '${execution.exp_root}/artifacts/transform'
+
+    def validate(self):
+        pass

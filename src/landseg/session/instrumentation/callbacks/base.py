@@ -37,6 +37,7 @@ class Callback:
         self._config: common.ConfigLike | None = None
         self._device: str | None
         self.skip_log = False
+        self.verbose = not logger.silent
         self.train_logger = logger.get_child('train')
         self.valdn_logger = logger.get_child('valdn')
 
@@ -84,7 +85,7 @@ class Callback:
     def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None: ...
     def on_inference_batch_forward(self) -> None: ...
     def on_inference_batch_end(self) -> None: ...
-    def on_inference_end(self, out_dir: str) -> None: ...
+    def on_inference_end(self, out_dir: str, **kwargs) -> None: ...
 
     # -------------------------convenience properties-------------------------
     @property

@@ -116,6 +116,7 @@ class SessionBuildContext:
     device: str
     logger: utils.Logger
     skip_callback_logging: bool = False
+    verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None
 
@@ -246,7 +247,8 @@ def build_session(
                 schedule=config.runtime.schedule,
                 phases=config.phases,
                 paths=context.session_paths,
-                logger=context.logger
+                logger=context.logger,
+                verbose=context.verbose_runner
             )
             return SessionExecutables(evaluator, trainer, training_runner)
 

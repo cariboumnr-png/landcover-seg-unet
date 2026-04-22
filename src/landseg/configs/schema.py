@@ -19,8 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
+# pylint: disable=too-many-instance-attributes
 
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
@@ -30,452 +29,19 @@ suitable for OmegaConf structured configs.
 # standard imports
 from __future__ import annotations
 import dataclasses
-import os
-import re
 import typing
-# third-party imports
-import omegaconf
+# local imports
+import landseg.configs._schema as s
 
 # alias
 field = dataclasses.field
 
-# -------------------------------DATA FOUNDATION-------------------------------
-# ----- grid
-@dataclasses.dataclass
-class Extent:
-    default_input_dpath: str = '${execution.exp_root}/input/extent_reference'
-    filename: str = ''
-    filepath: str = ''
-    origin: tuple[float, float] = (0.0, 0.0)
-    pixel_size: tuple[float, float] = (0.0, 0.0)
-    grid_extent: tuple[float, float] | None = None
-    grid_shape: tuple[int, int] | None = None
-
-@dataclasses.dataclass
-class TileSpecs:
-    size_row: int = 256
-    size_col: int = 256
-    overlap_row: int = 0
-    overlap_col: int = 0
-
-@dataclasses.dataclass
-class Grid:
-    mode: str = 'ref'
-    crs: str = omegaconf.MISSING
-    extent: Extent = field(default_factory=Extent)
-    tile_specs: TileSpecs = field(default_factory=TileSpecs)
-
-    def __post_init__(self):
-        if not self.extent.filepath:
-            self.extent.filepath = os.path.join(
-                self.extent.default_input_dpath, self.extent.filename
-            )
-        if not _is_resolved(self.crs) or not _is_resolved(self.mode):
-            return
-        if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
-            raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
-        if self.mode not in {'ref', 'aoi', 'tiles'}:
-            raise ValueError(f'Invalid mode: {self.mode}')
-
-    @property
-    def tile_specs_tuple(self) -> tuple[int, int, int, int]:
-        return dataclasses.astuple(self.tile_specs)
-
-    def validate(self) -> None:
-        if not _is_resolved(self.mode):
-            return
-        if self.mode == 'ref':
-            if not os.path.exists(self.extent.filepath):
-                raise FileNotFoundError('Mode=ref but ref raster not provided')
-        elif self.mode == 'aoi':
-            if not all(self.extent.pixel_size):
-                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.extent.grid_extent or ()):
-                raise ValueError('Mode=aoi but grid extent has zero(s)')
-        elif self.mode == 'tiles':
-            if not all(self.extent.pixel_size):
-                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.extent.grid_shape or ()):
-                raise ValueError('Mode=tiles but grid shape has zero(s)')
-
-# ----- domain
-@dataclasses.dataclass
-class DomainFile:
-    name: str = omegaconf.MISSING
-    path: str = ''
-    index_base: int = omegaconf.MISSING
-
-@dataclasses.dataclass
-class Domains:
-    default_input_dpath: str = '${execution.exp_root}/input/domain_knowledge'
-    files: list[DomainFile] = field(default_factory=lambda: [])
-    valid_threshold: float = 0.7
-    target_variance: float = 0.9
-
-    def validate(self):
-        for file in self.files:
-            if not file.path:
-                file.path = os.path.join(self.default_input_dpath, file.name)
-            if not os.path.exists(file.path):
-                raise FileNotFoundError(f'Invalid domain raster: {file.path}')
-
-# ----- data
-@dataclasses.dataclass
-class FileNames:
-    dev_image: str = omegaconf.MISSING
-    dev_label: str = omegaconf.MISSING
-    test_image: str = omegaconf.MISSING
-    test_label: str = omegaconf.MISSING
-    config: str = omegaconf.MISSING
-
-@dataclasses.dataclass
-class FilePaths:
-    dev_image: str = ''
-    dev_label: str = ''
-    test_image: str = ''
-    test_label: str = ''
-    config: str = ''
-
-@dataclasses.dataclass
-class General:
-    ignore_index: int = 255
-    image_dem_pad: int = 8
-
-@dataclasses.dataclass
-class DataBlocks:
-    name: str = omegaconf.MISSING
-    default_input_dpath: str = '${execution.exp_root}/input/${inputs.data.name}'
-    filenames: FileNames = field(default_factory=FileNames)
-    filepaths: FilePaths = field(default_factory=FilePaths)
-    general: General = field(default_factory=General)
-
-    def __post_init__(self):
-        # compose file paths
-        root = self.default_input_dpath
-        paths = self.filepaths
-        names = self.filenames
-        # dev image
-        if not self.filepaths.dev_image:
-            paths.dev_image = os.path.join(root, 'dev', names.dev_image)
-        # dev label
-        if not self.filepaths.dev_label:
-            paths.dev_label = os.path.join(root, 'dev', names.dev_label)
-        # test image (optional)
-        if not self.filepaths.test_image:
-            paths.test_image = os.path.join(root, 'test', names.test_image)
-        # test label (optional)
-        if not self.filepaths.test_label:
-            paths.test_label = os.path.join(root, 'test', names.test_label)
-        # config JSON
-        if not self.filepaths.config:
-            paths.config = os.path.join(root, names.config)
-        # defer validation until config is composed and resolved
-        if not _is_resolved(self.name):
-            return
-        if not self.name:
-            raise ValueError('Input data name not provided')
-
-    @property
-    def has_test_data(self) -> bool:
-        return (
-            os.path.isfile(self.filepaths.test_image) and
-            os.path.exists(self.filepaths.test_image) and
-            os.path.isfile(self.filepaths.test_label) and
-            os.path.exists(self.filepaths.test_label)
-        )
-
-    def validate(self) -> None:
-        def _must_exist(path: str | None, label: str) -> None:
-            if path and not os.path.exists(path):
-                raise FileNotFoundError(f'invalid {label}: {path}')
-        # checks
-        _must_exist(self.filepaths.dev_image, 'dev image')
-        _must_exist(self.filepaths.dev_label, 'dev label')
-        _must_exist(self.filepaths.config, 'config json')
-
-# ----- composite
-@dataclasses.dataclass
-class DataFoundation:
-    grid: Grid = field(default_factory=Grid)
-    domains: Domains = field(default_factory=Domains)
-    datablocks: DataBlocks = field(default_factory=DataBlocks)
-    output_dpath: str = '${execution.exp_root}/artifacts/foundation'
-
-    def validate(self) -> None:
-        self.grid.validate()
-        self.domains.validate()
-        self.datablocks.validate()
-
-# -------------------------------DATA  TRANSFORM-------------------------------
-@dataclasses.dataclass
-class Thresholds:
-    blk_thres_dev: float = 0.75
-    blk_thres_test: float = 0.1
-
-@dataclasses.dataclass
-class Partition:
-    val_ratio: float = 0.1
-    test_ratio: float = 0.0
-    buffer_step: int = 1
-
-@dataclasses.dataclass
-class Scoring:
-    reward: dict[int, float] = field(default_factory=dict)
-    alpha: float = 1.0
-    beta: float = 0.0
-
-@dataclasses.dataclass
-class Hydration:
-    max_skew_rate: float = 10.0
-
-# ----- composite
-@dataclasses.dataclass
-class DataTransform:
-    threshold: Thresholds = field(default_factory=Thresholds)
-    partition: Partition = field(default_factory=Partition)
-    scoring: Scoring = field(default_factory=Scoring)
-    hydration: Hydration = field(default_factory=Hydration)
-    output_dpath: str = '${execution.exp_root}/artifacts/transform'
-
-    def validate(self):
-        pass
-
-# -----------------------------DATA  SPECIFICATION-----------------------------
-@dataclasses.dataclass
-class DataSpecs:
-    domain_ids_name: str | None = None
-    domain_vec_name: str | None = None
-
-# ---------------------------------MODELS CONFIGS------------------------------
-@dataclasses.dataclass
-class ConvParams:
-    norm: str = 'gn'
-    gn_groups: int = 8
-    p_drop: float = 0.0
-
-@dataclasses.dataclass
-class UnetBody:
-    body: str = 'unet'
-    base_ch: int = 32
-    conv_params: dict[str, typing.Any] = field(
-        default_factory=lambda: {
-            'downs': dataclasses.asdict(ConvParams()),
-            'ups': dataclasses.asdict(ConvParams())
-        }
-    )
-
-@dataclasses.dataclass
-class UnetPPBody:
-    body: str = 'unetpp'
-    base_ch: int = 32
-    conv_params: dict[str, typing.Any] = field(
-        default_factory=lambda: {
-            'downs': dataclasses.asdict(ConvParams()),
-            'nodes': dataclasses.asdict(ConvParams())
-        }
-    )
-
-@dataclasses.dataclass
-class Concat:
-    out_dim: int = 4
-    use_ids: bool = True
-    use_vec: bool = True
-    use_mlp: bool = True
-
-@dataclasses.dataclass
-class FiLM:
-    embed_dim: int = 4
-    use_ids: bool = True
-    use_vec: bool = True
-    hidden: int = 128
-
-@dataclasses.dataclass
-class CondCfg:
-    mode: str | None = None  #  'concat' | 'film' | 'hybrid'
-    concat: Concat = field(default_factory=Concat)
-    film: FiLM = field(default_factory=FiLM)
-
-@dataclasses.dataclass
-class ModelFlags:
-    enable_logit_adjust: bool = True
-    enable_clamp: bool = True
-
-# ----- MODELS
-@dataclasses.dataclass
-class ModelsCfg:
-    use_body: str = 'unet'
-    body_registry: dict[str, typing.Any] = field(
-        default_factory=lambda: {
-            'unet': UnetBody(),
-            'unetpp': UnetPPBody(),
-        }
-    )
-    conditioning: CondCfg = field(default_factory=CondCfg)
-    clamp_range: tuple[float, float] = (1e-4, 1e4)
-    flags: ModelFlags = field(default_factory=ModelFlags)
-
-    def __post_init__(self):
-        mode = self.conditioning.mode
-        if mode and mode not in ['hybrid', 'concat', 'film']:
-            raise ValueError(f'Invalid conditionning mode: {mode}')
-
-    def validate(self) -> None:
-        # cross-check clamp range ordering
-        lo, hi = self.clamp_range
-        if lo <= 0 or hi <= 0 or lo >= hi:
-            raise ValueError('invalid clamp_range ordering or non-positive')
-
-# -------------------------------SESSION CONFIGS-------------------------------
-# ----- COMPONENTS
-@dataclasses.dataclass
-class LoaderConfig:
-    patch_size: int = 128
-    batch_size: int = 16
-
-@dataclasses.dataclass
-class FocalLossConfig:
-    weight: float = 0.5
-    gamma: float = 2.0
-    reduction: str = 'mean'
-
-@dataclasses.dataclass
-class DiceLossConfig:
-    weight: float = 0.5
-    smooth: float = 1.0
-
-@dataclasses.dataclass
-class SpectralLossConfig:
-    weight: float = 1e-3
-    alpha: float = 1.0
-    neighbour: int = 4
-
-@dataclasses.dataclass
-class TVLossConfig:
-    weight: float = 1e-4
-
-@dataclasses.dataclass
-class LossTypesConfig:
-    focal: FocalLossConfig = field(default_factory=FocalLossConfig)
-    dice: DiceLossConfig = field(default_factory=DiceLossConfig)
-    spectral: SpectralLossConfig = field(default_factory=SpectralLossConfig)
-    tv: TVLossConfig = field(default_factory=TVLossConfig)
-
-@dataclasses.dataclass
-class LossConfig:
-    alpha_fn: str = 'effective_n'
-    en_beta: float = 0.999
-    types: LossTypesConfig = field(default_factory=LossTypesConfig)
-
-@dataclasses.dataclass
-class OptimConfig:
-    opt_cls: str = 'AdamW'
-    lr: float = 1e-4
-    weight_decay: float = 1e-3
-    sched_cls: str | None = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = field(
-        default_factory=lambda: {'T_max': 50}
-    )
-
-@dataclasses.dataclass
-class ComponentsCfg:
-    loader: LoaderConfig = field(default_factory=LoaderConfig)
-    task: LossConfig = field(default_factory=LossConfig)
-    optimization: OptimConfig = field(default_factory=OptimConfig)
-
-    def validate(self) -> None:
-        # Example: scheduler-specific requirements
-        if self.optimization.sched_cls == 'CosAnneal':
-            if 'T_max' not in self.optimization.sched_args:
-                raise ValueError('missing T_max for CosAnneal')
-
-# ----- RUNTIME
-@dataclasses.dataclass
-class Schedule:
-    max_epoch: int = 50
-    max_step: int = 1_000_000
-    log_every: int = 50
-    val_every: int = 1
-    ckpt_every: int = 5
-    patience: int = 10
-    min_delta: float = 0.0005
-
-@dataclasses.dataclass
-class Monitor:
-    metric_name: str = 'iou'
-    track_head_name: str = 'base'
-    track_mode: str = 'max'
-
-@dataclasses.dataclass
-class Precision:
-    use_amp: bool = True
-
-@dataclasses.dataclass
-class Optimization:
-    grad_clip_norm: float | None = 1.0
-
-@dataclasses.dataclass
-class RuntimeConfig:
-    schedule: Schedule = field(default_factory=Schedule)
-    monitor: Monitor = field(default_factory=Monitor)
-    precision: Precision = field(default_factory=Precision)
-    optimization: Optimization = field(default_factory=Optimization)
-
-# ----- PHASES
-@dataclasses.dataclass
-class LogitAdjustConfig:
-    logit_adjust_alpha: float = 1.0
-    enable_train_logit_adjustment: bool = False
-    enable_val_logit_adjustment: bool = False
-    enable_test_logit_adjustment: bool = False
-
-@dataclasses.dataclass
-class PhaseHeads:
-    active_heads: list[str] = field(default_factory=lambda: ['layer1'])
-    frozen_heads: list[str] | None = None
-    excluded_cls: dict[str, list[int]] | None = None
-
-@dataclasses.dataclass
-class PhaseConfig:
-    finished: bool = False
-    name: str = 'coarse_head'
-    num_epochs: int = 50
-    heads: PhaseHeads = field(default_factory=PhaseHeads)
-    logit_adjust: LogitAdjustConfig = field(default_factory=LogitAdjustConfig)
-    lr_scale: float = 1.0
-
-    def as_dict(self) -> dict[str, typing.Any]:
-        '''Dict representation.'''
-        return dataclasses.asdict(self)
-
-# session composite
-@dataclasses.dataclass
-class SessionConfig:
-    '''doc'''
-    components: ComponentsCfg = field(default_factory=ComponentsCfg)
-    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
-    phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
-
-# ------------------------------PIPELINE  CONFIGS------------------------------
-@dataclasses.dataclass
-class TrainModelConfig:
-    pass  # training uses session config only (for now)
-
-@dataclasses.dataclass
-class EvaluateModelConfig:
-    checkpoint: str | None = None
-    split: str = 'test'
-    export_previews: bool = False
-
-@dataclasses.dataclass
-class PipelineConfig:
-    name: str = 'default'
-    model_train: TrainModelConfig = field(default_factory=TrainModelConfig)
-    model_evaluate: EvaluateModelConfig = field(default_factory=EvaluateModelConfig)
-
 # ------------------------------EXECUTION CONFIGS------------------------------
 @dataclasses.dataclass
-class ExecutionContext:
+class _ExecutionContext:
+    '''Mutable execution context.'''
     exp_root: str = './experiment' # root directory for this experiment run
+    verbosity: str = 'full' # 'full', 'logging_only', 'silent'
     dev_settings: str | None = None # developer-only override config
 
 # --------------------------------ROOT  CONFIGS--------------------------------
@@ -484,37 +50,48 @@ class RootConfig:
     '''Root structured config for landseg.'''
 
     # execution configs
-    execution: ExecutionContext = field(default_factory=ExecutionContext)
+    execution: _ExecutionContext = field(default_factory=_ExecutionContext)
     # raw input data and configs
-    foundation: DataFoundation = field(default_factory=DataFoundation)
+    foundation: s.DataFoundation = field(default_factory=s.DataFoundation)
     # data preparation
-    transform: DataTransform = field(default_factory=DataTransform)
+    transform: s.DataTransform = field(default_factory=s.DataTransform)
     # data specfication
-    dataspecs: DataSpecs = field(default_factory=DataSpecs)
+    dataspecs: s.DataSpecs = field(default_factory=s.DataSpecs)
     # model settings
-    models: ModelsCfg = field(default_factory=ModelsCfg)
+    models: s.ModelsConfig = field(default_factory=s.ModelsConfig)
     # session settings
-    session: SessionConfig = field(default_factory=SessionConfig)
+    session: s.SessionConfig = field(default_factory=s.SessionConfig)
+    # study settings
+    study: s.StudyConfig = field(default_factory=s.StudyConfig)
     # pipeline specific CLI flags
-    pipeline: PipelineConfig = field(default_factory=PipelineConfig)
+    pipeline: s.PipelineConfig = field(default_factory=s.PipelineConfig)
 
-    def validate_all(self) -> None:
-        # delegated to subtrees.
-        self.foundation.validate()
-        self.transform.validate()
-        self.models.validate()
-        # future checks to be added below (e.g., controller phases)
-
+    @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Dict representation.'''
         return dataclasses.asdict(self)
 
-# ------------------------------private  function------------------------------
-def _is_resolved(value: typing.Any) -> bool:
-    '''Return True if not omegaconf.MISSING and not an interpolation.'''
-    if value is omegaconf.MISSING:
-        return False
-    # OmegaConf marks interpolations as strings like '${...}' pre-resolution
-    if isinstance(value, str) and value.strip().startswith('${'):
-        return False
-    return True
+    def validate_all(self) -> None:
+        '''Validation'''
+        # delegated to subtrees.
+        self.foundation.validate()
+        self.transform.validate()
+        self.models.validate()
+        # TBD
+
+    # set parameters
+    def set_lr(self, lr: float) -> None:
+        '''Set learning rate.'''
+        self.session.components.optimization.lr = lr
+
+    def set_weight_decay(self, weight_decay: float) -> None:
+        '''Set weight decay.'''
+        self.session.components.optimization.weight_decay = weight_decay
+
+    def set_patch_size(self, patch_size: int) -> None:
+        '''Set patch size'''
+        self.session.components.loader.patch_size = patch_size
+
+    def set_batch_size(self, batch_size: int) -> None:
+        '''Set batch size'''
+        self.session.components.loader.batch_size = batch_size

@@ -202,11 +202,15 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         # load all files into one dataset
         if self.preload:
             logger.log('INFO', 'Preloading blocks into RAM')
-            logger.log('DEBUG', f'Config: {config}')
             _imgs: list[numpy.ndarray] = []
             _lbls: list[numpy.ndarray] = []
             self.data.dom = []
-            for blk_name, blk_fpath in tqdm.tqdm(block_src.items(), ncols=100):
+            # no progress bar if logger is silent
+            for blk_name, blk_fpath in tqdm.tqdm(
+                block_src.items(),
+                ncols=100,
+                disable=logger.silent
+            ):
                 dom = self._get_domain(blk_name)
                 blk_data = _BlockDataset(blk_fpath, config, dom, self.aug_flip)
                 _imgs.append(blk_data.imgs)

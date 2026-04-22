@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.core`.
+Top-level namespace for `landseg.session.instrumentation.exporters`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

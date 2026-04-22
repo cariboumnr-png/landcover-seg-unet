@@ -15,12 +15,15 @@ defaults:
   - session/components: default
   - session/runtime: default
   - session/phases: default
+  # study
+  - study: default
   # pipeline
   - pipeline: default
 
 # execution options
 execution:
   exp_root: ./experiment
+  verbosity: select # 'full', 'select', 'silent'
   dev_settings: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
 
 # hydra settings
