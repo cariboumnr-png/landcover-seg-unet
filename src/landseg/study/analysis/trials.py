@@ -32,6 +32,7 @@ import optuna.trial
 def rank_trials(
     study_name: str,
     storage: str,
+    *,
     top_k: int | None = None,
     ascending: bool = True
 ) -> list[dict[str, typing.Any]]:
