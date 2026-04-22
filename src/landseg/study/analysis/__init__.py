@@ -33,16 +33,17 @@ import typing
 __all__ = [
     # classes
     # functions
+    'rank_trials',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    pass
+    from .trials import rank_trials
 
 def __getattr__(name: str):
 
-    if name in {''}:
-        return getattr(importlib.import_module('.', __package__), name)
+    if name in {'rank_trials'}:
+        return getattr(importlib.import_module('.trials', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

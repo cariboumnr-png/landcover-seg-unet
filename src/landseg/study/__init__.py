@@ -33,15 +33,20 @@ import typing
 __all__ = [
     # classes
     # functions
+    'rank_trials',
     'run_sweep',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .analysis import rank_trials
     from .sweep import run_sweep
 
 def __getattr__(name: str):
+
+    if name in {'rank_trials'}:
+        return getattr(importlib.import_module('.analysis', __package__), name)
 
     if name in {'run_sweep'}:
         return getattr(importlib.import_module('.sweep', __package__), name)
