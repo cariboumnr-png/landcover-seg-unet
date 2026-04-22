@@ -29,14 +29,14 @@
 #   │   ├── domain/
 #   │   │    └── example_domain_1.tif, example_domain_2.tif, ...
 #   │   └── dataset_name/
-#   │        ├── fit/
+#   │        ├── dev/
 #   │        │    ├── example_image.tif
 #   │        │    └── example_label.tif
 #   │        ├── test/       (optional / optionnel)
 #   │        │    ├── example_image.tif
 #   │        │    └── example_label.tif
-#   │        └── configs/
-#   │             └── example_config.json
+#   │        └── example_config.json
+#
 # =============================================================================
 
 
@@ -92,24 +92,24 @@ foundation:
 # RAW DATASET / JEU DE DONNÉES BRUT
 # Located in / Situé dans : ${exp_root}/input/${foundation.datablocks.name}/
 #
-# - fit/  : required development data used to create train/validation artifacts
+# - dev/  : required development data used to create train/validation artifacts
 # - test/ : optional holdout data used for standalone evaluation
 # - configs/ : dataset-specific metadata/configuration
 #
-# - fit/  : données de développement requises pour créer les artefacts
+# - dev/  : données de développement requises pour créer les artefacts
 #           d’entraînement/validation
 # - test/ : données de réserve optionnelles utilisées pour l’évaluation autonome
 # - configs/ : métadonnées / configuration propres au jeu de données
   datablocks:
     name: dataset_name  # Dataset folder name / Nom du dossier du jeu de données
     filenames:
-      # Files in / Fichiers dans .../fit/
+      # Files in / Fichiers dans .../dev/
       dev_image: 'example_image.tif'
       dev_label: 'example_label.tif'
       # Files in / Fichiers dans .../test/
       test_image: 'example_image.tif'
       test_label: 'example_label.tif'
-      # File in / Fichier dans .../configs/
+      # File in / Fichier dans .../
       config: 'example_config.json'
 
 
