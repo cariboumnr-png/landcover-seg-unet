@@ -34,7 +34,7 @@ __all__ = [
     # classes
     # functions
     'make_objective',
-    'run_study',
+    'run_sweep',
     # types
     'RootConfigShape'
 ]
@@ -43,7 +43,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .config import RootConfigShape
     from .objectives import make_objective
-    from .study import run_study
+    from .runner import run_sweep
 
 def __getattr__(name: str):
 
@@ -53,7 +53,7 @@ def __getattr__(name: str):
     if name in {'make_objective'}:
         return getattr(importlib.import_module('.objectives', __package__), name)
 
-    if name in {'run_study'}:
-        return getattr(importlib.import_module('.study', __package__), name)
+    if name in {'run_sweep'}:
+        return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

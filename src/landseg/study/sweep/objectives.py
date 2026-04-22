@@ -31,12 +31,12 @@ import typing
 # third-party imports
 import optuna
 # local imports
-import landseg.tuning as tuning
+import landseg.study.sweep as sweep
 
 # -------------------------------Public Function-------------------------------
 def make_objective(
     base_runner: typing.Callable[[typing.Any], float],
-    cfg: tuning.RootConfigShape,
+    cfg: sweep.RootConfigShape,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''doc'''
 
@@ -54,9 +54,9 @@ def make_objective(
 
 # ------------------------------private  function------------------------------
 def _from_base_objectives(
-    cfg: tuning.RootConfigShape,
+    cfg: sweep.RootConfigShape,
     trial: optuna.Trial
-) -> tuning.RootConfigShape:
+) -> sweep.RootConfigShape:
     '''doc'''
 
     trial_cfg = copy.deepcopy(cfg)

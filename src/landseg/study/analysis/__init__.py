@@ -20,41 +20,29 @@
 # =========================================================================== #
 
 '''
-Run one study trial.
+Top-level namespace for `landseg.tuning.analysis`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# local imports
-import landseg.cli.pipelines as pipelines
-import landseg.configs as configs
-import landseg.study as study
+from __future__ import annotations
+import importlib
+import typing
 
+__all__ = [
+    # classes
+    # functions
+    # types
+]
 
-def sweep(config: configs.RootConfig):
-    '''doc'''
+# for static check
+if typing.TYPE_CHECKING:
+    pass
 
-    s = study.run_sweep(trial, config)
+def __getattr__(name: str):
 
-    return {
-        'best_value': s.best_value,
-        'best_params': s.best_params,
-    }
+    if name in {''}:
+        return getattr(importlib.import_module('.', __package__), name)
 
-
-def trial(config: configs.RootConfig) -> float:
-    '''
-    Run one trial with training and evaluation.
-
-    Args:
-        config: RootConfig with model, trainer, and runner settings.
-    '''
-
-    # set training runner to silent
-    config.execution.verbosity = 'silent'
-
-    # train
-    meta = pipelines.train(config)
-
-    # return the best value
-    best = meta['summary'].get('best_value') # tighten later
-    assert isinstance(best, float)
-    return best
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

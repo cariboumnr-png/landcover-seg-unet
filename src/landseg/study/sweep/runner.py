@@ -28,12 +28,12 @@ import typing
 # third-party imports
 import optuna
 # local imports
-import landseg.tuning as tuning
+import landseg.study.sweep as sweep
 
 # -------------------------------Public Function-------------------------------
-def run_study(
+def run_sweep(
     runner: typing.Callable[[typing.Any], float],
-    root_config: tuning.RootConfigShape,
+    root_config: sweep.RootConfigShape,
 ) -> optuna.Study:
     '''doc'''
 
@@ -63,7 +63,7 @@ def run_study(
     )
 
     # get objective
-    objective = tuning.make_objective(runner, root_config)
+    objective = sweep.make_objective(runner, root_config)
 
     # run optimization
     study.optimize(
