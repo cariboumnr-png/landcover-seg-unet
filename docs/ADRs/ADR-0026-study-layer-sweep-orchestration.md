@@ -28,18 +28,18 @@ distinct responsibilities.
 
 ### 1. Sweep orchestration is owned by Hydra and Optuna
 
-We adopted Hydra multirun with the Optuna sweeper plugin as the exclusive
-sweep orchestration mechanism.
+We adopted Hydra and Optuna as our exclusive sweep orchestration mechanism. However, because the official Hydra Optuna sweeper plugin lacks official support for Optuna 4.0+, we do not use it. Instead, we implemented a custom adapter to bridge the two frameworks. 
 
-Sweep orchestration responsibilities that are now handled by Hydra and
-Optuna include:
-- search-space definition
-- sampler and pruner selection
-- trial scheduling
-- study naming and storage
-- optimization over a scalar objective
+This adapter is specifically designed to derive a trial-specific root configuration (structured via Hydra and Python dataclasses) from a dedicated Hydra config group. 
 
-We do not implement or maintain a project-specific sweep engine.
+Despite this custom integration layer, the core sweep orchestration responsibilities are still strictly delegated to Hydra and Optuna. These include:
+* Search-space definition
+* Sampler and pruner selection
+* Trial scheduling
+* Study naming and storage
+* Optimization over a scalar objective
+
+While we maintain the config-derivation adapter to facilitate compatibility, we rely entirely on Optuna for the underlying optimization logic and do not implement or maintain a project-specific sweep engine.
 
 ---
 
