@@ -275,28 +275,28 @@ class TrainingRunner:
     def _load_progress(self, name: str) -> int:
         '''Load checkpoint metadata for a given phase if available.'''
 
-        best_ckpt = self.config.paths.best_checkpoint(name)
         last_ckpt = self.config.paths.last_checkpoint(name)
-        if os.path.exists(best_ckpt):
-            fp = best_ckpt
-        elif os.path.exists(last_ckpt):
+        best_ckpt = self.config.paths.best_checkpoint(name)
+        if os.path.exists(last_ckpt):
             fp = last_ckpt
+        elif os.path.exists(best_ckpt):
+            fp = best_ckpt
         else:
             return 1
-        #
-        if os.path.exists(fp):
-            meta = artifacts.load_checkpoint(
-                model=self.trainer.model,
-                fpath=best_ckpt,
-                map_device=self.trainer.device,
-                optimizer=self.trainer.optimization.optimizer,
-                scheduler=self.trainer.optimization.scheduler,
-            )
-            self.trainer.state.progress.epoch = meta['epoch'] + 1
-            self.trainer.state.progress.global_step = meta['step']
-            self.trainer.state.metrics.best_value = meta['metric']
-            return meta['epoch']
-        return 1
+
+        # load and return epoch number
+        meta = artifacts.load_checkpoint(
+            model=self.trainer.model,
+            fpath=fp,
+            map_device=self.trainer.device,
+            optimizer=self.trainer.optimization.optimizer,
+            scheduler=self.trainer.optimization.scheduler,
+        )
+        self.trainer.state.progress.epoch = meta['epoch'] + 1
+        self.trainer.state.progress.global_step = meta['step']
+        self.trainer.state.metrics.best_value = meta['metric']
+        return meta['epoch']
+
 
     def _save_progress(self, fpath: str) -> None:
         '''Save model checkpoint and training metadata to disk.'''
