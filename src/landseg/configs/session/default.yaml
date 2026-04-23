@@ -5,6 +5,5 @@ defaults:
   - runtime: default
   - phases: default
 
-phases_schema: ${session.phases_schema}
 resume_from_last: False
 train_mode: epochs

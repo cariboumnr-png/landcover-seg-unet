@@ -1,11 +1,43 @@
-name: default
+schema: baseline
 
-# no phase training
-phases:
-  - name: phase_0
-    num_epochs: 0
-    lr_scale: 1.0
-    heads:
-      active_heads: []
-      frozen_heads: null
-      excluded_cls: {}
+default:
+  name: default
+  # no phase training
+  phases:
+    - name: phase_0
+      num_epochs: 0
+      lr_scale: 1.0
+      heads:
+        active_heads: []
+        frozen_heads: null
+        excluded_cls: {}
+
+baseline:
+  name: baseline
+  select_children: []
+  excluded_cls: {}
+  # default top-down phase schema
+  phases:
+    - name: parent_head
+      num_epochs: 15
+      lr_scale: 1.0
+      heads:
+        active_heads: [base]
+        frozen_heads: null
+        excluded_cls: ${session.phases.baseline.excluded_cls}
+
+    - name: select_children_heads
+      num_epochs: 20
+      lr_scale: 1.0
+      heads:
+        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+        frozen_heads: [base]
+        excluded_cls: ${session.phases.baseline.excluded_cls}
+
+    - name: joint_tuning
+      num_epochs: 10
+      lr_scale: 1.0
+      heads:
+        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+        frozen_heads: null
+        excluded_cls: ${session.phases.baseline.excluded_cls}

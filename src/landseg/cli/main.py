@@ -39,6 +39,10 @@ import landseg.cli.pipelines as pipelines
 import landseg.configs as configs
 import landseg.utils as utils
 
+# omega resolver
+omegaconf.OmegaConf.register_new_resolver("concat", lambda x, y: x + y)
+
+# command registry
 command_registry = {
     'default': pipelines.default_action,
     'data-ingest': pipelines.ingest,

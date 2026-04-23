@@ -188,6 +188,11 @@ dataspecs:
 session:
   runtime:
 
+    heads:
+      active_heads: []
+      frozen_heads: null
+      excluded_cls: {}
+
     schedule:
       patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
       min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
@@ -215,13 +220,7 @@ session:
 # Définit la progression (curriculum) utilisée par la session d’entraînement.
 # -----------------------------------------------------------------------------
   phases:
-    - name: coarse_head   # Phase name / Nom de la phase
-      num_epochs: 100     # Maximum number of epochs / Nombre maximal d’époques
-      lr_scale: 1.0 # Learning-rate multiplier for this phase / Multiplicateur du taux d’apprentissage pour cette phase
-      heads:
-        # Heads updated during this phase / Têtes mises à jour pendant cette phase
-        active_heads: ['base']
-        # Heads frozen during this phase / Têtes gelées pendant cette phase
-        frozen_heads: []
-        # Classes ignored in the loss by head / Classes ignorées dans la perte par tête
-        excluded_cls: {}
+    schema: baseline
+    baseline:
+      select_children: []
+      excluded_cls: {}

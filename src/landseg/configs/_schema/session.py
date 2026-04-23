@@ -160,46 +160,15 @@ class _DefaultPhases:
 @dataclasses.dataclass
 class _BaselinePhases:
     name: str = 'baseline'
-    phase_epochs: tuple[int, int, int] = (15, 20, 5)
     select_children: list[str] = field(default_factory=list)
-    exclude_class: dict[str, list[int]] = field(default_factory=dict)
+    excluded_cls: dict[str, list[int]] = field(default_factory=dict)
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
-    def __post_init__(self) -> None:
-        '''Generate phases from config.'''
-        e1, e2, e3 = self.phase_epochs
-        self.phases = [
-            _Phase(
-                name='parent_head',
-                num_epochs=e1,
-                lr_scale=1.0, # unchanged
-                heads=_Heads(
-                    active_heads=['base'],
-                    frozen_heads=None,
-                    excluded_cls=self.exclude_class
-                )
-            ),
-            _Phase(
-                name='select_children',
-                num_epochs=e2,
-                lr_scale=1.0, # unchanged
-                heads=_Heads(
-                    active_heads=['base'] + self.select_children,
-                    frozen_heads=['base'],
-                    excluded_cls=self.exclude_class
-                )
-            ),
-            _Phase(
-                name='joint_tuning',
-                num_epochs=e3,
-                lr_scale=1.0, # unchanged
-                heads=_Heads(
-                    active_heads=['base'] + self.select_children,
-                    frozen_heads=None,
-                    excluded_cls=self.exclude_class
-                )
-            )
-        ]
+@dataclasses.dataclass
+class _PhaseConfig:
+    schema: str = 'default'
+    default: _DefaultPhases = field(default_factory=_DefaultPhases)
+    baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
 # session composite
 @dataclasses.dataclass
@@ -207,13 +176,6 @@ class SessionConfig:
     '''doc'''
     resume_from_last: bool = False
     train_mode: str = 'epochs'
-    phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
-    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
-
-    def __post_init__(self):
-        self.phases = {
-            'default': _DefaultPhases().phases,
-            'baseline': _BaselinePhases().phases
-        }[self.phase_schema]
+    phases: _PhaseConfig = field(default_factory=_PhaseConfig)
