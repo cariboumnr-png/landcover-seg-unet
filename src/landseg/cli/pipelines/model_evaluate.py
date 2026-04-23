@@ -75,7 +75,7 @@ def evaluate(config: configs.RootConfig):
 
     # save running config per run
     ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
-    ctrl.persist(config.as_dict())
+    ctrl.persist(config.as_dict)
 
     # create a logger
     logger = utils.Logger('main', session_paths.main_log_file)
