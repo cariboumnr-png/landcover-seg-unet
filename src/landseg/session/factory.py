@@ -244,20 +244,22 @@ def build_session(
             # build controller and return
             assert context.session_paths, 'Session artifacts paths not defined'
             match config.train_mode:
-                case 'epochs': runner_config = orchestration.RunnerConfig(
-                    paths=context.session_paths,
-                    mode='epochs',
-                    verbose=True,
-                    heads=config.runtime.heads,
-                    max_epochs=config.runtime.schedule.max_epoch,
-                    patience_epoch=config.runtime.schedule.patience,
-                )
-                case 'phases': runner_config = orchestration.RunnerConfig(
-                    paths=context.session_paths,
-                    mode='phases',
-                    verbose=True,
-                    phases=config.phases
-                )
+                case 'epochs':
+                    runner_config = orchestration.RunnerConfig(
+                        paths=context.session_paths,
+                        mode='epochs',
+                        verbose=context.verbose_runner,
+                        heads=config.runtime.heads,
+                        max_epochs=config.runtime.schedule.max_epoch,
+                        patience_epoch=config.runtime.schedule.patience,
+                    )
+                case 'phases':
+                    runner_config = orchestration.RunnerConfig(
+                        paths=context.session_paths,
+                        mode='phases',
+                        verbose=context.verbose_runner,
+                        phases=config.phases
+                    )
                 case _: raise ValueError(f'Invalid mode: {config.train_mode}')
 
             training_runner = orchestration.TrainingRunner(
