@@ -34,6 +34,7 @@ across interruptions.
 '''
 
 # standard imports
+import dataclasses
 import os
 import typing
 # local imports
@@ -42,12 +43,16 @@ import landseg.session.engine as engine
 import landseg.session.orchestration.training as training
 import landseg.utils as utils
 
-class _RunnerScheduleShape(typing.Protocol):
-    '''doc'''
-    @property
-    def patience(self) -> int | None: ...
-    @property
-    def val_every(self) -> int | None: ...
+@dataclasses.dataclass
+class RunnerConfig:
+    '''Runner configuration.'''
+    paths: artifacts.ResultsPaths
+    mode: typing.Literal['epochs', 'phases'] = 'epochs'
+    verbose: bool = True
+    heads: training.HeadsConfigLike | None = None
+    max_epochs: int | None = None
+    patience_epoch: int | None = None
+    phases: typing.Sequence[training.TrainingPhaseLike] | None = None
 
 # --------------------------------Public  Class--------------------------------
 class TrainingRunner:
@@ -61,12 +66,10 @@ class TrainingRunner:
     '''
     def __init__(
         self,
-        *,
         trainer: engine.MultiHeadTrainer,
         evaluator: engine.MultiHeadEvaluator,
-        schedule: _RunnerScheduleShape,
-        phases: typing.Sequence[training.TrainingPhaseLike],
-        paths: artifacts.ResultsPaths,
+        config: RunnerConfig,
+        *,
         logger: utils.Logger,
         **kwargs
     ):
@@ -92,37 +95,31 @@ class TrainingRunner:
         # parse arguments
         self.trainer = trainer
         self.evaluator = evaluator
-        self.schedule = schedule
-        self.phases = phases
-        self.paths = paths
+        self.config = config
         self.logger = logger.get_child('phase') # a child from base logger
-        self.verbose = kwargs.get('verbose', True)
 
-        # init phase counter
-        self.current_phase_idx = 0
-        self.current_phase = self.phases[self.current_phase_idx]
+        # set la status
+        self.trainer.model.set_logit_adjust_alpha(
+            kwargs.get('logit_adjust_alpha', 1.0)
+        )
+        self.trainer.config_logit_adjust(
+            enable_train_logit_adjust=kwargs.get('train_logit_adjust', True)
+        )
+        self.evaluator.model.set_logit_adjust_alpha(
+            kwargs.get('logit_adjust_alpha', 1.0)
+        )
+        self.evaluator.config_logit_adjust(
+            enable_val_logit_adjust=kwargs.get('val_logit_adjustment', True),
+            enable_test_logit_adjust=kwargs.get('test_logit_adjustment', False)
+        )
 
-        # check which phases have already finished
-        c = artifacts.Controller[list[dict[str, typing.Any]]].load_json_or_fail
-        self.progress = c(self.paths.phase_status)
-        try:
-            status = self.progress.fetch()
-            assert status # typing assertion
-            for i, p in enumerate(status):
-                if p.get('finished'):
-                    self.phases[i].finished = True
-        except artifacts.ArtifactError:
-            self._record_progress() # write phase status.json
-
-    @property
-    def done(self) -> bool:
-        '''Return whether all curriculum phases have completed.'''
-        return self.current_phase_idx >= len(self.phases)
+        # track the final checkpoint
+        self._end_checkpoint: str | None = None
 
     @property
-    def final_checkpoint(self) -> str:
-        '''Return path to the best checkpoint of the final phase.'''
-        return self.paths.best_checkpoint(self.phases[-1].name)
+    def final_checkpoint(self) -> str | None:
+        '''Return the final checkpoint of a training session.'''
+        return self._end_checkpoint
 
     def fit(self) -> None:
         '''
@@ -140,122 +137,154 @@ class TrainingRunner:
             - Stops early when all phases are complete.
         '''
 
-        # iterate from the starting phase (default to first phase)
-        for phase in self.phases:
-            # skip already finished phases
-            if phase.finished:
-                self._next_phase() # progress
-                continue
-            if self.verbose:
-                self._print_phase(phase)
-            # try load from previous checkpoint
-            meta = self._load_progress(phase.name)
-            # main execution
-            self._train_phase(meta)
-            # update phase sheme
-            self.current_phase.finished = True
-            self._record_progress()
-            # advance
-            self._next_phase()
+        # mode matching
+        match self.config.mode:
+            # train by epochs
+            case 'epochs': self._train_epochs()
+            # train by phases
+            case 'phases': self._train_phases()
 
-            # check completion status
-            if self.done:
-                self.logger.log('INFO', '__Experiment Complete__')
-                self.logger.log('INFO', 'All training phases finished')
-                break
+    def _train_epochs(self) -> tuple[dict, dict]:
+        '''doc'''
 
-    def _record_progress(self):
-        '''Persist current phase completion status to disk.'''
-        status = [p.as_dict() for p in self.phases]
-        self.progress.persist(status)
+        assert self.config.max_epochs, 'Max epoch not provided'
 
-    def _train_phase(self, meta) -> tuple[dict, dict]:
-        '''Run training loop for a single phase and return logs.'''
-
-        # if loaded from previous
-        if meta:
-            self.logger.log('INFO', 'Loading from previous checkpoint')
-            self.trainer.state.progress.epoch = meta['epoch'] + 1
-            self.trainer.state.progress.global_step = meta['step']
-            self.trainer.state.metrics.best_value = meta['metric']
-            start = meta['epoch'] + 1
-        else:
-            start = 1
-
-        # context for current phase
-        phase = self.current_phase
-        num_epoch = self.current_phase.num_epochs
+        # init train and validation logs
         t_logs = {}
         v_logs = {}
 
-        # set trainer logit adjustments
-        la_scheme = phase.logit_adjust
-        self.trainer.model.set_logit_adjust_alpha(la_scheme.logit_adjust_alpha)
-        self.trainer.config_logit_adjustment(
-            enable_train_logit_adjustment=la_scheme.enable_train_logit_adjustment,
-            enable_val_logit_adjustment=la_scheme.enable_val_logit_adjustment,
-            enable_test_logit_adjustment=la_scheme.enable_test_logit_adjustment,
+        # try load progress
+        self.logger.log('INFO', 'Try to load from previous checkpoint')
+        start = self._load_progress('checkpoint')
+        self.logger.log('INFO', f'Start/resume from epoch {start}')
+
+        # set head state
+        assert self.config.heads, 'Head config not provided'
+        self.trainer.set_head_state(
+            self.config.heads.active_heads,
+            self.config.heads.frozen_heads,
+            self.config.heads.excluded_cls
         )
 
-        # train
-        self.logger.log('INFO', f'__Phase [{phase.name}] started__')
-        for epoch in range(start, num_epoch + 1):
+        # start training
+        n_epochs = self.config.max_epochs
+        self.logger.log('INFO', f'Train with max {n_epochs} epochs')
+        for epoch in range(start, n_epochs + 1):
+            self.logger.log('INFO', f'__Epoch: {epoch}/{n_epochs}__')
             # early stop check
             # - patience can be None = no early stop
-            # - stop when patience reached
-            # - first 10 epochs not affected
-            patience = self.schedule.patience
+            # - warm up epochs: 5
+            patience = self.config.patience_epoch
             patience_counter = self.trainer.state.metrics.patience_n
-            if patience and patience_counter >= patience and epoch >= 10:
+            if patience and patience_counter >= patience and epoch >= 5:
                 self.logger.log('INFO', 'Patience limit reached, stopping')
                 break
-            self.logger.log('INFO', f'__Epoch: {epoch}/{num_epoch}__')
-            # set trainer heads
+            # refresh logs per epoch
+            t_logs, v_logs = self._run_one_epoch(
+                epoch=epoch,
+                active_heads=self.trainer.state.heads.active_heads,
+                checkpoint_name_tag='checkpoint' # generic name tag
+            )
+
+        # return training and validation logs
+        self.logger.log('INFO', '__Experiment Complete__')
+        return t_logs, v_logs
+
+    def _train_phases(self) -> tuple[dict, dict]:
+        '''Run training loop for a single phase and return logs.'''
+
+        # init train and validation logs
+        t_logs = {}
+        v_logs = {}
+
+        assert self.config.phases, 'Phases not provided'
+        for phase in self.config.phases:
+            # log phase start with optional print
+            self.logger.log('INFO', f'__Phase [{phase.name}] started__')
+            if self.config.verbose:
+                self._print_phase(phase)
+
+            # try load progress
+            self.logger.log('INFO', 'Try to load from previous checkpoint')
+            start = self._load_progress(phase.name)
+            if start == phase.num_epochs:
+                self.logger.log('INFO', f'Phase {phase.name} finished, skip')
+                continue
+            self.logger.log('INFO', f'Start/resume from epoch {start}')
+
+            # set head state per phase
             self.trainer.set_head_state(
                 phase.heads.active_heads,
                 phase.heads.frozen_heads,
                 phase.heads.excluded_cls
             )
-            # train the current epoch
-            t_logs = self.trainer.train_one_epoch(epoch)
-            # validate at set interval
-            if self.schedule.val_every is not None and \
-                epoch % self.schedule.val_every == 0:
-                v_logs = self.evaluator.validate()
-                # update preview if test data provided
-                if self.trainer.dataloaders.test:
-                    self.evaluator.infer(
-                        self.paths.previews,
-                        preview_heads=phase.heads.active_heads
-                    )
-            # save progress
-            if epoch == self.trainer.state.metrics.best_epoch:
-                self._save_progress(self.paths.best_checkpoint(phase.name))
-            else:
-                self._save_progress(self.paths.last_checkpoint(phase.name))
-        self.logger.log('INFO', f'__Phase [{phase.name}] finished__')
+
+            # run current phase
+            for epoch in range(start, phase.num_epochs + 1):
+                self.logger.log('INFO', f'__Epoch: {epoch}/{phase.num_epochs}__')
+                # refresh logs per epoch
+                t_logs, v_logs = self._run_one_epoch(
+                    epoch=epoch,
+                    active_heads=self.trainer.state.heads.active_heads,
+                    checkpoint_name_tag=phase.name
+                )
+
+            #  reset trainer state and continue
+            self.trainer.reset_head_state()
+            self.logger.log('INFO', f'__Phase [{phase.name}] finished__')
+
+        # return training and validation logs
+        self.logger.log('INFO', '__Experiment Complete__')
+        self.logger.log('INFO', 'All training phases finished')
+        return t_logs, v_logs
+
+    def _run_one_epoch(
+        self,
+        *,
+        epoch: int,
+        active_heads: list[str] | None,
+        checkpoint_name_tag: str
+    ) -> tuple[dict, dict]:
+        '''doc'''
+
+        # init
+        t_logs = {}
+        v_logs = {}
+
+        # train the current epoch
+        t_logs = self.trainer.train_one_epoch(epoch)
+        # validate each epoch
+        v_logs = self.evaluator.validate()
+        # update preview if test data provided
+        if self.trainer.dataloaders.test:
+            self.evaluator.infer(
+                self.config.paths.previews,
+                preview_heads=active_heads
+            )
+        # save progress
+        name = checkpoint_name_tag
+        if epoch == self.trainer.state.metrics.best_epoch:
+            self._save_progress(self.config.paths.best_checkpoint(name))
+            self._end_checkpoint = self.config.paths.best_checkpoint(name)
+        else:
+            self._save_progress(self.config.paths.last_checkpoint(name))
 
         # return training and validation logs
         return t_logs, v_logs
 
-    def _next_phase(self) -> None:
-        '''Advance to the next training phase and reset trainer state.'''
-
-        # advance phase idx
-        self.current_phase_idx += 1
-        # if already done stop
-        if self.done:
-            return
-        # update current active phase
-        self.current_phase = self.phases[self.current_phase_idx]
-        #  reset trainer state and continue
-        self.trainer.reset_head_state()
-
-    def _load_progress(self, phase_name: str):
+    def _load_progress(self, name: str) -> int:
         '''Load checkpoint metadata for a given phase if available.'''
 
-        best_ckpt = self.paths.best_checkpoint(phase_name)
+        best_ckpt = self.config.paths.best_checkpoint(name)
+        last_ckpt = self.config.paths.last_checkpoint(name)
         if os.path.exists(best_ckpt):
+            fp = best_ckpt
+        elif os.path.exists(last_ckpt):
+            fp = last_ckpt
+        else:
+            return 1
+        #
+        if os.path.exists(fp):
             meta = artifacts.load_checkpoint(
                 model=self.trainer.model,
                 fpath=best_ckpt,
@@ -263,8 +292,11 @@ class TrainingRunner:
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
             )
-            return meta
-        return None
+            self.trainer.state.progress.epoch = meta['epoch'] + 1
+            self.trainer.state.progress.global_step = meta['step']
+            self.trainer.state.metrics.best_value = meta['metric']
+            return meta['epoch']
+        return 1
 
     def _save_progress(self, fpath: str) -> None:
         '''Save model checkpoint and training metadata to disk.'''
@@ -288,20 +320,14 @@ class TrainingRunner:
         '''Pretty print a phase to console.'''
 
         print('__Phase details__')
-        la = phase.logit_adjust
         heads = phase.heads
         ss = '\n'.join([
             f'- Phase Name:\t{phase.name}',
             f'- Max Epochs:\t{phase.num_epochs}',
-            '- Logit Adjustment',
-            f'  - Global Alpha:\t{la.logit_adjust_alpha:.2f}',
-            f'  - Training Stage:\t{la.enable_train_logit_adjustment}',
-            f'  - Validation Stage:\t{la.enable_val_logit_adjustment}',
-            f'  - Inference Stage:\t{la.enable_test_logit_adjustment}',
+            f'- LR Scale:\t{phase.lr_scale}',
             '- Heads Specs',
             f'  - Active Heads:\t{heads.active_heads}',
             f'  - Frozen Heads:\t{heads.frozen_heads}',
             f'  - Excld. Class:\t{heads.excluded_cls}',
-            f'- LR Scale:\t{phase.lr_scale}'
         ])
         print(ss)
