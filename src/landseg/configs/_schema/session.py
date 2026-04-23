@@ -146,11 +146,60 @@ class _RuntimeConfig:
 
 # ----- PHASES
 @dataclasses.dataclass
-class _PhaseConfig:
+class _Phase:
     name: str = 'phase_0'
-    num_epochs: int = 30
+    num_epochs: int = 0
     lr_scale: float = 1.0
     heads: _Heads = field(default_factory=_Heads)
+
+@dataclasses.dataclass
+class _DefaultPhases:
+    name: str = 'default'
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
+@dataclasses.dataclass
+class _BaselinePhases:
+    name: str = 'baseline'
+    phase_epochs: tuple[int, int, int] = (15, 20, 5)
+    select_children: list[str] = field(default_factory=list)
+    exclude_class: dict[str, list[int]] = field(default_factory=dict)
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
+    def __post_init__(self) -> None:
+        '''Generate phases from config.'''
+        e1, e2, e3 = self.phase_epochs
+        self.phases = [
+            _Phase(
+                name='parent_head',
+                num_epochs=e1,
+                lr_scale=1.0, # unchanged
+                heads=_Heads(
+                    active_heads=['base'],
+                    frozen_heads=None,
+                    excluded_cls=self.exclude_class
+                )
+            ),
+            _Phase(
+                name='select_children',
+                num_epochs=e2,
+                lr_scale=1.0, # unchanged
+                heads=_Heads(
+                    active_heads=['base'] + self.select_children,
+                    frozen_heads=['base'],
+                    excluded_cls=self.exclude_class
+                )
+            ),
+            _Phase(
+                name='joint_tuning',
+                num_epochs=e3,
+                lr_scale=1.0, # unchanged
+                heads=_Heads(
+                    active_heads=['base'] + self.select_children,
+                    frozen_heads=None,
+                    excluded_cls=self.exclude_class
+                )
+            )
+        ]
 
 # session composite
 @dataclasses.dataclass
@@ -158,6 +207,13 @@ class SessionConfig:
     '''doc'''
     resume_from_last: bool = False
     train_mode: str = 'epochs'
+    phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
-    phases: list[_PhaseConfig] = field(default_factory=lambda: [_PhaseConfig()])
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
+    def __post_init__(self):
+        self.phases = {
+            'default': _DefaultPhases().phases,
+            'baseline': _BaselinePhases().phases
+        }[self.phase_schema]

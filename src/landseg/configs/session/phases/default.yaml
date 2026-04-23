@@ -1,7 +1,11 @@
-- name: phase_0
-  num_epochs: 30
-  lr_scale: 1.0
-  heads:
-    active_heads: []
-    frozen_heads: null
-    excluded_cls: {}
+name: default
+
+# no phase training
+phases:
+  - name: phase_0
+    num_epochs: 0
+    lr_scale: 1.0
+    heads:
+      active_heads: []
+      frozen_heads: null
+      excluded_cls: {}

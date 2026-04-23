@@ -1,0 +1,30 @@
+name: baseline
+phase_epochs: [15, 20, 5]
+select_children: []
+excluded_cls: {}
+
+# default top-down phase schema
+phases:
+  - name: parent_head
+    num_epochs: 15
+    lr_scale: 1.0
+    heads:
+      active_heads: [base]
+      frozen_heads: null
+      excluded_cls: {}
+
+  - name: select_children_heads
+    num_epochs: 20
+    lr_scale: 1.0
+    heads:
+      active_heads: [base] # add select children heads
+      frozen_heads: [base]
+      excluded_cls: {}
+
+  - name: joint_tuning
+    num_epochs: 5
+    lr_scale: 1.0
+    heads:
+      active_heads: [base] # add select children heads
+      frozen_heads: null
+      excluded_cls: {}
