@@ -1,3 +1,8 @@
+heads:
+  active_heads: []
+  frozen_heads: null
+  excluded_cls: {}
+
 schedule:
   max_epoch: 50
   max_step: 1000000
@@ -6,11 +11,20 @@ schedule:
   ckpt_every: 5
   patience: 10
   min_delta: 0.0005
+
 monitor:
   metric_name: iou
   track_head_name: base
   track_mode: max
+
 precision:
   use_amp: True
+
 optimization:
   grad_clip_norm: 1.0
+
+logit_adjust:
+  logit_adjust_alpha: 1.0
+  enable_train_logit_adjustment: True
+  enable_val_logit_adjustment: False
+  enable_test_logit_adjustment: False

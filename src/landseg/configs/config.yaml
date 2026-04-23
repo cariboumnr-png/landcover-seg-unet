@@ -12,9 +12,7 @@ defaults:
   # models
   - models: default
   # session
-  - session/components: default
-  - session/runtime: default
-  - session/phases: default
+  - session: default
   # study
   - study: default
   # pipeline

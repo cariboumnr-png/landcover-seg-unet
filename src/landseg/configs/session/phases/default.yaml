@@ -1,12 +1,7 @@
-- name: coarse_head
-  num_epochs: 50
-  heads:
-    active_heads: [layer1]
-    frozen_heads: null
-    excluded_cls: null
-  logit_adjust:
-    logit_adjust_alpha: 1.0
-    enable_train_logit_adjustment: False
-    enable_val_logit_adjustment: False
-    enable_test_logit_adjustment: False
+- name: phase_0
+  num_epochs: 30
   lr_scale: 1.0
+  heads:
+    active_heads: []
+    frozen_heads: null
+    excluded_cls: {}

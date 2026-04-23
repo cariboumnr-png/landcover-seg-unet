@@ -200,6 +200,13 @@ session:
       # sélection du meilleur point de sauvegarde.
       track_head_name: layer1
 
+    logit_adjust:
+      # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
+      logit_adjust_alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
+      enable_train_logit_adjustment: False
+      enable_val_logit_adjustment: False
+      enable_test_logit_adjustment: False
+
 
 # -----------------------------------------------------------------------------
 # TRAINING PHASES / PHASES D’ENTRAÎNEMENT
@@ -210,7 +217,7 @@ session:
   phases:
     - name: coarse_head   # Phase name / Nom de la phase
       num_epochs: 100     # Maximum number of epochs / Nombre maximal d’époques
-
+      lr_scale: 1.0 # Learning-rate multiplier for this phase / Multiplicateur du taux d’apprentissage pour cette phase
       heads:
         # Heads updated during this phase / Têtes mises à jour pendant cette phase
         active_heads: ['base']
@@ -218,12 +225,3 @@ session:
         frozen_heads: []
         # Classes ignored in the loss by head / Classes ignorées dans la perte par tête
         excluded_cls: {}
-
-      logit_adjust:
-        # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
-        logit_adjust_alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
-        enable_train_logit_adjustment: False
-        enable_val_logit_adjustment: False
-        enable_test_logit_adjustment: False
-
-      lr_scale: 1.0 # Learning-rate multiplier for this phase / Multiplicateur du taux d’apprentissage pour cette phase

@@ -99,6 +99,12 @@ class _ComponentsCfg:
 
 # ----- RUNTIME
 @dataclasses.dataclass
+class _Heads:
+    active_heads: list[str] = field(default_factory=lambda: [])
+    frozen_heads: list[str] | None = None
+    excluded_cls: dict[str, list[int]] | None = None
+
+@dataclasses.dataclass
 class _Schedule:
     max_epoch: int = 50
     max_step: int = 1_000_000
@@ -123,14 +129,6 @@ class _Optimization:
     grad_clip_norm: float | None = 1.0
 
 @dataclasses.dataclass
-class _RuntimeConfig:
-    schedule: _Schedule = field(default_factory=_Schedule)
-    monitor: _Monitor = field(default_factory=_Monitor)
-    precision: _Precision = field(default_factory=_Precision)
-    optimization: _Optimization = field(default_factory=_Optimization)
-
-# ----- PHASES
-@dataclasses.dataclass
 class _LogitAdjustConfig:
     logit_adjust_alpha: float = 1.0
     enable_train_logit_adjustment: bool = False
@@ -138,28 +136,28 @@ class _LogitAdjustConfig:
     enable_test_logit_adjustment: bool = False
 
 @dataclasses.dataclass
-class _PhaseHeads:
-    active_heads: list[str] = field(default_factory=lambda: ['layer1'])
-    frozen_heads: list[str] | None = None
-    excluded_cls: dict[str, list[int]] | None = None
+class _RuntimeConfig:
+    heads: _Heads = field(default_factory=_Heads)
+    schedule: _Schedule = field(default_factory=_Schedule)
+    monitor: _Monitor = field(default_factory=_Monitor)
+    precision: _Precision = field(default_factory=_Precision)
+    optimization: _Optimization = field(default_factory=_Optimization)
+    logit_adjust: _LogitAdjustConfig = field(default_factory=_LogitAdjustConfig)
 
+# ----- PHASES
 @dataclasses.dataclass
 class _PhaseConfig:
-    finished: bool = False
-    name: str = 'coarse_head'
-    num_epochs: int = 50
-    heads: _PhaseHeads = field(default_factory=_PhaseHeads)
-    logit_adjust: _LogitAdjustConfig = field(default_factory=_LogitAdjustConfig)
+    name: str = 'phase_0'
+    num_epochs: int = 30
     lr_scale: float = 1.0
-
-    def as_dict(self) -> dict[str, typing.Any]:
-        '''Dict representation.'''
-        return dataclasses.asdict(self)
+    heads: _Heads = field(default_factory=_Heads)
 
 # session composite
 @dataclasses.dataclass
 class SessionConfig:
     '''doc'''
+    resume_from_last: bool = False
+    train_mode: str = 'epochs'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
     phases: list[_PhaseConfig] = field(default_factory=lambda: [_PhaseConfig()])

@@ -1,0 +1,9 @@
+# Main entry to the config tree
+defaults:
+  - _self_
+  - components: default
+  - runtime: default
+  - phases: default
+
+resume_from_last: False
+train_mode: epochs
