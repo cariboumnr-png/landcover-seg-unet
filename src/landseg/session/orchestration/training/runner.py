@@ -207,7 +207,7 @@ class TrainingRunner:
             # try load progress
             self.logger.log('INFO', 'Try to load from previous checkpoint')
             start = self._load_progress(phase.name)
-            if start == phase.num_epochs:
+            if start == phase.num_epochs + 1:
                 self.logger.log('INFO', f'Phase {phase.name} finished, skip')
                 continue
             self.logger.log('INFO', f'Start/resume from epoch {start}')
@@ -296,7 +296,6 @@ class TrainingRunner:
         self.trainer.state.progress.global_step = meta['step']
         self.trainer.state.metrics.best_value = meta['metric']
         return meta['epoch']
-
 
     def _save_progress(self, fpath: str) -> None:
         '''Save model checkpoint and training metadata to disk.'''
