@@ -234,12 +234,12 @@ class EngineBase:
         self.state.heads.active_hmetrics = None
 
     # ----- runtime configuration helpers
-    def config_logit_adjustment(
+    def config_logit_adjust(
         self,
         *,
-        enable_train_logit_adjustment: bool,
-        enable_val_logit_adjustment: bool,
-        enable_test_logit_adjustment: bool,
+        enable_train_logit_adjust: bool = True,
+        enable_val_logit_adjust: bool = True,
+        enable_test_logit_adjust: bool = False,
         **kwargs
     ) -> None:
         '''
@@ -250,9 +250,9 @@ class EngineBase:
         '''
 
         # assign flags
-        self.flags['enable_train_la'] = enable_train_logit_adjustment
-        self.flags['enable_val_la'] = enable_val_logit_adjustment
-        self.flags['enable_test_la'] = enable_test_logit_adjustment
+        self.flags['enable_train_la'] = enable_train_logit_adjust
+        self.flags['enable_val_la'] = enable_val_logit_adjust
+        self.flags['enable_test_la'] = enable_test_logit_adjust
         # implemented for signature flexibility
         if kwargs:
             pass
