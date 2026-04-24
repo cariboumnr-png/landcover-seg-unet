@@ -32,9 +32,9 @@ import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.event as events
 
 @dataclasses.dataclass
-class EarlyStopConfig:
+class TrackingConfig:
     '''doc'''
-    enabled: bool = False
+    enable_early_stop: bool = False
     patience_epochs: int = 5
     track_mode: str = 'max'
     delta: float = 0.0005
@@ -65,13 +65,13 @@ class PhasePolicy:
         *,
         training_engine: engine.TrainingEpochRunner,
         phase_config: PhaseConfig,
-        early_stop: EarlyStopConfig
+        track_config: TrackingConfig
     ):
         '''doc'''
 
         self.engine = training_engine
         self.config = phase_config
-        self.early_stop = early_stop
+        self.track = track_config
         #
         self.tracker = _MetricsTracker()
 
@@ -109,9 +109,9 @@ class PhasePolicy:
             yield events.CheckpointRequest(tag)
 
             # early stop check
-            if not self.early_stop.enabled:
+            if not self.track.enable_early_stop:
                 continue
-            if self.tracker.patience_n >= self.early_stop.patience_epochs:
+            if self.tracker.patience_n >= self.track.patience_epochs:
                 yield events.StopRun('Patience limit reached')
                 break
 
@@ -156,11 +156,11 @@ class PhasePolicy:
             self.tracker.curr_value = target
 
         # track by mode
-        mode = self.early_stop.track_mode
+        mode = self.track.track_mode
         match mode:
             # track if metrics is increasing
             case 'max':
-                if target >= self.tracker.best_value + self.early_stop.delta:
+                if target >= self.tracker.best_value + self.track.delta:
                     self.tracker.best_value = target
                     self.tracker.best_epoch = epoch
                     self.tracker.patience_n = 0
