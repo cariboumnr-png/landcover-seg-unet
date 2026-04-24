@@ -92,7 +92,7 @@ class MultiHeadEvaluator(engine.EngineBase):
         self.dataset = dataset
 
     # -------------------------------Public  Methods-------------------------------
-    def validate(self) -> dict[str, dict]:
+    def validate(self) -> dict[str, dict[str, typing.Any]]:
         '''
         Execute a full validation epoch and return finalized metrics.
 

@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine`.
+Top-level namespace for `landseg.session.engine.runner`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,10 +32,6 @@ import typing
 
 __all__ = [
     # classes
-    'BatchExecutionEngine',
-    'EngineBase',
-    'MultiHeadEvaluator',
-    'MultiHeadTrainer',
     'EpochMetrics',
     'TrainingEpochRunner',
     # functions
@@ -44,19 +40,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .batch import BatchExecutionEngine
-    from .policy import EngineBase, MultiHeadEvaluator, MultiHeadTrainer
-    from .runner import EpochMetrics, TrainingEpochRunner
+    from .training import EpochMetrics, TrainingEpochRunner
 
 def __getattr__(name: str):
 
-    if name in {'BatchExecutionEngine'}:
-        return getattr(importlib.import_module('.batch', __package__), name)
-
-    if name in {'EngineBase', 'MultiHeadEvaluator', 'MultiHeadTrainer'}:
-        return getattr(importlib.import_module('.policy', __package__), name)
-
     if name in {'EpochMetrics', 'TrainingEpochRunner',}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+        return getattr(importlib.import_module('.training', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
