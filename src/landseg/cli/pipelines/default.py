@@ -23,6 +23,9 @@
 Default
 '''
 
+# standard imports
+import dataclasses
+import json
 # local imports
 import landseg.configs as configs
 
@@ -30,5 +33,7 @@ def default_action(config: configs.RootConfig):
     '''place holder.'''
 
     config.validate_all()
-    print(config)
-    print('This is the default action, currently doing nothing.')
+    as_dict = dataclasses.asdict(config)
+    print('This is the default action')
+    print('Follows are the whole runtime configs')
+    print(json.dumps(as_dict, indent=2))

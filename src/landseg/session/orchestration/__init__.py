@@ -32,18 +32,19 @@ import typing
 
 __all__ = [
     # classes
+    'RunnerConfig',
     'TrainingRunner',
     # functions
     # types
-    'TrainingPhaseLike'
+    'PhaseLike'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .training import TrainingRunner, TrainingPhaseLike
+    from .training import RunnerConfig, TrainingRunner, PhaseLike
 
 def __getattr__(name: str):
 
-    if name in {'TrainingRunner', 'TrainingPhaseLike'}:
+    if name in {'RunnerConfig', 'TrainingRunner', 'PhaseLike'}:
         return getattr(importlib.import_module('.training', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

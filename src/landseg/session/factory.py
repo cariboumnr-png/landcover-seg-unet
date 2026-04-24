@@ -86,11 +86,15 @@ class SessionConfigShape(typing.Protocol):
             schedule.
     '''
     @property
+    def train_mode(self) -> str: ...
+    @property
+    def phase_schema(self) -> str: ...
+    @property
     def components(self) -> comps.ComponentsConfig: ...
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def phases(self) -> typing.Sequence[orchestration.TrainingPhaseLike]: ...
+    def training_phases(self) -> typing.Sequence[orchestration.PhaseLike] | None: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -241,14 +245,30 @@ def build_session(
             )
             # build controller and return
             assert context.session_paths, 'Session artifacts paths not defined'
+            match config.train_mode:
+                case 'epochs':
+                    runner_config = orchestration.RunnerConfig(
+                        paths=context.session_paths,
+                        mode='epochs',
+                        verbose=context.verbose_runner,
+                        heads=config.runtime.heads,
+                        max_epochs=config.runtime.schedule.max_epoch,
+                        patience_epoch=config.runtime.schedule.patience,
+                    )
+                case 'phases':
+                    runner_config = orchestration.RunnerConfig(
+                        paths=context.session_paths,
+                        mode='phases',
+                        verbose=context.verbose_runner,
+                        phases=config.training_phases
+                    )
+                case _: raise ValueError(f'Invalid mode: {config.train_mode}')
+
             training_runner = orchestration.TrainingRunner(
-                trainer=trainer,
-                evaluator=evaluator,
-                schedule=config.runtime.schedule,
-                phases=config.phases,
-                paths=context.session_paths,
+                trainer,
+                evaluator,
+                runner_config,
                 logger=context.logger,
-                verbose=context.verbose_runner
             )
             return SessionExecutables(evaluator, trainer, training_runner)
 
@@ -259,8 +279,8 @@ def build_session(
                 components=session_components,
                 callbacks=callbacks,
                 device=context.device,
-                use_amp=config.runtime.precision.use_amp,
-                grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-                log_every=config.runtime.schedule.log_every,
+                use_amp=False,
+                grad_clip_norm=None,
+                log_every=1,
             )
             return SessionExecutables(evaluator, trainer, None)

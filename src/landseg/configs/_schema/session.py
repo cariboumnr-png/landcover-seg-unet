@@ -99,6 +99,12 @@ class _ComponentsCfg:
 
 # ----- RUNTIME
 @dataclasses.dataclass
+class _Heads:
+    active_heads: list[str] = field(default_factory=lambda: [])
+    frozen_heads: list[str] | None = None
+    excluded_cls: dict[str, list[int]] | None = None
+
+@dataclasses.dataclass
 class _Schedule:
     max_epoch: int = 50
     max_step: int = 1_000_000
@@ -123,14 +129,6 @@ class _Optimization:
     grad_clip_norm: float | None = 1.0
 
 @dataclasses.dataclass
-class _RuntimeConfig:
-    schedule: _Schedule = field(default_factory=_Schedule)
-    monitor: _Monitor = field(default_factory=_Monitor)
-    precision: _Precision = field(default_factory=_Precision)
-    optimization: _Optimization = field(default_factory=_Optimization)
-
-# ----- PHASES
-@dataclasses.dataclass
 class _LogitAdjustConfig:
     logit_adjust_alpha: float = 1.0
     enable_train_logit_adjustment: bool = False
@@ -138,28 +136,63 @@ class _LogitAdjustConfig:
     enable_test_logit_adjustment: bool = False
 
 @dataclasses.dataclass
-class _PhaseHeads:
-    active_heads: list[str] = field(default_factory=lambda: ['layer1'])
-    frozen_heads: list[str] | None = None
-    excluded_cls: dict[str, list[int]] | None = None
+class _RuntimeConfig:
+    heads: _Heads = field(default_factory=_Heads)
+    schedule: _Schedule = field(default_factory=_Schedule)
+    monitor: _Monitor = field(default_factory=_Monitor)
+    precision: _Precision = field(default_factory=_Precision)
+    optimization: _Optimization = field(default_factory=_Optimization)
+    logit_adjust: _LogitAdjustConfig = field(default_factory=_LogitAdjustConfig)
+
+# ----- PHASES
+@dataclasses.dataclass
+class _Phase:
+    name: str = 'phase_0'
+    num_epochs: int = 0
+    lr_scale: float = 1.0
+    heads: _Heads = field(default_factory=_Heads)
 
 @dataclasses.dataclass
-class _PhaseConfig:
-    finished: bool = False
-    name: str = 'coarse_head'
-    num_epochs: int = 50
-    heads: _PhaseHeads = field(default_factory=_PhaseHeads)
-    logit_adjust: _LogitAdjustConfig = field(default_factory=_LogitAdjustConfig)
-    lr_scale: float = 1.0
+class _DefaultPhases:
+    name: str = 'default'
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
-    def as_dict(self) -> dict[str, typing.Any]:
-        '''Dict representation.'''
-        return dataclasses.asdict(self)
+@dataclasses.dataclass
+class _BaselinePhases:
+    name: str = 'baseline'
+    select_children: list[str] = field(default_factory=list)
+    excluded_cls: dict[str, list[int]] = field(default_factory=dict)
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
+@dataclasses.dataclass
+class _PhaseProfiles:
+    default: _DefaultPhases = field(default_factory=_DefaultPhases)
+    baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
 # session composite
 @dataclasses.dataclass
 class SessionConfig:
     '''doc'''
+    resume_from_last: bool = False
+    train_mode: str = 'epochs'
+    phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
-    phases: list[_PhaseConfig] = field(default_factory=lambda: [_PhaseConfig()])
+    phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
+
+    @property
+    def training_phases(self) -> list[_Phase] | None:
+        '''List of phases by configs.'''
+        if self.train_mode == 'epochs':
+            return None
+        if self.train_mode == 'phases':
+            registry = {
+                'default': self.phases.default.phases,
+                'baseline': self.phases.baseline.phases
+            }
+            schema = registry.get(self.phase_schema)
+            if schema is None:
+                raise ValueError(f'Invalid phase schema: {self.phase_schema}')
+            return schema
+        # unspported
+        raise ValueError(f'Invalid training mode: {self.train_mode}')

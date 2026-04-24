@@ -1,12 +1,41 @@
-- name: coarse_head
-  num_epochs: 50
-  heads:
-    active_heads: [layer1]
-    frozen_heads: null
-    excluded_cls: null
-  logit_adjust:
-    logit_adjust_alpha: 1.0
-    enable_train_logit_adjustment: False
-    enable_val_logit_adjustment: False
-    enable_test_logit_adjustment: False
-  lr_scale: 1.0
+default:
+  name: default
+  # single dummy training phase
+  phases:
+    - name: dummy_phase
+      num_epochs: 30
+      lr_scale: 1.0
+      heads:
+        active_heads: []
+        frozen_heads: null
+        excluded_cls: {}
+
+baseline:
+  name: baseline
+  select_children: []
+  excluded_cls: {}
+  # default top-down phase schema
+  phases:
+    - name: parent_head
+      num_epochs: 15
+      lr_scale: 1.0
+      heads:
+        active_heads: [base]
+        frozen_heads: null
+        excluded_cls: ${session.phases.baseline.excluded_cls}
+
+    - name: select_children_heads
+      num_epochs: 20
+      lr_scale: 1.0
+      heads:
+        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+        frozen_heads: [base]
+        excluded_cls: ${session.phases.baseline.excluded_cls}
+
+    - name: joint_tuning
+      num_epochs: 10
+      lr_scale: 1.0
+      heads:
+        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+        frozen_heads: null
+        excluded_cls: ${session.phases.baseline.excluded_cls}

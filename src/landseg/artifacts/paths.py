@@ -287,19 +287,22 @@ class ResultsPaths:
     def meta(self) -> str:
         return os.path.join(self.run_folder, 'metadata.json')
 
-    def init(self):
+    def init(self, trace_to_last: bool = False):
         '''Initialize a results folder.'''
 
-        # find the latest run number
+        # starting id number
         i = 1
+        # find the latest run number
         while True:
             self.run_id = f'run_{i:04d}'
             self.run_folder = os.path.join(self.results_root, self.run_id)
-            try:
-                os.makedirs(self.run_folder)
+            if not os.path.exists(self.run_folder):
                 break
-            except FileExistsError:
-                i += 1
+            i += 1
+        # if trace to the last folder
+        if trace_to_last:
+            self.run_id = f'run_{i - 1:04d}'
+            self.run_folder = os.path.join(self.results_root, self.run_id)
 
         # create all subfolders if not already exist
         os.makedirs(self.checkpoints, exist_ok=True)

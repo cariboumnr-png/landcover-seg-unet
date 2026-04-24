@@ -49,7 +49,7 @@ class InferCallback(callbacks.Callback):
         # only if the patch grid is of valid shape, e.e, non-zero dims
 
         # determine which heads to produce preview images
-        heads = kwargs.get('preview_heads', [])
+        heads: list[str] = kwargs.get('preview_heads', [])
         # if no specifics provided, preview all heads
         if not heads:
             heads = self.state.heads.all_heads
