@@ -40,6 +40,13 @@ class EarlyStopConfig:
     delta: float = 0.0005
 
 @dataclasses.dataclass
+class HeadState:
+    '''doc'''
+    active_heads: list[str]
+    frozen_heads: list[str] | None
+    excluded_cls: dict[str, list[int]] | None
+
+@dataclasses.dataclass
 class _MetricsTracker:
     '''doc'''
     last_value: float = -float('inf')
@@ -58,21 +65,28 @@ class PhasePolicy:
         training_engine: engine.TrainingEpochRunner,
         phase_name: str,
         max_epoch: int,
-        active_heads: list[str] | None = None,
+        head_state: HeadState,
         early_stop: EarlyStopConfig
     ):
         '''doc'''
 
         self.engine = training_engine
-        self.heads = active_heads
         self.name = phase_name
         self.max_epoch = max_epoch
+        self.heads_state = head_state
         self.early_stop = early_stop
         #
         self.tracker = _MetricsTracker()
 
     def run(self) -> typing.Iterator[events.Event]:
         '''doc'''
+
+        # set trainer head state per phase
+        self.engine.trainer.set_head_state(
+            self.heads_state.active_heads,
+            self.heads_state.frozen_heads,
+            self.heads_state.excluded_cls
+        )
 
         # phase starts
         yield events.PhaseStart(self.name)
@@ -85,7 +99,7 @@ class PhasePolicy:
                 training_engine=self.engine,
                 phase_name=self.name,
                 epoch_index=epoch,
-                active_heads=self.heads
+                active_heads=self.heads_state.active_heads
             ).run()
 
             # track metrics
@@ -105,6 +119,9 @@ class PhasePolicy:
                 yield events.StopRun('Patience limit reached')
                 break
 
+        # reset trainer head state
+        self.engine.trainer.reset_head_state()
+
         # phase ends
         yield events.PhaseEnd(self.name)
 
@@ -116,7 +133,7 @@ class PhasePolicy:
                 training_engine=self.engine,
                 phase_name=self.name,
                 epoch_index=epoch,
-                active_heads=self.heads
+                active_heads=self.heads_state.active_heads
             ).execute()
 
     def _track_metrics(
