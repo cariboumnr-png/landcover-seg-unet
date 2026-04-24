@@ -1,14 +1,15 @@
 # ADR-0027: Training Phase Schemas for Hierarchical Multi-Head Models
 
 - **Status:** Accepted
-- **Date:** 2026-04-22
+- **Date:** 2026-04-23
 
-> Only the **Top-Down Baseline Phase Schema** will be implemented initially.
-> Other schemas are documented and deferred for future implementation.
+> The **Top-Down Baseline Phase Schema** has been implemented as the
+> initial, supported phase schema. Other schemas are documented here
+> and intentionally deferred.
 
 ## Context
 
-The training system supports multi-phase execution where each phase
+The training system now supports multi-phase execution where each phase
 controls:
 
 - Which model heads are active or frozen
@@ -24,24 +25,30 @@ The system targets hierarchical classification problems, where:
 - Parent–child relationships may or may not be present, depending on
   upstream configuration
 
-As part of an upcoming runner refactor (towards a generator-based design),
-it is necessary to clarify and stabilize the **phase abstractions**
-independently of execution mechanics.
+As part of the recent phase-system refactor, the **phase abstractions
+have been clarified and stabilized independently of execution
+mechanics**, in preparation for a future runner redesign.
 
 ## Problem Statement
 
-A flexible phase system enables a wide range of curricula, but introduces:
+A flexible phase system enables a wide range of curricula, but also
+introduces:
 
 - Increased cognitive and control-flow complexity in the runner
 - Ambiguity around which phase schemas are first-class and supported
 - Difficulty reasoning about default behavior, especially under HPO
 
-A clear set of **canonical phase schemas** is needed to:
+To address this, a clear set of **canonical phase schemas** was needed
+to:
+
 - Establish sensible defaults
 - Bound system complexity
-- Enable future extensions without refactoring the runner again
+- Enable future extensions without repeatedly refactoring the runner
 
 ## Considered Phase Schemas
+
+The following phase schemas were evaluated conceptually and documented
+for reference.
 
 ### 1. Top-Down Baseline (Classical Curriculum)
 
@@ -59,55 +66,33 @@ from coarse to fine.
 - Simple head activation logic
 - Easy to debug and reason about
 
----
-
 ### 2. Soft Hierarchy (Overlapping Phases)
 
 **Description**
 A smoother curriculum where parent and child heads are active together,
-but their influence is controlled via loss weighting.
-
-**Phases**
-1. Parent-dominant joint training
-2. Child-dominant joint training
-3. Balanced joint fine-tuning
+with influence controlled via loss weighting.
 
 **Characteristics**
 - Reduced representation drift at phase boundaries
 - Requires careful loss-weight configuration
 - Harder to inspect than strict freezing
 
----
-
 ### 3. Conditional Child Activation
 
 **Description**
-Child heads are only trained on samples belonging to their associated
+Child heads are trained only on samples belonging to their associated
 parent class.
-
-**Phases**
-1. Parent-only training
-2. Conditional child training (parent frozen or active)
-3. Relaxed joint training
 
 **Characteristics**
 - Limits gradient noise from irrelevant child classes
 - Strong alignment with hierarchical semantics
 - Requires conditional routing logic in the training loop
 
----
-
 ### 4. Imbalance-Aware Curriculum
 
 **Description**
-A curriculum that progressively introduces child heads based on class
+A curriculum that introduces child heads progressively based on class
 frequency, combined with stronger logit adjustment for rare classes.
-
-**Phases**
-1. Parent-only training
-2. Frequent child heads
-3. Rare child heads (stronger logit adjustment)
-4. Joint fine-tuning with reduced bias correction
 
 **Characteristics**
 - Explicitly targets long-tailed distributions
@@ -116,33 +101,49 @@ frequency, combined with stronger logit adjustment for rare classes.
 
 ## Decision
 
-- **The Top-Down Baseline Phase Schema** will be implemented as the
-  **default and only supported schema** in the initial phase system.
+- The **Top-Down Baseline Phase Schema has been implemented** as the
+  **default and only supported schema** in the current phase system.
 - A **non-hierarchical default schema** (single-phase or fully joint
-  training) will be used when no parent–child structure is configured
+  training) is used when no parent–child structure is configured
   upstream.
-- The remaining schemas are **documented but deferred**, and are not part
-  of the initial implementation.
+- The remaining schemas are **documented but not implemented**, and do
+  not participate in training execution at this stage.
 
-This decision prioritizes:
-- Clarity and inspectability
-- Minimal runner complexity during refactoring
-- A well-understood and widely applicable training curriculum
+This implementation prioritizes:
+
+- Clarity and inspectability of training behavior
+- Minimal runner complexity during the current refactor phase
+- A stable and widely applicable baseline curriculum
 
 ## Consequences
 
 ### Positive
-- Simplifies the runner refactor by reducing branching logic
-- Establishes a clear mental model for phase transitions
-- Provides a stable baseline for future extensions and experimentation
+
+- The runner and configuration system now have a clear, bounded notion
+  of what a “phase” is
+- Phase schemas are explicit, named, and configurable without embedding
+  logic in the runner
+- The system is prepared for a follow-up runner redesign without
+  revisiting phase semantics again
 
 ### Negative
-- More advanced curricula are not immediately available
+
+- More advanced curricula are not yet available
 - Some datasets may benefit from deferred schemas
-- Future implementations will require revisiting this ADR
+- Phase semantics are currently descriptive rather than strictly
+  enforced at runtime
 
 ## Follow-Ups
 
-- Implement Top-Down Baseline phase configuration in `phase.py`
-- Integrate hierarchy-aware defaults via upstream configuration
-- Revisit and revise this ADR once the generator-based runner is stable
+- A subsequent ADR will introduce a **generator-based training runner**.
+  The interaction between the new runner and the phase system is
+  expected to further refine how phases are executed, without changing
+  the conceptual schemas defined here.
+- Additional phase schemas (e.g. soft hierarchy, conditional activation)
+  will be implemented once the new runner is in place.
+- At that time, we will provide:
+  - A **reference phase profile** intended for user customization
+  - More **explicit and enforced phase semantics** (e.g. validation of
+    head activation, routing, and logit-adjust behavior)
+
+This ADR will be revisited once the generator-based runner is stable.
