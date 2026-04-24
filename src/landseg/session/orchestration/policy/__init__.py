@@ -34,6 +34,7 @@ __all__ = [
     # classes
     'EarlyStopConfig',
     'EpochPolicy',
+    'PhaseConfig',
     'PhasePolicy',
     # functions
     # types
@@ -41,14 +42,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .epoch import EpochPolicy
-    from .phase import EarlyStopConfig, PhasePolicy
+    from .phase import EarlyStopConfig, PhaseConfig, PhasePolicy
 
 def __getattr__(name: str):
 
     if name in {'EpochPolicy'}:
         return getattr(importlib.import_module('.epoch', __package__), name)
 
-    if name in {'EarlyStopConfig', 'PhasePolicy'}:
+    if name in {'EarlyStopConfig', 'PhaseConfig', 'PhasePolicy'}:
         return getattr(importlib.import_module('.phase', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

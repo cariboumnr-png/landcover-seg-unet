@@ -40,11 +40,12 @@ class EarlyStopConfig:
     delta: float = 0.0005
 
 @dataclasses.dataclass
-class HeadState:
+class PhaseConfig:
     '''doc'''
+    phase_name: str
+    max_epoch: int
     active_heads: list[str]
     frozen_heads: list[str] | None
-    excluded_cls: dict[str, list[int]] | None
 
 @dataclasses.dataclass
 class _MetricsTracker:
@@ -63,17 +64,13 @@ class PhasePolicy:
         self,
         *,
         training_engine: engine.TrainingEpochRunner,
-        phase_name: str,
-        max_epoch: int,
-        head_state: HeadState,
+        phase_config: PhaseConfig,
         early_stop: EarlyStopConfig
     ):
         '''doc'''
 
         self.engine = training_engine
-        self.name = phase_name
-        self.max_epoch = max_epoch
-        self.heads_state = head_state
+        self.config = phase_config
         self.early_stop = early_stop
         #
         self.tracker = _MetricsTracker()
@@ -83,23 +80,22 @@ class PhasePolicy:
 
         # set trainer head state per phase
         self.engine.trainer.set_head_state(
-            self.heads_state.active_heads,
-            self.heads_state.frozen_heads,
-            self.heads_state.excluded_cls
+            self.config.active_heads,
+            self.config.frozen_heads,
         )
 
         # phase starts
-        yield events.PhaseStart(self.name)
+        yield events.PhaseStart(self.config.phase_name)
 
         # iterate epochs
-        for epoch in range(1, self.max_epoch + 1):
+        for epoch in range(1, self.config.max_epoch + 1):
 
             # delegate to epoch policy
             metrics = yield from policy.EpochPolicy(
                 training_engine=self.engine,
-                phase_name=self.name,
+                phase_name=self.config.phase_name,
                 epoch_index=epoch,
-                active_heads=self.heads_state.active_heads
+                active_heads=self.config.active_heads
             ).run()
 
             # track metrics
@@ -107,9 +103,9 @@ class PhasePolicy:
 
             # request checkpointing
             if self.tracker.is_best_epoch:
-                tag = f'phase_{self.name}_epoch_{epoch}_best'
+                tag = f'phase_{self.config.phase_name}_epoch_{epoch}_best'
             else:
-                tag = f'phase_{self.name}_epoch_{epoch}_last'
+                tag = f'phase_{self.config.phase_name}_epoch_{epoch}_last'
             yield events.CheckpointRequest(tag)
 
             # early stop check
@@ -123,17 +119,17 @@ class PhasePolicy:
         self.engine.trainer.reset_head_state()
 
         # phase ends
-        yield events.PhaseEnd(self.name)
+        yield events.PhaseEnd(self.config.phase_name)
 
     def execute(self):
         '''Run the underlying epoch policy and return raw metrics.'''
 
-        for epoch in range(1, self.max_epoch + 1):
+        for epoch in range(1, self.config.max_epoch + 1):
             yield policy.EpochPolicy(
                 training_engine=self.engine,
-                phase_name=self.name,
+                phase_name=self.config.phase_name,
                 epoch_index=epoch,
-                active_heads=self.heads_state.active_heads
+                active_heads=self.config.active_heads
             ).execute()
 
     def _track_metrics(
