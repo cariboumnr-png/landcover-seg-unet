@@ -7,3 +7,4 @@ defaults:
 
 resume_from_last: False
 train_mode: epochs
+phase_schema: baseline

@@ -36,7 +36,7 @@ class HeadsConfigLike(typing.Protocol):
     @property
     def excluded_cls(self) -> dict[str, list[int]] | None: ...
 
-class TrainingPhaseLike(typing.Protocol):
+class PhaseLike(typing.Protocol):
     '''Training phase container'''
     @property
     def name(self)-> str: ...

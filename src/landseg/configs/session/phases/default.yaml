@@ -1,11 +1,9 @@
-schema: baseline
-
 default:
   name: default
-  # no phase training
+  # single dummy training phase
   phases:
-    - name: phase_0
-      num_epochs: 0
+    - name: dummy_phase
+      num_epochs: 30
       lr_scale: 1.0
       heads:
         active_heads: []

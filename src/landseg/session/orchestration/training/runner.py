@@ -52,7 +52,7 @@ class RunnerConfig:
     heads: training.HeadsConfigLike | None = None
     max_epochs: int | None = None
     patience_epoch: int | None = None
-    phases: typing.Sequence[training.TrainingPhaseLike] | None = None
+    phases: typing.Sequence[training.PhaseLike] | None = None
 
 # --------------------------------Public  Class--------------------------------
 class TrainingRunner:
@@ -315,7 +315,7 @@ class TrainingRunner:
         self.logger.log('INFO', f'Checkpoint saved: {fpath}')
 
     @staticmethod
-    def _print_phase(phase: training.TrainingPhaseLike):
+    def _print_phase(phase: training.PhaseLike):
         '''Pretty print a phase to console.'''
 
         print('__Phase details__')

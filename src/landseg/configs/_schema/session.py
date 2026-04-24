@@ -165,8 +165,7 @@ class _BaselinePhases:
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
-class _PhaseConfig:
-    schema: str = 'default'
+class _PhaseProfiles:
     default: _DefaultPhases = field(default_factory=_DefaultPhases)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
@@ -176,6 +175,23 @@ class SessionConfig:
     '''doc'''
     resume_from_last: bool = False
     train_mode: str = 'epochs'
+    phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
-    phases: _PhaseConfig = field(default_factory=_PhaseConfig)
+    phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
+
+    @property
+    def training_phases(self) -> list[_Phase] | None:
+        '''List of phases by configs.'''
+        if self.train_mode == 'epochs':
+            return None
+        if self.train_mode == 'phases':
+            registry = {
+                'default': self.phases.default.phases,
+                'baseline': self.phases.baseline.phases
+            }
+            schema = registry.get(self.phase_schema)
+            if schema is None:
+                raise ValueError(f'Invalid phase schema: {self.phase_schema}')
+
+        raise ValueError(f'Invalid training mode: {self.train_mode}')

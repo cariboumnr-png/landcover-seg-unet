@@ -186,6 +186,13 @@ dataspecs:
 # Contrôle le suivi et les conditions d’arrêt pendant l’entraînement du modèle.
 # -----------------------------------------------------------------------------
 session:
+
+  # knobs
+  resume_from_last: False
+  train_mode: 'epochs'
+  phase_schema: baseline
+
+  # sub config groups
   runtime:
 
     heads:
@@ -219,8 +226,9 @@ session:
 #
 # Définit la progression (curriculum) utilisée par la session d’entraînement.
 # -----------------------------------------------------------------------------
+
+
   phases:
-    schema: baseline
     baseline:
       select_children: []
       excluded_cls: {}

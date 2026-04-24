@@ -88,11 +88,13 @@ class SessionConfigShape(typing.Protocol):
     @property
     def train_mode(self) -> str: ...
     @property
+    def phase_schema(self) -> str: ...
+    @property
     def components(self) -> comps.ComponentsConfig: ...
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def phases(self) -> typing.Sequence[orchestration.TrainingPhaseLike]: ...
+    def training_phases(self) -> typing.Sequence[orchestration.PhaseLike] | None: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -258,7 +260,7 @@ def build_session(
                         paths=context.session_paths,
                         mode='phases',
                         verbose=context.verbose_runner,
-                        phases=config.phases
+                        phases=config.training_phases
                     )
                 case _: raise ValueError(f'Invalid mode: {config.train_mode}')
 
