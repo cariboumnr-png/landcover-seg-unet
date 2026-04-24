@@ -193,5 +193,6 @@ class SessionConfig:
             schema = registry.get(self.phase_schema)
             if schema is None:
                 raise ValueError(f'Invalid phase schema: {self.phase_schema}')
-
+            return schema
+        # unspported
         raise ValueError(f'Invalid training mode: {self.train_mode}')
