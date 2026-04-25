@@ -261,6 +261,7 @@ class TrainingRunner:
                         m = f'__Phase [{phase_name}] ended__'
                         self.logger.log('INFO', m)
 
+
     def _load_progress(self, fpath: str) -> int:
         '''
         Restore training state from a checkpoint.
