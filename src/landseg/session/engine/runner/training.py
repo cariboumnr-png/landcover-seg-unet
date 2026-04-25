@@ -71,7 +71,6 @@ class TrainingEpochRunner:
         self,
         trainer: engine.MultiHeadTrainer,
         evaluator: engine.MultiHeadEvaluator | None,
-
     ):
         '''
         Initialize an epoch runner.

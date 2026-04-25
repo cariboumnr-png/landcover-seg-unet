@@ -94,7 +94,7 @@ class SessionConfigShape(typing.Protocol):
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def training_phases(self) -> typing.Sequence[orchestration.PhaseLike] | None: ...
+    def training_phases(self) -> list[orchestration.Phase]: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -243,30 +243,21 @@ def build_session(
                 grad_clip_norm=config.runtime.optimization.grad_clip_norm,
                 log_every=config.runtime.schedule.log_every,
             )
+            epoch_runner = engine.TrainingEpochRunner(trainer, evaluator)
             # build controller and return
             assert context.session_paths, 'Session artifacts paths not defined'
-            match config.train_mode:
-                case 'epochs':
-                    runner_config = orchestration.RunnerConfig(
-                        paths=context.session_paths,
-                        mode='epochs',
-                        verbose=context.verbose_runner,
-                        heads=config.runtime.heads,
-                        max_epochs=config.runtime.schedule.max_epoch,
-                        patience_epoch=config.runtime.schedule.patience,
-                    )
-                case 'phases':
-                    runner_config = orchestration.RunnerConfig(
-                        paths=context.session_paths,
-                        mode='phases',
-                        verbose=context.verbose_runner,
-                        phases=config.training_phases
-                    )
-                case _: raise ValueError(f'Invalid mode: {config.train_mode}')
-
+            runner_config = orchestration.RunnerConfig(
+                artifacts_paths=context.session_paths,
+                resume_from_last=False,
+                verbose=context.verbose_runner,
+                enable_early_stop=True,
+                track_mode=config.runtime.monitor.track_mode,
+                patience_epochs=config.runtime.schedule.patience,
+                delta=config.runtime.schedule.min_delta
+            )
             training_runner = orchestration.TrainingRunner(
-                trainer,
-                evaluator,
+                epoch_runner,
+                config.training_phases,
                 runner_config,
                 logger=context.logger,
             )
