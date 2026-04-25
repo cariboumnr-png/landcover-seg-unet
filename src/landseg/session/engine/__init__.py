@@ -33,7 +33,6 @@ import typing
 __all__ = [
     # classes
     'BatchExecutionEngine',
-    'EngineBase',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
     'EpochMetrics',
@@ -45,7 +44,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .batch import BatchExecutionEngine
-    from .policy import EngineBase, MultiHeadEvaluator, MultiHeadTrainer
+    from .policy import MultiHeadEvaluator, MultiHeadTrainer
     from .runner import EpochMetrics, TrainingEpochRunner
 
 def __getattr__(name: str):
@@ -53,7 +52,7 @@ def __getattr__(name: str):
     if name in {'BatchExecutionEngine'}:
         return getattr(importlib.import_module('.batch', __package__), name)
 
-    if name in {'EngineBase', 'MultiHeadEvaluator', 'MultiHeadTrainer'}:
+    if name in {'MultiHeadEvaluator', 'MultiHeadTrainer'}:
         return getattr(importlib.import_module('.policy', __package__), name)
 
     if name in {'EpochMetrics', 'TrainingEpochRunner',}:

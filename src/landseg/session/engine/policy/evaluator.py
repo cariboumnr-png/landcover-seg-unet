@@ -50,9 +50,9 @@ In short:
 # standard imports
 import typing
 # local imports
-import landseg.session.engine as engine
+import landseg.session.engine.policy as policy
 
-class MultiHeadEvaluator(engine.EngineBase):
+class MultiHeadEvaluator(policy.EngineBase):
     '''
     Evaluation and inference policy controller.
 

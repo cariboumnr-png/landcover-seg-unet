@@ -51,9 +51,9 @@ In short:
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine as engine
+import landseg.session.engine.policy as policy
 
-class MultiHeadTrainer(engine.EngineBase):
+class MultiHeadTrainer(policy.EngineBase):
     '''
     Training and evaluation policy controller.
 
