@@ -310,6 +310,11 @@ class ResultsPaths:
         os.makedirs(self.plots, exist_ok=True)
         os.makedirs(self.previews, exist_ok=True)
 
+    def checkpoint_path(self, tag: str) -> str:
+        if not tag.endswith('.pt'):
+            tag = f'{tag}.pt'
+        return os.path.join(self.checkpoints, tag)
+
     def best_checkpoint(self, phase_name: str) -> str:
         return os.path.join(self.checkpoints, f'{phase_name}_best.pt')
 
