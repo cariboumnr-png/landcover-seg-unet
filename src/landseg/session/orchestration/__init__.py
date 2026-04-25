@@ -32,7 +32,7 @@ import typing
 
 __all__ = [
     # classes
-    'Phase',
+    'PhaseLike',
     'RunnerConfig',
     'TrainingRunner',
     # functions
@@ -40,13 +40,13 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .phases import Phase
+    from .phases import PhaseLike
     from .runner import RunnerConfig, TrainingRunner
 
 def __getattr__(name: str):
 
-    if name in {'Phase'}:
-        return getattr(importlib.import_module('.phase', __package__), name)
+    if name in {'PhaseLike'}:
+        return getattr(importlib.import_module('.phases', __package__), name)
 
     if name in {'RunnerConfig', 'TrainingRunner'}:
         return getattr(importlib.import_module('.runner', __package__), name)

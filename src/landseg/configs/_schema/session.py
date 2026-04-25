@@ -149,8 +149,9 @@ class _RuntimeConfig:
 class _Phase:
     name: str = 'phase_0'
     num_epochs: int = 0
-    lr_scale: float = 1.0
-    heads: _Heads = field(default_factory=_Heads)
+    lr_scale: float | None = 1.0
+    active_heads: list[str] | None = None
+    frozen_heads: list[str] | None = None
 
 @dataclasses.dataclass
 class _DefaultPhases:
@@ -174,25 +175,19 @@ class _PhaseProfiles:
 class SessionConfig:
     '''doc'''
     resume_from_last: bool = False
-    train_mode: str = 'epochs'
     phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
     phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
 
     @property
-    def training_phases(self) -> list[_Phase] | None:
+    def training_phases(self) -> list[_Phase]:
         '''List of phases by configs.'''
-        if self.train_mode == 'epochs':
-            return None
-        if self.train_mode == 'phases':
-            registry = {
-                'default': self.phases.default.phases,
-                'baseline': self.phases.baseline.phases
-            }
-            schema = registry.get(self.phase_schema)
-            if schema is None:
-                raise ValueError(f'Invalid phase schema: {self.phase_schema}')
-            return schema
-        # unspported
-        raise ValueError(f'Invalid training mode: {self.train_mode}')
+        registry = {
+            'default': self.phases.default.phases,
+            'baseline': self.phases.baseline.phases
+        }
+        schema = registry.get(self.phase_schema)
+        if schema is None:
+            raise ValueError(f'Invalid phase schema: {self.phase_schema}')
+        return schema

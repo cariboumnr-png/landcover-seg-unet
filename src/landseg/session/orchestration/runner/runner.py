@@ -40,6 +40,7 @@ interrupted experiments.
 # standard imports
 import dataclasses
 import os
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.session.engine as engine
@@ -84,7 +85,7 @@ class TrainingRunner:
     def __init__(
         self,
         epoch_runner: engine.TrainingEpochRunner,
-        training_phases: list[phases.Phase],
+        training_phases: typing.Sequence[phases.PhaseLike],
         config: RunnerConfig,
         *,
         logger: utils.Logger,
@@ -179,16 +180,16 @@ class TrainingRunner:
 
         Iterates through each phase, consuming its event stream and
         handling side effects such as logging, checkpointing, and early
-        termination. 
+        termination.
 
         Yields:
-            event.Event: 
-                The immutable event stream emitted by the policies, passed 
-                upward for top-level observers (e.g., Optuna pruners).
-        
+            event.Event: The immutable event stream emitted by the
+                policies, passed upward for top-level observers (e.g.,
+                Optuna pruners).
+
         Returns:
-            float:
-                The final target metric achieved after the curriculum completes.
+            float: The final target metric achieved after the curriculum
+                completes.
 
         Behavior:
             - Processes phases sequentially
@@ -199,7 +200,8 @@ class TrainingRunner:
             - Yields raw orchestration events as a generator
             - Terminates early only in single-phase mode when early
               stopping is triggered
-            - Returns the definitive curriculum scalar for hyperparameter sweeping
+            - Returns the definitive curriculum scalar for hyperparameter
+                sweeping
         '''
         final_curriculum_metric = -float('inf')
 
@@ -216,13 +218,12 @@ class TrainingRunner:
                 last_epoch = 1
 
             # get phase events stream
-            phase_policy = policy.PhasePolicy(
+            events_stream = policy.PhasePolicy(
                 epoch_runner=self.epoch_runner,
                 phase_config=phase,
                 track_config=self.tracking_config,
                 start_epoch=last_epoch
-            )
-            events_stream = phase_policy.run()
+            ).run()
             phase_best_metric = -float('inf')
 
             # manually advance the generator to capture both yields and returns
@@ -243,8 +244,8 @@ class TrainingRunner:
                             self.logger.log('INFO', m)
 
                         case event.EpochEnd(metrics=metrics):
-                            # Side effect handled downstream; explicitly pass to yield
-                            pass 
+                            m = self._metrics_to_str(metrics)
+                            self.logger.log('INFO', m)
 
                         case event.CheckpointRequest(tag=tag):
                             if tag == 'best':
@@ -259,13 +260,13 @@ class TrainingRunner:
                             if not self.allow_early_stop:
                                 m = f'Ignored StopRun event: {reason}'
                                 self.logger.log('WARNING', m)
-                                # do not yield ignored stops to top-level observers
+                                # do not yield ignored stops to observers
                                 continue
-                            
+
                             m = f'Training stopping due to: {reason}'
                             self.logger.log('INFO', m)
-                            
-                            # yield the final event, then return the metric immediately
+
+                            # yield the final event, then return immediately
                             yield e
                             return phase_best_metric
 
@@ -285,6 +286,10 @@ class TrainingRunner:
             final_curriculum_metric = phase_best_metric
 
         return final_curriculum_metric
+
+    def execute(self):
+        '''Execute the full training curriculum in a blocking manner.'''
+        return self.run()
 
     def _load_progress(self, fpath: str) -> int:
         '''
@@ -330,7 +335,7 @@ class TrainingRunner:
         )
 
     @staticmethod
-    def _print_phase(phase: phases.Phase):
+    def _print_phase(phase: phases.PhaseLike):
         '''Pretty print a phase to console.'''
 
         print('__Phase details__')
@@ -342,3 +347,9 @@ class TrainingRunner:
             f'- Frozen Heads:\t{phase.frozen_heads}',
         ])
         print(ss)
+
+    @staticmethod
+    def _metrics_to_str(metrics: dict[str, float]):
+        '''doc'''
+        import json
+        return json.dumps(metrics, indent=2)

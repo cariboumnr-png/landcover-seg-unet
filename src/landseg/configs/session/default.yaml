@@ -6,5 +6,4 @@ defaults:
   - phases: default
 
 resume_from_last: False
-train_mode: epochs
-phase_schema: baseline
+phase_schema: default

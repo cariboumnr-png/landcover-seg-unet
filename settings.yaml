@@ -189,8 +189,7 @@ session:
 
   # knobs
   resume_from_last: False
-  train_mode: 'epochs'
-  phase_schema: baseline
+  phase_schema: default
 
   # sub config groups
   runtime:
@@ -231,4 +230,3 @@ session:
   phases:
     baseline:
       select_children: []
-      excluded_cls: {}
