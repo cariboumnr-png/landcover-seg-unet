@@ -60,9 +60,9 @@ class EpochPolicy:
 
         # epoch ends
         yield events.EpochEnd(self.epoch, self.phase, parsed_metrics)
-        
+
         # enables downstream `yield from`
-        return parsed_metrics 
+        return parsed_metrics
 
     def execute(self):
         '''Run the underlying engine and return raw metrics.'''
@@ -74,16 +74,12 @@ class EpochPolicy:
         train_losses = metrics.training
         val_accuracies = metrics.validation or {}
         parsed: dict[str, float] = {}
-        # get heads
-        train_heads = list(train_losses.keys())
+        # get heads metrics
         val_heads = list(val_accuracies.keys())
-        if val_heads:
-            assert train_heads == val_heads # sanity
         # get active heads for metrics extraction
-        active = train_heads if self.active_heads is None else self.active_heads
-        # losses from active heads
-        for h in active:
-            parsed[f'loss_{h}'] = train_losses.get(h, 0.0)
+        active = val_heads if self.active_heads is None else self.active_heads
+        # add loss values to snapshot
+        parsed.update(**train_losses)
         # accuracies from active heads
         miou_sum = ac_miou_sum = 0.0
         for h in active:
