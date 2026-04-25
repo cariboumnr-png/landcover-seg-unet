@@ -96,10 +96,7 @@ class PhasePolicy:
             self._track_metrics(epoch, metrics)
 
             # request checkpointing
-            if self.tracker.is_best_epoch:
-                tag = f'phase_{self.config.name}_epoch_{epoch}_best'
-            else:
-                tag = f'phase_{self.config.name}_epoch_{epoch}_last'
+            tag = 'best' if self.tracker.is_best_epoch else 'last'
             yield events.CheckpointRequest(tag)
 
             # early stop check
