@@ -55,9 +55,9 @@ class RunnerConfig:
     resume_from_last: bool = False
     verbose: bool = True
     enable_early_stop: bool = True
-    patience_epochs: int = 5
     track_mode: str = 'max'
-    delta: float = 0.005
+    patience_epochs: int | None = 5
+    delta: float | None = 0.005
 
 # --------------------------------Public  Class--------------------------------
 class TrainingRunner:

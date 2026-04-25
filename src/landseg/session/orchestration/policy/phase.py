@@ -36,9 +36,9 @@ import landseg.session.orchestration.event as events
 class TrackingConfig:
     '''doc'''
     enable_early_stop: bool = False
-    patience_epochs: int = 5
     track_mode: str = 'max'
-    delta: float = 0.0005
+    patience_epochs: int | None = 5
+    delta: float | None = 0.0005
 
 @dataclasses.dataclass
 class _MetricsTracker:
@@ -104,7 +104,10 @@ class PhasePolicy:
             # early stop check
             if not self.track.enable_early_stop:
                 continue
-            if self.tracker.patience_n >= self.track.patience_epochs:
+            if (
+                self.track.patience_epochs and
+                self.tracker.patience_n >= self.track.patience_epochs
+            ):
                 yield events.StopRun('Patience limit reached')
                 break
 
@@ -150,10 +153,11 @@ class PhasePolicy:
 
         # track by mode
         mode = self.track.track_mode
+        delta = self.track.delta or 0.0
         match mode:
             # track if metrics is increasing
             case 'max':
-                if target >= self.tracker.best_value + self.track.delta:
+                if target >= self.tracker.best_value + delta:
                     self.tracker.best_value = target
                     self.tracker.best_epoch = epoch
                     self.tracker.patience_n = 0
