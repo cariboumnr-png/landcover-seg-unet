@@ -34,7 +34,6 @@ class _CallbackSet:
     train: callbacks.TrainCallback
     validate: callbacks.ValCallback
     infer: callbacks.InferCallback
-    logging: callbacks.LoggingCallback
     progress: callbacks.ProgressCallback
 
     def __iter__(self):
@@ -55,14 +54,12 @@ def build_callbacks(
         train=callbacks.TrainCallback(logger),
         validate=callbacks.ValCallback(logger),
         infer=callbacks.InferCallback(logger),
-        logging=callbacks.LoggingCallback(logger),
         progress=callbacks.ProgressCallback(logger),
     )
     # set up all callback instances
     callback_set.train.setup(state, config, device=device, skip_log=skip_log)
     callback_set.validate.setup(state, config, device=device, skip_log=skip_log)
     callback_set.infer.setup(state, config, device=device, skip_log=skip_log)
-    callback_set.logging.setup(state, config, device=device, skip_log=skip_log)
     callback_set.progress.setup(state, config, device=device, skip_log=skip_log)
     # return
     return callback_set
