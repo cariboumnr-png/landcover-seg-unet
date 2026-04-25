@@ -57,7 +57,7 @@ class PhasePolicy:
         self,
         *,
         epoch_runner: engine.TrainingEpochRunner,
-        phase_config: phases.Phase,
+        phase_config: phases.PhaseLike,
         track_config: TrackingConfig,
         start_epoch: int = 1
     ):
@@ -71,6 +71,7 @@ class PhasePolicy:
         self.tracker = _MetricsTracker()
 
     def run(self) -> typing.Generator[events.Event, None, float]:
+        '''doc'''
 
         # set trainer head state per phase
         self.runner.trainer.set_head_state(

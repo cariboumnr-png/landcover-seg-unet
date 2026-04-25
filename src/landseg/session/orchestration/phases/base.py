@@ -19,35 +19,41 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Phase definition
 '''
 
 # standard imports
-from __future__ import annotations
-import dataclasses
+import typing
 
-@dataclasses.dataclass(frozen=True)
-class Phase:
+class PhaseLike(typing.Protocol):
     '''
     Immutable description of a single training phase.
 
     A Phase defines *what* should be trained and for how long, but does
     not define *how* training progresses or *when* it stops.
     '''
-    name: str
-    num_epochs: int
-    lr_scale: float | None = None   # currently not in use
-    active_heads: list[str] | None = None
-    frozen_heads: list[str] | None = None
+    @property
+    def name(self) -> str: ...
+    @property
+    def num_epochs(self) -> int: ...
+    @property
+    def lr_scale(self) -> float | None: ...   # currently not in use
+    @property
+    def active_heads(self) -> list[str] | None: ...
+    @property
+    def frozen_heads(self) -> list[str] | None: ...
 
-@dataclasses.dataclass(frozen=True)
-class PhaseProfile:
+class PhaseProfile(typing.Protocol):
     '''
     Ordered collection of phases forming a training curriculum.
 
     PhaseProfile objects are resolved from configuration and consumed
     by orchestration logic. They contain no execution semantics.
     '''
-    name: str
-    phases: list[Phase]
+    @property
+    def name(self) -> str: ...
+    @property
+    def phases(self) -> list[PhaseLike]: ...

@@ -32,18 +32,18 @@ import typing
 
 __all__ = [
     # classes
-    'Phase',
+    'PhaseLike',
     'PhaseProfile',
     # functions
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import Phase, PhaseProfile
+    from .base import PhaseLike, PhaseProfile
 
 def __getattr__(name: str):
 
-    if name in {'Phase', 'PhaseProfile'}:
+    if name in {'PhaseLike', 'PhaseProfile'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
