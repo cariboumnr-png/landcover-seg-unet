@@ -58,13 +58,15 @@ class PhasePolicy:
         *,
         epoch_runner: engine.TrainingEpochRunner,
         phase_config: phases.Phase,
-        track_config: TrackingConfig
+        track_config: TrackingConfig,
+        start_epoch: int = 1
     ):
         '''doc'''
 
         self.runner = epoch_runner
         self.config = phase_config
         self.track = track_config
+        self.start_epoch = start_epoch
         #
         self.tracker = _MetricsTracker()
 
@@ -82,7 +84,7 @@ class PhasePolicy:
         yield events.PhaseStart(self.config.name)
 
         # iterate epochs
-        for epoch in range(1, self.config.num_epochs + 1):
+        for epoch in range(self.start_epoch, self.config.num_epochs + 1):
 
             # delegate to epoch policy
             metrics = yield from policy.EpochPolicy(

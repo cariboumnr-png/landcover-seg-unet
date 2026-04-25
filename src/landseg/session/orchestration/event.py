@@ -114,7 +114,7 @@ class PhaseEnd(Event):
 # -------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)
 class EpochStart(Event):
-    epoch_index: int = 0
+    epoch_index: int = 1
     phase_name: str = ''
 
     def __init__(self, epoch_index: int, phase_name: str) -> None:
@@ -130,7 +130,7 @@ class EpochStart(Event):
 
 @dataclasses.dataclass(frozen=True)
 class EpochEnd(Event):
-    epoch_index: int = 0
+    epoch_index: int = 1
     phase_name: str = ''
     metrics: dict[str, float] = field(default_factory=dict)
 
