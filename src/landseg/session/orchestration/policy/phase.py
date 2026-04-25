@@ -70,8 +70,7 @@ class PhasePolicy:
         #
         self.tracker = _MetricsTracker()
 
-    def run(self) -> typing.Iterator[events.Event]:
-        '''doc'''
+    def run(self) -> typing.Generator[events.Event, None, float]:
 
         # set trainer head state per phase
         self.runner.trainer.set_head_state(
@@ -116,6 +115,9 @@ class PhasePolicy:
 
         # phase ends
         yield events.PhaseEnd(self.config.name)
+
+        # Return the best value tracked during this phase
+        return self.tracker.best_value
 
     def execute(self):
         '''Run the underlying epoch policy and return raw metrics.'''
