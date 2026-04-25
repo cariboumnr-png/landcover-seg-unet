@@ -125,7 +125,10 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     assert runner, 'Training runner not properly built' # sanity
 
     # run session
-    runner.fit()
+    _m = {}
+    for m in runner.run():
+        _m = m
+    print(_m)
 
     # close logger
     logger.close()
@@ -133,7 +136,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = {}
-    meta['summary']['best_value'] = runner.evaluator.state.metrics.best_value
-    meta['summary']['checkpoint'] = runner.final_checkpoint # best of the final
+    # meta['summary']['best_value'] = runner.evaluator.state.metrics.best_value
+    # meta['summary']['checkpoint'] = runner.final_checkpoint # best of the final
     meta_ctrl.persist(meta)
     return meta
