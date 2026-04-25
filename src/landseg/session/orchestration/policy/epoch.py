@@ -47,9 +47,8 @@ class EpochPolicy:
         self.engine = training_engine
         self.active_heads = active_heads
 
-    def run(self) -> typing.Iterator[events.Event]:
+    def run(self) -> typing.Generator[events.Event, None, dict[str, float]]:
         '''doc'''
-
         # epoch starts
         yield events.EpochStart(self.epoch, self.phase)
 
@@ -61,6 +60,9 @@ class EpochPolicy:
 
         # epoch ends
         yield events.EpochEnd(self.epoch, self.phase, parsed_metrics)
+        
+        # enables downstream `yield from`
+        return parsed_metrics 
 
     def execute(self):
         '''Run the underlying engine and return raw metrics.'''
