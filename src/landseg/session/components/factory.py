@@ -74,7 +74,8 @@ def build_session_components(
     headspecs = task.build_headspecs(
         data_specs,
         alpha_fn=config.task.alpha_fn,
-        en_beta=config.task.en_beta
+        en_beta=config.task.en_beta,
+        excluded_cls=config.task.excluded_cls
     )
     # task - heads loss modules
     headlosses = task.build_headlosses(

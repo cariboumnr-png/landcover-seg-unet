@@ -155,7 +155,6 @@ class EngineBase:
         self,
         active_heads: list[str] | None = None,
         frozen_heads: list[str] | None = None,
-        excluded_cls: dict[str, list[int]] | None = None
     ) -> None:
         '''
         Configure active and frozen heads and apply class exclusions.
@@ -209,14 +208,6 @@ class EngineBase:
         # set frozen heads to model if provided
         if frozen_heads is not None:
             self.model.set_frozen_heads(frozen_heads)
-
-        # set excluded classes to active heads
-        if excluded_cls is not None:
-            for h in active_heads:
-                excl = excluded_cls.get(h)
-                if excl is not None:
-                    self.state.heads.active_hspecs[h].set_exclude(tuple(excl))
-                    self.state.heads.active_hmetrics[h].exclude_class_1b = tuple(excl)
 
     def reset_head_state(self) -> None:
         '''

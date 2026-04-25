@@ -191,13 +191,13 @@ session:
   resume_from_last: False
   phase_schema: default
 
+  # components
+  components:
+    task:
+      excluded_cls: {}
+
   # sub config groups
   runtime:
-
-    heads:
-      active_heads: []
-      frozen_heads: null
-      excluded_cls: {}
 
     schedule:
       patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
@@ -209,7 +209,7 @@ session:
       #
       # Tête utilisée pour le suivi en validation, l’arrêt anticipé et la
       # sélection du meilleur point de sauvegarde.
-      track_head_name: layer1
+      track_head_name: base
 
     logit_adjust:
       # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
@@ -225,7 +225,6 @@ session:
 #
 # Définit la progression (curriculum) utilisée par la session d’entraînement.
 # -----------------------------------------------------------------------------
-
 
   phases:
     baseline:

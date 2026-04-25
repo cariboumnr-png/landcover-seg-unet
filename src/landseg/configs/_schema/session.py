@@ -73,6 +73,7 @@ class _LossTypesConfig:
 class _LossConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
+    excluded_cls: dict[str, list[int]] | None = None
     types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
 @dataclasses.dataclass
@@ -98,12 +99,6 @@ class _ComponentsCfg:
                 raise ValueError('missing T_max for CosAnneal')
 
 # ----- RUNTIME
-@dataclasses.dataclass
-class _Heads:
-    active_heads: list[str] = field(default_factory=lambda: [])
-    frozen_heads: list[str] | None = None
-    excluded_cls: dict[str, list[int]] | None = None
-
 @dataclasses.dataclass
 class _Schedule:
     max_epoch: int = 50
@@ -137,7 +132,6 @@ class _LogitAdjustConfig:
 
 @dataclasses.dataclass
 class _RuntimeConfig:
-    heads: _Heads = field(default_factory=_Heads)
     schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
     precision: _Precision = field(default_factory=_Precision)
@@ -162,7 +156,6 @@ class _DefaultPhases:
 class _BaselinePhases:
     name: str = 'baseline'
     select_children: list[str] = field(default_factory=list)
-    excluded_cls: dict[str, list[int]] = field(default_factory=dict)
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
