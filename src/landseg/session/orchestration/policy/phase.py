@@ -120,16 +120,19 @@ class PhasePolicy:
         # Return the best value tracked during this phase
         return self.tracker.best_value
 
-    def execute(self):
+    def execute(self) -> list[engine.EpochMetrics]:
         '''Run the underlying epoch policy and return raw metrics.'''
 
+        epochs: list[engine.EpochMetrics] = []
         for epoch in range(1, self.config.num_epochs + 1):
-            yield policy.EpochPolicy(
+            epoch_metrics = policy.EpochPolicy(
                 training_engine=self.runner,
                 phase_name=self.config.name,
                 epoch_index=epoch,
                 active_heads=self.config.active_heads
             ).execute()
+            epochs.append(epoch_metrics)
+        return epochs
 
     def _track_metrics(
         self,
