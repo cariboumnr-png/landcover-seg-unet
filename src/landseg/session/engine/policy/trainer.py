@@ -90,7 +90,10 @@ class MultiHeadTrainer(policy.EngineBase):
         self.grad_clip_norm = grad_clip_norm
         self.log_every = log_every
 
-    def train_one_epoch(self, epoch: int) -> dict[str, float]:
+        # init the epoch results container with all heads
+        self.epoch_results = policy.TrainerEpochResults(self.state.heads.all_heads)
+
+    def train_one_epoch(self, epoch: int) -> policy.TrainerEpochResults:
         '''
         Execute one training epoch and return epoch-level training logs.
 
@@ -137,12 +140,12 @@ class MultiHeadTrainer(policy.EngineBase):
             # delegate batch to engine (forward and compute loss)
             self.engine.run_train_batch()
 
-            # batch backward
-            loss = self.state.batch_out.total_loss
+            # batch backward on total loss
+            total = self.state.batch_out.total_loss
             if self.use_amp:
-                self.state.optim.scaler.scale(loss).backward()
+                self.state.optim.scaler.scale(total).backward()
             else:
-                loss.backward()
+                total.backward()
             self._emit('on_train_backward')
 
             # gradient clipping
@@ -165,9 +168,16 @@ class MultiHeadTrainer(policy.EngineBase):
             self._emit('on_train_optimizer_step')
 
             # batch end
-            # accumulate batch loss to epoch-level total loss
+            # accumulate total loss
             batch_loss = float(self.state.batch_out.total_loss.detach().item())
-            self.state.epoch_sum.train_loss += batch_loss
+            self.epoch_results.total_loss += batch_loss
+            # accumulate per head loss
+            for head, loss in self.state.batch_out.head_loss.items():
+                if head in self.epoch_results.heads:
+                    self.epoch_results.head_losses[head] += loss
+            # update bidx
+            self.epoch_results.current_bidx = bidx
+
             # update train logs if at interval (decided by trainer method)
             self._update_train_logs(flush=False)
             self._emit('on_train_batch_end')
@@ -176,7 +186,7 @@ class MultiHeadTrainer(policy.EngineBase):
         # - update logs and loss (total/per-head) for the epoch
         self._update_train_logs(flush=True)
         self._emit('on_train_epoch_end')
-        return self.state.epoch_sum.train_logs.head_losses
+        return self.epoch_results
 
     # ----- training phase
     def _clip_grad(self):
@@ -201,22 +211,15 @@ class MultiHeadTrainer(policy.EngineBase):
         logs = {}
         # update log at interval
         if flush or bidx % self.log_every == 0:
-            # average total loss so far
-            avg_loss = self.state.epoch_sum.train_loss / max(1, bidx)
-            logs['Total_Loss'] = avg_loss
+            logs['Total_Loss'] = self.epoch_results.mean_total_loss
             # per-head losses
-            for h, v in self.state.batch_out.head_loss.items():
-                logs[f'Head_Loss_{h}'] = float(v)
-            # extras - lr
-            logs['LR'] = self.optimization.optimizer.param_groups[0]['lr']
-            # assgin to state dict
-            self.state.epoch_sum.train_logs.head_losses = logs
+            for k, v in self.epoch_results.mean_head_losses.items():
+                if v > 0: # only report non-zero losses
+                    logs[f'Head_Loss_{k}'] = float(v)
+            # pretty string of the losses
+            text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
+            text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
+            self.state.epoch_sum.train_logs.head_losses_str = text
+            self.state.epoch_sum.train_logs.updated = True
         else:
             self.state.epoch_sum.train_logs.updated = False # reset flag
-
-        # if logs are updated: provide a printer friendly text and return flag
-        if logs:
-            self.state.epoch_sum.train_logs.updated = True
-            text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
-            text = f'b{bidx:04d} | ' + '|'.join(text_list)
-            self.state.epoch_sum.train_logs.head_losses_str = text
