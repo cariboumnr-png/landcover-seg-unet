@@ -44,8 +44,7 @@ class StateLike(typing.Protocol):
     heads: _Heads
     batch_cxt: _BatchContex
     batch_out: _BatchOutput
-    epoch_sum: _EpochSummary
-    metrics: _MetricsTracker
+    summary: _EpochSummary
     optim: _OptimState
 
 # ----- .progress
@@ -53,6 +52,7 @@ class _Progress(typing.Protocol):
     epoch: int
     epoch_step: int
     global_step: int
+    current_metrics: float
 
 # ----- .heads
 class _Heads(typing.Protocol):
@@ -84,18 +84,20 @@ class _BatchOutput(typing.Protocol):
 
 # ----- .epoch_sum (summary)
 class _EpochSummary(typing.Protocol):
-    train_loss: float
-    val_loss: float
-    train_logs: _TrainLogs
-    val_logs: _ValLogs
-    infer_ctx: _InferContext
+    train_summary: _TrainSummary
+    val_summary: _ValSummary
+    infer_context: _InferContext
 
-class _TrainLogs(typing.Protocol):
+class _TrainSummary(typing.Protocol):
+    total_loss: float
     head_losses_str: str
     updated: bool
+    def clear(self) -> None: ...
 
-class _ValLogs(typing.Protocol):
+class _ValSummary(typing.Protocol):
+    target_metrics: float
     head_metrics_str: dict[str, list[str]]
+    def clear(self) -> None: ...
 
 class _InferContext(typing.Protocol):
     patch_per_blk: int
@@ -103,14 +105,6 @@ class _InferContext(typing.Protocol):
     block_columns: int
     patch_grid_shape: tuple[int, int]
     maps: dict[str, dict[tuple[int, int], torch.Tensor]]
-
-# ----- .metrics
-class _MetricsTracker(typing.Protocol):
-    last_value: float
-    curr_value: float
-    best_value: float
-    best_epoch: int
-    patience_n: int
 
 # ----- .optim (optimization state)
 class _OptimState(typing.Protocol):

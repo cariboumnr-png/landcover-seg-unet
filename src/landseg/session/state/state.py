@@ -24,7 +24,6 @@
 # standard imports
 from __future__ import annotations
 import dataclasses
-import typing
 # third-party imports
 import torch
 # local imports
@@ -39,8 +38,7 @@ class _RuntimeState:
     heads: _Heads
     batch_cxt: _BatchContex
     batch_out: _BatchOutput
-    epoch_sum: _EpochSummary
-    metrics: _MetricsTracker
+    summary: _ResultsSummary
     optim: _OptimState
 
     def __str__(self):
@@ -49,8 +47,7 @@ class _RuntimeState:
             f'{str(self.heads)}',
             f'{str(self.batch_cxt)}',
             f'{str(self.batch_out)}',
-            f'{str(self.epoch_sum)}',
-            f'{str(self.metrics)}',
+            f'{str(self.summary)}',
             f'{str(self.optim)}'
         ])
 
@@ -61,13 +58,15 @@ class _Progress:
     epoch: int
     epoch_step: int
     global_step: int
+    current_metrics: float
 
     def __str__(self) -> str:
         return '\n'.join([
             'Progress:',
             f'\tCurrent Epoch: {self.epoch}',
             f'\tCurrent Step in Epoch: {self.epoch_step}',
-            f'\tCurrent Global Step: {self.global_step}'
+            f'\tCurrent Global Step: {self.global_step}',
+            f'\tCurrent Metrics: {self.current_metrics}',
         ])
 
 # ----- .heads
@@ -79,7 +78,7 @@ class _Heads:
     frozen_heads: list[str] | None
     active_hspecs: dict[str, common.SpecsLike] | None
     active_hloss: dict[str, common.CompositeLossLike] | None
-    active_hmetrics: dict[str, common._ConfusionMatrixLike] | None
+    active_hmetrics: dict[str, common.ConfusionMatrixLike] | None
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -172,35 +171,42 @@ class _BatchOutput:
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
 
-# ----- .epoch summary
+# ----- .summary
 @dataclasses.dataclass
-class _EpochSummary:
-    '''Epoch-level aggregates for train/val/infer.'''
-    train_loss: float
-    val_loss: float
-    train_logs: _TrainLogs
-    val_logs: _ValLogs
+class _ResultsSummary:
+    '''Summaries train/val/infer.'''
+    train_summary: _TrainSummary
+    val_summary: _ValSummary
     infer_ctx: _InferContext
 
     def __str__(self) -> str:
         return '\n'.join([
             'Epoch Results:',
-            f'\tTraining Loss: {self.train_loss}',
-            f'\tValidation Loss: {self.val_loss}',
         ])
 
 @dataclasses.dataclass
-class _TrainLogs:
-    '''Training summary for an epoch (aggregated losses).'''
-    head_losses: dict[str, float]
+class _TrainSummary:
+    '''Training results summary.'''
+    total_loss: float
     head_losses_str: str
     updated: bool
 
+    def clear(self) -> None:
+        '''Clear container.'''
+        self.total_loss = 0.0
+        self.head_losses_str = ''
+        self.updated = False
+
 @dataclasses.dataclass
-class _ValLogs:
+class _ValSummary:
     '''Validation summary for an epoch (per-head metrics).'''
-    head_metrics: dict[str, dict[str, typing.Any]]
+    target_metrics: float
     head_metrics_str: dict[str, list[str]]
+
+    def clear(self) -> None:
+        '''Clear container.'''
+        self.target_metrics = 0.0
+        self.head_metrics_str.clear()
 
 @dataclasses.dataclass
 class _InferContext:
@@ -210,30 +216,6 @@ class _InferContext:
     block_columns: int
     patch_grid_shape: tuple[int, int]
     maps: dict[str, dict[tuple[int, int], torch.Tensor]]
-
-# ----- .metrics
-@dataclasses.dataclass
-class _MetricsTracker:
-    '''Experiment-level metric tracker with patience bookkeeping.'''
-    last_value: float
-    curr_value: float
-    best_value: float
-    best_epoch: int
-    patience_n: int
-
-    def __str__(self) -> str:
-        _lastv = self.last_value if self.last_value != -float('inf') else 'N/A'
-        _currv = self.curr_value if self.last_value != -float('inf') else 'N/A'
-        _bestv = self.best_value if self.best_value != -float('inf') else 'N/A'
-        _epoch = self.best_epoch if self.best_epoch != -1 else 'N/A'
-        return '\n'.join([
-            'Experimental Metrics:',
-            f'\tLast Value: {_lastv}',
-            f'\tCurr Value: {_currv}',
-            f'\tBest Value: {_bestv}',
-            f'\tBest Epoch: {_epoch}',
-            f'\tPatience: {self.patience_n}'
-        ])
 
 # ----- .optimization state
 @dataclasses.dataclass
@@ -269,6 +251,7 @@ def initialize(
             epoch=0,
             epoch_step=0,
             global_step=0,
+            current_metrics=0.0
         ),
         heads=_Heads(
             all_heads=list(components.headspecs.as_dict().keys()),
@@ -293,16 +276,14 @@ def initialize(
             total_loss=torch.empty(0),
             head_loss={},
         ),
-        epoch_sum=_EpochSummary(
-            train_loss=0.0,
-            val_loss=0.0,
-            train_logs=_TrainLogs(
-                head_losses={},
+        summary=_ResultsSummary(
+            train_summary=_TrainSummary(
+                total_loss=0.0,
                 head_losses_str='',
                 updated=False,
             ),
-            val_logs=_ValLogs(
-                head_metrics={},
+            val_summary=_ValSummary(
+                target_metrics=0.0,
                 head_metrics_str={},
             ),
             infer_ctx=_InferContext(
@@ -310,15 +291,8 @@ def initialize(
                 patch_per_dim=0,
                 block_columns=0,
                 patch_grid_shape=(0, 0),
-                maps = {}
+                maps={}
             )
-        ),
-        metrics=_MetricsTracker(
-            last_value=-float('inf'),
-            curr_value=-float('inf'),
-            best_value=-float('inf'),
-            best_epoch=-1,
-            patience_n=0
         ),
         optim=_OptimState(
             scaler=torch.GradScaler(
@@ -334,13 +308,13 @@ def initialize(
         per_blk = components.dataloaders.meta.patch_per_blk
         per_dim = int(per_blk ** 0.5)
         assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
-        state.epoch_sum.infer_ctx.patch_per_blk = per_blk
-        state.epoch_sum.infer_ctx.patch_per_dim = per_dim
+        state.summary.infer_ctx.patch_per_blk = per_blk
+        state.summary.infer_ctx.patch_per_dim = per_dim
         # resolve block col/row numbers
         blk_col, blk_row = components.dataloaders.meta.test_blks_grid
-        state.epoch_sum.infer_ctx.block_columns = blk_col
+        state.summary.infer_ctx.block_columns = blk_col
         # resolve patch col/row numbers
         pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
-        state.epoch_sum.infer_ctx.patch_grid_shape = pch_col, pch_row
+        state.summary.infer_ctx.patch_grid_shape = pch_col, pch_row
     # return
     return state
