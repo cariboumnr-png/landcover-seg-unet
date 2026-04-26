@@ -173,18 +173,18 @@ class MultiHeadTrainer(policy.EngineBase):
             self.epoch_results.total_loss += batch_loss
             # accumulate per head loss
             for head, loss in self.state.batch_out.head_loss.items():
-                if head in self.epoch_results.heads:
+                if head in self.epoch_results.all_heads:
                     self.epoch_results.head_losses[head] += loss
             # update bidx
             self.epoch_results.current_bidx = bidx
 
             # update train logs if at interval (decided by trainer method)
-            self._update_train_logs(flush=False)
+            self._update_training_state(flush=False)
             self._emit('on_train_batch_end')
 
         # train phase end
         # - update logs and loss (total/per-head) for the epoch
-        self._update_train_logs(flush=True)
+        self._update_training_state(flush=True)
         self._emit('on_train_epoch_end')
         return self.epoch_results
 
@@ -198,7 +198,7 @@ class MultiHeadTrainer(policy.EngineBase):
                 self.grad_clip_norm
             )
 
-    def _update_train_logs(self, flush: bool=False):
+    def _update_training_state(self, flush: bool=False):
         '''
         Average losses and update per-head loss logs at intervals.
 
@@ -219,7 +219,8 @@ class MultiHeadTrainer(policy.EngineBase):
             # pretty string of the losses
             text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
             text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            self.state.epoch_sum.train_logs.head_losses_str = text
-            self.state.epoch_sum.train_logs.updated = True
+            self.state.summary.train_summary.total_loss = logs['Total_Loss']
+            self.state.summary.train_summary.head_losses_str = text
+            self.state.summary.train_summary.updated = True
         else:
-            self.state.epoch_sum.train_logs.updated = False # reset flag
+            self.state.summary.train_summary.updated = False # reset flag

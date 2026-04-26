@@ -40,6 +40,15 @@ class TrainerEpochResults:
     total_loss: float = 0.0
     head_losses: dict[str, float] = field(default_factory=dict)
 
+    def __str__(self):
+        return '\n'.join([
+            f'All Heads: {self.all_heads}',
+            f'Current Mean Total Loss: {self.mean_total_loss}'
+            f'Perhead Loss',
+        ]) + '\n'.join([
+            f'{h}: {l:4f}' for h, l in self.head_losses.items()
+        ])
+
     def __post_init__(self):
         self.head_losses = {h: 0.0 for h in self.all_heads}
 
