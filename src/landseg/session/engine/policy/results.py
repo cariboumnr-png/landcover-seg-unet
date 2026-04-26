@@ -59,8 +59,38 @@ class EvaluatorEpochResults:
     '''Evaluator aggregated epoch results.'''
     all_heads: list[str]
     monitor_heads: list[str]
-    monitor_metrics: float = 0.0
     head_metrics: dict[str, common.AccumulatedMetrics] = field(default_factory=dict)
 
     def __post_init__(self):
         self.head_metrics = {h: common.AccumulatedMetrics for h in self.all_heads}
+
+    @property
+    def target_metrics(self) -> float:
+        '''
+        Return the mean metrics from all monitor heads.
+
+        For each head if active classes are set, prefer mean IoU from the
+        active classes; otherwise count mean from all present classes.
+        '''
+
+        # retrieve iou metrics from monitor heads
+        mean = 0.0
+        mean_ac = 0.0
+
+        # accumulate from all monitor heads
+        for head in self.monitor_heads:
+            assert head in self.head_metrics # sanity
+            metrics = self.head_metrics[head]
+            # accumulate moniter metrics for stae
+            mean += metrics.mean
+            mean_ac +=  metrics.ac_mean
+            # collect per head metrics formatted strings
+
+        # get average ious
+        mean /= max(1, len(self.monitor_heads))
+        mean_ac /= max(1, len(self.monitor_heads))
+
+        # pick iou - prefer iou from active classes if present
+        if not any([mean, mean_ac]):
+            raise ValueError('No validation metrics found')
+        return mean_ac if mean_ac else mean

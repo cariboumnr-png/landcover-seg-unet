@@ -197,29 +197,16 @@ class MultiHeadEvaluator(policy.EngineBase):
         assert self.state.heads.active_hmetrics is not None
 
         # retrieve iou metrics from monitor heads
-        mean = 0.0
-        mean_ac = 0.0
         metrics_str: dict[str, list[str]] = {}
 
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
             self.epoch_results.head_metrics[head] = metrics_module.metrics
-            # accumulate moniter metrics for stae
-            mean += metrics_module.metrics.mean
-            mean_ac +=  metrics_module.metrics.ac_mean
             # collect per head metrics formatted strings
             metrics_str[head] = metrics_module.metrics.as_str_list
 
-        # get average ious
-        mean /= max(1, len(self.state.heads.active_hmetrics))
-        mean_ac /= max(1, len(self.state.heads.active_hmetrics))
-
-        # pick iou - prefer iou from active classes if present
-        if not any([mean, mean_ac]):
-            raise ValueError('No validation metrics found')
-        target = mean_ac if mean_ac else mean
-
         # assign to state summary
-        self.state.epoch_sum.val_summary.target_metrics = target
-        self.state.epoch_sum.val_summary.head_metrics_str = metrics_str
+        summary = self.state.summary.val_summary
+        summary.target_metrics = self.epoch_results.target_metrics
+        summary.head_metrics_str = metrics_str
