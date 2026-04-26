@@ -20,10 +20,10 @@
 # =========================================================================== #
 
 '''
-Training metrics utilities: confusion matrix accumulation and IoU metrics.
+Validation utilities: confusion matrix accumulation and IoU metrics.
 
 Provides:
-    - A typed metrics dictionary for reporting.
+    - Dataclass container for accumlated metrics reporting.
     - ConfusionMatrix: incremental updates and IoU/mean IoU computation,
       with optional hierarchical gating and class exclusion.
 '''
