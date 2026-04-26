@@ -20,7 +20,11 @@
 # =========================================================================== #
 
 '''
-Phase level orchestration policy.
+Phase-level orchestration policy.
+
+This module defines orchestration logic for executing a training phase,
+which consists of multiple epochs. It manages model head configuration,
+metric tracking, checkpoint signaling, and optional early stopping.
 '''
 
 # standard imports
@@ -34,7 +38,7 @@ import landseg.session.orchestration.event as events
 
 @dataclasses.dataclass
 class TrackingConfig:
-    '''doc'''
+    '''Configuration for metric tracking and early stopping.'''
     enable_early_stop: bool = False
     track_mode: str = 'max'
     patience_epochs: int | None = 5
@@ -42,7 +46,12 @@ class TrackingConfig:
 
 @dataclasses.dataclass
 class _MetricsTracker:
-    '''doc'''
+    '''
+    Internal state container for tracking metric progression.
+
+    This class maintains state across epochs for determining improvements,
+    best values, and early stopping conditions.
+    '''
     last_value: float = -float('inf')
     curr_value: float = -float('inf')
     best_value: float = -float('inf')
@@ -51,7 +60,19 @@ class _MetricsTracker:
     is_best_epoch: bool = False
 
 class PhasePolicy:
-    '''doc'''
+    '''
+    Orchestrates execution of a training phase across multiple epochs.
+
+    This class coordinates:
+    - Model head configuration for the phase
+    - Iterative execution of epochs via `EpochPolicy`
+    - Metric tracking and best model selection
+    - Checkpoint signaling
+    - Optional early stopping based on tracked metrics
+
+    It supports both event-driven execution (via generators) and direct
+    execution.
+    '''
 
     def __init__(
         self,
@@ -61,7 +82,18 @@ class PhasePolicy:
         track_config: TrackingConfig,
         start_epoch: int = 1
     ):
-        '''doc'''
+        '''
+        Initializes the phase policy.
+
+        Args:
+            epoch_runner: Engine responsible for executing individual
+                epochs.
+            phase_config: Configuration describing the phase, including
+                number of epochs and head settings.
+            track_config: Configuration for tracking metrics and early
+                stopping behavior.
+            start_epoch: Epoch index to start from. Defaults to 1.
+        '''
 
         self.runner = epoch_runner
         self.config = phase_config
@@ -71,7 +103,25 @@ class PhasePolicy:
         self.tracker = _MetricsTracker()
 
     def run(self) -> typing.Generator[events.Event, None, float]:
-        '''doc'''
+        '''
+        Runs the phase with event emission.
+
+        This method:
+        - Configures model heads for the phase
+        - Iterates through epochs using `EpochPolicy`
+        - Tracks metrics and determines best epochs
+        - Emits checkpoint and early stopping events
+
+        Yields:
+            Lifecycle events:
+                - `PhaseStart` and `PhaseEnd`
+                - Epoch-level events (delegated)
+                - `CheckpointRequest` after each epoch
+                - `StopRun` if early stopping is triggered
+
+        Returns:
+            Best metric value observed during the phase.
+        '''
 
         # set trainer head state per phase
         self.runner.trainer.set_head_state(
@@ -121,7 +171,15 @@ class PhasePolicy:
         return self.tracker.best_value
 
     def execute(self) -> list[engine.EpochMetrics]:
-        '''Run the underlying epoch policy and return raw metrics.'''
+        '''
+        Executes the phase without emitting events.
+
+        This method execute all epochs sequentially and collects their
+        metrics without any orchestration events.
+
+        Returns:
+            List of metrics for each executed epoch.
+        '''
 
         epochs: list[engine.EpochMetrics] = []
         for epoch in range(1, self.config.num_epochs + 1):
