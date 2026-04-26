@@ -79,7 +79,7 @@ class _Heads:
     frozen_heads: list[str] | None
     active_hspecs: dict[str, common.SpecsLike] | None
     active_hloss: dict[str, common.CompositeLossLike] | None
-    active_hmetrics: dict[str, common.ConfusionMatrixLike] | None
+    active_hmetrics: dict[str, common._ConfusionMatrixLike] | None
 
     def __str__(self) -> str:
         return '\n'.join([

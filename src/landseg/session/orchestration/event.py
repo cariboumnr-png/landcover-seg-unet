@@ -132,13 +132,13 @@ class EpochStart(Event):
 class EpochEnd(Event):
     epoch_index: int = 1
     phase_name: str = ''
-    metrics: dict[str, float] = field(default_factory=dict)
+    metrics: typing.Any = None
 
     def __init__(
         self,
         epoch_index: int,
         phase_name: str,
-        metrics: dict[str, float],
+        metrics: typing.Any,
     ) -> None:
         super().__init__(
             name='epoch_end',

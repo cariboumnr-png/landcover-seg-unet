@@ -91,12 +91,10 @@ class _EpochSummary(typing.Protocol):
     infer_ctx: _InferContext
 
 class _TrainLogs(typing.Protocol):
-    head_losses: dict[str, float]
     head_losses_str: str
     updated: bool
 
 class _ValLogs(typing.Protocol):
-    head_metrics: dict[str, dict[str, typing.Any]]
     head_metrics_str: dict[str, list[str]]
 
 class _InferContext(typing.Protocol):
