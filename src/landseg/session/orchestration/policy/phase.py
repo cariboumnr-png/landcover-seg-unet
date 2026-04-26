@@ -146,7 +146,7 @@ class PhasePolicy:
 
             # track metrics
             assert metrics.validation, 'No validation results found'
-            self._track_metrics(epoch, metrics.validation.monitor_metrics)
+            self._track_metrics(epoch, metrics.validation.target_metrics)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
