@@ -134,13 +134,16 @@ class PhasePolicy:
     def _track_metrics(
         self,
         epoch: int,
-        metrics: dict[str, float]
+        metrics: engine.EpochMetrics
     ):
         '''Track best metrics and count patience epochs.'''
 
         # retrieve iou metrics
-        mean = metrics.get('mean_iou_active_heads', 0.0) # all classes
-        mean_ac = metrics.get('mean_ac_iou_active_heads', 0.0) # active classes
+        # TEMP track base head for now
+        assert metrics.validation # otherwise no tracking - TBD
+        mean = metrics.validation.head_metrics['base'].mean
+        mean_ac =  metrics.validation.head_metrics['base'].ac_mean
+
         # pick value
         if not any([mean, mean_ac]):
             raise ValueError(f'No valid metrics: {metrics}')

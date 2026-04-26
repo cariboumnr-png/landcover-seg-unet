@@ -47,7 +47,7 @@ class EpochPolicy:
         self.engine = training_engine
         self.active_heads = active_heads
 
-    def run(self) -> typing.Generator[events.Event, None, dict[str, float]]:
+    def run(self) -> typing.Generator[events.Event, None, engine.EpochMetrics]:
         '''doc'''
         # epoch starts
         yield events.EpochStart(self.epoch, self.phase)
@@ -55,40 +55,12 @@ class EpochPolicy:
         # delegate execution to epoch runner
         epoch_metrics = self.engine.run(self.epoch)
 
-        # parse epoch metrics into dict
-        parsed_metrics = self._parse_metrics(epoch_metrics)
-
         # epoch ends
-        yield events.EpochEnd(self.epoch, self.phase, parsed_metrics)
+        yield events.EpochEnd(self.epoch, self.phase, epoch_metrics)
 
         # enables downstream `yield from`
-        return parsed_metrics
+        return epoch_metrics
 
     def execute(self):
         '''Run the underlying engine and return raw metrics.'''
         return self.engine.run(self.epoch)
-
-    def _parse_metrics(self, metrics: engine.EpochMetrics) -> dict[str, float]:
-        '''Helper to parse epoch metrics into a plain dictionary.'''
-
-        train_losses = metrics.training
-        val_accuracies = metrics.validation or {}
-        parsed: dict[str, float] = {}
-        # get heads metrics
-        val_heads = list(val_accuracies.keys())
-        # get active heads for metrics extraction
-        active = val_heads if self.active_heads is None else self.active_heads
-        # add loss values to snapshot
-        parsed.update(**train_losses)
-        # accuracies from active heads
-        miou_sum = ac_miou_sum = 0.0
-        for h in active:
-            ious = val_accuracies.get(h, {})
-            parsed[f'miou_{h}'] = ious.get('mean', 0.0)
-            miou_sum += parsed[f'miou_{h}']
-            parsed[f'ac_miou_{h}'] = ious.get('ac_mean', 0.0)
-            ac_miou_sum += parsed[f'ac_miou_{h}']
-        # mean accuraries from heads
-        parsed['mean_iou_active_heads'] = miou_sum / len(active)
-        parsed['mean_ac_iou_active_heads'] = ac_miou_sum / len(active)
-        return parsed
