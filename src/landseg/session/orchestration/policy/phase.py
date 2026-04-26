@@ -40,7 +40,6 @@ import landseg.session.orchestration.event as events
 class TrackingConfig:
     '''Configuration for metric tracking and early stopping.'''
     track_mode: str = 'max'
-    track_heads: list[str] = dataclasses.field(default_factory=lambda: ['base'])
     enable_early_stop: bool = False
     patience_epochs: int | None = 5
     delta: float | None = 0.0005
@@ -146,7 +145,8 @@ class PhasePolicy:
             ).run()
 
             # track metrics
-            self._track_metrics(epoch, metrics)
+            assert metrics.validation, 'No validation results found'
+            self._track_metrics(epoch, metrics.validation.monitor_metrics)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
@@ -196,33 +196,17 @@ class PhasePolicy:
     def _track_metrics(
         self,
         epoch: int,
-        metrics: engine.EpochMetrics
+        target_metrics: float
     ):
         '''Track best metrics and count patience epochs.'''
-
-        assert metrics.validation # otherwise no tracking - TBD
-        # retrieve iou metrics from monitor heads
-        mean = 0.0
-        mean_ac = 0.0
-        for head in self.track.track_heads:
-            assert head in metrics.validation.head_metrics # sanity
-            mean += metrics.validation.head_metrics[head].mean
-            mean_ac +=  metrics.validation.head_metrics[head].ac_mean
-        mean /= max(1, len(self.track.track_heads))
-        mean_ac /= max(1, len(self.track.track_heads))
-
-        # pick value
-        if not any([mean, mean_ac]):
-            raise ValueError(f'No valid metrics: {metrics}')
-        target = mean_ac if mean_ac else mean
 
         # update last and current value
         if epoch == 1:
             self.tracker.last_value = 0.0
-            self.tracker.curr_value = target
+            self.tracker.curr_value = target_metrics
         else:
             self.tracker.last_value = self.tracker.curr_value
-            self.tracker.curr_value = target
+            self.tracker.curr_value = target_metrics
 
         # track by mode
         mode = self.track.track_mode
@@ -230,8 +214,8 @@ class PhasePolicy:
         match mode:
             # track if metrics is increasing
             case 'max':
-                if target >= self.tracker.best_value + delta:
-                    self.tracker.best_value = target
+                if target_metrics >= self.tracker.best_value + delta:
+                    self.tracker.best_value = target_metrics
                     self.tracker.best_epoch = epoch
                     self.tracker.patience_n = 0
                     self.tracker.is_best_epoch = True

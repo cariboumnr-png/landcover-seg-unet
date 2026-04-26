@@ -79,20 +79,19 @@ class MultiHeadEvaluator(policy.EngineBase):
     def __init__(
         self,
         *,
-        track_mode: str,
-        track_head_name: str,
-        min_delta: float | None,
+        monitor_heads: list[str],
         dataset: typing.Literal['val', 'test'] = 'val',
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.track_mode = track_mode
-        self.track_head_name = track_head_name
-        self.min_delta = min_delta
+        self.monitor_heads = monitor_heads
         self.dataset = dataset
 
         # init the epoch results container with all heads
-        self.epoch_results = policy.EvaluatorEpochResults(self.state.heads.all_heads)
+        self.epoch_results = policy.EvaluatorEpochResults(
+            all_heads=self.state.heads.all_heads,
+            monitor_heads=self.monitor_heads
+        )
 
     # -------------------------------Public  Methods-------------------------------
     def validate(self) -> policy.EvaluatorEpochResults:
@@ -194,12 +193,33 @@ class MultiHeadEvaluator(policy.EngineBase):
         core, which remains metric-agnostic.
         '''
 
+        # sanity
         assert self.state.heads.active_hmetrics is not None
+
+        # retrieve iou metrics from monitor heads
+        mean = 0.0
+        mean_ac = 0.0
         metrics_str: dict[str, list[str]] = {}
 
         for head, metrics_module in self.state.heads.active_hmetrics.items():
+            # compute assign metrics to epoch results
             metrics_module.compute()
             self.epoch_results.head_metrics[head] = metrics_module.metrics
+            # accumulate moniter metrics for stae
+            mean += metrics_module.metrics.mean
+            mean_ac +=  metrics_module.metrics.ac_mean
+            # collect per head metrics formatted strings
             metrics_str[head] = metrics_module.metrics.as_str_list
 
-        self.state.epoch_sum.val_logs.head_metrics_str = metrics_str
+        # get average ious
+        mean /= max(1, len(self.state.heads.active_hmetrics))
+        mean_ac /= max(1, len(self.state.heads.active_hmetrics))
+
+        # pick iou - prefer iou from active classes if present
+        if not any([mean, mean_ac]):
+            raise ValueError('No validation metrics found')
+        target = mean_ac if mean_ac else mean
+
+        # assign to state summary
+        self.state.epoch_sum.val_summary.target_metrics = target
+        self.state.epoch_sum.val_summary.head_metrics_str = metrics_str
