@@ -73,17 +73,17 @@ class AccumulatedMetrics:
         str_list: list[str] = []
         # all classes
         m = f'{self.mean:.4f}'
-        str_list.append('Mean IoU (all):\t' + m)
+        str_list.append('Mean IoU (all): ' + m)
         c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ious.items())
-        str_list.append('Class IoU (all):\t' + c)
+        str_list.append('Class IoU (all): ' + c)
         # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
         # text.append('Class support (all):\t' + s)
         # subset of active classes (if not None)
         if bool(self.ac_mean):
             m = f'{self.ac_mean:.4f}'
-            str_list.append('Mean IoU (active):\t' + m)
+            str_list.append('Mean IoU (active): ' + m)
             c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ac_ious.items())
-            str_list.append('Class IoU (active):\t' + c)
+            str_list.append('Class IoU (active): ' + c)
             # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
             # text.append('Class support (active):\t' + s)
         # return text lines

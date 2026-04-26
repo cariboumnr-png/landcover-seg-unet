@@ -245,8 +245,8 @@ class TrainingRunner:
 
                         case event.EpochEnd(metrics=metrics):
                             # to be parsed to formal logging
-                            m = metrics
-                            self.logger.log('INFO', m)
+                            print(metrics)
+                            # self.logger.log('INFO', m)
 
                         case event.CheckpointRequest(tag=tag):
                             if tag == 'best':

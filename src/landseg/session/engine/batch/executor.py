@@ -408,7 +408,7 @@ class BatchExecutionEngine:
         '''
 
         # inference context alias
-        ctx = self.state.epoch_sum.infer_ctx
+        ctx = self.state.summary.infer_context
 
         # get through each head and attach preds to corresponding block-heads
         for head, logits in self.state.batch_out.preds.items():

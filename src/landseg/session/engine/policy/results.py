@@ -40,17 +40,17 @@ class TrainerEpochResults:
     total_loss: float = 0.0
     head_losses: dict[str, float] = field(default_factory=dict)
 
-    def __str__(self):
+    def __post_init__(self):
+        self.head_losses = {h: 0.0 for h in self.all_heads}
+
+    def __str__(self) -> str:
         return '\n'.join([
             f'All Heads: {self.all_heads}',
-            f'Current Mean Total Loss: {self.mean_total_loss}'
-            f'Perhead Loss',
+            f'Current Mean Total Loss: {self.mean_total_loss}',
+            'Perhead Loss\n',
         ]) + '\n'.join([
             f'{h}: {l:4f}' for h, l in self.head_losses.items()
         ])
-
-    def __post_init__(self):
-        self.head_losses = {h: 0.0 for h in self.all_heads}
 
     @property
     def mean_total_loss(self) -> float:
@@ -72,6 +72,16 @@ class EvaluatorEpochResults:
 
     def __post_init__(self):
         self.head_metrics = {h: common.AccumulatedMetrics for h in self.all_heads}
+
+    def __str__(self) -> str:
+        return '\n'.join([
+            f'All Heads: {self.all_heads}',
+            f'Current Monitor Heads: {self.monitor_heads}',
+            'Perhead IoUs\n',
+        ]) + '\t\n'.join([
+            f'{h}: {m.as_str_list}'
+            for h, m in self.head_metrics.items() if h in self.monitor_heads
+        ])
 
     @property
     def target_metrics(self) -> float:

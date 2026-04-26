@@ -52,6 +52,14 @@ class EpochMetrics:
     training: policy.TrainerEpochResults
     validation: policy.EvaluatorEpochResults | None
 
+    def __str__(self) -> str:
+        return '\n'.join([
+            'Training Results:',
+            str(self.training),
+            'Validation Results:',
+            str(self.validation),
+        ])
+
 # --------------------------------Public  Class--------------------------------
 class TrainingEpochRunner:
     '''
