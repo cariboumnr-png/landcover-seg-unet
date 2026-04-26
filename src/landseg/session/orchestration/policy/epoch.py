@@ -20,7 +20,12 @@
 # =========================================================================== #
 
 '''
-Epoch level orchestration policy.
+Epoch-level orchestration policy.
+
+This module defines a lightweight orchestration layer responsible for
+managing the lifecycle of a single training epoch. It emits structured
+events around epoch execution and delegates the actual computation to a
+training engine.
 '''
 
 # standard imports
@@ -30,7 +35,17 @@ import landseg.session.engine as engine
 import landseg.session.orchestration.event as events
 
 class EpochPolicy:
-    '''doc'''
+    '''
+    Orchestrates the execution of a single training epoch.
+
+    This class wraps a `TrainingEpochRunner` and is responsible for:
+    - Emitting lifecycle events (start and end of an epoch)
+    - Delegating execution to the underlying training engine
+    - Returning computed epoch metrics
+
+    It supports both generator-based execution (for event streaming) and
+    direct execution (for simplified usage).
+    '''
 
     def __init__(
         self,
@@ -40,7 +55,17 @@ class EpochPolicy:
         epoch_index: int,
         active_heads: list[str] | None = None
     ):
-        '''doc'''
+        '''
+        Initializes the epoch policy.
+
+        Args:
+            training_engine: Engine responsible for executing the epoch
+                logic.
+            phase_name: Name of the phase (e.g., 'train', 'validation').
+            epoch_index: Index of the epoch to run.
+            active_heads: Subset of model heads to activate during this
+                epoch. Defaults to None.
+        '''
 
         self.epoch = epoch_index
         self.phase = phase_name
@@ -48,7 +73,21 @@ class EpochPolicy:
         self.active_heads = active_heads
 
     def run(self) -> typing.Generator[events.Event, None, engine.EpochMetrics]:
-        '''doc'''
+        '''
+        Runs the epoch with event emission.
+
+        This method emits structured events before and after delegating
+        execution to the underlying training engine. It is designed to be
+        used in event-driven pipelines via ``yield from``.
+
+        Yields:
+            Lifecycle events:
+                - ``EpochStart`` before execution
+                - ``EpochEnd`` after execution, including metrics
+
+        Returns:
+            Metrics produced by the training engine for this epoch.
+        '''
         # epoch starts
         yield events.EpochStart(self.epoch, self.phase)
 
@@ -61,6 +100,15 @@ class EpochPolicy:
         # enables downstream `yield from`
         return epoch_metrics
 
-    def execute(self):
-        '''Run the underlying engine and return raw metrics.'''
+    def execute(self) -> engine.EpochMetrics:
+        '''
+        Executes the epoch without emitting events.
+
+        This is a simplified execution path that directly calls the
+        underlying training engine without producing any orchestration
+        events.
+
+        Returns:
+            engine.EpochMetrics: Metrics produced by the training engine.
+        '''
         return self.engine.run(self.epoch)
