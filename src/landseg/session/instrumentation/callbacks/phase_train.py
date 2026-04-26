@@ -32,7 +32,6 @@ class TrainCallback(callbacks.Callback):
     def on_train_epoch_begin(self, epoch: int) -> None:
         # reset train loss and logs
         self.state.epoch_sum.train_loss = 0.0
-        self.state.epoch_sum.train_logs.head_losses.clear()
         self.state.epoch_sum.train_logs.head_losses_str = ''
         self.state.epoch_sum.train_logs.updated = False
 

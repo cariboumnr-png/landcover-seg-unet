@@ -63,7 +63,7 @@ class ProgressCallback(callbacks.Callback):
         if self.verbose:
             epoch = self.state.progress.epoch
             target_head = self.config.monitor.track_head_name
-            print('Validation metrics:')
+            print('Validation metrics:          ') # extra space to clear line
             for s in self.state.epoch_sum.val_logs.head_metrics_str[target_head]:
                 print(s)
             print(f'Epoch_{epoch:03d} validation finished')

@@ -36,7 +36,6 @@ class ValCallback(callbacks.Callback):
             metrics_mod.reset(self.device)
         # reset validation loss and logs
         self.state.epoch_sum.val_loss = 0.0 # currently not in use
-        self.state.epoch_sum.val_logs.head_metrics.clear()
         self.state.epoch_sum.val_logs.head_metrics_str.clear()
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:

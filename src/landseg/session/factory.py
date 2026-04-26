@@ -198,9 +198,7 @@ def build_session(
     callbacks = instrument.build_callbacks(
         runtime_state, # type: ignore
         config.runtime,
-        context.logger,
         device=context.device,
-        skip_log=context.skip_callback_logging
     )
 
     # batch engine

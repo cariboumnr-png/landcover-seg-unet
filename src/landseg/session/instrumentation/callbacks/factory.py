@@ -26,7 +26,6 @@ import dataclasses
 # local imports
 import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
-import landseg.utils as utils
 
 @dataclasses.dataclass
 class _CallbackSet:
@@ -42,24 +41,22 @@ class _CallbackSet:
 def build_callbacks(
     state: common.StateLike,
     config: common.ConfigLike,
-    logger: utils.Logger,
     *,
     device: str,
-    skip_log: bool = False
 ) -> _CallbackSet:
     '''Factory to generate a set of callback class instances.'''
 
     # build set
     callback_set = _CallbackSet(
-        train=callbacks.TrainCallback(logger),
-        validate=callbacks.ValCallback(logger),
-        infer=callbacks.InferCallback(logger),
-        progress=callbacks.ProgressCallback(logger),
+        train=callbacks.TrainCallback(),
+        validate=callbacks.ValCallback(),
+        infer=callbacks.InferCallback(),
+        progress=callbacks.ProgressCallback(),
     )
     # set up all callback instances
-    callback_set.train.setup(state, config, device=device, skip_log=skip_log)
-    callback_set.validate.setup(state, config, device=device, skip_log=skip_log)
-    callback_set.infer.setup(state, config, device=device, skip_log=skip_log)
-    callback_set.progress.setup(state, config, device=device, skip_log=skip_log)
+    callback_set.train.setup(state, config, device=device)
+    callback_set.validate.setup(state, config, device=device)
+    callback_set.infer.setup(state, config, device=device)
+    callback_set.progress.setup(state, config, device=device)
     # return
     return callback_set
