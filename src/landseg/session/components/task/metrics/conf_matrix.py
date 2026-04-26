@@ -30,6 +30,7 @@ Provides:
 
 # standard imports
 import dataclasses
+import typing
 # third-party imports
 import torch
 
@@ -51,15 +52,24 @@ class AccumulatedMetrics:
     mean: float = 0.0
     ious: dict[str, float] = field(default_factory=dict)
     support: dict[str, int] = field(default_factory=dict)
-    has_active: bool = False
     ac_mean: float = 0.0
     ac_ious: dict[str, float] = field(default_factory=dict)
     ac_support: dict[str, int] = field(default_factory=dict)
+    _locked: bool = field(default=False, init=False, repr=False)
+
+    def __setattr__(self, key, value):
+        if getattr(self, "_locked", False):
+            raise AttributeError("Object is immutable after compute()")
+        super().__setattr__(key, value)
+
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as the metrics a nested dictionary.'''
+        return dataclasses.asdict(self)
 
     @property
     def as_str_list(self) -> list[str]:
         '''Human-readable summary for mean/class IoUs (all/active).'''
-
         str_list: list[str] = []
         # all classes
         m = f'{self.mean:.4f}'
@@ -78,6 +88,10 @@ class AccumulatedMetrics:
             # text.append('Class support (active):\t' + s)
         # return text lines
         return str_list
+
+    def lock(self):
+        '''Lock object via __setattr__ blocking.'''
+        self._locked = True
 
 # --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
@@ -115,7 +129,7 @@ class ConfusionMatrix:
         self.cm = torch.zeros((h, w), dtype=torch.int64)
 
         # init metrics data class
-        self.metrics = AccumulatedMetrics()
+        self.metrics = AccumulatedMetrics() # will lock after compute()
 
     @torch.no_grad()
     def update(
@@ -205,8 +219,6 @@ class ConfusionMatrix:
             activ = set(range(len(iou))) - set(x - 1 for x in excld) # 0-based
         else:
             activ = ()
-        # give metric dict a flag
-        self.metrics.has_active = bool(activ)
 
         # iterate ious and split into groups
         activ_sum = 0.0
@@ -224,6 +236,9 @@ class ConfusionMatrix:
         v = dn > 0 # mean IoU over classes with denom > 0
         self.metrics.mean = iou[v].mean().item() if v.any() else 0.0
         self.metrics.ac_mean = activ_sum / len(activ) if activ else 0.0
+
+        # lock metrics
+        self.metrics.lock()
 
     def reset(self, device: str) -> None:
         '''Zero the confusion matrix and move to specified device.'''
