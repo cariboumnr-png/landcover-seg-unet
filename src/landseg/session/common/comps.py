@@ -113,13 +113,13 @@ class _HeadMetricsLike(typing.Protocol):
 
 @typing.runtime_checkable
 class ConfusionMatrixLike(typing.Protocol):
-    metrics: _AccumulatedMetrics
+    metrics: AccumulatedMetrics
     def update(self, preds: 'torch.Tensor', targets: 'torch.Tensor', **kwargs) -> None: ...
     def compute(self) -> None: ...
     def reset(self, device: str) -> None: ...
 
 @typing.runtime_checkable
-class _AccumulatedMetrics(typing.Protocol):
+class AccumulatedMetrics(typing.Protocol):
     @property
     def mean(self) -> float: ...
     @property
