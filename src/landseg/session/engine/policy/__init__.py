@@ -33,8 +33,10 @@ import typing
 __all__ = [
     # classes
     'EngineBase',
+    'EvaluatorEpochResults',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
+    'TrainerEpochResults'
     # functions
     # types
 ]
@@ -43,6 +45,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import EngineBase
     from .evaluator import MultiHeadEvaluator
+    from .results import EvaluatorEpochResults, TrainerEpochResults
     from .trainer import MultiHeadTrainer
 
 def __getattr__(name: str):
@@ -55,5 +58,8 @@ def __getattr__(name: str):
 
     if name in {'MultiHeadTrainer'}:
         return getattr(importlib.import_module('.trainer', __package__), name)
+
+    if name in {'EvaluatorEpochResults', 'TrainerEpochResults'}:
+        return getattr(importlib.import_module('.results', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
