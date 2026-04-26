@@ -57,7 +57,7 @@ class AccumulatedMetrics:
     ac_support: dict[str, int] = field(default_factory=dict)
     _locked: bool = field(default=False, init=False, repr=False)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         if getattr(self, "_locked", False):
             raise AttributeError("Object is immutable after compute()")
         super().__setattr__(key, value)
@@ -89,9 +89,21 @@ class AccumulatedMetrics:
         # return text lines
         return str_list
 
-    def lock(self):
+    def lock(self) -> None:
         '''Lock object via __setattr__ blocking.'''
+
         self._locked = True
+
+    def reset(self) -> None:
+        '''Reset all attributes to default; will unlock.'''
+
+        object.__setattr__(self, "_locked", False) # lock override
+        self.mean = 0.0
+        self.ious.clear()
+        self.support.clear()
+        self.ac_mean = 0.0
+        self.ac_ious.clear()
+        self.ac_support.clear()
 
 # --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
@@ -244,3 +256,4 @@ class ConfusionMatrix:
         '''Zero the confusion matrix and move to specified device.'''
 
         self.cm = self.cm.zero_().to(device)
+        self.metrics.reset()
