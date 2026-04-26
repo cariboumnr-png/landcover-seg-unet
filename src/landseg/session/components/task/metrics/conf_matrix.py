@@ -36,10 +36,10 @@ import torch
 # aliases
 field = dataclasses.field
 
-#
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class ConfusionMatricConfig:
-    '''Typed configuration for confusion-matrix computation.'''
+    '''Configuration for confusion-matrix computation.'''
     num_classes: int
     ignore_index: int
     parent_class_1b: int | None
@@ -47,7 +47,7 @@ class ConfusionMatricConfig:
 
 @dataclasses.dataclass
 class AccumulatedMetrics:
-    '''Typed dict with IoU metrics, supports, and active-class views.'''
+    '''Container for IoU metrics, supports, and active-class views.'''
     mean: float = 0.0
     ious: dict[str, float] = field(default_factory=dict)
     support: dict[str, int] = field(default_factory=dict)
@@ -115,7 +115,7 @@ class ConfusionMatrix:
         self.cm = torch.zeros((h, w), dtype=torch.int64)
 
         # init metrics data class
-        self.metrics = AccumulatedMetrics
+        self.metrics = AccumulatedMetrics()
 
     @torch.no_grad()
     def update(
