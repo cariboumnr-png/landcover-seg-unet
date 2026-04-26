@@ -244,7 +244,8 @@ class TrainingRunner:
                             self.logger.log('INFO', m)
 
                         case event.EpochEnd(metrics=metrics):
-                            m = self._metrics_to_str(metrics)
+                            # to be parsed to formal logging
+                            m = metrics
                             self.logger.log('INFO', m)
 
                         case event.CheckpointRequest(tag=tag):
@@ -347,9 +348,3 @@ class TrainingRunner:
             f'- Frozen Heads:\t{phase.frozen_heads}',
         ])
         print(ss)
-
-    @staticmethod
-    def _metrics_to_str(metrics: dict[str, float]):
-        '''doc'''
-        import json
-        return json.dumps(metrics, indent=2)

@@ -43,15 +43,14 @@ as orchestration evolves.
 
 # standard imports
 import dataclasses
-import typing
 # local imports
-import landseg.session.engine as engine
+import landseg.session.engine.policy as policy
 
 @dataclasses.dataclass(frozen=True)
 class EpochMetrics:
     '''Immutable metrics produced by a single training epoch.'''
-    training: dict[str, float]
-    validation: dict[str, dict[str, typing.Any]] | None
+    training: policy.TrainerEpochResults
+    validation: policy.EvaluatorEpochResults | None
 
 # --------------------------------Public  Class--------------------------------
 class TrainingEpochRunner:
@@ -69,8 +68,8 @@ class TrainingEpochRunner:
 
     def __init__(
         self,
-        trainer: engine.MultiHeadTrainer,
-        evaluator: engine.MultiHeadEvaluator | None,
+        trainer: policy.MultiHeadTrainer,
+        evaluator: policy.MultiHeadEvaluator | None,
     ):
         '''
         Initialize an epoch runner.
