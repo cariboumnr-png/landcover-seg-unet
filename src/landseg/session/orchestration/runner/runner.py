@@ -55,8 +55,10 @@ class RunnerConfig:
     artifacts_paths: artifacts.ResultsPaths
     resume_from_last: bool = False
     verbose: bool = True
-    enable_early_stop: bool = True
+
     track_mode: str = 'max'
+    track_heads: list[str] = dataclasses.field(default_factory=lambda: ['base'])
+    enable_early_stop: bool = True
     patience_epochs: int | None = 5
     delta: float | None = 0.005
 
@@ -140,6 +142,7 @@ class TrainingRunner:
             enable_early_stop=enable_early_stop,
             patience_epochs=config.patience_epochs,
             track_mode=config.track_mode,
+            track_heads=config.track_heads,
             delta=config.delta
         )
 

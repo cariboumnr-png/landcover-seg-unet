@@ -39,8 +39,9 @@ import landseg.session.orchestration.event as events
 @dataclasses.dataclass
 class TrackingConfig:
     '''Configuration for metric tracking and early stopping.'''
-    enable_early_stop: bool = False
     track_mode: str = 'max'
+    track_heads: list[str] = dataclasses.field(default_factory=lambda: ['base'])
+    enable_early_stop: bool = False
     patience_epochs: int | None = 5
     delta: float | None = 0.0005
 
@@ -199,11 +200,16 @@ class PhasePolicy:
     ):
         '''Track best metrics and count patience epochs.'''
 
-        # retrieve iou metrics
-        # TEMP track base head for now
         assert metrics.validation # otherwise no tracking - TBD
-        mean = metrics.validation.head_metrics['base'].mean
-        mean_ac =  metrics.validation.head_metrics['base'].ac_mean
+        # retrieve iou metrics from monitor heads
+        mean = 0.0
+        mean_ac = 0.0
+        for head in self.track.track_heads:
+            assert head in metrics.validation.head_metrics # sanity
+            mean += metrics.validation.head_metrics[head].mean
+            mean_ac +=  metrics.validation.head_metrics[head].ac_mean
+        mean /= max(1, len(self.track.track_heads))
+        mean_ac /= max(1, len(self.track.track_heads))
 
         # pick value
         if not any([mean, mean_ac]):
