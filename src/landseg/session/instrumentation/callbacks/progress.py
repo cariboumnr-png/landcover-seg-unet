@@ -30,7 +30,8 @@ class ProgressCallback(callbacks.Callback):
     def on_train_epoch_begin(self, epoch: int) -> None:
         self.state.progress.epoch = epoch   # get current epoch
         self.state.progress.epoch_step = 0  # reset epoch step
-        self.log_train('INFO', f'Epoch_{epoch:03d} training started')
+        if self.verbose:
+            print(f'Epoch_{epoch:03d} training started')
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
@@ -39,48 +40,30 @@ class ProgressCallback(callbacks.Callback):
     def on_train_batch_end(self) -> None:
         self.state.progress.epoch_step += 1
         self.state.progress.global_step += 1
-        # train logs to console if updated
-        if self.state.epoch_sum.train_logs.updated:
-            msg = self.state.epoch_sum.train_logs.head_losses_str
-            self.log_train('INFO', msg)
+        if self.state.epoch_sum.train_logs.updated and self.verbose:
+            print(self.state.epoch_sum.train_logs.head_losses_str)
 
     def on_train_epoch_end(self) -> None:
-        # increment epoch counter
         epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.val_every
-        # already at max epoch
-        if epoch == self.config.schedule.max_epoch:
-            return
-        # if no validation after training, increment after this hook
-        if eval_interval is None or epoch % eval_interval != 0:
-            self.state.progress.epoch += 1
-
-        self.log_train('INFO', self.state.epoch_sum.train_logs.head_losses_str)
-        self.log_train('INFO', f'Epoch_{epoch:03d} training finished')
+        if self.verbose:
+            print(self.state.epoch_sum.train_logs.head_losses_str)
+        print(f'Epoch_{epoch:03d} training finished')
 
     def on_validation_begin(self) -> None:
         epoch = self.state.progress.epoch
-        self.log_valdn('INFO', f'Epoch_{epoch:03d} validating started')
+        if self.verbose:
+            print(f'Epoch_{epoch:03d} validating started')
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
             print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
 
     def on_validation_end(self) -> None:
-        # increment epoch counter
-        epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.val_every
-        # already at max epoch
-        if epoch == self.config.schedule.max_epoch:
-            return
-        # if validation is done, increment after this hook
-        if eval_interval is not None and epoch % eval_interval == 0:
-            self.state.progress.epoch += 1
-        #
-        target_head = self.config.monitor.track_head_name
-        v = self.state.metrics.best_value
-        e = self.state.metrics.best_epoch
-        for t in self.state.epoch_sum.val_logs.head_metrics_str[target_head]:
-            self.log_valdn('INFO', t)
-        self.log_valdn('INFO', f'Current best metric/epoch:\t{v:.4f}|{e}')
-        self.log_valdn('INFO', f'Epoch_{epoch:03d} validation finished')
+        self.state.progress.epoch += 1 # increment epoch counter
+        if self.verbose:
+            epoch = self.state.progress.epoch
+            target_head = self.config.monitor.track_head_name
+            print('Validation metrics:')
+            for s in self.state.epoch_sum.val_logs.head_metrics_str[target_head]:
+                print(s)
+            print(f'Epoch_{epoch:03d} validation finished')
