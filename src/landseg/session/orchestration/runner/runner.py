@@ -55,9 +55,7 @@ class RunnerConfig:
     artifacts_paths: artifacts.ResultsPaths
     resume_from_last: bool = False
     verbose: bool = True
-
     track_mode: str = 'max'
-    track_heads: list[str] = dataclasses.field(default_factory=lambda: ['base'])
     enable_early_stop: bool = True
     patience_epochs: int | None = 5
     delta: float | None = 0.005
@@ -142,7 +140,6 @@ class TrainingRunner:
             enable_early_stop=enable_early_stop,
             patience_epochs=config.patience_epochs,
             track_mode=config.track_mode,
-            track_heads=config.track_heads,
             delta=config.delta
         )
 
@@ -314,7 +311,7 @@ class TrainingRunner:
         )
         self.trainer.state.progress.epoch = meta['epoch'] + 1
         self.trainer.state.progress.global_step = meta['step']
-        self.trainer.state.metrics.best_value = meta['metric']
+        self.trainer.state.progress.current_metrics = meta['metric']
         return meta['epoch']
 
     def _save_progress(self, fpath: str) -> None:
@@ -326,7 +323,7 @@ class TrainingRunner:
         '''
 
         ckpt_meta: artifacts.CheckpointMeta = {
-            'metric': self.trainer.state.metrics.curr_value,
+            'metric': self.trainer.state.progress.current_metrics,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }

@@ -218,7 +218,7 @@ def build_session(
         callbacks=callbacks,
         device=context.device,
         track_mode=config.runtime.monitor.track_mode,
-        track_head_name=config.runtime.monitor.track_head_name,
+        monitor_heads=config.runtime.monitor.track_heads,
         min_delta=config.runtime.schedule.min_delta,
         dataset=context.eval_dataset
     )

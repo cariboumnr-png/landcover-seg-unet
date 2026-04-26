@@ -112,7 +112,7 @@ class _Schedule:
 @dataclasses.dataclass
 class _Monitor:
     metric_name: str = 'iou'
-    track_head_name: str = 'base'
+    track_heads: list[str] = field(default_factory=lambda: ['base'])
     track_mode: str = 'max'
 
 @dataclasses.dataclass

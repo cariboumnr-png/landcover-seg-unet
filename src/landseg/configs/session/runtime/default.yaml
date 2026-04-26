@@ -9,7 +9,7 @@ schedule:
 
 monitor:
   metric_name: iou
-  track_head_name: base
+  track_heads: [base]
   track_mode: max
 
 precision:

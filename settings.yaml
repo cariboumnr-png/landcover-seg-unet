@@ -209,7 +209,7 @@ session:
       #
       # Tête utilisée pour le suivi en validation, l’arrêt anticipé et la
       # sélection du meilleur point de sauvegarde.
-      track_head_name: base
+      track_heads: [base]
 
     logit_adjust:
       # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
