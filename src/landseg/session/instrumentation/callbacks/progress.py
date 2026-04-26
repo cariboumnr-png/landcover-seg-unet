@@ -40,13 +40,13 @@ class ProgressCallback(callbacks.Callback):
     def on_train_batch_end(self) -> None:
         self.state.progress.epoch_step += 1
         self.state.progress.global_step += 1
-        if self.state.epoch_sum.train_logs.updated and self.verbose:
-            print(self.state.epoch_sum.train_logs.head_losses_str)
+        if self.state.summary.train_summary.updated and self.verbose:
+            print(self.state.summary.train_summary.head_losses_str)
 
     def on_train_epoch_end(self) -> None:
         epoch = self.state.progress.epoch
         if self.verbose:
-            print(self.state.epoch_sum.train_logs.head_losses_str)
+            print(self.state.summary.train_summary.head_losses_str)
         print(f'Epoch_{epoch:03d} training finished')
 
     def on_validation_begin(self) -> None:
@@ -62,8 +62,6 @@ class ProgressCallback(callbacks.Callback):
         self.state.progress.epoch += 1 # increment epoch counter
         if self.verbose:
             epoch = self.state.progress.epoch
-            target_head = self.config.monitor.track_head_name
-            print('Validation metrics:          ') # extra space to clear line
-            for s in self.state.epoch_sum.val_logs.head_metrics_str[target_head]:
-                print(s)
+            target_metrics = self.state.summary.val_summary.target_metrics
+            print(f'Current monitoring metrics: {target_metrics:.4f}')
             print(f'Epoch_{epoch:03d} validation finished')

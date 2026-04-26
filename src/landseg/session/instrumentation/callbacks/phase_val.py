@@ -34,9 +34,8 @@ class ValCallback(callbacks.Callback):
         assert self.state.heads.active_hmetrics is not None
         for metrics_mod in self.state.heads.active_hmetrics.values():
             metrics_mod.reset(self.device)
-        # reset validation loss and logs
-        self.state.epoch_sum.val_loss = 0.0 # currently not in use
-        self.state.epoch_sum.val_logs.head_metrics_str.clear()
+        # reset validation summary
+        self.state.summary.val_summary.clear()
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch context with new input batch (from validation data)
