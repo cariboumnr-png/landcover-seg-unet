@@ -35,13 +35,13 @@ field = dataclasses.field
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Trainer aggregated results.'''
-    heads: list[str]
+    all_heads: list[str]
     current_bidx: int = 0
     total_loss: float = 0.0
     head_losses: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.head_losses = {h: 0.0 for h in self.heads}
+        self.head_losses = {h: 0.0 for h in self.all_heads}
 
     @property
     def mean_total_loss(self) -> float:
@@ -57,8 +57,10 @@ class TrainerEpochResults:
 @dataclasses.dataclass
 class EvaluatorEpochResults:
     '''Evaluator aggregated epoch results.'''
-    heads: list[str]
+    all_heads: list[str]
+    monitor_heads: list[str]
+    monitor_metrics: float = 0.0
     head_metrics: dict[str, common.AccumulatedMetrics] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.head_metrics = {h: common.AccumulatedMetrics for h in self.heads}
+        self.head_metrics = {h: common.AccumulatedMetrics for h in self.all_heads}
