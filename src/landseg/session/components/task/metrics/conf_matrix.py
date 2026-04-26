@@ -28,30 +28,56 @@ Provides:
       with optional hierarchical gating and class exclusion.
 '''
 
-from __future__ import annotations
 # standard imports
-import typing
+import dataclasses
 # third-party imports
 import torch
 
-# ---------------------------------Public Type---------------------------------
-class ConfusionMatricConfig(typing.TypedDict):
+# aliases
+field = dataclasses.field
+
+#
+@dataclasses.dataclass
+class ConfusionMatricConfig:
     '''Typed configuration for confusion-matrix computation.'''
     num_classes: int
     ignore_index: int
     parent_class_1b: int | None
     exclude_class_1b: tuple[int, ...] | None
 
-# --------------------------------private  type--------------------------------
-class _Metrics(typing.TypedDict):
+@dataclasses.dataclass
+class AccumulatedMetrics:
     '''Typed dict with IoU metrics, supports, and active-class views.'''
-    mean: float
-    ious: dict[str, float]
-    support: dict[str, int]
-    has_active: bool
-    ac_mean: float
-    ac_ious: dict[str, float]
-    ac_support: dict[str, int]
+    mean: float = 0.0
+    ious: dict[str, float] = field(default_factory=dict)
+    support: dict[str, int] = field(default_factory=dict)
+    has_active: bool = False
+    ac_mean: float = 0.0
+    ac_ious: dict[str, float] = field(default_factory=dict)
+    ac_support: dict[str, int] = field(default_factory=dict)
+
+    @property
+    def as_str_list(self) -> list[str]:
+        '''Human-readable summary for mean/class IoUs (all/active).'''
+
+        str_list: list[str] = []
+        # all classes
+        m = f'{self.mean:.4f}'
+        str_list.append('Mean IoU (all):\t' + m)
+        c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ious.items())
+        str_list.append('Class IoU (all):\t' + c)
+        # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
+        # text.append('Class support (all):\t' + s)
+        # subset of active classes (if not None)
+        if bool(self.ac_mean):
+            m = f'{self.ac_mean:.4f}'
+            str_list.append('Mean IoU (active):\t' + m)
+            c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ac_ious.items())
+            str_list.append('Class IoU (active):\t' + c)
+            # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
+            # text.append('Class support (active):\t' + s)
+        # return text lines
+        return str_list
 
 # --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
@@ -79,25 +105,17 @@ class ConfusionMatrix:
         '''
 
         # assign attributes
-        self.n_cls = config['num_classes']
-        self.ignore_index = config['ignore_index']
-        self.parent_class_1b = config['parent_class_1b']
-        self.exclude_class_1b = config['exclude_class_1b']
+        self.n_cls = config.num_classes
+        self.ignore_index = config.ignore_index
+        self.parent_class_1b = config.parent_class_1b
+        self.exclude_class_1b = config.exclude_class_1b
 
         # set up running confusion matrix (start with zeros)
         h, w = self.n_cls, self.n_cls
         self.cm = torch.zeros((h, w), dtype=torch.int64)
 
-        # store result as a class attribute
-        self._metrics: _Metrics = {
-            'mean': 0.0,
-            'ious': {},
-            'support': {},
-            'has_active': False,
-            'ac_mean': 0.0,
-            'ac_ious': {},
-            'ac_support': {}
-        }
+        # init metrics data class
+        self.metrics = AccumulatedMetrics
 
     @torch.no_grad()
     def update(
@@ -188,56 +206,26 @@ class ConfusionMatrix:
         else:
             activ = ()
         # give metric dict a flag
-        self._metrics['has_active'] = bool(activ)
+        self.metrics.has_active = bool(activ)
 
         # iterate ious and split into groups
         activ_sum = 0.0
         for idx in range(len(iou)):
-            self._metrics['ious'][f'{idx + 1}'] = iou_list[idx]
-            self._metrics['support'][f'{idx + 1}'] = support[idx]
+            self.metrics.ious[f'{idx + 1}'] = iou_list[idx]
+            self.metrics.support[f'{idx + 1}'] = support[idx]
             # if class is not excluded
             if idx in activ:
                 # 1-based class label
-                self._metrics['ac_ious'][f'{idx + 1}'] = iou_list[idx]
-                self._metrics['ac_support'][f'{idx + 1}'] = support[idx]
+                self.metrics.ac_ious[f'{idx + 1}'] = iou_list[idx]
+                self.metrics.ac_support[f'{idx + 1}'] = support[idx]
                 activ_sum += iou_list[idx]
 
         # set metrics outputs
         v = dn > 0 # mean IoU over classes with denom > 0
-        self._metrics['mean'] = iou[v].mean().item() if v.any() else 0.0
-        self._metrics['ac_mean'] = activ_sum / len(activ) if activ else 0.0
+        self.metrics.mean = iou[v].mean().item() if v.any() else 0.0
+        self.metrics.ac_mean = activ_sum / len(activ) if activ else 0.0
 
     def reset(self, device: str) -> None:
         '''Zero the confusion matrix and move to specified device.'''
 
         self.cm = self.cm.zero_().to(device)
-
-    @property
-    def metrics_dict(self) -> dict[str, typing.Any]:
-        '''Return metrics as a plain Python dict.'''
-
-        return dict(self._metrics)
-
-    @property
-    def metrics_text(self) -> list[str]:
-        '''Human-readable summary for mean/class IoUs (all/active).'''
-
-        mm = self._metrics
-        text = []
-        # all classes
-        m = f"{mm['mean']:.4f}"
-        text.append('Mean IoU (all):\t' + m)
-        c = '|'.join(f'cls{k}={v:.4f}' for k, v in mm['ious'].items())
-        text.append('Class IoU (all):\t' + c)
-        # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
-        # text.append('Class support (all):\t' + s)
-        # subset of active classes (if not None)
-        if self.exclude_class_1b:
-            m = f"{mm['ac_mean']:.4f}"
-            text.append('Mean IoU (active):\t' + m)
-            c = '|'.join(f'cls{k}={v:.4f}' for k, v in mm['ac_ious'].items())
-            text.append('Class IoU (active):\t' + c)
-            # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
-            # text.append('Class support (active):\t' + s)
-        # return text lines
-        return text
