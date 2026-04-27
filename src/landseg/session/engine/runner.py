@@ -77,8 +77,30 @@ class EpochRunner:
     level control logic (e.g. phase policies or a generator-based runner).
     '''
 
+    @typing.overload
+    def __init__(self,
+        mode: typing.Literal['train_evaluate'],
+        trainer: policy.MultiHeadTrainer,
+        evaluator: policy.MultiHeadEvaluator
+    ) -> None: ...
+
+    @typing.overload
+    def __init__(self,
+        mode: typing.Literal['train_only'],
+        trainer: policy.MultiHeadTrainer,
+        evaluator: None
+    ) -> None: ...
+
+    @typing.overload
+    def __init__(self,
+        mode: typing.Literal['evaluate_only'],
+        trainer: None,
+        evaluator: policy.MultiHeadEvaluator
+    ) -> None: ...
+
     def __init__(
         self,
+        mode: typing.Literal['train_evaluate', 'train_only', 'evaluate_only'],
         trainer: policy.MultiHeadTrainer | None,
         evaluator: policy.MultiHeadEvaluator | None,
     ):
@@ -96,23 +118,9 @@ class EpochRunner:
         '''
 
         # parse arguments
+        self.mode = mode
         self.trainer = trainer
         self.evaluator = evaluator
-
-        # sanity
-        if not any([trainer, evaluator]):
-            raise _EpochRunnerInitError
-
-    @property
-    def run_mode(
-        self
-    ) -> typing.Literal['train_evaluate', 'train_only', 'evaluate_only']:
-        '''Return run type by the presence of trainer and evaluator.'''
-        match (bool(self.trainer), bool(self.evaluator)):
-            case (True, True): return 'train_evaluate'
-            case (True, False): return 'train_only'
-            case (False, True): return 'evaluate_only'
-            case (False, False): raise _EpochRunnerInitError # typing
 
     def run(self, epoch: int) -> EpochMetrics:
         '''
@@ -128,22 +136,28 @@ class EpochRunner:
         '''
 
         # run by mode
-        match self.run_mode:
+        match self.mode:
             case 'train_evaluate':
-                assert self.trainer and self.evaluator # typing
+                if not (self.trainer and self.evaluator):
+                    raise ValueError('Missing trainer or evaluator')
                 train_results = self.trainer.train_one_epoch(epoch)
                 val_results = self.evaluator.validate()
                 return EpochMetrics(train_results, val_results)
 
             case 'train_only':
-                assert self.trainer # typing
+                if not self.trainer:
+                    raise ValueError('Missing trainer')
                 train_results = self.trainer.train_one_epoch(epoch)
                 return EpochMetrics(train_results, None)
 
             case 'evaluate_only':
-                assert self.evaluator # typing
+                if not self.evaluator:
+                    raise ValueError('Missing evaluator')
                 val_results = self.evaluator.validate()
                 return EpochMetrics(None, val_results)
+
+            case _:
+                raise ValueError(f'Invalid mode: {self.mode}')
 
     def set_head_state(
         self,
@@ -164,12 +178,3 @@ class EpochRunner:
             self.trainer.reset_head_state()
         if self.evaluator:
             self.evaluator.reset_head_state()
-
-class EpochRunnerError(Exception):
-    '''Base class for `EpochRunner` errors.'''
-    def __init__(self, message='`EpochRunner` errors'):
-        super().__init__(message)
-
-class _EpochRunnerInitError(EpochRunnerError):
-    def __init__(self, message='Neither of trainer nor evalutor provided'):
-        super().__init__(message)
