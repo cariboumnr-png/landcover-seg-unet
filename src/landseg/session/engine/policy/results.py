@@ -63,6 +63,13 @@ class TrainerEpochResults:
         n = max(1, self.current_bidx)
         return {h: l / n for h, l in self.head_losses.items()}
 
+    def clear(self) -> None:
+        '''Reset all loss values to `0.0`.'''
+
+        self.total_loss = 0.0
+        for h in self.head_losses:
+            self.head_losses[h] = 0.0
+
 @dataclasses.dataclass
 class EvaluatorEpochResults:
     '''Evaluator aggregated epoch results.'''
@@ -91,7 +98,6 @@ class EvaluatorEpochResults:
         For each head if active classes are set, prefer mean IoU from the
         active classes; otherwise count mean from all present classes.
         '''
-
         # retrieve iou metrics from monitor heads
         mean = 0.0
         mean_ac = 0.0

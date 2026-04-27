@@ -126,6 +126,8 @@ class MultiHeadTrainer(policy.EngineBase):
         self.model.train()
         # set logit adjustment status
         self.model.set_logit_adjust_enabled(self.flags['enable_train_la'])
+        # reset results container (avoid carry-over from last epoch)
+        self.epoch_results.clear()
         self._emit('on_train_epoch_begin', epoch)
 
         # interate through training data batches
