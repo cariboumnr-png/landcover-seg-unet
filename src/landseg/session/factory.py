@@ -31,8 +31,9 @@ including:
 - runtime state (device placement, AMP configuration)
 - instrumentation callbacks
 - batch execution engine
-- evaluator (always present)
-- trainer and orchestration runner (conditional)
+- evaluator (always instantiated)
+- trainer (always instantiated, but may not be used)
+- orchestration runner (only in training mode)
 
 Configuration is split into two distinct inputs:
 
@@ -78,12 +79,17 @@ class SessionConfigShape(typing.Protocol):
     a session.
 
     Attributes:
-        components: Configuration for constructing session components
-            (e.g., losses, metrics).
-        runtime: Runtime configuration (precision, scheduling, monitoring,
-            optimization).
-        phases: Ordered sequence of training phases defining the training
-            schedule.
+        phase_schema: Identifier describing how training phases are
+            interpreted by the orchestration layer.
+        components:
+            Configuration used to construct session components such as
+            losses, metrics, and dataloaders.
+        runtime:
+            Runtime configuration controlling precision, optimization,
+            scheduling, and monitoring behavior.
+        training_phases:
+            Ordered sequence of phase definitions used by the training
+            orchestration runner.
     '''
     @property
     def phase_schema(self) -> str: ...
@@ -109,33 +115,16 @@ class SessionBuildContext:
                 debugging)
         device: Target compute device (e.g., 'cpu', 'cuda').
         logger: Logger instance for runtime logging and instrumentation.
-        skip_callback_logging: If True, disables logging within callbacks.
         eval_dataset: Dataset split used for evaluation ('val' or 'test').
         session_paths: Optional artifact paths for saving outputs (
-            required for training).
+            required for `'training'` mode).
     '''
     intent: typing.Literal['training', 'evaluation', 'overfit']
     device: str
     logger: utils.Logger
-    skip_callback_logging: bool = False
     verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None
-
-@dataclasses.dataclass
-class SessionExecutables:
-    '''
-    Container for executable session components.
-
-    Attributes:
-        evaluator: Evaluation engine for multi-head models.
-        trainer: Training engine (None if not applicable).
-        training_runner: Orchestration runner managing training phases
-            (None if not applicable).
-    '''
-    evaluator: engine.MultiHeadEvaluator
-    trainer: engine.MultiHeadTrainer | None
-    training_runner: orchestration.TrainingRunner | None
 
 # -------------------------------Public Function-------------------------------
 def build_session(
@@ -143,40 +132,52 @@ def build_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext
-) -> SessionExecutables:
+) -> tuple[engine.EpochRunner | None, orchestration.TrainingRunner | None]:
     '''
-    Construct and initialize a session execution pipeline.
+    Assemble the execution pipeline for a multi-head model session.
 
-    This function assembles all required components for model execution,
-    including:
-    - Session components (losses, metrics, etc.)
-    - Runtime state (device placement, AMP configuration)
-    - Instrumentation callbacks
-    - Batch execution engine
-    - Evaluator (always created)
-    - Trainer and orchestration runner (conditionally created based on
-        intent)
+    This function constructs and wires together all runtime components:
+    - session components (losses, metrics, dataloaders)
+    - runtime state (device placement, AMP)
+    - instrumentation callbacks
+    - batch execution engine
+    - trainer and evaluator
 
-    Behavior varies based on `context.intent`:
-        - 'evaluation': builds evaluator only
-        - 'training': builds evaluator, trainer, and training runner
-        - 'overfit': builds evaluator and trainer without orchestration
+    The evaluator is always created. The trainer is also instantiated in
+    all modes but is only actively used when applicable. The returned
+    objects depend on the execution intent.
+
+    Execution modes:
+        `'evaluation'`:
+            Returns an `EpochRunner` containing only the evaluator.
+
+        `'overfit'`:
+            Returns an `EpochRunner` with both trainer and evaluator.
+            No orchestration layer is used.
+
+        `'training'`:
+            Returns a `TrainingRunner` that manages training phases,
+            early stopping, and evaluation. An `EpochRunner` is created
+            internally but not returned.
 
     Args:
-        dataspecs: Dataset specifications including head structure and
-            relationships.
-        model: Multi-head model instance to be executed.
-        config: Session configuration conforming to SessionConfigShape.
-        context: Build-time context specifying execution mode and runtime
-            settings.
+        dataspecs: Dataset specifications, including head structure and
+            parent relationships.
+        model: Multi-head model to execute.
+        config: Static session configuration defining components, runtime
+            behavior, and training phases.
+        context: Runtime context of the execution mode and environment.
 
     Returns:
-        SessionExcutables: Container with evaluator and optional
-            trainer/runner.
+        A tuple:
+        - `EpochRunner | None`
+            Returned in 'evaluation' and 'overfit' modes.
+        - `TrainingRunner | None`
+            Returned only in 'training' mode.
 
     Raises:
-        AssertionError: If `intent='training'` and `session_paths` is not
-            provided.
+        AssertionError:
+            If `intent='training'` but `session_paths` is not provided.
     '''
 
     # build session components
@@ -211,7 +212,19 @@ def build_session(
         device=context.device
     )
 
-    # evaluator is always needed
+    # trainer
+    trainer = engine.MultiHeadTrainer(
+        engine=batch_executor,
+        state=runtime_state,
+        components=session_components,
+        callbacks=callbacks,
+        device=context.device,
+        use_amp=config.runtime.precision.use_amp,
+        grad_clip_norm=config.runtime.optimization.grad_clip_norm,
+        log_every=config.runtime.schedule.log_every,
+    )
+
+    # evaluator
     evaluator = engine.MultiHeadEvaluator(
         engine=batch_executor,
         state=runtime_state,
@@ -226,22 +239,15 @@ def build_session(
 
     # build trainer/runner depending on mode
     match context.intent:
-        case 'evaluation':
-            return SessionExecutables(evaluator, None, None)
+
+        case 'overfit':
+            # return an epoch runner with both trainer and evaluator
+            return engine.EpochRunner(trainer, evaluator), None
 
         case 'training':
-            trainer = engine.MultiHeadTrainer(
-                engine=batch_executor,
-                state=runtime_state,
-                components=session_components,
-                callbacks=callbacks,
-                device=context.device,
-                use_amp=config.runtime.precision.use_amp,
-                grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-                log_every=config.runtime.schedule.log_every,
-            )
-            epoch_runner = engine.TrainingEpochRunner(trainer, evaluator)
-            # build controller and return
+            # build an epoch runner with both trainer and evaluator
+            epoch_runner = engine.EpochRunner(trainer, evaluator)
+            # build orchestration runner and return
             assert context.session_paths, 'Session artifacts paths not defined'
             runner_config = orchestration.RunnerConfig(
                 artifacts_paths=context.session_paths,
@@ -252,23 +258,13 @@ def build_session(
                 patience_epochs=config.runtime.schedule.patience,
                 delta=config.runtime.schedule.min_delta
             )
-            training_runner = orchestration.TrainingRunner(
+            return None, orchestration.TrainingRunner(
                 epoch_runner,
                 config.training_phases,
                 runner_config,
                 logger=context.logger,
             )
-            return SessionExecutables(evaluator, trainer, training_runner)
 
-        case 'overfit':
-            trainer = engine.MultiHeadTrainer(
-                engine=batch_executor,
-                state=runtime_state,
-                components=session_components,
-                callbacks=callbacks,
-                device=context.device,
-                use_amp=False,
-                grad_clip_norm=None,
-                log_every=1,
-            )
-            return SessionExecutables(evaluator, trainer, None)
+        case 'evaluation':
+            # return an epoch runner with just the evaluator
+            return engine.EpochRunner(None, evaluator), None

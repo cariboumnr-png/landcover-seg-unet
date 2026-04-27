@@ -110,7 +110,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     )
 
     # build a full session with a runner
-    runner = session.build_session(
+    _, runner = session.build_session(
         dataspecs,
         model,
         config.session,
@@ -121,7 +121,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
             verbose_runner=print_out,
             session_paths=session_paths,
         )
-    ).training_runner
+    )
     assert runner, 'Training runner not properly built' # sanity
 
     # run session

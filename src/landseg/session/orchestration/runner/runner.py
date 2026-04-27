@@ -84,7 +84,7 @@ class TrainingRunner:
     '''
     def __init__(
         self,
-        epoch_runner: engine.TrainingEpochRunner,
+        epoch_runner: engine.EpochRunner,
         training_phases: typing.Sequence[phases.PhaseLike],
         config: RunnerConfig,
         *,
@@ -162,11 +162,13 @@ class TrainingRunner:
     @property
     def trainer(self) -> engine.MultiHeadTrainer:
         '''Return training policy engine.'''
+        assert self.epoch_runner.trainer # typing
         return self.epoch_runner.trainer
 
     @property
-    def evaluator(self) -> engine.MultiHeadEvaluator | None:
+    def evaluator(self) -> engine.MultiHeadEvaluator:
         '''Return evaluating policy engine.'''
+        assert self.epoch_runner.evaluator # typing
         return self.epoch_runner.evaluator
 
     @property
@@ -298,6 +300,7 @@ class TrainingRunner:
 
     def _parse_metrics(self, metrics: engine.EpochMetrics):
         '''Parse a concise epoch results as a string for console.'''
+        assert metrics.training
         assert metrics.validation
         return (
             f' | Total Loss: {metrics.training.mean_total_loss:.4f} | '
