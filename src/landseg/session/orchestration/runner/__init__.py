@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.orchestration.training`.
+Top-level namespace for `landseg.session.orchestration.runner`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
