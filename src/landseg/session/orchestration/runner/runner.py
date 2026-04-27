@@ -248,14 +248,16 @@ class TrainingRunner:
                             t = phase.num_epochs
                             n = len(str(t))
                             m = self._parse_metrics(metrics)
-                            self.logger.log('INFO', f'Epoch {i:0{n}d}/{t} {m}')
+                            self.logger.log('INFO', f'Epoch {i:0{n}d}/{t}{m}')
 
                         case event.CheckpointRequest(tag=tag):
+                            # always save current as 'last'
+                            fp = self.paths.last_checkpoint(f'{phase.name}')
+                            self._save_progress(fp)
+                            # save another one if it is the 'best'
                             if tag == 'best':
                                 fp = self.paths.best_checkpoint(f'{phase.name}')
-                            else:
-                                fp = self.paths.last_checkpoint(f'{phase.name}')
-                            self._save_progress(fp)
+                                self._save_progress(fp)
                             m = f'Checkpoint saved at: {fp}'
                             self.logger.log('DEBUG', m)
 
@@ -298,9 +300,10 @@ class TrainingRunner:
         '''Parse a concise epoch results as a string for console.'''
         assert metrics.validation
         return (
-            f'Total Loss: {metrics.training.mean_total_loss:.4f} | '
+            f' | Total Loss: {metrics.training.mean_total_loss:.4f} | '
             f'Mean IoU {metrics.validation.target_metrics:.4f} | '
             # f'Monitor Heads: {", ".join(metrics.validation.monitor_heads)}'
+            # f'Best Epoch: {self.}'
         )
 
     def _load_progress(self, fpath: str) -> int:

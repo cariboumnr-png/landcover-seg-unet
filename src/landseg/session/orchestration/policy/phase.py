@@ -220,6 +220,7 @@ class PhasePolicy:
                     self.tracker.patience_n = 0
                     self.tracker.is_best_epoch = True
                 else:
+                    self.tracker.is_best_epoch = False
                     self.tracker.patience_n += 1
             case _:
                 raise ValueError(f'Invalid track mode: {mode}')
