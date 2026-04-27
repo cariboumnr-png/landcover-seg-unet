@@ -84,7 +84,7 @@ def build_headmetrics(
     for hname, hspec in headspecs.as_dict().items():
         # attach to output list
         config = metrics.ConfusionMatricConfig(
-            num_classes=hspec.num_classes,
+            num_classes=len(hspec.count),
             ignore_index=ignore_index,
             parent_class_1b=hspec.parent_cls,
             exclude_class_1b=hspec.exclude_cls

@@ -34,8 +34,3 @@ class Spec:
     parent_cls: int | None # 1-based
     weight: float
     exclude_cls: tuple[int, ...] | None
-
-    @property
-    def num_classes(self) -> int:
-        '''Number of classes.'''
-        return len(self.count)

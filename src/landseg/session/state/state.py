@@ -240,7 +240,8 @@ class _OptimState:
 
 # -------------------------------Public Function-------------------------------
 def initialize(
-    components: common.ComponentsLike,
+    headspecs: common.HeadSpecsLike,
+    dataloaders: common.DataLoadersLike,
     use_amp: bool,
     device: str,
 ) -> _RuntimeState:
@@ -254,7 +255,7 @@ def initialize(
             current_metrics=0.0
         ),
         heads=_Heads(
-            all_heads=list(components.headspecs.as_dict().keys()),
+            all_heads=list(headspecs.as_dict().keys()),
             active_heads=None,
             frozen_heads=None,
             active_hspecs=None,
@@ -264,7 +265,7 @@ def initialize(
         batch_cxt=_BatchContex(
             bidx=0,
             pidx_start=0,
-            batch_size_full=components.dataloaders.meta.batch_size,
+            batch_size_full=dataloaders.meta.batch_size,
             batch=None,
             x=torch.empty(0),
             y_dict={},
@@ -303,15 +304,15 @@ def initialize(
     )
 
     # if test dataset if provided, setup inference context
-    if components.dataloaders.test:
+    if dataloaders.test:
         # resolve patch-block layout
-        per_blk = components.dataloaders.meta.patch_per_blk
+        per_blk = dataloaders.meta.patch_per_blk
         per_dim = int(per_blk ** 0.5)
         assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
         state.summary.infer_ctx.patch_per_blk = per_blk
         state.summary.infer_ctx.patch_per_dim = per_dim
         # resolve block col/row numbers
-        blk_col, blk_row = components.dataloaders.meta.test_blks_grid
+        blk_col, blk_row = dataloaders.meta.test_blks_grid
         state.summary.infer_ctx.block_columns = blk_col
         # resolve patch col/row numbers
         pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)

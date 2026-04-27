@@ -189,7 +189,8 @@ def build_session(
 
     # initiate the shared runtime state
     runtime_state = state.initialize(
-        session_components,
+        session_components.headspecs,
+        session_components.dataloaders,
         use_amp=config.runtime.precision.use_amp,
         device=context.device
     )
