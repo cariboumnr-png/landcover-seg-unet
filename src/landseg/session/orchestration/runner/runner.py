@@ -44,7 +44,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.session.engine as engine
-import landseg.session.orchestration.event as event
+import landseg.session.orchestration.events as events
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
 import landseg.utils as utils
@@ -174,7 +174,7 @@ class TrainingRunner:
         '''Return the run-level artifacts file paths class.'''
         return self.config.artifacts_paths
 
-    def run(self) -> typing.Generator[event.Event, None, float]:
+    def run(self) -> typing.Generator[events.Event, None, float]:
         '''
         Execute the configured training curriculum.
 
@@ -233,16 +233,16 @@ class TrainingRunner:
 
                     # runner intercepts events to perform side effects
                     match e:
-                        case event.PhaseStart(phase_name=phase_name):
+                        case events.PhaseStart(phase_name=phase_name):
                             m = f' -- Phase [{phase_name}] start --'
                             self.logger.log('INFO', m)
                             if self.config.verbose:
                                 self._print_phase(phase)
 
-                        case event.EpochStart():
+                        case events.EpochStart():
                             pass # no ops for now
 
-                        case event.EpochEnd(epoch_index=i, metrics=metrics):
+                        case events.EpochEnd(epoch_index=i, metrics=metrics):
                             # simple runtime type check for now
                             assert isinstance(metrics, engine.EpochMetrics)
                             t = phase.num_epochs
@@ -250,7 +250,7 @@ class TrainingRunner:
                             m = self._parse_metrics(metrics)
                             self.logger.log('INFO', f'Epoch {i:0{n}d}/{t}{m}')
 
-                        case event.CheckpointRequest(tag=tag):
+                        case events.CheckpointRequest(tag=tag):
                             # always save current as 'last'
                             fp = self.paths.last_checkpoint(f'{phase.name}')
                             self._save_progress(fp)
@@ -261,7 +261,7 @@ class TrainingRunner:
                             m = f'Checkpoint saved at: {fp}'
                             self.logger.log('DEBUG', m)
 
-                        case event.StopRun(reason=reason):
+                        case events.StopRun(reason=reason):
                             if not self.allow_early_stop:
                                 m = f'Ignored StopRun event: {reason}'
                                 self.logger.log('WARNING', m)
@@ -275,7 +275,7 @@ class TrainingRunner:
                             yield e
                             return phase_best_metric
 
-                        case event.PhaseEnd(phase_name=phase_name):
+                        case events.PhaseEnd(phase_name=phase_name):
                             m = f'-- Phase [{phase_name}] end --'
                             self.logger.log('INFO', m)
 

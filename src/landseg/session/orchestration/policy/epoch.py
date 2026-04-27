@@ -32,7 +32,7 @@ training engine.
 import typing
 # local imports
 import landseg.session.engine as engine
-import landseg.session.orchestration.event as events
+import landseg.session.orchestration.events as events
 
 class EpochPolicy:
     '''

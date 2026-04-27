@@ -34,7 +34,7 @@ import typing
 import landseg.session.engine as engine
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
-import landseg.session.orchestration.event as events
+import landseg.session.orchestration.events as events
 
 @dataclasses.dataclass
 class TrackingConfig:
