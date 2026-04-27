@@ -54,6 +54,12 @@ concerns explicit and localized.
 The entry point is `build_session`, which returns a `SessionExcutables`
 container with the constructed evaluator and optional training components
 depending on the selected intent.
+
+Type behavior:
+    The session factory uses Literal-based typing and overloads to
+    encode execution intent at the type level. This allows static type
+    checkers to infer the exact return type of `build_session` based on
+    the provided context.
 '''
 
 # standard imports
@@ -69,6 +75,14 @@ import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
 import landseg.session.state as state
 import landseg.utils as utils
+
+# types
+IntentT = typing.TypeVar(
+    'IntentT',
+    typing.Literal['overfit'],
+    typing.Literal['training'],
+    typing.Literal['evaluation'],
+)
 
 # ---------------------------------Public Type---------------------------------
 class SessionConfigShape(typing.Protocol):
@@ -102,7 +116,25 @@ class SessionConfigShape(typing.Protocol):
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class SessionBuildContext:
+class OverfitSession:
+    '''Overfit session with train-evaluate epoch runner.'''
+    intent: typing.Literal['overfit']
+    runner: engine.EpochRunner
+
+@dataclasses.dataclass
+class TrainingSession:
+    '''Training session with epoch and phase orchestration.'''
+    intent: typing.Literal['training']
+    runner: orchestration.TrainingRunner
+
+@dataclasses.dataclass
+class EvaluationSession:
+    '''Overfit session with evaluate-only epoch runner.'''
+    intent: typing.Literal['evaluation']
+    runner: engine.EpochRunner
+
+@dataclasses.dataclass
+class SessionBuildContext(typing.Generic[IntentT]):
     '''
     Context object providing runtime parameters for session construction.
 
@@ -119,7 +151,7 @@ class SessionBuildContext:
         session_paths: Optional artifact paths for saving outputs (
             required for `'training'` mode).
     '''
-    intent: typing.Literal['training', 'evaluation', 'overfit']
+    intent: IntentT
     device: str
     logger: utils.Logger
     verbose_runner: bool = True
@@ -127,12 +159,37 @@ class SessionBuildContext:
     session_paths: artifacts.ResultsPaths | None = None
 
 # -------------------------------Public Function-------------------------------
+# overload signatures
+@typing.overload
+def build_session(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext[typing.Literal['overfit']],
+) -> OverfitSession: ...
+
+@typing.overload
+def build_session(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext[typing.Literal['training']],
+) -> TrainingSession: ...
+
+@typing.overload
+def build_session(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext[typing.Literal['evaluation']],
+) -> EvaluationSession: ...
+
 def build_session(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext
-) -> tuple[engine.EpochRunner | None, orchestration.TrainingRunner | None]:
+) -> OverfitSession | TrainingSession | EvaluationSession:
     '''
     Assemble the execution pipeline for a multi-head model session.
 
@@ -143,19 +200,18 @@ def build_session(
     - batch execution engine
     - trainer and evaluator
 
-    The evaluator is always created. The trainer is also instantiated in
-    all modes but is only actively used when applicable. The returned
-    objects depend on the execution intent.
+    The exact return type depends on `context.intent` and is enforced
+    via static typing (Literal-based overloads).
 
     Execution modes:
-        `'evaluation'`:
+        `'evaluation'` (EpochRunner, None):
             Returns an `EpochRunner` containing only the evaluator.
 
-        `'overfit'`:
+        `'overfit'` (EpochRunner, None):
             Returns an `EpochRunner` with both trainer and evaluator.
             No orchestration layer is used.
 
-        `'training'`:
+        `'training'` (None, TrainingRunner):
             Returns a `TrainingRunner` that manages training phases,
             early stopping, and evaluation. An `EpochRunner` is created
             internally but not returned.
@@ -169,11 +225,22 @@ def build_session(
         context: Runtime context of the execution mode and environment.
 
     Returns:
-        A tuple:
-        - `EpochRunner | None`
-            Returned in 'evaluation' and 'overfit' modes.
-        - `TrainingRunner | None`
-            Returned only in 'training' mode.
+        A session object whose type depends on `context.intent`:
+
+        - OverfitSession:
+            Returned for 'overfit. Provides an `epoch_runner` for
+            execution.
+
+        - TrainingSession:
+            Returned for 'training'. Provides a `runner` that manages
+            full training orchestration.
+
+        - EvaluationSession:
+            Returned for 'evaluation'. Provides an `epoch_runner` for
+            execution.
+
+        The return type is statically enforced via overloads and
+        Literal-based typing.
 
     Raises:
         AssertionError:
@@ -242,11 +309,12 @@ def build_session(
 
         case 'overfit':
             # return an epoch runner with both trainer and evaluator
-            return engine.EpochRunner(trainer, evaluator), None
+            return OverfitSession(
+                intent='overfit',
+                runner=engine.EpochRunner('train_evaluate', trainer, evaluator)
+            )
 
         case 'training':
-            # build an epoch runner with both trainer and evaluator
-            epoch_runner = engine.EpochRunner(trainer, evaluator)
             # build orchestration runner and return
             assert context.session_paths, 'Session artifacts paths not defined'
             runner_config = orchestration.RunnerConfig(
@@ -258,13 +326,22 @@ def build_session(
                 patience_epochs=config.runtime.schedule.patience,
                 delta=config.runtime.schedule.min_delta
             )
-            return None, orchestration.TrainingRunner(
-                epoch_runner,
-                config.training_phases,
-                runner_config,
-                logger=context.logger,
+            return TrainingSession(
+                intent='training',
+                runner=orchestration.TrainingRunner(
+                    engine.EpochRunner('train_evaluate', trainer, evaluator),
+                    config.training_phases,
+                    runner_config,
+                    logger=context.logger,
+                )
             )
 
         case 'evaluation':
             # return an epoch runner with just the evaluator
-            return engine.EpochRunner(None, evaluator), None
+            return EvaluationSession(
+                intent='evaluation',
+                runner=engine.EpochRunner('evaluate_only', None, evaluator)
+            )
+
+        case _:
+            raise ValueError(f'Invalid session intent: {context.intent}')
