@@ -38,11 +38,14 @@ session:
     schedule:
       max_epoch: 1000
     monitor:
-      track_head_name: base
+      track_heads: [base]
     precision:
       use_amp: False
     optimization:
       grad_clip_norm: null
+    logit_adjust:
+      logit_adjust_alpha: 0.0
+      enable_train_logit_adjustment: False
 
 pipeline:
   name: diagnose-overfit

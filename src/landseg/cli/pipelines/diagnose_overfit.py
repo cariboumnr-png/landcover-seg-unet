@@ -75,7 +75,7 @@ def overfit(config: configs.RootConfig) -> None:
     )
 
     # build trainer and evaluator
-    s = session.build_session(
+    pipeline_session = session.build_session(
         dataspecs,
         model,
         config.session,
@@ -83,31 +83,31 @@ def overfit(config: configs.RootConfig) -> None:
             intent='overfit',
             device=c.DEVICE,
             logger=logger,
-            skip_callback_logging=True
         )
     )
-    assert s.trainer # sanity
 
     # set monitor head
-    monitor_head = config.session.runtime.monitor.track_head_name
-    s.trainer.set_head_state([monitor_head])
+    monitor_head = config.session.runtime.monitor.track_heads
+    pipeline_session.runner.set_head_state(monitor_head)
 
-    # run trainer and evaluator
+    # run train-evaluate
     max_epoch = config.session.runtime.schedule.max_epoch
     lr = config.session.components.optimization.lr
     logger.log('INFO', 'Starting overfit test')
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
     logger.log('INFO', f'Learning rate: {lr}')
     for ep in range(1, max_epoch + 1):
-        los = s.trainer.train_one_epoch(ep)['Total_Loss']
-        iou = s.evaluator.validate()[monitor_head]['mean']
+        results = pipeline_session.runner.run(ep)
+        assert results.training and results.validation # typing
+        los = results.training.total_loss
+        iou = results.validation.target_metrics
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
             return
 
     # if overfit not reached
-    hint = 'pipeline=train-overfit trainer.runtime.schedule.max_epoch=<value>'
+    hint = 'pipeline=diagnose-overfit session.runtime.schedule.max_epoch=<value>'
     logger.log(
         'WARNING',
         f'IoU did not reach 99% after {max_epoch} epochs. '
