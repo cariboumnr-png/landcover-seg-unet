@@ -110,7 +110,7 @@ def evaluate(config: configs.RootConfig):
     )
 
     # build session runner
-    evaluator = session.build_session(
+    pipeline_session = session.build_session(
         dataspecs,
         model,
         config.session,
@@ -120,19 +120,20 @@ def evaluate(config: configs.RootConfig):
             logger=logger,
             eval_dataset=split
         )
-    ).evaluator
+    )
 
     # evaluate
-    evaluator.set_head_state()
-    val_logs = evaluator.validate()
+    evaluation_results = pipeline_session.runner.run(1).validation
+    assert evaluation_results
+    metrics = {h: m.as_dict for h, m in evaluation_results.head_metrics.items()}
 
-    # produce previews on all the heads
-    if eval_config.export_previews:
-        evaluator.infer(session_paths.previews)
+    # # produce previews on all the heads
+    # if eval_config.export_previews:
+    #     pipeline_session.runner.evaluator.infer(session_paths.previews)
 
     # persist the validation log as the current outputs
     output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
-    output_ctrl.persist(val_logs)
+    output_ctrl.persist(metrics)
 
     # close logger
     logger.close()
@@ -140,6 +141,6 @@ def evaluate(config: configs.RootConfig):
     # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = {}
-    meta['summary']['final'] = evaluator.state.metrics.best_value
+    meta['summary']['final'] = evaluation_results.target_metrics
     meta_ctrl.persist(meta)
-    return evaluator.state.metrics.best_value
+    return evaluation_results.target_metrics
