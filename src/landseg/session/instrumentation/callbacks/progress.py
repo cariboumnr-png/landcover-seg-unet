@@ -30,38 +30,18 @@ class ProgressCallback(callbacks.Callback):
     def on_train_epoch_begin(self, epoch: int) -> None:
         self.state.progress.epoch = epoch   # get current epoch
         self.state.progress.epoch_step = 0  # reset epoch step
-        if self.verbose:
-            print(f'Epoch_{epoch:03d} training started')
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
-            print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
+            print(f'Training... batch_{bidx:04d}', end='\r', flush=True)
 
     def on_train_batch_end(self) -> None:
         self.state.progress.epoch_step += 1
         self.state.progress.global_step += 1
-        if self.state.summary.train_summary.updated and self.verbose:
-            print(self.state.summary.train_summary.head_losses_str)
-
-    def on_train_epoch_end(self) -> None:
-        epoch = self.state.progress.epoch
-        if self.verbose:
-            print(self.state.summary.train_summary.head_losses_str)
-        print(f'Epoch_{epoch:03d} training finished')
-
-    def on_validation_begin(self) -> None:
-        epoch = self.state.progress.epoch
-        if self.verbose:
-            print(f'Epoch_{epoch:03d} validating started')
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
-            print(f'Processing batch_{bidx:04d}', end='\r', flush=True)
+            print(f'Validating... batch_{bidx:04d}', end='\r', flush=True)
 
     def on_validation_end(self) -> None:
         self.state.progress.epoch += 1 # increment epoch counter
-        if self.verbose:
-            epoch = self.state.progress.epoch
-            target_metrics = self.state.summary.val_summary.target_metrics
-            print(f'Current monitoring metrics: {target_metrics:.4f}')
-            print(f'Epoch_{epoch:03d} validation finished')

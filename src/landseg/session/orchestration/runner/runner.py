@@ -234,19 +234,21 @@ class TrainingRunner:
                     # runner intercepts events to perform side effects
                     match e:
                         case event.PhaseStart(phase_name=phase_name):
-                            m = f'__Phase [{phase_name}] started__'
+                            m = f' -- Phase [{phase_name}] start --'
                             self.logger.log('INFO', m)
                             if self.config.verbose:
                                 self._print_phase(phase)
 
-                        case event.EpochStart(epoch_index=epoch_index):
-                            m = f'__Epoch: {epoch_index}/{phase.num_epochs}__'
-                            self.logger.log('INFO', m)
+                        case event.EpochStart():
+                            pass # no ops for now
 
-                        case event.EpochEnd(metrics=metrics):
-                            # to be parsed to formal logging
-                            print(metrics)
-                            # self.logger.log('INFO', m)
+                        case event.EpochEnd(epoch_index=i, metrics=metrics):
+                            # simple runtime type check for now
+                            assert isinstance(metrics, engine.EpochMetrics)
+                            t = phase.num_epochs
+                            n = len(str(t))
+                            m = self._parse_metrics(metrics)
+                            self.logger.log('INFO', f'Epoch {i:0{n}d}/{t} {m}')
 
                         case event.CheckpointRequest(tag=tag):
                             if tag == 'best':
@@ -255,7 +257,7 @@ class TrainingRunner:
                                 fp = self.paths.last_checkpoint(f'{phase.name}')
                             self._save_progress(fp)
                             m = f'Checkpoint saved at: {fp}'
-                            self.logger.log('INFO', m)
+                            self.logger.log('DEBUG', m)
 
                         case event.StopRun(reason=reason):
                             if not self.allow_early_stop:
@@ -272,7 +274,7 @@ class TrainingRunner:
                             return phase_best_metric
 
                         case event.PhaseEnd(phase_name=phase_name):
-                            m = f'__Phase [{phase_name}] ended__'
+                            m = f'-- Phase [{phase_name}] end --'
                             self.logger.log('INFO', m)
 
                     # Pass the event UP to the top-level observer (e.g. Optuna)
@@ -291,6 +293,15 @@ class TrainingRunner:
     def execute(self):
         '''Execute the full training curriculum in a blocking manner.'''
         return self.run()
+
+    def _parse_metrics(self, metrics: engine.EpochMetrics):
+        '''Parse a concise epoch results as a string for console.'''
+        assert metrics.validation
+        return (
+            f'Total Loss: {metrics.training.mean_total_loss:.4f} | '
+            f'Mean IoU {metrics.validation.target_metrics:.4f} | '
+            # f'Monitor Heads: {", ".join(metrics.validation.monitor_heads)}'
+        )
 
     def _load_progress(self, fpath: str) -> int:
         '''
