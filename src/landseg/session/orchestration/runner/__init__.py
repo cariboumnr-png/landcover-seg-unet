@@ -46,7 +46,4 @@ def __getattr__(name: str):
     if name in {'RunnerConfig', 'TrainingRunner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
-    if name in {'HeadsConfigLike', 'PhaseLike'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

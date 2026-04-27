@@ -32,9 +32,7 @@ import typing
 
 __all__ = [
     # classes
-    'EpochRunner',
     'SessionBuildContext',
-    'TrainingRunner',
     # functions
     'build_session',
     # types
@@ -44,24 +42,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .engine import EpochRunner
     from .factory import SessionConfigShape, SessionBuildContext, build_session
     from .metadata import SessionMetadata
-    from .orchestration import TrainingRunner
-
 
 def __getattr__(name: str):
-
-    if name in {'EpochRunner'}:
-        return getattr(importlib.import_module('.engine', __package__), name)
 
     if name in {'SessionConfigShape', 'SessionBuildContext', 'build_session'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     if name in {'SessionMetadata'}:
         return getattr(importlib.import_module('.metadata', __package__), name)
-
-    if name in {'TrainingRunner'}:
-        return getattr(importlib.import_module('.orchestration', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
