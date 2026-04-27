@@ -97,7 +97,7 @@ def overfit(config: configs.RootConfig) -> None:
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
     logger.log('INFO', f'Learning rate: {lr}')
     for ep in range(1, max_epoch + 1):
-        results = pipeline_session.runner.run(ep)
+        results = pipeline_session.runner.run_epoch(ep)
         assert results.training and results.validation # typing
         los = results.training.total_loss
         iou = results.validation.target_metrics

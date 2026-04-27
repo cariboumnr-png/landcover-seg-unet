@@ -109,8 +109,8 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         clamp_range=config.models.clamp_range
     )
 
-    # build a full session with a runner
-    _, runner = session.build_session(
+    # build the session
+    pipeline_session = session.build_session(
         dataspecs,
         model,
         config.session,
@@ -122,11 +122,10 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
             session_paths=session_paths,
         )
     )
-    assert runner, 'Training runner not properly built' # sanity
 
     # run session
     _m = {}
-    for m in runner.run():
+    for m in pipeline_session.runner.run(): # this line got warning
         _m = m
     print(_m)
 

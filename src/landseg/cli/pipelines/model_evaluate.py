@@ -123,7 +123,7 @@ def evaluate(config: configs.RootConfig):
     )
 
     # evaluate
-    evaluation_results = pipeline_session.runner.run(1).validation
+    evaluation_results = pipeline_session.runner.run_epoch(1).validation
     assert evaluation_results
     metrics = {h: m.as_dict for h, m in evaluation_results.head_metrics.items()}
 
