@@ -122,7 +122,7 @@ class EpochRunner:
         self.trainer = trainer
         self.evaluator = evaluator
 
-    def run(self, epoch: int) -> EpochMetrics:
+    def run_epoch(self, epoch: int) -> EpochMetrics:
         '''
         Run a single training epoch and return aggregated metrics.
 

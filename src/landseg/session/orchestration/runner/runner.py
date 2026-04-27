@@ -43,7 +43,7 @@ import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.session.engine as engine
+import landseg.session.common as common
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
@@ -84,7 +84,7 @@ class TrainingRunner:
     '''
     def __init__(
         self,
-        epoch_runner: engine.EpochRunner,
+        epoch_runner: common.EpochEngineLike,
         training_phases: typing.Sequence[phases.PhaseLike],
         config: RunnerConfig,
         *,
@@ -160,13 +160,13 @@ class TrainingRunner:
             )
 
     @property
-    def trainer(self) -> engine.MultiHeadTrainer:
+    def trainer(self) -> common.BatchEngineLike:
         '''Return training policy engine.'''
         assert self.epoch_runner.trainer # typing
         return self.epoch_runner.trainer
 
     @property
-    def evaluator(self) -> engine.MultiHeadEvaluator:
+    def evaluator(self) -> common.BatchEngineLike:
         '''Return evaluating policy engine.'''
         assert self.epoch_runner.evaluator # typing
         return self.epoch_runner.evaluator
@@ -246,7 +246,7 @@ class TrainingRunner:
 
                         case events.EpochEnd(epoch_index=i, metrics=metrics):
                             # simple runtime type check for now
-                            assert isinstance(metrics, engine.EpochMetrics)
+                            assert isinstance(metrics, common.EpochMetricsLike)
                             t = phase.num_epochs
                             n = len(str(t))
                             m = self._parse_metrics(metrics)
@@ -298,7 +298,7 @@ class TrainingRunner:
         '''Execute the full training curriculum in a blocking manner.'''
         return self.run()
 
-    def _parse_metrics(self, metrics: engine.EpochMetrics):
+    def _parse_metrics(self, metrics: common.EpochMetricsLike):
         '''Parse a concise epoch results as a string for console.'''
         assert metrics.training
         assert metrics.validation
@@ -323,8 +323,8 @@ class TrainingRunner:
             model=self.trainer.model,
             fpath=fpath,
             map_device=self.trainer.device,
-            optimizer=self.trainer.optimization.optimizer,
-            scheduler=self.trainer.optimization.scheduler,
+            optimizer=self.trainer.comps.optimization.optimizer,
+            scheduler=self.trainer.comps.optimization.scheduler,
         )
         self.trainer.state.progress.epoch = meta['epoch'] + 1
         self.trainer.state.progress.global_step = meta['step']

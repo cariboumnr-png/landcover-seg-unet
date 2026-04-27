@@ -31,7 +31,7 @@ training engine.
 # standard imports
 import typing
 # local imports
-import landseg.session.engine as engine
+import landseg.session.common as common
 import landseg.session.orchestration.events as events
 
 class EpochPolicy:
@@ -50,7 +50,7 @@ class EpochPolicy:
     def __init__(
         self,
         *,
-        epoch_runner: engine.EpochRunner,
+        epoch_runner: common.EpochEngineLike,
         phase_name: str,
         epoch_index: int,
         active_heads: list[str] | None = None
@@ -72,7 +72,7 @@ class EpochPolicy:
         self.runner = epoch_runner
         self.active_heads = active_heads
 
-    def run(self) -> typing.Generator[events.Event, None, engine.EpochMetrics]:
+    def run(self) -> typing.Generator[events.Event, None, common.EpochMetricsLike]:
         '''
         Runs the epoch with event emission.
 
@@ -92,7 +92,7 @@ class EpochPolicy:
         yield events.EpochStart(self.epoch, self.phase)
 
         # delegate execution to epoch runner
-        epoch_metrics = self.runner.run(self.epoch)
+        epoch_metrics = self.runner.run_epoch(self.epoch)
 
         # epoch ends
         yield events.EpochEnd(self.epoch, self.phase, epoch_metrics)
@@ -100,7 +100,7 @@ class EpochPolicy:
         # enables downstream `yield from`
         return epoch_metrics
 
-    def execute(self) -> engine.EpochMetrics:
+    def execute(self) -> common.EpochMetricsLike:
         '''
         Executes the epoch without emitting events.
 
@@ -111,4 +111,4 @@ class EpochPolicy:
         Returns:
             engine.EpochMetrics: Metrics produced by the training engine.
         '''
-        return self.runner.run(self.epoch)
+        return self.runner.run_epoch(self.epoch)
