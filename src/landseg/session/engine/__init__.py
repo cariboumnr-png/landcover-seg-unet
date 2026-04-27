@@ -33,10 +33,8 @@ import typing
 __all__ = [
     # classes
     'BatchExecutionEngine',
-    'MultiHeadEvaluator',
-    'MultiHeadTrainer',
     'EpochMetrics',
-    'TrainingEpochRunner',
+    'EpochRunner',
     # functions
     # types
 ]
@@ -44,18 +42,15 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .batch import BatchExecutionEngine
-    from .policy import MultiHeadEvaluator, MultiHeadTrainer
-    from .runner import EpochMetrics, TrainingEpochRunner
+
+    from .runner import EpochMetrics, EpochRunner
 
 def __getattr__(name: str):
 
     if name in {'BatchExecutionEngine'}:
         return getattr(importlib.import_module('.batch', __package__), name)
 
-    if name in {'MultiHeadEvaluator', 'MultiHeadTrainer'}:
-        return getattr(importlib.import_module('.policy', __package__), name)
-
-    if name in {'EpochMetrics', 'TrainingEpochRunner',}:
+    if name in {'EpochMetrics', 'EpochRunner',}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

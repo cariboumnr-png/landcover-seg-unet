@@ -50,7 +50,7 @@ class EpochPolicy:
     def __init__(
         self,
         *,
-        training_engine: engine.TrainingEpochRunner,
+        epoch_runner: engine.EpochRunner,
         phase_name: str,
         epoch_index: int,
         active_heads: list[str] | None = None
@@ -69,7 +69,7 @@ class EpochPolicy:
 
         self.epoch = epoch_index
         self.phase = phase_name
-        self.engine = training_engine
+        self.runner = epoch_runner
         self.active_heads = active_heads
 
     def run(self) -> typing.Generator[events.Event, None, engine.EpochMetrics]:
@@ -92,7 +92,7 @@ class EpochPolicy:
         yield events.EpochStart(self.epoch, self.phase)
 
         # delegate execution to epoch runner
-        epoch_metrics = self.engine.run(self.epoch)
+        epoch_metrics = self.runner.run(self.epoch)
 
         # epoch ends
         yield events.EpochEnd(self.epoch, self.phase, epoch_metrics)
@@ -111,4 +111,4 @@ class EpochPolicy:
         Returns:
             engine.EpochMetrics: Metrics produced by the training engine.
         '''
-        return self.engine.run(self.epoch)
+        return self.runner.run(self.epoch)

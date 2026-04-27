@@ -77,7 +77,7 @@ class PhasePolicy:
     def __init__(
         self,
         *,
-        epoch_runner: engine.TrainingEpochRunner,
+        epoch_runner: engine.EpochRunner,
         phase_config: phases.PhaseLike,
         track_config: TrackingConfig,
         start_epoch: int = 1
@@ -124,7 +124,7 @@ class PhasePolicy:
         '''
 
         # set trainer head state per phase
-        self.runner.trainer.set_head_state(
+        self.runner.set_head_state(
             self.config.active_heads,
             self.config.frozen_heads,
         )
@@ -138,7 +138,7 @@ class PhasePolicy:
 
             # delegate to epoch policy
             metrics = yield from policy.EpochPolicy(
-                training_engine=self.runner,
+                epoch_runner=self.runner,
                 phase_name=self.config.name,
                 epoch_index=epoch,
                 active_heads=self.config.active_heads
@@ -163,7 +163,7 @@ class PhasePolicy:
                 break
 
         # reset trainer head state
-        self.runner.trainer.reset_head_state()
+        self.runner.reset_head_state()
 
         # phase ends
         yield events.PhaseEnd(self.config.name)
@@ -185,7 +185,7 @@ class PhasePolicy:
         epochs: list[engine.EpochMetrics] = []
         for epoch in range(1, self.config.num_epochs + 1):
             epoch_metrics = policy.EpochPolicy(
-                training_engine=self.runner,
+                epoch_runner=self.runner,
                 phase_name=self.config.name,
                 epoch_index=epoch,
                 active_heads=self.config.active_heads
