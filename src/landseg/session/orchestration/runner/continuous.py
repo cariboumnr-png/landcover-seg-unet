@@ -70,7 +70,6 @@ class ContinuousRunner(runner.BaseRunner):
         self,
         *,
         phase: phases.PhaseLike,
-        start_epoch: int = 1,
         **kwargs: typing.Any
     ):
         '''
@@ -95,7 +94,6 @@ class ContinuousRunner(runner.BaseRunner):
         super().__init__(**kwargs)
         # parse arguments
         self.phase = phase # single phase
-        self.start_epoch = start_epoch
 
     def run(self) -> typing.Generator[runner.TrainingStep, None, None]:
         '''
@@ -133,7 +131,6 @@ class ContinuousRunner(runner.BaseRunner):
             epoch_runner=self.epoch_runner,
             phase_config=self.phase,
             track_config=self.config.tracking,
-            start_epoch=self.start_epoch
         ).run()
 
         # manually advance the generator to capture both yields and returns

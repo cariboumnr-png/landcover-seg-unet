@@ -339,7 +339,6 @@ def build_session(
                     runner_type='continuous',
                     training_phases=config.single_phase,
                     logger=context.logger,
-                    start_epoch=1
                 )
             )
 

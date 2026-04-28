@@ -80,7 +80,6 @@ class PhasePolicy:
         epoch_runner: common.EpochEngineLike,
         phase_config: phases.PhaseLike,
         track_config: TrackingConfig,
-        start_epoch: int = 1
     ):
         '''
         Initializes the phase policy.
@@ -98,7 +97,6 @@ class PhasePolicy:
         self.runner = epoch_runner
         self.config = phase_config
         self.track = track_config
-        self.start_epoch = start_epoch
         #
         self.tracker = _MetricsTracker()
 
@@ -134,7 +132,7 @@ class PhasePolicy:
         yield events.PhaseStart(self.config.name)
 
         # iterate epochs
-        for epoch in range(self.start_epoch, self.config.num_epochs + 1):
+        for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
 
             # delegate to epoch policy
             metrics = yield from policy.EpochPolicy(

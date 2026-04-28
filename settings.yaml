@@ -189,6 +189,7 @@ session:
 
   # knobs
   resume_from_last: False
+  mode: continuous
   phase_schema: default
 
   # components

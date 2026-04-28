@@ -143,6 +143,7 @@ class _RuntimeConfig:
 class _Phase:
     name: str = 'phase_0'
     num_epochs: int = 0
+    start_epoch: int = 1 # 1-based
     lr_scale: float | None = 1.0
     active_heads: list[str] | None = None
     frozen_heads: list[str] | None = None
@@ -180,6 +181,7 @@ class SessionConfig:
         return _Phase(
             name='single_phase',
             num_epochs=self.runtime.schedule.max_epoch,
+            start_epoch=1,
             lr_scale=1.0,
             active_heads=['base'],
             frozen_heads=None
