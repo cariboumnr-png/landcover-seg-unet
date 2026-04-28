@@ -46,7 +46,7 @@ class EngineBuildContext:
 class EngineBuildConfig:
     '''Engine building configs'''
     use_amp: bool
-    grad_clip_norm: bool
+    grad_clip_norm: float | None
     loss_update_every: int
     metrics_track_heads: list[str]
     evaluation_dataset: typing.Literal['val', 'test'] = 'val'
@@ -56,7 +56,7 @@ def build_engine(
     *,
     context: EngineBuildContext,
     config: EngineBuildConfig,
-    mode: typing.Literal['train_evaluate', 'train_only', 'evaluate_only'],
+    mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
     device: str
 ) -> policy.EpochRunner:
     '''
@@ -98,9 +98,9 @@ def build_engine(
 
     # return engine with matched mode
     match mode:
-        case 'train_evaluate':
+        case 'train_eval':
             return policy.EpochRunner(mode, trainer, evaluator)
         case 'train_only':
             return policy.EpochRunner(mode, trainer, None)
-        case 'evaluate_only':
+        case 'eval_only':
             return policy.EpochRunner(mode, None, evaluator)

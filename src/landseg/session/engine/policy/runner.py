@@ -40,6 +40,8 @@ import typing
 # local imports
 import landseg.session.engine.policy as policy
 
+Mode: typing.TypeAlias = typing.Literal['train_eval', 'train_only', 'eval_only']
+
 # --------------------------------Public  Class--------------------------------
 class EpochRunner:
     '''
@@ -56,7 +58,7 @@ class EpochRunner:
 
     @typing.overload
     def __init__(self,
-        mode: typing.Literal['train_evaluate'],
+        mode: typing.Literal['train_eval'],
         trainer: policy.MultiHeadTrainer,
         evaluator: policy.MultiHeadEvaluator
     ) -> None: ...
@@ -70,14 +72,14 @@ class EpochRunner:
 
     @typing.overload
     def __init__(self,
-        mode: typing.Literal['evaluate_only'],
+        mode: typing.Literal['eval_only'],
         trainer: None,
         evaluator: policy.MultiHeadEvaluator
     ) -> None: ...
 
     def __init__(
         self,
-        mode: typing.Literal['train_evaluate', 'train_only', 'evaluate_only'],
+        mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
         trainer: policy.MultiHeadTrainer | None,
         evaluator: policy.MultiHeadEvaluator | None,
     ):
@@ -95,9 +97,9 @@ class EpochRunner:
         '''
 
         # parse arguments
-        self.mode = mode
-        self.trainer = trainer
-        self.evaluator = evaluator
+        self.mode: Mode = mode
+        self.trainer: policy.MultiHeadTrainer | None = trainer
+        self.evaluator: policy.MultiHeadEvaluator | None = evaluator
 
     def run_epoch(self, epoch: int) -> policy.EpochResults:
         '''
@@ -114,7 +116,7 @@ class EpochRunner:
 
         # run by mode
         match self.mode:
-            case 'train_evaluate':
+            case 'train_eval':
                 if not (self.trainer and self.evaluator):
                     raise ValueError('Missing trainer or evaluator')
                 train_results = self.trainer.train_one_epoch(epoch)
@@ -127,14 +129,11 @@ class EpochRunner:
                 train_results = self.trainer.train_one_epoch(epoch)
                 return policy.EpochResults(train_results, None)
 
-            case 'evaluate_only':
+            case 'eval_only':
                 if not self.evaluator:
                     raise ValueError('Missing evaluator')
                 val_results = self.evaluator.validate()
                 return policy.EpochResults(None, val_results)
-
-            case _:
-                raise ValueError(f'Invalid mode: {self.mode}')
 
     def set_head_state(
         self,
