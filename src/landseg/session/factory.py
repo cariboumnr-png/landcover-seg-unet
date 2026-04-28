@@ -274,7 +274,6 @@ def build_session(
         config=config,
         context=context
     )
-
     epoch_runner_partial = functools.partial(
         engine.build_engine,
         context=engine_build_context,
@@ -283,11 +282,12 @@ def build_session(
     )
 
     # get partial training runner
+    base_config = _training_runner_build_prep(config, context)
     training_runner_partial = functools.partial(
-        _build_training_runner_factory,
+        orchestration.build_runner,
         epoch_runner=epoch_runner_partial(mode='train_eval'),
-        config=config,
-        context=context,
+        base_config=base_config,
+        logger=context.logger,
     )
 
     # build trainer/runner depending on mode
@@ -311,26 +311,31 @@ def build_session(
             # build orchestration runner and return
             return ContinuousTrainingSession(
                 intent='continuous_training',
-                runner=training_runner_partial(intent=intent)
+                runner=training_runner_partial(
+                    runner_type='continuous',
+                    training_phases=config.single_phase
+                )
             )
 
         case 'curriculum_training':
             # build orchestration runner and return
             return CurriculumTrainingSession(
                 intent='curriculum_training',
-                runner=training_runner_partial(intent=intent)
+                runner=training_runner_partial(
+                    runner_type='curriculum',
+                    training_phases=config.curriculum
+                )
             )
 
 # prepare engine building context and configs
 def _epoch_runner_build_prep(
+    *,
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext
 ) -> tuple[engine.EngineBuildContext, engine.EngineBuildConfig]:
-    '''
-    Assemble partial epoch runner.
-    '''
+    '''doc'''
 
     # build session components
     session_components = comps.build_session_components(
@@ -372,66 +377,22 @@ def _epoch_runner_build_prep(
     )
     return engine_build_context, engine_build_config
 
-# training orchestration runner factory with overloads
-@typing.overload
-def _build_training_runner_factory(
-    *,
-    epoch_runner: engine.EpochRunner,
+def _training_runner_build_prep(
     config: SessionConfigShape,
     context: SessionBuildContext,
-    intent: typing.Literal['continuous_training'],
-) -> orchestration.ContinuousRunner: ...
-
-@typing.overload
-def _build_training_runner_factory(
-    *,
-    epoch_runner: engine.EpochRunner,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['curriculum_training'],
-) -> orchestration.CurriculumRunner: ...
-
-def _build_training_runner_factory(
-    *,
-    epoch_runner: engine.EpochRunner,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['continuous_training', 'curriculum_training']
-) -> orchestration.ContinuousRunner | orchestration.CurriculumRunner:
+) -> orchestration.BaseRunnerConfig:
     '''doc'''
 
     assert context.session_paths, 'Session artifacts paths not defined'
-
     tracking = orchestration.TrackingConfig(
         track_mode=config.runtime.monitor.track_mode,
         enable_early_stop=config.runtime.monitor.allow_early_stop,
         patience_epochs=config.runtime.monitor.patience,
         delta=config.runtime.monitor.min_delta,
     )
-
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
         verbose=context.verbose_runner,
         tracking=tracking,
     )
-
-    match intent:
-        case 'continuous_training':
-            return orchestration.build_runner(
-                epoch_runner=epoch_runner,
-                base_config=base_config,
-                runner_type='continuous',
-                training_phases=config.single_phase,
-                logger=context.logger,
-            )
-
-        case 'curruculum_training':
-            return orchestration.build_runner(
-                epoch_runner=epoch_runner,
-                base_config=base_config,
-                runner_type='curriculum',
-                training_phases=config.curriculum,
-                logger=context.logger,
-            )
-        case _:
-            raise ValueError(f'Invalid session intent: {intent}')
+    return base_config
