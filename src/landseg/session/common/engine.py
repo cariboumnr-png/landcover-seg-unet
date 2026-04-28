@@ -36,7 +36,7 @@ import landseg.session.common as common
 
 class EpochEngineLike(typing.Protocol):
     @property
-    def mode(self) -> str: ...
+    def mode(self) -> typing.Literal['train_eval', 'train_only', 'eval_only']: ...
     @property
     def trainer(self) -> BatchEngineLike | None: ...
     @property
@@ -54,14 +54,6 @@ class BatchEngineLike(typing.Protocol):
     device: str
     state: common.StateLike
     comps: common.ComponentsLike
-    def config_logit_adjust(
-        self,
-        *,
-        enable_train_logit_adjust: bool = True,
-        enable_val_logit_adjust: bool = True,
-        enable_test_logit_adjust: bool = False,
-        **kwargs
-    ) -> None: ...
 
 @typing.runtime_checkable
 class EpochMetricsLike(typing.Protocol):
