@@ -60,9 +60,18 @@ class RunnerConfig:
     patience_epochs: int | None = 5
     delta: float | None = 0.005
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class TrainingStep:
-    '''Immutable training step result summary.'''
+    '''
+    Immutable training progress snapshot.
+
+    Invariants:
+        - Exactly one TrainingStep is yielded per completed epoch.
+        - Exactly one terminal TrainingStep is yielded per run
+          (is_run_end == True).
+        - metrics represent the most recently completed epoch.
+        - No TrainingStep represents partial execution.
+    '''
     phase_name: str # identity / location
     phase_index: int
     epoch: int = 1
@@ -189,11 +198,21 @@ class TrainingRunner:
 
     def run(self) -> typing.Generator[TrainingStep, None, None]:
         '''
-        Execute the configured training curriculum.
+        Execute the configured training curriculum as a stream of steps.
 
         Yields:
-            TrainingStep: One per completed epoch. Exactly one terminal
-            step is yielded at the end of the run.
+            TrainingStep:
+                - One step per completed epoch.
+                - Exactly one terminal step per run
+                (TrainingStep.is_run_end == True).
+
+        Behavior:
+            - Processes phases sequentially.
+            - Consumes internal event streams emitted by phase policies.
+            - Translates epoch-completion events to TrainingStep records.
+            - Handles checkpointing and logging as side effects.
+            - Supports resumption from checkpoints when configured.
+            - Terminates early only when explicitly permitted.
         '''
 
         # tracking
@@ -296,8 +315,11 @@ class TrainingRunner:
         '''
         Execute the training curriculum in a blocking manner.
 
+        This method fully consumes the step generator and returns the
+        primary metric from the terminal TrainingStep.
+
         Returns:
-            float: Final target metric from the terminal `TrainingStep`.
+            float: Final target metric achieved at run termination.
         '''
 
         # tracking
