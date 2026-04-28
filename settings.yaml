@@ -199,10 +199,6 @@ session:
   # sub config groups
   runtime:
 
-    schedule:
-      patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
-      min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
-
     monitor:
       # Head used for validation tracking, early stopping, and best-checkpoint
       # selection.
@@ -210,13 +206,14 @@ session:
       # Tête utilisée pour le suivi en validation, l’arrêt anticipé et la
       # sélection du meilleur point de sauvegarde.
       track_heads: [base]
+      patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
+      min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
 
     logit_adjust:
       # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
       logit_adjust_alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
       enable_train_logit_adjustment: False
-      enable_val_logit_adjustment: False
-      enable_test_logit_adjustment: False
+      enable_eval_logit_adjustment: False
 
 
 # -----------------------------------------------------------------------------

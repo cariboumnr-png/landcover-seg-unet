@@ -106,14 +106,15 @@ class _Schedule:
     log_every: int = 50
     val_every: int = 1
     ckpt_every: int = 5
-    patience: int = 10
-    min_delta: float = 0.0005
 
 @dataclasses.dataclass
 class _Monitor:
     metric_name: str = 'iou'
     track_heads: list[str] = field(default_factory=lambda: ['base'])
     track_mode: str = 'max'
+    allow_early_stop: bool = True
+    patience: int = 10
+    min_delta: float = 0.0005
 
 @dataclasses.dataclass
 class _Precision:
@@ -127,8 +128,7 @@ class _Optimization:
 class _LogitAdjustConfig:
     logit_adjust_alpha: float = 1.0
     enable_train_logit_adjustment: bool = False
-    enable_val_logit_adjustment: bool = False
-    enable_test_logit_adjustment: bool = False
+    enable_eval_logit_adjustment: bool = False
 
 @dataclasses.dataclass
 class _RuntimeConfig:
@@ -168,13 +168,25 @@ class _PhaseProfiles:
 class SessionConfig:
     '''doc'''
     resume_from_last: bool = False
+    mode: str = 'continuous'
     phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
     phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
 
     @property
-    def training_phases(self) -> list[_Phase]:
+    def single_phase(self) -> _Phase:
+        '''Single phase from runtime configs.'''
+        return _Phase(
+            name='single_phase',
+            num_epochs=self.runtime.schedule.max_epoch,
+            lr_scale=1.0,
+            active_heads=['base'],
+            frozen_heads=None
+        )
+
+    @property
+    def curriculum(self) -> list[_Phase]:
         '''List of phases by configs.'''
         registry = {
             'default': self.phases.default.phases,

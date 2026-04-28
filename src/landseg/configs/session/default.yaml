@@ -6,4 +6,5 @@ defaults:
   - phases: default
 
 resume_from_last: False
+mode: continuous # continuour | curriculum
 phase_schema: default

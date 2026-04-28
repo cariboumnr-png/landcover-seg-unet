@@ -4,13 +4,14 @@ schedule:
   log_every: 50
   val_every: 1
   ckpt_every: 5
-  patience: 10
-  min_delta: 0.0005
 
 monitor:
   metric_name: iou
   track_heads: [base]
   track_mode: max
+  allow_early_stop: True
+  patience: 10
+  min_delta: 0.0005
 
 precision:
   use_amp: True
@@ -21,5 +22,4 @@ optimization:
 logit_adjust:
   logit_adjust_alpha: 1.0
   enable_train_logit_adjustment: True
-  enable_val_logit_adjustment: False
-  enable_test_logit_adjustment: False
+  enable_eval_logit_adjustment: True

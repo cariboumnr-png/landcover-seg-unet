@@ -112,7 +112,9 @@ class SessionConfigShape(typing.Protocol):
     @property
     def runtime(self) -> common.ConfigLike: ...
     @property
-    def training_phases(self) -> typing.Sequence[orchestration.PhaseLike]: ...
+    def single_phase(self) -> orchestration.PhaseLike: ...
+    @property
+    def curriculum(self) -> typing.Sequence[orchestration.PhaseLike]: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -284,7 +286,7 @@ def build_session(
         device=context.device,
     )
 
-    # build epoch runner
+    # build partial epoch runner
     engine_build_context = engine.EngineBuildContext(
         dataspecs=dataspecs,
         model=model,
@@ -324,9 +326,9 @@ def build_session(
                 verbose=context.verbose_runner,
                 tracking=orchestration.TrackingConfig(
                     track_mode=config.runtime.monitor.track_mode,
-                    enable_early_stop=True,
-                    patience_epochs=config.runtime.schedule.patience,
-                    delta=config.runtime.schedule.min_delta
+                    enable_early_stop=config.runtime.monitor.allow_early_stop,
+                    patience_epochs=config.runtime.monitor.patience,
+                    delta=config.runtime.monitor.min_delta
                 )
             )
             return ContinuousTrainingSession(
@@ -335,7 +337,8 @@ def build_session(
                     epoch_runner=epoch_runner(mode='train_eval'),
                     base_config=base_config,
                     runner_type='continuous',
-                    training_phases=config.training_phases[0],
+                    training_phases=config.single_phase,
+                    logger=context.logger,
                     start_epoch=1
                 )
             )
@@ -348,7 +351,7 @@ def build_session(
                 verbose=context.verbose_runner,
                 tracking=orchestration.TrackingConfig(
                     track_mode=config.runtime.monitor.track_mode,
-                    delta=config.runtime.schedule.min_delta
+                    delta=config.runtime.monitor.min_delta
                 )
             )
             return CurriculumTrainingSession(
@@ -357,7 +360,8 @@ def build_session(
                     epoch_runner=epoch_runner(mode='train_eval'),
                     base_config=base_config,
                     runner_type='curriculum',
-                    training_phases=config.training_phases,
+                    training_phases=config.curriculum,
+                    logger=context.logger,
                 )
             )
 

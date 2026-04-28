@@ -104,24 +104,40 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         dataspecs=dataspecs,
         backbone_config=config.models.body_registry[config.models.use_body],
         conditioning=config.models.conditioning,
-        enable_logit_adjust=config.models.flags.enable_logit_adjust,
         enable_clamp=config.models.flags.enable_clamp,
         clamp_range=config.models.clamp_range
     )
 
     # build the session
-    pipeline_session = session.build_session(
-        dataspecs,
-        model,
-        config.session,
-        context=session.SessionBuildContext(
-            intent='continuous_training',
-            device=c.DEVICE,
-            logger=logger,
-            verbose_runner=print_out,
-            session_paths=session_paths,
-        )
-    )
+    match config.session.mode:
+        case 'continuous':
+            pipeline_session = session.build_session(
+                dataspecs,
+                model,
+                config.session,
+                context=session.SessionBuildContext(
+                    intent='continuous_training',
+                    device=c.DEVICE,
+                    logger=logger,
+                    verbose_runner=print_out,
+                    session_paths=session_paths,
+                )
+            )
+        case 'curriculum':
+            pipeline_session = session.build_session(
+                dataspecs,
+                model,
+                config.session,
+                context=session.SessionBuildContext(
+                    intent='curriculum_training',
+                    device=c.DEVICE,
+                    logger=logger,
+                    verbose_runner=print_out,
+                    session_paths=session_paths,
+                )
+            )
+        case _:
+            raise ValueError(f'Invalid training mode: {config.session.mode}')
 
     # run session in a block
     final = pipeline_session.runner.execute()
