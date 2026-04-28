@@ -189,7 +189,7 @@ session:
 
   # knobs
   resume_from_last: False
-  mode: continuous
+  mode: curriculum # continuour | curriculum
   phase_schema: default
 
   # components

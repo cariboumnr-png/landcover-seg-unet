@@ -77,7 +77,7 @@ def build_runner(
     runner_type: typing.Literal['continuous', 'curriculum'],
     training_phases: phases.PhaseLike |  typing.Sequence[phases.PhaseLike],
     logger: utils.Logger,
-) -> runner.ContinuousRunner | runner.CurriculumRunner:
+) -> runner.BaseRunner:
     '''
     Construct a concrete orchestration runner for epoch-based training.
 
