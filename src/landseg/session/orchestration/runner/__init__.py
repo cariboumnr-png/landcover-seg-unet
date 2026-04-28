@@ -32,16 +32,23 @@ import typing
 
 __all__ = [
     # classes
+    'BaseRunner',
+    'BaseRunnerConfig',
     'RunnerConfig',
     'TrainingRunner',
+    'TrainingStep',
     # functions
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
+    from .base import BaseRunner, BaseRunnerConfig, TrainingStep
     from .runner import RunnerConfig, TrainingRunner
 
 def __getattr__(name: str):
+
+    if name in {'BaseRunner', 'BaseRunnerConfig', 'TrainingStep'}:
+        return getattr(importlib.import_module('.base', __package__), name)
 
     if name in {'RunnerConfig', 'TrainingRunner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
