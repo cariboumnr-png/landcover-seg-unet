@@ -177,7 +177,7 @@ class _ResultsSummary:
     '''Summaries train/val/infer.'''
     train_summary: _TrainSummary
     val_summary: _ValSummary
-    infer_ctx: _InferContext
+    infer_context: _InferContext
 
     def __str__(self) -> str:
         return '\n'.join([
@@ -287,7 +287,7 @@ def initialize(
                 target_metrics=0.0,
                 head_metrics_str={},
             ),
-            infer_ctx=_InferContext(
+            infer_context=_InferContext(
                 patch_per_blk=0,
                 patch_per_dim=0,
                 block_columns=0,
@@ -309,13 +309,13 @@ def initialize(
         per_blk = dataloaders.meta.patch_per_blk
         per_dim = int(per_blk ** 0.5)
         assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
-        state.summary.infer_ctx.patch_per_blk = per_blk
-        state.summary.infer_ctx.patch_per_dim = per_dim
+        state.summary.infer_context.patch_per_blk = per_blk
+        state.summary.infer_context.patch_per_dim = per_dim
         # resolve block col/row numbers
         blk_col, blk_row = dataloaders.meta.test_blks_grid
-        state.summary.infer_ctx.block_columns = blk_col
+        state.summary.infer_context.block_columns = blk_col
         # resolve patch col/row numbers
         pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
-        state.summary.infer_ctx.patch_grid_shape = pch_col, pch_row
+        state.summary.infer_context.patch_grid_shape = pch_col, pch_row
     # return
     return state

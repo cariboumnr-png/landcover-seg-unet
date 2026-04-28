@@ -64,6 +64,7 @@ Type behavior:
 
 # standard imports
 import dataclasses
+import functools
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -80,7 +81,8 @@ import landseg.utils as utils
 IntentT = typing.TypeVar(
     'IntentT',
     typing.Literal['overfit'],
-    typing.Literal['training'],
+    typing.Literal['continuous_training'],
+    typing.Literal['curriculum_training'],
     typing.Literal['evaluation'],
 )
 
@@ -106,8 +108,6 @@ class SessionConfigShape(typing.Protocol):
             orchestration runner.
     '''
     @property
-    def phase_schema(self) -> str: ...
-    @property
     def components(self) -> comps.ComponentsConfig: ...
     @property
     def runtime(self) -> common.ConfigLike: ...
@@ -122,10 +122,16 @@ class OverfitSession:
     runner: engine.EpochRunner
 
 @dataclasses.dataclass
-class TrainingSession:
+class ContinuousTrainingSession:
     '''Training session with epoch and phase orchestration.'''
-    intent: typing.Literal['training']
-    runner: orchestration.TrainingRunner
+    intent: typing.Literal['continuous_training']
+    runner: orchestration.ContinuousRunner
+
+@dataclasses.dataclass
+class CurriculumTrainingSession:
+    '''Training session with epoch and phase orchestration.'''
+    intent: typing.Literal['curriculum_training']
+    runner: orchestration.CurriculumRunner
 
 @dataclasses.dataclass
 class EvaluationSession:
@@ -173,8 +179,16 @@ def build_session(
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
-    context: SessionBuildContext[typing.Literal['training']],
-) -> TrainingSession: ...
+    context: SessionBuildContext[typing.Literal['continuous_training']],
+) -> ContinuousTrainingSession: ...
+
+@typing.overload
+def build_session(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext[typing.Literal['curriculum_training']],
+) -> CurriculumTrainingSession: ...
 
 @typing.overload
 def build_session(
@@ -189,7 +203,7 @@ def build_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext
-) -> OverfitSession | TrainingSession | EvaluationSession:
+) -> OverfitSession | ContinuousTrainingSession | CurriculumTrainingSession | EvaluationSession:
     '''
     Assemble the execution pipeline for a multi-head model session.
 
@@ -270,38 +284,26 @@ def build_session(
         device=context.device,
     )
 
-    # batch engine
-    batch_executor = engine.BatchExecutionEngine(
+    # build epoch runner
+    engine_build_context = engine.EngineBuildContext(
+        dataspecs=dataspecs,
         model=model,
-        state=runtime_state, # type: ignore
-        parent_map=dataspecs.heads.head_parent,
-        use_amp=config.runtime.precision.use_amp,
-        device=context.device
-    )
-
-    # trainer
-    trainer = engine.MultiHeadTrainer(
-        engine=batch_executor,
-        state=runtime_state,
         components=session_components,
         callbacks=callbacks,
-        device=context.device,
+        runtime_state=runtime_state
+    )
+    engine_build_config = engine.EngineBuildConfig(
         use_amp=config.runtime.precision.use_amp,
         grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-        log_every=config.runtime.schedule.log_every,
+        loss_update_every=config.runtime.schedule.log_every,
+        metrics_track_heads=config.runtime.monitor.track_heads,
+        evaluation_dataset=context.eval_dataset
     )
-
-    # evaluator
-    evaluator = engine.MultiHeadEvaluator(
-        engine=batch_executor,
-        state=runtime_state,
-        components=session_components,
-        callbacks=callbacks,
-        device=context.device,
-        track_mode=config.runtime.monitor.track_mode,
-        monitor_heads=config.runtime.monitor.track_heads,
-        min_delta=config.runtime.schedule.min_delta,
-        dataset=context.eval_dataset
+    epoch_runner = functools.partial(
+        engine.build_engine,
+        context=engine_build_context,
+        config=engine_build_config,
+        device=context.device
     )
 
     # build trainer/runner depending on mode
@@ -311,28 +313,51 @@ def build_session(
             # return an epoch runner with both trainer and evaluator
             return OverfitSession(
                 intent='overfit',
-                runner=engine.EpochRunner('train_evaluate', trainer, evaluator)
+                runner=epoch_runner(mode='train_eval'),
             )
 
-        case 'training':
+        case 'continuous_training':
             # build orchestration runner and return
             assert context.session_paths, 'Session artifacts paths not defined'
-            runner_config = orchestration.RunnerConfig(
+            base_config = orchestration.BaseRunnerConfig(
                 artifacts_paths=context.session_paths,
-                resume_from_last=False,
                 verbose=context.verbose_runner,
-                enable_early_stop=True,
-                track_mode=config.runtime.monitor.track_mode,
-                patience_epochs=config.runtime.schedule.patience,
-                delta=config.runtime.schedule.min_delta
+                tracking=orchestration.TrackingConfig(
+                    track_mode=config.runtime.monitor.track_mode,
+                    enable_early_stop=True,
+                    patience_epochs=config.runtime.schedule.patience,
+                    delta=config.runtime.schedule.min_delta
+                )
             )
-            return TrainingSession(
-                intent='training',
-                runner=orchestration.TrainingRunner(
-                    engine.EpochRunner('train_evaluate', trainer, evaluator),
-                    config.training_phases,
-                    runner_config,
-                    logger=context.logger,
+            return ContinuousTrainingSession(
+                intent='continuous_training',
+                runner=orchestration.build_runner(
+                    epoch_runner=epoch_runner(mode='train_eval'),
+                    base_config=base_config,
+                    runner_type='continuous',
+                    training_phases=config.training_phases[0],
+                    start_epoch=1
+                )
+            )
+
+        case 'curriculum_training':
+            # build orchestration runner and return
+            assert context.session_paths, 'Session artifacts paths not defined'
+            base_config = orchestration.BaseRunnerConfig(
+                artifacts_paths=context.session_paths,
+                verbose=context.verbose_runner,
+                tracking=orchestration.TrackingConfig(
+                    track_mode=config.runtime.monitor.track_mode,
+                    delta=config.runtime.schedule.min_delta
+                )
+            )
+            return CurriculumTrainingSession(
+                intent='curriculum_training',
+                runner=orchestration.build_runner(
+                    epoch_runner=epoch_runner(mode='train_eval'),
+                    base_config=base_config,
+                    runner_type='curriculum',
+                    training_phases=config.training_phases,
                 )
             )
 
@@ -340,7 +365,7 @@ def build_session(
             # return an epoch runner with just the evaluator
             return EvaluationSession(
                 intent='evaluation',
-                runner=engine.EpochRunner('evaluate_only', None, evaluator)
+                runner=epoch_runner(mode='eval_only')
             )
 
         case _:

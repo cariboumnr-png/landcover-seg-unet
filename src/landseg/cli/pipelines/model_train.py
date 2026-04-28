@@ -115,7 +115,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         model,
         config.session,
         context=session.SessionBuildContext(
-            intent='training',
+            intent='continuous_training',
             device=c.DEVICE,
             logger=logger,
             verbose_runner=print_out,
