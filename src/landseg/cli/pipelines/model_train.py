@@ -123,11 +123,8 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         )
     )
 
-    # run session
-    _m = {}
-    for m in pipeline_session.runner.run(): # this line got warning
-        _m = m
-    print(_m)
+    # run session in a block
+    final = pipeline_session.runner.execute()
 
     # close logger
     logger.close()
@@ -135,7 +132,6 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = {}
-    # meta['summary']['best_value'] = runner.evaluator.state.metrics.best_value
-    # meta['summary']['checkpoint'] = runner.final_checkpoint # best of the final
+    meta['summary']['best_value'] = final
     meta_ctrl.persist(meta)
     return meta
