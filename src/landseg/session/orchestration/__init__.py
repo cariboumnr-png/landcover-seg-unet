@@ -59,7 +59,7 @@ def __getattr__(name: str):
     if name in {'TrackingConfig'}:
         return getattr(importlib.import_module('.policy', __package__), name)
 
-    if name in {'ContinuousRunner', 'CurriculumRunner'}:
+    if name in {'ContinuousRunner', 'CurriculumRunner', 'BaseRunnerConfig'}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -48,6 +48,7 @@ import typing
 import landseg.session.common as common
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.runner as runner
+import landseg.utils as utils
 
 @typing.overload
 def build_runner(
@@ -56,6 +57,7 @@ def build_runner(
     base_config: runner.BaseRunnerConfig,
     runner_type: typing.Literal['continuous'],
     training_phases: phases.PhaseLike,
+    logger: utils.Logger,
     start_epoch: int = 1
 ) -> runner.ContinuousRunner: ...
 
@@ -66,6 +68,7 @@ def build_runner(
     base_config: runner.BaseRunnerConfig,
     runner_type: typing.Literal['curriculum'],
     training_phases: typing.Sequence[phases.PhaseLike],
+    logger: utils.Logger,
 ) -> runner.CurriculumRunner: ...
 
 def build_runner(
@@ -74,6 +77,7 @@ def build_runner(
     base_config: runner.BaseRunnerConfig,
     runner_type: typing.Literal['continuous', 'curriculum'],
     training_phases: phases.PhaseLike |  typing.Sequence[phases.PhaseLike],
+    logger: utils.Logger,
     start_epoch: int = 1
 ) -> runner.ContinuousRunner | runner.CurriculumRunner:
     '''
@@ -133,6 +137,7 @@ def build_runner(
                 epoch_runner=epoch_runner,
                 base_config=base_config,
                 phase=training_phases,
+                logger=logger,
                 start_epoch=start_epoch
             )
         case 'curriculum':
@@ -145,4 +150,5 @@ def build_runner(
                 epoch_runner=epoch_runner,
                 base_config=base_config,
                 training_phases=training_phases,
+                logger=logger,
             )

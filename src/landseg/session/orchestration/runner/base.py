@@ -139,7 +139,7 @@ class BaseRunner(abc.ABC):
     def __init__(
         self,
         epoch_runner: common.EpochEngineLike,
-        config: BaseRunnerConfig,
+        base_config: BaseRunnerConfig,
         *,
         logger: utils.Logger,
     ):
@@ -171,16 +171,16 @@ class BaseRunner(abc.ABC):
 
         # parse arguments
         self.epoch_runner = epoch_runner
-        self.config = config
+        self.config = base_config
 
         # a child from base logger
         self.logger = logger.get_child('phase')
 
         # set la status
-        self.trainer.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
-        self.trainer.model.set_logit_adjust_enabled(config.train_logit_adjust)
-        self.evaluator.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
-        self.evaluator.model.set_logit_adjust_enabled(config.val_logit_adjust)
+        self.trainer.model.set_logit_adjust_alpha(base_config.logit_adjust_alpha)
+        self.trainer.model.set_logit_adjust_enabled(base_config.train_logit_adjust)
+        self.evaluator.model.set_logit_adjust_alpha(base_config.logit_adjust_alpha)
+        self.evaluator.model.set_logit_adjust_enabled(base_config.val_logit_adjust)
 
     @property
     def trainer(self) -> common.BatchEngineLike:
