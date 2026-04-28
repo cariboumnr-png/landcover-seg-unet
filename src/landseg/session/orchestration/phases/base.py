@@ -28,6 +28,7 @@ Phase definition
 # standard imports
 import typing
 
+@typing.runtime_checkable
 class PhaseLike(typing.Protocol):
     '''
     Immutable description of a single training phase.

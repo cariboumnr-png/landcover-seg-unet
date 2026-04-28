@@ -34,8 +34,8 @@ __all__ = [
     # classes
     'BaseRunner',
     'BaseRunnerConfig',
-    'RunnerConfig',
-    'TrainingRunner',
+    'ContinuousRunner',
+    'CurriculumRunner',
     'TrainingStep',
     # functions
     # types
@@ -43,14 +43,18 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import BaseRunner, BaseRunnerConfig, TrainingStep
-    from .runner import RunnerConfig, TrainingRunner
+    from .continuous import ContinuousRunner
+    from .curriculum import CurriculumRunner
 
 def __getattr__(name: str):
 
     if name in {'BaseRunner', 'BaseRunnerConfig', 'TrainingStep'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'RunnerConfig', 'TrainingRunner'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+    if name in {'ContinuousRunner'}:
+        return getattr(importlib.import_module('.continuous', __package__), name)
+
+    if name in {'CurriculumRunner'}:
+        return getattr(importlib.import_module('.currirulum', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
