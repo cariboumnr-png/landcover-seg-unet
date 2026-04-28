@@ -36,32 +36,9 @@ Design principles
 '''
 
 # standard imports
-import dataclasses
 import typing
 # local imports
 import landseg.session.engine.policy as policy
-
-@dataclasses.dataclass(frozen=True)
-class EpochMetrics:
-    '''
-    Immutable container for metrics produced during a single epoch.
-
-    Attributes:
-        training: Results returned by the trainer for the epoch, or None
-            if no training step was executed.
-        validation: Results returned by the evaluator, or None if no
-            evaluation step was executed.
-    '''
-    training: policy.TrainerEpochResults | None
-    validation: policy.EvaluatorEpochResults | None
-
-    def __str__(self) -> str:
-        return '\n'.join([
-            'Training Results:',
-            str(self.training),
-            'Validation Results:',
-            str(self.validation),
-        ])
 
 # --------------------------------Public  Class--------------------------------
 class EpochRunner:
@@ -122,7 +99,7 @@ class EpochRunner:
         self.trainer = trainer
         self.evaluator = evaluator
 
-    def run_epoch(self, epoch: int) -> EpochMetrics:
+    def run_epoch(self, epoch: int) -> policy.EpochResults:
         '''
         Run a single training epoch and return aggregated metrics.
 
@@ -131,8 +108,8 @@ class EpochRunner:
             bookkeeping or logging purposes.
 
         Returns:
-            EpochMetrics instance containing training and/or validation
-            results depending on the configured execution mode.
+            `policy.EpochResults` instance containing training and/or
+            validation results depending on the configured execution mode.
         '''
 
         # run by mode
@@ -142,19 +119,19 @@ class EpochRunner:
                     raise ValueError('Missing trainer or evaluator')
                 train_results = self.trainer.train_one_epoch(epoch)
                 val_results = self.evaluator.validate()
-                return EpochMetrics(train_results, val_results)
+                return policy.EpochResults(train_results, val_results)
 
             case 'train_only':
                 if not self.trainer:
                     raise ValueError('Missing trainer')
                 train_results = self.trainer.train_one_epoch(epoch)
-                return EpochMetrics(train_results, None)
+                return policy.EpochResults(train_results, None)
 
             case 'evaluate_only':
                 if not self.evaluator:
                     raise ValueError('Missing evaluator')
                 val_results = self.evaluator.validate()
-                return EpochMetrics(None, val_results)
+                return policy.EpochResults(None, val_results)
 
             case _:
                 raise ValueError(f'Invalid mode: {self.mode}')

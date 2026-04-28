@@ -80,18 +80,16 @@ class MultiHeadTrainer(policy.EngineBase):
     def __init__(
         self,
         *,
-        use_amp: bool,
         grad_clip_norm: float | None,
-        log_every: int,
+        update_every: int,
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.use_amp = use_amp
         self.grad_clip_norm = grad_clip_norm
-        self.log_every = log_every
+        self.update_every = update_every
 
         # init the epoch results container with all heads
-        self.epoch_results = policy.TrainerEpochResults(self.state.heads.all_heads)
+        self.results = policy.TrainerEpochResults(self.state.heads.all_heads)
 
     def train_one_epoch(self, epoch: int) -> policy.TrainerEpochResults:
         '''
@@ -124,10 +122,8 @@ class MultiHeadTrainer(policy.EngineBase):
         # ----- train phase begin
         # set model to train mode
         self.model.train()
-        # set logit adjustment status
-        self.model.set_logit_adjust_enabled(self.flags['enable_train_la'])
         # reset results container (avoid carry-over from last epoch)
-        self.epoch_results.clear()
+        self.results.clear()
         self._emit('on_train_epoch_begin', epoch)
 
         # interate through training data batches
@@ -144,7 +140,7 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch backward on total loss
             total = self.state.batch_out.total_loss
-            if self.use_amp:
+            if self.engine.use_amp:
                 self.state.optim.scaler.scale(total).backward()
             else:
                 total.backward()
@@ -153,7 +149,7 @@ class MultiHeadTrainer(policy.EngineBase):
             # gradient clipping
             optimizer = self.optimization.optimizer
             # unscale if use AMP
-            if self.use_amp:
+            if self.engine.use_amp:
                 self.state.optim.scaler.unscale_(optimizer)
             self._clip_grad()
             self._emit('on_train_before_optimizer_step')
@@ -161,7 +157,7 @@ class MultiHeadTrainer(policy.EngineBase):
             # optimizer step
             optimizer = self.optimization.optimizer
             # use AMP
-            if self.use_amp:
+            if self.engine.use_amp:
                 self.state.optim.scaler.step(optimizer)
                 self.state.optim.scaler.update() # update scaler
             # no AMP
@@ -172,13 +168,13 @@ class MultiHeadTrainer(policy.EngineBase):
             # batch end
             # accumulate total loss
             batch_loss = float(self.state.batch_out.total_loss.detach().item())
-            self.epoch_results.total_loss += batch_loss
+            self.results.total_loss += batch_loss
             # accumulate per head loss
             for head, loss in self.state.batch_out.head_loss.items():
-                if head in self.epoch_results.all_heads:
-                    self.epoch_results.head_losses[head] += loss
+                if head in self.results.all_heads:
+                    self.results.head_losses[head] += loss
             # update bidx
-            self.epoch_results.current_bidx = bidx
+            self.results.current_bidx = bidx
 
             # update train logs if at interval (decided by trainer method)
             self._update_training_state(flush=False)
@@ -188,7 +184,7 @@ class MultiHeadTrainer(policy.EngineBase):
         # - update logs and loss (total/per-head) for the epoch
         self._update_training_state(flush=True)
         self._emit('on_train_epoch_end')
-        return self.epoch_results
+        return self.results
 
     # ----- training phase
     def _clip_grad(self):
@@ -212,10 +208,10 @@ class MultiHeadTrainer(policy.EngineBase):
         # create log dict
         logs = {}
         # update log at interval
-        if flush or bidx % self.log_every == 0:
-            logs['Total_Loss'] = self.epoch_results.mean_total_loss
+        if flush or bidx % self.update_every == 0:
+            logs['Total_Loss'] = self.results.mean_total_loss
             # per-head losses
-            for k, v in self.epoch_results.mean_head_losses.items():
+            for k, v in self.results.mean_head_losses.items():
                 if v > 0: # only report non-zero losses
                     logs[f'Head_Loss_{k}'] = float(v)
             # pretty string of the losses

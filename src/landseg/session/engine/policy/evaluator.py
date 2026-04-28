@@ -88,7 +88,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.dataset = dataset
 
         # init the epoch results container with all heads
-        self.epoch_results = policy.EvaluatorEpochResults(
+        self.results = policy.EvaluatorEpochResults(
             all_heads=self.state.heads.all_heads,
             monitor_heads=self.monitor_heads
         )
@@ -121,8 +121,6 @@ class MultiHeadEvaluator(policy.EngineBase):
         # val phase start
         # set model to evaluation mode
         self.model.eval()
-        # set logit adjustment status
-        self.model.set_logit_adjust_enabled(self.flags['enable_val_la'])
         self._emit('on_validation_begin')
 
         # set target dataset
@@ -144,7 +142,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         # val phase end
         self._compute_iou()
         self._emit('on_validation_end')
-        return self.epoch_results
+        return self.results
 
     def infer(self, out_dir: str, **kwargs) -> None:
         '''
@@ -165,8 +163,6 @@ class MultiHeadEvaluator(policy.EngineBase):
         # infer phase start
         # set model to evaluation mode
         self.model.eval()
-        # set logit adjustment status
-        self.model.set_logit_adjust_enabled(self.flags['enable_test_la'])
         self._emit('on_inference_begin')
 
         # iterate through inference dataset
@@ -202,11 +198,11 @@ class MultiHeadEvaluator(policy.EngineBase):
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
-            self.epoch_results.head_metrics[head] = metrics_module.metrics
+            self.results.head_metrics[head] = metrics_module.metrics
             # collect per head metrics formatted strings
             metrics_str[head] = metrics_module.metrics.as_str_list
 
         # assign to state summary
         summary = self.state.summary.val_summary
-        summary.target_metrics = self.epoch_results.target_metrics
+        summary.target_metrics = self.results.target_metrics
         summary.head_metrics_str = metrics_str

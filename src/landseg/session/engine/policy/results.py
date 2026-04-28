@@ -32,6 +32,28 @@ import landseg.session.common as common
 # aliases
 field = dataclasses.field
 
+@dataclasses.dataclass(frozen=True)
+class EpochResults:
+    '''
+    Immutable container for metrics produced during a single epoch.
+
+    Attributes:
+        training: Results returned by the trainer for the epoch, or None
+            if no training step was executed.
+        validation: Results returned by the evaluator, or None if no
+            evaluation step was executed.
+    '''
+    training: TrainerEpochResults | None
+    validation: EvaluatorEpochResults | None
+
+    def __str__(self) -> str:
+        return '\n'.join([
+            'Training Results:',
+            str(self.training),
+            'Validation Results:',
+            str(self.validation),
+        ])
+
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Trainer aggregated results.'''
