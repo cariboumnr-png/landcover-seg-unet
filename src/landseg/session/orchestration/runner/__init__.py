@@ -55,6 +55,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.continuous', __package__), name)
 
     if name in {'CurriculumRunner'}:
-        return getattr(importlib.import_module('.currirulum', __package__), name)
+        return getattr(importlib.import_module('.curriculum', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
