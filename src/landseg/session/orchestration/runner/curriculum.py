@@ -66,8 +66,9 @@ class CurriculumRunner(runner.BaseRunner):
 
     def __init__(
         self,
+        *,
         training_phases: typing.Sequence[phases.PhaseLike],
-        **kwargs
+        **kwargs: typing.Any
     ):
         '''
         Initialize a curriculum-based training runner.

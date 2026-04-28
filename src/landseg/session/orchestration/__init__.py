@@ -32,23 +32,34 @@ import typing
 
 __all__ = [
     # classes
-    'PhaseLike',
-    'RunnerConfig',
-    'TrainingRunner',
+    'BaseRunnerConfig',
+    'ContinuousRunner',
+    'CurriculumRunner',
+    'TrackingConfig',
     # functions
+    'build_runner',
     # types
+    'PhaseLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .phases import PhaseLike
-    from .runner import RunnerConfig, TrainingRunner
+    from .factory import build_runner
+    from .policy import TrackingConfig
+    from .runner import  BaseRunnerConfig, ContinuousRunner, CurriculumRunner
 
 def __getattr__(name: str):
 
     if name in {'PhaseLike'}:
         return getattr(importlib.import_module('.phases', __package__), name)
 
-    if name in {'RunnerConfig', 'TrainingRunner'}:
+    if name in {'build_runner'}:
+        return getattr(importlib.import_module('.factory', __package__), name)
+
+    if name in {'TrackingConfig'}:
+        return getattr(importlib.import_module('.policy', __package__), name)
+
+    if name in {'ContinuousRunner', 'CurriculumRunner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -68,8 +68,8 @@ class ContinuousRunner(runner.BaseRunner):
 
     def __init__(
         self,
-        phase: phases.PhaseLike,
         *,
+        phase: phases.PhaseLike,
         start_epoch: int = 1,
         **kwargs: typing.Any
     ):

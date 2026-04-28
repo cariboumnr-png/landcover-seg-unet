@@ -72,16 +72,13 @@ class BaseRunnerConfig:
             execution.
         val_logit_adjustment: Enable logit adjustment during validation
             execution.
-        test_logit_adjustment: Enable logit adjustment during test-time
-            inference.
     '''
     artifacts_paths: artifacts.ResultsPaths
     tracking: policy.TrackingConfig
     verbose: bool = True
     logit_adjust_alpha: float = 1.0
     train_logit_adjust: bool = True
-    val_logit_adjustment: bool = True
-    test_logit_adjustment: bool = False
+    val_logit_adjust: bool = True
 
 @dataclasses.dataclass(frozen=True)
 class TrainingStep:
@@ -181,14 +178,9 @@ class BaseRunner(abc.ABC):
 
         # set la status
         self.trainer.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
-        self.trainer.config_logit_adjust(
-            enable_train_logit_adjust=config.train_logit_adjust
-        )
+        self.trainer.model.set_logit_adjust_enabled(config.train_logit_adjust)
         self.evaluator.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
-        self.evaluator.config_logit_adjust(
-            enable_val_logit_adjust=config.val_logit_adjustment,
-            enable_test_logit_adjust=config.test_logit_adjustment
-        )
+        self.evaluator.model.set_logit_adjust_enabled(config.val_logit_adjust)
 
     @property
     def trainer(self) -> common.BatchEngineLike:
