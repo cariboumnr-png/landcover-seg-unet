@@ -34,7 +34,7 @@ as a stream of TrainingStep records, one per completed epoch.
 # standard imports
 import typing
 # local imports
-import landseg.session.common as common
+import landseg.core as core
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
@@ -95,7 +95,7 @@ class ContinuousRunner(runner.BaseRunner):
         # parse arguments
         self.phase = phase # single phase
 
-    def run(self) -> typing.Generator[runner.TrainingStep, None, None]:
+    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
         '''
         Execute continuous training as a stream of TrainingStep records.
 
@@ -120,7 +120,7 @@ class ContinuousRunner(runner.BaseRunner):
 
         # tracking
         current_epoch: int = -1
-        current_metrics: common.EpochMetricsLike | None = None
+        current_metrics: core.EpochResults | None = None
 
         # print phase info if verbose
         if self.config.verbose:
@@ -146,14 +146,14 @@ class ContinuousRunner(runner.BaseRunner):
 
                 case events.EpochEnd(epoch_index=epoch, metrics=metrics):
                     # typing correctness
-                    assert isinstance(metrics, common.EpochMetricsLike)
+                    assert isinstance(metrics, core.EpochResults)
                     # tracking
                     current_epoch = epoch
                     current_metrics = metrics
                     is_phase_end = epoch==self.phase.num_epochs
                     self._log_metrics(epoch, self.phase.num_epochs, metrics)
 
-                    yield runner.TrainingStep(
+                    yield core.TrainingSessionStep(
                         phase_name=self.phase.name,
                         phase_index=0,
                         epoch=epoch,
@@ -167,7 +167,7 @@ class ContinuousRunner(runner.BaseRunner):
 
                 case events.StopRun(reason=reason):
 
-                    yield runner.TrainingStep(
+                    yield core.TrainingSessionStep(
                         phase_name=self.phase.name,
                         phase_index=0,
                         epoch=current_epoch,

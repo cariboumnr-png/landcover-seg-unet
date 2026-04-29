@@ -33,7 +33,7 @@ one per completed epoch.
 # standard imports
 import typing
 # local imports
-import landseg.session.common as common
+import landseg.core as core
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
@@ -87,7 +87,7 @@ class CurriculumRunner(runner.BaseRunner):
         # parse arguments
         self.phases = training_phases
 
-    def run(self) -> typing.Generator[runner.TrainingStep, None, None]:
+    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
         '''
         Execute the curriculum as a stream of `TrainingStep` records.
 
@@ -115,7 +115,7 @@ class CurriculumRunner(runner.BaseRunner):
         # tracking
         current_phase_idx: int = 0
         current_epoch: int = 1
-        current_metrics: common.EpochMetricsLike | None = None
+        current_metrics: core.EpochResults | None = None
 
         # iterate through provided phases
         for i, phase in enumerate(self.phases):
@@ -144,14 +144,14 @@ class CurriculumRunner(runner.BaseRunner):
 
                     case events.EpochEnd(epoch_index=epoch, metrics=metrics):
                         # typing correctness
-                        assert isinstance(metrics, common.EpochMetricsLike)
+                        assert isinstance(metrics, core.EpochResults)
                         # tracking
                         current_phase_idx = i
                         current_epoch = epoch
                         current_metrics = metrics
                         is_phase_end = epoch==phase.num_epochs
                         self._log_metrics(epoch, phase.num_epochs, metrics)
-                        yield runner.TrainingStep(
+                        yield core.TrainingSessionStep(
                             phase_name=phase.name,
                             phase_index=i,
                             epoch=epoch,
@@ -169,7 +169,7 @@ class CurriculumRunner(runner.BaseRunner):
         assert current_phase_idx == len(self.phases) - 1
         assert current_epoch == self.phases[current_phase_idx].num_epochs
         # final terminal step after all phases complete
-        yield runner.TrainingStep(
+        yield core.TrainingSessionStep(
             phase_name=self.phases[current_phase_idx].name,
             phase_index=current_phase_idx,
             epoch=current_epoch,
