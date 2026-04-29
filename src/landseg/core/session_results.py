@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-instance-attributes
+
 '''
 Session step
 '''
@@ -48,13 +50,21 @@ class TrainingSessionStep:
         - metrics reflect the most recently completed epoch.
         - No TrainingStep represents partial or in-progress execution.
     '''
-    phase_name: str # identity / location
+    # identity / location
+    phase_name: str
     phase_index: int
     epoch: int = 1
-    metrics: EpochResults | None = None # metrics
-    is_phase_end: bool = False # termination signals
+    global_epoch: int = 1
+    # termination signals
+    is_phase_end: bool = False
     is_run_end: bool = False
-    early_stop_reason: str | None = None
+    stop_reason: str | None = None
+    # metrics
+    objective_name: str = ''
+    objective_value: float = 0.0
+    best_value_so_far: float = 0.0
+    is_best_epoch: bool = False
+    metrics: EpochResults | None = None # raw
 
     @property
     def target_scalar(self) -> float:
@@ -129,7 +139,7 @@ class TrainerEpochResults:
 class EvaluatorEpochResults:
     '''Evaluator aggregated epoch results.'''
     all_heads: list[str]
-    monitor_heads: list[str]
+    monitor_heads: list[str] # heads for IoU caculation
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -144,6 +154,11 @@ class EvaluatorEpochResults:
             f'{h}: {m.as_str_list}'
             for h, m in self.head_metrics.items() if h in self.monitor_heads
         ])
+
+    @property
+    def monitor_heads_str(self) -> str:
+        '''Return plain text of the monitor heads'''
+        return '|'.join(self.monitor_heads)
 
     @property
     def target_metrics(self) -> float:
