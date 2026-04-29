@@ -1,58 +1,58 @@
-# ADR-0028: Refactor Training Runner to Generator-Based Execution for Optuna Pruning
+# ADR-0028: Generator-Based Training Runner for Observable, Prunable Execution
 
-- **Status:** Proposed
-- **Date:** 2026-04-22
+- **Status:** Accepted
+- **Date:** 2026-04-29
+- **Supersedes:** Monolithic `TrainingRunner` execution model
 
 ---
 
 ## Context
 
-The current training architecture encapsulates the full training lifecycle within
-a runner abstraction designed primarily for CLI-driven workflows. Each invocation
-executes a complete session and returns a final scalar metric.
+The original training architecture encapsulated the full training lifecycle inside a
+monolithic runner designed primarily for CLI-driven workflows. Each invocation executed
+an entire session and returned only a final scalar metric.
 
-This design has the following characteristics:
+This design had several properties:
 
-* Strong encapsulation of training, evaluation, scheduling, and early stopping
-* A single entry point (`fit()`-style execution) that hides intermediate progress
-* Callback system oriented toward side effects (e.g., logging, persistence)
+- Strong encapsulation of training, evaluation, scheduling, and early stopping
+- A single, terminal `fit()` / `execute()` entry point
+- Callbacks oriented toward side effects (logging, persistence)
+- No externally visible intermediate progress
 
-While effective for CLI pipelines, this model creates a limitation for hyperparameter
-optimization:
+While effective for CLI pipelines, this model fundamentally limited hyperparameter
+optimization and external orchestration:
 
-> A trial is treated as an opaque function with only a final output, preventing
-> access to intermediate metrics.
+> Training was treated as an opaque function with only a final output.
 
 As a result:
 
-* Pruning strategies in Optuna cannot operate
-* Intermediate performance signals are not externally observable
-* Sweep logic is forced to treat training as a black box
+- Optuna pruning could not operate
+- Intermediate epoch- and phase-level metrics were inaccessible
+- Sweep logic was forced to treat training as a black box
 
-This misalignment becomes critical as the sweep layer requires fine-grained control
-over trial execution.
+At the same time, the system already employed a **mature, explicit phase abstraction**
+used to define curricula (e.g. multi-stage head activation, scheduling, and scaling).
+The runner’s responsibility was *execution*, not semantic definition of phases.
 
-The training system already includes a **mature, explicit phase abstraction** used
-to structure multi-stage curricula (e.g., head activation schemas, logit adjustment,
-learning rate scaling). The runner is responsible only for *executing* these phases,
-not defining or interpreting their semantics.
+This mismatch between execution and orchestration requirements motivated a structural
+refactor.
 
 ---
 
-## Decision
+## Decision (Implemented)
 
-Refactor the training runner to a **generator-based execution model** that yields
-structured intermediate results throughout the training process.
+The training runner **has been refactored into a generator-based execution model** that
+exposes training progress as a stream of immutable, structured steps.
 
-The runner will:
+Instead of executing training to completion and returning a single value, the runner now:
 
-* Expose incremental progress (e.g., per epoch within a phase)
-* Respect phase boundaries and configuration defined externally
-* Retain internal control over training logic (e.g., early stopping, scheduling)
-* Allow external consumers (e.g., sweep layer) to drive execution flow
+- Yields one structured step per completed epoch
+- Preserves explicit phase boundaries supplied by configuration
+- Retains internal responsibility for training logic and state
+- Allows external consumers (CLI, sweeps, studies) to control execution by consuming
+  the generator
 
-This refactor explicitly preserves the existing phase model and treats it as a
-stable input to runner execution.
+The runner now acts as an **iterator over training state**, not a terminal procedure.
 
 ---
 
@@ -60,86 +60,133 @@ stable input to runner execution.
 
 ### Execution Model
 
-Replace monolithic execution with a streaming interface:
+The monolithic training runner has been replaced by generator-based orchestration:
 
-* The runner produces a sequence of structured step outputs
-* Each step represents a meaningful unit of progress (e.g., epoch)
-* Steps are annotated with phase identifiers
-* Execution control shifts to the caller
+- Training progress is emitted incrementally
+- Each yielded unit represents a completed epoch
+- Phase transitions are explicit and observable
+- Termination is signaled through structured metadata, not implicit control flow
 
-The runner becomes an **iterator over training state**, rather than a terminal
-procedure.
-
----
-
-### Step Interface
-
-Each yielded step should contain:
-
-* Phase identifiers (phase name, phase index)
-* Progress markers (epoch, global step)
-* Training and validation metrics (normalized structure)
-* Internal state indicators (e.g., best-model-so-far)
-* Early stopping signals (e.g., convergence reached)
-
-Phase transitions are observable through step metadata, not implicit control flow.
+Execution control resides with the caller, which may:
+- Consume the full run
+- Stop early (e.g. pruning)
+- Observe or persist intermediate results
 
 ---
 
-## Integration Strategy
+### Public Step Interface
 
-### CLI Workflows
+All training progress is exposed through a single public contract:
 
-Maintain backward compatibility by internally consuming the generator:
+**`TrainingSessionStep`** (immutable, frozen dataclass)
 
-* CLI continues to execute full training sessions
-* Phase sequencing and behavior remain unchanged
-* Generator mechanics remain invisible to end users
+Each step contains:
 
----
+- **Phase identity**
+  - `phase_name`
+  - `phase_index`
+- **Progress markers**
+  - `epoch`
+  - `global_epoch`
+- **Metrics**
+  - `objective_name`
+  - `objective_value`
+  - raw `EpochResults` (training + validation)
+- **Best-so-far tracking**
+  - `best_value_so_far`
+  - `best_epoch_so_far`
+  - `is_best_epoch`
+- **Termination signals**
+  - `is_phase_end`
+  - `is_run_end`
+  - `stop_reason`
 
-### Sweep Layer
-
-Update the sweep objective to:
-
-* Iterate over runner outputs
-* Report intermediate metrics to Optuna
-* Use phase-aware step metadata to inform pruning strategies
-
-This enables pruning decisions at **epoch-level or phase-level granularity**
-without modifying phase definitions or training semantics.
-
----
-
-## Rationale
-
-### Architectural Alignment
-
-The generator model reflects the runner’s true role:
-
-> A producer of training state over time, structured by an explicitly defined
-> phase schema.
+This structure is the **sole externally observable execution unit** for training.
 
 ---
 
-### Separation of Concerns
+## Architectural Realignment
 
-* **Phase system:** defines curriculum structure and training intent
-* **Runner:** executes phases and emits progress
-* **Sweep layer:** makes optimization and pruning decisions
+### Separation of Concerns (Enforced)
 
-Each layer has a single, well-scoped responsibility.
+The refactor enforces strict layering:
+
+- **Batch / Epoch Execution**
+  - Executes exactly one epoch
+  - No phases, no scheduling, no stopping logic
+  - Returns aggregated epoch metrics only
+
+- **Orchestration Policies**
+  - Manage epoch sequencing within a phase
+  - Track best metrics and early stopping
+  - Emit structured, immutable events
+
+- **Runners**
+  - Translate orchestration events into `TrainingSessionStep`
+  - Expose progress exclusively as a generator
+  - Do not embed CLI or sweep logic
+
+- **External Consumers (CLI, Sweep, Study)**
+  - Consume step streams
+  - Decide when and how long to run
+  - Report, prune, or terminate based on observed state
+
+Each layer now has a single, well-scoped responsibility.
 
 ---
 
-### Flexibility
+## Phase Model Preservation
 
-This design enables:
+The existing phase abstraction has been **preserved and clarified**, not replaced.
 
-* Early termination via pruning
-* External monitoring and inspection of phase behavior
-* Reuse of the runner in different orchestration contexts
-* Deterministic partial execution for testing and debugging
+- Phases remain pure, declarative inputs:
+  - name
+  - number of epochs
+  - head configuration
+- Phases define *what* to train and *for how long*
+- Runners and policies define *how* execution proceeds
+
+No training semantics were pushed into phase definitions.
+
+---
+
+## Sweep and Optuna Integration
+
+The sweep subsystem has been updated to consume runner generators directly.
+
+- A sweep trial now builds a **step-producing runner**
+- The objective iterates over `TrainingSessionStep`
+- Intermediate metrics are reported to Optuna
+- Pruning decisions operate at epoch or phase granularity
+
+Training is no longer treated as a black box.
+
+This directly resolves the original limitation that motivated the ADR.
+
+---
+
+## CLI Workflows
+
+CLI workflows remain fully supported.
+
+- CLI pipelines internally consume the same generator interface
+- Full end-to-end runs behave identically from a user perspective
+- Generator mechanics remain invisible to CLI users
+
+Backward compatibility is achieved through internal consumption of the step stream
+rather than duplicating execution logic.
+
+---
+
+## Explicit Termination and Early Stopping
+
+Early stopping and termination are now explicit and observable:
+
+- Stopping causes are surfaced in step metadata
+- Convergence, pruning, and external interruption are distinguishable
+- Termination is modeled as structured data, not implicit state
+
+This improves debugging, testing, and automated decision-making.
 
 ---
 
@@ -147,88 +194,32 @@ This design enables:
 
 ### Positive
 
-* Enables Optuna pruning using intermediate metrics
-* Improves observability across epochs and phases
-* Decouples training execution from optimization logic
-* Preserves stability of the existing phase abstraction
-* Improves testability through step-wise inspection
+- Enables Optuna pruning using intermediate metrics
+- Makes training progress externally observable
+- Decouples execution from optimization logic
+- Preserves and strengthens the phase abstraction
+- Improves testability via step-wise inspection
+- Enables alternative orchestration contexts
 
----
+### Costs
 
-### Negative
+- Significant refactor of runner and orchestration internals
+- Introduction of generator-based execution as the primary model
+- Required mechanical updates to CLI and sweep integration
 
-* Requires refactoring of the runner interface
-* Introduces a new execution paradigm that callers must understand
-* Requires updates to integrations that expect monolithic execution
-
----
-
-## Additional Improvements
-
-### 1. Simplify Runner Responsibilities
-
-Refactor the runner to:
-
-* Isolate core execution logic
-* Delegate logging, checkpointing, and reporting to hooks or callbacks
-* Avoid embedding policy decisions in execution code
-
----
-
-### 2. Normalize Metric Structure
-
-Unify metric outputs into a consistent schema:
-
-* Flatten nested metric structures
-* Use standardized naming conventions
-* Ensure compatibility across trainer, evaluator, and sweep layers
-
----
-
-### 3. Improve State Management
-
-Reduce reliance on mutable shared state:
-
-* Keep internal state encapsulated within the runner
-* Expose only immutable step outputs
-* Avoid implicit dependencies via callbacks
-
----
-
-### 4. Make Early Stopping Explicit
-
-Surface early stopping decisions in the step output:
-
-* Indicate when and why training stops
-* Distinguish convergence from external interruption (e.g., pruning)
-
----
-
-### 5. Introduce Controlled Execution Modes
-
-Support partial execution for debugging and testing:
-
-* Limit number of yielded steps
-* Enable deterministic short runs
-* Facilitate unit and integration testing of runner behavior
-
----
-
-## Migration Plan
-
-1. Introduce generator-based execution alongside existing interface
-2. Internally adapt the current execution method to consume the generator
-3. Update sweep layer to use generator interface
-4. Gradually refactor dependent components
-5. Deprecate monolithic execution entry point once migration is complete
+These costs have been paid and absorbed by the current architecture.
 
 ---
 
 ## Summary
 
-The existing runner design reflects historical CLI requirements but constrains
-modern optimization workflows. Transitioning to a generator-based execution model
-exposes training as a sequence of observable, phase-annotated states.
+The training execution system has been successfully refactored from a monolithic,
+terminal runner into a generator-based orchestration model.
 
-This refactor enables pruning, improves modularity, and cleanly integrates with
-the existing phase system without redefining or weakening its semantics.
+Training is now exposed as a sequence of immutable, phase-aware steps that can be
+observed, inspected, and controlled by external consumers without compromising
+internal execution semantics.
+
+This change enables pruning, improves modularity, and aligns the execution model
+with modern optimization and orchestration requirements while preserving the
+existing phase-based training design.
