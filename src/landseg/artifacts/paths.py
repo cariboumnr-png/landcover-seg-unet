@@ -287,6 +287,10 @@ class ResultsPaths:
     def meta(self) -> str:
         return os.path.join(self.run_folder, 'metadata.json')
 
+    @property
+    def step_results(self) -> str:
+        return os.path.join(self.run_folder, 'step_results.json')
+
     def init(self, trace_to_last: bool = False):
         '''Initialize a results folder.'''
 

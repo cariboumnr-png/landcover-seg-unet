@@ -203,11 +203,19 @@ class BaseRunner(abc.ABC):
             float: Final target metric achieved at run termination.
         '''
 
+        # init a JSON artifact to store step results
+        ctrl = artifacts.Controller[list[dict]](self.paths.step_results)
+        steps: list[dict] = []
+
         # tracking
         last_step: core.TrainingSessionStep | None = None
         # consume self.run()
         for step in self.run():
             last_step = step
+            steps.append(dataclasses.asdict(step))
+
+        # persist the JSON
+        ctrl.persist(steps)
 
         # exceptions handling
         if last_step is None:
