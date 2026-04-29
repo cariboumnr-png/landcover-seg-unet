@@ -153,6 +153,32 @@ class EpochEnd(Event):
         object.__setattr__(self, 'metrics', metrics)
 
 # -------------------------------------------------------------------------
+# Report events
+# -------------------------------------------------------------------------
+@dataclasses.dataclass(frozen=True)
+class MetricsReport(Event):
+    best_so_far: float = 0.0
+    best_epoch: int = -1
+    is_best_epoch: bool = False
+
+    def __init__(
+        self,
+        best_so_far: float,
+        best_epoch: int,
+        is_best_epoch: bool
+    ) -> None:
+        super().__init__(
+            name='tracking_report',
+            payload={
+                'best_so_far': best_so_far,
+                'best_epoch': best_epoch,
+                'is_best_epoch': is_best_epoch
+            },
+        )
+        object.__setattr__(self, 'best_so_far', best_so_far)
+        object.__setattr__(self, 'is_best_epoch', is_best_epoch)
+
+# -------------------------------------------------------------------------
 # Control events
 # -------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)

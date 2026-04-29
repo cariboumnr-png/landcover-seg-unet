@@ -101,6 +101,13 @@ class PhasePolicy:
         #
         self.tracker = _MetricsTracker()
 
+    @property
+    def patience_reached(self) -> bool | None:
+        '''Convenience flag; return `True` if patience is reached.'''
+        if self.track.patience_epochs is None:
+            return None
+        return self.tracker.patience_n >= self.track.patience_epochs
+
     def run(self) -> typing.Generator[events.Event, None, float]:
         '''
         Runs the phase with event emission.
@@ -145,7 +152,10 @@ class PhasePolicy:
 
             # track metrics
             assert metrics.validation, 'No validation results found'
-            self._track_metrics(epoch, metrics.validation.target_metrics)
+            reports = self._track(epoch, metrics.validation.target_metrics)
+
+            # report tracking results
+            yield events.MetricsReport(*reports)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
@@ -154,10 +164,7 @@ class PhasePolicy:
             # early stop check
             if not self.track.enable_early_stop:
                 continue
-            if (
-                self.track.patience_epochs and
-                self.tracker.patience_n >= self.track.patience_epochs
-            ):
+            if self.patience_reached:
                 yield events.StopRun('Patience limit reached')
                 break
 
@@ -192,11 +199,11 @@ class PhasePolicy:
             epochs.append(epoch_metrics)
         return epochs
 
-    def _track_metrics(
+    def _track(
         self,
         epoch: int,
         target_metrics: float
-    ):
+    ) -> tuple[float, int, bool]:
         '''Track best metrics and count patience epochs.'''
 
         # update last and current value
@@ -223,3 +230,10 @@ class PhasePolicy:
                     self.tracker.patience_n += 1
             case _:
                 raise ValueError(f'Invalid track mode: {mode}')
+
+        # return reporting attributes
+        return (
+            self.tracker.best_value,
+            self.tracker.best_epoch,
+            self.tracker.is_best_epoch,
+        )
