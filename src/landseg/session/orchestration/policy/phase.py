@@ -122,6 +122,7 @@ class PhasePolicy:
             Lifecycle events:
                 - `PhaseStart` and `PhaseEnd`
                 - Epoch-level events (delegated)
+                - `MetricsReport` after each epoch
                 - `CheckpointRequest` after each epoch
                 - `StopRun` if early stopping is triggered
 
