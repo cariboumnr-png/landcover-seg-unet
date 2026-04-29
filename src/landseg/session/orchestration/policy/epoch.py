@@ -96,7 +96,7 @@ class EpochPolicy:
         epoch_metrics = self.runner.run_epoch(self.epoch)
 
         # epoch ends
-        yield events.EpochEnd(self.epoch, self.phase, epoch_metrics)
+        yield events.EpochEnd(self.epoch, self.phase)
 
         # enables downstream `yield from`
         return epoch_metrics

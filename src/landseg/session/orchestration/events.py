@@ -65,6 +65,8 @@ are introduced.
 from __future__ import annotations
 import dataclasses
 import typing
+# local imports
+import landseg.core as core
 
 # alias
 field = dataclasses.field
@@ -132,25 +134,21 @@ class EpochStart(Event):
 class EpochEnd(Event):
     epoch_index: int = 1
     phase_name: str = ''
-    metrics: typing.Any = None
 
     def __init__(
         self,
         epoch_index: int,
         phase_name: str,
-        metrics: typing.Any,
     ) -> None:
         super().__init__(
             name='epoch_end',
             payload={
                 'epoch_index': epoch_index,
                 'phase_name': phase_name,
-                'metrics': metrics,
             },
         )
         object.__setattr__(self, 'epoch_index', epoch_index)
         object.__setattr__(self, 'phase_name', phase_name)
-        object.__setattr__(self, 'metrics', metrics)
 
 # -------------------------------------------------------------------------
 # Report events
@@ -160,23 +158,28 @@ class MetricsReport(Event):
     best_so_far: float = 0.0
     best_epoch: int = -1
     is_best_epoch: bool = False
+    raw_metrics: core.EpochResults | None = None
 
     def __init__(
         self,
         best_so_far: float,
         best_epoch: int,
-        is_best_epoch: bool
+        is_best_epoch: bool,
+        raw_metrics: core.EpochResults,
     ) -> None:
         super().__init__(
             name='tracking_report',
             payload={
                 'best_so_far': best_so_far,
                 'best_epoch': best_epoch,
-                'is_best_epoch': is_best_epoch
+                'is_best_epoch': is_best_epoch,
+                'raw_metrics': raw_metrics,
             },
         )
         object.__setattr__(self, 'best_so_far', best_so_far)
+        object.__setattr__(self, 'best_epoch', best_epoch)
         object.__setattr__(self, 'is_best_epoch', is_best_epoch)
+        object.__setattr__(self, 'raw_metrics', raw_metrics)
 
 # -------------------------------------------------------------------------
 # Control events

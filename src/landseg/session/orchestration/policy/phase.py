@@ -156,7 +156,7 @@ class PhasePolicy:
             reports = self._track(epoch, metrics.validation.target_metrics)
 
             # report tracking results
-            yield events.MetricsReport(*reports)
+            yield events.MetricsReport(*reports, metrics)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
