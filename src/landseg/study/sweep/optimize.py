@@ -37,7 +37,7 @@ import landseg.study.sweep as sweep
 
 # -------------------------------Public Function-------------------------------
 def run_sweep(
-    runner: typing.Callable[[typing.Any], float],
+    runner_builder: typing.Callable,
     root_config: sweep.RootConfigShape,
 ) -> optuna.Study:
     '''
@@ -80,7 +80,7 @@ def run_sweep(
     )
 
     # get objective
-    objective = sweep.make_objective(runner, root_config)
+    objective = sweep.make_objective(runner_builder, root_config)
 
     # run optimization
     study.optimize(
