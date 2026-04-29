@@ -85,7 +85,7 @@ def make_objective(
         for step in run():
 
             # get value from step
-            value = step.target_scalar
+            value = step.objective_value
             last_value = value
 
             # report intermediate result
