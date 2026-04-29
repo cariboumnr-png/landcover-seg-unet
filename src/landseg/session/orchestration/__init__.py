@@ -32,7 +32,6 @@ import typing
 
 __all__ = [
     # classes
-    'BaseRunner',
     'BaseRunnerConfig',
     'ContinuousRunner',
     'CurriculumRunner',
@@ -47,7 +46,7 @@ if typing.TYPE_CHECKING:
     from .builder import build_runner
     from .phases import PhaseLike
     from .policy import TrackingConfig
-    from .runner import  BaseRunnerConfig, BaseRunner, ContinuousRunner, CurriculumRunner
+    from .runner import  BaseRunnerConfig, ContinuousRunner, CurriculumRunner
 
 def __getattr__(name: str):
 
@@ -60,7 +59,7 @@ def __getattr__(name: str):
     if name in {'TrackingConfig'}:
         return getattr(importlib.import_module('.policy', __package__), name)
 
-    if name in {'BaseRunner', 'ContinuousRunner', 'CurriculumRunner', 'BaseRunnerConfig'}:
+    if name in {'ContinuousRunner', 'CurriculumRunner', 'BaseRunnerConfig'}:
         return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

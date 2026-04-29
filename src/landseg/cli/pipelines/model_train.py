@@ -111,32 +111,31 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     # build the session
     session_context=session.SessionBuildContext(
         device=c.DEVICE,
-        logger=logger,
         verbose_runner=print_out,
         session_paths=session_paths,
     )
     match config.session.mode:
         case 'continuous':
-            pipeline_session = session.build_session(
-                dataspecs,
-                model,
-                config.session,
+            runner = session.factory.build_continous_training_session(
+                dataspecs=dataspecs,
+                model=model,
+                config=config.session,
                 context=session_context,
-                intent='continuous_training',
+                logger=logger
             )
         case 'curriculum':
-            pipeline_session = session.build_session(
-                dataspecs,
-                model,
-                config.session,
+            runner = session.factory.build_curriculum_training_session(
+                dataspecs=dataspecs,
+                model=model,
+                config=config.session,
                 context=session_context,
-                intent='curriculum_training',
+                logger=logger
             )
         case _:
             raise ValueError(f'Invalid training mode: {config.session.mode}')
 
     # run session in a block
-    final = pipeline_session.runner.execute()
+    final = runner.execute()
 
     # close logger
     logger.close()

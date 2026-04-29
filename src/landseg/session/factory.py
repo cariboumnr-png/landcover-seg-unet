@@ -63,6 +63,7 @@ Type behavior:
 '''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
 import functools
 import typing
@@ -76,15 +77,6 @@ import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
 import landseg.session.state as state
 import landseg.utils as utils
-
-# types
-IntentT = typing.TypeVar(
-    'IntentT',
-    typing.Literal['overfit'],
-    typing.Literal['continuous_training'],
-    typing.Literal['curriculum_training'],
-    typing.Literal['evaluation'],
-)
 
 # ---------------------------------Public Type---------------------------------
 class SessionConfigShape(typing.Protocol):
@@ -118,31 +110,7 @@ class SessionConfigShape(typing.Protocol):
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class OverfitSession:
-    '''Overfit session with train-evaluate epoch runner.'''
-    intent: typing.Literal['overfit']
-    runner: engine.EpochRunner
-
-@dataclasses.dataclass
-class ContinuousTrainingSession:
-    '''Training session with epoch and phase orchestration.'''
-    intent: typing.Literal['continuous_training']
-    runner: orchestration.ContinuousRunner
-
-@dataclasses.dataclass
-class CurriculumTrainingSession:
-    '''Training session with epoch and phase orchestration.'''
-    intent: typing.Literal['curriculum_training']
-    runner: orchestration.CurriculumRunner
-
-@dataclasses.dataclass
-class EvaluationSession:
-    '''Overfit session with evaluate-only epoch runner.'''
-    intent: typing.Literal['evaluation']
-    runner: engine.EpochRunner
-
-@dataclasses.dataclass
-class SessionBuildContext(typing.Generic[IntentT]):
+class SessionBuildContext:
     '''
     Context object providing runtime parameters for session construction.
 
@@ -160,181 +128,106 @@ class SessionBuildContext(typing.Generic[IntentT]):
             required for `'training'` mode).
     '''
     device: str
-    logger: utils.Logger
     verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None
 
 # -------------------------------Public Function-------------------------------
-# overload signatures
-@typing.overload
-def build_session(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['overfit']
-) -> OverfitSession: ...
-
-@typing.overload
-def build_session(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['continuous_training']
-) -> ContinuousTrainingSession: ...
-
-@typing.overload
-def build_session(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['curriculum_training']
-) -> CurriculumTrainingSession: ...
-
-@typing.overload
-def build_session(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['evaluation'],
-) -> EvaluationSession: ...
-
-def build_session(
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    intent: typing.Literal['overfit', 'continuous_training', 'curriculum_training', 'evaluation']
-) -> OverfitSession | ContinuousTrainingSession | CurriculumTrainingSession | EvaluationSession:
-    '''
-    Assemble the execution pipeline for a multi-head model session.
-
-    This function constructs and wires together all runtime components:
-    - session components (losses, metrics, dataloaders)
-    - runtime state (device placement, AMP)
-    - instrumentation callbacks
-    - batch execution engine
-    - trainer and evaluator
-
-    The exact return type depends on `context.intent` and is enforced
-    via static typing (Literal-based overloads).
-
-    Execution modes:
-        `'evaluation'` (EpochRunner, None):
-            Returns an `EpochRunner` containing only the evaluator.
-
-        `'overfit'` (EpochRunner, None):
-            Returns an `EpochRunner` with both trainer and evaluator.
-            No orchestration layer is used.
-
-        `'training'` (None, TrainingRunner):
-            Returns a `TrainingRunner` that manages training phases,
-            early stopping, and evaluation. An `EpochRunner` is created
-            internally but not returned.
-
-    Args:
-        dataspecs: Dataset specifications, including head structure and
-            parent relationships.
-        model: Multi-head model to execute.
-        config: Static session configuration defining components, runtime
-            behavior, and training phases.
-        context: Runtime context of the execution mode and environment.
-
-    Returns:
-        A session object whose type depends on `context.intent`:
-
-        - OverfitSession:
-            Returned for 'overfit. Provides an `epoch_runner` for
-            execution.
-
-        - TrainingSession:
-            Returned for 'training'. Provides a `runner` that manages
-            full training orchestration.
-
-        - EvaluationSession:
-            Returned for 'evaluation'. Provides an `epoch_runner` for
-            execution.
-
-        The return type is statically enforced via overloads and
-        Literal-based typing.
-
-    Raises:
-        AssertionError:
-            If `intent='training'` but `session_paths` is not provided.
-    '''
-
-    # get partial epoch runner
-    engine_build_context, engine_build_config = _epoch_runner_build_prep(
-        dataspecs=dataspecs,
-        model=model,
-        config=config,
-        context=context
-    )
-    epoch_runner_partial = functools.partial(
-        engine.build_engine,
-        context=engine_build_context,
-        config=engine_build_config,
-        device=context.device
-    )
-
-    # get partial training runner
-    base_config = _training_runner_build_prep(config, context)
-    training_runner_partial = functools.partial(
-        orchestration.build_runner,
-        epoch_runner=epoch_runner_partial(mode='train_eval'),
-        base_config=base_config,
-        logger=context.logger,
-    )
-
-    # build trainer/runner depending on mode
-    match intent:
-
-        case 'overfit':
-            # return an epoch runner with both trainer and evaluator
-            return OverfitSession(
-                intent='overfit',
-                runner=epoch_runner_partial(mode='train_eval'),
-            )
-
-        case 'evaluation':
-            # return an epoch runner with just the evaluator
-            return EvaluationSession(
-                intent='evaluation',
-                runner=epoch_runner_partial(mode='eval_only')
-            )
-
-        case 'continuous_training':
-            # build orchestration runner and return
-            return ContinuousTrainingSession(
-                intent='continuous_training',
-                runner=training_runner_partial(
-                    runner_type='continuous',
-                    training_phases=config.single_phase
-                )
-            )
-
-        case 'curriculum_training':
-            # build orchestration runner and return
-            return CurriculumTrainingSession(
-                intent='curriculum_training',
-                runner=training_runner_partial(
-                    runner_type='curriculum',
-                    training_phases=config.curriculum
-                )
-            )
-
-# prepare engine building context and configs
-def _epoch_runner_build_prep(
+def build_overfit_session(
     *,
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
-    context: SessionBuildContext
-) -> tuple[engine.EngineBuildContext, engine.EngineBuildConfig]:
+    context: SessionBuildContext,
+    logger: utils.Logger
+) -> engine.EpochRunner:
+    '''
+    doc
+    '''
+
+    epoch_runner_partial = _build_partial_epoch_runner(
+        dataspecs,
+        model,
+        config,
+        context,
+        logger,
+    )
+    return epoch_runner_partial(mode='train_eval')
+
+def build_evaluate_session(
+    *,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext,
+    logger: utils.Logger
+) -> engine.EpochRunner:
+    '''
+    doc
+    '''
+
+    epoch_runner_partial = _build_partial_epoch_runner(
+        dataspecs=dataspecs,
+        model=model,
+        config=config,
+        context=context,
+        logger=logger,
+    )
+    return epoch_runner_partial(mode='eval_only')
+
+def build_continous_training_session(
+    *,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext,
+    logger: utils.Logger
+) -> orchestration.ContinuousRunner:
+    '''doc'''
+
+    training_runner_partial = _build_partial_training_runner(
+        dataspecs=dataspecs,
+        model=model,
+        config=config,
+        context=context,
+        logger=logger,
+    )
+    training_runner = training_runner_partial(
+        training_phases=config.single_phase,
+        runner_type='continuous',
+    )
+    return training_runner
+
+def build_curriculum_training_session(
+    *,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext,
+    logger: utils.Logger
+) -> orchestration.CurriculumRunner:
+    '''doc'''
+
+    training_runner_partial = _build_partial_training_runner(
+        dataspecs=dataspecs,
+        model=model,
+        config=config,
+        context=context,
+        logger=logger,
+    )
+    training_runner = training_runner_partial(
+        training_phases=config.curriculum,
+        runner_type='curriculum',
+    )
+    return training_runner
+
+def _build_partial_epoch_runner(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext,
+    logger: utils.Logger
+) -> typing.Callable[..., engine.EpochRunner]:
     '''doc'''
 
     # build session components
@@ -342,7 +235,7 @@ def _epoch_runner_build_prep(
         dataspecs,
         model,
         config.components,
-        logger=context.logger,
+        logger=logger,
     )
 
     # initiate the shared runtime state
@@ -360,13 +253,14 @@ def _epoch_runner_build_prep(
         device=context.device,
     )
 
-    # build runner context and config and return
+    # build runner context and config
     engine_build_context = engine.EngineBuildContext(
         dataspecs=dataspecs,
         model=model,
         components=session_components,
         callbacks=callbacks,
-        runtime_state=runtime_state
+        runtime_state=runtime_state,
+        device=context.device,
     )
     engine_build_config = engine.EngineBuildConfig(
         use_amp=config.runtime.precision.use_amp,
@@ -375,13 +269,31 @@ def _epoch_runner_build_prep(
         metrics_track_heads=config.runtime.monitor.track_heads,
         evaluation_dataset=context.eval_dataset
     )
-    return engine_build_context, engine_build_config
 
-def _training_runner_build_prep(
+    # return a partial epoch runner without the mode flag
+    return functools.partial(
+        engine.build_engine,
+        context=engine_build_context,
+        config=engine_build_config,
+    )
+
+def _build_partial_training_runner(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-) -> orchestration.BaseRunnerConfig:
+    logger: utils.Logger
+) -> typing.Callable: # avoid complex typing as it is just an internal wrapper
     '''doc'''
+
+    epoch_runner_partial = _build_partial_epoch_runner(
+        dataspecs,
+        model,
+        config,
+        context,
+        logger
+    )
+    epoch_runner = epoch_runner_partial(mode='train_eval')
 
     assert context.session_paths, 'Session artifacts paths not defined'
     tracking = orchestration.TrackingConfig(
@@ -395,4 +307,11 @@ def _training_runner_build_prep(
         verbose=context.verbose_runner,
         tracking=tracking,
     )
-    return base_config
+
+    # return a partial orchestraction runner
+    return functools.partial(
+        orchestration.build_runner,
+        epoch_runner=epoch_runner,
+        base_config=base_config,
+        logger=logger
+    )

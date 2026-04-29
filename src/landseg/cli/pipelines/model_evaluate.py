@@ -110,20 +110,21 @@ def evaluate(config: configs.RootConfig):
     )
 
     # build session runner
-    pipeline_session = session.build_session(
-        dataspecs,
-        model,
-        config.session,
-        context=session.SessionBuildContext(
-            intent='evaluation',
-            device=c.DEVICE,
-            logger=logger,
-            eval_dataset=split
-        )
+    session_context=session.SessionBuildContext(
+        device=c.DEVICE,
+        verbose_runner=True,
+        session_paths=session_paths,
+    )
+    runner = session.factory.build_evaluate_session(
+        dataspecs=dataspecs,
+        model=model,
+        config=config.session,
+        context=session_context,
+        logger=logger
     )
 
     # evaluate
-    evaluation_results = pipeline_session.runner.run_epoch(1).validation
+    evaluation_results = runner.run_epoch(1).validation
     assert evaluation_results
     metrics = {h: m.as_dict for h, m in evaluation_results.head_metrics.items()}
 

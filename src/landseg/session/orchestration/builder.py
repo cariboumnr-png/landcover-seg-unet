@@ -55,8 +55,8 @@ def build_runner(
     *,
     epoch_runner: common.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
-    runner_type: typing.Literal['continuous'],
     training_phases: phases.PhaseLike,
+    runner_type: typing.Literal['continuous'],
     logger: utils.Logger,
 ) -> runner.ContinuousRunner: ...
 
@@ -65,8 +65,8 @@ def build_runner(
     *,
     epoch_runner: common.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
-    runner_type: typing.Literal['curriculum'],
     training_phases: typing.Sequence[phases.PhaseLike],
+    runner_type: typing.Literal['curriculum'],
     logger: utils.Logger,
 ) -> runner.CurriculumRunner: ...
 
@@ -74,8 +74,8 @@ def build_runner(
     *,
     epoch_runner: common.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
+    training_phases: phases.PhaseLike | typing.Sequence[phases.PhaseLike],
     runner_type: typing.Literal['continuous', 'curriculum'],
-    training_phases: phases.PhaseLike |  typing.Sequence[phases.PhaseLike],
     logger: utils.Logger,
 ) -> runner.BaseRunner:
     '''

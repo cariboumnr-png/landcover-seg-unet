@@ -41,6 +41,7 @@ class EngineBuildContext:
     components: common.ComponentsLike
     callbacks: common.CallBacksLike
     runtime_state: common.StateLike
+    device: str
 
 @dataclasses.dataclass
 class EngineBuildConfig:
@@ -57,7 +58,6 @@ def build_engine(
     context: EngineBuildContext,
     config: EngineBuildConfig,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
-    device: str
 ) -> policy.EpochRunner:
     '''
     doc
@@ -69,7 +69,7 @@ def build_engine(
         state=context.runtime_state, # type: ignore
         parent_map=context.dataspecs.heads.head_parent,
         use_amp=config.use_amp,
-        device=device
+        device=context.device
     )
 
     # trainer
@@ -78,8 +78,7 @@ def build_engine(
         state=context.runtime_state,
         components=context.components,
         callbacks=context.callbacks,
-        device=device,
-
+        device=context.device,
         grad_clip_norm=config.grad_clip_norm,
         update_every=config.loss_update_every,
     )
@@ -90,8 +89,7 @@ def build_engine(
         state=context.runtime_state,
         components=context.components,
         callbacks=context.callbacks,
-        device=device,
-
+        device=context.device,
         monitor_heads=config.metrics_track_heads,
         dataset=config.evaluation_dataset
     )

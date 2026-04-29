@@ -74,21 +74,19 @@ def overfit(config: configs.RootConfig) -> None:
         clamp_range=config.models.clamp_range
     )
 
-    # build trainer and evaluator
-    pipeline_session = session.build_session(
-        dataspecs,
-        model,
-        config.session,
-        context=session.SessionBuildContext(
-            intent='overfit',
-            device=c.DEVICE,
-            logger=logger,
-        )
+    # build the session
+    session_context=session.SessionBuildContext(device=c.DEVICE)
+    runner = session.factory.build_overfit_session(
+        dataspecs=dataspecs,
+        model=model,
+        config=config.session,
+        context=session_context,
+        logger=logger
     )
 
     # set monitor head
     monitor_head = config.session.runtime.monitor.track_heads
-    pipeline_session.runner.set_head_state(monitor_head)
+    runner.set_head_state(monitor_head)
 
     # run train-evaluate
     max_epoch = config.session.runtime.schedule.max_epoch
@@ -97,7 +95,7 @@ def overfit(config: configs.RootConfig) -> None:
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
     logger.log('INFO', f'Learning rate: {lr}')
     for ep in range(1, max_epoch + 1):
-        results = pipeline_session.runner.run_epoch(ep)
+        results = runner.run_epoch(ep)
         assert results.training and results.validation # typing
         los = results.training.total_loss
         iou = results.validation.target_metrics
