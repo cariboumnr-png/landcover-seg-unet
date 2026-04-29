@@ -45,6 +45,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.artifacts as artifacts
+import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
@@ -79,31 +80,6 @@ class BaseRunnerConfig:
     logit_adjust_alpha: float = 1.0
     train_logit_adjust: bool = True
     val_logit_adjust: bool = True
-
-@dataclasses.dataclass(frozen=True)
-class TrainingStep:
-    '''
-    Immutable training progress snapshot exposed by runners.
-
-    A TrainingStep represents the externally observable state of training
-    after a completed epoch. It is the sole unit of progress emitted by
-    runner generators and forms the public execution contract consumed
-    by CLI pipelines, sweep logic, and monitoring tools.
-
-    Invariants:
-        - Exactly one TrainingStep is yielded per completed epoch.
-        - Exactly one terminal TrainingStep is yielded per run
-          (is_run_end == True).
-        - metrics reflect the most recently completed epoch.
-        - No TrainingStep represents partial or in-progress execution.
-    '''
-    phase_name: str # identity / location
-    phase_index: int
-    epoch: int = 1
-    metrics: common.EpochMetricsLike | None = None # metrics
-    is_phase_end: bool = False # termination signals
-    is_run_end: bool = False
-    early_stop_reason: str | None = None
 
 # --------------------------------Public  Class--------------------------------
 class BaseRunner(abc.ABC):
@@ -200,7 +176,7 @@ class BaseRunner(abc.ABC):
         return self.config.artifacts_paths
 
     @abc.abstractmethod
-    def run(self) -> typing.Generator[TrainingStep, None, None]:
+    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
         '''
         Execute training as a stream of TrainingStep records.
 
@@ -228,7 +204,7 @@ class BaseRunner(abc.ABC):
         '''
 
         # tracking
-        last_step: TrainingStep | None = None
+        last_step: core.TrainingSessionStep | None = None
         # consume self.run()
         for step in self.run():
             last_step = step
@@ -248,7 +224,7 @@ class BaseRunner(abc.ABC):
         self,
         epoch_idx: int,
         total_epochs: int,
-        metrics: common.EpochMetricsLike
+        metrics: core.EpochResults
     ) -> None:
         '''Parse and log a concise epoch results summary to console.'''
 

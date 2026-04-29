@@ -31,6 +31,7 @@ metric tracking, checkpoint signaling, and optional early stopping.
 import dataclasses
 import typing
 # local imports
+import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
@@ -169,7 +170,7 @@ class PhasePolicy:
         # Return the best value tracked during this phase
         return self.tracker.best_value
 
-    def execute(self) -> list[common.EpochMetricsLike]:
+    def execute(self) -> list[core.EpochResults]:
         '''
         Executes the phase without emitting events.
 
@@ -180,7 +181,7 @@ class PhasePolicy:
             List of metrics for each executed epoch.
         '''
 
-        epochs: list[common.EpochMetricsLike] = []
+        epochs: list[core.EpochResults] = []
         for epoch in range(1, self.config.num_epochs + 1):
             epoch_metrics = policy.EpochPolicy(
                 epoch_runner=self.runner,

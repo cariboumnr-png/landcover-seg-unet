@@ -50,6 +50,7 @@ In short:
 # standard imports
 import typing
 # local imports
+import landseg.core as core
 import landseg.session.engine.policy as policy
 
 class MultiHeadEvaluator(policy.EngineBase):
@@ -88,13 +89,13 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.dataset = dataset
 
         # init the epoch results container with all heads
-        self.results = policy.EvaluatorEpochResults(
+        self.results = core.EvaluatorEpochResults(
             all_heads=self.state.heads.all_heads,
             monitor_heads=self.monitor_heads
         )
 
     # -------------------------------Public  Methods-------------------------------
-    def validate(self) -> policy.EvaluatorEpochResults:
+    def validate(self) -> core.EvaluatorEpochResults:
         '''
         Execute a full validation epoch and return finalized metrics.
 

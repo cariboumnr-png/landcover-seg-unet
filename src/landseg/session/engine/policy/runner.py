@@ -38,6 +38,7 @@ Design principles
 # standard imports
 import typing
 # local imports
+import landseg.core as core
 import landseg.session.engine.policy as policy
 
 Mode: typing.TypeAlias = typing.Literal['train_eval', 'train_only', 'eval_only']
@@ -101,7 +102,7 @@ class EpochRunner:
         self.trainer: policy.MultiHeadTrainer | None = trainer
         self.evaluator: policy.MultiHeadEvaluator | None = evaluator
 
-    def run_epoch(self, epoch: int) -> policy.EpochResults:
+    def run_epoch(self, epoch: int) -> core.EpochResults:
         '''
         Run a single training epoch and return aggregated metrics.
 
@@ -121,19 +122,19 @@ class EpochRunner:
                     raise ValueError('Missing trainer or evaluator')
                 train_results = self.trainer.train_one_epoch(epoch)
                 val_results = self.evaluator.validate()
-                return policy.EpochResults(train_results, val_results)
+                return core.EpochResults(train_results, val_results)
 
             case 'train_only':
                 if not self.trainer:
                     raise ValueError('Missing trainer')
                 train_results = self.trainer.train_one_epoch(epoch)
-                return policy.EpochResults(train_results, None)
+                return core.EpochResults(train_results, None)
 
             case 'eval_only':
                 if not self.evaluator:
                     raise ValueError('Missing evaluator')
                 val_results = self.evaluator.validate()
-                return policy.EpochResults(None, val_results)
+                return core.EpochResults(None, val_results)
 
     def set_head_state(
         self,

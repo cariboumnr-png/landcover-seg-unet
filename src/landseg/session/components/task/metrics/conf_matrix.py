@@ -30,9 +30,10 @@ Provides:
 
 # standard imports
 import dataclasses
-import typing
 # third-party imports
 import torch
+# local imports
+import landseg.core as core
 
 # aliases
 field = dataclasses.field
@@ -45,65 +46,6 @@ class ConfusionMatricConfig:
     ignore_index: int
     parent_class_1b: int | None
     exclude_class_1b: tuple[int, ...] | None
-
-@dataclasses.dataclass
-class AccumulatedMetrics:
-    '''Container for IoU metrics, supports, and active-class views.'''
-    mean: float = 0.0
-    ious: dict[str, float] = field(default_factory=dict)
-    support: dict[str, int] = field(default_factory=dict)
-    ac_mean: float = 0.0
-    ac_ious: dict[str, float] = field(default_factory=dict)
-    ac_support: dict[str, int] = field(default_factory=dict)
-    _locked: bool = field(default=False, init=False, repr=False)
-
-    def __setattr__(self, key, value) -> None:
-        if getattr(self, "_locked", False):
-            raise AttributeError("Object is immutable after compute()")
-        super().__setattr__(key, value)
-
-    @property
-    def as_dict(self) -> dict[str, typing.Any]:
-        '''Return as the metrics a nested dictionary.'''
-        return dataclasses.asdict(self)
-
-    @property
-    def as_str_list(self) -> list[str]:
-        '''Human-readable summary for mean/class IoUs (all/active).'''
-        str_list: list[str] = []
-        # all classes
-        m = f'{self.mean:.4f}'
-        str_list.append('Mean IoU (all): ' + m)
-        c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ious.items())
-        str_list.append('Class IoU (all): ' + c)
-        # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
-        # text.append('Class support (all):\t' + s)
-        # subset of active classes (if not None)
-        if bool(self.ac_mean):
-            m = f'{self.ac_mean:.4f}'
-            str_list.append('Mean IoU (active): ' + m)
-            c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ac_ious.items())
-            str_list.append('Class IoU (active): ' + c)
-            # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
-            # text.append('Class support (active):\t' + s)
-        # return text lines
-        return str_list
-
-    def lock(self) -> None:
-        '''Lock object via __setattr__ blocking.'''
-
-        self._locked = True
-
-    def reset(self) -> None:
-        '''Reset all attributes to default; will unlock.'''
-
-        object.__setattr__(self, "_locked", False) # lock override
-        self.mean = 0.0
-        self.ious.clear()
-        self.support.clear()
-        self.ac_mean = 0.0
-        self.ac_ious.clear()
-        self.ac_support.clear()
 
 # --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
@@ -141,7 +83,7 @@ class ConfusionMatrix:
         self.cm = torch.zeros((h, w), dtype=torch.int64)
 
         # init metrics data class
-        self.metrics = AccumulatedMetrics() # will lock after compute()
+        self.metrics = core.AccumulatedMetrics() # will lock after compute()
 
     @torch.no_grad()
     def update(

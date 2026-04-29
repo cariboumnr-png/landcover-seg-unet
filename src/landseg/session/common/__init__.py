@@ -45,7 +45,6 @@ __all__ = [
     'ConfigLike',
     'StateLike',
     'EpochEngineLike',
-    'EpochMetricsLike',
     'BatchEngineLike'
 ]
 # for static check
@@ -56,7 +55,7 @@ if typing.TYPE_CHECKING:
                         HeadSpecsLike
                         )
     from .config import ConfigLike
-    from .engine import EpochEngineLike, EpochMetricsLike, BatchEngineLike
+    from .engine import EpochEngineLike, BatchEngineLike
     from .state import StateLike
 
 def __getattr__(name: str):
@@ -72,7 +71,7 @@ def __getattr__(name: str):
     if name in {'ConfigLike'}:
         return getattr(importlib.import_module('.config', __package__), name)
 
-    if name in {'EpochEngineLike', 'EpochMetricsLike', 'BatchEngineLike'}:
+    if name in {'EpochEngineLike', 'BatchEngineLike'}:
         return getattr(importlib.import_module('.engine', __package__), name)
 
     if name in {'StateLike'}:

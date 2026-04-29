@@ -31,6 +31,7 @@ training engine.
 # standard imports
 import typing
 # local imports
+import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.events as events
 
@@ -72,7 +73,7 @@ class EpochPolicy:
         self.runner = epoch_runner
         self.active_heads = active_heads
 
-    def run(self) -> typing.Generator[events.Event, None, common.EpochMetricsLike]:
+    def run(self) -> typing.Generator[events.Event, None, core.EpochResults]:
         '''
         Runs the epoch with event emission.
 
@@ -100,7 +101,7 @@ class EpochPolicy:
         # enables downstream `yield from`
         return epoch_metrics
 
-    def execute(self) -> common.EpochMetricsLike:
+    def execute(self) -> core.EpochResults:
         '''
         Executes the epoch without emitting events.
 

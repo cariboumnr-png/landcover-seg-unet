@@ -51,6 +51,7 @@ In short:
 # third-party imports
 import torch
 # local imports
+import landseg.core as core
 import landseg.session.engine.policy as policy
 
 class MultiHeadTrainer(policy.EngineBase):
@@ -89,9 +90,9 @@ class MultiHeadTrainer(policy.EngineBase):
         self.update_every = update_every
 
         # init the epoch results container with all heads
-        self.results = policy.TrainerEpochResults(self.state.heads.all_heads)
+        self.results = core.TrainerEpochResults(self.state.heads.all_heads)
 
-    def train_one_epoch(self, epoch: int) -> policy.TrainerEpochResults:
+    def train_one_epoch(self, epoch: int) -> core.TrainerEpochResults:
         '''
         Execute one training epoch and return epoch-level training logs.
 
