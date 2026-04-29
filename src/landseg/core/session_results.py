@@ -53,18 +53,19 @@ class TrainingSessionStep:
     # identity / location
     phase_name: str
     phase_index: int
-    epoch: int = 1
-    global_epoch: int = 1
+    epoch: int
+    global_epoch: int
     # termination signals
-    is_phase_end: bool = False
-    is_run_end: bool = False
-    stop_reason: str | None = None
+    is_phase_end: bool
+    is_run_end: bool
+    stop_reason: str | None
     # metrics
-    objective_name: str = ''
-    objective_value: float = 0.0
-    best_value_so_far: float = 0.0
-    is_best_epoch: bool = False
-    metrics: EpochResults | None = None # raw
+    objective_name: str
+    objective_value: float
+    best_value_so_far: float
+    best_epoch_so_far: int
+    is_best_epoch: bool
+    metrics: EpochResults # raw
 
     @property
     def target_scalar(self) -> float:
@@ -86,8 +87,8 @@ class EpochResults:
         validation: Results returned by the evaluator, or None if no
             evaluation step was executed.
     '''
-    training: TrainerEpochResults | None
-    validation: EvaluatorEpochResults | None
+    training: TrainerEpochResults | None = None
+    validation: EvaluatorEpochResults | None = None
 
     def __str__(self) -> str:
         return '\n'.join([

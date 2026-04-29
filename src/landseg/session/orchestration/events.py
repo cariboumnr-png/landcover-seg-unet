@@ -158,7 +158,7 @@ class MetricsReport(Event):
     best_so_far: float = 0.0
     best_epoch: int = -1
     is_best_epoch: bool = False
-    raw_metrics: core.EpochResults | None = None
+    raw_metrics: core.EpochResults = field(default_factory=core.EpochResults)
 
     def __init__(
         self,
