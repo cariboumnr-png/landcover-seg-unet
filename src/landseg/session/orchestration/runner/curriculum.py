@@ -112,13 +112,16 @@ class CurriculumRunner(runner.BaseRunner):
                 abandoning the step stream.
         '''
 
-        # tracking
-        current_phase_idx: int = 0
-        current_epoch: int = 1
-        current_metrics: core.EpochResults | None = None
+        # run tracking
+        global_epoch: int = 1
+        is_run_end: bool = False
 
         # iterate through provided phases
         for i, phase in enumerate(self.phases):
+
+            # phase tracking
+            current_epoch: int = 1
+            is_phase_end: bool = False
 
             # print phase info if verbose
             if self.config.verbose:
@@ -136,6 +139,7 @@ class CurriculumRunner(runner.BaseRunner):
 
                 try:
                     e = next(events_stream)
+                    global_epoch += 1
                 except StopIteration:
                     break # already at the end of phase
 
@@ -143,37 +147,50 @@ class CurriculumRunner(runner.BaseRunner):
                 match e:
 
                     case events.EpochEnd(epoch_index=epoch, metrics=metrics):
-                        # typing correctness
-                        assert isinstance(metrics, core.EpochResults)
-                        # tracking
-                        current_phase_idx = i
+
+                        # epoch and run tracking
                         current_epoch = epoch
-                        current_metrics = metrics
-                        is_phase_end = epoch==phase.num_epochs
-                        self._log_metrics(epoch, phase.num_epochs, metrics)
+                        is_phase_end = current_epoch==phase.num_epochs
+                        is_run_end = is_phase_end and i == len(self.phases) - 1
+
+                    case events.MetricsReport(
+                        best_so_far=best_so_far,
+                        best_epoch=best_epoch,
+                        is_best_epoch=is_best_epoch,
+                        raw_metrics=metrics
+                    ):
+
+                        # metrics logging
+                        self._log_metrics(
+                            current_epoch,
+                            phase.num_epochs,
+                            metrics
+                        )
+
+                        # normal yield
+                        assert metrics.validation
                         yield core.TrainingSessionStep(
+                            # id/loc
                             phase_name=phase.name,
                             phase_index=i,
-                            epoch=epoch,
+                            epoch=current_epoch,
+                            global_epoch=global_epoch,
+                            # control
+                            is_phase_end=is_phase_end,
+                            is_run_end=is_run_end,
+                            stop_reason=None,
+                            # metrics
+                            objective_name=metrics.validation.monitor_heads_str,
+                            objective_value=metrics.validation.target_metrics,
+                            best_value_so_far=best_so_far,
+                            best_epoch_so_far=best_epoch,
+                            is_best_epoch=is_best_epoch,
                             metrics=metrics,
-                            is_phase_end=is_phase_end
                         )
-                        # exit current phase
-                        if is_phase_end:
-                            break
 
                     case events.CheckpointRequest(tag=tag):
                         self._save_progress(phase.name, is_best=tag=='best')
 
-        # simple check that we are actually at the end
-        assert current_phase_idx == len(self.phases) - 1
-        assert current_epoch == self.phases[current_phase_idx].num_epochs
-        # final terminal step after all phases complete
-        yield core.TrainingSessionStep(
-            phase_name=self.phases[current_phase_idx].name,
-            phase_index=current_phase_idx,
-            epoch=current_epoch,
-            metrics=current_metrics,
-            is_phase_end=True,
-            is_run_end=True,
-        )
+                # end of current phase
+                if is_phase_end:
+                    break

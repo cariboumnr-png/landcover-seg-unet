@@ -94,6 +94,13 @@ class ContinuousRunner(runner.BaseRunner):
         super().__init__(**kwargs)
         # parse arguments
         self.phase = phase # single phase
+        # tracking
+        self._current_epoch: int = -1
+        self._current_metrics: core.EpochResults = core.EpochResults()
+        self._is_phase_end: bool = False
+        self._best_value_so_far: float = 0.0
+        self._best_epoch_so_far: int = -1
+        self._is_best_epoch: bool = False
 
     def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
         '''
@@ -118,10 +125,6 @@ class ContinuousRunner(runner.BaseRunner):
                 `is_run_end == True` upon termination.
         '''
 
-        # tracking
-        current_epoch: int = -1
-        current_metrics: core.EpochResults | None = None
-
         # print phase info if verbose
         if self.config.verbose:
             self._print_phase(self.phase)
@@ -144,39 +147,71 @@ class ContinuousRunner(runner.BaseRunner):
             # runner intercepts events to perform side effects
             match e:
 
-                case events.EpochEnd(epoch_index=epoch, metrics=metrics):
-                    # typing correctness
-                    assert isinstance(metrics, core.EpochResults)
-                    # tracking
-                    current_epoch = epoch
-                    current_metrics = metrics
-                    is_phase_end = epoch==self.phase.num_epochs
-                    self._log_metrics(epoch, self.phase.num_epochs, metrics)
+                case events.EpochEnd(epoch_index=epoch):
 
-                    yield core.TrainingSessionStep(
-                        phase_name=self.phase.name,
-                        phase_index=0,
-                        epoch=epoch,
-                        metrics=metrics,
-                        is_phase_end=is_phase_end
+                    # epoch tracking
+                    self._current_epoch = epoch
+                    self._is_phase_end = epoch==self.phase.num_epochs
+
+                case events.MetricsReport(
+                    best_so_far=best_so_far,
+                    best_epoch=best_epoch,
+                    is_best_epoch=is_best_epoch,
+                    raw_metrics=metrics
+                ):
+
+                    # metrics tracking
+                    self._current_metrics = metrics
+                    self._best_value_so_far=best_so_far
+                    self._best_epoch_so_far=best_epoch
+                    self._is_best_epoch=is_best_epoch
+                    # metrics logging
+                    self._log_metrics(
+                        self._current_epoch,
+                        self.phase.num_epochs,
+                        self._current_metrics
                     )
-                    if is_phase_end:
-                        reason = 'Max epoch reached'
-                        self.logger.log('INFO', f'Exit training: {reason}')
-                        return # normal exit
+
+                    # normal yield
+                    if not self._is_phase_end:
+                        yield self._get_step(reason=None)
+
+                    # yield at the end
+                    reason = 'Max epoch reached'
+                    self.logger.log('INFO', f'Exit training: {reason}')
+                    yield self._get_step(reason=reason)
+                    return
 
                 case events.StopRun(reason=reason):
 
-                    yield core.TrainingSessionStep(
-                        phase_name=self.phase.name,
-                        phase_index=0,
-                        epoch=current_epoch,
-                        metrics=current_metrics,
-                        is_run_end=True,
-                        early_stop_reason=reason
-                    )
+                    # yield and exit on stop signal
                     self.logger.log('INFO', f'Exit training: {reason}')
-                    return # exit the whole run
+                    yield self._get_step(reason=reason)
+                    return
 
                 case events.CheckpointRequest(tag=tag):
                     self._save_progress(self.phase.name, is_best=tag=='best')
+
+    def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
+        '''Helper to generate a step dataclass from self trackers.'''
+
+        # typing correctness
+        assert self._current_metrics.validation
+        return core.TrainingSessionStep(
+            # id/loc
+            phase_name=self.phase.name,
+            phase_index=0,
+            epoch=self._current_epoch,
+            global_epoch=self._current_epoch,
+            # control
+            is_phase_end=self._is_phase_end,
+            is_run_end=self._is_phase_end, # single phase
+            stop_reason=reason,
+            # metrics
+            objective_name=self._current_metrics.validation.monitor_heads_str,
+            objective_value=self._current_metrics.validation.target_metrics,
+            best_value_so_far=self._best_value_so_far,
+            best_epoch_so_far=self._best_epoch_so_far,
+            is_best_epoch=self._is_best_epoch,
+            metrics=self._current_metrics,
+        )

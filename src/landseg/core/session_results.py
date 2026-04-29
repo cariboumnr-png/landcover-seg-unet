@@ -67,15 +67,6 @@ class TrainingSessionStep:
     is_best_epoch: bool
     metrics: EpochResults # raw
 
-    @property
-    def target_scalar(self) -> float:
-        '''Return a step-scoped evaluation scalar.'''
-        # sanity checks
-        assert self.metrics
-        assert self.metrics.validation
-        # return scalar
-        return self.metrics.validation.target_metrics
-
 @dataclasses.dataclass(frozen=True)
 class EpochResults:
     '''
