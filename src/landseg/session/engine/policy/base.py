@@ -62,7 +62,6 @@ class EngineBase:
         callbacks: common.CallBacksLike,
         *,
         device: str,
-        **kwargs
     ):
         '''
         Initialize an engine policy instance.
@@ -117,13 +116,6 @@ class EngineBase:
         self.device = device
         self.model.to(self.device)
 
-        # runtime flags
-        self.flags = {
-            'enable_train_la': kwargs.get('enable_train_la', False),
-            'enable_val_la': kwargs.get('enable_val_la', False),
-            'enable_test_la': kwargs.get('enable_test_la', False),
-        }
-
     # ----- convenience properties
     @property
     def dataloaders(self):
@@ -155,7 +147,6 @@ class EngineBase:
         self,
         active_heads: list[str] | None = None,
         frozen_heads: list[str] | None = None,
-        excluded_cls: dict[str, list[int]] | None = None
     ) -> None:
         '''
         Configure active and frozen heads and apply class exclusions.
@@ -210,14 +201,6 @@ class EngineBase:
         if frozen_heads is not None:
             self.model.set_frozen_heads(frozen_heads)
 
-        # set excluded classes to active heads
-        if excluded_cls is not None:
-            for h in active_heads:
-                excl = excluded_cls.get(h)
-                if excl is not None:
-                    self.state.heads.active_hspecs[h].set_exclude(tuple(excl))
-                    self.state.heads.active_hmetrics[h].exclude_class_1b = tuple(excl)
-
     def reset_head_state(self) -> None:
         '''
         Reset all runtime head configuration.
@@ -232,30 +215,6 @@ class EngineBase:
         self.state.heads.active_hspecs = None
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
-
-    # ----- runtime configuration helpers
-    def config_logit_adjust(
-        self,
-        *,
-        enable_train_logit_adjust: bool = True,
-        enable_val_logit_adjust: bool = True,
-        enable_test_logit_adjust: bool = False,
-        **kwargs
-    ) -> None:
-        '''
-        Configure logit adjustment usage flags.
-
-        This helper exists to centralize runtime flag manipulation and
-        provide a stable interface for trainer and evaluator policy.
-        '''
-
-        # assign flags
-        self.flags['enable_train_la'] = enable_train_logit_adjust
-        self.flags['enable_val_la'] = enable_val_logit_adjust
-        self.flags['enable_test_la'] = enable_test_logit_adjust
-        # implemented for signature flexibility
-        if kwargs:
-            pass
 
     # ----- callback dispatch
     def _emit(self, hook: str, *args, **kwargs) -> None:

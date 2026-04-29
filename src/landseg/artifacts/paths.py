@@ -287,6 +287,10 @@ class ResultsPaths:
     def meta(self) -> str:
         return os.path.join(self.run_folder, 'metadata.json')
 
+    @property
+    def step_results(self) -> str:
+        return os.path.join(self.run_folder, 'step_results.json')
+
     def init(self, trace_to_last: bool = False):
         '''Initialize a results folder.'''
 
@@ -310,11 +314,11 @@ class ResultsPaths:
         os.makedirs(self.plots, exist_ok=True)
         os.makedirs(self.previews, exist_ok=True)
 
-    def best_checkpoint(self, phase_name: str) -> str:
-        return os.path.join(self.checkpoints, f'{phase_name}_best.pt')
+    def best_checkpoint(self, name: str) -> str:
+        return os.path.join(self.checkpoints, f'{name}_best.pt')
 
-    def last_checkpoint(self, phase_name: str) -> str:
-        return os.path.join(self.checkpoints, f'{phase_name}_last.pt')
+    def last_checkpoint(self, name: str) -> str:
+        return os.path.join(self.checkpoints, f'{name}_last.pt')
 
     @staticmethod
     def time(time_format: str) -> str:

@@ -2,40 +2,37 @@ default:
   name: default
   # single dummy training phase
   phases:
-    - name: dummy_phase
+    - name: single_phase_parent
       num_epochs: 30
+      start_epoch: 1
       lr_scale: 1.0
-      heads:
-        active_heads: []
-        frozen_heads: null
-        excluded_cls: {}
+      active_heads: [base]
+      frozen_heads: null
 
 baseline:
   name: baseline
   select_children: []
-  excluded_cls: {}
   # default top-down phase schema
   phases:
     - name: parent_head
       num_epochs: 15
+      start_epoch: 1
       lr_scale: 1.0
-      heads:
-        active_heads: [base]
-        frozen_heads: null
-        excluded_cls: ${session.phases.baseline.excluded_cls}
+      active_heads: [base]
+      frozen_heads: null
+
 
     - name: select_children_heads
       num_epochs: 20
+      start_epoch: 1
       lr_scale: 1.0
-      heads:
-        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
-        frozen_heads: [base]
-        excluded_cls: ${session.phases.baseline.excluded_cls}
+      active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+      frozen_heads: [base]
+
 
     - name: joint_tuning
       num_epochs: 10
+      start_epoch: 1
       lr_scale: 1.0
-      heads:
-        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
-        frozen_heads: null
-        excluded_cls: ${session.phases.baseline.excluded_cls}
+      active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+      frozen_heads: null

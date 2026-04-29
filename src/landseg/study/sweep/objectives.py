@@ -41,11 +41,16 @@ import typing
 # third-party imports
 import optuna
 # local imports
+import landseg.core as core
 import landseg.study.sweep as sweep
+
+# aliases
+StepGenerator = typing.Generator[core.TrainingSessionStep, None, None]
+StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
 # -------------------------------Public Function-------------------------------
 def make_objective(
-    base_runner: typing.Callable[[typing.Any], float],
+    runner_builder: typing.Callable[..., StepRunner],
     cfg: sweep.RootConfigShape,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''
@@ -69,8 +74,29 @@ def make_objective(
         match obj:
             case 'base': trial_cfg = _from_base_objectives(cfg, trial)
             case _: raise ValueError(f'Invalid objective: {obj}')
-        # return objective
-        return base_runner(trial_cfg)
+
+        # build the runner with trial config
+        run = runner_builder(trial_cfg)
+
+        # last metric tracking
+        last_value = 0.0
+
+        # drive the runner
+        for step in run():
+
+            # get value from step
+            value = step.objective_value
+            last_value = value
+
+            # report intermediate result
+            trial.report(value, step.epoch)
+
+            # check pruning condition
+            if trial.should_prune():
+                raise optuna.TrialPruned()
+
+        # return the last value
+        return last_value
 
     return objective
 
@@ -118,5 +144,5 @@ def _from_base_objectives(
             step=cfg.study.base.batch_size[2],
         )
     )
-
+    # return trial config
     return trial_cfg

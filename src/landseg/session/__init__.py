@@ -33,9 +33,7 @@ import typing
 __all__ = [
     # classes
     'SessionBuildContext',
-    'SessionExecutables',
     # functions
-    'build_session',
     # types
     'SessionConfigShape',
     'SessionMetadata',
@@ -43,15 +41,12 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import (SessionConfigShape, SessionBuildContext,
-                          SessionExecutables, build_session)
+    from .factory import SessionConfigShape, SessionBuildContext
     from .metadata import SessionMetadata
-
 
 def __getattr__(name: str):
 
-    if name in {'SessionConfigShape', 'SessionBuildContext', 'SessionExecutables',
-                'build_session'}:
+    if name in {'SessionConfigShape', 'SessionBuildContext'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     if name in {'SessionMetadata'}:

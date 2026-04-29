@@ -31,12 +31,24 @@ Sweep orchestration is delegated to Optuna; study-level aggregation and
 analysis are handled elsewhere.
 '''
 
+# standard imports
+import typing
 # local imports
-import landseg.cli.pipelines as pipelines
+import landseg._constants as c
+import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.core as core
+import landseg.geopipe as geopipe
+import landseg.models as models
+import landseg.session as session
+import landseg.utils as utils
 import landseg.study as study
 
+# aliases
+StepGenerator = typing.Generator[core.TrainingSessionStep, None, None]
+StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
+#
 def sweep(config: configs.RootConfig):
     '''
     Execute a configured study sweep.
@@ -48,33 +60,57 @@ def sweep(config: configs.RootConfig):
     '''
 
     # run sweep and return
-    s = study.run_sweep(_trial, config)
+    s = study.run_sweep(_build_runner, config)
     return {
         'best_value': s.best_value,
         'best_params': s.best_params,
     }
 
+def _build_runner(config: configs.RootConfig) -> StepRunner:
+    '''Build a continuous training orchestraction runner.'''
 
-def _trial(config: configs.RootConfig) -> float:
-    '''
-    Run a single sweep trial.
+    # init run io folder tree
+    paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
+    paths.init(trace_to_last=config.session.resume_from_last)
 
-    This function executes one end-to-end training run using the provided
-    configuration and returns a scalar objective value suitable for
-    optimization. All detailed outputs are persisted as normal run
-    artifacts and are not returned directly.
+    # create a centralized main logger
+    logger = utils.Logger(
+        name='main',
+        log_file=paths.main_log_file,
+        console_lvl=None
+    )
 
-    Args:
-        config: RootConfig with model, trainer, and runner settings.
-    '''
+    # collect artifacts and build dataspsec
+    artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
 
-    # set training runner to silent
-    config.execution.verbosity = 'silent'
-
-    # train
-    meta = pipelines.train(config)
-
-    # return the best value
-    best = meta['summary'].get('best_value') # tighten later
-    assert isinstance(best, float)
-    return best
+    # collect artifacts and build dataspsec
+    dataspecs = geopipe.build_dataspec(
+        artifact_paths,
+        mode='default',
+        ids_domain_name=config.dataspecs.domain_ids_name,
+        vec_domain_name=config.dataspecs.domain_vec_name,
+        print_out=False
+    )
+    # setup the model
+    model = models.build_multihead_unet(
+        dataspecs=dataspecs,
+        backbone_config=config.models.body_registry[config.models.use_body],
+        conditioning=config.models.conditioning,
+        enable_clamp=config.models.flags.enable_clamp,
+        clamp_range=config.models.clamp_range
+    )
+    # build the session
+    session_context=session.SessionBuildContext(
+        device=c.DEVICE,
+        verbose_runner=False,
+        session_paths=paths,
+    )
+    runner = session.factory.build_continous_training_session(
+        dataspecs=dataspecs,
+        model=model,
+        config=config.session,
+        context=session_context,
+        logger=logger
+    )
+    # return the runner
+    return runner.run

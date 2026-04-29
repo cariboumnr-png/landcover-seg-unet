@@ -189,20 +189,16 @@ session:
 
   # knobs
   resume_from_last: False
-  train_mode: 'epochs'
-  phase_schema: baseline
+  mode: continuous # continuous | curriculum
+  phase_schema: default
+
+  # components
+  components:
+    task:
+      excluded_cls: {}
 
   # sub config groups
   runtime:
-
-    heads:
-      active_heads: []
-      frozen_heads: null
-      excluded_cls: {}
-
-    schedule:
-      patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
-      min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
 
     monitor:
       # Head used for validation tracking, early stopping, and best-checkpoint
@@ -210,14 +206,15 @@ session:
       #
       # Tête utilisée pour le suivi en validation, l’arrêt anticipé et la
       # sélection du meilleur point de sauvegarde.
-      track_head_name: layer1
+      track_heads: [base]
+      patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
+      min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
 
     logit_adjust:
       # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
       logit_adjust_alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
       enable_train_logit_adjustment: False
-      enable_val_logit_adjustment: False
-      enable_test_logit_adjustment: False
+      enable_eval_logit_adjustment: False
 
 
 # -----------------------------------------------------------------------------
@@ -227,8 +224,6 @@ session:
 # Définit la progression (curriculum) utilisée par la session d’entraînement.
 # -----------------------------------------------------------------------------
 
-
   phases:
     baseline:
       select_children: []
-      excluded_cls: {}

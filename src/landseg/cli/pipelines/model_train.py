@@ -104,28 +104,38 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         dataspecs=dataspecs,
         backbone_config=config.models.body_registry[config.models.use_body],
         conditioning=config.models.conditioning,
-        enable_logit_adjust=config.models.flags.enable_logit_adjust,
         enable_clamp=config.models.flags.enable_clamp,
         clamp_range=config.models.clamp_range
     )
 
-    # build a full session with a runner
-    runner = session.build_session(
-        dataspecs,
-        model,
-        config.session,
-        context=session.SessionBuildContext(
-            intent='training',
-            device=c.DEVICE,
-            logger=logger,
-            verbose_runner=print_out,
-            session_paths=session_paths,
-        )
-    ).training_runner
-    assert runner, 'Training runner not properly built' # sanity
+    # build the session
+    session_context=session.SessionBuildContext(
+        device=c.DEVICE,
+        verbose_runner=print_out,
+        session_paths=session_paths,
+    )
+    match config.session.mode:
+        case 'continuous':
+            runner = session.factory.build_continous_training_session(
+                dataspecs=dataspecs,
+                model=model,
+                config=config.session,
+                context=session_context,
+                logger=logger
+            )
+        case 'curriculum':
+            runner = session.factory.build_curriculum_training_session(
+                dataspecs=dataspecs,
+                model=model,
+                config=config.session,
+                context=session_context,
+                logger=logger
+            )
+        case _:
+            raise ValueError(f'Invalid training mode: {config.session.mode}')
 
-    # run session
-    runner.fit()
+    # run session in a block
+    final = runner.execute()
 
     # close logger
     logger.close()
@@ -133,7 +143,6 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     # update metadata and return
     meta['completed_at'] = session_paths.time(c.TF_ISO8601)
     meta['summary'] = {}
-    meta['summary']['best_value'] = runner.evaluator.state.metrics.best_value
-    meta['summary']['checkpoint'] = runner.final_checkpoint # best of the final
+    meta['summary']['best_value'] = final
     meta_ctrl.persist(meta)
     return meta

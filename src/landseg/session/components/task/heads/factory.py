@@ -58,7 +58,8 @@ def build_headspecs(
     data: core.DataSpecs,
     *,
     alpha_fn: str,
-    en_beta: float | None = None
+    en_beta: float | None = None,
+    excluded_cls: dict[str, list[int]] | None = None
 ) -> HeadSpecs:
     '''
     Generate concreate head specs classes indexed by head name.
@@ -89,6 +90,7 @@ def build_headspecs(
     # iterate heads in data and create headspec for each
     headspecs_dict: dict[str, heads.Spec] = {}
     for name, counts in data.heads.class_counts.items():
+        exclude = tuple(excluded_cls.get(name, [])) if excluded_cls else None
         headspec = heads.Spec(
             name=name,
             count=counts,
@@ -96,7 +98,7 @@ def build_headspecs(
             parent_head=data.heads.head_parent[name],
             parent_cls=data.heads.head_parent_cls[name],
             weight=1.0,
-            exclude_cls=()
+            exclude_cls=exclude
         )
         headspecs_dict[name] = headspec
     # return

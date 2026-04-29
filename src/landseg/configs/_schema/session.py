@@ -73,6 +73,7 @@ class _LossTypesConfig:
 class _LossConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
+    excluded_cls: dict[str, list[int]] | None = None
     types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
 @dataclasses.dataclass
@@ -99,26 +100,21 @@ class _ComponentsCfg:
 
 # ----- RUNTIME
 @dataclasses.dataclass
-class _Heads:
-    active_heads: list[str] = field(default_factory=lambda: [])
-    frozen_heads: list[str] | None = None
-    excluded_cls: dict[str, list[int]] | None = None
-
-@dataclasses.dataclass
 class _Schedule:
     max_epoch: int = 50
     max_step: int = 1_000_000
     log_every: int = 50
     val_every: int = 1
     ckpt_every: int = 5
-    patience: int = 10
-    min_delta: float = 0.0005
 
 @dataclasses.dataclass
 class _Monitor:
     metric_name: str = 'iou'
-    track_head_name: str = 'base'
+    track_heads: list[str] = field(default_factory=lambda: ['base'])
     track_mode: str = 'max'
+    allow_early_stop: bool = True
+    patience: int = 10
+    min_delta: float = 0.0005
 
 @dataclasses.dataclass
 class _Precision:
@@ -132,12 +128,10 @@ class _Optimization:
 class _LogitAdjustConfig:
     logit_adjust_alpha: float = 1.0
     enable_train_logit_adjustment: bool = False
-    enable_val_logit_adjustment: bool = False
-    enable_test_logit_adjustment: bool = False
+    enable_eval_logit_adjustment: bool = False
 
 @dataclasses.dataclass
 class _RuntimeConfig:
-    heads: _Heads = field(default_factory=_Heads)
     schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
     precision: _Precision = field(default_factory=_Precision)
@@ -149,8 +143,10 @@ class _RuntimeConfig:
 class _Phase:
     name: str = 'phase_0'
     num_epochs: int = 0
-    lr_scale: float = 1.0
-    heads: _Heads = field(default_factory=_Heads)
+    start_epoch: int = 1 # 1-based
+    lr_scale: float | None = 1.0
+    active_heads: list[str] | None = None
+    frozen_heads: list[str] | None = None
 
 @dataclasses.dataclass
 class _DefaultPhases:
@@ -161,7 +157,6 @@ class _DefaultPhases:
 class _BaselinePhases:
     name: str = 'baseline'
     select_children: list[str] = field(default_factory=list)
-    excluded_cls: dict[str, list[int]] = field(default_factory=dict)
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
@@ -174,25 +169,32 @@ class _PhaseProfiles:
 class SessionConfig:
     '''doc'''
     resume_from_last: bool = False
-    train_mode: str = 'epochs'
+    mode: str = 'continuous'
     phase_schema: str = 'default'
     components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
     phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
 
     @property
-    def training_phases(self) -> list[_Phase] | None:
+    def single_phase(self) -> _Phase:
+        '''Single phase from runtime configs.'''
+        return _Phase(
+            name='single_phase',
+            num_epochs=self.runtime.schedule.max_epoch,
+            start_epoch=1,
+            lr_scale=1.0,
+            active_heads=['base'],
+            frozen_heads=None
+        )
+
+    @property
+    def curriculum(self) -> list[_Phase]:
         '''List of phases by configs.'''
-        if self.train_mode == 'epochs':
-            return None
-        if self.train_mode == 'phases':
-            registry = {
-                'default': self.phases.default.phases,
-                'baseline': self.phases.baseline.phases
-            }
-            schema = registry.get(self.phase_schema)
-            if schema is None:
-                raise ValueError(f'Invalid phase schema: {self.phase_schema}')
-            return schema
-        # unspported
-        raise ValueError(f'Invalid training mode: {self.train_mode}')
+        registry = {
+            'default': self.phases.default.phases,
+            'baseline': self.phases.baseline.phases
+        }
+        schema = registry.get(self.phase_schema)
+        if schema is None:
+            raise ValueError(f'Invalid phase schema: {self.phase_schema}')
+        return schema

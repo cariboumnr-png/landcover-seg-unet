@@ -19,47 +19,44 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.orchestration`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Phase definition
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
 import typing
 
-__all__ = [
-    # classes
-    'BaseRunnerConfig',
-    'ContinuousRunner',
-    'CurriculumRunner',
-    'TrackingConfig',
-    # functions
-    'build_runner',
-    # types
-    'PhaseLike',
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .builder import build_runner
-    from .phases import PhaseLike
-    from .policy import TrackingConfig
-    from .runner import  BaseRunnerConfig, ContinuousRunner, CurriculumRunner
+@typing.runtime_checkable
+class PhaseLike(typing.Protocol):
+    '''
+    Immutable description of a single training phase.
 
-def __getattr__(name: str):
+    A Phase defines *what* should be trained and for how long, but does
+    not define *how* training progresses or *when* it stops.
+    '''
+    @property
+    def name(self) -> str: ...
+    @property
+    def num_epochs(self) -> int: ...
+    @property
+    def start_epoch(self) -> int: ...
+    @property
+    def lr_scale(self) -> float | None: ...   # currently not in use
+    @property
+    def active_heads(self) -> list[str] | None: ...
+    @property
+    def frozen_heads(self) -> list[str] | None: ...
 
-    if name in {'build_runner'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+class PhaseProfile(typing.Protocol):
+    '''
+    Ordered collection of phases forming a training curriculum.
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'TrackingConfig'}:
-        return getattr(importlib.import_module('.policy', __package__), name)
-
-    if name in {'ContinuousRunner', 'CurriculumRunner', 'BaseRunnerConfig'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    PhaseProfile objects are resolved from configuration and consumed
+    by orchestration logic. They contain no execution semantics.
+    '''
+    @property
+    def name(self) -> str: ...
+    @property
+    def phases(self) -> list[PhaseLike]: ...

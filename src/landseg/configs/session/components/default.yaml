@@ -7,6 +7,7 @@ loader:
 task:
   alpha_fn: 'effective_n'
   en_beta: 0.999
+  excluded_cls: {}
   types:
     focal:
       weight: 0.5

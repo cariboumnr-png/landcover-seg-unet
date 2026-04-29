@@ -19,37 +19,38 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.orchestration.training`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Engine runner protocol.
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
+# local imoprts
+import landseg.core as core
+import landseg.session.common as common
 
-__all__ = [
-    # classes
-    'RunnerConfig',
-    'TrainingRunner',
-    # functions
-    # types
-    'HeadsConfigLike',
-    'PhaseLike'
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .runner import RunnerConfig, TrainingRunner
-    from .config import HeadsConfigLike, PhaseLike
+class EpochEngineLike(typing.Protocol):
+    @property
+    def mode(self) -> typing.Literal['train_eval', 'train_only', 'eval_only']: ...
+    @property
+    def trainer(self) -> BatchEngineLike | None: ...
+    @property
+    def evaluator(self) -> BatchEngineLike | None: ...
+    def run_epoch(self, epoch: int) -> core.EpochResults: ...
+    def set_head_state(
+        self,
+        active_heads: list[str] | None = None,
+        frozen_heads: list[str] | None = None,
+    ) -> None: ...
+    def reset_head_state(self) -> None: ...
 
-def __getattr__(name: str):
-
-    if name in {'RunnerConfig', 'TrainingRunner'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
-
-    if name in {'HeadsConfigLike', 'PhaseLike'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class BatchEngineLike(typing.Protocol):
+    model: core.MultiheadModelLike
+    device: str
+    state: common.StateLike
+    comps: common.ComponentsLike

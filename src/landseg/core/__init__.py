@@ -37,6 +37,11 @@ __all__ = [
     'Heads',
     'Splits',
     'Domains',
+    'TrainingSessionStep',
+    'EpochResults',
+    'TrainerEpochResults',
+    'EvaluatorEpochResults',
+    'AccumulatedMetrics',
     # functions
     # typing
     'MultiheadModelLike',
@@ -44,8 +49,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .model_protocol import MultiheadModelLike
     from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
+    from .model_protocol import MultiheadModelLike
+    from .session_results import (
+        TrainingSessionStep,
+        EpochResults,
+        TrainerEpochResults,
+        EvaluatorEpochResults,
+        AccumulatedMetrics
+    )
 
 def __getattr__(name: str):
 
@@ -54,5 +66,14 @@ def __getattr__(name: str):
 
     if name in {'MultiheadModelLike'}:
         return getattr(importlib.import_module('.model_protocol', __package__), name)
+
+    if name in {
+        'TrainingSessionStep',
+        'EpochResults',
+        'TrainerEpochResults',
+        'EvaluatorEpochResults',
+        'AccumulatedMetrics'
+    }:
+        return getattr(importlib.import_module('.session_results', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

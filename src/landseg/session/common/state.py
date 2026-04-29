@@ -40,80 +40,107 @@ if typing.TYPE_CHECKING:
 # ----- Runtime state (composite)
 @typing.runtime_checkable
 class StateLike(typing.Protocol):
-    progress: _Progress
-    heads: _Heads
-    batch_cxt: _BatchContex
-    batch_out: _BatchOutput
-    epoch_sum: _EpochSummary
-    metrics: _MetricsTracker
-    optim: _OptimState
+    @property
+    def progress(self) -> _Progress: ...
+    @property
+    def heads(self) -> _Heads: ...
+    @property
+    def batch_cxt(self) -> _BatchContex: ...
+    @property
+    def batch_out(self) -> _BatchOutput: ...
+    @property
+    def summary(self) -> _EpochSummary: ...
+    @property
+    def optim(self) -> _OptimState: ...
 
-# ----- .progress
 class _Progress(typing.Protocol):
-    epoch: int
-    epoch_step: int
-    global_step: int
+    @property
+    def epoch(self) -> int: ...
+    @property
+    def epoch_step(self) -> int: ...
+    @property
+    def global_step(self) -> int: ...
+    @property
+    def current_metrics(self) -> float: ...
 
-# ----- .heads
 class _Heads(typing.Protocol):
-    all_heads: list[str]
-    active_heads: list[str] | None
-    frozen_heads: list[str] | None
-    active_hspecs: dict[str, common.SpecsLike] | None
-    active_hloss: dict[str, common.CompositeLossLike] | None
-    active_hmetrics: dict[str, common.ConfusionMatrixLike] | None
+    @property
+    def all_heads(self) -> list[str]: ...
+    @property
+    def active_heads(self) -> list[str] | None: ...
+    @property
+    def frozen_heads(self) -> list[str] | None: ...
+    @property
+    def active_hspecs(self) -> dict[str, common.SpecsLike] | None: ...
+    @property
+    def active_hloss(self) -> dict[str, common.CompositeLossLike] | None: ...
+    @property
+    def active_hmetrics(self) -> dict[str, common.ConfusionMatrixLike] | None: ...
 
-# ----- .batch_ctx (context)
 class _BatchContex(typing.Protocol):
-    bidx: int
-    pidx_start: int
-    batch: alias.DatasetItem | None
-    batch_size_full: int
-    x: 'torch.Tensor'
-    y_dict: dict[str, 'torch.Tensor']
-    domain: dict[str, 'torch.Tensor| None']
+    @property
+    def bidx(self) -> int: ...
+    @property
+    def pidx_start(self) -> int: ...
+    @property
+    def batch(self) -> alias.DatasetItem | None: ...
+    @property
+    def batch_size_full(self) -> int: ...
+    @property
+    def x(self) -> torch.Tensor: ...
+    @property
+    def y_dict(self) -> dict[str, torch.Tensor]: ...
+    @property
+    def domain(self) -> dict[str, torch.Tensor | None]: ...
     def refresh(self, bidx: int, batch: tuple) -> None: ...
 
-# ----- .batch_out (output)
 class _BatchOutput(typing.Protocol):
-    bdix: int
-    preds: dict[str, 'torch.Tensor']
-    total_loss: 'torch.Tensor'
-    head_loss: dict[str, float]
+    @property
+    def bidx(self) -> int: ...
+    @property
+    def preds(self) -> dict[str, torch.Tensor]: ...
+    @property
+    def total_loss(self) -> torch.Tensor: ...
+    @property
+    def head_loss(self) -> dict[str, float]: ...
     def refresh(self, bidx) -> None: ...
 
-# ----- .epoch_sum (summary)
 class _EpochSummary(typing.Protocol):
-    train_loss: float
-    val_loss: float
-    train_logs: _TrainLogs
-    val_logs: _ValLogs
-    infer_ctx: _InferContext
+    @property
+    def train_summary(self) -> _TrainSummary: ...
+    @property
+    def val_summary(self) -> _ValSummary: ...
+    @property
+    def infer_context(self) -> _InferContext: ...
 
-class _TrainLogs(typing.Protocol):
-    head_losses: dict[str, float]
-    head_losses_str: str
-    updated: bool
+class _TrainSummary(typing.Protocol):
+    @property
+    def total_loss(self) -> float: ...
+    @property
+    def head_losses_str(self) -> str: ...
+    @property
+    def updated(self) -> bool: ...
+    def clear(self) -> None: ...
 
-class _ValLogs(typing.Protocol):
-    head_metrics: dict[str, dict[str, typing.Any]]
-    head_metrics_str: dict[str, list[str]]
+class _ValSummary(typing.Protocol):
+    @property
+    def target_metrics(self) -> float: ...
+    @property
+    def head_metrics_str(self) -> dict[str, list[str]]: ...
+    def clear(self) -> None: ...
 
 class _InferContext(typing.Protocol):
-    patch_per_blk: int
-    patch_per_dim: int
-    block_columns: int
-    patch_grid_shape: tuple[int, int]
-    maps: dict[str, dict[tuple[int, int], torch.Tensor]]
+    @property
+    def patch_per_blk(self) -> int: ...
+    @property
+    def patch_per_dim(self) -> int: ...
+    @property
+    def block_columns(self) -> int: ...
+    @property
+    def patch_grid_shape(self) -> tuple[int, int]: ...
+    @property
+    def maps(self) -> dict[str, dict[tuple[int, int], torch.Tensor]]: ...
 
-# ----- .metrics
-class _MetricsTracker(typing.Protocol):
-    last_value: float
-    curr_value: float
-    best_value: float
-    best_epoch: int
-    patience_n: int
-
-# ----- .optim (optimization state)
 class _OptimState(typing.Protocol):
-    scaler: 'torch.GradScaler'
+    @property
+    def scaler(self) -> torch.GradScaler: ...

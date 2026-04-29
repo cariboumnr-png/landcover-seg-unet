@@ -32,7 +32,7 @@ class InferCallback(callbacks.Callback):
 
     def on_inference_begin(self) -> None:
         # reset infer outputs
-        self.state.epoch_sum.infer_ctx.maps.clear()
+        self.state.summary.infer_context.maps.clear()
 
     def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch ctx
@@ -53,10 +53,10 @@ class InferCallback(callbacks.Callback):
         # if no specifics provided, preview all heads
         if not heads:
             heads = self.state.heads.all_heads
-        if all(self.state.epoch_sum.infer_ctx.patch_grid_shape):
+        if all(self.state.summary.infer_context.patch_grid_shape):
             exporters.export_previews(
-                self.state.epoch_sum.infer_ctx.maps,
+                self.state.summary.infer_context.maps,
                 out_dir,
-                map_grid_shape=self.state.epoch_sum.infer_ctx.patch_grid_shape,
+                map_grid_shape=self.state.summary.infer_context.patch_grid_shape,
                 heads=heads
             )

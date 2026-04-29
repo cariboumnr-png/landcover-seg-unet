@@ -19,30 +19,31 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+'''
+Top-level namespace for `landseg.session.orchestration.phases`.
 
-'''Training-focused phase protocol.'''
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
-# standard imports
 from __future__ import annotations
+import importlib
 import typing
 
-class HeadsConfigLike(typing.Protocol):
-    '''Shape of the heads configuration container.'''
-    @property
-    def active_heads(self) -> list[str]: ...
-    @property
-    def frozen_heads(self) -> list[str] | None: ...
-    @property
-    def excluded_cls(self) -> dict[str, list[int]] | None: ...
+__all__ = [
+    # classes
+    'PhaseLike',
+    'PhaseProfile',
+    # functions
+    # types
+]
+# for static check
+if typing.TYPE_CHECKING:
+    from .base import PhaseLike, PhaseProfile
 
-class PhaseLike(typing.Protocol):
-    '''Training phase container'''
-    @property
-    def name(self)-> str: ...
-    @property
-    def num_epochs(self)-> int: ...
-    @property
-    def lr_scale(self)-> float: ...
-    @property
-    def heads(self)-> HeadsConfigLike: ...
+def __getattr__(name: str):
+
+    if name in {'PhaseLike', 'PhaseProfile'}:
+        return getattr(importlib.import_module('.base', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

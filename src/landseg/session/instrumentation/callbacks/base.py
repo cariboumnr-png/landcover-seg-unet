@@ -27,19 +27,15 @@
 
 # local imports
 import landseg.session.common as common
-import landseg.utils as utils
 
 class Callback:
     '''Base class for callbacks; subclass to implement behaviors.'''
 
-    def __init__(self, logger: utils.Logger):
+    def __init__(self):
         self._state: common.StateLike | None = None
         self._config: common.ConfigLike | None = None
         self._device: str | None
-        self.skip_log = False
-        self.verbose = not logger.silent
-        self.train_logger = logger.get_child('train')
-        self.valdn_logger = logger.get_child('valdn')
+        self.verbose: bool = True
 
     def setup(
         self,
@@ -47,20 +43,10 @@ class Callback:
         config: common.ConfigLike,
         *,
         device: str,
-        skip_log: bool
     ) -> None:
         self._state = state
         self._config = config
         self._device = device
-        self.skip_log = skip_log
-
-    def log_train(self, level: str, message: str) -> None:
-        '''Centralized callback logging'''
-        self.train_logger.log(level, message, self.skip_log)
-
-    def log_valdn(self, level: str, message: str) -> None:
-        '''Centralized callback logging'''
-        self.valdn_logger.log(level, message, self.skip_log)
 
     # -----------------------------training phase-----------------------------
     def on_train_epoch_begin(self, epoch: int) -> None: ...

@@ -50,9 +50,10 @@ In short:
 # standard imports
 import typing
 # local imports
-import landseg.session.engine as engine
+import landseg.core as core
+import landseg.session.engine.policy as policy
 
-class MultiHeadEvaluator(engine.EngineBase):
+class MultiHeadEvaluator(policy.EngineBase):
     '''
     Evaluation and inference policy controller.
 
@@ -79,20 +80,22 @@ class MultiHeadEvaluator(engine.EngineBase):
     def __init__(
         self,
         *,
-        track_mode: str,
-        track_head_name: str,
-        min_delta: float | None,
+        monitor_heads: list[str],
         dataset: typing.Literal['val', 'test'] = 'val',
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.track_mode = track_mode
-        self.track_head_name = track_head_name
-        self.min_delta = min_delta
+        self.monitor_heads = monitor_heads
         self.dataset = dataset
 
+        # init the epoch results container with all heads
+        self.results = core.EvaluatorEpochResults(
+            all_heads=self.state.heads.all_heads,
+            monitor_heads=self.monitor_heads
+        )
+
     # -------------------------------Public  Methods-------------------------------
-    def validate(self) -> dict[str, dict]:
+    def validate(self) -> core.EvaluatorEpochResults:
         '''
         Execute a full validation epoch and return finalized metrics.
 
@@ -119,8 +122,6 @@ class MultiHeadEvaluator(engine.EngineBase):
         # val phase start
         # set model to evaluation mode
         self.model.eval()
-        # set logit adjustment status
-        self.model.set_logit_adjust_enabled(self.flags['enable_val_la'])
         self._emit('on_validation_begin')
 
         # set target dataset
@@ -141,9 +142,8 @@ class MultiHeadEvaluator(engine.EngineBase):
 
         # val phase end
         self._compute_iou()
-        self._track_metrics()
         self._emit('on_validation_end')
-        return self.state.epoch_sum.val_logs.head_metrics
+        return self.results
 
     def infer(self, out_dir: str, **kwargs) -> None:
         '''
@@ -164,8 +164,6 @@ class MultiHeadEvaluator(engine.EngineBase):
         # infer phase start
         # set model to evaluation mode
         self.model.eval()
-        # set logit adjustment status
-        self.model.set_logit_adjust_enabled(self.flags['enable_test_la'])
         self._emit('on_inference_begin')
 
         # iterate through inference dataset
@@ -192,52 +190,20 @@ class MultiHeadEvaluator(engine.EngineBase):
         core, which remains metric-agnostic.
         '''
 
+        # sanity
         assert self.state.heads.active_hmetrics is not None
-        val_logs: dict[str, dict] = {}
-        val_logs_text: dict[str, list[str]] = {}
+
+        # retrieve iou metrics from monitor heads
+        metrics_str: dict[str, list[str]] = {}
 
         for head, metrics_module in self.state.heads.active_hmetrics.items():
+            # compute assign metrics to epoch results
             metrics_module.compute()
-            val_logs[head] = metrics_module.metrics_dict
-            val_logs_text[head] = metrics_module.metrics_text
+            self.results.head_metrics[head] = metrics_module.metrics
+            # collect per head metrics formatted strings
+            metrics_str[head] = metrics_module.metrics.as_str_list
 
-        self.state.epoch_sum.val_logs.head_metrics = val_logs
-        self.state.epoch_sum.val_logs.head_metrics_str = val_logs_text
-
-    def _track_metrics(self) -> None:
-        '''
-        Track best validation metrics and update patience counters.
-
-        This method interprets finalized validation metrics according to
-        monitoring configuration and updates experiment-level tracking
-        state, including:
-
-        - best metric value
-        - best epoch
-        - patience counter
-        '''
-
-        # get metric from validation metrics dictionary
-        track_head = self.track_head_name
-        val = self.state.epoch_sum.val_logs.head_metrics[track_head]
-        met = val['ac_mean'] if val['has_active'] else val['mean']
-
-        # at the end of the first epoch
-        if self.state.progress.epoch == 1:
-            self.state.metrics.last_value = 0.0
-            self.state.metrics.curr_value = met
-        else:
-            self.state.metrics.last_value = self.state.metrics.curr_value
-            self.state.metrics.curr_value = met
-
-        delta = self.min_delta or 0.0
-        assert delta >= 0.0
-
-        if self.track_mode == 'max':
-            # update tracking numbers
-            if met >= self.state.metrics.best_value + delta:
-                self.state.metrics.best_value = met
-                self.state.metrics.best_epoch = self.state.progress.epoch
-                self.state.metrics.patience_n = 0
-            else:
-                self.state.metrics.patience_n += 1
+        # assign to state summary
+        summary = self.state.summary.val_summary
+        summary.target_metrics = self.results.target_metrics
+        summary.head_metrics_str = metrics_str

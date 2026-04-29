@@ -30,11 +30,8 @@ class TrainCallback(callbacks.Callback):
     '''Training: parse - forward - compute loss - backward - step.'''
 
     def on_train_epoch_begin(self, epoch: int) -> None:
-        # reset train loss and logs
-        self.state.epoch_sum.train_loss = 0.0
-        self.state.epoch_sum.train_logs.head_losses.clear()
-        self.state.epoch_sum.train_logs.head_losses_str = ''
-        self.state.epoch_sum.train_logs.updated = False
+        # reset training summary
+        self.state.summary.train_summary.clear()
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch context with new input batch (from training data)

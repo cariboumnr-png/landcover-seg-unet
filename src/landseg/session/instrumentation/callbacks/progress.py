@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Progress increments callback class.'''
 
 # local imports
@@ -33,30 +31,17 @@ class ProgressCallback(callbacks.Callback):
         self.state.progress.epoch = epoch   # get current epoch
         self.state.progress.epoch_step = 0  # reset epoch step
 
+    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
+        if self.verbose:
+            print(f'Training... batch_{bidx:04d}', end='\r', flush=True)
+
     def on_train_batch_end(self) -> None:
         self.state.progress.epoch_step += 1
         self.state.progress.global_step += 1
 
-    def on_train_epoch_end(self) -> None:
-        # increment epoch counter
-        epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.val_every
-        # already at max epoch
-        if epoch == self.config.schedule.max_epoch:
-            return
-        # if no validation after training, increment after this hook
-        if eval_interval is None or epoch % eval_interval != 0:
-            self.state.progress.epoch += 1
-
-    def on_validation_begin(self) -> None: ...
+    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
+        if self.verbose:
+            print(f'Validating... batch_{bidx:04d}', end='\r', flush=True)
 
     def on_validation_end(self) -> None:
-        # increment epoch counter
-        epoch = self.state.progress.epoch
-        eval_interval = self.config.schedule.val_every
-        # already at max epoch
-        if epoch == self.config.schedule.max_epoch:
-            return
-        # if validation is done, increment after this hook
-        if eval_interval is not None and epoch % eval_interval == 0:
-            self.state.progress.epoch += 1
+        self.state.progress.epoch += 1 # increment epoch counter

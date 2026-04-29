@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.orchestration`.
+Top-level namespace for `landseg.session.orchestration.policy`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,34 +32,23 @@ import typing
 
 __all__ = [
     # classes
-    'BaseRunnerConfig',
-    'ContinuousRunner',
-    'CurriculumRunner',
+    'EpochPolicy',
+    'PhasePolicy',
     'TrackingConfig',
     # functions
-    'build_runner',
     # types
-    'PhaseLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_runner
-    from .phases import PhaseLike
-    from .policy import TrackingConfig
-    from .runner import  BaseRunnerConfig, ContinuousRunner, CurriculumRunner
+    from .epoch import EpochPolicy
+    from .phase import PhasePolicy, TrackingConfig
 
 def __getattr__(name: str):
 
-    if name in {'build_runner'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in {'EpochPolicy'}:
+        return getattr(importlib.import_module('.epoch', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'TrackingConfig'}:
-        return getattr(importlib.import_module('.policy', __package__), name)
-
-    if name in {'ContinuousRunner', 'CurriculumRunner', 'BaseRunnerConfig'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+    if name in {'PhasePolicy', 'TrackingConfig'}:
+        return getattr(importlib.import_module('.phase', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
