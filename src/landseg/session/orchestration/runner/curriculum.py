@@ -162,9 +162,10 @@ class CurriculumRunner(runner.BaseRunner):
 
                         # metrics logging
                         self._log_metrics(
-                            current_epoch,
-                            phase.num_epochs,
-                            metrics
+                            epoch_idx=current_epoch,
+                            total_epochs=phase.num_epochs,
+                            best_so_far=(best_epoch, best_so_far),
+                            metrics=metrics
                         )
 
                         # normal yield

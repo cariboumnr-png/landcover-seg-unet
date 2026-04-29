@@ -167,9 +167,10 @@ class ContinuousRunner(runner.BaseRunner):
                     self._is_best_epoch=is_best_epoch
                     # metrics logging
                     self._log_metrics(
-                        self._current_epoch,
-                        self.phase.num_epochs,
-                        self._current_metrics
+                        epoch_idx=self._current_epoch,
+                        total_epochs=self.phase.num_epochs,
+                        best_so_far=(best_epoch, best_so_far),
+                        metrics=self._current_metrics
                     )
 
                     # normal yield
