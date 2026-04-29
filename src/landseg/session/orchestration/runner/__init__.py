@@ -36,19 +36,18 @@ __all__ = [
     'BaseRunnerConfig',
     'ContinuousRunner',
     'CurriculumRunner',
-    'TrainingStep',
     # functions
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import BaseRunner, BaseRunnerConfig, TrainingStep
+    from .base import BaseRunner, BaseRunnerConfig
     from .continuous import ContinuousRunner
     from .curriculum import CurriculumRunner
 
 def __getattr__(name: str):
 
-    if name in {'BaseRunner', 'BaseRunnerConfig', 'TrainingStep'}:
+    if name in {'BaseRunner', 'BaseRunnerConfig'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
     if name in {'ContinuousRunner'}:
