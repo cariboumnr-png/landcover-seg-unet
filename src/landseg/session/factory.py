@@ -70,8 +70,8 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.components as comps
+import landseg.session.configs as configs
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
@@ -99,9 +99,9 @@ class SessionConfigShape(typing.Protocol):
             orchestration runner.
     '''
     @property
-    def components(self) -> comps.ComponentsConfig: ...
+    def components(self) -> comps.ComponentsConfigLike: ...
     @property
-    def runtime(self) -> common.ConfigLike: ...
+    def runtime(self) -> configs.RuntimeConfigLike: ...
     @property
     def single_phase(self) -> orchestration.PhaseLike: ...
     @property
@@ -304,12 +304,15 @@ def _build_partial_training_runner(
         artifacts_paths=context.session_paths,
         verbose=context.verbose_runner,
         tracking=tracking,
+        logit_adjust_alpha=config.runtime.logit_adjust.logit_adjust_alpha,
+        train_logit_adjust=config.runtime.logit_adjust.enable_train_logit_adjust,
+        eval_logit_adjust=config.runtime.logit_adjust.enable_eval_logit_adjust
     )
 
     # return a partial orchestraction runner
     return functools.partial(
         orchestration.build_runner,
         epoch_runner=epoch_runner,
-        base_config=base_config,
+        config=base_config,
         logger=logger
     )
