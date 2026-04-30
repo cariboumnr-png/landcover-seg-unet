@@ -43,6 +43,9 @@ expected interfaces.
 from __future__ import annotations
 import typing
 
+if typing.TYPE_CHECKING:
+    import torch
+
 # ---------------------------------Public Type---------------------------------
 class EngineStateLike(typing.Protocol):
     '''Interface on the subset of engine state for callbacks.'''
@@ -50,7 +53,7 @@ class EngineStateLike(typing.Protocol):
     heads: _Heads
     batch_cxt: _BatchContex
     batch_out: _BatchOutput
-    summary: _EpochSummary
+    epoch: _EpochSummary
 
 class _Progress(typing.Protocol):
     epoch: int
@@ -71,22 +74,15 @@ class _BatchOutput(typing.Protocol):
     def refresh(self, bidx: int) -> None: ...
 
 class _EpochSummary(typing.Protocol):
-    train_summary: _TrainSummary
-    val_summary: _ValSummary
-    infer_context: _InferContext
+    train_stats: _TrainEpoch
+    eval_stats: _EvaluateEpoch
 
-class _TrainSummary(typing.Protocol):
+class _TrainEpoch(typing.Protocol):
     def clear(self) -> None: ...
 
-class _ValSummary(typing.Protocol):
+class _EvaluateEpoch(typing.Protocol):
+    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]]
     def clear(self) -> None: ...
-
-class _InferContext(typing.Protocol):
-    patch_per_blk: int
-    patch_per_dim: int
-    block_columns: int
-    patch_grid_shape: tuple[int, int]
-    maps: dict
 
 # --------------------------------Public  Class--------------------------------
 class Callback:

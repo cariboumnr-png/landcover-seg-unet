@@ -32,7 +32,7 @@ class InferCallback(callbacks.Callback):
 
     def on_inference_begin(self) -> None:
         # reset infer outputs
-        self.state.summary.infer_context.maps.clear()
+        self.state.epoch.eval_stats.clear()
 
     def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch ctx
@@ -50,13 +50,14 @@ class InferCallback(callbacks.Callback):
 
         # determine which heads to produce preview images
         heads: list[str] = kwargs.get('preview_heads', [])
+        patch_grid_shape: tuple[int, int] = kwargs.get('patch_grid_shape', ())
         # if no specifics provided, preview all heads
         if not heads:
             heads = self.state.heads.all_heads
-        if all(self.state.summary.infer_context.patch_grid_shape):
+        if all(patch_grid_shape):
             exporters.export_previews(
-                self.state.summary.infer_context.maps,
+                self.state.epoch.eval_stats.infer_maps,
                 out_dir,
-                map_grid_shape=self.state.summary.infer_context.patch_grid_shape,
+                map_grid_shape=patch_grid_shape,
                 heads=heads
             )
