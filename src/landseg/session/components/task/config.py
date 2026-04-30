@@ -24,7 +24,8 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Common types for task module.
+Configuration protocol for `session.components.task`.
+Defines required structure for task-level loss configuration.
 '''
 
 # standard typing
@@ -33,7 +34,6 @@ import typing
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfig(typing.Protocol):
-    '''doc'''
     @property
     def alpha_fn(self) -> str: ...
     @property
