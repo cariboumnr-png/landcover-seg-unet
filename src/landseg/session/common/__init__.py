@@ -37,37 +37,27 @@ __all__ = [
     'HeadSpecsLike',
     'DataLoadersLike',
     'AccumulatedMetrics',
-    'CallBacksLike',
     'SpecsLike',
     'CompositeLossLike',
     'ConfusionMatrixLike',
     'ComponentsLike',
-    'ConfigLike',
     'EpochEngineLike',
     'EngineBaseLike'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .callbacks import CallBacksLike
     from .comps import (CompositeLossLike, ConfusionMatrixLike, SpecsLike,
                         AccumulatedMetrics, ComponentsLike, DataLoadersLike,
                         HeadSpecsLike
                         )
-    from .config import ConfigLike
     from .engine import EpochEngineLike, EngineBaseLike
 
 def __getattr__(name: str):
-
-    if name in {'CallBacksLike'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
 
     if name in {'CompositeLossLike', 'ConfusionMatrixLike', 'SpecsLike',
                 'AccumulatedMetrics', 'ComponentsLike', 'HeadSpecsLike',
                 'DataLoadersLike',}:
         return getattr(importlib.import_module('.comps', __package__), name)
-
-    if name in {'ConfigLike'}:
-        return getattr(importlib.import_module('.config', __package__), name)
 
     if name in {'EpochEngineLike', 'BatchEngineLike'}:
         return getattr(importlib.import_module('.engine', __package__), name)
