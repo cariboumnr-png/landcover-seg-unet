@@ -50,12 +50,22 @@ Higher-level controllers (e.g. Trainer, Evaluator, Runner) answer:
 
 # standard imports
 import contextlib
+import dataclasses
 # third-party imports
 import torch
 # local imports
 import landseg.core as core
 import landseg.session.engine.state as state
 import landseg.session.engine.batch as batch
+
+@dataclasses.dataclass
+class BatchExecutorConfig:
+    '''doc'''
+    parent_map: dict[str, str | None]
+    use_amp: bool
+    patch_per_blk: int | None
+    patch_per_dim: int | None
+    block_columns: int | None
 
 class BatchExecutionEngine:
     '''
@@ -90,11 +100,10 @@ class BatchExecutionEngine:
 
     def __init__(
         self,
-        *,
         model: core.MultiheadModelLike,
         engine_state: state.EngineState,
-        parent_map: dict[str, str | None],
-        use_amp: bool,
+        config: BatchExecutorConfig,
+        *,
         device: str,
     ):
         '''
@@ -120,8 +129,7 @@ class BatchExecutionEngine:
         # parse arguments
         self.model = model
         self.state = engine_state
-        self.parent_map = parent_map
-        self.use_amp = use_amp
+        self.config = config
         # move model to device
         self.device = device
         self.model.to(self.device)
@@ -320,11 +328,11 @@ class BatchExecutionEngine:
         device_type = self.device
         # pick dtype; feel free to prefer bf16 if supported:
         dtype = torch.bfloat16 if device_type == 'cpu' else torch.float16
-        if self.use_amp:
+        if self.config.use_amp:
             return torch.autocast(
                 device_type=device_type,
                 dtype=dtype,
-                enabled=self.use_amp
+                enabled=self.config.use_amp
             )
         return contextlib.nullcontext()
 
@@ -387,7 +395,7 @@ class BatchExecutionEngine:
         preds = self.state.batch_out.preds
         targets = self.state.batch_cxt.y_dict
         for head, logits in preds.items():
-            parent = self.parent_map.get(head)
+            parent = self.config.parent_map.get(head)
             parent_1b = targets.get(parent) if parent is not None else None
             # retrieve head metric calculator
             metrics_module = self.state.heads.active_hmetrics[head]
@@ -407,9 +415,10 @@ class BatchExecutionEngine:
         visualization of these results are handled externally.
         '''
 
-        # inference context alias
-        ctx = self.state.summary.infer_context
-
+        # early exit
+        cfg = self.config
+        if not (cfg.patch_per_blk and cfg.patch_per_dim and cfg.block_columns):
+            return
         # get through each head and attach preds to corresponding block-heads
         for head, logits in self.state.batch_out.preds.items():
 
@@ -422,19 +431,20 @@ class BatchExecutionEngine:
                 # global patch index
                 patch_idx = self.state.batch_cxt.pidx_start + i
                 # block position
-                block_idx = patch_idx // ctx.patch_per_blk
-                block_row, block_col = divmod(block_idx, ctx.block_columns)
+                block_idx = patch_idx // cfg.patch_per_blk
+                block_row, block_col = divmod(block_idx, cfg.block_columns)
                 # patch position inside block
-                p_in_blk = patch_idx % ctx.patch_per_blk
-                patch_row, patch_col = divmod(p_in_blk, ctx.patch_per_dim)
+                p_in_blk = patch_idx % cfg.patch_per_blk
+                patch_row, patch_col = divmod(p_in_blk, cfg.patch_per_dim)
                 # map pred to patch-grid coordinates
                 mapped[(
-                    block_col * ctx.patch_per_dim + patch_col,
-                    block_row * ctx.patch_per_dim + patch_row
+                    block_col * cfg.patch_per_dim + patch_col,
+                    block_row * cfg.patch_per_dim + patch_row
                 )] = pred
 
             # pull existing epoch-level maps (persist across batches)
             # ensure per-head dict exists, then mutate
-            ctx.maps.setdefault(head, {}).update(mapped)
+            maps = self.state.epoch.eval_stats.infer_maps
+            maps.setdefault(head, {}).update(mapped)
             # Update (merge) mapping for this head
             # Keys are (col, row) in patch-grid coords

@@ -141,7 +141,7 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch backward on total loss
             total = self.state.batch_out.total_loss
-            if self.engine.use_amp:
+            if self.engine.config.use_amp:
                 self.state.optim.scaler.scale(total).backward()
             else:
                 total.backward()
@@ -150,7 +150,7 @@ class MultiHeadTrainer(policy.EngineBase):
             # gradient clipping
             optimizer = self.optimization.optimizer
             # unscale if use AMP
-            if self.engine.use_amp:
+            if self.engine.config.use_amp:
                 self.state.optim.scaler.unscale_(optimizer)
             self._clip_grad()
             self._emit('on_train_before_optimizer_step')
@@ -158,7 +158,7 @@ class MultiHeadTrainer(policy.EngineBase):
             # optimizer step
             optimizer = self.optimization.optimizer
             # use AMP
-            if self.engine.use_amp:
+            if self.engine.config.use_amp:
                 self.state.optim.scaler.step(optimizer)
                 self.state.optim.scaler.update() # update scaler
             # no AMP
@@ -218,8 +218,8 @@ class MultiHeadTrainer(policy.EngineBase):
             # pretty string of the losses
             text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
             text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            self.state.summary.train_summary.total_loss = logs['Total_Loss']
-            self.state.summary.train_summary.head_losses_str = text
-            self.state.summary.train_summary.updated = True
+            self.state.epoch.train_stats.total_loss = logs['Total_Loss']
+            self.state.epoch.train_stats.head_losses_str = text
+            self.state.epoch.train_stats.updated = True
         else:
-            self.state.summary.train_summary.updated = False # reset flag
+            self.state.epoch.train_stats.updated = False # reset flag

@@ -239,8 +239,8 @@ def _build_partial_epoch_runner(
 
     # initiate the shared runtime state
     runtime_state = engine.initialize_state(
-        session_components.headspecs,
-        session_components.dataloaders,
+        all_heads=list(session_components.headspecs.as_dict().keys()),
+        batch_size=config.components.loader.batch_size,
         use_amp=config.runtime.precision.use_amp,
         device=context.device
     )

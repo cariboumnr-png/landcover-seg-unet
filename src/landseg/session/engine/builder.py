@@ -66,11 +66,18 @@ def build_engine(
     '''
 
     # batch engine
-    batch_executor = batch.BatchExecutionEngine(
-        model=context.model,
-        engine_state=runtime_state,
+    preview_ctx = context.components.dataloaders.preview_context
+    batch_config = batch.BatchExecutorConfig(
         parent_map=context.dataspecs.heads.head_parent,
         use_amp=config.use_amp,
+        patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
+        patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
+        block_columns=preview_ctx.block_columns if preview_ctx else None
+    )
+    batch_executor = batch.BatchExecutionEngine(
+        context.model,
+        runtime_state,
+        batch_config,
         device=context.device
     )
 

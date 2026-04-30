@@ -204,6 +204,6 @@ class MultiHeadEvaluator(policy.EngineBase):
             metrics_str[head] = metrics_module.metrics.as_str_list
 
         # assign to state summary
-        summary = self.state.summary.val_summary
+        summary = self.state.epoch.eval_stats
         summary.target_metrics = self.results.target_metrics
         summary.head_metrics_str = metrics_str

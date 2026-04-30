@@ -33,19 +33,20 @@ import typing
 __all__ = [
     # classes
     'BatchExecutionEngine',
+    'BatchExecutorConfig',
     # functions
     'multihead_loss',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import BatchExecutionEngine
+    from .executor import BatchExecutionEngine, BatchExecutorConfig
     from .loss import multihead_loss
 
 
 def __getattr__(name: str):
 
-    if name in {'BatchExecutionEngine'}:
+    if name in {'BatchExecutionEngine', 'BatchExecutorConfig'}:
         return getattr(importlib.import_module('.executor', __package__), name)
 
     if name in {'multihead_loss'}:
