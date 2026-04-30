@@ -42,10 +42,12 @@ __all__ = [
     'ConfusionMatrixLike',
     'ComponentsLike',
     'EpochEngineLike',
-    'EngineBaseLike'
+    'EngineBaseLike',
+    'ConfigLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
+    from .config import ConfigLike
     from .comps import (CompositeLossLike, ConfusionMatrixLike, SpecsLike,
                         AccumulatedMetrics, ComponentsLike, DataLoadersLike,
                         HeadSpecsLike
@@ -53,6 +55,9 @@ if typing.TYPE_CHECKING:
     from .engine import EpochEngineLike, EngineBaseLike
 
 def __getattr__(name: str):
+
+    if name in {'ConfigLike'}:
+        return getattr(importlib.import_module('.config', __package__), name)
 
     if name in {'CompositeLossLike', 'ConfusionMatrixLike', 'SpecsLike',
                 'AccumulatedMetrics', 'ComponentsLike', 'HeadSpecsLike',
