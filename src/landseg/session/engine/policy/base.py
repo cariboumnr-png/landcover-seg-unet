@@ -30,6 +30,7 @@ execution mechanics to a shared execution core.
 
 # standard imports
 import copy
+import typing
 # local imports
 import landseg.session.common as common
 import landseg.session.engine.state as state
@@ -60,7 +61,7 @@ class EngineBase:
         engine: batch.BatchExecutionEngine,
         engine_state: state.EngineState,
         components: common.ComponentsLike,
-        callbacks: common.CallBacksLike,
+        callbacks: typing.Iterator[object],
         *,
         device: str,
     ):
