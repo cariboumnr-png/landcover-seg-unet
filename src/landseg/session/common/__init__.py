@@ -34,29 +34,34 @@ __all__ = [
     # classes
     # functions
     # types
-    'HeadSpecsLike',
-    'DataLoadersLike',
-    'AccumulatedMetrics',
-    'SpecsLike',
     'CompositeLossLike',
-    'ConfusionMatrixLike',
     'ComponentsLike',
-    'EpochEngineLike',
+    'ConfusionMatrixLike',
+    'DataLoadersLike',
     'EngineBaseLike',
+    'EpochEngineLike',
+    'SpecsLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .comps import (CompositeLossLike, ConfusionMatrixLike, SpecsLike,
-                        AccumulatedMetrics, ComponentsLike, DataLoadersLike,
-                        HeadSpecsLike
-                        )
+    from .comps import (
+        CompositeLossLike,
+        ComponentsLike,
+        ConfusionMatrixLike,
+        DataLoadersLike,
+        SpecsLike,
+    )
     from .engine import EpochEngineLike, EngineBaseLike
 
 def __getattr__(name: str):
 
-    if name in {'CompositeLossLike', 'ConfusionMatrixLike', 'SpecsLike',
-                'AccumulatedMetrics', 'ComponentsLike', 'HeadSpecsLike',
-                'DataLoadersLike',}:
+    if name in {
+        'CompositeLossLike',
+        'ComponentsLike',
+        'ConfusionMatrixLike',
+        'DataLoadersLike',
+        'SpecsLike',
+    }:
         return getattr(importlib.import_module('.comps', __package__), name)
 
     if name in {'EpochEngineLike', 'EngineBaseLike'}:
