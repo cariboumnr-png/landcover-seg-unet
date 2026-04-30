@@ -30,6 +30,7 @@ import typing
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.engine.batch as batch
+import landseg.session.engine.state as state
 import landseg.session.engine.policy as policy
 
 # ------------------------------Public  Dataclass------------------------------
@@ -40,7 +41,6 @@ class EngineBuildContext:
     model: core.MultiheadModelLike
     components: common.ComponentsLike
     callbacks: common.CallBacksLike
-    runtime_state: common.StateLike
     device: str
 
 @dataclasses.dataclass
@@ -57,6 +57,7 @@ def build_engine(
     *,
     context: EngineBuildContext,
     config: EngineBuildConfig,
+    runtime_state: state.EngineState,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> policy.EpochRunner:
     '''
@@ -66,7 +67,7 @@ def build_engine(
     # batch engine
     batch_executor = batch.BatchExecutionEngine(
         model=context.model,
-        state=context.runtime_state, # type: ignore
+        engine_state=runtime_state,
         parent_map=context.dataspecs.heads.head_parent,
         use_amp=config.use_amp,
         device=context.device
@@ -75,7 +76,7 @@ def build_engine(
     # trainer
     trainer = policy.MultiHeadTrainer(
         engine=batch_executor,
-        state=context.runtime_state,
+        state=runtime_state,
         components=context.components,
         callbacks=context.callbacks,
         device=context.device,
@@ -86,7 +87,7 @@ def build_engine(
     # evaluator
     evaluator = policy.MultiHeadEvaluator(
         engine=batch_executor,
-        state=context.runtime_state,
+        state=runtime_state,
         components=context.components,
         callbacks=context.callbacks,
         device=context.device,

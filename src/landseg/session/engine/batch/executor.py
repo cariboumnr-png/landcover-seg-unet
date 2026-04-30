@@ -54,7 +54,7 @@ import contextlib
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.engine.state as state
 import landseg.session.engine.batch as batch
 
 class BatchExecutionEngine:
@@ -92,7 +92,7 @@ class BatchExecutionEngine:
         self,
         *,
         model: core.MultiheadModelLike,
-        state: common.StateLike,
+        engine_state: state.EngineState,
         parent_map: dict[str, str | None],
         use_amp: bool,
         device: str,
@@ -119,7 +119,7 @@ class BatchExecutionEngine:
 
         # parse arguments
         self.model = model
-        self.state = state
+        self.state = engine_state
         self.parent_map = parent_map
         self.use_amp = use_amp
         # move model to device

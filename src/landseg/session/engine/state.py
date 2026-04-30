@@ -32,7 +32,7 @@ import landseg.session.common.alias as alias
 
 # ----- Runtime state (composite)
 @dataclasses.dataclass
-class _RuntimeState:
+class EngineState:
     '''Composite training state with sensible defaults.'''
     progress: _Progress
     heads: _Heads
@@ -239,15 +239,15 @@ class _OptimState:
         ])
 
 # -------------------------------Public Function-------------------------------
-def initialize(
+def initialize_state(
     headspecs: common.HeadSpecsLike,
     dataloaders: common.DataLoadersLike,
     use_amp: bool,
     device: str,
-) -> _RuntimeState:
+) -> EngineState:
     '''Instantiate a trainer state dataclass with placeholder values.'''
 
-    state = _RuntimeState(
+    state = EngineState(
         progress=_Progress(
             epoch=0,
             epoch_step=0,

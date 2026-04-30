@@ -35,8 +35,9 @@ __all__ = [
     'EngineBuildContext',
     'EngineBuildConfig',
     'EpochRunner',
-    'build_engine'
+    'build_engine',
     # functions
+    'initialize_state'
     # types
 ]
 
@@ -44,6 +45,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .builder import EngineBuildContext, EngineBuildConfig, build_engine
     from .policy import EpochRunner
+    from .state import initialize_state
 
 def __getattr__(name: str):
 
@@ -52,5 +54,8 @@ def __getattr__(name: str):
 
     if name in {'EpochRunner'}:
         return getattr(importlib.import_module('.policy', __package__), name)
+
+    if name in {'initialize'}:
+        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

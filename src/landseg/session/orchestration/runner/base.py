@@ -159,13 +159,13 @@ class BaseRunner(abc.ABC):
         self.evaluator.model.set_logit_adjust_enabled(base_config.val_logit_adjust)
 
     @property
-    def trainer(self) -> common.BatchEngineLike:
+    def trainer(self) -> common.EngineBaseLike:
         '''Return training policy engine.'''
         assert self.epoch_runner.trainer # typing
         return self.epoch_runner.trainer
 
     @property
-    def evaluator(self) -> common.BatchEngineLike:
+    def evaluator(self) -> common.EngineBaseLike:
         '''Return evaluating policy engine.'''
         assert self.epoch_runner.evaluator # typing
         return self.epoch_runner.evaluator
