@@ -38,9 +38,9 @@ class EpochEngineLike(typing.Protocol):
     @property
     def mode(self) -> typing.Literal['train_eval', 'train_only', 'eval_only']: ...
     @property
-    def trainer(self) -> BatchEngineLike | None: ...
+    def trainer(self) -> EngineBaseLike | None: ...
     @property
-    def evaluator(self) -> BatchEngineLike | None: ...
+    def evaluator(self) -> EngineBaseLike | None: ...
     def run_epoch(self, epoch: int) -> core.EpochResults: ...
     def set_head_state(
         self,
@@ -49,8 +49,17 @@ class EpochEngineLike(typing.Protocol):
     ) -> None: ...
     def reset_head_state(self) -> None: ...
 
-class BatchEngineLike(typing.Protocol):
+class EngineBaseLike(typing.Protocol):
     model: core.MultiheadModelLike
-    device: str
-    state: common.StateLike
+    state: _EngineStateLike
     comps: common.ComponentsLike
+    device: str
+
+class _EngineStateLike(typing.Protocol):
+    progress: _Progress
+
+class _Progress(typing.Protocol):
+    epoch: int
+    epoch_step: int
+    global_step: int
+    current_metrics: float

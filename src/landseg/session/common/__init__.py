@@ -43,9 +43,8 @@ __all__ = [
     'ConfusionMatrixLike',
     'ComponentsLike',
     'ConfigLike',
-    'StateLike',
     'EpochEngineLike',
-    'BatchEngineLike'
+    'EngineBaseLike'
 ]
 # for static check
 if typing.TYPE_CHECKING:
@@ -55,8 +54,7 @@ if typing.TYPE_CHECKING:
                         HeadSpecsLike
                         )
     from .config import ConfigLike
-    from .engine import EpochEngineLike, BatchEngineLike
-    from .state import StateLike
+    from .engine import EpochEngineLike, EngineBaseLike
 
 def __getattr__(name: str):
 
@@ -73,8 +71,5 @@ def __getattr__(name: str):
 
     if name in {'EpochEngineLike', 'BatchEngineLike'}:
         return getattr(importlib.import_module('.engine', __package__), name)
-
-    if name in {'StateLike'}:
-        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

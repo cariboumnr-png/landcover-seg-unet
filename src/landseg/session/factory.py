@@ -75,7 +75,6 @@ import landseg.session.components as comps
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
-import landseg.session.state as state
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
@@ -239,14 +238,14 @@ def _build_partial_epoch_runner(
     )
 
     # initiate the shared runtime state
-    runtime_state = state.initialize(
+    runtime_state = engine.initialize_state(
         session_components.headspecs,
         session_components.dataloaders,
         use_amp=config.runtime.precision.use_amp,
         device=context.device
     )
 
-    # build callbacks
+    # add callbacks instrumentation
     callbacks = instrument.build_callbacks(
         runtime_state, # type: ignore
         device=context.device,
@@ -258,7 +257,6 @@ def _build_partial_epoch_runner(
         model=model,
         components=session_components,
         callbacks=callbacks,
-        runtime_state=runtime_state,
         device=context.device,
     )
     engine_build_config = engine.EngineBuildConfig(
@@ -274,6 +272,7 @@ def _build_partial_epoch_runner(
         engine.build_engine,
         context=engine_build_context,
         config=engine_build_config,
+        runtime_state=runtime_state,
     )
 
 def _build_partial_training_runner(
