@@ -34,7 +34,7 @@ import landseg.session.components.task as task
 import landseg.utils as utils
 
 # --------------------------------private  type--------------------------------
-class ComponentsConfig(typing.Protocol):
+class ComponentsConfigLike(typing.Protocol):
     '''Shape of the components building configuration.'''
     @property
     def loader(self) -> data.LoaderConfig: ...
@@ -57,7 +57,7 @@ class _SessionComponents:
 def build_session_components(
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    config: ComponentsConfig,
+    config: ComponentsConfigLike,
     *,
     logger: utils.Logger,
  ) -> _SessionComponents:

@@ -79,7 +79,7 @@ class BaseRunnerConfig:
     verbose: bool = True
     logit_adjust_alpha: float = 1.0
     train_logit_adjust: bool = True
-    val_logit_adjust: bool = True
+    eval_logit_adjust: bool = True
 
 # --------------------------------Public  Class--------------------------------
 class BaseRunner(abc.ABC):
@@ -115,7 +115,7 @@ class BaseRunner(abc.ABC):
     def __init__(
         self,
         epoch_runner: common.EpochEngineLike,
-        base_config: BaseRunnerConfig,
+        config: BaseRunnerConfig,
         *,
         logger: utils.Logger,
     ):
@@ -147,16 +147,16 @@ class BaseRunner(abc.ABC):
 
         # parse arguments
         self.epoch_runner = epoch_runner
-        self.config = base_config
+        self.config = config
 
         # a child from base logger
         self.logger = logger.get_child('phase')
 
         # set la status
-        self.trainer.model.set_logit_adjust_alpha(base_config.logit_adjust_alpha)
-        self.trainer.model.set_logit_adjust_enabled(base_config.train_logit_adjust)
-        self.evaluator.model.set_logit_adjust_alpha(base_config.logit_adjust_alpha)
-        self.evaluator.model.set_logit_adjust_enabled(base_config.val_logit_adjust)
+        self.trainer.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
+        self.trainer.model.set_logit_adjust_enabled(config.train_logit_adjust)
+        self.evaluator.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
+        self.evaluator.model.set_logit_adjust_enabled(config.eval_logit_adjust)
 
     @property
     def trainer(self) -> common.EngineBaseLike:
