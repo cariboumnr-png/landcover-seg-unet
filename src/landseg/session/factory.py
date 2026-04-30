@@ -249,7 +249,6 @@ def _build_partial_epoch_runner(
     # build callbacks
     callbacks = instrument.build_callbacks(
         runtime_state, # type: ignore
-        config.runtime,
         device=context.device,
     )
 
