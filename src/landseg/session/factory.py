@@ -256,7 +256,6 @@ def _build_partial_epoch_runner(
         dataspecs=dataspecs,
         model=model,
         components=session_components,
-        callbacks=callbacks,
         device=context.device,
     )
     engine_build_config = engine.EngineBuildConfig(
@@ -273,6 +272,7 @@ def _build_partial_epoch_runner(
         context=engine_build_context,
         config=engine_build_config,
         runtime_state=runtime_state,
+        callbacks=callbacks,
     )
 
 def _build_partial_training_runner(

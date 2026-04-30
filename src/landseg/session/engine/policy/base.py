@@ -61,7 +61,7 @@ class EngineBase:
         engine: batch.BatchExecutionEngine,
         engine_state: state.EngineState,
         components: common.ComponentsLike,
-        callbacks: typing.Iterator[object],
+        callbacks: typing.Sequence[object],
         *,
         device: str,
     ):

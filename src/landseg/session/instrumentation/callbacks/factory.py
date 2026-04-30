@@ -21,34 +21,21 @@
 
 '''Compose a list of callback classes in sequence for the engines.'''
 
-# standard imports
-import dataclasses
 # local imports
 import landseg.session.instrumentation.callbacks as callbacks
-
-@dataclasses.dataclass
-class _CallbackSet:
-    '''Collection of callback class contracts.'''
-    train: callbacks.TrainCallback
-    validate: callbacks.ValCallback
-    infer: callbacks.InferCallback
-    progress: callbacks.ProgressCallback
-
-    def __iter__(self):
-        return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
 
 def build_callbacks(
     state: callbacks.EngineStateLike,
     *,
     device: str,
     verbose: bool = True
-) -> _CallbackSet:
+) -> list[object]:
     '''Factory to generate a set of callback class instances.'''
 
     # return
-    return _CallbackSet(
-        train=callbacks.TrainCallback(state, device=device, verbose=verbose),
-        validate=callbacks.ValCallback(state, device=device, verbose=verbose),
-        infer=callbacks.InferCallback(state, device=device, verbose=verbose),
-        progress=callbacks.ProgressCallback(state, device=device, verbose=verbose),
-    )
+    return [
+        callbacks.TrainCallback(state, device=device, verbose=verbose),
+        callbacks.ValCallback(state, device=device, verbose=verbose),
+        callbacks.InferCallback(state, device=device, verbose=verbose),
+        callbacks.ProgressCallback(state, device=device, verbose=verbose),
+    ]

@@ -29,6 +29,7 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
+import landseg.session.engine as engine
 import landseg.session.engine.batch as batch
 import landseg.session.engine.state as state
 import landseg.session.engine.policy as policy
@@ -40,7 +41,6 @@ class EngineBuildContext:
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
     components: common.ComponentsLike
-    callbacks: common.CallBacksLike
     device: str
 
 @dataclasses.dataclass
@@ -58,8 +58,9 @@ def build_engine(
     context: EngineBuildContext,
     config: EngineBuildConfig,
     runtime_state: state.EngineState,
+    callbacks: typing.Sequence[object],
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
-) -> policy.EpochRunner:
+) -> engine.EpochRunner:
     '''
     doc
     '''
@@ -78,7 +79,7 @@ def build_engine(
         engine=batch_executor,
         state=runtime_state,
         components=context.components,
-        callbacks=context.callbacks,
+        callbacks=callbacks,
         device=context.device,
         grad_clip_norm=config.grad_clip_norm,
         update_every=config.loss_update_every,
@@ -89,7 +90,7 @@ def build_engine(
         engine=batch_executor,
         state=runtime_state,
         components=context.components,
-        callbacks=context.callbacks,
+        callbacks=callbacks,
         device=context.device,
         monitor_heads=config.metrics_track_heads,
         dataset=config.evaluation_dataset
@@ -98,8 +99,8 @@ def build_engine(
     # return engine with matched mode
     match mode:
         case 'train_eval':
-            return policy.EpochRunner(mode, trainer, evaluator)
+            return engine.EpochRunner(mode, trainer, evaluator)
         case 'train_only':
-            return policy.EpochRunner(mode, trainer, None)
+            return engine.EpochRunner(mode, trainer, None)
         case 'eval_only':
-            return policy.EpochRunner(mode, None, evaluator)
+            return engine.EpochRunner(mode, None, evaluator)
