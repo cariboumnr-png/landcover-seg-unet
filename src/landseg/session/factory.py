@@ -192,8 +192,10 @@ def build_continous_training_session(
         logger=logger,
     )
     training_runner = training_runner_partial(
-        training_phases=config.single_phase,
-        runner_type='continuous',
+        training_schema = orchestration.TrainingSchema(
+            schema='continuous',
+            training_phases=config.single_phase,
+        )
     )
     return training_runner
 
@@ -215,8 +217,10 @@ def build_curriculum_training_session(
         logger=logger,
     )
     training_runner = training_runner_partial(
-        training_phases=config.curriculum,
-        runner_type='curriculum',
+        training_schema = orchestration.TrainingSchema(
+            schema='curriculum',
+            training_phases=config.curriculum,
+        )
     )
     return training_runner
 
@@ -313,6 +317,6 @@ def _build_partial_training_runner(
     return functools.partial(
         orchestration.build_runner,
         epoch_runner=epoch_runner,
-        config=base_config,
+        base_config=base_config,
         logger=logger
     )
