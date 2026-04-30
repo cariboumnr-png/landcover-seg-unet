@@ -64,7 +64,7 @@ def __getattr__(name: str):
                 'DataLoadersLike',}:
         return getattr(importlib.import_module('.comps', __package__), name)
 
-    if name in {'EpochEngineLike', 'BatchEngineLike'}:
+    if name in {'EpochEngineLike', 'EngineBaseLike'}:
         return getattr(importlib.import_module('.engine', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

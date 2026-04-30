@@ -77,7 +77,7 @@ def build_engine(
     # trainer
     trainer = policy.MultiHeadTrainer(
         engine=batch_executor,
-        state=runtime_state,
+        engine_state=runtime_state,
         components=context.components,
         callbacks=callbacks,
         device=context.device,
@@ -88,7 +88,7 @@ def build_engine(
     # evaluator
     evaluator = policy.MultiHeadEvaluator(
         engine=batch_executor,
-        state=runtime_state,
+        engine_state=runtime_state,
         components=context.components,
         callbacks=callbacks,
         device=context.device,
