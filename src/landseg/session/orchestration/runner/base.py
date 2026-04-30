@@ -294,8 +294,8 @@ class BaseRunner(abc.ABC):
             model=self.trainer.model,
             fpath=fp,
             ckpt_meta=ckpt_meta,
-            optimizer=self.trainer.comps.optimization.optimizer,
-            scheduler=self.trainer.comps.optimization.scheduler,
+            optimizer=self.trainer.optimization.optimizer,
+            scheduler=self.trainer.optimization.scheduler,
         )
         self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
         # if this is also the best, save/overwrite the '*.best.pt'
@@ -305,8 +305,8 @@ class BaseRunner(abc.ABC):
                 model=self.trainer.model,
                 fpath=fp,
                 ckpt_meta=ckpt_meta,
-                optimizer=self.trainer.comps.optimization.optimizer,
-                scheduler=self.trainer.comps.optimization.scheduler,
+                optimizer=self.trainer.optimization.optimizer,
+                scheduler=self.trainer.optimization.scheduler,
             )
             self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
 

@@ -32,28 +32,26 @@ from __future__ import annotations
 import typing
 # local imoprts
 import landseg.core as core
-import landseg.session.common as common
+
+if typing.TYPE_CHECKING:
+    import torch.optim
+
+# aliases
+Heads: typing.TypeAlias = list[str] | None
 
 class EpochEngineLike(typing.Protocol):
-    @property
-    def mode(self) -> typing.Literal['train_eval', 'train_only', 'eval_only']: ...
     @property
     def trainer(self) -> EngineBaseLike | None: ...
     @property
     def evaluator(self) -> EngineBaseLike | None: ...
     def run_epoch(self, epoch: int) -> core.EpochResults: ...
-    def set_head_state(
-        self,
-        active_heads: list[str] | None = None,
-        frozen_heads: list[str] | None = None,
-    ) -> None: ...
+    def set_head_state(self, active_heads: Heads, frozen_heads: Heads) -> None: ...
     def reset_head_state(self) -> None: ...
 
 class EngineBaseLike(typing.Protocol):
     model: core.MultiheadModelLike
     state: _EngineStateLike
-    comps: common.ComponentsLike
-    device: str
+    optimization: _OptimizationLike
 
 class _EngineStateLike(typing.Protocol):
     progress: _Progress
@@ -63,3 +61,7 @@ class _Progress(typing.Protocol):
     epoch_step: int
     global_step: int
     current_metrics: float
+
+class _OptimizationLike(typing.Protocol):
+    optimizer: 'torch.optim.Optimizer'
+    scheduler: 'torch.optim.lr_scheduler.LRScheduler | None'
