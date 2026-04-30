@@ -58,12 +58,13 @@ class DataLoadersLike(typing.Protocol):
     @property
     def test(self) -> 'torch.utils.data.DataLoader | None':...
     @property
-    def meta(self) -> _LoaderMetaLike: ...
+    def preview_context(self) -> '_PreviewContext | None': ...
 
-class _LoaderMetaLike(typing.Protocol):
-    batch_size: int
+class _PreviewContext(typing.Protocol):
     patch_per_blk: int
-    test_blks_grid: tuple[int, int]
+    patch_per_dim: int
+    block_columns: int
+    patch_grid_shape: tuple[int, int]
 
 # ---------------------------------head  specs---------------------------------
 @typing.runtime_checkable
