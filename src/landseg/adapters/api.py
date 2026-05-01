@@ -23,6 +23,8 @@
 Programmati API entry
 '''
 
+# standard imports
+import pathlib
 # third-party imports
 import hydra
 import hydra.core.global_hydra
@@ -40,10 +42,15 @@ def get_default_config(pipeline: str) -> omegaconf.DictConfig:
     Users are expected to further modify the returned config interactively.
     '''
 
+    # resolve absolute path to the config/ folder
+    config_dir = pathlib.Path(__file__).resolve().parents[1] / 'configs'
+
+    # clear global hydra state
     if hydra.core.global_hydra.GlobalHydra.instance().is_initialized():
         hydra.core.global_hydra.GlobalHydra.instance().clear()
 
-    with hydra.initialize(config_path='./configs'):
+    # compose config from existing configs from config/
+    with hydra.initialize_config_dir(config_dir=str(config_dir)):
         cfg = hydra.compose('config', overrides=[f'pipeline={pipeline}'])
     return cfg
 
