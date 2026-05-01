@@ -34,7 +34,7 @@ import landseg.execution as execution
 import landseg.utils as utils
 
 #
-def get_default_config(pipeline: str) -> omegaconf.DictConfig:
+def get_default_config(overrides: list[str]) -> omegaconf.DictConfig:
     '''
     Return a base Hydra-composed configuration for the given pipeline.
 
@@ -43,16 +43,20 @@ def get_default_config(pipeline: str) -> omegaconf.DictConfig:
     '''
 
     # resolve absolute path to the config/ folder
-    config_dir = pathlib.Path(__file__).resolve().parents[1] / 'configs'
+    cfg_dir = str(pathlib.Path(__file__).resolve().parents[1] / 'configs')
 
     # clear global hydra state
     if hydra.core.global_hydra.GlobalHydra.instance().is_initialized():
         hydra.core.global_hydra.GlobalHydra.instance().clear()
 
     # compose config from existing configs from config/
-    with hydra.initialize_config_dir(config_dir=str(config_dir)):
-        cfg = hydra.compose('config', overrides=[f'pipeline={pipeline}'])
+    with hydra.initialize_config_dir(config_dir=cfg_dir,version_base='1.3'):
+        cfg = hydra.compose('config', overrides=overrides)
     return cfg
+
+def print_config(config: omegaconf.DictConfig):
+    '''doc'''
+    print(omegaconf.OmegaConf.to_yaml(config))
 
 #
 def run(config: omegaconf.DictConfig):

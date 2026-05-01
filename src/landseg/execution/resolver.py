@@ -25,10 +25,9 @@ Hydra configs resolver
 
 # standard imports
 import os
+import pathlib
 import typing
 # third-party imports
-import hydra
-import hydra.utils
 import omegaconf
 # local imports
 import landseg.configs as configs
@@ -39,31 +38,38 @@ omegaconf.OmegaConf.register_new_resolver("concat", lambda x, y: x + y)
 def resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
     '''Resolve configs from difference sources'''
 
-        # list of configs to resolve
+    # list of configs to resolve
     config_list: list = []
 
-    # add schema
+    # add schema - dataclass scaffolding with default dummy values
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     config_list.append(schema)
 
-    # add Hydra-composed runtime config
+    # add Hydra-composed config - this might also contain dummy values
     config_list.append(config)
 
-    # get user settings at root (with safer CWD fetching)
-    user = os.path.join(hydra.utils.get_original_cwd(), 'settings.yaml')
+    # add user settings - this should contain the complete config values
+    # resolve absolute path to the user settings at root
+    # root/src/landseg/execution/resolver.py -> the 4th parent
+    user = pathlib.Path(__file__).resolve().parents[3] / 'settings.yaml'
     if os.path.exists(user):
         user_settings = omegaconf.OmegaConf.load(user)
         assert isinstance(user_settings, omegaconf.DictConfig)
         config_list.append(user_settings)
+    else:
+        print(f"[WARN] user settings not provided: {user}")
 
-    # get dev settings (untracked)
-    dev = config['execution'].get('dev_settings')
+    # add dev settings (optional and untracked)
+    dev = omegaconf.OmegaConf.select(config, 'execution.dev_settings', default=None)
     if dev and os.path.exists(dev):
         dev_settings = omegaconf.OmegaConf.load(dev)
         assert isinstance(dev_settings, omegaconf.DictConfig)
         config_list.append(dev_settings)
+    else:
+        print(f"[INFO] dev settings not provided: {dev}")
 
-    # merging overrides resolve
+    # merging configs in order (last wins)
+    # dev -> user -> hydra defaults -> schema defaults
     with omegaconf.open_dict(config):
         merged = omegaconf.OmegaConf.merge(*config_list)
     cfg = typing.cast(omegaconf.DictConfig, merged)
