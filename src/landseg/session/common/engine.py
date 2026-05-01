@@ -49,19 +49,29 @@ class EpochEngineLike(typing.Protocol):
     def reset_head_state(self) -> None: ...
 
 class EngineBaseLike(typing.Protocol):
-    model: core.MultiheadModelLike
-    state: _EngineStateLike
-    optimization: _OptimizationLike
+    @property
+    def model(self) -> core.MultiheadModelLike: ...
+    @property
+    def state(self) -> _EngineStateLike: ...
+    @property
+    def optimization(self) -> _OptimizationLike: ...
 
 class _EngineStateLike(typing.Protocol):
-    progress: _Progress
+    @property
+    def progress(self) -> _Progress: ...
 
 class _Progress(typing.Protocol):
-    epoch: int
-    epoch_step: int
-    global_step: int
-    current_metrics: float
+    @property
+    def epoch(self) -> int: ...
+    @property
+    def epoch_step(self) -> int: ...
+    @property
+    def global_step(self) -> int: ...
+    @property
+    def current_metrics(self) -> float: ...
 
 class _OptimizationLike(typing.Protocol):
-    optimizer: 'torch.optim.Optimizer'
-    scheduler: 'torch.optim.lr_scheduler.LRScheduler | None'
+    @property
+    def optimizer(self) -> 'torch.optim.Optimizer': ...
+    @property
+    def scheduler(self) -> 'torch.optim.lr_scheduler.LRScheduler | None': ...
