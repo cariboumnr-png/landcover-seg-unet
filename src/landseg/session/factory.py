@@ -267,7 +267,9 @@ def _build_partial_epoch_runner(
         grad_clip_norm=config.runtime.optimization.grad_clip_norm,
         loss_update_every=config.runtime.schedule.log_every,
         metrics_track_heads=config.runtime.monitor.track_heads,
-        evaluation_dataset=context.eval_dataset
+        evaluation_dataset=context.eval_dataset,
+        enable_logit_adjust=config.runtime.logit_adjust.enable_logit_adjust,
+        logit_adjust_alpha=config.runtime.logit_adjust.logit_adjust_alpha,
     )
 
     # return a partial epoch runner without the mode flag
@@ -298,19 +300,13 @@ def _build_partial_training_runner(
     epoch_runner = epoch_runner_partial(mode='train_eval')
 
     assert context.session_paths, 'Session artifacts paths not defined'
-    tracking = orchestration.TrackingConfig(
+    base_config = orchestration.BaseRunnerConfig(
+        artifacts_paths=context.session_paths,
+        verbose=context.verbose_runner,
         track_mode=config.runtime.monitor.track_mode,
         enable_early_stop=config.runtime.monitor.allow_early_stop,
         patience_epochs=config.runtime.monitor.patience,
         delta=config.runtime.monitor.min_delta,
-    )
-    base_config = orchestration.BaseRunnerConfig(
-        artifacts_paths=context.session_paths,
-        verbose=context.verbose_runner,
-        tracking=tracking,
-        logit_adjust_alpha=config.runtime.logit_adjust.logit_adjust_alpha,
-        train_logit_adjust=config.runtime.logit_adjust.enable_train_logit_adjust,
-        eval_logit_adjust=config.runtime.logit_adjust.enable_eval_logit_adjust
     )
 
     # return a partial orchestraction runner

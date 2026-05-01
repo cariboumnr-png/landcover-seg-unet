@@ -51,6 +51,8 @@ class EngineBuildConfig:
     loss_update_every: int
     metrics_track_heads: list[str]
     evaluation_dataset: typing.Literal['val', 'test'] = 'val'
+    enable_logit_adjust: bool = False
+    logit_adjust_alpha: float = 1.0
 
 # -------------------------------Public Function-------------------------------
 def build_engine(
@@ -80,6 +82,10 @@ def build_engine(
         batch_config,
         device=context.device
     )
+    
+    # config model logit adjustment
+    batch_executor.model.set_logit_adjust_enabled(config.enable_logit_adjust)
+    batch_executor.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
 
     # trainer
     trainer = policy.MultiHeadTrainer(
