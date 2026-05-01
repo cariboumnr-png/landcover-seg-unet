@@ -35,24 +35,12 @@ import hydra
 import hydra.utils
 import omegaconf
 # local imports
-import landseg.cli.pipelines as pipelines
+import landseg.cli as cli
 import landseg.configs as configs
 import landseg.utils as utils
 
 # omega resolver
 omegaconf.OmegaConf.register_new_resolver("concat", lambda x, y: x + y)
-
-# command registry
-command_registry = {
-    'default': pipelines.default_action,
-    'data-ingest': pipelines.ingest,
-    'data-prepare': pipelines.prepare,
-    'diagnose-overfit': pipelines.overfit,
-    'model-evaluate':pipelines.evaluate,
-    'model-train': pipelines.train,
-    'study-sweep': pipelines.sweep,
-    'study-analysis': pipelines.analyze,
-}
 
 # main process
 @hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
@@ -71,7 +59,7 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
         # get running pipeline
         pipeline_name = root_config.pipeline.name
         # get command from pipeline
-        command = command_registry[pipeline_name]
+        command = cli.get_pipeline(pipeline_name)
         # run command
         logger.log('INFO', f'Runing pipeline: {pipeline_name} start')
         result = command(root_config)
