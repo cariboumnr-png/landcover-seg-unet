@@ -64,22 +64,15 @@ class BaseRunnerConfig:
 
         artifacts_paths: Provider of run-level filesystem paths used for
             checkpoint persistence and artifact emission.
-        resume_from_last: Whether higher-level orchestration (e.g. CLI)
-            may request resumption from previously persisted state.
         verbose: Enable verbose console output during execution.
-        logit_adjust_alpha: Global scaling factor applied to logit
-            adjustment modules.
-        train_logit_adjust: Enable logit adjustment during training
-            execution.
-        val_logit_adjustment: Enable logit adjustment during validation
-            execution.
+        ...
     '''
     artifacts_paths: artifacts.ResultsPaths
-    tracking: policy.TrackingConfig
     verbose: bool = True
-    logit_adjust_alpha: float = 1.0
-    train_logit_adjust: bool = True
-    val_logit_adjust: bool = True
+    track_mode: str = 'max'
+    enable_early_stop: bool = False
+    patience_epochs: int | None = 5
+    delta: float | None = 0.0005
 
 # --------------------------------Public  Class--------------------------------
 class BaseRunner(abc.ABC):
@@ -115,7 +108,7 @@ class BaseRunner(abc.ABC):
     def __init__(
         self,
         epoch_runner: common.EpochEngineLike,
-        base_config: BaseRunnerConfig,
+        config: BaseRunnerConfig,
         *,
         logger: utils.Logger,
     ):
@@ -147,25 +140,25 @@ class BaseRunner(abc.ABC):
 
         # parse arguments
         self.epoch_runner = epoch_runner
-        self.config = base_config
+        self.config = config
+        self.tracking = policy.TrackingConfig(
+                track_mode=self.config.track_mode,
+                enable_early_stop=self.config.enable_early_stop,
+                patience_epochs=self.config.patience_epochs,
+                delta=self.config.delta,
+            )
 
         # a child from base logger
         self.logger = logger.get_child('phase')
 
-        # set la status
-        self.trainer.model.set_logit_adjust_alpha(base_config.logit_adjust_alpha)
-        self.trainer.model.set_logit_adjust_enabled(base_config.train_logit_adjust)
-        self.evaluator.model.set_logit_adjust_alpha(base_config.logit_adjust_alpha)
-        self.evaluator.model.set_logit_adjust_enabled(base_config.val_logit_adjust)
-
     @property
-    def trainer(self) -> common.BatchEngineLike:
+    def trainer(self) -> common.EngineBaseLike:
         '''Return training policy engine.'''
         assert self.epoch_runner.trainer # typing
         return self.epoch_runner.trainer
 
     @property
-    def evaluator(self) -> common.BatchEngineLike:
+    def evaluator(self) -> common.EngineBaseLike:
         '''Return evaluating policy engine.'''
         assert self.epoch_runner.evaluator # typing
         return self.epoch_runner.evaluator
@@ -294,8 +287,8 @@ class BaseRunner(abc.ABC):
             model=self.trainer.model,
             fpath=fp,
             ckpt_meta=ckpt_meta,
-            optimizer=self.trainer.comps.optimization.optimizer,
-            scheduler=self.trainer.comps.optimization.scheduler,
+            optimizer=self.trainer.optimization.optimizer,
+            scheduler=self.trainer.optimization.scheduler,
         )
         self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
         # if this is also the best, save/overwrite the '*.best.pt'
@@ -305,8 +298,8 @@ class BaseRunner(abc.ABC):
                 model=self.trainer.model,
                 fpath=fp,
                 ckpt_meta=ckpt_meta,
-                optimizer=self.trainer.comps.optimization.optimizer,
-                scheduler=self.trainer.comps.optimization.scheduler,
+                optimizer=self.trainer.optimization.optimizer,
+                scheduler=self.trainer.optimization.scheduler,
             )
             self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
 

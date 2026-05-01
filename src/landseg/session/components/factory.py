@@ -33,8 +33,8 @@ import landseg.session.components.optim as optim
 import landseg.session.components.task as task
 import landseg.utils as utils
 
-# --------------------------------private  type--------------------------------
-class ComponentsConfig(typing.Protocol):
+# ---------------------------------Public Type---------------------------------
+class ComponentsConfigLike(typing.Protocol):
     '''Shape of the components building configuration.'''
     @property
     def loader(self) -> data.LoaderConfig: ...
@@ -43,10 +43,10 @@ class ComponentsConfig(typing.Protocol):
     @property
     def optimization(self) -> optim.OptimConfig: ...
 
-# ------------------------------private dataclass------------------------------
+# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class _SessionComponents:
-    '''Collection of trainer components.'''
+class SessionComponents:
+    '''A simple container of the session components.'''
     dataloaders: data.DataLoaders
     headspecs: task.HeadSpecs
     headlosses: task.HeadLosses
@@ -57,10 +57,10 @@ class _SessionComponents:
 def build_session_components(
     data_specs: core.DataSpecs,
     model: core.MultiheadModelLike,
-    config: ComponentsConfig,
+    config: ComponentsConfigLike,
     *,
     logger: utils.Logger,
- ) -> _SessionComponents:
+ ) -> SessionComponents:
     '''Builder session components from data shape and configs.'''
 
     # data loader
@@ -94,7 +94,7 @@ def build_session_components(
     optimization = optim.build_optimization(model, config.optimization)
 
     # collect components
-    return _SessionComponents(
+    return SessionComponents(
         dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,

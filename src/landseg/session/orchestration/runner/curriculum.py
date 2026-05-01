@@ -131,7 +131,7 @@ class CurriculumRunner(runner.BaseRunner):
             events_stream = policy.PhasePolicy(
                 epoch_runner=self.epoch_runner,
                 phase_config=phase,
-                track_config=self.config.tracking,
+                track_config=self.tracking,
             ).run()
 
             # manually advance the generator to capture both yields and returns

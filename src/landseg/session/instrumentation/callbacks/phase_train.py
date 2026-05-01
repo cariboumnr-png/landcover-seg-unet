@@ -31,7 +31,7 @@ class TrainCallback(callbacks.Callback):
 
     def on_train_epoch_begin(self, epoch: int) -> None:
         # reset training summary
-        self.state.summary.train_summary.clear()
+        self.state.epoch.train_stats.clear()
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch context with new input batch (from training data)

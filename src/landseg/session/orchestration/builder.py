@@ -43,6 +43,7 @@ external contract regardless of internal training structure.
 '''
 
 # standard imports
+import dataclasses
 import typing
 # local imports
 import landseg.session.common as common
@@ -50,32 +51,40 @@ import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.runner as runner
 import landseg.utils as utils
 
-@typing.overload
-def build_runner(
-    *,
-    epoch_runner: common.EpochEngineLike,
-    base_config: runner.BaseRunnerConfig,
-    training_phases: phases.PhaseLike,
-    runner_type: typing.Literal['continuous'],
-    logger: utils.Logger,
-) -> runner.ContinuousRunner: ...
+#
+@dataclasses.dataclass
+class TrainingSchema:
+    '''doc'''
+    schema: typing.Literal['continuous', 'curriculum']
+    training_phases: phases.PhaseLike | typing.Sequence[phases.PhaseLike]
 
-@typing.overload
-def build_runner(
-    *,
-    epoch_runner: common.EpochEngineLike,
-    base_config: runner.BaseRunnerConfig,
-    training_phases: typing.Sequence[phases.PhaseLike],
-    runner_type: typing.Literal['curriculum'],
-    logger: utils.Logger,
-) -> runner.CurriculumRunner: ...
+    @typing.overload
+    def __init__(
+        self,
+        schema: typing.Literal['continuous'],
+        training_phases: phases.PhaseLike
+    ) -> None: ...
+
+    @typing.overload
+    def __init__(
+        self,
+        schema: typing.Literal['curriculum'],
+        training_phases: typing.Sequence[phases.PhaseLike]
+    ) -> None: ...
+
+    def __init__(
+        self,
+        schema: typing.Literal['continuous', 'curriculum'],
+        training_phases: phases.PhaseLike | typing.Sequence[phases.PhaseLike]
+    ):
+        self.schema = schema
+        self.training_phases = training_phases
 
 def build_runner(
     *,
     epoch_runner: common.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
-    training_phases: phases.PhaseLike | typing.Sequence[phases.PhaseLike],
-    runner_type: typing.Literal['continuous', 'curriculum'],
+    training_schema: TrainingSchema,
     logger: utils.Logger,
 ) -> runner.BaseRunner:
     '''
@@ -127,7 +136,8 @@ def build_runner(
             expected type for the selected ``runner_type``.
     '''
 
-    match runner_type:
+    training_phases = training_schema.training_phases
+    match training_schema.schema:
         case 'continuous':
             if not isinstance(training_phases, phases.PhaseLike):
                 raise ValueError('Continuous training requires a single phase')

@@ -35,15 +35,15 @@ __all__ = [
     # functions
     'build_session_components',
     # types
-    'ComponentsConfig'
+    'ComponentsConfigLike'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import ComponentsConfig, build_session_components
+    from .factory import ComponentsConfigLike, build_session_components
 
 def __getattr__(name: str):
 
-    if name in {'ComponentsConfig', 'build_session_components'}:
+    if name in {'ComponentsConfigLike', 'build_session_components'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

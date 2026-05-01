@@ -70,12 +70,11 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.components as comps
+import landseg.session.configs as configs
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
-import landseg.session.state as state
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
@@ -100,9 +99,9 @@ class SessionConfigShape(typing.Protocol):
             orchestration runner.
     '''
     @property
-    def components(self) -> comps.ComponentsConfig: ...
+    def components(self) -> comps.ComponentsConfigLike: ...
     @property
-    def runtime(self) -> common.ConfigLike: ...
+    def runtime(self) -> configs.RuntimeConfigLike: ...
     @property
     def single_phase(self) -> orchestration.PhaseLike: ...
     @property
@@ -193,8 +192,10 @@ def build_continous_training_session(
         logger=logger,
     )
     training_runner = training_runner_partial(
-        training_phases=config.single_phase,
-        runner_type='continuous',
+        training_schema = orchestration.TrainingSchema(
+            schema='continuous',
+            training_phases=config.single_phase,
+        )
     )
     return training_runner
 
@@ -216,8 +217,10 @@ def build_curriculum_training_session(
         logger=logger,
     )
     training_runner = training_runner_partial(
-        training_phases=config.curriculum,
-        runner_type='curriculum',
+        training_schema = orchestration.TrainingSchema(
+            schema='curriculum',
+            training_phases=config.curriculum,
+        )
     )
     return training_runner
 
@@ -239,17 +242,16 @@ def _build_partial_epoch_runner(
     )
 
     # initiate the shared runtime state
-    runtime_state = state.initialize(
-        session_components.headspecs,
-        session_components.dataloaders,
+    runtime_state = engine.initialize_state(
+        all_heads=list(session_components.headspecs.as_dict().keys()),
+        batch_size=config.components.loader.batch_size,
         use_amp=config.runtime.precision.use_amp,
         device=context.device
     )
 
-    # build callbacks
+    # add callbacks instrumentation
     callbacks = instrument.build_callbacks(
         runtime_state, # type: ignore
-        config.runtime,
         device=context.device,
     )
 
@@ -258,8 +260,6 @@ def _build_partial_epoch_runner(
         dataspecs=dataspecs,
         model=model,
         components=session_components,
-        callbacks=callbacks,
-        runtime_state=runtime_state,
         device=context.device,
     )
     engine_build_config = engine.EngineBuildConfig(
@@ -267,7 +267,9 @@ def _build_partial_epoch_runner(
         grad_clip_norm=config.runtime.optimization.grad_clip_norm,
         loss_update_every=config.runtime.schedule.log_every,
         metrics_track_heads=config.runtime.monitor.track_heads,
-        evaluation_dataset=context.eval_dataset
+        evaluation_dataset=context.eval_dataset,
+        enable_logit_adjust=config.runtime.logit_adjust.enable_logit_adjust,
+        logit_adjust_alpha=config.runtime.logit_adjust.logit_adjust_alpha,
     )
 
     # return a partial epoch runner without the mode flag
@@ -275,6 +277,8 @@ def _build_partial_epoch_runner(
         engine.build_engine,
         context=engine_build_context,
         config=engine_build_config,
+        runtime_state=runtime_state,
+        callbacks=callbacks,
     )
 
 def _build_partial_training_runner(
@@ -296,16 +300,13 @@ def _build_partial_training_runner(
     epoch_runner = epoch_runner_partial(mode='train_eval')
 
     assert context.session_paths, 'Session artifacts paths not defined'
-    tracking = orchestration.TrackingConfig(
+    base_config = orchestration.BaseRunnerConfig(
+        artifacts_paths=context.session_paths,
+        verbose=context.verbose_runner,
         track_mode=config.runtime.monitor.track_mode,
         enable_early_stop=config.runtime.monitor.allow_early_stop,
         patience_epochs=config.runtime.monitor.patience,
         delta=config.runtime.monitor.min_delta,
-    )
-    base_config = orchestration.BaseRunnerConfig(
-        artifacts_paths=context.session_paths,
-        verbose=context.verbose_runner,
-        tracking=tracking,
     )
 
     # return a partial orchestraction runner

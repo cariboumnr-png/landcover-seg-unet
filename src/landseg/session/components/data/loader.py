@@ -66,15 +66,16 @@ class DataLoaders:
     train: torch.utils.data.DataLoader | None
     val: torch.utils.data.DataLoader | None
     test: torch.utils.data.DataLoader | None
-    meta: _Meta
+    preview_context: _PreviewContext | None
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class _Meta:
-    '''Simple meta to be shipped with the dataloaders.'''
-    batch_size: int
+class _PreviewContext:
+    '''Inference assembly context for block-wise stitching.'''
     patch_per_blk: int
-    test_blks_grid:  tuple[int, int]
+    patch_per_dim: int
+    block_columns: int
+    patch_grid_shape: tuple[int, int]
 
 # -------------------------------Public Function-------------------------------
 def build_dataloaders(
@@ -119,11 +120,6 @@ def build_dataloaders(
     # meta to be shipped
     h_w = data_specs.meta.image_specs.height_width
     assert h_w % config.patch_size == 0
-    meta = _Meta(
-        batch_size=config.batch_size,
-        patch_per_blk=int(h_w / config.patch_size) ** 2,
-        test_blks_grid=data_specs.meta.test_blks_grid
-    )
 
     # partial load function
     load_partial = functools.partial(
@@ -142,7 +138,12 @@ def build_dataloaders(
             single_loader = load_partial('single')
             # pass the same as val dataloader for minimal disturbance downstream
             assert single_loader
-            return DataLoaders(single_loader, single_loader, None, meta)
+            return DataLoaders(
+                train=single_loader,
+                val=single_loader,
+                test=None,
+                preview_context=None
+            )
 
         # val only mode
         case 'val_only':
@@ -151,7 +152,7 @@ def build_dataloaders(
                 train=None,
                 val=val_loader,
                 test=None,
-                meta=meta
+                preview_context=None
             )
 
         # test only mode
@@ -161,25 +162,31 @@ def build_dataloaders(
                 train=None,
                 val=None,
                 test=test_loader,
-                meta=meta
+                preview_context=None
             )
 
         # defualt normal experiment
         case 'default':
+            train = load_partial('train')
+            val = load_partial('val')
+            test = load_partial('test')
+            if test is not None:
+                preview_context = _generate_preview_context(
+                    per_blk=int(h_w / config.patch_size) ** 2,
+                    test_blks_grid=data_specs.meta.test_blks_grid
+                )
+            else:
+                preview_context = None
             return DataLoaders(
-                train=load_partial('train'),
-                val=load_partial('val'),
-                test=load_partial('test'),
-                meta=meta
+                train=train,
+                val=val,
+                test=test,
+                preview_context=preview_context
             )
-
-        # catch
-        case _:
-            raise ValueError(f'Invalid mode: {data_specs.mode}')
 
 # ------------------------------private  function------------------------------
 def _load(
-    mode: str,
+    mode: typing.Literal['train', 'val', 'test', 'single'],
     data_specs: core.DataSpecs,
     batch_size: int,
     patch_size: int,
@@ -187,9 +194,6 @@ def _load(
     logger: utils.Logger
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
-
-    # mode sanity check
-    assert mode in ['train', 'val', 'test', 'single']
 
     # fetch data blocks by mode
     data_blocks_registry: dict[str, dict[str, str]] = {
@@ -199,6 +203,7 @@ def _load(
         'single': data_specs.splits.train
     }
     data_blocks = data_blocks_registry[mode]
+
     # early exit if no data blocks are available, e.g., no test dataset
     if not data_blocks:
         return None
@@ -350,3 +355,24 @@ def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
 
     # return
     return xs, ys_out, dom_out
+
+def _generate_preview_context(
+    per_blk: int,
+    test_blks_grid: tuple[int, int]
+):
+    '''Resolve patch-block layout for preview context.'''
+
+    # resolve patch-block layout
+    per_dim = int(per_blk ** 0.5)
+    assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
+    # resolve block col/row numbers
+    blk_col, blk_row = test_blks_grid
+    # resolve patch col/row numbers
+    pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
+    # return dataclasee
+    return _PreviewContext(
+        patch_per_blk=per_blk,
+        patch_per_dim=per_dim,
+        block_columns=blk_col,
+        patch_grid_shape=(pch_col, pch_row)
+    )

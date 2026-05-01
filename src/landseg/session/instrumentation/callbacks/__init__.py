@@ -40,12 +40,14 @@ __all__ = [
     'InferCallback',
     'ProgressCallback',
     # functions
-    'build_callbacks'
+    'build_callbacks',
+    # types
+    'EngineStateLike'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import Callback
+    from .base import Callback, EngineStateLike
     from .factory import build_callbacks
     from .phase_infer import InferCallback
     from .phase_train import TrainCallback
@@ -54,7 +56,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'Callback'}:
+    if name in {'Callback', 'EngineStateLike'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
     if name in {'build_callbacks'}:

@@ -21,42 +21,21 @@
 
 '''Compose a list of callback classes in sequence for the engines.'''
 
-# standard imports
-import dataclasses
 # local imports
-import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 
-@dataclasses.dataclass
-class _CallbackSet:
-    '''Collection of callback class contracts.'''
-    train: callbacks.TrainCallback
-    validate: callbacks.ValCallback
-    infer: callbacks.InferCallback
-    progress: callbacks.ProgressCallback
-
-    def __iter__(self):
-        return iter((getattr(self, f.name) for f in dataclasses.fields(self)))
-
 def build_callbacks(
-    state: common.StateLike,
-    config: common.ConfigLike,
+    state: callbacks.EngineStateLike,
     *,
     device: str,
-) -> _CallbackSet:
+    verbose: bool = True
+) -> list[object]:
     '''Factory to generate a set of callback class instances.'''
 
-    # build set
-    callback_set = _CallbackSet(
-        train=callbacks.TrainCallback(),
-        validate=callbacks.ValCallback(),
-        infer=callbacks.InferCallback(),
-        progress=callbacks.ProgressCallback(),
-    )
-    # set up all callback instances
-    callback_set.train.setup(state, config, device=device)
-    callback_set.validate.setup(state, config, device=device)
-    callback_set.infer.setup(state, config, device=device)
-    callback_set.progress.setup(state, config, device=device)
     # return
-    return callback_set
+    return [
+        callbacks.TrainCallback(state, device=device, verbose=verbose),
+        callbacks.ValCallback(state, device=device, verbose=verbose),
+        callbacks.InferCallback(state, device=device, verbose=verbose),
+        callbacks.ProgressCallback(state, device=device, verbose=verbose),
+    ]

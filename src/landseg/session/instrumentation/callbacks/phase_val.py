@@ -35,7 +35,7 @@ class ValCallback(callbacks.Callback):
         for metrics_mod in self.state.heads.active_hmetrics.values():
             metrics_mod.reset(self.device)
         # reset validation summary
-        self.state.summary.val_summary.clear()
+        self.state.epoch.eval_stats.clear()
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
         # refresh batch context with new input batch (from validation data)
