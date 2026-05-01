@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-landseg = "landseg.cli.main:main"
+landseg = "landseg.adapters.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
