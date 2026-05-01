@@ -45,7 +45,7 @@ session:
       grad_clip_norm: null
     logit_adjust:
       logit_adjust_alpha: 0.0
-      enable_train_logit_adjustment: False
+      enable_logit_adjust: False
 
 pipeline:
   name: diagnose-overfit

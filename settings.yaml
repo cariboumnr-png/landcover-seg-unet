@@ -212,7 +212,7 @@ session:
 
     logit_adjust:
       # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
-      enable_logit_adjustment: False
+      enable_logit_adjust: False
       logit_adjust_alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
 
 

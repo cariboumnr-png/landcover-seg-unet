@@ -20,5 +20,5 @@ optimization:
   grad_clip_norm: 1.0
 
 logit_adjust:
-  enable_logit_adjustment: True
+  enable_logit_adjust: True
   logit_adjust_alpha: 1.0

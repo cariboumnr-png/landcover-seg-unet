@@ -108,7 +108,7 @@ class BaseRunner(abc.ABC):
     def __init__(
         self,
         epoch_runner: common.EpochEngineLike,
-        config: BaseRunnerConfig,
+        base_config: BaseRunnerConfig,
         *,
         logger: utils.Logger,
     ):
@@ -140,7 +140,7 @@ class BaseRunner(abc.ABC):
 
         # parse arguments
         self.epoch_runner = epoch_runner
-        self.config = config
+        self.config = base_config
         self.tracking = policy.TrackingConfig(
                 track_mode=self.config.track_mode,
                 enable_early_stop=self.config.enable_early_stop,

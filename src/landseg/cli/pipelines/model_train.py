@@ -104,6 +104,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         dataspecs=dataspecs,
         backbone_config=config.models.body_registry[config.models.use_body],
         conditioning=config.models.conditioning,
+        enable_logit_adjust=config.models.flags.enable_logit_adjust,
         enable_clamp=config.models.flags.enable_clamp,
         clamp_range=config.models.clamp_range
     )
