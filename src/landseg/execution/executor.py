@@ -20,8 +20,22 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.cli`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Pipeline execution
 '''
+
+# standard imports
+import typing
+# local imports
+import landseg.execution.pipelines as piplines
+import landseg.configs as configs
+
+#
+def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
+    '''Run the selected CLI pipeline with resolved configuration.'''
+
+    # get running pipeline
+    pipeline_name = root_config.pipeline.name
+    # get command from pipeline
+    command = piplines.get(pipeline_name)
+    # run command and return result
+    return command(root_config)

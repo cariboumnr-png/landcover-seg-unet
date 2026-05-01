@@ -33,8 +33,8 @@ name with both runtime checks and static type safety.
 # standard imports
 import typing
 # local imports
-import landseg.cli.pipelines as pipelines
 import landseg.configs as configs
+import landseg.execution.pipelines as pipelines
 
 # allowed pipeline names
 PipelineName = typing.Literal[
@@ -65,7 +65,7 @@ PIPELINES: dict[PipelineName, PipelineFn] = {
 }
 
 # runtime safe access
-def get_pipeline(name: str) -> PipelineFn:
+def get(name: str) -> PipelineFn:
     '''
     Retrieve the pipeline function associated with a given name.
 

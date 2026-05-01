@@ -19,42 +19,59 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=no-value-for-parameter
-
 '''
-CLI entry.
+Hydra configs resolver
 '''
 
 # standard imports
-import sys
+import os
 import typing
 # third-party imports
 import hydra
+import hydra.utils
 import omegaconf
 # local imports
-import landseg.execution as execution
-import landseg.utils as utils
+import landseg.configs as configs
 
-# main process
-@hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
-def main(config: omegaconf.DictConfig) -> typing.Any:
-    '''Run the selected CLI pipeline with resolved configuration.'''
+# register omega resolvers
+omegaconf.OmegaConf.register_new_resolver("concat", lambda x, y: x + y)
 
-    # cli logger
-    logger = utils.Logger('cli', './cli.log')
+def resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
+    '''Resolve configs from difference sources'''
 
-    # run specified mode with exceptions handling
-    try:
-        root_config = execution.resolve_configs(config)
-        return execution.execute_pipeline(root_config)
-    # manual keyboard interruption
-    except KeyboardInterrupt:
-        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
-        sys.exit(130)
-    # capture others and log
-    except Exception: # pylint: disable=broad-exception-caught
-        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
-        sys.exit(1)
+        # list of configs to resolve
+    config_list: list = []
 
-if __name__ == '__main__':
-    main()
+    # add schema
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    config_list.append(schema)
+
+    # add Hydra-composed runtime config
+    config_list.append(config)
+
+    # get user settings at root (with safer CWD fetching)
+    user = os.path.join(hydra.utils.get_original_cwd(), 'settings.yaml')
+    if os.path.exists(user):
+        user_settings = omegaconf.OmegaConf.load(user)
+        assert isinstance(user_settings, omegaconf.DictConfig)
+        config_list.append(user_settings)
+
+    # get dev settings (untracked)
+    dev = config['execution'].get('dev_settings')
+    if dev and os.path.exists(dev):
+        dev_settings = omegaconf.OmegaConf.load(dev)
+        assert isinstance(dev_settings, omegaconf.DictConfig)
+        config_list.append(dev_settings)
+
+    # merging overrides resolve
+    with omegaconf.open_dict(config):
+        merged = omegaconf.OmegaConf.merge(*config_list)
+    cfg = typing.cast(omegaconf.DictConfig, merged)
+    omegaconf.OmegaConf.resolve(cfg)
+
+    # construct and cast config dataclass
+    root = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
+
+    # final validation checks before returning
+    root.validate_all()
+    return root
