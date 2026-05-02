@@ -25,7 +25,6 @@
 
 # local imports
 import landseg.session.instrumentation.callbacks as callbacks
-import landseg.session.instrumentation.exporters as exporters
 
 class InferCallback(callbacks.Callback):
     '''Inference: parse -> forward -> collect outputs (optional).'''
@@ -38,20 +37,22 @@ class InferCallback(callbacks.Callback):
 
     def on_inference_batch_end(self) -> None: ...
 
-    def on_inference_end(self, out_dir: str, **kwargs) -> None:
-        # stitch all blocks together and output previews
-        # only if the patch grid is of valid shape, e.e, non-zero dims
+    def on_inference_end(self, out_dir: str, **kwargs) -> None: ...
 
-        # determine which heads to produce preview images
-        heads: list[str] = kwargs.get('preview_heads', [])
-        patch_grid_shape: tuple[int, int] = kwargs.get('patch_grid_shape', ())
-        # if no specifics provided, preview all heads
-        if not heads:
-            heads = self.state.heads.all_heads
-        if all(patch_grid_shape):
-            exporters.export_previews(
-                self.state.epoch.eval_stats.infer_maps,
-                out_dir,
-                map_grid_shape=patch_grid_shape,
-                heads=heads
-            )
+        # ------------------------TO BE RE-IMPLEMENTED------------------------
+        # # stitch all blocks together and output previews
+        # # only if the patch grid is of valid shape, e.e, non-zero dims
+
+        # # determine which heads to produce preview images
+        # heads: list[str] = kwargs.get('preview_heads', [])
+        # patch_grid_shape: tuple[int, int] = kwargs.get('patch_grid_shape', ())
+        # # if no specifics provided, preview all heads
+        # if not heads:
+        #     heads = self.state.heads.all_heads
+        # if all(patch_grid_shape):
+        #     exporters.export_previews(
+        #         self.state.epoch.eval_stats.infer_maps,
+        #         out_dir,
+        #         map_grid_shape=patch_grid_shape,
+        #         heads=heads
+        #     )
