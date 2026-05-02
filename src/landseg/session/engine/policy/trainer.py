@@ -182,12 +182,12 @@ class MultiHeadTrainer(policy.EngineBase):
             self.results.current_bidx = bidx
 
             # update train logs if at interval (decided by trainer method)
-            self._update_training_state(flush=False)
+            self._update_training_stats(flush=False)
             self._emit('on_train_batch_end')
 
         # training phase end
         # - update logs and loss (total/per-head) for the epoch
-        self._update_training_state(flush=True)
+        self._update_training_stats(flush=True)
         self._emit('on_train_epoch_end')
         return self.results
 
@@ -201,7 +201,7 @@ class MultiHeadTrainer(policy.EngineBase):
                 self.grad_clip_norm
             )
 
-    def _update_training_state(self, flush: bool=False):
+    def _update_training_stats(self, flush: bool=False):
         '''
         Average losses and update per-head loss logs at intervals.
 
