@@ -86,7 +86,7 @@ class MultiHeadEvaluator(policy.EngineBase):
     ):
         super().__init__(**kwargs)
         self.monitor_heads = monitor_heads
-        self.dataset = dataset
+        self.dataset: typing.Literal['val', 'test'] = dataset
 
         # init the epoch results container with all heads
         self.results = core.EvaluatorEpochResults(
@@ -119,16 +119,23 @@ class MultiHeadEvaluator(policy.EngineBase):
             A mapping from head name to its finalized validation metrics.
         '''
 
-        # val phase start
+        # validation phase begin
+        self._emit('on_validation_begin')
         # set model to evaluation mode
         self.model.eval()
-        self._emit('on_validation_begin')
+        # reset evaluation states
+        self.state.epoch.eval_stats.clear()
+        # reset per-head confusion matrix from active heads
+        assert self.state.heads.active_hmetrics is not None
+        for metrics_mod in self.state.heads.active_hmetrics.values():
+            metrics_mod.reset(self.device)
+        # reset head metrics dictionary
+        self.results.head_metrics.clear()
 
         # set target dataset
         match self.dataset:
             case 'val': dataloader = self.dataloaders.val
             case 'test': dataloader = self.dataloaders.test
-            case _: raise ValueError(f'Invalid dataset type: {self.dataset}')
 
         # iterate through validation dataset
         assert dataloader, 'Target dataset not provided'
@@ -162,10 +169,12 @@ class MultiHeadEvaluator(policy.EngineBase):
         post-process inference results directly.
         '''
 
-        # infer phase start
+        # infer phase begin
+        self._emit('on_inference_begin')
         # set model to evaluation mode
         self.model.eval()
-        self._emit('on_inference_begin')
+        # reset evaluation states
+        self.state.epoch.eval_stats.clear()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'

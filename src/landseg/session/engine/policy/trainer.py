@@ -120,12 +120,14 @@ class MultiHeadTrainer(policy.EngineBase):
             (e.g., total and per-head losses).
         '''
 
-        # ----- train phase begin
+        # training phase begin
+        self._emit('on_train_epoch_begin', epoch)
         # set model to train mode
         self.model.train()
+        # reset training summary
+        self.state.epoch.train_stats.clear()
         # reset results container (avoid carry-over from last epoch)
         self.results.clear()
-        self._emit('on_train_epoch_begin', epoch)
 
         # interate through training data batches
         assert self.dataloaders.train, 'Training dataset not provided'
@@ -134,7 +136,7 @@ class MultiHeadTrainer(policy.EngineBase):
             # batch start
             self._emit('on_train_batch_begin', bidx, batch)
             self._batch_reset(bidx, batch)
-            
+
             # reset optimizer gradient
             self.optimization.optimizer.zero_grad(set_to_none=True)
 
@@ -183,7 +185,7 @@ class MultiHeadTrainer(policy.EngineBase):
             self._update_training_state(flush=False)
             self._emit('on_train_batch_end')
 
-        # train phase end
+        # training phase end
         # - update logs and loss (total/per-head) for the epoch
         self._update_training_state(flush=True)
         self._emit('on_train_epoch_end')

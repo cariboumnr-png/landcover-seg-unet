@@ -30,9 +30,7 @@ import landseg.session.instrumentation.exporters as exporters
 class InferCallback(callbacks.Callback):
     '''Inference: parse -> forward -> collect outputs (optional).'''
 
-    def on_inference_begin(self) -> None:
-        # reset infer outputs
-        self.state.epoch.eval_stats.clear()
+    def on_inference_begin(self) -> None: ...
 
     def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None: ...
 
