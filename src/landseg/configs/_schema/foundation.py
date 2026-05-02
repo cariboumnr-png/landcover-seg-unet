@@ -144,7 +144,7 @@ class _General:
 @dataclasses.dataclass
 class _DataBlocks:
     name: str = omegaconf.MISSING
-    default_input_dpath: str = '${execution.exp_root}/input/${inputs.data.name}'
+    default_input_dpath: str = '${execution.exp_root}/input/${foundation.datablocks.name}'
     filenames: _FileNames = field(default_factory=_FileNames)
     filepaths: _FilePaths = field(default_factory=_FilePaths)
     general: _General = field(default_factory=_General)
@@ -154,6 +154,9 @@ class _DataBlocks:
         root = self.default_input_dpath
         paths = self.filepaths
         names = self.filenames
+        # defer validation until config is composed and resolved
+        if not _is_resolved(self.name):
+            return
         # dev image
         if not self.filepaths.dev_image:
             paths.dev_image = os.path.join(root, 'dev', names.dev_image)
@@ -169,9 +172,6 @@ class _DataBlocks:
         # config JSON
         if not self.filepaths.config:
             paths.config = os.path.join(root, names.config)
-        # defer validation until config is composed and resolved
-        if not _is_resolved(self.name):
-            return
         if not self.name:
             raise ValueError('Input data name not provided')
 
