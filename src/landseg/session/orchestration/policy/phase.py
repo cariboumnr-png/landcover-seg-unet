@@ -152,11 +152,15 @@ class PhasePolicy:
             ).run()
 
             # track metrics
-            assert metrics.validation, 'No validation results found'
-            reports = self._track(epoch, metrics.validation.target_metrics)
+            # - if validation is run this epoch
+            if metrics.validation:
+                tracked = self._track(epoch, metrics.validation.target_metrics)
+            # - if validation is not run this epoch
+            else:
+                tracked = (0.0, -1, False)
 
             # report tracking results
-            yield events.MetricsReport(*reports, metrics)
+            yield events.MetricsReport(*tracked, metrics)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'

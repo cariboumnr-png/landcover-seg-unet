@@ -231,14 +231,18 @@ class BaseRunner(abc.ABC):
     ) -> None:
         '''Parse and log a concise epoch results summary to console.'''
 
-        # typing sanity
+        # training metrics is always neends
         assert metrics.training
-        assert metrics.validation
+        # validation may or may not be run every epoch
+        if metrics.validation:
+            mean_iou = metrics.validation.target_metrics
+        else:
+            mean_iou = 0.0
         # best so far
         best_epoch, best_value = best_so_far
         msg = (
             f'|Total Loss: {metrics.training.mean_total_loss:.4f}|'
-            f'Mean IoU: {metrics.validation.target_metrics:.4f}|'
+            f'Mean IoU: {mean_iou:.4f}|'
             f'Best Epoch: {best_epoch}|Best Value: {best_value:.4f}|'
         )
         t = total_epochs

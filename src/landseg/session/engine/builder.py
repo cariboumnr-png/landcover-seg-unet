@@ -108,7 +108,9 @@ def build_engine(
         callbacks=callbacks,
         device=context.device,
         monitor_heads=config.metrics_track_heads,
-        dataset=config.evaluation_dataset
+        dataset=config.evaluation_dataset,
+        val_every=config.val_every_n_epoch,
+        infer_every=config.infer_every_n_epoch
     )
 
     # return engine with matched mode

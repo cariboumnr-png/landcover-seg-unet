@@ -125,7 +125,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # early exit if this epoch is not to be validated
         if not epoch % self.val_every == 0:
-            return
+            return None
 
         # validation phase begin
         self._emit('on_validation_begin')
