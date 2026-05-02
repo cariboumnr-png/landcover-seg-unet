@@ -52,9 +52,11 @@ class RuntimeConfigLike(typing.Protocol):
 # ------------------------------private dataclass------------------------------
 class _Schedule(typing.Protocol):
     @property
-    def log_every(self) -> int: ...
+    def log_loss_every(self) -> int: ...
     @property
-    def val_every(self) -> int | None: ...  # current not referenced
+    def val_every(self) -> int: ...
+    @property
+    def infer_every(self) -> int: ...
     @property
     def ckpt_every(self) -> int | None: ... # current not referenced
 

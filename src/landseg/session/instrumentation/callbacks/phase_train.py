@@ -29,15 +29,9 @@ import landseg.session.instrumentation.callbacks as callbacks
 class TrainCallback(callbacks.Callback):
     '''Training: parse - forward - compute loss - backward - step.'''
 
-    def on_train_epoch_begin(self, epoch: int) -> None:
-        # reset training summary
-        self.state.epoch.train_stats.clear()
+    def on_train_epoch_begin(self, epoch: int) -> None: ...
 
-    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch context with new input batch (from training data)
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
+    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None: ...
 
     def on_train_batch_forward(self) -> None: ...
 

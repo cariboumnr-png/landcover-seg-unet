@@ -29,19 +29,9 @@ import landseg.session.instrumentation.callbacks as callbacks
 class ValCallback(callbacks.Callback):
     '''Validation pipeline: parse - forward - compute metrics.'''
 
-    def on_validation_begin(self) -> None:
-        # reset per-head confusion matrix from active heads
-        assert self.state.heads.active_hmetrics is not None
-        for metrics_mod in self.state.heads.active_hmetrics.values():
-            metrics_mod.reset(self.device)
-        # reset validation summary
-        self.state.epoch.eval_stats.clear()
+    def on_validation_begin(self) -> None: ...
 
-    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch context with new input batch (from validation data)
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
+    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None: ...
 
     def on_validation_batch_forward(self) -> None: ...
 

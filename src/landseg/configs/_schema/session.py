@@ -103,8 +103,9 @@ class _ComponentsCfg:
 class _Schedule:
     max_epoch: int = 50
     max_step: int = 1_000_000
-    log_every: int = 50
+    log_loss_every: int = 50
     val_every: int = 1
+    infer_every: int = 1
     ckpt_every: int = 5
 
 @dataclasses.dataclass

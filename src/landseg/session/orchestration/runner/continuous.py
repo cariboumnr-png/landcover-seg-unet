@@ -176,12 +176,12 @@ class ContinuousRunner(runner.BaseRunner):
                     # normal yield
                     if not self._is_phase_end:
                         yield self._get_step(reason=None)
-
                     # yield at the end
-                    reason = 'Max epoch reached'
-                    self.logger.log('INFO', f'Exit training: {reason}')
-                    yield self._get_step(reason=reason)
-                    return
+                    else:
+                        reason = 'Max epoch reached'
+                        self.logger.log('INFO', f'Exit training: {reason}')
+                        yield self._get_step(reason=reason)
+                        return
 
                 case events.StopRun(reason=reason):
 
@@ -196,8 +196,14 @@ class ContinuousRunner(runner.BaseRunner):
     def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
         '''Helper to generate a step dataclass from self trackers.'''
 
-        # typing correctness
-        assert self._current_metrics.validation
+        # depending on whether validation was run for this epoch
+        if self._current_metrics.validation:
+            objective_name=self._current_metrics.validation.monitor_heads_str
+            objective_value=self._current_metrics.validation.target_metrics
+        else:
+            objective_name = 'N/A'
+            objective_value = 0.0
+
         return core.TrainingSessionStep(
             # id/loc
             phase_name=self.phase.name,
@@ -209,8 +215,8 @@ class ContinuousRunner(runner.BaseRunner):
             is_run_end=self._is_phase_end, # single phase
             stop_reason=reason,
             # metrics
-            objective_name=self._current_metrics.validation.monitor_heads_str,
-            objective_value=self._current_metrics.validation.target_metrics,
+            objective_name=objective_name,
+            objective_value=objective_value,
             best_value_so_far=self._best_value_so_far,
             best_epoch_so_far=self._best_epoch_so_far,
             is_best_epoch=self._is_best_epoch,

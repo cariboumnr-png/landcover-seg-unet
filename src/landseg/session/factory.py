@@ -265,7 +265,9 @@ def _build_partial_epoch_runner(
     engine_build_config = engine.EngineBuildConfig(
         use_amp=config.runtime.precision.use_amp,
         grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-        loss_update_every=config.runtime.schedule.log_every,
+        train_update_every_n_batch=config.runtime.schedule.log_loss_every,
+        val_every_n_epoch=config.runtime.schedule.val_every,
+        infer_every_n_epoch=config.runtime.schedule.infer_every,
         metrics_track_heads=config.runtime.monitor.track_heads,
         evaluation_dataset=context.eval_dataset,
         enable_logit_adjust=config.runtime.logit_adjust.enable_logit_adjust,
