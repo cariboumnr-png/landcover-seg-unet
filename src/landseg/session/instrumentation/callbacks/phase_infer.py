@@ -34,11 +34,7 @@ class InferCallback(callbacks.Callback):
         # reset infer outputs
         self.state.epoch.eval_stats.clear()
 
-    def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch ctx
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
+    def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None: ...
 
     def on_inference_batch_forward(self) -> None: ...
 

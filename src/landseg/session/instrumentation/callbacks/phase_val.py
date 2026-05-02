@@ -37,11 +37,7 @@ class ValCallback(callbacks.Callback):
         # reset validation summary
         self.state.epoch.eval_stats.clear()
 
-    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
-        # refresh batch context with new input batch (from validation data)
-        self.state.batch_cxt.refresh(bidx, batch)
-        # refresh batch results
-        self.state.batch_out.refresh(bidx)
+    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None: ...
 
     def on_validation_batch_forward(self) -> None: ...
 

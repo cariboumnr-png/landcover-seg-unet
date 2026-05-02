@@ -133,6 +133,8 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch start
             self._emit('on_train_batch_begin', bidx, batch)
+            self._batch_reset(bidx, batch)
+            
             # reset optimizer gradient
             self.optimization.optimizer.zero_grad(set_to_none=True)
 
