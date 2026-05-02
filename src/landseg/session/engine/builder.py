@@ -48,7 +48,9 @@ class EngineBuildConfig:
     '''Engine building configs'''
     use_amp: bool
     grad_clip_norm: float | None
-    loss_update_every: int
+    train_update_every_n_batch: int
+    val_every_n_epoch: int
+    infer_every_n_epoch: int
     metrics_track_heads: list[str]
     evaluation_dataset: typing.Literal['val', 'test'] = 'val'
     enable_logit_adjust: bool = False
@@ -82,7 +84,7 @@ def build_engine(
         batch_config,
         device=context.device
     )
-    
+
     # config model logit adjustment
     batch_executor.model.set_logit_adjust_enabled(config.enable_logit_adjust)
     batch_executor.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
@@ -95,7 +97,7 @@ def build_engine(
         callbacks=callbacks,
         device=context.device,
         grad_clip_norm=config.grad_clip_norm,
-        update_every=config.loss_update_every,
+        update_every=config.train_update_every_n_batch,
     )
 
     # evaluator
