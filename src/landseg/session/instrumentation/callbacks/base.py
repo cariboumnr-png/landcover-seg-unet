@@ -51,9 +51,9 @@ class EngineStateLike(typing.Protocol):
     '''Interface on the subset of engine state for callbacks.'''
     progress: _Progress
     heads: _Heads
-    batch_cxt: _BatchContex
-    batch_out: _BatchOutput
-    epoch: _EpochSummary
+    # batch_cxt: _BatchContex
+    # batch_out: _BatchOutput
+    # epoch: _EpochSummary
 
 class _Progress(typing.Protocol):
     epoch: int
@@ -67,22 +67,22 @@ class _Heads(typing.Protocol):
 class _MetricsModule(typing.Protocol):
     def reset(self, device: str) -> None: ...
 
-class _BatchContex(typing.Protocol):
-    def refresh(self, bidx: int, batch: tuple) -> None: ...
+# class _BatchContex(typing.Protocol):
+#     def refresh(self, bidx: int, batch: tuple) -> None: ...
 
-class _BatchOutput(typing.Protocol):
-    def refresh(self, bidx: int) -> None: ...
+# class _BatchOutput(typing.Protocol):
+#     def refresh(self, bidx: int) -> None: ...
 
-class _EpochSummary(typing.Protocol):
-    train_stats: _TrainEpoch
-    eval_stats: _EvaluateEpoch
+# class _EpochSummary(typing.Protocol):
+#     train_stats: _TrainEpoch
+#     eval_stats: _EvaluateEpoch
 
-class _TrainEpoch(typing.Protocol):
-    def clear(self) -> None: ...
+# class _TrainEpoch(typing.Protocol):
+#     def clear(self) -> None: ...
 
-class _EvaluateEpoch(typing.Protocol):
-    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]]
-    def clear(self) -> None: ...
+# class _EvaluateEpoch(typing.Protocol):
+#     infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]]
+#     def clear(self) -> None: ...
 
 # --------------------------------Public  Class--------------------------------
 class Callback:
