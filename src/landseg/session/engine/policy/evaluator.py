@@ -82,11 +82,15 @@ class MultiHeadEvaluator(policy.EngineBase):
         *,
         monitor_heads: list[str],
         dataset: typing.Literal['val', 'test'] = 'val',
+        val_every: int = 1,
+        infer_every: int = 1,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.monitor_heads = monitor_heads
         self.dataset: typing.Literal['val', 'test'] = dataset
+        self.val_every = val_every
+        self.infer_every = infer_every
 
         # init the epoch results container with all heads
         self.results = core.EvaluatorEpochResults(
@@ -95,7 +99,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         )
 
     # -------------------------------Public  Methods-------------------------------
-    def validate(self) -> core.EvaluatorEpochResults:
+    def validate(self, epoch: int) -> core.EvaluatorEpochResults | None:
         '''
         Execute a full validation epoch and return finalized metrics.
 
@@ -118,6 +122,10 @@ class MultiHeadEvaluator(policy.EngineBase):
         Returns:
             A mapping from head name to its finalized validation metrics.
         '''
+
+        # early exit if this epoch is not to be validated
+        if not epoch % self.val_every == 0:
+            return
 
         # validation phase begin
         self._emit('on_validation_begin')
@@ -153,7 +161,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         self._emit('on_validation_end')
         return self.results
 
-    def infer(self, out_dir: str, **kwargs) -> None:
+    def infer(self, epoch: int) -> None:
         '''
         Execute inference over the test dataset.
 
@@ -168,6 +176,10 @@ class MultiHeadEvaluator(policy.EngineBase):
         the batch execution engine. This method does not interpret or
         post-process inference results directly.
         '''
+
+        # early exit if this epoch is not to be validated
+        if not epoch % self.infer_every == 0:
+            return
 
         # infer phase begin
         self._emit('on_inference_begin')
@@ -188,7 +200,7 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_infer_batch()
 
         # inference phase end
-        self._emit('on_inference_end', out_dir, **kwargs)
+        self._emit('on_inference_end')
 
     # ----- validation phase
     def _compute_iou(self) -> None:
