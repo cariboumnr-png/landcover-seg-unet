@@ -1,35 +1,110 @@
-## ADR-0029 Transition to Programmatic API for Data & Training Notebook Execution
+# ADR-0029 Transition to Programmatic API for Data & Training Notebook Execution
 
-**Status:** Proposed  
-**Date:** 2026-04-30  
+**Status:** Accepted
+**Date:** 2026-05-01
 
------
+---
 
-### Context
-Currently, the `landcover-seg-unet` pipeline (spanning data ingestion, preparation, training, and sweeping) relies exclusively on a CLI driven by Hydra's `@hydra.main` decorator. This CLI-only architecture creates UX friction for target deployment environments like Databricks, where technical users operate primarily within Jupyter Notebooks.
+## Context
 
-Because the project contains distinct lifecycles—such as one-off data preparation versus iterative model training—forcing all operations through a single CLI entry point or a monolithic configuration file is inefficient. We need a way to orchestrate these distinct pipelines programmatically from isolated notebooks.
+The landcover-seg-unet pipeline (spanning data ingestion, preparation, training,
+and sweeping) originally relied exclusively on a CLI driven by Hydra’s `@hydra.main`
+decorator. This CLI‑only architecture caused significant UX friction in notebook‑centric
+environments such as Databricks, where technical users primarily interact through Jupyter
+Notebooks rather than shell workflows.
 
-To manage the complexity of this transition, this ADR focuses strictly on establishing the foundational adapter and migrating the first phase of the project lifecycle: data ingestion, data preparation, and a standard model training loop.
+The project also spans multiple distinct lifecycles—such as one‑off data ingestion
+and preparation versus iterative model training. Forcing all operations through
+a single CLI entry point and a monolithic configuration structure proved inefficient
+and cumbersome, particularly when users needed to selectively execute or iterate on
+individual pipeline stages.
 
-### Decision
-We will decouple the core execution logic from the CLI by introducing a programmatic API adapter, enabling the `data-ingest`, `data-prepare`, and `model-train` pipelines to be executed entirely from notebook cells.
+To address these limitations, the project was restructured to support programmatic
+orchestration of core pipelines directly from notebooks, while retaining the CLI
+for advanced batch and orchestration workflows. This ADR documents the completed 
+architectural transition and the first migrated lifecycle phase: data ingestion,
+data preparation, and standard model training.
 
-1. **Programmatic Adapter:** We will create `src/landseg/api.py` utilizing Hydra's `compose` API to programmatically construct the configuration tree (`DictConfig`) without CLI invocation.
-2. **Inspect and Modify Workflow:** The API will expose a `get_default_config(pipeline)` function, allowing users to load base configurations for specific pipelines (e.g., `data-prepare` vs `model-train`) and modify parameters using standard Python dot-notation.
-3. **Execution Entry Point:** The API will provide a `run(cfg)` function that routes the composed configuration to the appropriate pipeline logic, bypassing `@hydra.main`.
-4. **Notebook Phasing:** We will introduce the first two template notebooks:
-    * `01_data_preparation.ipynb`: Scoped strictly to `data-ingest` and `data-prepare`.
-    * `02_model_training.ipynb`: Scoped strictly to `model-train`.
-5. **Absolute I/O Paths:** Because the notebook abstracts the Current Working Directory, all I/O operations (reading raw imagery, saving preprocessed patches, and writing model artifacts) must utilize explicit absolute paths defined in the config.
+---
 
-### Consequences
+## Decision
 
-**Positive:**
-* **Frictionless Deployment:** Users can `pip install .` and execute data preprocessing and training loops directly via Python cells.
-* **Separation of Concerns:** By isolating data preparation from training into separate notebooks, users avoid loading unnecessary configurations.
-* **Validation Retention:** We retain 100% of the type safety and validation provided by our existing nested dataclasses.
+We have decoupled core execution logic from the CLI by introducing a programmatic
+API adapter. This enables the `data-ingest`, `data-prepare`, and `model-train`
+pipelines to be executed directly from notebook cells without invoking the CLI.
 
-**Negative:**
-* **Path Strictness:** Users can no longer rely on relative paths; absolute paths must be enforced.
-* **Deferred Functionality:** Complex orchestration (e.g., `study-sweep` and `study-analyze`) is explicitly deferred to a future ADR, meaning hyperparameter sweeping remains CLI-bound for this iteration.
+The following changes have been implemented:
+
+- **Programmatic Adapter**
+  A new module, `src/landseg/adapters/api.py`, provides a notebook‑safe API that
+  programmatically composes Hydra configurations (`DictConfig`) without relying
+  on `@hydra.main`.
+
+- **Inspectable and Mutable Configuration**
+  The API exposes `get_default_config(pipeline)` for loading base configurations
+  by pipeline and supports interactive modification using standard Python data
+  structures and OmegaConf semantics. Custom configuration dictionaries are merged
+  explicitly prior to execution.
+
+- **Unified Execution Entry Point**
+  The API provides a `run(cfg)` function that routes the resolved configuration
+  into a shared execution layer. This mirrors CLI execution semantics while avoiding
+  interpreter termination and global state side effects.
+
+- **Execution / CLI Separation**
+  All pipeline execution logic has been moved into a dedicated `landseg.execution`
+  namespace. The CLI now acts as a thin adapter that resolves Hydra configuration
+  and delegates execution to the shared executor, ensuring full parity between CLI
+  and API execution paths.
+
+- **Notebook Phasing**
+  Two template notebooks have been introduced and validated:
+  - `01_data_preparation.ipynb`, scoped strictly to `data-ingest` and `data-prepare`
+  - `02_model_training.ipynb`, scoped strictly to `model-train`
+
+- **Absolute I/O Paths**
+  All pipelines now rely on explicit absolute paths defined in configuration. No
+  execution logic depends on the process or notebook working directory, ensuring
+  safe operation in notebook environments.
+
+---
+
+## Consequences
+
+### Positive
+
+- **Notebook‑First UX**
+  Users can install the package and run preprocessing and training pipelines
+  directly from notebook cells without CLI indirection.
+
+- **Clear Separation of Concerns**
+  Data preparation and model training are isolated into distinct execution
+  contexts, reducing configuration complexity and cognitive load.
+
+- **Shared Execution Semantics**
+  CLI and programmatic execution paths share identical resolution, validation,
+  and pipeline logic, eliminating drift between interfaces.
+
+- **Validation Retained**
+  All dataclass‑based validation and type safety guarantees are preserved through
+  the unified resolver and executor layers.
+
+### Negative
+
+- **Path Strictness**
+  Relative paths are no longer supported. Users must explicitly provide absolute
+  paths for all filesystem interactions.
+
+- **Deferred Functionality**
+  Advanced orchestration workflows (e.g., `study-sweep`, `study-analysis`) remain
+  CLI‑bound and are intentionally excluded from the notebook API. These are deferred
+  to a future ADR if notebook support becomes necessary.
+
+---
+
+## Outcome
+
+This architectural transition has been fully implemented and validated in code.
+The programmatic API, refactored CLI, unified execution layer, and notebook
+workflows are in active use and behave as designed. Accordingly, this ADR is
+now **Accepted**.
