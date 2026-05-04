@@ -83,6 +83,7 @@ class _BatchOutput:
     preds: dict[str, torch.Tensor] = field(default_factory=dict)
     total_loss: torch.Tensor = torch.empty(0)
     head_loss: dict[str, float] = field(default_factory=dict)
+    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
 
     def refresh(self, bidx: int):
         '''Clear outputs to start a new batch.'''
@@ -90,6 +91,7 @@ class _BatchOutput:
         self.preds.clear()                          # clear the old batch
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
+        # note: we do not clear inference results mapping (batch aggregation)
 
 # ----- summary stats
 # @dataclasses.dataclass
@@ -110,13 +112,13 @@ class _EvaluationMetrics:
     '''Validation summary for an epoch (per-head metrics).'''
     target_metrics: float = 0.0
     head_metrics_str: dict[str, list[str]] = field(default_factory=dict)
-    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
+    # infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
 
     def clear(self) -> None:
         '''Clear container.'''
         self.target_metrics = 0.0
         self.head_metrics_str.clear()
-        self.infer_maps.clear()
+        # self.infer_maps.clear()
 
 @dataclasses.dataclass
 class _SummaryStats:
