@@ -96,9 +96,9 @@ def overfit(config: configs.RootConfig) -> None:
     logger.log('INFO', f'Learning rate: {lr}')
     for ep in range(1, max_epoch + 1):
         results = runner.run_epoch(ep)
-        assert results.training and results.validation # typing
+        assert results.training and results.evaluation # typing
         los = results.training.total_loss
-        iou = results.validation.target_metrics
+        iou = results.evaluation.target_metrics
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')

@@ -83,20 +83,20 @@ class EpochResults:
             evaluation step was executed.
     '''
     training: TrainerEpochResults | None = None
-    validation: EvaluatorEpochResults | None = None
+    evaluation: EvaluatorEpochResults | None = None
 
     @property
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
-        if self.validation:
-            return self.validation.monitor_heads_str
+        if self.evaluation:
+            return self.evaluation.monitor_heads_str
         return 'N/A'
 
     @property
     def target_metrics(self) -> float:
         '''Return the target metrics from the validation results.'''
-        if self.validation:
-            return self.validation.target_metrics
+        if self.evaluation:
+            return self.evaluation.target_metrics
         return -float('inf')
 
 @dataclasses.dataclass

@@ -45,13 +45,32 @@ import typing
 
 # ---------------------------------Public Type---------------------------------
 class EngineStateLike(typing.Protocol):
-    '''Interface on the subset of engine state for callbacks.'''
+    '''Interface of engine state that the callbacks listen to.'''
     progress: _Progress
+    optim: _OptimeRuntime
 
 class _Progress(typing.Protocol):
-    epoch: int
-    global_step: int
+    @property
+    def epoch(self) -> int: ...
+    @property
+    def global_step(self) -> int: ...
 
+class _OptimeRuntime(typing.Protocol):
+    @property
+    def lr(self) -> float: ...
+
+class TrainingSessionStepLike(typing.Protocol):
+    '''Interface of epoch results that the callbacks listen to'''
+    training: _TrainerEpochResults
+    validation: _EvaluatorEpochResults
+
+class _TrainerEpochResults(typing.Protocol):
+    @property
+    def mean_total_loss(self) -> float: ...
+
+class _EvaluatorEpochResults(typing.Protocol):
+    @property
+    def target_metrics(self) -> float: ...
 # --------------------------------Public  Class--------------------------------
 class Callback:
     '''
