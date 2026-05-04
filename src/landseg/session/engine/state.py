@@ -38,9 +38,7 @@ field = dataclasses.field
 class _Progress:
     '''Training progress counters (epoch/step/global).'''
     epoch: int = 0
-    epoch_step: int = 0
     global_step: int = 0
-    current_metrics: float = 0.0
 
 # ----- .heads management
 @dataclasses.dataclass

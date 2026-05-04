@@ -29,14 +29,12 @@ class ProgressCallback(callbacks.Callback):
 
     def on_train_epoch_begin(self, epoch: int) -> None:
         self.state.progress.epoch = epoch   # get current epoch
-        self.state.progress.epoch_step = 0  # reset epoch step
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
             print(f'Training... batch_{bidx:04d}', end='\r', flush=True)
 
     def on_train_batch_end(self) -> None:
-        self.state.progress.epoch_step += 1
         self.state.progress.global_step += 1
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:

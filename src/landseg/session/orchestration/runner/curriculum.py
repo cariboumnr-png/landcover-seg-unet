@@ -86,6 +86,8 @@ class CurriculumRunner(runner.BaseRunner):
         super().__init__(**kwargs)
         # parse arguments
         self.phases = training_phases
+        # tracking
+        self._current_metrics: core.EpochResults = core.EpochResults()
 
     def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
         '''
@@ -161,6 +163,7 @@ class CurriculumRunner(runner.BaseRunner):
                     ):
 
                         # metrics logging
+                        self._current_metrics = metrics
                         self._log_metrics(
                             epoch_idx=current_epoch,
                             total_epochs=phase.num_epochs,
@@ -190,7 +193,11 @@ class CurriculumRunner(runner.BaseRunner):
                         )
 
                     case events.CheckpointRequest(tag=tag):
-                        self._save_progress(phase.name, is_best=tag=='best')
+                        self._save_progress(
+                            phase.name,
+                            self._current_metrics,
+                            is_best=tag=='best'
+                        )
 
                 # end of current phase
                 if is_phase_end:

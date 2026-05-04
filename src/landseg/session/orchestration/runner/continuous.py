@@ -191,7 +191,11 @@ class ContinuousRunner(runner.BaseRunner):
                     return
 
                 case events.CheckpointRequest(tag=tag):
-                    self._save_progress(self.phase.name, is_best=tag=='best')
+                    self._save_progress(
+                        self.phase.name,
+                        self._current_metrics,
+                        is_best=tag=='best'
+                    )
 
     def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
         '''Helper to generate a step dataclass from self trackers.'''
