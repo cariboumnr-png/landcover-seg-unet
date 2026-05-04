@@ -244,7 +244,7 @@ class BaseRunner(abc.ABC):
         # best so far
         best_epoch, best_value = best_so_far
         msg = (
-            f'|Total Loss: {metrics.training.mean_total_loss:.4f}|'
+            f'|Total Loss: {metrics.training.total_loss:.4f}|'
             f'Mean IoU: {mean_iou:.4f}|'
             f'Best Epoch: {best_epoch}|Best Value: {best_value:.4f}|'
         )
