@@ -43,6 +43,10 @@ expected interfaces.
 from __future__ import annotations
 import typing
 
+# imports only when type checking
+if typing.TYPE_CHECKING:
+    import torch
+
 # ---------------------------------Public Type---------------------------------
 class EngineStateLike(typing.Protocol):
     '''Interface of engine state that the callbacks listen to.'''
@@ -62,7 +66,7 @@ class _OptimeRuntime(typing.Protocol):
 class TrainingSessionStepLike(typing.Protocol):
     '''Interface of epoch results that the callbacks listen to'''
     training: _TrainerEpochResults
-    validation: _EvaluatorEpochResults
+    evaluation: _EvaluatorEpochResults
 
 class _TrainerEpochResults(typing.Protocol):
     @property
@@ -71,6 +75,8 @@ class _TrainerEpochResults(typing.Protocol):
 class _EvaluatorEpochResults(typing.Protocol):
     @property
     def target_metrics(self) -> float: ...
+    @property
+    def head_inference(self) -> dict[str, dict[tuple[int, int], 'torch.Tensor']]: ...
 # --------------------------------Public  Class--------------------------------
 class Callback:
     '''
