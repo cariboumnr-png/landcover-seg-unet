@@ -128,6 +128,8 @@ class MultiHeadTrainer(policy.EngineBase):
         self.state.epoch.train_stats.clear()
         # reset results container (avoid carry-over from last epoch)
         self.results.clear()
+        # update epoch tracker
+        self.state.progress.epoch = epoch
 
         # interate through training data batches
         assert self.dataloaders.train, 'Training dataset not provided'
