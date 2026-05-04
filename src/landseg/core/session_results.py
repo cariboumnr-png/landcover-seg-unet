@@ -81,6 +81,20 @@ class EpochResults:
     training: TrainerEpochResults | None = None
     validation: EvaluatorEpochResults | None = None
 
+    @property
+    def target_objective(self) -> str:
+        '''Return the targert objective from the validation results.'''
+        if self.validation:
+            return self.validation.monitor_heads_str
+        return 'N/A'
+
+    @property
+    def target_metrics(self) -> float:
+        '''Return the target metrics from the validation results.'''
+        if self.validation:
+            return self.validation.target_metrics
+        return -float('inf')
+
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Trainer aggregated results.'''

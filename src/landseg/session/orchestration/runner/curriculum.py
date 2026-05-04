@@ -168,7 +168,6 @@ class CurriculumRunner(runner.BaseRunner):
                         )
 
                         # normal yield
-                        assert metrics.validation
                         yield core.TrainingSessionStep(
                             # id/loc
                             phase_name=phase.name,
@@ -180,8 +179,8 @@ class CurriculumRunner(runner.BaseRunner):
                             is_run_end=self._is_run_end,
                             stop_reason=None,
                             # metrics
-                            objective_name=metrics.validation.monitor_heads_str,
-                            objective_value=metrics.validation.target_metrics,
+                            objective_name=self._current_metrics.target_objective,
+                            objective_value=self._current_metrics.target_metrics,
                             best_value_so_far=best_so_far,
                             best_epoch_so_far=best_epoch,
                             is_best_epoch=is_best_epoch,
