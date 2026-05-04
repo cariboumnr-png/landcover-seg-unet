@@ -35,10 +35,6 @@ import typing
 __all__ = [
     # classes
     'Callback',
-    'TrainCallback',
-    'ValCallback',
-    'InferCallback',
-    'ProgressCallback',
     # functions
     'build_callbacks',
     # types
@@ -49,10 +45,6 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import Callback, EngineStateLike
     from .factory import build_callbacks
-    from .phase_infer import InferCallback
-    from .phase_train import TrainCallback
-    from .phase_val import ValCallback
-    from .progress import ProgressCallback
 
 def __getattr__(name: str):
 
@@ -61,17 +53,5 @@ def __getattr__(name: str):
 
     if name in {'build_callbacks'}:
         return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'InferCallback'}:
-        return getattr(importlib.import_module('.phase_infer', __package__), name)
-
-    if name in {'TrainCallback'}:
-        return getattr(importlib.import_module('.phase_train', __package__), name)
-
-    if name in {'ValCallback'}:
-        return getattr(importlib.import_module('.phase_val', __package__), name)
-
-    if name in {'ProgressCallback'}:
-        return getattr(importlib.import_module('.progress', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

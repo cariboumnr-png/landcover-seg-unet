@@ -24,18 +24,8 @@
 # local imports
 import landseg.session.instrumentation.callbacks as callbacks
 
-def build_callbacks(
-    state: callbacks.EngineStateLike,
-    *,
-    device: str,
-    verbose: bool = True
-) -> list[object]:
+def build_callbacks(*, verbose: bool = True) -> list[object]:
     '''Factory to generate a set of callback class instances.'''
 
     # return
-    return [
-        callbacks.TrainCallback(state, device=device, verbose=verbose),
-        callbacks.ValCallback(state, device=device, verbose=verbose),
-        callbacks.InferCallback(state, device=device, verbose=verbose),
-        callbacks.ProgressCallback(state, device=device, verbose=verbose),
-    ]
+    return [callbacks.Callback(verbose=verbose)]

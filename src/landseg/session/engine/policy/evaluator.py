@@ -148,7 +148,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         for bidx, batch in enumerate(dataloader, start=1):
 
             # batch start
-            self._emit('on_validation_batch_begin', bidx, batch)
+            self._emit('on_batch_begin', 'Validating', bidx)
             self._batch_reset(bidx, batch)
 
             # delegate to batch executor
@@ -189,7 +189,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         for bidx, batch in enumerate(self.dataloaders.test, start=1):
 
             # batch start
-            self._emit('on_inference_batch_begin', bidx, batch)
+            self._emit('on_batch_begin', 'Inferring', bidx)
             self._batch_reset(bidx, batch)
 
             # delegate to batch executor

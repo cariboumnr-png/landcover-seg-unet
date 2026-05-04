@@ -250,10 +250,7 @@ def _build_partial_epoch_runner(
     )
 
     # add callbacks instrumentation
-    callbacks = instrument.build_callbacks(
-        runtime_state, # type: ignore
-        device=context.device,
-    )
+    callbacks = instrument.build_callbacks(verbose=context.verbose_runner)
 
     # build runner context and config
     engine_build_context = engine.EngineBuildContext(

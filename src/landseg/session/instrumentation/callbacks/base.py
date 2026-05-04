@@ -21,12 +21,10 @@
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
-# pylint: disable=too-many-public-methods
 # pylint: disable=unused-argument
 
 '''
-Defines the base callback interface and supporting state protocols
-used by the training engine.
+Defines the base callback interface and supporting state protocols.
 
 This module provides:
 - A `Callback` base class that users can subclass to inject custom
@@ -63,14 +61,16 @@ class _OptimeRuntime(typing.Protocol):
     @property
     def lr(self) -> float: ...
 
-class TrainingSessionStepLike(typing.Protocol):
+class SessionStepLike(typing.Protocol):
     '''Interface of epoch results that the callbacks listen to'''
-    training: _TrainerEpochResults
-    evaluation: _EvaluatorEpochResults
+    training: _TrainerEpochResults | None
+    evaluation: _EvaluatorEpochResults | None
 
 class _TrainerEpochResults(typing.Protocol):
     @property
-    def mean_total_loss(self) -> float: ...
+    def total_loss(self) -> float: ...
+    @property
+    def head_loss(self) -> dict[str, float]: ...
 
 class _EvaluatorEpochResults(typing.Protocol):
     @property
@@ -80,61 +80,37 @@ class _EvaluatorEpochResults(typing.Protocol):
 # --------------------------------Public  Class--------------------------------
 class Callback:
     '''
-    Base class for defining training engine callbacks.
+    Base class for defining dashboarding callbacks.
 
     Subclasses can override any of the hook methods to execute custom
     logic at specific points in the training, validation, or inference
     lifecycle. All methods are optional; only override those needed.
-
-    The callback operates on a shared `state` object that conforms to
-    `EngineStateLike`, enabling interaction with training progress,
-    batch data, metrics, and summaries without tight coupling to a
-    specific engine implementation.
     '''
 
     def __init__(
         self,
-        state: EngineStateLike,
         *,
-        device: str,
         verbose: bool = True
     ):
         '''
         Initializes the callback.
 
         Args:
-            state: Engine state object providing access to runtime
-                context, including progress, batch data, and summaries.
-            device: Target device identifier (e.g., "cpu", "cuda") used
-                for any device-specific operations within the callback.
             verbose: If True, enables optional logging or debug output
                 in callback implementations..
         '''
-        self.state = state
-        self.device = device
         self.verbose = verbose
 
-    # -----------------------------training phase-----------------------------
-    def on_train_epoch_begin(self, epoch: int) -> None: ...
-    def on_train_batch_begin(self, bidx: int, batch: tuple) -> None: ...
-    def on_train_batch_forward(self) -> None: ...
-    def on_train_batch_compute_loss(self) -> None: ...
-    def on_train_backward(self) -> None: ...
-    def on_train_before_optimizer_step(self) -> None: ...
-    def on_train_optimizer_step(self) -> None: ...
-    def on_train_batch_end(self) -> None: ...
-    def on_train_epoch_end(self) -> None: ...
-
-    # ----------------------------validation phase----------------------------
-    def on_validation_begin(self) -> None: ...
-    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None: ...
-    def on_validation_batch_forward(self) -> None: ...
-    def on_validation_batch_end(self) -> None: ...
-    def on_validation_end(self) -> None: ...
-
-    # -----------------------------inference phase-----------------------------
-    def on_inference_begin(self) -> None: ...
-    def on_inference_batch_begin(self, bidx: int, batch: tuple) -> None: ...
-    def on_inference_batch_forward(self) -> None: ...
-    def on_inference_batch_end(self) -> None: ...
-    def on_inference_end(self, out_dir: str, **kwargs) -> None: ...
+    # base methods
+    # --- epoch begin
+    def on_epoch_begin(self, epoch: int) -> None: ...
+    # --- batch begin
+    def on_batch_begin(self, action: str, bidx: int) -> None:
+        if self.verbose:
+            print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
+    # --- 'themed' batches
+    # def on_train_batch_end(self, engine_state: EngineStateLike) -> None: ...
+    # def on_validation_batch_end(self, session_step: SessionStepLike) -> None: ...
+    # def on_inference_batch_end(self, session_step: SessionStepLike) -> None: ...
+    # --- epoch end
+    def on_epoch_end(self, epoch: int) -> None: ...
