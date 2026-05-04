@@ -27,19 +27,16 @@ import landseg.session.instrumentation.callbacks as callbacks
 class ProgressCallback(callbacks.Callback):
     '''Progress tracker.'''
 
-    def on_train_epoch_begin(self, epoch: int) -> None:
-        self.state.progress.epoch = epoch   # get current epoch
+    def on_train_epoch_begin(self, epoch: int) -> None: ...
 
     def on_train_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
             print(f'Training... batch_{bidx:04d}', end='\r', flush=True)
 
-    def on_train_batch_end(self) -> None:
-        self.state.progress.global_step += 1
+    def on_train_batch_end(self) -> None: ...
 
     def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None:
         if self.verbose:
             print(f'Validating... batch_{bidx:04d}', end='\r', flush=True)
 
-    def on_validation_end(self) -> None:
-        self.state.progress.epoch += 1 # increment epoch counter
+    def on_validation_end(self) -> None: ...

@@ -168,6 +168,8 @@ class MultiHeadTrainer(policy.EngineBase):
             # no AMP
             else:
                 self.optimization.optimizer.step()
+            # increment global step counter
+            self.state.progress.global_step += 1
             self._emit('on_train_optimizer_step')
 
             # batch end
