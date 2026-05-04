@@ -92,8 +92,8 @@ class MultiHeadTrainer(policy.EngineBase):
         # init the epoch results container with all heads
         self.results = core.TrainerEpochResults(self.state.heads.all_heads)
         # epoch-level accumulated loss tracker
-        self._loss = 0.0
-        self._head_losses = {h: 0.0 for h in self.state.heads.all_heads}
+        self._loss: float
+        self._head_losses: dict[str, float]
 
     def train_one_epoch(self, epoch: int) -> core.TrainerEpochResults:
         '''
@@ -112,9 +112,7 @@ class MultiHeadTrainer(policy.EngineBase):
         accumulation) is performed by the batch execution engine and
         reflected in shared RuntimeState.
 
-        Lifecycle callback hooks (e.g., `on_train_epoch_begin`,
-        `on_train_backward`, `on_train_optimizer_step`,
-        `on_train_batch_end`) are emitted as semantic markers to allow
+        Lifecycle callback hooks are emitted as semantic markers to allow
         observation and side effects, but do not invoke or control
         execution logic.
 
@@ -131,13 +129,16 @@ class MultiHeadTrainer(policy.EngineBase):
         self.results.clear()
         # update epoch tracker
         self.state.progress.epoch = epoch
+        # reset loss trackers
+        self._loss = 0.0
+        self._head_losses = {h: 0.0 for h in self.state.heads.all_heads}
 
         # interate through training data batches
         assert self.dataloaders.train, 'Training dataset not provided'
         for bidx, batch in enumerate(self.dataloaders.train, start=1):
 
             # batch start
-            self._emit('on_train_batch_begin', bidx)
+            self._emit('on_batch_begin', 'Training', bidx)
             self._batch_reset(bidx, batch)
 
             # reset optimizer gradient
