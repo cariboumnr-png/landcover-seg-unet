@@ -131,8 +131,6 @@ class MultiHeadEvaluator(policy.EngineBase):
         self._emit('on_validation_begin')
         # set model to evaluation mode
         self.model.eval()
-        # reset evaluation states
-        self.state.summary.eval_stats.clear()
         # reset per-head confusion matrix from active heads
         assert self.state.heads.active_hmetrics is not None
         for metrics_mod in self.state.heads.active_hmetrics.values():
@@ -185,8 +183,6 @@ class MultiHeadEvaluator(policy.EngineBase):
         self._emit('on_inference_begin')
         # set model to evaluation mode
         self.model.eval()
-        # reset evaluation states
-        self.state.summary.eval_stats.clear()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
@@ -217,16 +213,16 @@ class MultiHeadEvaluator(policy.EngineBase):
         assert self.state.heads.active_hmetrics is not None
 
         # retrieve iou metrics from monitor heads
-        metrics_str: dict[str, list[str]] = {}
+        # metrics_str: dict[str, list[str]] = {}
 
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
             self.results.head_metrics[head] = metrics_module.metrics
             # collect per head metrics formatted strings
-            metrics_str[head] = metrics_module.metrics.as_str_list
+            # metrics_str[head] = metrics_module.metrics.as_str_list
 
-        # assign to state summary
-        summary = self.state.summary.eval_stats
-        summary.target_metrics = self.results.target_metrics
-        summary.head_metrics_str = metrics_str
+        # # assign to state summary
+        # summary = self.state.summary.eval_stats
+        # summary.target_metrics = self.results.target_metrics
+        # summary.head_metrics_str = metrics_str

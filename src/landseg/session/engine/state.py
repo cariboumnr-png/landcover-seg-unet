@@ -93,39 +93,6 @@ class _BatchOutput:
         self.head_loss.clear()                      # clear the old batch
         # note: we do not clear inference results mapping (batch aggregation)
 
-# ----- summary stats
-# @dataclasses.dataclass
-# class _TrainingLoss:
-#     '''Training results summary.'''
-#     total_loss: float = 0.0
-#     head_losses_str: str = ''
-#     updated: bool = False
-
-#     def clear(self) -> None:
-#         '''Clear container.'''
-#         self.total_loss = 0.0
-#         self.head_losses_str = ''
-#         self.updated = False
-
-@dataclasses.dataclass
-class _EvaluationMetrics:
-    '''Validation summary for an epoch (per-head metrics).'''
-    target_metrics: float = 0.0
-    head_metrics_str: dict[str, list[str]] = field(default_factory=dict)
-    # infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
-
-    def clear(self) -> None:
-        '''Clear container.'''
-        self.target_metrics = 0.0
-        self.head_metrics_str.clear()
-        # self.infer_maps.clear()
-
-@dataclasses.dataclass
-class _SummaryStats:
-    '''Summaries train/val/infer.'''
-    # train_stats: _TrainingLoss = field(default_factory=_TrainingLoss)
-    eval_stats: _EvaluationMetrics = field(default_factory=_EvaluationMetrics)
-
 # ----- optimization runtime status
 @dataclasses.dataclass
 class _OptimRuntime:
@@ -147,7 +114,6 @@ class EngineState:
     heads: _Heads = field(default_factory=_Heads)
     batch_cxt: _BatchContex = field(default_factory=_BatchContex)
     batch_out: _BatchOutput = field(default_factory=_BatchOutput)
-    summary: _SummaryStats = field(default_factory=_SummaryStats)
 
 # -------------------------------Public Function-------------------------------
 def initialize_state(
