@@ -168,8 +168,15 @@ class MultiHeadTrainer(policy.EngineBase):
             # no AMP
             else:
                 self.optimization.optimizer.step()
+
+            # scheduler step (if present)
+            if self.optimization.scheduler is not None:
+                self.optimization.scheduler.step()
+
             # increment global step counter
             self.state.progress.global_step += 1
+            # snapshopt learning rate
+            self.state.optim.lrs = [g['lr'] for g in optimizer.param_groups]
             self._emit('on_train_optimizer_step')
 
             # batch end

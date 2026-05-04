@@ -126,15 +126,21 @@ class _EpochStats:
 
 # ----- .optimization state
 @dataclasses.dataclass
-class _OptimState:
-    '''Optimization state (e.g., AMP GradScaler).'''
+class _OptimRuntime:
+    '''Runtime optimizer state (AMP scaler and LR snapshot).'''
     scaler: torch.GradScaler
+    lrs: list[float] = field(default_factory=list)
+
+    @property
+    def lr(self) -> float | None:
+        '''Return the primary Learning Rate value.'''
+        return self.lrs[0] if self.lrs else None
 
 # ----- Runtime state (composite)
 @dataclasses.dataclass
 class EngineState:
     '''Composite training state with sensible defaults.'''
-    optim: _OptimState
+    optim: _OptimRuntime
     progress: _Progress = field(default_factory=_Progress)
     heads: _Heads = field(default_factory=_Heads)
     batch_cxt: _BatchContex = field(default_factory=_BatchContex)
@@ -153,7 +159,7 @@ def initialize_state(
 
     # create an instance with default values
     runtime_state = EngineState(
-        optim=_OptimState(
+        optim=_OptimRuntime(
             scaler=torch.GradScaler(device=device, enabled=use_amp)
         )
     )
