@@ -196,6 +196,7 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_infer_batch()
 
         # inference phase end
+        self.results.head_inference = self.state.batch_out.infer_maps
         self._emit('on_inference_end')
 
     # ----- validation phase

@@ -30,6 +30,10 @@ from __future__ import annotations
 import dataclasses
 import typing
 
+#
+if typing.TYPE_CHECKING:
+    import torch
+
 # aliases
 field = dataclasses.field
 
@@ -130,6 +134,7 @@ class EvaluatorEpochResults:
     all_heads: list[str]
     monitor_heads: list[str] # heads for IoU caculation
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    head_inference: dict[str, dict[tuple[int, int], 'torch.Tensor']] = field(default_factory=dict)
 
     def __post_init__(self):
         self.head_metrics = {h: AccumulatedMetrics() for h in self.all_heads}
