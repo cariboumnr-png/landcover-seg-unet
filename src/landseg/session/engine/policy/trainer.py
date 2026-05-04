@@ -124,8 +124,6 @@ class MultiHeadTrainer(policy.EngineBase):
         self._emit('on_train_epoch_begin', epoch)
         # set model to train mode
         self.model.train()
-        # reset training summary
-        self.state.summary.train_stats.clear()
         # reset results container (avoid carry-over from last epoch)
         self.results.clear()
         # update epoch tracker
@@ -192,13 +190,10 @@ class MultiHeadTrainer(policy.EngineBase):
             # update bidx
             self.results.current_bidx = bidx
 
-            # update train logs if at interval (decided by trainer method)
-            self._update_training_stats(flush=False)
+            # batch end
             self._emit('on_train_batch_end')
 
         # training phase end
-        # - update logs and loss (total/per-head) for the epoch
-        self._update_training_stats(flush=True)
         self._emit('on_train_epoch_end')
         return self.results
 
@@ -212,29 +207,29 @@ class MultiHeadTrainer(policy.EngineBase):
                 self.grad_clip_norm
             )
 
-    def _update_training_stats(self, flush: bool=False):
-        '''
-        Average losses and update per-head loss logs at intervals.
+    # def _update_training_stats(self, flush: bool=False):
+    #     '''
+    #     Average losses and update per-head loss logs at intervals.
 
-        Set `flush=True` to flush results at end of a training epoch.
-        '''
+    #     Set `flush=True` to flush results at end of a training epoch.
+    #     '''
 
-        # get current batch id
-        bidx = self.state.batch_cxt.bidx
-        # create log dict
-        logs = {}
-        # update log at interval
-        if flush or bidx % self.update_every == 0:
-            logs['Total_Loss'] = self.results.mean_total_loss
-            # per-head losses
-            for k, v in self.results.mean_head_losses.items():
-                if v > 0: # only report non-zero losses
-                    logs[f'Head_Loss_{k}'] = float(v)
-            # pretty string of the losses
-            text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
-            text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            self.state.summary.train_stats.total_loss = logs['Total_Loss']
-            self.state.summary.train_stats.head_losses_str = text
-            self.state.summary.train_stats.updated = True
-        else:
-            self.state.summary.train_stats.updated = False # reset flag
+    #     # get current batch id
+    #     bidx = self.state.batch_cxt.bidx
+    #     # create log dict
+    #     logs = {}
+    #     # update log at interval
+    #     if flush or bidx % self.update_every == 0:
+    #         logs['Total_Loss'] = self.results.mean_total_loss
+    #         # per-head losses
+    #         for k, v in self.results.mean_head_losses.items():
+    #             if v > 0: # only report non-zero losses
+    #                 logs[f'Head_Loss_{k}'] = float(v)
+    #         # pretty string of the losses
+    #         text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
+    #         text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
+    #         self.state.summary.train_stats.total_loss = logs['Total_Loss']
+    #         self.state.summary.train_stats.head_losses_str = text
+    #         self.state.summary.train_stats.updated = True
+    #     else:
+    #         self.state.summary.train_stats.updated = False # reset flag
