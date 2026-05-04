@@ -218,11 +218,11 @@ class BaseRunner(abc.ABC):
             raise RuntimeError('Training produced no steps')
         if not last_step.is_run_end:
             raise RuntimeError('Training did not terminate cleanly')
-        if not (last_step.metrics and last_step.metrics.validation):
+        if not (last_step.metrics and last_step.metrics.evaluation):
             raise RuntimeError('Invalid validation results')
 
         # return the final scalar
-        return last_step.metrics.validation.target_metrics
+        return last_step.metrics.evaluation.target_metrics
 
     def _log_metrics(
         self,
@@ -237,8 +237,8 @@ class BaseRunner(abc.ABC):
         # training metrics is always neends
         assert metrics.training
         # validation may or may not be run every epoch
-        if metrics.validation:
-            mean_iou = metrics.validation.target_metrics
+        if metrics.evaluation:
+            mean_iou = metrics.evaluation.target_metrics
         else:
             mean_iou = 0.0
         # best so far
@@ -283,7 +283,7 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
-        validation = metrics.validation
+        validation = metrics.evaluation
         ckpt_meta: artifacts.CheckpointMeta = {
             'metric': validation.target_metrics if validation else 0.0,
             'epoch': self.trainer.state.progress.epoch,
