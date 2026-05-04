@@ -33,14 +33,14 @@ import landseg.session.common.alias as alias
 # alias
 field = dataclasses.field
 
-# ----- .progress tracking
+# ----- progress tracking
 @dataclasses.dataclass
 class _Progress:
     '''Training progress counters (epoch/step/global).'''
     epoch: int = 0
     global_step: int = 0
 
-# ----- .heads management
+# ----- heads management
 @dataclasses.dataclass
 class _Heads:
     '''State for multihead selection, freezing, and active specs.'''
@@ -51,7 +51,7 @@ class _Heads:
     active_hloss: dict[str, common.CompositeLossLike] | None = None
     active_hmetrics: dict[str, common.ConfusionMatrixLike] | None = None
 
-# ----- .batch context
+# ----- batch context
 @dataclasses.dataclass
 class _BatchContex:
     '''Per-batch input/context (indices, tensors, and domain info).'''
@@ -75,7 +75,7 @@ class _BatchContex:
         self.y_dict.clear()
         self.domain.clear()
 
-# ----- .batch output
+# ----- batch output
 @dataclasses.dataclass
 class _BatchOutput:
     '''Per-batch outputs: predictions and losses.'''
@@ -91,9 +91,9 @@ class _BatchOutput:
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
 
-# ----- .epoch level stats
+# ----- summary stats
 @dataclasses.dataclass
-class _TrainEpoch:
+class _TrainingLoss:
     '''Training results summary.'''
     total_loss: float = 0.0
     head_losses_str: str = ''
@@ -106,7 +106,7 @@ class _TrainEpoch:
         self.updated = False
 
 @dataclasses.dataclass
-class _EvaluateEpoch:
+class _EvaluationMetrics:
     '''Validation summary for an epoch (per-head metrics).'''
     target_metrics: float = 0.0
     head_metrics_str: dict[str, list[str]] = field(default_factory=dict)
@@ -119,12 +119,12 @@ class _EvaluateEpoch:
         self.infer_maps.clear()
 
 @dataclasses.dataclass
-class _EpochStats:
+class _SummaryStats:
     '''Summaries train/val/infer.'''
-    train_stats: _TrainEpoch = field(default_factory=_TrainEpoch)
-    eval_stats: _EvaluateEpoch = field(default_factory=_EvaluateEpoch)
+    train_stats: _TrainingLoss = field(default_factory=_TrainingLoss)
+    eval_stats: _EvaluationMetrics = field(default_factory=_EvaluationMetrics)
 
-# ----- .optimization state
+# ----- optimization runtime status
 @dataclasses.dataclass
 class _OptimRuntime:
     '''Runtime optimizer state (AMP scaler and LR snapshot).'''
@@ -145,7 +145,7 @@ class EngineState:
     heads: _Heads = field(default_factory=_Heads)
     batch_cxt: _BatchContex = field(default_factory=_BatchContex)
     batch_out: _BatchOutput = field(default_factory=_BatchOutput)
-    epoch: _EpochStats = field(default_factory=_EpochStats)
+    summary: _SummaryStats = field(default_factory=_SummaryStats)
 
 # -------------------------------Public Function-------------------------------
 def initialize_state(

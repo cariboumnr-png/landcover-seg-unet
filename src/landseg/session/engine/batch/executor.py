@@ -444,7 +444,7 @@ class BatchExecutionEngine:
 
             # pull existing epoch-level maps (persist across batches)
             # ensure per-head dict exists, then mutate
-            maps = self.state.epoch.eval_stats.infer_maps
+            maps = self.state.summary.eval_stats.infer_maps
             maps.setdefault(head, {}).update(mapped)
             # Update (merge) mapping for this head
             # Keys are (col, row) in patch-grid coords

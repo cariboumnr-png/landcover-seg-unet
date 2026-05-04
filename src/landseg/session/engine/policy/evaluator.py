@@ -132,7 +132,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         # set model to evaluation mode
         self.model.eval()
         # reset evaluation states
-        self.state.epoch.eval_stats.clear()
+        self.state.summary.eval_stats.clear()
         # reset per-head confusion matrix from active heads
         assert self.state.heads.active_hmetrics is not None
         for metrics_mod in self.state.heads.active_hmetrics.values():
@@ -186,7 +186,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         # set model to evaluation mode
         self.model.eval()
         # reset evaluation states
-        self.state.epoch.eval_stats.clear()
+        self.state.summary.eval_stats.clear()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
@@ -227,6 +227,6 @@ class MultiHeadEvaluator(policy.EngineBase):
             metrics_str[head] = metrics_module.metrics.as_str_list
 
         # assign to state summary
-        summary = self.state.epoch.eval_stats
+        summary = self.state.summary.eval_stats
         summary.target_metrics = self.results.target_metrics
         summary.head_metrics_str = metrics_str

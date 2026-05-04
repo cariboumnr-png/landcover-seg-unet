@@ -125,7 +125,7 @@ class MultiHeadTrainer(policy.EngineBase):
         # set model to train mode
         self.model.train()
         # reset training summary
-        self.state.epoch.train_stats.clear()
+        self.state.summary.train_stats.clear()
         # reset results container (avoid carry-over from last epoch)
         self.results.clear()
         # update epoch tracker
@@ -233,8 +233,8 @@ class MultiHeadTrainer(policy.EngineBase):
             # pretty string of the losses
             text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
             text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            self.state.epoch.train_stats.total_loss = logs['Total_Loss']
-            self.state.epoch.train_stats.head_losses_str = text
-            self.state.epoch.train_stats.updated = True
+            self.state.summary.train_stats.total_loss = logs['Total_Loss']
+            self.state.summary.train_stats.head_losses_str = text
+            self.state.summary.train_stats.updated = True
         else:
-            self.state.epoch.train_stats.updated = False # reset flag
+            self.state.summary.train_stats.updated = False # reset flag
