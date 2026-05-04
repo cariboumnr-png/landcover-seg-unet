@@ -219,10 +219,10 @@ class EngineBase:
         self.state.heads.active_hmetrics = None
 
     # ----- batch context/output reset
-    def _batch_reset(self, bidx: int, batch: tuple) -> None:
+    def _batch_reset(self, bidx: int, _batch: tuple) -> None:
         '''Refresh batch context and output from engine state.'''
         # refresh batch ctx
-        self.state.batch_cxt.refresh(bidx, batch)
+        self.state.batch_cxt.refresh(bidx, _batch)
         # refresh batch results
         self.state.batch_out.refresh(bidx)
 
