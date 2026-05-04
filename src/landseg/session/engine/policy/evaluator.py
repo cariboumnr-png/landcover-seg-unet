@@ -115,9 +115,8 @@ class MultiHeadEvaluator(policy.EngineBase):
         performed by the batch execution engine during validation batches.
         Epoch-level computation and interpretation are performed here.
 
-        Lifecycle callback hooks (e.g., `on_validation_begin`,
-        `on_validation_batch_begin`, `on_validation_end`) are emitted
-        as semantic markers for observation and side effects.
+        Lifecycle callback hooks are emitted as semantic markers for
+        observation and side effects.
 
         Returns:
             A mapping from head name to its finalized validation metrics.
@@ -128,7 +127,7 @@ class MultiHeadEvaluator(policy.EngineBase):
             return None
 
         # validation phase begin
-        self._emit('on_validation_begin')
+        self._emit('on_val_policy_begin')
         # set model to evaluation mode
         self.model.eval()
         # reset per-head confusion matrix from active heads
@@ -153,10 +152,11 @@ class MultiHeadEvaluator(policy.EngineBase):
 
             # delegate to batch executor
             self.engine.run_validate_batch()
+            self._emit('val_batch_end')
 
         # val phase end
         self._compute_iou()
-        self._emit('on_validation_end')
+        self._emit('val_policy_end')
         return self.results
 
     def infer(self, epoch: int) -> None:
@@ -180,7 +180,7 @@ class MultiHeadEvaluator(policy.EngineBase):
             return
 
         # infer phase begin
-        self._emit('on_inference_begin')
+        self._emit('on_infer_policy_begin')
         # set model to evaluation mode
         self.model.eval()
 
@@ -194,10 +194,11 @@ class MultiHeadEvaluator(policy.EngineBase):
 
             # delegate to batch executor
             self.engine.run_infer_batch()
+            self._emit('infer_batch_end')
 
         # inference phase end
         self.results.head_inference = self.state.batch_out.infer_maps
-        self._emit('on_inference_end')
+        self._emit('on_infer_policy_end')
 
     # ----- validation phase
     def _compute_iou(self) -> None:
@@ -213,17 +214,9 @@ class MultiHeadEvaluator(policy.EngineBase):
         # sanity
         assert self.state.heads.active_hmetrics is not None
 
-        # retrieve iou metrics from monitor heads
-        # metrics_str: dict[str, list[str]] = {}
-
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
             self.results.head_metrics[head] = metrics_module.metrics
             # collect per head metrics formatted strings
             # metrics_str[head] = metrics_module.metrics.as_str_list
-
-        # # assign to state summary
-        # summary = self.state.summary.eval_stats
-        # summary.target_metrics = self.results.target_metrics
-        # summary.head_metrics_str = metrics_str

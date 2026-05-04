@@ -122,7 +122,7 @@ class MultiHeadTrainer(policy.EngineBase):
         '''
 
         # training phase begin
-        self._emit('on_train_epoch_begin', epoch)
+        self._emit('on_train_policy_begin')
         # set model to train mode
         self.model.train()
         # reset results container (avoid carry-over from last epoch)
@@ -157,7 +157,6 @@ class MultiHeadTrainer(policy.EngineBase):
             self._loss += total.detach().item()
             for head, loss in self.state.batch_out.head_loss.items():
                 self._head_losses[head] += loss
-            self._emit('on_train_backward')
 
             # gradient clipping
             optimizer = self.optimization.optimizer
@@ -165,7 +164,6 @@ class MultiHeadTrainer(policy.EngineBase):
             if self.engine.config.use_amp:
                 self.state.optim.scaler.unscale_(optimizer)
             self._clip_grad()
-            self._emit('on_train_before_optimizer_step')
 
             # optimizer step
             optimizer = self.optimization.optimizer
@@ -185,7 +183,6 @@ class MultiHeadTrainer(policy.EngineBase):
             self.state.progress.global_step += 1
             # snapshopt learning rate
             self.state.optim.lrs = [g['lr'] for g in optimizer.param_groups]
-            self._emit('on_train_optimizer_step')
 
             # batch end
             self._update_training_stats() # depending on frequency config
@@ -193,7 +190,7 @@ class MultiHeadTrainer(policy.EngineBase):
 
         # training phase end
         self._update_training_stats(flush=True) # force update
-        self._emit('on_train_epoch_end')
+        self._emit('on_train_policy_end')
         return self.results
 
     # ----- training phase
