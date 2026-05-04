@@ -147,9 +147,12 @@ class BaseRunner(abc.ABC):
                 patience_epochs=self.config.patience_epochs,
                 delta=self.config.delta,
             )
-
         # a child from base logger
         self.logger = logger.get_child('phase')
+        # internal tracking attributes
+        self._is_phase_end: bool = False
+        self._current_epoch: int = -1
+        self._current_metrics: core.EpochResults = core.EpochResults() # epoch
 
     @property
     def trainer(self) -> common.EngineBaseLike:

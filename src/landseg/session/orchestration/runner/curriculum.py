@@ -87,7 +87,8 @@ class CurriculumRunner(runner.BaseRunner):
         # parse arguments
         self.phases = training_phases
         # tracking
-        self._current_metrics: core.EpochResults = core.EpochResults()
+        self._global_epoch: int = 1
+        self._is_run_end: bool = False
 
     def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
         '''
@@ -114,16 +115,8 @@ class CurriculumRunner(runner.BaseRunner):
                 abandoning the step stream.
         '''
 
-        # run tracking
-        global_epoch: int = 1
-        is_run_end: bool = False
-
         # iterate through provided phases
         for i, phase in enumerate(self.phases):
-
-            # phase tracking
-            current_epoch: int = 1
-            is_phase_end: bool = False
 
             # print phase info if verbose
             if self.config.verbose:
@@ -141,7 +134,7 @@ class CurriculumRunner(runner.BaseRunner):
 
                 try:
                     e = next(events_stream)
-                    global_epoch += 1
+                    self._global_epoch += 1
                 except StopIteration:
                     break # already at the end of phase
 
@@ -151,9 +144,12 @@ class CurriculumRunner(runner.BaseRunner):
                     case events.EpochEnd(epoch_index=epoch, metrics=metrics):
 
                         # epoch and run tracking
-                        current_epoch = epoch
-                        is_phase_end = current_epoch==phase.num_epochs
-                        is_run_end = is_phase_end and i == len(self.phases) - 1
+                        self._current_epoch = epoch
+                        self._is_phase_end = epoch==phase.num_epochs
+                        self._is_run_end = (
+                            self._is_phase_end and
+                            i == len(self.phases) - 1
+                        )
 
                     case events.MetricsReport(
                         best_so_far=best_so_far,
@@ -165,7 +161,7 @@ class CurriculumRunner(runner.BaseRunner):
                         # metrics logging
                         self._current_metrics = metrics
                         self._log_metrics(
-                            epoch_idx=current_epoch,
+                            epoch_idx=self._current_epoch,
                             total_epochs=phase.num_epochs,
                             best_so_far=(best_epoch, best_so_far),
                             metrics=metrics
@@ -177,11 +173,11 @@ class CurriculumRunner(runner.BaseRunner):
                             # id/loc
                             phase_name=phase.name,
                             phase_index=i,
-                            epoch=current_epoch,
-                            global_epoch=global_epoch,
+                            epoch=self._current_epoch,
+                            global_epoch=self._global_epoch,
                             # control
-                            is_phase_end=is_phase_end,
-                            is_run_end=is_run_end,
+                            is_phase_end=self._is_phase_end,
+                            is_run_end=self._is_run_end,
                             stop_reason=None,
                             # metrics
                             objective_name=metrics.validation.monitor_heads_str,
@@ -200,5 +196,5 @@ class CurriculumRunner(runner.BaseRunner):
                         )
 
                 # end of current phase
-                if is_phase_end:
+                if self._is_phase_end:
                     break

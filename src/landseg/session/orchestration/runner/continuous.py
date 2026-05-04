@@ -95,9 +95,6 @@ class ContinuousRunner(runner.BaseRunner):
         # parse arguments
         self.phase = phase # single phase
         # tracking
-        self._current_epoch: int = -1
-        self._current_metrics: core.EpochResults = core.EpochResults()
-        self._is_phase_end: bool = False
         self._best_value_so_far: float = 0.0
         self._best_epoch_so_far: int = -1
         self._is_best_epoch: bool = False
