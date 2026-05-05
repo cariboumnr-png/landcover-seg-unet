@@ -64,9 +64,9 @@ class CallbackDispatcher(common.SessionObserverLike):
             cb.on_batch_begin(action, bidx)
 
     # --- batch ends
-    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None:
+    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
         for cb in self.callbacks:
-            cb.on_train_batch_end(results)
+            cb.on_train_batch_end(bidx, results)
 
     def on_val_batch_end(self) -> None: ...
 

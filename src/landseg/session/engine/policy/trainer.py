@@ -189,7 +189,7 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch end
             self._update_training_stats() # depending on frequency config
-            self.dispatcher.on_train_batch_end(self.results)
+            self.dispatcher.on_train_batch_end(bidx, self.results)
 
         # training phase end
         self._update_training_stats(flush=True) # force update
@@ -223,15 +223,7 @@ class MultiHeadTrainer(policy.EngineBase):
             # --- perhead loss
             for head in self.state.heads.all_heads:
                 self.results.head_losses[head] = self._head_losses[head] / n
-            # --- global step
-            self.results.last_updated = self.state.progress.global_step
+            # --- epoch batch id (for deteremining whether to update results)
+            self.results.last_updated = bidx
             # --- current learning rate
             self.results.current_lr = self.state.optim.lr
-
-            # # pretty string of the losses
-            # logs = {}
-            # logs['total'] = self.results.total_loss
-            # logs = {h: l for h, l in self.results.head_losses.items() if l > 0}
-            # text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
-            # text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            # print(text)

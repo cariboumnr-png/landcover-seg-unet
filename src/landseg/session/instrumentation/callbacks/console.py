@@ -22,6 +22,7 @@
 '''Console printing callback.'''
 
 # local imports
+import landseg.core as core
 import landseg.session.instrumentation.callbacks as callbacks
 
 class ConsoleCallback(callbacks.BaseCallback):
@@ -30,3 +31,14 @@ class ConsoleCallback(callbacks.BaseCallback):
     def on_batch_begin(self, action: str, bidx: int) -> None:
         if self.verbose:
             print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
+
+    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
+        if self.verbose and bidx > 1 and bidx == results.last_updated:
+            text_list: list[str] = []
+            text_list.append(f'total_loss: {results.total_loss:.4f}')
+            text_list.extend([
+                f'{h}_loss: {l:.4f}'
+                for h, l in results.head_losses.items() if l > 0
+            ])
+            text_list.append(f'LR: {results.current_lr:.4e}')
+            print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
