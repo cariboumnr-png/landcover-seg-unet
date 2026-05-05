@@ -19,57 +19,37 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.common`.
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Callbacks dispatcher
 '''
 
+# standard imports
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    # classes
-    # functions
-    # types
-    'CompositeLossLike',
-    'ComponentsLike',
-    'ConfusionMatrixLike',
-    'DataLoadersLike',
-    'DispatcherLike',
-    'EngineBaseLike',
-    'EpochEngineLike',
-    'SpecsLike',
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .callbacks import DispatcherLike
-    from .comps import (
-        CompositeLossLike,
-        ComponentsLike,
-        ConfusionMatrixLike,
-        DataLoadersLike,
-        SpecsLike,
-    )
-    from .engine import EpochEngineLike, EngineBaseLike
-
-def __getattr__(name: str):
-
-    if name in {'DispatcherLike'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
-
-    if name in {
-        'CompositeLossLike',
-        'ComponentsLike',
-        'ConfusionMatrixLike',
-        'DataLoadersLike',
-        'SpecsLike',
-    }:
-        return getattr(importlib.import_module('.comps', __package__), name)
-
-    if name in {'EpochEngineLike', 'EngineBaseLike'}:
-        return getattr(importlib.import_module('.engine', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+# -----------------------------Engine components-----------------------------
+@typing.runtime_checkable
+class DispatcherLike(typing.Protocol):
+    # base methods
+    # --- epoch begins
+    def on_epoch_begin(self, epoch: int) -> None: ...
+    # --- policy begins
+    def on_train_policy_begin(self) -> None: ...
+    def on_val_policy_begin(self) -> None: ...
+    def on_infer_policy_begin(self) -> None: ...
+    # --- batch begins
+    def on_batch_begin(self, action: str, bidx: int) -> None: ...
+    # --- batch ends
+    def on_train_batch_end(self) -> None: ...
+    def on_val_batch_end(self) -> None: ...
+    def on_infer_batch_end(self) -> None: ...
+    # --- policy ends
+    def on_train_policy_end(self) -> None: ...
+    def on_val_policy_end(self) -> None: ...
+    def on_infer_policy_end(self) -> None: ...
+    # --- epoch ends
+    def on_epoch_end(self, epoch: int) -> None: ...
