@@ -49,6 +49,9 @@ class CallbackDispatcher(common.SessionObserverLike):
             self.callbacks.remove(callback)
 
     # megaphone methods
+    # --- training phase begins
+    def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
+
     # --- training step begins
     def on_train_step_begin(self) -> None: ...
 
@@ -96,3 +99,6 @@ class CallbackDispatcher(common.SessionObserverLike):
     def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
         for cb in self.callbacks:
             cb.on_train_step_end(results)
+
+    # --- training phase ends
+    def on_train_phase_end(self) -> None: ...

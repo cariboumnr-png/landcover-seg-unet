@@ -32,10 +32,13 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.core as core
+import landseg.session.common as common
 
 # -----------------------------Engine components-----------------------------
 @typing.runtime_checkable
 class SessionObserverLike(typing.Protocol):
+    # --- training phase begins
+    def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
     # --- training step begins
     def on_train_step_begin(self) -> None: ...
     # --- epoch begins
@@ -58,3 +61,5 @@ class SessionObserverLike(typing.Protocol):
     def on_epoch_end(self, epoch: int) -> None: ...
     # --- training step ends
     def on_train_step_end(self, results: core.TrainingSessionStep) -> None: ...
+    # --- training phase ends
+    def on_train_phase_end(self) -> None: ...

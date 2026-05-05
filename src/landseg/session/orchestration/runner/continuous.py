@@ -122,9 +122,8 @@ class ContinuousRunner(runner.BaseRunner):
                 `is_run_end == True` upon termination.
         '''
 
-        # print phase info if verbose
-        if self.config.verbose:
-            self._print_phase(self.phase)
+        # dispatch at phase begininng
+        self.dispatcher.on_train_phase_begin(self.phase)
 
         # get phase events stream
         events_stream = policy.PhasePolicy(

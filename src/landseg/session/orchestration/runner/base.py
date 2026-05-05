@@ -284,17 +284,3 @@ class BaseRunner(abc.ABC):
                 scheduler=self.trainer.optimization.scheduler,
             )
             self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
-
-    @staticmethod
-    def _print_phase(phase: common.PhaseLike):
-        '''Pretty print a phase to console.'''
-
-        print('__Phase details__')
-        ss = '\n'.join([
-            f'- Phase Name:\t{phase.name}',
-            f'- Max Epochs:\t{phase.num_epochs}',
-            f'- LR Scale:\t{phase.lr_scale}',
-            f'- Active Heads:\t{phase.active_heads}',
-            f'- Frozen Heads:\t{phase.frozen_heads}',
-        ])
-        print(ss)

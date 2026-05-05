@@ -23,10 +23,23 @@
 
 # local imports
 import landseg.core as core
+import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 
 class ConsoleCallback(callbacks.BaseCallback):
     '''Progress tracker.'''
+
+    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+        if self.verbose:
+            print('__Phase details__')
+            text = '\n'.join([
+                f'- Phase Name:\t{phase.name}',
+                f'- Max Epochs:\t{phase.num_epochs}',
+                f'- LR Scale:\t{phase.lr_scale}',
+                f'- Active Heads:\t{phase.active_heads}',
+                f'- Frozen Heads:\t{phase.frozen_heads}',
+            ])
+            print(text)
 
     def on_batch_begin(self, action: str, bidx: int) -> None:
         if self.verbose:
