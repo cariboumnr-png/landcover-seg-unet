@@ -127,7 +127,7 @@ class MultiHeadEvaluator(policy.EngineBase):
             return None
 
         # validation phase begin
-        self._emit('on_val_policy_begin')
+        self.dispatcher.on_val_policy_begin()
         # set model to evaluation mode
         self.model.eval()
         # reset per-head confusion matrix from active heads
@@ -147,16 +147,16 @@ class MultiHeadEvaluator(policy.EngineBase):
         for bidx, batch in enumerate(dataloader, start=1):
 
             # batch start
-            self._emit('on_batch_begin', 'Validating', bidx)
+            self.dispatcher.on_batch_begin('Validating', bidx)
             self._batch_reset(bidx, batch)
 
             # delegate to batch executor
             self.engine.run_validate_batch()
-            self._emit('val_batch_end')
+            self.dispatcher.on_val_batch_end()
 
         # val phase end
         self._compute_iou()
-        self._emit('val_policy_end')
+        self.dispatcher.on_val_policy_end()
         return self.results
 
     def infer(self, epoch: int) -> None:
@@ -180,7 +180,7 @@ class MultiHeadEvaluator(policy.EngineBase):
             return
 
         # infer phase begin
-        self._emit('on_infer_policy_begin')
+        self.dispatcher.on_infer_policy_begin()
         # set model to evaluation mode
         self.model.eval()
 
@@ -189,16 +189,16 @@ class MultiHeadEvaluator(policy.EngineBase):
         for bidx, batch in enumerate(self.dataloaders.test, start=1):
 
             # batch start
-            self._emit('on_batch_begin', 'Inferring', bidx)
+            self.dispatcher.on_batch_begin('Inferring', bidx)
             self._batch_reset(bidx, batch)
 
             # delegate to batch executor
             self.engine.run_infer_batch()
-            self._emit('infer_batch_end')
+            self.dispatcher.on_infer_batch_end()
 
         # inference phase end
         self.results.head_inference = self.state.batch_out.infer_maps
-        self._emit('on_infer_policy_end')
+        self.dispatcher.on_infer_policy_end()
 
     # ----- validation phase
     def _compute_iou(self) -> None:

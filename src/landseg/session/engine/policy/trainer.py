@@ -122,7 +122,7 @@ class MultiHeadTrainer(policy.EngineBase):
         '''
 
         # training phase begin
-        self._emit('on_train_policy_begin')
+        self.dispatcher.on_train_policy_begin()
         # set model to train mode
         self.model.train()
         # reset results container (avoid carry-over from last epoch)
@@ -138,7 +138,7 @@ class MultiHeadTrainer(policy.EngineBase):
         for bidx, batch in enumerate(self.dataloaders.train, start=1):
 
             # batch start
-            self._emit('on_batch_begin', 'Training', bidx)
+            self.dispatcher.on_batch_begin('Training', bidx)
             self._batch_reset(bidx, batch)
 
             # reset optimizer gradient
@@ -186,11 +186,11 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch end
             self._update_training_stats() # depending on frequency config
-            self._emit('on_train_batch_end')
+            self.dispatcher.on_train_batch_end()
 
         # training phase end
         self._update_training_stats(flush=True) # force update
-        self._emit('on_train_policy_end')
+        self.dispatcher.on_train_policy_end()
         return self.results
 
     # ----- training phase

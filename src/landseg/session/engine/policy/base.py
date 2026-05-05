@@ -30,7 +30,6 @@ execution mechanics to a shared execution core.
 
 # standard imports
 import copy
-import typing
 # local imports
 import landseg.session.common as common
 import landseg.session.engine.state as state
@@ -61,7 +60,7 @@ class EngineBase:
         engine: batch.BatchExecutionEngine,
         engine_state: state.EngineState,
         components: common.ComponentsLike,
-        callbacks: typing.Sequence[object],
+        dispatcher: common.DispatcherLike,
         *,
         device: str,
     ):
@@ -112,7 +111,7 @@ class EngineBase:
         self.comps = components
 
         # callback system
-        self.callbacks = callbacks
+        self.dispatcher = dispatcher
 
         # device placement
         self.device = device
@@ -225,12 +224,3 @@ class EngineBase:
         self.state.batch_cxt.refresh(bidx, _batch)
         # refresh batch results
         self.state.batch_out.refresh(bidx)
-
-    # ----- callback dispatch
-    def _emit(self, hook: str, *args, **kwargs) -> None:
-        '''Emit a lifecycle hook to all registered callbacks.'''
-
-        for callback in self.callbacks:
-            method = getattr(callback, hook, None)
-            if callable(method):
-                method(*args, **kwargs)
