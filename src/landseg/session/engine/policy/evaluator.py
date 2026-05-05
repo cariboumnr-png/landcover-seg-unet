@@ -156,7 +156,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # val phase end
         self._compute_iou()
-        self.dispatcher.on_val_policy_end()
+        self.dispatcher.on_val_policy_end(self.results)
         return self.results
 
     def infer(self, epoch: int) -> None:
@@ -198,7 +198,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # inference phase end
         self.results.head_inference = self.state.batch_out.infer_maps
-        self.dispatcher.on_infer_policy_end()
+        self.dispatcher.on_infer_policy_end(self.results)
 
     # ----- validation phase
     def _compute_iou(self) -> None:

@@ -90,7 +90,10 @@ class MultiHeadTrainer(policy.EngineBase):
         self.update_every = update_every
 
         # init the epoch results container with all heads
-        self.results = core.TrainerEpochResults(self.state.heads.all_heads)
+        self.results = core.TrainerEpochResults(
+            all_heads=self.state.heads.all_heads,
+            current_lr=self.state.optim.lr
+        )
         # epoch-level accumulated loss tracker
         self._loss: float
         self._head_losses: dict[str, float]
@@ -186,11 +189,11 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch end
             self._update_training_stats() # depending on frequency config
-            self.dispatcher.on_train_batch_end()
+            self.dispatcher.on_train_batch_end(self.results)
 
         # training phase end
         self._update_training_stats(flush=True) # force update
-        self.dispatcher.on_train_policy_end()
+        self.dispatcher.on_train_policy_end(self.results)
         return self.results
 
     # ----- training phase
@@ -210,23 +213,25 @@ class MultiHeadTrainer(policy.EngineBase):
         Set `flush=True` to flush results at end of a training epoch.
         '''
 
-        # get current batch id
+        # get current epoch batch id
         bidx = self.state.batch_cxt.bidx
-        n = max(1, bidx)
-
+        n = max(1, bidx) # safe denominator
         # update results container
         if flush or bidx % self.update_every == 0:
             # --- total loss
-
             self.results.total_loss = self._loss / n
             # --- perhead loss
             for head in self.state.heads.all_heads:
                 self.results.head_losses[head] = self._head_losses[head] / n
+            # --- global step
+            self.results.last_updated = self.state.progress.global_step
+            # --- current learning rate
+            self.results.current_lr = self.state.optim.lr
 
-            # pretty string of the losses
-            logs = {}
-            logs['total'] = self.results.total_loss
-            logs = {h: l for h, l in self.results.head_losses.items() if l > 0}
-            text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
-            text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            print(text)
+            # # pretty string of the losses
+            # logs = {}
+            # logs['total'] = self.results.total_loss
+            # logs = {h: l for h, l in self.results.head_losses.items() if l > 0}
+            # text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
+            # text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
+            # print(text)
