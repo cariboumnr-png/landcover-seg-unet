@@ -40,10 +40,9 @@ expected interfaces.
 # standard imports
 from __future__ import annotations
 import typing
-
-# imports only when type checking
-if typing.TYPE_CHECKING:
-    import torch
+# local imports
+import landseg.core as core
+import landseg.session.common as common
 
 # ---------------------------------Public Type---------------------------------
 class EngineStateLike(typing.Protocol):
@@ -60,25 +59,8 @@ class _Progress(typing.Protocol):
 class _OptimeRuntime(typing.Protocol):
     @property
     def lr(self) -> float: ...
-
-class SessionStepLike(typing.Protocol):
-    '''Interface of epoch results that the callbacks listen to'''
-    training: _TrainerEpochResults | None
-    evaluation: _EvaluatorEpochResults | None
-
-class _TrainerEpochResults(typing.Protocol):
-    @property
-    def total_loss(self) -> float: ...
-    @property
-    def head_loss(self) -> dict[str, float]: ...
-
-class _EvaluatorEpochResults(typing.Protocol):
-    @property
-    def target_metrics(self) -> float: ...
-    @property
-    def head_inference(self) -> dict[str, dict[tuple[int, int], 'torch.Tensor']]: ...
 # --------------------------------Public  Class--------------------------------
-class BaseCallback:
+class BaseCallback(common.SessionObserverLike):
     '''
     Base class for defining dashboarding callbacks.
 
@@ -111,8 +93,8 @@ class BaseCallback:
     def on_val_batch_end(self) -> None: ...
     def on_infer_batch_end(self) -> None: ...
     # --- policy ends
-    def on_train_policy_end(self) -> None: ...
-    def on_val_policy_end(self) -> None: ...
-    def on_infer_policy_end(self) -> None: ...
+    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None: ...
+    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
+    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
