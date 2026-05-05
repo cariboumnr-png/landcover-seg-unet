@@ -37,28 +37,10 @@ the engine loosely coupled while ensuring type safety and clarity of
 expected interfaces.
 '''
 
-# standard imports
-from __future__ import annotations
-import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
 
-# ---------------------------------Public Type---------------------------------
-class EngineStateLike(typing.Protocol):
-    '''Interface of engine state that the callbacks listen to.'''
-    progress: _Progress
-    optim: _OptimeRuntime
-
-class _Progress(typing.Protocol):
-    @property
-    def epoch(self) -> int: ...
-    @property
-    def global_step(self) -> int: ...
-
-class _OptimeRuntime(typing.Protocol):
-    @property
-    def lr(self) -> float: ...
 # --------------------------------Public  Class--------------------------------
 class BaseCallback(common.SessionObserverLike):
     '''
@@ -89,7 +71,7 @@ class BaseCallback(common.SessionObserverLike):
     # --- batch begins
     def on_batch_begin(self, action: str, bidx: int) -> None: ...
     # --- batch ends
-    def on_train_batch_end(self) -> None: ...
+    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None: ...
     def on_val_batch_end(self) -> None: ...
     def on_infer_batch_end(self) -> None: ...
     # --- policy ends

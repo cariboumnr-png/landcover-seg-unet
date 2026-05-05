@@ -50,24 +50,40 @@ class CallbackDispatcher(common.SessionObserverLike):
 
     # megaphone methods
     def on_epoch_begin(self, epoch: int) -> None: ...
+
     # --- policy begins
     def on_train_policy_begin(self) -> None: ...
+
     def on_val_policy_begin(self) -> None: ...
+
     def on_infer_policy_begin(self) -> None: ...
+
     # --- batch begins
     def on_batch_begin(self, action: str, bidx: int) -> None:
-        '''Broadcasting batch end.'''
-
         for cb in self.callbacks:
             cb.on_batch_begin(action, bidx)
 
     # --- batch ends
-    def on_train_batch_end(self) -> None: ...
+    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_train_batch_end(results)
+
     def on_val_batch_end(self) -> None: ...
+
     def on_infer_batch_end(self) -> None: ...
+
     # --- policy ends
-    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None: ...
-    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
-    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
+    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_train_policy_end(results)
+
+    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_val_policy_end(results)
+
+    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_infer_policy_end(results)
+
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
