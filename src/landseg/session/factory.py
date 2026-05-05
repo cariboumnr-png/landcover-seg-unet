@@ -128,6 +128,7 @@ class SessionBuildContext:
             required for `'training'` mode).
     '''
     device: str
+    total_epochs: int
     verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None
@@ -256,7 +257,7 @@ def _build_partial_epoch_runner(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: utils.Logger
+    logger: utils.Logger,
 ) -> typing.Callable[..., engine.EpochRunner]:
     '''doc'''
 
@@ -266,6 +267,7 @@ def _build_partial_epoch_runner(
         model,
         config.components,
         logger=logger,
+        total_epochs=context.total_epochs
     )
 
     # initiate the shared runtime state
@@ -310,7 +312,7 @@ def _build_partial_training_runner(
     config: SessionConfigShape,
     context: SessionBuildContext,
     dispatcher: common.SessionObserverLike,
-    logger: utils.Logger
+    logger: utils.Logger,
 ) -> typing.Callable: # avoid complex typing as it is just an internal wrapper
     '''doc'''
 

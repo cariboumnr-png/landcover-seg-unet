@@ -110,13 +110,14 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     )
 
     # build the session
-    session_context=session.SessionBuildContext(
-        device=c.DEVICE,
-        verbose_runner=print_out,
-        session_paths=session_paths,
-    )
     match config.session.mode:
         case 'continuous':
+            session_context=session.SessionBuildContext(
+                device=c.DEVICE,
+                total_epochs=config.session.single_phase.num_epochs,
+                verbose_runner=print_out,
+                session_paths=session_paths,
+            )
             runner = session.factory.build_continous_training_session(
                 dataspecs=dataspecs,
                 model=model,
@@ -125,6 +126,12 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
                 logger=logger
             )
         case 'curriculum':
+            session_context=session.SessionBuildContext(
+                device=c.DEVICE,
+                total_epochs=sum(p.num_epochs for p in config.session.curriculum),
+                verbose_runner=print_out,
+                session_paths=session_paths,
+            )
             runner = session.factory.build_curriculum_training_session(
                 dataspecs=dataspecs,
                 model=model,

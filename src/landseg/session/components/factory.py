@@ -60,6 +60,7 @@ def build_session_components(
     config: ComponentsConfigLike,
     *,
     logger: utils.Logger,
+    total_epochs: int
  ) -> SessionComponents:
     '''Builder session components from data shape and configs.'''
 
@@ -91,6 +92,10 @@ def build_session_components(
     )
 
     # optimizer and scheduler
+    t_max = total_epochs * len(data_loaders.train or [])
+    if t_max == 0:
+        t_max = None
+    config.optimization.sched_args.update({'T_max': t_max})
     optimization = optim.build_optimization(model, config.optimization)
 
     # collect components
