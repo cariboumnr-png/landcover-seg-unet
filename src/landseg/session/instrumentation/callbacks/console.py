@@ -19,13 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Compose a list of callback classes in sequence for the engines.'''
+'''Console printing callback.'''
 
 # local imports
 import landseg.session.instrumentation.callbacks as callbacks
 
-def build_callbacks(*, verbose: bool = True) -> list[object]:
-    '''Factory to generate a set of callback class instances.'''
+class ConsoleCallback(callbacks.BaseCallback):
+    '''Progress tracker.'''
 
-    # return
-    return [callbacks.Callback(verbose=verbose)]
+    def on_batch_begin(self, action: str, bidx: int) -> None:
+        if self.verbose:
+            print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
