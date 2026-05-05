@@ -103,7 +103,8 @@ class EpochResults:
 class TrainerEpochResults:
     '''Trainer aggregated results.'''
     all_heads: list[str]
-    last_updated: int = 1 # bidx
+    current_lr: float | None
+    last_updated: int = 1 # global step in batches
     total_loss: float = 0.0
     head_losses: dict[str, float] = field(default_factory=dict)
 
