@@ -47,7 +47,6 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
 import landseg.utils as utils
 
@@ -287,7 +286,7 @@ class BaseRunner(abc.ABC):
             self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
 
     @staticmethod
-    def _print_phase(phase: phases.PhaseLike):
+    def _print_phase(phase: common.PhaseLike):
         '''Pretty print a phase to console.'''
 
         print('__Phase details__')

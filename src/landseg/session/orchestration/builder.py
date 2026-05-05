@@ -47,7 +47,6 @@ import dataclasses
 import typing
 # local imports
 import landseg.session.common as common
-import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.runner as runner
 import landseg.utils as utils
 
@@ -56,26 +55,26 @@ import landseg.utils as utils
 class TrainingSchema:
     '''doc'''
     schema: typing.Literal['continuous', 'curriculum']
-    training_phases: phases.PhaseLike | typing.Sequence[phases.PhaseLike]
+    training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike]
 
     @typing.overload
     def __init__(
         self,
         schema: typing.Literal['continuous'],
-        training_phases: phases.PhaseLike
+        training_phases: common.PhaseLike
     ) -> None: ...
 
     @typing.overload
     def __init__(
         self,
         schema: typing.Literal['curriculum'],
-        training_phases: typing.Sequence[phases.PhaseLike]
+        training_phases: typing.Sequence[common.PhaseLike]
     ) -> None: ...
 
     def __init__(
         self,
         schema: typing.Literal['continuous', 'curriculum'],
-        training_phases: phases.PhaseLike | typing.Sequence[phases.PhaseLike]
+        training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike]
     ):
         self.schema = schema
         self.training_phases = training_phases
@@ -140,7 +139,7 @@ def build_runner(
     training_phases = training_schema.training_phases
     match training_schema.schema:
         case 'continuous':
-            if not isinstance(training_phases, phases.PhaseLike):
+            if not isinstance(training_phases, common.PhaseLike):
                 raise ValueError('Continuous training requires a single phase')
             return runner.ContinuousRunner(
                 epoch_runner=epoch_runner,
@@ -152,7 +151,7 @@ def build_runner(
         case 'curriculum':
             if not (
                 isinstance(training_phases, list) and
-                all(isinstance(p, phases.PhaseLike) for p in training_phases)
+                all(isinstance(p, common.PhaseLike) for p in training_phases)
             ):
                 raise ValueError('Curriculum expects a sequence of phases')
             return runner.CurriculumRunner(

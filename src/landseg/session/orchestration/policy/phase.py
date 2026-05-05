@@ -33,7 +33,6 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.events as events
 
@@ -79,7 +78,7 @@ class PhasePolicy:
         self,
         *,
         epoch_runner: common.EpochEngineLike,
-        phase_config: phases.PhaseLike,
+        phase_config: common.PhaseLike,
         track_config: TrackingConfig,
     ):
         '''
