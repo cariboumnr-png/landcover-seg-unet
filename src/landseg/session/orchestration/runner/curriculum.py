@@ -141,6 +141,9 @@ class CurriculumRunner(runner.BaseRunner):
                 # runner intercepts events to perform side effects
                 match e:
 
+                    case events.EpochStart(epoch_index=epoch):
+                        self.dispatcher.on_epoch_begin(epoch)
+
                     case events.EpochEnd(epoch_index=epoch, metrics=metrics):
 
                         # epoch and run tracking
@@ -150,6 +153,8 @@ class CurriculumRunner(runner.BaseRunner):
                             self._is_phase_end and
                             i == len(self.phases) - 1
                         )
+                        # dispatch
+                        self.dispatcher.on_epoch_end(epoch)
 
                     case events.MetricsReport(
                         best_so_far=best_so_far,

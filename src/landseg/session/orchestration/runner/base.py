@@ -109,6 +109,7 @@ class BaseRunner(abc.ABC):
         self,
         epoch_runner: common.EpochEngineLike,
         base_config: BaseRunnerConfig,
+        dispatcher: common.SessionObserverLike,
         *,
         logger: utils.Logger,
     ):
@@ -141,6 +142,7 @@ class BaseRunner(abc.ABC):
         # parse arguments
         self.epoch_runner = epoch_runner
         self.config = base_config
+        self.dispatcher = dispatcher
         self.tracking = policy.TrackingConfig(
                 track_mode=self.config.track_mode,
                 enable_early_stop=self.config.enable_early_stop,

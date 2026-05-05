@@ -144,11 +144,16 @@ class ContinuousRunner(runner.BaseRunner):
             # runner intercepts events to perform side effects
             match e:
 
+                case events.EpochStart(epoch_index=epoch):
+                    self.dispatcher.on_epoch_begin(epoch)
+
                 case events.EpochEnd(epoch_index=epoch):
 
                     # epoch tracking
                     self._current_epoch = epoch
                     self._is_phase_end = epoch==self.phase.num_epochs
+                    # dispatch
+                    self.dispatcher.on_epoch_end(epoch)
 
                 case events.MetricsReport(
                     best_so_far=best_so_far,
