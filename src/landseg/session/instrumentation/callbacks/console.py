@@ -76,3 +76,6 @@ class ConsoleCallback(callbacks.BaseCallback):
             t = results.phase_max_epoch
             n = len(str(t))
             print(f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}')
+
+    def on_checkpointing(self, fp: str) -> None:
+        print(f'Checkpoint saved: {fp}')

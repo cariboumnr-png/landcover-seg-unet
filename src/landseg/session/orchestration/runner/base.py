@@ -48,7 +48,6 @@ import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.policy as policy
-import landseg.utils as utils
 
 @dataclasses.dataclass
 class BaseRunnerConfig:
@@ -109,8 +108,6 @@ class BaseRunner(abc.ABC):
         epoch_runner: common.EpochEngineLike,
         base_config: BaseRunnerConfig,
         dispatcher: common.SessionObserverLike,
-        *,
-        logger: utils.Logger,
     ):
         '''
         Initialize the base runner.
@@ -148,8 +145,6 @@ class BaseRunner(abc.ABC):
                 patience_epochs=self.config.patience_epochs,
                 delta=self.config.delta,
             )
-        # a child from base logger
-        self.logger = logger.get_child('phase')
         # internal tracking attributes
         self._is_phase_end: bool = False
         self._current_epoch: int = -1
@@ -272,7 +267,7 @@ class BaseRunner(abc.ABC):
             optimizer=self.trainer.optimization.optimizer,
             scheduler=self.trainer.optimization.scheduler,
         )
-        self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
+        self.dispatcher.on_checkpointing(fp)
         # if this is also the best, save/overwrite the '*.best.pt'
         if is_best:
             fp = self.paths.best_checkpoint(f'{phase_name}_epoch_{ep}')
@@ -283,4 +278,4 @@ class BaseRunner(abc.ABC):
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
             )
-            self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
+            self.dispatcher.on_checkpointing(fp)

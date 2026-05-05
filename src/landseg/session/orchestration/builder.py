@@ -48,7 +48,6 @@ import typing
 # local imports
 import landseg.session.common as common
 import landseg.session.orchestration.runner as runner
-import landseg.utils as utils
 
 #
 @dataclasses.dataclass
@@ -85,7 +84,6 @@ def build_runner(
     base_config: runner.BaseRunnerConfig,
     training_schema: TrainingSchema,
     dispatcher: common.SessionObserverLike,
-    logger: utils.Logger,
 ) -> runner.BaseRunner:
     '''
     Construct a concrete orchestration runner for epoch-based training.
@@ -146,7 +144,6 @@ def build_runner(
                 base_config=base_config,
                 dispatcher=dispatcher,
                 phase=training_phases,
-                logger=logger,
             )
         case 'curriculum':
             if not (
@@ -159,5 +156,4 @@ def build_runner(
                 base_config=base_config,
                 dispatcher=dispatcher,
                 training_phases=training_phases,
-                logger=logger,
             )

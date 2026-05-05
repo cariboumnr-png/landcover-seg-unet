@@ -341,5 +341,4 @@ def _build_partial_training_runner(
         epoch_runner=epoch_runner,
         base_config=base_config,
         dispatcher=dispatcher,
-        logger=logger
     )
