@@ -78,7 +78,7 @@ class _EvaluatorEpochResults(typing.Protocol):
     @property
     def head_inference(self) -> dict[str, dict[tuple[int, int], 'torch.Tensor']]: ...
 # --------------------------------Public  Class--------------------------------
-class Callback:
+class BaseCallback:
     '''
     Base class for defining dashboarding callbacks.
 
@@ -87,11 +87,7 @@ class Callback:
     lifecycle. All methods are optional; only override those needed.
     '''
 
-    def __init__(
-        self,
-        *,
-        verbose: bool = True
-    ):
+    def __init__(self, *, verbose: bool = True):
         '''
         Initializes the callback.
 
@@ -109,13 +105,11 @@ class Callback:
     def on_val_policy_begin(self) -> None: ...
     def on_infer_policy_begin(self) -> None: ...
     # --- batch begins
-    def on_batch_begin(self, action: str, bidx: int) -> None:
-        if self.verbose:
-            print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
+    def on_batch_begin(self, action: str, bidx: int) -> None: ...
     # --- batch ends
-    def on_train_batch_end(self, engine_state: EngineStateLike) -> None: ...
-    def on_val_batch_end(self, session_step: SessionStepLike) -> None: ...
-    def on_infer_batch_end(self, session_step: SessionStepLike) -> None: ...
+    def on_train_batch_end(self) -> None: ...
+    def on_val_batch_end(self) -> None: ...
+    def on_infer_batch_end(self) -> None: ...
     # --- policy ends
     def on_train_policy_end(self) -> None: ...
     def on_val_policy_end(self) -> None: ...
