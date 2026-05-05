@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-instance-attributes
-
 '''
 Session step
 '''
@@ -38,7 +36,7 @@ if typing.TYPE_CHECKING:
 field = dataclasses.field
 
 @dataclasses.dataclass(frozen=True)
-class TrainingSessionStep:
+class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     '''
     Immutable training progress snapshot exposed by runners.
 
@@ -57,7 +55,8 @@ class TrainingSessionStep:
     # identity / location
     phase_name: str
     phase_index: int
-    epoch: int
+    phase_max_epoch: int
+    epoch_in_phase: int
     global_epoch: int
     # termination signals
     is_phase_end: bool

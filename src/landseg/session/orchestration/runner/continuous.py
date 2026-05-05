@@ -167,13 +167,6 @@ class ContinuousRunner(runner.BaseRunner):
                     self._best_value_so_far=best_so_far
                     self._best_epoch_so_far=best_epoch
                     self._is_best_epoch=is_best_epoch
-                    # metrics logging
-                    self._log_metrics(
-                        epoch_idx=self._current_epoch,
-                        total_epochs=self.phase.num_epochs,
-                        best_so_far=(best_epoch, best_so_far),
-                        metrics=self._current_metrics
-                    )
 
                     # normal yield
                     if not self._is_phase_end:
@@ -202,11 +195,13 @@ class ContinuousRunner(runner.BaseRunner):
     def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
         '''Helper to generate a step dataclass from self trackers.'''
 
-        return core.TrainingSessionStep(
+        # poplulate step results container
+        step = core.TrainingSessionStep(
             # id/loc
             phase_name=self.phase.name,
             phase_index=0,
-            epoch=self._current_epoch,
+            phase_max_epoch=self.phase.num_epochs,
+            epoch_in_phase=self._current_epoch,
             global_epoch=self._current_epoch,
             # control
             is_phase_end=self._is_phase_end,
@@ -220,3 +215,6 @@ class ContinuousRunner(runner.BaseRunner):
             is_best_epoch=self._is_best_epoch,
             metrics=self._current_metrics,
         )
+        # when this method is called it means this training step is done
+        self.dispatcher.on_train_step_end(step)
+        return step

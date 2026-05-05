@@ -42,3 +42,24 @@ class ConsoleCallback(callbacks.BaseCallback):
             ])
             text_list.append(f'LR: {results.current_lr:.4e}')
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
+
+    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+        metrics = results.metrics
+        if self.verbose:
+             # training metrics is always neends
+            assert metrics.training
+            # validation may or may not be run every epoch
+            if metrics.evaluation:
+                mean_iou = metrics.evaluation.target_metrics
+            else:
+                mean_iou = 0.0
+            # best so far
+            msg = (
+                f'|Total Loss: {metrics.training.total_loss:.4f}|'
+                f'Mean IoU: {mean_iou:.4f}|'
+                f'Best Epoch: {results.best_epoch_so_far}|'
+                f'Best Value: {results.best_value_so_far:.4f}|'
+            )
+            t = results.phase_max_epoch
+            n = len(str(t))
+            print(f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}')

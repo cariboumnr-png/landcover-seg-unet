@@ -165,32 +165,29 @@ class CurriculumRunner(runner.BaseRunner):
 
                         # metrics logging
                         self._current_metrics = metrics
-                        self._log_metrics(
-                            epoch_idx=self._current_epoch,
-                            total_epochs=phase.num_epochs,
-                            best_so_far=(best_epoch, best_so_far),
-                            metrics=metrics
-                        )
 
                         # normal yield
-                        yield core.TrainingSessionStep(
+                        step = core.TrainingSessionStep(
                             # id/loc
                             phase_name=phase.name,
                             phase_index=i,
-                            epoch=self._current_epoch,
+                            phase_max_epoch=phase.num_epochs,
+                            epoch_in_phase=self._current_epoch,
                             global_epoch=self._global_epoch,
                             # control
                             is_phase_end=self._is_phase_end,
                             is_run_end=self._is_run_end,
                             stop_reason=None,
                             # metrics
-                            objective_name=self._current_metrics.target_objective,
-                            objective_value=self._current_metrics.target_metrics,
+                            objective_name=metrics.target_objective,
+                            objective_value=metrics.target_metrics,
                             best_value_so_far=best_so_far,
                             best_epoch_so_far=best_epoch,
                             is_best_epoch=is_best_epoch,
                             metrics=metrics,
                         )
+                        self.dispatcher.on_train_step_end(step)
+                        yield step
 
                     case events.CheckpointRequest(tag=tag):
                         self._save_progress(

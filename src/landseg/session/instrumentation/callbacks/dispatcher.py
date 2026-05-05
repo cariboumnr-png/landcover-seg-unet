@@ -49,6 +49,10 @@ class CallbackDispatcher(common.SessionObserverLike):
             self.callbacks.remove(callback)
 
     # megaphone methods
+    # --- training step begins
+    def on_train_step_begin(self) -> None: ...
+
+    # --- epoch begins
     def on_epoch_begin(self, epoch: int) -> None: ...
 
     # --- policy begins
@@ -87,3 +91,8 @@ class CallbackDispatcher(common.SessionObserverLike):
 
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
+
+    # --- training step ends
+    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+        for cb in self.callbacks:
+            cb.on_train_step_end(results)

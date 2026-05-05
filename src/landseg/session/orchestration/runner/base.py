@@ -226,34 +226,6 @@ class BaseRunner(abc.ABC):
         # return the final scalar
         return last_step.metrics.evaluation.target_metrics
 
-    def _log_metrics(
-        self,
-        *,
-        epoch_idx: int,
-        total_epochs: int,
-        best_so_far: tuple[int, float],
-        metrics: core.EpochResults
-    ) -> None:
-        '''Parse and log a concise epoch results summary to console.'''
-
-        # training metrics is always neends
-        assert metrics.training
-        # validation may or may not be run every epoch
-        if metrics.evaluation:
-            mean_iou = metrics.evaluation.target_metrics
-        else:
-            mean_iou = 0.0
-        # best so far
-        best_epoch, best_value = best_so_far
-        msg = (
-            f'|Total Loss: {metrics.training.total_loss:.4f}|'
-            f'Mean IoU: {mean_iou:.4f}|'
-            f'Best Epoch: {best_epoch}|Best Value: {best_value:.4f}|'
-        )
-        t = total_epochs
-        n = len(str(t))
-        self.logger.log('INFO', f'[Epoch {epoch_idx:0{n}d}/{t}] {msg}')
-
     def _save_progress(
         self,
         phase_name: str,
