@@ -30,6 +30,10 @@ from __future__ import annotations
 import dataclasses
 import typing
 
+#
+if typing.TYPE_CHECKING:
+    import torch
+
 # aliases
 field = dataclasses.field
 
@@ -79,29 +83,33 @@ class EpochResults:
             evaluation step was executed.
     '''
     training: TrainerEpochResults | None = None
-    validation: EvaluatorEpochResults | None = None
+    evaluation: EvaluatorEpochResults | None = None
+
+    @property
+    def target_objective(self) -> str:
+        '''Return the targert objective from the validation results.'''
+        if self.evaluation:
+            return self.evaluation.monitor_heads_str
+        return 'N/A'
+
+    @property
+    def target_metrics(self) -> float:
+        '''Return the target metrics from the validation results.'''
+        if self.evaluation:
+            return self.evaluation.target_metrics
+        return -float('inf')
 
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Trainer aggregated results.'''
     all_heads: list[str]
-    current_bidx: int = 0
+    current_lr: float | None
+    last_updated: int = 1 # global step in batches
     total_loss: float = 0.0
     head_losses: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self):
         self.head_losses = {h: 0.0 for h in self.all_heads}
-
-    @property
-    def mean_total_loss(self) -> float:
-        '''Return current moving average total loss.'''
-        return self.total_loss / max(1, self.current_bidx)
-
-    @property
-    def mean_head_losses(self) -> dict[str, float]:
-        '''Return current moving average per head losses.'''
-        n = max(1, self.current_bidx)
-        return {h: l / n for h, l in self.head_losses.items()}
 
     def clear(self) -> None:
         '''Reset all loss values to `0.0`.'''
@@ -116,6 +124,7 @@ class EvaluatorEpochResults:
     all_heads: list[str]
     monitor_heads: list[str] # heads for IoU caculation
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    head_inference: dict[str, dict[tuple[int, int], 'torch.Tensor']] = field(default_factory=dict)
 
     def __post_init__(self):
         self.head_metrics = {h: AccumulatedMetrics() for h in self.all_heads}

@@ -19,23 +19,38 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Compose a list of callback classes in sequence for the engines.'''
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 
+'''
+Callbacks dispatcher
+'''
+
+# standard imports
+from __future__ import annotations
+import typing
 # local imports
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.core as core
 
-def build_callbacks(
-    state: callbacks.EngineStateLike,
-    *,
-    device: str,
-    verbose: bool = True
-) -> list[object]:
-    '''Factory to generate a set of callback class instances.'''
-
-    # return
-    return [
-        callbacks.TrainCallback(state, device=device, verbose=verbose),
-        callbacks.ValCallback(state, device=device, verbose=verbose),
-        callbacks.InferCallback(state, device=device, verbose=verbose),
-        callbacks.ProgressCallback(state, device=device, verbose=verbose),
-    ]
+# -----------------------------Engine components-----------------------------
+@typing.runtime_checkable
+class SessionObserverLike(typing.Protocol):
+    # --- epoch begins
+    def on_epoch_begin(self, epoch: int) -> None: ...
+    # --- policy begins
+    def on_train_policy_begin(self) -> None: ...
+    def on_val_policy_begin(self) -> None: ...
+    def on_infer_policy_begin(self) -> None: ...
+    # --- batch begins
+    def on_batch_begin(self, action: str, bidx: int) -> None: ...
+    # --- batch ends
+    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None: ...
+    def on_val_batch_end(self) -> None: ...
+    def on_infer_batch_end(self) -> None: ...
+    # --- policy ends
+    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None: ...
+    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
+    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
+    # --- epoch ends
+    def on_epoch_end(self, epoch: int) -> None: ...

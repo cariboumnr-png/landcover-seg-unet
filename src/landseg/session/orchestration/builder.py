@@ -85,6 +85,7 @@ def build_runner(
     epoch_runner: common.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
     training_schema: TrainingSchema,
+    dispatcher: common.SessionObserverLike,
     logger: utils.Logger,
 ) -> runner.BaseRunner:
     '''
@@ -144,6 +145,7 @@ def build_runner(
             return runner.ContinuousRunner(
                 epoch_runner=epoch_runner,
                 base_config=base_config,
+                dispatcher=dispatcher,
                 phase=training_phases,
                 logger=logger,
             )
@@ -156,6 +158,7 @@ def build_runner(
             return runner.CurriculumRunner(
                 epoch_runner=epoch_runner,
                 base_config=base_config,
+                dispatcher=dispatcher,
                 training_phases=training_phases,
                 logger=logger,
             )

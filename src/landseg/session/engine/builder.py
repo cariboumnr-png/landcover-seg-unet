@@ -62,7 +62,7 @@ def build_engine(
     context: EngineBuildContext,
     config: EngineBuildConfig,
     runtime_state: state.EngineState,
-    callbacks: typing.Sequence[object],
+    dispatcher: common.SessionObserverLike,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> engine.EpochRunner:
     '''
@@ -94,7 +94,7 @@ def build_engine(
         engine=batch_executor,
         engine_state=runtime_state,
         components=context.components,
-        callbacks=callbacks,
+        dispatcher=dispatcher,
         device=context.device,
         grad_clip_norm=config.grad_clip_norm,
         update_every=config.train_update_every_n_batch,
@@ -105,7 +105,7 @@ def build_engine(
         engine=batch_executor,
         engine_state=runtime_state,
         components=context.components,
-        callbacks=callbacks,
+        dispatcher=dispatcher,
         device=context.device,
         monitor_heads=config.metrics_track_heads,
         dataset=config.evaluation_dataset,

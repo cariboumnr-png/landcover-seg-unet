@@ -95,9 +95,6 @@ class ContinuousRunner(runner.BaseRunner):
         # parse arguments
         self.phase = phase # single phase
         # tracking
-        self._current_epoch: int = -1
-        self._current_metrics: core.EpochResults = core.EpochResults()
-        self._is_phase_end: bool = False
         self._best_value_so_far: float = 0.0
         self._best_epoch_so_far: int = -1
         self._is_best_epoch: bool = False
@@ -147,11 +144,16 @@ class ContinuousRunner(runner.BaseRunner):
             # runner intercepts events to perform side effects
             match e:
 
+                case events.EpochStart(epoch_index=epoch):
+                    self.dispatcher.on_epoch_begin(epoch)
+
                 case events.EpochEnd(epoch_index=epoch):
 
                     # epoch tracking
                     self._current_epoch = epoch
                     self._is_phase_end = epoch==self.phase.num_epochs
+                    # dispatch
+                    self.dispatcher.on_epoch_end(epoch)
 
                 case events.MetricsReport(
                     best_so_far=best_so_far,
@@ -191,18 +193,14 @@ class ContinuousRunner(runner.BaseRunner):
                     return
 
                 case events.CheckpointRequest(tag=tag):
-                    self._save_progress(self.phase.name, is_best=tag=='best')
+                    self._save_progress(
+                        self.phase.name,
+                        self._current_metrics,
+                        is_best=tag=='best'
+                    )
 
     def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
         '''Helper to generate a step dataclass from self trackers.'''
-
-        # depending on whether validation was run for this epoch
-        if self._current_metrics.validation:
-            objective_name=self._current_metrics.validation.monitor_heads_str
-            objective_value=self._current_metrics.validation.target_metrics
-        else:
-            objective_name = 'N/A'
-            objective_value = 0.0
 
         return core.TrainingSessionStep(
             # id/loc
@@ -215,8 +213,8 @@ class ContinuousRunner(runner.BaseRunner):
             is_run_end=self._is_phase_end, # single phase
             stop_reason=reason,
             # metrics
-            objective_name=objective_name,
-            objective_value=objective_value,
+            objective_name=self._current_metrics.target_objective,
+            objective_value=self._current_metrics.target_metrics,
             best_value_so_far=self._best_value_so_far,
             best_epoch_so_far=self._best_epoch_so_far,
             is_best_epoch=self._is_best_epoch,

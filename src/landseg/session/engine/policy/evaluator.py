@@ -115,9 +115,8 @@ class MultiHeadEvaluator(policy.EngineBase):
         performed by the batch execution engine during validation batches.
         Epoch-level computation and interpretation are performed here.
 
-        Lifecycle callback hooks (e.g., `on_validation_begin`,
-        `on_validation_batch_begin`, `on_validation_end`) are emitted
-        as semantic markers for observation and side effects.
+        Lifecycle callback hooks are emitted as semantic markers for
+        observation and side effects.
 
         Returns:
             A mapping from head name to its finalized validation metrics.
@@ -128,11 +127,9 @@ class MultiHeadEvaluator(policy.EngineBase):
             return None
 
         # validation phase begin
-        self._emit('on_validation_begin')
+        self.dispatcher.on_val_policy_begin()
         # set model to evaluation mode
         self.model.eval()
-        # reset evaluation states
-        self.state.epoch.eval_stats.clear()
         # reset per-head confusion matrix from active heads
         assert self.state.heads.active_hmetrics is not None
         for metrics_mod in self.state.heads.active_hmetrics.values():
@@ -150,15 +147,16 @@ class MultiHeadEvaluator(policy.EngineBase):
         for bidx, batch in enumerate(dataloader, start=1):
 
             # batch start
-            self._emit('on_validation_batch_begin', bidx, batch)
+            self.dispatcher.on_batch_begin('Validating', bidx)
             self._batch_reset(bidx, batch)
 
             # delegate to batch executor
             self.engine.run_validate_batch()
+            self.dispatcher.on_val_batch_end()
 
         # val phase end
         self._compute_iou()
-        self._emit('on_validation_end')
+        self.dispatcher.on_val_policy_end(self.results)
         return self.results
 
     def infer(self, epoch: int) -> None:
@@ -182,25 +180,25 @@ class MultiHeadEvaluator(policy.EngineBase):
             return
 
         # infer phase begin
-        self._emit('on_inference_begin')
+        self.dispatcher.on_infer_policy_begin()
         # set model to evaluation mode
         self.model.eval()
-        # reset evaluation states
-        self.state.epoch.eval_stats.clear()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
         for bidx, batch in enumerate(self.dataloaders.test, start=1):
 
             # batch start
-            self._emit('on_inference_batch_begin', bidx, batch)
+            self.dispatcher.on_batch_begin('Inferring', bidx)
             self._batch_reset(bidx, batch)
 
             # delegate to batch executor
             self.engine.run_infer_batch()
+            self.dispatcher.on_infer_batch_end()
 
         # inference phase end
-        self._emit('on_inference_end')
+        self.results.head_inference = self.state.batch_out.infer_maps
+        self.dispatcher.on_infer_policy_end(self.results)
 
     # ----- validation phase
     def _compute_iou(self) -> None:
@@ -216,17 +214,9 @@ class MultiHeadEvaluator(policy.EngineBase):
         # sanity
         assert self.state.heads.active_hmetrics is not None
 
-        # retrieve iou metrics from monitor heads
-        metrics_str: dict[str, list[str]] = {}
-
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
             self.results.head_metrics[head] = metrics_module.metrics
             # collect per head metrics formatted strings
-            metrics_str[head] = metrics_module.metrics.as_str_list
-
-        # assign to state summary
-        summary = self.state.epoch.eval_stats
-        summary.target_metrics = self.results.target_metrics
-        summary.head_metrics_str = metrics_str
+            # metrics_str[head] = metrics_module.metrics.as_str_list

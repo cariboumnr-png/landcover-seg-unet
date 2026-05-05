@@ -19,64 +19,71 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
-# pylint: disable=unused-argument
-
 '''
-Defines the base callback interface and supporting state protocols.
-
-This module provides:
-- A `Callback` base class that users can subclass to inject custom
-  behavior at specific stages of training, validation, and inference.
-- A set of `Protocol` definitions that describe the expected structure
-  of the engine state object passed to callbacks.
-
-The design relies on structural typing (via `typing.Protocol`) to keep
-the engine loosely coupled while ensuring type safety and clarity of
-expected interfaces.
+Callback dispatcher.
 '''
 
 # local imports
 import landseg.core as core
 import landseg.session.common as common
+import landseg.session.instrumentation.callbacks as callbacks
 
-# --------------------------------Public  Class--------------------------------
-class BaseCallback(common.SessionObserverLike):
-    '''
-    Base class for defining dashboarding callbacks.
+class CallbackDispatcher(common.SessionObserverLike):
+    '''Broadcast engine events to all registered passive callbacks.'''
 
-    Subclasses can override any of the hook methods to execute custom
-    logic at specific points in the training, validation, or inference
-    lifecycle. All methods are optional; only override those needed.
-    '''
+    def __init__(self, cbs: list[callbacks.BaseCallback] | None = None):
+        '''Initialize the dispatcher'''
 
-    def __init__(self, *, verbose: bool = True):
-        '''
-        Initializes the callback.
+        self.callbacks = cbs or []
 
-        Args:
-            verbose: If True, enables optional logging or debug output
-                in callback implementations..
-        '''
-        self.verbose = verbose
+    def register(self, callback: callbacks.BaseCallback):
+        '''Attach a new callback dynamically.'''
 
-    # base methods
-    # --- epoch begins
+        if not callback in self.callbacks:
+            self.callbacks.append(callback)
+
+    def deregister(self, callback: callbacks.BaseCallback):
+        '''Remove a callback.'''
+
+        if callback in self.callbacks:
+            self.callbacks.remove(callback)
+
+    # megaphone methods
     def on_epoch_begin(self, epoch: int) -> None: ...
+
     # --- policy begins
     def on_train_policy_begin(self) -> None: ...
+
     def on_val_policy_begin(self) -> None: ...
+
     def on_infer_policy_begin(self) -> None: ...
+
     # --- batch begins
-    def on_batch_begin(self, action: str, bidx: int) -> None: ...
+    def on_batch_begin(self, action: str, bidx: int) -> None:
+        for cb in self.callbacks:
+            cb.on_batch_begin(action, bidx)
+
     # --- batch ends
-    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None: ...
+    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_train_batch_end(results)
+
     def on_val_batch_end(self) -> None: ...
+
     def on_infer_batch_end(self) -> None: ...
+
     # --- policy ends
-    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None: ...
-    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
-    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
+    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_train_policy_end(results)
+
+    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_val_policy_end(results)
+
+    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None:
+        for cb in self.callbacks:
+            cb.on_infer_policy_end(results)
+
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...

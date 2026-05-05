@@ -19,22 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
-'''Validation phase callback class.'''
+'''Console printing callback.'''
 
 # local imports
 import landseg.session.instrumentation.callbacks as callbacks
 
-class ValCallback(callbacks.Callback):
-    '''Validation pipeline: parse - forward - compute metrics.'''
+class ConsoleCallback(callbacks.BaseCallback):
+    '''Progress tracker.'''
 
-    def on_validation_begin(self) -> None: ...
-
-    def on_validation_batch_begin(self, bidx: int, batch: tuple) -> None: ...
-
-    def on_validation_batch_forward(self) -> None: ...
-
-    def on_validation_batch_end(self) -> None: ...
-
-    def on_validation_end(self) -> None: ...
+    def on_batch_begin(self, action: str, bidx: int) -> None:
+        if self.verbose:
+            print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)

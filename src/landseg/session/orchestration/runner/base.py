@@ -109,6 +109,7 @@ class BaseRunner(abc.ABC):
         self,
         epoch_runner: common.EpochEngineLike,
         base_config: BaseRunnerConfig,
+        dispatcher: common.SessionObserverLike,
         *,
         logger: utils.Logger,
     ):
@@ -141,15 +142,19 @@ class BaseRunner(abc.ABC):
         # parse arguments
         self.epoch_runner = epoch_runner
         self.config = base_config
+        self.dispatcher = dispatcher
         self.tracking = policy.TrackingConfig(
                 track_mode=self.config.track_mode,
                 enable_early_stop=self.config.enable_early_stop,
                 patience_epochs=self.config.patience_epochs,
                 delta=self.config.delta,
             )
-
         # a child from base logger
         self.logger = logger.get_child('phase')
+        # internal tracking attributes
+        self._is_phase_end: bool = False
+        self._current_epoch: int = -1
+        self._current_metrics: core.EpochResults = core.EpochResults() # epoch
 
     @property
     def trainer(self) -> common.EngineBaseLike:
@@ -215,11 +220,11 @@ class BaseRunner(abc.ABC):
             raise RuntimeError('Training produced no steps')
         if not last_step.is_run_end:
             raise RuntimeError('Training did not terminate cleanly')
-        if not (last_step.metrics and last_step.metrics.validation):
+        if not (last_step.metrics and last_step.metrics.evaluation):
             raise RuntimeError('Invalid validation results')
 
         # return the final scalar
-        return last_step.metrics.validation.target_metrics
+        return last_step.metrics.evaluation.target_metrics
 
     def _log_metrics(
         self,
@@ -234,14 +239,14 @@ class BaseRunner(abc.ABC):
         # training metrics is always neends
         assert metrics.training
         # validation may or may not be run every epoch
-        if metrics.validation:
-            mean_iou = metrics.validation.target_metrics
+        if metrics.evaluation:
+            mean_iou = metrics.evaluation.target_metrics
         else:
             mean_iou = 0.0
         # best so far
         best_epoch, best_value = best_so_far
         msg = (
-            f'|Total Loss: {metrics.training.mean_total_loss:.4f}|'
+            f'|Total Loss: {metrics.training.total_loss:.4f}|'
             f'Mean IoU: {mean_iou:.4f}|'
             f'Best Epoch: {best_epoch}|Best Value: {best_value:.4f}|'
         )
@@ -252,6 +257,7 @@ class BaseRunner(abc.ABC):
     def _save_progress(
         self,
         phase_name: str,
+        metrics: core.EpochResults,
         *,
         is_best: bool
     ) -> None:
@@ -279,8 +285,9 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
+        validation = metrics.evaluation
         ckpt_meta: artifacts.CheckpointMeta = {
-            'metric': self.trainer.state.progress.current_metrics,
+            'metric': validation.target_metrics if validation else 0.0,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }

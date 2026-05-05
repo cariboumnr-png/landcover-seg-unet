@@ -33,16 +33,14 @@ import landseg.session.common.alias as alias
 # alias
 field = dataclasses.field
 
-# ----- .progress tracking
+# ----- progress tracking
 @dataclasses.dataclass
 class _Progress:
     '''Training progress counters (epoch/step/global).'''
     epoch: int = 0
-    epoch_step: int = 0
     global_step: int = 0
-    current_metrics: float = 0.0
 
-# ----- .heads management
+# ----- heads management
 @dataclasses.dataclass
 class _Heads:
     '''State for multihead selection, freezing, and active specs.'''
@@ -53,7 +51,7 @@ class _Heads:
     active_hloss: dict[str, common.CompositeLossLike] | None = None
     active_hmetrics: dict[str, common.ConfusionMatrixLike] | None = None
 
-# ----- .batch context
+# ----- batch context
 @dataclasses.dataclass
 class _BatchContex:
     '''Per-batch input/context (indices, tensors, and domain info).'''
@@ -77,7 +75,7 @@ class _BatchContex:
         self.y_dict.clear()
         self.domain.clear()
 
-# ----- .batch output
+# ----- batch output
 @dataclasses.dataclass
 class _BatchOutput:
     '''Per-batch outputs: predictions and losses.'''
@@ -85,6 +83,7 @@ class _BatchOutput:
     preds: dict[str, torch.Tensor] = field(default_factory=dict)
     total_loss: torch.Tensor = torch.empty(0)
     head_loss: dict[str, float] = field(default_factory=dict)
+    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
 
     def refresh(self, bidx: int):
         '''Clear outputs to start a new batch.'''
@@ -92,56 +91,29 @@ class _BatchOutput:
         self.preds.clear()                          # clear the old batch
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
+        # note: we do not clear inference results mapping (batch aggregation)
 
-# ----- .epoch level stats
+# ----- optimization runtime status
 @dataclasses.dataclass
-class _TrainEpoch:
-    '''Training results summary.'''
-    total_loss: float = 0.0
-    head_losses_str: str = ''
-    updated: bool = False
-
-    def clear(self) -> None:
-        '''Clear container.'''
-        self.total_loss = 0.0
-        self.head_losses_str = ''
-        self.updated = False
-
-@dataclasses.dataclass
-class _EvaluateEpoch:
-    '''Validation summary for an epoch (per-head metrics).'''
-    target_metrics: float = 0.0
-    head_metrics_str: dict[str, list[str]] = field(default_factory=dict)
-    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
-
-    def clear(self) -> None:
-        '''Clear container.'''
-        self.target_metrics = 0.0
-        self.head_metrics_str.clear()
-        self.infer_maps.clear()
-
-@dataclasses.dataclass
-class _EpochStats:
-    '''Summaries train/val/infer.'''
-    train_stats: _TrainEpoch = field(default_factory=_TrainEpoch)
-    eval_stats: _EvaluateEpoch = field(default_factory=_EvaluateEpoch)
-
-# ----- .optimization state
-@dataclasses.dataclass
-class _OptimState:
-    '''Optimization state (e.g., AMP GradScaler).'''
+class _OptimRuntime:
+    '''Runtime optimizer state (AMP scaler and LR snapshot).'''
     scaler: torch.GradScaler
+    lrs: list[float] = field(default_factory=list)
+
+    @property
+    def lr(self) -> float | None:
+        '''Return the primary Learning Rate value.'''
+        return self.lrs[0] if self.lrs else None
 
 # ----- Runtime state (composite)
 @dataclasses.dataclass
 class EngineState:
     '''Composite training state with sensible defaults.'''
-    optim: _OptimState
+    optim: _OptimRuntime
     progress: _Progress = field(default_factory=_Progress)
     heads: _Heads = field(default_factory=_Heads)
     batch_cxt: _BatchContex = field(default_factory=_BatchContex)
     batch_out: _BatchOutput = field(default_factory=_BatchOutput)
-    epoch: _EpochStats = field(default_factory=_EpochStats)
 
 # -------------------------------Public Function-------------------------------
 def initialize_state(
@@ -155,7 +127,7 @@ def initialize_state(
 
     # create an instance with default values
     runtime_state = EngineState(
-        optim=_OptimState(
+        optim=_OptimRuntime(
             scaler=torch.GradScaler(device=device, enabled=use_amp)
         )
     )

@@ -124,7 +124,7 @@ def evaluate(config: configs.RootConfig):
     )
 
     # evaluate
-    evaluation_results = runner.run_epoch(0).validation # will always run
+    evaluation_results = runner.run_epoch(0).evaluation # will always run
     assert evaluation_results
     metrics = {h: m.as_dict for h, m in evaluation_results.head_metrics.items()}
 

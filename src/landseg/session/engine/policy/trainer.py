@@ -90,7 +90,13 @@ class MultiHeadTrainer(policy.EngineBase):
         self.update_every = update_every
 
         # init the epoch results container with all heads
-        self.results = core.TrainerEpochResults(self.state.heads.all_heads)
+        self.results = core.TrainerEpochResults(
+            all_heads=self.state.heads.all_heads,
+            current_lr=self.state.optim.lr
+        )
+        # epoch-level accumulated loss tracker
+        self._loss: float
+        self._head_losses: dict[str, float]
 
     def train_one_epoch(self, epoch: int) -> core.TrainerEpochResults:
         '''
@@ -109,9 +115,7 @@ class MultiHeadTrainer(policy.EngineBase):
         accumulation) is performed by the batch execution engine and
         reflected in shared RuntimeState.
 
-        Lifecycle callback hooks (e.g., `on_train_epoch_begin`,
-        `on_train_backward`, `on_train_optimizer_step`,
-        `on_train_batch_end`) are emitted as semantic markers to allow
+        Lifecycle callback hooks are emitted as semantic markers to allow
         observation and side effects, but do not invoke or control
         execution logic.
 
@@ -121,20 +125,23 @@ class MultiHeadTrainer(policy.EngineBase):
         '''
 
         # training phase begin
-        self._emit('on_train_epoch_begin', epoch)
+        self.dispatcher.on_train_policy_begin()
         # set model to train mode
         self.model.train()
-        # reset training summary
-        self.state.epoch.train_stats.clear()
         # reset results container (avoid carry-over from last epoch)
         self.results.clear()
+        # update epoch tracker
+        self.state.progress.epoch = epoch
+        # reset loss trackers
+        self._loss = 0.0
+        self._head_losses = {h: 0.0 for h in self.state.heads.all_heads}
 
         # interate through training data batches
         assert self.dataloaders.train, 'Training dataset not provided'
         for bidx, batch in enumerate(self.dataloaders.train, start=1):
 
             # batch start
-            self._emit('on_train_batch_begin', bidx, batch)
+            self.dispatcher.on_batch_begin('Training', bidx)
             self._batch_reset(bidx, batch)
 
             # reset optimizer gradient
@@ -149,7 +156,10 @@ class MultiHeadTrainer(policy.EngineBase):
                 self.state.optim.scaler.scale(total).backward()
             else:
                 total.backward()
-            self._emit('on_train_backward')
+            # add to interal loss trackers
+            self._loss += total.detach().item()
+            for head, loss in self.state.batch_out.head_loss.items():
+                self._head_losses[head] += loss
 
             # gradient clipping
             optimizer = self.optimization.optimizer
@@ -157,7 +167,6 @@ class MultiHeadTrainer(policy.EngineBase):
             if self.engine.config.use_amp:
                 self.state.optim.scaler.unscale_(optimizer)
             self._clip_grad()
-            self._emit('on_train_before_optimizer_step')
 
             # optimizer step
             optimizer = self.optimization.optimizer
@@ -168,27 +177,23 @@ class MultiHeadTrainer(policy.EngineBase):
             # no AMP
             else:
                 self.optimization.optimizer.step()
-            self._emit('on_train_optimizer_step')
+
+            # scheduler step (if present)
+            if self.optimization.scheduler is not None:
+                self.optimization.scheduler.step()
+
+            # increment global step counter
+            self.state.progress.global_step += 1
+            # snapshopt learning rate
+            self.state.optim.lrs = [g['lr'] for g in optimizer.param_groups]
 
             # batch end
-            # accumulate total loss
-            batch_loss = float(self.state.batch_out.total_loss.detach().item())
-            self.results.total_loss += batch_loss
-            # accumulate per head loss
-            for head, loss in self.state.batch_out.head_loss.items():
-                if head in self.results.all_heads:
-                    self.results.head_losses[head] += loss
-            # update bidx
-            self.results.current_bidx = bidx
-
-            # update train logs if at interval (decided by trainer method)
-            self._update_training_stats(flush=False)
-            self._emit('on_train_batch_end')
+            self._update_training_stats() # depending on frequency config
+            self.dispatcher.on_train_batch_end(self.results)
 
         # training phase end
-        # - update logs and loss (total/per-head) for the epoch
-        self._update_training_stats(flush=True)
-        self._emit('on_train_epoch_end')
+        self._update_training_stats(flush=True) # force update
+        self.dispatcher.on_train_policy_end(self.results)
         return self.results
 
     # ----- training phase
@@ -208,22 +213,25 @@ class MultiHeadTrainer(policy.EngineBase):
         Set `flush=True` to flush results at end of a training epoch.
         '''
 
-        # get current batch id
+        # get current epoch batch id
         bidx = self.state.batch_cxt.bidx
-        # create log dict
-        logs = {}
-        # update log at interval
+        n = max(1, bidx) # safe denominator
+        # update results container
         if flush or bidx % self.update_every == 0:
-            logs['Total_Loss'] = self.results.mean_total_loss
-            # per-head losses
-            for k, v in self.results.mean_head_losses.items():
-                if v > 0: # only report non-zero losses
-                    logs[f'Head_Loss_{k}'] = float(v)
-            # pretty string of the losses
-            text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
-            text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            self.state.epoch.train_stats.total_loss = logs['Total_Loss']
-            self.state.epoch.train_stats.head_losses_str = text
-            self.state.epoch.train_stats.updated = True
-        else:
-            self.state.epoch.train_stats.updated = False # reset flag
+            # --- total loss
+            self.results.total_loss = self._loss / n
+            # --- perhead loss
+            for head in self.state.heads.all_heads:
+                self.results.head_losses[head] = self._head_losses[head] / n
+            # --- global step
+            self.results.last_updated = self.state.progress.global_step
+            # --- current learning rate
+            self.results.current_lr = self.state.optim.lr
+
+            # # pretty string of the losses
+            # logs = {}
+            # logs['total'] = self.results.total_loss
+            # logs = {h: l for h, l in self.results.head_losses.items() if l > 0}
+            # text_list = [f'{k}: {v:.4f}' for k, v in logs.items()]
+            # text = f'batch_{bidx:04d} | ' + '|'.join(text_list)
+            # print(text)
