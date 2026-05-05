@@ -50,7 +50,9 @@ class CallbackDispatcher(common.SessionObserverLike):
 
     # megaphone methods
     # --- training phase begins
-    def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
+    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+        for cb in self.callbacks:
+            cb.on_train_phase_begin(phase)
 
     # --- training step begins
     def on_train_step_begin(self) -> None: ...
