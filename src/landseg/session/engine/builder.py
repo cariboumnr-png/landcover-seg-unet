@@ -62,7 +62,7 @@ def build_engine(
     context: EngineBuildContext,
     config: EngineBuildConfig,
     runtime_state: state.EngineState,
-    dispatcher: common.EngineDispatcher,
+    dispatcher: common.SessionObserverLike,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> engine.EpochRunner:
     '''

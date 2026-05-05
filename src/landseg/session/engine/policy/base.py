@@ -60,7 +60,7 @@ class EngineBase:
         engine: batch.BatchExecutionEngine,
         engine_state: state.EngineState,
         components: common.ComponentsLike,
-        dispatcher: common.EngineDispatcher,
+        dispatcher: common.SessionObserverLike,
         *,
         device: str,
     ):
