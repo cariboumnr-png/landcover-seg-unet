@@ -38,14 +38,14 @@ __all__ = [
     'ComponentsLike',
     'ConfusionMatrixLike',
     'DataLoadersLike',
-    'EngineDispatcher',
+    'SessionObserverLike',
     'EngineBaseLike',
     'EpochEngineLike',
     'SpecsLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .instrument import EngineDispatcher
+    from .events import SessionObserverLike
     from .comps import (
         CompositeLossLike,
         ComponentsLike,
@@ -57,9 +57,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'EngineDispatcher'}:
-        return getattr(importlib.import_module('.instrument', __package__), name)
-
     if name in {
         'CompositeLossLike',
         'ComponentsLike',
@@ -68,6 +65,9 @@ def __getattr__(name: str):
         'SpecsLike',
     }:
         return getattr(importlib.import_module('.comps', __package__), name)
+
+    if name in {'SessionObserverLike'}:
+        return getattr(importlib.import_module('.events', __package__), name)
 
     if name in {'EpochEngineLike', 'EngineBaseLike'}:
         return getattr(importlib.import_module('.engine', __package__), name)
