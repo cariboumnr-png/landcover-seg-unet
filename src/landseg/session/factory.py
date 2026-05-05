@@ -250,7 +250,9 @@ def _build_partial_epoch_runner(
     )
 
     # add callbacks instrumentation
-    callbacks = instrument.build_callbacks(verbose=context.verbose_runner)
+    callback_dispatcher = instrument.CallbackDispatcher([
+        instrument.ConsoleCallback(verbose=context.verbose_runner)
+    ])
 
     # build runner context and config
     engine_build_context = engine.EngineBuildContext(
@@ -277,7 +279,7 @@ def _build_partial_epoch_runner(
         context=engine_build_context,
         config=engine_build_config,
         runtime_state=runtime_state,
-        callbacks=callbacks,
+        dispatcher=callback_dispatcher,
     )
 
 def _build_partial_training_runner(
