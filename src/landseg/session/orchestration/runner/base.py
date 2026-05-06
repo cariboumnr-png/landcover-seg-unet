@@ -47,9 +47,8 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
-import landseg.utils as utils
+import landseg.session.orchestration.protocols as protocols
 
 @dataclasses.dataclass
 class BaseRunnerConfig:
@@ -107,11 +106,9 @@ class BaseRunner(abc.ABC):
 
     def __init__(
         self,
-        epoch_runner: common.EpochEngineLike,
+        epoch_runner: protocols.EpochEngineLike,
         base_config: BaseRunnerConfig,
         dispatcher: common.SessionObserverLike,
-        *,
-        logger: utils.Logger,
     ):
         '''
         Initialize the base runner.
@@ -149,21 +146,19 @@ class BaseRunner(abc.ABC):
                 patience_epochs=self.config.patience_epochs,
                 delta=self.config.delta,
             )
-        # a child from base logger
-        self.logger = logger.get_child('phase')
         # internal tracking attributes
         self._is_phase_end: bool = False
         self._current_epoch: int = -1
         self._current_metrics: core.EpochResults = core.EpochResults() # epoch
 
     @property
-    def trainer(self) -> common.EngineBaseLike:
+    def trainer(self) -> protocols.EngineBaseLike:
         '''Return training policy engine.'''
         assert self.epoch_runner.trainer # typing
         return self.epoch_runner.trainer
 
     @property
-    def evaluator(self) -> common.EngineBaseLike:
+    def evaluator(self) -> protocols.EngineBaseLike:
         '''Return evaluating policy engine.'''
         assert self.epoch_runner.evaluator # typing
         return self.epoch_runner.evaluator
@@ -226,38 +221,9 @@ class BaseRunner(abc.ABC):
         # return the final scalar
         return last_step.metrics.evaluation.target_metrics
 
-    def _log_metrics(
-        self,
-        *,
-        epoch_idx: int,
-        total_epochs: int,
-        best_so_far: tuple[int, float],
-        metrics: core.EpochResults
-    ) -> None:
-        '''Parse and log a concise epoch results summary to console.'''
-
-        # training metrics is always neends
-        assert metrics.training
-        # validation may or may not be run every epoch
-        if metrics.evaluation:
-            mean_iou = metrics.evaluation.target_metrics
-        else:
-            mean_iou = 0.0
-        # best so far
-        best_epoch, best_value = best_so_far
-        msg = (
-            f'|Total Loss: {metrics.training.total_loss:.4f}|'
-            f'Mean IoU: {mean_iou:.4f}|'
-            f'Best Epoch: {best_epoch}|Best Value: {best_value:.4f}|'
-        )
-        t = total_epochs
-        n = len(str(t))
-        self.logger.log('INFO', f'[Epoch {epoch_idx:0{n}d}/{t}] {msg}')
-
     def _save_progress(
         self,
         phase_name: str,
-        metrics: core.EpochResults,
         *,
         is_best: bool
     ) -> None:
@@ -285,15 +251,14 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
-        validation = metrics.evaluation
+        validation = self._current_metrics.evaluation
         ckpt_meta: artifacts.CheckpointMeta = {
             'metric': validation.target_metrics if validation else 0.0,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }
-        ep = self.trainer.state.progress.epoch
         # always save a '*last.pt'
-        fp = self.paths.last_checkpoint(f'{phase_name}_epoch_{ep}')
+        fp = self.paths.last_checkpoint(f'{phase_name}_epoch')
         artifacts.save_checkpoint(
             model=self.trainer.model,
             fpath=fp,
@@ -301,10 +266,10 @@ class BaseRunner(abc.ABC):
             optimizer=self.trainer.optimization.optimizer,
             scheduler=self.trainer.optimization.scheduler,
         )
-        self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
+        self.dispatcher.on_checkpointing(fp)
         # if this is also the best, save/overwrite the '*.best.pt'
         if is_best:
-            fp = self.paths.best_checkpoint(f'{phase_name}_epoch_{ep}')
+            fp = self.paths.best_checkpoint(f'{phase_name}_epoch')
             artifacts.save_checkpoint(
                 model=self.trainer.model,
                 fpath=fp,
@@ -312,18 +277,4 @@ class BaseRunner(abc.ABC):
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
             )
-            self.logger.log('DEBUG', f'Checkpoint saved: {fp}')
-
-    @staticmethod
-    def _print_phase(phase: phases.PhaseLike):
-        '''Pretty print a phase to console.'''
-
-        print('__Phase details__')
-        ss = '\n'.join([
-            f'- Phase Name:\t{phase.name}',
-            f'- Max Epochs:\t{phase.num_epochs}',
-            f'- LR Scale:\t{phase.lr_scale}',
-            f'- Active Heads:\t{phase.active_heads}',
-            f'- Frozen Heads:\t{phase.frozen_heads}',
-        ])
-        print(ss)
+            self.dispatcher.on_checkpointing(fp)

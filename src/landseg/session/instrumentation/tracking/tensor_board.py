@@ -20,45 +20,43 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Tensorboard tracker
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
 import typing
+# third-party imports
+import torch.utils.tensorboard as tensorbaord
+# local imports
+import landseg.session.instrumentation.tracking as tracking
 
-__all__ = [
-    # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    'TrackingCallback',
-    # functions
-    # types
-]
-
-# for static check
+#
 if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-    from .tracking import TrackingCallback
+    import numpy.typing
+    import torch
 
-def __getattr__(name: str):
+#
+class TensorBoardTracker(tracking.BaseTracker):
+    '''Tensorboard tracker class.'''
 
-    if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    def __init__(self, uri: str):
+        super().__init__(uri, None)
+        self.writer = tensorbaord.SummaryWriter(log_dir=self.uri)
 
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
+    def log_scalar(self, key: str, value: float, step: int):
+        self.writer.add_scalar(key, value, step)
 
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
+    def log_params(self, key: str, value: typing.Any): ...
+        # not natively supported in TensorBoard
 
-    if name in {'TrackingCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
+    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int):
+        self.writer.add_image(key, image, step)
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    def log_artifact(self, fpath: str): ...
+        # not implemented here
+
+    def flush(self):
+        self.writer.flush()
+
+    def close(self):
+        self.writer.close()

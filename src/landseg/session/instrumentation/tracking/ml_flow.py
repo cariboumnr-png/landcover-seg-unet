@@ -20,45 +20,49 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Minimal MLFlow tracker
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
 import typing
+# third-party imports
+import mlflow
+# local imports
+import landseg.session.instrumentation.tracking as tracking
 
-__all__ = [
-    # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    'TrackingCallback',
-    # functions
-    # types
-]
-
-# for static check
+#
 if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-    from .tracking import TrackingCallback
+    import numpy.typing
+    import torch
 
-def __getattr__(name: str):
+#
+class MLFlowTracker(tracking.BaseTracker):
+    '''Minimal MLflow tracker for experiment logging.'''
 
-    if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    def __init__(self, uri: str, artifact_path: str):
+        super().__init__(uri, artifact_path)
 
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
+        mlflow.set_tracking_uri(self.uri)
+        if artifact_path:
+            mlflow.set_experiment(artifact_path)
+        # start run immediately (simple semantics)
+        self._run = mlflow.start_run()
 
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
+    def log_scalar(self, key: str, value: float, step: int):
+        mlflow.log_metric(key, value, step)
 
-    if name in {'TrackingCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
+    def log_params(self, key: str, value: typing.Any):
+        mlflow.log_param(key, value)
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int):
+        # on ops for now
+        pass
+
+    def log_artifact(self, fpath: str):
+        mlflow.log_artifact(fpath)
+
+    def flush(self): ...
+        # MLflow writes immediately; not required
+
+    def close(self):
+        mlflow.end_run()

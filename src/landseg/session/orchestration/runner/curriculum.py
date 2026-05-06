@@ -34,8 +34,8 @@ one per completed epoch.
 import typing
 # local imports
 import landseg.core as core
+import landseg.session.common as common
 import landseg.session.orchestration.events as events
-import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.runner as runner
 
@@ -67,7 +67,7 @@ class CurriculumRunner(runner.BaseRunner):
     def __init__(
         self,
         *,
-        training_phases: typing.Sequence[phases.PhaseLike],
+        training_phases: typing.Sequence[common.PhaseLike],
         **kwargs: typing.Any
     ):
         '''
@@ -118,9 +118,10 @@ class CurriculumRunner(runner.BaseRunner):
         # iterate through provided phases
         for i, phase in enumerate(self.phases):
 
-            # print phase info if verbose
-            if self.config.verbose:
-                self._print_phase(phase)
+            # reset flag
+            self._is_phase_end = False
+            # dispatch at phase begininng
+            self.dispatcher.on_train_phase_begin(phase)
 
             # get phase events stream
             events_stream = policy.PhasePolicy(
@@ -144,7 +145,7 @@ class CurriculumRunner(runner.BaseRunner):
                     case events.EpochStart(epoch_index=epoch):
                         self.dispatcher.on_epoch_begin(epoch)
 
-                    case events.EpochEnd(epoch_index=epoch, metrics=metrics):
+                    case events.EpochEnd(epoch_index=epoch):
 
                         # epoch and run tracking
                         self._current_epoch = epoch
@@ -165,40 +166,35 @@ class CurriculumRunner(runner.BaseRunner):
 
                         # metrics logging
                         self._current_metrics = metrics
-                        self._log_metrics(
-                            epoch_idx=self._current_epoch,
-                            total_epochs=phase.num_epochs,
-                            best_so_far=(best_epoch, best_so_far),
-                            metrics=metrics
-                        )
 
                         # normal yield
-                        yield core.TrainingSessionStep(
+                        step = core.TrainingSessionStep(
                             # id/loc
                             phase_name=phase.name,
                             phase_index=i,
-                            epoch=self._current_epoch,
+                            phase_max_epoch=phase.num_epochs,
+                            epoch_in_phase=self._current_epoch,
                             global_epoch=self._global_epoch,
                             # control
                             is_phase_end=self._is_phase_end,
                             is_run_end=self._is_run_end,
                             stop_reason=None,
                             # metrics
-                            objective_name=self._current_metrics.target_objective,
-                            objective_value=self._current_metrics.target_metrics,
+                            objective_name=metrics.target_objective,
+                            objective_value=metrics.target_metrics,
                             best_value_so_far=best_so_far,
                             best_epoch_so_far=best_epoch,
                             is_best_epoch=is_best_epoch,
                             metrics=metrics,
                         )
+                        self.dispatcher.on_train_step_end(step)
+                        yield step
 
                     case events.CheckpointRequest(tag=tag):
-                        self._save_progress(
-                            phase.name,
-                            self._current_metrics,
-                            is_best=tag=='best'
-                        )
+                        self._save_progress(phase.name, is_best=tag=='best')
 
                 # end of current phase
                 if self._is_phase_end:
+                    reason = 'Max epoch reached'
+                    self.dispatcher.on_train_phase_end(phase.name, reason)
                     break

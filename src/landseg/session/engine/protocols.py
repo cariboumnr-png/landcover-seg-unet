@@ -40,7 +40,7 @@ if typing.TYPE_CHECKING:
 @typing.runtime_checkable
 class ComponentsLike(typing.Protocol):
     @property
-    def dataloaders(self) -> DataLoadersLike:...
+    def dataloaders(self) -> _DataLoadersLike:...
     @property
     def headspecs(self) -> _HeadSpecsLike:...
     @property
@@ -52,7 +52,7 @@ class ComponentsLike(typing.Protocol):
 
 # ---------------------------------dataloaders---------------------------------
 @typing.runtime_checkable
-class DataLoadersLike(typing.Protocol):
+class _DataLoadersLike(typing.Protocol):
     @property
     def train(self) -> 'torch.utils.data.DataLoader | None':...
     @property

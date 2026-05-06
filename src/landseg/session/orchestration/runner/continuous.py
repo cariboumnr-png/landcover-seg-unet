@@ -35,8 +35,8 @@ as a stream of TrainingStep records, one per completed epoch.
 import typing
 # local imports
 import landseg.core as core
+import landseg.session.common as common
 import landseg.session.orchestration.events as events
-import landseg.session.orchestration.phases as phases
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.runner as runner
 
@@ -69,7 +69,7 @@ class ContinuousRunner(runner.BaseRunner):
     def __init__(
         self,
         *,
-        phase: phases.PhaseLike,
+        phase: common.PhaseLike,
         **kwargs: typing.Any
     ):
         '''
@@ -122,9 +122,8 @@ class ContinuousRunner(runner.BaseRunner):
                 `is_run_end == True` upon termination.
         '''
 
-        # print phase info if verbose
-        if self.config.verbose:
-            self._print_phase(self.phase)
+        # dispatch at phase begininng
+        self.dispatcher.on_train_phase_begin(self.phase)
 
         # get phase events stream
         events_stream = policy.PhasePolicy(
@@ -167,13 +166,6 @@ class ContinuousRunner(runner.BaseRunner):
                     self._best_value_so_far=best_so_far
                     self._best_epoch_so_far=best_epoch
                     self._is_best_epoch=is_best_epoch
-                    # metrics logging
-                    self._log_metrics(
-                        epoch_idx=self._current_epoch,
-                        total_epochs=self.phase.num_epochs,
-                        best_so_far=(best_epoch, best_so_far),
-                        metrics=self._current_metrics
-                    )
 
                     # normal yield
                     if not self._is_phase_end:
@@ -181,32 +173,30 @@ class ContinuousRunner(runner.BaseRunner):
                     # yield at the end
                     else:
                         reason = 'Max epoch reached'
-                        self.logger.log('INFO', f'Exit training: {reason}')
                         yield self._get_step(reason=reason)
+                        self.dispatcher.on_train_phase_end(self.phase.name, reason)
                         return
 
                 case events.StopRun(reason=reason):
 
                     # yield and exit on stop signal
-                    self.logger.log('INFO', f'Exit training: {reason}')
                     yield self._get_step(reason=reason)
+                    self.dispatcher.on_train_phase_end(self.phase.name, reason)
                     return
 
                 case events.CheckpointRequest(tag=tag):
-                    self._save_progress(
-                        self.phase.name,
-                        self._current_metrics,
-                        is_best=tag=='best'
-                    )
+                    self._save_progress(self.phase.name, is_best=tag=='best')
 
     def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
         '''Helper to generate a step dataclass from self trackers.'''
 
-        return core.TrainingSessionStep(
+        # poplulate step results container
+        step = core.TrainingSessionStep(
             # id/loc
             phase_name=self.phase.name,
             phase_index=0,
-            epoch=self._current_epoch,
+            phase_max_epoch=self.phase.num_epochs,
+            epoch_in_phase=self._current_epoch,
             global_epoch=self._current_epoch,
             # control
             is_phase_end=self._is_phase_end,
@@ -220,3 +210,6 @@ class ContinuousRunner(runner.BaseRunner):
             is_best_epoch=self._is_best_epoch,
             metrics=self._current_metrics,
         )
+        # when this method is called it means this training step is done
+        self.dispatcher.on_train_step_end(step)
+        return step

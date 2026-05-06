@@ -19,14 +19,57 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Console printing callback.'''
+'''Tracking callback'''
 
+# standard imports
+import typing
 # local imports
+import landseg.core as core
+import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.tracking as tracking
 
-class ConsoleCallback(callbacks.BaseCallback):
-    '''Progress tracker.'''
+class TrackingCallback(callbacks.BaseCallback):
+    '''Tracking callback.'''
 
-    def on_batch_begin(self, action: str, bidx: int) -> None:
-        if self.verbose:
-            print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
+    def __init__(
+        self,
+        trackers: list[typing.Literal['tb', 'mlflow']],
+        uri: str,
+        # artifact_path: str | None = None,
+        **kwargs
+    ):
+        '''Initialize the callback.'''
+
+        super().__init__(**kwargs)
+        self._trackers: list[tracking.BaseTracker] = []
+        if 'tb' in trackers:
+            self._trackers.append(tracking.TensorBoardTracker(uri))
+
+    def on_train_phase_begin(self, phase: common.PhaseLike): ...
+
+    def on_batch_begin(self, action: str, bidx: int): ...
+
+    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
+        if not results.metrics_updated:
+            return
+        step = results.global_step
+        for tracker in self._trackers:
+            tracker.log_scalar('total_loss', results.total_loss, step)
+            tracker.log_scalar('lr', results.current_lr or 0.0, step)
+            tracker.flush()
+
+    def on_train_step_end(self, results: core.TrainingSessionStep):
+        metrics = results.metrics
+        phase = results.phase_name
+        step = results.epoch_in_phase
+        for tracker in self._trackers:
+            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
+
+    def on_train_phase_end(self, phase: str, reason: str): ...
+
+    def on_train_end(self) -> None:
+        for tracker in self._trackers:
+            tracker.close()
+
+    def on_checkpointing(self, fp: str): ...

@@ -19,8 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+
 '''
-Top-level namespace for `landseg.session.orchestration.phases`.
+Top-level namespace for `landseg.session.instrumentation.callbacks`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,18 +33,28 @@ import typing
 
 __all__ = [
     # classes
-    'PhaseLike',
-    'PhaseProfile',
+    'BaseTracker',
+    'MLFlowTracker',
+    'TensorBoardTracker'
     # functions
     # types
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import PhaseLike, PhaseProfile
+    from .base import BaseTracker
+    from .ml_flow import MLFlowTracker
+    from .tensor_board import TensorBoardTracker
 
 def __getattr__(name: str):
 
-    if name in {'PhaseLike', 'PhaseProfile'}:
+    if name in {'BaseTracker'}:
         return getattr(importlib.import_module('.base', __package__), name)
+
+    if name in {'MLFlowTracker'}:
+        return getattr(importlib.import_module('ml_flow', __package__), name)
+
+    if name in {'TensorBoardTracker'}:
+        return getattr(importlib.import_module('.tensor_board', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

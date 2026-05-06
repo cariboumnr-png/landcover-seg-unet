@@ -19,46 +19,35 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+'''
+Base tracker class
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
+import abc
 import typing
 
-__all__ = [
-    # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    'TrackingCallback',
-    # functions
-    # types
-]
-
-# for static check
+#
 if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-    from .tracking import TrackingCallback
+    import numpy.typing
+    import torch
 
-def __getattr__(name: str):
-
-    if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
-
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
-
-    if name in {'TrackingCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class BaseTracker(abc.ABC):
+    '''Interface of the base tracker.'''
+    def __init__(self, uri: str, artifact_path: str | None = None):
+        self.uri = uri
+        self.artifact_path = artifact_path
+    @abc.abstractmethod
+    def log_scalar(self, key: str, value: float, step: int): ...
+    @abc.abstractmethod
+    def log_params(self, key: str, value: typing.Any): ...
+    @abc.abstractmethod
+    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int): ...
+    @abc.abstractmethod
+    def log_artifact(self, fpath: str): ...
+    @abc.abstractmethod
+    def flush(self): ...
+    @abc.abstractmethod
+    def close(self): ...

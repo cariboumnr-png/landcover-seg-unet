@@ -49,6 +49,15 @@ class CallbackDispatcher(common.SessionObserverLike):
             self.callbacks.remove(callback)
 
     # megaphone methods
+    # --- training phase begins
+    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+        for cb in self.callbacks:
+            cb.on_train_phase_begin(phase)
+
+    # --- training step begins
+    def on_train_step_begin(self) -> None: ...
+
+    # --- epoch begins
     def on_epoch_begin(self, epoch: int) -> None: ...
 
     # --- policy begins
@@ -64,9 +73,9 @@ class CallbackDispatcher(common.SessionObserverLike):
             cb.on_batch_begin(action, bidx)
 
     # --- batch ends
-    def on_train_batch_end(self, results: core.TrainerEpochResults) -> None:
+    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
         for cb in self.callbacks:
-            cb.on_train_batch_end(results)
+            cb.on_train_batch_end(bidx, results)
 
     def on_val_batch_end(self) -> None: ...
 
@@ -87,3 +96,23 @@ class CallbackDispatcher(common.SessionObserverLike):
 
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
+
+    # --- training step ends
+    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+        for cb in self.callbacks:
+            cb.on_train_step_end(results)
+
+    # --- training phase ends
+    def on_train_phase_end(self, phase: str, reason: str) -> None:
+        for cb in self.callbacks:
+            cb.on_train_phase_end(phase, reason)
+
+    # --- training end
+    def on_train_end(self) -> None:
+        for cb in self.callbacks:
+            cb.on_train_end()
+
+    # --- utilities
+    def on_checkpointing(self, fp: str) -> None:
+        for cb in self.callbacks:
+            cb.on_checkpointing(fp)

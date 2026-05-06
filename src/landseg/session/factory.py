@@ -104,9 +104,9 @@ class SessionConfigShape(typing.Protocol):
     @property
     def runtime(self) -> configs.RuntimeConfigLike: ...
     @property
-    def single_phase(self) -> orchestration.PhaseLike: ...
+    def single_phase(self) -> common.PhaseLike: ...
     @property
-    def curriculum(self) -> typing.Sequence[orchestration.PhaseLike]: ...
+    def curriculum(self) -> typing.Sequence[common.PhaseLike]: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -148,7 +148,7 @@ def build_overfit_session(
 
     # callback dispatcher
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
     # partial epoch runner
     epoch_runner_partial = _build_partial_epoch_runner(
@@ -175,7 +175,7 @@ def build_evaluate_session(
 
     # callback dispatcher
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
     # partial epoch runner
     epoch_runner_partial = _build_partial_epoch_runner(
@@ -199,8 +199,10 @@ def build_continous_training_session(
     '''doc'''
 
     # callback dispatcher
+    assert context.session_paths, 'Session paths manager not provided'
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner),
+        instrument.TrackingCallback(['tb'], context.session_paths.logs)
     ])
     # partial training runner
     training_runner_partial = _build_partial_training_runner(
@@ -230,8 +232,10 @@ def build_curriculum_training_session(
     '''doc'''
 
     # callback dispatcher
+    assert context.session_paths, 'Session paths manager not provided'
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner),
+        instrument.TrackingCallback(['tb'], context.session_paths.logs)
     ])
     # partial training runner
     training_runner_partial = _build_partial_training_runner(
@@ -341,5 +345,4 @@ def _build_partial_training_runner(
         epoch_runner=epoch_runner,
         base_config=base_config,
         dispatcher=dispatcher,
-        logger=logger
     )

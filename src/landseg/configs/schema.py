@@ -77,7 +77,8 @@ class RootConfig:
         self.foundation.validate()
         self.transform.validate()
         self.models.validate()
-        # TBD
+        self.session.validate()
+        # To be completed
 
     # set parameters
     def set_lr(self, lr: float) -> None:

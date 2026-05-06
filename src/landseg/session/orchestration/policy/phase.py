@@ -33,9 +33,9 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.orchestration.phases as phases
-import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.events as events
+import landseg.session.orchestration.policy as policy
+import landseg.session.orchestration.protocols as protocols
 
 @dataclasses.dataclass
 class TrackingConfig:
@@ -78,8 +78,8 @@ class PhasePolicy:
     def __init__(
         self,
         *,
-        epoch_runner: common.EpochEngineLike,
-        phase_config: phases.PhaseLike,
+        epoch_runner: protocols.EpochEngineLike,
+        phase_config: common.PhaseLike,
         track_config: TrackingConfig,
     ):
         '''
@@ -159,12 +159,12 @@ class PhasePolicy:
             else:
                 tracked = (0.0, -1, False)
 
-            # report tracking results
-            yield events.MetricsReport(*tracked, metrics)
-
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
             yield events.CheckpointRequest(tag)
+
+            # report tracking results
+            yield events.MetricsReport(*tracked, metrics)
 
             # early stop check
             if not self.track.enable_early_stop:

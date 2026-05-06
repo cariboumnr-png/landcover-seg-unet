@@ -33,6 +33,7 @@ import landseg.session.engine as engine
 import landseg.session.engine.batch as batch
 import landseg.session.engine.state as state
 import landseg.session.engine.policy as policy
+import landseg.session.engine.protocols as protocols
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -40,7 +41,7 @@ class EngineBuildContext:
     '''Engine building context'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
-    components: common.ComponentsLike
+    components: protocols.ComponentsLike
     device: str
 
 @dataclasses.dataclass

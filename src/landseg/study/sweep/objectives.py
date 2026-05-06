@@ -89,7 +89,7 @@ def make_objective(
             last_value = value
 
             # report intermediate result
-            trial.report(value, step.epoch)
+            trial.report(value, step.epoch_in_phase)
 
             # check pruning condition
             if trial.should_prune():
