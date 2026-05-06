@@ -258,9 +258,8 @@ class BaseRunner(abc.ABC):
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }
-        ep = self.trainer.state.progress.epoch
         # always save a '*last.pt'
-        fp = self.paths.last_checkpoint(f'{phase_name}_epoch_{ep}')
+        fp = self.paths.last_checkpoint(f'{phase_name}_epoch')
         artifacts.save_checkpoint(
             model=self.trainer.model,
             fpath=fp,
@@ -271,7 +270,7 @@ class BaseRunner(abc.ABC):
         self.dispatcher.on_checkpointing(fp)
         # if this is also the best, save/overwrite the '*.best.pt'
         if is_best:
-            fp = self.paths.best_checkpoint(f'{phase_name}_epoch_{ep}')
+            fp = self.paths.best_checkpoint(f'{phase_name}_epoch')
             artifacts.save_checkpoint(
                 model=self.trainer.model,
                 fpath=fp,
