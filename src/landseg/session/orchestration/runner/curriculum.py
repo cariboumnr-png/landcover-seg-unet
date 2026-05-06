@@ -190,11 +190,7 @@ class CurriculumRunner(runner.BaseRunner):
                         yield step
 
                     case events.CheckpointRequest(tag=tag):
-                        self._save_progress(
-                            phase.name,
-                            self._current_metrics,
-                            is_best=tag=='best'
-                        )
+                        self._save_progress(phase.name, is_best=tag=='best')
 
                 # end of current phase
                 if self._is_phase_end:
