@@ -59,7 +59,10 @@ class TrackingCallback(callbacks.BaseCallback):
             tracker.log_scalar('lr', results.current_lr or 0.0, step)
             tracker.flush()
 
-    def on_train_step_end(self, results: core.TrainingSessionStep): ...
+    def on_train_step_end(self, results: core.TrainingSessionStep):
+        step = results.epoch_in_phase
+        for tracker in self._trackers:
+            tracker.log_scalar('mean_IoU', results.metrics.target_metrics, step)
 
     def on_train_phase_end(self, phase: str, reason: str): ...
 
