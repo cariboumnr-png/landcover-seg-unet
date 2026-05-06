@@ -198,3 +198,18 @@ class SessionConfig:
         if schema is None:
             raise ValueError(f'Invalid phase schema: {self.phase_schema}')
         return schema
+
+    def validate(self):
+        '''Session module configs validating and guarding.'''
+
+        # current guards
+        mode = ['continuous', 'curriculum']
+        if self.mode not in mode:
+            raise ValueError(f'Invalid mode: {self.mode}, allowed: {mode}')
+        if self.mode == 'curriculum':
+            if self.runtime.monitor.allow_early_stop:
+                print(
+                    'Warning: allow_early_stop=True is invalid for curriculum'
+                    ' training. It is now being set to False'
+                )
+                self.runtime.monitor.allow_early_stop = False

@@ -32,11 +32,8 @@ import omegaconf
 # local imports
 import landseg.configs as configs
 
-# aliases
-omega = omegaconf.OmegaConf
-
-# register omega resolvers
-omega.register_new_resolver("concat", lambda x, y: x + y)
+# register omegaconf.OmegaConf.resolvers
+omegaconf.OmegaConf.register_new_resolver("concat", lambda x, y: x + y)
 
 def resolve_configs(
     config: omegaconf.DictConfig,
@@ -48,7 +45,7 @@ def resolve_configs(
     config_list: list = []
 
     # add schema - dataclass scaffolding with default dummy values
-    schema = omega.structured(configs.RootConfig)
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     config_list.append(schema)
 
     # add Hydra-composed config
@@ -61,26 +58,26 @@ def resolve_configs(
     # root/src/landseg/execution/resolver.py -> the 4th parent
     user = pathlib.Path(__file__).resolve().parents[3] / 'settings.yaml'
     if os.path.exists(user) and use_additional_settings:
-        user_settings = omega.load(user)
+        user_settings = omegaconf.OmegaConf.load(user)
         assert isinstance(user_settings, omegaconf.DictConfig)
         config_list.append(user_settings)
 
     # add dev settings (optional and untracked)
-    dev = omega.select(config, 'execution.dev_settings', default=None)
+    dev = omegaconf.OmegaConf.select(config, 'execution.dev_settings', default=None)
     if dev and os.path.exists(dev) and use_additional_settings:
-        dev_settings = omega.load(dev)
+        dev_settings = omegaconf.OmegaConf.load(dev)
         assert isinstance(dev_settings, omegaconf.DictConfig)
         config_list.append(dev_settings)
 
     # merging configs in order (last wins)
     # dev -> user -> hydra defaults -> schema defaults
     with omegaconf.open_dict(config):
-        merged = omega.merge(*config_list)
+        merged = omegaconf.OmegaConf.merge(*config_list)
     cfg = typing.cast(omegaconf.DictConfig, merged)
-    omega.resolve(cfg)
+    omegaconf.OmegaConf.resolve(cfg)
 
     # construct and cast config dataclass
-    root = typing.cast(configs.RootConfig, omega.to_object(cfg))
+    root = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
 
     # final validation checks before returning
     root.validate_all()
