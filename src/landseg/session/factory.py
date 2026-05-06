@@ -199,8 +199,10 @@ def build_continous_training_session(
     '''doc'''
 
     # callback dispatcher
+    assert context.session_paths, 'Session paths manager not provided'
     dispatcher = instrument.CallbackDispatcher([
-        instrument.LoggingCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner),
+        instrument.TrackingCallback(['tb'], context.session_paths.logs)
     ])
     # partial training runner
     training_runner_partial = _build_partial_training_runner(
