@@ -144,7 +144,7 @@ class CurriculumRunner(runner.BaseRunner):
                     case events.EpochStart(epoch_index=epoch):
                         self.dispatcher.on_epoch_begin(epoch)
 
-                    case events.EpochEnd(epoch_index=epoch, metrics=metrics):
+                    case events.EpochEnd(epoch_index=epoch):
 
                         # epoch and run tracking
                         self._current_epoch = epoch
