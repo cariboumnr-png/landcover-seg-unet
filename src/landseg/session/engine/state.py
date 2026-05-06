@@ -27,8 +27,8 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
-import landseg.session.common as common
 import landseg.session.common.alias as alias
+import landseg.session.engine.protocols as protocols
 
 # alias
 field = dataclasses.field
@@ -47,9 +47,9 @@ class _Heads:
     all_heads: list[str] = field(default_factory=list)
     active_heads: list[str] | None = None
     frozen_heads: list[str] | None = None
-    active_hspecs: dict[str, common.SpecsLike] | None = None
-    active_hloss: dict[str, common.CompositeLossLike] | None = None
-    active_hmetrics: dict[str, common.ConfusionMatrixLike] | None = None
+    active_hspecs: dict[str, protocols.SpecsLike] | None = None
+    active_hloss: dict[str, protocols.CompositeLossLike] | None = None
+    active_hmetrics: dict[str, protocols.ConfusionMatrixLike] | None = None
 
 # ----- batch context
 @dataclasses.dataclass
