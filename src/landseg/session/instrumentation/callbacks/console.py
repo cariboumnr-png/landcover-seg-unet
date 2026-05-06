@@ -77,5 +77,10 @@ class ConsoleCallback(callbacks.BaseCallback):
             n = len(str(t))
             print(f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}')
 
+    def on_train_phase_end(self, phase: str, reason: str) -> None:
+        if self.verbose:
+            print(f'Exiting training phase {phase}: {reason}')
+
     def on_checkpointing(self, fp: str) -> None:
-        print(f'Checkpoint saved: {fp}')
+        if self.verbose:
+            print(f'Checkpoint saved: {fp}')

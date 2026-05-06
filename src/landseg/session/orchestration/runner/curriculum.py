@@ -198,4 +198,6 @@ class CurriculumRunner(runner.BaseRunner):
 
                 # end of current phase
                 if self._is_phase_end:
+                    reason = 'Max epoch reached'
+                    self.dispatcher.on_train_phase_end(phase.name, reason)
                     break

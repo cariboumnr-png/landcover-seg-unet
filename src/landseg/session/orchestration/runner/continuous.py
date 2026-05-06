@@ -173,14 +173,14 @@ class ContinuousRunner(runner.BaseRunner):
                     # yield at the end
                     else:
                         reason = 'Max epoch reached'
-                        self.logger.log('INFO', f'Exit training: {reason}')
+                        self.dispatcher.on_train_phase_end(self.phase.name, reason)
                         yield self._get_step(reason=reason)
                         return
 
                 case events.StopRun(reason=reason):
 
                     # yield and exit on stop signal
-                    self.logger.log('INFO', f'Exit training: {reason}')
+                    self.dispatcher.on_train_phase_end(self.phase.name, reason)
                     yield self._get_step(reason=reason)
                     return
 
