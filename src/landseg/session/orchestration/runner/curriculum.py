@@ -118,7 +118,8 @@ class CurriculumRunner(runner.BaseRunner):
         # iterate through provided phases
         for i, phase in enumerate(self.phases):
 
-            # print phase info if verbose
+            # reset flag
+            self._is_phase_end = False
             # dispatch at phase begininng
             self.dispatcher.on_train_phase_begin(phase)
 
