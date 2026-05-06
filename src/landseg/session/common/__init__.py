@@ -38,9 +38,8 @@ __all__ = [
     'ComponentsLike',
     'ConfusionMatrixLike',
     'DataLoadersLike',
+    'PhaseLike',
     'SessionObserverLike',
-    'EngineBaseLike',
-    'EpochEngineLike',
     'SpecsLike',
 ]
 # for static check
@@ -53,7 +52,6 @@ if typing.TYPE_CHECKING:
         DataLoadersLike,
         SpecsLike,
     )
-    from .engine import EpochEngineLike, EngineBaseLike
     from .phases import PhaseLike
 
 def __getattr__(name: str):
@@ -69,9 +67,6 @@ def __getattr__(name: str):
 
     if name in {'SessionObserverLike'}:
         return getattr(importlib.import_module('.events', __package__), name)
-
-    if name in {'EpochEngineLike', 'EngineBaseLike'}:
-        return getattr(importlib.import_module('.engine', __package__), name)
 
     if name in {'PhaseLike'}:
         return getattr(importlib.import_module('.phases', __package__), name)

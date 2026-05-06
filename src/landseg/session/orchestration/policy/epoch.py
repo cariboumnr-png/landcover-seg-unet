@@ -32,8 +32,8 @@ training engine.
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.orchestration.events as events
+import landseg.session.orchestration.protocols as protocols
 
 class EpochPolicy:
     '''
@@ -51,7 +51,7 @@ class EpochPolicy:
     def __init__(
         self,
         *,
-        epoch_runner: common.EpochEngineLike,
+        epoch_runner: protocols.EpochEngineLike,
         phase_name: str,
         epoch_index: int,
         active_heads: list[str] | None = None

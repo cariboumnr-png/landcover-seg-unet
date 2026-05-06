@@ -47,6 +47,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.session.common as common
+import landseg.session.orchestration.protocols as protocols
 import landseg.session.orchestration.runner as runner
 
 #
@@ -80,7 +81,7 @@ class TrainingSchema:
 
 def build_runner(
     *,
-    epoch_runner: common.EpochEngineLike,
+    epoch_runner: protocols.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
     training_schema: TrainingSchema,
     dispatcher: common.SessionObserverLike,

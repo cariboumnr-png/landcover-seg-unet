@@ -33,8 +33,9 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.events as events
+import landseg.session.orchestration.policy as policy
+import landseg.session.orchestration.protocols as protocols
 
 @dataclasses.dataclass
 class TrackingConfig:
@@ -77,7 +78,7 @@ class PhasePolicy:
     def __init__(
         self,
         *,
-        epoch_runner: common.EpochEngineLike,
+        epoch_runner: protocols.EpochEngineLike,
         phase_config: common.PhaseLike,
         track_config: TrackingConfig,
     ):

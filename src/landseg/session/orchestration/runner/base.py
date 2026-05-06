@@ -48,6 +48,7 @@ import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.policy as policy
+import landseg.session.orchestration.protocols as protocols
 
 @dataclasses.dataclass
 class BaseRunnerConfig:
@@ -105,7 +106,7 @@ class BaseRunner(abc.ABC):
 
     def __init__(
         self,
-        epoch_runner: common.EpochEngineLike,
+        epoch_runner: protocols.EpochEngineLike,
         base_config: BaseRunnerConfig,
         dispatcher: common.SessionObserverLike,
     ):
@@ -151,13 +152,13 @@ class BaseRunner(abc.ABC):
         self._current_metrics: core.EpochResults = core.EpochResults() # epoch
 
     @property
-    def trainer(self) -> common.EngineBaseLike:
+    def trainer(self) -> protocols.EngineBaseLike:
         '''Return training policy engine.'''
         assert self.epoch_runner.trainer # typing
         return self.epoch_runner.trainer
 
     @property
-    def evaluator(self) -> common.EngineBaseLike:
+    def evaluator(self) -> protocols.EngineBaseLike:
         '''Return evaluating policy engine.'''
         assert self.epoch_runner.evaluator # typing
         return self.epoch_runner.evaluator
