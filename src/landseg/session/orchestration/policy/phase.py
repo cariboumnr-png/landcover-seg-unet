@@ -159,12 +159,12 @@ class PhasePolicy:
             else:
                 tracked = (0.0, -1, False)
 
-            # report tracking results
-            yield events.MetricsReport(*tracked, metrics)
-
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
             yield events.CheckpointRequest(tag)
+
+            # report tracking results
+            yield events.MetricsReport(*tracked, metrics)
 
             # early stop check
             if not self.track.enable_early_stop:

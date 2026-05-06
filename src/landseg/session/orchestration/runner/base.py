@@ -224,7 +224,6 @@ class BaseRunner(abc.ABC):
     def _save_progress(
         self,
         phase_name: str,
-        metrics: core.EpochResults,
         *,
         is_best: bool
     ) -> None:
@@ -252,7 +251,7 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
-        validation = metrics.evaluation
+        validation = self._current_metrics.evaluation
         ckpt_meta: artifacts.CheckpointMeta = {
             'metric': validation.target_metrics if validation else 0.0,
             'epoch': self.trainer.state.progress.epoch,
