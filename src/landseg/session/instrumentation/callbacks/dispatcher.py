@@ -107,6 +107,11 @@ class CallbackDispatcher(common.SessionObserverLike):
         for cb in self.callbacks:
             cb.on_train_phase_end(phase, reason)
 
+    # --- training end
+    def on_train_end(self) -> None:
+        for cb in self.callbacks:
+            cb.on_train_end()
+
     # --- utilities
     def on_checkpointing(self, fp: str) -> None:
         for cb in self.callbacks:
