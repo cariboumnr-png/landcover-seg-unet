@@ -19,6 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+
 '''
 Top-level namespace for `landseg.session.instrumentation.callbacks`.
 
@@ -32,33 +33,26 @@ import typing
 
 __all__ = [
     # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    'TrackingCallback',
+    'BaseTracker',
+    'TensorBoardTracker'
     # functions
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-    from .tracking import TrackingCallback
+    from .base import BaseTracker
+    from .tensor_board import TensorBoardTracker
 
 def __getattr__(name: str):
 
-    if name in {'BaseCallback'}:
+    if name in {'BaseTracker'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
+    if name in {'TensorBoardTracker'}:
+        return getattr(importlib.import_module('.tensor_board', __package__), name)
 
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
-
-    if name in {'TrackingCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
+    if name in {'.'}:
+        return getattr(importlib.import_module('.', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
