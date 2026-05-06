@@ -148,7 +148,7 @@ def build_overfit_session(
 
     # callback dispatcher
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
     # partial epoch runner
     epoch_runner_partial = _build_partial_epoch_runner(
@@ -175,7 +175,7 @@ def build_evaluate_session(
 
     # callback dispatcher
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
     # partial epoch runner
     epoch_runner_partial = _build_partial_epoch_runner(
@@ -200,7 +200,7 @@ def build_continous_training_session(
 
     # callback dispatcher
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
     # partial training runner
     training_runner_partial = _build_partial_training_runner(
@@ -231,7 +231,7 @@ def build_curriculum_training_session(
 
     # callback dispatcher
     dispatcher = instrument.CallbackDispatcher([
-        instrument.ConsoleCallback(verbose=context.verbose_runner)
+        instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
     # partial training runner
     training_runner_partial = _build_partial_training_runner(

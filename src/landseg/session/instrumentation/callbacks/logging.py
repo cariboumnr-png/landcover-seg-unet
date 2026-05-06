@@ -26,7 +26,7 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 
-class ConsoleCallback(callbacks.BaseCallback):
+class LoggingCallback(callbacks.BaseCallback):
     '''Progress tracker.'''
 
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None:

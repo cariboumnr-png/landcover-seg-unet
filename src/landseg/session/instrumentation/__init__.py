@@ -33,17 +33,17 @@ import typing
 __all__ = [
     # classes
     'CallbackDispatcher',
-    'ConsoleCallback',
+    'LoggingCallback',
     # functions
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .callbacks import CallbackDispatcher, ConsoleCallback
+    from .callbacks import CallbackDispatcher, LoggingCallback
 
 def __getattr__(name: str):
 
-    if name in {'CallbackDispatcher', 'ConsoleCallback'}:
+    if name in {'CallbackDispatcher', 'LoggingCallback'}:
         return getattr(importlib.import_module('.callbacks', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -36,7 +36,7 @@ __all__ = [
     # classes
     'BaseCallback',
     'CallbackDispatcher',
-    'ConsoleCallback',
+    'LoggingCallback',
     # functions
     # types
 ]
@@ -44,18 +44,18 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import BaseCallback
-    from .console import ConsoleCallback
     from .dispatcher import CallbackDispatcher
+    from .logging import LoggingCallback
 
 def __getattr__(name: str):
 
     if name in {'BaseCallback'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'ConsoleCallback'}:
-        return getattr(importlib.import_module('.console', __package__), name)
-
     if name in {'CallbackDispatcher'}:
         return getattr(importlib.import_module('.dispatcher', __package__), name)
+
+    if name in {'LoggingCallback'}:
+        return getattr(importlib.import_module('.logging', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
