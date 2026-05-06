@@ -46,7 +46,7 @@ class ConsoleCallback(callbacks.BaseCallback):
             print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
 
     def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
-        if self.verbose and bidx > 1 and bidx == results.last_updated:
+        if self.verbose and results.metrics_updated:
             text_list: list[str] = []
             text_list.append(f'total_loss: {results.total_loss:.4f}')
             text_list.extend([

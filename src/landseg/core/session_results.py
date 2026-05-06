@@ -100,11 +100,15 @@ class EpochResults:
 
 @dataclasses.dataclass
 class TrainerEpochResults:
-    '''Trainer aggregated results.'''
+    '''Results that update regularly during training flush at the end.'''
     all_heads: list[str]
-    current_lr: float | None
-    last_updated: int = 1 # global step in batches
+    # update every batch
+    epoch_step: int = 1
+    global_step: int = 1
+    # update gated by interval settings
+    metrics_updated: bool = False
     total_loss: float = 0.0
+    current_lr: float | None = None
     head_losses: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self):

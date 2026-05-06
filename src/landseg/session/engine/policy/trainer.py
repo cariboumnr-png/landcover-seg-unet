@@ -90,10 +90,8 @@ class MultiHeadTrainer(policy.EngineBase):
         self.update_every = update_every
 
         # init the epoch results container with all heads
-        self.results = core.TrainerEpochResults(
-            all_heads=self.state.heads.all_heads,
-            current_lr=self.state.optim.lr
-        )
+        heads = self.state.heads.all_heads
+        self.results = core.TrainerEpochResults(all_heads=heads)
         # epoch-level accumulated loss tracker
         self._loss: float
         self._head_losses: dict[str, float]
@@ -213,17 +211,20 @@ class MultiHeadTrainer(policy.EngineBase):
         Set `flush=True` to flush results at end of a training epoch.
         '''
 
-        # get current epoch batch id
-        bidx = self.state.batch_cxt.bidx
-        n = max(1, bidx) # safe denominator
-        # update results container
-        if flush or bidx % self.update_every == 0:
+        # always update current epoch and global step (batch)
+        self.results.epoch_step = self.state.batch_cxt.bidx
+        self.results.global_step = self.state.progress.global_step
+        # update losses and lr at interval
+        n = max(1, self.state.batch_cxt.bidx) # safe denominator
+        if flush or self.state.batch_cxt.bidx % self.update_every == 0:
+            # flip flag
+            self.results.metrics_updated = True
             # --- total loss
             self.results.total_loss = self._loss / n
             # --- perhead loss
             for head in self.state.heads.all_heads:
                 self.results.head_losses[head] = self._head_losses[head] / n
-            # --- epoch batch id (for deteremining whether to update results)
-            self.results.last_updated = bidx
             # --- current learning rate
             self.results.current_lr = self.state.optim.lr
+        else:
+            self.results.metrics_updated = False
