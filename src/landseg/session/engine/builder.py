@@ -138,6 +138,7 @@ def build_engine(
         dispatcher=dispatcher,
         device=context.device,
         # evaluator-specific
+        monitor_heads=runtime.monitor.track_heads,
         val_every=runtime.schedule.val_every,
         infer_every=runtime.schedule.infer_every,
         dataset=context.evaluation_dataset,
