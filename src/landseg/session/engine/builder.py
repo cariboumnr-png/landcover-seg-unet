@@ -33,12 +33,21 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.engine as engine
 import landseg.session.engine.batch as batch
-import landseg.session.engine.configs as configs
 import landseg.session.engine.optim as optim
 import landseg.session.engine.policy as policy
 import landseg.session.engine.protocols as protocols
 import landseg.session.engine.state as state
 import landseg.session.engine.tasks as tasks
+
+# ---------------------------------Public Type---------------------------------
+class EngineBuildConfigShape(typing.Protocol):
+    '''Structural typing interface for engine building.'''
+    @property
+    def tasks(self) -> tasks.TaskConfig: ...
+    @property
+    def optimization(self) -> optim.OptimConfig: ...
+    @property
+    def runtime(self) -> common.RuntimeConfigLike: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -47,7 +56,6 @@ class EngineBuildContext:
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
     dataloaders: protocols.DataLoadersLike
-    batch_size: int
     evaluation_dataset: typing.Literal['val', 'test']
     device: str
 
@@ -55,9 +63,7 @@ class EngineBuildContext:
 def build_engine(
     *,
     context: EngineBuildContext,
-    tasks_config: tasks.TaskConfig,
-    optim_config: optim.OptimConfig,
-    runtime_config: configs.RuntimeConfigLike,
+    config: EngineBuildConfigShape,
     dispatcher: common.SessionObserverLike,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> engine.EpochRunner:
@@ -65,10 +71,16 @@ def build_engine(
     doc
     '''
 
+    # aliases
+    runtime = config.runtime
+    tasks_config = config.tasks
+    optim_config = config.optimization
+
+    # initialize engine state
     runtime_state = state.initialize_state(
         all_heads=list(context.dataspecs.heads.class_counts.keys()),
-        batch_size=context.batch_size,
-        use_amp=runtime_config.precision.use_amp,
+        batch_size=context.dataloaders.batch_size,
+        use_amp=runtime.precision.use_amp,
         device=context.device
     )
 
@@ -76,7 +88,7 @@ def build_engine(
     preview_ctx = context.dataloaders.preview_context
     batch_config = batch.BatchExecutorConfig(
         parent_map=context.dataspecs.heads.head_parent,
-        use_amp=runtime_config.precision.use_amp,
+        use_amp=runtime.precision.use_amp,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
         block_columns=preview_ctx.block_columns if preview_ctx else None
@@ -89,8 +101,8 @@ def build_engine(
     )
 
     # config model logit adjustment
-    batch_executor.model.set_logit_adjust_enabled(runtime_config.logit_adjust.enable)
-    batch_executor.model.set_logit_adjust_alpha(runtime_config.logit_adjust.alpha)
+    batch_executor.model.set_logit_adjust_enabled(runtime.logit_adjust.enable)
+    batch_executor.model.set_logit_adjust_alpha(runtime.logit_adjust.alpha)
 
     # engine tasks
     engine_tasks = tasks.build_engine_tasks(context.dataspecs, tasks_config)
@@ -109,8 +121,8 @@ def build_engine(
         dispatcher=dispatcher,
         device=context.device,
         # trainer-specific
-        grad_clip_norm=runtime_config.optimization.grad_clip_norm,
-        update_every=runtime_config.schedule.log_loss_every,
+        grad_clip_norm=runtime.optimization.grad_clip_norm,
+        update_every=runtime.schedule.log_loss_every,
     )
 
     # evaluator
@@ -124,9 +136,8 @@ def build_engine(
         dispatcher=dispatcher,
         device=context.device,
         # evaluator-specific
-        monitor_heads=runtime_config.monitor.track_heads,
-        val_every=runtime_config.schedule.val_every,
-        infer_every=runtime_config.schedule.infer_every,
+        val_every=runtime.schedule.val_every,
+        infer_every=runtime.schedule.infer_every,
         dataset=context.evaluation_dataset,
     )
 

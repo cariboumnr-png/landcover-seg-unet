@@ -35,6 +35,7 @@ __all__ = [
     # functions
     # types
     'PhaseLike',
+    'RuntimeConfigLike',
     'SessionObserverLike',
 
 ]
@@ -42,6 +43,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .events import SessionObserverLike
     from .phases import PhaseLike
+    from .runtime import RuntimeConfigLike
 
 def __getattr__(name: str):
 
@@ -50,5 +52,8 @@ def __getattr__(name: str):
 
     if name in {'PhaseLike'}:
         return getattr(importlib.import_module('.phases', __package__), name)
+
+    if name in {'RuntimeConfigLike'}:
+        return getattr(importlib.import_module('.runtime', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

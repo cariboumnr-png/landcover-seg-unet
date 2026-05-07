@@ -74,7 +74,6 @@ import landseg.session.common as common
 import landseg.session.data as data
 
 import landseg.session.engine as engine
-import landseg.session.engine.configs as configs
 import landseg.session.engine.optim as optim
 import landseg.session.engine.tasks as tasks
 
@@ -110,7 +109,7 @@ class SessionConfigShape(typing.Protocol):
     @property
     def optimization(self) -> optim.OptimConfig: ...
     @property
-    def runtime(self) -> configs.RuntimeConfigLike: ...
+    def runtime(self) -> common.RuntimeConfigLike: ...
     @property
     def single_phase(self) -> common.PhaseLike: ...
     @property
@@ -285,7 +284,6 @@ def _build_partial_epoch_runner(
         dataspecs=dataspecs,
         model=model,
         dataloaders=data_loaders,
-        batch_size=config.loader.batch_size,
         evaluation_dataset=context.eval_dataset,
         device=context.device,
     )
@@ -294,9 +292,7 @@ def _build_partial_epoch_runner(
     return functools.partial(
         engine.build_engine,
         context=engine_build_context,
-        tasks_config=config.tasks,
-        optim_config=config.optimization,
-        runtime_config=config.runtime
+        config=config
     )
 
 def _build_partial_training_runner(
