@@ -135,7 +135,13 @@ class PhasePolicy:
             self.config.active_heads,
             self.config.frozen_heads,
         )
-        # TBD set learning rate per phase
+        # reconfigure optimization per phase
+        assert self.runner.trainer
+        phase_batch_n = self.config.num_epochs * self.runner.total_train_batch
+        self.runner.trainer.optimization.reconfigure(
+            lr=None, # TBD in runtime config
+            sched_args={'T_max': phase_batch_n}
+        )
 
         # phase starts
         yield events.PhaseStart(self.config.name)
