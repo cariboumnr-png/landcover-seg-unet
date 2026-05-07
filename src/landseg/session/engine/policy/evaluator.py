@@ -81,9 +81,9 @@ class MultiHeadEvaluator(policy.EngineBase):
         self,
         *,
         monitor_heads: list[str],
-        dataset: typing.Literal['val', 'test'] = 'val',
         val_every: int = 1,
         infer_every: int = 1,
+        dataset: typing.Literal['val', 'test'] = 'val',
         **kwargs
     ):
         super().__init__(**kwargs)

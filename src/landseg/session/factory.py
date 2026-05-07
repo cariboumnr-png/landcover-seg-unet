@@ -71,10 +71,13 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.components as comps
-import landseg.session.configs as configs
 import landseg.session.data as data
+
 import landseg.session.engine as engine
+import landseg.session.engine.configs as configs
+import landseg.session.engine.optim as optim
+import landseg.session.engine.tasks as tasks
+
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
 import landseg.utils as utils
@@ -101,7 +104,11 @@ class SessionConfigShape(typing.Protocol):
             orchestration runner.
     '''
     @property
-    def components(self) -> comps.ComponentsConfigLike: ...
+    def loader(self) -> data.LoaderConfig: ...
+    @property
+    def tasks(self) -> tasks.TaskConfig: ...
+    @property
+    def optimization(self) -> optim.OptimConfig: ...
     @property
     def runtime(self) -> configs.RuntimeConfigLike: ...
     @property
@@ -266,55 +273,31 @@ def _build_partial_epoch_runner(
 ) -> typing.Callable[..., engine.EpochRunner]:
     '''doc'''
 
-    # build session components
-    session_components = comps.build_session_components(
-        dataspecs,
-        model,
-        config.components,
-        total_epochs=context.total_epochs
-    )
-
-    # initiate the shared runtime state
-    runtime_state = engine.initialize_state(
-        all_heads=list(session_components.headspecs.as_dict().keys()),
-        batch_size=config.components.loader.batch_size,
-        use_amp=config.runtime.precision.use_amp,
-        device=context.device
-    )
-
-    # build runner context and config
+    # data loader
     data_loaders = data.build_dataloaders(
         dataspecs,
-        config.components.loader,
+        config.loader,
         logger=logger
     )
 
+    # engine building context and config
     engine_build_context = engine.EngineBuildContext(
         dataspecs=dataspecs,
         model=model,
         dataloaders=data_loaders,
-        components=session_components,
-        device=context.device,
-    )
-    engine_build_config = engine.EngineBuildConfig(
-        use_amp=config.runtime.precision.use_amp,
-        grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-        train_update_every_n_batch=config.runtime.schedule.log_loss_every,
-        val_every_n_epoch=config.runtime.schedule.val_every,
-        infer_every_n_epoch=config.runtime.schedule.infer_every,
-        metrics_track_heads=config.runtime.monitor.track_heads,
+        batch_size=config.loader.batch_size,
         evaluation_dataset=context.eval_dataset,
-        enable_logit_adjust=config.runtime.logit_adjust.enable_logit_adjust,
-        logit_adjust_alpha=config.runtime.logit_adjust.logit_adjust_alpha,
+        device=context.device,
     )
 
     # return a partial epoch runner without the mode flag
     return functools.partial(
         engine.build_engine,
         context=engine_build_context,
-        config=engine_build_config,
-        runtime_state=runtime_state,
-     )
+        tasks_config=config.tasks,
+        optim_config=config.optimization,
+        runtime_config=config.runtime
+    )
 
 def _build_partial_training_runner(
     *,

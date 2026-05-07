@@ -35,12 +35,13 @@ import typing
 field = dataclasses.field
 
 # -------------------------------SESSION CONFIGS-------------------------------
-# ----- COMPONENTS
+# ----- LOADER
 @dataclasses.dataclass
 class _LoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
+# ----- TASKS
 @dataclasses.dataclass
 class _FocalLossConfig:
     weight: float = 0.5
@@ -76,6 +77,7 @@ class _LossConfig:
     excluded_cls: dict[str, list[int]] | None = None
     types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
+# ----- OPTIMIZATION
 @dataclasses.dataclass
 class _OptimConfig:
     opt_cls: str = 'AdamW'

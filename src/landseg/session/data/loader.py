@@ -48,7 +48,7 @@ import torch.utils.data
 # local imports
 import landseg.core as core
 import landseg.session.common.alias as alias
-import landseg.session.components.data as data
+import landseg.session.data as data
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------

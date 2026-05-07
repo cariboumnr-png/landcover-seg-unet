@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Engine building
 '''
@@ -31,10 +33,11 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.engine as engine
 import landseg.session.engine.batch as batch
-import landseg.session.engine.state as state
+import landseg.session.engine.configs as configs
 import landseg.session.engine.optim as optim
 import landseg.session.engine.policy as policy
 import landseg.session.engine.protocols as protocols
+import landseg.session.engine.state as state
 import landseg.session.engine.tasks as tasks
 
 # ------------------------------Public  Dataclass------------------------------
@@ -44,29 +47,17 @@ class EngineBuildContext:
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
     dataloaders: protocols.DataLoadersLike
+    batch_size: int
+    evaluation_dataset: typing.Literal['val', 'test']
     device: str
-
-@dataclasses.dataclass
-class EngineBuildConfig:
-    '''Engine building configs'''
-    use_amp: bool
-    grad_clip_norm: float | None
-    train_update_every_n_batch: int
-    val_every_n_epoch: int
-    infer_every_n_epoch: int
-    metrics_track_heads: list[str]
-    evaluation_dataset: typing.Literal['val', 'test'] = 'val'
-    enable_logit_adjust: bool = False
-    logit_adjust_alpha: float = 1.0
 
 # -------------------------------Public Function-------------------------------
 def build_engine(
     *,
     context: EngineBuildContext,
-    config: EngineBuildConfig,
-    runtime_state: state.EngineState,
-    task_config: tasks.TaskConfig,
+    tasks_config: tasks.TaskConfig,
     optim_config: optim.OptimConfig,
+    runtime_config: configs.RuntimeConfigLike,
     dispatcher: common.SessionObserverLike,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> engine.EpochRunner:
@@ -74,11 +65,18 @@ def build_engine(
     doc
     '''
 
+    runtime_state = state.initialize_state(
+        all_heads=list(context.dataspecs.heads.class_counts.keys()),
+        batch_size=context.batch_size,
+        use_amp=runtime_config.precision.use_amp,
+        device=context.device
+    )
+
     # batch engine
     preview_ctx = context.dataloaders.preview_context
     batch_config = batch.BatchExecutorConfig(
         parent_map=context.dataspecs.heads.head_parent,
-        use_amp=config.use_amp,
+        use_amp=runtime_config.precision.use_amp,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
         block_columns=preview_ctx.block_columns if preview_ctx else None
@@ -91,11 +89,11 @@ def build_engine(
     )
 
     # config model logit adjustment
-    batch_executor.model.set_logit_adjust_enabled(config.enable_logit_adjust)
-    batch_executor.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
+    batch_executor.model.set_logit_adjust_enabled(runtime_config.logit_adjust.enable)
+    batch_executor.model.set_logit_adjust_alpha(runtime_config.logit_adjust.alpha)
 
     # engine tasks
-    engine_tasks = tasks.build_engine_tasks(context.dataspecs, task_config)
+    engine_tasks = tasks.build_engine_tasks(context.dataspecs, tasks_config)
 
     # engine optimization
     optimization = optim.build_optimization(context.model, optim_config)
@@ -111,8 +109,8 @@ def build_engine(
         dispatcher=dispatcher,
         device=context.device,
         # trainer-specific
-        grad_clip_norm=config.grad_clip_norm,
-        update_every=config.train_update_every_n_batch,
+        grad_clip_norm=runtime_config.optimization.grad_clip_norm,
+        update_every=runtime_config.schedule.log_loss_every,
     )
 
     # evaluator
@@ -126,10 +124,10 @@ def build_engine(
         dispatcher=dispatcher,
         device=context.device,
         # evaluator-specific
-        monitor_heads=config.metrics_track_heads,
-        dataset=config.evaluation_dataset,
-        val_every=config.val_every_n_epoch,
-        infer_every=config.infer_every_n_epoch
+        monitor_heads=runtime_config.monitor.track_heads,
+        val_every=runtime_config.schedule.val_every,
+        infer_every=runtime_config.schedule.infer_every,
+        dataset=context.evaluation_dataset,
     )
 
     # return engine with matched mode
