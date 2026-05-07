@@ -77,7 +77,7 @@ def build_engine(
     optim_config = config.optimization
 
     # initialize engine state
-    runtime_state = state.initialize_state(
+    engine_state = state.initialize_state(
         all_heads=list(context.dataspecs.heads.class_counts.keys()),
         batch_size=context.dataloaders.batch_size,
         use_amp=runtime.precision.use_amp,
@@ -95,7 +95,7 @@ def build_engine(
     )
     batch_executor = batch.BatchExecutionEngine(
         context.model,
-        runtime_state,
+        engine_state,
         batch_config,
         device=context.device
     )
@@ -110,13 +110,18 @@ def build_engine(
     # engine optimization
     optimization = optim.build_optimization(context.model, optim_config)
 
+    # engine core bundle
+    engine_core = policy.EngineCore(
+        engine=batch_executor,
+        engine_state=engine_state,
+        engine_tasks=engine_tasks,
+        engine_optim=optimization
+    )
+
     # trainer
     trainer = policy.MultiHeadTrainer(
         # base engine
-        engine=batch_executor,
-        engine_state=runtime_state,
-        engine_tasks=engine_tasks,
-        optimization=optimization,
+        engine_core=engine_core,
         dataloaders=context.dataloaders,
         dispatcher=dispatcher,
         device=context.device,
@@ -128,10 +133,7 @@ def build_engine(
     # evaluator
     evaluator = policy.MultiHeadEvaluator(
         # base engine
-        engine=batch_executor,
-        engine_state=runtime_state,
-        engine_tasks=engine_tasks,
-        optimization=optimization,
+        engine_core=engine_core,
         dataloaders=context.dataloaders,
         dispatcher=dispatcher,
         device=context.device,
