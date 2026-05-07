@@ -57,7 +57,7 @@ class EngineBase:
 
     def __init__(
         self,
-        engine_core: batch.EngineCore,
+        engine_core: batch.BatchEngine,
         dataloaders: protocols.DataLoadersLike,
         dispatcher: common.SessionObserverLike,
         *,

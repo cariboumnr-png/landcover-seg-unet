@@ -38,7 +38,7 @@ import landseg.session.engine.protocols as protocols
 
 
 # ---------------------------------Public Type---------------------------------
-class EngineBuildConfigShape(typing.Protocol):
+class BatchEngineConfigShape(typing.Protocol):
     '''Structural typing interface for engine building.'''
     @property
     def tasks(self) -> tasks.TaskConfig: ...
@@ -49,21 +49,21 @@ class EngineBuildConfigShape(typing.Protocol):
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class EngineCore:
+class BatchEngine:
     '''Engine core components bundle.'''
     engine: executor.BatchExecutionEngine
     engine_optim:optim.Optimization
     engine_tasks: tasks.EngineTasks
 
 # -------------------------------Public Function-------------------------------
-def build_engine_core(
+def build_batch_engine(
     *,
     dataspecs: core.DataSpecs,
     dataloaders: protocols.DataLoadersLike,
     model: core.MultiheadModelLike,
-    config: EngineBuildConfigShape,
+    config: BatchEngineConfigShape,
     device: str
-) -> EngineCore:
+) -> BatchEngine:
     '''
     doc
     '''
@@ -109,7 +109,7 @@ def build_engine_core(
     optimization = optim.build_optimization(model, optim_config)
 
     # engine core bundle
-    return EngineCore(
+    return BatchEngine(
         engine=batch_executor,
         engine_optim=optimization,
         engine_tasks=engine_tasks,

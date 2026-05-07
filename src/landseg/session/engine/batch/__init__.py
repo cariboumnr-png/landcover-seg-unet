@@ -32,10 +32,10 @@ import typing
 
 __all__ = [
     # classes
-    'EngineCore',
-    'EngineBuildConfigShape',
+    'BatchEngine',
+    'BatchEngineConfigShape',
     # functions
-    'build_engine_core',
+    'build_batch_engine',
     # types
     'OptimConfig',
     'TaskConfig'
@@ -43,13 +43,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import EngineCore, EngineBuildConfigShape, build_engine_core
+    from .builder import BatchEngine, BatchEngineConfigShape, build_batch_engine
     from .optim import OptimConfig
     from .tasks import TaskConfig
 
 def __getattr__(name: str):
 
-    if name in {'EngineCore', 'EngineBuildConfigShape', 'build_engine_core'}:
+    if name in {'BatchEngine', 'BatchEngineConfigShape', 'build_batch_engine'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
     if name in {'OptimConfig'}:

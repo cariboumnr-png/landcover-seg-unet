@@ -125,7 +125,7 @@ def build_engine(
     )
 
     # batch engine
-    batch_engine = batch.build_engine_core(
+    batch_engine = batch.build_batch_engine(
         dataspecs=dataspecs,
         dataloaders=data_loaders,
         model=model,
