@@ -80,7 +80,6 @@ class MultiHeadEvaluator(policy.EngineBase):
     def __init__(
         self,
         *,
-        monitor_heads: list[str],
         val_every: int = 1,
         infer_every: int = 1,
         dataset: typing.Literal['val', 'test'] = 'val',
@@ -92,10 +91,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.infer_every = infer_every
 
         # init the epoch results container with all heads
-        self.results = core.EvaluatorEpochResults(
-            all_heads=self.state.heads.all_heads,
-            monitor_heads=monitor_heads
-        )
+        self.results = core.EvaluatorEpochResults()
 
     # -------------------------------Public  Methods-------------------------------
     def validate(self, epoch: int) -> core.EvaluatorEpochResults | None:

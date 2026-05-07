@@ -90,8 +90,7 @@ class MultiHeadTrainer(policy.EngineBase):
         self.update_every = update_every
 
         # init the epoch results container with all heads
-        heads = self.state.heads.all_heads
-        self.results = core.TrainerEpochResults(all_heads=heads)
+        self.results = core.TrainerEpochResults()
         # epoch-level accumulated loss tracker
         self._loss: float
         self._head_losses: dict[str, float]

@@ -88,7 +88,7 @@ class EpochResults:
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
         if self.evaluation:
-            return self.evaluation.monitor_heads_str
+            return self.evaluation.active_heads_str
         return 'N/A'
 
     @property
@@ -101,7 +101,6 @@ class EpochResults:
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Results that update regularly during training flush at the end.'''
-    all_heads: list[str]
     # update every batch
     epoch_step: int = 1
     global_step: int = 1
@@ -110,9 +109,6 @@ class TrainerEpochResults:
     total_loss: float = 0.0
     current_lr: float | None = None
     head_losses: dict[str, float] = field(default_factory=dict)
-
-    def __post_init__(self):
-        self.head_losses = {h: 0.0 for h in self.all_heads}
 
     def clear(self) -> None:
         '''Reset all loss values to `0.0`.'''
@@ -124,23 +120,18 @@ class TrainerEpochResults:
 @dataclasses.dataclass
 class EvaluatorEpochResults:
     '''Evaluator aggregated epoch results.'''
-    all_heads: list[str]
-    monitor_heads: list[str] # heads for IoU caculation
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
     head_inference: dict[str, dict[tuple[int, int], 'torch.Tensor']] = field(default_factory=dict)
 
-    def __post_init__(self):
-        self.head_metrics = {h: AccumulatedMetrics() for h in self.all_heads}
-
     @property
-    def monitor_heads_str(self) -> str:
+    def active_heads_str(self) -> str:
         '''Return plain text of the monitor heads'''
-        return '|'.join(self.monitor_heads)
+        return '|'.join(self.head_metrics.keys())
 
     @property
     def target_metrics(self) -> float:
         '''
-        Return the mean metrics from all monitor heads.
+        Return the mean metrics active heads.
 
         For each head if active classes are set, prefer mean IoU from the
         active classes; otherwise count mean from all present classes.
@@ -150,17 +141,15 @@ class EvaluatorEpochResults:
         mean_ac = 0.0
 
         # accumulate from all monitor heads
-        for head in self.monitor_heads:
-            assert head in self.head_metrics # sanity
-            metrics = self.head_metrics[head]
+        for metrics in self.head_metrics.values():
             # accumulate moniter metrics for stae
             mean += metrics.mean
             mean_ac +=  metrics.ac_mean
             # collect per head metrics formatted strings
 
         # get average ious
-        mean /= max(1, len(self.monitor_heads))
-        mean_ac /= max(1, len(self.monitor_heads))
+        mean /= max(1, len(self.head_metrics))
+        mean_ac /= max(1, len(self.head_metrics))
 
         # pick iou - prefer iou from active classes if present
         if not any([mean, mean_ac]):
