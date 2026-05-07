@@ -70,12 +70,7 @@ import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.data as data
-
 import landseg.session.engine as engine
-
-import landseg.session.engine.runtime.optim as optim
-import landseg.session.engine.runtime.tasks as tasks
-
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
 import landseg.utils as utils
@@ -104,9 +99,9 @@ class SessionConfigShape(typing.Protocol):
     @property
     def loader(self) -> data.LoaderConfig: ...
     @property
-    def tasks(self) -> tasks.TaskConfig: ...
+    def tasks(self) -> engine.TaskConfig: ...
     @property
-    def optimization(self) -> optim.OptimConfig: ...
+    def optimization(self) -> engine.OptimConfig: ...
     @property
     def runtime(self) -> common.RuntimeConfigLike: ...
     @property
@@ -209,7 +204,7 @@ def build_continous_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: utils.Logger
-): #  -> orchestration.ContinuousRunner
+) -> orchestration.ContinuousRunner:
     '''doc'''
 
     # callback dispatcher
@@ -260,7 +255,7 @@ def build_curriculum_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: utils.Logger
-): #-> orchestration.CurriculumRunner
+) -> orchestration.CurriculumRunner:
     '''doc'''
 
     # callback dispatcher
