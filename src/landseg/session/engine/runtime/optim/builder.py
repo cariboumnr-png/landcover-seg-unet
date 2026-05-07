@@ -91,11 +91,11 @@ def build_optimization(
     scheduler = sched_factory(optimizer, **config.sched_args)
 
     return optim.Optimization(
-        optimizer=optimizer,
-        scheduler=scheduler,
-        _sched_cls=config.sched_cls,
-        _sched_factory=sched_factory,
-        _sched_args=config.sched_args
+        optimizer,
+        scheduler,
+        sched_cls=config.sched_cls,
+        sched_factory=sched_factory,
+        sched_args=config.sched_args
     )
 
 # ------------------------------private  function------------------------------
