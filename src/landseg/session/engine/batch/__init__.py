@@ -34,7 +34,9 @@ __all__ = [
     # classes
     'BatchExecutionEngine',
     'BatchExecutorConfig',
+    'EngineState',
     # functions
+    'initialize_state',
     'multihead_loss',
 ]
 
@@ -42,7 +44,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .executor import BatchExecutionEngine, BatchExecutorConfig
     from .loss import multihead_loss
-
+    from .state import EngineState, initialize_state
 
 def __getattr__(name: str):
 
@@ -51,5 +53,8 @@ def __getattr__(name: str):
 
     if name in {'multihead_loss'}:
         return getattr(importlib.import_module('.loss', __package__), name)
+
+    if name in {'EngineState', 'initialize_state'}:
+        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

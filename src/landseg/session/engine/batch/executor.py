@@ -55,7 +55,6 @@ import dataclasses
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.state as state
 import landseg.session.engine.batch as batch
 
 @dataclasses.dataclass
@@ -101,7 +100,7 @@ class BatchExecutionEngine:
     def __init__(
         self,
         model: core.MultiheadModelLike,
-        engine_state: state.EngineState,
+        engine_state: batch.EngineState,
         config: BatchExecutorConfig,
         *,
         device: str,

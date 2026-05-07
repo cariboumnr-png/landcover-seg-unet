@@ -36,7 +36,6 @@ import landseg.session.engine.batch as batch
 import landseg.session.engine.optim as optim
 import landseg.session.engine.policy as policy
 import landseg.session.engine.protocols as protocols
-import landseg.session.engine.state as state
 import landseg.session.engine.tasks as tasks
 
 # ---------------------------------Public Type---------------------------------
@@ -77,7 +76,7 @@ def build_engine(
     optim_config = config.optimization
 
     # initialize engine state
-    engine_state = state.initialize_state(
+    engine_state = batch.initialize_state(
         all_heads=list(context.dataspecs.heads.class_counts.keys()),
         batch_size=context.dataloaders.batch_size,
         use_amp=runtime.precision.use_amp,

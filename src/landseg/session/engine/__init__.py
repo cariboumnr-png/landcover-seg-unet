@@ -33,29 +33,23 @@ import typing
 __all__ = [
     # classes
     'EngineBuildContext',
-    'EngineBuildConfig',
     'EpochRunner',
     'build_engine',
     # functions
-    'initialize_state'
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import EngineBuildContext, EngineBuildConfig, build_engine
+    from .builder import EngineBuildContext, build_engine
     from .runner import EpochRunner
-    from .state import initialize_state
 
 def __getattr__(name: str):
 
-    if name in {'EngineBuildContext', 'EngineBuildConfig', 'build_engine'}:
+    if name in {'EngineBuildContext', 'build_engine'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
     if name in {'EpochRunner'}:
         return getattr(importlib.import_module('.runner', __package__), name)
-
-    if name in {'initialize_state'}:
-        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
