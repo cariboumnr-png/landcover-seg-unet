@@ -37,7 +37,7 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.session.components.task.loss.primitives as primitives
+import landseg.session.engine.tasks.loss.primitives as primitives
 
 # --------------------------------Public  Class--------------------------------
 class FocalLoss(primitives.PrimitiveLoss):

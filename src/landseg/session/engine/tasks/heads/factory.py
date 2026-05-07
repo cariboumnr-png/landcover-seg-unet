@@ -25,7 +25,7 @@
 import numpy
 # local imports
 import landseg.core as core
-import landseg.session.components.task.heads as heads
+import landseg.session.engine.tasks.heads as heads
 
 class HeadSpecs:
     '''
@@ -40,16 +40,16 @@ class HeadSpecs:
     mapping directly, use method: `as_dict()`.
     '''
 
-    def __init__(self, specs: dict[str, heads.Spec]):
+    def __init__(self, specs: dict[str, heads.HeadSpec]):
         self._specs = specs
 
-    def __getitem__(self, key: str) -> heads.Spec:
+    def __getitem__(self, key: str) -> heads.HeadSpec:
         return self._specs[key]
 
     def __len__(self) -> int:
         return len(self._specs)
 
-    def as_dict(self) -> dict[str, heads.Spec]:
+    def as_dict(self) -> dict[str, heads.HeadSpec]:
         '''Return a shallow copy of the mapping as `dict[str, Spec]`.'''
         return dict(self._specs)
 
@@ -88,10 +88,10 @@ def build_headspecs(
         raise ValueError(f'Invalid alpha calc fn: {alpha_fn}')
 
     # iterate heads in data and create headspec for each
-    headspecs_dict: dict[str, heads.Spec] = {}
+    headspecs_dict: dict[str, heads.HeadSpec] = {}
     for name, counts in data.heads.class_counts.items():
         exclude = tuple(excluded_cls.get(name, [])) if excluded_cls else None
-        headspec = heads.Spec(
+        headspec = heads.HeadSpec(
             name=name,
             count=counts,
             loss_alpha=alpha_fn_registry[alpha_fn](list(counts), **fn_kwargs),

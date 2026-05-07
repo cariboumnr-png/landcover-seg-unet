@@ -36,8 +36,9 @@ objects.
 '''
 
 # local imports
-import landseg.session.components.task as task
-import landseg.session.components.task.loss as loss
+import landseg.session.engine.tasks as tasks
+import landseg.session.engine.tasks.heads as heads
+import landseg.session.engine.tasks.loss as loss
 
 # --------------------------------Public  Class--------------------------------
 class HeadLosses:
@@ -68,9 +69,9 @@ class HeadLosses:
 
 # -------------------------------Public Function-------------------------------
 def build_headlosses(
-    headspecs: task.HeadSpecs,
+    headspecs: heads.HeadSpecs,
     *,
-    config: task.TaskConfig,
+    config: tasks.TaskConfig,
     ignore_index: int,
     spectral_band_indices: list[int] | None = None
 ) -> HeadLosses:

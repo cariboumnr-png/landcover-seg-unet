@@ -32,8 +32,8 @@ import typing
 
 __all__ = [
     # classes
-    'HeadSpecs',
     'HeadSpec',
+    'HeadSpecs',
     # functions
     'build_headspecs',
     # types
@@ -41,15 +41,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .specs import HeadSpec
     from .factory import HeadSpecs, build_headspecs
+    from .specs import HeadSpec
 
 def __getattr__(name: str):
 
-    if name in {'Spec'}:
-        return getattr(importlib.import_module('.specs', __package__), name)
-
     if name in {'HeadSpecs', 'build_headspecs'}:
         return getattr(importlib.import_module('.factory', __package__), name)
+
+    if name in {'HeadSpec'}:
+        return getattr(importlib.import_module('.specs', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

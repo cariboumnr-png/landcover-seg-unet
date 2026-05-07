@@ -37,8 +37,8 @@ The main entry point is `CompositeLoss`, which handles:
 import torch
 import torch.nn
 # local imports
-import landseg.session.components.task as task
-import landseg.session.components.task.loss.primitives as primitives
+import landseg.session.engine.tasks as tasks
+import landseg.session.engine.tasks.loss.primitives as primitives
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -78,7 +78,7 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: task.TaskConfig,
+        config: tasks.TaskConfig,
         *,
         ignore_index: int,
         focal_alpha: list[float] | None = None,
