@@ -49,6 +49,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.builder', __package__), name)
 
     if name in {'Optimization'}:
-        return getattr(importlib.import_module('.optimizer', __package__), name)
+        return getattr(importlib.import_module('.optimization', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

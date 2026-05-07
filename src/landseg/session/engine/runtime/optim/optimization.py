@@ -30,7 +30,6 @@ Provides:
 '''
 
 # standard imports
-import dataclasses
 import typing
 # third-party imports
 import torch
@@ -40,7 +39,6 @@ Optimizer = torch.optim.Optimizer
 LRScheduler = torch.optim.lr_scheduler.LRScheduler
 
 # -------------------------------Public Function-------------------------------
-@dataclasses.dataclass
 class Optimization:
     '''
     Stateful wrapper for optimizer and scheduler.
@@ -48,13 +46,22 @@ class Optimization:
     Provides explicit APIs for stepping and resetting.
     '''
 
-    optimizer: Optimizer
-    scheduler: LRScheduler | None = None
 
-    # keep minimal metadata so we can rebuild scheduler
-    _sched_cls: str | None = None
-    _sched_factory: typing.Callable[..., LRScheduler] | None = None
-    _sched_args: dict[str, typing.Any] | None = None
+    def __init__(
+        self,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+        *,
+        sched_cls: str | None = None,
+        sched_factory: typing.Callable[..., LRScheduler] | None = None,
+        sched_args: dict[str, typing.Any] | None = None
+    ):
+        '''doc'''
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self._sched_cls = sched_cls
+        self._sched_factory = sched_factory
+        self._sched_args = sched_args
 
     # -------------------------- public APIs --------------------------
     @property
@@ -78,6 +85,38 @@ class Optimization:
 
         if self.scheduler is not None:
             self.scheduler.step()
+
+    def reconfigure(
+        self,
+        *,
+        lr: float | None = None,
+        sched_cls: str | None = None,
+        sched_factory: typing.Callable[
+            ..., torch.optim.lr_scheduler.LRScheduler
+        ] | None = None,
+        sched_args: dict[str, typing.Any] | None = None
+    ) -> None:
+        '''
+        Reconfigure optimizer + scheduler in one call.
+        '''
+
+        if lr is not None:
+            for group in self.optimizer.param_groups:
+                group['lr'] = lr
+
+        if sched_factory is None or sched_cls is None:
+            self.scheduler = None
+            self._sched_factory = None
+            self._sched_cls = None
+            self._sched_args = None
+            return
+
+        args = sched_args or {}
+
+        self.scheduler = sched_factory(self.optimizer, **args)
+        self._sched_factory = sched_factory
+        self._sched_cls = sched_cls
+        self._sched_args = args
 
     def reset_scheduler(
         self,
