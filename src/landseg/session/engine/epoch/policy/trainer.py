@@ -142,7 +142,7 @@ class MultiHeadTrainer(policy.EngineBase):
             self._batch_reset(bidx, batch)
 
             # reset optimizer gradient
-            self.optimization.optimizer.zero_grad(set_to_none=True)
+            self.optimization.zero_grad()
 
             # delegate batch to engine (forward and compute loss)
             self.engine.run_train_batch()
@@ -159,30 +159,27 @@ class MultiHeadTrainer(policy.EngineBase):
                 self._head_losses[head] += loss
 
             # gradient clipping
-            optimizer = self.optimization.optimizer
             # unscale if use AMP
             if self.engine.config.use_amp:
-                self.state.optim.scaler.unscale_(optimizer)
+                self.state.optim.scaler.unscale_(self.optimization.optimizer)
             self._clip_grad()
 
             # optimizer step
-            optimizer = self.optimization.optimizer
             # use AMP
             if self.engine.config.use_amp:
-                self.state.optim.scaler.step(optimizer)
+                self.state.optim.scaler.step(self.optimization.optimizer)
                 self.state.optim.scaler.update() # update scaler
             # no AMP
             else:
-                self.optimization.optimizer.step()
+                self.optimization.step_optimizer()
 
             # scheduler step (if present)
-            if self.optimization.scheduler is not None:
-                self.optimization.scheduler.step()
+            self.optimization.step_scheduler()
 
             # increment global step counter
             self.state.progress.global_step += 1
             # snapshopt learning rate
-            self.state.optim.lrs = [g['lr'] for g in optimizer.param_groups]
+            self.state.optim.lrs = self.optimization.lrs
 
             # batch end
             self._update_training_stats() # depending on frequency config
