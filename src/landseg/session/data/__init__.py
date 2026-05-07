@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.components.data`.
+Top-level namespace for `landseg.session.data`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

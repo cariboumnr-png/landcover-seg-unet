@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.policy`.
+Top-level namespace for `landseg.session.engine.epoch.policy`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
