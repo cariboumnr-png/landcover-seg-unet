@@ -40,11 +40,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .optimizer import OptimConfig, Optimization, build_optimization
+    from .builder import OptimConfig, build_optimization
+    from .optimization import Optimization
 
 def __getattr__(name: str):
 
-    if name in {'OptimConfig', 'Optimization', 'build_optimization'}:
+    if name in {'OptimConfig', 'build_optimization'}:
+        return getattr(importlib.import_module('.builder', __package__), name)
+
+    if name in {'Optimization'}:
         return getattr(importlib.import_module('.optimizer', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
