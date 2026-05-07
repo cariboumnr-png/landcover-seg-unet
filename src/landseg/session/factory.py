@@ -147,7 +147,7 @@ def build_overfit_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: utils.Logger
-) -> engine.EpochRunner:
+) -> engine.EpochEngine:
     '''
     doc
     '''
@@ -156,14 +156,19 @@ def build_overfit_session(
     dispatcher = instrument.CallbackDispatcher([
         instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
-    return engine.build_engine(
+    # context
+    engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        mode='train_eval',
         dispatcher=dispatcher,
-        config=config,
         device=context.device,
         logger=logger,
+    )
+    return engine.build_epoch_engine(
+        context=engine_context,
+        config=config,
+        mode='train_eval',
+        eval_dataset=context.eval_dataset,
     )
 
 def build_evaluate_session(
@@ -173,7 +178,7 @@ def build_evaluate_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: utils.Logger
-) -> engine.EpochRunner:
+) -> engine.EpochEngine:
     '''
     doc
     '''
@@ -182,14 +187,19 @@ def build_evaluate_session(
     dispatcher = instrument.CallbackDispatcher([
         instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
-    return engine.build_engine(
+    # context
+    engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        mode='eval_only',
         dispatcher=dispatcher,
-        config=config,
         device=context.device,
         logger=logger,
+    )
+    return engine.build_epoch_engine(
+        context=engine_context,
+        config=config,
+        mode='eval_only',
+        eval_dataset=context.eval_dataset,
     )
 
 def build_continous_training_session(
@@ -208,16 +218,20 @@ def build_continous_training_session(
         instrument.LoggingCallback(verbose=context.verbose_runner),
         instrument.TrackingCallback(['tb'], context.session_paths.logs)
     ])
-
-    # epoch runner
-    epoch_runner = engine.build_engine(
+    # epoch engine context
+    engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        mode='train_eval',
         dispatcher=dispatcher,
-        config=config,
         device=context.device,
         logger=logger,
+    )
+    # epoch engine
+    epoch_engine = engine.build_epoch_engine(
+        context=engine_context,
+        config=config,
+        mode='train_eval',
+        eval_dataset=context.eval_dataset,
     )
 
     # base orchestrator config
@@ -238,7 +252,7 @@ def build_continous_training_session(
 
     # return the orchestrator
     return orchestration.build_runner(
-        epoch_runner=epoch_runner,
+        epoch_engine=epoch_engine,
         base_config=base_config,
         training_schema=training_schema,
         dispatcher=dispatcher
@@ -260,18 +274,21 @@ def build_curriculum_training_session(
         instrument.LoggingCallback(verbose=context.verbose_runner),
         instrument.TrackingCallback(['tb'], context.session_paths.logs)
     ])
-
-    # epoch runner
-    epoch_runner = engine.build_engine(
+    # epoch engine context
+    engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        mode='train_eval',
         dispatcher=dispatcher,
-        config=config,
         device=context.device,
         logger=logger,
     )
-
+    # epoch engine
+    epoch_engine = engine.build_epoch_engine(
+        context=engine_context,
+        config=config,
+        mode='train_eval',
+        eval_dataset=context.eval_dataset,
+    )
     # base orchestrator config
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
@@ -290,7 +307,7 @@ def build_curriculum_training_session(
 
     # return the orchestrator
     return orchestration.build_runner(
-        epoch_runner=epoch_runner,
+        epoch_engine=epoch_engine,
         base_config=base_config,
         training_schema=training_schema,
         dispatcher=dispatcher

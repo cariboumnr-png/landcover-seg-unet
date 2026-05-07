@@ -81,7 +81,7 @@ class TrainingSchema:
 
 def build_runner(
     *,
-    epoch_runner: protocols.EpochEngineLike,
+    epoch_engine: protocols.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
     training_schema: TrainingSchema,
     dispatcher: common.SessionObserverLike,
@@ -141,7 +141,7 @@ def build_runner(
             if not isinstance(training_phases, common.PhaseLike):
                 raise ValueError('Continuous training requires a single phase')
             return runner.ContinuousRunner(
-                epoch_runner=epoch_runner,
+                epoch_runner=epoch_engine,
                 base_config=base_config,
                 dispatcher=dispatcher,
                 phase=training_phases,
@@ -153,7 +153,7 @@ def build_runner(
             ):
                 raise ValueError('Curriculum expects a sequence of phases')
             return runner.CurriculumRunner(
-                epoch_runner=epoch_runner,
+                epoch_runner=epoch_engine,
                 base_config=base_config,
                 dispatcher=dispatcher,
                 training_phases=training_phases,

@@ -32,7 +32,7 @@ import typing
 
 __all__ = [
     # classes
-    'EpochRunner',
+    'EpochEngine',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
     # functions
@@ -41,15 +41,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .executor import EpochEngine
     from .policy import MultiHeadTrainer, MultiHeadEvaluator
-    from .runner import EpochRunner
 
 def __getattr__(name: str):
 
+    if name in {'EpochEngine'}:
+        return getattr(importlib.import_module('.executor', __package__), name)
+
     if name in {'MultiHeadEvaluator', 'MultiHeadTrainer',}:
         return getattr(importlib.import_module('.policy', __package__), name)
-
-    if name in {'EpochRunner'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -63,6 +63,7 @@ Type behavior:
 '''
 
 # standard imports
+import dataclasses
 import typing
 # local imports
 import landseg.core as core
@@ -73,8 +74,8 @@ import landseg.session.engine.epoch as epoch
 import landseg.session.instrumentation as instrument
 import landseg.utils as utils
 
-# ---------------------------------Public Type---------------------------------
-class SessionConfigShape(typing.Protocol):
+# --------------------------------priavte  type--------------------------------
+class _EpochEngineConfigShape(typing.Protocol):
     '''
     Structural typing interface for session configuration.
 
@@ -103,34 +104,40 @@ class SessionConfigShape(typing.Protocol):
     @property
     def runtime(self) -> common.RuntimeConfigLike: ...
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class EpochEngineContext:
+    '''Epoch engine building context.'''
+    dataspecs: core.DataSpecs
+    model: core.MultiheadModelLike
+    dispatcher: instrument.CallbackDispatcher
+    device: str
+    logger: utils.Logger
+
 # -------------------------------Public Function-------------------------------
-def build_engine(
+def build_epoch_engine(
     *,
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
+    context: EpochEngineContext,
+    config: _EpochEngineConfigShape,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
-    dispatcher: instrument.CallbackDispatcher,
-    config: SessionConfigShape,
-    device: str,
-    logger: utils.Logger,
     eval_dataset: typing.Literal['val', 'test'] = 'val'
-) -> epoch.EpochRunner:
+) -> epoch.EpochEngine:
     '''doc'''
 
     # data loader
     data_loaders = data.build_dataloaders(
-        dataspecs,
+        context.dataspecs,
         config.loader,
-        logger=logger
+        logger=context.logger
     )
 
     # batch engine
     batch_engine = batch.build_batch_engine(
-        dataspecs=dataspecs,
+        dataspecs=context.dataspecs,
         dataloaders=data_loaders,
-        model=model,
+        model=context.model,
         config=config,
-        device=device
+        device=context.device
     )
 
     # trainer
@@ -138,8 +145,8 @@ def build_engine(
         # base engine
         engine_core=batch_engine,
         dataloaders=data_loaders,
-        dispatcher=dispatcher,
-        device=device,
+        dispatcher=context.dispatcher,
+        device=context.device,
         # trainer-specific
         grad_clip_norm=config.runtime.optimization.grad_clip_norm,
         update_every=config.runtime.schedule.log_loss_every,
@@ -150,8 +157,8 @@ def build_engine(
         # base engine
         engine_core=batch_engine,
         dataloaders=data_loaders,
-        dispatcher=dispatcher,
-        device=device,
+        dispatcher=context.dispatcher,
+        device=context.device,
         # evaluator-specific
         val_every=config.runtime.schedule.val_every,
         infer_every=config.runtime.schedule.infer_every,
@@ -161,8 +168,8 @@ def build_engine(
     # return engine with matched mode
     match mode:
         case 'train_eval':
-            return epoch.EpochRunner(mode, trainer, evaluator)
+            return epoch.EpochEngine(mode, trainer, evaluator)
         case 'train_only':
-            return epoch.EpochRunner(mode, trainer, None)
+            return epoch.EpochEngine(mode, trainer, None)
         case 'eval_only':
-            return epoch.EpochRunner(mode, None, evaluator)
+            return epoch.EpochEngine(mode, None, evaluator)

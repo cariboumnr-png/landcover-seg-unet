@@ -32,20 +32,21 @@ import typing
 
 __all__ = [
     # classes
-    'EpochRunner',
+    'EpochEngineContext',
+    'EpochEngine',
     # functions
-    'build_engine',
+    'build_epoch_engine',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_engine
-    from .epoch import EpochRunner
+    from .builder import EpochEngineContext, build_epoch_engine
+    from .epoch import EpochEngine
 
 def __getattr__(name: str):
 
-    if name in {'build_engine'}:
+    if name in {'EpochEngineContext', 'build_epoch_engine'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
     if name in {'EpochRunner'}:

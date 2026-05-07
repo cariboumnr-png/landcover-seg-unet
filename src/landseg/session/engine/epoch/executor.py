@@ -44,7 +44,7 @@ import landseg.session.engine.epoch.policy as policy
 Mode: typing.TypeAlias = typing.Literal['train_eval', 'train_only', 'eval_only']
 
 # --------------------------------Public  Class--------------------------------
-class EpochRunner:
+class EpochEngine:
     '''
     Execute exactly one training epoch with optional validation.
 
