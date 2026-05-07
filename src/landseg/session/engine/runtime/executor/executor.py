@@ -58,15 +58,17 @@ import landseg.core as core
 import landseg.session.engine.runtime.executor as executor
 
 @dataclasses.dataclass
-class BatchExecutorConfig:
+class BatchEngineConfig:
     '''doc'''
-    parent_map: dict[str, str | None]
     use_amp: bool
+    enable_logit_adjust: bool
+    logit_adjust_alpha: float
+    parent_map: dict[str, str | None]
     patch_per_blk: int | None
     patch_per_dim: int | None
     block_columns: int | None
 
-class BatchExecutionEngine:
+class BatchEngine:
     '''
     Pure batch execution engine for session workflows.
 
@@ -101,7 +103,7 @@ class BatchExecutionEngine:
         self,
         model: core.MultiheadModelLike,
         engine_state: executor.EngineState,
-        config: BatchExecutorConfig,
+        config: BatchEngineConfig,
         *,
         device: str,
     ):
@@ -132,6 +134,9 @@ class BatchExecutionEngine:
         # move model to device
         self.device = device
         self.model.to(self.device)
+        # config model logit adjustment
+        self.model.set_logit_adjust_enabled(config.enable_logit_adjust)
+        self.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
 
     # ----- Public Method
     def run_train_batch(self) -> None:

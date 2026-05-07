@@ -32,8 +32,8 @@ import typing
 
 __all__ = [
     # classes
-    'BatchExecutionEngine',
-    'BatchExecutorConfig',
+    'BatchEngine',
+    'BatchEngineConfig',
     'EngineState',
     # functions
     'initialize_state',
@@ -42,7 +42,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import BatchExecutionEngine, BatchExecutorConfig
+    from .executor import BatchEngine, BatchEngineConfig
     from .loss import multihead_loss
     from .state import EngineState, initialize_state
 

@@ -32,8 +32,8 @@ import typing
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.engine.runtime.executor as executor
-import landseg.session.engine.runtime.optim as optim
-import landseg.session.engine.runtime.tasks as tasks
+import landseg.session.engine.runtime.optim as engine_optim
+import landseg.session.engine.runtime.tasks as engine_tasks
 import landseg.session.engine.protocols as protocols
 
 
@@ -41,9 +41,9 @@ import landseg.session.engine.protocols as protocols
 class EngineRuntimeConfigShape(typing.Protocol):
     '''Structural typing interface for engine building.'''
     @property
-    def tasks(self) -> tasks.TaskConfig: ...
+    def tasks(self) -> engine_tasks.TaskConfig: ...
     @property
-    def optimization(self) -> optim.OptimConfig: ...
+    def optimization(self) -> engine_optim.OptimConfig: ...
     @property
     def runtime(self) -> common.RuntimeConfigLike: ...
 
@@ -51,9 +51,9 @@ class EngineRuntimeConfigShape(typing.Protocol):
 @dataclasses.dataclass
 class EngineRuntime:
     '''Engine core components bundle.'''
-    engine: executor.BatchExecutionEngine
-    optim:optim.Optimization
-    tasks: tasks.EngineTasks
+    engine: executor.BatchEngine
+    engine_optim: engine_optim.Optimization
+    engine_tasks: engine_tasks.EngineTasks
 
 # -------------------------------Public Function-------------------------------
 def build_engine_runtime(
@@ -84,33 +84,31 @@ def build_engine_runtime(
     )
 
     # batch engine
-    batch_config = executor.BatchExecutorConfig(
-        parent_map=dataspecs.heads.head_parent,
+    batch_config = executor.BatchEngineConfig(
+        enable_logit_adjust=runtime.logit_adjust.enable,
+        logit_adjust_alpha=runtime.logit_adjust.alpha,
         use_amp=runtime.precision.use_amp,
+        parent_map=dataspecs.heads.head_parent,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
         block_columns=preview_ctx.block_columns if preview_ctx else None
     )
-    batch_executor = executor.BatchExecutionEngine(
+    batch_engine = executor.BatchEngine(
         model,
         engine_state,
         batch_config,
         device=device
     )
 
-    # config model logit adjustment
-    batch_executor.model.set_logit_adjust_enabled(runtime.logit_adjust.enable)
-    batch_executor.model.set_logit_adjust_alpha(runtime.logit_adjust.alpha)
+    # engine optimization
+    optimization = engine_optim.build_optimization(model, optim_config)
 
     # engine tasks
-    engine_tasks = tasks.build_engine_tasks(dataspecs, tasks_config)
-
-    # engine optimization
-    optimization = optim.build_optimization(model, optim_config)
+    tasks = engine_tasks.build_engine_tasks(dataspecs, tasks_config)
 
     # engine core bundle
     return EngineRuntime(
-        engine=batch_executor,
-        optim=optimization,
-        tasks=engine_tasks,
+        engine=batch_engine,
+        engine_optim=optimization,
+        engine_tasks=tasks,
     )

@@ -131,22 +131,22 @@ class EngineBase:
     @property
     def headspecs(self):
         '''Access head specifications.'''
-        return self.runtime.tasks.headspecs
+        return self.runtime.engine_tasks.headspecs
 
     @property
     def headlosses(self):
         '''Access head-specific loss modules.'''
-        return self.runtime.tasks.headlosses
+        return self.runtime.engine_tasks.headlosses
 
     @property
     def headmetrics(self):
         '''Access head-specific metric modules.'''
-        return self.runtime.tasks.headmetrics
+        return self.runtime.engine_tasks.headmetrics
 
     @property
     def optimization(self):
         '''Optim'''
-        return self.runtime.optim
+        return self.runtime.engine_optim
 
     # ----- head configuration helpers
     def set_head_state(
