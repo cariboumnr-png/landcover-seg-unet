@@ -60,6 +60,7 @@ class EngineBase:
         self,
         engine: batch.BatchExecutionEngine,
         engine_state: state.EngineState,
+        dataloaders: protocols.DataLoadersLike,
         components: protocols.ComponentsLike,
         dispatcher: common.SessionObserverLike,
         *,
@@ -108,6 +109,9 @@ class EngineBase:
         self.model = engine.model
         self.state = engine_state
 
+        # data loader
+        self.dataloaders = dataloaders
+
         # engine components
         self.comps = components
 
@@ -119,11 +123,6 @@ class EngineBase:
         self.model.to(self.device)
 
     # ----- convenience properties
-    @property
-    def dataloaders(self):
-        '''Access configured dataloaders.'''
-        return self.comps.dataloaders
-
     @property
     def headspecs(self):
         '''Access head specifications.'''

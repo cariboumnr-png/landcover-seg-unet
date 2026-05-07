@@ -36,23 +36,9 @@ import landseg.core as core
 if typing.TYPE_CHECKING:
     import torch
 
-# -----------------------------Engine components-----------------------------
-@typing.runtime_checkable
-class ComponentsLike(typing.Protocol):
-    @property
-    def dataloaders(self) -> _DataLoadersLike:...
-    @property
-    def headspecs(self) -> _HeadSpecsLike:...
-    @property
-    def headlosses(self) -> _HeadLossesLike:...
-    @property
-    def headmetrics(self) -> _HeadMetricsLike:...
-    @property
-    def optimization(self) -> _OptimizationLike:...
-
 # ---------------------------------dataloaders---------------------------------
 @typing.runtime_checkable
-class _DataLoadersLike(typing.Protocol):
+class DataLoadersLike(typing.Protocol):
     @property
     def train(self) -> 'torch.utils.data.DataLoader | None':...
     @property
@@ -67,6 +53,18 @@ class _PreviewContext(typing.Protocol):
     patch_per_dim: int
     block_columns: int
     patch_grid_shape: tuple[int, int]
+
+# -----------------------------Engine components-----------------------------
+@typing.runtime_checkable
+class ComponentsLike(typing.Protocol):
+    @property
+    def headspecs(self) -> _HeadSpecsLike:...
+    @property
+    def headlosses(self) -> _HeadLossesLike:...
+    @property
+    def headmetrics(self) -> _HeadMetricsLike:...
+    @property
+    def optimization(self) -> _OptimizationLike:...
 
 # ---------------------------------head  specs---------------------------------
 @typing.runtime_checkable

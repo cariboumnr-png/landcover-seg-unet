@@ -73,6 +73,7 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.components as comps
 import landseg.session.configs as configs
+import landseg.session.data as data
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
@@ -270,7 +271,6 @@ def _build_partial_epoch_runner(
         dataspecs,
         model,
         config.components,
-        logger=logger,
         total_epochs=context.total_epochs
     )
 
@@ -283,9 +283,16 @@ def _build_partial_epoch_runner(
     )
 
     # build runner context and config
+    data_loaders = data.build_dataloaders(
+        dataspecs,
+        config.components.loader,
+        logger=logger
+    )
+
     engine_build_context = engine.EngineBuildContext(
         dataspecs=dataspecs,
         model=model,
+        dataloaders=data_loaders,
         components=session_components,
         device=context.device,
     )

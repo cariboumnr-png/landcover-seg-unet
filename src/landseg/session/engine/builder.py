@@ -41,6 +41,7 @@ class EngineBuildContext:
     '''Engine building context'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
+    dataloaders: protocols.DataLoadersLike
     components: protocols.ComponentsLike
     device: str
 
@@ -71,7 +72,7 @@ def build_engine(
     '''
 
     # batch engine
-    preview_ctx = context.components.dataloaders.preview_context
+    preview_ctx = context.dataloaders.preview_context
     batch_config = batch.BatchExecutorConfig(
         parent_map=context.dataspecs.heads.head_parent,
         use_amp=config.use_amp,
@@ -92,22 +93,28 @@ def build_engine(
 
     # trainer
     trainer = policy.MultiHeadTrainer(
+        # base engine
         engine=batch_executor,
         engine_state=runtime_state,
+        dataloaders=context.dataloaders,
         components=context.components,
         dispatcher=dispatcher,
         device=context.device,
+        # trainer-specific
         grad_clip_norm=config.grad_clip_norm,
         update_every=config.train_update_every_n_batch,
     )
 
     # evaluator
     evaluator = policy.MultiHeadEvaluator(
+        # base engine
         engine=batch_executor,
         engine_state=runtime_state,
+        dataloaders=context.dataloaders,
         components=context.components,
         dispatcher=dispatcher,
         device=context.device,
+        # evaluator-specific
         monitor_heads=config.metrics_track_heads,
         dataset=config.evaluation_dataset,
         val_every=config.val_every_n_epoch,

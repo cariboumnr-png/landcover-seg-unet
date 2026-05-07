@@ -31,7 +31,6 @@ import landseg.core as core
 import landseg.session.components.data as data
 import landseg.session.components.optim as optim
 import landseg.session.components.task as task
-import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
 class ComponentsConfigLike(typing.Protocol):
@@ -47,7 +46,6 @@ class ComponentsConfigLike(typing.Protocol):
 @dataclasses.dataclass
 class SessionComponents:
     '''A simple container of the session components.'''
-    dataloaders: data.DataLoaders
     headspecs: task.HeadSpecs
     headlosses: task.HeadLosses
     headmetrics: task.HeadMetrics
@@ -59,17 +57,9 @@ def build_session_components(
     model: core.MultiheadModelLike,
     config: ComponentsConfigLike,
     *,
-    logger: utils.Logger,
     total_epochs: int
  ) -> SessionComponents:
     '''Builder session components from data shape and configs.'''
-
-    # data loader
-    data_loaders = data.build_dataloaders(
-        data_specs,
-        config.loader,
-        logger=logger,
-    )
 
     # task - heads specifications
     headspecs = task.build_headspecs(
@@ -92,7 +82,7 @@ def build_session_components(
     )
 
     # optimizer and scheduler
-    t_max = total_epochs * len(data_loaders.train or [])
+    t_max = total_epochs # TODO
     if t_max == 0:
         t_max = None
     config.optimization.sched_args.update({'T_max': t_max})
@@ -100,7 +90,6 @@ def build_session_components(
 
     # collect components
     return SessionComponents(
-        dataloaders=data_loaders,
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
