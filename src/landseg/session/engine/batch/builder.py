@@ -72,17 +72,18 @@ def build_engine_core(
     runtime = config.runtime
     tasks_config = config.tasks
     optim_config = config.optimization
+    meta = dataloaders.meta
+    preview_ctx = meta.preview_context
 
     # initialize engine state
     engine_state = executor.initialize_state(
         all_heads=list(dataspecs.heads.class_counts.keys()),
-        batch_size=dataloaders.batch_size,
+        batch_size=meta.batch_size,
         use_amp=runtime.precision.use_amp,
         device=device
     )
 
     # batch engine
-    preview_ctx = dataloaders.preview_context
     batch_config = executor.BatchExecutorConfig(
         parent_map=dataspecs.heads.head_parent,
         use_amp=runtime.precision.use_amp,
