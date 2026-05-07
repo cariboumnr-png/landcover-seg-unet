@@ -36,14 +36,12 @@ import landseg.session.common as common
 import landseg.session.engine.batch as batch
 import landseg.session.engine.optim as optim
 import landseg.session.engine.protocols as protocols
-import landseg.session.engine.state as state
 import landseg.session.engine.tasks as tasks
 
 @dataclasses.dataclass
 class EngineCore:
     '''Engine core components bundle.'''
     engine: batch.BatchExecutionEngine
-    engine_state: state.EngineState
     engine_tasks: tasks.EngineTasks
     engine_optim:optim.Optimization
 
@@ -116,7 +114,7 @@ class EngineBase:
         # execution core and shared state
         self.engine = engine_core.engine
         self.model = engine_core.engine.model
-        self.state = engine_core.engine_state
+        self.state = engine_core.engine.state
 
         # data loader
         self.dataloaders = dataloaders

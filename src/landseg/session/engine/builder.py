@@ -113,7 +113,6 @@ def build_engine(
     # engine core bundle
     engine_core = policy.EngineCore(
         engine=batch_executor,
-        engine_state=engine_state,
         engine_tasks=engine_tasks,
         engine_optim=optimization
     )
