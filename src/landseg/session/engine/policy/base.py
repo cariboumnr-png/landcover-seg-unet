@@ -32,7 +32,7 @@ execution mechanics to a shared execution core.
 import copy
 # local imports
 import landseg.session.common as common
-import landseg.session.engine.core as engine_core
+import landseg.session.engine.batch as batch
 import landseg.session.engine.protocols as protocols
 
 class EngineBase:
@@ -57,7 +57,7 @@ class EngineBase:
 
     def __init__(
         self,
-        core: engine_core.EngineCore,
+        engine_core: batch.EngineCore,
         dataloaders: protocols.DataLoadersLike,
         dispatcher: common.SessionObserverLike,
         *,
@@ -102,18 +102,18 @@ class EngineBase:
         '''
 
         # execution core and shared state
-        self.engine = core.engine
-        self.model = core.engine.model
-        self.state = core.engine.state
+        self.engine = engine_core.engine
+        self.model = engine_core.engine.model
+        self.state = engine_core.engine.state
 
         # data loader
         self.dataloaders = dataloaders
 
         # engine tasks
-        self.tasks = core.engine_tasks
+        self.tasks = engine_core.engine_tasks
 
         # engine optimization
-        self.optimization = core.engine_optim
+        self.optimization = engine_core.engine_optim
 
         # callback system
         self.dispatcher = dispatcher

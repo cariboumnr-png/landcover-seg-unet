@@ -55,7 +55,7 @@ import dataclasses
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.core.batch as batch
+import landseg.session.engine.batch.executor as executor
 
 @dataclasses.dataclass
 class BatchExecutorConfig:
@@ -100,7 +100,7 @@ class BatchExecutionEngine:
     def __init__(
         self,
         model: core.MultiheadModelLike,
-        engine_state: batch.EngineState,
+        engine_state: executor.EngineState,
         config: BatchExecutorConfig,
         *,
         device: str,
@@ -363,7 +363,7 @@ class BatchExecutionEngine:
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
         # call loss function
-        total, perhead = batch.multihead_loss(
+        total, perhead = executor.multihead_loss(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features

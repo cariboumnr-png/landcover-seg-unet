@@ -32,8 +32,8 @@ Used by the trainer to compute IoU-based metrics for each prediction head.
 '''
 
 # local imports
-import landseg.session.engine.core.tasks.heads as heads
-import landseg.session.engine.core.tasks.metrics as metrics
+import landseg.session.engine.batch.tasks.heads as heads
+import landseg.session.engine.batch.tasks.metrics as metrics
 
 class HeadMetrics:
     '''

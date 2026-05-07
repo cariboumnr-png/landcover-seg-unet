@@ -32,21 +32,9 @@ import typing
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.engine as engine
-import landseg.session.engine.core as engine_core
-import landseg.session.engine.core.optim as optim
-import landseg.session.engine.core.tasks as tasks
+import landseg.session.engine.batch as batch
 import landseg.session.engine.policy as policy
 import landseg.session.engine.protocols as protocols
-
-# ---------------------------------Public Type---------------------------------
-class EngineBuildConfigShape(typing.Protocol):
-    '''Structural typing interface for engine building.'''
-    @property
-    def tasks(self) -> tasks.TaskConfig: ...
-    @property
-    def optimization(self) -> optim.OptimConfig: ...
-    @property
-    def runtime(self) -> common.RuntimeConfigLike: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -62,7 +50,7 @@ class EngineBuildContext:
 def build_engine(
     *,
     context: EngineBuildContext,
-    config: EngineBuildConfigShape,
+    config: batch.EngineBuildConfigShape,
     dispatcher: common.SessionObserverLike,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> engine.EpochRunner:
@@ -70,7 +58,7 @@ def build_engine(
     doc
     '''
 
-    ee = engine_core.build_engine_core(
+    engine_core = batch.build_engine_core(
         dataspecs=context.dataspecs,
         dataloaders=context.dataloaders,
         model=context.model,
@@ -81,7 +69,7 @@ def build_engine(
     # trainer
     trainer = policy.MultiHeadTrainer(
         # base engine
-        core=ee,
+        engine_core=engine_core,
         dataloaders=context.dataloaders,
         dispatcher=dispatcher,
         device=context.device,
@@ -93,7 +81,7 @@ def build_engine(
     # evaluator
     evaluator = policy.MultiHeadEvaluator(
         # base engine
-        core=ee,
+        engine_core=engine_core,
         dataloaders=context.dataloaders,
         dispatcher=dispatcher,
         device=context.device,

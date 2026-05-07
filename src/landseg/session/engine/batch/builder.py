@@ -31,9 +31,9 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.engine.core.batch as batch
-import landseg.session.engine.core.optim as optim
-import landseg.session.engine.core.tasks as tasks
+import landseg.session.engine.batch.executor as executor
+import landseg.session.engine.batch.optim as optim
+import landseg.session.engine.batch.tasks as tasks
 import landseg.session.engine.protocols as protocols
 
 
@@ -51,7 +51,7 @@ class EngineBuildConfigShape(typing.Protocol):
 @dataclasses.dataclass
 class EngineCore:
     '''Engine core components bundle.'''
-    engine: batch.BatchExecutionEngine
+    engine: executor.BatchExecutionEngine
     engine_optim:optim.Optimization
     engine_tasks: tasks.EngineTasks
 
@@ -74,7 +74,7 @@ def build_engine_core(
     optim_config = config.optimization
 
     # initialize engine state
-    engine_state = batch.initialize_state(
+    engine_state = executor.initialize_state(
         all_heads=list(dataspecs.heads.class_counts.keys()),
         batch_size=dataloaders.batch_size,
         use_amp=runtime.precision.use_amp,
@@ -83,14 +83,14 @@ def build_engine_core(
 
     # batch engine
     preview_ctx = dataloaders.preview_context
-    batch_config = batch.BatchExecutorConfig(
+    batch_config = executor.BatchExecutorConfig(
         parent_map=dataspecs.heads.head_parent,
         use_amp=runtime.precision.use_amp,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
         block_columns=preview_ctx.block_columns if preview_ctx else None
     )
-    batch_executor = batch.BatchExecutionEngine(
+    batch_executor = executor.BatchExecutionEngine(
         model,
         engine_state,
         batch_config,

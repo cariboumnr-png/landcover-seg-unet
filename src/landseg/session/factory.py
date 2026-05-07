@@ -74,8 +74,8 @@ import landseg.session.common as common
 import landseg.session.data as data
 
 import landseg.session.engine as engine
-import landseg.session.engine.core.optim as optim
-import landseg.session.engine.core.tasks as tasks
+import landseg.session.engine.batch.optim as optim
+import landseg.session.engine.batch.tasks as tasks
 
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
