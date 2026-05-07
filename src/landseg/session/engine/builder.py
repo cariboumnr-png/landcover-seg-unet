@@ -143,7 +143,7 @@ def build_epoch_engine(
     # trainer
     trainer = epoch.MultiHeadTrainer(
         # base engine
-        engine_core=engine_runtime,
+        engine_runtime=engine_runtime,
         dataloaders=data_loaders,
         dispatcher=context.dispatcher,
         device=context.device,
@@ -155,7 +155,7 @@ def build_epoch_engine(
     # evaluator
     evaluator = epoch.MultiHeadEvaluator(
         # base engine
-        engine_core=engine_runtime,
+        engine_runtime=engine_runtime,
         dataloaders=data_loaders,
         dispatcher=context.dispatcher,
         device=context.device,

@@ -48,7 +48,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'BatchExecutionEngine', 'BatchExecutorConfig'}:
+    if name in {'BatchEngine', 'BatchEngineConfig'}:
         return getattr(importlib.import_module('.executor', __package__), name)
 
     if name in {'multihead_loss'}:
