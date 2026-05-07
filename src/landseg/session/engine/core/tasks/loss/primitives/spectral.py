@@ -30,7 +30,7 @@ similar predicted class probabilities.
 import torch
 import torch.nn.functional
 # local imports
-import landseg.session.engine.tasks.loss.primitives as primitives
+import landseg.session.engine.core.tasks.loss.primitives as primitives
 
 class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
     '''

@@ -36,9 +36,9 @@ objects.
 '''
 
 # local imports
-import landseg.session.engine.tasks as tasks
-import landseg.session.engine.tasks.heads as heads
-import landseg.session.engine.tasks.loss as loss
+import landseg.session.engine.core.tasks as tasks
+import landseg.session.engine.core.tasks.heads as heads
+import landseg.session.engine.core.tasks.loss as loss
 
 # --------------------------------Public  Class--------------------------------
 class HeadLosses:

@@ -22,7 +22,7 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Engine building
+Engine core building
 '''
 
 # standard imports
@@ -31,12 +31,11 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.engine as engine
-import landseg.session.engine.core as engine_core
+import landseg.session.engine.core.batch as batch
 import landseg.session.engine.core.optim as optim
 import landseg.session.engine.core.tasks as tasks
-import landseg.session.engine.policy as policy
 import landseg.session.engine.protocols as protocols
+
 
 # ---------------------------------Public Type---------------------------------
 class EngineBuildConfigShape(typing.Protocol):
@@ -50,64 +49,67 @@ class EngineBuildConfigShape(typing.Protocol):
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class EngineBuildContext:
-    '''Engine building context'''
-    dataspecs: core.DataSpecs
-    model: core.MultiheadModelLike
-    dataloaders: protocols.DataLoadersLike
-    evaluation_dataset: typing.Literal['val', 'test']
-    device: str
+class EngineCore:
+    '''Engine core components bundle.'''
+    engine: batch.BatchExecutionEngine
+    engine_optim:optim.Optimization
+    engine_tasks: tasks.EngineTasks
 
 # -------------------------------Public Function-------------------------------
-def build_engine(
+def build_engine_core(
     *,
-    context: EngineBuildContext,
+    dataspecs: core.DataSpecs,
+    dataloaders: protocols.DataLoadersLike,
+    model: core.MultiheadModelLike,
     config: EngineBuildConfigShape,
-    dispatcher: common.SessionObserverLike,
-    mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
-) -> engine.EpochRunner:
+    device: str
+) -> EngineCore:
     '''
     doc
     '''
 
-    ee = engine_core.build_engine_core(
-        dataspecs=context.dataspecs,
-        dataloaders=context.dataloaders,
-        model=context.model,
-        config=config,
-        device=context.device
+    # aliases
+    runtime = config.runtime
+    tasks_config = config.tasks
+    optim_config = config.optimization
+
+    # initialize engine state
+    engine_state = batch.initialize_state(
+        all_heads=list(dataspecs.heads.class_counts.keys()),
+        batch_size=dataloaders.batch_size,
+        use_amp=runtime.precision.use_amp,
+        device=device
     )
 
-    # trainer
-    trainer = policy.MultiHeadTrainer(
-        # base engine
-        core=ee,
-        dataloaders=context.dataloaders,
-        dispatcher=dispatcher,
-        device=context.device,
-        # trainer-specific
-        grad_clip_norm=config.runtime.optimization.grad_clip_norm,
-        update_every=config.runtime.schedule.log_loss_every,
+    # batch engine
+    preview_ctx = dataloaders.preview_context
+    batch_config = batch.BatchExecutorConfig(
+        parent_map=dataspecs.heads.head_parent,
+        use_amp=runtime.precision.use_amp,
+        patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
+        patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
+        block_columns=preview_ctx.block_columns if preview_ctx else None
+    )
+    batch_executor = batch.BatchExecutionEngine(
+        model,
+        engine_state,
+        batch_config,
+        device=device
     )
 
-    # evaluator
-    evaluator = policy.MultiHeadEvaluator(
-        # base engine
-        core=ee,
-        dataloaders=context.dataloaders,
-        dispatcher=dispatcher,
-        device=context.device,
-        # evaluator-specific
-        val_every=config.runtime.schedule.val_every,
-        infer_every=config.runtime.schedule.infer_every,
-        dataset=context.evaluation_dataset,
-    )
+    # config model logit adjustment
+    batch_executor.model.set_logit_adjust_enabled(runtime.logit_adjust.enable)
+    batch_executor.model.set_logit_adjust_alpha(runtime.logit_adjust.alpha)
 
-    # return engine with matched mode
-    match mode:
-        case 'train_eval':
-            return engine.EpochRunner(mode, trainer, evaluator)
-        case 'train_only':
-            return engine.EpochRunner(mode, trainer, None)
-        case 'eval_only':
-            return engine.EpochRunner(mode, None, evaluator)
+    # engine tasks
+    engine_tasks = tasks.build_engine_tasks(dataspecs, tasks_config)
+
+    # engine optimization
+    optimization = optim.build_optimization(model, optim_config)
+
+    # engine core bundle
+    return EngineCore(
+        engine=batch_executor,
+        engine_optim=optimization,
+        engine_tasks=engine_tasks,
+    )
