@@ -63,9 +63,7 @@ Type behavior:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
-import functools
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -74,6 +72,7 @@ import landseg.session.common as common
 import landseg.session.data as data
 
 import landseg.session.engine as engine
+
 import landseg.session.engine.batch.optim as optim
 import landseg.session.engine.batch.tasks as tasks
 
@@ -157,16 +156,15 @@ def build_overfit_session(
     dispatcher = instrument.CallbackDispatcher([
         instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
-    # partial epoch runner
-    epoch_runner_partial = _build_partial_epoch_runner(
+    return engine.build_engine(
         dataspecs=dataspecs,
         model=model,
+        mode='train_eval',
+        dispatcher=dispatcher,
         config=config,
-        context=context,
+        device=context.device,
         logger=logger,
     )
-    # complete runner and return
-    return epoch_runner_partial(mode='train_eval', dispatcher=dispatcher)
 
 def build_evaluate_session(
     *,
@@ -184,16 +182,15 @@ def build_evaluate_session(
     dispatcher = instrument.CallbackDispatcher([
         instrument.LoggingCallback(verbose=context.verbose_runner)
     ])
-    # partial epoch runner
-    epoch_runner_partial = _build_partial_epoch_runner(
+    return engine.build_engine(
         dataspecs=dataspecs,
         model=model,
+        mode='eval_only',
+        dispatcher=dispatcher,
         config=config,
-        context=context,
+        device=context.device,
         logger=logger,
     )
-    # complete runner and return
-    return epoch_runner_partial(mode='eval_only', dispatcher=dispatcher)
 
 def build_continous_training_session(
     *,
@@ -202,7 +199,7 @@ def build_continous_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: utils.Logger
-) -> orchestration.ContinuousRunner:
+): #  -> orchestration.ContinuousRunner
     '''doc'''
 
     # callback dispatcher
@@ -211,111 +208,19 @@ def build_continous_training_session(
         instrument.LoggingCallback(verbose=context.verbose_runner),
         instrument.TrackingCallback(['tb'], context.session_paths.logs)
     ])
-    # partial training runner
-    training_runner_partial = _build_partial_training_runner(
+
+    # epoch runner
+    epoch_runner = engine.build_engine(
         dataspecs=dataspecs,
         model=model,
-        config=config,
-        context=context,
+        mode='train_eval',
         dispatcher=dispatcher,
-        logger=logger,
-    )
-    # complete training runner and return
-    return training_runner_partial(
-        training_schema = orchestration.TrainingSchema(
-            schema='continuous',
-            training_phases=config.single_phase,
-        )
-    )
-
-def build_curriculum_training_session(
-    *,
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    logger: utils.Logger
-) -> orchestration.CurriculumRunner:
-    '''doc'''
-
-    # callback dispatcher
-    assert context.session_paths, 'Session paths manager not provided'
-    dispatcher = instrument.CallbackDispatcher([
-        instrument.LoggingCallback(verbose=context.verbose_runner),
-        instrument.TrackingCallback(['tb'], context.session_paths.logs)
-    ])
-    # partial training runner
-    training_runner_partial = _build_partial_training_runner(
-        dataspecs=dataspecs,
-        model=model,
         config=config,
-        context=context,
-        dispatcher=dispatcher,
-        logger=logger,
-    )
-    # complete training runner and return
-    return training_runner_partial(
-        training_schema = orchestration.TrainingSchema(
-            schema='curriculum',
-            training_phases=config.curriculum,
-        )
-    )
-
-# ------------------------------private  function------------------------------
-def _build_partial_epoch_runner(
-    *,
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    logger: utils.Logger,
-) -> typing.Callable[..., engine.EpochRunner]:
-    '''doc'''
-
-    # data loader
-    data_loaders = data.build_dataloaders(
-        dataspecs,
-        config.loader,
-        logger=logger
-    )
-
-    # engine building context and config
-    engine_build_context = engine.EngineBuildContext(
-        dataspecs=dataspecs,
-        model=model,
-        dataloaders=data_loaders,
-        evaluation_dataset=context.eval_dataset,
         device=context.device,
-    )
-
-    # return a partial epoch runner without the mode flag
-    return functools.partial(
-        engine.build_engine,
-        context=engine_build_context,
-        config=config
-    )
-
-def _build_partial_training_runner(
-    *,
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    dispatcher: common.SessionObserverLike,
-    logger: utils.Logger,
-) -> typing.Callable: # avoid complex typing as it is just an internal wrapper
-    '''doc'''
-
-    epoch_runner_partial = _build_partial_epoch_runner(
-        dataspecs=dataspecs,
-        model=model,
-        config=config,
-        context=context,
         logger=logger,
     )
-    epoch_runner = epoch_runner_partial(mode='train_eval', dispatcher=dispatcher)
 
-    assert context.session_paths, 'Session artifacts paths not defined'
+    # base orchestrator config
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
         verbose=context.verbose_runner,
@@ -325,10 +230,68 @@ def _build_partial_training_runner(
         delta=config.runtime.monitor.min_delta,
     )
 
-    # return a partial orchestraction runner
-    return functools.partial(
-        orchestration.build_runner,
+    # training schema
+    training_schema = orchestration.TrainingSchema(
+        schema='continuous',
+        training_phases=config.single_phase,
+    )
+
+    # return the orchestrator
+    return orchestration.build_runner(
         epoch_runner=epoch_runner,
         base_config=base_config,
+        training_schema=training_schema,
+        dispatcher=dispatcher
+    )
+
+def build_curriculum_training_session(
+    *,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext,
+    logger: utils.Logger
+): #-> orchestration.CurriculumRunner
+    '''doc'''
+
+    # callback dispatcher
+    assert context.session_paths, 'Session paths manager not provided'
+    dispatcher = instrument.CallbackDispatcher([
+        instrument.LoggingCallback(verbose=context.verbose_runner),
+        instrument.TrackingCallback(['tb'], context.session_paths.logs)
+    ])
+
+    # epoch runner
+    epoch_runner = engine.build_engine(
+        dataspecs=dataspecs,
+        model=model,
+        mode='train_eval',
         dispatcher=dispatcher,
+        config=config,
+        device=context.device,
+        logger=logger,
+    )
+
+    # base orchestrator config
+    base_config = orchestration.BaseRunnerConfig(
+        artifacts_paths=context.session_paths,
+        verbose=context.verbose_runner,
+        track_mode=config.runtime.monitor.track_mode,
+        enable_early_stop=config.runtime.monitor.allow_early_stop,
+        patience_epochs=config.runtime.monitor.patience,
+        delta=config.runtime.monitor.min_delta,
+    )
+
+    # training schema
+    training_schema = orchestration.TrainingSchema(
+        schema='curriculum',
+        training_phases=config.curriculum,
+    )
+
+    # return the orchestrator
+    return orchestration.build_runner(
+        epoch_runner=epoch_runner,
+        base_config=base_config,
+        training_schema=training_schema,
+        dispatcher=dispatcher
     )
