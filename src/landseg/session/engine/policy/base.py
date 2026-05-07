@@ -101,20 +101,10 @@ class EngineBase:
                     Enable logit adjustment during inference.
         '''
 
-        # execution core and shared state
-        self.engine = engine_core.engine
-        self.model = engine_core.engine.model
-        self.state = engine_core.engine.state
-
+        # execution core
+        self.core = engine_core
         # data loader
         self.dataloaders = dataloaders
-
-        # engine tasks
-        self.tasks = engine_core.engine_tasks
-
-        # engine optimization
-        self.optimization = engine_core.engine_optim
-
         # callback system
         self.dispatcher = dispatcher
 
@@ -122,21 +112,41 @@ class EngineBase:
         self.device = device
         self.model.to(self.device)
 
-    # ----- convenience properties
+    # ----- access attributes as properties
+    @property
+    def engine(self):
+        '''Return the engine'''
+        return self.engine
+
+    @property
+    def model(self):
+        '''Return the model'''
+        return self.core.engine.model
+
+    @property
+    def state(self):
+        '''Return the engine state.'''
+        return self.core.engine.state
+
     @property
     def headspecs(self):
         '''Access head specifications.'''
-        return self.tasks.headspecs
+        return self.core.engine_tasks.headspecs
 
     @property
     def headlosses(self):
         '''Access head-specific loss modules.'''
-        return self.tasks.headlosses
+        return self.core.engine_tasks.headlosses
 
     @property
     def headmetrics(self):
         '''Access head-specific metric modules.'''
-        return self.tasks.headmetrics
+        return self.core.engine_tasks.headmetrics
+
+    @property
+    def optimization(self):
+        '''Optim'''
+        return self.core.engine_optim
 
     # ----- head configuration helpers
     def set_head_state(
