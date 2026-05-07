@@ -116,7 +116,7 @@ class EngineBase:
     @property
     def engine(self):
         '''Return the engine'''
-        return self.engine
+        return self.core.engine
 
     @property
     def model(self):

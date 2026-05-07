@@ -35,16 +35,27 @@ __all__ = [
     'EngineCore',
     'EngineBuildConfigShape',
     # functions
-    'build_engine_core'
+    'build_engine_core',
+    # types
+    'OptimConfig',
+    'TaskConfig'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import EngineCore, EngineBuildConfigShape, build_engine_core
+    from .optim import OptimConfig
+    from .tasks import TaskConfig
 
 def __getattr__(name: str):
 
     if name in {'EngineCore', 'EngineBuildConfigShape', 'build_engine_core'}:
         return getattr(importlib.import_module('.builder', __package__), name)
+
+    if name in {'OptimConfig'}:
+        return getattr(importlib.import_module('.optim', __package__), name)
+
+    if name in {'TaskConfig'}:
+        return getattr(importlib.import_module('.tasks', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

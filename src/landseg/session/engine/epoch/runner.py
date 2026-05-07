@@ -39,7 +39,7 @@ Design principles
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.engine.policy as policy
+import landseg.session.engine.epoch.policy as policy
 
 Mode: typing.TypeAlias = typing.Literal['train_eval', 'train_only', 'eval_only']
 
