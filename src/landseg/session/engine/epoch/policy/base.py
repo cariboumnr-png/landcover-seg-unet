@@ -32,7 +32,7 @@ execution mechanics to a shared execution core.
 import copy
 # local imports
 import landseg.session.common as common
-import landseg.session.engine.batch as batch
+import landseg.session.engine.runtime as runtime
 import landseg.session.engine.protocols as protocols
 
 class EngineBase:
@@ -57,7 +57,7 @@ class EngineBase:
 
     def __init__(
         self,
-        engine_runtime: batch.EngineRuntime,
+        engine_runtime: runtime.EngineRuntime,
         dataloaders: protocols.DataLoadersLike,
         dispatcher: common.SessionObserverLike,
         *,

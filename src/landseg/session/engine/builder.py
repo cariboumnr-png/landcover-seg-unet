@@ -69,8 +69,8 @@ import typing
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.data as data
-import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
+import landseg.session.engine.runtime as runtime
 import landseg.session.instrumentation as instrument
 import landseg.utils as utils
 
@@ -98,9 +98,9 @@ class _EpochEngineConfigShape(typing.Protocol):
     @property
     def loader(self) -> data.LoaderConfig: ...
     @property
-    def tasks(self) -> batch.TaskConfig: ...
+    def tasks(self) -> runtime.TaskConfig: ...
     @property
-    def optimization(self) -> batch.OptimConfig: ...
+    def optimization(self) -> runtime.OptimConfig: ...
     @property
     def runtime(self) -> common.RuntimeConfigLike: ...
 
@@ -132,7 +132,7 @@ def build_epoch_engine(
     )
 
     # engine runtime
-    engine_runtime = batch.build_engine_runtime(
+    engine_runtime = runtime.build_engine_runtime(
         dataspecs=context.dataspecs,
         dataloaders=data_loaders,
         model=context.model,

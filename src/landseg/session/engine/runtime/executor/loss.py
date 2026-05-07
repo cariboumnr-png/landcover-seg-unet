@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.batch.tasks as tasks
+import landseg.session.engine.runtime.tasks as tasks
 
 # -------------------------------Public Function-------------------------------
 def multihead_loss(

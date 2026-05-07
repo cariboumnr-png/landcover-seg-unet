@@ -31,9 +31,9 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.engine.batch.executor as executor
-import landseg.session.engine.batch.optim as optim
-import landseg.session.engine.batch.tasks as tasks
+import landseg.session.engine.runtime.executor as executor
+import landseg.session.engine.runtime.optim as optim
+import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.protocols as protocols
 
 

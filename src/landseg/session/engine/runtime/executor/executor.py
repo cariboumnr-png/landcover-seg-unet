@@ -55,7 +55,7 @@ import dataclasses
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.batch.executor as executor
+import landseg.session.engine.runtime.executor as executor
 
 @dataclasses.dataclass
 class BatchExecutorConfig:

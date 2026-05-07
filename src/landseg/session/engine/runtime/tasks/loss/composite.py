@@ -37,8 +37,8 @@ The main entry point is `CompositeLoss`, which handles:
 import torch
 import torch.nn
 # local imports
-import landseg.session.engine.batch.tasks as tasks
-import landseg.session.engine.batch.tasks.loss.primitives as primitives
+import landseg.session.engine.runtime.tasks as tasks
+import landseg.session.engine.runtime.tasks.loss.primitives as primitives
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):

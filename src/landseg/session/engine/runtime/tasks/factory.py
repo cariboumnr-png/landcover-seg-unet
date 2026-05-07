@@ -31,9 +31,9 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.engine.batch.tasks.heads as heads
-import landseg.session.engine.batch.tasks.loss as loss
-import landseg.session.engine.batch.tasks.metrics as metrics
+import landseg.session.engine.runtime.tasks.heads as heads
+import landseg.session.engine.runtime.tasks.loss as loss
+import landseg.session.engine.runtime.tasks.metrics as metrics
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfig(typing.Protocol):
