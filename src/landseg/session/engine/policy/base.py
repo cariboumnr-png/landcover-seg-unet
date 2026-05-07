@@ -33,8 +33,10 @@ import copy
 # local imports
 import landseg.session.common as common
 import landseg.session.engine.batch as batch
+import landseg.session.engine.optim as optim
 import landseg.session.engine.protocols as protocols
 import landseg.session.engine.state as state
+import landseg.session.engine.tasks as tasks
 
 class EngineBase:
     '''
@@ -60,8 +62,9 @@ class EngineBase:
         self,
         engine: batch.BatchExecutionEngine,
         engine_state: state.EngineState,
+        engine_tasks: tasks.EngineTasks,
+        engine_optim:optim.Optimization,
         dataloaders: protocols.DataLoadersLike,
-        components: protocols.ComponentsLike,
         dispatcher: common.SessionObserverLike,
         *,
         device: str,
@@ -112,8 +115,11 @@ class EngineBase:
         # data loader
         self.dataloaders = dataloaders
 
-        # engine components
-        self.comps = components
+        # engine tasks
+        self.tasks = engine_tasks
+
+        # engine optimization
+        self.optimization = engine_optim
 
         # callback system
         self.dispatcher = dispatcher
@@ -126,22 +132,17 @@ class EngineBase:
     @property
     def headspecs(self):
         '''Access head specifications.'''
-        return self.comps.headspecs
+        return self.tasks.headspecs
 
     @property
     def headlosses(self):
         '''Access head-specific loss modules.'''
-        return self.comps.headlosses
+        return self.tasks.headlosses
 
     @property
     def headmetrics(self):
         '''Access head-specific metric modules.'''
-        return self.comps.headmetrics
-
-    @property
-    def optimization(self):
-        '''Access optimization configuration and components.'''
-        return self.comps.optimization
+        return self.tasks.headmetrics
 
     # ----- head configuration helpers
     def set_head_state(

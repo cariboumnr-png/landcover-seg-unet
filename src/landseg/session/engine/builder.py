@@ -32,8 +32,10 @@ import landseg.session.common as common
 import landseg.session.engine as engine
 import landseg.session.engine.batch as batch
 import landseg.session.engine.state as state
+import landseg.session.engine.optim as optim
 import landseg.session.engine.policy as policy
 import landseg.session.engine.protocols as protocols
+import landseg.session.engine.tasks as tasks
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -42,7 +44,6 @@ class EngineBuildContext:
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
     dataloaders: protocols.DataLoadersLike
-    components: protocols.ComponentsLike
     device: str
 
 @dataclasses.dataclass
@@ -64,6 +65,8 @@ def build_engine(
     context: EngineBuildContext,
     config: EngineBuildConfig,
     runtime_state: state.EngineState,
+    task_config: tasks.TaskConfig,
+    optim_config: optim.OptimConfig,
     dispatcher: common.SessionObserverLike,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
 ) -> engine.EpochRunner:
@@ -91,13 +94,20 @@ def build_engine(
     batch_executor.model.set_logit_adjust_enabled(config.enable_logit_adjust)
     batch_executor.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
 
+    # engine tasks
+    engine_tasks = tasks.build_engine_tasks(context.dataspecs, task_config)
+
+    # engine optimization
+    optimization = optim.build_optimization(context.model, optim_config)
+
     # trainer
     trainer = policy.MultiHeadTrainer(
         # base engine
         engine=batch_executor,
         engine_state=runtime_state,
+        engine_tasks=engine_tasks,
+        optimization=optimization,
         dataloaders=context.dataloaders,
-        components=context.components,
         dispatcher=dispatcher,
         device=context.device,
         # trainer-specific
@@ -110,8 +120,9 @@ def build_engine(
         # base engine
         engine=batch_executor,
         engine_state=runtime_state,
+        engine_tasks=engine_tasks,
+        optimization=optimization,
         dataloaders=context.dataloaders,
-        components=context.components,
         dispatcher=dispatcher,
         device=context.device,
         # evaluator-specific

@@ -56,15 +56,13 @@ class _PreviewContext(typing.Protocol):
 
 # -----------------------------Engine components-----------------------------
 @typing.runtime_checkable
-class ComponentsLike(typing.Protocol):
+class EngineTasksLike(typing.Protocol):
     @property
     def headspecs(self) -> _HeadSpecsLike:...
     @property
     def headlosses(self) -> _HeadLossesLike:...
     @property
     def headmetrics(self) -> _HeadMetricsLike:...
-    @property
-    def optimization(self) -> _OptimizationLike:...
 
 # ---------------------------------head  specs---------------------------------
 @typing.runtime_checkable
@@ -120,6 +118,6 @@ class ConfusionMatrixLike(typing.Protocol):
 
 # ------------------------------------optim------------------------------------
 @typing.runtime_checkable
-class _OptimizationLike(typing.Protocol):
+class OptimizationLike(typing.Protocol):
     optimizer: torch.optim.Optimizer
     scheduler: torch.optim.lr_scheduler.LRScheduler | None
