@@ -244,17 +244,12 @@ def build_continous_training_session(
         delta=config.runtime.monitor.min_delta,
     )
 
-    # training schema
-    training_schema = orchestration.TrainingSchema(
-        schema='continuous',
-        training_phases=config.single_phase,
-    )
-
     # return the orchestrator
     return orchestration.build_runner(
         epoch_engine=epoch_engine,
         base_config=base_config,
-        training_schema=training_schema,
+        runner_type='continuous',
+        training_phases=config.single_phase,
         dispatcher=dispatcher
     )
 
@@ -299,16 +294,11 @@ def build_curriculum_training_session(
         delta=config.runtime.monitor.min_delta,
     )
 
-    # training schema
-    training_schema = orchestration.TrainingSchema(
-        schema='curriculum',
-        training_phases=config.curriculum,
-    )
-
     # return the orchestrator
     return orchestration.build_runner(
         epoch_engine=epoch_engine,
         base_config=base_config,
-        training_schema=training_schema,
+        runner_type='curriculum',
+        training_phases=config.curriculum,
         dispatcher=dispatcher
     )

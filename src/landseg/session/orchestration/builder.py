@@ -43,49 +43,41 @@ external contract regardless of internal training structure.
 '''
 
 # standard imports
-import dataclasses
 import typing
 # local imports
 import landseg.session.common as common
 import landseg.session.orchestration.protocols as protocols
 import landseg.session.orchestration.runner as runner
 
-#
-@dataclasses.dataclass
-class TrainingSchema:
-    '''doc'''
-    schema: typing.Literal['continuous', 'curriculum']
-    training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike]
+@typing.overload
+def build_runner(
+    *,
+    epoch_engine: protocols.EpochEngineLike,
+    base_config: runner.BaseRunnerConfig,
+    runner_type: typing.Literal['continuous'],
+    training_phases: common.PhaseLike,
+    dispatcher: common.SessionObserverLike,
+) -> runner.ContinuousRunner: ...
 
-    @typing.overload
-    def __init__(
-        self,
-        schema: typing.Literal['continuous'],
-        training_phases: common.PhaseLike
-    ) -> None: ...
+@typing.overload
+def build_runner(
+    *,
+    epoch_engine: protocols.EpochEngineLike,
+    base_config: runner.BaseRunnerConfig,
+    runner_type: typing.Literal['curriculum'],
+    training_phases: typing.Sequence[common.PhaseLike],
+    dispatcher: common.SessionObserverLike,
+) -> runner.CurriculumRunner: ...
 
-    @typing.overload
-    def __init__(
-        self,
-        schema: typing.Literal['curriculum'],
-        training_phases: typing.Sequence[common.PhaseLike]
-    ) -> None: ...
-
-    def __init__(
-        self,
-        schema: typing.Literal['continuous', 'curriculum'],
-        training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike]
-    ):
-        self.schema = schema
-        self.training_phases = training_phases
 
 def build_runner(
     *,
     epoch_engine: protocols.EpochEngineLike,
     base_config: runner.BaseRunnerConfig,
-    training_schema: TrainingSchema,
+    runner_type: typing.Literal['continuous', 'curriculum'],
+    training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike],
     dispatcher: common.SessionObserverLike,
-) -> runner.BaseRunner:
+) -> runner.ContinuousRunner | runner.CurriculumRunner:
     '''
     Construct a concrete orchestration runner for epoch-based training.
 
@@ -135,8 +127,7 @@ def build_runner(
             expected type for the selected ``runner_type``.
     '''
 
-    training_phases = training_schema.training_phases
-    match training_schema.schema:
+    match runner_type:
         case 'continuous':
             if not isinstance(training_phases, common.PhaseLike):
                 raise ValueError('Continuous training requires a single phase')

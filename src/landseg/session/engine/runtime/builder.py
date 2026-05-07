@@ -38,7 +38,7 @@ import landseg.session.engine.protocols as protocols
 
 
 # ---------------------------------Public Type---------------------------------
-class EngineRuntimeConfigShape(typing.Protocol):
+class _EngineRuntimeConfigShape(typing.Protocol):
     '''Structural typing interface for engine building.'''
     @property
     def tasks(self) -> engine_tasks.TaskConfig: ...
@@ -61,7 +61,7 @@ def build_engine_runtime(
     dataspecs: core.DataSpecs,
     dataloaders: protocols.DataLoadersLike,
     model: core.MultiheadModelLike,
-    config: EngineRuntimeConfigShape,
+    config: _EngineRuntimeConfigShape,
     device: str
 ) -> EngineRuntime:
     '''

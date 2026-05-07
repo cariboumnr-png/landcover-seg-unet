@@ -36,26 +36,20 @@ __all__ = [
     'ContinuousRunner',
     'CurriculumRunner',
     'TrackingConfig',
-    'TrainingSchema',
     # functions
     'build_runner',
     # types
-    'PhaseLike',
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_runner, TrainingSchema
-    from .phases import PhaseLike
+    from .builder import build_runner
     from .policy import TrackingConfig
     from .runner import  BaseRunnerConfig, ContinuousRunner, CurriculumRunner
 
 def __getattr__(name: str):
 
-    if name in {'TrainingSchema', 'build_runner'}:
+    if name in {'build_runner'}:
         return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
 
     if name in {'TrackingConfig'}:
         return getattr(importlib.import_module('.policy', __package__), name)
