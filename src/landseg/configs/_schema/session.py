@@ -117,8 +117,8 @@ class _Optimization:
 
 @dataclasses.dataclass
 class _LogitAdjustConfig:
-    enable_logit_adjust: bool = False
-    logit_adjust_alpha: float = 1.0
+    enable: bool = False
+    alpha: float = 1.0
 
 @dataclasses.dataclass
 class _RuntimeConfig:
