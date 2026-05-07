@@ -49,7 +49,7 @@ def __getattr__(name: str):
     if name in {'EpochEngineContext', 'build_epoch_engine'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
-    if name in {'EpochRunner'}:
+    if name in {'EpochEngine'}:
         return getattr(importlib.import_module('.epoch', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -22,7 +22,7 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Engine core building
+Engine runtime building
 '''
 
 # standard imports
@@ -38,7 +38,7 @@ import landseg.session.engine.protocols as protocols
 
 
 # ---------------------------------Public Type---------------------------------
-class BatchEngineConfigShape(typing.Protocol):
+class EngineRuntimeConfigShape(typing.Protocol):
     '''Structural typing interface for engine building.'''
     @property
     def tasks(self) -> tasks.TaskConfig: ...
@@ -49,21 +49,21 @@ class BatchEngineConfigShape(typing.Protocol):
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
-class BatchEngine:
+class EngineRuntime:
     '''Engine core components bundle.'''
     engine: executor.BatchExecutionEngine
-    engine_optim:optim.Optimization
-    engine_tasks: tasks.EngineTasks
+    optim:optim.Optimization
+    tasks: tasks.EngineTasks
 
 # -------------------------------Public Function-------------------------------
-def build_batch_engine(
+def build_engine_runtime(
     *,
     dataspecs: core.DataSpecs,
     dataloaders: protocols.DataLoadersLike,
     model: core.MultiheadModelLike,
-    config: BatchEngineConfigShape,
+    config: EngineRuntimeConfigShape,
     device: str
-) -> BatchEngine:
+) -> EngineRuntime:
     '''
     doc
     '''
@@ -109,8 +109,8 @@ def build_batch_engine(
     optimization = optim.build_optimization(model, optim_config)
 
     # engine core bundle
-    return BatchEngine(
+    return EngineRuntime(
         engine=batch_executor,
-        engine_optim=optimization,
-        engine_tasks=engine_tasks,
+        optim=optimization,
+        tasks=engine_tasks,
     )

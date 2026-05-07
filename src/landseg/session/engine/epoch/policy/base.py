@@ -57,7 +57,7 @@ class EngineBase:
 
     def __init__(
         self,
-        engine_core: batch.BatchEngine,
+        engine_runtime: batch.EngineRuntime,
         dataloaders: protocols.DataLoadersLike,
         dispatcher: common.SessionObserverLike,
         *,
@@ -102,7 +102,7 @@ class EngineBase:
         '''
 
         # execution core
-        self.core = engine_core
+        self.runtime = engine_runtime
         # data loader
         self.dataloaders = dataloaders
         # callback system
@@ -116,37 +116,37 @@ class EngineBase:
     @property
     def engine(self):
         '''Return the engine'''
-        return self.core.engine
+        return self.runtime.engine
 
     @property
     def model(self):
         '''Return the model'''
-        return self.core.engine.model
+        return self.runtime.engine.model
 
     @property
     def state(self):
         '''Return the engine state.'''
-        return self.core.engine.state
+        return self.runtime.engine.state
 
     @property
     def headspecs(self):
         '''Access head specifications.'''
-        return self.core.engine_tasks.headspecs
+        return self.runtime.tasks.headspecs
 
     @property
     def headlosses(self):
         '''Access head-specific loss modules.'''
-        return self.core.engine_tasks.headlosses
+        return self.runtime.tasks.headlosses
 
     @property
     def headmetrics(self):
         '''Access head-specific metric modules.'''
-        return self.core.engine_tasks.headmetrics
+        return self.runtime.tasks.headmetrics
 
     @property
     def optimization(self):
         '''Optim'''
-        return self.core.engine_optim
+        return self.runtime.optim
 
     # ----- head configuration helpers
     def set_head_state(

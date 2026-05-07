@@ -131,8 +131,8 @@ def build_epoch_engine(
         logger=context.logger
     )
 
-    # batch engine
-    batch_engine = batch.build_batch_engine(
+    # engine runtime
+    engine_runtime = batch.build_engine_runtime(
         dataspecs=context.dataspecs,
         dataloaders=data_loaders,
         model=context.model,
@@ -143,7 +143,7 @@ def build_epoch_engine(
     # trainer
     trainer = epoch.MultiHeadTrainer(
         # base engine
-        engine_core=batch_engine,
+        engine_core=engine_runtime,
         dataloaders=data_loaders,
         dispatcher=context.dispatcher,
         device=context.device,
@@ -155,7 +155,7 @@ def build_epoch_engine(
     # evaluator
     evaluator = epoch.MultiHeadEvaluator(
         # base engine
-        engine_core=batch_engine,
+        engine_core=engine_runtime,
         dataloaders=data_loaders,
         dispatcher=context.dispatcher,
         device=context.device,
