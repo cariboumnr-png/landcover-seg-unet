@@ -35,12 +35,13 @@ import typing
 field = dataclasses.field
 
 # -------------------------------SESSION CONFIGS-------------------------------
-# ----- COMPONENTS
+# ----- LOADER
 @dataclasses.dataclass
 class _LoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
+# ----- TASKS
 @dataclasses.dataclass
 class _FocalLossConfig:
     weight: float = 0.5
@@ -76,6 +77,7 @@ class _LossConfig:
     excluded_cls: dict[str, list[int]] | None = None
     types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
+# ----- OPTIMIZATION
 @dataclasses.dataclass
 class _OptimConfig:
     opt_cls: str = 'AdamW'
@@ -85,18 +87,6 @@ class _OptimConfig:
     sched_args: dict[str, typing.Any] = field(
         default_factory=lambda: {'T_max': 50}
     )
-
-@dataclasses.dataclass
-class _ComponentsCfg:
-    loader: _LoaderConfig = field(default_factory=_LoaderConfig)
-    task: _LossConfig = field(default_factory=_LossConfig)
-    optimization: _OptimConfig = field(default_factory=_OptimConfig)
-
-    def validate(self) -> None:
-        # Example: scheduler-specific requirements
-        if self.optimization.sched_cls == 'CosAnneal':
-            if 'T_max' not in self.optimization.sched_args:
-                raise ValueError('missing T_max for CosAnneal')
 
 # ----- RUNTIME
 @dataclasses.dataclass
@@ -127,8 +117,8 @@ class _Optimization:
 
 @dataclasses.dataclass
 class _LogitAdjustConfig:
-    enable_logit_adjust: bool = False
-    logit_adjust_alpha: float = 1.0
+    enable: bool = False
+    alpha: float = 1.0
 
 @dataclasses.dataclass
 class _RuntimeConfig:
@@ -171,8 +161,12 @@ class SessionConfig:
     resume_from_last: bool = False
     mode: str = 'continuous'
     phase_schema: str = 'default'
-    components: _ComponentsCfg = field(default_factory=_ComponentsCfg)
+
+    loader: _LoaderConfig = field(default_factory=_LoaderConfig)
+    tasks: _LossConfig = field(default_factory=_LossConfig)
+    optimization: _OptimConfig = field(default_factory=_OptimConfig)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
+
     phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
 
     @property
@@ -213,3 +207,8 @@ class SessionConfig:
                     ' training. It is now being set to False'
                 )
                 self.runtime.monitor.allow_early_stop = False
+
+        # Example: scheduler-specific requirements
+        if self.optimization.sched_cls == 'CosAnneal':
+            if 'T_max' not in self.optimization.sched_args:
+                raise ValueError('missing T_max for CosAnneal')

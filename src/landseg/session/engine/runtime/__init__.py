@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,29 @@ import typing
 
 __all__ = [
     # classes
+    'EngineRuntime',
     # functions
+    'build_engine_runtime',
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
+    'OptimConfig',
+    'TaskConfig'
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .builder import EngineRuntime, build_engine_runtime
+    from .optim import OptimConfig
+    from .tasks import TaskConfig
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'EngineRuntime','build_engine_runtime'}:
+        return getattr(importlib.import_module('.builder', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
+    if name in {'OptimConfig'}:
+        return getattr(importlib.import_module('.optim', __package__), name)
 
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'TaskConfig'}:
+        return getattr(importlib.import_module('.tasks', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -21,7 +21,7 @@
 
 
 '''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
+Top-level namespace for `landseg.session.instrumentation.tracking`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

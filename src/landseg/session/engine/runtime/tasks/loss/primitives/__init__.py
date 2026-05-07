@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch.tasks.loss.primitives`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,38 @@ import typing
 
 __all__ = [
     # classes
+    'PrimitiveLoss',
+    'DiceLoss',
+    'FocalLoss',
+    'SpectralSmoothnessLoss',
+    'TotalVariationLoss',
     # functions
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .base import PrimitiveLoss
+    from .dice import DiceLoss
+    from .focal import FocalLoss
+    from .spectral import SpectralSmoothnessLoss
+    from .tv import TotalVariationLoss
+
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'PrimitiveLoss'}:
+        return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
+    if name in {'DiceLoss'}:
+        return getattr(importlib.import_module('.dice', __package__), name)
 
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'FocalLoss'}:
+        return getattr(importlib.import_module('.focal', __package__), name)
+
+    if name in {'SpectralSmoothnessLoss'}:
+        return getattr(importlib.import_module('.spectral', __package__), name)
+
+    if name in {'TotalVariationLoss'}:
+        return getattr(importlib.import_module('.tv', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

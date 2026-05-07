@@ -83,16 +83,16 @@ class RootConfig:
     # set parameters
     def set_lr(self, lr: float) -> None:
         '''Set learning rate.'''
-        self.session.components.optimization.lr = lr
+        self.session.optimization.lr = lr
 
     def set_weight_decay(self, weight_decay: float) -> None:
         '''Set weight decay.'''
-        self.session.components.optimization.weight_decay = weight_decay
+        self.session.optimization.weight_decay = weight_decay
 
     def set_patch_size(self, patch_size: int) -> None:
         '''Set patch size'''
-        self.session.components.loader.patch_size = patch_size
+        self.session.loader.patch_size = patch_size
 
     def set_batch_size(self, batch_size: int) -> None:
         '''Set batch size'''
-        self.session.components.loader.batch_size = batch_size
+        self.session.loader.batch_size = batch_size

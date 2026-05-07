@@ -32,30 +32,30 @@ import typing
 
 __all__ = [
     # classes
-    'EngineBuildContext',
-    'EngineBuildConfig',
-    'EpochRunner',
-    'build_engine',
+    'EpochEngineContext',
+    'EpochEngine',
     # functions
-    'initialize_state'
+    'build_epoch_engine',
     # types
+    'TaskConfig',
+    'OptimConfig',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import EngineBuildContext, EngineBuildConfig, build_engine
-    from .runner import EpochRunner
-    from .state import initialize_state
+    from .builder import EpochEngineContext, build_epoch_engine
+    from .epoch import EpochEngine
+    from .runtime import TaskConfig, OptimConfig
 
 def __getattr__(name: str):
 
-    if name in {'EngineBuildContext', 'EngineBuildConfig', 'build_engine'}:
+    if name in {'EpochEngineContext', 'build_epoch_engine'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
-    if name in {'EpochRunner'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+    if name in {'EpochEngine'}:
+        return getattr(importlib.import_module('.epoch', __package__), name)
 
-    if name in {'initialize_state'}:
-        return getattr(importlib.import_module('.state', __package__), name)
+    if name in {'TaskConfig', 'OptimConfig'}:
+        return getattr(importlib.import_module('.runtime', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

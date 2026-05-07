@@ -19,41 +19,18 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.common`.
+'''Head specifications.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# standard imports
+import dataclasses
 
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    # classes
-    # functions
-    # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
-]
-# for static check
-if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
-
-def __getattr__(name: str):
-
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
-
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+@dataclasses.dataclass
+class HeadSpec:
+    '''Specifications for a training head.'''
+    name: str
+    count: list[int]
+    loss_alpha: list[float]
+    parent_head: str | None
+    parent_cls: int | None # 1-based
+    weight: float
+    exclude_cls: tuple[int, ...] | None

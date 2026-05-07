@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch.tasks`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,34 @@ import typing
 
 __all__ = [
     # classes
+    'EngineTasks',
+    'HeadSpec',
+    'CompositeLoss',
+    'ConfusionMatrix',
     # functions
+    'build_engine_tasks',
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
+    'TaskConfig'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .factory import EngineTasks, TaskConfig, build_engine_tasks
+    from .heads import HeadSpec
+    from .loss import CompositeLoss
+    from .metrics import ConfusionMatrix
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'EngineTasks', 'TaskConfig', 'build_engine_tasks'}:
+        return getattr(importlib.import_module('.factory', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
+    if name in {'HeadSpec'}:
+        return getattr(importlib.import_module('.heads', __package__), name)
 
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'CompositeLoss'}:
+        return getattr(importlib.import_module('.loss', __package__), name)
+
+    if name in {'ConfusionMatrix'}:
+        return getattr(importlib.import_module('.metrics', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

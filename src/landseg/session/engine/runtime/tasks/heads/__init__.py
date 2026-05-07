@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch.tasks.heads`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,24 @@ import typing
 
 __all__ = [
     # classes
+    'HeadSpec',
+    'HeadSpecs',
     # functions
+    'build_headspecs',
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .factory import HeadSpecs, build_headspecs
+    from .specs import HeadSpec
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'HeadSpecs', 'build_headspecs'}:
+        return getattr(importlib.import_module('.factory', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'HeadSpec'}:
+        return getattr(importlib.import_module('.specs', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

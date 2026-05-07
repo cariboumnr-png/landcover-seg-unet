@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch.executor`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,29 @@ import typing
 
 __all__ = [
     # classes
+    'BatchEngine',
+    'BatchEngineConfig',
+    'EngineState',
     # functions
-    # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
+    'initialize_state',
+    'multihead_loss',
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .executor import BatchEngine, BatchEngineConfig
+    from .loss import multihead_loss
+    from .state import EngineState, initialize_state
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'BatchEngine', 'BatchEngineConfig'}:
+        return getattr(importlib.import_module('.executor', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
+    if name in {'multihead_loss'}:
+        return getattr(importlib.import_module('.loss', __package__), name)
 
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'EngineState', 'initialize_state'}:
+        return getattr(importlib.import_module('.state', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

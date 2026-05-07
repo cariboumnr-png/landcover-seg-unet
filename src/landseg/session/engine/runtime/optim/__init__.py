@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch.optim`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -29,31 +29,26 @@ order simple and circular-free.
 from __future__ import annotations
 import importlib
 import typing
-
 __all__ = [
     # classes
+    'Optimization',
     # functions
+    'build_optimization',
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
+    'OptimConfig'
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .builder import OptimConfig, build_optimization
+    from .optimization import Optimization
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'OptimConfig', 'build_optimization'}:
+        return getattr(importlib.import_module('.builder', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'Optimization'}:
+        return getattr(importlib.import_module('.optimization', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.data`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,26 @@ import typing
 
 __all__ = [
     # classes
+    'BlockConfig',
+    'DataLoaders',
+    'MultiBlockDataset',
     # functions
+    'build_dataloaders',
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
+    'LoaderConfig'
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .dataset import BlockConfig, MultiBlockDataset
+    from .loader import LoaderConfig, DataLoaders, build_dataloaders
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'BlockConfig', 'MultiBlockDataset'}:
+        return getattr(importlib.import_module('.dataset', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'LoaderConfig', 'DataLoaders', 'build_dataloaders'}:
+        return getattr(importlib.import_module('.loader', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

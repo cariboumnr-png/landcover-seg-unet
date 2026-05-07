@@ -24,38 +24,66 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Session components protocols
+Internal runtime configuration structures for the trainer.
+
+Defines typed dataclasses for scheduling, monitoring, precision, and
+optimization settings, along with a factory that constructs a unified
+RuntimeConfig from user configuration files.
 '''
 
 # standard imports
 from __future__ import annotations
 import typing
 
-if typing.TYPE_CHECKING:
-    import torch
+# ---------------------------trainer runtime config---------------------------
+class RuntimeConfigLike(typing.Protocol):
+    '''Container holding all trainer runtime configuration sections.'''
+    @property
+    def schedule(self) -> '_Schedule': ...
+    @property
+    def monitor(self) -> '_Monitor': ...
+    @property
+    def precision(self) -> '_Precision': ...
+    @property
+    def optimization(self) -> '_OptimConfig': ...
+    @property
+    def logit_adjust(self) -> '_LogitAdjustConfig': ...
 
-# ---------------------------------dataloaders---------------------------------
-@typing.runtime_checkable
-class DataLoadersLike(typing.Protocol):
+# ------------------------------private dataclass------------------------------
+class _Schedule(typing.Protocol):
     @property
-    def train(self) -> 'torch.utils.data.DataLoader | None':...
+    def log_loss_every(self) -> int: ...
     @property
-    def val(self) -> 'torch.utils.data.DataLoader | None':...
+    def val_every(self) -> int: ...
     @property
-    def test(self) -> 'torch.utils.data.DataLoader | None':...
+    def infer_every(self) -> int: ...
     @property
-    def meta(self) -> _DataLoadersMeta: ...
+    def ckpt_every(self) -> int | None: ... # current not referenced
 
-class _DataLoadersMeta(typing.Protocol):
+class _Monitor(typing.Protocol):
     @property
-    def batch_size(self) -> int: ...
+    def metric_name(self) -> str: ...
     @property
-    def patch_size(self) -> int: ...
+    def track_heads(self) -> list[str]: ...
     @property
-    def preview_context(self) -> '_PreviewContext | None': ...
+    def track_mode(self) -> str: ...
+    @property
+    def allow_early_stop(self) -> bool: ...
+    @property
+    def patience(self) -> int | None: ...
+    @property
+    def min_delta(self) -> float | None: ...
 
-class _PreviewContext(typing.Protocol):
-    patch_per_blk: int
-    patch_per_dim: int
-    block_columns: int
-    patch_grid_shape: tuple[int, int]
+class _Precision(typing.Protocol):
+    @property
+    def use_amp(self) -> bool: ...
+
+class _OptimConfig(typing.Protocol):
+    @property
+    def grad_clip_norm(self) -> float | None: ...
+
+class _LogitAdjustConfig(typing.Protocol):
+    @property
+    def alpha(self) -> float: ...
+    @property
+    def enable(self) -> bool: ...

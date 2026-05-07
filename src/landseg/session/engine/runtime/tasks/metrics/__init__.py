@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.engine.batch.tasks.metrics`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,28 +32,25 @@ import typing
 
 __all__ = [
     # classes
+    'ConfusionMatrix',
+    'HeadMetrics',
     # functions
+    'build_headmetrics',
     # types
-    'PhaseLike',
-    'RuntimeConfigLike',
-    'SessionObserverLike',
-
+    'ConfusionMatricConfig'
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .events import SessionObserverLike
-    from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
+    from .conf_matrix import ConfusionMatrix, ConfusionMatricConfig
+    from .factory import HeadMetrics, build_headmetrics
 
 def __getattr__(name: str):
 
-    if name in {'SessionObserverLike'}:
-        return getattr(importlib.import_module('.events', __package__), name)
+    if name in {'ConfusionMatrix', 'ConfusionMatricConfig'}:
+        return getattr(importlib.import_module('.conf_matrix', __package__), name)
 
-    if name in {'PhaseLike'}:
-        return getattr(importlib.import_module('.phases', __package__), name)
-
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'HeadMetrics', 'build_headmetrics'}:
+        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

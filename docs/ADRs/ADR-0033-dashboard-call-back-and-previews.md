@@ -1,28 +1,22 @@
 # ADR-0033: Implement Dashboard Callback and Preview Integration
 
 **Status:** Proposed
-**Date:** 2026-05-03
+**Date:** 2026-05-06
 
 ## Context
-With the event dispatcher (ADR-0031) and the unified tracker (ADR-0032) in place, we lack the final bridge: the actual 
-observer that captures epoch-level metrics and visual previews, and routes them to the dashboard.
+During the implementation of ADR-0031 (Event Dispatcher) and ADR-0032 (Unified Tracking Facade), the foundational routing for metrics and telemetry was established. The `TrackingCallback` now successfully bridges training events and scalar metrics to the underlying tracking backends (TensorBoard/MLflow). 
 
-Additionally, our existing inference preview utility (`src/landseg/session/instrumentation/exporters/preview.py`) currently
-operates as an isolated file-saver. It needs to be wired into the modern visualization pipeline.
+However, the original intent of ADR-0033—to push visual tracking to the dashboard—remains partially unfulfilled. Our existing inference preview utility (`src/landseg/session/instrumentation/exporters/preview.py`) currently operates as an isolated file-saver. With the tracking facade now supporting a `log_image` API, this visual preview logic needs to be fully integrated into the event-driven lifecycle so that stitched image grids (Landsat + DEM + Ground Truth + Prediction) are automatically tracked epoch-by-epoch alongside scalar metrics.
 
 ## Decision
-We will implement the `DashboardCallback` to drive all visual and metric tracking:
+Instead of creating a standalone `DashboardCallback` as originally proposed (since metric routing is now handled by the `TrackingCallback`), we will extend the tracking instrumentation to explicitly handle image telemetry:
 
-1.  **`DashboardCallback` Implementation:** Create a new callback inheriting from `BaseCallback`. It will be instantiated with
-an `ExperimentTracker` instance.
-2.  **Metric Routing:** On the `on_epoch_end` hook, the callback will extract scalar metrics (train loss, validation IoU, etc.)
-from the payload and push them to the tracker.
-3.  **Preview Stitching:** On the `on_eval_end` (or `on_epoch_end`) hook, the callback will utilize the existing `preview.py`
-logic to generate the stitched image grid (Landsat + DEM + Ground Truth + Prediction) and push it directly to the tracker using
-the `log_image` API.
+1. **Preview Extraction:** Refactor the existing preview logic to generate image arrays/buffers in memory rather than writing directly to disk.
+2. **Event Hook Integration:** Utilize the `on_eval_end` (or `on_epoch_end`) lifecycle hooks to trigger the preview generation.
+3. **Telemetry Routing:** Push the generated preview grid to the active `BaseTracker` instance via the `log_image(key, image, step)` method. 
+4. **Separation of Concerns:** This visual logging can either be integrated into the existing `TrackingCallback` or isolated into a dedicated `PreviewTrackingCallback` to allow users to opt-in or opt-out of heavy image logging during rapid sweeps.
 
 ## Consequences
-* **Definition of Done:** Launching a training run with the `DashboardCallback` attached results in a fully populated TensorBoard
-dashboard, including both scalar loss curves and epoch-by-epoch visual inference previews.
-* **Deprecation:** Any legacy code manually saving `.png` files to disk from the preview exporter can be refactored or removed in
-favor of the dashboard artifact store.
+* **Definition of Done:** Launching a training session with the appropriate callback attached results in visual inference previews populating the TensorBoard/MLflow UI automatically at the end of evaluation epochs.
+* **Deprecation:** Legacy code relying on manual `.png` file saving to local disk from the preview exporter can be deprecated in favor of the artifact tracking store.
+* **Performance:** Writing images to the tracker adds overhead. Scoping this to `on_eval_end` ensures it does not block the high-frequency batch training loops.
