@@ -66,6 +66,8 @@ class DataLoaders:
     train: torch.utils.data.DataLoader | None
     val: torch.utils.data.DataLoader | None
     test: torch.utils.data.DataLoader | None
+    batch_size: int
+    patch_size: int
     preview_context: _PreviewContext | None
 
 # ------------------------------private dataclass------------------------------
@@ -142,6 +144,8 @@ def build_dataloaders(
                 train=single_loader,
                 val=single_loader,
                 test=None,
+                batch_size=config.batch_size,
+                patch_size=config.patch_size,
                 preview_context=None
             )
 
@@ -152,6 +156,8 @@ def build_dataloaders(
                 train=None,
                 val=val_loader,
                 test=None,
+                batch_size=config.batch_size,
+                patch_size=config.patch_size,
                 preview_context=None
             )
 
@@ -161,6 +167,8 @@ def build_dataloaders(
             return DataLoaders(
                 train=None,
                 val=None,
+                batch_size=config.batch_size,
+                patch_size=config.patch_size,
                 test=test_loader,
                 preview_context=None
             )
@@ -181,6 +189,8 @@ def build_dataloaders(
                 train=train,
                 val=val,
                 test=test,
+                batch_size=config.batch_size,
+                patch_size=config.patch_size,
                 preview_context=preview_context
             )
 
