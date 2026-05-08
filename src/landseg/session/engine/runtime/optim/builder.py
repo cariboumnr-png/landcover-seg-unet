@@ -50,6 +50,8 @@ class OptimConfig(typing.Protocol):
     def sched_cls(self) -> str | None: ...
     @property
     def sched_args(self) -> dict[str, typing.Any]: ...
+    @property
+    def grad_clip_norm(self) -> float | None: ...
 
 # a callable that constructs an Optimizer (e.g., torch.optim.AdamW)
 P = typing.ParamSpec('P')
@@ -93,6 +95,7 @@ def build_optimization(
     return optim.Optimization(
         optimizer,
         scheduler,
+        grad_clip_norm=config.grad_clip_norm,
         sched_cls=config.sched_cls,
         sched_factory=sched_factory,
         sched_args=config.sched_args

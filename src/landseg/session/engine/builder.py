@@ -148,7 +148,6 @@ def build_epoch_engine(
         dispatcher=context.dispatcher,
         device=context.device,
         # trainer-specific
-        grad_clip_norm=config.runtime.optimization.grad_clip_norm,
         update_every=config.runtime.schedule.log_loss_every,
     )
 

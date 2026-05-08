@@ -52,13 +52,15 @@ class Optimization:
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         *,
+        grad_clip_norm: float | None = None,
         sched_cls: str | None = None,
         sched_factory: typing.Callable[..., LRScheduler] | None = None,
-        sched_args: dict[str, typing.Any] | None = None
+        sched_args: dict[str, typing.Any] | None = None,
     ):
         '''doc'''
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.grad_clip_norm = grad_clip_norm
         self._sched_cls = sched_cls
         self._sched_factory = sched_factory
         self._sched_args = sched_args
