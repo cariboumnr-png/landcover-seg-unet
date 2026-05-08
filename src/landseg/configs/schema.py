@@ -91,8 +91,8 @@ class RootConfig:
 
     def set_patch_size(self, patch_size: int) -> None:
         '''Set patch size'''
-        self.session.loader.patch_size = patch_size
+        self.session.data_loader.patch_size = patch_size
 
     def set_batch_size(self, batch_size: int) -> None:
         '''Set batch size'''
-        self.session.loader.batch_size = batch_size
+        self.session.data_loader.batch_size = batch_size

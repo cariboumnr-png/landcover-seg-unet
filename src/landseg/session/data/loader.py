@@ -52,7 +52,7 @@ import landseg.session.data as data
 import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
-class LoaderConfig(typing.Protocol):
+class DataLoaderConfig(typing.Protocol):
     '''Shape of a container for configuring data loading.'''
     @property
     def batch_size(self) -> int: ...
@@ -87,7 +87,7 @@ class _PreviewContext:
 # -------------------------------Public Function-------------------------------
 def build_dataloaders(
     data_specs: core.DataSpecs,
-    config: LoaderConfig,
+    config: DataLoaderConfig,
     *,
     logger: utils.Logger,
 ) -> DataLoaders:

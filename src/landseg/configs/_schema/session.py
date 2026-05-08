@@ -35,9 +35,9 @@ import typing
 field = dataclasses.field
 
 # -------------------------------SESSION CONFIGS-------------------------------
-# ----- LOADER
+# ----- data loader
 @dataclasses.dataclass
-class _LoaderConfig:
+class _DataLoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
@@ -162,7 +162,7 @@ class SessionConfig:
     mode: str = 'continuous'
     phase_schema: str = 'default'
 
-    loader: _LoaderConfig = field(default_factory=_LoaderConfig)
+    data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
     tasks: _LossConfig = field(default_factory=_LossConfig)
     optimization: _OptimConfig = field(default_factory=_OptimConfig)
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
