@@ -96,9 +96,10 @@ class _LossConfig:
     excluded_cls: dict[str, list[int]] | None = None
     types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
-# ----- RUNTIME
+# ----- orchestration
 @dataclasses.dataclass
 class _Schedule:
+    resume_from_last: bool = False
     max_epoch: int = 50
     max_step: int = 1_000_000
     log_loss_every: int = 50
@@ -115,12 +116,6 @@ class _Monitor:
     patience: int = 10
     min_delta: float = 0.0005
 
-@dataclasses.dataclass
-class _RuntimeConfig:
-    schedule: _Schedule = field(default_factory=_Schedule)
-    monitor: _Monitor = field(default_factory=_Monitor)
-
-# ----- PHASES
 @dataclasses.dataclass
 class _Phase:
     name: str = 'phase_0'
@@ -146,21 +141,12 @@ class _PhaseProfiles:
     default: _DefaultPhases = field(default_factory=_DefaultPhases)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
-# session composite
 @dataclasses.dataclass
-class SessionConfig:
-    '''doc'''
-    resume_from_last: bool = False
+class _OrchestrationConfig:
     mode: str = 'continuous'
     phase_schema: str = 'default'
-
-    data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
-    engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
-    engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
-    engine_tasks: _LossConfig = field(default_factory=_LossConfig)
-
-    runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
-
+    schedule: _Schedule = field(default_factory=_Schedule)
+    monitor: _Monitor = field(default_factory=_Monitor)
     phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
 
     @property
@@ -168,7 +154,7 @@ class SessionConfig:
         '''Single phase from runtime configs.'''
         return _Phase(
             name='single_phase',
-            num_epochs=self.runtime.schedule.max_epoch,
+            num_epochs=self.schedule.max_epoch,
             start_epoch=1,
             lr_scale=1.0,
             active_heads=['base'],
@@ -187,20 +173,30 @@ class SessionConfig:
             raise ValueError(f'Invalid phase schema: {self.phase_schema}')
         return schema
 
+# session composite
+@dataclasses.dataclass
+class SessionConfig:
+    data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
+    engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
+    engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
+    engine_tasks: _LossConfig = field(default_factory=_LossConfig)
+    orchestration: _OrchestrationConfig = field(default_factory=_OrchestrationConfig)
+
     def validate(self):
         '''Session module configs validating and guarding.'''
 
         # current guards
         mode = ['continuous', 'curriculum']
-        if self.mode not in mode:
-            raise ValueError(f'Invalid mode: {self.mode}, allowed: {mode}')
-        if self.mode == 'curriculum':
-            if self.runtime.monitor.allow_early_stop:
+        _mode = self.orchestration.mode
+        if _mode not in mode:
+            raise ValueError(f'Invalid mode: {_mode}, allowed: {mode}')
+        if _mode == 'curriculum':
+            if self.orchestration.monitor.allow_early_stop:
                 print(
                     'Warning: allow_early_stop=True is invalid for curriculum'
                     ' training. It is now being set to False'
                 )
-                self.runtime.monitor.allow_early_stop = False
+                self.orchestration.monitor.allow_early_stop = False
 
         # Example: scheduler-specific requirements
         if self.engine_optim.sched_cls == 'CosAnneal':
