@@ -90,22 +90,20 @@ class _LossTypesConfig:
     tv: _TVLossConfig = field(default_factory=_TVLossConfig)
 
 @dataclasses.dataclass
-class _LossConfig:
+class _TasksConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
     excluded_cls: dict[str, list[int]] | None = None
-    types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
+    loss_types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
 # ----- orchestration
 @dataclasses.dataclass
 class _Schedule:
+    val_every_n_epoch: int = 1
+    infer_every_n_epoch: int = 1
+    ckpt_every_n_epoch: int = 5
+    update_loss_every_n_batch: int = 50
     resume_from_last: bool = False
-    max_epoch: int = 50
-    max_step: int = 1_000_000
-    log_loss_every: int = 50
-    val_every: int = 1
-    infer_every: int = 1
-    ckpt_every: int = 5
 
 @dataclasses.dataclass
 class _Monitor:
@@ -137,17 +135,17 @@ class _BaselinePhases:
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
-class _PhaseProfiles:
+class _Curriculum:
+    schema: str = 'default'
     default: _DefaultPhases = field(default_factory=_DefaultPhases)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
 @dataclasses.dataclass
 class _OrchestrationConfig:
-    mode: str = 'continuous'
-    phase_schema: str = 'default'
+    mode: str = 'single'
     schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
-    phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
+    curriculum: _Curriculum = field(default_factory=_Curriculum)
 
     @property
     def single_phase(self) -> _Phase:
@@ -162,15 +160,15 @@ class _OrchestrationConfig:
         )
 
     @property
-    def curriculum(self) -> list[_Phase]:
+    def multi_phases(self) -> list[_Phase]:
         '''List of phases by configs.'''
         registry = {
-            'default': self.phases.default.phases,
-            'baseline': self.phases.baseline.phases
+            'default': self.curriculum.default.phases,
+            'baseline': self.curriculum.baseline.phases
         }
-        schema = registry.get(self.phase_schema)
+        schema = registry.get(self.curriculum.schema)
         if schema is None:
-            raise ValueError(f'Invalid phase schema: {self.phase_schema}')
+            raise ValueError(f'Invalid phase schema: {self.curriculum.schema}')
         return schema
 
 # session composite
@@ -179,7 +177,7 @@ class SessionConfig:
     data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
     engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
     engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
-    engine_tasks: _LossConfig = field(default_factory=_LossConfig)
+    engine_tasks: _TasksConfig = field(default_factory=_TasksConfig)
     orchestration: _OrchestrationConfig = field(default_factory=_OrchestrationConfig)
 
     def validate(self):

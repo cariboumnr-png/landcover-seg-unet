@@ -1,0 +1,57 @@
+mode: single # single | multiple
+
+schedule:
+  val_every_n_epoch: 1
+  infer_every_n_epoch: 1
+  ckpt_every_n_epoch: 5
+  update_loss_every_n_batch: 50
+  resume_from_last: False
+
+monitor:
+  metric_name: iou
+  track_heads: [base]
+  track_mode: max
+  allow_early_stop: True
+  patience: 10
+  min_delta: 0.0005
+
+curriculum:
+  schema: default
+  default:
+    name: default
+    # single training phase on the parent head only
+    phases:
+      - name: single_phase_parent
+        num_epochs: 10
+        start_epoch: 1
+        lr_scale: 1.0
+        active_heads: [base]
+        frozen_heads: null
+
+  baseline:
+    name: baseline
+    select_children: []
+    # default top-down phase schema
+    phases:
+      - name: parent_head
+        num_epochs: 15
+        start_epoch: 1
+        lr_scale: 1.0
+        active_heads: [base]
+        frozen_heads: null
+
+
+      - name: select_children_heads
+        num_epochs: 20
+        start_epoch: 1
+        lr_scale: 1.0
+        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+        frozen_heads: [base]
+
+
+      - name: joint_tuning
+        num_epochs: 10
+        start_epoch: 1
+        lr_scale: 1.0
+        active_heads: ${concat:[base],${session.phases.baseline.select_children}}
+        frozen_heads: null

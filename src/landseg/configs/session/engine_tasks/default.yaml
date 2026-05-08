@@ -1,0 +1,18 @@
+# engine tasks settings
+alpha_fn: 'effective_n'
+en_beta: 0.999
+excluded_cls: {}
+loss_types:
+  focal:
+    weight: 0.5
+    gamma: 2.0
+    reduction: 'mean'
+  dice:
+    weight: 0.5
+    smooth: 1.0
+  spectral:
+    weight: 1e-3
+    alpha: 1.0
+    neighbour: 4
+  tv:
+    weight: 1e-4
