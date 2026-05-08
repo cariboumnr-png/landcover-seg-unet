@@ -48,7 +48,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
 
     # init run io folder tree
     session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
-    session_paths.init(trace_to_last=False) # TODO
+    session_paths.init(config.session.orchestration.schedule.resume_from_last)
 
     # create the session metadata dict
     meta_ctrl = artifacts.Controller[dict](session_paths.meta)

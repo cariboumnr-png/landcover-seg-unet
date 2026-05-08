@@ -138,8 +138,9 @@ class PhasePolicy:
         # reconfigure optimization per phase
         assert self.runner.trainer
         phase_batch_n = self.config.num_epochs * self.runner.total_train_batch
+        curr_lr = self.runner.trainer.optimization.lrs[0] # primary
         self.runner.trainer.optimization.reconfigure(
-            lr=None, # TBD in runtime config
+            lr=curr_lr * self.config.lr_scale if self.config.lr_scale else None,
             sched_args={'T_max': phase_batch_n}
         )
 
