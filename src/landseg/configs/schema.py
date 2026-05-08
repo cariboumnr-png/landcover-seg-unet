@@ -83,11 +83,11 @@ class RootConfig:
     # set parameters
     def set_lr(self, lr: float) -> None:
         '''Set learning rate.'''
-        self.session.optimization.lr = lr
+        self.session.engine_optim.lr = lr
 
     def set_weight_decay(self, weight_decay: float) -> None:
         '''Set weight decay.'''
-        self.session.optimization.weight_decay = weight_decay
+        self.session.engine_optim.weight_decay = weight_decay
 
     def set_patch_size(self, patch_size: int) -> None:
         '''Set patch size'''

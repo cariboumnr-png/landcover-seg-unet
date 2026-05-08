@@ -41,7 +41,7 @@ class _DataLoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
-# ----- TASKS
+# ----- engine tasks
 @dataclasses.dataclass
 class _FocalLossConfig:
     weight: float = 0.5
@@ -87,6 +87,7 @@ class _OptimConfig:
     sched_args: dict[str, typing.Any] = field(
         default_factory=lambda: {'T_max': 50}
     )
+    grad_clip_norm: float | None = 1.0
 
 # ----- RUNTIME
 @dataclasses.dataclass
@@ -112,10 +113,6 @@ class _Precision:
     use_amp: bool = True
 
 @dataclasses.dataclass
-class _Optimization:
-    grad_clip_norm: float | None = 1.0
-
-@dataclasses.dataclass
 class _LogitAdjustConfig:
     enable: bool = False
     alpha: float = 1.0
@@ -125,7 +122,6 @@ class _RuntimeConfig:
     schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
     precision: _Precision = field(default_factory=_Precision)
-    optimization: _Optimization = field(default_factory=_Optimization)
     logit_adjust: _LogitAdjustConfig = field(default_factory=_LogitAdjustConfig)
 
 # ----- PHASES
@@ -163,8 +159,9 @@ class SessionConfig:
     phase_schema: str = 'default'
 
     data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
-    tasks: _LossConfig = field(default_factory=_LossConfig)
-    optimization: _OptimConfig = field(default_factory=_OptimConfig)
+    engine_tasks: _LossConfig = field(default_factory=_LossConfig)
+    engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
+
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
 
     phases: _PhaseProfiles = field(default_factory=_PhaseProfiles)
@@ -209,6 +206,6 @@ class SessionConfig:
                 self.runtime.monitor.allow_early_stop = False
 
         # Example: scheduler-specific requirements
-        if self.optimization.sched_cls == 'CosAnneal':
-            if 'T_max' not in self.optimization.sched_args:
+        if self.engine_optim.sched_cls == 'CosAnneal':
+            if 'T_max' not in self.engine_optim.sched_args:
                 raise ValueError('missing T_max for CosAnneal')
