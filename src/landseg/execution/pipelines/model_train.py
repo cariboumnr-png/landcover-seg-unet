@@ -48,7 +48,7 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
 
     # init run io folder tree
     session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
-    session_paths.init(trace_to_last=config.session.resume_from_last)
+    session_paths.init(trace_to_last=False) # TODO
 
     # create the session metadata dict
     meta_ctrl = artifacts.Controller[dict](session_paths.meta)
@@ -114,7 +114,6 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         case 'continuous':
             session_context=session.SessionBuildContext(
                 device=c.DEVICE,
-                total_epochs=config.session.single_phase.num_epochs,
                 verbose_runner=print_out,
                 session_paths=session_paths,
             )
@@ -128,7 +127,6 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         case 'curriculum':
             session_context=session.SessionBuildContext(
                 device=c.DEVICE,
-                total_epochs=sum(p.num_epochs for p in config.session.curriculum),
                 verbose_runner=print_out,
                 session_paths=session_paths,
             )

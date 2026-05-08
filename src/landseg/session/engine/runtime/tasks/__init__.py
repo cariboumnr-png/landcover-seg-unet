@@ -50,7 +50,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'EngineTasks', 'TaskConfig', 'build_engine_tasks'}:
+    if name in {'EngineTasks', 'TaskConfigShape', 'build_engine_tasks'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     if name in {'HeadSpec'}:

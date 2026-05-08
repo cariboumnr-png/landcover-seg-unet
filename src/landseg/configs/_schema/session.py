@@ -125,8 +125,8 @@ class _Phase:
 
 @dataclasses.dataclass
 class _SinglePhase:
-    name: str = 'signle'
-    phases: _Phase = field(default_factory=_Phase)
+    name: str = 'single'
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
 class _BaselinePhases:
@@ -142,7 +142,6 @@ class _Curriculum:
 
 @dataclasses.dataclass
 class _OrchestrationConfig:
-    mode: str = 'single'
     schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
     curriculum: _Curriculum = field(default_factory=_Curriculum)
@@ -150,7 +149,7 @@ class _OrchestrationConfig:
     @property
     def single_phase(self) -> _Phase:
         '''Single phase from runtime configs.'''
-        return self.curriculum.single.phases
+        return self.curriculum.single.phases[0]
 
     @property
     def multi_phases(self) -> list[_Phase]:
@@ -167,6 +166,7 @@ class _OrchestrationConfig:
 # session composite
 @dataclasses.dataclass
 class SessionConfig:
+    mode: str = 'continuous'
     data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
     engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
     engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
@@ -178,10 +178,9 @@ class SessionConfig:
 
         # current guards
         mode = ['continuous', 'curriculum']
-        _mode = self.orchestration.mode
-        if _mode not in mode:
-            raise ValueError(f'Invalid mode: {_mode}, allowed: {mode}')
-        if _mode == 'curriculum':
+        if self.mode not in mode:
+            raise ValueError(f'Invalid mode: {self.mode}, allowed: {mode}')
+        if self.mode == 'curriculum':
             if self.orchestration.monitor.allow_early_stop:
                 print(
                     'Warning: allow_early_stop=True is invalid for curriculum'

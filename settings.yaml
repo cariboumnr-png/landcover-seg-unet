@@ -187,41 +187,19 @@ dataspecs:
 # -----------------------------------------------------------------------------
 session:
 
-  # knobs
-  resume_from_last: False
   mode: continuous # continuous | curriculum
-  phase_schema: default
 
-  # components
-  tasks:
+  engine_tasks:
     excluded_cls: {}
 
-  # sub config groups
-  runtime:
-
+  orchestration:
     monitor:
-      # Head used for validation tracking, early stopping, and best-checkpoint
-      # selection.
-      #
-      # Tête utilisée pour le suivi en validation, l’arrêt anticipé et la
-      # sélection du meilleur point de sauvegarde.
       track_heads: [base]
       patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
       min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
 
-    logit_adjust:
-      # Optional class-imbalance correction / Correction optionnelle du déséquilibre des classes
-      enable: False
-      alpha: 1.0  # Strength of adjustment / Intensité de l’ajustement
-
-
-# -----------------------------------------------------------------------------
-# TRAINING PHASES / PHASES D’ENTRAÎNEMENT
-# Defines the curriculum used by the training session.
-#
-# Définit la progression (curriculum) utilisée par la session d’entraînement.
-# -----------------------------------------------------------------------------
-
-  phases:
-    baseline:
-      select_children: []
+    curriculum:
+      single:
+        phases:
+          - num_epochs: 10
+            active_heads: [base]

@@ -127,7 +127,6 @@ class SessionBuildContext:
             required for `'training'` mode).
     '''
     device: str
-    total_epochs: int
     verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None

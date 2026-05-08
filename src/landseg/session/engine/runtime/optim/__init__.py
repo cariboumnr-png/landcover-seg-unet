@@ -45,7 +45,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'OptimConfig', 'build_optimization'}:
+    if name in {'OptimConfigShape', 'build_optimization'}:
         return getattr(importlib.import_module('.builder', __package__), name)
 
     if name in {'Optimization'}:

@@ -147,7 +147,7 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # batch backward on total loss
             total = self.state.batch_out.total_loss
-            if self.engine.context.use_amp:
+            if self.engine.config.use_amp:
                 self.state.optim.scaler.scale(total).backward()
             else:
                 total.backward()
@@ -158,13 +158,13 @@ class MultiHeadTrainer(policy.EngineBase):
 
             # gradient clipping
             # unscale if use AMP
-            if self.engine.context.use_amp:
+            if self.engine.config.use_amp:
                 self.state.optim.scaler.unscale_(self.optimization.optimizer)
             self._clip_grad()
 
             # optimizer step
             # use AMP
-            if self.engine.context.use_amp:
+            if self.engine.config.use_amp:
                 self.state.optim.scaler.step(self.optimization.optimizer)
                 self.state.optim.scaler.update() # update scaler
             # no AMP
