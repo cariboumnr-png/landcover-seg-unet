@@ -111,8 +111,8 @@ class _Monitor:
     track_heads: list[str] = field(default_factory=lambda: ['base'])
     track_mode: str = 'max'
     allow_early_stop: bool = True
-    patience: int = 10
-    min_delta: float = 0.0005
+    patience: int | None = 10
+    min_delta: float | None = 0.0005
 
 @dataclasses.dataclass
 class _Phase:

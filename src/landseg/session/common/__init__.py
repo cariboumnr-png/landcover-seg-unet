@@ -35,15 +35,15 @@ __all__ = [
     # functions
     # types
     'PhaseLike',
-    'RuntimeConfigLike',
+    'OrchestrationConfigShape',
     'SessionObserverLike',
 
 ]
 # for static check
 if typing.TYPE_CHECKING:
     from .events import SessionObserverLike
+    from .orchestration import OrchestrationConfigShape
     from .phases import PhaseLike
-    from .runtime import RuntimeConfigLike
 
 def __getattr__(name: str):
 
@@ -53,7 +53,7 @@ def __getattr__(name: str):
     if name in {'PhaseLike'}:
         return getattr(importlib.import_module('.phases', __package__), name)
 
-    if name in {'RuntimeConfigLike'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {'OrchestrationConfigShape'}:
+        return getattr(importlib.import_module('.orchestration', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

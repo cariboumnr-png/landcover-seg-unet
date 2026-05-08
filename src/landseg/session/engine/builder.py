@@ -70,6 +70,9 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.data as data
 import landseg.session.engine.epoch as epoch
+import landseg.session.engine.runtime.executor as executor
+import landseg.session.engine.runtime.optim as optim
+import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.runtime as runtime
 import landseg.session.instrumentation as instrument
 import landseg.utils as utils
@@ -96,13 +99,15 @@ class _EpochEngineConfigShape(typing.Protocol):
             orchestration runner.
     '''
     @property
-    def loader(self) -> data.DataLoaderConfig: ...
+    def data_loader(self) -> data.DataLoaderConfig: ...
     @property
-    def tasks(self) -> runtime.TaskConfig: ...
+    def engine_exec(self) -> executor.BatchExecConfigShape: ...
     @property
-    def optimization(self) -> runtime.OptimConfig: ...
+    def engine_optim(self) -> optim.OptimConfig: ...
     @property
-    def runtime(self) -> common.RuntimeConfigLike: ...
+    def engine_tasks(self) -> tasks.TaskConfig: ...
+    @property
+    def orchestration(self) -> common.OrchestrationConfigShape: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -127,7 +132,7 @@ def build_epoch_engine(
     # data loader
     data_loaders = data.build_dataloaders(
         context.dataspecs,
-        config.loader,
+        config.data_loader,
         logger=context.logger
     )
 
@@ -148,7 +153,7 @@ def build_epoch_engine(
         dispatcher=context.dispatcher,
         device=context.device,
         # trainer-specific
-        update_every=config.runtime.schedule.log_loss_every,
+        update_every=config.orchestration.schedule.update_loss_every_n_batch,
     )
 
     # evaluator
@@ -159,8 +164,8 @@ def build_epoch_engine(
         dispatcher=context.dispatcher,
         device=context.device,
         # evaluator-specific
-        val_every=config.runtime.schedule.val_every,
-        infer_every=config.runtime.schedule.infer_every,
+        val_every=config.orchestration.schedule.val_every_n_epoch,
+        infer_every=config.orchestration.schedule.infer_every_n_epoch,
         dataset=eval_dataset,
     )
 
