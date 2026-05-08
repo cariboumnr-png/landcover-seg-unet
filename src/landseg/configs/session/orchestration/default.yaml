@@ -16,9 +16,9 @@ monitor:
   min_delta: 0.0005
 
 curriculum:
-  schema: default
-  default:
-    name: default
+  schema: single
+  single:
+    name: single
     # single training phase on the parent head only
     phases:
       - name: single_phase_parent

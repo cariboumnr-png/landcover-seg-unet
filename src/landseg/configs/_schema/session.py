@@ -124,9 +124,9 @@ class _Phase:
     frozen_heads: list[str] | None = None
 
 @dataclasses.dataclass
-class _DefaultPhases:
-    name: str = 'default'
-    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+class _SinglePhase:
+    name: str = 'signle'
+    phases: _Phase = field(default_factory=_Phase)
 
 @dataclasses.dataclass
 class _BaselinePhases:
@@ -136,8 +136,8 @@ class _BaselinePhases:
 
 @dataclasses.dataclass
 class _Curriculum:
-    schema: str = 'default'
-    default: _DefaultPhases = field(default_factory=_DefaultPhases)
+    schema: str = 'single'
+    single: _SinglePhase = field(default_factory=_SinglePhase)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
 @dataclasses.dataclass
@@ -150,20 +150,13 @@ class _OrchestrationConfig:
     @property
     def single_phase(self) -> _Phase:
         '''Single phase from runtime configs.'''
-        return _Phase(
-            name='single_phase',
-            num_epochs=self.schedule.max_epoch,
-            start_epoch=1,
-            lr_scale=1.0,
-            active_heads=['base'],
-            frozen_heads=None
-        )
+        return self.curriculum.single.phases
 
     @property
     def multi_phases(self) -> list[_Phase]:
         '''List of phases by configs.'''
+        # currently supported pre-configured phases
         registry = {
-            'default': self.curriculum.default.phases,
             'baseline': self.curriculum.baseline.phases
         }
         schema = registry.get(self.curriculum.schema)
