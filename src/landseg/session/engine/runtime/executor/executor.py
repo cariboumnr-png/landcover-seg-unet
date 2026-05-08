@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Batch-level execution engine for session workflows.
 
@@ -51,18 +53,25 @@ Higher-level controllers (e.g. Trainer, Evaluator, Runner) answer:
 # standard imports
 import contextlib
 import dataclasses
+import typing
 # third-party imports
 import torch
 # local imports
 import landseg.core as core
 import landseg.session.engine.runtime.executor as executor
 
-@dataclasses.dataclass
-class BatchEngineConfig:
+class BatchExecConfigShape(typing.Protocol):
     '''doc'''
-    use_amp: bool
-    enable_logit_adjust: bool
-    logit_adjust_alpha: float
+    @property
+    def use_amp(self) -> bool: ...
+    @property
+    def enable_logit_adjust(self) -> bool: ...
+    @property
+    def logit_adjust_alpha(self) -> float: ...
+
+@dataclasses.dataclass
+class BatchExecContext:
+    '''doc'''
     parent_map: dict[str, str | None]
     patch_per_blk: int | None
     patch_per_dim: int | None
@@ -103,7 +112,8 @@ class BatchEngine:
         self,
         model: core.MultiheadModelLike,
         engine_state: executor.EngineState,
-        config: BatchEngineConfig,
+        config: BatchExecConfigShape,
+        context: BatchExecContext,
         *,
         device: str,
     ):
@@ -131,6 +141,7 @@ class BatchEngine:
         self.model = model
         self.state = engine_state
         self.config = config
+        self.context = context
         # move model to device
         self.device = device
         self.model.to(self.device)
@@ -399,7 +410,7 @@ class BatchEngine:
         preds = self.state.batch_out.preds
         targets = self.state.batch_cxt.y_dict
         for head, logits in preds.items():
-            parent = self.config.parent_map.get(head)
+            parent = self.context.parent_map.get(head)
             parent_1b = targets.get(parent) if parent is not None else None
             # retrieve head metric calculator
             metrics_module = self.state.heads.active_hmetrics[head]
@@ -420,7 +431,7 @@ class BatchEngine:
         '''
 
         # early exit
-        cfg = self.config
+        cfg = self.context
         if not (cfg.patch_per_blk and cfg.patch_per_dim and cfg.block_columns):
             return
         # get through each head and attach preds to corresponding block-heads

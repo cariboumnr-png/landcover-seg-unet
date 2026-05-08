@@ -30,10 +30,9 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.engine.runtime.executor as executor
-import landseg.session.engine.runtime.optim as engine_optim
-import landseg.session.engine.runtime.tasks as engine_tasks
+import landseg.session.engine.runtime.optim as optim
+import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.protocols as protocols
 
 
@@ -41,19 +40,19 @@ import landseg.session.engine.protocols as protocols
 class _EngineRuntimeConfigShape(typing.Protocol):
     '''Structural typing interface for engine building.'''
     @property
-    def tasks(self) -> engine_tasks.TaskConfig: ...
+    def engine_exec(self) -> executor.BatchExecConfigShape: ...
     @property
-    def optimization(self) -> engine_optim.OptimConfig: ...
+    def engine_optim(self) -> optim.OptimConfig: ...
     @property
-    def runtime(self) -> common.RuntimeConfigLike: ...
+    def engine_tasks(self) -> tasks.TaskConfig: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class EngineRuntime:
     '''Engine core components bundle.'''
     engine: executor.BatchEngine
-    engine_optim: engine_optim.Optimization
-    engine_tasks: engine_tasks.EngineTasks
+    engine_optim: optim.Optimization
+    engine_tasks: tasks.EngineTasks
 
 # -------------------------------Public Function-------------------------------
 def build_engine_runtime(
@@ -69,9 +68,9 @@ def build_engine_runtime(
     '''
 
     # aliases
-    runtime = config.runtime
-    tasks_config = config.tasks
-    optim_config = config.optimization
+    exec_config = config.engine_exec
+    tasks_config = config.engine_tasks
+    optim_config = config.engine_optim
     meta = dataloaders.meta
     preview_ctx = meta.preview_context
 
@@ -79,15 +78,12 @@ def build_engine_runtime(
     engine_state = executor.initialize_state(
         all_heads=list(dataspecs.heads.class_counts.keys()),
         batch_size=meta.batch_size,
-        use_amp=runtime.precision.use_amp,
+        use_amp=exec_config.use_amp,
         device=device
     )
 
     # batch engine
-    batch_config = executor.BatchEngineConfig(
-        enable_logit_adjust=runtime.logit_adjust.enable,
-        logit_adjust_alpha=runtime.logit_adjust.alpha,
-        use_amp=runtime.precision.use_amp,
+    exec_context = executor.BatchExecContext(
         parent_map=dataspecs.heads.head_parent,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
@@ -96,19 +92,14 @@ def build_engine_runtime(
     batch_engine = executor.BatchEngine(
         model,
         engine_state,
-        batch_config,
+        exec_config,
+        exec_context,
         device=device
     )
-
-    # engine optimization
-    optimization = engine_optim.build_optimization(model, optim_config)
-
-    # engine tasks
-    tasks = engine_tasks.build_engine_tasks(dataspecs, tasks_config)
 
     # engine core bundle
     return EngineRuntime(
         engine=batch_engine,
-        engine_optim=optimization,
-        engine_tasks=tasks,
+        engine_optim=optim.build_optimization(model, optim_config),
+        engine_tasks=tasks.build_engine_tasks(dataspecs, tasks_config),
     )
