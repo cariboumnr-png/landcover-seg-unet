@@ -41,6 +41,25 @@ class _DataLoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
+# ----- engione executor
+@dataclasses.dataclass
+class _EngineExecConfig:
+    use_amp: bool = True
+    enable_logit_adjust: bool = False
+    logit_adjust_alpha: float = 1.0
+
+# ----- engine optim
+@dataclasses.dataclass
+class _OptimConfig:
+    opt_cls: str = 'AdamW'
+    lr: float = 1e-4
+    weight_decay: float = 1e-3
+    sched_cls: str | None = 'CosAnneal'
+    sched_args: dict[str, typing.Any] = field(
+        default_factory=lambda: {'T_max': 50}
+    )
+    grad_clip_norm: float | None = 1.0
+
 # ----- engine tasks
 @dataclasses.dataclass
 class _FocalLossConfig:
@@ -77,18 +96,6 @@ class _LossConfig:
     excluded_cls: dict[str, list[int]] | None = None
     types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
-# ----- OPTIMIZATION
-@dataclasses.dataclass
-class _OptimConfig:
-    opt_cls: str = 'AdamW'
-    lr: float = 1e-4
-    weight_decay: float = 1e-3
-    sched_cls: str | None = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = field(
-        default_factory=lambda: {'T_max': 50}
-    )
-    grad_clip_norm: float | None = 1.0
-
 # ----- RUNTIME
 @dataclasses.dataclass
 class _Schedule:
@@ -109,20 +116,9 @@ class _Monitor:
     min_delta: float = 0.0005
 
 @dataclasses.dataclass
-class _Precision:
-    use_amp: bool = True
-
-@dataclasses.dataclass
-class _LogitAdjustConfig:
-    enable: bool = False
-    alpha: float = 1.0
-
-@dataclasses.dataclass
 class _RuntimeConfig:
     schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
-    precision: _Precision = field(default_factory=_Precision)
-    logit_adjust: _LogitAdjustConfig = field(default_factory=_LogitAdjustConfig)
 
 # ----- PHASES
 @dataclasses.dataclass
@@ -159,8 +155,9 @@ class SessionConfig:
     phase_schema: str = 'default'
 
     data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
-    engine_tasks: _LossConfig = field(default_factory=_LossConfig)
+    engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
     engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
+    engine_tasks: _LossConfig = field(default_factory=_LossConfig)
 
     runtime: _RuntimeConfig = field(default_factory=_RuntimeConfig)
 
