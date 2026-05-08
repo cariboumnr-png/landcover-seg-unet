@@ -163,6 +163,7 @@ class MultiHeadTrainer(policy.EngineBase):
             self._clip_grad()
 
             # optimizer step
+            scale_before = self.state.optim.scaler.get_scale()
             # use AMP
             if self.engine.config.use_amp:
                 self.state.optim.scaler.step(self.optimization.optimizer)
@@ -170,9 +171,11 @@ class MultiHeadTrainer(policy.EngineBase):
             # no AMP
             else:
                 self.optimization.step_optimizer()
+            scale_after = self.state.optim.scaler.get_scale()
 
-            # scheduler step (if present)
-            self.optimization.step_scheduler()
+            # scheduler step (if scheduler present AND scale did not decrease)
+            if scale_after >= scale_before:
+                self.optimization.step_scheduler()
 
             # increment global step counter
             self.state.progress.global_step += 1
