@@ -36,15 +36,30 @@ __all__ = [
     # functions
     'build_engine_runtime',
     # types
+    'BatchExecConfigShape',
+    'OptimConfigShape',
+    'TaskConfigShape'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import EngineRuntime, build_engine_runtime
+    from .executor import BatchExecConfigShape
+    from .optim import OptimConfigShape
+    from .tasks import TaskConfigShape
 
 def __getattr__(name: str):
 
     if name in {'EngineRuntime','build_engine_runtime'}:
         return getattr(importlib.import_module('.builder', __package__), name)
+
+    if name in {'BatchExecConfigShape'}:
+        return getattr(importlib.import_module('.executor', __package__), name)
+
+    if name in {'OptimConfigShape'}:
+        return getattr(importlib.import_module('.optim', __package__), name)
+
+    if name in {'TaskConfigShape'}:
+        return getattr(importlib.import_module('.tasks', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

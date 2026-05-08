@@ -37,15 +37,16 @@ __all__ = [
     # functions
     'build_epoch_engine',
     # types
-    'TaskConfig',
-    'OptimConfig',
+    'BatchExecConfigShape',
+    'TaskConfigShape',
+    'OptimConfigShape',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import EpochEngineContext, build_epoch_engine
     from .epoch import EpochEngine
-    from .runtime import TaskConfig, OptimConfig
+    from .runtime import BatchExecConfigShape, TaskConfigShape, OptimConfigShape
 
 def __getattr__(name: str):
 
@@ -55,7 +56,7 @@ def __getattr__(name: str):
     if name in {'EpochEngine'}:
         return getattr(importlib.import_module('.epoch', __package__), name)
 
-    if name in {'TaskConfig', 'OptimConfig'}:
+    if name in {'BatchExecConfigShape', 'TaskConfigShape', 'OptimConfigShape'}:
         return getattr(importlib.import_module('.runtime', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

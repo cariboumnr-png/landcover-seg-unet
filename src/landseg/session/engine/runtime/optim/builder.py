@@ -38,7 +38,7 @@ import landseg.core as core
 import landseg.session.engine.runtime.optim as optim
 
 # ---------------------------------Public Type---------------------------------
-class OptimConfig(typing.Protocol):
+class OptimConfigShape(typing.Protocol):
     '''doc'''
     @property
     def opt_cls(self) -> str: ...
@@ -73,7 +73,7 @@ _SCHEDULERS: dict[str, SchedulerFactory] = {
 # -------------------------------Public Function-------------------------------
 def build_optimization(
     model: core.MultiheadModelLike,
-    config: OptimConfig
+    config: OptimConfigShape
 ) -> optim.Optimization:
 
     optimizer = _build_optimizer(

@@ -78,7 +78,7 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: tasks.TaskConfig,
+        config: tasks.TaskConfigShape,
         *,
         ignore_index: int,
         focal_alpha: list[float] | None = None,

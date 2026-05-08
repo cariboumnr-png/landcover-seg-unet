@@ -39,11 +39,11 @@ __all__ = [
     # functions
     'build_engine_tasks',
     # types
-    'TaskConfig'
+    'TaskConfigShape'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import EngineTasks, TaskConfig, build_engine_tasks
+    from .factory import EngineTasks, TaskConfigShape, build_engine_tasks
     from .heads import HeadSpec
     from .loss import CompositeLoss
     from .metrics import ConfusionMatrix

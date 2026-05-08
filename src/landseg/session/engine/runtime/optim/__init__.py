@@ -35,12 +35,12 @@ __all__ = [
     # functions
     'build_optimization',
     # types
-    'OptimConfig'
+    'OptimConfigShape'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import OptimConfig, build_optimization
+    from .builder import OptimConfigShape, build_optimization
     from .optimization import Optimization
 
 def __getattr__(name: str):
