@@ -136,7 +136,7 @@ class _BaselinePhases:
 
 @dataclasses.dataclass
 class _Curriculum:
-    schema: str = 'single'
+    schema: str = 'baseline' # multi-phase training exclusive
     single: _SinglePhase = field(default_factory=_SinglePhase)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
@@ -160,7 +160,7 @@ class _OrchestrationConfig:
         }
         schema = registry.get(self.curriculum.schema)
         if schema is None:
-            raise ValueError(f'Invalid phase schema: {self.curriculum.schema}')
+            raise ValueError(f'Invalid multi-phase schema: {self.curriculum.schema}')
         return schema
 
 # session composite

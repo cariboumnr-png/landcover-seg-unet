@@ -72,8 +72,8 @@ foundation:
     tile_specs:
       size_row: 256
       size_col: 256
-      overlap_row: 0
-      overlap_col: 0
+      overlap_row: 128
+      overlap_col: 128
 
 # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
 # Place ANY NUMBER of domain rasters in / Placez AUTANT de rasters que voulu dans :
@@ -189,17 +189,106 @@ session:
 
   mode: continuous # continuous | curriculum
 
-  engine_tasks:
-    excluded_cls: {}
+  # -------------------------------------------------------------------------
+  # DATA LOADER
+  # Controls how training patches are generated and batched.
+  #
+  # Définit comment les tuiles (patches) sont générées et batchées pour
+  # l’entraînement.
+  # -------------------------------------------------------------------------
+  data_loader:
+    patch_size: 128
+    batch_size: 16
 
+  # -------------------------------------------------------------------------
+  # ENGINE EXECUTION (BATCH-LEVEL)
+  # Controls low-level execution behavior inside the training engine.
+  #
+  # Contrôle le comportement d’exécution bas niveau dans le moteur
+  # d’entraînement.
+  # -------------------------------------------------------------------------
+  engine_exec:
+    use_amp: True
+    enable_logit_adjust: True
+
+  # -------------------------------------------------------------------------
+  # OPTIMIZATION SETTINGS
+  # Defines how model parameters are updated during training.
+  #
+  # Définit la manière dont les paramètres du modèle sont optimisés.
+  # -------------------------------------------------------------------------
+  engine_optim:
+    opt_cls: 'AdamW'
+    lr: 0.0001
+    weight_decay: 0.001
+    sched_cls: 'CosAnneal'
+
+  # -------------------------------------------------------------------------
+  # TASK & LOSS CONFIGURATION
+  # Defines the training objective, including loss composition and class
+  # handling.
+  #
+  # Définit l’objectif d’entraînement (fonctions de perte, gestion des classes).
+  # -------------------------------------------------------------------------
+  engine_tasks:
+    excluded_cls: {}    # e.g., {'head_name': [1, 2]} (class index is 1-based)
+    loss_types:
+      focal:
+        weight: 0.5
+      dice:
+        weight: 0.5
+      spectral:
+        weight: 0.001
+      tv:
+        weight: 0.0001
+
+  # -------------------------------------------------------------------------
+  # ORCHESTRATION (TRAINING CONTROL)
+  # Defines how training progresses over time, including monitoring,
+  # early stopping, and curriculum scheduling.
+  #
+  # Définit la progression de l’entraînement (monitoring, arrêt anticipé,
+  # curriculum).
+  # -------------------------------------------------------------------------
   orchestration:
+    # -----------------------------------------------------------------------
+    # MONITORING & EARLY STOPPING
+    # Controls validation tracking and stopping behavior.
+    #
+    # Contrôle le suivi de la validation et les conditions d’arrêt.
+    # -----------------------------------------------------------------------
     monitor:
       track_heads: [base]
-      patience: 10      # Stop if validation does not improve / Arrêt si la validation ne s’améliore pas
-      min_delta: 0.0005 # Minimum improvement to count as progress / Amélioration minimale considérée comme un progrès
+      allow_early_stop: True  # will be DISABLED during curriculum training
+      patience: 5             # Stop if validation does not improve
+      min_delta: 0.0005       # Minimum improvement to count as progress
 
+    # -----------------------------------------------------------------------
+    # TRAINING CURRICULUM
+    # Defines how training is staged over phases.
+    #
+    # Définit la progression de l’entraînement en phases.
+    # -----------------------------------------------------------------------
     curriculum:
-      single:
-        phases:
-          - num_epochs: 10
+      single: # conitunous training will follow this
+        phases: # you can use this as a phase template to design your own phases
+          - name: single_phase_parent
+            num_epochs: 10
+            start_epoch: 1
+            lr_scale: 1.0
             active_heads: [base]
+            frozen_heads: null
+
+      baseline: # default curriculum training will follow this baseline
+        select_children: []
+        phases:
+          - name: parent_head
+            num_epochs: 15
+            active_heads: [base]
+
+          - name: select_children_heads
+            num_epochs: 20
+            frozen_heads: [base]
+
+          - name: joint_tuning
+            num_epochs: 10
