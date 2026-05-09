@@ -81,12 +81,10 @@ class MultiHeadTrainer(policy.EngineBase):
     def __init__(
         self,
         *,
-        grad_clip_norm: float | None,
         update_every: int,
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.grad_clip_norm = grad_clip_norm
         self.update_every = update_every
 
         # init the epoch results container with all heads
@@ -165,6 +163,7 @@ class MultiHeadTrainer(policy.EngineBase):
             self._clip_grad()
 
             # optimizer step
+            scale_before = self.state.optim.scaler.get_scale()
             # use AMP
             if self.engine.config.use_amp:
                 self.state.optim.scaler.step(self.optimization.optimizer)
@@ -172,9 +171,11 @@ class MultiHeadTrainer(policy.EngineBase):
             # no AMP
             else:
                 self.optimization.step_optimizer()
+            scale_after = self.state.optim.scaler.get_scale()
 
-            # scheduler step (if present)
-            self.optimization.step_scheduler()
+            # scheduler step (if scheduler present AND scale did not decrease)
+            if scale_after >= scale_before:
+                self.optimization.step_scheduler()
 
             # increment global step counter
             self.state.progress.global_step += 1
@@ -194,10 +195,10 @@ class MultiHeadTrainer(policy.EngineBase):
     def _clip_grad(self):
         '''Clip gradients by global norm when set.'''
 
-        if self.grad_clip_norm is not None:
+        if self.optimization.grad_clip_norm is not None:
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(),
-                self.grad_clip_norm
+                self.optimization.grad_clip_norm
             )
 
     def _update_training_stats(self, flush: bool=False):

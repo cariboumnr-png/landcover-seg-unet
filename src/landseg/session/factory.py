@@ -97,17 +97,15 @@ class SessionConfigShape(typing.Protocol):
             orchestration runner.
     '''
     @property
-    def loader(self) -> data.LoaderConfig: ...
+    def data_loader(self) -> data.DataLoaderConfig: ...
     @property
-    def tasks(self) -> engine.TaskConfig: ...
+    def engine_exec(self) -> engine.BatchExecConfigShape: ...
     @property
-    def optimization(self) -> engine.OptimConfig: ...
+    def engine_optim(self) -> engine.OptimConfigShape: ...
     @property
-    def runtime(self) -> common.RuntimeConfigLike: ...
+    def engine_tasks(self) -> engine.TaskConfigShape: ...
     @property
-    def single_phase(self) -> common.PhaseLike: ...
-    @property
-    def curriculum(self) -> typing.Sequence[common.PhaseLike]: ...
+    def orchestration(self) -> common.OrchestrationConfigShape: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -129,7 +127,6 @@ class SessionBuildContext:
             required for `'training'` mode).
     '''
     device: str
-    total_epochs: int
     verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None
@@ -233,10 +230,10 @@ def build_continous_training_session(
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
         verbose=context.verbose_runner,
-        track_mode=config.runtime.monitor.track_mode,
-        enable_early_stop=config.runtime.monitor.allow_early_stop,
-        patience_epochs=config.runtime.monitor.patience,
-        delta=config.runtime.monitor.min_delta,
+        track_mode=config.orchestration.monitor.track_mode,
+        enable_early_stop=config.orchestration.monitor.allow_early_stop,
+        patience_epochs=config.orchestration.monitor.patience,
+        delta=config.orchestration.monitor.min_delta,
     )
 
     # return the orchestrator
@@ -244,7 +241,7 @@ def build_continous_training_session(
         epoch_engine=epoch_engine,
         base_config=base_config,
         runner_type='continuous',
-        training_phases=config.single_phase,
+        training_phases=config.orchestration.single_phase,
         dispatcher=dispatcher
     )
 
@@ -283,10 +280,10 @@ def build_curriculum_training_session(
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
         verbose=context.verbose_runner,
-        track_mode=config.runtime.monitor.track_mode,
-        enable_early_stop=config.runtime.monitor.allow_early_stop,
-        patience_epochs=config.runtime.monitor.patience,
-        delta=config.runtime.monitor.min_delta,
+        track_mode=config.orchestration.monitor.track_mode,
+        enable_early_stop=config.orchestration.monitor.allow_early_stop,
+        patience_epochs=config.orchestration.monitor.patience,
+        delta=config.orchestration.monitor.min_delta,
     )
 
     # return the orchestrator
@@ -294,6 +291,6 @@ def build_curriculum_training_session(
         epoch_engine=epoch_engine,
         base_config=base_config,
         runner_type='curriculum',
-        training_phases=config.curriculum,
+        training_phases=config.orchestration.multi_phases,
         dispatcher=dispatcher
     )

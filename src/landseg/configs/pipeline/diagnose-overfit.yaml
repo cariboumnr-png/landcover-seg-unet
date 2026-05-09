@@ -16,36 +16,37 @@ models:
 
 session:
 
-  components:
-    task:
-      types:
-        focal:
-          weight: 1.0
-          gamma: 0.0
-        dice:
-          weight: 0.0
-        spectral:
-          weight: 0.0
-        tv:
-          weight: 0.0
-    optimization:
-      lr: 1e-3
-      weight_decay: 0.0
-      sched_cls: null
-      sched_args: {}
+  engine_exec:
+    use_amp: False
+    enable_logit_adjust: False
+    logit_adjust_alpha: 0.0
 
-  runtime:
-    schedule:
-      max_epoch: 1000
+  engine_optim:
+    lr: 1e-3
+    weight_decay: 0.0
+    sched_cls: null
+    sched_args: {}
+    grad_clip_norm: null
+
+  engine_tasks:
+    loss_types:
+      focal:
+        weight: 1.0
+        gamma: 0.0
+      dice:
+        weight: 0.0
+      spectral:
+        weight: 0.0
+      tv:
+        weight: 0.0
+
+  orchestration:
     monitor:
       track_heads: [base]
-    precision:
-      use_amp: False
-    optimization:
-      grad_clip_norm: null
-    logit_adjust:
-      logit_adjust_alpha: 0.0
-      enable_logit_adjust: False
+    curriculum:
+      single:
+        phases:
+          - num_epochs: 1000
 
 pipeline:
   name: diagnose-overfit

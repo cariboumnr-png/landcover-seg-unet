@@ -71,7 +71,7 @@ def _build_runner(config: configs.RootConfig) -> StepRunner:
 
     # init run io folder tree
     paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
-    paths.init(trace_to_last=config.session.resume_from_last)
+    paths.init(trace_to_last=False)
 
     # create a centralized main logger
     logger = utils.Logger(

@@ -33,7 +33,8 @@ import typing
 __all__ = [
     # classes
     'BatchEngine',
-    'BatchEngineConfig',
+    'BatchExecConfigShape',
+    'BatchExecContext',
     'EngineState',
     # functions
     'initialize_state',
@@ -42,13 +43,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import BatchEngine, BatchEngineConfig
+    from .executor import BatchEngine, BatchExecConfigShape, BatchExecContext
     from .loss import multihead_loss
     from .state import EngineState, initialize_state
 
 def __getattr__(name: str):
 
-    if name in {'BatchEngine', 'BatchEngineConfig'}:
+    if name in {'BatchEngine', 'BatchExecConfigShape', 'BatchExecContext'}:
         return getattr(importlib.import_module('.executor', __package__), name)
 
     if name in {'multihead_loss'}:

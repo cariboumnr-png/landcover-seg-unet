@@ -38,7 +38,7 @@ import landseg.core as core
 import landseg.session.engine.runtime.optim as optim
 
 # ---------------------------------Public Type---------------------------------
-class OptimConfig(typing.Protocol):
+class OptimConfigShape(typing.Protocol):
     '''doc'''
     @property
     def opt_cls(self) -> str: ...
@@ -50,6 +50,8 @@ class OptimConfig(typing.Protocol):
     def sched_cls(self) -> str | None: ...
     @property
     def sched_args(self) -> dict[str, typing.Any]: ...
+    @property
+    def grad_clip_norm(self) -> float | None: ...
 
 # a callable that constructs an Optimizer (e.g., torch.optim.AdamW)
 P = typing.ParamSpec('P')
@@ -71,7 +73,7 @@ _SCHEDULERS: dict[str, SchedulerFactory] = {
 # -------------------------------Public Function-------------------------------
 def build_optimization(
     model: core.MultiheadModelLike,
-    config: OptimConfig
+    config: OptimConfigShape
 ) -> optim.Optimization:
 
     optimizer = _build_optimizer(
@@ -93,6 +95,7 @@ def build_optimization(
     return optim.Optimization(
         optimizer,
         scheduler,
+        grad_clip_norm=config.grad_clip_norm,
         sched_cls=config.sched_cls,
         sched_factory=sched_factory,
         sched_args=config.sched_args

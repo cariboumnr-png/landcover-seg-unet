@@ -19,14 +19,58 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 
 '''
-Phase definition
+Internal runtime configuration structures for the trainer.
+
+Defines typed dataclasses for scheduling, monitoring, precision, and
+optimization settings, along with a factory that constructs a unified
+RuntimeConfig from user configuration files.
 '''
 
 # standard imports
+from __future__ import annotations
 import typing
+
+# ---------------------------trainer runtime config---------------------------
+class OrchestrationConfigShape(typing.Protocol):
+    '''Container holding all trainer runtime configuration sections.'''
+    @property
+    def schedule(self) -> _Schedule: ...
+    @property
+    def monitor(self) -> _Monitor: ...
+    @property
+    def single_phase(self) -> PhaseLike: ...
+    @property
+    def multi_phases(self) -> typing.Sequence[PhaseLike]: ...
+
+# ------------------------------private dataclass------------------------------
+class _Schedule(typing.Protocol):
+    @property
+    def val_every_n_epoch(self) -> int: ...
+    @property
+    def infer_every_n_epoch(self) -> int: ...
+    @property
+    def ckpt_every_n_epoch(self) -> int: ... # current not in use
+    @property
+    def update_loss_every_n_batch(self) -> int: ...
+
+class _Monitor(typing.Protocol):
+    @property
+    def metric_name(self) -> str: ...
+    @property
+    def track_heads(self) -> list[str]: ...
+    @property
+    def track_mode(self) -> str: ...
+    @property
+    def allow_early_stop(self) -> bool: ...
+    @property
+    def patience(self) -> int | None: ...
+    @property
+    def min_delta(self) -> float | None: ...
 
 @typing.runtime_checkable
 class PhaseLike(typing.Protocol):
@@ -43,20 +87,8 @@ class PhaseLike(typing.Protocol):
     @property
     def start_epoch(self) -> int: ...
     @property
-    def lr_scale(self) -> float | None: ...   # currently not in use
+    def lr_scale(self) -> float | None: ...
     @property
     def active_heads(self) -> list[str] | None: ...
     @property
     def frozen_heads(self) -> list[str] | None: ...
-
-class PhaseProfile(typing.Protocol):
-    '''
-    Ordered collection of phases forming a training curriculum.
-
-    PhaseProfile objects are resolved from configuration and consumed
-    by orchestration logic. They contain no execution semantics.
-    '''
-    @property
-    def name(self) -> str: ...
-    @property
-    def phases(self) -> list[PhaseLike]: ...

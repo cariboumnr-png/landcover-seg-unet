@@ -39,18 +39,18 @@ __all__ = [
     # functions
     'build_engine_tasks',
     # types
-    'TaskConfig'
+    'TaskConfigShape'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import EngineTasks, TaskConfig, build_engine_tasks
+    from .factory import EngineTasks, TaskConfigShape, build_engine_tasks
     from .heads import HeadSpec
     from .loss import CompositeLoss
     from .metrics import ConfusionMatrix
 
 def __getattr__(name: str):
 
-    if name in {'EngineTasks', 'TaskConfig', 'build_engine_tasks'}:
+    if name in {'EngineTasks', 'TaskConfigShape', 'build_engine_tasks'}:
         return getattr(importlib.import_module('.factory', __package__), name)
 
     if name in {'HeadSpec'}:

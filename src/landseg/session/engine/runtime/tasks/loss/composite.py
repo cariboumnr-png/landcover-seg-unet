@@ -78,7 +78,7 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: tasks.TaskConfig,
+        config: tasks.TaskConfigShape,
         *,
         ignore_index: int,
         focal_alpha: list[float] | None = None,
@@ -108,41 +108,41 @@ class CompositeLoss(torch.nn.Module):
 
         # iterate through support loss types and add loss of non-zero weight
         # focal loss
-        if config.types.focal.weight:
+        if config.loss_types.focal.weight:
             loss_fn = primitives.FocalLoss(
                 alpha=focal_alpha,
-                gamma=config.types.focal.gamma,
-                reduction=config.types.focal.reduction,
+                gamma=config.loss_types.focal.gamma,
+                reduction=config.loss_types.focal.reduction,
                 ignore_index=ignore_index
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.types.focal.weight)
+            self.weights.append(config.loss_types.focal.weight)
 
         # dice loss
-        if config.types.dice.weight:
+        if config.loss_types.dice.weight:
             loss_fn = primitives.DiceLoss(
-                smooth=config.types.dice.smooth,
+                smooth=config.loss_types.dice.smooth,
                 ignore_index=ignore_index
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.types.dice.weight)
+            self.weights.append(config.loss_types.dice.weight)
 
         # spectral smoothness loss as regularizer
-        if config.types.spectral.weight:
+        if config.loss_types.spectral.weight:
             loss_fn = primitives.SpectralSmoothnessLoss(
-                alpha=config.types.spectral.alpha,
-                neighbour=config.types.spectral.neighbour,
+                alpha=config.loss_types.spectral.alpha,
+                neighbour=config.loss_types.spectral.neighbour,
                 spectral_bands=spectral_band_indices,
                 ignore_index=ignore_index,
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.types.spectral.weight)
+            self.weights.append(config.loss_types.spectral.weight)
 
         # total variation
-        if config.types.tv.weight:
+        if config.loss_types.tv.weight:
             loss_fn = primitives.TotalVariationLoss(ignore_index=ignore_index)
             self.losses.append(loss_fn)
-            self.weights.append(config.types.tv.weight)
+            self.weights.append(config.loss_types.tv.weight)
 
     def forward(
         self,

@@ -36,7 +36,7 @@ import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
 
 # ---------------------------------Public Type---------------------------------
-class TaskConfig(typing.Protocol):
+class TaskConfigShape(typing.Protocol):
     @property
     def alpha_fn(self) -> str: ...
     @property
@@ -44,7 +44,7 @@ class TaskConfig(typing.Protocol):
     @property
     def excluded_cls(self) -> dict[str, list[int]] | None: ...
     @property
-    def types(self) -> _LossTypes: ...
+    def loss_types(self) -> _LossTypes: ...
 
 # --------------------------------private  type--------------------------------
 class _LossTypes(typing.Protocol):
@@ -95,7 +95,7 @@ class EngineTasks:
 # -------------------------------Public Function-------------------------------
 def build_engine_tasks(
     data_specs: core.DataSpecs,
-    config: TaskConfig,
+    config: TaskConfigShape,
  ) -> EngineTasks:
     '''Builder session components from data shape and configs.'''
 

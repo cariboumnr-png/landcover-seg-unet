@@ -1,0 +1,3 @@
+# dataloading settings
+patch_size: 128
+batch_size: 16

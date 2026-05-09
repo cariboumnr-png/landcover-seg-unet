@@ -52,13 +52,15 @@ class Optimization:
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         *,
+        grad_clip_norm: float | None = None,
         sched_cls: str | None = None,
         sched_factory: typing.Callable[..., LRScheduler] | None = None,
-        sched_args: dict[str, typing.Any] | None = None
+        sched_args: dict[str, typing.Any] | None = None,
     ):
         '''doc'''
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.grad_clip_norm = grad_clip_norm
         self._sched_cls = sched_cls
         self._sched_factory = sched_factory
         self._sched_args = sched_args
@@ -91,75 +93,54 @@ class Optimization:
         *,
         lr: float | None = None,
         sched_cls: str | None = None,
-        sched_factory: typing.Callable[
-            ..., torch.optim.lr_scheduler.LRScheduler
-        ] | None = None,
-        sched_args: dict[str, typing.Any] | None = None
+        sched_factory: typing.Callable[..., LRScheduler] | None = None,
+        sched_args: dict[str, typing.Any] | None = None,
+        disable_scheduler: bool = False,
     ) -> None:
         '''
-        Reconfigure optimizer + scheduler in one call.
+        Reconfigure optimizer and/or scheduler.
         '''
 
+        # ---------------- lr update ----------------
         if lr is not None:
             for group in self.optimizer.param_groups:
                 group['lr'] = lr
 
-        if sched_factory is None or sched_cls is None:
+        # ---------------- disable scheduler ----------------
+        if disable_scheduler:
             self.scheduler = None
             self._sched_factory = None
             self._sched_cls = None
             self._sched_args = None
             return
 
-        args = sched_args or {}
+        # ---------------- no scheduler changes ----------------
+        if (
+            sched_cls is None and
+            sched_factory is None and
+            sched_args is None
+        ):
+            return
 
-        self.scheduler = sched_factory(self.optimizer, **args)
-        self._sched_factory = sched_factory
-        self._sched_cls = sched_cls
-        self._sched_args = args
-
-    def reset_scheduler(
-        self,
-        *,
-        sched_cls: str | None,
-        sched_factory: typing.Callable[..., LRScheduler] | None,
-        sched_args: dict[str, typing.Any] | None = None
-    ) -> None:
-        '''
-        Rebuild scheduler with new configuration.
-
-        Args:
-            sched_cls: name for tracking only (debug/logging)
-            sched_factory: callable to construct scheduler
-            sched_args: kwargs passed to scheduler
-        '''
+        # ---------------- inherit existing config ----------------
+        sched_cls = sched_cls or self._sched_cls
+        sched_factory = sched_factory or self._sched_factory
 
         if sched_factory is None or sched_cls is None:
-            self.scheduler = None
-            self._sched_cls = None
-            self._sched_factory = None
-            self._sched_args = None
-            return
+            raise ValueError(
+                'Scheduler configuration incomplete.'
+            )
 
-        args = sched_args or {}
+        merged_args = dict(self._sched_args or {})
+        if sched_args is not None:
+            merged_args.update(sched_args)
 
-        self.scheduler = sched_factory(self.optimizer, **args)
-        self._sched_cls = sched_cls
-        self._sched_factory = sched_factory
-        self._sched_args = args
-
-    def rebuild_scheduler(self) -> None:
-        '''
-        Recreate scheduler using stored configuration.
-
-        Useful after optimizer state changes or resume.
-        '''
-
-        if self._sched_factory is None:
-            self.scheduler = None
-            return
-
-        self.scheduler = self._sched_factory(
+        # ---------------- rebuild scheduler ----------------
+        self.scheduler = sched_factory(
             self.optimizer,
-            **(self._sched_args or {})
+            **merged_args
         )
+
+        self._sched_cls = sched_cls
+        self._sched_factory = sched_factory
+        self._sched_args = merged_args

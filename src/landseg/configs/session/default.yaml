@@ -1,43 +1,10 @@
 # Main entry to the config tree
 defaults:
   - _self_
-  - runtime: default
-  - phases: default
+  - data_loader: default
+  - engine_exec: default
+  - engine_optim: default
+  - engine_tasks: default
+  - orchestration: default
 
-resume_from_last: False
-mode: continuous # continuour | curriculum
-phase_schema: default
-
-# dataloader
-loader:
-  patch_size: 128
-  batch_size: 16
-
-# engine
-tasks:
-  alpha_fn: 'effective_n'
-  en_beta: 0.999
-  excluded_cls: {}
-  types:
-    focal:
-      weight: 0.5
-      gamma: 2.0
-      reduction: 'mean'
-    dice:
-      weight: 0.5
-      smooth: 1.0
-    spectral:
-      weight: 1e-3
-      alpha: 1.0
-      neighbour: 4
-    tv:
-      weight: 1e-4
-
-# engine and orchestration
-optimization:
-  opt_cls: 'AdamW'
-  lr: 1e-4
-  weight_decay: 1e-3
-  sched_cls: 'CosAnneal'
-  sched_args:
-    T_max: 50
+mode: continuous # continuous | curriculum

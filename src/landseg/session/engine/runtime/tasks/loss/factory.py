@@ -71,7 +71,7 @@ class HeadLosses:
 def build_headlosses(
     headspecs: heads.HeadSpecs,
     *,
-    config: tasks.TaskConfig,
+    config: tasks.TaskConfigShape,
     ignore_index: int,
     spectral_band_indices: list[int] | None = None
 ) -> HeadLosses:
