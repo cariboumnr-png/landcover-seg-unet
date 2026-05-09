@@ -89,8 +89,8 @@ def overfit(config: configs.RootConfig) -> None:
     runner.set_head_state(monitor_head)
 
     # run train-evaluate
-    max_epoch = config.session.orchestration.schedule.max_epoch
-    lr = config.session.components.optimization.lr
+    max_epoch = config.session.orchestration.single_phase.num_epochs
+    lr = config.session.engine_optim.lr
     logger.log('INFO', 'Starting overfit test')
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
     logger.log('INFO', f'Learning rate: {lr}')
