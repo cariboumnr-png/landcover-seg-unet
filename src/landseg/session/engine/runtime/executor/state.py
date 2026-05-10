@@ -128,6 +128,7 @@ class EngineState:
     heads: _Heads = field(default_factory=_Heads)
     batch_cxt: _BatchContex = field(default_factory=_BatchContex)
     batch_out: _BatchOutput = field(default_factory=_BatchOutput)
+    infer_out: _InferOutput = field(default_factory=_InferOutput)
 
 # -------------------------------Public Function-------------------------------
 def initialize_state(
