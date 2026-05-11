@@ -21,70 +21,18 @@
 
 '''Preview.'''
 
-# standard imports
-import os
 # third-party imports
 import numpy
 import PIL.Image
 import torch
 
 # -------------------------------Public Function-------------------------------
-def export_previews(
-    maps: dict[str, dict[tuple[int, int], torch.Tensor]],
-    out_dir: str,
-    *,
-    map_grid_shape: tuple[int, int] = (0, 0),
-    heads: list[str] | None = None,
-    palettes: dict[str, numpy.ndarray] | None = None,
-) -> dict[str, str]:
-    '''
-    Build and save PNG previews per head from infer maps.
-
-    Args:
-        maps: { blkname: { head: Tensor[H_blk, W_blk] } }
-        out_dir: directory to write PNGs into.
-        heads: which heads to export; if None, use all heads in maps.
-        index_base: 0 if names start with col_0/row_0; set to 1 for
-            col_1/row_1.
-        palettes: optional per-head palettes { head: [num_classes, 3] }.
-
-    Returns:
-        { head: path_to_png }
-    '''
-
-    # no ops if input shape is (0, 0) - dummy values from caller
-    if not all(x > 0 for x in map_grid_shape):
-        return {}
-
-    # make output dir if not already
-    os.makedirs(out_dir, exist_ok=True)
-
-    # parse grid shape
-    cols, rows = map_grid_shape
-
-    # if heads not provided, use all heads
-    if heads is None:
-        heads = list(maps.keys())
-
-    # iterate through heads
-    results: dict[str, str] = {}
-    for head in heads:
-        mosaic = stitch_patches(maps[head], cols_total=cols, rows_total=rows)
-        pal = palettes.get(head) if palettes else None
-        out_path = f'{out_dir}/preview_{head}.png'
-        _save_index_mosaic_png(mosaic, out_path, pal)
-        results[head] = out_path
-
-    return results
-
-# ----- mosaic building
 def stitch_patches(
     placements: dict[tuple[int, int], torch.Tensor],
     *,
-    cols_total: int | None = None,
-    rows_total: int | None = None,
-    fill_value: int | float = 0,
-) -> torch.Tensor:
+    grid_shape: tuple[int, int] | None = None,
+    palette: numpy.ndarray | None = None
+) -> numpy.ndarray:
     '''
     Merge {(col, row): patch[Hp, Wp]} into a full [H_total, W_total] tensor.
 
@@ -96,54 +44,43 @@ def stitch_patches(
     '''
     assert placements, 'placements is empty'
 
-    # Take a sample patch to get shape/device/dtype
+    # Take a sample patch to get shape
     any_patch = next(iter(placements.values()))
-    hp, wp = any_patch.shape
-    device = any_patch.device
-    dtype = any_patch.dtype
+    if any_patch.dim() == 2:
+        hp, wp = any_patch.shape
+    elif any_patch.dim() == 3:
+        _, hp, wp = any_patch.shape
+    else:
+        raise ValueError(f'Unsupported tensor shape: {any_patch.shape}')
 
     # if total cols and rows are provided, infer from the placement dict
-    if cols_total is None:
+    if grid_shape is None:
         cols_total = max(col for col, _ in placements) + 1
-    if rows_total is None:
         rows_total = max(row for _, row in placements) + 1
+    else:
+        cols_total, rows_total = grid_shape
 
     # init a canvas
     canvas = torch.full(
         (rows_total * hp, cols_total * wp),
-        fill_value=fill_value,
-        dtype=dtype,
-        device=device,
+        fill_value=0,
+        dtype=any_patch.dtype,
+        device=any_patch.device,
     )
 
-    # place each patch and return
+    # place each patch according to the grid coordinates
     for (col, row), patch in placements.items():
         y = row * hp
         x = col * wp
         canvas[y: y + hp, x: x + wp] = patch
-    return canvas
 
-# ----- png saving
-def _save_index_mosaic_png(
-    mosaic: torch.Tensor,
-    out_path: str,
-    palette: numpy.ndarray | None = None
-) -> None:
-    '''
-    Save a class-index mosaic tensor as a color PNG.
-
-    Notes:
-        - Detaches and moves to CPU exactly once here.
-        - Expects mosaic to contain integer class indices.
-    '''
-
-    arr = mosaic.detach().to('cpu').numpy()
+    #
+    array = canvas.detach().to('cpu').numpy()
     if palette is None:
-        max_cls = int(numpy.max(arr)) if arr.size > 0 else 0
+        max_cls = int(numpy.max(array)) if array.size > 0 else 0
         palette = _default_palette(max_cls + 1)
 
-    rgb = _colorize_indices(arr, palette)
-    PIL.Image.fromarray(rgb, mode='RGB').save(out_path)
+    return _colorize_indices(array, palette)
 
 def _default_palette(
     num_classes: int,
@@ -169,7 +106,7 @@ def _colorize_indices(
     palette: numpy.ndarray
 ) -> numpy.ndarray:
     '''
-    Map a 2D class index array [H, W] to RGB [H, W, 3] using a palette.
+    Map a 2D class index array [H, W] to RGB [3, H, W] using a palette.
 
     Args:
         index_map: 2D integer array.
@@ -189,5 +126,28 @@ def _colorize_indices(
         idx = idx.astype(numpy.int32)
 
     idx = numpy.clip(idx, 0, palette.shape[0] - 1)
-    rgb = palette[idx]
+    rgb = palette[idx] # HWC
+    rgb = numpy.transpose(rgb, (2, 0, 1)) # CHW
     return rgb.astype(numpy.uint8)
+
+# ----- png saving
+def _save_index_mosaic_png(
+    mosaic: torch.Tensor,
+    out_path: str,
+    palette: numpy.ndarray | None = None
+) -> None:
+    '''
+    Save a class-index mosaic tensor as a color PNG.
+
+    Notes:
+        - Detaches and moves to CPU exactly once here.
+        - Expects mosaic to contain integer class indices.
+    '''
+
+    arr = mosaic.detach().to('cpu').numpy()
+    if palette is None:
+        max_cls = int(numpy.max(arr)) if arr.size > 0 else 0
+        palette = _default_palette(max_cls + 1)
+
+    rgb = _colorize_indices(arr, palette)
+    PIL.Image.fromarray(rgb, mode='RGB').save(out_path)

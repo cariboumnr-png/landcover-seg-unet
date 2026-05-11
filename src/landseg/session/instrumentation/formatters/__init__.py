@@ -33,17 +33,16 @@ import typing
 __all__ = [
     # classes
     # functions
-    'export_previews',
     'stitch_patches',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .preview import export_previews, stitch_patches
+    from .preview import stitch_patches
 
 def __getattr__(name: str):
 
-    if name in {'export_previews', 'stitch_patches',}:
+    if name in {'stitch_patches',}:
         return getattr(importlib.import_module('.preview', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
