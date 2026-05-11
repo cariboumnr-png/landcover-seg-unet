@@ -69,7 +69,7 @@ def export_previews(
     # iterate through heads
     results: dict[str, str] = {}
     for head in heads:
-        mosaic = _stitch_patches(maps[head], cols_total, rows_total)
+        mosaic = stitch_patches(maps[head], cols_total, rows_total)
         pal = palettes.get(head) if palettes else None
         out_path = f'{out_dir}/preview_{head}.png'
         _save_index_mosaic_png(mosaic, out_path, pal)
@@ -77,10 +77,9 @@ def export_previews(
 
     return results
 
-# ------------------------------private  function------------------------------
 # ----- mosaic building
 
-def _stitch_patches(
+def stitch_patches(
     placements: dict[tuple[int, int], torch.Tensor],
     cols_total: int,
     rows_total: int,
