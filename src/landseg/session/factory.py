@@ -145,9 +145,7 @@ def build_overfit_session(
     '''
 
     # callback dispatcher
-    dispatcher = instrument.CallbackDispatcher([
-        instrument.LoggingCallback(verbose=context.verbose_runner)
-    ])
+    dispatcher = instrument.build_dispatcher(verbose=context.verbose_runner)
     # context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -176,9 +174,7 @@ def build_evaluate_session(
     '''
 
     # callback dispatcher
-    dispatcher = instrument.CallbackDispatcher([
-        instrument.LoggingCallback(verbose=context.verbose_runner)
-    ])
+    dispatcher = instrument.build_dispatcher(verbose=context.verbose_runner)
     # context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -206,10 +202,11 @@ def build_continous_training_session(
 
     # callback dispatcher
     assert context.session_paths, 'Session paths manager not provided'
-    dispatcher = instrument.CallbackDispatcher([
-        instrument.LoggingCallback(verbose=context.verbose_runner),
-        instrument.TrackingCallback(['tb'], context.session_paths.logs)
-    ])
+    dispatcher = instrument.build_dispatcher(
+        trackers=['tb'],
+        uri=context.session_paths.logs,
+        verbose=context.verbose_runner
+    )
     # epoch engine context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -257,10 +254,11 @@ def build_curriculum_training_session(
 
     # callback dispatcher
     assert context.session_paths, 'Session paths manager not provided'
-    dispatcher = instrument.CallbackDispatcher([
-        instrument.LoggingCallback(verbose=context.verbose_runner),
-        instrument.TrackingCallback(['tb'], context.session_paths.logs)
-    ])
+    dispatcher = instrument.build_dispatcher(
+        trackers=['tb'],
+        uri=context.session_paths.logs,
+        verbose=context.verbose_runner
+    )
     # epoch engine context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
