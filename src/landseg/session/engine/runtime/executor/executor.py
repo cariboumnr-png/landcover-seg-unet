@@ -431,10 +431,9 @@ class BatchEngine:
         inference state.
         '''
 
-        # early exit
-        cfg = self.context
-        if not (cfg.patch_per_blk and cfg.patch_per_dim and cfg.block_columns):
-            return
+        # context
+        ctx = self.context
+        assert ctx.patch_per_blk and ctx.patch_per_dim and ctx.block_columns
 
         # extract batch context and offload to CPU
         # raw image
@@ -456,17 +455,17 @@ class BatchEngine:
             # global patch index
             patch_idx = self.state.batch_cxt.pidx_start + i
             # block position
-            block_idx = patch_idx // cfg.patch_per_blk
-            block_row, block_col = divmod(block_idx, cfg.block_columns)
+            block_idx = patch_idx // ctx.patch_per_blk
+            block_row, block_col = divmod(block_idx, ctx.block_columns)
 
             # patch position inside block
-            p_in_blk = patch_idx % cfg.patch_per_blk
-            patch_row, patch_col = divmod(p_in_blk, cfg.patch_per_dim)
+            p_in_blk = patch_idx % ctx.patch_per_blk
+            patch_row, patch_col = divmod(p_in_blk, ctx.patch_per_dim)
 
             # map pred to patch-grid coordinates
             coord = (
-                block_col * cfg.patch_per_dim + patch_col,
-                block_row * cfg.patch_per_dim + patch_row
+                block_col * ctx.patch_per_dim + patch_col,
+                block_row * ctx.patch_per_dim + patch_row
             )
 
             # store input patch [C, H, W]

@@ -171,8 +171,13 @@ class MultiHeadEvaluator(policy.EngineBase):
         post-process inference results directly.
         '''
 
-        # early exit if this epoch is not to be validated
+        # early exit if this epoch is not to be inferred
         if not epoch % self.infer_every == 0:
+            return None
+
+        # early exit if continuous holdout test dataset is not provided
+        ctx = self.engine.context
+        if not (ctx.patch_per_blk and ctx.patch_per_dim and ctx.block_columns):
             return None
 
         # infer phase begin
