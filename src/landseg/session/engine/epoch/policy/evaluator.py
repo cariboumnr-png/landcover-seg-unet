@@ -178,6 +178,8 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.dispatcher.on_infer_policy_begin()
         # set model to evaluation mode
         self.model.eval()
+        # reset inference outputs
+        self.state.infer_out.clear()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
@@ -192,7 +194,11 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.dispatcher.on_infer_batch_end()
 
         # inference phase end
-        self.results.head_inference = self.state.batch_out.infer_maps
+        # retrieve inference results from state
+        self.results.infer_image = self.state.infer_out.inputs # raw channels
+        self.results.infer_targets = self.state.infer_out.targets # per head
+        self.results.infer_preds = self.state.infer_out.preds # per head
+        # broadcast
         self.dispatcher.on_infer_policy_end(self.results)
 
     # ----- validation phase
@@ -208,10 +214,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # sanity
         assert self.state.heads.active_hmetrics is not None
-
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
             self.results.head_metrics[head] = metrics_module.metrics
-            # collect per head metrics formatted strings
-            # metrics_str[head] = metrics_module.metrics.as_str_list

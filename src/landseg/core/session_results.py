@@ -27,6 +27,8 @@ Session step
 from __future__ import annotations
 import dataclasses
 import typing
+# local imports
+import landseg.session.common.alias as alias
 
 #
 if typing.TYPE_CHECKING:
@@ -121,7 +123,9 @@ class TrainerEpochResults:
 class EvaluatorEpochResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
-    head_inference: dict[str, dict[tuple[int, int], 'torch.Tensor']] = field(default_factory=dict)
+    infer_image: alias.TensorGridPatches = field(default_factory=dict)
+    infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
 
     @property
     def active_heads_str(self) -> str:
