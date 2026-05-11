@@ -60,7 +60,7 @@ def export_previews(
     os.makedirs(out_dir, exist_ok=True)
 
     # parse grid shape
-    cols_total, rows_total = map_grid_shape
+    cols, rows = map_grid_shape
 
     # if heads not provided, use all heads
     if heads is None:
@@ -69,7 +69,7 @@ def export_previews(
     # iterate through heads
     results: dict[str, str] = {}
     for head in heads:
-        mosaic = stitch_patches(maps[head], cols_total, rows_total)
+        mosaic = stitch_patches(maps[head], cols_total=cols, rows_total=rows)
         pal = palettes.get(head) if palettes else None
         out_path = f'{out_dir}/preview_{head}.png'
         _save_index_mosaic_png(mosaic, out_path, pal)
@@ -78,12 +78,11 @@ def export_previews(
     return results
 
 # ----- mosaic building
-
 def stitch_patches(
     placements: dict[tuple[int, int], torch.Tensor],
-    cols_total: int,
-    rows_total: int,
     *,
+    cols_total: int | None = None,
+    rows_total: int | None = None,
     fill_value: int | float = 0,
 ) -> torch.Tensor:
     '''
@@ -102,6 +101,12 @@ def stitch_patches(
     hp, wp = any_patch.shape
     device = any_patch.device
     dtype = any_patch.dtype
+
+    # if total cols and rows are provided, infer from the placement dict
+    if cols_total is None:
+        cols_total = max(col for col, _ in placements) + 1
+    if rows_total is None:
+        rows_total = max(row for _, row in placements) + 1
 
     # init a canvas
     canvas = torch.full(
