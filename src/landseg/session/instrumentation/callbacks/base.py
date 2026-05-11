@@ -40,6 +40,7 @@ expected interfaces.
 # local imports
 import landseg.core as core
 import landseg.session.common as common
+import landseg.session.instrumentation.tracking as tracking
 
 # --------------------------------Public  Class--------------------------------
 class BaseCallback(common.SessionObserverLike):
@@ -51,7 +52,12 @@ class BaseCallback(common.SessionObserverLike):
     lifecycle. All methods are optional; only override those needed.
     '''
 
-    def __init__(self, *, verbose: bool = True):
+    def __init__(
+        self,
+        *,
+        trackers: list[tracking.BaseTracker] | None = None,
+        verbose: bool = True
+    ):
         '''
         Initializes the callback.
 
@@ -60,6 +66,9 @@ class BaseCallback(common.SessionObserverLike):
                 in callback implementations..
         '''
         self.verbose = verbose
+        self._trackers: list[tracking.BaseTracker] = []
+        if trackers:
+            self._trackers = trackers
 
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...

@@ -21,30 +21,13 @@
 
 '''Tracking callback'''
 
-# standard imports
-import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
-import landseg.session.instrumentation.tracking as tracking
 
 class TrackingCallback(callbacks.BaseCallback):
     '''Tracking callback.'''
-
-    def __init__(
-        self,
-        trackers: list[typing.Literal['tb', 'mlflow']],
-        uri: str,
-        # artifact_path: str | None = None,
-        **kwargs
-    ):
-        '''Initialize the callback.'''
-
-        super().__init__(**kwargs)
-        self._trackers: list[tracking.BaseTracker] = []
-        if 'tb' in trackers:
-            self._trackers.append(tracking.TensorBoardTracker(uri))
 
     def on_train_phase_begin(self, phase: common.PhaseLike): ...
 
@@ -65,6 +48,7 @@ class TrackingCallback(callbacks.BaseCallback):
         step = results.epoch_in_phase
         for tracker in self._trackers:
             tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
+            tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...
 
