@@ -84,20 +84,20 @@ class EpochResults:
             evaluation step was executed.
     '''
     training: TrainerEpochResults | None = None
-    evaluation: EvaluatorEpochResults | None = None
+    validation: ValidationEpochResults | None = None
 
     @property
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
-        if self.evaluation:
-            return self.evaluation.active_heads_str
+        if self.validation:
+            return self.validation.active_heads_str
         return 'N/A'
 
     @property
     def target_metrics(self) -> float:
         '''Return the target metrics from the validation results.'''
-        if self.evaluation:
-            return self.evaluation.target_metrics
+        if self.validation:
+            return self.validation.target_metrics
         return -float('inf')
 
 @dataclasses.dataclass
@@ -120,12 +120,9 @@ class TrainerEpochResults:
             self.head_losses[h] = 0.0
 
 @dataclasses.dataclass
-class EvaluatorEpochResults:
+class ValidationEpochResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
-    infer_image: alias.TensorGridPatches = field(default_factory=dict)
-    infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
-    infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
 
     @property
     def active_heads_str(self) -> str:
@@ -218,3 +215,10 @@ class AccumulatedMetrics:
         self.ac_mean = 0.0
         self.ac_ious.clear()
         self.ac_support.clear()
+
+@dataclasses.dataclass
+class InferenceResults:
+    '''Containe for inference results.'''
+    infer_image: alias.TensorGridPatches = field(default_factory=dict)
+    infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)

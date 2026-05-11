@@ -90,11 +90,12 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.val_every = val_every
         self.infer_every = infer_every
 
-        # init the epoch results container with all heads
-        self.results = core.EvaluatorEpochResults()
+        # init the epoch results containers
+        self.val_results = core.ValidationEpochResults()
+        self.infer_results = core.InferenceResults()
 
     # -------------------------------Public  Methods-------------------------------
-    def validate(self, epoch: int) -> core.EvaluatorEpochResults | None:
+    def validate(self, epoch: int) -> core.ValidationEpochResults | None:
         '''
         Execute a full validation epoch and return finalized metrics.
 
@@ -130,7 +131,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         for metrics_mod in self.state.heads.active_hmetrics.values():
             metrics_mod.reset(self.device)
         # reset head metrics dictionary
-        self.results.head_metrics.clear()
+        self.val_results.head_metrics.clear()
 
         # set target dataset
         match self.dataset:
@@ -151,10 +152,10 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # val phase end
         self._compute_iou()
-        self.dispatcher.on_val_policy_end(self.results)
-        return self.results
+        self.dispatcher.on_val_policy_end(self.val_results)
+        return self.val_results
 
-    def infer(self, epoch: int) -> None:
+    def infer(self, epoch: int) -> core.InferenceResults | None:
         '''
         Execute inference over the test dataset.
 
@@ -172,7 +173,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # early exit if this epoch is not to be validated
         if not epoch % self.infer_every == 0:
-            return
+            return None
 
         # infer phase begin
         self.dispatcher.on_infer_policy_begin()
@@ -195,11 +196,12 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # inference phase end
         # retrieve inference results from state
-        self.results.infer_image = self.state.infer_out.inputs # raw channels
-        self.results.infer_targets = self.state.infer_out.targets # per head
-        self.results.infer_preds = self.state.infer_out.preds # per head
-        # broadcast
-        self.dispatcher.on_infer_policy_end(self.results)
+        self.infer_results.infer_image = self.state.infer_out.inputs # raw channels
+        self.infer_results.infer_targets = self.state.infer_out.targets # per head
+        self.infer_results.infer_preds = self.state.infer_out.preds # per head
+        # broadcast and return results
+        self.dispatcher.on_infer_policy_end(self.val_results)
+        return self.infer_results
 
     # ----- validation phase
     def _compute_iou(self) -> None:
@@ -217,4 +219,4 @@ class MultiHeadEvaluator(policy.EngineBase):
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
-            self.results.head_metrics[head] = metrics_module.metrics
+            self.val_results.head_metrics[head] = metrics_module.metrics

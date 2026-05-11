@@ -40,7 +40,8 @@ __all__ = [
     'TrainingSessionStep',
     'EpochResults',
     'TrainerEpochResults',
-    'EvaluatorEpochResults',
+    'ValidationEpochResults',
+    'InferenceResults',
     'AccumulatedMetrics',
     # functions
     # typing
@@ -55,7 +56,8 @@ if typing.TYPE_CHECKING:
         TrainingSessionStep,
         EpochResults,
         TrainerEpochResults,
-        EvaluatorEpochResults,
+        ValidationEpochResults,
+        InferenceResults,
         AccumulatedMetrics
     )
 
@@ -71,7 +73,8 @@ def __getattr__(name: str):
         'TrainingSessionStep',
         'EpochResults',
         'TrainerEpochResults',
-        'EvaluatorEpochResults',
+        'ValidationEpochResults',
+        'InferenceResults',
         'AccumulatedMetrics'
     }:
         return getattr(importlib.import_module('.session_results', __package__), name)

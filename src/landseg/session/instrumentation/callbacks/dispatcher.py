@@ -86,11 +86,11 @@ class CallbackDispatcher(common.SessionObserverLike):
         for cb in self.callbacks:
             cb.on_train_policy_end(results)
 
-    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None:
+    def on_val_policy_end(self, results: core.ValidationEpochResults) -> None:
         for cb in self.callbacks:
             cb.on_val_policy_end(results)
 
-    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None:
+    def on_infer_policy_end(self, results: core.ValidationEpochResults) -> None:
         for cb in self.callbacks:
             cb.on_infer_policy_end(results)
 

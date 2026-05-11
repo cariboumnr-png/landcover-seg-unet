@@ -215,11 +215,11 @@ class BaseRunner(abc.ABC):
             raise RuntimeError('Training produced no steps')
         if not last_step.is_run_end:
             raise RuntimeError('Training did not terminate cleanly')
-        if not (last_step.metrics and last_step.metrics.evaluation):
+        if not (last_step.metrics and last_step.metrics.validation):
             raise RuntimeError('Invalid validation results')
 
         # return the final scalar
-        return last_step.metrics.evaluation.target_metrics
+        return last_step.metrics.validation.target_metrics
 
     def _save_progress(
         self,
@@ -251,7 +251,7 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
-        validation = self._current_metrics.evaluation
+        validation = self._current_metrics.validation
         ckpt_meta: artifacts.CheckpointMeta = {
             'metric': validation.target_metrics if validation else 0.0,
             'epoch': self.trainer.state.progress.epoch,
