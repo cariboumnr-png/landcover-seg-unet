@@ -96,10 +96,10 @@ class _BatchOutput:
 class _InferOutput:
     '''Epoch-level aggregation for continuous inference domains.'''
     # inputs: maps (col, row) -> patch tensor [C, H, W]
-    inputs: dict[tuple[int, int], torch.Tensor] = field(default_factory=dict)
+    inputs: alias.TensorGridPatches = field(default_factory=dict)
     # targets and preds: maps head_name -> (col, row) -> patch tensor [H, W]
-    targets: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
-    preds: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
+    targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
 
     def clear(self):
         '''Clear aggregated grids at the start of a new inference phase.'''

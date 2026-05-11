@@ -425,40 +425,61 @@ class BatchEngine:
         '''
         Aggregate inference batch predictions into runtime storage.
 
-        This method maps per-batch predictions into epoch-level inference
-        buffers based on spatial layout information. Interpretation and
-        visualization of these results are handled externally.
+        This method maps per-batch inputs, targets, and predictions into
+        spatial grids based on spatial layout information. It strictly
+        stores these tensors (offloaded to CPU) in the continuous
+        inference state.
         '''
 
         # early exit
         cfg = self.context
         if not (cfg.patch_per_blk and cfg.patch_per_dim and cfg.block_columns):
             return
-        # get through each head and attach preds to corresponding block-heads
-        for head, logits in self.state.batch_out.preds.items():
 
-            # logits: [B, C, Hp, Wp] -> preds: # [B, Hp, Wp]
-            preds = torch.argmax(logits, dim=1)
-            # get preds placed according to locations from this batch
-            mapped: dict[tuple[int, int], torch.Tensor] = {}
-            # place patches to locations
-            for i, pred in enumerate(preds):
-                # global patch index
-                patch_idx = self.state.batch_cxt.pidx_start + i
-                # block position
-                block_idx = patch_idx // cfg.patch_per_blk
-                block_row, block_col = divmod(block_idx, cfg.block_columns)
-                # patch position inside block
-                p_in_blk = patch_idx % cfg.patch_per_blk
-                patch_row, patch_col = divmod(p_in_blk, cfg.patch_per_dim)
-                # map pred to patch-grid coordinates
-                mapped[(
-                    block_col * cfg.patch_per_dim + patch_col,
-                    block_row * cfg.patch_per_dim + patch_row
-                )] = pred
+        # extract batch context and offload to CPU
+        # raw image
+        x = self.state.batch_cxt.x.detach().cpu()
+        # predictions
+        preds = {
+            head: torch.argmax(logits, dim=1).detach().cpu()
+            for head, logits in self.state.batch_out.preds.items()
+        }
+        # ground truth
+        targets = {
+            head: t.detach().cpu()
+            for head, t in self.state.batch_cxt.y_dict.items()
+        } if self.state.batch_cxt.y_dict else {}
 
-            # pull existing epoch-level maps (persist across batches)
-            # ensure per-head dict exists, then mutate
-            self.state.batch_out.infer_maps.setdefault(head, {}).update(mapped)
-            # Update (merge) mapping for this head
-            # Keys are (col, row) in patch-grid coords
+        # iterate each tensor in the current batch
+        for i in range(x.shape[0]): # get current size (last may be ragged)
+
+            # global patch index
+            patch_idx = self.state.batch_cxt.pidx_start + i
+            # block position
+            block_idx = patch_idx // cfg.patch_per_blk
+            block_row, block_col = divmod(block_idx, cfg.block_columns)
+
+            # patch position inside block
+            p_in_blk = patch_idx % cfg.patch_per_blk
+            patch_row, patch_col = divmod(p_in_blk, cfg.patch_per_dim)
+
+            # map pred to patch-grid coordinates
+            coord = (
+                block_col * cfg.patch_per_dim + patch_col,
+                block_row * cfg.patch_per_dim + patch_row
+            )
+
+            # store input patch [C, H, W]
+            self.state.infer_out.inputs[coord] = x[i]
+
+            # store target and predictions per head
+            for head in preds.keys():
+                # aggregate prediction tensors
+                self.state.infer_out.preds.setdefault(
+                    head, {}
+                )[coord] = preds[head][i]
+                # aggregate target tensors
+                if head in targets:
+                    self.state.infer_out.targets.setdefault(
+                        head, {}
+                    )[coord] = targets[head][i]
