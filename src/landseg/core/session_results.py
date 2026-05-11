@@ -85,6 +85,7 @@ class EpochResults:
     '''
     training: TrainerEpochResults | None = None
     validation: ValidationEpochResults | None = None
+    inference: InferenceResults | None = None
 
     @property
     def target_objective(self) -> str:

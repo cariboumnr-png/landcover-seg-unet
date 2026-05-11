@@ -130,21 +130,22 @@ class EpochEngine:
             case 'train_eval':
                 if not (self.trainer and self.evaluator):
                     raise ValueError('Missing trainer or evaluator')
-                train_results = self.trainer.train_one_epoch(epoch)
-                val_results = self.evaluator.validate(epoch)
-                return core.EpochResults(train_results, val_results)
+                _train = self.trainer.train_one_epoch(epoch)
+                _val = self.evaluator.validate(epoch)
+                _infer = self.evaluator.infer(epoch)
+                return core.EpochResults(_train, _val, _infer)
 
             case 'train_only':
                 if not self.trainer:
                     raise ValueError('Missing trainer')
-                train_results = self.trainer.train_one_epoch(epoch)
-                return core.EpochResults(train_results, None)
+                _train = self.trainer.train_one_epoch(epoch)
+                return core.EpochResults(_train, None, None)
 
             case 'eval_only':
                 if not self.evaluator:
                     raise ValueError('Missing evaluator')
-                val_results = self.evaluator.validate(0) # will always run
-                return core.EpochResults(None, val_results)
+                _val = self.evaluator.validate(0) # will always run
+                return core.EpochResults(None, _val, None)
 
     def set_head_state(
         self,
