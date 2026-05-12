@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.batch.tasks`.
+Top-level namespace for `landseg.session.engine.runtime.tasks`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
