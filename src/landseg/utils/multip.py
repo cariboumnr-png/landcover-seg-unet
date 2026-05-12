@@ -19,7 +19,21 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Simple multiprocessing framework wrapped in a class.'''
+'''
+Lightweight parallel execution framework supporting threads and processes.
+
+This module provides a unified wrapper around Python's ThreadPoolExecutor
+and multiprocessing.Pool to simplify parallel execution of callables.
+
+Jobs are expressed as (function, args, kwargs) tuples and are executed
+concurrently with optional progress reporting via tqdm.
+
+Key features:
+- Thread or process-based execution selectable at runtime
+- Safe function execution with error capture per job
+- Optional tqdm progress tracking
+- Uniform job abstraction across concurrency backends
+'''
 
 # standard imports
 import concurrent.futures
@@ -30,13 +44,33 @@ import typing
 import tqdm
 
 # global
-CORE_N = multiprocessing.cpu_count() - 4
+CORE_N = max(1, multiprocessing.cpu_count() - 4)
 
 class ParallelExecutor:
-    '''Doc.'''
+    '''
+    A configurable parallel execution utility.
+
+    The executor accepts a list of jobs defined as tuples:
+        (function, args, kwargs)
+
+    and returns a list of results preserving execution order.
+
+    Features:
+    - Thread-based execution via concurrent.futures.ThreadPoolExecutor
+    - Process-based execution via multiprocessing.Pool
+    - Automatic error handling per job with structured error output
+    - Optional progress bar integration using tqdm
+
+    Notes:
+    - Process-based execution requires that target functions be
+        pickleable.
+    - Exceptions in individual jobs are captured and returned as
+        dictionaries rather than propagated, unless explicitly re-raised
+        for system-level signals.
+    '''
     def __init__(
             self,
-            max_workers:int = CORE_N,
+            max_workers: int = CORE_N,
             use_threads: bool= False,
             show_progress: bool= True,
             *,
