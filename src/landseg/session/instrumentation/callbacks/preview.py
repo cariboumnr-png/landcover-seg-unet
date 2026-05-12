@@ -19,35 +19,51 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Tracking callback'''
+'''Preivew callback'''
 
 # local imports
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.formatters as formatters
 
-class TrackingCallback(callbacks.BaseCallback):
-    '''Tracking callback.'''
+class PreviewCallback(callbacks.BaseCallback):
+    '''Preview callback.'''
 
     def on_train_phase_begin(self, phase: common.PhaseLike): ...
 
     def on_batch_begin(self, action: str, bidx: int): ...
 
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
-        if not results.metrics_updated:
-            return
-        step = results.global_step
-        for tracker in self._trackers:
-            tracker.log_scalar('total_loss', results.total_loss, step)
-            tracker.log_scalar('lr', results.current_lr or 0.0, step)
-            tracker.flush()
+    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults): ...
 
-    def on_train_step_end(self, results: core.TrainingSessionStep):
+    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
         metrics = results.metrics
         phase = results.phase_name
         step = results.epoch_in_phase
+        if not metrics.inference:
+            return
+        infer = metrics.inference
+        # collect stitched tensors into a dict
+        stitched = {}
+        # stitched = {
+        #     'raw_image': formatters.stitch_patches(infer.infer_image)[0] # test - elevation
+        # }
+        # targets per head
+        for head, targets in infer.infer_targets.items():
+            stitched[f'{head}_labels'] = formatters.stitch_patches(
+                targets,
+                palette=self.reclass_color_map
+            )
+        # predictions per head
+        for head, preds in infer.infer_preds.items():
+            stitched[f'{head}_predictions'] = formatters.stitch_patches(
+                preds,
+                palette=self.reclass_color_map
+            )
+        # broadcast to trackers
         for tracker in self._trackers:
-            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
+            for key, t in stitched.items():
+                tracker.log_image(f'{phase}_{key}', t, step)
             tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...

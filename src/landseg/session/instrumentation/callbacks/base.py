@@ -40,6 +40,7 @@ expected interfaces.
 # local imports
 import landseg.core as core
 import landseg.session.common as common
+import landseg.session.instrumentation.tracking as tracking
 
 # --------------------------------Public  Class--------------------------------
 class BaseCallback(common.SessionObserverLike):
@@ -51,7 +52,13 @@ class BaseCallback(common.SessionObserverLike):
     lifecycle. All methods are optional; only override those needed.
     '''
 
-    def __init__(self, *, verbose: bool = True):
+    def __init__(
+        self,
+        *,
+        trackers: list[tracking.BaseTracker] | None = None,
+        verbose: bool = True,
+        reclass_color_map: dict[int, list[int]] | None = None
+    ):
         '''
         Initializes the callback.
 
@@ -60,6 +67,10 @@ class BaseCallback(common.SessionObserverLike):
                 in callback implementations..
         '''
         self.verbose = verbose
+        self._trackers: list[tracking.BaseTracker] = []
+        if trackers:
+            self._trackers = trackers
+        self.reclass_color_map = reclass_color_map
 
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
@@ -79,8 +90,8 @@ class BaseCallback(common.SessionObserverLike):
     def on_infer_batch_end(self) -> None: ...
     # --- policy ends
     def on_train_policy_end(self, results: core.TrainerEpochResults) -> None: ...
-    def on_val_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
-    def on_infer_policy_end(self, results: core.EvaluatorEpochResults) -> None: ...
+    def on_val_policy_end(self, results: core.ValidationEpochResults) -> None: ...
+    def on_infer_policy_end(self, results: core.ValidationEpochResults) -> None: ...
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
     # --- training step ends

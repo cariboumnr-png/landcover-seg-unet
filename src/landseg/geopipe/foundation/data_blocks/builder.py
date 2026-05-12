@@ -136,6 +136,7 @@ class BlockBuilder:
         # parse block meta dict (carried by each block)
         with open (self.config.config_fpath, 'r', encoding='UTF-8') as src:
             meta_src = json.load(src)
+            self.meta_src = meta_src
         keys = meta_src.keys() & geo_core.DataBlockMeta.__annotations__
         meta = {k: meta_src[k] for k in keys}
         self.meta = typing.cast(geo_core.DataBlockMeta, meta) # typing compliance
@@ -153,6 +154,12 @@ class BlockBuilder:
         '''If current pipeline is supplied with a label raster.'''
         label_fpath = self.config.label_fpath
         return bool(label_fpath) and os.path.exists(label_fpath)
+
+    @property
+    def reclass_color_map(self) -> dict[int, list[int]] | None:
+        '''Return the reclass color map from config JSON if provided.'''
+        _map = self.meta_src.get('label_reclass_color_map', None)
+        return {int(k): v for k, v in _map.items()} if _map else None
 
     def build_single_block(
         self,

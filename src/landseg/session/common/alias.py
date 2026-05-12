@@ -45,3 +45,8 @@ DatasetBatch: typing.TypeAlias = typing.Sequence[DatasetItem]
 '''
 A collection of `DatasetItem` objects.
 '''
+
+TensorGridPatches: typing.TypeAlias = dict[tuple[int, int], torch.Tensor]
+'''
+Tensor patches on a grid indexed by (col, row).
+'''

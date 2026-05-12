@@ -20,55 +20,40 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Build dispatcher
 '''
 
-from __future__ import annotations
-import importlib
+# standard imports
 import typing
+# local imports
+import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.tracking as tracking
 
-__all__ = [
-    # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    'PreviewCallback',
-    'TrackingCallback',
-    # functions
-    'build_dispatcher',
-    # types
-]
+def build_dispatcher(
+    trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
+    uri: str | None = None,
+    # artifact_path: str | None = None, used by MLFlow
+    reclass_color_map: dict[int, list[int]] | None = None,
+    verbose: bool = True
+) -> callbacks.CallbackDispatcher:
+    '''doc'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .builder import build_dispatcher
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-    from .preview import PreviewCallback
-    from .tracking import TrackingCallback
+    # trackers list
+    tracker_list: list[tracking.BaseTracker] = []
+    if trackers:
+        if 'tb' in trackers:
+            assert uri, 'URI not provided for TensorBoard tracker'
+            tracker_list.append(tracking.TensorBoardTracker(uri))
 
-def __getattr__(name: str):
+    # callbacks list
+    callbacks_list: list[callbacks.BaseCallback] = [
+        callbacks.LoggingCallback(verbose=verbose),
+        callbacks.TrackingCallback(trackers=tracker_list),
+        callbacks.PreviewCallback(
+            trackers=tracker_list,
+            reclass_color_map=reclass_color_map
+        )
+    ]
 
-    if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'build_dispatcher'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
-
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
-
-    if name in {'PreviewCallback'}:
-        return getattr(importlib.import_module('.preview', __package__), name)
-
-    if name in {'TrackingCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    # return dispatcher
+    return callbacks.CallbackDispatcher(callbacks_list)

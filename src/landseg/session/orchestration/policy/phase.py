@@ -160,8 +160,8 @@ class PhasePolicy:
 
             # track metrics
             # - if validation is run this epoch
-            if metrics.evaluation:
-                tracked = self._track(epoch, metrics.evaluation.target_metrics)
+            if metrics.validation:
+                tracked = self._track(epoch, metrics.validation.target_metrics)
             # - if validation is not run this epoch
             else:
                 tracked = (0.0, -1, False)

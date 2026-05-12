@@ -27,6 +27,8 @@ Session step
 from __future__ import annotations
 import dataclasses
 import typing
+# local imports
+import landseg.session.common.alias as alias
 
 #
 if typing.TYPE_CHECKING:
@@ -70,6 +72,13 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     is_best_epoch: bool
     metrics: EpochResults # raw
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return a dict representation of the step.'''
+        step_dict = dataclasses.asdict(self)
+        step_dict['metrics'].pop('inference')
+        return step_dict
+
 @dataclasses.dataclass(frozen=True)
 class EpochResults:
     '''
@@ -82,20 +91,21 @@ class EpochResults:
             evaluation step was executed.
     '''
     training: TrainerEpochResults | None = None
-    evaluation: EvaluatorEpochResults | None = None
+    validation: ValidationEpochResults | None = None
+    inference: InferenceResults | None = None
 
     @property
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
-        if self.evaluation:
-            return self.evaluation.active_heads_str
+        if self.validation:
+            return self.validation.active_heads_str
         return 'N/A'
 
     @property
     def target_metrics(self) -> float:
         '''Return the target metrics from the validation results.'''
-        if self.evaluation:
-            return self.evaluation.target_metrics
+        if self.validation:
+            return self.validation.target_metrics
         return -float('inf')
 
 @dataclasses.dataclass
@@ -118,10 +128,9 @@ class TrainerEpochResults:
             self.head_losses[h] = 0.0
 
 @dataclasses.dataclass
-class EvaluatorEpochResults:
+class ValidationEpochResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
-    head_inference: dict[str, dict[tuple[int, int], 'torch.Tensor']] = field(default_factory=dict)
 
     @property
     def active_heads_str(self) -> str:
@@ -214,3 +223,10 @@ class AccumulatedMetrics:
         self.ac_mean = 0.0
         self.ac_ious.clear()
         self.ac_support.clear()
+
+@dataclasses.dataclass
+class InferenceResults:
+    '''Containe for inference results.'''
+    infer_image: alias.TensorGridPatches = field(default_factory=dict)
+    infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)

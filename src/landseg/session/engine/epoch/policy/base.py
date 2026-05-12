@@ -107,7 +107,6 @@ class EngineBase:
         self.dataloaders = dataloaders
         # callback system
         self.dispatcher = dispatcher
-
         # device placement
         self.device = device
         self.model.to(self.device)

@@ -144,8 +144,13 @@ def run_blocks_building(
         source_label=config.label_fpath,
         mapped_grid_id=world_grid.gid,
         blocks_dir=artfact_paths.blocks,
-        catalog_fpath=artfact_paths.catalog,
-        schema_fpath=artfact_paths.schema
+        reclass_color_map=block_builder.reclass_color_map
     )
-    data_blocks.update_manifest(updated, policy=policy, logger=logger)
+    data_blocks.update_manifest(
+        updated,
+        artfact_paths.catalog,
+        artfact_paths.schema,
+        policy=policy,
+        logger=logger
+    )
     logger.log('INFO', 'Data blocks catalog and schema updated')

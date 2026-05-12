@@ -62,8 +62,8 @@ class LoggingCallback(callbacks.BaseCallback):
              # training metrics is always neends
             assert metrics.training
             # validation may or may not be run every epoch
-            if metrics.evaluation:
-                mean_iou = metrics.evaluation.target_metrics
+            if metrics.validation:
+                mean_iou = metrics.validation.target_metrics
             else:
                 mean_iou = 0.0
             # best so far

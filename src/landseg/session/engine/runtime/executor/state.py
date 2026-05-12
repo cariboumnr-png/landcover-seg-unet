@@ -83,7 +83,6 @@ class _BatchOutput:
     preds: dict[str, torch.Tensor] = field(default_factory=dict)
     total_loss: torch.Tensor = torch.empty(0)
     head_loss: dict[str, float] = field(default_factory=dict)
-    infer_maps: dict[str, dict[tuple[int, int], torch.Tensor]] = field(default_factory=dict)
 
     def refresh(self, bidx: int):
         '''Clear outputs to start a new batch.'''
@@ -91,7 +90,22 @@ class _BatchOutput:
         self.preds.clear()                          # clear the old batch
         self.total_loss = torch.empty(0)            # clear the old batch
         self.head_loss.clear()                      # clear the old batch
-        # note: we do not clear inference results mapping (batch aggregation)
+
+# ----- inference ouputs
+@dataclasses.dataclass
+class _InferOutput:
+    '''Epoch-level aggregation for continuous inference domains.'''
+    # inputs: maps (col, row) -> patch tensor [C, H, W]
+    inputs: alias.TensorGridPatches = field(default_factory=dict)
+    # targets and preds: maps head_name -> (col, row) -> patch tensor [H, W]
+    targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+
+    def clear(self):
+        '''Clear aggregated grids at the start of a new inference phase.'''
+        self.inputs.clear()
+        self.targets.clear()
+        self.preds.clear()
 
 # ----- optimization runtime status
 @dataclasses.dataclass
@@ -114,6 +128,7 @@ class EngineState:
     heads: _Heads = field(default_factory=_Heads)
     batch_cxt: _BatchContex = field(default_factory=_BatchContex)
     batch_out: _BatchOutput = field(default_factory=_BatchOutput)
+    infer_out: _InferOutput = field(default_factory=_InferOutput)
 
 # -------------------------------Public Function-------------------------------
 def initialize_state(

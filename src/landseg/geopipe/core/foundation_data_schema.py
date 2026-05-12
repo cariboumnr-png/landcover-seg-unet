@@ -130,3 +130,4 @@ class _LabelsInfo(typing.TypedDict):
     label_to_ignore: list[int]
     channel_parent: dict[str, str | None]
     channel_parent_cls: dict[str, int | None]
+    reclass_color_map: dict[int, list[int]] | None
