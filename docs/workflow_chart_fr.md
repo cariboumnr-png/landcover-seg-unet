@@ -1,142 +1,199 @@
-## Flux de travail actuel
+## Workflow actuel
+
+Dernière mise à jour : 2026-05-12
+
 ```
-[foundation/world_grids/builder]            (1 Grille monde – construction pure)
+[foundation/world_grids/builder]            (1 Grille globale – construction pure)
+|
++--> [artifacts/controller]
+|        (résolution / build / réutilisation selon politique)
 |
 +--> [foundation/world_grids/lifecycle]
-|        (persistance et validation des artefacts de grille)
+|        (persistance et validation de l’artefact grille)
 |
-+--> [foundation/domain_maps/mapper]        (2 Domaine → Grille, optionnel)
++--> [foundation/domain_maps/mapper]        (2 Domaine → alignement sur grille, optionnel)
 |        |
 |        +--> [foundation/domain_maps/builder]
-|        |        (calcul pur des caractéristiques du domaine)
+|        |        (calcul pur des features de domaine)
+|        |
+|        +--> [artifacts/controller]
+|        |        (résolution / build / réutilisation artefact domaine)
 |        |
 |        +--> [foundation/domain_maps/lifecycle]
-|                 (persistance des artefacts de domaine)
+|                 (persistance et validation des artefacts domaine)
 |
-+--> [foundation/data_blocks/mapper]        (3 Imagerie/Étiquettes → fenêtres de grille)
++--> [foundation/data_blocks/mapper]        (3 Imagerie / labels → fenêtres de grille)
 |        |
 |        +--> [foundation/data_blocks/builder]
 |        |        (construction pure des blocs)
 |        |
+|        +--> [artifacts/controller]
+|        |        (résolution / build / réutilisation des blocs)
+|        |
 |        +--> [foundation/data_blocks/manifest]
-|                 (mise à jour du catalogue et du schéma)
+|                 (catalogue, enregistrement schéma et indexation)
 |
-+--> [geopipe/specification/factory]        (4 Construction des DataSpecs)
++--> [geopipe/specification/factory]        (4 Construction des DataSpecs à partir des artefacts)
 |
-+--> [models/factory]                       (5 Construction du modèle)
++--> [models/factory]                       (5 Construction et assemblage du modèle)
 |
-+--> [session/factory]                     (6 Frontière de construction de session)
++--> [session/factory]                      (6 Frontière de construction de session)
 |        |
-|        +--> [session/components]          (composants : loaders, têtes, loss, optim)
+|        +--> [session/data]                (dataloaders et adaptateurs de batch)
 |        |
-|        +--> [session/state]               (initialisation de l’état runtime)
+|        +--> [session/engine]
+|        |        (moteurs d’exécution batch + epoch)
 |        |
-|        +--> [session/instrumentation]     (callbacks, exporteurs)
+|        +--> [session/instrumentation]
+|        |        (callbacks, logging, suivi, export)
 |        |
-|        +--> [session/engine/batch]        (moteur d’exécution batch partagé)
+|        +--> [session/orchestration]
+|        |        (gestion du cycle de vie et coordination des phases)
 |        |
-|        +--> [session/engine/policy]       (politiques trainer / evaluator)
-|        |
-|        +--> [session/runner]              (optionnel : phases et runner)
+|        +--> [session/metadata]
+|                 (suivi et contexte runtime de la session)
 |
 |
-+--> [cli/pipelines/*]                              (7 Exécution des pipelines)
-         (orchestration explicite des étapes de commande seulement ;
-          résout la configuration, sélectionne un pipeline, puis
-          délègue la construction et l’exécution aux couches en aval)
++--> [execution/executor]                  (7 Point d’entrée d’exécution)
+         (résout la config, sélectionne le pipeline, délègue)
 
-    +--> [cli/pipelines/train_model]               (7a Pipeline d’entraînement)
-    |        (exécution complète d’une expérience)
+    +--> [execution/pipelines/train]       (7a Pipeline d’entraînement)
+    |        (cycle complet d’expérimentation)
     |        |
-    |        +--> valider / résoudre les artefacts d’expérience requis
-    |        |        (artefacts de jeu de données préparé, manifestes,
-    |        |         schéma)
-    |        |
-    |        +--> [geopipe/specification/factory]
-    |        |        (construire les DataSpecs à partir des artefacts
-    |        |         préparés)
-    |        |
-    |        +--> [models/factory]
-    |        |        (construire le modèle d’entraînement)
-    |        |
-    |        +--> [session/factory]
-    |        |        (assembler la session d’entraînement :
-    |        |         composants, état, callbacks, moteurs, runner)
-    |        |
-    |        +--> [session/runner]
-    |                 (exécuter le cycle multi-phases
-    |                  entraînement / validation)
-    |
-    +--> [cli/pipelines/evaluate_model]            (7b Pipeline d’évaluation)
-    |        (exécution d’une évaluation unique)
-    |        |
-    |        +--> valider / résoudre les artefacts d’expérience requis
-    |        |        (artefacts de jeu de données préparé, manifestes,
-    |        |         schéma, entrées d’évaluation / source du modèle)
+    |        +--> résolution des artefacts via [artifacts/controller]
+    |        |        (grille, domaine, blocs, manifests, schéma)
     |        |
     |        +--> [geopipe/specification/factory]
-    |        |        (construire les DataSpecs d’évaluation)
+    |        |        (construction des DataSpecs)
     |        |
     |        +--> [models/factory]
-    |        |        (construire le modèle d’évaluation)
+    |        |        (construction du modèle d’entraînement)
     |        |
     |        +--> [session/factory]
-    |        |        (assembler la session d’évaluation :
-    |        |         composants, état, callbacks, moteur d’évaluation)
+    |        |        (assemblage de la session d’entraînement)
     |        |
-    |        +--> [session/engine/policy]
-    |                 (exécuter un passage unique d’évaluation et
-    |                  produire métriques / exports)
+    |        +--> [session/orchestration]
+    |                 (exécution train/validate mono ou multi-phase)
     |
-    +--> [cli/pipelines/train_overfit]             (7c Pipeline d’overfit)
-             (validation de la chaîne complète sur un seul bloc)
+    +--> [execution/pipelines/evaluate]    (7b Pipeline d’évaluation)
+    |        (évaluation en un passage)
+    |        |
+    |        +--> résolution des artefacts via [artifacts/controller]
+    |        |        (données, manifests, source modèle)
+    |        |
+    |        +--> [geopipe/specification/factory]
+    |        |        (construction DataSpecs d’évaluation)
+    |        |
+    |        +--> [models/factory]
+    |        |        (construction du modèle d’évaluation)
+    |        |
+    |        +--> [session/factory]
+    |        |        (assemblage de la session d’évaluation)
+    |        |
+    |        +--> [session/engine]
+    |                 (exécution et émission métriques / exports)
+    |
+    +--> [execution/pipelines/overfit]     (7c Pipeline de sur-apprentissage)
+             (validation complète sur portée minimale)
              |
-             +--> construire / sélectionner un seul bloc valide
-             |        (chemin minimal d’acquisition de bloc pour la
-             |         validation de débogage)
+             +--> résolution / build d’un bloc minimal via [artifacts/controller]
+             |        (acquisition artefact pour debug)
              |
-             +--> construire des DataSpecs minimaux
-             |        (spécification à bloc unique / portée réduite)
+             +--> construction DataSpecs minimal
+             |        (spécification mono-bloc / restreinte)
              |
              +--> [models/factory]
-             |        (construire le modèle de débogage / overfit)
+             |        (construction modèle debug)
              |
              +--> [session/factory]
-             |        (assembler une session d’entraînement compacte
-             |         pour le test d’overfit)
+             |        (assemblage session compacte)
              |
-             +--> [session/engine/policy]
-                      (entraîner de manière répétée sur le même bloc
-                       jusqu’à atteindre un ajustement quasi parfait /
-                       la cible attendue pour le débogage)
-``
+             +--> [session/engine]
+                      (entraînement répété jusqu’à convergence)
 ```
+
+---
 
 ### Notes d’interprétation (mises à jour)
 
-- Toutes les étapes de construction de la fondation (grille, domaine, blocs)
-restent pures et déterministes.
-- Toute la logique de réutilisation, d’écrasement et de validation passe par
-artifacts.Controller / PayloadController.
-- La construction des DataSpecs et du modèle a lieu avant la frontière
-de session et ceux‑ci sont traités comme des entrées de la construction de
-session.
-- La construction de session est centralisée dans session/factory et est
-responsable de :
+- Toutes les étapes de construction de la couche foundation (grille,
+  domaine, blocs) restent pures, déterministes, et sans effets de bord.
 
-  - la construction des composants
-  - l’initialisation de l’état runtime
-  - le rattachement (binding) des callbacks
-  - l’instanciation des moteurs
-  - l’assemblage optionnel du runner
+- Toutes les décisions de réutilisation, de reconstruction, d’écrasement
+  et de validation des artefacts sont centralisées via
+  artifacts.controller, imposant une gestion du cycle de vie pilotée
+  par des politiques.
 
+- Les builders de la couche foundation ne gèrent pas la persistance ;
+  ils produisent des sorties en mémoire qui sont matérialisées
+  exclusivement via la couche des artefacts.
 
-- Les moteurs sont limités à la politique (policy‑only) et reçoivent un état et
-des composants entièrement initialisés.
-- La CLI exécute des étapes de pipeline explicites et demande une session ;
-elle n’assemble pas les internals du runtime.
-- Le flux sépare clairement :
+- Toutes les étapes en aval opèrent sur des artefacts résolus, et non sur
+  des intermédiaires recalculés ou implicites.
 
-  - les artefacts de fondation (ingestion et préparation)
-  - les artefacts d’expérience (specs, modèle)
-  - le runtime d’entraînement (cycle de vie détenu par la session)
+- Les DataSpecs et la construction du modèle se produisent strictement
+  avant la frontière de session et sont traités comme des entrées
+  entièrement résolues et immuables.
+
+- La construction de la session est centralisée dans session/factory et
+  prend en charge :
+
+  - la construction des interfaces de données (dataloaders, samplers)
+  - l’assemblage des composants (liaisons du modèle, fonctions de perte,
+    optimiseurs)
+  - l’initialisation de l’état d’exécution
+  - le raccordement des callbacks et de l’instrumentation
+  - l’instanciation des moteurs d’exécution
+  - la mise en place de l’orchestration du cycle de vie
+
+- Les éléments internes de la session sont entièrement configurés avant
+  l’exécution ; aucune mutation structurelle ne se produit pendant
+  l’exécution.
+
+- Les moteurs d’exécution opèrent sur un état et des composants injectés
+  et ne codent pas la configuration ni les décisions de cycle de vie.
+
+- Le contrôle du cycle de vie (phases train/validate et transitions) est
+  géré par l’orchestration de session, et non par les pipelines.
+
+- La couche d’exécution (execution.executor + pipelines) est responsable
+  uniquement de :
+
+  - la résolution de la configuration
+  - la sélection du pipeline
+  - la coordination de la résolution des artefacts via
+    artifacts.controller
+  - la délégation de la construction aux factories (specs, modèle,
+    session)
+
+- Les pipelines ne construisent pas les éléments internes à l’exécution
+  et agissent strictement comme des coquilles d’orchestration légères.
+
+- Le workflow impose une séparation claire entre les couches :
+
+  - couche foundation
+    construction déterministe des données (grille, domaine, blocs)
+
+  - couche artefacts
+    persistance, validation, versionnement, et politiques de
+    réutilisation
+
+  - couche expérimentation
+    spécification des données (DataSpecs) et construction du modèle
+
+  - couche session
+    système d’exécution, exécution et orchestration du cycle de vie
+
+  - couche exécution
+    orchestration de haut niveau et sélection de pipeline
+
+- Le système maintient un flux de dépendance unidirectionnel :
+
+  foundation → artifacts → experiment → session → execution
+
+- Cette structure garantit :
+
+  - la reproductibilité via un contrôle explicite des artefacts
+  - une séparation stricte entre les responsabilités de build et runtime
+  - des pipelines composables et prévisibles
+  - une reconstruction déterministe à partir des configs et des artefacts

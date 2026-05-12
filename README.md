@@ -7,71 +7,113 @@
 >*models that classify land cover. It helps users organize data, run deep‑learning*
 >*models, and reproduce results consistently.*
 
-A modular, reproducible deep-learning framework for pixel‑level landcover mapping.
-The system fuses **Landsat spectral imagery**, **DEM‑derived topographical metrics**,
-and **domain‑knowledge features** under stable **grid** and **domain** artifacts.
-The pipeline is powered by PyTorch U‑Net architectures and a fully specification‑driven
-data preparation workflow.
+A modular, artifact‑driven deep learning framework for pixel‑level landcover mapping.
+The system integrates **Landsat spectral imagery**, **DEM‑derived topographic metrics**,
+and **domain features** through a structured data preparation pipeline and a session-based
+training runtime built on **U‑Net–style segmentation architectures** (PyTorch implementation).
 
 > **Project Status:**
-> This repository is currently in **research / experimental** mode.
-> Module boundaries and APIs are **not yet stable**.
-> Runtime construction is now **session‑owned**, with execution engines acting as
-> policy layers over a shared batch core. Public session and engine APIs are still
-> evolving and should not yet be considered stable.
-
+> This repository is currently in **research / experimental** mode. Module boundaries
+> and APIs are **not yet stable**. Some interfaces are stable for usage, while others
+> (notably advanced orchestration and study layers) are still under development.
 
 ---
 
-
 # 📖 Overview
 
-This repository provides an end‑to‑end, artifact‑driven workflow for preparing
-datasets and training land‑cover segmentation models.
+This repository provides an end-to-end workflow for preparing geospatial datasets
+and training land-cover segmentation models, with a strong emphasis on reproducibility
+and structured data flow.
 
-- **Grid & Domain Artifacts**
-  Deterministic world‑grid tiling and grid‑aligned domain raster mapping,
-  persisted as reusable, hash‑guarded artifacts.
+## Core Concepts
 
-- **Dataprep Pipeline**
-  Raster geometry validation → grid/window mapping → raw block caching →
-  spectral and topographic feature derivation → label hierarchy construction →
-  dataset partitioning and scoring → normalization → schema generation.
+- **Foundation Artifacts (Data Preparation)**
 
-- **Schemas as Manifest of Record**
-  Generated `**schema.json` artifacts serve as the authoritative description of
-  dataset structure, provenance, splits, tensor shapes, label topology, and
-  normalization. No user‑authored manifest is required for standard workflows.
+  Raw rasters are transformed into structured, grid-aligned artifacts
+  (e.g., data blocks, domain maps). These artifacts act as the bridge between
+  geospatial formats (GeoTIFF) and tensor-based model inputs.
 
-- **Dataset Specs (`DataSpecs`)**
-  A unified runtime representation derived from persisted schemas and catalogs,
-  describing model inputs, class structure, splits, normalization, and optional
-  domain conditioning.
+- **Experiment Definition (DataSpecs + Model)**
 
-- **Model Architectures**
-  Multi‑head U‑Net and U‑Net variants with optional grid‑aligned domain
-  conditioning.
+  Prepared artifacts are assembled into `DataSpecs`, which define:
 
-- **Training, Evaluation & Inference**
-  Runtime construction is owned by a session layer that assembles components,
-  runtime state, callbacks, and execution engines. Training and evaluation are
-  driven by policy‑only engines over a shared batch executor, with an optional
-  phase‑based runner providing higher‑level orchestration when required.
+  - Model inputs
+  - Dataset splits
+  - Normalization
+  - Class structure
 
-- **Reproducibility by Construction**
-  Training and inference consume only persisted artifacts (schemas, checkpoints)
-  under strict hashing, schema‑gated loading, explicit  runtime state, and
-  deterministic rebuild‑on‑mismatch policies, ensuring auditable and restartable
-  experiments across runs and environments.
+  Models are constructed from configuration and paired with these specifications.
 
-More detailed documentation available here:
+- **Session (Runtime System)**
+
+  Training and evaluation are executed through a session, which assembles:
+
+  - Dataloaders
+  - Models
+  - Loss functions and optimizers
+  - Execution engines
+  - Callbacks and instrumentation
+
+- **Pipelines (Execution Layer)**
+
+  CLI pipelines orchestrate the workflow. They resolve configuration and artifacts,
+  then delegate construction to the system (they do not implement core logic).
+
+## Key Features
+
+- **Artifact-Driven Workflow**
+
+  All intermediate and final data are stored as versioned artifacts.
+  Users configure the system; artifact lifecycle and reuse are handled automatically.
+
+- **Deterministic Data Preparation**
+
+  Grid and domain alignment ensure consistent spatial structure across runs.
+
+- **Specification-Driven Datasets (`DataSpecs`)**
+
+  A single runtime object defines all model inputs, splits, and normalization.
+
+- **Session-Based Runtime**
+
+  Training and evaluation logic are encapsulated in a structured runtime system.
+
+- **Decoupled Tracking (Early-Stage Dev)**
+
+  TensorBoard support is available via callback-based instrumentation
+  (no vendor lock-in).
+
+  Additional backends (e.g., MLflow) are planned.
+
+---
+
+## ⚠️ Stability Notes
+
+- **Stable for Use**
+
+  - Data ingestion and preparation pipelines
+  - Artifact-based dataset construction
+  - Training and evaluation pipelines
+  - TensorBoard integration (basic tracking)
+
+- **Under Active Development**
+
+  - Notebook-based workflows
+    *(expected to become the primary entry point)*
+  - Study / sweeping layer
+    *(Optuna-based experimentation utilities)*
+  - Session and execution APIs
+    *(may evolve over time)*
+
+---
+
+**More detailed documentation available here**:
 - [Repository Structure](./docs/project_structure.md)
 - [Workflow Chart](./docs/workflow_chart.md)
 
 ---
 
-
-## ▶️ Usage
+## ▶️ CLI Entry Usage
 
 Before running any experiment, you must prepare your input rasters and organize
 your project folder correctly. Please start by reading the data‑preparation guide:
@@ -164,32 +206,74 @@ all required inputs should be provided through the root‑level `settings.yaml`.
 
 ---
 
+## 📊 Tracking & Visualization
+
+Training metrics and logs are emitted via callback-based instrumentation.
+
+- TensorBoard is currently supported *(local usage)*
+- Tracking is decoupled from framework internals
+- Future support planned for additional backends *(e.g., MLflow)*
+
+---
+
+## 🧠 Conceptual Model
+
+The system enforces a strict separation of concerns:
+
+- **Foundation Layer**
+  Deterministic data construction
+  *(grid, domain, blocks)*
+
+- **Artifacts Layer**
+  Persistence, validation, and reuse policies
+
+- **Experiment Layer**
+  `DataSpecs` and model definition
+
+- **Session Layer**
+  Runtime execution and lifecycle orchestration
+
+- **Execution Layer**
+  Pipeline selection and coordination
+
+**Dependency Flow**
+
+    foundation → artifacts → experiment → session → execution
+
+## 📦 Artifact behavior (user-facing summary)
+
+Artifacts are automatically generated and reused. Users do not manually manage lifecycle policies.
+
+Prepared dataset artifacts are stored under:
+
+    <user-defined-experiment-root>/artifacts
+
+Session outputs are stored under:
+
+    <user-defined-experiment-root>/results/run_xxxx/
+
+Artifacts serve as the source of truth for reproducibility.
+
+---
+
 ## 🚀 Roadmap
 
 ### Near‑Term
-- Documentation refresh reflecting the session‑first runtime architecture
-  and current pipeline layout (training, overfit, evaluation-only)
-- Workflow diagrams and ADR cross‑references for session construction,
-  runtime ownership, and evaluation/reporting boundaries
-- Improved examples for training, overfit, and standalone evaluation
-  pipelines
+- Notebook-first workflow (user-friendly entry point)
+- Improved experiment visualization and reporting
+- Enhanced TensorBoard integration (richer logging, previews)
 
 ### Medium‑Term
-- Refine and stabilize the public session construction surface around
-  explicit session intents and supported runtime guarantees
-- Standardize evaluation result outputs and downstream reporting schemas
-- Optional user‑authored task / phase manifest for more declarative
-  training workflows
-- Incremental hardening of session and engine public APIs
+- Stable study / hyperparameter sweep interface (Optuna)
+- MLflow integration for experiment tracking
+- Improved session configuration clarity and guarantees
+- Standardized evaluation outputs and reporting schemas
 
 ### Long‑Term
+- Cross-experiment comparison and study workflows
 - Additional model architectures
-- Expanded evaluation, export, and reporting utilities built on top of
-  the session/evaluator boundary
-- Experiment / study‑level workflows for cross‑session comparison,
-  selection, and higher‑level orchestration
-- Consolidation of stable runtime components into a production‑leaning
-  execution surface centered on the session / engine boundary
+- Production-oriented execution surface
+- Extended export and deployment utilities
 
 ---
 

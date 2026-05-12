@@ -22,44 +22,14 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Session construction and wiring.
+Epoch engine construction utilities.
 
-This module provides a factory (`build_session`) that assembles all
-runtime objects required to execute a multi-head model workflow,
-including:
-- component graph (losses, metrics, etc.)
-- runtime state (device placement, AMP configuration)
-- instrumentation callbacks
-- batch execution engine
-- evaluator (always instantiated)
-- trainer (always instantiated, but may not be used)
-- orchestration runner (only in training mode)
+Builds the epoch-level execution engine by assembling data loaders,
+runtime execution components, and training/evaluation policies from
+dataset metadata and configuration.
 
-Configuration is split into two distinct inputs:
-
-- `config` (static, user-defined):
-  Structured configuration originating from external sources (e.g., Hydra
-  dataclasses). It defines *what* to build: components, runtime behavior,
-  and training phases.
-
-- `context` (dynamic, invocation-time):
-  Execution-specific parameters that define *how* the session is run in a
-  given invocation. This includes intent (training/evaluation/overfit),
-  device selection, logging, and runtime flags.
-
-This separation allows the same configuration to be reused across
-different execution modes without modification, while keeping runtime
-concerns explicit and localized.
-
-The entry point is `build_session`, which returns a `SessionExcutables`
-container with the constructed evaluator and optional training components
-depending on the selected intent.
-
-Type behavior:
-    The session factory uses Literal-based typing and overloads to
-    encode execution intent at the type level. This allows static type
-    checkers to infer the exact return type of `build_session` based on
-    the provided context.
+This module serves as the orchestration entry point that wires together
+all components required for epoch-wise training and evaluation.
 '''
 
 # standard imports
@@ -80,23 +50,11 @@ import landseg.utils as utils
 # --------------------------------priavte  type--------------------------------
 class _EpochEngineConfigShape(typing.Protocol):
     '''
-    Structural typing interface for session configuration.
+    Configuration interface for constructing the epoch engine.
 
-    Defines the minimum required configuration attributes used to build
-    a session.
-
-    Attributes:
-        phase_schema: Identifier describing how training phases are
-            interpreted by the orchestration layer.
-        components:
-            Configuration used to construct session components such as
-            losses, metrics, and dataloaders.
-        runtime:
-            Runtime configuration controlling precision, optimization,
-            scheduling, and monitoring behavior.
-        training_phases:
-            Ordered sequence of phase definitions used by the training
-            orchestration runner.
+    Defines the required configuration sections used to build data
+    loaders, execution runtime, optimization, task components, and
+    orchestration scheduling behavior.
     '''
     @property
     def data_loader(self) -> data.DataLoaderConfig: ...
@@ -112,7 +70,7 @@ class _EpochEngineConfigShape(typing.Protocol):
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class EpochEngineContext:
-    '''Epoch engine building context.'''
+    '''Runtime context required for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
     dispatcher: instrument.CallbackDispatcher
@@ -127,7 +85,34 @@ def build_epoch_engine(
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
     eval_dataset: typing.Literal['val', 'test'] = 'val'
 ) -> epoch.EpochEngine:
-    '''doc'''
+    '''
+    Construct an epoch engine with training and/or evaluation policies.
+
+    Assembles all required components, including dataloaders, execution
+    runtime, trainer, and evaluator, and returns an ``EpochEngine``
+    configured for the specified mode.
+
+    Args:
+        context: Runtime context containing dataset specs, model,
+            dispatcher, device, and logger.
+        config: Configuration providing data loading, execution,
+            optimization, task, and orchestration settings.
+        mode: Execution mode determining which policies are active:
+            - `'train_eval'`: both training and evaluation
+            - `'train_only'`: training only
+            - `'eval_only'`: evaluation only
+        eval_dataset:
+            Dataset split used for evaluation (`'val'` or `'test'`).
+
+    Returns:
+        epoch.EpochEngine:
+            Fully constructed epoch engine with appropriate policies.
+
+    Notes:
+        - Trainer and evaluator share the same execution runtime.
+        - Scheduling behavior is controlled via orchestration config.
+        - Components are assembled once and reused across epochs.
+    '''
 
     # data loader
     data_loaders = data.build_dataloaders(

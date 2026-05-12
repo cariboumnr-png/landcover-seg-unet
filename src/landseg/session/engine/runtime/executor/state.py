@@ -19,7 +19,22 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Initiate a shared session-level runtime state object (mutable).'''
+'''
+Session-level runtime state for batch execution and orchestration.
+
+Defines structured dataclasses representing the mutable state shared
+across the execution engine, trainer/evaluator policies, and runner.
+
+The state captures:
+- Execution progress (epoch, global step)
+- Active and frozen head configuration
+- Per-batch inputs and outputs
+- Epoch-level inference aggregation
+- Optimization runtime (e.g., AMP scaler, learning rates)
+
+All components are updated deterministically during execution and
+serve as the single source of truth for runtime behavior and results.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -36,7 +51,6 @@ field = dataclasses.field
 # ----- progress tracking
 @dataclasses.dataclass
 class _Progress:
-    '''Training progress counters (epoch/step/global).'''
     epoch: int = 0
     global_step: int = 0
 
@@ -102,7 +116,7 @@ class _InferOutput:
     preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
 
     def clear(self):
-        '''Clear aggregated grids at the start of a new inference phase.'''
+        '''Clear at the start of a new inference phase.'''
         self.inputs.clear()
         self.targets.clear()
         self.preds.clear()
@@ -138,7 +152,34 @@ def initialize_state(
     use_amp: bool,
     device: str,
 ) -> EngineState:
-    '''Instantiate a trainer state dataclass with placeholder values.'''
+    '''
+    Initialize a runtime state container with default execution values.
+
+    Constructs an ``EngineState`` instance with initialized optimization
+    runtime (including AMP scaler) and populates essential static fields
+    required before execution begins.
+
+    Args:
+        all_heads:
+            List of all available model head names.
+        batch_size:
+            Batch size used during execution (stored in batch context).
+        use_amp:
+            Whether automatic mixed precision is enabled.
+        device:
+            Target device used to initialize the AMP scaler.
+
+    Returns:
+        EngineState:
+            A fully constructed runtime state object with initialized
+            subcomponents and ready for execution.
+
+    Notes:
+        - Most fields are initialized with default placeholders and are\
+          updated dynamically during batch execution.
+        - Head-specific active/frozen configurations are assigned later\
+          during phase orchestration.
+    '''
 
     # create an instance with default values
     runtime_state = EngineState(
@@ -149,6 +190,5 @@ def initialize_state(
     # update
     runtime_state.heads.all_heads = all_heads
     runtime_state.batch_cxt.batch_size = batch_size
-
     # return
     return runtime_state

@@ -85,6 +85,28 @@ class MultiHeadEvaluator(policy.EngineBase):
         dataset: typing.Literal['val', 'test'] = 'val',
         **kwargs
     ):
+        '''
+        Initialize the multi-head evaluation policy controller.
+
+        Args:
+            val_every:
+                Number of epochs between validation executions.
+            infer_every:
+                Number of epochs between inference executions.
+            dataset:
+                Dataset split used for inference ('val' or 'test').
+            **kwargs:
+                Forwarded to ``EngineBase`` for runtime, dataloaders,
+                dispatcher, and device configuration.
+
+        Notes:
+            - Maintains separate containers for validation and inference\
+            results.
+            - Execution is conditionally triggered based on epoch\
+              scheduling intervals.
+            - This class performs no gradient or optimization logic.
+        '''
+
         super().__init__(**kwargs)
         self.dataset: typing.Literal['val', 'test'] = dataset
         self.val_every = val_every

@@ -82,11 +82,6 @@ class ContinuousRunner(runner.BaseRunner):
         Args:
             phase: The sole training phase defining model configuration
                 and maximum number of epochs.
-            tracking_config: Metric tracking and early stopping config
-                passed to the `PhasePolicy`.
-            start_epoch: Epoch index at which execution begins. This is
-                typically provided by higher-level orchestration (e.g.,
-                CLI) for resumed runs.
             **kwargs: Forwarded to `BaseRunner` initialization (epoch
                 runner, logger, and configuration).
         '''

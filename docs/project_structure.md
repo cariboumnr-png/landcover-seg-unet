@@ -1,58 +1,75 @@
 ## 📁 Current Project Structure (showing two levels)
 
-Dernière mise à jour : 2026-04-07
+Last updated : 2026-05-12
 
 ```
-./src/landseg/
-├── artifacts/                    [Unified artifact lifecycle & persistence]
-│   ├── checkpoint.py             # model checkpointing utilities
-│   ├── controller.py             # policy-driven load/build/rebuild logic
-│   ├── payload_io.py             # structured payload + metadata I/O
-│   ├── paths.py                  # canonical artifact path layout
-│   └── policy.py                 # artifact lifecycle policies
+
+./notebooks/
+│   ├── 01_data_preparation.ipynb # data ingest, validation, and preparation pipelines
+│   └── 02_model_train.ipynb      # demo: end-to-end continuous training session
 |
-├── cli/                          [CLI entry point and pipeline dispatch]
-│   ├── main.py                   <- Hydra-based CLI entry
-│   └── pipelines/                # explicit pipeline stages
+./src/landseg/
+├── adapters/                     [External entry interfaces]
+│   ├── api.py                    <- programmatic API entry point
+│   └── cli.py                    <- Hydra-driven CLI entry point
+│
+├── artifacts/                    [Artifact lifecycle management & persistence]
+│   ├── checkpoint.py             # model checkpoint save/load utilities
+│   ├── controller.py             # policy-driven artifact resolve/build/rebuild
+│   ├── paths.py                  # canonical artifact path definitions
+│   ├── payload_io.py             # structured payload + metadata serialization
+│   └── policy.py                 # artifact lifecycle rules and policies
 |
 ├── configs/                      [Hydra configuration tree]
-│   ├── dataspecs/                # data specification
-│   ├── foundation/               # grid, domain, data-block configs
-│   ├── models/                   # model configuration
-│   ├── pipeline/                 # ingest / prepare / train pipelines
-│   ├── session/                  # session configuration
-│   ├── transform/                # data transform configs
-│   ├── config.yaml               # hydra config tree entry point
-│   └── schema.py                 # config dataclass validation
+│   ├── _schema_/                 # structured config dataclasses (sectional)
+│   ├── dataspecs/                # dataset specification configs
+│   ├── foundation/               # grid/domain/block configuration
+│   ├── models/                   # model architecture configs
+│   ├── pipeline/                 # ingest / prepare / train pipeline configs
+│   ├── session/                  # runtime session configuration
+│   ├── transform/                # data transform definitions
+│   ├── schema.py                 # composite config schema
+│   └── config.yaml               # Hydra config entry point
 |
-├── core/                         [Project-level contracts]
-│   ├── data_specs.py             # runtime dataset specification
-│   └── model_protocol.py         # model interface contracts
+├── core/                         [Project-wide contracts & abstractions]
+│   ├── data_specs.py             # runtime dataset specification contract
+│   ├── model_protocol.py         # model interface / behavioral contract
+│   └── session_results.py        # structured session output/results dataclasses
+|
+├── execution/                    [Execution orchestration layer]
+│   ├── pipelines/                # explicit, stage-based pipeline implementations
+│   ├── executor.py               # unified execution entry point
+│   └── resolver.py               # config resolution and dependency binding
 |
 ├── geopipe/                      [Geospatial data preparation pipeline]
-│   ├── core/                     # immutable core data structures
-│   ├── foundation/               # grid, domain, block preparation
-│   ├── transform/                # experiment-scoped data transforms
-│   ├── specification/            # DataSpecs construction
-│   └── utils/                    # module level utilities
+│   ├── core/                     # immutable core geospatial data structures
+│   ├── foundation/               # grid, domain, and block construction
+│   ├── specification/            # DataSpecs construction and assembly
+│   ├── transform/                # experiment-scoped data transformations
+│   └── utils/                    # geopipeline-level utilities
 |
-├── models/                       [Model architectures]
-│   ├── backbones/                # UNet, UNet++, etc.
-│   ├── multihead/                # multihead model framework
-│   └── factory.py                # model construction
+├── models/                       [Model architectures & composition]
+│   ├── backbones/                # backbone networks (e.g., UNet, UNet++)
+│   ├── multihead/                # multi-head modeling framework
+│   └── factory.py                # model construction and wiring
 |
-├── session/                      [runtime system]
-│   ├── commmon/                  # shared types in the module
-│   ├── components/               # losses, metrics, dataloaders
-│   ├── engine/                   # batch and policy engines
-│   ├── instrumentation/          # callbacks, preview utility
-│   ├── orchestration/            # session orchestration
-│   ├── factory.py                # session builders
-│   └── metadata.py               # session metadata
+├── session/                      [Runtime execution system]
+│   ├── commmon/                  # shared types and internal contracts
+│   ├── data/                     # dataloader and batching adapters
+│   ├── engine/                   # batch- and epoch-level execution engines
+│   ├── instrumentation/          # callbacks, logging, tracking, preview tools
+│   ├── orchestration/            # session lifecycle orchestration
+│   ├── factory.py                # session construction/builders
+│   └── metadata.py               # session metadata and tracking
+|
+├── study/                        [Experimentation & study layer]
+│   ├── analysis/                 # post-sweep evaluation and analysis
+│   └── sweep/                    # Optuna-based hyperparameter sweeping
 |
 ├── utils/                        [Shared utilities]
-|   ├── logger.py                 # project logging
-|   └── multip.py                 # multiprocessing helpers
+│   ├── logger.py                 # project-level logging utilities
+│   └── multip.py                 # multiprocessing helpers
 |
-└── _constants.py                 # project wide constants
-  ```
+└── _constants.py                 # global constants and shared definitions
+
+```

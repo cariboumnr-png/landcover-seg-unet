@@ -37,22 +37,22 @@ import landseg.session.engine.protocols as protocols
 
 class EngineBase:
     '''
-    Base class for session engines.
+    Base class for session engines defining policy on top of execution.
 
-    An engine defines *policy* and *orchestration* on top of a shared
-    batch execution core. Concrete engines (e.g., trainer, evaluator)
-    differ in how they interpret execution results over time, but
-    share:
+    An engine encapsulates *policy* and *orchestration behavior* over a
+    shared batch execution runtime. Concrete implementations (e.g.,
+    trainer and evaluator engines) differ in how they interpret runtime
+    state and coordinate execution over time, while sharing:
 
-    - runtime state interpretation
-    - head configuration logic
-    - callback wiring
+    - runtime state access and interpretation
+    - model/head configuration
+    - observer (callback) dispatching
     - device placement
 
-    This class deliberately does **not** implement:
-    - batch execution
-    - optimizer or scheduler logic
-    - epoch or phase control
+    This class intentionally excludes:
+    - batch execution mechanics (handled by `runtime`)
+    - optimization logic (e.g., optimizer/scheduler)
+    - epoch and phase control flow
     '''
 
     def __init__(
@@ -64,41 +64,31 @@ class EngineBase:
         device: str,
     ):
         '''
-        Initialize an engine policy instance.
+        Initialization with shared runtime and orchestration bindings.
 
-        The engine is constructed with an already-initialized batch
-        execution core and a shared RuntimeState. Runtime state is not
-        owned by the engine; it is deterministically mutated by the
-        execution core and interpreted according to engine-specific
-        policy (training, evaluation, or inference).
+        The engine operates over an external execution runtime and does
+        not own mutable training state. Instead, it interprets runtime
+        outputs according to its policy (e.g., training, validation,
+        inference) and coordinates high-level execution behavior.
 
         Args:
-            engine:
-                BatchExecutionEngine responsible for all batch-level
-                execution mechanics.
-            state:
-                Shared RuntimeState instance updated by the execution
-                core and consumed by the engine.
-            components:
-                Engine components including dataloaders, callbacks,
-                loss modules, metric modules, and (if applicable)
-                optimization components.
-            config:
-                Runtime configuration controlling scheduling,
-                precision, and monitoring behavior.
+            engine_runtime:
+                Shared execution runtime responsible for batch-level
+                computation and state mutation.
+            dataloaders:
+                Data access interface providing train/val/test loaders
+                and associated metadata.
+            dispatcher:
+                Observer interface for emitting lifecycle events during
+                execution.
             device:
-                Device identifier (e.g., 'cpu', 'cuda', 'cuda:0') to
-                which the model is moved at engine construction.
-            kwargs:
-                Runtime control flags:
-                - skip_log:
-                    Disable logging callbacks.
-                - enable_train_la:
-                    Enable logit adjustment during training.
-                - enable_val_la:
-                    Enable logit adjustment during validation.
-                - enable_test_la:
-                    Enable logit adjustment during inference.
+                Target device for model placement (e.g., 'cpu', 'cuda').
+
+        Notes:
+            - The model is moved to the target device during
+              initialization.
+            - The engine assumes all components are preconfigured and
+              focuses purely on orchestration logic.
         '''
 
         # execution core

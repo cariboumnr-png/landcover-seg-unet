@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Preview.'''
+'''Preview utilities'''
 
 # third-party imports
 import numpy

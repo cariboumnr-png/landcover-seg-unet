@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.batch.tasks.heads`.
+Top-level namespace for `landseg.session.engine.runtime.tasks.heads`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -41,15 +41,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import HeadSpecs, build_headspecs
-    from .specs import HeadSpec
+    from .specs import HeadSpec, HeadSpecs, build_headspecs
 
 def __getattr__(name: str):
 
-    if name in {'HeadSpecs', 'build_headspecs'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'HeadSpec'}:
+    if name in {'HeadSpec', 'HeadSpecs', 'build_headspecs'}:
         return getattr(importlib.import_module('.specs', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

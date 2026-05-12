@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Project-wide type aliases and lazy imports for type checking.'''
+'''Session module type aliases.'''
 
 # standard imports
 import typing

@@ -84,6 +84,25 @@ class MultiHeadTrainer(policy.EngineBase):
         update_every: int,
         **kwargs
     ):
+        '''
+        Initialize the multi-head training policy controller.
+
+        Args:
+            update_every:
+                Number of batches between metric aggregation and logging
+                updates (i.e., controls how frequently averaged losses
+                and learning rate are refreshed in ``results``).
+            **kwargs:
+                Forwarded to ``EngineBase`` for runtime, dataloaders,
+                dispatcher, and device configuration.
+
+        Notes:
+            - Initializes epoch-level result aggregation containers.
+            - Loss tracking is maintained per-epoch and per-head.
+            - Batch execution remains delegated to the runtime; this \
+            class only controls result aggregation cadence.
+        '''
+
         super().__init__(**kwargs)
         self.update_every = update_every
 

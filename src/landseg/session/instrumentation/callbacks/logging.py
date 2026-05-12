@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Console printing callback.'''
+'''Logging callback.'''
 
 # local imports
 import landseg.core as core
@@ -27,7 +27,7 @@ import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 
 class LoggingCallback(callbacks.BaseCallback):
-    '''Progress tracker.'''
+    '''Logging callback'''
 
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
         if self.verbose:

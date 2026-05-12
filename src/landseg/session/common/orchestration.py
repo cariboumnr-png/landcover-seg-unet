@@ -24,11 +24,27 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Internal runtime configuration structures for the trainer.
+Internal orchestration runtime configuration protocols.
 
-Defines typed dataclasses for scheduling, monitoring, precision, and
-optimization settings, along with a factory that constructs a unified
-RuntimeConfig from user configuration files.
+This module defines structured, type-safe protocol interfaces used by the
+training orchestration layer to coordinate execution behavior across
+phases, scheduling, and monitoring.
+
+It formalizes how configuration is accessed at runtime by exposing:
+- Scheduling controls (validation, inference, checkpoint cadence)
+- Monitoring and early-stopping behavior
+- Phase definitions for single-phase and multi-phase execution
+
+The ``PhaseLike`` protocol provides an immutable description of a
+training phase, specifying *what* is trained and for how long, while
+leaving execution strategy to the orchestration engine.
+
+The ``OrchestrationConfigShape`` protocol acts as a unified contract
+for runtime configuration, enabling consistent access across the engine
+regardless of how user configs are originally defined or loaded.
+
+These protocols enable strong typing, implementation flexibility, and
+clear separation between configuration structure and orchestration logic.
 '''
 
 # standard imports
@@ -37,7 +53,7 @@ import typing
 
 # ---------------------------trainer runtime config---------------------------
 class OrchestrationConfigShape(typing.Protocol):
-    '''Container holding all trainer runtime configuration sections.'''
+    '''Unified access interface for all orchestration config sections.'''
     @property
     def schedule(self) -> _Schedule: ...
     @property
@@ -74,12 +90,7 @@ class _Monitor(typing.Protocol):
 
 @typing.runtime_checkable
 class PhaseLike(typing.Protocol):
-    '''
-    Immutable description of a single training phase.
-
-    A Phase defines *what* should be trained and for how long, but does
-    not define *how* training progresses or *when* it stops.
-    '''
+    '''Immutable specification of a single training phase.'''
     @property
     def name(self) -> str: ...
     @property

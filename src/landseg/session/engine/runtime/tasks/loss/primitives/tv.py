@@ -20,10 +20,13 @@
 # =========================================================================== #
 
 '''
-Spectral smoothness loss.
+Total variation loss for segmentation tasks.
 
-This loss encourages neighboring pixels with similar features to have
-similar predicted class probabilities.
+Encourages spatial smoothness by penalizing differences between
+neighboring pixel predictions.
+
+This module defines a single loss primitive used by higher-level loss
+composition components in the execution pipeline.
 '''
 
 # third-party imports

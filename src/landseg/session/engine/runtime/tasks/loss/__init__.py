@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.batch.tasks.loss`.
+Top-level namespace for `landseg.session.engine.runtime.tasks.loss`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

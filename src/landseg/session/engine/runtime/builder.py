@@ -87,14 +87,14 @@ def build_engine_runtime(
         parent_map=dataspecs.heads.head_parent,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
-        block_columns=preview_ctx.block_columns if preview_ctx else None
+        block_columns=preview_ctx.block_columns if preview_ctx else None,
+        device=device
     )
     batch_engine = executor.BatchEngine(
         model,
         engine_state,
         exec_config,
         exec_context,
-        device=device
     )
 
     # engine core bundle

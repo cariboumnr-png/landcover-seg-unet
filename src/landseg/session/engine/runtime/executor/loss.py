@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Multihead loss computation helpers for trainer.'''
+'''
+Multi-head loss composition utilities.
+
+Provides helper functions for computing and aggregating losses across
+multiple model heads, including support for hierarchical supervision,
+per-head weighting, and auxiliary feature-aware losses.
+'''
 
 # third-party imports
 import torch
@@ -36,18 +42,34 @@ def multihead_loss(
     headlosses: dict[str, tasks.CompositeLoss],
 ) -> tuple[torch.Tensor, dict[str, float]]:
     '''
-    Compose the total loss from per-head losses.
+    Compute weighted multi-head loss with optional hierarchical masking.
 
-    Steps:
-    - For each head:
-        - fetch logits and matching target
-        - shift target from 1-based to 0-based (keep 255)
-        - optionally gate by parent class if hierarchical
-        - apply all specified loss functions (weighted sum)
+    For each head:
+    - Align predictions and targets (convert targets to 0-based indexing)
+    - Optionally derive masks from parent targets for hierarchical heads
+    - Apply the configured composite loss (may use features)
+    - Weight and accumulate into a total loss
+
+    Args:
+        multihead_preds: Per-head prediction tensors (logits).
+        multihead_targets: Per-head target tensors in dataset encoding.
+        features: Shared feature tensor passed to feature-aware losses.
+        headspecs: Per-head specs (e.g., parent relation, weights).
+        headlosses: Per-head composite loss modules.
 
     Returns:
-        (total_loss, per_head): scalar total loss and a dict of detached
-        per-head loss values for logging.
+        tuple:
+        - total_loss: Weighted scalar loss across all heads.
+        - per_head: Dict of per-head loss values (detached floats).
+
+    Raises:
+        RuntimeError:
+            If the aggregated loss contains NaN or Inf values.
+
+    Notes:
+        - Assumes all tensors are on the same device.
+        - Ignore index is preserved during base shift (e.g., 0 -> 1).
+        - Per-head losses are not weighted in the returned dictionary.
     '''
 
     # infer device from preds (assumes all on same device)

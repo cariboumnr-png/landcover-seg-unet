@@ -92,7 +92,6 @@ class PhasePolicy:
                 number of epochs and head settings.
             track_config: Configuration for tracking metrics and early
                 stopping behavior.
-            start_epoch: Epoch index to start from. Defaults to 1.
         '''
 
         self.runner = epoch_runner

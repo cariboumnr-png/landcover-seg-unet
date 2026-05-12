@@ -20,12 +20,14 @@
 # =========================================================================== #
 
 '''
-Validation utilities: confusion matrix accumulation and IoU metrics.
+Confusion matrix and IoU metrics for segmentation evaluation.
 
-Provides:
-    - Dataclass container for accumlated metrics reporting.
-    - ConfusionMatrix: incremental updates and IoU/mean IoU computation,
-      with optional hierarchical gating and class exclusion.
+Provides incremental confusion matrix updates and derived metrics,
+including per-class IoU and mean IoU, with support for ignore-index
+handling, hierarchical gating, and class exclusion.
+
+These components are used during validation and inference to
+accumulate and summarize prediction performance.
 '''
 
 # standard imports
@@ -41,7 +43,7 @@ field = dataclasses.field
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class ConfusionMatricConfig:
-    '''Configuration for confusion-matrix computation.'''
+    '''Configuration for confusion-matrix construction and computation.'''
     num_classes: int
     ignore_index: int
     parent_class_1b: int | None
@@ -50,26 +52,28 @@ class ConfusionMatricConfig:
 # --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
     '''
-    Incremental confusion matrix with IoU computation.
+    Incremental confusion matrix with IoU metric computation.
 
-    Supports:
-        - Hierarchical gating via a parent-class filter.
-        - Excluding classes when reporting active-class IoUs.
+    Accumulates predictions over batches and computes per-class and
+    mean IoU, with optional hierarchical filtering and class exclusion
+    applied during metric reporting.
     '''
 
     def __init__(self, config: ConfusionMatricConfig):
         '''
-        Initialize the confusion matrix and configuration.
+        Initialize confusion matrix state and configuration.
 
         Args:
             config:
-                Dictionary with
-                - 'num_classes': total number of classes (int)
-                - 'ignore_index': label to ignore (int or None)
-                - 'parent_class_1b': parent class (1-based) to gate on
-                    when provided (int or None)
-                - 'exclude_class_1b': classes (1-based) to exclude from
-                    active-class metrics (list[int] or None)
+                Configuration specifying number of classes, ignore index,
+                optional parent-class gating, and class exclusions for
+                metric reporting.
+
+        Notes:
+            - Internal matrix is initialized to zeros and updated\
+              incrementally during execution.
+            - Metrics are stored in an accumulated container and\
+              finalized after computation.
         '''
 
         # assign attributes

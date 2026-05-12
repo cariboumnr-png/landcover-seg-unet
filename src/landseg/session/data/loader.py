@@ -30,7 +30,7 @@ This module prepares:
     - A custom collate function supporting labeled and unlabeled splits,
     - A small metadata bundle shipped with the dataloaders.
 
-The main entry point is `get_dataloaders`, returning a structured
+The main entry point is `build_dataloaders`, returning a structured
 DataLoaders object containing train/val/test loaders and metadata.
 '''
 
@@ -92,33 +92,32 @@ def build_dataloaders(
     logger: utils.Logger,
 ) -> DataLoaders:
     '''
-    Build PyTorch-style dataloaders from dataset metadata and config.
+    Construct train/val/test dataloaders and metadata from dataset specs.
 
-    This function constructs training, validation, and optionally test
-    dataloaders from the dataset specification. It dynamically decides
-    caching and preloading strategies based on available system resources.
+    Builds PyTorch-style dataloaders based on dataset metadata and user
+    configuration, while deriving execution-specific strategies such as
+    caching, preloading, and batching behavior.
 
     Args:
-        data_specs: Dataset specification containing block paths, domain
-            information, split definitions, and global metadata.
-        batch_size: Number of samples per batch in each dataloader.
-        patch_size: Size of each data patch/block used for batching.
-        logger: Logger instance for progress and status reporting.
+        data_specs: Dataset specification describing data layout, splits,
+            block structure, and global metadata.
+        config: Data loading configuration (e.g., batch and patch size).
+        logger: Logger used for reporting build progress and decisions.
 
     Returns:
-        DataLoaders: An object containing dataloaders and metadata:
-            - train: DataLoader for training data
-            - val: DataLoader for validation data
-            - test: DataLoader for test data, or None if not available
-            - meta: Metadata bundle (see `_Meta`)
+        DataLoaders: Container with:
+            - train: Training dataloader (or None if unavailable)
+            - val: Validation dataloader (or None if unavailable)
+            - test: Test/inference dataloader (or None if unavailable)
+            - meta: Associated metadata (batch/patch settings and
+              optional preview context)
 
     Notes:
-    - In single-block mode, a single loader may be reused for both train
-        and val.
-    - Preloading and caching decisions are computed dynamically based on
-        available memory.
-    - All dataloaders are configured to match the dataset specification
-        and batch/patch parameters provided.
+        - Loader reuse may occur (e.g., single-block datasets).
+        - Memory-aware strategies (e.g., caching/preloading) are inferred
+          at runtime.
+        - Returned loaders are aligned with dataset structure and
+          orchestration requirements.
     '''
 
     # get a child from the base logger

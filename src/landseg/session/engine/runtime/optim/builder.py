@@ -19,14 +19,16 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring, too-few-public-methods
-'''
-Simple optimizer and scheduler factory utilities.
+# pylint: disable=missing-function-docstring
 
-Provides:
-    - A minimal Protocol for models exposing `.parameters()`.
-    - Registries for common optimizers and schedulers.
-    - A factory to build (optimizer, scheduler) pairs from config.
+'''
+Optimizer and scheduler construction utilities.
+
+Defines configuration protocols, registries, and factory functions for
+building optimizer and scheduler pairs from user-provided settings.
+
+This module translates lightweight configuration into fully initialized
+runtime optimization components used by the training engine.
 '''
 
 # standard imports
@@ -39,7 +41,7 @@ import landseg.session.engine.runtime.optim as optim
 
 # ---------------------------------Public Type---------------------------------
 class OptimConfigShape(typing.Protocol):
-    '''doc'''
+    '''Configuration interface for building optimizer and scheduler.'''
     @property
     def opt_cls(self) -> str: ...
     @property
@@ -75,7 +77,34 @@ def build_optimization(
     model: core.MultiheadModelLike,
     config: OptimConfigShape
 ) -> optim.Optimization:
+    '''
+    Build an optimization wrapper from model and configuration.
 
+    Constructs a PyTorch optimizer and an optional learning rate
+    scheduler based on the provided configuration, returning a unified
+    ``Optimization`` wrapper for runtime use.
+
+    Args:
+        model: Model exposing parameters to optimize.
+        config: Optimization configuration specifying optimizer type,
+            learning rate, weight decay, scheduler settings, and
+            gradient clipping.
+
+    Returns:
+        Optimization:
+            Wrapper containing the optimizer and optional scheduler.
+
+    Raises:
+        ValueError:
+            If the specified optimizer or scheduler is not registered.
+
+    Notes:
+        - Scheduler is optional and only created if configured.
+        - Scheduler construction uses a registry-backed factory.
+        - Configuration is preserved to support future reconfiguration.
+    '''
+
+    # build the optimizer
     optimizer = _build_optimizer(
         model,
         optim_cls=config.opt_cls,
@@ -83,15 +112,17 @@ def build_optimization(
         weight_decay=config.weight_decay
     )
 
+    # exit if scheduler class in not configured
     if config.sched_cls is None:
         return optim.Optimization(optimizer=optimizer)
 
+    # set scheduler
     sched_factory = _SCHEDULERS.get(config.sched_cls)
     if sched_factory is None:
         raise ValueError(f'Unknown scheduler: {config.sched_cls}')
-
     scheduler = sched_factory(optimizer, **config.sched_args)
 
+    # return
     return optim.Optimization(
         optimizer,
         scheduler,
