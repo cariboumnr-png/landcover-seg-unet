@@ -64,7 +64,7 @@ class PreviewCallback(callbacks.BaseCallback):
         for tracker in self._trackers:
             for key, t in stitched.items():
                 tracker.log_image(f'{phase}_{key}', t, step)
-                tracker.flush()
+            tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...
 
