@@ -45,7 +45,7 @@ def build_dataspec(
     ids_domain_name: str | None = None,
     vec_domain_name: str | None = None,
     print_out: bool = False
-):
+) -> core.DataSpecs:
     '''
     Build a `DataSpecs` object from catalog metadata and transform schema.
 
@@ -164,6 +164,7 @@ def _get_meta(
     return core.Meta(
         test_blks_grid=(col, row),
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
+        reclass_color_map=data_schema['labels']['relcass_color_map'],
         image_specs=core.Meta.Image(
             num_channels=data_schema['tensor_shapes']['image']['C'],
             height_width=data_schema['tensor_shapes']['image']['H'],

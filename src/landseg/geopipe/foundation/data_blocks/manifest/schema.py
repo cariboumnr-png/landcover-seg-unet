@@ -41,9 +41,9 @@ def build_schema(
     sample_block_fpath: str,
     *,
     original: geo_core.DataSchema | None,
+    sources: tuple[str, str | None],
     mapped_grid_id: str,
-    source_image: str,
-    source_label: str | None,
+    reclass_color_map: dict[int, list[int]] | None
 ) -> geo_core.DataSchema:
     '''
     Create or update the dataset-level `schema.json`.
@@ -76,6 +76,9 @@ def build_schema(
 
     # current time
     t = datetime.datetime.now().strftime(c.TF_ISO8601)
+
+    # parse sources
+    source_image, source_label = sources
 
     # update route
     if original:
@@ -148,6 +151,7 @@ def build_schema(
             'label_to_ignore': sample_blk.meta['label_ignore_cls'],
             'channel_parent': sample_blk.meta['label_ch_parent'],
             'channel_parent_cls': sample_blk.meta['label_ch_parent_cls'],
+            'relcass_color_map': reclass_color_map
         },
     }
     return new

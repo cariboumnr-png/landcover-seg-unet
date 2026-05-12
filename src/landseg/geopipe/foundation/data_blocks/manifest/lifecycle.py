@@ -52,12 +52,13 @@ class ManifestUpdateContext:
     source_label: str | None        # optional path to the label raster
     mapped_grid_id: str             # id for the grid the blocks are mapped to
     blocks_dir: str                 # where data blocks are
-    catalog_fpath: str              # path to save catalog.json
-    schema_fpath: str               # path to save schema.json
+    reclass_color_map: dict[int, list[int]] | None
 
 # -------------------------------Public Function-------------------------------
 def update_manifest(
     context: ManifestUpdateContext,
+    catalog_fpath: str,
+    schema_fpath: str,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
@@ -85,7 +86,7 @@ def update_manifest(
 
 
     # load catalog JSON
-    ctrl = CatalogDictCtrl(context.catalog_fpath, policy)
+    ctrl = CatalogDictCtrl(catalog_fpath, policy)
     try:
         data_dict = ctrl.fetch()
     except artifacts.ArtifactError as exc:
@@ -110,7 +111,7 @@ def update_manifest(
         ctrl.persist(catalog_json)
 
     # load schema JSON
-    ctrl = SchemaCtrl(context.schema_fpath, policy)
+    ctrl = SchemaCtrl(schema_fpath, policy)
     try:
         current_schema = ctrl.fetch()
     except artifacts.ArtifactError as exc:
@@ -122,8 +123,8 @@ def update_manifest(
         sample_block,
         original=current_schema,
         mapped_grid_id=context.mapped_grid_id,
-        source_image=context.source_image,
-        source_label=context.source_label,
+        sources=(context.source_image, context.source_label),
+        reclass_color_map=context.reclass_color_map
     )
     ctrl.persist(schema_dict)
 

@@ -154,6 +154,12 @@ class BlockBuilder:
         label_fpath = self.config.label_fpath
         return bool(label_fpath) and os.path.exists(label_fpath)
 
+    @property
+    def reclass_color_map(self) -> dict[int, list[int]] | None:
+        '''Return the reclass color map from config JSON if provided.'''
+        _map = self.meta.get('label_reclass_color_map', None)
+        return {int(k): v for k, v in _map} if _map else None
+
     def build_single_block(
         self,
         save_dpath: str,
