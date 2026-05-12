@@ -33,6 +33,7 @@ def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
     uri: str | None = None,
     # artifact_path: str | None = None, used by MLFlow
+    reclass_color_map: dict[int, list[int]] | None = None,
     verbose: bool = True
 ) -> callbacks.CallbackDispatcher:
     '''doc'''
@@ -48,7 +49,10 @@ def build_dispatcher(
     callbacks_list: list[callbacks.BaseCallback] = [
         callbacks.LoggingCallback(verbose=verbose),
         callbacks.TrackingCallback(trackers=tracker_list),
-        callbacks.PreviewCallback(trackers=tracker_list)
+        callbacks.PreviewCallback(
+            trackers=tracker_list,
+            reclass_color_map=reclass_color_map
+        )
     ]
 
     # return dispatcher

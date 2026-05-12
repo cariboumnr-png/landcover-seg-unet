@@ -151,7 +151,7 @@ def build_schema(
             'label_to_ignore': sample_blk.meta['label_ignore_cls'],
             'channel_parent': sample_blk.meta['label_ch_parent'],
             'channel_parent_cls': sample_blk.meta['label_ch_parent_cls'],
-            'relcass_color_map': reclass_color_map
+            'reclass_color_map': reclass_color_map
         },
     }
     return new

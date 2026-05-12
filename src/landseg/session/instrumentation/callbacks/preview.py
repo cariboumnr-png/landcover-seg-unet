@@ -50,10 +50,16 @@ class PreviewCallback(callbacks.BaseCallback):
         # }
         # targets per head
         for head, targets in infer.infer_targets.items():
-            stitched[f'{head}_labels'] = formatters.stitch_patches(targets)
+            stitched[f'{head}_labels'] = formatters.stitch_patches(
+                targets,
+                palette=self.reclass_color_map
+            )
         # predictions per head
         for head, preds in infer.infer_preds.items():
-            stitched[f'{head}_predictions'] = formatters.stitch_patches(preds)
+            stitched[f'{head}_predictions'] = formatters.stitch_patches(
+                preds,
+                palette=self.reclass_color_map
+            )
         # broadcast to trackers
         for tracker in self._trackers:
             for key, t in stitched.items():

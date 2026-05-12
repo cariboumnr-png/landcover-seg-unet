@@ -31,7 +31,7 @@ def stitch_patches(
     placements: dict[tuple[int, int], torch.Tensor],
     *,
     grid_shape: tuple[int, int] | None = None,
-    palette: numpy.ndarray | None = None
+    palette: numpy.ndarray | dict[int, list[int]] | None = None
 ) -> numpy.ndarray:
     '''
     Merge {(col, row): patch[Hp, Wp]} into a full [H_total, W_total] tensor.
@@ -79,7 +79,10 @@ def stitch_patches(
     if palette is None:
         max_cls = int(numpy.max(array)) if array.size > 0 else 0
         palette = _default_palette(max_cls + 1)
-
+    elif isinstance(palette, dict):
+        palette = _palette_from_dict(palette)
+    else:
+        pass
     return _colorize_indices(array, palette)
 
 def _default_palette(
@@ -129,6 +132,39 @@ def _colorize_indices(
     rgb = palette[idx] # HWC
     rgb = numpy.transpose(rgb, (2, 0, 1)) # CHW
     return rgb.astype(numpy.uint8)
+
+def _palette_from_dict(
+    color_map: dict[int, list[int]],
+    default_color: tuple[int, int, int] = (0, 0, 0)
+) -> numpy.ndarray:
+    '''
+    Convert a mapping of class index -> RGB color into a palette array.
+    '''
+
+    if not color_map:
+        raise ValueError('color_map cannot be empty')
+
+    # key type guard
+    color_map = {int(k): v for k, v in color_map.items()}
+
+    max_index = max(color_map.keys())
+
+    palette = numpy.full(
+        (max_index + 1, 3),
+        default_color,
+        dtype=numpy.uint8
+    )
+
+    for class_index, rgb in color_map.items():
+
+        if len(rgb) != 3:
+            raise ValueError(
+                f'RGB value for class {class_index} must contain 3 elements'
+            )
+
+        palette[class_index] = numpy.asarray(rgb, dtype=numpy.uint8)
+
+    return palette
 
 # ----- png saving
 def _save_index_mosaic_png(

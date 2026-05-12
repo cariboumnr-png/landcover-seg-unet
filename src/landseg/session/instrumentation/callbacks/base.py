@@ -56,7 +56,8 @@ class BaseCallback(common.SessionObserverLike):
         self,
         *,
         trackers: list[tracking.BaseTracker] | None = None,
-        verbose: bool = True
+        verbose: bool = True,
+        reclass_color_map: dict[int, list[int]] | None = None
     ):
         '''
         Initializes the callback.
@@ -69,6 +70,7 @@ class BaseCallback(common.SessionObserverLike):
         self._trackers: list[tracking.BaseTracker] = []
         if trackers:
             self._trackers = trackers
+        self.reclass_color_map = reclass_color_map
 
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
