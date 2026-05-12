@@ -17,8 +17,8 @@ dependencies = [
     "torchvision>=0.17",
     "tqdm>=4.66",
     "psutil>=5.9",
-    tensorboard>=2.16,
-    mlflow>=2.13,
+    "tensorboard>=2.16",
+    "mlflow>=2.13",
 ]
 
 [project.scripts]
