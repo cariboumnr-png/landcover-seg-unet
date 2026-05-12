@@ -440,7 +440,7 @@ class BatchEngine:
         x = self.state.batch_cxt.x.detach().cpu()
         # predictions
         preds = {
-            head: torch.argmax(logits, dim=1).detach().cpu()
+            head: torch.argmax(logits, dim=1).detach().cpu() + 1 # to 1-based
             for head, logits in self.state.batch_out.preds.items()
         }
         # ground truth
