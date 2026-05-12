@@ -64,6 +64,17 @@ class _UnetPPBody:
     )
 
 @dataclasses.dataclass
+class _UnetPPPBody:
+    body: str = 'unetpp'
+    base_ch: int = 32
+    conv_params: dict[str, typing.Any] = field(
+        default_factory=lambda: {
+            'downs': dataclasses.asdict(_ConvParams()),
+            'nodes': dataclasses.asdict(_ConvParams())
+        }
+    )
+
+@dataclasses.dataclass
 class _Concat:
     out_dim: int = 4
     use_ids: bool = True
@@ -96,6 +107,7 @@ class ModelsConfig:
         default_factory=lambda: {
             'unet': _UnetBody(),
             'unetpp': _UnetPPBody(),
+            'unetppp': _UnetPPPBody(),
         }
     )
     conditioning: _Conditioning = field(default_factory=_Conditioning)

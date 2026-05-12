@@ -301,7 +301,8 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
         # model body registry
         body_registry = {
             'unet': backbones.UNet,
-            'unetpp': backbones.UNetPP
+            'unetpp': backbones.UNetPP,
+            'unetppp': backbones.UNetPPP
         }
         if not body in body_registry:
             raise ValueError(f'Invalid base model: {body}')

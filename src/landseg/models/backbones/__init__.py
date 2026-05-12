@@ -37,7 +37,8 @@ __all__ = [
     'Downsample',
     'Upsample',
     'UNet',
-    'UNetPP'
+    'UNetPP',
+    'UNetPPP'
     # functions
     # types
 ]
@@ -48,6 +49,7 @@ if typing.TYPE_CHECKING:
     from .blocks import DoubleConv, Downsample, Upsample
     from .unet import UNet
     from .unetpp import UNetPP
+    from .unetppp import UNetPPP
 
 def __getattr__(name: str):
 
@@ -62,5 +64,8 @@ def __getattr__(name: str):
 
     if name in {'UNetPP'}:
         return getattr(importlib.import_module('.unetpp', __package__), name)
+
+    if name in {'UNetPPP'}:
+        return getattr(importlib.import_module('.unetppp', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -26,6 +26,18 @@ body_registry:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
+  unetppp:
+    body: unetpp
+    base_ch: 32
+    conv_params:
+      downs:
+        norm: gn
+        gn_groups: 8
+        p_drop: 0.0
+      nodes:
+        norm: gn
+        gn_groups: 8
+        p_drop: 0.0
 
 # conditioning
 conditioning:
