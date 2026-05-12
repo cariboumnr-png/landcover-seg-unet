@@ -22,44 +22,29 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Session construction and wiring.
+Session construction and wiring utilities.
 
-This module provides a factory (`build_session`) that assembles all
-runtime objects required to execute a multi-head model workflow,
-including:
-- component graph (losses, metrics, etc.)
-- runtime state (device placement, AMP configuration)
-- instrumentation callbacks
-- batch execution engine
-- evaluator (always instantiated)
-- trainer (always instantiated, but may not be used)
-- orchestration runner (only in training mode)
+Assembles all components required to execute a multi-head model
+workflow, including data loading, runtime execution, task components,
+instrumentation, and orchestration runners.
 
-Configuration is split into two distinct inputs:
+This module defines factory entry points for building session variants
+(e.g., overfit, evaluation, continuous training, curriculum training)
+from shared configuration and runtime context.
 
-- `config` (static, user-defined):
-  Structured configuration originating from external sources (e.g., Hydra
-  dataclasses). It defines *what* to build: components, runtime behavior,
-  and training phases.
+Configuration is split into:
 
-- `context` (dynamic, invocation-time):
-  Execution-specific parameters that define *how* the session is run in a
-  given invocation. This includes intent (training/evaluation/overfit),
-  device selection, logging, and runtime flags.
+- ``config`` (static):
+    Defines *what* to build (components, runtime behavior, scheduling).
 
-This separation allows the same configuration to be reused across
-different execution modes without modification, while keeping runtime
-concerns explicit and localized.
+- ``context`` (dynamic):
+    Defines *how* the session is executed (device, logging, paths).
 
-The entry point is `build_session`, which returns a `SessionExcutables`
-container with the constructed evaluator and optional training components
-depending on the selected intent.
+This separation enables reuse of configuration across execution modes
+while keeping invocation-specific concerns explicit.
 
-Type behavior:
-    The session factory uses Literal-based typing and overloads to
-    encode execution intent at the type level. This allows static type
-    checkers to infer the exact return type of `build_session` based on
-    the provided context.
+All public builder functions act as intent-specific entry points that
+compose and return the appropriate executable objects.
 '''
 
 # standard imports
@@ -78,23 +63,14 @@ import landseg.utils as utils
 # ---------------------------------Public Type---------------------------------
 class SessionConfigShape(typing.Protocol):
     '''
-    Structural typing interface for session configuration.
+    Configuration interface for session construction.
 
-    Defines the minimum required configuration attributes used to build
-    a session.
+    Defines the required configuration sections used to assemble all
+    session components, including data loading, execution runtime,
+    optimization, task definitions, and orchestration behavior.
 
-    Attributes:
-        phase_schema: Identifier describing how training phases are
-            interpreted by the orchestration layer.
-        components:
-            Configuration used to construct session components such as
-            losses, metrics, and dataloaders.
-        runtime:
-            Runtime configuration controlling precision, optimization,
-            scheduling, and monitoring behavior.
-        training_phases:
-            Ordered sequence of phase definitions used by the training
-            orchestration runner.
+    This configuration describes the static structure of a session and
+    is independent of runtime invocation details.
     '''
     @property
     def data_loader(self) -> data.DataLoaderConfig: ...
@@ -110,22 +86,7 @@ class SessionConfigShape(typing.Protocol):
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class SessionBuildContext:
-    '''
-    Context object providing runtime parameters for session construction.
-
-    Attributes:
-        intent: Execution mode for the session:
-            - 'training': full training loop with evaluation and
-                scheduling
-            - 'evaluation': evaluation-only mode
-            - 'overfit': training without orchestration (typically for
-                debugging)
-        device: Target compute device (e.g., 'cpu', 'cuda').
-        logger: Logger instance for runtime logging and instrumentation.
-        eval_dataset: Dataset split used for evaluation ('val' or 'test').
-        session_paths: Optional artifact paths for saving outputs (
-            required for `'training'` mode).
-    '''
+    '''Context for session construction.'''
     device: str
     verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
@@ -140,9 +101,7 @@ def build_overfit_session(
     context: SessionBuildContext,
     logger: utils.Logger
 ) -> engine.EpochEngine:
-    '''
-    doc
-    '''
+    '''Build an epoch engine for overfit training with evaluation.'''
 
     # callback dispatcher
     dispatcher = instrument.build_dispatcher(verbose=context.verbose_runner)
@@ -169,9 +128,7 @@ def build_evaluate_session(
     context: SessionBuildContext,
     logger: utils.Logger
 ) -> engine.EpochEngine:
-    '''
-    doc
-    '''
+    '''Build an epoch engine for evaluation-only execution.'''
 
     # callback dispatcher
     dispatcher = instrument.build_dispatcher(verbose=context.verbose_runner)
@@ -198,7 +155,7 @@ def build_continous_training_session(
     context: SessionBuildContext,
     logger: utils.Logger
 ) -> orchestration.ContinuousRunner:
-    '''doc'''
+    '''Build a continuous training runner orchestrator.'''
 
     # callback dispatcher
     assert context.session_paths, 'Session paths manager not provided'
@@ -251,7 +208,7 @@ def build_curriculum_training_session(
     context: SessionBuildContext,
     logger: utils.Logger
 ) -> orchestration.CurriculumRunner:
-    '''doc'''
+    '''Build a multiphase training runner orchestrator.'''
 
     # callback dispatcher
     assert context.session_paths, 'Session paths manager not provided'

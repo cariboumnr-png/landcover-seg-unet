@@ -113,9 +113,8 @@ def build_runner(
             runner. For ``'continuous'``, this must be a single
             ``PhaseLike`` instance. For ``'curriculum'``, this must be a
             sequence of ``PhaseLike`` instances executed sequentially.
-        start_epoch: Starting epoch index for continuous training. This
-            value is only applicable to the ``'continuous'`` runner and
-            is ignored for curriculum runners.
+        dispatcher: Callback dispatcher responsible for broadcasting
+            lifecycle events to registered observers
 
     Returns:
         ContinuousRunner or CurriculumRunner

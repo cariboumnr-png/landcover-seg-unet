@@ -74,13 +74,12 @@ class CurriculumRunner(runner.BaseRunner):
         Initialize a curriculum-based training runner.
 
         Args:
-            training_phases:
-                Ordered sequence of Phase configurations defining the
-                curriculum. Phases are executed sequentially and each
-                phase runs to completion before the next begins.
-            **kwargs:
-                Forwarded to BaseRunner initialization, including the
-                epoch execution engine, runner configuration, and logger.
+            training_phases: Ordered sequence of Phase configurations
+                defining the curriculum. Phases are executed sequentially
+                and each phase runs to completion before the next begins.
+            **kwargs: Forwarded to BaseRunner initialization, including
+                the epoch execution engine, runner configuration, and
+                logger.
         '''
 
         super().__init__(**kwargs)

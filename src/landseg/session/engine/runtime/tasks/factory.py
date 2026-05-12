@@ -23,7 +23,16 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 
-'''Factory to build the session-owned components.'''
+'''
+Engine task construction utilities.
+
+Builds session-scoped task components, including head specifications,
+loss modules, and metric accumulators, from dataset metadata and user
+configuration.
+
+This module serves as the entry point for assembling all per-head
+training and evaluation artifacts used by the execution engine.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -37,6 +46,7 @@ import landseg.session.engine.runtime.tasks.metrics as metrics
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfigShape(typing.Protocol):
+    '''Configuration interface for constructing per-head tasks.'''
     @property
     def alpha_fn(self) -> str: ...
     @property
@@ -87,7 +97,7 @@ class _TotalVariationLoss(typing.Protocol):
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class EngineTasks:
-    '''A simple container of the session components.'''
+    '''Container for session-level task components.'''
     headspecs: heads.HeadSpecs
     headlosses: loss.HeadLosses
     headmetrics: metrics.HeadMetrics
@@ -97,7 +107,30 @@ def build_engine_tasks(
     data_specs: core.DataSpecs,
     config: TaskConfigShape,
  ) -> EngineTasks:
-    '''Builder session components from data shape and configs.'''
+    '''
+    Construct per-head specifications, losses, and metrics.
+
+    Builds all task-related components required for execution from
+    dataset metadata and configuration, including head definitions, loss
+    composition modules, and metric accumulators.
+
+    Args:
+        data_specs: Dataset specification containing class statistics,
+            hierarchy, and metadata.
+        config: Task configuration controlling loss weighting, alpha
+            computation, and enabled loss types.
+
+    Returns:
+        EngineTasks:
+            Container with initialized head specifications, loss modules,
+            and metrics.
+
+    Notes:
+        - Head specifications are derived from dataset metadata.
+        - Loss modules are composed based on configured loss types.
+        - Metric modules are initialized per head with ignore-index\
+          handling and optional exclusions.
+    '''
 
     # task - heads specifications
     headspecs = heads.build_headspecs(

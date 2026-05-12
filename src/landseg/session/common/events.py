@@ -24,7 +24,29 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Callbacks dispatcher
+Session observer protocol definitions for the training engine.
+
+This module defines the ``SessionObserverLike`` protocol, which specifies
+the full set of lifecycle hooks (callbacks) that can be implemented to
+observe and respond to events during a training session.
+
+The observer pattern is used to decouple the training engine from
+side effects such as logging, checkpointing, monitoring, and custom
+instrumentation.
+
+Lifecycle coverage includes:
+- Training phase boundaries (begin/end)
+- Training steps and epochs
+- Policy execution (train / validation / inference)
+- Batch-level events
+- Result reporting hooks
+- Checkpointing events
+
+Classes implementing this protocol can be registered with the training
+session to receive notifications at each stage of execution.
+
+All methods are optional at runtime, but type-checking ensures interface
+compliance when explicitly implemented.
 '''
 
 # standard imports
@@ -37,6 +59,7 @@ import landseg.session.common as common
 # -----------------------------Engine components-----------------------------
 @typing.runtime_checkable
 class SessionObserverLike(typing.Protocol):
+    '''Lifecycle callback interface for observing session events.'''
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
     # --- training step begins

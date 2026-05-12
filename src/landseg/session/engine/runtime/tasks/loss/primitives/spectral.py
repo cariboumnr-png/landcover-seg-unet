@@ -20,11 +20,15 @@
 # =========================================================================== #
 
 '''
-Spectral smoothness loss.
+Spectral smoothness loss for segmentation tasks.
 
-This loss encourages neighboring pixels with similar features to have
-similar predicted class probabilities.
+Encourages neighboring pixels with similar features to produce consistent
+predictions, promoting spatial coherence in outputs.
+
+This module defines a single loss primitive used by higher-level loss
+composition components in the execution pipeline.
 '''
+
 
 # third-party imports
 import torch

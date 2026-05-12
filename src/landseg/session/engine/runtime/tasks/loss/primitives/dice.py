@@ -20,16 +20,13 @@
 # =========================================================================== #
 
 '''
-Loss computation blocks for segmentation models.
+Dice loss implementation for segmentation tasks.
 
-Currently provides implementations of:
-    - FocalLoss: multi-class focal loss with ignore-index and optional
-      per-pixel masking.
-    - DiceLoss: soft Dice loss with weighted pixels and safe
-      ignore-index handling.
+Provides a multi-class soft Dice loss with support for ignore-index
+handling and optional per-pixel masking.
 
-Also includes a helper for constructing per-pixel weight maps from
-user-provided masks and ignore-index rules.
+This module defines a single loss primitive used by higher-level loss
+composition components in the execution pipeline.
 '''
 
 # third-party imports

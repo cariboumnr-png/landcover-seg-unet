@@ -128,12 +128,11 @@ class BaseRunner(abc.ABC):
             or higher-level orchestration.
 
         Args:
-            epoch_runner:
-                Engine responsible for executing individual epochs.
-            config:
-                Shared runner configuration.
-            logger:
-                Base logger instance used for structured logging.
+            epoch_runner: Engine responsible for executing individual
+                epochs.
+            base_config: shared runner configuration.
+            dispatcher: Callback dispatcher responsible for broadcasting
+                lifecycle events to registered observers
         '''
 
         # parse arguments

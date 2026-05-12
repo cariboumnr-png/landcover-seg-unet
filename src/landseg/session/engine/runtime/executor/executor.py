@@ -61,7 +61,7 @@ import landseg.core as core
 import landseg.session.engine.runtime.executor as executor
 
 class BatchExecConfigShape(typing.Protocol):
-    '''doc'''
+    '''Interface for batch execution precision and logit adjustment.'''
     @property
     def use_amp(self) -> bool: ...
     @property
@@ -71,11 +71,12 @@ class BatchExecConfigShape(typing.Protocol):
 
 @dataclasses.dataclass
 class BatchExecContext:
-    '''doc'''
+    '''Static auxiliary context for batch execution.'''
     parent_map: dict[str, str | None]
     patch_per_blk: int | None
     patch_per_dim: int | None
     block_columns: int | None
+    device: str
 
 class BatchEngine:
     '''
@@ -114,8 +115,6 @@ class BatchEngine:
         engine_state: executor.EngineState,
         config: BatchExecConfigShape,
         context: BatchExecContext,
-        *,
-        device: str,
     ):
         '''
         Initialize the batch execution engine.
@@ -143,7 +142,7 @@ class BatchEngine:
         self.config = config
         self.context = context
         # move model to device
-        self.device = device
+        self.device = context.device
         self.model.to(self.device)
         # config model logit adjustment
         self.model.set_logit_adjust_enabled(config.enable_logit_adjust)

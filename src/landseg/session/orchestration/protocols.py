@@ -24,7 +24,7 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Engine runner protocol.
+Protocol for the epoch-level engine for orchestration.
 '''
 
 # standard imports

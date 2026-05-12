@@ -104,7 +104,7 @@ class EpochEngine:
 
     @property
     def total_train_batch(self) -> int:
-        '''Return total number of training batches per epoch.'''
+        '''Return total number of training batches of the epoch.'''
         if not self.trainer:
             return 0
         assert self.trainer.dataloaders.train, 'Training dataloader not present'

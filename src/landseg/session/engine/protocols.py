@@ -24,7 +24,7 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Session components protocols
+Protocols for Epoch-level engine components.
 '''
 
 # standard imports

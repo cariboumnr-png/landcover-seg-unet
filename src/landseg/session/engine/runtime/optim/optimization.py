@@ -19,14 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring, too-few-public-methods
 '''
-Simple optimizer and scheduler factory utilities.
+Optimizer and scheduler orchestration utilities.
 
-Provides:
-    - A minimal Protocol for models exposing `.parameters()`.
-    - Registries for common optimizers and schedulers.
-    - A factory to build (optimizer, scheduler) pairs from config.
+Defines a lightweight wrapper around PyTorch optimizers and learning
+rate schedulers, providing a unified interface for stepping, gradient
+management, and dynamic reconfiguration during runtime.
+
+The module focuses on orchestration-level control rather than optimizer
+implementation details.
 '''
 
 # standard imports
@@ -41,11 +42,15 @@ LRScheduler = torch.optim.lr_scheduler.LRScheduler
 # -------------------------------Public Function-------------------------------
 class Optimization:
     '''
-    Stateful wrapper for optimizer and scheduler.
+    Runtime wrapper for optimizer and optional scheduler.
 
-    Provides explicit APIs for stepping and resetting.
+    Encapsulates optimizer and scheduler behavior behind a stable API,
+    enabling coordinated stepping, gradient management, and dynamic
+    reconfiguration during training.
+
+    This class does not implement optimization algorithms; it delegates
+    execution to the underlying `PyTorch` components.
     '''
-
 
     def __init__(
         self,
@@ -57,7 +62,21 @@ class Optimization:
         sched_factory: typing.Callable[..., LRScheduler] | None = None,
         sched_args: dict[str, typing.Any] | None = None,
     ):
-        '''doc'''
+        '''
+        Initialize the optimization wrapper.
+
+        Args:
+            optimizer: A `PyTorch` optimizer instance.
+            scheduler: Optional learning rate scheduler instance.
+            grad_clip_norm: Optional gradient clipping norm applied
+                externally.
+            sched_cls: Identifier for the scheduler type (for tracking
+                only).
+            sched_factory: Factory callable used to reconstruct the
+                scheduler.
+            sched_args: Arguments used to initialize the scheduler.
+        '''
+
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.grad_clip_norm = grad_clip_norm
@@ -68,22 +87,22 @@ class Optimization:
     # -------------------------- public APIs --------------------------
     @property
     def lrs(self) -> list[float]:
-        '''Return the learning rates.'''
+        '''Return current learning rates from all parameter groups.'''
 
         return [g['lr'] for g in self.optimizer.param_groups]
 
     def step_optimizer(self) -> None:
-        '''Step the optimizer.'''
+        '''Perform a single optimizer update step.'''
 
         self.optimizer.step()
 
     def zero_grad(self, set_to_none: bool = True) -> None:
-        '''Clear gradients.'''
+        '''Reset gradients on all optimized parameters.'''
 
         self.optimizer.zero_grad(set_to_none=set_to_none)
 
     def step_scheduler(self) -> None:
-        '''Step scheduler if present.'''
+        '''Advance the scheduler if configured.'''
 
         if self.scheduler is not None:
             self.scheduler.step()
@@ -99,6 +118,24 @@ class Optimization:
     ) -> None:
         '''
         Reconfigure optimizer and/or scheduler.
+        Update optimizer learning rate and/or scheduler configuration.
+
+        Args:
+            lr:
+                New learning rate applied to all parameter groups.
+            sched_cls:
+                Scheduler identifier used for tracking.
+            sched_factory:
+                Factory callable to rebuild the scheduler.
+            sched_args:
+                Scheduler initialization arguments (merged with existing).
+            disable_scheduler:
+                If True, removes the scheduler entirely.
+
+        Notes:
+            - Scheduler updates rebuild the scheduler instance using the
+              stored optimizer and merged arguments.
+            - Partial updates reuse previously stored scheduler settings.
         '''
 
         # ---------------- lr update ----------------
