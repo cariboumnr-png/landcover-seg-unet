@@ -1,58 +1,73 @@
 ## 📁 Structure actuelle du projet (affichant deux niveaux)
 
-Last updated: 2026-04-07
+Dernière mise à jour: 2026-05-12
 
 ```
+./notebooks/
+│   ├── 01_data_preparation.ipynb # ingestion, validation et préparation des données
+│   └── 02_model_train.ipynb      # démo : session complète d'entraînement continu
+|
 ./src/landseg/
-├── artifacts/                    [Cycle de vie et persistance des artefacts unifiés]
-│   ├── checkpoint.py             # utilitaires de sauvegarde des modèles (checkpoints)
-│   ├── controller.py             # logique de chargement/assemblage/reconstruction pilotée par politiques
-│   ├── payload_io.py             # E/S de payload structuré et métadonnées
-│   ├── paths.py                  # structure canonique des chemins d’artefacts
-│   └── policy.py                 # politiques de cycle de vie des artefacts
+├── adapters/                     [Interfaces d'entrée externes]
+│   ├── api.py                    <- point d'entrée API programmatique
+│   └── cli.py                    <- interface CLI pilotée par Hydra
+│
+├── artifacts/                    [Gestion du cycle de vie des artefacts & persistance]
+│   ├── checkpoint.py             # utilitaires de sauvegarde/chargement de checkpoints
+│   ├── controller.py             # résolution/build/rebuild selon politiques
+│   ├── paths.py                  # définition des chemins canoniques des artefacts
+│   ├── payload_io.py             # sérialisation payload structuré + métadonnées
+│   └── policy.py                 # règles et stratégies de cycle de vie
 |
-├── cli/                          [Entrée CLI et dispatch des pipelines]
-│   ├── main.py                   <- entrée CLI basée sur Hydra
-│   └── pipelines/                # étapes explicites de pipeline
+├── configs/                      [Arborescence de configuration Hydra]
+│   ├── _schema_/                 # dataclasses de configuration (par section)
+│   ├── dataspecs/                # configurations de spécification des datasets
+│   ├── foundation/               # configs grille / domaine / blocs
+│   ├── models/                   # configurations des architectures modèles
+│   ├── pipeline/                 # configs des pipelines (ingest / prepare / train)
+│   ├── session/                  # configuration des sessions d'exécution
+│   ├── transform/                # définitions des transformations de données
+│   ├── schema.py                 # schéma de configuration composite
+│   └── config.yaml               # point d'entrée Hydra
 |
-├── configs/                      [Arbre de configuration Hydra]
-│   ├── dataspecs/                # spécification des données
-│   ├── foundation/               # grille, domaine, blocs de données
-│   ├── models/                   # configuration des modèles
-│   ├── pipeline/                 # pipelines d’ingestion / préparation / entraînement
-│   ├── session/                  # configuration de session
-│   ├── transform/                # configurations de transformation des données
-│   ├── config.yaml               # point d’entrée de l’arbre de configuration Hydra
-│   └── schema.py                 # validation des dataclasses de configuration
+├── core/                         [Contrats et abstractions du projet]
+│   ├── data_specs.py             # contrat de spécification des datasets à runtime
+│   ├── model_protocol.py         # interface/contrat des modèles
+│   └── session_results.py        # structures de sortie des sessions
 |
-├── core/                         [Contrats au niveau du projet]
-│   ├── data_specs.py             # spécification de dataset à l’exécution
-│   └── model_protocol.py         # contrats d’interface des modèles
+├── execution/                    [Couche d'orchestration d'exécution]
+│   ├── pipelines/                # implémentations explicites des étapes pipeline
+│   ├── executor.py               # point d'entrée unifié d'exécution
+│   └── resolver.py               # résolution de configuration et injection dépendances
 |
 ├── geopipe/                      [Pipeline de préparation des données géospatiales]
-│   ├── core/                     # structures de données immuables
-│   ├── foundation/               # préparation de grille, domaine et blocs
-│   ├── transform/                # transformations liées aux expériences
-│   ├── specification/            # construction des DataSpecs
-│   └── utils/                    # utilitaires au niveau du module
+│   ├── core/                     # structures de données géospatiales immuables
+│   ├── foundation/               # construction grille, domaine et blocs
+│   ├── specification/            # construction et assemblage des DataSpecs
+│   ├── transform/                # transformations spécifiques à l'expérience
+│   └── utils/                    # utilitaires du geopipeline
 |
-├── models/                       [Architectures de modèles]
-│   ├── backbones/                # UNet, UNet++ etc.
-│   ├── multihead/                # cadre de modèle multi-têtes
-│   └── factory.py                # construction des modèles
+├── models/                       [Architectures et composition des modèles]
+│   ├── backbones/                # réseaux backbone (ex : UNet, UNet++)
+│   ├── multihead/                # framework de modèles multi-têtes
+│   └── factory.py                # construction et assemblage des modèles
 |
-├── session/                      [système d’exécution]
-|   ├── common/                   # types partagés dans le module
-│   ├── components/               # pertes, métriques, dataloaders
-│   ├── engine/                   # moteurs de batch et politiques
-│   ├── instrumentation/          # callbacks, utilitaire de prévisualisation
-│   ├── orchestration/            # orchestration des sessions
-│   ├── factory.py                # constructeurs de sessions
-│   └── metadata.py               # métadonnées de session
+├── session/                      [Système d'exécution runtime]
+│   ├── commmon/                  # types partagés et contrats internes
+│   ├── data/                     # adaptateurs dataloader / batching
+│   ├── engine/                   # moteurs d'exécution (batch et epoch)
+│   ├── instrumentation/          # callbacks, logging, suivi, preview
+│   ├── orchestration/            # orchestration du cycle de session
+│   ├── factory.py                # construction des sessions
+│   └── metadata.py               # métadonnées et traçabilité des sessions
 |
-├── utils/                        [Shared utilities]
-|   ├── logger.py                 # journalisation du projet
-|   └── multip.py                 # outils de multiprocessus
+├── study/                        [Couche expérimentation & étude]
+│   ├── analysis/                 # analyse post-sweep des modèles
+│   └── sweep/                    # exploration hyperparamétrique (Optuna)
+|
+├── utils/                        [Utilitaires partagés]
+│   ├── logger.py                 # utilitaires de logging du projet
+│   └── multip.py                 # helpers de multiprocessing
 |
 └── _constants.py                 # constantes globales du projet
   ```
