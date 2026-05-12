@@ -205,7 +205,7 @@ class BaseRunner(abc.ABC):
         # consume self.run()
         for step in self.run():
             last_step = step
-            steps.append(dataclasses.asdict(step))
+            steps.append(step.as_dict)
 
         # persist the JSON
         ctrl.persist(steps)

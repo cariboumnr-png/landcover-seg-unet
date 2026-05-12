@@ -72,6 +72,13 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     is_best_epoch: bool
     metrics: EpochResults # raw
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return a dict representation of the step.'''
+        step_dict = dataclasses.asdict(self)
+        step_dict['metrics'].pop('inference')
+        return step_dict
+
 @dataclasses.dataclass(frozen=True)
 class EpochResults:
     '''
