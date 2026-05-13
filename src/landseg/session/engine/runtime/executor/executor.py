@@ -481,3 +481,6 @@ class BatchEngine:
                     self.state.infer_out.targets.setdefault(
                         head, {}
                     )[coord] = targets[head][i]
+                    self.state.infer_out.errors.setdefault(
+                        head, {}
+                    )[coord] = (preds[head][i] == targets[head][i]).int()

@@ -60,6 +60,12 @@ class PreviewCallback(callbacks.BaseCallback):
                 preds,
                 palette=self.reclass_color_map
             )
+        # errors per head
+        for head, errors in infer.infer_errors.items():
+            stitched[f'{head}_errors'] = formatters.stitch_patches(
+                errors,
+                palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
+            )
         # broadcast to trackers
         for tracker in self._trackers:
             for key, t in stitched.items():
