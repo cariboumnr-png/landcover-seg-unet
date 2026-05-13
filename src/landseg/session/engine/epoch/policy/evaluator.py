@@ -226,6 +226,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.infer_results.infer_image = self.state.infer_out.inputs # raw channels
         self.infer_results.infer_targets = self.state.infer_out.targets # per head
         self.infer_results.infer_preds = self.state.infer_out.preds # per head
+        self.infer_results.infer_errors = self.state.infer_out.errors # per head
         # broadcast and return results
         self.dispatcher.on_infer_policy_end(self.val_results)
         return self.infer_results

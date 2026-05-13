@@ -230,3 +230,4 @@ class InferenceResults:
     infer_image: alias.TensorGridPatches = field(default_factory=dict)
     infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
     infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    infer_errors: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
