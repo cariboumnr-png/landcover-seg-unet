@@ -55,7 +55,6 @@ ensuring consistency and reproducibility across downstream workflows.
 
 # standard imports
 from __future__ import annotations
-import copy
 import dataclasses
 import json
 import math
@@ -217,7 +216,7 @@ class DataBlock:
 
         self = cls()
         # update meta with input
-        self.meta.update(copy.deepcopy(meta))
+        self.meta.update(meta)
         # assign image
         self.data.image = img_arr.astype(numpy.float32) # remote sensing default
         self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
