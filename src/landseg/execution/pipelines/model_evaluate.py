@@ -81,7 +81,10 @@ def evaluate(config: configs.RootConfig):
     logger = utils.Logger('main', session_paths.main_log_file)
 
     # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
+    artifact_paths=artifacts.ArtifactPaths(
+        f'{config.execution.exp_root}/artifacts/'
+        f'{config.foundation.datablocks.name}'
+    )
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
         mode='test_only' if split == 'test' else 'val_only',

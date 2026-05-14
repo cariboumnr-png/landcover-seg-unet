@@ -90,7 +90,10 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
     )
 
     # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
+    artifact_paths=artifacts.ArtifactPaths(
+        f'{config.execution.exp_root}/artifacts/'
+        f'{config.foundation.datablocks.name}'
+    )
     dataspecs = geopipe.build_dataspec(
         artifact_paths,
         mode='default',

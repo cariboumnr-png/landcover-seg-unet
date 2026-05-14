@@ -81,7 +81,10 @@ def _build_runner(config: configs.RootConfig) -> StepRunner:
     )
 
     # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(f'{config.execution.exp_root}/artifacts')
+    artifact_paths=artifacts.ArtifactPaths(
+        f'{config.execution.exp_root}/artifacts/'
+        f'{config.foundation.datablocks.name}'
+    )
 
     # collect artifacts and build dataspsec
     dataspecs = geopipe.build_dataspec(
