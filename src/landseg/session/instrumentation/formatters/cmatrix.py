@@ -30,7 +30,8 @@ def get_cmatrix(
     preds: torch.Tensor,
     *,
     class_names: list[str] | None = None,
-    num_classes: int | None = None
+    num_classes: int | None = None,
+    ignore_index: int | None = 255
 ) -> tuple[torch.Tensor, str]:
     '''
     Generates a confusion matrix tensor and a Markdown table.
@@ -42,6 +43,8 @@ def get_cmatrix(
             defaults to ['Class 0', 'Class 1', ...].
         num_classes: Total number of classes. If None, inferred from the
             maximum value in preds and labels.
+        ignore_index: Label value to ignore when computing the confusion
+            matrix (e.g. 255 in semantic segmentation tasks).
 
     Returns:
         tuple:
@@ -53,7 +56,17 @@ def get_cmatrix(
         if class_names is not None:
             num_classes = len(class_names)
         else:
-            num_classes = int(max(preds.max().item(), targets.max().item())) + 1
+            if ignore_index is not None:
+                valid_targets = targets[targets != ignore_index]
+                if valid_targets.numel() == 0:
+                    raise ValueError('No valid targets remain after ignoring.')
+                num_classes = int(
+                    max(preds.max().item(), valid_targets.max().item())
+                ) + 1
+            else:
+                num_classes = int(
+                    max(preds.max().item(), targets.max().item())
+                ) + 1
 
     # get default class names if not provided
     if class_names is None:
@@ -62,27 +75,36 @@ def get_cmatrix(
     # validate class_names length matches num_classes
     if len(class_names) != num_classes:
         raise ValueError(
-            f'Length of class_names ({len(class_names)}) must match'
+            f'Length of class_names ({len(class_names)}) must match '
             f'num_classes ({num_classes}).'
         )
 
-    # 4compute outputs
-    cm_tensor = _compute_cm_tensor(preds, targets, num_classes)
+    # compute outputs
+    cm_tensor = _compute_cm_tensor(
+        preds,
+        targets,
+        num_classes,
+        ignore_index=ignore_index
+    )
+
     cm_markdown = _format_cm_markdown(cm_tensor, class_names)
 
     return cm_tensor, cm_markdown
 
-# ------------------------------private  function------------------------------
+# ------------------------------private function-------------------------------
 def _compute_cm_tensor(
     preds: torch.Tensor,
     labels: torch.Tensor,
-    num_classes: int
+    num_classes: int,
+    *,
+    ignore_index: int | None = None
 ) -> torch.Tensor:
     '''Computes a dense confusion matrix tensor.'''
 
     # flatten tensors
     preds_flat = preds.view(-1)
     labels_flat = labels.view(-1)
+
     # sanity
     if preds_flat.shape != labels_flat.shape:
         raise ValueError(
@@ -90,11 +112,18 @@ def _compute_cm_tensor(
             f'must have the same number of elements.'
         )
 
+    # remove ignored labels
+    if ignore_index is not None:
+        valid_mask = labels_flat != ignore_index
+        preds_flat = preds_flat[valid_mask]
+        labels_flat = labels_flat[valid_mask]
+
     # flat indexing: (True * num_classes) + Pred
     indices = (num_classes * labels_flat) + preds_flat
 
     # calculate bincount and reshape to 2D
     cm_tensor = torch.bincount(indices, minlength=num_classes**2)
+
     return cm_tensor.reshape(num_classes, num_classes)
 
 def _format_cm_markdown(
