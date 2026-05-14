@@ -579,10 +579,16 @@ class _Calc:
     # spectral indices related
     @staticmethod
     def mask(band, nodata):
-        '''Returns a mask where band == nodata.'''
-        # avoid overflow downstream
+        '''
+        Returns a masked array where band == nodata.
+        If nodata is None, no values are masked.
+        '''
+        band = band.astype(numpy.float64)
+        if nodata is None:
+            return numpy.ma.array(band, mask=False)
         return numpy.ma.masked_where(
-            numpy.isclose(band, nodata), band.astype(numpy.float64)
+            numpy.isclose(band, nodata),
+            band
         )
 
     @staticmethod
@@ -624,17 +630,18 @@ class _Calc:
     def slope_n_aspect(arr, nodata):
         '''Returns slope and aspect from DEM.'''
         # all 9 cells need to have a valid value (Horn's)
-        if numpy.any(numpy.isclose(arr, nodata)) or \
-            numpy.isnan(arr).any() or \
-                numpy.isinf(arr).any():
+        invalid = numpy.isnan(arr).any() or numpy.isinf(arr).any()
+        if nodata is not None:
+            invalid = invalid or numpy.any(numpy.isclose(arr, nodata))
+        if invalid:
             return nodata, nodata, nodata
         # calculation
         dz_dx = (
-            (arr[0, 2] + 2 * arr[1, 2] + arr[2, 2]) - \
+            (arr[0, 2] + 2 * arr[1, 2] + arr[2, 2]) -
             (arr[0, 0] + 2 * arr[1, 0] + arr[2, 0])
         ) / 8.0
         dz_dy = (
-            (arr[2, 0] + 2 * arr[2, 1] + arr[2, 2]) - \
+            (arr[2, 0] + 2 * arr[2, 1] + arr[2, 2]) -
             (arr[0, 0] + 2 * arr[0, 1] + arr[0, 2])
         ) / 8.0
         # calculate slope
@@ -646,7 +653,6 @@ class _Calc:
         # compute cosine and sine of aspect
         cos_aspect = numpy.cos(aspect_rad)
         sin_aspect = numpy.sin(aspect_rad)
-        # return
         return slope, cos_aspect, sin_aspect
 
     @staticmethod
@@ -656,10 +662,16 @@ class _Calc:
         h, w = arr.shape
         c_row, c_col = h // 2, w // 2
         centre = arr[c_row, c_col]
-        # centre pixel is nodata
-        if numpy.isclose(centre, nodata):
+        # invalid centre pixel
+        if numpy.isnan(centre) or numpy.isinf(centre):
             return nodata
-        masked = numpy.ma.masked_where(numpy.isclose(arr, nodata), arr)
+        if nodata is not None and numpy.isclose(centre, nodata):
+            return nodata
+        # build mask
+        invalid_mask = numpy.isnan(arr) | numpy.isinf(arr)
+        if nodata is not None:
+            invalid_mask |= numpy.isclose(arr, nodata)
+        masked = numpy.ma.masked_where(invalid_mask, arr)
         # all is nodata except centre
         if masked.count() == 1:
             return nodata
