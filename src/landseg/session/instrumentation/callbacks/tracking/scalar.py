@@ -19,52 +19,41 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
+'''Scallar tracking callback'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.core as core
+import landseg.session.common as common
+import landseg.session.instrumentation.callbacks as callbacks
 
-from __future__ import annotations
-import importlib
-import typing
+class ScalarsCallback(callbacks.BaseCallback):
+    '''Scallar tracking callback'''
 
-__all__ = [
-    # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    'ImageCallback',
-    'ScalarsCallback',
-    # functions
-    'build_dispatcher',
-    # types
-]
+    def on_train_phase_begin(self, phase: common.PhaseLike): ...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .builder import build_dispatcher
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-    from .tracking import ImageCallback, ScalarsCallback
+    def on_batch_begin(self, action: str, bidx: int): ...
 
-def __getattr__(name: str):
+    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
+        if not results.metrics_updated:
+            return
+        step = results.global_step
+        for tracker in self._trackers:
+            tracker.log_scalar('total_loss', results.total_loss, step)
+            tracker.log_scalar('lr', results.current_lr or 0.0, step)
+            tracker.flush()
 
-    if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    def on_train_step_end(self, results: core.TrainingSessionStep):
+        metrics = results.metrics
+        phase = results.phase_name
+        step = results.epoch_in_phase
+        for tracker in self._trackers:
+            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
+            tracker.flush()
 
-    if name in {'build_dispatcher'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    def on_train_phase_end(self, phase: str, reason: str): ...
 
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
+    def on_train_end(self) -> None:
+        for tracker in self._trackers:
+            tracker.close()
 
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
-
-    if name in {'ImageCallback', 'ScalarsCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    def on_checkpointing(self, fp: str): ...

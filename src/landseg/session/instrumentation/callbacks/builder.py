@@ -86,8 +86,8 @@ def build_dispatcher(
     # callbacks list
     callbacks_list: list[callbacks.BaseCallback] = [
         callbacks.LoggingCallback(verbose=verbose),
-        callbacks.TrackingCallback(trackers=tracker_list),
-        callbacks.PreviewCallback(
+        callbacks.ScalarsCallback(trackers=tracker_list),
+        callbacks.ImageCallback(
             trackers=tracker_list,
             reclass_color_map=reclass_color_map
         )

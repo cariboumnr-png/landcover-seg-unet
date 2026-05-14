@@ -19,41 +19,36 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Tracking callback'''
+'''
+Top-level namespace for `landseg.session.instrumentation.callbacks.tracking`.
 
-# local imports
-import landseg.core as core
-import landseg.session.common as common
-import landseg.session.instrumentation.callbacks as callbacks
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
-class TrackingCallback(callbacks.BaseCallback):
-    '''Tracking callback.'''
+from __future__ import annotations
+import importlib
+import typing
 
-    def on_train_phase_begin(self, phase: common.PhaseLike): ...
+__all__ = [
+    # classes
+    'ImageCallback',
+    'ScalarsCallback',
+    # functions
+    # types
+]
 
-    def on_batch_begin(self, action: str, bidx: int): ...
+# for static check
+if typing.TYPE_CHECKING:
+    from .image import ImageCallback
+    from .scalar import ScalarsCallback
 
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
-        if not results.metrics_updated:
-            return
-        step = results.global_step
-        for tracker in self._trackers:
-            tracker.log_scalar('total_loss', results.total_loss, step)
-            tracker.log_scalar('lr', results.current_lr or 0.0, step)
-            tracker.flush()
+def __getattr__(name: str):
 
-    def on_train_step_end(self, results: core.TrainingSessionStep):
-        metrics = results.metrics
-        phase = results.phase_name
-        step = results.epoch_in_phase
-        for tracker in self._trackers:
-            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
-            tracker.flush()
+    if name in {'ImageCallback'}:
+        return getattr(importlib.import_module('.image', __package__), name)
 
-    def on_train_phase_end(self, phase: str, reason: str): ...
+    if name in {'ScalarsCallback'}:
+        return getattr(importlib.import_module('.scalar', __package__), name)
 
-    def on_train_end(self) -> None:
-        for tracker in self._trackers:
-            tracker.close()
-
-    def on_checkpointing(self, fp: str): ...
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
