@@ -43,7 +43,6 @@ Notes:
 from __future__ import annotations
 import copy
 import dataclasses
-import json
 import random
 import os
 import typing
@@ -52,10 +51,30 @@ import zlib
 # third-party imports
 import numpy
 # local imports
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
+
+# --------------------------------private  type--------------------------------
+class _BlockBuilderMeta(typing.TypedDict):
+    '''
+    Typed dictionary for metadata shared among the blocks.
+
+    The required keys are a subset of `geo_core.DataBlockMeta`, which is
+    used when building each block.
+    '''
+
+    # required
+    label_num_cls: int
+    label_ignore_cls: list[int]
+    label_reclass_map: dict[str, list[int]]
+    image_band_map: dict[str, int]
+    # optional
+    label_class_name: typing.NotRequired[dict[str, str]]
+    label_reclass_name: typing.NotRequired[dict[str, str]]
+    label_reclass_color_map: typing.NotRequired[dict[int, list[int]]]
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -133,13 +152,11 @@ class BlockBuilder:
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
 
-        # parse block meta dict (carried by each block)
-        with open (self.config.config_fpath, 'r', encoding='UTF-8') as src:
-            meta_src = json.load(src)
-            self.meta_src = meta_src
-        keys = meta_src.keys() & geo_core.DataBlockMeta.__annotations__
-        meta = {k: meta_src[k] for k in keys}
-        self.meta = typing.cast(geo_core.DataBlockMeta, meta) # typing compliance
+        # read data config JSON
+        ctrl = artifacts.Controller[_BlockBuilderMeta].load_json_or_fail
+        ctrl = ctrl(self.config.config_fpath)
+        ctrl.hash(overwrite=False) # hash once
+        self.meta_src = ctrl.fetch()
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
@@ -156,8 +173,22 @@ class BlockBuilder:
         return bool(label_fpath) and os.path.exists(label_fpath)
 
     @property
+    def meta(self) -> geo_core.DataBlockMeta:
+        '''Return a fresh block meta dict with values from meta source.'''
+        _meta = {}
+        assert self.meta_src
+        _meta['label_num_cls'] = self.meta_src['label_num_cls']
+        _meta['label_ignore_cls'] = self.meta_src['label_ignore_cls']
+        _meta['label_reclass_map'] = self.meta_src['label_reclass_map']
+        _meta['image_band_map'] = self.meta_src['image_band_map']
+        # cast for type checker
+        _meta = typing.cast(geo_core.DataBlockMeta, _meta)
+        return _meta
+
+    @property
     def reclass_color_map(self) -> dict[int, list[int]] | None:
         '''Return the reclass color map from config JSON if provided.'''
+        assert self.meta_src # typing
         _map = self.meta_src.get('label_reclass_color_map', None)
         return {int(k): v for k, v in _map.items()} if _map else None
 
@@ -350,13 +381,12 @@ class BlockBuilder:
         # prep block creation jobs
         jobs = []
         for c in self.coords_todo:
-            meta = copy.deepcopy(self.meta)
             co_contxt = self._get_context(c)
             save_args = {
                 'save': True,
                 'save_fpath': f'{self.blks_dir}/{geo_utils.xy_name(c)}.npz'
             }
-            jobs.append((_build_a_blk, (meta, co_contxt,), save_args))
+            jobs.append((_build_a_blk, (self.meta, co_contxt,), save_args))
 
         # parallel processing through all raster windows
         utils.ParallelExecutor().run(jobs)

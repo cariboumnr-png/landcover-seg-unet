@@ -157,12 +157,16 @@ class Controller(typing.Generic[T]):
         if self.dir: # skip if write to root, e.g., ./file.json
             os.makedirs(self.dir, exist_ok=True)
 
-        # write files according to type
+        # write files according to type and hash
         match self.type:
             case 'json':
                 self._json_write(self.fp, src)
             case 'npz_dict':
                 self._npz_write_dict(self.fp, src)
+        self.hash()
+
+    def hash(self, overwrite: bool = True):
+        '''Create or add hash record.'''
 
         # load hash record with some error handling (create new if so)
         try:
@@ -170,10 +174,13 @@ class Controller(typing.Generic[T]):
         except (FileNotFoundError, json.JSONDecodeError):
             self._json_write(self.hash_fpath, {'root': self.dir})
             records = self._json_read(self.hash_fpath)
+            records[self.fname] = self.sha256 # get hash after file is written
+            self._json_write(self.hash_fpath, records)
 
         # append/update hash in record and save
-        records[self.fname] = self.sha256 # get hash after file is written
-        self._json_write(self.hash_fpath, records)
+        if overwrite:
+            records[self.fname] = self.sha256 # get hash after file is written
+            self._json_write(self.hash_fpath, records)
 
     @staticmethod
     def get_sha256(fp):

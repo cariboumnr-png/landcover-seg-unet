@@ -55,7 +55,6 @@ ensuring consistency and reproducibility across downstream workflows.
 
 # standard imports
 from __future__ import annotations
-import copy
 import dataclasses
 import json
 import math
@@ -217,7 +216,7 @@ class DataBlock:
 
         self = cls()
         # update meta with input
-        self.meta.update(copy.deepcopy(meta))
+        self.meta.update(meta)
         # assign image
         self.data.image = img_arr.astype(numpy.float32) # remote sensing default
         self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
@@ -323,31 +322,28 @@ class DataBlock:
         band_indices = self.meta['image_band_map']
         nodata = self.meta['image_nodata']
 
-        # assertions
-        assert all(k in band_indices for k in ['red', 'nir', 'swir1', 'swir2'])
-
         # mask off nodata pixels to avoid overflow
         # 32 bit increased to 64 bit float
         red = _Calc.mask(self.data.image[band_indices['red']], nodata)
-        nir = _Calc.mask(self.data.image[band_indices['nir']], nodata)
-        swir1 = _Calc.mask(self.data.image[band_indices['swir1']], nodata)
-        swir2 = _Calc.mask(self.data.image[band_indices['swir2']], nodata)
+        # add spectral indices depending on band availability
+        indices_stack = []
+        n = len(self.meta['image_band_map'])
+        if 'nir' in band_indices:
+            nir = _Calc.mask(self.data.image[band_indices['nir']], nodata)
+            indices_stack.append(_Calc.ndvi(nir, red, nodata))
+            self.meta['image_band_map']['NDVI'] = n
+            if 'swir1' in band_indices:
+                swir1 = _Calc.mask(self.data.image[band_indices['swir1']], nodata)
+                indices_stack.append(_Calc.ndmi(nir, swir1, nodata))
+                self.meta['image_band_map']['NDMI'] = n + 1
+            if 'swir2' in band_indices:
+                swir2 = _Calc.mask(self.data.image[band_indices['swir2']], nodata)
+                indices_stack.append(_Calc.nbr(nir, swir2, nodata))
+                self.meta['image_band_map']['NBR'] = n + 2
 
         # add to image array
-        add_indices = numpy.stack([
-            _Calc.ndvi(nir, red, nodata),
-            _Calc.ndmi(nir, swir1, nodata),
-            _Calc.nbr(nir, swir2, nodata)
-        ]).astype(numpy.float32)
+        add_indices = numpy.stack(indices_stack ).astype(numpy.float32)
         self.data.image = numpy.append(self.data.image, add_indices, axis=0)
-
-        # add to band map
-        n = len(self.meta['image_band_map'])
-        self.meta['image_band_map'].update({
-            'NDVI': n,
-            'NDMI': n + 1,
-            'NBR': n + 2
-        })
 
     def _add_topographical_metrics(self) -> None:
         '''Add topographical metrics to the image array.'''
@@ -582,10 +578,16 @@ class _Calc:
     # spectral indices related
     @staticmethod
     def mask(band, nodata):
-        '''Returns a mask where band == nodata.'''
-        # avoid overflow downstream
+        '''
+        Returns a masked array where band == nodata.
+        If nodata is None, no values are masked.
+        '''
+        band = band.astype(numpy.float64)
+        if nodata is None:
+            return numpy.ma.array(band, mask=False)
         return numpy.ma.masked_where(
-            numpy.isclose(band, nodata), band.astype(numpy.float64)
+            numpy.isclose(band, nodata),
+            band
         )
 
     @staticmethod
@@ -627,17 +629,18 @@ class _Calc:
     def slope_n_aspect(arr, nodata):
         '''Returns slope and aspect from DEM.'''
         # all 9 cells need to have a valid value (Horn's)
-        if numpy.any(numpy.isclose(arr, nodata)) or \
-            numpy.isnan(arr).any() or \
-                numpy.isinf(arr).any():
+        invalid = numpy.isnan(arr).any() or numpy.isinf(arr).any()
+        if nodata is not None:
+            invalid = invalid or numpy.any(numpy.isclose(arr, nodata))
+        if invalid:
             return nodata, nodata, nodata
         # calculation
         dz_dx = (
-            (arr[0, 2] + 2 * arr[1, 2] + arr[2, 2]) - \
+            (arr[0, 2] + 2 * arr[1, 2] + arr[2, 2]) -
             (arr[0, 0] + 2 * arr[1, 0] + arr[2, 0])
         ) / 8.0
         dz_dy = (
-            (arr[2, 0] + 2 * arr[2, 1] + arr[2, 2]) - \
+            (arr[2, 0] + 2 * arr[2, 1] + arr[2, 2]) -
             (arr[0, 0] + 2 * arr[0, 1] + arr[0, 2])
         ) / 8.0
         # calculate slope
@@ -649,7 +652,6 @@ class _Calc:
         # compute cosine and sine of aspect
         cos_aspect = numpy.cos(aspect_rad)
         sin_aspect = numpy.sin(aspect_rad)
-        # return
         return slope, cos_aspect, sin_aspect
 
     @staticmethod
@@ -659,10 +661,16 @@ class _Calc:
         h, w = arr.shape
         c_row, c_col = h // 2, w // 2
         centre = arr[c_row, c_col]
-        # centre pixel is nodata
-        if numpy.isclose(centre, nodata):
+        # invalid centre pixel
+        if numpy.isnan(centre) or numpy.isinf(centre):
             return nodata
-        masked = numpy.ma.masked_where(numpy.isclose(arr, nodata), arr)
+        if nodata is not None and numpy.isclose(centre, nodata):
+            return nodata
+        # build mask
+        invalid_mask = numpy.isnan(arr) | numpy.isinf(arr)
+        if nodata is not None:
+            invalid_mask |= numpy.isclose(arr, nodata)
+        masked = numpy.ma.masked_where(invalid_mask, arr)
         # all is nodata except centre
         if masked.count() == 1:
             return nodata

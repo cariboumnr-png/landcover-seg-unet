@@ -142,23 +142,25 @@ def _get_meta(
     lbl_px = math.prod(data_schema['tensor_shapes']['label']['shape'])
 
     # get the patch grid of the test blocks if provided
+    test_blocks = transform_schema.get('test_blocks', None)
     col, row = 0, 0
-    # get block names sorted by col then row
-    sorted_blknames = sorted(transform_schema['test_blocks'].keys(), key=geo_utils.name_xy)
-    # get xy origin
-    xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
-    # track max col and row number (0-based)
-    for blkname in sorted_blknames:
-        x, y = geo_utils.name_xy(blkname)
-        col = max(col, (x - xmin) / data_schema['tensor_shapes']['image']['W'])
-        row = max(row, (y - ymin) / data_schema['tensor_shapes']['image']['H'])
-    col, row = int(col + 1), int(row + 1)
-    # Simple checker if test blocks form a continuous array, e.g., no gaps.
-    # This typically is the case if the test blocks are extracted from external
-    # image/label. Here we consider only to produce the preview image if this
-    # condition is true
-    if col * row != len(sorted_blknames):
-        col, row = 0, 0 # empty grid for downstream
+    if len(test_blocks) > 0:
+        # get block names sorted by col then row
+        sorted_blknames = sorted(test_blocks.keys(), key=geo_utils.name_xy)
+        # get xy origin
+        xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
+        # track max col and row number (0-based)
+        for blkname in sorted_blknames:
+            x, y = geo_utils.name_xy(blkname)
+            col = max(col, (x - xmin) / data_schema['tensor_shapes']['image']['W'])
+            row = max(row, (y - ymin) / data_schema['tensor_shapes']['image']['H'])
+        col, row = int(col + 1), int(row + 1)
+        # Simple checker if test blocks form a continuous array, e.g., no gaps.
+        # This typically is the case if the test blocks are extracted from external
+        # image/label. Here we consider only to produce the preview image if this
+        # condition is true
+        if col * row != len(sorted_blknames):
+            col, row = 0, 0 # empty grid for downstream
 
     # return a meta dataclass
     return core.Meta(
