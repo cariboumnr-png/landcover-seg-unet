@@ -144,7 +144,7 @@ class _General:
 @dataclasses.dataclass
 class _DataBlocks:
     name: str = omegaconf.MISSING
-    default_input_dpath: str = '${execution.exp_root}/input/${foundation.datablocks.name}'
+    default_input_dpath: str = '${execution.exp_root}/input/data/${foundation.datablocks.name}'
     filenames: _FileNames = field(default_factory=_FileNames)
     filepaths: _FilePaths = field(default_factory=_FilePaths)
     general: _General = field(default_factory=_General)
@@ -199,7 +199,7 @@ class DataFoundation:
     grid: _Grid = field(default_factory=_Grid)
     domains: _Domains = field(default_factory=_Domains)
     datablocks: _DataBlocks = field(default_factory=_DataBlocks)
-    output_dpath: str = '${execution.exp_root}/artifacts/foundation'
+    output_dpath: str = '${execution.exp_root}/artifacts/${foundation.datablocks.name}/foundation'
 
     def validate(self) -> None:
         self.grid.validate()

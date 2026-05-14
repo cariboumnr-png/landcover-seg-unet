@@ -61,7 +61,7 @@ class DataTransform:
     partition: _Partition = field(default_factory=_Partition)
     scoring: _Scoring = field(default_factory=_Scoring)
     hydration: _Hydration = field(default_factory=_Hydration)
-    output_dpath: str = '${execution.exp_root}/artifacts/transform'
+    output_dpath: str = '${execution.exp_root}/artifacts/${foundation.datablocks.name}/transform'
 
     def validate(self):
         pass
