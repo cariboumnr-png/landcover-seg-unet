@@ -66,11 +66,12 @@ class BaseCallback(common.SessionObserverLike):
             verbose: If True, enables optional logging or debug output
                 in callback implementations..
         '''
-        self.verbose = verbose
         self._trackers: list[tracking.BaseTracker] = []
         if trackers:
             self._trackers = trackers
-        self.reclass_color_map = reclass_color_map
+        self.verbose = verbose
+        self._reclass_color_map = reclass_color_map
+        self._inference_logs = {}
 
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...

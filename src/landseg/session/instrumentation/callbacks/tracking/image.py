@@ -43,32 +43,37 @@ class ImageCallback(callbacks.BaseCallback):
         if not metrics.inference:
             return
         infer = metrics.inference
-        # collect stitched tensors into a dict
-        stitched = {}
-        # stitched = {
-        #     'raw_image': formatters.stitch_patches(infer.infer_image)[0] # test - elevation
-        # }
-        # targets per head
-        for head, targets in infer.infer_targets.items():
-            stitched[f'{head}_labels'] = formatters.stitch_patches(
-                targets,
-                palette=self.reclass_color_map
+        # all should have the same heads but here we will use heads in targets
+        for head in infer.infer_targets.keys():
+            # targets
+            targets = formatters.stitch_patches(
+                infer.infer_targets[head],
+                palette=self._reclass_color_map
             )
-        # predictions per head
-        for head, preds in infer.infer_preds.items():
-            stitched[f'{head}_predictions'] = formatters.stitch_patches(
-                preds,
-                palette=self.reclass_color_map
+            # predictions
+            preds = formatters.stitch_patches(
+                infer.infer_preds[head],
+                palette=self._reclass_color_map
             )
-        # errors per head
-        for head, errors in infer.infer_errors.items():
-            stitched[f'{head}_errors'] = formatters.stitch_patches(
-                errors,
+            # errors
+            errors = formatters.stitch_patches(
+                infer.infer_errors[head],
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
+            # from confusion matrics
+            cm_tensor, _ = formatters.get_cmatrix(targets, preds)
+
+            # assign to tags
+            if f'{head}_labels' not in self._inference_logs:
+                self._inference_logs[f'{head}_labels'] = targets # add once
+            # refresh every call
+            self._inference_logs[f'{head}_predictions'] = preds
+            self._inference_logs[f'{head}_errors'] = errors
+            self._inference_logs[f'{head}_confusion_matrix'] = cm_tensor
+
         # broadcast to trackers
         for tracker in self._trackers:
-            for key, t in stitched.items():
+            for key, t in self._inference_logs.items():
                 tracker.log_image(f'{phase}_{key}', t, step)
             tracker.flush()
 
