@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Preivew callback'''
+'''Image callback'''
 
 # local imports
 import landseg.core as core
@@ -27,8 +27,8 @@ import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 import landseg.session.instrumentation.formatters as formatters
 
-class PreviewCallback(callbacks.BaseCallback):
-    '''Preview callback.'''
+class ImageCallback(callbacks.BaseCallback):
+    '''Image callback.'''
 
     def on_train_phase_begin(self, phase: common.PhaseLike): ...
 
