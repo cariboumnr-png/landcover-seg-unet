@@ -33,16 +33,21 @@ import typing
 __all__ = [
     # classes
     # functions
+    'get_cmatrix',
     'stitch_patches',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .cmatrix import get_cmatrix
     from .stitcher import stitch_patches
 
 def __getattr__(name: str):
 
-    if name in {'stitch_patches',}:
+    if name in {'get_cmatrix'}:
+        return getattr(importlib.import_module('.cmatrix', __package__), name)
+
+    if name in {'stitch_patches'}:
         return getattr(importlib.import_module('.preview', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

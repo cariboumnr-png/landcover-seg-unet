@@ -25,9 +25,10 @@
 import torch
 
 # -------------------------------Public Function-------------------------------
-def get_confusion_matrix_and_table(
+def get_cmatrix(
+    targets: torch.Tensor,
     preds: torch.Tensor,
-    labels: torch.Tensor,
+    *,
     class_names: list[str] | None = None,
     num_classes: int | None = None
 ) -> tuple[torch.Tensor, str]:
@@ -52,7 +53,7 @@ def get_confusion_matrix_and_table(
         if class_names is not None:
             num_classes = len(class_names)
         else:
-            num_classes = int(max(preds.max().item(), labels.max().item())) + 1
+            num_classes = int(max(preds.max().item(), targets.max().item())) + 1
 
     # get default class names if not provided
     if class_names is None:
@@ -66,7 +67,7 @@ def get_confusion_matrix_and_table(
         )
 
     # 4compute outputs
-    cm_tensor = _compute_cm_tensor(preds, labels, num_classes)
+    cm_tensor = _compute_cm_tensor(preds, targets, num_classes)
     cm_markdown = _format_cm_markdown(cm_tensor, class_names)
 
     return cm_tensor, cm_markdown
