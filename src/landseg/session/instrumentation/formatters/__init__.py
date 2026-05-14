@@ -38,7 +38,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .preview import stitch_patches
+    from .stitcher import stitch_patches
 
 def __getattr__(name: str):
 
