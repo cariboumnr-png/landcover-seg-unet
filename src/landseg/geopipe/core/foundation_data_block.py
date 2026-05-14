@@ -323,31 +323,28 @@ class DataBlock:
         band_indices = self.meta['image_band_map']
         nodata = self.meta['image_nodata']
 
-        # assertions
-        assert all(k in band_indices for k in ['red', 'nir', 'swir1', 'swir2'])
-
         # mask off nodata pixels to avoid overflow
         # 32 bit increased to 64 bit float
         red = _Calc.mask(self.data.image[band_indices['red']], nodata)
-        nir = _Calc.mask(self.data.image[band_indices['nir']], nodata)
-        swir1 = _Calc.mask(self.data.image[band_indices['swir1']], nodata)
-        swir2 = _Calc.mask(self.data.image[band_indices['swir2']], nodata)
+        # add spectral indices depending on band availability
+        indices_stack = []
+        n = len(self.meta['image_band_map'])
+        if 'nir' in band_indices:
+            nir = _Calc.mask(self.data.image[band_indices['nir']], nodata)
+            indices_stack.append(_Calc.ndvi(nir, red, nodata))
+            self.meta['image_band_map']['NDVI'] = n
+            if 'swir1' in band_indices:
+                swir1 = _Calc.mask(self.data.image[band_indices['swir1']], nodata)
+                indices_stack.append(_Calc.ndmi(nir, swir1, nodata))
+                self.meta['image_band_map']['NDMI'] = n + 1
+            if 'swir2' in band_indices:
+                swir2 = _Calc.mask(self.data.image[band_indices['swir2']], nodata)
+                indices_stack.append(_Calc.nbr(nir, swir2, nodata))
+                self.meta['image_band_map']['NBR'] = n + 2
 
         # add to image array
-        add_indices = numpy.stack([
-            _Calc.ndvi(nir, red, nodata),
-            _Calc.ndmi(nir, swir1, nodata),
-            _Calc.nbr(nir, swir2, nodata)
-        ]).astype(numpy.float32)
+        add_indices = numpy.stack(indices_stack ).astype(numpy.float32)
         self.data.image = numpy.append(self.data.image, add_indices, axis=0)
-
-        # add to band map
-        n = len(self.meta['image_band_map'])
-        self.meta['image_band_map'].update({
-            'NDVI': n,
-            'NDMI': n + 1,
-            'NBR': n + 2
-        })
 
     def _add_topographical_metrics(self) -> None:
         '''Add topographical metrics to the image array.'''
