@@ -31,7 +31,6 @@ import typing
 
 #
 if typing.TYPE_CHECKING:
-    import numpy.typing
     import torch
 
 class BaseTracker(abc.ABC):
@@ -44,7 +43,7 @@ class BaseTracker(abc.ABC):
     @abc.abstractmethod
     def log_params(self, key: str, value: typing.Any): ...
     @abc.abstractmethod
-    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int): ...
+    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs): ...
     @abc.abstractmethod
     def log_artifact(self, fpath: str): ...
     @abc.abstractmethod

@@ -32,7 +32,6 @@ import landseg.session.instrumentation.tracking as tracking
 
 #
 if typing.TYPE_CHECKING:
-    import numpy.typing
     import torch
 
 #
@@ -49,8 +48,8 @@ class TensorBoardTracker(tracking.BaseTracker):
     def log_params(self, key: str, value: typing.Any): ...
         # not natively supported in TensorBoard
 
-    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int):
-        self.writer.add_image(key, image, step)
+    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
+        self.writer.add_image(key, image, step, **kwargs)
 
     def log_artifact(self, fpath: str): ...
         # not implemented here

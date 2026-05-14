@@ -32,7 +32,6 @@ import landseg.session.instrumentation.tracking as tracking
 
 #
 if typing.TYPE_CHECKING:
-    import numpy.typing
     import torch
 
 #
@@ -54,7 +53,7 @@ class MLFlowTracker(tracking.BaseTracker):
     def log_params(self, key: str, value: typing.Any):
         mlflow.log_param(key, value)
 
-    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int):
+    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
         # on ops for now
         pass
 
