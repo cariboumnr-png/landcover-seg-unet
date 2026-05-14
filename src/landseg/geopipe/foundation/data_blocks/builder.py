@@ -154,7 +154,9 @@ class BlockBuilder:
 
         # read data config JSON
         ctrl = artifacts.Controller[_BlockBuilderMeta].load_json_or_fail
-        self.meta_src = ctrl(self.config.config_fpath).fetch()
+        ctrl = ctrl(self.config.config_fpath)
+        ctrl.hash(overwrite=False) # hash once
+        self.meta_src = ctrl.fetch()
 
         # make sure output dir for the blocks exist
         os.makedirs(self.blks_dir, exist_ok=True)
