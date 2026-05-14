@@ -29,8 +29,7 @@ import torch
 def stitch_patches(
     placements: dict[tuple[int, int], torch.Tensor],
     *,
-    grid_shape: tuple[int, int] | None = None,
-    palette: torch.Tensor | numpy.ndarray | dict[int, list[int]] | None = None
+    grid_shape: tuple[int, int] | None = None
 ) -> torch.Tensor:
     '''
     Merge {(col, row): patch[Hp, Wp]} into a full RGB tensor.
@@ -64,7 +63,7 @@ def stitch_patches(
         device=any_patch.device,
     )
 
-    # stitch patches
+    # stitch patches and return
     for (col, row), patch in placements.items():
 
         if patch.dim() == 3:
@@ -74,6 +73,14 @@ def stitch_patches(
         x = col * wp
 
         canvas[y:y + hp, x:x + wp] = patch
+    return canvas
+
+def colorize(
+    canvas: torch.Tensor,
+    *,
+    palette: torch.Tensor | numpy.ndarray | dict[int, list[int]] | None = None
+) -> torch.Tensor:
+    '''Map class indices [H, W] -> RGB tensor [3, H, W].'''
 
     # palette handling
     if palette is None:
@@ -93,7 +100,24 @@ def stitch_patches(
             device=canvas.device
         )
 
-    return _colorize_indices(canvas, palette)
+    if canvas.dim() != 2:
+        raise ValueError('index_map must be 2D [H, W]')
+
+    if palette.dim() != 2 or palette.shape[1] != 3:
+        raise ValueError('palette must be shaped [N, 3]')
+
+    idx = canvas.to(torch.long)
+
+    idx = torch.clamp(
+        idx,
+        0,
+        palette.shape[0] - 1
+    )
+
+    rgb = palette[idx]          # [H, W, 3]
+    rgb = rgb.permute(2, 0, 1) # [3, H, W]
+
+    return rgb.contiguous()
 
 def _default_palette(
     num_classes: int,
@@ -124,32 +148,6 @@ def _default_palette(
         dtype=torch.uint8,
         device=device
     )
-
-def _colorize_indices(
-    index_map: torch.Tensor,
-    palette: torch.Tensor
-) -> torch.Tensor:
-    '''Map class indices [H, W] -> RGB tensor [3, H, W].'''
-
-    if index_map.dim() != 2:
-        raise ValueError('index_map must be 2D [H, W]')
-
-    if palette.dim() != 2 or palette.shape[1] != 3:
-        raise ValueError('palette must be shaped [N, 3]')
-
-    idx = index_map.to(torch.long)
-
-    idx = torch.clamp(
-        idx,
-        0,
-        palette.shape[0] - 1
-    )
-
-    rgb = palette[idx]          # [H, W, 3]
-    rgb = rgb.permute(2, 0, 1) # [3, H, W]
-
-    return rgb.contiguous()
-
 
 def _palette_from_dict(
     color_map: dict[int, list[int]],
