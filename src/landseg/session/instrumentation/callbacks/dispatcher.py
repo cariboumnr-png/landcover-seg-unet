@@ -90,7 +90,7 @@ class CallbackDispatcher(common.SessionObserverLike):
         for cb in self.callbacks:
             cb.on_val_policy_end(results)
 
-    def on_infer_policy_end(self, results: core.ValidationEpochResults) -> None:
+    def on_infer_policy_end(self, results: core.InferenceEpochResults) -> None:
         for cb in self.callbacks:
             cb.on_infer_policy_end(results)
 

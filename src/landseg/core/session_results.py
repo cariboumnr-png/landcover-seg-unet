@@ -90,7 +90,7 @@ class EpochResults:
     '''
     training: TrainerEpochResults | None = None
     validation: ValidationEpochResults | None = None
-    inference: InferenceResults | None = None
+    inference: InferenceEpochResults | None = None
 
     @property
     def target_objective(self) -> str:
@@ -223,8 +223,9 @@ class AccumulatedMetrics:
         self.ac_support.clear()
 
 @dataclasses.dataclass
-class InferenceResults:
+class InferenceEpochResults:
     '''Containe for inference results.'''
+    head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
     infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)

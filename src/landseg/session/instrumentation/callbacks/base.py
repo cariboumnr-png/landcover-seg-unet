@@ -37,15 +37,10 @@ the engine loosely coupled while ensuring type safety and clarity of
 expected interfaces.
 '''
 
-# standard imports
-import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.instrumentation.dashboards as dashboards
-
-if typing.TYPE_CHECKING:
-    import torch
 
 # --------------------------------Public  Class--------------------------------
 class BaseCallback(common.SessionObserverLike):
@@ -76,8 +71,6 @@ class BaseCallback(common.SessionObserverLike):
             self._trackers = trackers
         self.verbose = verbose
         self._reclass_color_map = reclass_color_map
-        self._infer_logs: dict[str, str] = {}
-        self._infer_tensors: 'dict[str, torch.Tensor]' = {}
 
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
@@ -98,7 +91,7 @@ class BaseCallback(common.SessionObserverLike):
     # --- policy ends
     def on_train_policy_end(self, results: core.TrainerEpochResults) -> None: ...
     def on_val_policy_end(self, results: core.ValidationEpochResults) -> None: ...
-    def on_infer_policy_end(self, results: core.ValidationEpochResults) -> None: ...
+    def on_infer_policy_end(self, results: core.InferenceEpochResults) -> None: ...
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
     # --- training step ends

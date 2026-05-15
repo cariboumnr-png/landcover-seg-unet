@@ -116,7 +116,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # init the epoch results containers
         self.val_results = core.ValidationEpochResults()
-        self.infer_results = core.InferenceResults()
+        self.infer_results = core.InferenceEpochResults()
 
     # -------------------------------Public  Methods-------------------------------
     def validate(self, epoch: int) -> core.ValidationEpochResults | None:
@@ -148,6 +148,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # validation phase begin
         self.dispatcher.on_val_policy_begin()
+
         # set model to evaluation mode
         self.model.eval()
         # reset per-head confusion matrix from active heads
@@ -174,12 +175,17 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_validate_batch()
             self.dispatcher.on_val_batch_end()
 
+        # compute iou
+        for head, metrics_module in self.state.heads.active_hmetrics.items():
+            # compute assign metrics to epoch results
+            metrics_module.compute()
+            self.val_results.head_metrics[head] = metrics_module.metrics
+
         # val phase end
-        self._compute_iou()
         self.dispatcher.on_val_policy_end(self.val_results)
         return self.val_results
 
-    def infer(self, epoch: int) -> core.InferenceResults | None:
+    def infer(self, epoch: int) -> core.InferenceEpochResults | None:
         '''
         Execute inference over the test dataset.
 
@@ -206,8 +212,15 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # infer phase begin
         self.dispatcher.on_infer_policy_begin()
+
         # set model to evaluation mode
         self.model.eval()
+        # reset per-head confusion matrix from active heads
+        assert self.state.heads.active_hmetrics is not None
+        for metrics_mod in self.state.heads.active_hmetrics.values():
+            metrics_mod.reset(self.device)
+        # reset head metrics dictionary
+        self.infer_results.head_metrics.clear()
         # reset inference outputs
         self.state.infer_out.clear()
 
@@ -223,32 +236,19 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_infer_batch()
             self.dispatcher.on_infer_batch_end()
 
-        # inference phase end
-        # stitch inference results from state
+        # stitch inference results
         self._stitch_patches()
-        # broadcast and return results
-        self.dispatcher.on_infer_policy_end(self.val_results)
-        return self.infer_results
 
-    # ----- validation phase
-    def _compute_iou(self) -> None:
-        '''
-        Finalize IoU and related validation metrics.
-
-        This method performs phase-level aggregation and formatting of
-        metrics accumulated during validation batches. It deliberately
-        lives at the evaluator policy layer rather than in the execution
-        core, which remains metric-agnostic.
-        '''
-
-        # sanity
-        assert self.state.heads.active_hmetrics is not None
+        # compute iou
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             # compute assign metrics to epoch results
             metrics_module.compute()
-            self.val_results.head_metrics[head] = metrics_module.metrics
+            self.infer_results.head_metrics[head] = metrics_module.metrics
 
-    # ----- inference phase
+        # inference phase end
+        self.dispatcher.on_infer_policy_end(self.infer_results)
+        return self.infer_results
+
     def _stitch_patches(self) -> None:
         '''
         Merge {(col, row): patch[Hp, Wp]} into a full RGB tensor.

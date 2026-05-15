@@ -43,48 +43,34 @@ class InferTrackingCallback(callbacks.BaseCallback):
         if not metrics.inference:
             return
         infer = metrics.inference
-        # all should have the same heads but here we will use heads in targets
+        # all should have the same heads but here we will use heads in labels
+        stitched_tensors = {}
         for head in infer.infer_labels.keys():
-
-            # assign to tags
-            # add once
-            if f'{head}_labels' not in self._infer_tensors:
-                self._infer_tensors[f'{head}_labels'] = formatters.colorize(
-                    infer.infer_labels[head],
-                    palette=self._reclass_color_map
-                )
-            # refresh every call
-            self._infer_tensors[f'{head}_predictions'] = formatters.colorize(
+            # add tensors from label, preds, and errors
+            stitched_tensors[f'{head}_labels'] = formatters.colorize(
+                infer.infer_labels[head],
+                palette=self._reclass_color_map
+            )
+            stitched_tensors[f'{head}_predictions'] = formatters.colorize(
                 infer.infer_preds[head],
                 palette=self._reclass_color_map
             )
-            self._infer_tensors[f'{head}_errors'] = formatters.colorize(
+            stitched_tensors[f'{head}_errors'] = formatters.colorize(
                 infer.infer_errors[head],
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
 
             # report from confusion matrics
-            _, cm_text = formatters.get_cmatrix(
-                infer.infer_labels[head],
-                infer.infer_preds[head],
-                class_range=(1, 6),
-                class_names=['WAT', 'FOR', 'WET', 'NT', 'DISTB', 'OTH'],
-                exclude_cls=(4, 6),
-                ignore_index=255,
-            )
-            self._infer_logs[f'{head}_inference results'] = cm_text
+            print(infer.head_metrics)
 
         # broadcast to trackers
         for tracker in self._trackers:
             # log images
-            for key, t in self._infer_tensors.items():
+            for key, t in stitched_tensors.items():
                 if t.dim() == 3:
                     tracker.log_image(f'{phase}_{key}', t, step)
                 elif t.dim() == 2:
                     tracker.log_image(f'{phase}_{key}', t, step, dataformats='HW')
-            # log text
-            for key, s in self._infer_logs.items():
-                tracker.log_text(key, s, step)
             tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...

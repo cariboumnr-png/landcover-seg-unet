@@ -202,4 +202,4 @@ class ConfusionMatrix:
         '''Zero the confusion matrix and move to specified device.'''
 
         self.cm = self.cm.zero_().to(device)
-        self.metrics.reset()
+        self.metrics = core.AccumulatedMetrics() # get a new instance

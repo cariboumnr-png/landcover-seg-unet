@@ -263,6 +263,8 @@ class BatchEngine:
         self.state.batch_out.preds = dict(outputs)
 
         # ----- batch end
+        # update per-head confusion matrix
+        self._update_conf_matrix()
         # aggregate to epoch storage (CPU detach)
         self._aggregate_batch_predictions()
 
@@ -357,7 +359,6 @@ class BatchEngine:
         stack.enter_context(self._autocast_ctx())
         return stack
 
-    # ----- training phase
     def _compute_loss(self) -> None:
         '''
         Compute total and per-head losses for the current batch.
@@ -389,7 +390,6 @@ class BatchEngine:
         self.state.batch_out.total_loss = total
         self.state.batch_out.head_loss = perhead
 
-    # ----- validation phase
     def _update_conf_matrix(self) -> None:
         '''
         Update per-head metric accumulators.
@@ -419,7 +419,6 @@ class BatchEngine:
                 parent_raw_1b=parent_1b     # 1-based (keyword arg)
             )
 
-    # ----- inference phase
     def _aggregate_batch_predictions(self):
         '''
         Aggregate inference batch predictions into runtime storage.
