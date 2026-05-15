@@ -68,7 +68,7 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     best_value_so_far: float
     best_epoch_so_far: int
     is_best_epoch: bool
-    metrics: EpochResults # raw
+    raw_metrics: EpochResults # raw
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
@@ -200,17 +200,13 @@ class AccumulatedMetrics:
         str_list.append('Mean IoU (all): ' + m)
         c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ious.items())
         str_list.append('Class IoU (all): ' + c)
-        # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
-        # text.append('Class support (all):\t' + s)
         # subset of active classes (if not None)
         if bool(self.ac_mean):
             m = f'{self.ac_mean:.4f}'
             str_list.append('Mean IoU (active): ' + m)
             c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ac_ious.items())
             str_list.append('Class IoU (active): ' + c)
-            # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
-            # text.append('Class support (active):\t' + s)
-        # return text lines
+        # return strings
         return str_list
 
     def lock(self) -> None:

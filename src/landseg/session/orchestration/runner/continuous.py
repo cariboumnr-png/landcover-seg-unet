@@ -205,7 +205,7 @@ class ContinuousRunner(runner.BaseRunner):
             best_value_so_far=self._best_value_so_far,
             best_epoch_so_far=self._best_epoch_so_far,
             is_best_epoch=self._is_best_epoch,
-            metrics=self._current_metrics,
+            raw_metrics=self._current_metrics,
         )
         # when this method is called it means this training step is done
         self.dispatcher.on_train_step_end(step)

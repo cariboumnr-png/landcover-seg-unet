@@ -184,7 +184,7 @@ class CurriculumRunner(runner.BaseRunner):
                             best_value_so_far=best_so_far,
                             best_epoch_so_far=best_epoch,
                             is_best_epoch=is_best_epoch,
-                            metrics=metrics,
+                            raw_metrics=metrics,
                         )
                         self.dispatcher.on_train_step_end(step)
                         yield step

@@ -57,7 +57,7 @@ class LoggingCallback(callbacks.BaseCallback):
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
     def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
-        metrics = results.metrics
+        metrics = results.raw_metrics
         if self.verbose:
              # training metrics is always neends
             assert metrics.training

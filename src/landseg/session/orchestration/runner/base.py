@@ -214,11 +214,11 @@ class BaseRunner(abc.ABC):
             raise RuntimeError('Training produced no steps')
         if not last_step.is_run_end:
             raise RuntimeError('Training did not terminate cleanly')
-        if not (last_step.metrics and last_step.metrics.validation):
+        if not (last_step.raw_metrics and last_step.raw_metrics.validation):
             raise RuntimeError('Invalid validation results')
 
         # return the final scalar
-        return last_step.metrics.target_metrics
+        return last_step.raw_metrics.target_metrics
 
     def _save_progress(
         self,

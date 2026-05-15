@@ -36,7 +36,7 @@ class ValTrackingCallback(callbacks.BaseCallback):
     def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults): ...
 
     def on_train_step_end(self, results: core.TrainingSessionStep):
-        metrics = results.metrics
+        metrics = results.raw_metrics
         phase = results.phase_name
         step = results.epoch_in_phase
         for tracker in self._trackers:

@@ -38,7 +38,7 @@ class InferTrackingCallback(callbacks.BaseCallback):
 
     def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
         # early exit if inference was not run
-        infer_results = results.metrics.inference
+        infer_results = results.raw_metrics.inference
         if not infer_results:
             return
 
@@ -60,7 +60,7 @@ class InferTrackingCallback(callbacks.BaseCallback):
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
             # add mean IoU scalar
-            head_metrics[head] = results.metrics.inference_metrics
+            head_metrics[head] = results.raw_metrics.inference_metrics
 
         # broadcast to trackers
         phase = results.phase_name
