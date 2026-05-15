@@ -73,7 +73,7 @@ class EpochPolicy:
         self.runner = epoch_runner
         self.active_heads = active_heads
 
-    def run(self) -> typing.Generator[events.Event, None, core.EpochResults]:
+    def run(self) -> typing.Generator[events.Event, None, core.SessionStepResults]:
         '''
         Runs the epoch with event emission.
 
@@ -101,7 +101,7 @@ class EpochPolicy:
         # enables downstream `yield from`
         return epoch_metrics
 
-    def execute(self) -> core.EpochResults:
+    def execute(self) -> core.SessionStepResults:
         '''
         Executes the epoch without emitting events.
 

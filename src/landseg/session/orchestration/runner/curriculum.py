@@ -89,7 +89,7 @@ class CurriculumRunner(runner.BaseRunner):
         self._global_epoch: int = 1
         self._is_run_end: bool = False
 
-    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
+    def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
         Execute the curriculum as a stream of `TrainingStep` records.
 
@@ -167,7 +167,7 @@ class CurriculumRunner(runner.BaseRunner):
                         self._current_metrics = metrics
 
                         # normal yield
-                        step = core.TrainingSessionStep(
+                        step = core.SessionStepSummary(
                             # id/loc
                             phase_name=phase.name,
                             phase_index=i,

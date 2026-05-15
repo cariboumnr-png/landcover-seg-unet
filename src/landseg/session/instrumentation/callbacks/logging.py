@@ -45,7 +45,7 @@ class LoggingCallback(callbacks.BaseCallback):
         if self.verbose:
             print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
 
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
+    def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
         if self.verbose and results.metrics_updated:
             text_list: list[str] = []
             text_list.append(f'total_loss: {results.total_loss:.4f}')
@@ -56,7 +56,7 @@ class LoggingCallback(callbacks.BaseCallback):
             text_list.append(f'LR: {results.current_lr:.4e}')
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
-    def on_session_step_end(self, results: core.TrainingSessionStep) -> None:
+    def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         metrics = results.raw_metrics
         if self.verbose:
              # training metrics is always neends

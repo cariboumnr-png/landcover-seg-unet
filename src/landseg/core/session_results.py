@@ -36,7 +36,7 @@ if typing.TYPE_CHECKING:
 field = dataclasses.field
 
 @dataclasses.dataclass(frozen=True)
-class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
+class SessionStepSummary: # pylint: disable=too-many-instance-attributes
     '''
     Immutable training progress snapshot exposed by runners.
 
@@ -68,7 +68,7 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     best_value_so_far: float
     best_epoch_so_far: int
     is_best_epoch: bool
-    raw_metrics: EpochResults # raw
+    raw_metrics: SessionStepResults # raw
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
@@ -81,7 +81,7 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
         }
 
 @dataclasses.dataclass(frozen=True)
-class EpochResults:
+class SessionStepResults:
     '''
     Immutable container for metrics produced during a single epoch.
 
@@ -91,9 +91,9 @@ class EpochResults:
         validation: Results returned by the evaluator, or None if no
             evaluation step was executed.
     '''
-    training: TrainerEpochResults | None = None
-    validation: ValidationEpochResults | None = None
-    inference: InferenceEpochResults | None = None
+    training: TrainStepResults | None = None
+    validation: ValStepResults | None = None
+    inference: InferStepResults | None = None
 
     @property
     def target_objective(self) -> str:
@@ -132,7 +132,7 @@ class EpochResults:
         return dataclasses.asdict(self)
 
 @dataclasses.dataclass
-class TrainerEpochResults:
+class TrainStepResults:
     '''Results that update regularly during training flush at the end.'''
     epoch_step: int = 1
     global_step: int = 1
@@ -154,7 +154,7 @@ class TrainerEpochResults:
         return dataclasses.asdict(self)
 
 @dataclasses.dataclass
-class ValidationEpochResults:
+class ValStepResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
 
@@ -164,7 +164,7 @@ class ValidationEpochResults:
         return {k: v.as_dict for k, v in self.head_metrics.items()}
 
 @dataclasses.dataclass
-class InferenceEpochResults:
+class InferStepResults:
     '''Containe for inference results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
     infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)

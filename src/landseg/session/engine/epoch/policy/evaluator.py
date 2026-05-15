@@ -115,11 +115,11 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.infer_every = infer_every
 
         # init the epoch results containers
-        self.val_results = core.ValidationEpochResults()
-        self.infer_results = core.InferenceEpochResults()
+        self.val_results = core.ValStepResults()
+        self.infer_results = core.InferStepResults()
 
     # -------------------------------Public  Methods-------------------------------
-    def validate(self, epoch: int) -> core.ValidationEpochResults | None:
+    def validate(self, epoch: int) -> core.ValStepResults | None:
         '''
         Execute a full validation epoch and return finalized metrics.
 
@@ -183,7 +183,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.dispatcher.on_val_policy_end(self.val_results)
         return self.val_results
 
-    def infer(self, epoch: int) -> core.InferenceEpochResults | None:
+    def infer(self, epoch: int) -> core.InferStepResults | None:
         '''
         Execute inference over the test dataset.
 

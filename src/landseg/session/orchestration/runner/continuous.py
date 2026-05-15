@@ -94,7 +94,7 @@ class ContinuousRunner(runner.BaseRunner):
         self._best_epoch_so_far: int = -1
         self._is_best_epoch: bool = False
 
-    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
+    def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
         Execute continuous training as a stream of TrainingStep records.
 
@@ -184,11 +184,11 @@ class ContinuousRunner(runner.BaseRunner):
                 case events.CheckpointRequest(tag=tag):
                     self._save_progress(self.phase.name, is_best=tag=='best')
 
-    def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
+    def _get_step(self, reason: str | None = None) -> core.SessionStepSummary:
         '''Helper to generate a step dataclass from self trackers.'''
 
         # poplulate step results container
-        step = core.TrainingSessionStep(
+        step = core.SessionStepSummary(
             # id/loc
             phase_name=self.phase.name,
             phase_index=0,

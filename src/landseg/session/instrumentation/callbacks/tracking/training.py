@@ -28,7 +28,7 @@ import landseg.session.instrumentation.callbacks as callbacks
 class TrainTrackingCallback(callbacks.BaseCallback):
     '''Scallar tracking callback'''
 
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
+    def on_train_batch_end(self, bidx: int, results: core.TrainStepResults):
         if not results.metrics_updated:
             return
         step = results.global_step

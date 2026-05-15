@@ -158,14 +158,14 @@ class MetricsReport(Event):
     best_so_far: float = 0.0
     best_epoch: int = -1
     is_best_epoch: bool = False
-    raw_metrics: core.EpochResults = field(default_factory=core.EpochResults)
+    raw_metrics: core.SessionStepResults = field(default_factory=core.SessionStepResults)
 
     def __init__(
         self,
         best_so_far: float,
         best_epoch: int,
         is_best_epoch: bool,
-        raw_metrics: core.EpochResults,
+        raw_metrics: core.SessionStepResults,
     ) -> None:
         super().__init__(
             name='tracking_report',

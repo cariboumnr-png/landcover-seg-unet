@@ -183,7 +183,7 @@ class PhasePolicy:
         # Return the best value tracked during this phase
         return self.tracker.best_value
 
-    def execute(self) -> list[core.EpochResults]:
+    def execute(self) -> list[core.SessionStepResults]:
         '''
         Executes the phase without emitting events.
 
@@ -194,7 +194,7 @@ class PhasePolicy:
             List of metrics for each executed epoch.
         '''
 
-        epochs: list[core.EpochResults] = []
+        epochs: list[core.SessionStepResults] = []
         for epoch in range(1, self.config.num_epochs + 1):
             epoch_metrics = policy.EpochPolicy(
                 epoch_runner=self.runner,

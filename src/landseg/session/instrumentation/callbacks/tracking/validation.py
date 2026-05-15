@@ -28,7 +28,7 @@ import landseg.session.instrumentation.callbacks as callbacks
 class ValTrackingCallback(callbacks.BaseCallback):
     '''Scallar tracking callback'''
 
-    def on_session_step_end(self, results: core.TrainingSessionStep):
+    def on_session_step_end(self, results: core.SessionStepSummary):
         metrics = results.raw_metrics
         phase = results.phase_name
         step = results.epoch_in_phase

@@ -45,7 +45,7 @@ import landseg.core as core
 import landseg.study.sweep as sweep
 
 # aliases
-StepGenerator = typing.Generator[core.TrainingSessionStep, None, None]
+StepGenerator = typing.Generator[core.SessionStepSummary, None, None]
 StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
 # -------------------------------Public Function-------------------------------

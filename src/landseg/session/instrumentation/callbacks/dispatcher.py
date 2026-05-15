@@ -73,7 +73,7 @@ class CallbackDispatcher(common.SessionObserverLike):
             cb.on_batch_begin(action, bidx)
 
     # --- batch ends
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
+    def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
         for cb in self.callbacks:
             cb.on_train_batch_end(bidx, results)
 
@@ -82,15 +82,15 @@ class CallbackDispatcher(common.SessionObserverLike):
     def on_infer_batch_end(self) -> None: ...
 
     # --- policy ends
-    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None:
+    def on_train_policy_end(self, results: core.TrainStepResults) -> None:
         for cb in self.callbacks:
             cb.on_train_policy_end(results)
 
-    def on_val_policy_end(self, results: core.ValidationEpochResults) -> None:
+    def on_val_policy_end(self, results: core.ValStepResults) -> None:
         for cb in self.callbacks:
             cb.on_val_policy_end(results)
 
-    def on_infer_policy_end(self, results: core.InferenceEpochResults) -> None:
+    def on_infer_policy_end(self, results: core.InferStepResults) -> None:
         for cb in self.callbacks:
             cb.on_infer_policy_end(results)
 
@@ -98,7 +98,7 @@ class CallbackDispatcher(common.SessionObserverLike):
     def on_epoch_end(self, epoch: int) -> None: ...
 
     # --- session step ends
-    def on_session_step_end(self, results: core.TrainingSessionStep) -> None:
+    def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         for cb in self.callbacks:
             cb.on_session_step_end(results)
 

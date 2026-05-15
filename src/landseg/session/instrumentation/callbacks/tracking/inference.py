@@ -29,7 +29,7 @@ import landseg.session.instrumentation.formatters as formatters
 class InferTrackingCallback(callbacks.BaseCallback):
     '''Image callback.'''
 
-    def on_session_step_end(self, results: core.TrainingSessionStep) -> None:
+    def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         # early exit if inference was not run
         infer_results = results.raw_metrics.inference
         if not infer_results:
