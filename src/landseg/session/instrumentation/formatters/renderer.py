@@ -26,55 +26,6 @@ import numpy
 import torch
 
 # -------------------------------Public Function-------------------------------
-def stitch_patches(
-    placements: dict[tuple[int, int], torch.Tensor],
-    *,
-    grid_shape: tuple[int, int] | None = None
-) -> torch.Tensor:
-    '''
-    Merge {(col, row): patch[Hp, Wp]} into a full RGB tensor.
-
-    Returns:
-        RGB tensor of shape [3, H_total, W_total] uint8.
-    '''
-
-    assert placements, 'placements is empty'
-    # sample patch
-    any_patch = next(iter(placements.values()))
-    if any_patch.dim() == 2:
-        hp, wp = any_patch.shape
-    elif any_patch.dim() == 3:
-        _, hp, wp = any_patch.shape
-    else:
-        raise ValueError(f'Unsupported tensor shape: {any_patch.shape}')
-
-    # infer grid size
-    if grid_shape is None:
-        cols_total = max(col for col, _ in placements) + 1
-        rows_total = max(row for _, row in placements) + 1
-    else:
-        cols_total, rows_total = grid_shape
-
-    # allocate mosaic index canvas
-    canvas = torch.full(
-        (rows_total * hp, cols_total * wp),
-        fill_value=0,
-        dtype=any_patch.dtype,
-        device=any_patch.device,
-    )
-
-    # stitch patches and return
-    for (col, row), patch in placements.items():
-
-        if patch.dim() == 3:
-            patch = patch.squeeze(0)
-
-        y = row * hp
-        x = col * wp
-
-        canvas[y:y + hp, x:x + wp] = patch
-    return canvas
-
 def colorize(
     canvas: torch.Tensor,
     *,

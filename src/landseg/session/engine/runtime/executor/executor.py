@@ -478,7 +478,7 @@ class BatchEngine:
                 )[coord] = preds[head][i]
                 # aggregate target tensors
                 if head in targets:
-                    self.state.infer_out.targets.setdefault(
+                    self.state.infer_out.labels.setdefault(
                         head, {}
                     )[coord] = targets[head][i]
                     self.state.infer_out.errors.setdefault(

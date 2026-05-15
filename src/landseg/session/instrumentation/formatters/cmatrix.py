@@ -237,7 +237,7 @@ def _format_iou_table(
         if denom[idx] == 0:
             rows.append(f'| {name} | N/A | no samples |')
             continue
-        
+
         # compute ious
         iou = tp[idx].float() / denom[idx].float()
         valid_ious.append(iou)

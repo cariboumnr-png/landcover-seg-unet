@@ -44,35 +44,29 @@ class InferTrackingCallback(callbacks.BaseCallback):
             return
         infer = metrics.inference
         # all should have the same heads but here we will use heads in targets
-        for head in infer.infer_targets.keys():
-            # targets
-            targets = formatters.stitch_patches(infer.infer_targets[head])
-            # predictions
-            preds = formatters.stitch_patches(infer.infer_preds[head])
-            # errors
-            errors = formatters.stitch_patches(infer.infer_errors[head])
+        for head in infer.infer_labels.keys():
 
             # assign to tags
             # add once
             if f'{head}_labels' not in self._infer_tensors:
                 self._infer_tensors[f'{head}_labels'] = formatters.colorize(
-                    targets,
+                    infer.infer_labels[head],
                     palette=self._reclass_color_map
                 )
             # refresh every call
             self._infer_tensors[f'{head}_predictions'] = formatters.colorize(
-                preds,
+                infer.infer_preds[head],
                 palette=self._reclass_color_map
             )
             self._infer_tensors[f'{head}_errors'] = formatters.colorize(
-                errors,
+                infer.infer_errors[head],
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
 
             # report from confusion matrics
             _, cm_text = formatters.get_cmatrix(
-                targets,
-                preds,
+                infer.infer_labels[head],
+                infer.infer_preds[head],
                 class_range=(1, 6),
                 class_names=['WAT', 'FOR', 'WET', 'NT', 'DISTB', 'OTH'],
                 exclude_cls=(4, 6),

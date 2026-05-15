@@ -225,6 +225,6 @@ class AccumulatedMetrics:
 @dataclasses.dataclass
 class InferenceResults:
     '''Containe for inference results.'''
-    infer_targets: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)

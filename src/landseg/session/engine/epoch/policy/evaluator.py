@@ -257,8 +257,13 @@ class MultiHeadEvaluator(policy.EngineBase):
             RGB tensor of shape [3, H_total, W_total] uint8.
         '''
 
-        def stitch(placements: dict[tuple[int, int], torch.Tensor],):
+        def stitch(placements: dict[tuple[int, int], torch.Tensor]):
             # stitch patches and return
+            canvas = torch.full(
+                (rows_total * hp, cols_total * wp),
+                fill_value=0,
+                device=self.device,
+            )
             for (col, row), patch in placements.items():
                 if patch.dim() == 3:
                     patch = patch.squeeze(0)
@@ -267,22 +272,16 @@ class MultiHeadEvaluator(policy.EngineBase):
                 canvas[y:y + hp, x:x + wp] = patch
             return canvas
 
+        # parse variables
         preview_ctx = self.dataloaders.meta.preview_context
         assert preview_ctx
         cols_total, rows_total = preview_ctx.patch_grid_shape
-
-        # allocate mosaic index canvas
         hp = wp = self.dataloaders.meta.patch_size
-        canvas = torch.full(
-            (rows_total * hp, cols_total * wp),
-            fill_value=0,
-            device=self.device,
-        )
 
-        #
-        targets = {h: stitch(p) for h, p in self.state.infer_out.targets.items()}
+        # stitch and pass to inference results container
+        labels = {h: stitch(p) for h, p in self.state.infer_out.labels.items()}
         preds = {h: stitch(p) for h, p in self.state.infer_out.preds.items()}
         errors = {h: stitch(p) for h, p in self.state.infer_out.errors.items()}
-        self.infer_results.infer_targets = targets
+        self.infer_results.infer_labels = labels
         self.infer_results.infer_preds = preds
         self.infer_results.infer_errors = errors
