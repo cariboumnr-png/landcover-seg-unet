@@ -54,11 +54,15 @@ class MLFlowTracker(dashboards.BaseTracker):
         mlflow.log_param(key, value)
 
     def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
-        # on ops for now
+        # no ops for now
         pass
 
     def log_artifact(self, fpath: str):
         mlflow.log_artifact(fpath)
+
+    def log_text(self, key: str, text: str, step: int):
+        # no ops for now
+        pass
 
     def flush(self): ...
         # MLflow writes immediately; not required

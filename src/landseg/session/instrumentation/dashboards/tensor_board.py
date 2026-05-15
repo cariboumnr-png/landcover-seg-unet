@@ -54,6 +54,9 @@ class TensorBoardTracker(dashboards.BaseTracker):
     def log_artifact(self, fpath: str): ...
         # not implemented here
 
+    def log_text(self, key: str, text: str, step: int):
+        self.writer.add_text(key, text, step)
+
     def flush(self):
         self.writer.flush()
 
