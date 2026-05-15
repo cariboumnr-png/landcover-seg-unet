@@ -73,7 +73,12 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
-        return dataclasses.asdict(self)
+        raw = self.raw_metrics
+        return {
+            'training': raw.training.as_dict if raw.training else None,
+            'validation': raw.validation.as_dict if raw.validation else None,
+            'inference': raw.inference.as_dict if raw.inference else None,
+        }
 
 @dataclasses.dataclass(frozen=True)
 class EpochResults:
@@ -189,7 +194,9 @@ class AccumulatedMetrics:
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
-        return dataclasses.asdict(self).pop('_locked')
+        _dict = dataclasses.asdict(self)
+        _dict.pop('_locked') # exclude
+        return _dict
 
     @property
     def as_str_list(self) -> list[str]:
