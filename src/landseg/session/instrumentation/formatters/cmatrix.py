@@ -25,87 +25,90 @@
 import torch
 
 # -------------------------------Public Function-------------------------------
+# -------------------------------Public Function-------------------------------
 def get_cmatrix(
     targets: torch.Tensor,
     preds: torch.Tensor,
     *,
+    class_range: tuple[int, int] | None = None,
     class_names: list[str] | None = None,
-    num_classes: int | None = None,
-    ignore_index: int | None = 255
+    ignore_index: int | None = None,
 ) -> tuple[torch.Tensor, str]:
     '''
     Generates a confusion matrix tensor and a Markdown table.
 
     Args:
+        targets: Tensor of integer ground truth labels.
         preds: Tensor of integer predictions.
-        labels: Tensor of integer ground truth labels.
         class_names: List of string names for each class. If None,
-            defaults to ['Class 0', 'Class 1', ...].
-        num_classes: Total number of classes. If None, inferred from the
-            maximum value in preds and labels.
-        ignore_index: Label value to ignore when computing the confusion
-            matrix (e.g. 255 in semantic segmentation tasks).
+            defaults to: ['Class 0', 'Class 1', ...]
+        class_range: Inclusive class index range. If None, inferred from
+            preds and targets.
+        ignore_index: Label value to ignore (e.g. 255 for segmentation).
 
     Returns:
         tuple:
             - A 2D PyTorch tensor representing the confusion matrix.
             - A Markdown-formatted string of the confusion matrix table.
     '''
-    # infer num of classes if not provided
-    if num_classes is None:
-        if class_names is not None:
-            num_classes = len(class_names)
-        else:
-            if ignore_index is not None:
-                valid_targets = targets[targets != ignore_index]
-                if valid_targets.numel() == 0:
-                    raise ValueError('No valid targets remain after ignoring.')
-                num_classes = int(
-                    max(preds.max().item(), valid_targets.max().item())
-                ) + 1
-            else:
-                num_classes = int(
-                    max(preds.max().item(), targets.max().item())
-                ) + 1
 
-    # get default class names if not provided
+    preds_flat = preds.view(-1)
+    targets_flat = targets.view(-1)
+
+    # apply ignore mask before inferring class range
+    if ignore_index is not None:
+        valid_mask = targets_flat != ignore_index
+        preds_flat = preds_flat[valid_mask]
+        targets_flat = targets_flat[valid_mask]
+
+    # infer class range if not provided
+    if class_range is None:
+        if targets_flat.numel() == 0:
+            raise ValueError('No valid pixels except ignore_index.')
+
+        class_min = int(min(preds_flat.min().item(), targets_flat.min().item()))
+        class_max = int(max( preds_flat.max().item(), targets_flat.max().item()))
+        class_range = (class_min, class_max)
+    else:
+        class_min, class_max = class_range
+    if class_max < class_min:
+        raise ValueError(f'Invalid class_range: {class_range}')
+    num_classes = class_max - class_min + 1
+
+    # default class names
     if class_names is None:
-        class_names = [f'Class {i}' for i in range(num_classes)]
+        class_names = [f'Class {i}' for i in range(class_min, class_max + 1)]
 
-    # validate class_names length matches num_classes
+    # validate class_names
     if len(class_names) != num_classes:
         raise ValueError(
             f'Length of class_names ({len(class_names)}) must match '
-            f'num_classes ({num_classes}).'
+            f'the number of classes implied by class_range '
+            f'({num_classes}).'
         )
 
-    # compute outputs
+    # compute confusion matrix tensor and markdown text
     cm_tensor = _compute_cm_tensor(
         preds,
         targets,
-        num_classes,
-        ignore_index=ignore_index
+        class_range=class_range,
+        ignore_index=ignore_index,
     )
-
     cm_markdown = _format_cm_markdown(cm_tensor, class_names)
-
     return cm_tensor, cm_markdown
 
 # ------------------------------private function-------------------------------
 def _compute_cm_tensor(
     preds: torch.Tensor,
     labels: torch.Tensor,
-    num_classes: int,
     *,
-    ignore_index: int | None = None
+    class_range: tuple[int, int],
+    ignore_index: int | None = None,
 ) -> torch.Tensor:
     '''Computes a dense confusion matrix tensor.'''
 
-    # flatten tensors
-    preds_flat = preds.view(-1)
-    labels_flat = labels.view(-1)
-
-    # sanity
+    preds_flat = preds.view(-1).long()
+    labels_flat = labels.view(-1).long()
     if preds_flat.shape != labels_flat.shape:
         raise ValueError(
             f'Shape mismatch: preds {preds.shape} and labels {labels.shape} '
@@ -118,12 +121,30 @@ def _compute_cm_tensor(
         preds_flat = preds_flat[valid_mask]
         labels_flat = labels_flat[valid_mask]
 
+    class_min, class_max = class_range
+    num_classes = class_max - class_min + 1
+
+    # handle fully ignored tensors
+    if labels_flat.numel() == 0:
+        return torch.zeros(
+            (num_classes, num_classes),
+            dtype=torch.long,
+            device=preds.device,
+        )
+
+    # normalize to zero-based indexing
+    preds_flat = preds_flat - class_min
+    labels_flat = labels_flat - class_min
+
+    # validate ranges
+    if labels_flat.min() < 0 or labels_flat.max() >= num_classes:
+        raise ValueError(f'labels out of valid range {class_range}')
+    if preds_flat.min() < 0 or preds_flat.max() >= num_classes:
+        raise ValueError(f'preds out of valid range {class_range}')
+
     # flat indexing: (True * num_classes) + Pred
     indices = (num_classes * labels_flat) + preds_flat
-
-    # calculate bincount and reshape to 2D
-    cm_tensor = torch.bincount(indices, minlength=num_classes**2)
-
+    cm_tensor = torch.bincount(indices, minlength=num_classes ** 2)
     return cm_tensor.reshape(num_classes, num_classes)
 
 def _format_cm_markdown(

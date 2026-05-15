@@ -46,35 +46,44 @@ class ImageCallback(callbacks.BaseCallback):
         # all should have the same heads but here we will use heads in targets
         for head in infer.infer_targets.keys():
             # targets
-            targets = formatters.stitch_patches(
-                infer.infer_targets[head],
-                palette=self._reclass_color_map
-            )
+            targets = formatters.stitch_patches(infer.infer_targets[head])
             # predictions
-            preds = formatters.stitch_patches(
-                infer.infer_preds[head],
-                palette=self._reclass_color_map
-            )
+            preds = formatters.stitch_patches(infer.infer_preds[head])
             # errors
-            errors = formatters.stitch_patches(
-                infer.infer_errors[head],
-                palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
-            )
+            errors = formatters.stitch_patches(infer.infer_errors[head])
             # from confusion matrics
-            cm_tensor, _ = formatters.get_cmatrix(targets, preds)
+            cm_tensor, cm_text = formatters.get_cmatrix(
+                targets, preds, ignore_index=255, class_range=(1, 6)
+            )
 
             # assign to tags
-            if f'{head}_labels' not in self._inference_logs:
-                self._inference_logs[f'{head}_labels'] = targets # add once
+            # add once
+            if f'{head}_labels' not in self._infer_logs:
+                self._infer_logs[f'{head}_labels'] = formatters.colorize(
+                    targets,
+                    palette=self._reclass_color_map
+                )
             # refresh every call
-            self._inference_logs[f'{head}_predictions'] = preds
-            self._inference_logs[f'{head}_errors'] = errors
-            self._inference_logs[f'{head}_confusion_matrix'] = cm_tensor
+            self._infer_logs[f'{head}_predictions'] = formatters.colorize(
+                preds,
+                palette=self._reclass_color_map
+            )
+            self._infer_logs[f'{head}_errors'] = formatters.colorize(
+                errors,
+                palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
+            )
+            self._infer_logs[f'{head}_confusion_matrix'] = formatters.colorize(
+                cm_tensor
+            )
+            print(cm_text)
 
         # broadcast to trackers
         for tracker in self._trackers:
-            for key, t in self._inference_logs.items():
-                tracker.log_image(f'{phase}_{key}', t, step)
+            for key, t in self._infer_logs.items():
+                if t.dim() == 3:
+                    tracker.log_image(f'{phase}_{key}', t, step)
+                elif t.dim() == 2:
+                    tracker.log_image(f'{phase}_{key}', t, step, dataformats='HW')
             tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...
