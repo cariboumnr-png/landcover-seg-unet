@@ -156,12 +156,11 @@ class InferenceEpochResults:
 @dataclasses.dataclass
 class AccumulatedMetrics:
     '''Container for IoU metrics, supports, and active-class views.'''
+    cmatrix: list[list[int]] = field(default_factory=list)
     mean: float = 0.0
     ious: dict[str, float] = field(default_factory=dict)
-    support: dict[str, int] = field(default_factory=dict)
     ac_mean: float = 0.0
     ac_ious: dict[str, float] = field(default_factory=dict)
-    ac_support: dict[str, int] = field(default_factory=dict)
     _locked: bool = field(default=False, init=False, repr=False)
 
     def __setattr__(self, key, value) -> None:
@@ -198,19 +197,7 @@ class AccumulatedMetrics:
 
     def lock(self) -> None:
         '''Lock object via __setattr__ blocking.'''
-
         self._locked = True
-
-    def reset(self) -> None:
-        '''Reset all attributes to default; will unlock.'''
-
-        object.__setattr__(self, "_locked", False) # lock override
-        self.mean = 0.0
-        self.ious.clear()
-        self.support.clear()
-        self.ac_mean = 0.0
-        self.ac_ious.clear()
-        self.ac_support.clear()
 
 # ------------------------------private  function------------------------------
 def _get_mean_iou(head_metrics: dict[str, AccumulatedMetrics]) -> float:

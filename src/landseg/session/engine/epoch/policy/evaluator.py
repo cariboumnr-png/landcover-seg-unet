@@ -175,11 +175,9 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_validate_batch()
             self.dispatcher.on_val_batch_end()
 
-        # compute iou
+        # compute and assign metrics
         for head, metrics_module in self.state.heads.active_hmetrics.items():
-            # compute assign metrics to epoch results
-            metrics_module.compute()
-            self.val_results.head_metrics[head] = metrics_module.metrics
+            self.val_results.head_metrics[head] = metrics_module.compute()
 
         # val phase end
         self.dispatcher.on_val_policy_end(self.val_results)
@@ -239,11 +237,9 @@ class MultiHeadEvaluator(policy.EngineBase):
         # stitch inference results
         self._stitch_patches()
 
-        # compute iou
+        # compute and assign metrics
         for head, metrics_module in self.state.heads.active_hmetrics.items():
-            # compute assign metrics to epoch results
-            metrics_module.compute()
-            self.infer_results.head_metrics[head] = metrics_module.metrics
+            self.infer_results.head_metrics[head] = metrics_module.compute()
 
         # inference phase end
         self.dispatcher.on_infer_policy_end(self.infer_results)
