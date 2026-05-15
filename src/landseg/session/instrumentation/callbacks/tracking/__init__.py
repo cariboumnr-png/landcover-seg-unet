@@ -32,23 +32,28 @@ import typing
 
 __all__ = [
     # classes
-    'ImageCallback',
-    'ScalarsCallback',
+    'InferTrackingCallback',
+    'TrainTrackingCallback',
+    'ValTrackingCallback',
     # functions
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .image import ImageCallback
-    from .scalar import ScalarsCallback
+    from .inference import InferTrackingCallback
+    from .training import TrainTrackingCallback
+    from .validation import ValTrackingCallback
 
 def __getattr__(name: str):
 
-    if name in {'ImageCallback'}:
-        return getattr(importlib.import_module('.image', __package__), name)
+    if name in {'InferTrackingCallback'}:
+        return getattr(importlib.import_module('.inference', __package__), name)
 
-    if name in {'ScalarsCallback'}:
-        return getattr(importlib.import_module('.scalar', __package__), name)
+    if name in {'TrainTrackingCallback'}:
+        return getattr(importlib.import_module('.training', __package__), name)
+
+    if name in {'ValTrackingCallback'}:
+        return getattr(importlib.import_module('.validation', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
