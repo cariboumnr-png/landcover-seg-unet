@@ -34,20 +34,20 @@ __all__ = [
     # classes
     # functions
     'colorize',
-    'get_cmatrix',
+    'report_iou',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .cmatrix import get_cmatrix
     from .renderer import colorize
+    from .report import report_iou
 
 def __getattr__(name: str):
 
-    if name in {'get_cmatrix'}:
-        return getattr(importlib.import_module('.cmatrix', __package__), name)
-
     if name in {'colorize'}:
         return getattr(importlib.import_module('.renderer', __package__), name)
+
+    if name in {'report_iou'}:
+        return getattr(importlib.import_module('.report', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
