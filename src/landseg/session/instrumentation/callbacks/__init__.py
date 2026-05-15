@@ -35,8 +35,6 @@ __all__ = [
     'BaseCallback',
     'CallbackDispatcher',
     'LoggingCallback',
-    'InferTrackingCallback',
-    'TrainTrackingCallback',
     # functions
     'build_dispatcher',
     # types
@@ -48,7 +46,6 @@ if typing.TYPE_CHECKING:
     from .builder import build_dispatcher
     from .dispatcher import CallbackDispatcher
     from .logging import LoggingCallback
-    from .tracking import InferTrackingCallback, TrainTrackingCallback
 
 def __getattr__(name: str):
 
@@ -63,8 +60,5 @@ def __getattr__(name: str):
 
     if name in {'LoggingCallback'}:
         return getattr(importlib.import_module('.logging', __package__), name)
-
-    if name in {'ImageCallback', 'ScalarsCallback'}:
-        return getattr(importlib.import_module('.tracking', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -59,8 +59,8 @@ class BaseCallback(common.SessionObserverLike):
 
     def __init__(
         self,
-        *,
         trackers: list[dashboards.BaseTracker] | None = None,
+        *,
         verbose: bool = True,
         reclass_color_map: dict[int, list[int]] | None = None
     ):
