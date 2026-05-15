@@ -27,8 +27,6 @@ Session step
 from __future__ import annotations
 import dataclasses
 import typing
-# local imports
-import landseg.session.common.alias as alias
 
 #
 if typing.TYPE_CHECKING:
@@ -227,7 +225,6 @@ class AccumulatedMetrics:
 @dataclasses.dataclass
 class InferenceResults:
     '''Containe for inference results.'''
-    infer_image: alias.TensorGridPatches = field(default_factory=dict)
-    infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
-    infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
-    infer_errors: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    infer_targets: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)

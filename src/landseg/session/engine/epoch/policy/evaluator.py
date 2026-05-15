@@ -49,6 +49,8 @@ In short:
 
 # standard imports
 import typing
+# third-party imports
+import torch
 # local imports
 import landseg.core as core
 import landseg.session.engine.epoch.policy as policy
@@ -222,11 +224,8 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.dispatcher.on_infer_batch_end()
 
         # inference phase end
-        # retrieve inference results from state
-        self.infer_results.infer_image = self.state.infer_out.inputs # raw channels
-        self.infer_results.infer_targets = self.state.infer_out.targets # per head
-        self.infer_results.infer_preds = self.state.infer_out.preds # per head
-        self.infer_results.infer_errors = self.state.infer_out.errors # per head
+        # stitch inference results from state
+        self._stitch_patches()
         # broadcast and return results
         self.dispatcher.on_infer_policy_end(self.val_results)
         return self.infer_results
@@ -248,3 +247,42 @@ class MultiHeadEvaluator(policy.EngineBase):
             # compute assign metrics to epoch results
             metrics_module.compute()
             self.val_results.head_metrics[head] = metrics_module.metrics
+
+    # ----- inference phase
+    def _stitch_patches(self) -> None:
+        '''
+        Merge {(col, row): patch[Hp, Wp]} into a full RGB tensor.
+
+        Returns:
+            RGB tensor of shape [3, H_total, W_total] uint8.
+        '''
+
+        def stitch(placements: dict[tuple[int, int], torch.Tensor],):
+            # stitch patches and return
+            for (col, row), patch in placements.items():
+                if patch.dim() == 3:
+                    patch = patch.squeeze(0)
+                y = row * hp
+                x = col * wp
+                canvas[y:y + hp, x:x + wp] = patch
+            return canvas
+
+        preview_ctx = self.dataloaders.meta.preview_context
+        assert preview_ctx
+        cols_total, rows_total = preview_ctx.patch_grid_shape
+
+        # allocate mosaic index canvas
+        hp = wp = self.dataloaders.meta.patch_size
+        canvas = torch.full(
+            (rows_total * hp, cols_total * wp),
+            fill_value=0,
+            device=self.device,
+        )
+
+        #
+        targets = {h: stitch(p) for h, p in self.state.infer_out.targets.items()}
+        preds = {h: stitch(p) for h, p in self.state.infer_out.preds.items()}
+        errors = {h: stitch(p) for h, p in self.state.infer_out.errors.items()}
+        self.infer_results.infer_targets = targets
+        self.infer_results.infer_preds = preds
+        self.infer_results.infer_errors = errors
