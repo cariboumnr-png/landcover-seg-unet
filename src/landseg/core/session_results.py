@@ -72,10 +72,8 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
-        '''Return a dict representation of the step.'''
-        step_dict = dataclasses.asdict(self)
-        step_dict['metrics'].pop('inference')
-        return step_dict
+        '''Return as a dictionary for serialization.'''
+        return dataclasses.asdict(self)
 
 @dataclasses.dataclass(frozen=True)
 class EpochResults:
@@ -123,6 +121,11 @@ class EpochResults:
             return _get_mean_iou(self.inference.head_metrics)
         return -float('inf')
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return dataclasses.asdict(self)
+
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Results that update regularly during training flush at the end.'''
@@ -140,10 +143,20 @@ class TrainerEpochResults:
         for h in self.head_losses:
             self.head_losses[h] = 0.0
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return dataclasses.asdict(self)
+
 @dataclasses.dataclass
 class ValidationEpochResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return {k: v.as_dict for k, v in self.head_metrics.items()}
 
 @dataclasses.dataclass
 class InferenceEpochResults:
@@ -152,6 +165,11 @@ class InferenceEpochResults:
     infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)
+
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return {k: v.as_dict for k, v in self.head_metrics.items()}
 
 @dataclasses.dataclass
 class AccumulatedMetrics:
@@ -170,8 +188,8 @@ class AccumulatedMetrics:
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
-        '''Return as the metrics a nested dictionary.'''
-        return dataclasses.asdict(self)
+        '''Return as a dictionary for serialization.'''
+        return dataclasses.asdict(self).pop('_locked')
 
     @property
     def as_str_list(self) -> list[str]:
