@@ -62,10 +62,8 @@ class LoggingCallback(callbacks.BaseCallback):
              # training metrics is always neends
             assert metrics.training
             # validation may or may not be run every epoch
-            if metrics.validation:
-                mean_iou = metrics.validation.target_metrics
-            else:
-                mean_iou = 0.0
+            mean_iou = metrics.target_metrics # would be -inf if not run
+
             # best so far
             msg = (
                 f'|Total Loss: {metrics.training.total_loss:.4f}|'

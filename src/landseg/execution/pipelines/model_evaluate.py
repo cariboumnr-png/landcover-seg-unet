@@ -127,9 +127,10 @@ def evaluate(config: configs.RootConfig):
     )
 
     # evaluate
-    evaluation_results = runner.run_epoch(0).validation # will always run
-    assert evaluation_results
-    metrics = {h: m.as_dict for h, m in evaluation_results.head_metrics.items()}
+    evaluation_results = runner.run_epoch(0) # will always run
+    assert evaluation_results.validation
+    _metrics = evaluation_results.validation.head_metrics
+    metrics = {h: m.as_dict for h, m in _metrics.items()}
 
     # # produce previews on all the heads
     # if eval_config.export_previews:

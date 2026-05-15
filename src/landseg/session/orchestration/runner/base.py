@@ -218,7 +218,7 @@ class BaseRunner(abc.ABC):
             raise RuntimeError('Invalid validation results')
 
         # return the final scalar
-        return last_step.metrics.validation.target_metrics
+        return last_step.metrics.target_metrics
 
     def _save_progress(
         self,
@@ -250,9 +250,8 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
-        validation = self._current_metrics.validation
         ckpt_meta: artifacts.CheckpointMeta = {
-            'metric': validation.target_metrics if validation else 0.0,
+            'metric':self._current_metrics.target_metrics,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }

@@ -96,23 +96,26 @@ class EpochResults:
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
         if self.validation:
-            return self.validation.active_heads_str
+            return '|'.join(self.validation.head_metrics.keys())
         return 'N/A'
 
     @property
     def target_metrics(self) -> float:
-        '''Return the target metrics from the validation results.'''
+        '''
+        Return the mean validation IoU from active heads.
+
+        For each head if excluded classes are set, compute without them;
+        otherwise compute from all present classes.
+        '''
         if self.validation:
-            return self.validation.target_metrics
+            return _get_mean_iou(self.validation.head_metrics)
         return -float('inf')
 
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Results that update regularly during training flush at the end.'''
-    # update every batch
     epoch_step: int = 1
     global_step: int = 1
-    # update gated by interval settings
     metrics_updated: bool = False
     total_loss: float = 0.0
     current_lr: float | None = None
@@ -130,38 +133,13 @@ class ValidationEpochResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
 
-    @property
-    def active_heads_str(self) -> str:
-        '''Return plain text of the monitor heads'''
-        return '|'.join(self.head_metrics.keys())
-
-    @property
-    def target_metrics(self) -> float:
-        '''
-        Return the mean metrics active heads.
-
-        For each head if active classes are set, prefer mean IoU from the
-        active classes; otherwise count mean from all present classes.
-        '''
-        # retrieve iou metrics from monitor heads
-        mean = 0.0
-        mean_ac = 0.0
-
-        # accumulate from all monitor heads
-        for metrics in self.head_metrics.values():
-            # accumulate moniter metrics for stae
-            mean += metrics.mean
-            mean_ac +=  metrics.ac_mean
-            # collect per head metrics formatted strings
-
-        # get average ious
-        mean /= max(1, len(self.head_metrics))
-        mean_ac /= max(1, len(self.head_metrics))
-
-        # pick iou - prefer iou from active classes if present
-        if not any([mean, mean_ac]):
-            raise ValueError('No validation metrics found')
-        return mean_ac if mean_ac else mean
+@dataclasses.dataclass
+class InferenceEpochResults:
+    '''Containe for inference results.'''
+    head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)
 
 @dataclasses.dataclass
 class AccumulatedMetrics:
@@ -222,10 +200,26 @@ class AccumulatedMetrics:
         self.ac_ious.clear()
         self.ac_support.clear()
 
-@dataclasses.dataclass
-class InferenceEpochResults:
-    '''Containe for inference results.'''
-    head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
-    infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
-    infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
-    infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)
+# ------------------------------private  function------------------------------
+def _get_mean_iou(head_metrics: dict[str, AccumulatedMetrics]) -> float:
+    '''Mean IoU calculation helper.'''
+
+    # retrieve iou metrics from monitor heads
+    mean = 0.0
+    mean_ac = 0.0
+
+    # accumulate from all monitor heads
+    for metrics in head_metrics.values():
+        # accumulate moniter metrics for stae
+        mean += metrics.mean
+        mean_ac +=  metrics.ac_mean
+        # collect per head metrics formatted strings
+
+    # get average ious
+    mean /= max(1, len(head_metrics))
+    mean_ac /= max(1, len(head_metrics))
+
+    # pick iou - prefer iou from active classes if present
+    if not any([mean, mean_ac]):
+        raise ValueError('No validation metrics found')
+    return mean_ac if mean_ac else mean
