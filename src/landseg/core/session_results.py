@@ -111,6 +111,18 @@ class EpochResults:
             return _get_mean_iou(self.validation.head_metrics)
         return -float('inf')
 
+    @property
+    def inference_metrics(self) -> float:
+        '''
+        Return the mean inference IoU from active heads.
+
+        For each head if excluded classes are set, compute without them;
+        otherwise compute from all present classes.
+        '''
+        if self.inference:
+            return _get_mean_iou(self.inference.head_metrics)
+        return -float('inf')
+
 @dataclasses.dataclass
 class TrainerEpochResults:
     '''Results that update regularly during training flush at the end.'''

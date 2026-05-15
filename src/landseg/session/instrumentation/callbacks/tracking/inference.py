@@ -37,40 +37,44 @@ class InferTrackingCallback(callbacks.BaseCallback):
     def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults): ...
 
     def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
-        metrics = results.metrics
-        phase = results.phase_name
-        step = results.epoch_in_phase
-        if not metrics.inference:
+        # early exit if inference was not run
+        infer_results = results.metrics.inference
+        if not infer_results:
             return
-        infer = metrics.inference
+
         # all should have the same heads but here we will use heads in labels
-        stitched_tensors = {}
-        for head in infer.infer_labels.keys():
+        head_tensors = {}
+        head_metrics = {}
+        for head in infer_results.infer_labels.keys():
             # add tensors from label, preds, and errors
-            stitched_tensors[f'{head}_labels'] = formatters.colorize(
-                infer.infer_labels[head],
+            head_tensors[f'{head}_labels'] = formatters.colorize(
+                infer_results.infer_labels[head],
                 palette=self._reclass_color_map
             )
-            stitched_tensors[f'{head}_predictions'] = formatters.colorize(
-                infer.infer_preds[head],
+            head_tensors[f'{head}_predictions'] = formatters.colorize(
+                infer_results.infer_preds[head],
                 palette=self._reclass_color_map
             )
-            stitched_tensors[f'{head}_errors'] = formatters.colorize(
-                infer.infer_errors[head],
+            head_tensors[f'{head}_errors'] = formatters.colorize(
+                infer_results.infer_errors[head],
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
-
-            # report from confusion matrics
-            print(infer.head_metrics)
+            # add mean IoU scalar
+            head_metrics[head] = results.metrics.inference_metrics
 
         # broadcast to trackers
+        phase = results.phase_name
+        step = results.epoch_in_phase
         for tracker in self._trackers:
             # log images
-            for key, t in stitched_tensors.items():
-                if t.dim() == 3:
-                    tracker.log_image(f'{phase}_{key}', t, step)
-                elif t.dim() == 2:
-                    tracker.log_image(f'{phase}_{key}', t, step, dataformats='HW')
+            for k, v in head_tensors.items():
+                if v.dim() == 3:
+                    tracker.log_image(f'{phase}_{k}', v, step)
+                elif v.dim() == 2:
+                    tracker.log_image(f'{phase}_{k}', v, step, dataformats='HW')
+            # log scalar
+            for k, v in head_metrics:
+                tracker.log_scalar(k, v, step)
             tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...
