@@ -86,9 +86,6 @@ class ConfusionMatrix:
         h, w = self.n_cls, self.n_cls
         self.cm = torch.zeros((h, w), dtype=torch.int64)
 
-        # init metrics data class
-        self.metrics = core.AccumulatedMetrics() # will lock after compute()
-
     @torch.no_grad()
     def update(
         self,
@@ -139,19 +136,14 @@ class ConfusionMatrix:
         # accumulate in place
         self.cm += binc.view(self.n_cls, self.n_cls)
 
-    def compute(self) -> None:
-        '''
-        Compute per-class IoU and aggregate means.
+    def compute(self) -> core.AccumulatedMetrics:
+        '''Compute IoUs and return a `core.AccumulatedMetrics` container.'''
 
-        Populates a `_Metrics` typed dict:
-            - 'mean': Mean IoU over all classes (float)
-            - 'ious': Dict of per-class IoU values {str: float}
-            - 'support': Dict of per-class supports {str: int}
-            - 'ac_mean': Mean IoU over active classes (float)
-            - 'ac_ious': Dict of IoU per active class {str: float}
-            - 'ac_support': Dict of support per active class {str: int}
+        # init metrics data class
+        metrics = core.AccumulatedMetrics()
+        metrics.cmatrix = self.cm.tolist() # for serialization
 
-        '''
+        # sanity
         if self.cm.ndim != 2 or self.cm.shape[0] != self.cm.shape[1]:
             raise ValueError('Confusion matrix must be a square 2D tensor')
 
@@ -166,8 +158,6 @@ class ConfusionMatrix:
         eps = torch.finfo(tp.dtype).eps
         iou = torch.where(dn > 0, tp / dn.clamp_min(eps), torch.zeros_like(dn))
         iou_list = iou.tolist()
-        # per-class supports (number of true pixels)
-        support = self.cm.sum(dim=1).tolist()
 
         # parse from to-exclude classes if provided
         excld = self.exclude_class_1b # 1-based
@@ -178,28 +168,25 @@ class ConfusionMatrix:
         else:
             activ = ()
 
-        # iterate ious and split into groups
+        # iterate IoUs (all class & active class)
         activ_sum = 0.0
         for idx in range(len(iou)):
-            self.metrics.ious[f'{idx + 1}'] = iou_list[idx]
-            self.metrics.support[f'{idx + 1}'] = support[idx]
+            metrics.ious[f'{idx + 1}'] = iou_list[idx]
             # if class is not excluded
             if idx in activ:
                 # 1-based class label
-                self.metrics.ac_ious[f'{idx + 1}'] = iou_list[idx]
-                self.metrics.ac_support[f'{idx + 1}'] = support[idx]
+                metrics.ac_ious[f'{idx + 1}'] = iou_list[idx]
                 activ_sum += iou_list[idx]
-
-        # set metrics outputs
+        # mean IoUs
         v = dn > 0 # mean IoU over classes with denom > 0
-        self.metrics.mean = iou[v].mean().item() if v.any() else 0.0
-        self.metrics.ac_mean = activ_sum / len(activ) if activ else 0.0
+        metrics.mean = iou[v].mean().item() if v.any() else 0.0
+        metrics.ac_mean = activ_sum / len(activ) if activ else 0.0
 
-        # lock metrics
-        self.metrics.lock()
+        # lock metrics and return
+        metrics.lock()
+        return metrics
 
     def reset(self, device: str) -> None:
         '''Zero the confusion matrix and move to specified device.'''
 
         self.cm = self.cm.zero_().to(device)
-        self.metrics.reset()

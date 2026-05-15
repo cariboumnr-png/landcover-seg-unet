@@ -49,6 +49,8 @@ In short:
 
 # standard imports
 import typing
+# third-party imports
+import torch
 # local imports
 import landseg.core as core
 import landseg.session.engine.epoch.policy as policy
@@ -113,11 +115,11 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.infer_every = infer_every
 
         # init the epoch results containers
-        self.val_results = core.ValidationEpochResults()
-        self.infer_results = core.InferenceResults()
+        self.val_results = core.ValStepResults()
+        self.infer_results = core.InferStepResults()
 
     # -------------------------------Public  Methods-------------------------------
-    def validate(self, epoch: int) -> core.ValidationEpochResults | None:
+    def validate(self, epoch: int) -> core.ValStepResults | None:
         '''
         Execute a full validation epoch and return finalized metrics.
 
@@ -146,6 +148,7 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # validation phase begin
         self.dispatcher.on_val_policy_begin()
+
         # set model to evaluation mode
         self.model.eval()
         # reset per-head confusion matrix from active heads
@@ -172,12 +175,15 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_validate_batch()
             self.dispatcher.on_val_batch_end()
 
+        # compute and assign metrics
+        for head, metrics_module in self.state.heads.active_hmetrics.items():
+            self.val_results.head_metrics[head] = metrics_module.compute()
+
         # val phase end
-        self._compute_iou()
         self.dispatcher.on_val_policy_end(self.val_results)
         return self.val_results
 
-    def infer(self, epoch: int) -> core.InferenceResults | None:
+    def infer(self, epoch: int) -> core.InferStepResults | None:
         '''
         Execute inference over the test dataset.
 
@@ -204,8 +210,15 @@ class MultiHeadEvaluator(policy.EngineBase):
 
         # infer phase begin
         self.dispatcher.on_infer_policy_begin()
+
         # set model to evaluation mode
         self.model.eval()
+        # reset per-head confusion matrix from active heads
+        assert self.state.heads.active_hmetrics is not None
+        for metrics_mod in self.state.heads.active_hmetrics.values():
+            metrics_mod.reset(self.device)
+        # reset head metrics dictionary
+        self.infer_results.head_metrics.clear()
         # reset inference outputs
         self.state.infer_out.clear()
 
@@ -221,29 +234,50 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.engine.run_infer_batch()
             self.dispatcher.on_infer_batch_end()
 
+        # stitch inference results
+        self._stitch_patches()
+
+        # compute and assign metrics
+        for head, metrics_module in self.state.heads.active_hmetrics.items():
+            self.infer_results.head_metrics[head] = metrics_module.compute()
+
         # inference phase end
-        # retrieve inference results from state
-        self.infer_results.infer_image = self.state.infer_out.inputs # raw channels
-        self.infer_results.infer_targets = self.state.infer_out.targets # per head
-        self.infer_results.infer_preds = self.state.infer_out.preds # per head
-        # broadcast and return results
-        self.dispatcher.on_infer_policy_end(self.val_results)
+        self.dispatcher.on_infer_policy_end(self.infer_results)
         return self.infer_results
 
-    # ----- validation phase
-    def _compute_iou(self) -> None:
+    def _stitch_patches(self) -> None:
         '''
-        Finalize IoU and related validation metrics.
+        Merge {(col, row): patch[Hp, Wp]} into a full RGB tensor.
 
-        This method performs phase-level aggregation and formatting of
-        metrics accumulated during validation batches. It deliberately
-        lives at the evaluator policy layer rather than in the execution
-        core, which remains metric-agnostic.
+        Returns:
+            RGB tensor of shape [3, H_total, W_total] uint8.
         '''
 
-        # sanity
-        assert self.state.heads.active_hmetrics is not None
-        for head, metrics_module in self.state.heads.active_hmetrics.items():
-            # compute assign metrics to epoch results
-            metrics_module.compute()
-            self.val_results.head_metrics[head] = metrics_module.metrics
+        def stitch(placements: dict[tuple[int, int], torch.Tensor]):
+            # stitch patches and return
+            canvas = torch.full(
+                (rows_total * hp, cols_total * wp),
+                fill_value=0,
+                device=self.device,
+            )
+            for (col, row), patch in placements.items():
+                if patch.dim() == 3:
+                    patch = patch.squeeze(0)
+                y = row * hp
+                x = col * wp
+                canvas[y:y + hp, x:x + wp] = patch
+            return canvas
+
+        # parse variables
+        preview_ctx = self.dataloaders.meta.preview_context
+        assert preview_ctx
+        cols_total, rows_total = preview_ctx.patch_grid_shape
+        hp = wp = self.dataloaders.meta.patch_size
+
+        # stitch and pass to inference results container
+        labels = {h: stitch(p) for h, p in self.state.infer_out.labels.items()}
+        preds = {h: stitch(p) for h, p in self.state.infer_out.preds.items()}
+        errors = {h: stitch(p) for h, p in self.state.infer_out.errors.items()}
+        self.infer_results.infer_labels = labels
+        self.infer_results.infer_preds = preds
+        self.infer_results.infer_errors = errors

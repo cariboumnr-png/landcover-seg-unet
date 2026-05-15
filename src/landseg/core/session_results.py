@@ -27,8 +27,6 @@ Session step
 from __future__ import annotations
 import dataclasses
 import typing
-# local imports
-import landseg.session.common.alias as alias
 
 #
 if typing.TYPE_CHECKING:
@@ -38,7 +36,7 @@ if typing.TYPE_CHECKING:
 field = dataclasses.field
 
 @dataclasses.dataclass(frozen=True)
-class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
+class SessionStepSummary: # pylint: disable=too-many-instance-attributes
     '''
     Immutable training progress snapshot exposed by runners.
 
@@ -70,17 +68,20 @@ class TrainingSessionStep: # pylint: disable=too-many-instance-attributes
     best_value_so_far: float
     best_epoch_so_far: int
     is_best_epoch: bool
-    metrics: EpochResults # raw
+    raw_metrics: SessionStepResults # raw
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
-        '''Return a dict representation of the step.'''
-        step_dict = dataclasses.asdict(self)
-        step_dict['metrics'].pop('inference')
-        return step_dict
+        '''Return as a dictionary for serialization.'''
+        raw = self.raw_metrics
+        return {
+            'training': raw.training.as_dict if raw.training else None,
+            'validation': raw.validation.as_dict if raw.validation else None,
+            'inference': raw.inference.as_dict if raw.inference else None,
+        }
 
 @dataclasses.dataclass(frozen=True)
-class EpochResults:
+class SessionStepResults:
     '''
     Immutable container for metrics produced during a single epoch.
 
@@ -90,31 +91,51 @@ class EpochResults:
         validation: Results returned by the evaluator, or None if no
             evaluation step was executed.
     '''
-    training: TrainerEpochResults | None = None
-    validation: ValidationEpochResults | None = None
-    inference: InferenceResults | None = None
+    training: TrainStepResults | None = None
+    validation: ValStepResults | None = None
+    inference: InferStepResults | None = None
 
     @property
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
         if self.validation:
-            return self.validation.active_heads_str
+            return '|'.join(self.validation.head_metrics.keys())
         return 'N/A'
 
     @property
     def target_metrics(self) -> float:
-        '''Return the target metrics from the validation results.'''
+        '''
+        Return the mean validation IoU from active heads.
+
+        For each head if excluded classes are set, compute without them;
+        otherwise compute from all present classes.
+        '''
         if self.validation:
-            return self.validation.target_metrics
+            return _get_mean_iou(self.validation.head_metrics)
         return -float('inf')
 
+    @property
+    def inference_metrics(self) -> float:
+        '''
+        Return the mean inference IoU from active heads.
+
+        For each head if excluded classes are set, compute without them;
+        otherwise compute from all present classes.
+        '''
+        if self.inference:
+            return _get_mean_iou(self.inference.head_metrics)
+        return -float('inf')
+
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return dataclasses.asdict(self)
+
 @dataclasses.dataclass
-class TrainerEpochResults:
+class TrainStepResults:
     '''Results that update regularly during training flush at the end.'''
-    # update every batch
     epoch_step: int = 1
     global_step: int = 1
-    # update gated by interval settings
     metrics_updated: bool = False
     total_loss: float = 0.0
     current_lr: float | None = None
@@ -127,53 +148,42 @@ class TrainerEpochResults:
         for h in self.head_losses:
             self.head_losses[h] = 0.0
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return dataclasses.asdict(self)
+
 @dataclasses.dataclass
-class ValidationEpochResults:
+class ValStepResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
 
     @property
-    def active_heads_str(self) -> str:
-        '''Return plain text of the monitor heads'''
-        return '|'.join(self.head_metrics.keys())
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return {k: v.as_dict for k, v in self.head_metrics.items()}
+
+@dataclasses.dataclass
+class InferStepResults:
+    '''Containe for inference results.'''
+    head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
+    infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)
 
     @property
-    def target_metrics(self) -> float:
-        '''
-        Return the mean metrics active heads.
-
-        For each head if active classes are set, prefer mean IoU from the
-        active classes; otherwise count mean from all present classes.
-        '''
-        # retrieve iou metrics from monitor heads
-        mean = 0.0
-        mean_ac = 0.0
-
-        # accumulate from all monitor heads
-        for metrics in self.head_metrics.values():
-            # accumulate moniter metrics for stae
-            mean += metrics.mean
-            mean_ac +=  metrics.ac_mean
-            # collect per head metrics formatted strings
-
-        # get average ious
-        mean /= max(1, len(self.head_metrics))
-        mean_ac /= max(1, len(self.head_metrics))
-
-        # pick iou - prefer iou from active classes if present
-        if not any([mean, mean_ac]):
-            raise ValueError('No validation metrics found')
-        return mean_ac if mean_ac else mean
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return as a dictionary for serialization.'''
+        return {k: v.as_dict for k, v in self.head_metrics.items()}
 
 @dataclasses.dataclass
 class AccumulatedMetrics:
     '''Container for IoU metrics, supports, and active-class views.'''
+    cmatrix: list[list[int]] = field(default_factory=list)
     mean: float = 0.0
     ious: dict[str, float] = field(default_factory=dict)
-    support: dict[str, int] = field(default_factory=dict)
     ac_mean: float = 0.0
     ac_ious: dict[str, float] = field(default_factory=dict)
-    ac_support: dict[str, int] = field(default_factory=dict)
     _locked: bool = field(default=False, init=False, repr=False)
 
     def __setattr__(self, key, value) -> None:
@@ -183,8 +193,10 @@ class AccumulatedMetrics:
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
-        '''Return as the metrics a nested dictionary.'''
-        return dataclasses.asdict(self)
+        '''Return as a dictionary for serialization.'''
+        _dict = dataclasses.asdict(self)
+        _dict.pop('_locked') # exclude
+        return _dict
 
     @property
     def as_str_list(self) -> list[str]:
@@ -195,38 +207,39 @@ class AccumulatedMetrics:
         str_list.append('Mean IoU (all): ' + m)
         c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ious.items())
         str_list.append('Class IoU (all): ' + c)
-        # s = '|'.join(f'cls{k}={v}' for k, v in mm['support'].items())
-        # text.append('Class support (all):\t' + s)
         # subset of active classes (if not None)
         if bool(self.ac_mean):
             m = f'{self.ac_mean:.4f}'
             str_list.append('Mean IoU (active): ' + m)
             c = '|'.join(f'cls{k}={v:.4f}' for k, v in self.ac_ious.items())
             str_list.append('Class IoU (active): ' + c)
-            # s = '|'.join(f'cls{k}={v}' for k, v in mm['ac_support'].items())
-            # text.append('Class support (active):\t' + s)
-        # return text lines
+        # return strings
         return str_list
 
     def lock(self) -> None:
         '''Lock object via __setattr__ blocking.'''
-
         self._locked = True
 
-    def reset(self) -> None:
-        '''Reset all attributes to default; will unlock.'''
+# ------------------------------private  function------------------------------
+def _get_mean_iou(head_metrics: dict[str, AccumulatedMetrics]) -> float:
+    '''Mean IoU calculation helper.'''
 
-        object.__setattr__(self, "_locked", False) # lock override
-        self.mean = 0.0
-        self.ious.clear()
-        self.support.clear()
-        self.ac_mean = 0.0
-        self.ac_ious.clear()
-        self.ac_support.clear()
+    # retrieve iou metrics from monitor heads
+    mean = 0.0
+    mean_ac = 0.0
 
-@dataclasses.dataclass
-class InferenceResults:
-    '''Containe for inference results.'''
-    infer_image: alias.TensorGridPatches = field(default_factory=dict)
-    infer_targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
-    infer_preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    # accumulate from all monitor heads
+    for metrics in head_metrics.values():
+        # accumulate moniter metrics for stae
+        mean += metrics.mean
+        mean_ac +=  metrics.ac_mean
+        # collect per head metrics formatted strings
+
+    # get average ious
+    mean /= max(1, len(head_metrics))
+    mean_ac /= max(1, len(head_metrics))
+
+    # pick iou - prefer iou from active classes if present
+    if not any([mean, mean_ac]):
+        raise ValueError('No validation metrics found')
+    return mean_ac if mean_ac else mean

@@ -158,12 +158,7 @@ class PhasePolicy:
             ).run()
 
             # track metrics
-            # - if validation is run this epoch
-            if metrics.validation:
-                tracked = self._track(epoch, metrics.validation.target_metrics)
-            # - if validation is not run this epoch
-            else:
-                tracked = (0.0, -1, False)
+            tracked = self._track(epoch, metrics.target_metrics)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
@@ -188,7 +183,7 @@ class PhasePolicy:
         # Return the best value tracked during this phase
         return self.tracker.best_value
 
-    def execute(self) -> list[core.EpochResults]:
+    def execute(self) -> list[core.SessionStepResults]:
         '''
         Executes the phase without emitting events.
 
@@ -199,7 +194,7 @@ class PhasePolicy:
             List of metrics for each executed epoch.
         '''
 
-        epochs: list[core.EpochResults] = []
+        epochs: list[core.SessionStepResults] = []
         for epoch in range(1, self.config.num_epochs + 1):
             epoch_metrics = policy.EpochPolicy(
                 epoch_runner=self.runner,
@@ -216,6 +211,10 @@ class PhasePolicy:
         target_metrics: float
     ) -> tuple[float, int, bool]:
         '''Track best metrics and count patience epochs.'''
+
+        # if validation is not done
+        if target_metrics == -float('inf'):
+            return (target_metrics, -1, False)
 
         # update last and current value
         if epoch == 1:

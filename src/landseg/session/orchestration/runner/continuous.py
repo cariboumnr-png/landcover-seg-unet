@@ -94,7 +94,7 @@ class ContinuousRunner(runner.BaseRunner):
         self._best_epoch_so_far: int = -1
         self._is_best_epoch: bool = False
 
-    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
+    def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
         Execute continuous training as a stream of TrainingStep records.
 
@@ -118,7 +118,7 @@ class ContinuousRunner(runner.BaseRunner):
         '''
 
         # dispatch at phase begininng
-        self.dispatcher.on_train_phase_begin(self.phase)
+        self.dispatcher.on_session_phase_begin(self.phase)
 
         # get phase events stream
         events_stream = policy.PhasePolicy(
@@ -170,7 +170,7 @@ class ContinuousRunner(runner.BaseRunner):
                         reason = 'Max epoch reached'
                         self._is_phase_end = True
                         yield self._get_step(reason=reason)
-                        self.dispatcher.on_train_phase_end(self.phase.name, reason)
+                        self.dispatcher.on_session_phase_end(self.phase.name, reason)
                         return
 
                 case events.StopRun(reason=reason):
@@ -178,17 +178,17 @@ class ContinuousRunner(runner.BaseRunner):
                     # yield and exit on stop signal
                     self._is_phase_end = True
                     yield self._get_step(reason=reason)
-                    self.dispatcher.on_train_phase_end(self.phase.name, reason)
+                    self.dispatcher.on_session_phase_end(self.phase.name, reason)
                     return
 
                 case events.CheckpointRequest(tag=tag):
                     self._save_progress(self.phase.name, is_best=tag=='best')
 
-    def _get_step(self, reason: str | None = None) -> core.TrainingSessionStep:
+    def _get_step(self, reason: str | None = None) -> core.SessionStepSummary:
         '''Helper to generate a step dataclass from self trackers.'''
 
         # poplulate step results container
-        step = core.TrainingSessionStep(
+        step = core.SessionStepSummary(
             # id/loc
             phase_name=self.phase.name,
             phase_index=0,
@@ -205,8 +205,8 @@ class ContinuousRunner(runner.BaseRunner):
             best_value_so_far=self._best_value_so_far,
             best_epoch_so_far=self._best_epoch_so_far,
             is_best_epoch=self._is_best_epoch,
-            metrics=self._current_metrics,
+            raw_metrics=self._current_metrics,
         )
         # when this method is called it means this training step is done
-        self.dispatcher.on_train_step_end(step)
+        self.dispatcher.on_session_step_end(step)
         return step

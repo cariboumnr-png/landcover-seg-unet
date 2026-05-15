@@ -148,7 +148,7 @@ class BaseRunner(abc.ABC):
         # internal tracking attributes
         self._is_phase_end: bool = False
         self._current_epoch: int = -1
-        self._current_metrics: core.EpochResults = core.EpochResults() # epoch
+        self._current_metrics: core.SessionStepResults = core.SessionStepResults() # epoch
 
     @property
     def trainer(self) -> protocols.EngineBaseLike:
@@ -168,7 +168,7 @@ class BaseRunner(abc.ABC):
         return self.config.artifacts_paths
 
     @abc.abstractmethod
-    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
+    def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
         Execute training as a stream of TrainingStep records.
 
@@ -200,7 +200,7 @@ class BaseRunner(abc.ABC):
         steps: list[dict] = []
 
         # tracking
-        last_step: core.TrainingSessionStep | None = None
+        last_step: core.SessionStepSummary | None = None
         # consume self.run()
         for step in self.run():
             last_step = step
@@ -214,11 +214,11 @@ class BaseRunner(abc.ABC):
             raise RuntimeError('Training produced no steps')
         if not last_step.is_run_end:
             raise RuntimeError('Training did not terminate cleanly')
-        if not (last_step.metrics and last_step.metrics.validation):
+        if not (last_step.raw_metrics and last_step.raw_metrics.validation):
             raise RuntimeError('Invalid validation results')
 
         # return the final scalar
-        return last_step.metrics.validation.target_metrics
+        return last_step.raw_metrics.target_metrics
 
     def _save_progress(
         self,
@@ -250,9 +250,8 @@ class BaseRunner(abc.ABC):
         '''
 
         # build checkpoint meta dict
-        validation = self._current_metrics.validation
         ckpt_meta: artifacts.CheckpointMeta = {
-            'metric': validation.target_metrics if validation else 0.0,
+            'metric':self._current_metrics.target_metrics,
             'epoch': self.trainer.state.progress.epoch,
             'step': self.trainer.state.progress.global_step
         }

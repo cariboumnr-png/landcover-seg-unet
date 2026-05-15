@@ -20,49 +20,45 @@
 # =========================================================================== #
 
 '''
-Minimal MLFlow tracker
+Tensorboard tracker
 '''
 
 # standard imports
 import typing
 # third-party imports
-import mlflow
+import torch.utils.tensorboard as tensorbaord
 # local imports
-import landseg.session.instrumentation.tracking as tracking
+import landseg.session.instrumentation.dashboards as dashboards
 
 #
 if typing.TYPE_CHECKING:
-    import numpy.typing
     import torch
 
 #
-class MLFlowTracker(tracking.BaseTracker):
-    '''Minimal MLflow tracker for experiment logging.'''
+class TensorBoardTracker(dashboards.BaseTracker):
+    '''Tensorboard tracker class.'''
 
-    def __init__(self, uri: str, artifact_path: str):
-        super().__init__(uri, artifact_path)
-
-        mlflow.set_tracking_uri(self.uri)
-        if artifact_path:
-            mlflow.set_experiment(artifact_path)
-        # start run immediately (simple semantics)
-        self._run = mlflow.start_run()
+    def __init__(self, uri: str):
+        super().__init__(uri, None)
+        self.writer = tensorbaord.SummaryWriter(log_dir=self.uri)
 
     def log_scalar(self, key: str, value: float, step: int):
-        mlflow.log_metric(key, value, step)
+        self.writer.add_scalar(key, value, step)
 
-    def log_params(self, key: str, value: typing.Any):
-        mlflow.log_param(key, value)
+    def log_params(self, key: str, value: typing.Any): ...
+        # not natively supported in TensorBoard
 
-    def log_image(self, key: str, image: 'numpy.typing.NDArray | torch.Tensor', step: int):
-        # on ops for now
-        pass
+    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
+        self.writer.add_image(key, image, step, **kwargs)
 
-    def log_artifact(self, fpath: str):
-        mlflow.log_artifact(fpath)
+    def log_artifact(self, fpath: str): ...
+        # not implemented here
 
-    def flush(self): ...
-        # MLflow writes immediately; not required
+    def log_text(self, key: str, text: str, step: int):
+        self.writer.add_text(key, text, step)
+
+    def flush(self):
+        self.writer.flush()
 
     def close(self):
-        mlflow.end_run()
+        self.writer.close()

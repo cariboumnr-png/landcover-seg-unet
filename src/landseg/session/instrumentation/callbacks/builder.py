@@ -34,7 +34,8 @@ instrumentation.
 import typing
 # local imports
 import landseg.session.instrumentation.callbacks as callbacks
-import landseg.session.instrumentation.tracking as tracking
+import landseg.session.instrumentation.callbacks.tracking as tracking
+import landseg.session.instrumentation.dashboards as dashboards
 
 def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
@@ -74,23 +75,21 @@ def build_dispatcher(
     '''
 
     # trackers list
-    tracker_list: list[tracking.BaseTracker] = []
+    _trackers: list[dashboards.BaseTracker] = []
     if trackers:
         if 'tb' in trackers:
             assert uri, 'URI not provided for TensorBoard tracker'
-            tracker_list.append(tracking.TensorBoardTracker(uri))
+            _trackers.append(dashboards.TensorBoardTracker(uri))
         if 'mlflow' in trackers:
             assert uri and artifact_path
-            tracker_list.append(tracking.MLFlowTracker(uri, artifact_path))
+            _trackers.append(dashboards.MLFlowTracker(uri, artifact_path))
 
     # callbacks list
     callbacks_list: list[callbacks.BaseCallback] = [
         callbacks.LoggingCallback(verbose=verbose),
-        callbacks.TrackingCallback(trackers=tracker_list),
-        callbacks.PreviewCallback(
-            trackers=tracker_list,
-            reclass_color_map=reclass_color_map
-        )
+        tracking.TrainTrackingCallback(_trackers),
+        tracking.ValTrackingCallback(_trackers),
+        tracking.InferTrackingCallback(_trackers,reclass_color_map=reclass_color_map)
     ]
 
     # return dispatcher

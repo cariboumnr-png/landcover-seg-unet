@@ -37,11 +37,11 @@ __all__ = [
     'Heads',
     'Splits',
     'Domains',
-    'TrainingSessionStep',
-    'EpochResults',
-    'TrainerEpochResults',
-    'ValidationEpochResults',
-    'InferenceResults',
+    'SessionStepSummary',
+    'SessionStepResults',
+    'TrainStepResults',
+    'ValStepResults',
+    'InferStepResults',
     'AccumulatedMetrics',
     # functions
     # typing
@@ -53,11 +53,11 @@ if typing.TYPE_CHECKING:
     from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
     from .model_protocol import MultiheadModelLike
     from .session_results import (
-        TrainingSessionStep,
-        EpochResults,
-        TrainerEpochResults,
-        ValidationEpochResults,
-        InferenceResults,
+        SessionStepSummary,
+        SessionStepResults,
+        TrainStepResults,
+        ValStepResults,
+        InferStepResults,
         AccumulatedMetrics
     )
 
@@ -70,11 +70,11 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.model_protocol', __package__), name)
 
     if name in {
-        'TrainingSessionStep',
-        'EpochResults',
-        'TrainerEpochResults',
-        'ValidationEpochResults',
-        'InferenceResults',
+        'SessionStepSummary',
+        'SessionStepResults',
+        'TrainStepResults',
+        'ValStepResults',
+        'InferStepResults',
         'AccumulatedMetrics'
     }:
         return getattr(importlib.import_module('.session_results', __package__), name)

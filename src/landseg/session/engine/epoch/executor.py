@@ -112,7 +112,7 @@ class EpochEngine:
         batch_size = loader.meta.batch_size
         return batch_size * len(self.trainer.dataloaders.train)
 
-    def run_epoch(self, epoch: int) -> core.EpochResults:
+    def run_epoch(self, epoch: int) -> core.SessionStepResults:
         '''
         Run a single training epoch and return aggregated metrics.
 
@@ -133,19 +133,19 @@ class EpochEngine:
                 _train = self.trainer.train_one_epoch(epoch)
                 _val = self.evaluator.validate(epoch)
                 _infer = self.evaluator.infer(epoch)
-                return core.EpochResults(_train, _val, _infer)
+                return core.SessionStepResults(_train, _val, _infer)
 
             case 'train_only':
                 if not self.trainer:
                     raise ValueError('Missing trainer')
                 _train = self.trainer.train_one_epoch(epoch)
-                return core.EpochResults(_train, None, None)
+                return core.SessionStepResults(_train, None, None)
 
             case 'eval_only':
                 if not self.evaluator:
                     raise ValueError('Missing evaluator')
                 _val = self.evaluator.validate(0) # will always run
-                return core.EpochResults(None, _val, None)
+                return core.SessionStepResults(None, _val, None)
 
     def set_head_state(
         self,

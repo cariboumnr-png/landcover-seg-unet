@@ -89,7 +89,7 @@ class CurriculumRunner(runner.BaseRunner):
         self._global_epoch: int = 1
         self._is_run_end: bool = False
 
-    def run(self) -> typing.Generator[core.TrainingSessionStep, None, None]:
+    def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
         Execute the curriculum as a stream of `TrainingStep` records.
 
@@ -120,7 +120,7 @@ class CurriculumRunner(runner.BaseRunner):
             # reset flag
             self._is_phase_end = False
             # dispatch at phase begininng
-            self.dispatcher.on_train_phase_begin(phase)
+            self.dispatcher.on_session_phase_begin(phase)
 
             # get phase events stream
             events_stream = policy.PhasePolicy(
@@ -167,7 +167,7 @@ class CurriculumRunner(runner.BaseRunner):
                         self._current_metrics = metrics
 
                         # normal yield
-                        step = core.TrainingSessionStep(
+                        step = core.SessionStepSummary(
                             # id/loc
                             phase_name=phase.name,
                             phase_index=i,
@@ -184,9 +184,9 @@ class CurriculumRunner(runner.BaseRunner):
                             best_value_so_far=best_so_far,
                             best_epoch_so_far=best_epoch,
                             is_best_epoch=is_best_epoch,
-                            metrics=metrics,
+                            raw_metrics=metrics,
                         )
-                        self.dispatcher.on_train_step_end(step)
+                        self.dispatcher.on_session_step_end(step)
                         yield step
 
                     case events.CheckpointRequest(tag=tag):
@@ -195,5 +195,5 @@ class CurriculumRunner(runner.BaseRunner):
                 # end of current phase
                 if self._is_phase_end:
                     reason = 'Max epoch reached'
-                    self.dispatcher.on_train_phase_end(phase.name, reason)
+                    self.dispatcher.on_session_phase_end(phase.name, reason)
                     break

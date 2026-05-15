@@ -29,7 +29,7 @@ import landseg.session.instrumentation.callbacks as callbacks
 class LoggingCallback(callbacks.BaseCallback):
     '''Logging callback'''
 
-    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
         if self.verbose:
             print('__Phase details__')
             text = '\n'.join([
@@ -45,7 +45,7 @@ class LoggingCallback(callbacks.BaseCallback):
         if self.verbose:
             print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
 
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
+    def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
         if self.verbose and results.metrics_updated:
             text_list: list[str] = []
             text_list.append(f'total_loss: {results.total_loss:.4f}')
@@ -56,16 +56,14 @@ class LoggingCallback(callbacks.BaseCallback):
             text_list.append(f'LR: {results.current_lr:.4e}')
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
-    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
-        metrics = results.metrics
+    def on_session_step_end(self, results: core.SessionStepSummary) -> None:
+        metrics = results.raw_metrics
         if self.verbose:
              # training metrics is always neends
             assert metrics.training
             # validation may or may not be run every epoch
-            if metrics.validation:
-                mean_iou = metrics.validation.target_metrics
-            else:
-                mean_iou = 0.0
+            mean_iou = metrics.target_metrics # would be -inf if not run
+
             # best so far
             msg = (
                 f'|Total Loss: {metrics.training.total_loss:.4f}|'
@@ -77,7 +75,7 @@ class LoggingCallback(callbacks.BaseCallback):
             n = len(str(t))
             print(f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}')
 
-    def on_train_phase_end(self, phase: str, reason: str) -> None:
+    def on_session_phase_end(self, phase: str, reason: str) -> None:
         if self.verbose:
             print(f'Exiting training phase {phase}: {reason}')
 

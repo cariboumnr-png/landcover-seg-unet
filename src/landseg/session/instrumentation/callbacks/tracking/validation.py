@@ -19,46 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.session.instrumentation.callbacks`.
+'''Scallar tracking callback'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.core as core
+import landseg.session.instrumentation.callbacks as callbacks
 
-from __future__ import annotations
-import importlib
-import typing
+class ValTrackingCallback(callbacks.BaseCallback):
+    '''Scallar tracking callback'''
 
-__all__ = [
-    # classes
-    'BaseCallback',
-    'CallbackDispatcher',
-    'LoggingCallback',
-    # functions
-    'build_dispatcher',
-    # types
-]
+    def on_session_step_end(self, results: core.SessionStepSummary):
+        metrics = results.raw_metrics
+        phase = results.phase_name
+        step = results.epoch_in_phase
+        for tracker in self._trackers:
+            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
+            tracker.flush()
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .builder import build_dispatcher
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
-
-def __getattr__(name: str):
-
-    if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'build_dispatcher'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
-
-    if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    def on_session_end(self) -> None:
+        for tracker in self._trackers:
+            tracker.close()

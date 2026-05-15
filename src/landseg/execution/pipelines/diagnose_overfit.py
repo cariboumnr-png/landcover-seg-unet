@@ -98,7 +98,7 @@ def overfit(config: configs.RootConfig) -> None:
         results = runner.run_epoch(ep)
         assert results.training and results.validation # typing
         los = results.training.total_loss
-        iou = results.validation.target_metrics
+        iou = results.target_metrics
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
@@ -200,6 +200,7 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
         meta =core.Meta(
             blk_bytes=0,
             test_blks_grid=(0, 0),
+            reclass_color_map=None,
             image_specs=core.Meta.Image(
                 num_channels=block.data.image.shape[0],
                 height_width=block.data.label.shape[1], # here assume H==W

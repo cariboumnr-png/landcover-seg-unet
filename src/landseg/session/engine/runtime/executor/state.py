@@ -112,14 +112,17 @@ class _InferOutput:
     # inputs: maps (col, row) -> patch tensor [C, H, W]
     inputs: alias.TensorGridPatches = field(default_factory=dict)
     # targets and preds: maps head_name -> (col, row) -> patch tensor [H, W]
-    targets: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    labels: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
     preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    # errors
+    errors: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
 
     def clear(self):
         '''Clear at the start of a new inference phase.'''
         self.inputs.clear()
-        self.targets.clear()
+        self.labels.clear()
         self.preds.clear()
+        self.errors.clear()
 
 # ----- optimization runtime status
 @dataclasses.dataclass

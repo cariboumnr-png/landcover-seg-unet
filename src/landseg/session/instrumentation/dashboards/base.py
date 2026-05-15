@@ -19,41 +19,36 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Tracking callback'''
+# pylint: disable=missing-function-docstring
 
-# local imports
-import landseg.core as core
-import landseg.session.common as common
-import landseg.session.instrumentation.callbacks as callbacks
+'''
+Base tracker class
+'''
 
-class TrackingCallback(callbacks.BaseCallback):
-    '''Tracking callback.'''
+# standard imports
+import abc
+import typing
 
-    def on_train_phase_begin(self, phase: common.PhaseLike): ...
+#
+if typing.TYPE_CHECKING:
+    import torch
 
-    def on_batch_begin(self, action: str, bidx: int): ...
-
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
-        if not results.metrics_updated:
-            return
-        step = results.global_step
-        for tracker in self._trackers:
-            tracker.log_scalar('total_loss', results.total_loss, step)
-            tracker.log_scalar('lr', results.current_lr or 0.0, step)
-            tracker.flush()
-
-    def on_train_step_end(self, results: core.TrainingSessionStep):
-        metrics = results.metrics
-        phase = results.phase_name
-        step = results.epoch_in_phase
-        for tracker in self._trackers:
-            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
-            tracker.flush()
-
-    def on_train_phase_end(self, phase: str, reason: str): ...
-
-    def on_train_end(self) -> None:
-        for tracker in self._trackers:
-            tracker.close()
-
-    def on_checkpointing(self, fp: str): ...
+class BaseTracker(abc.ABC):
+    '''Interface of the base tracker.'''
+    def __init__(self, uri: str, artifact_path: str | None = None):
+        self.uri = uri
+        self.artifact_path = artifact_path
+    @abc.abstractmethod
+    def log_scalar(self, key: str, value: float, step: int): ...
+    @abc.abstractmethod
+    def log_params(self, key: str, value: typing.Any): ...
+    @abc.abstractmethod
+    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs): ...
+    @abc.abstractmethod
+    def log_artifact(self, fpath: str): ...
+    @abc.abstractmethod
+    def log_text(self, key: str, text: str, step: int): ...
+    @abc.abstractmethod
+    def flush(self): ...
+    @abc.abstractmethod
+    def close(self): ...

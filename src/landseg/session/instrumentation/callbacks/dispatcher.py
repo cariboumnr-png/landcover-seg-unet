@@ -49,13 +49,13 @@ class CallbackDispatcher(common.SessionObserverLike):
             self.callbacks.remove(callback)
 
     # megaphone methods
-    # --- training phase begins
-    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+    # --- session phase begins
+    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
         for cb in self.callbacks:
-            cb.on_train_phase_begin(phase)
+            cb.on_session_phase_begin(phase)
 
-    # --- training step begins
-    def on_train_step_begin(self) -> None: ...
+    # --- session step begins
+    def on_session_step_begin(self) -> None: ...
 
     # --- epoch begins
     def on_epoch_begin(self, epoch: int) -> None: ...
@@ -73,7 +73,7 @@ class CallbackDispatcher(common.SessionObserverLike):
             cb.on_batch_begin(action, bidx)
 
     # --- batch ends
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults) -> None:
+    def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
         for cb in self.callbacks:
             cb.on_train_batch_end(bidx, results)
 
@@ -82,35 +82,35 @@ class CallbackDispatcher(common.SessionObserverLike):
     def on_infer_batch_end(self) -> None: ...
 
     # --- policy ends
-    def on_train_policy_end(self, results: core.TrainerEpochResults) -> None:
+    def on_train_policy_end(self, results: core.TrainStepResults) -> None:
         for cb in self.callbacks:
             cb.on_train_policy_end(results)
 
-    def on_val_policy_end(self, results: core.ValidationEpochResults) -> None:
+    def on_val_policy_end(self, results: core.ValStepResults) -> None:
         for cb in self.callbacks:
             cb.on_val_policy_end(results)
 
-    def on_infer_policy_end(self, results: core.ValidationEpochResults) -> None:
+    def on_infer_policy_end(self, results: core.InferStepResults) -> None:
         for cb in self.callbacks:
             cb.on_infer_policy_end(results)
 
     # --- epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
 
-    # --- training step ends
-    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+    # --- session step ends
+    def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         for cb in self.callbacks:
-            cb.on_train_step_end(results)
+            cb.on_session_step_end(results)
 
-    # --- training phase ends
-    def on_train_phase_end(self, phase: str, reason: str) -> None:
+    # --- session phase ends
+    def on_session_phase_end(self, phase: str, reason: str) -> None:
         for cb in self.callbacks:
-            cb.on_train_phase_end(phase, reason)
+            cb.on_session_phase_end(phase, reason)
 
-    # --- training end
-    def on_train_end(self) -> None:
+    # --- session end
+    def on_session_end(self) -> None:
         for cb in self.callbacks:
-            cb.on_train_end()
+            cb.on_session_end()
 
     # --- utilities
     def on_checkpointing(self, fp: str) -> None:
