@@ -28,14 +28,14 @@ import typing
 # third-party imports
 import mlflow
 # local imports
-import landseg.session.instrumentation.tracking as tracking
+import landseg.session.instrumentation.dashboards as dashboards
 
 #
 if typing.TYPE_CHECKING:
     import torch
 
 #
-class MLFlowTracker(tracking.BaseTracker):
+class MLFlowTracker(dashboards.BaseTracker):
     '''Minimal MLflow tracker for experiment logging.'''
 
     def __init__(self, uri: str, artifact_path: str):

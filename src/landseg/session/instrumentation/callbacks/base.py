@@ -42,7 +42,7 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.instrumentation.tracking as tracking
+import landseg.session.instrumentation.dashboards as dashboards
 
 if typing.TYPE_CHECKING:
     import torch
@@ -60,7 +60,7 @@ class BaseCallback(common.SessionObserverLike):
     def __init__(
         self,
         *,
-        trackers: list[tracking.BaseTracker] | None = None,
+        trackers: list[dashboards.BaseTracker] | None = None,
         verbose: bool = True,
         reclass_color_map: dict[int, list[int]] | None = None
     ):
@@ -71,7 +71,7 @@ class BaseCallback(common.SessionObserverLike):
             verbose: If True, enables optional logging or debug output
                 in callback implementations..
         '''
-        self._trackers: list[tracking.BaseTracker] = []
+        self._trackers: list[dashboards.BaseTracker] = []
         if trackers:
             self._trackers = trackers
         self.verbose = verbose

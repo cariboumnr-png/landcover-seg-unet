@@ -28,14 +28,14 @@ import typing
 # third-party imports
 import torch.utils.tensorboard as tensorbaord
 # local imports
-import landseg.session.instrumentation.tracking as tracking
+import landseg.session.instrumentation.dashboards as dashboards
 
 #
 if typing.TYPE_CHECKING:
     import torch
 
 #
-class TensorBoardTracker(tracking.BaseTracker):
+class TensorBoardTracker(dashboards.BaseTracker):
     '''Tensorboard tracker class.'''
 
     def __init__(self, uri: str):
