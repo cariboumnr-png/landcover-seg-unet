@@ -54,22 +54,22 @@ class InferTrackingCallback(callbacks.BaseCallback):
 
             # assign to tags
             # add once
-            if f'{head}_labels' not in self._infer_logs:
-                self._infer_logs[f'{head}_labels'] = formatters.colorize(
+            if f'{head}_labels' not in self._infer_tensors:
+                self._infer_tensors[f'{head}_labels'] = formatters.colorize(
                     targets,
                     palette=self._reclass_color_map
                 )
             # refresh every call
-            self._infer_logs[f'{head}_predictions'] = formatters.colorize(
+            self._infer_tensors[f'{head}_predictions'] = formatters.colorize(
                 preds,
                 palette=self._reclass_color_map
             )
-            self._infer_logs[f'{head}_errors'] = formatters.colorize(
+            self._infer_tensors[f'{head}_errors'] = formatters.colorize(
                 errors,
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
 
-            # from confusion matrics
+            # report from confusion matrics
             _, cm_text = formatters.get_cmatrix(
                 targets,
                 preds,
@@ -78,15 +78,19 @@ class InferTrackingCallback(callbacks.BaseCallback):
                 exclude_cls=(4, 6),
                 ignore_index=255,
             )
-            print(cm_text)
+            self._infer_logs[f'{head}_inference results'] = cm_text
 
         # broadcast to trackers
         for tracker in self._trackers:
-            for key, t in self._infer_logs.items():
+            # log images
+            for key, t in self._infer_tensors.items():
                 if t.dim() == 3:
                     tracker.log_image(f'{phase}_{key}', t, step)
                 elif t.dim() == 2:
                     tracker.log_image(f'{phase}_{key}', t, step, dataformats='HW')
+            # log text
+            for key, s in self._infer_logs.items():
+                tracker.log_text(key, s, step)
             tracker.flush()
 
     def on_train_phase_end(self, phase: str, reason: str): ...

@@ -76,7 +76,8 @@ class BaseCallback(common.SessionObserverLike):
             self._trackers = trackers
         self.verbose = verbose
         self._reclass_color_map = reclass_color_map
-        self._infer_logs: 'dict[str, torch.Tensor]' = {}
+        self._infer_logs: dict[str, str] = {}
+        self._infer_tensors: 'dict[str, torch.Tensor]' = {}
 
     # --- training phase begins
     def on_train_phase_begin(self, phase: common.PhaseLike) -> None: ...
