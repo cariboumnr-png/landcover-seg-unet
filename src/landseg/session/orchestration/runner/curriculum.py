@@ -120,7 +120,7 @@ class CurriculumRunner(runner.BaseRunner):
             # reset flag
             self._is_phase_end = False
             # dispatch at phase begininng
-            self.dispatcher.on_train_phase_begin(phase)
+            self.dispatcher.on_session_phase_begin(phase)
 
             # get phase events stream
             events_stream = policy.PhasePolicy(
@@ -186,7 +186,7 @@ class CurriculumRunner(runner.BaseRunner):
                             is_best_epoch=is_best_epoch,
                             raw_metrics=metrics,
                         )
-                        self.dispatcher.on_train_step_end(step)
+                        self.dispatcher.on_session_step_end(step)
                         yield step
 
                     case events.CheckpointRequest(tag=tag):
@@ -195,5 +195,5 @@ class CurriculumRunner(runner.BaseRunner):
                 # end of current phase
                 if self._is_phase_end:
                     reason = 'Max epoch reached'
-                    self.dispatcher.on_train_phase_end(phase.name, reason)
+                    self.dispatcher.on_session_phase_end(phase.name, reason)
                     break

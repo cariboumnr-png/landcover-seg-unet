@@ -23,19 +23,12 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 
 class ValTrackingCallback(callbacks.BaseCallback):
     '''Scallar tracking callback'''
 
-    def on_train_phase_begin(self, phase: common.PhaseLike): ...
-
-    def on_batch_begin(self, action: str, bidx: int): ...
-
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults): ...
-
-    def on_train_step_end(self, results: core.TrainingSessionStep):
+    def on_session_step_end(self, results: core.TrainingSessionStep):
         metrics = results.raw_metrics
         phase = results.phase_name
         step = results.epoch_in_phase
@@ -43,10 +36,6 @@ class ValTrackingCallback(callbacks.BaseCallback):
             tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
             tracker.flush()
 
-    def on_train_phase_end(self, phase: str, reason: str): ...
-
-    def on_train_end(self) -> None:
+    def on_session_end(self) -> None:
         for tracker in self._trackers:
             tracker.close()
-
-    def on_checkpointing(self, fp: str): ...

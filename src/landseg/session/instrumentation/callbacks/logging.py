@@ -29,7 +29,7 @@ import landseg.session.instrumentation.callbacks as callbacks
 class LoggingCallback(callbacks.BaseCallback):
     '''Logging callback'''
 
-    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
         if self.verbose:
             print('__Phase details__')
             text = '\n'.join([
@@ -56,7 +56,7 @@ class LoggingCallback(callbacks.BaseCallback):
             text_list.append(f'LR: {results.current_lr:.4e}')
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
-    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+    def on_session_step_end(self, results: core.TrainingSessionStep) -> None:
         metrics = results.raw_metrics
         if self.verbose:
              # training metrics is always neends
@@ -75,7 +75,7 @@ class LoggingCallback(callbacks.BaseCallback):
             n = len(str(t))
             print(f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}')
 
-    def on_train_phase_end(self, phase: str, reason: str) -> None:
+    def on_session_phase_end(self, phase: str, reason: str) -> None:
         if self.verbose:
             print(f'Exiting training phase {phase}: {reason}')
 

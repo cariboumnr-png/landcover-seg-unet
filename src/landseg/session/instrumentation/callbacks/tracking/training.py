@@ -23,15 +23,10 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 
 class TrainTrackingCallback(callbacks.BaseCallback):
     '''Scallar tracking callback'''
-
-    def on_train_phase_begin(self, phase: common.PhaseLike): ...
-
-    def on_batch_begin(self, action: str, bidx: int): ...
 
     def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults):
         if not results.metrics_updated:
@@ -42,12 +37,6 @@ class TrainTrackingCallback(callbacks.BaseCallback):
             tracker.log_scalar('lr', results.current_lr or 0.0, step)
             tracker.flush()
 
-    def on_train_step_end(self, results: core.TrainingSessionStep): ...
-
-    def on_train_phase_end(self, phase: str, reason: str): ...
-
-    def on_train_end(self) -> None:
+    def on_session_end(self) -> None:
         for tracker in self._trackers:
             tracker.close()
-
-    def on_checkpointing(self, fp: str): ...

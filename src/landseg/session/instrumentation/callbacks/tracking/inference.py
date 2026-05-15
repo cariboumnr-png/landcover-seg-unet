@@ -23,20 +23,13 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
 import landseg.session.instrumentation.formatters as formatters
 
 class InferTrackingCallback(callbacks.BaseCallback):
     '''Image callback.'''
 
-    def on_train_phase_begin(self, phase: common.PhaseLike): ...
-
-    def on_batch_begin(self, action: str, bidx: int): ...
-
-    def on_train_batch_end(self, bidx: int, results: core.TrainerEpochResults): ...
-
-    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+    def on_session_step_end(self, results: core.TrainingSessionStep) -> None:
         # early exit if inference was not run
         infer_results = results.raw_metrics.inference
         if not infer_results:
@@ -60,7 +53,7 @@ class InferTrackingCallback(callbacks.BaseCallback):
                 palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
             )
             # add mean IoU scalar
-            head_metrics[head] = results.raw_metrics.inference_metrics
+            head_metrics[f'{head}_IoU'] = results.raw_metrics.inference_metrics
 
         # broadcast to trackers
         phase = results.phase_name
@@ -69,18 +62,14 @@ class InferTrackingCallback(callbacks.BaseCallback):
             # log images
             for k, v in head_tensors.items():
                 if v.dim() == 3:
-                    tracker.log_image(f'{phase}_{k}', v, step)
+                    tracker.log_image(f'Test_{phase}_{k}', v, step)
                 elif v.dim() == 2:
-                    tracker.log_image(f'{phase}_{k}', v, step, dataformats='HW')
+                    tracker.log_image(f'Test_{phase}_{k}', v, step, dataformats='HW')
             # log scalar
-            for k, v in head_metrics:
-                tracker.log_scalar(k, v, step)
+            for k, v in head_metrics.items():
+                tracker.log_scalar(f'Test_{phase}_{k}', v, step)
             tracker.flush()
 
-    def on_train_phase_end(self, phase: str, reason: str): ...
-
-    def on_train_end(self) -> None:
+    def on_session_end(self) -> None:
         for tracker in self._trackers:
             tracker.close()
-
-    def on_checkpointing(self, fp: str): ...

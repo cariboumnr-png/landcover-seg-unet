@@ -50,12 +50,12 @@ class CallbackDispatcher(common.SessionObserverLike):
 
     # megaphone methods
     # --- training phase begins
-    def on_train_phase_begin(self, phase: common.PhaseLike) -> None:
+    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
         for cb in self.callbacks:
-            cb.on_train_phase_begin(phase)
+            cb.on_session_phase_begin(phase)
 
     # --- training step begins
-    def on_train_step_begin(self) -> None: ...
+    def on_session_step_begin(self) -> None: ...
 
     # --- epoch begins
     def on_epoch_begin(self, epoch: int) -> None: ...
@@ -98,19 +98,19 @@ class CallbackDispatcher(common.SessionObserverLike):
     def on_epoch_end(self, epoch: int) -> None: ...
 
     # --- training step ends
-    def on_train_step_end(self, results: core.TrainingSessionStep) -> None:
+    def on_session_step_end(self, results: core.TrainingSessionStep) -> None:
         for cb in self.callbacks:
-            cb.on_train_step_end(results)
+            cb.on_session_step_end(results)
 
     # --- training phase ends
-    def on_train_phase_end(self, phase: str, reason: str) -> None:
+    def on_session_phase_end(self, phase: str, reason: str) -> None:
         for cb in self.callbacks:
-            cb.on_train_phase_end(phase, reason)
+            cb.on_session_phase_end(phase, reason)
 
     # --- training end
-    def on_train_end(self) -> None:
+    def on_session_end(self) -> None:
         for cb in self.callbacks:
-            cb.on_train_end()
+            cb.on_session_end()
 
     # --- utilities
     def on_checkpointing(self, fp: str) -> None:

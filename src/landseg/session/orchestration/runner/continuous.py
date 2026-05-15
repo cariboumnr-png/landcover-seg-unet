@@ -118,7 +118,7 @@ class ContinuousRunner(runner.BaseRunner):
         '''
 
         # dispatch at phase begininng
-        self.dispatcher.on_train_phase_begin(self.phase)
+        self.dispatcher.on_session_phase_begin(self.phase)
 
         # get phase events stream
         events_stream = policy.PhasePolicy(
@@ -170,7 +170,7 @@ class ContinuousRunner(runner.BaseRunner):
                         reason = 'Max epoch reached'
                         self._is_phase_end = True
                         yield self._get_step(reason=reason)
-                        self.dispatcher.on_train_phase_end(self.phase.name, reason)
+                        self.dispatcher.on_session_phase_end(self.phase.name, reason)
                         return
 
                 case events.StopRun(reason=reason):
@@ -178,7 +178,7 @@ class ContinuousRunner(runner.BaseRunner):
                     # yield and exit on stop signal
                     self._is_phase_end = True
                     yield self._get_step(reason=reason)
-                    self.dispatcher.on_train_phase_end(self.phase.name, reason)
+                    self.dispatcher.on_session_phase_end(self.phase.name, reason)
                     return
 
                 case events.CheckpointRequest(tag=tag):
@@ -208,5 +208,5 @@ class ContinuousRunner(runner.BaseRunner):
             raw_metrics=self._current_metrics,
         )
         # when this method is called it means this training step is done
-        self.dispatcher.on_train_step_end(step)
+        self.dispatcher.on_session_step_end(step)
         return step
