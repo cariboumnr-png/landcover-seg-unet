@@ -25,13 +25,13 @@
 import torch
 
 # -------------------------------Public Function-------------------------------
-# -------------------------------Public Function-------------------------------
 def get_cmatrix(
     targets: torch.Tensor,
     preds: torch.Tensor,
     *,
     class_range: tuple[int, int] | None = None,
     class_names: list[str] | None = None,
+    exclude_cls: tuple[int, ...] | None = None,
     ignore_index: int | None = None,
 ) -> tuple[torch.Tensor, str]:
     '''
@@ -87,15 +87,21 @@ def get_cmatrix(
             f'({num_classes}).'
         )
 
-    # compute confusion matrix tensor and markdown text
+    # compute confusion matrix tensor and markdown report
     cm_tensor = _compute_cm_tensor(
         preds,
         targets,
         class_range=class_range,
         ignore_index=ignore_index,
     )
-    cm_markdown = _format_cm_markdown(cm_tensor, class_names)
-    return cm_tensor, cm_markdown
+    report = _format_report(
+        cm_tensor=cm_tensor,
+        class_names=class_names,
+        class_min=class_min,
+        exclude_cls=exclude_cls,
+    )
+
+    return cm_tensor, report
 
 # ------------------------------private function-------------------------------
 def _compute_cm_tensor(
@@ -124,14 +130,6 @@ def _compute_cm_tensor(
     class_min, class_max = class_range
     num_classes = class_max - class_min + 1
 
-    # handle fully ignored tensors
-    if labels_flat.numel() == 0:
-        return torch.zeros(
-            (num_classes, num_classes),
-            dtype=torch.long,
-            device=preds.device,
-        )
-
     # normalize to zero-based indexing
     preds_flat = preds_flat - class_min
     labels_flat = labels_flat - class_min
@@ -147,22 +145,81 @@ def _compute_cm_tensor(
     cm_tensor = torch.bincount(indices, minlength=num_classes ** 2)
     return cm_tensor.reshape(num_classes, num_classes)
 
-def _format_cm_markdown(
+def _format_report(
     cm_tensor: torch.Tensor,
-    class_names: list[str]
+    class_names: list[str],
+    class_min: int,
+    exclude_cls: tuple[int, ...] | None,
 ) -> str:
-    '''Formats a 2D confusion matrix into a Markdown table.'''
 
-    # headers
-    num_classes = len(class_names)
-    header = '| True \\ Pred | ' + ' | '.join(class_names) + ' |'
-    separator = '|' + '|'.join(['---'] * (num_classes + 1)) + '|'
+    cm = cm_tensor
 
-    # table rows
-    rows = [header, separator]
-    for i in range(num_classes):
-        row_data = [f'**{class_names[i]}**']
-        for j in range(num_classes):
-            row_data.append(str(cm_tensor[i, j].item()))
-        rows.append('| ' + ' | '.join(row_data) + ' |')
-    return '\n'.join(rows)
+    cm_table = _format_cm_table(cm, class_names)
+
+    iou_table = _format_iou_table(
+        cm=cm,
+        class_names=class_names,
+        class_min=class_min,
+        exclude_cls=set(exclude_cls or ()),
+    )
+
+    return cm_table + "\n\n" + iou_table
+
+def _format_cm_table(cm: torch.Tensor, class_names: list[str]) -> str:
+    header = "| True \\ Pred | " + " | ".join(class_names) + " |"
+    sep = "|" + "|".join(["---"] * (len(class_names) + 1)) + "|"
+
+    rows = [header, sep]
+
+    for i, name in enumerate(class_names):
+        row = [f"**{name}**"]
+        row += [str(cm[i, j].item()) for j in range(len(class_names))]
+        rows.append("| " + " | ".join(row) + " |")
+
+    return "\n".join(rows)
+
+def _format_iou_table(
+    cm: torch.Tensor,
+    class_names: list[str],
+    class_min: int,
+    exclude_cls: set[int],
+) -> str:
+
+    tp = torch.diag(cm)
+    fp = cm.sum(dim=0) - tp
+    fn = cm.sum(dim=1) - tp
+
+    denom = tp + fp + fn
+
+    rows = [
+        "| Class | IoU | Note |",
+        "|---|---|---|",
+    ]
+
+    valid_ious = []
+
+    for idx, name in enumerate(class_names):
+        class_id = class_min + idx
+
+        if class_id in exclude_cls:
+            rows.append(f"| {name} | - | excluded |")
+            continue
+
+        if denom[idx] == 0:
+            rows.append(f"| {name} | N/A | no samples |")
+            continue
+
+        iou = tp[idx].float() / denom[idx].float()
+        valid_ious.append(iou)
+
+        note = "no TP" if tp[idx] == 0 else ""
+        rows.append(f"| {name} | {iou.item():.4f} | {note} |")
+
+    miou = (
+        torch.stack(valid_ious).mean().item()
+        if valid_ious else 0.0
+    )
+
+    rows.append(f"| **mIoU** | **{miou:.4f}** | |")
+
+    return "\n".join(rows)
