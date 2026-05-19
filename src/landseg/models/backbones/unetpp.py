@@ -166,6 +166,16 @@ class UNetPP(backbones.Backbone):
             if isinstance(m, torch.nn.Conv2d):
                 torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
+    @property
+    def out_channels(self) -> int:
+        '''Return channel width of final decoded representation.'''
+        return self._out_channels
+
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        return 2 ** len(self.downs)
+
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Return 5-level encoder features.'''
 
@@ -220,8 +230,3 @@ class UNetPP(backbones.Backbone):
 
         x = torch.cat(tensors, dim=1)
         return self.nodes[node](x)
-
-    @property
-    def out_channels(self) -> int:
-        '''Return channel width of final decoded representation.'''
-        return self._out_channels

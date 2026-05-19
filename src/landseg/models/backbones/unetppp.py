@@ -24,7 +24,37 @@
 # which **IS** callable
 
 '''
-doc
+UNet3+ backbone implementing full-scale dense skip aggregation.
+
+This module defines a UNet3+ encoder-decoder architecture with
+full-resolution feature fusion across all encoder stages. Unlike
+standard U-Net and UNet++, UNet3+ removes strict scale-by-scale
+decoding and instead aggregates projected features from all encoder
+levels at each decoder stage using explicit spatial alignment.
+
+**Core Design**
+- Encoder: 4-stage hierarchical downsampling (x2 per stage)
+- Feature projection: all encoder outputs mapped to a unified width
+- Decoder: full-scale aggregation of all encoder + intermediate decoder
+  features at each stage
+- Resampling: explicit interpolation/pooling for cross-scale alignment
+
+**Key Properties**
+- Full-scale skip connections across all resolutions
+- Unified channel space for all encoder features
+- Direction-aware resizing (upsampling + exact downsampling support)
+- Decoder operates on dynamically aligned feature grids rather than a
+  fixed spatial pyramid
+
+**Differences from UNet / UNet++**
+- UNet: single-path symmetric encoder-decoder
+- UNet++: nested, progressively refined skip nodes
+- UNet3+: full-resolution feature fusion with global skip aggregation
+
+**Notes**
+- Spatial hierarchy is defined by the encoder only (x2 per level)
+- Decoder does not impose additional strict divisibility constraints
+- Output channel width equals `base_ch`
 '''
 
 # third-party imports
@@ -34,17 +64,24 @@ import torch.nn.functional
 # local imports
 import landseg.models.backbones as backbones
 
-
-
 class UNetPPP(backbones.Backbone):
     '''
     Canonical UNet3+ backbone.
 
     Characteristics:
-    - full-scale skip aggregation
-    - unified projection width
-    - dense decoder connectivity
-    - direction-aware resizing
+    - full-scale skip aggregation across encoder levels
+    - unified projection width for all encoder features
+    - dense multi-resolution decoder connectivity
+    - explicit resizing between all feature scales (upsampling + optional
+        pooled downsampling)
+    - encoder defines base spatial hierarchy; decoder operates on
+        interpolated feature grids
+
+    Notes:
+    - Output channel width equals `base_ch`
+    - Spatial alignment is handled via runtime interpolation, not fixed
+        tensor shapes
+    - Encoder depth defines the minimum spatial divisor constraint
     '''
 
     # aliases
@@ -116,10 +153,13 @@ class UNetPPP(backbones.Backbone):
 
     @property
     def out_channels(self) -> int:
-        '''
-        Number of output channels.
-        '''
+        '''Number of output channels.'''
         return self._out_channels
+
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        return 2 ** len(self.downs)
 
     def _resize(
         self,
@@ -171,12 +211,7 @@ class UNetPPP(backbones.Backbone):
         self,
         x: torch.Tensor,
     ) -> tuple[torch.Tensor, ...]:
-        '''
-        Run encoder path.
-
-        Returns:
-            (x1, x2, x3, x4, x5)
-        '''
+        '''Run encoder path and return multi-scale feature hierarchy.'''
 
         x1 = self.inc(x)
         x2 = self.downs[0](x1)
@@ -190,9 +225,7 @@ class UNetPPP(backbones.Backbone):
         self,
         xs: tuple[torch.Tensor, ...],
     ) -> torch.Tensor:
-        '''
-        Canonical UNet3+ decoder.
-        '''
+        '''UNet3+ full-scale feature aggregation decoder.'''
 
         x1, x2, x3, x4, x5 = xs
 
@@ -289,9 +322,7 @@ class UNetPPP(backbones.Backbone):
         self,
         x: torch.Tensor,
     ) -> torch.Tensor:
-        '''
-        Compute UNet3+ feature map.
-        '''
+        '''Compute UNet3+ feature map.'''
 
         xs = self.encode(x)
         return self.decode(xs)

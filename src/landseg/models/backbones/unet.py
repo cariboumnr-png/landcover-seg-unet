@@ -159,6 +159,16 @@ class UNet(backbones.Backbone):
             if isinstance(m, torch.nn.Conv2d):
                 torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
+    @property
+    def out_channels(self) -> int:
+        '''Return the channel width of the backbone output.'''
+        return self._out_channels
+
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        return 2 ** len(self.downs)
+
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Run the contracting path and return encoder features.'''
 
@@ -186,8 +196,3 @@ class UNet(backbones.Backbone):
         x1, x2, x3, x4, xb = self.encode(x)
         x = self.decode((x1, x2, x3, x4, xb))
         return x
-
-    @property
-    def out_channels(self) -> int:
-        '''Return the channel width of the backbone output.'''
-        return self._out_channels
