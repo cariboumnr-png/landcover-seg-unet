@@ -221,23 +221,20 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
                 out[head] = buf
         return out
 
-    def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
+    def forward(
+        self,
+        x: torch.Tensor,
+        *,
+        ids_domain: torch.Tensor | None = None,
+        vec_domain: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         '''Compute per-head logits with optional domain info.'''
 
         # numeric safty
         assert torch.isfinite(x).all(), "Input has NaN/Inf"
 
-        # get domain if provided
-        dom_ids = kwargs.get('ids', None)
-        dom_vec = kwargs.get('vec', None)
-        if dom_ids is not None:
-            assert isinstance(dom_ids, torch.Tensor)
-            # assert dom_ids.type() is torch.int64, dom_ids
-        if dom_vec is not None:
-            assert isinstance(dom_vec, torch.Tensor)
-
         # feed domain to router
-        concat, film = self.domain_router.forward(dom_ids, dom_vec)
+        concat, film = self.domain_router.forward(ids_domain, vec_domain)
 
         # concatenate domain channels (if configured)
         if self.concat is not None:

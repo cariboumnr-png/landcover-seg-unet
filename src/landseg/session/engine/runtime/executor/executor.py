@@ -294,26 +294,30 @@ class BatchEngine:
         # x should always be present
         assert isinstance(x, torch.Tensor) and x.ndim == 4 # shape [B, S, H, W]
         x = x.to(device)
-        # whether label is a placeholder
+
+        # whether label is present (not a placeholder)
         has_label = y.numel() > 0
         if has_label:
             assert isinstance(y, torch.Tensor) and y.ndim == 4 # shape [B, S, H, W]
             # x and y should have the same batch size and h*w, slice might differ
             assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
             y = y.to(device)
+
         # domain can be an empty dict or a dict[str, torch.Tensore]
-        work_domain = {}
+        _domain = {}
         if domain:
             # each domain can be a tensor with the same batch size or None
             for k, v in domain.items():
                 if isinstance(v, torch.Tensor):
                     assert v.shape[0] == x.shape[0]
-                    work_domain[k] = v
+                    _domain[k] = v
                 else:
-                    work_domain[k] = None
-            work_domain = {k: v.to(device) for k, v in work_domain.items()}
+                    _domain[k] = None
+            _domain = {k: v.to(device) for k, v in _domain.items()}
         else:
-            work_domain = {}
+            _domain = {}
+        # enforce domain dict key names
+        _domain = {'ids': _domain.get('ids'), 'vec': _domain.get('vec')}
 
         # heads: fall back to all available heads if activce heads not provided
         if self.state.heads.active_heads is None:
@@ -336,7 +340,7 @@ class BatchEngine:
         # assign to context
         self.state.batch_cxt.x = x
         self.state.batch_cxt.y_dict = y_dict
-        self.state.batch_cxt.domain = work_domain
+        self.state.batch_cxt.domain = _domain
 
     # ----- context setup
     def _autocast_ctx(self):

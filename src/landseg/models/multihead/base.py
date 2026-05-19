@@ -31,7 +31,13 @@ class BaseMultiheadModel(torch.nn.Module, metaclass=abc.ABCMeta):
     '''Minimally required class methods.'''
 
     @abc.abstractmethod
-    def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
+    def forward(
+        self,
+        x: torch.Tensor,
+        *,
+        ids_domain: torch.Tensor | None = None,
+        vec_domain: torch.Tensor | None = None
+    ) -> dict[str, torch.Tensor]:
         '''Multihead output as a dict of tensors'''
 
     @abc.abstractmethod
