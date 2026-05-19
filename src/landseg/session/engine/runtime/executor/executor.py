@@ -182,7 +182,7 @@ class BatchEngine:
         domain = self.state.batch_cxt.domain
         # forward with autocast context
         with self._autocast_ctx():
-            predictions = self.model.forward(x, **domain)
+            predictions = self.model(x, **domain)
         # assign predictions to batch output
         self.state.batch_out.preds = dict(predictions)
 
@@ -221,7 +221,7 @@ class BatchEngine:
         domain = self.state.batch_cxt.domain
         # forward with autocast context
         with self._val_ctx():
-            outputs = self.model.forward(x, **domain)
+            outputs = self.model(x, **domain)
         self.state.batch_out.preds = dict(outputs)
 
         # ----- batch end
@@ -258,7 +258,7 @@ class BatchEngine:
         domain = self.state.batch_cxt.domain
         # forward with inference + autocast (same style as validation)
         with self._val_ctx():
-            outputs = self.model.forward(x, **domain)
+            outputs = self.model(x, **domain)
         # store raw predictions to batch output
         self.state.batch_out.preds = dict(outputs)
 
