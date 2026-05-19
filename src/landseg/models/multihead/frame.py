@@ -221,6 +221,11 @@ class MultiHeadUNet(multihead.BaseMultiheadModel):
                 out[head] = buf
         return out
 
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor from the model body.'''
+        return self.body.spatial_divisor
+
     def forward(
         self,
         x: torch.Tensor,
