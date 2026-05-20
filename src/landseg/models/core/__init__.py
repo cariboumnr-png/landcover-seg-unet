@@ -33,6 +33,8 @@ import typing
 __all__ = [
     # classes
     'DomainContextRouter',
+    'DomainProjectionConfig',
+    'DomainTargetConfig',
     'HeadManager',
     'NumericSafety',
     # functions
@@ -41,13 +43,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .domains import DomainContextRouter
+    from .domains import DomainContextRouter, DomainProjectionConfig, DomainTargetConfig
     from .heads import HeadManager
     from .safety import NumericSafety
 
 def __getattr__(name: str):
 
-    if name in {'DomainContextRouter'}:
+    if name in {'DomainContextRouter', 'DomainProjectionConfig', 'DomainTargetConfig'}:
         return getattr(importlib.import_module('.domains', __package__), name)
 
     if name in {'HeadManager'}:
