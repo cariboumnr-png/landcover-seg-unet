@@ -19,47 +19,34 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.models.multihead`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''Multihead model typed configuration.'''
 
 from __future__ import annotations
-import importlib
+# standard imports
 import typing
 
-__all__ = [
-    # classes
-    'DomainContextRouter',
-    'DomainProjectionConfig',
-    'DomainTargetConfig',
-    'HeadManager',
-    'NumericSafety',
-    # functions
-    # types
-]
+class DomainTargetConfig(typing.Protocol):
+    '''Typed container for configuring concatenation adapter.'''
+    @property
+    def use_ids(self) -> bool: ...
+    @property
+    def use_vec(self) -> bool: ...
+    @property
+    def projection(self) -> DomainProjectionConfig: ...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .config import DomainProjectionConfig, DomainTargetConfig
-    from .domains import DomainContextRouter
-    from .heads import HeadManager
-    from .safety import NumericSafety
-
-def __getattr__(name: str):
-
-    if name in {'DomainProjectionConfig', 'DomainTargetConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
-    if name in {'DomainContextRouter'}:
-        return getattr(importlib.import_module('.domains', __package__), name)
-
-    if name in {'HeadManager'}:
-        return getattr(importlib.import_module('.heads', __package__), name)
-
-    if name in {'NumericSafety'}:
-        return getattr(importlib.import_module('.safety', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class DomainProjectionConfig(typing.Protocol):
+    '''Projection configuration for one domain target.'''
+    @property
+    def out_dim(self) -> int: ...
+    @property
+    def use_mlp(self) -> bool: ...
+    @property
+    def hidden_dim(self) -> int | None: ...
+    @property
+    def num_layers(self) -> int: ...
+    @property
+    def dropout(self) -> float: ...
+    @property
+    def activation(self) -> str: ...
