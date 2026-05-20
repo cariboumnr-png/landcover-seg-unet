@@ -168,6 +168,11 @@ class UNetPP(backbones.Backbone):
                 torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
     @property
+    def bottleneck_ch(self) -> int:
+        '''Return the bottleneck channel number.'''
+        return self._out_channels * 16
+
+    @property
     def out_channels(self) -> int:
         '''Return channel width of final decoded representation.'''
         return self._out_channels

@@ -153,6 +153,11 @@ class UNetPPP(backbones.Backbone):
                 torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
     @property
+    def bottleneck_ch(self) -> int:
+        '''Return the bottleneck channel number.'''
+        return self._out_channels # same
+
+    @property
     def out_channels(self) -> int:
         '''Number of output channels.'''
         return self._out_channels
