@@ -68,6 +68,7 @@ import torch
 import torch.nn
 # local imports
 import landseg.models.backbones as backbones
+import landseg.models.backbones.unet.blocks as blocks
 
 class UNet(backbones.Backbone):
     '''
@@ -93,9 +94,9 @@ class UNet(backbones.Backbone):
     '''
 
     # module aliases
-    DC = backbones.DoubleConv
-    DS = backbones.Downsample
-    US = backbones.Upsample
+    DC = blocks.DoubleConv
+    DS = blocks.Downsample
+    US = blocks.Upsample
 
     # core UNet body
     def __init__(self, in_ch: int, base_ch: int, **kwargs):

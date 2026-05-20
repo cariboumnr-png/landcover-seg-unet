@@ -65,7 +65,7 @@ class DomainContextRouter(torch.nn.Module):
         self,
         *,
         domain_vec_dim: int | None,
-        targets: dict[str, DomainTargetConfig | None],
+        targets: dict[str, DomainTargetConfig],
     ) -> None:
         '''Initialize target-specific vector projections.'''
 
@@ -76,7 +76,7 @@ class DomainContextRouter(torch.nn.Module):
         if domain_vec_dim is None:
             return
         for name, cfg in targets.items():
-            if cfg is None or not cfg.use_vec or cfg.projection is None:
+            if not cfg.use_vec or cfg.projection is None:
                 continue
             self.proj[name] = _make_projection(domain_vec_dim, cfg.projection)
 
@@ -89,10 +89,10 @@ class DomainContextRouter(torch.nn.Module):
 
         routed: dict[str, tuple] = {}
         for name, cfg in self.targets.items():
-            target_ids = ids if cfg and cfg.use_ids else None
+            target_ids = ids if cfg.use_ids else None
             target_vec = None
 
-            if cfg and cfg.use_vec and vec is not None:
+            if cfg.use_vec and vec is not None:
                 if name in self.proj:
                     target_vec = self.proj[name](vec)
                 else:

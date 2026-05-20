@@ -32,6 +32,9 @@ import typing
 
 __all__ = [
     # classes
+    'DoubleConv',
+    'Downsample',
+    'Upsample',
     'UNet',
     'UNetPP',
     'UNetPPP',
@@ -42,6 +45,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .blocks import DoubleConv, Downsample, Upsample
     from .config import UNetBodyConfig
     from .unet import UNet
     from .unetpp import UNetPP

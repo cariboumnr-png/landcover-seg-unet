@@ -33,9 +33,6 @@ import typing
 __all__ = [
     # classes
     'Backbone',
-    'DoubleConv',
-    'Downsample',
-    'Upsample',
     'UNet',
     'UNetPP',
     'UNetPPP',
@@ -47,16 +44,12 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import Backbone
-    from .blocks import DoubleConv, Downsample, Upsample
     from .unet import UNet, UNetPP, UNetPPP, UNetBodyConfig
 
 def __getattr__(name: str):
 
     if name in {'Backbone'}:
         return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
-        return getattr(importlib.import_module('.blocks', __package__), name)
 
     if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBodyConfig'}:
         return getattr(importlib.import_module('.unetppp', __package__), name)
