@@ -41,6 +41,10 @@ import dataclasses
 import landseg.core as core
 import landseg.models.multihead as multihead
 
+import landseg.models.backbones as backbones
+import landseg.models.core as model_core
+import landseg.models.frames as frames
+
 # private dataclass
 @dataclasses.dataclass
 class _FromDataSpecs:
@@ -143,5 +147,28 @@ def build_multihead_unet(
         dataspecs_config=dataspecs_config,
         backbone_config=backbone_config,
         conditioning=conditioning,
+        **kwargs
+    )
+
+def build_multihead_unet_(
+    *,
+    dataspecs: core.DataSpecs,
+    body_config: backbones.UNetBodyConfig,
+    concat_config: model_core.DomainTargetConfig | None,
+    film_config: model_core.DomainTargetConfig | None,
+    **kwargs
+) -> frames.MultiHeadBaseModel:
+    '''doc'''
+
+    cond_cfg: dict[str, model_core.DomainTargetConfig] = {}
+    if concat_config:
+        cond_cfg['input'] = concat_config
+    if film_config:
+        cond_cfg['bottleneck'] = film_config
+
+    return frames.MultiHeadUNet(
+        dataspecs=dataspecs,
+        backbone_config=body_config,
+        conditioning_config=cond_cfg,
         **kwargs
     )
