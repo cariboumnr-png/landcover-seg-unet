@@ -38,7 +38,6 @@ __all__ = [
     'UNet',
     'UNetPP',
     'UNetPPP',
-    'UNetBodyConfig',
     # functions
     # types
 ]
@@ -46,15 +45,11 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .blocks import DoubleConv, Downsample, Upsample
-    from .config import UNetBodyConfig
     from .unet import UNet
     from .unetpp import UNetPP
     from .unetppp import UNetPPP
 
 def __getattr__(name: str):
-
-    if name in {'UNetBodyConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
 
     if name in {'UNet'}:
         return getattr(importlib.import_module('.unet', __package__), name)

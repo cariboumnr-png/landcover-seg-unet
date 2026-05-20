@@ -44,12 +44,16 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import Backbone
-    from .unet import UNet, UNetPP, UNetPPP, UNetBodyConfig
+    from .config import UNetBodyConfig
+    from .unet import UNet, UNetPP, UNetPPP
 
 def __getattr__(name: str):
 
     if name in {'Backbone'}:
         return getattr(importlib.import_module('.base', __package__), name)
+
+    if name in {'UNetBodyConfig'}:
+        return getattr(importlib.import_module('.config', __package__), name)
 
     if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBodyConfig'}:
         return getattr(importlib.import_module('.unetppp', __package__), name)
