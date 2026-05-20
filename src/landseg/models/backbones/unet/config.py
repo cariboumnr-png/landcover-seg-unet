@@ -19,46 +19,19 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.models.backbones`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''Multihead model typed configuration.'''
 
 from __future__ import annotations
-import importlib
+# standard imports
 import typing
 
-__all__ = [
-    # classes
-    'Backbone',
-    'DoubleConv',
-    'Downsample',
-    'Upsample',
-    'UNet',
-    'UNetPP',
-    'UNetPPP',
-    'UNetBodyConfig'
-    # functions
-    # types
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .blocks import DoubleConv, Downsample, Upsample
-    from .unet import UNet, UNetPP, UNetPPP, UNetBodyConfig
-
-def __getattr__(name: str):
-
-    if name in {'Backbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
-        return getattr(importlib.import_module('.blocks', __package__), name)
-
-    if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBodyConfig'}:
-        return getattr(importlib.import_module('.unetppp', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class UNetBodyConfig(typing.Protocol):
+    '''Typed container for model backbone configuration.'''
+    @property
+    def body(self) -> str: ...
+    @property
+    def base_ch(self) -> int: ...
+    @property
+    def conv_params(self) -> dict[str, typing.Any]:...
