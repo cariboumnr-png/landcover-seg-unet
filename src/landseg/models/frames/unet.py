@@ -155,7 +155,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         super().__init__()
 
-        # base channels
+        self.dataspecs = dataspecs
         base_ch = backbone_config.base_ch
 
         heads = {k: len(v) for k, v in dataspecs.heads.class_counts.items()}
@@ -207,6 +207,24 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
     def spatial_divisor(self) -> int:
         '''Minimum spatial divisor from the model body.'''
         return self.body.spatial_divisor
+
+    def build_dummy_batch(
+        self,
+        batch_size: int = 2,
+        device: str = 'cpu'
+    ) -> dict[str, torch.Tensor]:
+        '''Dummy data batch for validation.'''
+
+        in_ch = self.dataspecs.meta.image_specs.num_channels
+        size = self.dataspecs.meta.image_specs.height_width
+        # [B, C, S, S] assume H==W
+        return {
+            head: torch.randn(
+                (batch_size, in_ch, size, size),
+                device=device,
+                dtype=torch.float32
+            ) for head in self.dataspecs.heads.class_counts
+        }
 
     def _forward_features(
         self,
