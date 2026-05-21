@@ -22,126 +22,167 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Factory for constructing multihead UNet models.
+Factory utilities for constructing and validating multi-head UNet models.
 
-Provides a factory that assembles:
-    - A UNet or UNet++ backbone,
-    - Multihead output configuration derived from dataset metadata,
-    - Optional domain-conditioning settings (concat / FiLM),
-    - Numeric-safety and logit-adjust behaviour.
+This module provides a single entry point for building a fully configured
+`MultiHeadUNet` from dataset specifications and explicit architectural
+configuration objects.
 
-The primary entry point is `build_multihead_unet`, which returns an
-initialized `MultiHeadUNet` instance based on dataset specs and a
-user-supplied configuration.
+Key responsibilities:
+    - Translate dataset metadata into model-ready configuration
+      (input channels, head topology, class structure).
+    - Instantiate a MultiHeadUNet backbone with optional domain conditioning.
+    - Apply optional runtime overrides (e.g., logit adjustment, clamping).
+    - Perform strict build-time validation via a synthetic forward pass.
+
+The design is intentionally framework-agnostic with respect to experiment
+management systems (e.g., Hydra). All configuration inputs are treated as
+explicit structural contracts rather than global state.
 '''
 
 # standard imports
-import dataclasses
+import typing
+# third-party imports
+import torch
 # local imports
 import landseg.core as core
-import landseg.models.multihead as multihead
-
-# private dataclass
-@dataclasses.dataclass
-class _FromDataSpecs:
-    '''Typed container for model conditioning configuration.'''
-    in_ch: int
-    logit_adjust: dict[str, list[float]]
-    heads_w_counts: dict[str, list[int]]
-    domain_ids_num: int     # id categories
-    domain_vec_dim: int     # vector dims
+import landseg.models.backbones as backbones
+import landseg.models.core as model_core
+import landseg.models.frames as frames
 
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     *,
     dataspecs: core.DataSpecs,
-    backbone_config: multihead.BackboneConfig,
-    conditioning: multihead.ConditioningConfig,
+    body_config: backbones.UNetBodyConfig,
+    conditioning_config: typing.Mapping[str, model_core.DomainTargetConfig],
     **kwargs
-) -> multihead.BaseMultiheadModel:
+) -> frames.MultiHeadBaseModel:
     '''
-    Construct a configured MultiHeadUNet from explicit inputs.
+    Construct and validate a `MultiHeadUNet` model.
 
-    This factory assembles a complete multi-head UNet model using:
-    - dataset-derived runtime specifications (`DataSpecs`), and
-    - explicitly supplied configuration objects describing backbone
-      structure and domain conditioning behavior.
+    This factory assembles a complete multi-head segmentation model by:
+        - Deriving structural constraints from dataset specifications.
+        - Instantiating a UNet/UNet++ backbone via `body_config`.
+        - Applying optional domain-conditioning (concat and/or FiLM).
+        - Injecting runtime safety features (e.g., logit adjustment,
+            clamping).
+        - Running a strict forward-pass validation to verify consistency.
 
-    The factory is intentionally decoupled from any global or external
-    configuration system (e.g., Hydra). Configuration inputs are treated
-    as structural contracts (via Protocols) and may originate from
-    Hydra-backed dataclasses, plain dataclasses, or other compatible
-    objects defined at the application / CLI layer.
-
-    Responsibilities of this factory:
-        - Translate dataset metadata into model-level configuration
-          (input channels, head definitions, logit-adjust priors).
-        - Normalize backbone and conditioning configuration into the
-          internal `multihead.*Config` dataclasses owned by the models
-          module.
-        - Instantiate and return a fully initialized `MultiHeadUNet`.
+    Parameters are keyword-only to enforce explicit configuration
+    boundaries and avoid ambiguity in model construction.
 
     Args:
-        dataspecs:
-            Dataset specifications carrying runtime information derived
-            from the data pipeline, including:
-                - image channel count,
-                - per-head class counts,
-                - optional logit-adjust priors,
-                - domain cardinalities and vector dimensions.
-        backbone_config:
-            Backbone configuration describing:
-                - backbone body name (e.g., 'unet', 'unetpp'),
-                - base channel width,
-                - convolutional block parameters forwarded to the
-                  backbone constructor.
-        conditioning_config:
-            Domain conditioning configuration describing how categorical
-            domain IDs and/or continuous domain vectors are routed to:
-                - input-level concatenation, and/or
-                - bottleneck-level FiLM conditioning.
+        dataspecs: Dataset-derived specifications
+        body_config: Backbone configuration describing architecture
+            selection and convolutional structure parameters.
+        conditioning_config: Mapping of domain names to conditioning
+            strategies, defining how domain information is injected
+            (concatenation and/or FiLM).
         **kwargs:
-            Optional runtime overrides forwarded to `MultiHeadUNet`,
-            such as:
-                - `enable_logit_adjust`,
-                - `enable_clamp`,
-                - `clamp_range`.
+            Optional runtime overrides forwarded to the model constructor,
+            including:
+            - enable_clamp
+            - clamp_range
 
     Returns:
-        BaseMultiheadModel:
-            A fully configured `MultiHeadUNet` instance composed of:
-                - the selected UNet backbone,
-                - multihead output blocks,
-                - optional domain conditioning (concat / FiLM),
-                - numeric safety and logit-adjust mechanisms.
+        frames.MultiHeadBaseModel: Fully initialized and validated
+            MultiHeadUNet instance.
 
     Raises:
-        ValueError:
-            If an unsupported backbone identifier is provided.
-
-    Notes:
-        - All arguments are keyword-only to make configuration boundaries
-          explicit and order-independent.
-        - This factory assumes configuration objects are already
-          validated by the application layer.
-        - No Hydra or experiment-level configuration is imported or
-          accessed within this module by design.
+        ValueError: If the backbone configuration is invalid or
+            unsupported.
+        RuntimeError: If the model fails structural or forward-pass
+            validation.
     '''
 
-
-    # parse from data specs
-    dataspecs_config = _FromDataSpecs(
-        in_ch=dataspecs.meta.image_specs.num_channels,
-        logit_adjust=dataspecs.heads.logits_adjust,
-        heads_w_counts=dataspecs.heads.class_counts,
-        domain_ids_num=dataspecs.domains.ids_max + 1, # from 0-based
-        domain_vec_dim=dataspecs.domains.vec_dim
-    )
-
-    # return model instance
-    return multihead.MultiHeadUNet(
-        dataspecs_config=dataspecs_config,
-        backbone_config=backbone_config,
-        conditioning=conditioning,
+    model = frames.MultiHeadUNet(
+        dataspecs=dataspecs,
+        backbone_config=body_config,
+        conditioning_config=dict(conditioning_config),
         **kwargs
     )
+    _validate_model_build(model, dataspecs)
+    return model
+
+def _validate_model_build(
+    model: frames.MultiHeadBaseModel,
+    dataspecs: core.DataSpecs,
+    *,
+    batch_size: int = 2,
+) -> None:
+    '''
+    Build-time structural and numerical validations.
+
+    The function constructs a synthetic batch using `build_dummy_batch()`
+    from the model and executes a forward pass in eval/no_grad mode.
+
+    Structural constraints:
+        - Model accepts generated input tensors (from the model).
+        - Output is a dict[str, Tensor].
+        - Output heads exactly match dataspecs.heads.class_counts keys.
+        - Each head output is a 4D tensor (B, C, H, W).
+        - Batch dimension matches requested batch_size.
+        - Channel dimension matches number of classes per head.
+        - Spatial dimensions are not validated against input resolution.
+
+    Numerical constraints:
+        - All output tensors contain only finite values (no NaN/Inf).
+    '''
+
+    model.eval()
+
+    # ----- forward pass
+    b = model.build_dummy_batch(batch_size=batch_size)
+    with torch.no_grad():
+        try:
+            outputs = model(
+                b['x'],
+                ids_domain = b.get('ids_domain'),
+                vec_domain = b.get('vec_domain')
+            )
+        except Exception as e:
+            raise RuntimeError('Model forward validation failed.') from e
+
+    # ----- output container contract
+    if not isinstance(outputs, dict):
+        raise RuntimeError(f'Expected dict[str, Tensor], got {type(outputs)}')
+
+    expected_heads = set(dataspecs.heads.class_counts.keys())
+    actual_heads = set(outputs.keys())
+    if expected_heads != actual_heads:
+        raise RuntimeError(
+            'Head mismatch between model and dataspecs.\n'
+            f'Expected: {expected_heads}\n'
+            f'Actual: {actual_heads}'
+        )
+
+    # ----- per-head validation
+    for head, class_counts in dataspecs.heads.class_counts.items():
+
+        y = outputs[head]
+
+        # head type and shape
+        if not torch.is_tensor(y):
+            raise RuntimeError(f'Head {head} is not a tensor')
+        if y.ndim != 4:
+            raise RuntimeError(f'Head {head} must be BCHW, got {y.shape}')
+
+        bsz, ch, _, _ = y.shape
+        # batch consistency only (no spatial assumptions)
+        if bsz != batch_size:
+            raise RuntimeError(
+                f'Batch mismatch in head {head}: '
+                f'{bsz} != {batch_size}'
+            )
+
+        # channel topology
+        if ch != len(class_counts):
+            raise RuntimeError(
+                f'Channel mismatch in head {head}: '
+                f'{ch} != {len(class_counts)}'
+            )
+
+        # numeric stability
+        if not torch.isfinite(y).all():
+            raise RuntimeError(f'Non-finite values in head {head}')

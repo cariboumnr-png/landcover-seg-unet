@@ -1,7 +1,7 @@
 # configuration for building multihead model
-use_body: unet
+model_body: unet
+model_body_registry:
 
-body_registry:
   unet:
     body: unet
     base_ch: 32
@@ -14,6 +14,7 @@ body_registry:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
+
   unetpp:
     body: unetpp
     base_ch: 32
@@ -26,8 +27,9 @@ body_registry:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
+
   unetppp:
-    body: unetpp
+    body: unetppp
     base_ch: 32
     conv_params:
       downs:
@@ -40,26 +42,34 @@ body_registry:
         p_drop: 0.0
 
 # conditioning
-conditioning:
-  # mode of conditioning: 'none', 'concat', 'film', 'hybrid'
-  mode: 'hybrid'
-  # concat pathway
+conditioner: [concat, film]
+conditioner_registry:
+
   concat:
-    out_dim: 4
+    name: concat
     use_ids: True
     use_vec: True
-    use_mlp: True
-  # FiLM pathway
+    ids_embd_dims: 4
+    vec_proj_dims: 4
+    vec_proj_config:
+      use_mlp: False
+    conditioner_config: {}
+
   film:
-    embed_dim: 4
+    name: film
     use_ids: True
     use_vec: True
-    hidden: 128
+    ids_embd_dims: 4
+    vec_proj_dims: 4
+    vec_proj_config:
+      use_mlp: True
+      hidden_dim: 128
+      num_layers: 1
+      activation: 'silu'
+      dropout: 0.1
+    conditioner_config:
+      hidden_dim: 128
 
 # numerical safety
+enable_clamp: True
 clamp_range: [1e-4, 1e4]
-
-# runtime flags - don't modify unless debugging
-flags:
-  enable_logit_adjust: True
-  enable_clamp: True

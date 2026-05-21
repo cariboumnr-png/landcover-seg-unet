@@ -45,7 +45,6 @@ class _DataLoaderConfig:
 @dataclasses.dataclass
 class _EngineExecConfig:
     use_amp: bool = True
-    enable_logit_adjust: bool = False
     logit_adjust_alpha: float = 1.0
 
 # ----- engine optim

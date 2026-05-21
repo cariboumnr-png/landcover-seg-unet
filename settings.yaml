@@ -160,10 +160,8 @@ transform:
 # optionnelles.
 # -----------------------------------------------------------------------------
 models:
-  conditioning:
-    # Integration mode for domain data / Mode d'intégration des données thématiques
-    # Options: null | concat | film | hybrid
-    mode: 'hybrid'
+  model_body: unet
+  conditioner: [concat, film]
 
 
 # -----------------------------------------------------------------------------
@@ -209,7 +207,7 @@ session:
   # -------------------------------------------------------------------------
   engine_exec:
     use_amp: True
-    enable_logit_adjust: True
+    logit_adjust_alpha: 1.0
 
   # -------------------------------------------------------------------------
   # OPTIMIZATION SETTINGS

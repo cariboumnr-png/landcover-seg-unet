@@ -40,6 +40,12 @@ class Backbone(torch.nn.Module, metaclass=abc.ABCMeta):
         '''Number of channels in the output feature map (C_out).'''
         raise NotImplementedError
 
+    @property
+    @abc.abstractmethod
+    def spatial_divisor(self) -> int:
+        '''Integer factor by which spatial dimensions are constrained.'''
+        raise NotImplementedError
+
     @abc.abstractmethod
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''

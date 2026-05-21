@@ -19,44 +19,48 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.models.backbones`.
+'''Base classes for architecture backbones.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# standard imports
+import abc
+# third-party imports
+import torch
+# local imports
+import landseg.models.backbones as backbones
 
-from __future__ import annotations
-import importlib
-import typing
+class UNetBackbone(backbones.Backbone):
+    '''
+    Contract for any feature extractor used by MultiHeadModel.
+    Implementations must produce a feature map with a known channel
+    width that matches the heads' expected input (e.g., base_ch).
+    '''
 
-__all__ = [
-    # classes
-    'Backbone',
-    'UNet',
-    'UNetPP',
-    'UNetPPP',
-    'UNetBackbone',
-    'UNetBodyConfig'
-    # functions
-    # types
-]
+    @property
+    @abc.abstractmethod
+    def bottleneck_ch(self) -> int:
+        '''Return the bottleneck channel number.'''
+        raise NotImplementedError
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .config import UNetBodyConfig
-    from .unet import UNet, UNetPP, UNetPPP, UNetBackbone
+    @abc.abstractmethod
+    def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        '''
+        Args:
+            x: [B, C_in, H, W]
+        Returns:
+            y: [B, C_out, H, W] (or possibly downsampled; the framework
+                should document expectations, e.g., same spatial size if
+                heads are dense).
+        '''
+        raise NotImplementedError
 
-def __getattr__(name: str):
-
-    if name in {'Backbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'UNetBodyConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
-    if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBackbone'}:
-        return getattr(importlib.import_module('.unet', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    @abc.abstractmethod
+    def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
+        '''
+        Args:
+            x: [B, C_in, H, W]
+        Returns:
+            y: [B, C_out, H, W] (or possibly downsampled; the framework
+                should document expectations, e.g., same spatial size if
+                heads are dense).
+        '''
+        raise NotImplementedError

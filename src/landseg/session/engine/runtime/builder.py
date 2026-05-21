@@ -22,7 +22,10 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Engine runtime building
+Engine runtime building module.
+
+Provides construction utilities for assembling execution, optimization,
+and task subsystems into a unified runtime.
 '''
 
 # standard imports
@@ -64,8 +67,42 @@ def build_engine_runtime(
     device: str
 ) -> EngineRuntime:
     '''
-    doc
+    Construct the full engine runtime from model, data specifications,
+    dataloaders, and configuration objects.
+
+    This function validates spatial compatibility between input data
+    patches and model requirements, initializes execution state, builds
+    the batch execution engine, and assembles optimization and task
+    subsystems.
+
+    Args:
+        dataspecs: Dataset specification describing model heads and
+            hierarchical structure.
+        dataloaders: Data loader interface providing batching metadata
+            and preview context.
+        model: Multi-head model used for inference and training execution.
+        config: Runtime configuration providing execution, optimization,
+            and task settings.
+        device: Target compute device identifier (e.g., 'cpu', 'cuda').
+
+    Returns:
+        EngineRuntime:
+            Fully assembled runtime bundle containing execution engine,
+            optimization module, and task manager.
+
+    Raises:
+        ValueError:
+            If dataloader patch size is not divisible by model spatial
+            divisor.
     '''
+
+    # spatial division compability
+    p = dataloaders.meta.patch_size
+    s = model.spatial_divisor
+    if not p % s == 0:
+        print(f'Dataloader patch size (H*W): {p}')
+        print(f'Model spatial divisor (H*W): {s}')
+        raise ValueError(f'Invalid patch dimension: {p} not divible by {s}')
 
     # aliases
     exec_config = config.engine_exec

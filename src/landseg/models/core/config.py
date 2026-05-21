@@ -19,44 +19,39 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.models.backbones`.
+# pylint: disable=missing-function-docstring
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''Multihead model typed configuration.'''
 
 from __future__ import annotations
-import importlib
+# standard imports
 import typing
 
-__all__ = [
-    # classes
-    'Backbone',
-    'UNet',
-    'UNetPP',
-    'UNetPPP',
-    'UNetBackbone',
-    'UNetBodyConfig'
-    # functions
-    # types
-]
+class DomainTargetConfig(typing.Protocol):
+    '''Typed container for configuring concatenation adapter.'''
+    @property
+    def name(self) -> str: ...
+    @property
+    def use_ids(self) -> bool: ...
+    @property
+    def use_vec(self) -> bool: ...
+    @property
+    def ids_embd_dims(self) -> int: ...
+    @property
+    def vec_proj_dims(self) -> int: ...
+    @property
+    def vec_proj_config(self) -> DomainProjectionConfig: ...
+    @property
+    def conditioner_config(self) -> DomainConditionerAdapterConfig: ...
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .config import UNetBodyConfig
-    from .unet import UNet, UNetPP, UNetPPP, UNetBackbone
+class DomainProjectionConfig(typing.TypedDict):
+    '''doc'''
+    use_mlp: typing.NotRequired[bool]
+    hidden_dim: typing.NotRequired[int | None]
+    num_hidden_layers: typing.NotRequired[int]
+    dropout: typing.NotRequired[float]
+    activation: typing.NotRequired[str]
 
-def __getattr__(name: str):
-
-    if name in {'Backbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
-
-    if name in {'UNetBodyConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
-    if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBackbone'}:
-        return getattr(importlib.import_module('.unet', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class DomainConditionerAdapterConfig(typing.TypedDict):
+    '''To be expanded as needed'''
+    hidden_dim: typing.NotRequired[int] # currently for FiLM

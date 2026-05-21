@@ -19,63 +19,36 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+'''
+Top-level namespace for `landseg.models.core.conditioner`.
 
-'''Multihead model typed configuration.'''
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
 from __future__ import annotations
-# standard imports
+import importlib
 import typing
 
-class DataSpecsConfig(typing.Protocol):
-    '''General configuration'''
-    @property
-    def in_ch(self) -> int: ...
-    @property
-    def logit_adjust(self) -> dict[str, list[float]]: ...
-    @property
-    def heads_w_counts(self) -> dict[str, list[int]]: ...
-    @property
-    def domain_ids_num(self) -> int: ...     # id categories
-    @property
-    def domain_vec_dim(self) -> int: ...     # vector dims
+__all__ = [
+    # classes
+    'ConcatAdapter',
+    'FilmConditioner',
+    # functions
+    # types
+]
 
-class BackboneConfig(typing.Protocol):
-    '''Typed container for model backbone configuration.'''
-    @property
-    def body(self) -> str: ...
-    @property
-    def base_ch(self) -> int: ...
-    @property
-    def conv_params(self) -> dict[str, typing.Any]:...
+# for static check
+if typing.TYPE_CHECKING:
+    from .concat import ConcatAdapter
+    from .film import FilmConditioner
 
-class ConditioningConfig(typing.Protocol):
-    '''Typed container for model conditioning configuration.'''
-    @property
-    def mode(self) -> str | None: ...
-    @property
-    def concat(self) -> _ConcatConfig: ...
-    @property
-    def film(self) -> _FilmConfig: ...
+def __getattr__(name: str):
 
-class _ConcatConfig(typing.Protocol):
-    '''Typed container for configuring concatenation adapter.'''
-    @property
-    def out_dim(self) -> int: ...
-    @property
-    def use_ids(self) -> bool: ...
-    @property
-    def use_vec(self) -> bool: ...
-    @property
-    def use_mlp(self) -> bool: ...
+    if name in {'ConcatAdapter'}:
+        return getattr(importlib.import_module('.concat', __package__), name)
 
-class _FilmConfig(typing.Protocol):
-    '''Typed container for configuring FiLM conditioner.'''
-    @property
-    def embed_dim(self) -> int:...
-    @property
-    def use_ids(self) -> bool: ...
-    @property
-    def use_vec(self) -> bool: ...
-    @property
-    def hidden(self) -> int: ...
+    if name in {'FilmConditioner'}:
+        return getattr(importlib.import_module('.film', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

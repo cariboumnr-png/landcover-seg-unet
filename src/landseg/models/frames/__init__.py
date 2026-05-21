@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.multihead`.
+Top-level namespace for `landseg.models.frames`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,40 +32,23 @@ import typing
 
 __all__ = [
     # classes
-    'BackboneConfig',
-    'BaseMultiheadModel',
-    'ConditioningConfig',
-    'DataSpecsConfig',
-    'MultiHeadUNet',
+    'MultiHeadBaseModel',
+    'MultiHeadUNet'
     # functions
-    'get_concat',
-    'get_film'
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import BaseMultiheadModel
-    from .concat import get_concat
-    from .config import BackboneConfig, ConditioningConfig,  DataSpecsConfig
-    from .film import get_film
-    from .frame import MultiHeadUNet
+    from .base import MultiHeadBaseModel
+    from .unet import MultiHeadUNet
 
 def __getattr__(name: str):
 
-    if name in {'BaseMultiheadModel'}:
+    if name in {'MultiHeadBaseModel'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'get_concat'}:
-        return getattr(importlib.import_module('.concat', __package__), name)
-
-    if name in {'BackboneConfig', 'ConditioningConfig', 'DataSpecsConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
-    if name in {'get_film'}:
-        return getattr(importlib.import_module('.film', __package__), name)
-
     if name in {'MultiHeadUNet'}:
-        return getattr(importlib.import_module('.frame', __package__), name)
+        return getattr(importlib.import_module('.unet', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

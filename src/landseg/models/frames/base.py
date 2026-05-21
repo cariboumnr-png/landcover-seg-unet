@@ -1,0 +1,234 @@
+# =========================================================================== #
+#           Copyright (c) His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Abstract base definitions for multi-head neural network models.
+
+This module defines the shared interface and common infrastructure used
+by domain-aware multi-head models in the landseg framework.
+
+The base model coordinates:
+- shared feature extraction implemented by subclasses,
+- domain-context routing,
+- configurable prediction heads,
+- per-head logit adjustment,
+- selective head activation and freezing,
+- numerical safety validation.
+
+The concrete network body/backbone architecture is intentionally not
+defined here. Subclasses are responsible for implementing the actual
+feature extraction pipeline in ``_forward_features()`` and exposing any
+model-specific spatial constraints through ``spatial_divisor``.
+
+Typical subclasses may implement encoder-decoder architectures,
+transformer backbones, convolutional feature extractors, or hybrid
+multi-scale feature pipelines while reusing the shared head-management
+and inference behavior provided by this base class.
+'''
+
+# standard imports
+import abc
+# third-party imports
+import torch
+import torch.nn
+# local imports
+import landseg.models.core as model_core
+
+class MultiHeadBaseModel(abc.ABC, torch.nn.Module):
+    '''
+    Abstract base class for domain-aware multi-head segmentation models.
+
+    This class provides shared infrastructure for:
+    - domain-context routing,
+    - configurable prediction heads,
+    - per-head logit adjustment,
+    - selective head activation/freezing,
+    - numerical safety validation.
+
+    Subclasses are responsible for implementing the shared feature
+    extraction pipeline and defining model-specific architectural
+    constraints.
+    '''
+
+    def __init__(self):
+        '''
+        Initialize the multi-head model base state.
+
+        Expected subclass attributes:
+        - heads:
+            Head manager responsible for output prediction heads.
+        - domain_router:
+            Domain-aware routing module that converts raw domain
+            identifiers/vectors into structured routing payloads.
+        - num_safety:
+            Utility module for numerical safety checks and stabilization.
+        '''
+
+        super().__init__()
+        self.heads: model_core.HeadManager
+        self.domain_router: model_core.DomainContextRouter
+        self.num_safety: model_core.NumericSafety
+
+    @property
+    def logit_adjust(self) -> dict[str, torch.Tensor]:
+        '''
+        Returns Lazily gather per-head logit adjustment buffers.
+
+        Buffers are named 'la_{head}'. Excludes the scalar 'la_alpha'.
+        '''
+        out: dict[str, torch.Tensor] = {}
+        for name, buf in self.named_buffers():
+            if name.startswith('la_') and name != 'la_alpha':
+                head = name.removeprefix('la_')
+                out[head] = buf
+        return out
+
+    @property
+    def logit_adjust_alpha(self) -> float:
+        '''Returns Global logit adjust alpha scalar.'''
+        return float(getattr(self, 'la_alpha').item())
+
+    @property
+    @abc.abstractmethod
+    def spatial_divisor(self) -> int:
+        '''Minimum valid spatial divisor required by the backbone.'''
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def build_dummy_batch(
+        self,
+        batch_size: int = 2,
+        device: str = 'cpu'
+    ) -> dict[str, torch.Tensor]:
+        '''
+        Construct a synthetic batch for validation or export tests.
+
+        Args:
+            batch_size: Number of samples to generate.
+            device: Target device for generated tensors.
+
+        Returns:
+            Dictionary containing model-compatible input tensors.
+        '''
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def _forward_features(
+        self,
+        x: torch.Tensor,
+        domains: dict[str, model_core.DomainTargetPayload],
+    ) -> torch.Tensor:
+        '''
+        Compute shared backbone features before prediction heads.
+
+        Args:
+            x: Input tensor of shape: (batch, channels, height, width)
+            domains: Structured domain-routing payload generated by the
+                domain router.
+
+        Returns:
+            Shared feature tensor consumed by prediction heads.
+        '''
+        raise NotImplementedError
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        *,
+        ids_domain: torch.Tensor | None = None,
+        vec_domain: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
+
+        '''
+        Compute output logits for all active heads.
+
+        The forward pass performs:
+        1. Input numerical validation.
+        2. Domain-context routing.
+        3. Shared feature extraction.
+        4. Per-head prediction with optional logit adjustment.
+
+        Args:
+            x: Input tensor of shape: (batch, channels, height, width)
+            ids_domain: Optional integer domain identifiers.
+            vec_domain: Optional continuous domain embedding vectors.
+
+        Returns:
+            Dictionary mapping head names to output logits.
+        '''
+
+        assert torch.isfinite(x).all(), 'Input has NaN/Inf'
+        domain = self.domain_router.forward(ids_domain, vec_domain)
+        x = self._forward_features(x, domain)
+        return self.heads.forward(
+            x,
+            self.heads.active,
+            self.logit_adjust,
+            self.logit_adjust_alpha,
+        )
+
+    def set_active_heads(self, active_heads: list[str] | None=None) -> None:
+        '''Set the list of active heads used during forward.'''
+        self.heads.active = active_heads
+
+    def set_frozen_heads(self, frozen_heads: list[str] | None=None) -> None:
+        '''Freeze parameters for selected heads.'''
+        self.heads.frozen = frozen_heads
+        self.heads.freeze(frozen_heads)
+
+    def reset_heads(self):
+        '''Clear active/frozen head selections.'''
+        self.heads.active = None
+        self.heads.frozen = None
+
+    def set_logit_adjust_alpha(self, alpha: float) -> None:
+        '''Set logit adjust alpha.'''
+        la_alpha: torch.Tensor = getattr(self, 'la_alpha')
+        la_alpha.fill_(float(alpha))
+
+    def _register_logit_adjust(
+        self,
+        logit_adjust: dict[str, list[float]]
+    ) -> None:
+        '''
+        Register per-head logit adjustment buffers.
+
+        Logit adjustment values are stored as non-trainable buffers and
+        broadcast during prediction to compensate for class imbalance
+        or prior probability shifts.
+
+        Registered buffers:
+        - la_alpha: Global scalar strength multiplier.
+        - la_{head_name}: Per-head class adjustment tensor shaped as:
+            (1, num_classes, 1, 1)
+
+        Args:
+            logit_adjust: Mapping of head names to per-class adjustment
+                values.
+        '''
+
+        # register logit adjustments
+        # scalar strength alpha (1.0 = as-provided priors) for logit adjust
+        self.register_buffer('la_alpha', torch.tensor(1.0, dtype=torch.float32))
+        # register perhead logit adjustment as buffers (NOT parameters)
+        for h, v in logit_adjust.items():
+            t = torch.tensor(v, dtype=torch.float32).view(1, -1, 1, 1)
+            self.register_buffer(f'la_{h}', t)

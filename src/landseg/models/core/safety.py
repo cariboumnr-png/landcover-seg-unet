@@ -19,44 +19,40 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.models.backbones`.
+'''doc'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# third-party imports
+import torch
 
-from __future__ import annotations
-import importlib
-import typing
+class NumericSafety:
+    '''Autocast and clamping utilities for numerical stability.'''
 
-__all__ = [
-    # classes
-    'Backbone',
-    'UNet',
-    'UNetPP',
-    'UNetPPP',
-    'UNetBackbone',
-    'UNetBodyConfig'
-    # functions
-    # types
-]
+    def __init__(
+        self,
+        *,
+        enable_clamp: bool,
+        clamp_range: tuple[float, float],
+        device: str
+    ):
+        '''Configure clamping behavior and bounds.'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .config import UNetBodyConfig
-    from .unet import UNet, UNetPP, UNetPPP, UNetBackbone
+        self.enable_clamp = enable_clamp
+        self.clamp_range = clamp_range
+        self.device = device
 
-def __getattr__(name: str):
+    def autocast_context(
+        self,
+        enable: bool = True,
+        dtype: torch.dtype = torch.float16
+    ) -> torch.autocast:
+        '''Create an AMP autocast context for the current device.'''
 
-    if name in {'Backbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        return torch.autocast(self.device, dtype, enable)
 
-    if name in {'UNetBodyConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
+    def clamp(self, x: torch.Tensor) -> torch.Tensor:
+        '''Clamp tensor values to a safe numeric range.'''
 
-    if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBackbone'}:
-        return getattr(importlib.import_module('.unet', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+        if not self.enable_clamp:
+            return x
+        mmin, mmax = self.clamp_range
+        return torch.clamp(x, min=mmin, max=mmax)

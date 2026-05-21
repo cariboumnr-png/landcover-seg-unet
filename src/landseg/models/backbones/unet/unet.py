@@ -67,9 +67,9 @@ building blocks intended for composition inside more complex models.
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet
 
-class UNet(backbones.Backbone):
+class UNet(unet.UNetBackbone):
     '''
     UNet backbone implementing an encoder-decoder with skip connections.
 
@@ -93,9 +93,9 @@ class UNet(backbones.Backbone):
     '''
 
     # module aliases
-    DC = backbones.DoubleConv
-    DS = backbones.Downsample
-    US = backbones.Upsample
+    DC = unet.DoubleConv
+    DS = unet.Downsample
+    US = unet.Upsample
 
     # core UNet body
     def __init__(self, in_ch: int, base_ch: int, **kwargs):
@@ -159,6 +159,21 @@ class UNet(backbones.Backbone):
             if isinstance(m, torch.nn.Conv2d):
                 torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
+    @property
+    def bottleneck_ch(self) -> int:
+        '''Return the bottleneck channel number.'''
+        return self._out_channels * 16
+
+    @property
+    def out_channels(self) -> int:
+        '''Return the channel width of the backbone output.'''
+        return self._out_channels
+
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        return 2 ** len(self.downs)
+
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Run the contracting path and return encoder features.'''
 
@@ -186,8 +201,3 @@ class UNet(backbones.Backbone):
         x1, x2, x3, x4, xb = self.encode(x)
         x = self.decode((x1, x2, x3, x4, xb))
         return x
-
-    @property
-    def out_channels(self) -> int:
-        '''Return the channel width of the backbone output.'''
-        return self._out_channels

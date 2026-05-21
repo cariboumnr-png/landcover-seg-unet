@@ -20,16 +20,52 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.backbones.blocks`.
+Top-level namespace for `landseg.models.backbones.unet`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
-from .conv import DoubleConv, Downsample, Upsample
+from __future__ import annotations
+import importlib
+import typing
 
 __all__ = [
+    # classes
+    'UNetBackbone',
+    'UNet',
+    'UNetPP',
+    'UNetPPP',
     'DoubleConv',
     'Downsample',
-    'Upsample'
+    'Upsample',
+    # functions
+    # types
 ]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .base import UNetBackbone
+    from .conv import DoubleConv, Downsample, Upsample
+    from .unet import UNet
+    from .unetpp import UNetPP
+    from .unetppp import UNetPPP
+
+def __getattr__(name: str):
+
+    if name in {'UNetBackbone'}:
+        return getattr(importlib.import_module('.base', __package__), name)
+
+    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
+        return getattr(importlib.import_module('.conv', __package__), name)
+
+    if name in {'UNet'}:
+        return getattr(importlib.import_module('.unet', __package__), name)
+
+    if name in {'UNetPP'}:
+        return getattr(importlib.import_module('.unetpp', __package__), name)
+
+    if name in {'UNetPPP'}:
+        return getattr(importlib.import_module('.unetppp', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

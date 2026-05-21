@@ -54,9 +54,9 @@ computed by combining:
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet
 
-class UNetPP(backbones.Backbone):
+class UNetPP(unet.UNetBackbone):
     '''UNet++ backbone with nested dense skip refinements.
 
     This class constructs a 4-level encoder identical to UNet, followed by
@@ -77,8 +77,8 @@ class UNetPP(backbones.Backbone):
     '''
 
     # module aliases
-    DC = backbones.DoubleConv
-    DS = backbones.Downsample
+    DC = unet.DoubleConv
+    DS = unet.Downsample
     US = torch.nn.Upsample
 
     def __init__(self, in_ch: int, base_ch: int, **kwargs):
@@ -166,6 +166,21 @@ class UNetPP(backbones.Backbone):
             if isinstance(m, torch.nn.Conv2d):
                 torch.nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
+    @property
+    def bottleneck_ch(self) -> int:
+        '''Return the bottleneck channel number.'''
+        return self._out_channels * 16
+
+    @property
+    def out_channels(self) -> int:
+        '''Return channel width of final decoded representation.'''
+        return self._out_channels
+
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        return 2 ** len(self.downs)
+
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Return 5-level encoder features.'''
 
@@ -220,8 +235,3 @@ class UNetPP(backbones.Backbone):
 
         x = torch.cat(tensors, dim=1)
         return self.nodes[node](x)
-
-    @property
-    def out_channels(self) -> int:
-        '''Return channel width of final decoded representation.'''
-        return self._out_channels

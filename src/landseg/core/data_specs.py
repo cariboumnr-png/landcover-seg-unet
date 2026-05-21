@@ -167,7 +167,7 @@ class Domains:
     train: Dom
     val: Dom
     test: Dom
-    ids_max: int
+    ids_num: int
     vec_dim: int
 
     class Dom(typing.TypedDict):
@@ -178,6 +178,6 @@ class Domains:
     def __str__(self) -> str:
         return '\n'.join([
             '[Domain Knowledge]',
-            f'Discrete domain IDs count: {self.ids_max + 1}', # 0- to 1-based
+            f'Discrete domain IDs count: {self.ids_num + 1}', # 0- to 1-based
             f'Continuous domain PCA number of axes: {self.vec_dim}'
         ])

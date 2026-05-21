@@ -19,37 +19,19 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base interface for multihead model.'''
+# pylint: disable=missing-function-docstring
 
+'''Multihead model typed configuration.'''
+
+from __future__ import annotations
 # standard imports
-import abc
-# third-party imports
-import torch
-import torch.nn
+import typing
 
-class BaseMultiheadModel(torch.nn.Module, metaclass=abc.ABCMeta):
-    '''Minimally required class methods.'''
-
-    @abc.abstractmethod
-    def forward(self, x: torch.Tensor, **kwargs) -> dict[str, torch.Tensor]:
-        '''Multihead output as a dict of tensors'''
-
-    @abc.abstractmethod
-    def set_active_heads(self, active_heads: list[str] | None) -> None:
-        '''Heads to be actively trained.'''
-
-    @abc.abstractmethod
-    def set_frozen_heads(self, frozen_heads: list[str] | None) -> None:
-        '''Heads with no gradient updates.'''
-
-    @abc.abstractmethod
-    def reset_heads(self) -> None:
-        '''Reset heads state.'''
-
-    @abc.abstractmethod
-    def set_logit_adjust_enabled(self, enabled: bool) -> None:
-        '''Enable/disable logit adjustment.'''
-
-    @abc.abstractmethod
-    def set_logit_adjust_alpha(self, alpha: float) -> None:
-        '''Set global logit adjustment scalar.'''
+class UNetBodyConfig(typing.Protocol):
+    '''Typed container for model backbone configuration.'''
+    @property
+    def body(self) -> str: ...
+    @property
+    def base_ch(self) -> int: ...
+    @property
+    def conv_params(self) -> dict[str, typing.Any]:...
