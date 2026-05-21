@@ -232,7 +232,7 @@ def _get_domain(
         train=train_domain,
         val=val_domain,
         test=test_domain,
-        ids_max=ids_domain.max_id if ids_domain else -1,
+        ids_num=ids_domain.max_id if ids_domain else -1,
         vec_dim=vec_domain.n_pca_ax if vec_domain else 0
     )
 

@@ -36,33 +36,21 @@ user-supplied configuration.
 '''
 
 # standard imports
-import dataclasses
+import typing
 # local imports
 import landseg.core as core
-import landseg.models.multihead as multihead
-
 import landseg.models.backbones as backbones
 import landseg.models.core as model_core
 import landseg.models.frames as frames
-
-# private dataclass
-@dataclasses.dataclass
-class _FromDataSpecs:
-    '''Typed container for model conditioning configuration.'''
-    in_ch: int
-    logit_adjust: dict[str, list[float]]
-    heads_w_counts: dict[str, list[int]]
-    domain_ids_num: int     # id categories
-    domain_vec_dim: int     # vector dims
 
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     *,
     dataspecs: core.DataSpecs,
-    backbone_config: multihead.BackboneConfig,
-    conditioning: multihead.ConditioningConfig,
+    body_config: backbones.UNetBodyConfig,
+    conditioning_config: typing.Mapping[str, model_core.DomainTargetConfig],
     **kwargs
-) -> multihead.BaseMultiheadModel:
+) -> frames.MultiHeadBaseModel:
     '''
     Construct a configured MultiHeadUNet from explicit inputs.
 
@@ -132,43 +120,9 @@ def build_multihead_unet(
           accessed within this module by design.
     '''
 
-
-    # parse from data specs
-    dataspecs_config = _FromDataSpecs(
-        in_ch=dataspecs.meta.image_specs.num_channels,
-        logit_adjust=dataspecs.heads.logits_adjust,
-        heads_w_counts=dataspecs.heads.class_counts,
-        domain_ids_num=dataspecs.domains.ids_max + 1, # from 0-based
-        domain_vec_dim=dataspecs.domains.vec_dim
-    )
-
-    # return model instance
-    return multihead.MultiHeadUNet(
-        dataspecs_config=dataspecs_config,
-        backbone_config=backbone_config,
-        conditioning=conditioning,
-        **kwargs
-    )
-
-def build_multihead_unet_(
-    *,
-    dataspecs: core.DataSpecs,
-    body_config: backbones.UNetBodyConfig,
-    concat_config: model_core.DomainTargetConfig | None,
-    film_config: model_core.DomainTargetConfig | None,
-    **kwargs
-) -> frames.MultiHeadBaseModel:
-    '''doc'''
-
-    cond_cfg: dict[str, model_core.DomainTargetConfig] = {}
-    if concat_config:
-        cond_cfg['input'] = concat_config
-    if film_config:
-        cond_cfg['bottleneck'] = film_config
-
     return frames.MultiHeadUNet(
         dataspecs=dataspecs,
         backbone_config=body_config,
-        conditioning_config=cond_cfg,
+        conditioning_config=dict(conditioning_config),
         **kwargs
     )
