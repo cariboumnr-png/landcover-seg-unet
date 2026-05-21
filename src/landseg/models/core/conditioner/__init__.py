@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.multihead`.
+Top-level namespace for `landseg.models.core.conditioner`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

@@ -57,6 +57,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.config', __package__), name)
 
     if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBackbone'}:
-        return getattr(importlib.import_module('.unetppp', __package__), name)
+        return getattr(importlib.import_module('.unet', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

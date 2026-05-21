@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.backbones.blocks`.
+Top-level namespace for `landseg.models.backbones.unet.blocks`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
