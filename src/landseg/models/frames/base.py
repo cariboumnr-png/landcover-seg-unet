@@ -29,7 +29,6 @@ import abc
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
 import landseg.models.core as model_core
 
 class MultiHeadBaseModel(torch.nn.Module):
@@ -37,23 +36,15 @@ class MultiHeadBaseModel(torch.nn.Module):
     doc
     '''
 
-    def __init__(
-        self,
-        *,
-        body: backbones.Backbone,
-        heads_manager: model_core.HeadManager,
-        domain_router: model_core.DomainContextRouter,
-        num_safety: model_core.NumericSafety,
-      ):
+    def __init__(self):
         '''
         doc
         '''
 
         super().__init__()
-        self.body = body
-        self.heads = heads_manager
-        self.domain_router = domain_router
-        self.safety = num_safety
+        self.heads: model_core.HeadManager
+        self.domain_router: model_core.DomainContextRouter
+        self.safety: model_core.NumericSafety
 
     @property
     def logit_adjust(self) -> dict[str, torch.Tensor]:
@@ -73,11 +64,6 @@ class MultiHeadBaseModel(torch.nn.Module):
     def logit_adjust_alpha(self) -> float:
         '''Returns Global logit adjust alpha scalar.'''
         return float(getattr(self, 'la_alpha').item())
-
-    @property
-    def spatial_divisor(self) -> int:
-        '''Minimum spatial divisor from the model body.'''
-        return self.body.spatial_divisor
 
     @abc.abstractmethod
     def _forward_features(
