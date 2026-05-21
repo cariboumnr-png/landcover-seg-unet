@@ -97,9 +97,9 @@ def _build_runner(config: configs.RootConfig) -> StepRunner:
     # setup the model
     model = models.build_multihead_unet(
         dataspecs=dataspecs,
-        backbone_config=config.models.body_registry[config.models.use_body],
-        conditioning=config.models.conditioning,
-        enable_clamp=config.models.flags.enable_clamp,
+        body_config=config.models.model_body_config,
+        conditioning_config=config.models.conditioning_config,
+        enable_clamp=config.models.enable_clamp,
         clamp_range=config.models.clamp_range
     )
     # build the session
