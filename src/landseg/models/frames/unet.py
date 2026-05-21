@@ -191,11 +191,11 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         self.body = body(in_ch + add_dim, base_ch, **backbone_config.conv_params)
 
         # validate the spatial divisibility
-        if dataspecs.meta.image_specs.height_width % body.spatial_divisor != 0:
+        if dataspecs.meta.image_specs.height_width % self.body.spatial_divisor != 0:
             raise RuntimeError(
                 'Input spatial size is incompatible with model.\n'
                 f'Input size: {dataspecs.meta.image_specs.height_width}\n'
-                f'Required divisor: {body.spatial_divisor}'
+                f'Required divisor: {self.body.spatial_divisor}'
             )
 
         # film conditioning adpater
