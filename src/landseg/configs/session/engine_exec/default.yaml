@@ -1,4 +1,3 @@
 # batch engine execution settings
 use_amp: True
-enable_logit_adjust: True
 logit_adjust_alpha: 1.0

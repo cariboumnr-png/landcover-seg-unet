@@ -65,8 +65,6 @@ class BatchExecConfigShape(typing.Protocol):
     @property
     def use_amp(self) -> bool: ...
     @property
-    def enable_logit_adjust(self) -> bool: ...
-    @property
     def logit_adjust_alpha(self) -> float: ...
 
 @dataclasses.dataclass
@@ -145,7 +143,6 @@ class BatchEngine:
         self.device = context.device
         self.model.to(self.device)
         # config model logit adjustment
-        self.model.set_logit_adjust_enabled(config.enable_logit_adjust)
         self.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
 
     # ----- Public Method
