@@ -29,7 +29,7 @@ model_body_registry:
         p_drop: 0.0
 
   unetppp:
-    body: unetpp
+    body: unetppp
     base_ch: 32
     conv_params:
       downs:
@@ -49,23 +49,26 @@ conditioner_registry:
     name: concat
     use_ids: True
     use_vec: True
-    ids_embd_dims: int = 4
-    vec_proj_dims: int = 4
+    ids_embd_dims: 4
+    vec_proj_dims: 4
     vec_proj_config:
       use_mlp: False
+    conditioner_config: {}
 
   film:
     name: film
     use_ids: True
     use_vec: True
-    ids_embd_dims: int = 4
-    vec_proj_dims: int = 4
+    ids_embd_dims: 4
+    vec_proj_dims: 4
     vec_proj_config:
       use_mlp: True
-      hidden_dim: 256
+      hidden_dim: 128
       num_layers: 1
-      activation: 'gelu'
+      activation: 'silu'
       dropout: 0.1
+    conditioner_config:
+      hidden_dim: 128
 
 # numerical safety
 enable_clamp: True

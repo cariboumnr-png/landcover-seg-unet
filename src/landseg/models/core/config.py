@@ -41,6 +41,8 @@ class DomainTargetConfig(typing.Protocol):
     def vec_proj_dims(self) -> int: ...
     @property
     def vec_proj_config(self) -> DomainProjectionConfig: ...
+    @property
+    def conditioner_config(self) -> DomainConditionerAdapterConfig: ...
 
 class DomainProjectionConfig(typing.TypedDict):
     '''doc'''
@@ -49,3 +51,7 @@ class DomainProjectionConfig(typing.TypedDict):
     num_hidden_layers: typing.NotRequired[int]
     dropout: typing.NotRequired[float]
     activation: typing.NotRequired[str]
+
+class DomainConditionerAdapterConfig(typing.TypedDict):
+    '''To be expanded as needed'''
+    hidden_dim: typing.NotRequired[int] # currently for FiLM

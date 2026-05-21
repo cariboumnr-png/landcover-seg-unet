@@ -89,6 +89,7 @@ class _DomainTargetConfig(typing.Protocol):
     ids_embd_dims: int
     vec_proj_dims: int
     vec_proj_config: _DomainProjectionConfig
+    conditioner_config: _DomainConditionerAdapterConfig
 
 class _DomainProjectionConfig(typing.TypedDict):
     use_mlp: typing.NotRequired[bool]
@@ -96,6 +97,9 @@ class _DomainProjectionConfig(typing.TypedDict):
     num_hidden_layers: typing.NotRequired[int]
     dropout: typing.NotRequired[float]
     activation: typing.NotRequired[str]
+
+class _DomainConditionerAdapterConfig(typing.TypedDict):
+    hidden_dim: typing.NotRequired[int] # currently for FiLM
 
 class _DomainTargetConfigBase(_DomainTargetConfig):
     def __post_init__(self):
@@ -116,6 +120,9 @@ class _Concat(_DomainTargetConfigBase):
             'use_mlp': False
         }
     )
+    conditioner_config: _DomainConditionerAdapterConfig = field(
+        default_factory=lambda: {}
+    )
 
 @dataclasses.dataclass
 class _FiLM(_DomainTargetConfigBase):
@@ -127,10 +134,15 @@ class _FiLM(_DomainTargetConfigBase):
     vec_proj_config: _DomainProjectionConfig = field(
         default_factory=lambda: {
             'use_mlp': True,
-            'hidden_dim': 256,
+            'hidden_dim': 128,
             'num_hidden_layers': 1,
             'activation': 'gelu',
             'dropout': 0.1,
+        }
+    )
+    conditioner_config: _DomainConditionerAdapterConfig = field(
+        default_factory=lambda: {
+            'hidden_dim': 128
         }
     )
 
