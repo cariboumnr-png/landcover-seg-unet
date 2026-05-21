@@ -75,8 +75,11 @@ Instead of forcing a rigid patch-size constraint at the data preparation layer,
 we updated the `Backbone` protocol to enforce a new `spatial_divisor` property.
 This allows the specific machine learning architecture (e.g., Swin vs. ResNet)
 to declare its own spatial constraints, preserving flexibility in the `geopipe`
-foundations. The divisibility is to be enforced during model frame construction
-time.
+foundations. The divisibility is enforced:
+1. during model frame construction time that the data block size (H*W) must be
+    divisible.
+2. during session engine construction time that the patch size (pH*pW) must be
+    divisible.
 
 ### 2.3. Preserving Multi-Modal Schemas
 
