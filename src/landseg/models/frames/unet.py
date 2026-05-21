@@ -225,14 +225,34 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         in_ch = self.dataspecs.meta.image_specs.num_channels
         size = self.dataspecs.meta.image_specs.height_width
-        # [B, C, S, S] assume H==W
-        return {
-            head: torch.randn(
-                (batch_size, in_ch, size, size),
-                device=device,
-                dtype=torch.float32
-            ) for head in self.dataspecs.heads.class_counts
-        }
+        ids_num = self.dataspecs.domains.ids_num
+        vec_dim = self.dataspecs.domains.vec_dim
+
+        return_dict: dict[str, torch.Tensor] = {}
+
+        # dummy input tensor [B, C, S, S] assume H==W
+        return_dict['x'] = torch.randn(
+            (batch_size, in_ch, size, size),
+            device=device,
+            dtype=torch.float32
+        )
+        # dummy domains (optional depending on dataspecs)
+        if ids_num > 0:
+            return_dict['ids_domain'] = torch.randint(
+                0,
+                ids_num,
+                (batch_size,),
+                dtype=torch.long,
+                device=device
+            )
+        if vec_dim > 0:
+            return_dict['vec_domain'] = torch.randn(
+                (batch_size, vec_dim),
+                dtype=torch.float32,
+                device=device
+            )
+
+        return return_dict
 
     def _forward_features(
         self,
@@ -260,8 +280,8 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         '''
 
         # feed domain to router
-        film = domains.get('film')
         concat = domains.get('concat')
+        film = domains.get('film')
 
         # concatenate domain channels (if configured)
         if self.concat is not None:
