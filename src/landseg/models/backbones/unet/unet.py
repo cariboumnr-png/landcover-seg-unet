@@ -67,10 +67,10 @@ building blocks intended for composition inside more complex models.
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.blocks as blocks
 
-class UNet(backbones.Backbone):
+class UNet(unet.UNetBackbone):
     '''
     UNet backbone implementing an encoder-decoder with skip connections.
 

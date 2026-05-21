@@ -54,10 +54,10 @@ computed by combining:
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.blocks as blocks
 
-class UNetPP(backbones.Backbone):
+class UNetPP(unet.UNetBackbone):
     '''UNet++ backbone with nested dense skip refinements.
 
     This class constructs a 4-level encoder identical to UNet, followed by
