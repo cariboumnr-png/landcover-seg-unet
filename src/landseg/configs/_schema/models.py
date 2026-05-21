@@ -150,15 +150,15 @@ class _FiLM(_DomainTargetConfigBase):
 @dataclasses.dataclass
 class ModelsConfig:
     model_body: str = 'unet'
-    model_body_registry: dict[str, _UNetBodyConfig] = field(
+    model_body_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
             'unet': _UNet(),
             'unetpp': _UNetPP(),
             'unetppp': _UNetPPP(),
         }
     )
-    conditioner: list[str] = ['concat', 'film']
-    conditioner_registry: dict[str, _DomainTargetConfig] = field(
+    conditioner: list[str] = field(default_factory=lambda: ['concat', 'film'])
+    conditioner_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
             'concat': _Concat,
             'film': _FiLM

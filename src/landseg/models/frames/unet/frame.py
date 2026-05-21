@@ -70,6 +70,7 @@ import torch
 import landseg._constants as c
 import landseg.core as core
 import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet_backbones
 import landseg.models.core as model_core
 import landseg.models.frames as frames
 import landseg.models.frames.unet as unet
@@ -154,14 +155,16 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
               compatible with UNet-style backbones.
         '''
 
+        super().__init__()
+
         # base channels
         base_ch = backbone_config.base_ch
 
         heads = {k: len(v) for k, v in dataspecs.heads.class_counts.items()}
-        heads_manager = model_core.HeadManager(base_ch, heads)
+        self.heads = model_core.HeadManager(base_ch, heads)
 
         # domain router
-        domain_router = model_core.DomainContextRouter(
+        self.domain_router = model_core.DomainContextRouter(
             domain_ids_num=dataspecs.domains.ids_num,
             domain_vec_dim=dataspecs.domains.vec_dim,
             targets=conditioning_config
@@ -178,6 +181,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         # core UNet body
         body = self._get_model_body(backbone_config.body)
         in_ch = dataspecs.meta.image_specs.num_channels
+        self.body: unet_backbones.UNetBackbone
         self.body = body(in_ch + add_dim, base_ch, **backbone_config.conv_params)
 
         # film conditioning adpater
@@ -192,22 +196,19 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             )
 
         # default safety
-        num_safety = model_core.NumericSafety(
+        self.num_safety = model_core.NumericSafety(
             enable_clamp=kwargs.get('enable_clamp', True),
             clamp_range=kwargs.get('clamp_range', (1e-4, 1e4)),
             device=c.DEVICE
         )
 
-        # build components
-        super().__init__(
-            body=body,
-            heads_manager=heads_manager,
-            num_safety=num_safety,
-            domain_router=domain_router
-        )
-
         # register logits adjustments
         self._register_logit_adjust(dataspecs.heads.logits_adjust)
+
+    @property
+    def spatial_divisor(self) -> int:
+        '''Minimum spatial divisor from the model body.'''
+        return self.body.spatial_divisor
 
     def _forward_features(
         self,
@@ -245,14 +246,14 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         return x
 
     @staticmethod
-    def _get_model_body(body: str) -> backbones.Backbone:
+    def _get_model_body(body: str) -> unet_backbones.UNetBackbone:
         '''Retrieve model body by name.'''
 
         # model body registry
         body_registry = {
-            'unet': backbones.UNet,
-            'unetpp': backbones.UNetPP,
-            'unetppp': backbones.UNetPPP
+            'unet': unet_backbones.UNet,
+            'unetpp': unet_backbones.UNetPP,
+            'unetppp': unet_backbones.UNetPPP
         }
         if not body in body_registry:
             raise ValueError(f'Invalid base model: {body}')
