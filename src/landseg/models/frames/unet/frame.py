@@ -162,32 +162,34 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         # domain router
         domain_router = model_core.DomainContextRouter(
+            domain_ids_num=dataspecs.domains.ids_num,
             domain_vec_dim=dataspecs.domains.vec_dim,
             targets=conditioning_config
         )
-
-        # domain concatenation
-        concat_cfg = conditioning_config.get('input')
-        self.concat = unet.ConcatAdapter(
-            out_dom=concat_cfg.projection.out_dim,
-            use_mlp=concat_cfg.projection.use_mlp,
-            dim_continuous=dataspecs.domains.ids_max,
-            num_categories=dataspecs.domains.vec_dim,
-        ) if concat_cfg else None
-
-        # film conditioner
-        film_cfg = conditioning_config.get('bottleneck')
-        self.film = unet.FilmConditioner(
-            embed_dim=film_cfg.projection.out_dim,
-            num_categories=dataspecs.domains.ids_max,
-            dim_continuous=dataspecs.domains.vec_dim
-        ) if film_cfg else None
+        # concat adapter
+        concat_config = conditioning_config.get('concat')
+        if concat_config is None:
+            self.concat = None
+            add_dim = 0
+        else:
+            add_dim = concat_config.ids_embd_dims
+            self.concat = unet.ConcatAdapter(concat_dim=add_dim)
 
         # core UNet body
         body = self._get_model_body(backbone_config.body)
         in_ch = dataspecs.meta.image_specs.num_channels
-        in_ch += concat_cfg.projection.out_dim if concat_cfg is not None else 0
-        self.body = body(in_ch, base_ch, **backbone_config.conv_params)
+        self.body = body(in_ch + add_dim, base_ch, **backbone_config.conv_params)
+
+        # film conditioning adpater
+        film_config = conditioning_config.get('film')
+        if film_config is None:
+            self.film = None
+        else:
+            self.film = unet.FilmConditioner(
+                embed_dim=film_config.vec_proj_dims,
+                bottleneck_ch=self.body.bottleneck_ch,
+                hidden_dim=film_config.conditioner_config.get('hidden_dim')
+            )
 
         # default safety
         num_safety = model_core.NumericSafety(
@@ -210,17 +212,19 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
     def _forward_features(
         self,
         x: torch.Tensor,
-        domains: dict[str, tuple[torch.Tensor | None, torch.Tensor | None]]
+        domains: dict[str, model_core.DomainTargetPayload]
     ) -> torch.Tensor:
         '''doc'''
 
         # feed domain to router
-        concat = domains.get('input', {})
-        film = domains.get('bottleneck', {})
+        film = domains.get('film')
+        concat = domains.get('concat')
 
         # concatenate domain channels (if configured)
         if self.concat is not None:
-            x = self.concat(x, *concat)
+            ids = concat.ids_embd if concat else None
+            vec = concat.vec_proj if concat else None
+            x = self.concat(x, ids, vec)
 
         # force float32 with clamping control for gradient stability
         with self.safety.autocast_context(dtype=torch.float32):
@@ -229,8 +233,9 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             xb = self.safety.clamp(xb)
             # FiLM at bottom if provided
             if self.film is not None:
-                z = self.film.embed(*film)
-                xb = self.film.film_bottleneck(xb, z)
+                ids = film.ids_embd if film else None
+                vec = film.vec_proj if film else None
+                xb = self.film(xb, ids, vec)
                 xb = self.safety.clamp(xb)
             # decoders
             xs = tuple(self.safety.clamp(xx) for xx in [x1, x2, x3, x4, xb])

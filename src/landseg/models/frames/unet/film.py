@@ -20,170 +20,145 @@
 # =========================================================================== #
 
 '''
-FiLM-based domain conditioning for UNet-style models.
+FiLM-based domain conditioning modules.
 
-Provides modules to embed domain information (categorical and/or
-continuous) and generate FiLM parameters to modulate bottleneck feature
-maps.
+This module provides FiLM conditioning adapters that consume routed
+domain conditioning payloads and generate feature-wise affine modulation
+parameters for convolutional bottleneck features.
 
-Public APIs:
-    - FilmConditioner: Builds domain embeddings and applies FiLM to
-      bottleneck features.
-    - get_film: Factory that constructs a FilmConditioner from config.
+Conditioning tensors are produced externally by a
+`DomainContextRouter`. This module is intentionally limited to:
+    - consuming routed conditioning payloads
+    - generating FiLM modulation parameters
+    - applying feature-wise affine conditioning
+
+Embedding, projection, and routing logic are delegated to the routing
+subsystem.
 '''
 
 # third-party imports
 import torch
 import torch.nn
+# local imports
+import landseg.models.core as model_core
+
 
 class FilmConditioner(torch.nn.Module):
     '''
-    Build domain embeddings and generate FiLM parameters to modulate
-    UNet bottleneck features.
+    FiLM-based modulation using routed domain conditioning.
 
-    Supports:
-        - Categorical domain IDs (via Embedding).
-        - Continuous domain vectors (via MLP).
-        - Combined embeddings (summed).
+    This module consumes precomputed domain representations from
+    `DomainContextRouter` and produces FiLM parameters to modulate
+    feature maps.
 
-    FiLM output provides (gamma, beta) to scale and shift bottleneck
-    channels.
+    Supported inputs:
+        - ids_embd: [B, D]
+        - vec_proj: [B, D]
+
+    If both are present, they are summed before FiLM generation.
     '''
 
     def __init__(
         self,
         *,
         embed_dim: int,
-        num_categories: int,
-        dim_continuous: int,
-        **kwargs
-    ):
+        bottleneck_ch: int,
+        hidden_dim: int | None = None,
+    ) -> None:
         '''
-        Initialize a FiLM conditioner with optional embeddings.
+        Initialize FiLM generator.
 
         Args:
-            embed_dim: Width of the domain embedding (0 disables FiLM).
-            num_categories: Number of categorical domain classes (0
-                disables).
-            dim_continuous: Dimensionality of continuous domain vector
-                (0 disables).
-            kwargs:
-                - bottleneck_ch (int): Channel count of UNet bottleneck
-                    feature map to FiLM.
-                - hidden (int): Hidden width of the FiLM MLP; if falsy,
-                    defaults to embed_dim.
+            embed_dim: Expected domain embedding dimension (D).
+            bottleneck_ch: Number of feature channels to modulate.
+            hidden: Hidden width of FiLM MLP (defaults to embed_dim).
         '''
         super().__init__()
 
-        # parse arguments
-        bottleneck_ch = kwargs.get('bottleneck_ch', 16)
-        hidden = kwargs.get('hidden', 128)
-
-        # early exit
         self.embed_dim = embed_dim
-        if embed_dim == 0:  # FiLM disabled
-            self.domain_embed = None
-            self.domain_mlp = None
-            self.bottom_film = None
+
+        if embed_dim <= 0:
+            self.film = None
             return
 
-        # categorical
-        self.domain_embed = torch.nn.Embedding(
-            num_embeddings=num_categories,
-            embedding_dim=embed_dim
-        ) if num_categories > 0 else None
-        # continuous
-        self.domain_mlp = torch.nn.Sequential(
-            torch.nn.Linear(dim_continuous, embed_dim),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(embed_dim, embed_dim)
-        ) if dim_continuous > 0 else None
+        h = hidden_dim or embed_dim
 
-        # FiLM generator
-        h = hidden or embed_dim
-        self.bottom_film = torch.nn.Sequential(
+        self.film = torch.nn.Sequential(
             torch.nn.Linear(embed_dim, h),
             torch.nn.ReLU(inplace=True),
             torch.nn.Linear(h, 2 * bottleneck_ch),
         )
-        for m in self.bottom_film.modules():
-            if isinstance(m, torch.nn.Linear):
-                torch.nn.init.xavier_uniform_(m.weight)
-                torch.nn.init.zeros_(m.bias)
 
-    def embed(
+        for module in self.film.modules():
+            if isinstance(module, torch.nn.Linear):
+                torch.nn.init.xavier_uniform_(module.weight)
+                torch.nn.init.zeros_(module.bias)
+
+    def _build_z(
         self,
-        domain_ids: torch.Tensor | None = None,
-        domain_vec: torch.Tensor | None = None
+        payload: model_core.DomainTargetPayload | None,
     ) -> torch.Tensor | None:
         '''
-        Build domain embedding z (shape [B, embed_dim]) from:
-            - domain_ids (categorical) via Embedding, and/or
-            - domain_vec (continuous) via MLP.
+        Construct combined domain embedding z.
+
+        Args:
+            payload: Routed domain payload.
 
         Returns:
-            z (Tensor of shape [B, embed_dim]) or None if FiLM disabled
-            or if neither pathway produced an embedding.
+            Tensor [B, D] or None.
         '''
+        if payload is None or self.embed_dim <= 0:
+            return None
 
-        if self.embed_dim == 0:
+        z_ids = payload.ids_embd
+        z_vec = payload.vec_proj
+
+        if z_ids is None and z_vec is None:
             return None
-        z = None
-        if domain_ids is not None and self.domain_embed is not None:
-            z = self.domain_embed(domain_ids)
-        if domain_vec is not None and self.domain_mlp is not None:
-            zv = self.domain_mlp(domain_vec)
-            z = zv if z is None else z + zv
-        if z is None:
-            return None
+
+        if z_ids is not None and z_vec is not None:
+            if z_ids.shape[1] != z_vec.shape[1]:
+                raise ValueError('Mismatched payload dimensions')
+            z = z_ids + z_vec
+        else:
+            z = z_ids if z_ids is not None else z_vec
+
+        assert z is not None
+
+        if z.shape[1] != self.embed_dim:
+            raise ValueError(
+                f'Expected embedding dim={self.embed_dim}, '
+                f'got {z.shape[1]}'
+            )
+
         return torch.nn.functional.layer_norm(z, (z.shape[-1],))
-
-    def film_bottleneck(
-        self,
-        xb: torch.Tensor,
-        z: torch.Tensor | None = None
-    ) -> torch.Tensor:
-        '''
-        Apply FiLM to bottleneck features xb using embedding z.
-
-        Shapes:
-            xb: [B, Cb, H, W] with Cb == bottleneck_ch
-            z:  [B, embed_dim]
-
-        Returns:
-            xb' = xb * (1 + gamma) + beta, same shape as xb.
-
-        If FiLM disabled or z is None, returns xb unchanged.
-        '''
-
-        if self.embed_dim == 0 or z is None:
-            return xb
-        assert self.bottom_film is not None
-        gb = self.bottom_film(z)              # [B, 2*Cb]
-        gamma, beta = gb.chunk(2, dim=1)      # [B, Cb]
-        gamma = gamma.unsqueeze(-1).unsqueeze(-1)
-        beta  = beta.unsqueeze(-1).unsqueeze(-1)
-        return xb * (1.0 + gamma) + beta
 
     def forward(
         self,
         xb: torch.Tensor,
-        domain_ids: torch.Tensor | None = None,
-        domain_vec: torch.Tensor | None = None,
+        payload: model_core.DomainTargetPayload | None,
     ) -> torch.Tensor:
         '''
-        One-call interface:
-        1) Build embedding z from (domain_ids, domain_vec)
-        2) FiLM-modulate the bottleneck feature map xb
+        Apply FiLM modulation using routed domain payload.
 
         Args:
-            xb: Bottleneck feature map, shape [B, Cb, H, W]
-            domain_ids: Optional categorical IDs, shape [B] or [B, ...]
-            domain_vec: Optional continuous features, shape [B, D]
+            xb: Feature map [B, C, H, W]
+            payload: Routed domain conditioning
 
         Returns:
-            xb' (FiLM-modulated) with same shape as xb.
+            Modulated tensor (same shape as xb)
         '''
+        if self.embed_dim <= 0 or self.film is None:
+            return xb
 
-        z = self.embed(domain_ids=domain_ids, domain_vec=domain_vec)
-        return self.film_bottleneck(xb, z)
+        z = self._build_z(payload)
+        if z is None:
+            return xb
+
+        gb = self.film(z)                 # [B, 2C]
+        gamma, beta = gb.chunk(2, dim=1)  # [B, C]
+
+        gamma = gamma.unsqueeze(-1).unsqueeze(-1)
+        beta = beta.unsqueeze(-1).unsqueeze(-1)
+
+        return xb * (1.0 + gamma) + beta

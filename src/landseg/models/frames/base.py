@@ -83,7 +83,7 @@ class MultiHeadBaseModel(torch.nn.Module):
     def _forward_features(
         self,
         x: torch.Tensor,
-        domains: dict[str, tuple[torch.Tensor | None, torch.Tensor | None]],
+        domains: dict[str, model_core.DomainTargetPayload],
     ) -> torch.Tensor:
         '''Compute shared features before output heads.'''
         raise NotImplementedError
