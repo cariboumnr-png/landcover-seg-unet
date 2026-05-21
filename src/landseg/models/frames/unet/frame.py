@@ -223,23 +223,19 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         # concatenate domain channels (if configured)
         if self.concat is not None:
-            ids = concat.ids_embd if concat else None
-            vec = concat.vec_proj if concat else None
-            x = self.concat(x, ids, vec)
+            x = self.concat(x, concat)
 
         # force float32 with clamping control for gradient stability
-        with self.safety.autocast_context(dtype=torch.float32):
+        with self.num_safety.autocast_context(dtype=torch.float32):
             # encoders
-            x1, x2, x3, x4, xb = self.body.encode(self.safety.clamp(x))
-            xb = self.safety.clamp(xb)
+            x1, x2, x3, x4, xb = self.body.encode(self.num_safety.clamp(x))
+            xb = self.num_safety.clamp(xb)
             # FiLM at bottom if provided
             if self.film is not None:
-                ids = film.ids_embd if film else None
-                vec = film.vec_proj if film else None
-                xb = self.film(xb, ids, vec)
-                xb = self.safety.clamp(xb)
+                xb = self.film(xb, film)
+                xb = self.num_safety.clamp(xb)
             # decoders
-            xs = tuple(self.safety.clamp(xx) for xx in [x1, x2, x3, x4, xb])
+            xs = tuple(self.num_safety.clamp(x) for x in [x1, x2, x3, x4, xb])
             x = self.body.decode(xs)
 
         # return features

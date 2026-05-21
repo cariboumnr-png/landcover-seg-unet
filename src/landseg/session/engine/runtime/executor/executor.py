@@ -314,7 +314,10 @@ class BatchEngine:
         else:
             _domain = {}
         # enforce domain dict key names
-        _domain = {'ids': _domain.get('ids'), 'vec': _domain.get('vec')}
+        _domain = {
+            'ids_domain': _domain.get('ids'), 
+            'vec_domain': _domain.get('vec')
+        }
 
         # heads: fall back to all available heads if activce heads not provided
         if self.state.heads.active_heads is None:

@@ -44,7 +44,7 @@ class MultiHeadBaseModel(torch.nn.Module):
         super().__init__()
         self.heads: model_core.HeadManager
         self.domain_router: model_core.DomainContextRouter
-        self.safety: model_core.NumericSafety
+        self.num_safety: model_core.NumericSafety
 
     @property
     def logit_adjust(self) -> dict[str, torch.Tensor]:
