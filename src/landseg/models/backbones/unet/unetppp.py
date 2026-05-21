@@ -63,7 +63,6 @@ import torch.nn as nn
 import torch.nn.functional
 # local imports
 import landseg.models.backbones.unet as unet
-import landseg.models.backbones.unet.blocks as blocks
 
 class UNetPPP(unet.UNetBackbone):
     '''
@@ -86,8 +85,8 @@ class UNetPPP(unet.UNetBackbone):
     '''
 
     # aliases
-    DC = blocks.DoubleConv
-    DS = blocks.Downsample
+    DC = unet.DoubleConv
+    DS = unet.Downsample
 
     def __init__(
         self,

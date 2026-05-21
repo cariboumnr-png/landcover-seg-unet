@@ -36,6 +36,9 @@ __all__ = [
     'UNet',
     'UNetPP',
     'UNetPPP',
+    'DoubleConv',
+    'Downsample',
+    'Upsample',
     # functions
     # types
 ]
@@ -43,6 +46,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import UNetBackbone
+    from .conv import DoubleConv, Downsample, Upsample
     from .unet import UNet
     from .unetpp import UNetPP
     from .unetppp import UNetPPP
@@ -51,6 +55,9 @@ def __getattr__(name: str):
 
     if name in {'UNetBackbone'}:
         return getattr(importlib.import_module('.base', __package__), name)
+
+    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
+        return getattr(importlib.import_module('.conv', __package__), name)
 
     if name in {'UNet'}:
         return getattr(importlib.import_module('.unet', __package__), name)
