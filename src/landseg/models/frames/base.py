@@ -20,7 +20,28 @@
 # =========================================================================== #
 
 '''
-doc
+Abstract base definitions for multi-head neural network models.
+
+This module defines the shared interface and common infrastructure used
+by domain-aware multi-head models in the landseg framework.
+
+The base model coordinates:
+- shared feature extraction implemented by subclasses,
+- domain-context routing,
+- configurable prediction heads,
+- per-head logit adjustment,
+- selective head activation and freezing,
+- numerical safety validation.
+
+The concrete network body/backbone architecture is intentionally not
+defined here. Subclasses are responsible for implementing the actual
+feature extraction pipeline in ``_forward_features()`` and exposing any
+model-specific spatial constraints through ``spatial_divisor``.
+
+Typical subclasses may implement encoder-decoder architectures,
+transformer backbones, convolutional feature extractors, or hybrid
+multi-scale feature pipelines while reusing the shared head-management
+and inference behavior provided by this base class.
 '''
 
 # standard imports
@@ -33,17 +54,18 @@ import landseg.models.core as model_core
 
 class MultiHeadBaseModel(abc.ABC, torch.nn.Module):
     '''
-    Abstract base class for multi-head segmentation models.
+    Abstract base class for domain-aware multi-head segmentation models.
 
     This class provides shared infrastructure for:
-    - domain-aware feature routing,
-    - configurable output heads,
+    - domain-context routing,
+    - configurable prediction heads,
     - per-head logit adjustment,
     - selective head activation/freezing,
     - numerical safety validation.
 
-    Subclasses are responsible for implementing the backbone feature
-    extraction logic and defining model-specific spatial constraints.
+    Subclasses are responsible for implementing the shared feature
+    extraction pipeline and defining model-specific architectural
+    constraints.
     '''
 
     def __init__(self):
@@ -202,7 +224,7 @@ class MultiHeadBaseModel(abc.ABC, torch.nn.Module):
             logit_adjust: Mapping of head names to per-class adjustment
                 values.
         '''
-        
+
         # register logit adjustments
         # scalar strength alpha (1.0 = as-provided priors) for logit adjust
         self.register_buffer('la_alpha', torch.tensor(1.0, dtype=torch.float32))

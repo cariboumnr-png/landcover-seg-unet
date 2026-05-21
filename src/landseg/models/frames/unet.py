@@ -20,48 +20,59 @@
 # =========================================================================== #
 
 '''
-Multihead UNet architecture with domain conditioning and safety utils.
+Multi-head UNet architectures with optional domain conditioning.
 
-**Overview**\n
-This module composes a UNet backbone with a lightweight multihead output
-manager to support multi-prediction tasks (e.g., segmentation, detection
-heatmaps, or auxiliary heads) from shared features. Domain conditioning
-is supported through two complementary mechanisms:
+This module provides UNet-based implementations built on top of the
+multi-head model framework defined in :mod:`landseg.models.frames`.
 
-- **Concatenation** (input-level): domain channels are appended to the
-  input tensor when enabled. This is useful for simple categorical
-  indicators or low-dimensional continuous descriptors that should
-  influence all stages.
+The primary implementation, ``MultiHeadUNet``, combines:
+- a configurable UNet-style backbone,
+- shared feature extraction,
+- multiple prediction heads,
+- optional domain-aware conditioning,
+- numerical safety utilities for stable training and inference.
 
-- **FiLM** (bottleneck-level): Feature-wise Linear Modulation is applied
-  at the U-Net bottleneck using learned affine parameters derived from
-  domain embeddings. This focuses adaptation where global context is
-  strongest.
+Domain conditioning is supported through two complementary mechanisms:
 
-The design cleanly separates concerns:
-- `MultiHeadUNet`: orchestrates backbone, conditioning, and head routing.
-- `_HeadManager`: manages a set of 1x1 conv heads, activate/freeze state,
-  and optional per-head logit adjustment.
-- `_DomainRouter`: decides what domain info feeds concatenation vs FiLM,
-  with optional projections from raw vectors to required dimensions.
-- `_NumericSafety`: centralizes autocast context and value clamping to
-  improve numerical stability during training/inference.
+- Concatenation conditioning:
+  Domain embeddings are appended to the input tensor channels before
+  feature extraction. This allows conditioning information to influence
+  all encoder stages.
 
-**Expected Shapes**
-- Input  `x`: (N, C_in, H, W)
-- U-Net body output for heads: (N, base_ch, H, W)
+- FiLM conditioning:
+  Feature-wise Linear Modulation is applied at the bottleneck using
+  learned affine transforms derived from domain embeddings. This enables
+  lightweight global adaptation without modifying earlier activations.
+
+The implementation separates responsibilities across composable
+components:
+
+- ``MultiHeadUNet``:
+    Coordinates backbone execution, domain routing, conditioning, and
+    prediction heads.
+
+- ``HeadManager``:
+    Manages per-task output heads, active/frozen state, and optional
+    logit adjustment.
+
+- ``DomainContextRouter``:
+    Routes domain identifiers and vectors to concatenation and/or FiLM
+    pathways.
+
+- ``NumericSafety``:
+    Centralizes autocast handling and value clamping to improve
+    numerical stability.
+
+Expected tensor shapes:
+- Input image: N, C_in, H, W)
+- Shared feature map: (N, base_ch, H, W)
 - Per-head logits: (N, C_head, H, W)
 
-**Extension Points**
-- Add or replace heads in `_HeadManager`.
-- Swap input concatenation or FiLM policies in `_DomainRouter`.
-- Adjust clamping ranges and autocast dtype in `_NumericSafety`.
-- Replace the backbone with a drop-in module exposing `.encode/.decode`.
-
-**Notes**
-- Perhead logit adjustment supports label-frequency priors or calibrated
-  offsets via a broadcastable `(1, C_head, 1, 1)` tensor stored in a
-  non-trainable `Parameter`.
+Notes:
+- Logit adjustment tensors are stored as non-trainable buffers with shape
+    ``(1, C_head, 1, 1)``.
+- Backbone implementations are expected to expose compatible ``encode()``
+    and ``decode()`` methods.
 '''
 
 # third-party imports
@@ -75,19 +86,28 @@ import landseg.models.frames as frames
 
 class MultiHeadUNet(frames.MultiHeadBaseModel):
     '''
-    UNet with multihead outputs and optional domain conditioning.
+    Multi-head UNet model with optional domain conditioning.
 
-    Supports:
-        - Input-level domain concatenation (ConcatAdapter).
-        - Bottleneck-level conditioning via FiLM (FilmConditioner).
-        - Per-head logit adjustments.
-        - Autocast and clamping utilities for numerical stability.
+    This model combines:
+    - a configurable UNet-style backbone,
+    - shared encoder-decoder feature extraction,
+    - multiple task-specific prediction heads,
+    - optional domain-aware conditioning mechanisms,
+    - numerical safety utilities for stable execution.
 
-    The model orchestrates:
-        * UNet backbone (.body)
-        * Multihead output manager (.heads)
-        * Domain routing to concat / FiLM branches (.domain_router)
-        * Safety utilities controlling mixed precision (.safety)
+    Supported conditioning mechanisms:
+    - Input concatenation via ``ConcatAdapter``.
+    - Bottleneck FiLM modulation via ``FilmConditioner``.
+
+    Main components:
+    - ``body``:
+        Shared UNet backbone implementing ``encode()`` and ``decode()``.
+    - ``heads``:
+        Multi-head prediction manager producing task-specific logits.
+    - ``domain_router``:
+        Routes domain information to conditioning pathways.
+    - ``num_safety``:
+        Handles autocast control and activation clamping.
     '''
 
     def __init__(
@@ -99,58 +119,46 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         **kwargs
       ):
         '''
-        Initialize a multihead UNet-based model.
+        Initialize a multi-head UNet model.
 
-        This initializer constructs a complete multi-head UNet model from
-        pre-validated configuration objects supplied by the application
-        layer (e.g., CLI / experiment runner). The model itself does not
-        depend on any global or external configuration system.
+        This constructor assembles a complete domain-aware multi-head model
+        using externally validated configuration objects. The model itself
+        remains configuration-system agnostic and does not depend on Hydra
+        or any global runtime state.
 
-        The configuration inputs are treated as *structural contracts*
-        (typically via Protocols) and may originate from Hydra-backed
-        dataclasses, plain dataclasses, or other compatible objects.
+        The constructed model includes:
+        - a shared UNet backbone,
+        - task-specific prediction heads,
+        - optional domain-conditioning pathways,
+        - numerical safety utilities,
+        - optional per-head logit adjustment buffers.
 
-        Initializes:
-        - UNet backbone specified by `backbone_config`.
-        - Per-head Conv2d blocks and head routing via `_HeadManager`.
-        - Optional input-level domain concatenation (`ConcatAdapter`).
-        - Optional bottleneck-level FiLM conditioning (`FilmConditioner`).
-        - Domain routing logic for IDs and vectors (`_DomainRouter`).
-        - Numeric safety utilities (autocast and value clamping).
-        - Per-head logit adjustment buffers (non-trainable).
+        Conditioning pathways may include:
+        - input-level concatenation conditioning,
+        - bottleneck FiLM conditioning,
+        - both simultaneously,
+        - or neither.
 
         Args:
-            backbone_config:
-                Backbone-level configuration describing:
-                - backbone variant (e.g., 'unet', 'unetpp'),
-                - base channel width,
-                - convolutional block parameters forwarded to backbone.
-            dataspecs_config:
-                Model-level configuration defining:
-                - input channel count,
-                - head definitions and class counts,
-                - per-head logit adjustment priors (optional).
-            conditioning:
-                Domain conditioning configuration specifying how
-                categorical IDs and/or continuous vectors are routed to:
-                - input concatenation,
-                - bottleneck FiLM modulation.
+            dataspecs: Dataset and model specification container
+            backbone_config: Backbone configuration describing
+            conditioning_config: Mapping of conditioning targets to
+                domain-routing configurations
             **kwargs:
-                Optional runtime flags and overrides, including:
-                - `enable_logit_adjust` (bool): runtime toggle for logit
-                  adjustment (default: True).
-                - `enable_clamp` (bool): enable numeric clamping
-                  (default: True).
-                - `clamp_range` (tuple[float, float]): numeric clamp
-                  bounds (default: (1e-4, 1e4)).
+                Optional runtime configuration overrides.
+                Supported options:
+                - enable_clamp: Enable activation clamping for numerical
+                    stability. Default: ``True``.
+                - clamp_range: Tuple defining minimum and maximum clamp
+                    bounds. Default: ``(1e-4, 1e4)``.
 
         Notes:
-            - All parameters are keyword-only by design to make configuration
-              boundaries explicit and order-independent.
-            - Configuration ownership resides outside the model module;
-              this class assumes inputs are already validated.
-            - The model body must expose a `.encode()` / `.decode()` interface
-              compatible with UNet-style backbones.
+        - All arguments are keyword-only to make configuration boundaries
+          explicit and order-independent.
+        - Backbone implementations are expected to expose compatible
+          ``encode()`` and ``decode()`` methods.
+        - Logit adjustment tensors are registered as non-trainable buffers
+          and broadcast during head inference.
         '''
 
         super().__init__()
@@ -213,7 +221,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         batch_size: int = 2,
         device: str = 'cpu'
     ) -> dict[str, torch.Tensor]:
-        '''Dummy data batch for validation.'''
+        '''Construct synthetic input tensors for validation etc.'''
 
         in_ch = self.dataspecs.meta.image_specs.num_channels
         size = self.dataspecs.meta.image_specs.height_width
@@ -231,7 +239,25 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         x: torch.Tensor,
         domains: dict[str, model_core.DomainTargetPayload]
     ) -> torch.Tensor:
-        '''doc'''
+        '''
+        Compute shared UNet feature maps before prediction heads.
+
+        The feature pipeline performs:
+        1. Optional domain concatenation at the input level.
+        2. Encoder feature extraction through the UNet body.
+        3. Optional FiLM conditioning at the bottleneck.
+        4. Decoder reconstruction into shared output features.
+
+        Numerical clamping and controlled autocast execution are applied
+        throughout the pipeline to improve numerical stability.
+
+        Args:
+            x: Input tensor of shape: (batch, channels, height, width)
+            domains: Routed domain payloads from the domain router.
+
+        Returns:
+            Shared decoder feature tensor consumed by output heads.
+        '''
 
         # feed domain to router
         film = domains.get('film')
@@ -259,7 +285,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
     @staticmethod
     def _get_model_body(body: str) -> backbones.UNetBackbone:
-        '''Retrieve model body by name.'''
+        '''Retrieve a registered UNet backbone implementation.'''
 
         # model body registry
         body_registry = {
