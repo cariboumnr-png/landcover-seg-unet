@@ -36,6 +36,7 @@ __all__ = [
     'UNet',
     'UNetPP',
     'UNetPPP',
+    'UNetBackbone',
     'UNetBodyConfig'
     # functions
     # types
@@ -45,7 +46,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import Backbone
     from .config import UNetBodyConfig
-    from .unet import UNet, UNetPP, UNetPPP
+    from .unet import UNet, UNetPP, UNetPPP, UNetBackbone
 
 def __getattr__(name: str):
 
@@ -55,7 +56,7 @@ def __getattr__(name: str):
     if name in {'UNetBodyConfig'}:
         return getattr(importlib.import_module('.config', __package__), name)
 
-    if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBodyConfig'}:
+    if name in {'UNet', 'UNetPP', 'UNetPPP', 'UNetBackbone'}:
         return getattr(importlib.import_module('.unetppp', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

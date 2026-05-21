@@ -38,18 +38,24 @@ __all__ = [
     'DomainTargetConfig',
     'HeadManager',
     'NumericSafety',
+    'ConcatAdapter',
+    'FilmConditioner',
     # functions
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .conditioner import ConcatAdapter, FilmConditioner
     from .config import DomainProjectionConfig, DomainTargetConfig
     from .domains import DomainContextRouter, DomainTargetPayload
     from .heads import HeadManager
     from .safety import NumericSafety
 
 def __getattr__(name: str):
+
+    if name in {'ConcatAdapter', 'FilmConditioner'}:
+        return getattr(importlib.import_module('.conditioner', __package__), name)
 
     if name in {'DomainProjectionConfig', 'DomainTargetConfig'}:
         return getattr(importlib.import_module('.config', __package__), name)

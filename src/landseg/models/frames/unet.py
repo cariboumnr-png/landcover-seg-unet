@@ -70,10 +70,8 @@ import torch
 import landseg._constants as c
 import landseg.core as core
 import landseg.models.backbones as backbones
-import landseg.models.backbones.unet as unet_backbones
 import landseg.models.core as model_core
 import landseg.models.frames as frames
-import landseg.models.frames.unet as unet
 
 class MultiHeadUNet(frames.MultiHeadBaseModel):
     '''
@@ -176,12 +174,12 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             add_dim = 0
         else:
             add_dim = concat_config.ids_embd_dims
-            self.concat = unet.ConcatAdapter(concat_dim=add_dim)
+            self.concat = model_core.ConcatAdapter(concat_dim=add_dim)
 
         # core UNet body
         body = self._get_model_body(backbone_config.body)
         in_ch = dataspecs.meta.image_specs.num_channels
-        self.body: unet_backbones.UNetBackbone
+        self.body: backbones.UNetBackbone
         self.body = body(in_ch + add_dim, base_ch, **backbone_config.conv_params)
 
         # film conditioning adpater
@@ -189,7 +187,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         if film_config is None:
             self.film = None
         else:
-            self.film = unet.FilmConditioner(
+            self.film = model_core.FilmConditioner(
                 embed_dim=film_config.vec_proj_dims,
                 bottleneck_ch=self.body.bottleneck_ch,
                 hidden_dim=film_config.conditioner_config.get('hidden_dim')
@@ -242,14 +240,14 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         return x
 
     @staticmethod
-    def _get_model_body(body: str) -> unet_backbones.UNetBackbone:
+    def _get_model_body(body: str) -> backbones.UNetBackbone:
         '''Retrieve model body by name.'''
 
         # model body registry
         body_registry = {
-            'unet': unet_backbones.UNet,
-            'unetpp': unet_backbones.UNetPP,
-            'unetppp': unet_backbones.UNetPPP
+            'unet': backbones.UNet,
+            'unetpp': backbones.UNetPP,
+            'unetppp': backbones.UNetPPP
         }
         if not body in body_registry:
             raise ValueError(f'Invalid base model: {body}')

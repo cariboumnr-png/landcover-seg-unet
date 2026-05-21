@@ -34,7 +34,6 @@ __all__ = [
     # classes
     'ConcatAdapter',
     'FilmConditioner',
-    'MultiHeadUNet',
     # functions
     # types
 ]
@@ -43,7 +42,6 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .concat import ConcatAdapter
     from .film import FilmConditioner
-    from .frame import MultiHeadUNet
 
 def __getattr__(name: str):
 
@@ -52,8 +50,5 @@ def __getattr__(name: str):
 
     if name in {'FilmConditioner'}:
         return getattr(importlib.import_module('.film', __package__), name)
-
-    if name in {'MultiHeadUNet'}:
-        return getattr(importlib.import_module('.frame', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
