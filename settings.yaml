@@ -6,47 +6,13 @@
 # Ce fichier vous permet de configurer le projet sans modifier le code interne.
 # Modifiez uniquement les éléments nécessaires à votre analyse.
 #
-# IMPORTANT / IMPORTANT :
-#   - Do NOT edit anything inside ${...}. These are system-generated links
-#     called "interpolation keys."
-#   - Ne PAS modifier le texte dans ${...}. Ce sont des références générées
-#     par le système (« clés d’interpolation »).
-#
-#   - All folders inside the experiment root MUST follow the required structure.
-#   - Tous les dossiers à l’intérieur de la racine du projet DOIVENT suivre
-#     la structure requise.
-# =============================================================================
-
-
-# =============================================================================
-# REQUIRED PROJECT FOLDER STRUCTURE
-# STRUCTURE REQUISE DES DOSSIERS DU PROJET
-#
-#   exp_root/
-#   ├── input/
-#   │   ├── extent_ref/
-#   │   │    └── example_extent.tif
-#   │   ├── domain/
-#   │   │    └── example_domain_1.tif, example_domain_2.tif, ...
-#   │   └── dataset_name/
-#   │        ├── dev/
-#   │        │    ├── example_image.tif
-#   │        │    └── example_label.tif
-#   │        ├── test/       (optional / optionnel)
-#   │        │    ├── example_image.tif
-#   │        │    └── example_label.tif
-#   │        └── example_config.json
-#
-# =============================================================================
-
-
 # -----------------------------------------------------------------------------
 # PROJECT ROOT / RACINE DU PROJET
-# User-selected folder containing all project inputs, prepared artifacts,
-# run outputs, logs, and results.
+# User-selected folder containing all prepared artifacts, run outputs, logs,
+# and results.
 #
-# Dossier choisi par l’utilisateur contenant toutes les entrées du projet,
-# les artefacts préparés, les sorties d’exécution, les journaux et les résultats.
+# Dossier choisi par l’utilisateur contenant toutes  les artefacts préparés,
+# les sorties d’exécution, les journaux et les résultats.
 # -----------------------------------------------------------------------------
 execution:
   exp_root: ./experiment
@@ -61,14 +27,13 @@ execution:
 # fichiers bruts du jeu de données utilisés pour construire les artefacts
 # préparés pour l’entraînement et l’évaluation.
 # -----------------------------------------------------------------------------
-# PRE-PROCESSING & GRID / PRÉ-TRAITEMENT ET GRILLE
 foundation:
+# GRID SETTINGS
   grid:
-    mode: ref          # Fixed to 'ref' / Fixé à 'ref'
-    crs: 'EPSG:3161'   # Coordinate reference system / Système de coordonnées
+    mode: ref
+    crs: 'EPSG:3161'
     extent:
-      # Located in / Situé dans : ${exp_root}/input/extent_ref/
-      filename: 'example_extent.tif'
+      filepath: ./experiment/input/extent_reference/example_extent.tif
     tile_specs:
       size_row: 256
       size_col: 256
@@ -76,41 +41,22 @@ foundation:
       overlap_col: 128
 
 # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
-# Place ANY NUMBER of domain rasters in / Placez AUTANT de rasters que voulu dans :
-# ${exp_root}/input/domain/
-#
-# These rasters are optional model inputs used for domain conditioning.
-# Ces rasters sont des entrées optionnelles du modèle utilisées pour le
-# conditionnement thématique.
   domains:
     files:
-      - name: 'example_domain_1.tif'
+      - path: ./experiment/input/domain_knowledge/example_domain_1.tif
         index_base: 1
-      - name: 'example_domain_2.tif'
+      - path: ./experiment/input/domain_knowledge/example_domain_2.tif
         index_base: 1
 
 # RAW DATASET / JEU DE DONNÉES BRUT
-# Located in / Situé dans : ${exp_root}/input/${foundation.datablocks.name}/
-#
-# - dev/  : required development data used to create train/validation artifacts
-# - test/ : optional holdout data used for standalone evaluation
-# - configs/ : dataset-specific metadata/configuration
-#
-# - dev/  : données de développement requises pour créer les artefacts
-#           d’entraînement/validation
-# - test/ : données de réserve optionnelles utilisées pour l’évaluation autonome
-# - configs/ : métadonnées / configuration propres au jeu de données
   datablocks:
-    name: dataset_name  # Dataset folder name / Nom du dossier du jeu de données
-    filenames:
-      # Files in / Fichiers dans .../dev/
-      dev_image: 'example_image.tif'
-      dev_label: 'example_label.tif'
-      # Files in / Fichiers dans .../test/
-      test_image: 'example_image.tif'
-      test_label: 'example_label.tif'
-      # File in / Fichier dans .../
-      config: 'example_config.json'
+    name: demo_data
+    filepaths:
+      dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
+      dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
+      test_image: ./experiment/input/data/demo_data/test/example_image.tif
+      test_label: ./experiment/input/data/demo_data/test/example_label.tif
+      config: ./experiment/input/data/demo_data/example_config.json
 
 
 # -----------------------------------------------------------------------------
