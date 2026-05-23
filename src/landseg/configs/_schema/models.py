@@ -160,8 +160,8 @@ class ModelsConfig:
     conditioner: list[str] = field(default_factory=lambda: ['concat', 'film'])
     conditioner_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
-            'concat': _Concat,
-            'film': _FiLM
+            'concat': _Concat(),
+            'film': _FiLM()
         }
     )
     enable_clamp: bool = True
@@ -169,7 +169,6 @@ class ModelsConfig:
 
     @property
     def model_body_config(self) -> _UNetBodyConfig:
-        assert self.model_body in self.model_body_registry, 'Invalid model body'
         return self.model_body_registry[self.model_body]
 
     @property
@@ -177,7 +176,12 @@ class ModelsConfig:
         assert all(c in self.conditioner_registry for c in self.conditioner)
         return {c: self.conditioner_registry[c] for c in self.conditioner}
 
+    def set_base_channel(self, base_channel: int) -> None:
+        '''Set `base channel` to the current model body.'''
+        self.model_body_registry[self.model_body].base_ch = base_channel
+
     def validate(self) -> None:
+        assert self.model_body in self.model_body_registry, 'Invalid model body'
         # cross-check clamp range ordering
         lo, hi = self.clamp_range
         if lo <= 0 or hi <= 0 or lo >= hi:

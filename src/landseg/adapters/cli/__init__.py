@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.execution`.
+Top-level namespace for `landseg.adapters.cli`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -34,16 +34,21 @@ __all__ = [
     # classes
     # functions
     # types
-    'execute_pipeline',
+    'main',
+    'resolve_configs'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import execute_pipeline
+    from .cli import main
+    from .resolver import resolve_configs
 
 def __getattr__(name: str):
 
-    if name in {'execute_pipeline'}:
-        return getattr(importlib.import_module('.executor', __package__), name)
+    if name in {'main'}:
+        return getattr(importlib.import_module('.cli', __package__), name)
+
+    if name in {'resolve_configs'}:
+        return getattr(importlib.import_module('.resolver', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

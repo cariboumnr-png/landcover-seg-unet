@@ -20,30 +20,28 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.execution`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Programmatic API entry
 '''
 
-from __future__ import annotations
-import importlib
-import typing
+# local imports
+import landseg.configs as configs
+import landseg.execution as execution
+import landseg.utils as utils
 
-__all__ = [
-    # classes
-    # functions
-    # types
-    'execute_pipeline',
-]
+def run(root_config: configs.RootConfig):
+    '''Run pipeline'''
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .executor import execute_pipeline
-
-def __getattr__(name: str):
-
-    if name in {'execute_pipeline'}:
-        return getattr(importlib.import_module('.executor', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    logger = utils.Logger('api', './api.log')
+    try:
+        logger.log('INFO', f'Running pipeline: {root_config.pipeline.name}')
+        return execution.execute_pipeline(root_config)
+    except KeyboardInterrupt:
+        logger.log('INFO', 'Execution interrupted')
+        raise
+    except Exception:
+        logger.log(
+            'CRITICAL',
+            'Unhandled exception occurred during API execution',
+            exc_info=True,
+        )
+        raise

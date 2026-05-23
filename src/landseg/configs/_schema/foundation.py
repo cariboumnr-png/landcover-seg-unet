@@ -105,12 +105,23 @@ class DomainFile:
     path: str = ''
     index_base: int = omegaconf.MISSING
 
+    def __post_init__(self):
+        if os.path.exists(self.path):
+            self.name = os.path.splitext(os.path.basename(self.path))[0]
+
 @dataclasses.dataclass
 class _Domains:
     default_input_dpath: str = '${execution.exp_root}/input/domain_knowledge'
     files: list[DomainFile] = field(default_factory=lambda: [])
     valid_threshold: float = 0.7
     target_variance: float = 0.9
+
+    def add_domain(self, fpath: str, index_base: int):
+        if not os.path.exists(fpath):
+            raise ValueError(f'Domain raster {fpath} does not exist')
+        if not isinstance(index_base, int):
+            raise TypeError(f'Index base must be [int], got {type(index_base)}')
+        self.files.append(DomainFile(path=fpath, index_base=index_base ))
 
     def validate(self):
         for file in self.files:
