@@ -70,8 +70,8 @@ class DomainContextRouter(torch.nn.Module):
     def __init__(
         self,
         *,
-        domain_ids_num: int | None,
-        domain_vec_dim: int | None,
+        domain_ids_num: int,
+        domain_vec_dim: int,
         targets: dict[str, config.DomainTargetConfig],
     ) -> None:
         '''
@@ -101,14 +101,14 @@ class DomainContextRouter(torch.nn.Module):
 
         for name, target_cfg in targets.items():
 
-            if target_cfg.use_vec and domain_vec_dim is not None:
+            if target_cfg.use_vec and domain_vec_dim > 0:
                 self.vec_proj[name] = _make_projection(
                     domain_vec_dim,
                     target_cfg.vec_proj_dims,
                     projection_config=target_cfg.vec_proj_config
                 )
 
-            if target_cfg.use_ids and domain_ids_num is not None:
+            if target_cfg.use_ids and domain_ids_num > 0:
                 self.ids_embd[name] = torch.nn.Embedding(
                     domain_ids_num,
                     target_cfg.ids_embd_dims
