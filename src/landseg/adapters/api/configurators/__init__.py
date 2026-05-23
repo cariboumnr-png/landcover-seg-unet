@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.adapters`.
+Top-level namespace for `landseg.adapters.api.configurators`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
