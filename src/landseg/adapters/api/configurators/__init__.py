@@ -20,30 +20,39 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.execution`.
+Top-level namespace for `landseg.adapters`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
-
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
+    'DataIngestionConfigurator',
+    'DataPreparationConfigurator',
+    'TrainingSessionConfigurator'
     # functions
     # types
-    'execute_pipeline',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import execute_pipeline
+    from .data_ingest import DataIngestionConfigurator
+    from .data_prepare import DataPreparationConfigurator
+    from .model_train import TrainingSessionConfigurator
 
 def __getattr__(name: str):
 
-    if name in {'execute_pipeline'}:
-        return getattr(importlib.import_module('.executor', __package__), name)
+    if name in {'DataIngestionConfigurator'}:
+        return getattr(importlib.import_module('.data_ingest', __package__), name)
+
+    if name in {'DataPreparationConfigurator'}:
+        return getattr(importlib.import_module('.data_prepare', __package__), name)
+
+    if name in {'TrainingSessionConfigurator'}:
+        return getattr(importlib.import_module('.model_train', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

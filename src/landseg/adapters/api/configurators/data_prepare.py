@@ -19,42 +19,61 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=no-value-for-parameter
-
 '''
-CLI entry.
+Data preparation configurator
 '''
 
 # standard imports
-import sys
 import typing
-# third-party imports
-import hydra
-import omegaconf
 # local imports
-import landseg.execution as execution
-import landseg.utils as utils
+import landseg.configs as configs
 
-# main process
-@hydra.main('pkg://landseg/configs', 'config', version_base='1.3')
-def main(config: omegaconf.DictConfig) -> typing.Any:
-    '''Run the selected CLI pipeline with resolved configuration.'''
+class DataPreparationConfigurator:
+    '''Configure data ingestion.'''
 
-    # cli logger
-    logger = utils.Logger('cli', './cli.log')
+    def __init__(
+        self,
+        experiment_root: str,
+        dataset_name: str
+    ):
+        '''Initialize the configurator'''
 
-    # run specified mode with exceptions handling
-    try:
-        root_config = execution.resolve_configs(config)
-        return execution.execute_pipeline(root_config)
-    # manual keyboard interruption
-    except KeyboardInterrupt:
-        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
-        sys.exit(130)
-    # capture others and log
-    except Exception: # pylint: disable=broad-exception-caught
-        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
-        sys.exit(1)
+        self._cfg = configs.RootConfig() # with all default values
+        # set output dirpaths
+        self._cfg.execution.exp_root = experiment_root
+        self._cfg.foundation.output_dpath = (
+            f'{experiment_root}/artifacts/{dataset_name}/foundation'
+        )
+        self._cfg.transform.output_dpath = (
+            f'{experiment_root}/artifacts/{dataset_name}/transform'
+        )
+        # here we set pipeline to data-prepare
+        self._cfg.pipeline.name = 'data-prepare'
 
-if __name__ == '__main__':
-    main()
+    @property
+    def running_root_config(self) -> configs.RootConfig:
+        '''Validate and return the `RootConfig`,'''
+        self._cfg.transform.validate()
+        return self._cfg
+
+    def set_partition(
+        self,
+        validation_blocks_ratio: float,
+        test_holdout_blocks_ratio: float
+    ) -> typing.Self:
+        '''Set block ratios for validation and test holdout.'''
+        self._cfg.transform.partition.val_ratio = validation_blocks_ratio
+        self._cfg.transform.partition.test_ratio = test_holdout_blocks_ratio
+        return self
+
+    def set_scoring(
+        self,
+        reward_classes: dict[int, float]
+    ) -> typing.Self:
+        '''Set block scoring criteria.'''
+        self._cfg.transform.scoring.reward = reward_classes
+        return self
+
+    def set_hydration(self) -> typing.Self:
+        '''Set blocks hydration'''
+        return self
