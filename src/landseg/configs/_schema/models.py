@@ -160,8 +160,8 @@ class ModelsConfig:
     conditioner: list[str] = field(default_factory=lambda: ['concat', 'film'])
     conditioner_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
-            'concat': _Concat,
-            'film': _FiLM
+            'concat': _Concat(),
+            'film': _FiLM()
         }
     )
     enable_clamp: bool = True
