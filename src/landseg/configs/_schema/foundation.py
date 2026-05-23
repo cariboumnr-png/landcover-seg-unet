@@ -27,7 +27,6 @@ Data foundation schema
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import os
 import re
@@ -164,6 +163,6 @@ class DataFoundation:
         self.datablocks.validate()
 
 # ------------------------------private  function------------------------------
-def _must_exist(path: str | None, label: str) -> None:
+def _must_exist(path: str | None, tag: str) -> None:
     if path and not os.path.exists(path):
-        raise FileNotFoundError(f'File [{label}] is invalid: {path}')
+        raise FileNotFoundError(f'File [{tag}] is invalid: {path}')
