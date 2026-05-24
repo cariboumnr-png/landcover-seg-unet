@@ -38,14 +38,12 @@ curriculum:
         active_heads: [base]
         frozen_heads: null
 
-
       - name: select_children_heads
         num_epochs: 20
         start_epoch: 1
         lr_scale: 1.0
         active_heads: ${concat:[base],${session.orchestration.curriculum.baseline.select_children}}
         frozen_heads: [base]
-
 
       - name: joint_tuning
         num_epochs: 10

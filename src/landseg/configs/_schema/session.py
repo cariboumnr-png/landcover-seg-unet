@@ -54,9 +54,7 @@ class _OptimConfig:
     lr: float = 1e-4
     weight_decay: float = 1e-3
     sched_cls: str | None = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = field(
-        default_factory=lambda: {'T_max': 50}
-    )
+    sched_args: dict[str, typing.Any] = field(default_factory=lambda: {'T_max': 50})
     grad_clip_norm: float | None = 1.0
 
 # ----- engine tasks
@@ -135,7 +133,7 @@ class _BaselinePhases:
 
 @dataclasses.dataclass
 class _Curriculum:
-    schema: str = 'baseline' # multi-phase training exclusive
+    schema: str = 'single'
     single: _SinglePhase = field(default_factory=_SinglePhase)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
 
@@ -154,13 +152,10 @@ class _OrchestrationConfig:
     def multi_phases(self) -> list[_Phase]:
         '''List of phases by configs.'''
         # currently supported pre-configured phases
-        registry = {
-            'baseline': self.curriculum.baseline.phases
-        }
-        schema = registry.get(self.curriculum.schema)
-        if schema is None:
-            raise ValueError(f'Invalid multi-phase schema: {self.curriculum.schema}')
-        return schema
+        schema = self.curriculum.schema
+        match schema:
+            case 'baseline': return self.curriculum.baseline.phases
+            case _: raise ValueError(f'Invalid multi-phase schema: {schema}')
 
 # session composite
 @dataclasses.dataclass
@@ -172,22 +167,23 @@ class SessionConfig:
     engine_tasks: _TasksConfig = field(default_factory=_TasksConfig)
     orchestration: _OrchestrationConfig = field(default_factory=_OrchestrationConfig)
 
-    def validate(self):
-        '''Session module configs validating and guarding.'''
-
-        # current guards
-        mode = ['continuous', 'curriculum']
-        if self.mode not in mode:
-            raise ValueError(f'Invalid mode: {self.mode}, allowed: {mode}')
+    def __post_init__(self):
+        # allow_early_stop=True is invalid for curriculum
         if self.mode == 'curriculum':
-            if self.orchestration.monitor.allow_early_stop:
-                print(
-                    'Warning: allow_early_stop=True is invalid for curriculum'
-                    ' training. It is now being set to False'
-                )
-                self.orchestration.monitor.allow_early_stop = False
+            self.orchestration.monitor.allow_early_stop = False
 
-        # Example: scheduler-specific requirements
+    def validate(self):
+        # mode specific requirements
+        if self.mode == 'continuous':
+            pass
+        elif self.mode == 'curriculum':
+            pass
+        else:
+            raise ValueError(
+                f'Invalid mode: {self.mode}, '
+                f'must be "continuous" or "curriculum"'
+            )
+        # scheduler specific requirements
         if self.engine_optim.sched_cls == 'CosAnneal':
             if 'T_max' not in self.engine_optim.sched_args:
                 raise ValueError('missing T_max for CosAnneal')

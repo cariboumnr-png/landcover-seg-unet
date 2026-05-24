@@ -3,6 +3,5 @@ opt_cls: 'AdamW'
 lr: 1e-4
 weight_decay: 1e-3
 sched_cls: 'CosAnneal'
-sched_args:
-  T_max: 50
+sched_args: {'T_max': 50}
 grad_clip_norm: 1.0
