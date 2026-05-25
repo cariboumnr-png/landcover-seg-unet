@@ -128,7 +128,11 @@ class _SinglePhase:
 @dataclasses.dataclass
 class _BaselinePhases:
     name: str = 'baseline'
-    select_children: list[str] = field(default_factory=list)
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
+@dataclasses.dataclass
+class _CustomPhases:
+    name: str = 'custom'
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
@@ -136,6 +140,7 @@ class _Curriculum:
     schema: str = 'single'
     single: _SinglePhase = field(default_factory=_SinglePhase)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
+    custom: _CustomPhases = field(default_factory=_CustomPhases)
 
 @dataclasses.dataclass
 class _OrchestrationConfig:
@@ -155,7 +160,8 @@ class _OrchestrationConfig:
         schema = self.curriculum.schema
         match schema:
             case 'baseline': return self.curriculum.baseline.phases
-            case _: raise ValueError(f'Invalid multi-phase schema: {schema}')
+            case 'custom': return self.curriculum.custom.phases
+            case _: raise ValueError(f'Invalid multi-phases schema: {schema}')
 
 # session composite
 @dataclasses.dataclass
