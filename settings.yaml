@@ -1,33 +1,17 @@
 # =============================================================================
 # USER SETTINGS / PARAMÈTRES UTILISATEUR
-# This file lets you configure the project without modifying internal code.
-# Adjust only the items needed for your analysis.
-#
-# Ce fichier vous permet de configurer le projet sans modifier le code interne.
-# Modifiez uniquement les éléments nécessaires à votre analyse.
-#
+
 # -----------------------------------------------------------------------------
 # PROJECT ROOT / RACINE DU PROJET
-# User-selected folder containing all prepared artifacts, run outputs, logs,
-# and results.
-#
-# Dossier choisi par l’utilisateur contenant toutes  les artefacts préparés,
-# les sorties d’exécution, les journaux et les résultats.
 # -----------------------------------------------------------------------------
 execution:
   exp_root: ./experiment
 
-
 # -----------------------------------------------------------------------------
 # INPUT DEFINITIONS / DÉFINITION DES ENTRÉES
-# Defines the spatial extent reference, domain rasters, and raw dataset files
-# used to build prepared artifacts for training and evaluation.
-#
-# Définit la référence d’étendue spatiale, les rasters thématiques et les
-# fichiers bruts du jeu de données utilisés pour construire les artefacts
-# préparés pour l’entraînement et l’évaluation.
 # -----------------------------------------------------------------------------
 foundation:
+
 # GRID SETTINGS
   grid:
     mode: ref
@@ -58,76 +42,30 @@ foundation:
       test_label: ./experiment/input/data/demo_data/test/example_label.tif
       config: ./experiment/input/data/demo_data/example_config.json
 
-
 # -----------------------------------------------------------------------------
 # DATA PREPARATION SETTINGS / PARAMÈTRES DE PRÉPARATION DES DONNÉES
-# Controls how raw blocks are partitioned and balanced when building prepared
-# dataset artifacts for training and evaluation.
-#
-# Contrôle la façon dont les blocs bruts sont partitionnés et équilibrés lors
-# de la création des artefacts préparés pour l’entraînement et l’évaluation.
 # -----------------------------------------------------------------------------
 transform:
-
-  # BLOCK PARTITION / PARTITION DES BLOCS
-  # Proportions used to split prepared development data into validation and test.
-  # The remaining data is assigned to training.
-  #
-  # Proportions utilisées pour séparer les données préparées de développement
-  # en validation et en test. Le reste est attribué à l’entraînement.
   partition:
     val_ratio: 0.1
     test_ratio: 0.0
 
-  # BLOCK SCORING PARAMETERS / PARAMÈTRES DE PONDÉRATION DES BLOCS
-  # Optional class-priority weights used during block selection.
-  # Class indices are 1-based in this user file.
-  #
-  # Poids optionnels de priorité par classe utilisés lors de la sélection
-  # des blocs. Les indices de classe sont basés sur 1 dans ce fichier utilisateur.
-  scoring:
-    reward: {}
-
-  # HYDRATION / HYDRATATION
-  # Controls how aggressively extra training blocks are added to improve
-  # class balance.
-  #
-  # Contrôle à quel point des blocs d’entraînement supplémentaires sont ajoutés
-  # pour améliorer l’équilibre entre les classes.
-  hydration:
-    max_skew_rate: 10.0
-
-
 # -----------------------------------------------------------------------------
 # MODEL ARCHITECTURE / ARCHITECTURE DU MODÈLE
-# Controls how the model uses optional domain information.
-#
-# Contrôle la manière dont le modèle utilise les informations thématiques
-# optionnelles.
 # -----------------------------------------------------------------------------
 models:
   model_body: unet
   conditioner: [concat, film]
 
-
 # -----------------------------------------------------------------------------
 # DATA SPECIFICATION / SPÉCIFICATION DES DONNÉES
-# Selects which domain layer is used as discrete IDs and which one is used
-# as continuous feature vectors.
-#
-# Sélectionne quelle couche thématique est utilisée comme identifiants discrets
-# et laquelle est utilisée comme vecteurs de caractéristiques continus.
 # -----------------------------------------------------------------------------
 dataspecs:
   domain_ids_name: example_domain_1
   domain_vec_name: example_domain_2
 
-
 # -----------------------------------------------------------------------------
 # SESSION RUNTIME / EXÉCUTION DE SESSION
-# Controls monitoring and stopping behavior during model training.
-#
-# Contrôle le suivi et les conditions d’arrêt pendant l’entraînement du modèle.
 # -----------------------------------------------------------------------------
 session:
 
@@ -135,10 +73,6 @@ session:
 
   # -------------------------------------------------------------------------
   # DATA LOADER
-  # Controls how training patches are generated and batched.
-  #
-  # Définit comment les tuiles (patches) sont générées et batchées pour
-  # l’entraînement.
   # -------------------------------------------------------------------------
   data_loader:
     patch_size: 128
@@ -146,20 +80,13 @@ session:
 
   # -------------------------------------------------------------------------
   # ENGINE EXECUTION (BATCH-LEVEL)
-  # Controls low-level execution behavior inside the training engine.
-  #
-  # Contrôle le comportement d’exécution bas niveau dans le moteur
-  # d’entraînement.
   # -------------------------------------------------------------------------
   engine_exec:
     use_amp: True
-    logit_adjust_alpha: 1.0
+    logit_adjust_alpha: 1.0 # set 0.0 to disable
 
   # -------------------------------------------------------------------------
   # OPTIMIZATION SETTINGS
-  # Defines how model parameters are updated during training.
-  #
-  # Définit la manière dont les paramètres du modèle sont optimisés.
   # -------------------------------------------------------------------------
   engine_optim:
     opt_cls: 'AdamW'
@@ -169,10 +96,6 @@ session:
 
   # -------------------------------------------------------------------------
   # TASK & LOSS CONFIGURATION
-  # Defines the training objective, including loss composition and class
-  # handling.
-  #
-  # Définit l’objectif d’entraînement (fonctions de perte, gestion des classes).
   # -------------------------------------------------------------------------
   engine_tasks:
     excluded_cls: {}    # e.g., {'head_name': [1, 2]} (class index is 1-based)
@@ -181,43 +104,27 @@ session:
         weight: 0.5
       dice:
         weight: 0.5
-      spectral:
-        weight: 0.001
-      tv:
-        weight: 0.0001
 
   # -------------------------------------------------------------------------
   # ORCHESTRATION (TRAINING CONTROL)
-  # Defines how training progresses over time, including monitoring,
-  # early stopping, and curriculum scheduling.
-  #
-  # Définit la progression de l’entraînement (monitoring, arrêt anticipé,
-  # curriculum).
   # -------------------------------------------------------------------------
   orchestration:
     # -----------------------------------------------------------------------
     # MONITORING & EARLY STOPPING
-    # Controls validation tracking and stopping behavior.
-    #
-    # Contrôle le suivi de la validation et les conditions d’arrêt.
     # -----------------------------------------------------------------------
     monitor:
       track_heads: [base]
       allow_early_stop: True  # will be DISABLED during curriculum training
       patience: 5             # Stop if validation does not improve
-      min_delta: 0.0005       # Minimum improvement to count as progress
 
     # -----------------------------------------------------------------------
     # TRAINING CURRICULUM
-    # Defines how training is staged over phases.
-    #
-    # Définit la progression de l’entraînement en phases.
     # -----------------------------------------------------------------------
     curriculum:
-      schema: single
+      schema: single # single if session.mode=continuous, else baseline/custom
 
       single: # conitunous training will follow this
-        phases: # you can use this as a phase template to design your own phases
+        phases:
           - name: single_phase_parent
             num_epochs: 10
             start_epoch: 1
@@ -248,7 +155,7 @@ session:
             active_heads: [base, reclass_1]
             frozen_heads: null
 
-      custom: # you can use this as a phase template to design your own phases
+      custom: # you can use this as a template to design your own phases
         phases:
           - name: phase_0
             num_epochs: 10
