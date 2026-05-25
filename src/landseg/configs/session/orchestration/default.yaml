@@ -15,9 +15,10 @@ monitor:
 
 curriculum:
   schema: single
+
+  # single training phase on the parent head only
   single:
     name: single
-    # single training phase on the parent head only
     phases:
       - name: single_phase_parent
         num_epochs: 10
@@ -26,10 +27,9 @@ curriculum:
         active_heads: [base]
         frozen_heads: null
 
+  # default top-down phase schema
   baseline:
     name: baseline
-    select_children: []
-    # default top-down phase schema
     phases:
       - name: parent_head
         num_epochs: 15
@@ -38,18 +38,27 @@ curriculum:
         active_heads: [base]
         frozen_heads: null
 
-
-      - name: select_children_heads
+      - name: refine_head_reclass_1
         num_epochs: 20
         start_epoch: 1
         lr_scale: 1.0
-        active_heads: ${concat:[base],${session.orchestration.curriculum.baseline.select_children}}
+        active_heads: [reclass_1]
         frozen_heads: [base]
-
 
       - name: joint_tuning
         num_epochs: 10
         start_epoch: 1
         lr_scale: 1.0
-        active_heads: ${concat:[base],${session.orchestration.curriculum.baseline.select_children}}
+        active_heads: [base, reclass_1]
+        frozen_heads: null
+
+  # custom multi-phases template
+  custom:
+    name: custom
+    phases:
+      - name: phase_0
+        num_epochs: 0
+        start_epoch: 1
+        lr_scale: 1.0
+        active_heads: null
         frozen_heads: null

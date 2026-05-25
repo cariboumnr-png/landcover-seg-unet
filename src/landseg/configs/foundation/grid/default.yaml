@@ -3,8 +3,6 @@ mode: ref # ref | aoi | tiles
 crs: ''
 extent:
   # when mode=ref provide:
-  default_input_dpath: '${execution.exp_root}/input/extent_reference'
-  filename: ''
   filepath: ''
   # when mode=(aoi | tiles) provide:
   origin: [0.0, 0.0] # x, y in CRS units

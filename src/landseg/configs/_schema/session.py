@@ -41,11 +41,18 @@ class _DataLoaderConfig:
     patch_size: int = 128
     batch_size: int = 16
 
+    def validate(self):
+        _must_within(self.patch_size, 'data patch size', 0)
+        _must_within(self.batch_size, 'data batch size', 0)
+
 # ----- engione executor
 @dataclasses.dataclass
 class _EngineExecConfig:
     use_amp: bool = True
     logit_adjust_alpha: float = 1.0
+
+    def validate(self):
+        _must_within(self.logit_adjust_alpha, 'logit adjust alpha', 0)
 
 # ----- engine optim
 @dataclasses.dataclass
@@ -54,10 +61,17 @@ class _OptimConfig:
     lr: float = 1e-4
     weight_decay: float = 1e-3
     sched_cls: str | None = 'CosAnneal'
-    sched_args: dict[str, typing.Any] = field(
-        default_factory=lambda: {'T_max': 50}
-    )
+    sched_args: dict[str, typing.Any] = field(default_factory=lambda: {'T_max': 50})
     grad_clip_norm: float | None = 1.0
+
+    def validate(self):
+        _must_within(self.lr, 'learning rate', 0)
+        _must_within(self.weight_decay, 'weight decay', 0)
+        _must_within(self.grad_clip_norm, 'gradient norm clipping', 0)
+        # scheduler specific requirements
+        if self.sched_cls == 'CosAnneal':
+            if 'T_max' not in self.sched_args:
+                raise ValueError('missing T_max for CosAnneal')
 
 # ----- engine tasks
 @dataclasses.dataclass
@@ -95,6 +109,16 @@ class _TasksConfig:
     excluded_cls: dict[str, list[int]] | None = None
     loss_types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
+    def validate(self):
+        match self.alpha_fn:
+            case 'effective_n': _must_within(self.en_beta, 'EN beta', 0, 1)
+            case 'inverse': pass
+            case _: raise ValueError('Invalid loss alpha function')
+        _must_within(self.loss_types.focal.weight, 'focal loss weight', 0)
+        _must_within(self.loss_types.dice.weight, 'dice loss weight', 0)
+        _must_within(self.loss_types.spectral.weight, 'spectral loss weight', 0)
+        _must_within(self.loss_types.tv.weight, 'tv loss weight', 0)
+
 # ----- orchestration
 @dataclasses.dataclass
 class _Schedule:
@@ -103,6 +127,12 @@ class _Schedule:
     ckpt_every_n_epoch: int = 5
     update_loss_every_n_batch: int = 50
     resume_from_last: bool = False
+
+    def validate(self):
+        _must_within(self.val_every_n_epoch, 'validation frequency', 1)
+        _must_within(self.infer_every_n_epoch, 'inference frequency', 1)
+        _must_within(self.ckpt_every_n_epoch, 'Saving frequency', 1)
+        _must_within(self.update_loss_every_n_batch, 'loss update frequency', 1)
 
 @dataclasses.dataclass
 class _Monitor:
@@ -113,6 +143,10 @@ class _Monitor:
     patience: int | None = 10
     min_delta: float | None = 0.0005
 
+    def validate(self):
+        _must_within(self.patience, 'patience epoch', 0)
+        _must_within(self.min_delta, 'patience delta', 0)
+
 @dataclasses.dataclass
 class _Phase:
     name: str = 'phase_0'
@@ -122,6 +156,16 @@ class _Phase:
     active_heads: list[str] | None = None
     frozen_heads: list[str] | None = None
 
+    def validate(self):
+        _must_within(self.num_epochs, f'{self.name}: number of epochs', 0)
+        _must_within(self.start_epoch, f'{self.name}:starting epoch', 0)
+        _must_within(self.lr_scale, 'LR scale', 0)
+        if self.start_epoch > self.num_epochs:
+            raise ValueError(
+                f'Starting epochs {self.num_epochs} for phase {self.name} is '
+                f'larger than the max number of epochs {self.num_epochs}'
+            )
+
 @dataclasses.dataclass
 class _SinglePhase:
     name: str = 'single'
@@ -130,14 +174,19 @@ class _SinglePhase:
 @dataclasses.dataclass
 class _BaselinePhases:
     name: str = 'baseline'
-    select_children: list[str] = field(default_factory=list)
+    phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
+@dataclasses.dataclass
+class _CustomPhases:
+    name: str = 'custom'
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
 @dataclasses.dataclass
 class _Curriculum:
-    schema: str = 'baseline' # multi-phase training exclusive
+    schema: str = 'single'
     single: _SinglePhase = field(default_factory=_SinglePhase)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
+    custom: _CustomPhases = field(default_factory=_CustomPhases)
 
 @dataclasses.dataclass
 class _OrchestrationConfig:
@@ -154,13 +203,20 @@ class _OrchestrationConfig:
     def multi_phases(self) -> list[_Phase]:
         '''List of phases by configs.'''
         # currently supported pre-configured phases
-        registry = {
-            'baseline': self.curriculum.baseline.phases
-        }
-        schema = registry.get(self.curriculum.schema)
-        if schema is None:
-            raise ValueError(f'Invalid multi-phase schema: {self.curriculum.schema}')
-        return schema
+        schema = self.curriculum.schema
+        match schema:
+            case 'baseline': return self.curriculum.baseline.phases
+            case 'custom': return self.curriculum.custom.phases
+            case _: raise ValueError(f'Invalid multi-phases schema: {schema}')
+
+    def validate(self):
+        self.schedule.validate()
+        self.monitor.validate()
+        if self.curriculum.schema == 'single':
+            self.single_phase.validate()
+        else:
+            for phase in self.multi_phases:
+                phase.validate()
 
 # session composite
 @dataclasses.dataclass
@@ -172,22 +228,46 @@ class SessionConfig:
     engine_tasks: _TasksConfig = field(default_factory=_TasksConfig)
     orchestration: _OrchestrationConfig = field(default_factory=_OrchestrationConfig)
 
-    def validate(self):
-        '''Session module configs validating and guarding.'''
-
-        # current guards
-        mode = ['continuous', 'curriculum']
-        if self.mode not in mode:
-            raise ValueError(f'Invalid mode: {self.mode}, allowed: {mode}')
+    def __post_init__(self):
+        # allow_early_stop=True is invalid for curriculum
         if self.mode == 'curriculum':
-            if self.orchestration.monitor.allow_early_stop:
-                print(
-                    'Warning: allow_early_stop=True is invalid for curriculum'
-                    ' training. It is now being set to False'
-                )
-                self.orchestration.monitor.allow_early_stop = False
+            self.orchestration.monitor.allow_early_stop = False
 
-        # Example: scheduler-specific requirements
-        if self.engine_optim.sched_cls == 'CosAnneal':
-            if 'T_max' not in self.engine_optim.sched_args:
-                raise ValueError('missing T_max for CosAnneal')
+    def validate(self):
+        # mode specific requirements
+        if self.mode == 'continuous':
+            if self.orchestration.curriculum.schema != 'single':
+                raise ValueError(
+                    '[curriculum.schema] must be "single" for a continuous '
+                    'training session'
+                )
+        elif self.mode == 'curriculum':
+            if self.orchestration.curriculum.schema == 'single':
+                raise ValueError(
+                    '[curriculum.schema] must not be "single" for a curriculum'
+                    '-based training session; expected: "baseline" or "custom"'
+                )
+        else:
+            raise ValueError(
+                f'Invalid mode: {self.mode}, '
+                f'must be "continuous" or "curriculum"'
+            )
+        # sections validation
+        self.data_loader.validate()
+        self.engine_exec.validate()
+        self.engine_optim.validate()
+        self.engine_tasks.validate()
+        self.orchestration.validate()
+
+# ------------------------------private  function------------------------------
+def _must_within(
+    value: typing.Any,
+    tag: str,
+    mmin: int | float | None = None,
+    mmax: int | float | None = None,
+) -> None:
+    if not isinstance(value, (int, float)):
+        return
+    rr = f'[{mmin}, {mmax}]'
+    if mmin and value < mmin or mmax and value > mmax:
+        raise ValueError(f'Value [{tag}] must be within {rr}, got: {value}')

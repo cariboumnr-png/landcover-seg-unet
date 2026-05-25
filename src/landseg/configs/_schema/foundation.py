@@ -27,14 +27,9 @@ Data foundation schema
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import os
 import re
-import typing
-
-# third-party imports
-import omegaconf
 
 # alias
 field = dataclasses.field
@@ -43,8 +38,6 @@ field = dataclasses.field
 # ----- grid
 @dataclasses.dataclass
 class _Extent:
-    default_input_dpath: str = '${execution.exp_root}/input/extent_reference'
-    filename: str = ''
     filepath: str = ''
     origin: tuple[float, float] = (0.0, 0.0)
     pixel_size: tuple[float, float] = (0.0, 0.0)
@@ -61,84 +54,63 @@ class _TileSpecs:
 @dataclasses.dataclass
 class _Grid:
     mode: str = 'ref'
-    crs: str = omegaconf.MISSING
+    crs: str = ''
     extent: _Extent = field(default_factory=_Extent)
     tile_specs: _TileSpecs = field(default_factory=_TileSpecs)
 
-    def __post_init__(self):
-        if not self.extent.filepath:
-            self.extent.filepath = os.path.join(
-                self.extent.default_input_dpath, self.extent.filename
-            )
-        if not _is_resolved(self.crs) or not _is_resolved(self.mode):
-            return
-        if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
-            raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
-        if self.mode not in {'ref', 'aoi', 'tiles'}:
-            raise ValueError(f'Invalid mode: {self.mode}')
-
     @property
     def tile_specs_tuple(self) -> tuple[int, int, int, int]:
+        '''Tile specs in px as (row, col, overlap_row, overlap_col).'''
         return dataclasses.astuple(self.tile_specs)
 
     def validate(self) -> None:
-        if not _is_resolved(self.mode):
-            return
-        if self.mode == 'ref':
-            if not os.path.exists(self.extent.filepath):
-                raise FileNotFoundError('Mode=ref but ref raster not provided')
-        elif self.mode == 'aoi':
-            if not all(self.extent.pixel_size):
-                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.extent.grid_extent or ()):
-                raise ValueError('Mode=aoi but grid extent has zero(s)')
-        elif self.mode == 'tiles':
-            if not all(self.extent.pixel_size):
-                raise ValueError('Mode=aoi|tiles but pixel size has zero(s)')
-            if not all(self.extent.grid_shape or ()):
-                raise ValueError('Mode=tiles but grid shape has zero(s)')
+        # grid mode validation
+        match self.mode:
+            case 'ref':
+                _must_exist(self.extent.filepath, 'extent reference raster')
+            case 'aoi':
+                if not all(self.extent.pixel_size):
+                    raise ValueError('Pixel size has zero(s)')
+                if not all(self.extent.grid_extent or ()):
+                    raise ValueError('Grid extent has zero(s)')
+            case 'tiles':
+                if not all(self.extent.pixel_size):
+                    raise ValueError('Pixel size has zero(s)')
+                if not all(self.extent.grid_shape or ()):
+                    raise ValueError('Grid shape has zero(s)')
+            case _:
+                raise ValueError(f'Invalid grid mode: {self.mode}')
+        # crs validation
+        if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
+            raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
 
 # ----- domain
 @dataclasses.dataclass
-class DomainFile:
-    name: str = omegaconf.MISSING
+class _DomainFile:
+    name: str = ''
     path: str = ''
-    index_base: int = omegaconf.MISSING
-
-    def __post_init__(self):
-        if os.path.exists(self.path):
-            self.name = os.path.splitext(os.path.basename(self.path))[0]
+    index_base: int = 1
 
 @dataclasses.dataclass
 class _Domains:
-    default_input_dpath: str = '${execution.exp_root}/input/domain_knowledge'
-    files: list[DomainFile] = field(default_factory=lambda: [])
+    files: list[_DomainFile] = field(default_factory=lambda: [])
     valid_threshold: float = 0.7
     target_variance: float = 0.9
 
     def add_domain(self, fpath: str, index_base: int):
-        if not os.path.exists(fpath):
-            raise ValueError(f'Domain raster {fpath} does not exist')
+        _must_exist(fpath, 'domain raster')
         if not isinstance(index_base, int):
             raise TypeError(f'Index base must be [int], got {type(index_base)}')
-        self.files.append(DomainFile(path=fpath, index_base=index_base ))
+        self.files.append(_DomainFile(path=fpath, index_base=index_base ))
 
     def validate(self):
         for file in self.files:
-            if not file.path:
-                file.path = os.path.join(self.default_input_dpath, file.name)
-            if not os.path.exists(file.path):
-                raise FileNotFoundError(f'Invalid domain raster: {file.path}')
+            _must_exist(file.path, 'domain raster')
+            # if domain name is not specified, parse from the path
+            if not file.name:
+                file.name = os.path.splitext(os.path.basename(file.path))[0]
 
 # ----- data
-@dataclasses.dataclass
-class _FileNames:
-    dev_image: str = omegaconf.MISSING
-    dev_label: str = omegaconf.MISSING
-    test_image: str = omegaconf.MISSING
-    test_label: str = omegaconf.MISSING
-    config: str = omegaconf.MISSING
-
 @dataclasses.dataclass
 class _FilePaths:
     dev_image: str = ''
@@ -154,37 +126,9 @@ class _General:
 
 @dataclasses.dataclass
 class _DataBlocks:
-    name: str = omegaconf.MISSING
-    default_input_dpath: str = '${execution.exp_root}/input/data/${foundation.datablocks.name}'
-    filenames: _FileNames = field(default_factory=_FileNames)
+    name: str = ''
     filepaths: _FilePaths = field(default_factory=_FilePaths)
     general: _General = field(default_factory=_General)
-
-    def __post_init__(self):
-        # compose file paths
-        root = self.default_input_dpath
-        paths = self.filepaths
-        names = self.filenames
-        # defer validation until config is composed and resolved
-        if not _is_resolved(self.name):
-            return
-        # dev image
-        if not self.filepaths.dev_image:
-            paths.dev_image = os.path.join(root, 'dev', names.dev_image)
-        # dev label
-        if not self.filepaths.dev_label:
-            paths.dev_label = os.path.join(root, 'dev', names.dev_label)
-        # test image (optional)
-        if not self.filepaths.test_image:
-            paths.test_image = os.path.join(root, 'test', names.test_image)
-        # test label (optional)
-        if not self.filepaths.test_label:
-            paths.test_label = os.path.join(root, 'test', names.test_label)
-        # config JSON
-        if not self.filepaths.config:
-            paths.config = os.path.join(root, names.config)
-        if not self.name:
-            raise ValueError('Input data name not provided')
 
     @property
     def has_test_data(self) -> bool:
@@ -196,13 +140,11 @@ class _DataBlocks:
         )
 
     def validate(self) -> None:
-        def _must_exist(path: str | None, label: str) -> None:
-            if path and not os.path.exists(path):
-                raise FileNotFoundError(f'invalid {label}: {path}')
-        # checks
-        _must_exist(self.filepaths.dev_image, 'dev image')
-        _must_exist(self.filepaths.dev_label, 'dev label')
-        _must_exist(self.filepaths.config, 'config json')
+        if not self.name:
+            raise ValueError('Input data name not provided')
+        _must_exist(self.filepaths.dev_image, 'model development image raster')
+        _must_exist(self.filepaths.dev_label, 'model development label raster')
+        _must_exist(self.filepaths.config, 'data config JSON')
 
 # ----- composite
 @dataclasses.dataclass
@@ -210,7 +152,10 @@ class DataFoundation:
     grid: _Grid = field(default_factory=_Grid)
     domains: _Domains = field(default_factory=_Domains)
     datablocks: _DataBlocks = field(default_factory=_DataBlocks)
-    output_dpath: str = '${execution.exp_root}/artifacts/${foundation.datablocks.name}/foundation'
+    output_dpath: str = (
+        '${execution.exp_root}/artifacts/'
+        '${foundation.datablocks.name}/foundation'
+    )
 
     def validate(self) -> None:
         self.grid.validate()
@@ -218,11 +163,6 @@ class DataFoundation:
         self.datablocks.validate()
 
 # ------------------------------private  function------------------------------
-def _is_resolved(value: typing.Any) -> bool:
-    '''Return True if not omegaconf.MISSING and not an interpolation.'''
-    if value is omegaconf.MISSING:
-        return False
-    # OmegaConf marks interpolations as strings like '${...}' pre-resolution
-    if isinstance(value, str) and value.strip().startswith('${'):
-        return False
-    return True
+def _must_exist(path: str | None, tag: str) -> None:
+    if path and not os.path.exists(path):
+        raise FileNotFoundError(f'File [{tag}] is invalid: {path}')

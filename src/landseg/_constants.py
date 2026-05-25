@@ -29,3 +29,4 @@ import torch
 # constants
 DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
+OVERFIT_MAX_EPOCH: int = 1000

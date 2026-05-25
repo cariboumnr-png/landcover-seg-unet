@@ -35,50 +35,47 @@ import typing
 # alias
 field = dataclasses.field
 
+# default double convolution parameters
+CONV_PARAMS: _ConvParams = {
+    'norm': 'gn',
+    'gn_groups': 8,
+    'p_drop': 0.05
+}
+
 # ---------------------------------MODELS CONFIGS------------------------------
 # ----- UNet bodies
 class _UNetBodyConfig(typing.Protocol):
     body: str
     base_ch: int
-    conv_params: dict[str, typing.Any]
+    conv_params: dict[str, _ConvParams]
 
-@dataclasses.dataclass
-class _ConvParams:
-    norm: str = 'gn'
-    gn_groups: int = 8
-    p_drop: float = 0.0
+class _ConvParams(typing.TypedDict):
+    norm: str
+    gn_groups: int
+    p_drop: float
 
 @dataclasses.dataclass
 class _UNet(_UNetBodyConfig):
     body: str = 'unet'
     base_ch: int = 32
-    conv_params: dict[str, typing.Any] = field(
-        default_factory=lambda: {
-            'downs': dataclasses.asdict(_ConvParams()),
-            'ups': dataclasses.asdict(_ConvParams())
-        }
+    conv_params: dict[str, _ConvParams] = field(
+        default_factory=lambda: {'downs': CONV_PARAMS, 'ups': CONV_PARAMS}
     )
 
 @dataclasses.dataclass
 class _UNetPP(_UNetBodyConfig):
     body: str = 'unetpp'
     base_ch: int = 32
-    conv_params: dict[str, typing.Any] = field(
-        default_factory=lambda: {
-            'downs': dataclasses.asdict(_ConvParams()),
-            'nodes': dataclasses.asdict(_ConvParams())
-        }
+    conv_params: dict[str, _ConvParams] = field(
+        default_factory=lambda: {'downs': CONV_PARAMS, 'nodes': CONV_PARAMS}
     )
 
 @dataclasses.dataclass
 class _UNetPPP(_UNetBodyConfig):
-    body: str = 'unetpp'
+    body: str = 'unetppp'
     base_ch: int = 32
-    conv_params: dict[str, typing.Any] = field(
-        default_factory=lambda: {
-            'downs': dataclasses.asdict(_ConvParams()),
-            'nodes': dataclasses.asdict(_ConvParams())
-        }
+    conv_params: dict[str, _ConvParams] = field(
+        default_factory=lambda: {'downs': CONV_PARAMS, 'nodes': CONV_PARAMS}
     )
 
 # ----- conditioners
@@ -157,7 +154,7 @@ class ModelsConfig:
             'unetppp': _UNetPPP(),
         }
     )
-    conditioner: list[str] = field(default_factory=lambda: ['concat', 'film'])
+    conditioners: list[str] = field(default_factory=lambda: [])
     conditioner_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
             'concat': _Concat(),
@@ -173,16 +170,27 @@ class ModelsConfig:
 
     @property
     def conditioning_config(self) -> dict[str, _DomainTargetConfig]:
-        assert all(c in self.conditioner_registry for c in self.conditioner)
-        return {c: self.conditioner_registry[c] for c in self.conditioner}
+        assert all(c in self.conditioner_registry for c in self.conditioners)
+        return {c: self.conditioner_registry[c] for c in self.conditioners}
 
     def set_base_channel(self, base_channel: int) -> None:
         '''Set `base channel` to the current model body.'''
         self.model_body_registry[self.model_body].base_ch = base_channel
 
     def validate(self) -> None:
-        assert self.model_body in self.model_body_registry, 'Invalid model body'
+        # model body selection
+        if not self.model_body in self.model_body_registry:
+            raise ValueError(
+                f'Invalid model body: {self.model_body} ',
+                f'expected: {list(self.model_body_registry.keys())}'
+            )
+        # conditioners
+        if not all(c in self.conditioner_registry for c in self.conditioners):
+            raise ValueError(
+                f'Invalid conditioner(s): {self,self.conditioners} '
+                f'expected: {list(self.conditioner_registry.keys())}'
+            )
         # cross-check clamp range ordering
         lo, hi = self.clamp_range
         if lo <= 0 or hi <= 0 or lo >= hi:
-            raise ValueError('invalid clamp_range ordering or non-positive')
+            raise ValueError('Invalid clamp_range ordering or non-positive')

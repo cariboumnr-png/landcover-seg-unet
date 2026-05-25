@@ -1,5 +1,5 @@
 # engine tasks settings
-alpha_fn: 'effective_n'
+alpha_fn: 'effective_n' # effective_n | inverse
 en_beta: 0.999
 excluded_cls: {}
 loss_types:

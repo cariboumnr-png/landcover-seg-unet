@@ -1,14 +1,5 @@
 name: demo_data
 
-default_input_dpath: ${execution.exp_root}/input/data/${foundation.datablocks.name}
-
-filenames:
-  dev_image: image.tif
-  dev_label: label.tif
-  test_image: image.tif
-  test_label: label.tif
-  config: config.json
-
 filepaths:
   dev_image: ''
   dev_label: ''

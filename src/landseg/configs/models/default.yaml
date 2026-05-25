@@ -42,7 +42,7 @@ model_body_registry:
         p_drop: 0.0
 
 # conditioning
-conditioner: [concat, film]
+conditioners: [concat, film]
 conditioner_registry:
 
   concat:

@@ -175,9 +175,10 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             domain_vec_dim=dataspecs.domains.vec_dim,
             targets=conditioning_config
         )
+        has_domain = dataspecs.domains.ids_num and dataspecs.domains.vec_dim
         # concat adapter
         concat_config = conditioning_config.get('concat')
-        if concat_config is None:
+        if concat_config is None or not has_domain:
             self.concat = None
             add_dim = 0
         else:
@@ -200,7 +201,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         # film conditioning adpater
         film_config = conditioning_config.get('film')
-        if film_config is None:
+        if film_config is None or not has_domain:
             self.film = None
         else:
             self.film = model_core.FilmConditioner(
