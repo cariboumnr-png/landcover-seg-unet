@@ -88,7 +88,7 @@ def overfit(config: configs.RootConfig) -> None:
     runner.set_head_state(monitor_head)
 
     # run train-evaluate
-    max_epoch = 1000
+    max_epoch = c.OVERFIT_MAX_EPOCH
     lr = config.session.engine_optim.lr
     logger.log('INFO', 'Starting overfit test')
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
