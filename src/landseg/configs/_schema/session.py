@@ -110,11 +110,14 @@ class _TasksConfig:
     loss_types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
 
     def validate(self):
-        losses = self.loss_types
-        _must_within(losses.focal.weight, 'focal loss weight', 0)
-        _must_within(losses.dice.weight, 'dice loss weight', 0)
-        _must_within(losses.spectral.weight, 'spectral loss weight', 0)
-        _must_within(losses.tv.weight, 'tv loss weight', 0)
+        match self.alpha_fn:
+            case 'effective_n': _must_within(self.en_beta, 'EN beta', 0, 1)
+            case 'inverse': pass
+            case _: raise ValueError('Invalid loss alpha function')
+        _must_within(self.loss_types.focal.weight, 'focal loss weight', 0)
+        _must_within(self.loss_types.dice.weight, 'dice loss weight', 0)
+        _must_within(self.loss_types.spectral.weight, 'spectral loss weight', 0)
+        _must_within(self.loss_types.tv.weight, 'tv loss weight', 0)
 
 # ----- orchestration
 @dataclasses.dataclass
