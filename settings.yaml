@@ -214,6 +214,8 @@ session:
     # Définit la progression de l’entraînement en phases.
     # -----------------------------------------------------------------------
     curriculum:
+      schema: single
+
       single: # conitunous training will follow this
         phases: # you can use this as a phase template to design your own phases
           - name: single_phase_parent
@@ -224,15 +226,33 @@ session:
             frozen_heads: null
 
       baseline: # default curriculum training will follow this baseline
-        select_children: []
         phases:
           - name: parent_head
             num_epochs: 15
+            start_epoch: 1
+            lr_scale: 1.0
             active_heads: [base]
+            frozen_heads: null
 
-          - name: select_children_heads
+          - name: refine_head_reclass_1
             num_epochs: 20
+            start_epoch: 1
+            lr_scale: 1.0
+            active_heads: [reclass_1]
             frozen_heads: [base]
 
           - name: joint_tuning
             num_epochs: 10
+            start_epoch: 1
+            lr_scale: 1.0
+            active_heads: [base, reclass_1]
+            frozen_heads: null
+
+      custom: # you can use this as a phase template to design your own phases
+        phases:
+          - name: phase_0
+            num_epochs: 10
+            start_epoch: 1
+            lr_scale: 1.0
+            active_heads: [base]
+            frozen_heads: null

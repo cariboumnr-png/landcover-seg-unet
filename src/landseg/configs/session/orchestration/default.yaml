@@ -16,9 +16,9 @@ monitor:
 curriculum:
   schema: single
 
+  # single training phase on the parent head only
   single:
     name: single
-    # single training phase on the parent head only
     phases:
       - name: single_phase_parent
         num_epochs: 10
@@ -27,9 +27,9 @@ curriculum:
         active_heads: [base]
         frozen_heads: null
 
+  # default top-down phase schema
   baseline:
     name: baseline
-    # default top-down phase schema
     phases:
       - name: parent_head
         num_epochs: 15
@@ -52,6 +52,7 @@ curriculum:
         active_heads: [base, reclass_1]
         frozen_heads: null
 
+  # custom multi-phases template
   custom:
     name: custom
     phases:
