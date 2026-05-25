@@ -1,40 +1,28 @@
 # @package _global_
 
 models:
-  conditioning:
-    mode: null
-    concat:
-      out_dim: 0
-      use_ids: False
-      use_vec: False
-      use_mlp: False
-    film:
-      embed_dim: 0
-      use_ids: False
-      use_vec: False
-      hidden: 128
+  model_body: unet
+  conditioners: []
 
 session:
 
   engine_exec:
     use_amp: False
-    enable_logit_adjust: False
     logit_adjust_alpha: 0.0
 
   engine_optim:
     lr: 1e-3
     weight_decay: 0.0
     sched_cls: null
-    sched_args: {}
     grad_clip_norm: null
 
   engine_tasks:
     loss_types:
       focal:
-        weight: 1.0
+        weight: 0.5
         gamma: 0.0
       dice:
-        weight: 0.0
+        weight: 0.5
       spectral:
         weight: 0.0
       tv:
@@ -43,10 +31,6 @@ session:
   orchestration:
     monitor:
       track_heads: [base]
-    curriculum:
-      single:
-        phases:
-          - num_epochs: 1000
 
 pipeline:
   name: diagnose-overfit

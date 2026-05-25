@@ -88,7 +88,7 @@ def overfit(config: configs.RootConfig) -> None:
     runner.set_head_state(monitor_head)
 
     # run train-evaluate
-    max_epoch = config.session.orchestration.single_phase.num_epochs
+    max_epoch = 1000
     lr = config.session.engine_optim.lr
     logger.log('INFO', 'Starting overfit test')
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
@@ -101,17 +101,11 @@ def overfit(config: configs.RootConfig) -> None:
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
             logger.log('INFO', 'Overfit reached - test complete')
+            logger.close()
             return
 
     # if overfit not reached
-    hint = 'pipeline=diagnose-overfit session.runtime.schedule.max_epoch=<value>'
-    logger.log(
-        'WARNING',
-        f'IoU did not reach 99% after {max_epoch} epochs. '
-        f'Increase the limit via: {hint}'
-    )
-
-    # close logger
+    logger.log('WARNING',f'IoU did not reach 99% after {max_epoch} epochs. ')
     logger.close()
 
 def _build_a_block(
