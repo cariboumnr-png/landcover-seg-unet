@@ -63,6 +63,7 @@ import torch.nn as nn
 import torch.nn.functional
 # local imports
 import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.components as components
 
 class UNetPPP(unet.UNetBackbone):
     '''
@@ -85,8 +86,8 @@ class UNetPPP(unet.UNetBackbone):
     '''
 
     # aliases
-    DC = unet.DoubleConv
-    DS = unet.Downsample
+    DC = components.DoubleConv
+    DS = components.Downsample
 
     def __init__(
         self,
@@ -107,13 +108,8 @@ class UNetPPP(unet.UNetBackbone):
         # encoder
         # ------------------------------------------------------------------ #
 
-        self.inc = self.DC(
-            in_ch,
-            ch,
-            norm=None,
-            p_drop=0.0,
-        )
-
+        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
+        
         self.downs = nn.ModuleList([
             self.DS(ch,      ch * 2,  **kwargs.get('downs', {})),
             self.DS(ch * 2,  ch * 4,  **kwargs.get('downs', {})),

@@ -55,6 +55,7 @@ import torch
 import torch.nn
 # local imports
 import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.components as components
 
 class UNetPP(unet.UNetBackbone):
     '''UNet++ backbone with nested dense skip refinements.
@@ -77,8 +78,8 @@ class UNetPP(unet.UNetBackbone):
     '''
 
     # module aliases
-    DC = unet.DoubleConv
-    DS = unet.Downsample
+    DC = components.DoubleConv
+    DS = components.Downsample
     US = torch.nn.Upsample
 
     def __init__(self, in_ch: int, base_ch: int, **kwargs):

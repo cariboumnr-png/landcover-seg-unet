@@ -32,33 +32,26 @@ import typing
 
 __all__ = [
     # classes
-    'UNetBackbone',
-    'UNet',
-    'UNetPP',
-    'UNetPPP',
+    'HybridBottleneck',
+    'TransformerBottleneck',
+    'DoubleConv',
+    'Downsample',
+    'Upsample',
     # functions
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import UNetBackbone
-    from .unet import UNet
-    from .unetpp import UNetPP
-    from .unetppp import UNetPPP
+    from .convolution_blocks import DoubleConv, Downsample, Upsample
+    from .transformer_bottleneck import HybridBottleneck, TransformerBottleneck
 
 def __getattr__(name: str):
 
-    if name in {'UNetBackbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
+        return getattr(importlib.import_module('.convolution_blocks', __package__), name)
 
-    if name in {'UNet'}:
-        return getattr(importlib.import_module('.unet', __package__), name)
-
-    if name in {'UNetPP'}:
-        return getattr(importlib.import_module('.unetpp', __package__), name)
-
-    if name in {'UNetPPP'}:
-        return getattr(importlib.import_module('.unetppp', __package__), name)
+    if name in {'HybridBottleneck', 'TransformerBottleneck'}:
+        return getattr(importlib.import_module('.transformer_bottleneck', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
