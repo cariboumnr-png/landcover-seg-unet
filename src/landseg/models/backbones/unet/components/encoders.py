@@ -38,19 +38,19 @@ class UNetEncoders(torch.nn.Module):
         self,
         in_ch: int,
         base_ch: int,
-        **kwargs
+        params: components.ConvolutionParameters,
     ) -> None:
         super().__init__()
 
         ch = base_ch # alias base_ch -> ch
         # initial convolution block with no norm nor drop outs
-        self.inc = components.DoubleConv(in_ch, base_ch)
+        self.inc = components.DoubleConv(in_ch, base_ch, params)
         # downsampling path (encoder) with 4 levels
         self.downs = torch.nn.ModuleList([
-            components.Downsample(ch,   ch*2,  **kwargs.get('downs', {})),
-            components.Downsample(ch*2, ch*4,  **kwargs.get('downs', {})),
-            components.Downsample(ch*4, ch*8,  **kwargs.get('downs', {})),
-            components.Downsample(ch*8, ch*16, **kwargs.get('downs', {})),
+            components.Downsample(ch,   ch*2,  params),
+            components.Downsample(ch*2, ch*4,  params),
+            components.Downsample(ch*4, ch*8,  params),
+            components.Downsample(ch*8, ch*16, params),
         ])
 
     def __len__(self) -> int:

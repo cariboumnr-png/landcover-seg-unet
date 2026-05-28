@@ -41,6 +41,8 @@ This module provides the common building blocks used across UNet-likes:
 # third-part imports
 import torch
 import torch.nn
+# local imports
+import landseg.models.backbones.unet.components as components
 
 class DoubleConv(torch.nn.Module):
     '''
@@ -55,7 +57,12 @@ class DoubleConv(torch.nn.Module):
     - ReLU configured with inplace=False to be conservative with autograd.
     '''
 
-    def __init__(self, in_ch: int, out_ch: int, **kwargs):
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        params: components.ConvolutionParameters,
+    ):
         '''
         Initiate a double-conv block with configurable normalization.
 
@@ -73,17 +80,14 @@ class DoubleConv(torch.nn.Module):
         '''
         super().__init__()
 
-        # unpack keyword arguments
-        norm = kwargs.get('norm', 'gn') # default group norm
-        gn_groups = kwargs.get('gn_groups', 8) # if group norm is used
-        p_drop = kwargs.get('p_drop', 0.05) # drop out rate
+        p_drop = params.p_drop # drop out rate
         self.block = torch.nn.Sequential(
             torch.nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False),
-            self._norm(norm, out_ch, gn_groups),
+            self._norm(params.norm, out_ch, params.gn_groups),
             torch.nn.ReLU(inplace=False),
             torch.nn.Dropout2d(p_drop) if p_drop > 0 else torch.nn.Identity(),
             torch.nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
-            self._norm(norm, out_ch, gn_groups),
+            self._norm(params.norm, out_ch, params.gn_groups),
             torch.nn.ReLU(inplace=False),
         )
 
@@ -92,7 +96,7 @@ class DoubleConv(torch.nn.Module):
         return self.block(x)
 
     @staticmethod
-    def _norm(mode: str | None, ch: int, gn_groups: int=8) -> torch.nn.Module:
+    def _norm(mode: str | None, ch: int, gn_groups: int | None) -> torch.nn.Module:
         '''Return the requested normalization layer or identity.'''
 
         # no normalization
@@ -103,6 +107,7 @@ class DoubleConv(torch.nn.Module):
         if mode == 'bn':
             return torch.nn.BatchNorm2d(ch)
         if mode == 'gn':
+            assert gn_groups is not None, 'gn_groups must be specified for group norm'
             g = min(gn_groups, ch)
             while ch % g != 0 and g > 1: # fall back to (1, ...)
                 g -= 1
@@ -119,7 +124,12 @@ class Downsample(torch.nn.Module):
     MaxPool2d(stride=2) → DoubleConv(in_ch, out_ch, **kwargs)
     '''
 
-    def __init__(self, in_ch: int, out_ch: int, **kwargs):
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        params: components.ConvolutionParameters,
+    ):
         '''
         Initialize a pooling-plus-double-conv downsampling stage.
 
@@ -132,7 +142,7 @@ class Downsample(torch.nn.Module):
         super().__init__()
         self.block = torch.nn.Sequential(
             torch.nn.MaxPool2d(2),
-            DoubleConv(in_ch, out_ch, **kwargs)
+            DoubleConv(in_ch, out_ch, params)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -148,21 +158,26 @@ class Upsample(torch.nn.Module):
     Upsample(scale_factor=2) → Concat([x_up, skip], dim=1) → DoubleConv
     '''
 
-    def __init__(self, in_ch: int, out_ch: int, **kwargs):
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        params: components.ConvolutionParameters
+    ):
         '''
         Bilinear upsample, skip concatenation, and DoubleConv refinement.
 
         Args:
             in_ch: Number of input channels.
             out_ch: Number of output channels.
-            **kwargs: Additional options pass to `DoubleConv`.
+            params: Convolution parameters.
         '''
 
         super().__init__()
         self.upsample = torch.nn.Upsample(
             scale_factor=2, mode='bilinear', align_corners=False
         )
-        self.conv = DoubleConv(in_ch, out_ch, **kwargs)
+        self.conv = DoubleConv(in_ch, out_ch, params)
 
     def forward(self, x: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
         '''Upsample, concatenate the skip feature, and refine.'''
