@@ -113,8 +113,9 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
     def __init__(
         self,
         *,
+        input_patch_size: int,
         dataspecs: core.DataSpecs,
-        backbone_config: backbones.UNetBodyConfig,
+        backbone_config: backbones.UNetBackboneConfig,
         conditioning_config: dict[str, model_core.DomainTargetConfig],
         **kwargs
       ):
@@ -164,7 +165,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         super().__init__()
 
         self.dataspecs = dataspecs
-        base_ch = backbone_config.base_ch
+        base_ch = backbone_config.body.base_ch
 
         heads = {k: len(v) for k, v in dataspecs.heads.class_counts.items()}
         self.heads = model_core.HeadManager(base_ch, heads)
@@ -186,10 +187,11 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             self.concat = model_core.ConcatAdapter(concat_dim=add_dim)
 
         # core UNet body
-        body = self._get_model_body(backbone_config.body)
-        in_ch = dataspecs.meta.image_specs.num_channels
-        self.body: backbones.UNetBackbone
-        self.body = body(in_ch + add_dim, base_ch, **backbone_config.conv_params)
+        self.body = backbones.build_unet_backbone(
+            dataspecs.meta.image_specs.num_channels + add_dim,
+            input_patch_size,
+            backbone_config
+        )
 
         # validate the spatial divisibility
         if dataspecs.meta.image_specs.height_width % self.body.spatial_divisor != 0:
@@ -311,17 +313,3 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         # return features
         return x
-
-    @staticmethod
-    def _get_model_body(body: str) -> backbones.UNetBackbone:
-        '''Retrieve a registered UNet backbone implementation.'''
-
-        # model body registry
-        body_registry = {
-            'unet': backbones.UNet,
-            'unetpp': backbones.UNetPP,
-            'unetppp': backbones.UNetPPP
-        }
-        if not body in body_registry:
-            raise ValueError(f'Invalid base model: {body}')
-        return body_registry[body]
