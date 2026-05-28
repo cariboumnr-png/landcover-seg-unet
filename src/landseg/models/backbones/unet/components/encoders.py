@@ -60,10 +60,10 @@ class UNetEncoders(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Return 5-level encoder features.'''
 
-        x1 = self.inc(x)
-        x2 = self.downs[0](x1)
-        x3 = self.downs[1](x2)
-        x4 = self.downs[2](x3)
-        x5 = self.downs[3](x4)
+        x1 = self.inc(x)                # H     in_ch ->  b
+        x2 = self.downs[0](x1)          # H/2   b     ->  2b
+        x3 = self.downs[1](x2)          # H/4   2b    ->  4b
+        x4 = self.downs[2](x3)          # H/8   4b    ->  8b
+        x5 = self.downs[3](x4)          # H/16  8b    ->  16b
 
         return x1, x2, x3, x4, x5

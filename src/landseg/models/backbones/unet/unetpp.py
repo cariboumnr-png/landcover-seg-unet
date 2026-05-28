@@ -57,6 +57,9 @@ import torch.nn
 import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.components as components
 
+# module aliases
+DC = components.DoubleConv
+
 class UNetPP(unet.UNetBackbone):
     '''UNet++ backbone with nested dense skip refinements.
 
@@ -77,10 +80,6 @@ class UNetPP(unet.UNetBackbone):
     - Convolution weights are Kaiming initialized (ReLU-friendly).
     '''
 
-    # module aliases
-    DC = components.DoubleConv
-    DS = components.Downsample
-    US = torch.nn.Upsample
 
     def __init__(self, in_ch: int, base_ch: int, **kwargs):
         '''
@@ -129,27 +128,27 @@ class UNetPP(unet.UNetBackbone):
         chs = {0: ch, 1: ch * 2, 2: ch * 4, 3: ch * 8, 4: ch * 16}
         self.nodes = torch.nn.ModuleDict({
         # Level 1 nested (j=1)
-            'x01': self.DC(chs[0]     + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x11': self.DC(chs[1]     + chs[2], chs[1], **kwargs.get('nodes', {})),
-            'x21': self.DC(chs[2]     + chs[3], chs[2], **kwargs.get('nodes', {})),
-            'x31': self.DC(chs[3]     + chs[4], chs[3], **kwargs.get('nodes', {})),
+            'x01': DC(chs[0]     + chs[1], chs[0], **kwargs.get('nodes', {})),
+            'x11': DC(chs[1]     + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x21': DC(chs[2]     + chs[3], chs[2], **kwargs.get('nodes', {})),
+            'x31': DC(chs[3]     + chs[4], chs[3], **kwargs.get('nodes', {})),
             # Level 2 nested (j=2)
-            'x02': self.DC(chs[0] * 2 + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x12': self.DC(chs[1] * 2 + chs[2], chs[1], **kwargs.get('nodes', {})),
-            'x22': self.DC(chs[2] * 2 + chs[3], chs[2], **kwargs.get('nodes', {})),
+            'x02': DC(chs[0] * 2 + chs[1], chs[0], **kwargs.get('nodes', {})),
+            'x12': DC(chs[1] * 2 + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x22': DC(chs[2] * 2 + chs[3], chs[2], **kwargs.get('nodes', {})),
             # Level 3 nested (j=3)
-            'x03': self.DC(chs[0] * 3 + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x13': self.DC(chs[1] * 3 + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x03': DC(chs[0] * 3 + chs[1], chs[0], **kwargs.get('nodes', {})),
+            'x13': DC(chs[1] * 3 + chs[2], chs[1], **kwargs.get('nodes', {})),
             # Level 4 nested (final output j=4)
-            'x04': self.DC(chs[0] * 4 + chs[1], chs[0], **kwargs.get('nodes', {}))
+            'x04': DC(chs[0] * 4 + chs[1], chs[0], **kwargs.get('nodes', {}))
         })
 
         # upsamplers for backbone resolution
         self.ups = torch.nn.ModuleList([
-            self.US(scale_factor=2, mode='bilinear', align_corners=False),
-            self.US(scale_factor=2, mode='bilinear', align_corners=False),
-            self.US(scale_factor=2, mode='bilinear', align_corners=False),
-            self.US(scale_factor=2, mode='bilinear', align_corners=False)
+            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
+            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
+            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
+            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
         ])
 
         # Kaiming weight initialization

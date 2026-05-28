@@ -93,11 +93,6 @@ class UNet(unet.UNetBackbone):
     - The backbone's `out_channels` = `base_ch` (decoder's final width).
     '''
 
-    # module aliases
-    DC = components.DoubleConv
-    DS = components.Downsample
-    US = components.Upsample
-
     # core UNet body
     def __init__(self, in_ch: int, base_ch: int, **kwargs):
         '''
@@ -138,10 +133,10 @@ class UNet(unet.UNetBackbone):
 
         # upsampling path (decoder) with 4 levels, concatenating encoder skips
         self.ups = torch.nn.ModuleList([
-            self.US(ch*16 + ch*8, ch*8, **kwargs.get('ups', {})),
-            self.US(ch*8  + ch*4, ch*4, **kwargs.get('ups', {})),
-            self.US(ch*4  + ch*2, ch*2, **kwargs.get('ups', {})),
-            self.US(ch*2  + ch,   ch,   **kwargs.get('ups', {}))
+            components.Upsample(ch*16 + ch*8, ch*8, **kwargs.get('ups', {})),
+            components.Upsample(ch*8  + ch*4, ch*4, **kwargs.get('ups', {})),
+            components.Upsample(ch*4  + ch*2, ch*2, **kwargs.get('ups', {})),
+            components.Upsample(ch*2  + ch,   ch,   **kwargs.get('ups', {}))
         ])
 
         # Kaiming weight initialization
@@ -167,13 +162,10 @@ class UNet(unet.UNetBackbone):
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Run the contracting path and return encoder features.'''
 
-        # x1 = self.inc(x)                # H     in_ch ->  b
-        # x2 = self.downs[0](x1)          # H/2   b     ->  2b
-        # x3 = self.downs[1](x2)          # H/4   2b    ->  4b
-        # x4 = self.downs[2](x3)          # H/8   4b    ->  8b
-        # x5 = self.downs[3](x4)          # H/16  8b    ->  16b
-        # xb = self.bottleneck(x5)        # H/16  16b   --  16b
+        # unpack the 5 levels
         x1, x2, x3, x4, x5 = self.downs(x)
+        # apply bottleneck to the deepest encoder feature
+        xb = self.bottleneck(x5)
         return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:

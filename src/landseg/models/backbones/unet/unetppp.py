@@ -85,10 +85,6 @@ class UNetPPP(unet.UNetBackbone):
     - Encoder depth defines the minimum spatial divisor constraint
     '''
 
-    # aliases
-    DC = components.DoubleConv
-    DS = components.Downsample
-
     def __init__(
         self,
         in_ch: int,
@@ -123,10 +119,10 @@ class UNetPPP(unet.UNetBackbone):
         # ------------------------------------------------------------------ #
 
         self.ups = nn.ModuleList([
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
+            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
+            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
+            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
+            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
         ])
 
         # Kaiming weight initialization
