@@ -95,11 +95,12 @@ def evaluate(config: configs.RootConfig):
 
     # setup the model
     model = models.build_multihead_unet(
+        patch_size=config.session.data_loader.patch_size,
         dataspecs=dataspecs,
-        body_config=config.models.model_body_config,
+        unet_backbone_config=config.models.unet_backbone_config,
         conditioning_config=config.models.conditioning_config,
-        enable_clamp=config.models.enable_clamp,
-        clamp_range=config.models.clamp_range
+        enable_clamp=config.models.numeric_safety.enable_clamp,
+        clamp_range=config.models.numeric_safety.clamp_range
     )
 
     # load checkpoint with no optimizer nor scheduler
