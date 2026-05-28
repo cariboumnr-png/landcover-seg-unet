@@ -88,17 +88,14 @@ class UNetPPP(unet.UNetBackbone):
     def __init__(
         self,
         in_ch: int,
-        base_ch: int,
         config: unet.BackboneConfig
     ) -> None:
         '''
         Initialize backbone.
         '''
 
-        super().__init__(in_ch, base_ch, config.encoder_conv_params)
-        # unified aggregation width
-        agg_ch = ch = base_ch
-        self._out_channels = base_ch
+        super().__init__(in_ch, config)
+        self._out_channels = ch = config.base_ch
 
         # ------------------------------------------------------------------ #
         # encoder projections
@@ -106,11 +103,11 @@ class UNetPPP(unet.UNetBackbone):
         # ------------------------------------------------------------------ #
 
         self.projs = nn.ModuleList([
-            nn.Conv2d(ch,      agg_ch, 1),
-            nn.Conv2d(ch * 2,  agg_ch, 1),
-            nn.Conv2d(ch * 4,  agg_ch, 1),
-            nn.Conv2d(ch * 8,  agg_ch, 1),
-            nn.Conv2d(ch * 16, agg_ch, 1),
+            nn.Conv2d(ch,      ch, 1),
+            nn.Conv2d(ch * 2,  ch, 1),
+            nn.Conv2d(ch * 4,  ch, 1),
+            nn.Conv2d(ch * 8,  ch, 1),
+            nn.Conv2d(ch * 16, ch, 1),
         ])
 
         # ------------------------------------------------------------------ #
@@ -120,10 +117,10 @@ class UNetPPP(unet.UNetBackbone):
 
         assert config.nodes_conv_params
         self.ups = nn.ModuleList([
-            components.DoubleConv(agg_ch * 5, agg_ch, config.nodes_conv_params),
-            components.DoubleConv(agg_ch * 5, agg_ch, config.nodes_conv_params),
-            components.DoubleConv(agg_ch * 5, agg_ch, config.nodes_conv_params),
-            components.DoubleConv(agg_ch * 5, agg_ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
         ])
 
         # Kaiming weight initialization

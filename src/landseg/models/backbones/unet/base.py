@@ -29,6 +29,7 @@ import abc
 import torch
 # local imports
 import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.components as components
 
 class UNetBackbone(backbones.Backbone):
@@ -41,12 +42,13 @@ class UNetBackbone(backbones.Backbone):
     def __init__(
         self,
         in_ch: int,
-        base_ch: int,
-        enc_conv_params: components.ConvolutionParameters,
+        config: unet.BackboneConfig,
     ):
         '''doc'''
 
         super().__init__()
+        base_ch = config.base_ch
+        enc_conv_params = config.encoder_conv_params
         # initial convolution block with no norm nor drop outs
         self.inc = components.DoubleConv(in_ch, base_ch, None)
         # downsampling path (encoder) with 4 levels

@@ -28,18 +28,17 @@ import landseg.models.backbones.unet.components as components
 
 def build_backbone(
     in_ch: int,
-    base_ch: int,
-    backbone_config: unet.BackboneConfig,
     input_size: int,
+    backbone_config: unet.BackboneConfig,
     bottleneck_config: components.BottleneckConfig
 ) -> backbones.Backbone:
     '''doc'''
 
     # core UNet body without bottleneck
     match backbone_config.body:
-        case 'unet': backbone = backbones.UNet(in_ch, base_ch, backbone_config)
-        case 'unetpp': backbone = backbones.UNetPP(in_ch, base_ch, backbone_config)
-        case 'unetppp': backbone = backbones.UNetPPP(in_ch, base_ch, backbone_config)
+        case 'unet': backbone = backbones.UNet(in_ch, backbone_config)
+        case 'unetpp': backbone = backbones.UNetPP(in_ch, backbone_config)
+        case 'unetppp': backbone = backbones.UNetPPP(in_ch, backbone_config)
         case _: raise ValueError(f'Invalid backbone body: {backbone_config.body}')
 
     # bottleneck specs from the backbone

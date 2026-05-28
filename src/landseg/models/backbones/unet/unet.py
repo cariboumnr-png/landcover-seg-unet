@@ -97,7 +97,6 @@ class UNet(unet.UNetBackbone):
     def __init__(
         self,
         in_ch: int,
-        base_ch: int,
         config: unet.BackboneConfig
     ):
         '''
@@ -132,10 +131,8 @@ class UNet(unet.UNetBackbone):
             (`base_ch`).
         '''
 
-        super().__init__(in_ch, base_ch, config.encoder_conv_params)
-        self._out_channels = base_ch # conforming to base class
-        ch = base_ch # alias base_ch -> ch
-
+        super().__init__(in_ch, config)
+        self._out_channels = ch = config.base_ch
         # upsampling path (decoder) with 4 levels, concatenating encoder skips
         assert config.decoder_conv_params
         self.ups = torch.nn.ModuleList([
