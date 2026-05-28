@@ -46,7 +46,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .convolution_blocks import DoubleConv, Downsample, Upsample
+    from .conv_blocks import DoubleConv, Downsample, Upsample
     from .encoders import UNetEncoders
     from .bottlenecks import (
         BaseBottleneck,
@@ -57,7 +57,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
 
     if name in {'DoubleConv', 'Downsample', 'Upsample'}:
-        return getattr(importlib.import_module('.convolution_blocks', __package__), name)
+        return getattr(importlib.import_module('.conv_blocks', __package__), name)
 
     if name in {'HybridBottleneck', 'TransformerBottleneck', 'BaseBottleneck', 'UNetBottleneck'}:
         return getattr(importlib.import_module('.bottlenecks', __package__), name)
