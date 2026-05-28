@@ -25,7 +25,6 @@
 import abc
 # third-party imports
 import torch
-import torch.nn
 # local imports
 import landseg.models.backbones as backbones
 import landseg.models.backbones.unet.components as components
@@ -41,12 +40,11 @@ class UNetBackbone(backbones.Backbone):
         self,
         in_ch: int,
         base_ch: int,
-        bottleneck: torch.nn.Module | None = None,
+        bottleneck: components.BaseBottleneck | None = None,
         **kwargs
     ) -> None:
         super().__init__()
 
-        ch = base_ch # alias base_ch -> ch
         # initial convolution block with no norm nor drop outs
         self.inc = components.DoubleConv(in_ch, base_ch)
         # downsampling path (encoder) with 4 levels
@@ -54,15 +52,17 @@ class UNetBackbone(backbones.Backbone):
         # bottleneck (deepest representation) with default
         if bottleneck is None:
             self.bottleneck = components.DoubleConv(
-                ch * 16, ch * 16, **kwargs.get('bottleneck', {})
+                self.bottleneck_ch,
+                self.bottleneck_ch,
+                **kwargs.get('bottleneck', {})
             )
         else:
-            if not isinstance(bottleneck, torch.nn.Module):
-                raise TypeError('bottleneck must be a torch.nn.Module')
-            if self.bottleneck_ch != ch * 16:
+            if not isinstance(bottleneck, components.BaseBottleneck):
+                raise TypeError('bottleneck must be a components.BaseBottleneck')
+            if self.bottleneck_ch != bottleneck.in_channels:
                 raise ValueError(
-                    f'bottleneck_ch ({self.bottleneck_ch}) must match '
-                    f'encoder output channels ({ch * 16})'
+                    f'bottleneck_ch ({bottleneck.in_channels}) must match '
+                    f'encoder output channels ({self.bottleneck_ch})'
                 )
             self.bottleneck = bottleneck
 
@@ -72,6 +72,7 @@ class UNetBackbone(backbones.Backbone):
         '''Return the bottleneck channel number.'''
         raise NotImplementedError
 
+    @abc.abstractmethod
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''
         Args:

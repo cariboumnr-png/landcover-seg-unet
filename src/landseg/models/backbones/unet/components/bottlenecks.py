@@ -42,13 +42,56 @@ performance especially on large-scale spatial patterns.
 - Configurable number of transformer blocks and attention heads
 '''
 
+# standard imports
+import abc
 # third-party imports
 import torch
 import torch.nn
 # local imports
 import landseg.models.backbones.unet.components as components
 
-class TransformerBottleneck(torch.nn.Module):
+class BaseBottleneck(torch.nn.Module):
+    '''
+    Base class for UNet bottlenecks.
+
+    Defines the interface and common functionality for bottleneck modules
+    used in UNet architectures. Subclasses must implement the forward
+    method to process the input feature map and produce an output of
+    identical shape.
+
+    This class is not intended to be instantiated directly. It serves as
+    a template for specific bottleneck implementations (e.g., pure
+    transformer, hybrid conv-transformer).
+    '''
+
+    def __init__(
+        self,
+        in_channels: int,
+        **kwargs
+    ):
+        super().__init__()
+        self.in_channels = in_channels
+
+    @abc.abstractmethod
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        '''
+        Process input feature map through the bottleneck.
+
+        Args:
+            x: Input tensor of shape (B, C, H, W)
+
+        Returns:
+            Output tensor of shape (B, C, H, W)
+
+        Notes:
+        - Subclasses must implement this method to define the bottleneck
+          processing logic.
+        - The output must have the same shape as the input to maintain
+          compatibility with the UNet architecture.
+        '''
+        raise NotImplementedError
+
+class TransformerBottleneck(BaseBottleneck):
     '''
     Transformer-based bottleneck for U-Net.
 
@@ -67,8 +110,6 @@ class TransformerBottleneck(torch.nn.Module):
         mlp_ratio: Feed-forward network expansion ratio.
         dropout: Dropout probability.
         attn_dropout: Attention-specific dropout probability.
-        norm: Optional normalization type (currently unused, for API
-            compatibility with DoubleConv).
 
     Example:
         Replace a UNet bottleneck:
@@ -92,7 +133,7 @@ class TransformerBottleneck(torch.nn.Module):
         dropout: float = 0.1,
         attn_dropout: float = 0.0,
     ):
-        super().__init__()
+        super().__init__(in_channels)
         self.in_channels = in_channels
 
         self.pos_embed = _PositionalEmbedding(in_channels, spatial_size=16)
@@ -133,7 +174,7 @@ class TransformerBottleneck(torch.nn.Module):
 
         return x
 
-class HybridBottleneck(torch.nn.Module):
+class HybridBottleneck(BaseBottleneck):
     '''
     Hybrid bottleneck combining convolution and transformer.
 
@@ -174,7 +215,7 @@ class HybridBottleneck(torch.nn.Module):
         norm: str | None = None,
         **kwargs
     ):
-        super().__init__()
+        super().__init__(in_channels)
         self.in_channels = in_channels
 
         self.conv_blocks = torch.nn.ModuleList([
