@@ -88,7 +88,7 @@ class UNetPPP(unet.UNetBackbone):
     def __init__(
         self,
         in_ch: int,
-        config: unet.BackboneConfig
+        config: unet.UNetBodyConfig
     ) -> None:
         '''
         Initialize backbone.

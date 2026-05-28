@@ -53,8 +53,9 @@ import landseg.models.frames as frames
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     *,
+    patch_size: int,
     dataspecs: core.DataSpecs,
-    body_config: backbones.UNetBodyConfig,
+    unet_backbone_config: backbones.UNetBackboneConfig,
     conditioning_config: typing.Mapping[str, model_core.DomainTargetConfig],
     **kwargs
 ) -> frames.MultiHeadBaseModel:
@@ -97,8 +98,9 @@ def build_multihead_unet(
     '''
 
     model = frames.MultiHeadUNet(
+        input_patch_size=patch_size,
         dataspecs=dataspecs,
-        backbone_config=body_config,
+        backbone_config=unet_backbone_config,
         conditioning_config=dict(conditioning_config),
         **kwargs
     )

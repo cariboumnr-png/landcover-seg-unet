@@ -29,7 +29,7 @@ import typing
 # local imports
 import landseg.models.backbones.unet.components as components
 
-class BackboneConfig(typing.Protocol):
+class UNetBodyConfig(typing.Protocol):
     '''Typed container for backbone convolution configuration.'''
     @property
     def body(self) -> str: ...

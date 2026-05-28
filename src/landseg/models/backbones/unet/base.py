@@ -42,7 +42,7 @@ class UNetBackbone(backbones.Backbone):
     def __init__(
         self,
         in_ch: int,
-        config: unet.BackboneConfig,
+        config: unet.UNetBodyConfig,
     ):
         '''doc'''
 

@@ -38,13 +38,15 @@ __all__ = [
     'UNetPPP',
     # functions
     # types
-    'BackboneConfig'
+    'UNetBodyConfig',
+    'BottleneckConfig'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .base import UNetBackbone
-    from .configs import BackboneConfig
+    from .components import BottleneckConfig
+    from .configs import UNetBodyConfig
     from .unet import UNet
     from .unetpp import UNetPP
     from .unetppp import UNetPPP
@@ -54,7 +56,10 @@ def __getattr__(name: str):
     if name in {'UNetBackbone'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'BackboneConfig'}:
+    if name in {'BottleneckConfig'}:
+        return getattr(importlib.import_module('.components', __package__), name)
+
+    if name in {'UNetBodyConfig'}:
         return getattr(importlib.import_module('.configs', __package__), name)
 
     if name in {'UNet'}:
