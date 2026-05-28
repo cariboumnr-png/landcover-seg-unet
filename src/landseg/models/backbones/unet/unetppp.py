@@ -90,13 +90,14 @@ class UNetPPP(unet.UNetBackbone):
         in_ch: int,
         base_ch: int,
         bottleneck: components.BaseBottleneck,
-        **kwargs,
+        enc_conv_params: components.ConvolutionParameters,
+        node_conv_params: components.ConvolutionParameters
     ) -> None:
         '''
         Initialize backbone.
         '''
 
-        super().__init__(in_ch, base_ch, bottleneck, **kwargs)
+        super().__init__(in_ch, base_ch, bottleneck, enc_conv_params)
         # unified aggregation width
         agg_ch = ch = base_ch
         self._out_channels = base_ch
@@ -120,10 +121,10 @@ class UNetPPP(unet.UNetBackbone):
         # ------------------------------------------------------------------ #
 
         self.ups = nn.ModuleList([
-            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            components.DoubleConv(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
+            components.DoubleConv(agg_ch * 5, agg_ch, node_conv_params),
+            components.DoubleConv(agg_ch * 5, agg_ch, node_conv_params),
+            components.DoubleConv(agg_ch * 5, agg_ch, node_conv_params),
+            components.DoubleConv(agg_ch * 5, agg_ch, node_conv_params),
         ])
 
         # Kaiming weight initialization

@@ -41,14 +41,15 @@ class UNetBackbone(backbones.Backbone):
         in_ch: int,
         base_ch: int,
         bottleneck: components.BaseBottleneck,
-        **kwargs
-    ) -> None:
-        super().__init__()
+        enc_conv_params: components.ConvolutionParameters
+    ):
+        '''doc'''
 
+        super().__init__()
         # initial convolution block with no norm nor drop outs
-        self.inc = components.DoubleConv(in_ch, base_ch)
+        self.inc = components.DoubleConv(in_ch, base_ch, None)
         # downsampling path (encoder) with 4 levels
-        self.downs = components.UNetEncoders(in_ch, base_ch, **kwargs)
+        self.downs = components.UNetEncoders(in_ch, base_ch, enc_conv_params)
         # bottleneck (deepest representation) with sanity checks
         if not isinstance(bottleneck, components.BaseBottleneck):
             raise TypeError('bottleneck must be a components.BaseBottleneck')

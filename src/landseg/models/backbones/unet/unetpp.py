@@ -83,7 +83,8 @@ class UNetPP(unet.UNetBackbone):
         in_ch: int,
         base_ch: int,
         bottleneck: components.BaseBottleneck,
-        **kwargs
+        enc_cov_params: components.ConvolutionParameters,
+        node_conv_params: components.ConvolutionParameters
     ):
         '''
         Construct the UNet++ nested-skip backbone.
@@ -122,7 +123,7 @@ class UNetPP(unet.UNetBackbone):
           produces only X_{0,4}.
         '''
 
-        super().__init__(in_ch, base_ch, bottleneck, **kwargs)
+        super().__init__(in_ch, base_ch, bottleneck, enc_cov_params)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
@@ -132,27 +133,28 @@ class UNetPP(unet.UNetBackbone):
         DC = components.DoubleConv
         self.nodes = torch.nn.ModuleDict({
         # Level 1 nested (j=1)
-            'x01': DC(chs[0]     + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x11': DC(chs[1]     + chs[2], chs[1], **kwargs.get('nodes', {})),
-            'x21': DC(chs[2]     + chs[3], chs[2], **kwargs.get('nodes', {})),
-            'x31': DC(chs[3]     + chs[4], chs[3], **kwargs.get('nodes', {})),
+            'x01': DC(chs[0]     + chs[1], chs[0], node_conv_params),
+            'x11': DC(chs[1]     + chs[2], chs[1], node_conv_params),
+            'x21': DC(chs[2]     + chs[3], chs[2], node_conv_params),
+            'x31': DC(chs[3]     + chs[4], chs[3], node_conv_params),
             # Level 2 nested (j=2)
-            'x02': DC(chs[0] * 2 + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x12': DC(chs[1] * 2 + chs[2], chs[1], **kwargs.get('nodes', {})),
-            'x22': DC(chs[2] * 2 + chs[3], chs[2], **kwargs.get('nodes', {})),
+            'x02': DC(chs[0] * 2 + chs[1], chs[0], node_conv_params),
+            'x12': DC(chs[1] * 2 + chs[2], chs[1], node_conv_params),
+            'x22': DC(chs[2] * 2 + chs[3], chs[2], node_conv_params),
             # Level 3 nested (j=3)
-            'x03': DC(chs[0] * 3 + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x13': DC(chs[1] * 3 + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x03': DC(chs[0] * 3 + chs[1], chs[0], node_conv_params),
+            'x13': DC(chs[1] * 3 + chs[2], chs[1], node_conv_params),
             # Level 4 nested (final output j=4)
-            'x04': DC(chs[0] * 4 + chs[1], chs[0], **kwargs.get('nodes', {}))
+            'x04': DC(chs[0] * 4 + chs[1], chs[0], node_conv_params)
         })
 
         # upsamplers for backbone resolution
+        US = torch.nn.Upsample
         self.ups = torch.nn.ModuleList([
-            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
-            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
-            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
-            torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+            US(scale_factor=2, mode='bilinear', align_corners=False),
+            US(scale_factor=2, mode='bilinear', align_corners=False),
+            US(scale_factor=2, mode='bilinear', align_corners=False),
+            US(scale_factor=2, mode='bilinear', align_corners=False)
         ])
 
         # Kaiming weight initialization

@@ -99,7 +99,8 @@ class UNet(unet.UNetBackbone):
         in_ch: int,
         base_ch: int,
         bottleneck: components.BaseBottleneck,
-        **kwargs
+        enc_conv_params: components.ConvolutionParameters,
+        dec_conv_params: components.ConvolutionParameters,
     ):
         '''
         Construct UNet body with configurable normalization and dropout.
@@ -133,16 +134,16 @@ class UNet(unet.UNetBackbone):
             (`base_ch`).
         '''
 
-        super().__init__(in_ch, base_ch, bottleneck, **kwargs)
+        super().__init__(in_ch, base_ch, bottleneck, enc_conv_params)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
         # upsampling path (decoder) with 4 levels, concatenating encoder skips
         self.ups = torch.nn.ModuleList([
-            components.Upsample(ch*16 + ch*8, ch*8, **kwargs.get('ups', {})),
-            components.Upsample(ch*8  + ch*4, ch*4, **kwargs.get('ups', {})),
-            components.Upsample(ch*4  + ch*2, ch*2, **kwargs.get('ups', {})),
-            components.Upsample(ch*2  + ch,   ch,   **kwargs.get('ups', {}))
+            components.Upsample(ch*16 + ch*8, ch*8, dec_conv_params),
+            components.Upsample(ch*8  + ch*4, ch*4, dec_conv_params),
+            components.Upsample(ch*4  + ch*2, ch*2, dec_conv_params),
+            components.Upsample(ch*2  + ch,   ch,   dec_conv_params)
         ])
 
         # Kaiming weight initialization
