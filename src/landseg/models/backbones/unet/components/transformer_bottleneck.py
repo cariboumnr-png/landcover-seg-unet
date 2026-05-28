@@ -46,7 +46,7 @@ performance especially on large-scale spatial patterns.
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.components as components
 
 class TransformerBottleneck(torch.nn.Module):
     '''
@@ -178,7 +178,7 @@ class HybridBottleneck(torch.nn.Module):
         self.in_channels = in_channels
 
         self.conv_blocks = torch.nn.ModuleList([
-            unet.DoubleConv(in_channels, in_channels, norm=norm, **kwargs)
+            components.DoubleConv(in_channels, in_channels, norm=norm, **kwargs)
             for _ in range(num_conv_blocks)
         ])
 
