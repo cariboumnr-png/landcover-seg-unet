@@ -61,7 +61,7 @@ class DoubleConv(torch.nn.Module):
         self,
         in_ch: int,
         out_ch: int,
-        params: components.ConvolutionParameters,
+        params: components.ConvolutionParameters | None,
     ):
         '''
         Initiate a double-conv block with configurable normalization.
@@ -80,14 +80,24 @@ class DoubleConv(torch.nn.Module):
         '''
         super().__init__()
 
-        p_drop = params.p_drop # drop out rate
+        # resolve parameters
+        if params is None:
+            norm = None
+            gn_groups = None
+            p_drop = 0.0
+        else:
+            norm = params.norm
+            gn_groups = params.gn_groups
+            p_drop = params.p_drop
+
+        # double convolutions
         self.block = torch.nn.Sequential(
             torch.nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False),
-            self._norm(params.norm, out_ch, params.gn_groups),
+            self._norm(norm, out_ch, gn_groups),
             torch.nn.ReLU(inplace=False),
             torch.nn.Dropout2d(p_drop) if p_drop > 0 else torch.nn.Identity(),
             torch.nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
-            self._norm(params.norm, out_ch, params.gn_groups),
+            self._norm(norm, out_ch, gn_groups),
             torch.nn.ReLU(inplace=False),
         )
 
