@@ -149,10 +149,12 @@ class TransformerBottleneck(BaseBottleneck):
         self,
         in_channels: int,
         spatial_size: int,
-        num_blocks: int,
-        params: components.TransformerParameters
+        config: components.BottleneckConfig,
     ):
         super().__init__(in_channels)
+
+        assert config.num_transformer_blocks
+        assert config.transformer_params
         self.in_ch = in_channels
 
         self.pos_embed = _PositionalEmbedding(in_channels, spatial_size)
@@ -160,12 +162,12 @@ class TransformerBottleneck(BaseBottleneck):
         self.blocks = torch.nn.ModuleList([
             _TransformerBlock(
                 in_channels,
-                num_heads=params.num_heads,
-                mlp_ratio=params.mlp_ratio,
-                dropout=params.dropout,
-                attn_dropout=params.attn_dropout,
+                num_heads=config.transformer_params.num_heads,
+                mlp_ratio=config.transformer_params.mlp_ratio,
+                dropout=config.transformer_params.dropout,
+                attn_dropout=config.transformer_params.attn_dropout,
             )
-            for _ in range(num_blocks)
+            for _ in range(config.num_transformer_blocks)
         ])
 
         self.norm_out = torch.nn.LayerNorm(in_channels)
@@ -225,11 +227,15 @@ class HybridBottleneck(BaseBottleneck):
         self,
         in_channels: int,
         spatial_size: int,
-        config: components.HybridBottleneckConfig,
-
+        config: components.BottleneckConfig,
     ):
         super().__init__(in_channels)
         self.in_ch = in_channels
+
+        assert config.num_conv_blocks
+        assert config.conv_params
+        assert config.num_transformer_blocks
+        assert config.transformer_params
 
         self.conv_blocks = torch.nn.ModuleList([
             components.DoubleConv(in_channels, in_channels, config.conv_params)
