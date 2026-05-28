@@ -45,7 +45,7 @@ class _ConvParams:
 
 # ----- UNet bodies
 @dataclasses.dataclass
-class _UNetBackboneConfig:
+class _UNetBodyConfig:
     body: str
     base_ch: int
     encoder_conv_params: _ConvParams
@@ -53,7 +53,7 @@ class _UNetBackboneConfig:
     decoder_conv_params: _ConvParams | None
 
 @dataclasses.dataclass
-class _UNet(_UNetBackboneConfig):
+class _UNet(_UNetBodyConfig):
     body: str = 'unet'
     base_ch: int = 32
     encoder_conv_params: _ConvParams = field(default_factory=_ConvParams)
@@ -61,7 +61,7 @@ class _UNet(_UNetBackboneConfig):
     decoder_conv_params: _ConvParams | None = field(default_factory=_ConvParams)
 
 @dataclasses.dataclass
-class _UNetPP(_UNetBackboneConfig):
+class _UNetPP(_UNetBodyConfig):
     body: str = 'unetpp'
     base_ch: int = 32
     encoder_conv_params: _ConvParams = field(default_factory=_ConvParams)
@@ -69,7 +69,7 @@ class _UNetPP(_UNetBackboneConfig):
     decoder_conv_params: _ConvParams | None = None
 
 @dataclasses.dataclass
-class _UNetPPP(_UNetBackboneConfig):
+class _UNetPPP(_UNetBodyConfig):
     body: str = 'unetppp'
     base_ch: int = 32
     encoder_conv_params: _ConvParams = field(default_factory=_ConvParams)
@@ -115,6 +115,12 @@ class _HybridBottleneckConfig(_BottleneckConfig):
     conv_params: _ConvParams | None = field(default_factory=_ConvParams)
     num_tranformer_blocks: int | None = 2
     transformer_params: _Transformer | None = field(default_factory=_Transformer)
+
+# ----- unet backbone config
+@dataclasses.dataclass
+class _UNetBackboneConfig:
+    body: _UNetBodyConfig
+    bottleneck: _BottleneckConfig
 
 # ----- conditioners
 class _DomainTargetConfig(typing.Protocol):
@@ -216,12 +222,11 @@ class ModelsConfig:
     numeric_safety: _NumericSafety = field(default_factory=_NumericSafety)
 
     @property
-    def model_body_config(self) -> _UNetBackboneConfig:
-        return self.model_body_registry[self.model_body]
-
-    @property
-    def bottleneck_config(self) -> _BottleneckConfig:
-        return self.bottleneck_registry[self.bottleneck]
+    def unet_backbone_config(self) -> _UNetBackboneConfig:
+        return _UNetBackboneConfig(
+            body=self.model_body_registry[self.model_body],
+            bottleneck=self.bottleneck_registry[self.bottleneck]
+        )
 
     @property
     def conditioning_config(self) -> dict[str, _DomainTargetConfig]:
