@@ -57,9 +57,6 @@ import torch.nn
 import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.components as components
 
-# module aliases
-DC = components.DoubleConv
-
 class UNetPP(unet.UNetBackbone):
     '''UNet++ backbone with nested dense skip refinements.
 
@@ -81,7 +78,13 @@ class UNetPP(unet.UNetBackbone):
     '''
 
 
-    def __init__(self, in_ch: int, base_ch: int, **kwargs):
+    def __init__(
+        self,
+        in_ch: int,
+        base_ch: int,
+        bottleneck: torch.nn.Module | None,
+        **kwargs
+    ):
         '''
         Construct the UNet++ nested-skip backbone.
 
@@ -119,13 +122,14 @@ class UNetPP(unet.UNetBackbone):
           produces only X_{0,4}.
         '''
 
-        super().__init__(in_ch, base_ch, **kwargs)
+        super().__init__(in_ch, base_ch, bottleneck, **kwargs)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
         # decoders (nested refinement) - every nested node becomes ch channels
         # channel size helper dict
         chs = {0: ch, 1: ch * 2, 2: ch * 4, 3: ch * 8, 4: ch * 16}
+        DC = components.DoubleConv
         self.nodes = torch.nn.ModuleDict({
         # Level 1 nested (j=1)
             'x01': DC(chs[0]     + chs[1], chs[0], **kwargs.get('nodes', {})),

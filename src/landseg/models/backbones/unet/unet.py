@@ -94,7 +94,13 @@ class UNet(unet.UNetBackbone):
     '''
 
     # core UNet body
-    def __init__(self, in_ch: int, base_ch: int, **kwargs):
+    def __init__(
+        self,
+        in_ch: int,
+        base_ch: int,
+        bottleneck: torch.nn.Module | None,
+        **kwargs
+    ):
         '''
         Construct UNet body with configurable normalization and dropout.
 
@@ -127,7 +133,7 @@ class UNet(unet.UNetBackbone):
             (`base_ch`).
         '''
 
-        super().__init__(in_ch, base_ch, **kwargs)
+        super().__init__(in_ch, base_ch, bottleneck, **kwargs)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 

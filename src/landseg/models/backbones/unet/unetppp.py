@@ -89,13 +89,14 @@ class UNetPPP(unet.UNetBackbone):
         self,
         in_ch: int,
         base_ch: int,
+        bottleneck: torch.nn.Module | None,
         **kwargs,
     ) -> None:
         '''
         Initialize backbone.
         '''
 
-        super().__init__(in_ch, base_ch, **kwargs)
+        super().__init__(in_ch, base_ch, bottleneck, **kwargs)
         # unified aggregation width
         agg_ch = ch = base_ch
         self._out_channels = base_ch
