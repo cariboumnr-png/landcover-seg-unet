@@ -40,7 +40,7 @@ class UNetBackbone(backbones.Backbone):
         self,
         in_ch: int,
         base_ch: int,
-        bottleneck: components.BaseBottleneck | None = None,
+        bottleneck: components.BaseBottleneck,
         **kwargs
     ) -> None:
         super().__init__()
@@ -49,22 +49,15 @@ class UNetBackbone(backbones.Backbone):
         self.inc = components.DoubleConv(in_ch, base_ch)
         # downsampling path (encoder) with 4 levels
         self.downs = components.UNetEncoders(in_ch, base_ch, **kwargs)
-        # bottleneck (deepest representation) with default
-        if bottleneck is None:
-            self.bottleneck = components.DoubleConv(
-                self.bottleneck_ch,
-                self.bottleneck_ch,
-                **kwargs.get('bottleneck', {})
+        # bottleneck (deepest representation) with sanity checks
+        if not isinstance(bottleneck, components.BaseBottleneck):
+            raise TypeError('bottleneck must be a components.BaseBottleneck')
+        if self.bottleneck_ch != bottleneck.in_ch:
+            raise ValueError(
+                f'bottleneck_ch ({bottleneck.in_ch}) must match '
+                f'encoder output channels ({self.bottleneck_ch})'
             )
-        else:
-            if not isinstance(bottleneck, components.BaseBottleneck):
-                raise TypeError('bottleneck must be a components.BaseBottleneck')
-            if self.bottleneck_ch != bottleneck.in_channels:
-                raise ValueError(
-                    f'bottleneck_ch ({bottleneck.in_channels}) must match '
-                    f'encoder output channels ({self.bottleneck_ch})'
-                )
-            self.bottleneck = bottleneck
+        self.bottleneck = bottleneck
 
     @property
     @abc.abstractmethod

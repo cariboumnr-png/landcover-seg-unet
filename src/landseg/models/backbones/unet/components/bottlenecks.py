@@ -64,13 +64,9 @@ class BaseBottleneck(torch.nn.Module):
     transformer, hybrid conv-transformer).
     '''
 
-    def __init__(
-        self,
-        in_channels: int,
-        **kwargs
-    ):
+    def __init__(self, in_ch: int):
         super().__init__()
-        self.in_channels = in_channels
+        self.in_ch = in_ch
 
     @abc.abstractmethod
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -90,6 +86,27 @@ class BaseBottleneck(torch.nn.Module):
           compatibility with the UNet architecture.
         '''
         raise NotImplementedError
+
+class UNetBottleneck(BaseBottleneck):
+    '''
+    Standard convolutional bottleneck for UNet.
+
+    Implements the traditional double convolutional block used at the
+    bottleneck of U-Net architectures. This serves as a baseline and can
+    be replaced with more complex modules (e.g., transformer-based) if
+    desired.
+
+    Architecture:
+    - DoubleConv with in_ch == out_ch, no downsampling.
+    - Optional normalization and dropout based on provided kwargs.
+    '''
+
+    def __init__(self, in_ch: int, **kwargs):
+        super().__init__(in_ch)
+        self.double_conv = components.DoubleConv(in_ch, in_ch, **kwargs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.double_conv(x)
 
 class TransformerBottleneck(BaseBottleneck):
     '''
@@ -127,6 +144,8 @@ class TransformerBottleneck(BaseBottleneck):
     def __init__(
         self,
         in_channels: int,
+        spatial_size: int,
+        *,
         num_blocks: int = 4,
         num_heads: int = 8,
         mlp_ratio: float = 4.0,
@@ -134,13 +153,13 @@ class TransformerBottleneck(BaseBottleneck):
         attn_dropout: float = 0.0,
     ):
         super().__init__(in_channels)
-        self.in_channels = in_channels
+        self.in_ch = in_channels
 
-        self.pos_embed = _PositionalEmbedding(in_channels, spatial_size=16)
+        self.pos_embed = _PositionalEmbedding(in_channels, spatial_size)
 
         self.blocks = torch.nn.ModuleList([
             _TransformerBlock(
-                channels=in_channels,
+                in_channels,
                 num_heads=num_heads,
                 mlp_ratio=mlp_ratio,
                 dropout=dropout,
@@ -190,8 +209,7 @@ class HybridBottleneck(BaseBottleneck):
         mlp_ratio: Feed-forward expansion ratio.
         dropout: Dropout probability.
         attn_dropout: Attention-specific dropout probability.
-        norm: Normalization type for conv blocks.
-        **kwargs: Additional arguments passed to conv blocks.
+        **conv_params: Additional arguments passed to convolutional blocks.
 
     Example:
         # Use hybrid for efficiency
@@ -206,28 +224,29 @@ class HybridBottleneck(BaseBottleneck):
     def __init__(
         self,
         in_channels: int,
-        num_conv_blocks: int = 1,
+        spatial_size: int,
+        *,
         num_transformer_blocks: int = 2,
+        num_conv_blocks: int = 1,
         num_heads: int = 8,
         mlp_ratio: float = 4.0,
         dropout: float = 0.1,
         attn_dropout: float = 0.0,
-        norm: str | None = None,
-        **kwargs
+        **conv_params
     ):
         super().__init__(in_channels)
-        self.in_channels = in_channels
+        self.in_ch = in_channels
 
         self.conv_blocks = torch.nn.ModuleList([
-            components.DoubleConv(in_channels, in_channels, norm=norm, **kwargs)
+            components.DoubleConv(in_channels, in_channels, **conv_params)
             for _ in range(num_conv_blocks)
         ])
 
-        self.pos_embed = _PositionalEmbedding(in_channels, spatial_size=16)
+        self.pos_embed = _PositionalEmbedding(in_channels, spatial_size)
 
         self.transformer_blocks = torch.nn.ModuleList([
             _TransformerBlock(
-                channels=in_channels,
+                in_channels,
                 num_heads=num_heads,
                 mlp_ratio=mlp_ratio,
                 dropout=dropout,
@@ -272,7 +291,7 @@ class _PositionalEmbedding(torch.nn.Module):
     dimensions through reshape-based broadcasting.
     '''
 
-    def __init__(self, channels: int, spatial_size: int = 16):
+    def __init__(self, channels: int, spatial_size: int):
         super().__init__()
         self.channels = channels
         self.register_parameter(
@@ -330,6 +349,7 @@ class _TransformerBlock(torch.nn.Module):
     def __init__(
         self,
         channels: int,
+        *,
         num_heads: int = 8,
         mlp_ratio: float = 4.0,
         dropout: float = 0.0,

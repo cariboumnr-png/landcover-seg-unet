@@ -98,7 +98,7 @@ class UNet(unet.UNetBackbone):
         self,
         in_ch: int,
         base_ch: int,
-        bottleneck: components.BaseBottleneck | None = None,
+        bottleneck: components.BaseBottleneck,
         **kwargs
     ):
         '''
