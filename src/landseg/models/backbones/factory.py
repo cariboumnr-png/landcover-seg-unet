@@ -19,27 +19,41 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''Factory for backbone architectures.'''
 
+# standard imports
+import typing
 # local imports
 import landseg.models.backbones as backbones
 import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.components as components
 
-def build_backbone(
+class UNetBackboneConfig(typing.Protocol):
+    '''doc'''
+    @property
+    def body(self) -> unet.UNetBodyConfig: ...
+    @property
+    def bottleneck(self) -> components.BottleneckConfig: ...
+
+def build_unet_backbone(
     in_ch: int,
     input_size: int,
-    backbone_config: unet.BackboneConfig,
-    bottleneck_config: components.BottleneckConfig
-) -> backbones.Backbone:
+    config: UNetBackboneConfig
+) -> backbones.UNetBackbone:
     '''doc'''
 
+    # aliases
+    unetbody_cfg = config.body
+    bottleneck_cfg = config.bottleneck
+
     # core UNet body without bottleneck
-    match backbone_config.body:
-        case 'unet': backbone = backbones.UNet(in_ch, backbone_config)
-        case 'unetpp': backbone = backbones.UNetPP(in_ch, backbone_config)
-        case 'unetppp': backbone = backbones.UNetPPP(in_ch, backbone_config)
-        case _: raise ValueError(f'Invalid backbone body: {backbone_config.body}')
+    match unetbody_cfg.body:
+        case 'unet': backbone = backbones.UNet(in_ch, unetbody_cfg)
+        case 'unetpp': backbone = backbones.UNetPP(in_ch, unetbody_cfg)
+        case 'unetppp': backbone = backbones.UNetPPP(in_ch, unetbody_cfg)
+        case _: raise ValueError(f'Invalid backbone body: {unetbody_cfg.body}')
 
     # bottleneck specs from the backbone
     if input_size % backbone.spatial_divisor != 0:
@@ -50,7 +64,7 @@ def build_backbone(
     spatial_size = input_size // backbone.spatial_divisor
 
     # build bottleneck module
-    backbone.build_bottleneck(bottleneck_config, spatial_size)
+    backbone.build_bottleneck(bottleneck_cfg, spatial_size)
 
     # return
     return backbone
