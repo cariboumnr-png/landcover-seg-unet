@@ -40,21 +40,17 @@ __all__ = [
     'Upsample',
     'UNetEncoders',
     'UNetBottleneck',
-    'ConvolutionParameters',
-    'TransformerParameters',
-    'HybridBottleneckConfig',
     # functions
     # types
+    'BottleneckConfig',
+    'ConvolutionParameters',
+    'TransformerParameters'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .conv_blocks import DoubleConv, Downsample, Upsample
-    from .configs import (
-        ConvolutionParameters,
-        TransformerParameters,
-        HybridBottleneckConfig
-    )
+    from .configs import BottleneckConfig, ConvolutionParameters, TransformerParameters
     from .encoders import UNetEncoders
     from .bottlenecks import (
         BaseBottleneck,
@@ -64,7 +60,7 @@ if typing.TYPE_CHECKING:
     )
 def __getattr__(name: str):
 
-    if name in {'ConvolutionParameters', 'TransformerParameters', 'HybridBottleneckConfig'}:
+    if name in {'BottleneckConfig', 'ConvolutionParameters', 'TransformerParameters'}:
         return getattr(importlib.import_module('.configs', __package__), name)
 
     if name in {'DoubleConv', 'Downsample', 'Upsample'}:
