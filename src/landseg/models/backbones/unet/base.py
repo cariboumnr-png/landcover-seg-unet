@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''Base classes for architecture backbones.'''
 
 # standard imports
@@ -40,8 +42,7 @@ class UNetBackbone(backbones.Backbone):
         self,
         in_ch: int,
         base_ch: int,
-        bottleneck: components.BaseBottleneck,
-        enc_conv_params: components.ConvolutionParameters
+        enc_conv_params: components.ConvolutionParameters,
     ):
         '''doc'''
 
@@ -50,20 +51,13 @@ class UNetBackbone(backbones.Backbone):
         self.inc = components.DoubleConv(in_ch, base_ch, None)
         # downsampling path (encoder) with 4 levels
         self.downs = components.UNetEncoders(in_ch, base_ch, enc_conv_params)
-        # bottleneck (deepest representation) with sanity checks
-        if not isinstance(bottleneck, components.BaseBottleneck):
-            raise TypeError('bottleneck must be a components.BaseBottleneck')
-        if self.bottleneck_ch != bottleneck.in_ch:
-            raise ValueError(
-                f'bottleneck_ch ({bottleneck.in_ch}) must match '
-                f'encoder output channels ({self.bottleneck_ch})'
-            )
-        self.bottleneck = bottleneck
+        # bottleneck type declaration
+        self.bottleneck: components.BaseBottleneck
 
     @property
     @abc.abstractmethod
     def bottleneck_ch(self) -> int:
-        '''Return the bottleneck channel number.'''
+        '''Return the expected bottleneck channel number.'''
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -89,3 +83,33 @@ class UNetBackbone(backbones.Backbone):
                 heads are dense).
         '''
         raise NotImplementedError
+
+    def build_bottleneck(
+        self,
+        config: components.BottleneckConfig,
+        spatial_size: int | None = None,
+    ) -> None:
+        '''Build bottleneck layer'''
+
+        match config.variant:
+            case 'conv':
+                assert config.conv_params
+                self.bottleneck = components.UNetBottleneck(
+                    self.bottleneck_ch,
+                    config.conv_params
+                )
+            case 'transformer':
+                assert spatial_size is not None
+                self.bottleneck = components.TransformerBottleneck(
+                    self.bottleneck_ch,
+                    spatial_size,
+                    config
+                )
+            case 'hybrid':
+                assert spatial_size is not None
+                self.bottleneck = components.HybridBottleneck(
+                    self.bottleneck_ch,
+                    spatial_size,
+                    config
+            )
+            case _: raise ValueError('Invalid bottleneck variant')
