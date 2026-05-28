@@ -1,4 +1,4 @@
-# configuration for building multihead model
+# backbone
 model_body: unet
 model_body_registry:
 
@@ -6,11 +6,12 @@ model_body_registry:
     body: unet
     base_ch: 32
     conv_params:
-      downs:
+      encoder_conv_params:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
-      ups:
+      nodes_conv_params_conv_params: null
+      decoder_conv_params:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
@@ -19,27 +20,68 @@ model_body_registry:
     body: unetpp
     base_ch: 32
     conv_params:
-      downs:
+      encoder_conv_params:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
-      nodes:
+      nodes_conv_params:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
+      decoder_conv_params: null
 
   unetppp:
     body: unetppp
     base_ch: 32
     conv_params:
-      downs:
+      encoder_conv_params:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
-      nodes:
+      nodes_conv_params:
         norm: gn
         gn_groups: 8
         p_drop: 0.0
+      decoder_conv_params: null
+
+# bottlenecks
+bottleneck: conv
+bottleneck_registry:
+
+  conv:
+    variant: conv
+    num_conv_blocks: null
+    conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    num_transformer_blocks: null
+    transformer_params: null
+
+  transformer:
+    variant: transformer
+    num_conv_blocks: null
+    conv_params: null
+    num_transformer_blocks: 4
+    transformer_params:
+      num_heads: 8
+      mlp_ratio: 0.1
+      dropout: 0.05
+      attn_dropout: 0.0
+
+  hybrid:
+    variant: hybrid
+    num_conv_blocks: 2
+    conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    num_transformer_blocks: 4
+    transformer_params:
+      num_heads: 8
+      mlp_ratio: 0.1
+      dropout: 0.05
+      attn_dropout: 0.0
 
 # conditioning
 conditioners: [concat, film]
@@ -70,6 +112,7 @@ conditioner_registry:
     conditioner_config:
       hidden_dim: 128
 
-# numerical safety
-enable_clamp: True
-clamp_range: [1e-4, 1e4]
+# safety
+numeric_safety:
+  enable_clamp: True
+  clamp_range: [1e-4, 1e4]
