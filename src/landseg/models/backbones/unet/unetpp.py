@@ -82,9 +82,7 @@ class UNetPP(unet.UNetBackbone):
         self,
         in_ch: int,
         base_ch: int,
-        bottleneck: components.BaseBottleneck,
-        enc_cov_params: components.ConvolutionParameters,
-        node_conv_params: components.ConvolutionParameters
+        config: unet.BackboneConfig
     ):
         '''
         Construct the UNet++ nested-skip backbone.
@@ -123,29 +121,30 @@ class UNetPP(unet.UNetBackbone):
           produces only X_{0,4}.
         '''
 
-        super().__init__(in_ch, base_ch, bottleneck, enc_cov_params)
+        super().__init__(in_ch, base_ch, config.encoder_conv_params)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
         # decoders (nested refinement) - every nested node becomes ch channels
         # channel size helper dict
         chs = {0: ch, 1: ch * 2, 2: ch * 4, 3: ch * 8, 4: ch * 16}
+        assert config.nodes_conv_params
         DC = components.DoubleConv
         self.nodes = torch.nn.ModuleDict({
         # Level 1 nested (j=1)
-            'x01': DC(chs[0]     + chs[1], chs[0], node_conv_params),
-            'x11': DC(chs[1]     + chs[2], chs[1], node_conv_params),
-            'x21': DC(chs[2]     + chs[3], chs[2], node_conv_params),
-            'x31': DC(chs[3]     + chs[4], chs[3], node_conv_params),
+            'x01': DC(chs[0]     + chs[1], chs[0], config.nodes_conv_params),
+            'x11': DC(chs[1]     + chs[2], chs[1], config.nodes_conv_params),
+            'x21': DC(chs[2]     + chs[3], chs[2], config.nodes_conv_params),
+            'x31': DC(chs[3]     + chs[4], chs[3], config.nodes_conv_params),
             # Level 2 nested (j=2)
-            'x02': DC(chs[0] * 2 + chs[1], chs[0], node_conv_params),
-            'x12': DC(chs[1] * 2 + chs[2], chs[1], node_conv_params),
-            'x22': DC(chs[2] * 2 + chs[3], chs[2], node_conv_params),
+            'x02': DC(chs[0] * 2 + chs[1], chs[0], config.nodes_conv_params),
+            'x12': DC(chs[1] * 2 + chs[2], chs[1], config.nodes_conv_params),
+            'x22': DC(chs[2] * 2 + chs[3], chs[2], config.nodes_conv_params),
             # Level 3 nested (j=3)
-            'x03': DC(chs[0] * 3 + chs[1], chs[0], node_conv_params),
-            'x13': DC(chs[1] * 3 + chs[2], chs[1], node_conv_params),
+            'x03': DC(chs[0] * 3 + chs[1], chs[0], config.nodes_conv_params),
+            'x13': DC(chs[1] * 3 + chs[2], chs[1], config.nodes_conv_params),
             # Level 4 nested (final output j=4)
-            'x04': DC(chs[0] * 4 + chs[1], chs[0], node_conv_params)
+            'x04': DC(chs[0] * 4 + chs[1], chs[0], config.nodes_conv_params)
         })
 
         # upsamplers for backbone resolution

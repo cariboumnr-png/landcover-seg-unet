@@ -21,36 +21,28 @@
 
 '''Factory for backbone architectures.'''
 
-# standard imports
-import typing
 # local imports
 import landseg.models.backbones as backbones
+import landseg.models.backbones.unet as unet
 import landseg.models.backbones.unet.components as components
 
 def build_backbone(
     in_ch: int,
     base_ch: int,
+    backbone_config: unet.BackboneConfig,
     input_size: int,
-    backbone_body: typing.Literal['unet', 'unetpp', 'unetppp'],
-    bottleneck_variant: typing.Literal['conv', 'transformer', 'hybrid'],
-    transformer_parameters: dict[str, typing.Any],
-    conv_parameters: dict[str, typing.Any],
+    bottleneck_config: components.BottleneckConfig
 ) -> backbones.Backbone:
     '''doc'''
 
     # core UNet body without bottleneck
-    match backbone_body:
-        case 'unet':
-            backbone = backbones.UNet(in_ch, base_ch, **conv_parameters)
-        case 'unetpp':
-            backbone = backbones.UNetPP(in_ch, base_ch, **conv_parameters)
-        case 'unetppp':
-            backbone = backbones.UNetPPP(in_ch, base_ch, **conv_parameters)
-        case _:
-            raise ValueError(f'Invalid backbone body: {backbone_body}')
+    match backbone_config.body:
+        case 'unet': backbone = backbones.UNet(in_ch, base_ch, backbone_config)
+        case 'unetpp': backbone = backbones.UNetPP(in_ch, base_ch, backbone_config)
+        case 'unetppp': backbone = backbones.UNetPPP(in_ch, base_ch, backbone_config)
+        case _: raise ValueError(f'Invalid backbone body: {backbone_config.body}')
 
     # bottleneck specs from the backbone
-    bottleneck_ch = backbone.bottleneck_ch
     if input_size % backbone.spatial_divisor != 0:
         raise ValueError(
             f'Input size {input_size} is not divisible by'
@@ -59,30 +51,7 @@ def build_backbone(
     spatial_size = input_size // backbone.spatial_divisor
 
     # build bottleneck module
-    match bottleneck_variant:
-        case 'transformer':
-            bottleneck = components.TransformerBottleneck(
-                bottleneck_ch,
-                spatial_size,
-                **transformer_parameters
-            )
-        case 'hybrid':
-            bottleneck = components.HybridBottleneck(
-                bottleneck_ch,
-                spatial_size,
-                **transformer_parameters,
-                **conv_parameters
-        )
-        case 'conv':
-            bottleneck = components.UNetBottleneck(
-                bottleneck_ch,
-                **conv_parameters.get('bottleneck', {})
-            )
-        case _:
-            raise ValueError(f'Invalid bottleneck variant: {bottleneck_variant}')
-
-    # inject bottleneck into backbone
-    backbone.bottleneck = bottleneck
+    backbone.build_bottleneck(bottleneck_config, spatial_size)
 
     # return
     return backbone
