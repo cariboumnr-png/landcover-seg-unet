@@ -89,7 +89,7 @@ class _BottleneckConfig:
     variant: str
     num_conv_blocks: int | None
     conv_params: _ConvParams | None
-    num_tranformer_blocks: int | None
+    num_transformer_blocks: int | None
     transformer_params: _Transformer | None
 
 @dataclasses.dataclass
@@ -97,7 +97,7 @@ class _UNetBottleneckConfig(_BottleneckConfig):
     variant: str = 'conv'
     num_conv_blocks: int | None = None
     conv_params: _ConvParams | None = field(default_factory=_ConvParams)
-    num_tranformer_blocks: int | None = None
+    num_transformer_blocks: int | None = None
     transformer_params: _Transformer | None = None
 
 @dataclasses.dataclass
@@ -105,7 +105,7 @@ class _TransformerBottleneckConfig(_BottleneckConfig):
     variant: str = 'transformer'
     num_conv_blocks: int | None = None
     conv_params: _ConvParams | None = None
-    num_tranformer_blocks: int | None = 4
+    num_transformer_blocks: int | None = 4
     transformer_params: _Transformer | None = field(default_factory=_Transformer)
 
 @dataclasses.dataclass
@@ -113,7 +113,7 @@ class _HybridBottleneckConfig(_BottleneckConfig):
     variant: str = 'hybrid'
     num_conv_blocks: int | None = 2
     conv_params: _ConvParams | None = field(default_factory=_ConvParams)
-    num_tranformer_blocks: int | None = 2
+    num_transformer_blocks: int | None = 2
     transformer_params: _Transformer | None = field(default_factory=_Transformer)
 
 # ----- unet backbone config
