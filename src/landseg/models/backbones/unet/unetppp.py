@@ -99,23 +99,10 @@ class UNetPPP(unet.UNetBackbone):
         Initialize backbone.
         '''
 
-        super().__init__()
+        super().__init__(in_ch, base_ch, **kwargs)
         # unified aggregation width
         agg_ch = ch = base_ch
         self._out_channels = base_ch
-
-        # ------------------------------------------------------------------ #
-        # encoder
-        # ------------------------------------------------------------------ #
-
-        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
-        
-        self.downs = nn.ModuleList([
-            self.DS(ch,      ch * 2,  **kwargs.get('downs', {})),
-            self.DS(ch * 2,  ch * 4,  **kwargs.get('downs', {})),
-            self.DS(ch * 4,  ch * 8,  **kwargs.get('downs', {})),
-            self.DS(ch * 8,  ch * 16, **kwargs.get('downs', {})),
-        ])
 
         # ------------------------------------------------------------------ #
         # encoder projections
@@ -214,13 +201,7 @@ class UNetPPP(unet.UNetBackbone):
     ) -> tuple[torch.Tensor, ...]:
         '''Run encoder path and return multi-scale feature hierarchy.'''
 
-        x1 = self.inc(x)
-        x2 = self.downs[0](x1)
-        x3 = self.downs[1](x2)
-        x4 = self.downs[2](x3)
-        x5 = self.downs[3](x4)
-
-        return x1, x2, x3, x4, x5
+        return self.downs(x)
 
     def decode(
         self,

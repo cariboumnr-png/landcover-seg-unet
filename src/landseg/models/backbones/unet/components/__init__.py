@@ -37,6 +37,7 @@ __all__ = [
     'DoubleConv',
     'Downsample',
     'Upsample',
+    'UNetEncoders',
     # functions
     # types
 ]
@@ -44,6 +45,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .convolution_blocks import DoubleConv, Downsample, Upsample
+    from .encoders import UNetEncoders
     from .transformer_bottleneck import HybridBottleneck, TransformerBottleneck
 
 def __getattr__(name: str):
@@ -53,5 +55,8 @@ def __getattr__(name: str):
 
     if name in {'HybridBottleneck', 'TransformerBottleneck'}:
         return getattr(importlib.import_module('.transformer_bottleneck', __package__), name)
+
+    if name in {'UNetEncoders'}:
+        return getattr(importlib.import_module('.encoders', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

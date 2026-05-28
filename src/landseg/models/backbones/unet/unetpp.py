@@ -120,19 +120,9 @@ class UNetPP(unet.UNetBackbone):
           produces only X_{0,4}.
         '''
 
-        super().__init__()
+        super().__init__(in_ch, base_ch, **kwargs)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
-
-        # initial convolution block with no norm nor drop outs
-        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
-        # 4 downsample encoders
-        self.downs = torch.nn.ModuleList([
-            self.DS(ch,     ch * 2,  **kwargs.get('downs', {})),
-            self.DS(ch * 2, ch * 4,  **kwargs.get('downs', {})),
-            self.DS(ch * 4, ch * 8,  **kwargs.get('downs', {})),
-            self.DS(ch * 8, ch * 16, **kwargs.get('downs', {}))
-        ])
 
         # decoders (nested refinement) - every nested node becomes ch channels
         # channel size helper dict
@@ -185,13 +175,7 @@ class UNetPP(unet.UNetBackbone):
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Return 5-level encoder features.'''
 
-        x0_0 = self.inc(x)
-        x1_0 = self.downs[0](x0_0)
-        x2_0 = self.downs[1](x1_0)
-        x3_0 = self.downs[2](x2_0)
-        x4_0 = self.downs[3](x3_0)
-
-        return x0_0, x1_0, x2_0, x3_0, x4_0
+        return self.downs(x)
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
         '''Decode nested UNet++ refinement graph.'''

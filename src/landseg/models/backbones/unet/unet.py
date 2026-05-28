@@ -132,22 +132,11 @@ class UNet(unet.UNetBackbone):
             (`base_ch`).
         '''
 
-        super().__init__()
+        super().__init__(in_ch, base_ch, **kwargs)
         self._out_channels = base_ch # conforming to base class
         ch = base_ch # alias base_ch -> ch
 
-        # initial convolution block with no norm nor drop outs
-        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
-        # 4 downs
-        self.downs = torch.nn.ModuleList([
-            self.DS(ch,   ch*2,  **kwargs.get('downs', {})),
-            self.DS(ch*2, ch*4,  **kwargs.get('downs', {})),
-            self.DS(ch*4, ch*8,  **kwargs.get('downs', {})),
-            self.DS(ch*8, ch*16, **kwargs.get('downs', {})),
-        ])
-        # bottleneck
-        self.bottleneck = self.DC(ch*16, ch*16, **kwargs.get('bottleneck', {}))
-        # 4 ups
+        # upsampling path (decoder) with 4 levels, concatenating encoder skips
         self.ups = torch.nn.ModuleList([
             self.US(ch*16 + ch*8, ch*8, **kwargs.get('ups', {})),
             self.US(ch*8  + ch*4, ch*4, **kwargs.get('ups', {})),
@@ -178,12 +167,13 @@ class UNet(unet.UNetBackbone):
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Run the contracting path and return encoder features.'''
 
-        x1 = self.inc(x)                # H     in_ch ->  b
-        x2 = self.downs[0](x1)          # H/2   b     ->  2b
-        x3 = self.downs[1](x2)          # H/4   2b    ->  4b
-        x4 = self.downs[2](x3)          # H/8   4b    ->  8b
-        x5 = self.downs[3](x4)          # H/16  8b    ->  16b
-        xb = self.bottleneck(x5)        # H/16  16b   --  16b
+        # x1 = self.inc(x)                # H     in_ch ->  b
+        # x2 = self.downs[0](x1)          # H/2   b     ->  2b
+        # x3 = self.downs[1](x2)          # H/4   2b    ->  4b
+        # x4 = self.downs[2](x3)          # H/8   4b    ->  8b
+        # x5 = self.downs[3](x4)          # H/16  8b    ->  16b
+        # xb = self.bottleneck(x5)        # H/16  16b   --  16b
+        x1, x2, x3, x4, x5 = self.downs(x)
         return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:

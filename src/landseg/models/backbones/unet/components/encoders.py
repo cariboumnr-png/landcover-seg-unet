@@ -21,16 +21,13 @@
 
 '''Base classes for architecture backbones.'''
 
-# standard imports
-import abc
 # third-party imports
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones as backbones
 import landseg.models.backbones.unet.components as components
 
-class UNetBackbone(backbones.Backbone):
+class UNetEncoders(torch.nn.Module):
     '''
     Contract for any feature extractor used by MultiHeadModel.
     Implementations must produce a feature map with a known channel
@@ -41,7 +38,6 @@ class UNetBackbone(backbones.Backbone):
         self,
         in_ch: int,
         base_ch: int,
-        bottleneck: torch.nn.Module | None = None,
         **kwargs
     ) -> None:
         super().__init__()
@@ -50,47 +46,24 @@ class UNetBackbone(backbones.Backbone):
         # initial convolution block with no norm nor drop outs
         self.inc = components.DoubleConv(in_ch, base_ch)
         # downsampling path (encoder) with 4 levels
-        self.downs = components.UNetEncoders(in_ch, base_ch, **kwargs)
-        # bottleneck (deepest representation) with default
-        if bottleneck is None:
-            self.bottleneck = components.DoubleConv(
-                ch * 16, ch * 16, **kwargs.get('bottleneck', {})
-            )
-        else:
-            if not isinstance(bottleneck, torch.nn.Module):
-                raise TypeError('bottleneck must be a torch.nn.Module')
-            if self.bottleneck_ch != ch * 16:
-                raise ValueError(
-                    f'bottleneck_ch ({self.bottleneck_ch}) must match '
-                    f'encoder output channels ({ch * 16})'
-                )
-            self.bottleneck = bottleneck
+        self.downs = torch.nn.ModuleList([
+            components.Downsample(ch,   ch*2,  **kwargs.get('downs', {})),
+            components.Downsample(ch*2, ch*4,  **kwargs.get('downs', {})),
+            components.Downsample(ch*4, ch*8,  **kwargs.get('downs', {})),
+            components.Downsample(ch*8, ch*16, **kwargs.get('downs', {})),
+        ])
 
-    @property
-    @abc.abstractmethod
-    def bottleneck_ch(self) -> int:
-        '''Return the bottleneck channel number.'''
-        raise NotImplementedError
+    def __len__(self) -> int:
+        '''Return the number of encoder levels.'''
+        return len(self.downs)
 
-    def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        '''
-        Args:
-            x: [B, C_in, H, W]
-        Returns:
-            y: [B, C_out, H, W] (or possibly downsampled; the framework
-                should document expectations, e.g., same spatial size if
-                heads are dense).
-        '''
-        raise NotImplementedError
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        '''Return 5-level encoder features.'''
 
-    @abc.abstractmethod
-    def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
-        '''
-        Args:
-            x: [B, C_in, H, W]
-        Returns:
-            y: [B, C_out, H, W] (or possibly downsampled; the framework
-                should document expectations, e.g., same spatial size if
-                heads are dense).
-        '''
-        raise NotImplementedError
+        x1 = self.inc(x)
+        x2 = self.downs[0](x1)
+        x3 = self.downs[1](x2)
+        x4 = self.downs[2](x3)
+        x5 = self.downs[3](x4)
+
+        return x1, x2, x3, x4, x5
