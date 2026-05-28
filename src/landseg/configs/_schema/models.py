@@ -51,7 +51,6 @@ class _UNetBackboneConfig:
     encoder_conv_params: _ConvParams
     nodes_conv_params: _ConvParams | None
     decoder_conv_params: _ConvParams | None
-    bottleneck_config: _BottleneckConfig
 
 @dataclasses.dataclass
 class _UNet(_UNetBackboneConfig):
@@ -91,7 +90,7 @@ class _BottleneckConfig:
     num_conv_blocks: int | None
     conv_params: _ConvParams | None
     num_tranformer_blocks: int | None
-    transfomer_params: _Transformer | None
+    transformer_params: _Transformer | None
 
 @dataclasses.dataclass
 class _UNetBottleneckConfig(_BottleneckConfig):
@@ -247,6 +246,6 @@ class ModelsConfig:
                 f'expected: {list(self.conditioner_registry.keys())}'
             )
         # cross-check clamp range ordering
-        lo, hi = self.clamp_range
+        lo, hi = self.numeric_safety.clamp_range
         if lo <= 0 or hi <= 0 or lo >= hi:
             raise ValueError('Invalid clamp_range ordering or non-positive')
