@@ -35,48 +35,87 @@ import typing
 # alias
 field = dataclasses.field
 
-# default double convolution parameters
-CONV_PARAMS: _ConvParams = {
-    'norm': 'gn',
-    'gn_groups': 8,
-    'p_drop': 0.05
-}
-
 # ---------------------------------MODELS CONFIGS------------------------------
+# ----- shared double convolution
+@dataclasses.dataclass
+class _ConvParams:
+    norm: str | None = 'gn'
+    gn_groups: int | None = 8
+    p_drop: float = 0.0
+
 # ----- UNet bodies
-class _UNetBodyConfig(typing.Protocol):
+@dataclasses.dataclass
+class _UNetBackboneConfig:
     body: str
     base_ch: int
-    conv_params: dict[str, _ConvParams]
-
-class _ConvParams(typing.TypedDict):
-    norm: str
-    gn_groups: int
-    p_drop: float
+    encoder_conv_params: _ConvParams
+    nodes_conv_params: _ConvParams | None
+    decoder_conv_params: _ConvParams | None
+    bottleneck_config: _BottleneckConfig
 
 @dataclasses.dataclass
-class _UNet(_UNetBodyConfig):
+class _UNet(_UNetBackboneConfig):
     body: str = 'unet'
     base_ch: int = 32
-    conv_params: dict[str, _ConvParams] = field(
-        default_factory=lambda: {'downs': CONV_PARAMS, 'ups': CONV_PARAMS}
-    )
+    encoder_conv_params: _ConvParams = field(default_factory=_ConvParams)
+    nodes_conv_params: _ConvParams | None = None
+    decoder_conv_params: _ConvParams | None = field(default_factory=_ConvParams)
 
 @dataclasses.dataclass
-class _UNetPP(_UNetBodyConfig):
+class _UNetPP(_UNetBackboneConfig):
     body: str = 'unetpp'
     base_ch: int = 32
-    conv_params: dict[str, _ConvParams] = field(
-        default_factory=lambda: {'downs': CONV_PARAMS, 'nodes': CONV_PARAMS}
-    )
+    encoder_conv_params: _ConvParams = field(default_factory=_ConvParams)
+    nodes_conv_params: _ConvParams | None = field(default_factory=_ConvParams)
+    decoder_conv_params: _ConvParams | None = None
 
 @dataclasses.dataclass
-class _UNetPPP(_UNetBodyConfig):
+class _UNetPPP(_UNetBackboneConfig):
     body: str = 'unetppp'
     base_ch: int = 32
-    conv_params: dict[str, _ConvParams] = field(
-        default_factory=lambda: {'downs': CONV_PARAMS, 'nodes': CONV_PARAMS}
-    )
+    encoder_conv_params: _ConvParams = field(default_factory=_ConvParams)
+    nodes_conv_params: _ConvParams | None = field(default_factory=_ConvParams)
+    decoder_conv_params: _ConvParams | None = None
+
+# ----- UNet bottlenecks
+@dataclasses.dataclass
+class _Transformer:
+    num_heads: int = 8
+    mlp_ratio: float = 0.1
+    dropout: float = 0.05
+    attn_dropout: float = 0.0
+
+@dataclasses.dataclass
+class _BottleneckConfig:
+    variant: str
+    num_conv_blocks: int | None
+    conv_params: _ConvParams | None
+    num_tranformer_blocks: int | None
+    transfomer_params: _Transformer | None
+
+@dataclasses.dataclass
+class _UNetBottleneckConfig(_BottleneckConfig):
+    variant: str = 'conv'
+    num_conv_blocks: int | None = None
+    conv_params: _ConvParams | None = field(default_factory=_ConvParams)
+    num_tranformer_blocks: int | None = None
+    transformer_params: _Transformer | None = None
+
+@dataclasses.dataclass
+class _TransformerBottleneckConfig(_BottleneckConfig):
+    variant: str = 'transformer'
+    num_conv_blocks: int | None = None
+    conv_params: _ConvParams | None = None
+    num_tranformer_blocks: int | None = 4
+    transformer_params: _Transformer | None = field(default_factory=_Transformer)
+
+@dataclasses.dataclass
+class _HybridBottleneckConfig(_BottleneckConfig):
+    variant: str = 'hybrid'
+    num_conv_blocks: int | None = 2
+    conv_params: _ConvParams | None = field(default_factory=_ConvParams)
+    num_tranformer_blocks: int | None = 2
+    transformer_params: _Transformer | None = field(default_factory=_Transformer)
 
 # ----- conditioners
 class _DomainTargetConfig(typing.Protocol):
@@ -143,6 +182,12 @@ class _FiLM(_DomainTargetConfigBase):
         }
     )
 
+# ----- numeric safty
+@dataclasses.dataclass
+class _NumericSafety:
+    enable_clamp: bool = True
+    clamp_range: tuple[float, float] = (1e-4, 1e4)
+
 # ----- MODELS
 @dataclasses.dataclass
 class ModelsConfig:
@@ -154,6 +199,14 @@ class ModelsConfig:
             'unetppp': _UNetPPP(),
         }
     )
+    bottleneck: str = 'conv'
+    bottleneck_registry: dict[str, typing.Any] = field(
+        default_factory=lambda: {
+            'conv': _UNetBottleneckConfig(),
+            'transformer': _TransformerBottleneckConfig(),
+            'hybrid': _HybridBottleneckConfig(),
+        }
+    )
     conditioners: list[str] = field(default_factory=lambda: [])
     conditioner_registry: dict[str, typing.Any] = field(
         default_factory=lambda: {
@@ -161,12 +214,15 @@ class ModelsConfig:
             'film': _FiLM()
         }
     )
-    enable_clamp: bool = True
-    clamp_range: tuple[float, float] = (1e-4, 1e4)
+    numeric_safety: _NumericSafety = field(default_factory=_NumericSafety)
 
     @property
-    def model_body_config(self) -> _UNetBodyConfig:
+    def model_body_config(self) -> _UNetBackboneConfig:
         return self.model_body_registry[self.model_body]
+
+    @property
+    def bottleneck_config(self) -> _BottleneckConfig:
+        return self.bottleneck_registry[self.bottleneck]
 
     @property
     def conditioning_config(self) -> dict[str, _DomainTargetConfig]:
