@@ -7,10 +7,20 @@
 >*des modèles de classification de l’occupation du sol. Il aide les utilisateurs à organiser les données, exécuter des modèles d’apprentissage profond*
 >*et reproduire les résultats de manière cohérente.*
 
-Un cadre modulaire d’apprentissage profond, orienté artefacts, pour la cartographie de l’occupation du sol au niveau du pixel.
-Le système intègre des **images spectrales Landsat**, des **métriques topographiques dérivées de modèles numériques d’élévation (DEM)**,
-et des **caractéristiques métier** au moyen d’un pipeline structuré de préparation des données et d’un environnement d’entraînement basé sur des sessions,
-reposant sur des **architectures de segmentation de type U-Net** (implémentation PyTorch).
+Un cadre modulaire d’apprentissage profond, orienté artefacts, pour la cartographie
+de l’occupation du sol au niveau du pixel. Le système intègre des **images spectrales Landsat**,
+des **métriques topographiques dérivées de modèles numériques d’élévation (DEM)**,
+et des **caractéristiques métier** au moyen d’un pipeline structuré de préparation
+des données et d’un environnement d’entraînement basé sur des sessions, reposant
+sur des **architectures de segmentation de type U-Net** (implémentation PyTorch).
+La prise en charge actuelle des modèles comprend des variantes U-Net multi-têtes
+configurables, notamment U-Net standard, U-Net++ et des dorsales de type U-Net3+,
+avec des goulots d’étranglement convolutionnels, transformeurs ou hybrides en
+option. La configuration par défaut demeure un U-Net convolutionnel conservateur
+afin d’assurer la stabilité des expériences de référence, tandis que les goulots
+d’étranglement fondés sur les transformeurs sont disponibles pour les expériences
+nécessitant un contexte spatial plus étendu et des interactions de caractéristiques
+à longue portée.
 
 > **État du projet :**
 > Ce dépôt est actuellement en mode **recherche / expérimental**. Les limites des modules

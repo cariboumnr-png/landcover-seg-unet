@@ -9,8 +9,14 @@
 
 A modular, artifact‑driven deep learning framework for pixel‑level landcover mapping.
 The system integrates **Landsat spectral imagery**, **DEM‑derived topographic metrics**,
-and **domain features** through a structured data preparation pipeline and a session-based
-training runtime built on **U‑Net–style segmentation architectures** (PyTorch implementation).
+and **domain features** through a structured data preparation pipeline and a
+session-based training runtime built on **U‑Net–style segmentation architectures**
+(PyTorch implementation). Current model support includes configurable multi-head
+U-Net variants, including standard U-Net, U-Net++, and U-Net3+ style backbones,
+with optional convolutional, transformer, or hybrid bottlenecks. The default is
+set to a conservative convolutional U-Net for baseline stability, while
+transformer-enabled bottlenecks are available for experiments requiring
+broader spatial context and long-range feature interaction.
 
 > **Project Status:**
 > This repository is currently in **research / experimental** mode. Module boundaries
