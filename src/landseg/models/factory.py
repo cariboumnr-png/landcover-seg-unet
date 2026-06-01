@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Factory utilities for constructing and validating multi-head UNet models.
 
@@ -31,8 +29,8 @@ configuration objects.
 Key responsibilities:
     - Translate dataset metadata into model-ready configuration
       (input channels, head topology, class structure).
-    - Instantiate a MultiHeadUNet backbone with optional domain conditioning.
-    - Apply optional runtime overrides (e.g., logit adjustment, clamping).
+    - Instantiate a backbone with optional domain conditioning.
+    - Apply optional runtime overrides (e.g., logit adjust, clamping).
     - Perform strict build-time validation via a synthetic forward pass.
 
 The design is intentionally framework-agnostic with respect to experiment
@@ -107,6 +105,7 @@ def build_multihead_unet(
     _validate_model_build(model, dataspecs)
     return model
 
+# ------------------------------private  function------------------------------
 def _validate_model_build(
     model: frames.MultiHeadBaseModel,
     dataspecs: core.DataSpecs,

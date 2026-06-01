@@ -122,10 +122,10 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         '''
         Initialize a multi-head UNet model.
 
-        This constructor assembles a complete domain-aware multi-head model
-        using externally validated configuration objects. The model itself
-        remains configuration-system agnostic and does not depend on Hydra
-        or any global runtime state.
+        Assembles a complete domain-aware multi-head model using
+        externally validated configuration objects. The model itself
+        remains configuration-system agnostic and does not depend on
+        Hydra or any global runtime state.
 
         The constructed model includes:
         - a shared UNet backbone,
@@ -141,25 +141,32 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         - or neither.
 
         Args:
+            input_patch_size: Spatial dimension (assumes square
+                patches).
             dataspecs: Dataset and model specification container
+                describing image properties, task heads, domains,
+                and class mappings.
             backbone_config: Backbone configuration describing
-            conditioning_config: Mapping of conditioning targets to
-                domain-routing configurations
+                architecture selection, encoder parameters, and
+                bottleneck type.
+            conditioning_config: Mapping of conditioning targets
+                (e.g., 'concat', 'film') to domain-routing
+                configurations.
             **kwargs:
-                Optional runtime configuration overrides.
-                Supported options:
-                - enable_clamp: Enable activation clamping for numerical
-                    stability. Default: ``True``.
-                - clamp_range: Tuple defining minimum and maximum clamp
-                    bounds. Default: ``(1e-4, 1e4)``.
+                Optional runtime configuration overrides. Supported
+                options:
+                - enable_clamp: Enable activation clamping for
+                    numerical stability. Default: ``True``.
+                - clamp_range: Tuple defining minimum and maximum
+                    clamp bounds. Default: ``(1e-4, 1e4)``.
 
         Notes:
-        - All arguments are keyword-only to make configuration boundaries
-          explicit and order-independent.
+        - All arguments are keyword-only to make configuration
+          boundaries explicit and order-independent.
         - Backbone implementations are expected to expose compatible
           ``encode()`` and ``decode()`` methods.
-        - Logit adjustment tensors are registered as non-trainable buffers
-          and broadcast during head inference.
+        - Logit adjustment tensors are registered as non-trainable
+          buffers and broadcast during head inference.
         '''
 
         super().__init__()

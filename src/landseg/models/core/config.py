@@ -19,16 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
-'''Multihead model typed configuration.'''
+'''
+Multihead model typed configuration.
+
+This module defines Protocol and TypedDict interfaces for domain
+conditioning configuration. Types enable static type checking of
+model configuration objects without runtime dependency on
+specific implementations or frameworks like Hydra.
+'''
 
 from __future__ import annotations
 # standard imports
 import typing
 
 class DomainTargetConfig(typing.Protocol):
-    '''Typed container for configuring concatenation adapter.'''
     @property
     def name(self) -> str: ...
     @property
@@ -45,7 +52,6 @@ class DomainTargetConfig(typing.Protocol):
     def conditioner_config(self) -> DomainConditionerAdapterConfig: ...
 
 class DomainProjectionConfig(typing.TypedDict):
-    '''doc'''
     use_mlp: typing.NotRequired[bool]
     hidden_dim: typing.NotRequired[int | None]
     num_hidden_layers: typing.NotRequired[int]
@@ -53,5 +59,4 @@ class DomainProjectionConfig(typing.TypedDict):
     activation: typing.NotRequired[str]
 
 class DomainConditionerAdapterConfig(typing.TypedDict):
-    '''To be expanded as needed'''
     hidden_dim: typing.NotRequired[int] # currently for FiLM

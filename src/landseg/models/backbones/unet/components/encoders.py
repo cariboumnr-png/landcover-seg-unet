@@ -19,7 +19,26 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base classes for architecture backbones.'''
+'''
+UNet encoder stages with configurable convolution blocks.
+
+This module provides encoder implementations for UNet architectures.
+It constructs multi-stage downsampling pathways with configurable
+normalization and dropout applied uniformly across all encoding
+stages.
+
+**Design**
+
+The encoder exposes initial convolution and four downsampling
+stages, progressing from base_ch to 16*base_ch channels.
+Convolution parameters (normalization, group count, dropout) are
+applied consistently to DoubleConv and Downsample blocks.
+
+**Output**
+
+The forward pass returns a 5-tuple of feature tensors
+representing increasing receptive field and channel width.
+'''
 
 # third-party imports
 import torch
@@ -39,7 +58,18 @@ class UNetEncoders(torch.nn.Module):
         in_ch: int,
         base_ch: int,
         params: components.ConvolutionParameters,
-    ) -> None:
+    ):
+        '''
+        Initialize multi-stage encoder with 4 downsampling levels.
+
+        Args:
+            in_ch: Input channels (typically from image or concatenated
+                domain features).
+            base_ch: Base channel width; outputs are
+                base_ch, 2*base_ch, 4*base_ch, 8*base_ch, 16*base_ch.
+            params: ConvolutionParameters specifying normalization,
+                dropout, and other conv block options.
+        '''
         super().__init__()
 
         ch = base_ch # alias base_ch -> ch

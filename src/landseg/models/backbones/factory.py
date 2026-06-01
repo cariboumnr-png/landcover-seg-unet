@@ -19,9 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
-'''Factory for backbone architectures.'''
+'''
+Factory for backbone architectures.
+
+This module provides a single factory function for instantiating
+UNet-based backbone implementations. The factory validates input
+spatial constraints and composes encoder, bottleneck, and decoder
+components into a complete feature extractor.
+'''
 
 # standard imports
 import typing
@@ -30,7 +38,6 @@ import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
 class UNetBackboneConfig(typing.Protocol):
-    '''doc'''
     @property
     def body(self) -> body.UNetBodyConfig: ...
     @property
@@ -41,7 +48,28 @@ def build_unet_backbone(
     input_size: int,
     config: UNetBackboneConfig
 ) -> body.UNetBackbone:
-    '''doc'''
+    '''
+    Instantiate a UNet backbone with configured body and bottleneck.
+
+    This factory constructs a complete UNet-based feature extractor by:
+    1. Selecting a backbone body variant (UNet, UNet++, or UNet+++).
+    2. Validating input spatial size against backbone divisibility.
+    3. Instantiating and configuring the bottleneck module.
+
+    Args:
+        in_ch: Number of input channels.
+        input_size: Spatial dimension (assumes square inputs).
+        config: UNetBackboneConfig specifying body and bottleneck
+            configuration.
+
+    Returns:
+        Fully constructed UNetBackbone instance ready for encoding
+        and decoding operations.
+
+    Raises:
+        ValueError: If input size is not divisible by backbone's
+            spatial divisor.
+    '''
 
     # aliases
     unetbody_cfg = config.body

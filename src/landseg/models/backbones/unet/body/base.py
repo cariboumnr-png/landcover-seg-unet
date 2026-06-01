@@ -19,9 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+'''Base classes for architecture backbones.
 
-'''Base classes for architecture backbones.'''
+This module provides the base classes and common interface for UNet
+backbone implementations. It extends the abstract Backbone contract
+with encoder/decoder methods and bottleneck infrastructure specific
+to UNet-style feature extraction.
+'''
 
 # standard imports
 import abc
@@ -44,7 +48,22 @@ class UNetBackbone(backbones.Backbone):
         in_ch: int,
         config: body.UNetBodyConfig,
     ):
-        '''doc'''
+        '''
+        Initialize UNet backbone encoder and bottleneck slots.
+
+        Constructs the initial convolution block and encoder pathway.
+        The bottleneck is left uninitialized and must be set separately
+        via ``build_bottleneck()``. Subclasses are responsible for
+        instantiating the decoder pathway and implementing the abstract
+        methods.
+
+        Args:
+            in_ch: Number of input channels from the input image or
+                concatenated domain features.
+            config: UNetBodyConfig specifying base channel width,
+                encoder convolution parameters, and other
+                architectural options.
+        '''
 
         super().__init__()
         base_ch = config.base_ch

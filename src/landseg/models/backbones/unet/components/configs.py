@@ -19,6 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
 '''Backbone components configurations.'''
@@ -28,7 +29,6 @@ from __future__ import annotations
 import typing
 
 class BottleneckConfig(typing.Protocol):
-    '''Typed container for bottleneck configuration.'''
     @property
     def variant(self) -> str: ...
     @property
@@ -41,7 +41,6 @@ class BottleneckConfig(typing.Protocol):
     def transformer_params(self) -> TransformerParameters | None: ...
 
 class ConvolutionParameters(typing.Protocol):
-    '''Typed container for model backbone configuration.'''
     @property
     def norm(self) -> str | None: ...
     @property
@@ -50,7 +49,6 @@ class ConvolutionParameters(typing.Protocol):
     def p_drop(self) -> float: ...
 
 class TransformerParameters(typing.Protocol):
-    '''Typed container for transformer bottleneck configuration.'''
     @property
     def num_heads(self) -> int: ...
     @property

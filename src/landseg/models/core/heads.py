@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Multi-task prediction head management for segmentation models.
+
+This module provides centralized infrastructure for managing
+multiple task-specific output heads, head selection strategies,
+and per-head logit adjustment.
+'''
 
 # third-party imports
 import torch
@@ -27,11 +33,13 @@ import torch.nn
 
 class HeadManager(torch.nn.Module):
     '''
-    Manage multiple 1x1 conv heads, activation state, and freezing.
+    Manage multiple 1x1 conv heads, activation state, and
+    freezing.
 
-    Each head as `Conv2d(in_ch → num_classes, kernel_size=1)` producing
-    per-pixel logits. The manager tracks which heads are active for
-    forward passes and supports freezing selected heads' parameters.
+    Each head is Conv2d(in_ch → num_classes, kernel_size=1)
+    producing per-pixel logits. The manager tracks which heads
+    are active for forward passes and supports freezing
+    selected heads' parameters.
     '''
 
     def __init__(self, in_ch: int, heads: dict[str, int]):

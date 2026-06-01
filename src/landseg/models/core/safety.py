@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''doc'''
+'''
+Numerical stability utilities for autocast and tensor clamping.
+
+This module provides lightweight utilities for controlling numerical
+precision via mixed-precision autocast and value clamping to prevent
+gradient explosion or vanishing during training and inference.
+'''
 
 # third-party imports
 import torch
