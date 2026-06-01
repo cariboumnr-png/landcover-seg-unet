@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.backbones`.
+Top-level namespace for `landseg.models.backbones.unet`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,24 +32,37 @@ import typing
 
 __all__ = [
     # classes
-    'Backbone',
+    'UNetBackbone',
+    'UNet',
+    'UNetPP',
+    'UNetPPP',
     # functions
-    'build_unet_backbone',
     # types
-    'UNetBackboneConfig'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .factory import UNetBackboneConfig, build_unet_backbone
+    from .base import UNetBackbone
+    from .configs import UNetBodyConfig
+    from .unet import UNet
+    from .unetpp import UNetPP
+    from .unetppp import UNetPPP
 
 def __getattr__(name: str):
 
-    if name in {'Backbone'}:
+    if name in {'UNetBackbone'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
-    if name in {'UNetBackboneConfig', 'build_unet_backbone'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'UNetBodyConfig'}:
+        return getattr(importlib.import_module('.configs', __package__), name)
+
+    if name in {'UNet'}:
+        return getattr(importlib.import_module('.unet', __package__), name)
+
+    if name in {'UNetPP'}:
+        return getattr(importlib.import_module('.unetpp', __package__), name)
+
+    if name in {'UNetPPP'}:
+        return getattr(importlib.import_module('.unetppp', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

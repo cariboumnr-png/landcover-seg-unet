@@ -62,10 +62,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional
 # local imports
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
-class UNetPPP(unet.UNetBackbone):
+class UNetPPP(body.UNetBackbone):
     '''
     Canonical UNet3+ backbone.
 
@@ -88,7 +88,7 @@ class UNetPPP(unet.UNetBackbone):
     def __init__(
         self,
         in_ch: int,
-        config: unet.UNetBodyConfig
+        config: body.UNetBodyConfig
     ) -> None:
         '''
         Initialize backbone.

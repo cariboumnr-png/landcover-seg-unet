@@ -67,10 +67,10 @@ building blocks intended for composition inside more complex models.
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
-class UNet(unet.UNetBackbone):
+class UNet(body.UNetBackbone):
     '''
     UNet backbone implementing an encoder-decoder with skip connections.
 
@@ -97,7 +97,7 @@ class UNet(unet.UNetBackbone):
     def __init__(
         self,
         in_ch: int,
-        config: unet.UNetBodyConfig
+        config: body.UNetBodyConfig
     ):
         '''
         Construct UNet body with configurable normalization and dropout.

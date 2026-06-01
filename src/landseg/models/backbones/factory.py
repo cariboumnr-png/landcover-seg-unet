@@ -26,14 +26,13 @@
 # standard imports
 import typing
 # local imports
-import landseg.models.backbones as backbones
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
 class UNetBackboneConfig(typing.Protocol):
     '''doc'''
     @property
-    def body(self) -> unet.UNetBodyConfig: ...
+    def body(self) -> body.UNetBodyConfig: ...
     @property
     def bottleneck(self) -> components.BottleneckConfig: ...
 
@@ -41,7 +40,7 @@ def build_unet_backbone(
     in_ch: int,
     input_size: int,
     config: UNetBackboneConfig
-) -> backbones.UNetBackbone:
+) -> body.UNetBackbone:
     '''doc'''
 
     # aliases
@@ -50,9 +49,9 @@ def build_unet_backbone(
 
     # core UNet body without bottleneck
     match unetbody_cfg.body:
-        case 'unet': backbone = backbones.UNet(in_ch, unetbody_cfg)
-        case 'unetpp': backbone = backbones.UNetPP(in_ch, unetbody_cfg)
-        case 'unetppp': backbone = backbones.UNetPPP(in_ch, unetbody_cfg)
+        case 'unet': backbone = body.UNet(in_ch, unetbody_cfg)
+        case 'unetpp': backbone = body.UNetPP(in_ch, unetbody_cfg)
+        case 'unetppp': backbone = body.UNetPPP(in_ch, unetbody_cfg)
         case _: raise ValueError(f'Invalid backbone body: {unetbody_cfg.body}')
 
     # bottleneck specs from the backbone

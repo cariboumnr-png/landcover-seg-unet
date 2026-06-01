@@ -29,7 +29,7 @@ import abc
 import torch
 # local imports
 import landseg.models.backbones as backbones
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
 class UNetBackbone(backbones.Backbone):
@@ -42,7 +42,7 @@ class UNetBackbone(backbones.Backbone):
     def __init__(
         self,
         in_ch: int,
-        config: unet.UNetBodyConfig,
+        config: body.UNetBodyConfig,
     ):
         '''doc'''
 
