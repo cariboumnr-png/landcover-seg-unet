@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.backbones.unet`.
+Top-level namespace for `landseg.models.backbones.unet.components`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
