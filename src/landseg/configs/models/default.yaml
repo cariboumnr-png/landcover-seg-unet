@@ -5,44 +5,41 @@ model_body_registry:
   unet:
     body: unet
     base_ch: 32
-    conv_params:
-      encoder_conv_params:
-        norm: gn
-        gn_groups: 8
-        p_drop: 0.0
-      nodes_conv_params_conv_params: null
-      decoder_conv_params:
-        norm: gn
-        gn_groups: 8
-        p_drop: 0.0
+    encoder_conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    nodes_conv_params: null
+    decoder_conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
 
   unetpp:
     body: unetpp
     base_ch: 32
-    conv_params:
-      encoder_conv_params:
-        norm: gn
-        gn_groups: 8
-        p_drop: 0.0
-      nodes_conv_params:
-        norm: gn
-        gn_groups: 8
-        p_drop: 0.0
-      decoder_conv_params: null
+    encoder_conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    nodes_conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    decoder_conv_params: null
 
   unetppp:
     body: unetppp
     base_ch: 32
-    conv_params:
-      encoder_conv_params:
-        norm: gn
-        gn_groups: 8
-        p_drop: 0.0
-      nodes_conv_params:
-        norm: gn
-        gn_groups: 8
-        p_drop: 0.0
-      decoder_conv_params: null
+    encoder_conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    nodes_conv_params:
+      norm: gn
+      gn_groups: 8
+      p_drop: 0.0
+    decoder_conv_params: null
 
 # bottlenecks
 bottleneck: conv
