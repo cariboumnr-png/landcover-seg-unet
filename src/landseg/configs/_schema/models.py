@@ -80,7 +80,7 @@ class _UNetPPP(_UNetBodyConfig):
 @dataclasses.dataclass
 class _Transformer:
     num_heads: int = 8
-    mlp_ratio: float = 0.1
+    mlp_ratio: float = 2.0
     dropout: float = 0.05
     attn_dropout: float = 0.0
 

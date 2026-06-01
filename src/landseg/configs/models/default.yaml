@@ -62,7 +62,7 @@ bottleneck_registry:
     num_transformer_blocks: 4
     transformer_params:
       num_heads: 8
-      mlp_ratio: 0.1
+      mlp_ratio: 2.0
       dropout: 0.05
       attn_dropout: 0.0
 
@@ -73,10 +73,10 @@ bottleneck_registry:
       norm: gn
       gn_groups: 8
       p_drop: 0.0
-    num_transformer_blocks: 4
+    num_transformer_blocks: 2
     transformer_params:
       num_heads: 8
-      mlp_ratio: 0.1
+      mlp_ratio: 2.0
       dropout: 0.05
       attn_dropout: 0.0
 
