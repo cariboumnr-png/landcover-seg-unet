@@ -59,7 +59,7 @@ class ConcatAdapter(torch.nn.Module):
         out_dom: Number of domain channels expected for concatenation.
 
     Raises:
-        ValueError: If payload dimensions do not match `out_dom`.
+        ValueError: If payload dimensions do not match `concat_dim`.
     '''
 
     def __init__(
@@ -68,10 +68,11 @@ class ConcatAdapter(torch.nn.Module):
         concat_dim: int,
     ) -> None:
         '''
-        Initialize the adapter.
+        Initialize the concatenation adapter with output dimension.
 
         Args:
-            out_dom: Number of domain channels to append.
+            concat_dim: Number of domain channels to concatenate to
+                feature maps.
         '''
         super().__init__()
         self.output_dim = concat_dim
@@ -89,7 +90,7 @@ class ConcatAdapter(torch.nn.Module):
             payload: Routed domain payload for this target.
 
         Returns:
-            Tensor: [B, C + out_dom, H, W] if out_dom > 0.
+            Tensor: [B, C + concat_dim, H, W] if concat_dim > 0.
 
         Raises:
             ValueError: If payload is missing or invalid when required.

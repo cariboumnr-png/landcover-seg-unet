@@ -54,9 +54,10 @@ computed by combining:
 import torch
 import torch.nn
 # local imports
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.body as body
+import landseg.models.backbones.unet.components as components
 
-class UNetPP(unet.UNetBackbone):
+class UNetPP(body.UNetBackbone):
     '''UNet++ backbone with nested dense skip refinements.
 
     This class constructs a 4-level encoder identical to UNet, followed by
@@ -76,12 +77,12 @@ class UNetPP(unet.UNetBackbone):
     - Convolution weights are Kaiming initialized (ReLU-friendly).
     '''
 
-    # module aliases
-    DC = unet.DoubleConv
-    DS = unet.Downsample
-    US = torch.nn.Upsample
 
-    def __init__(self, in_ch: int, base_ch: int, **kwargs):
+    def __init__(
+        self,
+        in_ch: int,
+        config: body.UNetBodyConfig
+    ):
         '''
         Construct the UNet++ nested-skip backbone.
 
@@ -119,46 +120,38 @@ class UNetPP(unet.UNetBackbone):
           produces only X_{0,4}.
         '''
 
-        super().__init__()
-        self._out_channels = base_ch # conforming to base class
-        ch = base_ch # alias base_ch -> ch
-
-        # initial convolution block with no norm nor drop outs
-        self.inc = self.DC(in_ch, ch, norm=None, p_drop=0.0)
-        # 4 downsample encoders
-        self.downs = torch.nn.ModuleList([
-            self.DS(ch,     ch * 2,  **kwargs.get('downs', {})),
-            self.DS(ch * 2, ch * 4,  **kwargs.get('downs', {})),
-            self.DS(ch * 4, ch * 8,  **kwargs.get('downs', {})),
-            self.DS(ch * 8, ch * 16, **kwargs.get('downs', {}))
-        ])
+        super().__init__(in_ch, config)
+        self._out_channels = ch = config.base_ch
 
         # decoders (nested refinement) - every nested node becomes ch channels
         # channel size helper dict
         chs = {0: ch, 1: ch * 2, 2: ch * 4, 3: ch * 8, 4: ch * 16}
+        assert config.nodes_conv_params
+        DC = components.DoubleConv
         self.nodes = torch.nn.ModuleDict({
         # Level 1 nested (j=1)
-            'x01': self.DC(chs[0]     + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x11': self.DC(chs[1]     + chs[2], chs[1], **kwargs.get('nodes', {})),
-            'x21': self.DC(chs[2]     + chs[3], chs[2], **kwargs.get('nodes', {})),
-            'x31': self.DC(chs[3]     + chs[4], chs[3], **kwargs.get('nodes', {})),
+            'x01': DC(chs[0]     + chs[1], chs[0], config.nodes_conv_params),
+            'x11': DC(chs[1]     + chs[2], chs[1], config.nodes_conv_params),
+            'x21': DC(chs[2]     + chs[3], chs[2], config.nodes_conv_params),
+            'x31': DC(chs[3]     + chs[4], chs[3], config.nodes_conv_params),
             # Level 2 nested (j=2)
-            'x02': self.DC(chs[0] * 2 + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x12': self.DC(chs[1] * 2 + chs[2], chs[1], **kwargs.get('nodes', {})),
-            'x22': self.DC(chs[2] * 2 + chs[3], chs[2], **kwargs.get('nodes', {})),
+            'x02': DC(chs[0] * 2 + chs[1], chs[0], config.nodes_conv_params),
+            'x12': DC(chs[1] * 2 + chs[2], chs[1], config.nodes_conv_params),
+            'x22': DC(chs[2] * 2 + chs[3], chs[2], config.nodes_conv_params),
             # Level 3 nested (j=3)
-            'x03': self.DC(chs[0] * 3 + chs[1], chs[0], **kwargs.get('nodes', {})),
-            'x13': self.DC(chs[1] * 3 + chs[2], chs[1], **kwargs.get('nodes', {})),
+            'x03': DC(chs[0] * 3 + chs[1], chs[0], config.nodes_conv_params),
+            'x13': DC(chs[1] * 3 + chs[2], chs[1], config.nodes_conv_params),
             # Level 4 nested (final output j=4)
-            'x04': self.DC(chs[0] * 4 + chs[1], chs[0], **kwargs.get('nodes', {}))
+            'x04': DC(chs[0] * 4 + chs[1], chs[0], config.nodes_conv_params)
         })
 
         # upsamplers for backbone resolution
+        US = torch.nn.Upsample
         self.ups = torch.nn.ModuleList([
-            self.US(scale_factor=2, mode='bilinear', align_corners=False),
-            self.US(scale_factor=2, mode='bilinear', align_corners=False),
-            self.US(scale_factor=2, mode='bilinear', align_corners=False),
-            self.US(scale_factor=2, mode='bilinear', align_corners=False)
+            US(scale_factor=2, mode='bilinear', align_corners=False),
+            US(scale_factor=2, mode='bilinear', align_corners=False),
+            US(scale_factor=2, mode='bilinear', align_corners=False),
+            US(scale_factor=2, mode='bilinear', align_corners=False)
         ])
 
         # Kaiming weight initialization
@@ -184,13 +177,7 @@ class UNetPP(unet.UNetBackbone):
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Return 5-level encoder features.'''
 
-        x0_0 = self.inc(x)
-        x1_0 = self.downs[0](x0_0)
-        x2_0 = self.downs[1](x1_0)
-        x3_0 = self.downs[2](x2_0)
-        x4_0 = self.downs[3](x3_0)
-
-        return x0_0, x1_0, x2_0, x3_0, x4_0
+        return self.downs(x)
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
         '''Decode nested UNet++ refinement graph.'''

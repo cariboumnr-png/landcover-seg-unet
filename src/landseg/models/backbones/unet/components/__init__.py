@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.models.backbones`.
+Top-level namespace for `landseg.models.backbones.unet.components`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,24 +32,44 @@ import typing
 
 __all__ = [
     # classes
-    'Backbone',
+    'BaseBottleneck',
+    'HybridBottleneck',
+    'TransformerBottleneck',
+    'DoubleConv',
+    'Downsample',
+    'Upsample',
+    'UNetEncoders',
+    'UNetBottleneck',
     # functions
-    'build_unet_backbone',
     # types
-    'UNetBackboneConfig'
+    'BottleneckConfig',
+    'ConvolutionParameters',
+    'TransformerParameters'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .factory import UNetBackboneConfig, build_unet_backbone
-
+    from .conv_blocks import DoubleConv, Downsample, Upsample
+    from .configs import BottleneckConfig, ConvolutionParameters, TransformerParameters
+    from .encoders import UNetEncoders
+    from .bottlenecks import (
+        BaseBottleneck,
+        HybridBottleneck,
+        TransformerBottleneck,
+        UNetBottleneck
+    )
 def __getattr__(name: str):
 
-    if name in {'Backbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    if name in {'BottleneckConfig', 'ConvolutionParameters', 'TransformerParameters'}:
+        return getattr(importlib.import_module('.configs', __package__), name)
 
-    if name in {'UNetBackboneConfig', 'build_unet_backbone'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
+        return getattr(importlib.import_module('.conv_blocks', __package__), name)
+
+    if name in {'HybridBottleneck', 'TransformerBottleneck', 'BaseBottleneck', 'UNetBottleneck'}:
+        return getattr(importlib.import_module('.bottlenecks', __package__), name)
+
+    if name in {'UNetEncoders'}:
+        return getattr(importlib.import_module('.encoders', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -185,11 +185,11 @@ class MultiHeadBaseModel(abc.ABC, torch.nn.Module):
             self.logit_adjust_alpha,
         )
 
-    def set_active_heads(self, active_heads: list[str] | None=None) -> None:
+    def set_active_heads(self, active_heads: list[str] | None = None) -> None:
         '''Set the list of active heads used during forward.'''
         self.heads.active = active_heads
 
-    def set_frozen_heads(self, frozen_heads: list[str] | None=None) -> None:
+    def set_frozen_heads(self, frozen_heads: list[str] | None = None) -> None:
         '''Freeze parameters for selected heads.'''
         self.heads.frozen = frozen_heads
         self.heads.freeze(frozen_heads)

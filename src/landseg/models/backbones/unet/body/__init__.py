@@ -19,19 +19,50 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+'''
+Top-level namespace for `landseg.models.backbones.unet.body`.
 
-'''Multihead model typed configuration.'''
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
+'''
 
 from __future__ import annotations
-# standard imports
+import importlib
 import typing
 
-class UNetBodyConfig(typing.Protocol):
-    '''Typed container for model backbone configuration.'''
-    @property
-    def body(self) -> str: ...
-    @property
-    def base_ch(self) -> int: ...
-    @property
-    def conv_params(self) -> dict[str, typing.Any]:...
+__all__ = [
+    # classes
+    'UNetBackbone',
+    'UNet',
+    'UNetPP',
+    'UNetPPP',
+    # functions
+    # types
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .base import UNetBackbone
+    from .configs import UNetBodyConfig
+    from .unet import UNet
+    from .unetpp import UNetPP
+    from .unetppp import UNetPPP
+
+def __getattr__(name: str):
+
+    if name in {'UNetBackbone'}:
+        return getattr(importlib.import_module('.base', __package__), name)
+
+    if name in {'UNetBodyConfig'}:
+        return getattr(importlib.import_module('.configs', __package__), name)
+
+    if name in {'UNet'}:
+        return getattr(importlib.import_module('.unet', __package__), name)
+
+    if name in {'UNetPP'}:
+        return getattr(importlib.import_module('.unetpp', __package__), name)
+
+    if name in {'UNetPPP'}:
+        return getattr(importlib.import_module('.unetppp', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

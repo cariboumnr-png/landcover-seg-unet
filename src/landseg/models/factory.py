@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Factory utilities for constructing and validating multi-head UNet models.
 
@@ -31,8 +29,8 @@ configuration objects.
 Key responsibilities:
     - Translate dataset metadata into model-ready configuration
       (input channels, head topology, class structure).
-    - Instantiate a MultiHeadUNet backbone with optional domain conditioning.
-    - Apply optional runtime overrides (e.g., logit adjustment, clamping).
+    - Instantiate a backbone with optional domain conditioning.
+    - Apply optional runtime overrides (e.g., logit adjust, clamping).
     - Perform strict build-time validation via a synthetic forward pass.
 
 The design is intentionally framework-agnostic with respect to experiment
@@ -53,8 +51,9 @@ import landseg.models.frames as frames
 # -------------------------------Public Function-------------------------------
 def build_multihead_unet(
     *,
+    patch_size: int,
     dataspecs: core.DataSpecs,
-    body_config: backbones.UNetBodyConfig,
+    unet_backbone_config: backbones.UNetBackboneConfig,
     conditioning_config: typing.Mapping[str, model_core.DomainTargetConfig],
     **kwargs
 ) -> frames.MultiHeadBaseModel:
@@ -97,14 +96,16 @@ def build_multihead_unet(
     '''
 
     model = frames.MultiHeadUNet(
+        input_patch_size=patch_size,
         dataspecs=dataspecs,
-        backbone_config=body_config,
+        backbone_config=unet_backbone_config,
         conditioning_config=dict(conditioning_config),
         **kwargs
     )
     _validate_model_build(model, dataspecs)
     return model
 
+# ------------------------------private  function------------------------------
 def _validate_model_build(
     model: frames.MultiHeadBaseModel,
     dataspecs: core.DataSpecs,

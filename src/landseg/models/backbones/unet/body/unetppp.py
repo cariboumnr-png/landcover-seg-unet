@@ -62,9 +62,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional
 # local imports
-import landseg.models.backbones.unet as unet
+import landseg.models.backbones.unet.body as body
+import landseg.models.backbones.unet.components as components
 
-class UNetPPP(unet.UNetBackbone):
+class UNetPPP(body.UNetBackbone):
     '''
     Canonical UNet3+ backbone.
 
@@ -84,42 +85,17 @@ class UNetPPP(unet.UNetBackbone):
     - Encoder depth defines the minimum spatial divisor constraint
     '''
 
-    # aliases
-    DC = unet.DoubleConv
-    DS = unet.Downsample
-
     def __init__(
         self,
         in_ch: int,
-        base_ch: int,
-        **kwargs,
+        config: body.UNetBodyConfig
     ) -> None:
         '''
         Initialize backbone.
         '''
 
-        super().__init__()
-        # unified aggregation width
-        agg_ch = ch = base_ch
-        self._out_channels = base_ch
-
-        # ------------------------------------------------------------------ #
-        # encoder
-        # ------------------------------------------------------------------ #
-
-        self.inc = self.DC(
-            in_ch,
-            ch,
-            norm=None,
-            p_drop=0.0,
-        )
-
-        self.downs = nn.ModuleList([
-            self.DS(ch,      ch * 2,  **kwargs.get('downs', {})),
-            self.DS(ch * 2,  ch * 4,  **kwargs.get('downs', {})),
-            self.DS(ch * 4,  ch * 8,  **kwargs.get('downs', {})),
-            self.DS(ch * 8,  ch * 16, **kwargs.get('downs', {})),
-        ])
+        super().__init__(in_ch, config)
+        self._out_channels = ch = config.base_ch
 
         # ------------------------------------------------------------------ #
         # encoder projections
@@ -127,11 +103,11 @@ class UNetPPP(unet.UNetBackbone):
         # ------------------------------------------------------------------ #
 
         self.projs = nn.ModuleList([
-            nn.Conv2d(ch,      agg_ch, 1),
-            nn.Conv2d(ch * 2,  agg_ch, 1),
-            nn.Conv2d(ch * 4,  agg_ch, 1),
-            nn.Conv2d(ch * 8,  agg_ch, 1),
-            nn.Conv2d(ch * 16, agg_ch, 1),
+            nn.Conv2d(ch,      ch, 1),
+            nn.Conv2d(ch * 2,  ch, 1),
+            nn.Conv2d(ch * 4,  ch, 1),
+            nn.Conv2d(ch * 8,  ch, 1),
+            nn.Conv2d(ch * 16, ch, 1),
         ])
 
         # ------------------------------------------------------------------ #
@@ -139,11 +115,12 @@ class UNetPPP(unet.UNetBackbone):
         # each stage aggregates 5 tensors
         # ------------------------------------------------------------------ #
 
+        assert config.nodes_conv_params
         self.ups = nn.ModuleList([
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
-            self.DC(agg_ch * 5, agg_ch, **kwargs.get('nodes', {})),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
+            components.DoubleConv(ch * 5, ch, config.nodes_conv_params),
         ])
 
         # Kaiming weight initialization
@@ -218,13 +195,7 @@ class UNetPPP(unet.UNetBackbone):
     ) -> tuple[torch.Tensor, ...]:
         '''Run encoder path and return multi-scale feature hierarchy.'''
 
-        x1 = self.inc(x)
-        x2 = self.downs[0](x1)
-        x3 = self.downs[1](x2)
-        x4 = self.downs[2](x3)
-        x5 = self.downs[3](x4)
-
-        return x1, x2, x3, x4, x5
+        return self.downs(x)
 
     def decode(
         self,

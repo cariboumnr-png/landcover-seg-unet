@@ -19,46 +19,25 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Numerical stability utilities for autocast and tensor clamping.
+# pylint: disable=missing-function-docstring
 
-This module provides lightweight utilities for controlling numerical
-precision via mixed-precision autocast and value clamping to prevent
-gradient explosion or vanishing during training and inference.
-'''
+'''Backbone components configurations.'''
 
-# third-party imports
-import torch
+# standard imports
+from __future__ import annotations
+import typing
+# local imports
+import landseg.models.backbones.unet.components as components
 
-class NumericSafety:
-    '''Autocast and clamping utilities for numerical stability.'''
-
-    def __init__(
-        self,
-        *,
-        enable_clamp: bool,
-        clamp_range: tuple[float, float],
-        device: str
-    ):
-        '''Configure clamping behavior and bounds.'''
-
-        self.enable_clamp = enable_clamp
-        self.clamp_range = clamp_range
-        self.device = device
-
-    def autocast_context(
-        self,
-        enable: bool = True,
-        dtype: torch.dtype = torch.float16
-    ) -> torch.autocast:
-        '''Create an AMP autocast context for the current device.'''
-
-        return torch.autocast(self.device, dtype, enable)
-
-    def clamp(self, x: torch.Tensor) -> torch.Tensor:
-        '''Clamp tensor values to a safe numeric range.'''
-
-        if not self.enable_clamp:
-            return x
-        mmin, mmax = self.clamp_range
-        return torch.clamp(x, min=mmin, max=mmax)
+class UNetBodyConfig(typing.Protocol):
+    '''Typed container for backbone convolution configuration.'''
+    @property
+    def body(self) -> str: ...
+    @property
+    def base_ch(self) -> int: ...
+    @property
+    def encoder_conv_params(self) -> components.ConvolutionParameters: ...
+    @property
+    def nodes_conv_params(self) -> components.ConvolutionParameters | None: ...
+    @property
+    def decoder_conv_params(self) -> components.ConvolutionParameters | None: ...

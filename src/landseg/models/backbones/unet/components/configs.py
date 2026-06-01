@@ -19,48 +19,41 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base classes for architecture backbones.'''
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
+'''Backbone components configurations.'''
 
 # standard imports
-import abc
-# third-party imports
-import torch
-# local imports
-import landseg.models.backbones as backbones
+from __future__ import annotations
+import typing
 
-class UNetBackbone(backbones.Backbone):
-    '''
-    Contract for any feature extractor used by MultiHeadModel.
-    Implementations must produce a feature map with a known channel
-    width that matches the heads' expected input (e.g., base_ch).
-    '''
-
+class BottleneckConfig(typing.Protocol):
     @property
-    @abc.abstractmethod
-    def bottleneck_ch(self) -> int:
-        '''Return the bottleneck channel number.'''
-        raise NotImplementedError
+    def variant(self) -> str: ...
+    @property
+    def num_conv_blocks(self) -> int | None: ...
+    @property
+    def conv_params(self) -> ConvolutionParameters | None: ...
+    @property
+    def num_transformer_blocks(self) -> int | None: ...
+    @property
+    def transformer_params(self) -> TransformerParameters | None: ...
 
-    @abc.abstractmethod
-    def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        '''
-        Args:
-            x: [B, C_in, H, W]
-        Returns:
-            y: [B, C_out, H, W] (or possibly downsampled; the framework
-                should document expectations, e.g., same spatial size if
-                heads are dense).
-        '''
-        raise NotImplementedError
+class ConvolutionParameters(typing.Protocol):
+    @property
+    def norm(self) -> str | None: ...
+    @property
+    def gn_groups(self) -> int | None: ...
+    @property
+    def p_drop(self) -> float: ...
 
-    @abc.abstractmethod
-    def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
-        '''
-        Args:
-            x: [B, C_in, H, W]
-        Returns:
-            y: [B, C_out, H, W] (or possibly downsampled; the framework
-                should document expectations, e.g., same spatial size if
-                heads are dense).
-        '''
-        raise NotImplementedError
+class TransformerParameters(typing.Protocol):
+    @property
+    def num_heads(self) -> int: ...
+    @property
+    def mlp_ratio(self) -> float: ...
+    @property
+    def dropout(self) -> float: ...
+    @property
+    def attn_dropout(self) -> float: ...

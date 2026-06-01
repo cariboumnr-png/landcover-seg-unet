@@ -113,18 +113,19 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
     def __init__(
         self,
         *,
+        input_patch_size: int,
         dataspecs: core.DataSpecs,
-        backbone_config: backbones.UNetBodyConfig,
+        backbone_config: backbones.UNetBackboneConfig,
         conditioning_config: dict[str, model_core.DomainTargetConfig],
         **kwargs
       ):
         '''
         Initialize a multi-head UNet model.
 
-        This constructor assembles a complete domain-aware multi-head model
-        using externally validated configuration objects. The model itself
-        remains configuration-system agnostic and does not depend on Hydra
-        or any global runtime state.
+        Assembles a complete domain-aware multi-head model using
+        externally validated configuration objects. The model itself
+        remains configuration-system agnostic and does not depend on
+        Hydra or any global runtime state.
 
         The constructed model includes:
         - a shared UNet backbone,
@@ -140,31 +141,38 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         - or neither.
 
         Args:
+            input_patch_size: Spatial dimension (assumes square
+                patches).
             dataspecs: Dataset and model specification container
+                describing image properties, task heads, domains,
+                and class mappings.
             backbone_config: Backbone configuration describing
-            conditioning_config: Mapping of conditioning targets to
-                domain-routing configurations
+                architecture selection, encoder parameters, and
+                bottleneck type.
+            conditioning_config: Mapping of conditioning targets
+                (e.g., 'concat', 'film') to domain-routing
+                configurations.
             **kwargs:
-                Optional runtime configuration overrides.
-                Supported options:
-                - enable_clamp: Enable activation clamping for numerical
-                    stability. Default: ``True``.
-                - clamp_range: Tuple defining minimum and maximum clamp
-                    bounds. Default: ``(1e-4, 1e4)``.
+                Optional runtime configuration overrides. Supported
+                options:
+                - enable_clamp: Enable activation clamping for
+                    numerical stability. Default: ``True``.
+                - clamp_range: Tuple defining minimum and maximum
+                    clamp bounds. Default: ``(1e-4, 1e4)``.
 
         Notes:
-        - All arguments are keyword-only to make configuration boundaries
-          explicit and order-independent.
+        - All arguments are keyword-only to make configuration
+          boundaries explicit and order-independent.
         - Backbone implementations are expected to expose compatible
           ``encode()`` and ``decode()`` methods.
-        - Logit adjustment tensors are registered as non-trainable buffers
-          and broadcast during head inference.
+        - Logit adjustment tensors are registered as non-trainable
+          buffers and broadcast during head inference.
         '''
 
         super().__init__()
 
         self.dataspecs = dataspecs
-        base_ch = backbone_config.base_ch
+        base_ch = backbone_config.body.base_ch
 
         heads = {k: len(v) for k, v in dataspecs.heads.class_counts.items()}
         self.heads = model_core.HeadManager(base_ch, heads)
@@ -186,10 +194,11 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             self.concat = model_core.ConcatAdapter(concat_dim=add_dim)
 
         # core UNet body
-        body = self._get_model_body(backbone_config.body)
-        in_ch = dataspecs.meta.image_specs.num_channels
-        self.body: backbones.UNetBackbone
-        self.body = body(in_ch + add_dim, base_ch, **backbone_config.conv_params)
+        self.body = backbones.build_unet_backbone(
+            dataspecs.meta.image_specs.num_channels + add_dim,
+            input_patch_size,
+            backbone_config
+        )
 
         # validate the spatial divisibility
         if dataspecs.meta.image_specs.height_width % self.body.spatial_divisor != 0:
@@ -311,17 +320,3 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
         # return features
         return x
-
-    @staticmethod
-    def _get_model_body(body: str) -> backbones.UNetBackbone:
-        '''Retrieve a registered UNet backbone implementation.'''
-
-        # model body registry
-        body_registry = {
-            'unet': backbones.UNet,
-            'unetpp': backbones.UNetPP,
-            'unetppp': backbones.UNetPPP
-        }
-        if not body in body_registry:
-            raise ValueError(f'Invalid base model: {body}')
-        return body_registry[body]

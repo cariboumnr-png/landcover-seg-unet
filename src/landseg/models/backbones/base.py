@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base classes for architecture backbones.'''
+'''Base classes for architecture backbones.
+
+This module defines the abstract interface for all backbone feature
+extractors used by multi-head segmentation models. Implementations must
+specify their output channel width and spatial divisor constraints to
+enable downstream validation and conditioning integration.
+'''
 
 # standard imports
 import abc
@@ -43,7 +49,7 @@ class Backbone(torch.nn.Module, metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def spatial_divisor(self) -> int:
-        '''Integer factor by which spatial dimensions are constrained.'''
+        '''Integer factor constraining spatial dimensions.'''
         raise NotImplementedError
 
     @abc.abstractmethod
