@@ -28,6 +28,8 @@ Data transform schema
 
 # standard imports
 import dataclasses
+# local imports
+import landseg.configs.schema.utils as utils
 
 # alias
 field = dataclasses.field
@@ -39,8 +41,8 @@ class _Thresholds:
     blk_thres_test: float = 0.1
 
     def validate(self):
-        _must_within(self.blk_thres_dev, 'dev block valid px threshold', 0, 1)
-        _must_within(self.blk_thres_test, 'test block valid px threshold', 0, 1)
+        utils.must_within(self.blk_thres_dev, 'dev block valid px threshold', 0, 1)
+        utils.must_within(self.blk_thres_test, 'test block valid px threshold', 0, 1)
 
 @dataclasses.dataclass
 class _Partition:
@@ -49,8 +51,8 @@ class _Partition:
     buffer_step: int = 1
 
     def validate(self):
-        _must_within(self.val_ratio, 'validation block ratio', 0, 1)
-        _must_within(self.val_ratio, 'test holdout block ratio', 0, 1)
+        utils.must_within(self.val_ratio, 'validation block ratio', 0, 1)
+        utils.must_within(self.test_ratio, 'test holdout block ratio', 0, 1)
 
 @dataclasses.dataclass
 class _Scoring:
@@ -59,15 +61,15 @@ class _Scoring:
     beta: float = 0.0
 
     def validate(self):
-        _must_within(self.alpha, 'scoring alpha', 0)
-        _must_within(self.beta, 'scoring beta', 0)
+        utils.must_within(self.alpha, 'scoring alpha', 0)
+        utils.must_within(self.beta, 'scoring beta', 0)
 
 @dataclasses.dataclass
 class _Hydration:
     max_skew_rate: float = 10.0
 
     def validate(self):
-        _must_within(self.max_skew_rate, 'hydration skew ratio', 0)
+        utils.must_within(self.max_skew_rate, 'hydration skew ratio', 0)
 
 # ----- composite
 @dataclasses.dataclass
@@ -86,14 +88,3 @@ class DataTransform:
         self.partition.validate()
         self.scoring.validate()
         self.hydration.validate()
-
-# ------------------------------private  function------------------------------
-def _must_within(
-    value: int | float,
-    tag: str,
-    mmin: int | float | None = None,
-    mmax: int | float | None = None,
-) -> None:
-    rr = f'[{mmin}, {mmax}]'
-    if mmin and value < mmin or mmax and value > mmax:
-        raise ValueError(f'Value [{tag}] must be within {rr}, got: {value}')
