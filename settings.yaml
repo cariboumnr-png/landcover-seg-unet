@@ -32,7 +32,10 @@ foundation:
 
 # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
   domains:
-    files: # add more files as needed, ALL will be processed into stable artifacts
+    # add more files as needed in the same format
+    # all rasters will be processed to both categorical and continuous artifacts
+    # which one to use is determined by dataspecs.domain_ids_name and domain_vec_name
+    files:
       - path: ./experiment/input/domain_knowledge/example_domain_1.tif
         index_base: 1
       - path: ./experiment/input/domain_knowledge/example_domain_2.tif

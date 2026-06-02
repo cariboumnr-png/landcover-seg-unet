@@ -92,10 +92,12 @@ class DataIngestionConfigurator:
 
     def set_test_holdout_data(
         self,
-        test_holdout_image: str,
-        test_holdout_label: str
+        test_holdout_image: str | None,
+        test_holdout_label: str | None
     ) -> typing.Self:
         '''Set test holdout data source.'''
+        if not test_holdout_image or not test_holdout_label:
+            return self
         self._cfg.foundation.datablocks.filepaths.test_image = test_holdout_image
         self._cfg.foundation.datablocks.filepaths.test_label = test_holdout_label
         return self

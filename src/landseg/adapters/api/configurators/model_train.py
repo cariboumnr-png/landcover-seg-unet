@@ -66,8 +66,8 @@ class TrainingSessionConfigurator:
 
     def set_domain_source(
         self,
-        category_domain: str,
-        continuous_domain: str,
+        category_domain: str | None,
+        continuous_domain: str | None,
     ) -> typing.Self:
         '''Set data source'''
         self._cfg.dataspecs.domain_ids_name = category_domain
@@ -77,10 +77,12 @@ class TrainingSessionConfigurator:
     def set_model(
         self,
         body: str,
+        bottleneck: str,
         base_channel: int
     ) -> typing.Self:
         '''Set model body.'''
         self._cfg.models.model_body = body
+        self._cfg.models.bottleneck = bottleneck
         self._cfg.models.set_base_channel(base_channel)
         return self
 
