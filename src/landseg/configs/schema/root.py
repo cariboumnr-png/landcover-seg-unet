@@ -31,7 +31,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 # local imports
-import landseg.configs._schema as s
+import landseg.configs.schema.sections as sec
 
 # alias
 field = dataclasses.field
@@ -52,19 +52,19 @@ class RootConfig:
     # execution configs
     execution: _ExecutionContext = field(default_factory=_ExecutionContext)
     # raw input data and configs
-    foundation: s.DataFoundation = field(default_factory=s.DataFoundation)
+    foundation: sec.DataFoundation = field(default_factory=sec.DataFoundation)
     # data preparation
-    transform: s.DataTransform = field(default_factory=s.DataTransform)
+    transform: sec.DataTransform = field(default_factory=sec.DataTransform)
     # data specfication
-    dataspecs: s.DataSpecs = field(default_factory=s.DataSpecs)
+    dataspecs: sec.DataSpecs = field(default_factory=sec.DataSpecs)
     # model settings
-    models: s.ModelsConfig = field(default_factory=s.ModelsConfig)
+    models: sec.ModelsConfig = field(default_factory=sec.ModelsConfig)
     # session settings
-    session: s.SessionConfig = field(default_factory=s.SessionConfig)
+    session: sec.SessionConfig = field(default_factory=sec.SessionConfig)
     # study settings
-    study: s.StudyConfig = field(default_factory=s.StudyConfig)
+    study: sec.StudyConfig = field(default_factory=sec.StudyConfig)
     # pipeline specific CLI flags
-    pipeline: s.PipelineConfig = field(default_factory=s.PipelineConfig)
+    pipeline: sec.PipelineConfig = field(default_factory=sec.PipelineConfig)
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
