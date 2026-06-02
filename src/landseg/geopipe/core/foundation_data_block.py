@@ -342,8 +342,9 @@ class DataBlock:
                 self.meta['image_band_map']['NBR'] = n + 2
 
         # add to image array
-        add_indices = numpy.stack(indices_stack ).astype(numpy.float32)
-        self.data.image = numpy.append(self.data.image, add_indices, axis=0)
+        if indices_stack:
+            add_indices = numpy.stack(indices_stack ).astype(numpy.float32)
+            self.data.image = numpy.append(self.data.image, add_indices, axis=0)
 
     def _add_topographical_metrics(self) -> None:
         '''Add topographical metrics to the image array.'''
