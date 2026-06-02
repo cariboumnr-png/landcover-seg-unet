@@ -28,7 +28,6 @@ Model architecture schema
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import typing
 
@@ -123,15 +122,6 @@ class _UNetBackboneConfig:
     bottleneck: _BottleneckConfig
 
 # ----- conditioners
-class _DomainTargetConfig(typing.Protocol):
-    name: str
-    use_ids: bool
-    use_vec: bool
-    ids_embd_dims: int
-    vec_proj_dims: int
-    vec_proj_config: _DomainProjectionConfig
-    conditioner_config: _DomainConditionerAdapterConfig
-
 class _DomainProjectionConfig(typing.TypedDict):
     use_mlp: typing.NotRequired[bool]
     hidden_dim: typing.NotRequired[int | None]
@@ -141,6 +131,15 @@ class _DomainProjectionConfig(typing.TypedDict):
 
 class _DomainConditionerAdapterConfig(typing.TypedDict):
     hidden_dim: typing.NotRequired[int] # currently for FiLM
+
+class _DomainTargetConfig(typing.Protocol):
+    name: str
+    use_ids: bool
+    use_vec: bool
+    ids_embd_dims: int
+    vec_proj_dims: int
+    vec_proj_config: _DomainProjectionConfig
+    conditioner_config: _DomainConditionerAdapterConfig
 
 class _DomainTargetConfigBase(_DomainTargetConfig):
     def __post_init__(self):

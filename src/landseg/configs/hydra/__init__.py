@@ -19,43 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=no-value-for-parameter
-
 '''
-CLI entry.
+Top-level namespace for `landseg.configs.hydra`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
-
-# standard imports
-import sys
-import typing
-# third-party imports
-import hydra
-import omegaconf
-# local imports
-import landseg.adapters.cli as cli
-import landseg.execution as execution
-import landseg.utils as utils
-
-# main process
-@hydra.main('pkg://landseg/configs/hydra', 'config', version_base='1.3')
-def main(config: omegaconf.DictConfig) -> typing.Any:
-    '''Run the selected CLI pipeline with resolved configuration.'''
-
-    # cli logger
-    logger = utils.Logger('cli', './cli.log')
-
-    # run specified mode with exceptions handling
-    try:
-        root_config = cli.resolve_configs(config)
-        return execution.execute_pipeline(root_config)
-    # manual keyboard interruption
-    except KeyboardInterrupt:
-        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
-        sys.exit(130)
-    # capture others and log
-    except Exception: # pylint: disable=broad-exception-caught
-        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()

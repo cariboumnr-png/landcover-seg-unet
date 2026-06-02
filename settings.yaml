@@ -1,5 +1,11 @@
 # =============================================================================
 # USER SETTINGS / PARAMÈTRES UTILISATEUR
+# Notes:
+# 1. This file contains the basic experiment configuration. Adjust the parameters as needed.
+# 2. All parameters will be validated prior to execution, but ensure that they are set correctly.
+# 3. The settings are organized into sections for clarity. Refer to the comments for guidance.
+# 4. Ensure that file paths and parameters are correctly set to avoid runtime errors.
+# 5. Use absolute file paths to ensure consistency across different environments.
 
 # -----------------------------------------------------------------------------
 # PROJECT ROOT / RACINE DU PROJET
@@ -12,13 +18,13 @@ execution:
 # -----------------------------------------------------------------------------
 foundation:
 
-# GRID SETTINGS
+# GRID SETTINGS / PARAMÈTRES DE LA GRILLE
   grid:
     mode: ref
-    crs: 'EPSG:3161'
+    crs: EPSG:3161 # MUST use a projected CRS with proper EPSG code
     extent:
       filepath: ./experiment/input/extent_reference/example_extent.tif
-    tile_specs:
+    tile_specs: # currently only support fixed-size, square tiles with fixed overlaps.
       size_row: 256
       size_col: 256
       overlap_row: 128
@@ -26,6 +32,9 @@ foundation:
 
 # DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
   domains:
+    # add more files as needed in the same format
+    # all rasters will be processed to both categorical and continuous artifacts
+    # which one to use is determined by dataspecs.domain_ids_name and domain_vec_name
     files:
       - path: ./experiment/input/domain_knowledge/example_domain_1.tif
         index_base: 1
@@ -36,10 +45,13 @@ foundation:
   datablocks:
     name: demo_data
     filepaths:
+      # dev_image/label MUST be provided together
       dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
       dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
+      # test_image/label are optional but must be provided together if used
       test_image: ./experiment/input/data/demo_data/test/example_image.tif
       test_label: ./experiment/input/data/demo_data/test/example_label.tif
+      # MUST be consistent between dev and test data
       config: ./experiment/input/data/demo_data/example_config.json
 
 # -----------------------------------------------------------------------------
@@ -47,59 +59,67 @@ foundation:
 # -----------------------------------------------------------------------------
 transform:
   partition:
-    val_ratio: 0.1
-    test_ratio: 0.0
+    val_ratio: 0.15
+    test_ratio: 0.10 # will be IGNORED if test_image & test_label are provided
 
 # -----------------------------------------------------------------------------
 # MODEL ARCHITECTURE / ARCHITECTURE DU MODÈLE
 # -----------------------------------------------------------------------------
 models:
-  model_body: unet
-  bottleneck: conv
-  conditioner: [concat, film]
+  model_body: unet  # unet | unetpp | unetppp
+  bottleneck: conv  # conv | transformer | hybrid
+  conditioner: []   # film | concat (leave empty for no conditioning)
 
 # -----------------------------------------------------------------------------
 # DATA SPECIFICATION / SPÉCIFICATION DES DONNÉES
 # -----------------------------------------------------------------------------
 dataspecs:
-  domain_ids_name: example_domain_1
-  domain_vec_name: example_domain_2
+  # currently support one categorical and one continuous domain knowledge layer
+  # MUST match the name in domains.files.path, null if not used
+  domain_ids_name: example_domain_1 # categorical
+  domain_vec_name: example_domain_2 # continuous
 
 # -----------------------------------------------------------------------------
 # SESSION RUNTIME / EXÉCUTION DE SESSION
 # -----------------------------------------------------------------------------
 session:
 
-  mode: continuous # continuous | curriculum
+  mode: continuous  # continuous | curriculum
 
   # -------------------------------------------------------------------------
-  # DATA LOADER
+  # DATA LOADER / CHARGEUR DE DONNÉES
   # -------------------------------------------------------------------------
   data_loader:
-    patch_size: 128
+    patch_size: 128 # MUST <= grid.tile_specs.size_row/col and can divide it
     batch_size: 16
 
   # -------------------------------------------------------------------------
-  # ENGINE EXECUTION (BATCH-LEVEL)
+  # ENGINE EXECUTION / EXÉCUTION DU MOTEUR
   # -------------------------------------------------------------------------
   engine_exec:
+    # enable automatic mixed precision for faster training and reduced memory usage
     use_amp: True
+    # how much to compensate for class imbalance by adjusting the logits before computing loss
     logit_adjust_alpha: 1.0 # set 0.0 to disable
 
   # -------------------------------------------------------------------------
-  # OPTIMIZATION SETTINGS
+  # OPTIMIZATION SETTINGS / PARAMÈTRES D'OPTIMISATION
   # -------------------------------------------------------------------------
   engine_optim:
-    opt_cls: 'AdamW'
+    opt_cls: 'AdamW'        # AdamW |
     lr: 0.0001
     weight_decay: 0.001
-    sched_cls: 'CosAnneal'
+    sched_cls: 'CosAnneal'  # CosAnneal |
 
   # -------------------------------------------------------------------------
-  # TASK & LOSS CONFIGURATION
+  # TASK & LOSS CONFIGURATION / CONFIGURATION DES TÂCHES ET DES PERTES
   # -------------------------------------------------------------------------
   engine_tasks:
-    excluded_cls: {}    # e.g., {'head_name': [1, 2]} (class index is 1-based)
+    # classes to exclude from loss computation for each head,
+    # e.g., set to {head_name: [1, 2]} to exclude class 1&2 for <head_name>
+    # class index should be 1-based
+    excluded_cls: {} # empty dict = no exclusion
+    # weights of loss types
     loss_types:
       focal:
         weight: 0.5
@@ -107,19 +127,22 @@ session:
         weight: 0.5
 
   # -------------------------------------------------------------------------
-  # ORCHESTRATION (TRAINING CONTROL)
+  # ORCHESTRATION / ORCHESTRATION
   # -------------------------------------------------------------------------
   orchestration:
     # -----------------------------------------------------------------------
-    # MONITORING & EARLY STOPPING
+    # MONITORING & EARLY STOPPING / SURVEILLANCE ET ARRÊT PRÉCOCE
     # -----------------------------------------------------------------------
     monitor:
+      # head to track for early stopping
       track_heads: [base]
-      allow_early_stop: True  # will be DISABLED during curriculum training
-      patience: 5             # Stop if validation does not improve
+      # if True, will stop training early based on validation performance of track_heads
+      allow_early_stop: True  # will be DISABLED during <curriculum> training
+      # stop training if validation does not improve for this many consecutive epochs
+      patience: 5
 
     # -----------------------------------------------------------------------
-    # TRAINING CURRICULUM
+    # TRAINING CURRICULUM / CURRICULUM D'ENTRAÎNEMENT
     # -----------------------------------------------------------------------
     curriculum:
       schema: single # single if session.mode=continuous, else baseline/custom
@@ -146,14 +169,14 @@ session:
             num_epochs: 20
             start_epoch: 1
             lr_scale: 1.0
-            active_heads: [reclass_1]
+            active_heads: [reclass_1] # change to your refine head
             frozen_heads: [base]
 
           - name: joint_tuning
             num_epochs: 10
             start_epoch: 1
             lr_scale: 1.0
-            active_heads: [base, reclass_1]
+            active_heads: [base, reclass_1] # change to your refine head
             frozen_heads: null
 
       custom: # you can use this as a template to design your own phases
@@ -164,3 +187,4 @@ session:
             lr_scale: 1.0
             active_heads: [base]
             frozen_heads: null
+          # append more phases as needed

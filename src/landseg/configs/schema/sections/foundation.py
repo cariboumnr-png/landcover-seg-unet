@@ -30,6 +30,8 @@ Data foundation schema
 import dataclasses
 import os
 import re
+# local imports
+import landseg.configs.schema.utils as utils
 
 # alias
 field = dataclasses.field
@@ -67,7 +69,7 @@ class _Grid:
         # grid mode validation
         match self.mode:
             case 'ref':
-                _must_exist(self.extent.filepath, 'extent reference raster')
+                utils.must_exist(self.extent.filepath, 'extent reference raster')
             case 'aoi':
                 if not all(self.extent.pixel_size):
                     raise ValueError('Pixel size has zero(s)')
@@ -98,14 +100,14 @@ class _Domains:
     target_variance: float = 0.9
 
     def add_domain(self, fpath: str, index_base: int):
-        _must_exist(fpath, 'domain raster')
+        utils.must_exist(fpath, 'domain raster')
         if not isinstance(index_base, int):
             raise TypeError(f'Index base must be [int], got {type(index_base)}')
         self.files.append(_DomainFile(path=fpath, index_base=index_base ))
 
     def validate(self):
         for file in self.files:
-            _must_exist(file.path, 'domain raster')
+            utils.must_exist(file.path, 'domain raster')
             # if domain name is not specified, parse from the path
             if not file.name:
                 file.name = os.path.splitext(os.path.basename(file.path))[0]
@@ -133,18 +135,16 @@ class _DataBlocks:
     @property
     def has_test_data(self) -> bool:
         return (
-            os.path.isfile(self.filepaths.test_image) and
-            os.path.exists(self.filepaths.test_image) and
-            os.path.isfile(self.filepaths.test_label) and
-            os.path.exists(self.filepaths.test_label)
+            utils.file_exists(self.filepaths.test_image) and
+            utils.file_exists(self.filepaths.test_label)
         )
 
     def validate(self) -> None:
         if not self.name:
             raise ValueError('Input data name not provided')
-        _must_exist(self.filepaths.dev_image, 'model development image raster')
-        _must_exist(self.filepaths.dev_label, 'model development label raster')
-        _must_exist(self.filepaths.config, 'data config JSON')
+        utils.must_exist(self.filepaths.dev_image, 'model development image raster')
+        utils.must_exist(self.filepaths.dev_label, 'model development label raster')
+        utils.must_exist(self.filepaths.config, 'data config JSON')
 
 # ----- composite
 @dataclasses.dataclass
@@ -161,8 +161,3 @@ class DataFoundation:
         self.grid.validate()
         self.domains.validate()
         self.datablocks.validate()
-
-# ------------------------------private  function------------------------------
-def _must_exist(path: str | None, tag: str) -> None:
-    if path and not os.path.exists(path):
-        raise FileNotFoundError(f'File [{tag}] is invalid: {path}')
