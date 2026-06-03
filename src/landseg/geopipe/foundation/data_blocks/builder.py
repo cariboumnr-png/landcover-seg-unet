@@ -66,15 +66,21 @@ class _BlockBuilderMeta(typing.TypedDict):
     used when building each block.
     '''
 
-    # required
-    label_num_cls: int
-    label_ignore_cls: list[int]
-    label_reclass_map: dict[str, list[int]]
     image_band_map: dict[str, int]
+    label_specs: dict[str, _LabelSpecs]
+
+class _LabelSpecs(typing.TypedDict):
+    '''doc'''
+
+    # required
+    num_cls: int
+    ignore_cls: list[int]
     # optional
-    label_class_name: typing.NotRequired[dict[str, str]]
-    label_reclass_name: typing.NotRequired[dict[str, str]]
-    label_reclass_color_map: typing.NotRequired[dict[int, list[int]]]
+    class_name: typing.NotRequired[dict[str, str]]
+    class_color_map: typing.NotRequired[dict[str, list[int]]]
+    reclass: typing.NotRequired[dict[str, list[int]]]
+    reclass_name: typing.NotRequired[dict[str, str]]
+    reclass_color_map: typing.NotRequired[dict[int, list[int]]]
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -99,12 +105,12 @@ class BlockBuilderConfig:
 class _BlockCreationContext:
     '''Immutable, per-block inputs required to build a single block.'''
     name: str
-    ignore_index: int
     dem_pad_px: int
     img_path: str
     img_window: alias.RasterWindow
     lbl_path: str | None
     lbl_window: alias.RasterWindow | None
+    meta_src: _BlockBuilderMeta
 
 # --------------------------------Public  Class--------------------------------
 class BlockBuilder:
@@ -177,12 +183,9 @@ class BlockBuilder:
         '''Return a fresh block meta dict with values from meta source.'''
         _meta = {}
         assert self.meta_src
-        _meta['label_num_cls'] = self.meta_src['label_num_cls']
-        _meta['label_ignore_cls'] = self.meta_src['label_ignore_cls']
-        _meta['label_reclass_map'] = self.meta_src['label_reclass_map']
         _meta['image_band_map'] = self.meta_src['image_band_map']
-        # cast for type checker
-        _meta = typing.cast(geo_core.DataBlockMeta, _meta)
+        _meta['ignore_index'] = self.config.ignore_index
+        _meta = typing.cast(geo_core.DataBlockMeta, _meta) # cast for type
         return _meta
 
     @property
@@ -394,14 +397,15 @@ class BlockBuilder:
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''
 
+        assert self.meta_src # typing
         return _BlockCreationContext(
             name=geo_utils.xy_name(coords),
-            ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,
             img_window=self.img_windows[coords],
             lbl_path=self.config.label_fpath,
-            lbl_window=self.lbl_windows[coords] if self.has_label else None
+            lbl_window=self.lbl_windows[coords] if self.has_label else None,
+            meta_src=self.meta_src
         )
 
 # ------------------------------private functions------------------------------
@@ -431,12 +435,12 @@ def _build_a_blk(
 ) -> geo_core.DataBlock:
     '''Create a block from the input rasters for the given window.'''
 
-    # meta i/o
-    meta['block_name'] = contxt.name # assign name
-    dem_band = meta['image_band_map']['dem']
+    # assign name
+    meta['block_name'] = contxt.name
 
     # read rasters at given window and create blocks
     with geo_utils.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
+
         # sanity check, image raster must be provided
         assert img, f'Invalid image source: {contxt.img_path}'
         # read image array
@@ -444,13 +448,18 @@ def _build_a_blk(
         img_arr: numpy.ndarray = img.read(window=img_window, boundless=True)
         meta['image_nodata'] = img.nodata
         # get padded dem array from image
+        dem_band = meta['image_band_map']['dem']
         padded_dem = _read_w_pad(img, img_window, dem_band, contxt.dem_pad_px)
+
         # read label array if provided
         lbl_window = contxt.lbl_window
         lbl_arr: numpy.ndarray | None = None
         if lbl is not None and lbl_window is not None:
             lbl_arr = lbl.read(window=lbl_window, boundless=True)
             meta['label_nodata'] = lbl.nodata
+            assert isinstance(lbl_arr, numpy.ndarray) # typing
+            # label stacking and topology building is now here
+            lbl_arr, meta = _get_label_stack(lbl_arr, contxt.meta_src, meta)
 
     # create and return DataBlock instance
     output_block = geo_core.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
@@ -496,3 +505,104 @@ def _read_w_pad(
         mode='reflect'
     )
     return expanded_padded
+
+def _get_label_stack(
+    label_array: numpy.ndarray,
+    meta_src: _BlockBuilderMeta,
+    meta: geo_core.DataBlockMeta,
+):
+    '''
+    Construct a multi-layer label stack based on specs and reclass rules.
+
+    Input arrays are processed sequentially. Bands without reclass maps are
+    added as-is. Bands with reclass maps are converted into group-ID layers,
+    followed by additional slices for each group (child layers).
+    '''
+
+    # containers
+    num_cls: dict[str, int] = {}
+    ignore_cls: dict[str, list[int]] = {}
+    parent_map: dict[str, str | None] = {}
+    parent_cls_map: dict[str, int | None] = {}
+
+    # sanity check
+    expected_bands = len(meta_src['label_specs'])
+    if label_array.shape[0] != expected_bands:
+        raise ValueError(
+            f'Label targets number != input label array shape on axis 0 '
+            f'{label_array.shape[0]} != {expected_bands}'
+        )
+    stack: list[numpy.ndarray] = []
+
+    # iterate label specs
+    ignore_index = meta['ignore_index']
+    for i, (name, spec) in enumerate(meta_src['label_specs'].items()):
+
+        arr = label_array[i]
+        reclass_name = spec.get('reclass_name', {})
+
+        # 1. Add the Raw Masked band (Original Class IDs)
+        to_ignore = list(spec['ignore_cls']) + [ignore_index]
+        raw_mask = ~numpy.isin(arr, to_ignore)
+        raw_valid = numpy.where(raw_mask, arr, ignore_index)
+        stack.append(raw_valid)
+
+        num_cls[name] = spec['num_cls']
+        ignore_cls[name] = spec['ignore_cls']
+        parent_map[name] = None
+        parent_cls_map[name] = None
+
+        reclass = spec.get('reclass')
+        if not reclass:
+            continue
+
+        # 2. Add a Grouping Band (Group IDs)
+        # This band becomes the "parent" for the child slices
+        grp_name = f'{name}_groups'
+        group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+
+        # Populate Grouping band and create Children
+        for group_id, classes in reclass.items():
+            _mask = numpy.isin(arr, classes)
+            group_layer[_mask] = int(group_id)
+
+            # 3. Create Child slices
+            child_arr = numpy.where(_mask, arr, ignore_index)
+            # re-index original classes in this slice to 1..N
+            for k, cls in enumerate(classes, 1):
+                child_arr[child_arr == cls] = int(k)
+
+            # Append child to stack after grouping layer is pushed
+            # (We'll handle the stack push order below)
+            child_name = reclass_name.get(group_id, f'{grp_name}_{group_id}')
+
+            # Meta for child (parent is the grouping layer)
+            num_cls[child_name] = len(classes)
+            ignore_cls[child_name] = []
+            parent_map[child_name] = grp_name
+            parent_cls_map[child_name] = int(group_id)
+
+            # Temporary list to manage push order if needed,
+            # but here we just append to the global stack
+            stack.append(child_arr)
+
+        # Insert/Append Group metadata and data
+        # To keep it logical, we add the grouping band to the stack
+        # but we need to track where it is. Let's append it at the end
+        # of the "block" for this spec.
+        stack.append(group_layer)
+        num_cls[grp_name] = len(reclass)
+        ignore_cls[grp_name] = []
+        parent_map[grp_name] = None
+        parent_cls_map[grp_name] = None
+
+    # stack all the arrays
+    _label_array = numpy.stack(stack, axis=0)
+
+    # populate meta dict
+    meta['label_num_cls'] = num_cls
+    meta['label_ignore_cls'] = ignore_cls
+    meta['label_parent'] = parent_map
+    meta['label_parent_cls'] = parent_cls_map
+
+    return _label_array, meta

@@ -83,11 +83,10 @@ class DataBlockMeta(typing.TypedDict):
     valid_ratios: dict[str, float]
     # label metadata
     label_nodata: int
-    label_num_cls: int
-    label_ignore_cls: list[int]
-    label_reclass_map: dict[str, list[int]]
-    label_ch_parent: dict[str, str | None]
-    label_ch_parent_cls: dict[str, int | None]
+    label_num_cls: dict[str, int]
+    label_ignore_cls: dict[str, list[int]]
+    label_parent: dict[str, str | None]
+    label_parent_cls: dict[str, int | None]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
     # image metadata
@@ -164,11 +163,10 @@ class DataBlock:
             'ignore_index': ignore_index,
             'valid_ratios': {},
             'label_nodata': 0,
-            'label_num_cls': 0,
-            'label_ignore_cls': [],
-            'label_reclass_map': {},
-            'label_ch_parent': {},
-            'label_ch_parent_cls': {},
+            'label_num_cls': {},
+            'label_ignore_cls': {},
+            'label_parent': {},
+            'label_parent_cls': {},
             'label_count': {},
             'label_entropy': {},
             'image_nodata': numpy.nan,
@@ -223,7 +221,8 @@ class DataBlock:
             # assertions - both 3 dims with the same H and W
             assert len(lbl_arr.shape) == 3 and len(img_arr.shape) == 3
             assert lbl_arr.shape[-2] == img_arr.shape[-2]
-            self.data.label = lbl_arr.astype(numpy.uint8) # LIMIT: [0-256)
+            self.data.label_stack = lbl_arr.astype(numpy.uint8)
+            self.data.label = self.data.label_stack[0]
             self.meta['has_label'] = True
         # otherwise give label related data a place holder
         else:
@@ -239,9 +238,7 @@ class DataBlock:
         # ---labels stack
         # only if labels are provided
         if self.meta['has_label']:
-            self._label_build_stack()
-            self._label_get_topology()
-            self._label_count_classes()
+            self._label_get_stats()
 
         # --- block-wise
         self._block_get_valid_mask()
@@ -389,125 +386,31 @@ class DataBlock:
             'tpi': n + 3
         })
 
-    def _label_build_stack(self) -> None:
-        '''Build the label stack and update its valid pixel ratios.'''
-
-        # get values from meta
-        ignore_index = self.meta['ignore_index']
-        reclass_map = self.meta['label_reclass_map']
-
-        # get labels to be ignored
-        labels_to_ignore = list(self.meta['label_ignore_cls'])
-        labels_to_ignore.append(self.meta['label_nodata'])
-        labels_to_ignore = [x for x in labels_to_ignore if x is not None]
-
-        # base as the first element of the list
-        raw_mask = ~numpy.isin(self.data.label, labels_to_ignore)
-        raw_valid = numpy.where(raw_mask, self.data.label, ignore_index)
-        fn_stack = [raw_valid]
-        self.meta['valid_ratios'].update({
-            'base': float(numpy.sum(raw_mask) / raw_valid.size)
-        })
-
-        # if no reclass, assign the only base label channel to self.data
-        if not reclass_map:
-            self.data.label_stack = numpy.stack(fn_stack, axis=0)
-            return
-
-        # iterate through reclass map
-        for band_num, classes in reclass_map.items():
-            # mask to the current base channel class IDs (parent)
-            _mask = numpy.isin(self.data.label, classes)
-            # in-place reclass relevant pixels in layer1
-            fn_stack[0][_mask] = int(band_num)
-            # create a new array to add to stack
-            reclass_new = numpy.where(_mask, self.data.label, ignore_index)
-            # reclass from 1 to n
-            for i, cls in enumerate(classes, 1):
-                reclass_new[reclass_new == cls] = int(i)
-            # append the to the stack
-            fn_stack.append(reclass_new)
-        # stack all the arrays and assign to self.data
-        self.data.label_stack = numpy.stack(fn_stack, axis=0)
-
-        # update valid pixel ratios for the stack
-        for i in range(1, len(reclass_map) + 1):
-            _valid = fn_stack[i] != ignore_index
-            _ratio = float(numpy.sum(_valid) / raw_valid.size)
-            self.meta['valid_ratios'].update({f'reclass_{i}': _ratio})
-
-    def _label_get_topology(self) -> None:
-        '''Derive label topology (parent-child).'''
-
-        # iterate through label counts
-        for layer_name in self.meta['valid_ratios']:
-            # emit topology
-            if layer_name == 'base':
-                self.meta['label_ch_parent'][layer_name] = None
-                self.meta['label_ch_parent_cls'][layer_name] = None
-            elif layer_name.startswith('reclass_'):
-                cls_id = int(layer_name.split('reclass_')[1])
-                self.meta['label_ch_parent'][layer_name] = 'base'
-                self.meta['label_ch_parent_cls'][layer_name] = cls_id
-            else:
-                pass
-
-    def _label_count_classes(self) -> None:
+    def _label_get_stats(self) -> None:
         '''Count present label values and calculate entropy.'''
 
-        # supposed number of classes for each label layer
-        label_num = self.meta['label_num_cls']
-        reclass_map = self.meta['label_reclass_map']
+        # the meta dict defines the names and sizes of every channel in stack
+        heads = list(self.meta['label_num_cls'].items())
 
-        # when no reclass, treat layer1 as original classes
-        if not reclass_map:
-            n_classes = [label_num, label_num]
-        # count of original label and reclassed layer1 groups
-        else:
-            n_classes = [label_num, len(reclass_map)]
-            # counts of layer2 groups
-            n_classes.extend([len(v) for v in reclass_map.values()])
+        for i, (name, n_cls) in enumerate(heads):
+            band = self.data.label_stack[i]
 
-        # all arrays to be counted
-        channels = numpy.concatenate(
-            [self.data.label[None, :, :], self.data.label_stack], axis=0
-        ) # (L, H, W)
-
-        # iterate label layers
-        assert len(n_classes) == len(channels) # sanity check
-        for i, band in enumerate(channels):
-            # count unique values for each label layer
-            label_unique = numpy.arange(1, n_classes[i] + 1) # start from 1
+            # count unique values for the current head (classes 1..N)
+            label_unique = numpy.arange(1, n_cls + 1)
             filtered = band[numpy.isin(band, label_unique)]
             uniques, counts = numpy.unique(filtered, return_counts=True)
 
-            # convert to list. avoid using arr.tolist()
-            uniques = [int(_) for _ in uniques]
-            counts = [int(_) for _ in counts]
+            # calculate shannon entropy
+            ent = float(_Calc.entropy(counts))
 
-            # get shannon entropy
-            ent = _Calc.entropy(counts)
+            # align counts to the fixed class size defined in schema
+            final_counts = [0] * n_cls
+            for val, count in zip(uniques, counts):
+                final_counts[int(val) - 1] = int(count)
 
-            # assign zero count to no_show classes
-            cc = []
-            for _ in range(n_classes[i]):
-                idx = _ + 1
-                if idx in uniques:
-                    count_idx = uniques.index(idx)
-                    cc.append(counts[count_idx])
-                else:
-                    cc.append(0)
-
-            # add to metadata
-            if i == 0:
-                self.meta['label_count'].update({'original': cc})
-                self.meta['label_entropy'].update({'original': ent})
-            elif i == 1:
-                self.meta['label_count'].update({'base': cc})
-                self.meta['label_entropy'].update({'base': ent})
-            else:
-                self.meta['label_count'].update({f'reclass_{i - 1}': cc})
-                self.meta['label_entropy'].update({f'reclass_{i - 1}': ent})
+            # store results in meta
+            self.meta['label_count'][name] = final_counts
+            self.meta['label_entropy'][name] = ent
 
     def _block_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
