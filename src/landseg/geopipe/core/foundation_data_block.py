@@ -198,20 +198,15 @@ class DataBlock:
             - Per-band statistical summaries
 
         Args:
-            img_arr:
-                Image array of shape (C, H, W).
-            lbl_arr:
-                Optional label array of shape (1, H, W). If None, the
-                block is treated as unlabeled.
-            padded_dem:
-                DEM array padded on all sides to support neighborhood
-                operations.
-            meta:
-                Dictionary containing block configuration and metadata.
+            img_arr: Image array of shape (C, H, W).
+            lbl_arr: Optional label array of shape (T, H, W). If None,
+                the block is treated as unlabeled.
+            padded_dem: DEM array padded on all sides to support
+                neighborhood operations.
+            meta: Dictionary with block configuration and metadata.
 
         Returns:
-            DataBlock:
-                A fully populated block instance.
+            DataBlock: A fully populated block instance.
 
         Notes: The method mutates internal state and returns the instance
         to support chaining.
@@ -237,17 +232,20 @@ class DataBlock:
             self.meta['has_label'] = False
 
         # process data sequence
-        # image bands related
-        self._add_spectral_indices()
-        self._add_topographical_metrics()
-        # labels related - only if labels are provided
+        # --- image bands
+        self._image_add_spectral()
+        self._image_add_topography()
+
+        # ---labels stack
+        # only if labels are provided
         if self.meta['has_label']:
-            self._build_label_stack()
-            self._get_topology()
-            self._count_label_classes()
-        # block-wise
-        self._get_block_valid_mask()
-        self._get_block_image_stats()
+            self._label_build_stack()
+            self._label_get_topology()
+            self._label_count_classes()
+
+        # --- block-wise
+        self._block_get_valid_mask()
+        self._block_get_image_stats()
 
         # sanity check self.data and return self to allow chained calls
         self.data.validate()
@@ -262,12 +260,10 @@ class DataBlock:
         from a previously saved block artifact.
 
         Args:
-            fpath:
-                Path to the `.npz` file containing serialized block data.
+            fpath: Path to the `.npz` file containing serialized data.
 
         Returns:
-            DataBlock:
-                A populated block instance with restored state.
+            DataBlock: A populated block instance with restored state.
 
         Notes:
             Unknown fields in the archive are ignored during loading.
@@ -298,9 +294,8 @@ class DataBlock:
         (stored as a compact JSON string) into a single artifact.
 
         Args:
-            fpath:
-                Output file path. Must end with `.npz`. Existing files
-                will be overwritten.
+            fpath: Output file path. Must end with `.npz`. Existing files
+                **will** be overwritten.
 
         Notes:
             Metadata is serialized using JSON to ensure portability.
@@ -317,42 +312,43 @@ class DataBlock:
         numpy.savez_compressed(fpath, **to_save)
 
     # ----- private method
-    def _add_spectral_indices(self) -> None:
-        '''Add spectral indices using loaded Landsat bands.'''
+    def _image_add_spectral(self) -> None:
+        '''Add spectral indices if related bands are available.'''
 
         # retrieve from meta
-        band_indices = self.meta['image_band_map']
+        band_idx = self.meta['image_band_map']
         nodata = self.meta['image_nodata']
 
         # mask off nodata pixels to avoid overflow
         # 32 bit increased to 64 bit float
-        red = _Calc.mask(self.data.image[band_indices['red']], nodata)
+        red = _Calc.mask(self.data.image[band_idx['red']], nodata)
         # add spectral indices depending on band availability
         indices_stack = []
         n = len(self.meta['image_band_map'])
-        if 'nir' in band_indices:
-            nir = _Calc.mask(self.data.image[band_indices['nir']], nodata)
+        if 'nir' in band_idx:
+            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
             indices_stack.append(_Calc.ndvi(nir, red, nodata))
             self.meta['image_band_map']['NDVI'] = n
-            if 'swir1' in band_indices:
-                swir1 = _Calc.mask(self.data.image[band_indices['swir1']], nodata)
+            if 'swir1' in band_idx:
+                swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
                 indices_stack.append(_Calc.ndmi(nir, swir1, nodata))
                 self.meta['image_band_map']['NDMI'] = n + 1
-            if 'swir2' in band_indices:
-                swir2 = _Calc.mask(self.data.image[band_indices['swir2']], nodata)
+            if 'swir2' in band_idx:
+                swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
                 indices_stack.append(_Calc.nbr(nir, swir2, nodata))
                 self.meta['image_band_map']['NBR'] = n + 2
 
         # add to image array
         if indices_stack:
-            add_indices = numpy.stack(indices_stack ).astype(numpy.float32)
-            self.data.image = numpy.append(self.data.image, add_indices, axis=0)
+            added = numpy.stack(indices_stack ).astype(numpy.float32)
+            self.data.image = numpy.append(self.data.image, added, axis=0)
 
-    def _add_topographical_metrics(self) -> None:
+    def _image_add_topography(self) -> None:
         '''Add topographical metrics to the image array.'''
 
-        # get vars
+        # retrieve from meta
         nodata = self.meta['image_nodata']
+        pad = self.meta['image_dem_pad']
 
         # prep metrics to add
         slope = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
@@ -360,21 +356,22 @@ class DataBlock:
         sin_a = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
         tpi = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
 
-        # padding
-        pad = self.meta['image_dem_pad']
         # sanity check on image/padded image shape
         max_h, max_w = self.data.image_dem_padded.shape
         if not self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad):
-            raise ValueError(f'{self.data.image[0].shape} {max_h}, {max_w}, {pad}')
+            raise ValueError(
+                f'Mismatch in image dimensions: {self.data.image[0].shape} vs'
+                f'({max_h - 2 * pad}, {max_w - 2 * pad}), padding: {pad}'
+            )
 
         # iterate through pixels from the original block in padded dem
         for y in range(pad, max_h - pad):
             for x in range(pad, max_w - pad):
-                # slope and aspect - pad neighbors, radius 1
+                # slope and aspect - pad neighbors, radius=1
                 pxs = _Calc.get_px_group(self.data.image_dem_padded, x, y, 1)
                 slope[y - pad, x - pad], cos_a[y - pad, x - pad], \
                     sin_a[y - pad, x - pad] = _Calc.slope_n_aspect(pxs, nodata)
-                # tpi - 224 neighbors, radius pad-1
+                # tpi - radius=pad-1 (default 8, so 15x15 window)
                 r = pad - 1
                 pxs =  _Calc.get_px_group(self.data.image_dem_padded, x, y, r)
                 tpi[y - pad, x - pad] = _Calc.tpi(pxs, nodata)
@@ -392,7 +389,7 @@ class DataBlock:
             'tpi': n + 3
         })
 
-    def _build_label_stack(self) -> None:
+    def _label_build_stack(self) -> None:
         '''Build the label stack and update its valid pixel ratios.'''
 
         # get values from meta
@@ -439,7 +436,7 @@ class DataBlock:
             _ratio = float(numpy.sum(_valid) / raw_valid.size)
             self.meta['valid_ratios'].update({f'reclass_{i}': _ratio})
 
-    def _get_topology(self) -> None:
+    def _label_get_topology(self) -> None:
         '''Derive label topology (parent-child).'''
 
         # iterate through label counts
@@ -455,7 +452,7 @@ class DataBlock:
             else:
                 pass
 
-    def _count_label_classes(self) -> None:
+    def _label_count_classes(self) -> None:
         '''Count present label values and calculate entropy.'''
 
         # supposed number of classes for each label layer
@@ -512,7 +509,7 @@ class DataBlock:
                 self.meta['label_count'].update({f'reclass_{i - 1}': cc})
                 self.meta['label_entropy'].update({f'reclass_{i - 1}': ent})
 
-    def _get_block_valid_mask(self):
+    def _block_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
 
         # get image nodata and ignore label index
@@ -542,7 +539,7 @@ class DataBlock:
             'block': float((numpy.sum(self.data.valid_mask) / valid_img.size))
         })
 
-    def _get_block_image_stats(self):
+    def _block_get_image_stats(self):
         '''Per block stats for later aggregation using Welford's.'''
 
         # image_nodata
@@ -578,24 +575,17 @@ class DataBlock:
 # --------------------------------private class--------------------------------
 class _Calc:
     '''Calculator namespace.'''
-    # spectral indices related
     @staticmethod
     def mask(band, nodata):
-        '''
-        Returns a masked array where band == nodata.
-        If nodata is None, no values are masked.
-        '''
+        '''Returns a masked array where band == nodata.'''
         band = band.astype(numpy.float64)
-        if nodata is None:
+        if nodata is None: # if nodata is None, no values are masked.
             return numpy.ma.array(band, mask=False)
-        return numpy.ma.masked_where(
-            numpy.isclose(band, nodata),
-            band
-        )
+        return numpy.ma.masked_where(numpy.isclose(band, nodata), band)
 
     @staticmethod
     def entropy(counts):
-        '''Shannon entropy.'''
+        '''Returns Shannon entropy.'''
         ent = 0.0
         ss = sum(counts)
         for c in counts:
@@ -606,19 +596,19 @@ class _Calc:
 
     @staticmethod
     def ndvi(nir, red, nodata):
-        '''Returns NDVI.'''
+        '''Returns Normalized Difference Vegetation Index.'''
         out = (nir - red) / (nir + red)
         return out.filled(nodata)
 
     @staticmethod
     def ndmi(nir, swir1, nodata):
-        '''Returns NDMI'''
+        '''Returns Normalized Difference Moisture Index.'''
         out = (nir - swir1) / (nir + swir1)
         return out.filled(nodata)
 
     @staticmethod
     def nbr(nir, swir2, nodata):
-        '''Returns Normalized Burn Ratio (NBR).'''
+        '''Returns Normalized Burn Ratio.'''
         out = (nir - swir2) / (nir + swir2)
         return out.filled(nodata)
 
@@ -630,7 +620,7 @@ class _Calc:
 
     @staticmethod
     def slope_n_aspect(arr, nodata):
-        '''Returns slope and aspect from DEM.'''
+        '''Returns slope and aspect (in radians) from DEM.'''
         # all 9 cells need to have a valid value (Horn's)
         invalid = numpy.isnan(arr).any() or numpy.isinf(arr).any()
         if nodata is not None:
@@ -659,7 +649,7 @@ class _Calc:
 
     @staticmethod
     def tpi(arr, nodata):
-        '''Returns Topographical Position Index (TPI) from DEM.'''
+        '''Returns Topographical Position Indexfrom DEM.'''
         # topographical position index
         h, w = arr.shape
         c_row, c_col = h // 2, w // 2
