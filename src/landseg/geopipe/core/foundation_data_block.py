@@ -225,11 +225,10 @@ class DataBlock:
         self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
         # assign label if provided:
         if lbl_arr is not None:
-            # assertions - both 3 dims and the same H and W read by rasterio
+            # assertions - both 3 dims with the same H and W
             assert len(lbl_arr.shape) == 3 and len(img_arr.shape) == 3
             assert lbl_arr.shape[-2] == img_arr.shape[-2]
-            # (1, H, W) -> (H, W)
-            self.data.label = lbl_arr.astype(numpy.uint8)[0]
+            self.data.label = lbl_arr.astype(numpy.uint8) # LIMIT: [0-256)
             self.meta['has_label'] = True
         # otherwise give label related data a place holder
         else:
