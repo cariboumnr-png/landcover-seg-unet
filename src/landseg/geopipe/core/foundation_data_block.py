@@ -137,19 +137,22 @@ class DataBlock:
         label, and block-level features are computed sequentially.
     '''
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        *,
+        ignore_index: int = 255,
+        dem_pad: int = 8,
+    ):
         '''
-        nitialize an empty `DataBlock` instance.
+        Initialize an empty `DataBlock` instance.
 
         The instance is created with placeholder data structures and a
         default metadata dictionary. It can be populated using either
         `build()` (from arrays) or `load()` (from disk).
 
         Args:
-            **kwargs:
-                Optional overrides for default metadata values such as:
-                - ignore_index: Label ignore value (default: 255)
-                - dem_pad: Padding size for DEM-based computations
+            ignore_index: Label ignore value (default: 255)
+            dem_pad: Padding size for DEM-based computations (default: 8)
         '''
 
         # init with empty block data
@@ -158,7 +161,7 @@ class DataBlock:
         self.meta: DataBlockMeta = {
             'block_name': '',
             'has_label': True,
-            'ignore_index': kwargs.get('ignore_index', 255),
+            'ignore_index': ignore_index,
             'valid_ratios': {},
             'label_nodata': 0,
             'label_num_cls': 0,
@@ -169,7 +172,7 @@ class DataBlock:
             'label_count': {},
             'label_entropy': {},
             'image_nodata': numpy.nan,
-            'image_dem_pad': kwargs.get('dem_pad', 8),
+            'image_dem_pad': dem_pad,
             'image_band_map': {},
             'image_stats': {}
         }
