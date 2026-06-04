@@ -45,6 +45,7 @@ exchange across different stages of the pipeline.
 from __future__ import annotations
 import collections.abc
 import json
+import re
 import typing
 
 # ---------------------------------Public Type---------------------------------
@@ -63,10 +64,10 @@ class CatalogEntry(typing.TypedDict):
         Absolute or relative path to the stored block file.
     - **row_col**:
         Two-element list representing the (row, col) grid index.
-    - **base_valid_px**:
-         Fraction or count of valid pixels in the base raster.
-    - **base_class_count**:
-         Per-class pixel counts for the base classification.
+    - **valid_px_ratios**:
+         Fraction of valid pixels in image and each label target slice.
+    - **class_count**:
+         Per-class pixel counts for each label target slice.
     - **schema_version**:
          Version identifier for the metadata schema.
     - **creation_time**:
@@ -185,19 +186,11 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], CatalogEntry]):
 
         # sort self._data and start the line
         data = {_xy_name(k): v for k, v in self._data.items()}
-        items = sorted(data.items())
-        lines = ['{']
-        # manual formatting line-by-line
-        for i, (key, value) in enumerate(items):
-            blk_txt = json.dumps(value)
-            blk_txt = blk_txt.replace('{', '{\n\t\t')
-            blk_txt = blk_txt.replace(', "', ',\n\t\t"')
-            blk_txt = blk_txt.replace('}', '\n\t}')
 
-            line = f'\t"{key}": {blk_txt}'
-            if i < len(items) - 1:
-                line += ','
-            lines.append(line)
-
-        lines.append('}')
-        return '\n'.join(lines)
+        # raw json and custom formatting before return
+        raw_json = json.dumps(data, indent=4)
+        # make list of numbers to be on the same line
+        _json = re.sub(r'\n\s+(\d+)', r' \1', raw_json) # remove new lines
+        _json = re.sub(r'\[ ', r'[', _json) # fix leading bracket
+        _json = re.sub(r'\n\s+\]', r']', _json) # fix closing bracket
+        return _json
