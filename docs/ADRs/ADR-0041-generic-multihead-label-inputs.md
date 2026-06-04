@@ -1,7 +1,7 @@
 # ADR-0041: Generic Multi-Head Mechanism and Optional Hierarchies
 
-**Status:** Proposed
-**Date:** 2026-06-02
+**Status:** Accepted
+**Date:** 2026-06-04
 
 ## 1. Context
 
@@ -25,40 +25,47 @@ we need a generic multi-head data ingestion and training mechanism.
 
 ## 2. Decision
 
-We are implementing a generic multi-head mechanism where hierarchies are strictly
-optional. The configuration, artifact generation, and runtime layers will be
-updated to treat heads as arbitrary, independent tasks by default, with hierarchy
-applied only when explicitly configured.
+We have adopted a generic multi-head mechanism that supports both independent
+and hierarchical tasks. However, to ensure numerical efficiency and data safety,
+we utilize a dense-tensor approach rather than a sparse dictionary approach
+for raw data storage and loading.
 
 ### 2.1. Flexible Label Ingestion
-The data ingestion pipeline will accept labels in varying formats:
+The data ingestion pipeline (`geopipe`) prioritizes composite rasters:
 * **Single-band raster:** Defaults to standard single-head training.
-* **Multi-band raster:** Each band can be mapped to a distinct prediction head.
-* **List of independent rasters:** Multiple separate rasters can be ingested
-simultaneously, each mapping to one or more heads.
+* **Multi-band raster:** Supports multiple targets within a single file.
+
+**Note:** We explicitly do not support a list of individual label rasters. Users
+must provide a composite raster prepared outside the project to ensure all
+labels are geographically aligned before ingestion.
 
 ### 2.2. Explicit Head Configuration
-The ingestion and dataset configuration schemas will explicitly define the mapping
-between the input raster bands and the model heads.
-* Hierarchies are no longer inferred. They must be explicitly declared via
-`head_parent` mapping.
-* A head can declare `parent: None`, making it entirely independent.
-* Hierarchy can be established between different input rasters or between bands
-within the same raster.
+Hierarchies are now defined during the ingestion phase through reclassification
+policies rather than arbitrary band mappings.
+* **Reclass-Driven Hierarchy:** Parent-child relationships are built by
+reclassifying specific bands into coarse and fine-grained targets.
+* **Restriction:** Hierarchy is not supported between arbitrary bands of a
+composite raster. This ensures that the pipeline can safely manage
+hierarchy-induced masking (e.g., ignore indices) automatically.
+* **Independent Heads:** Any head not participating in a reclass hierarchy is
+treated as a "Factorial" or independent task.
 
-### 2.3. Multi-Target `.npz` Artifact Generation
-When preparing the dataset, the `geopipe` module will pack multiple label arrays
-into the individual `.npz` data block files.
-* The `DataSpecs` schema will be updated so `Meta.Label` transitions from a single
-`array_key: str` to a mapping `array_keys: dict[str, str]`.
-* The data loader will yield a dictionary of target tensors (`dict[str, torch.Tensor]`)
-matching the output dictionary of logits produced by the model.
+### 2.3. Slicing-Based Artifact Generation
+Instead of transitioning to a dictionary of independent arrays in `.npz` files
+at this time, we have maintained the **monolithic label stack**.
+* The `geopipe` module packs all labels into a single `label_stack` tensor
+within the `.npz` block.
+* The `BatchEngine` runtime will continue to receive a 4D tensor `[B, S, H, W]`
+and use channel-slicing to route data to specific heads.
+* **Rationale:** Since landscape data is currently expected to be dense
+(consistent attributes per pixel), slicing is more memory-efficient and
+simpler to maintain than a sparse dictionary of tensors.
 
 ### 2.4. Loss and Metric Orchestration
-The training runtime will be updated to handle dictionary targets. The `CompositeLoss`
-and metric suites (e.g., `conf_matrix`) will iterate over the active heads, computing
-losses and logging metrics independently per head, while utilizing the `ignore_index`
-to seamlessly mask out missing labels for specific tasks on a per-pixel basis.
+The internal execution context utilizes a dictionary-based *view*
+(`y_dict`) generated dynamically after slicing. The `CompositeLoss` and metric suites
+iterate over active heads independently, allowing the pipeline to handle
+hierarchical masking safely.
 
 ## 3. Consequences
 
@@ -71,17 +78,27 @@ the model to learn from the available data without corrupting the entire pixel l
 * **Inductive Transfer:** Training independent heads on the same backbone forces
 the network to learn richer shared feature representations (e.g., texture features
 useful for age prediction inherently improve species classification).
+* **Pipeline Safety:** Restricted hierarchy definitions prevent invalid masking
+configurations and ensure deterministic training behavior.
 
 ### Negative
-* **Breaking Schema Changes:** Existing `data-ingest` and `data-prepare` YAML
-configurations will need to be migrated to explicitly declare the `array_keys`
-and `head_parent` structures.
+* **Static Slicing:** Adding new independent tasks requires re-ingesting the
+composite raster to rebuild the `label_stack`.
 
-## 4. Migration Notes
+## 4. Future Work
 
-* Update `src/landseg/core/data_specs.py` to support `dict[str, str]` for label
-array keys.
-* Refactor the data block builder in `geopipe` to stack/save multiple target
-arrays during the partitioning phase.
-* Update the training executor loop to pass `dict[str, torch.Tensor]` to the
-loss and metric functions.
+While the current implementation prioritizes performance for dense landscape data,
+several extensions are identified for future iterations:
+
+### 4.1. Sparse Dictionary-Based Targets
+As the framework expands to support heterogeneous tasks (e.g., combining
+pixel-level segmentation with patch-level classification), we may transition
+from monolithic channel-slicing to named array keys in `.npz` files. This would
+allow the `DataLoader` to yield a dictionary of tensors, supporting sparse
+attributes and variable spatial dimensions.
+
+### 4.2. Runtime Label Subsetting
+Enhancing the `Dataset` and `BatchEngine` to subset label channels dynamically
+at runtime based on `active_heads` (rather than relying on the `transform`
+layer to filter channels) would improve experiment agility without requiring
+re-materialization of artifacts.
