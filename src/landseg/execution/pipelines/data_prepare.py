@@ -58,7 +58,7 @@ def prepare(config: configs.RootConfig):
         foundation_paths.data_blocks.dev.catalog,
         foundation_paths.data_blocks.dev.schema,
         foundation_paths.data_blocks.test.catalog,
-        valid_px_threshold=0.8
+        config=config.transform.catalog
     )
 
     # datablocks partition

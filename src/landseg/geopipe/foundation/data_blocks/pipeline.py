@@ -144,7 +144,7 @@ def run_blocks_building(
         source_label=config.label_fpath,
         mapped_grid_id=world_grid.gid,
         blocks_dir=artfact_paths.blocks,
-        reclass_color_map=block_builder.reclass_color_map
+        label_color_map=block_builder.label_color_map
     )
     data_blocks.update_manifest(
         updated,

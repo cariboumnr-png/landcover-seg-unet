@@ -1,9 +1,9 @@
-# filtering thresholds for valid blocks
-threshold:
-  # minimum valid pixel ratio threshold for dev blocks
-  blk_thres_dev: 0.75
-  # minimum valid pixel ratio threshold for test blocks
-  blk_thres_test: 0.1
+# catalog datablocks view settings
+catalog:
+  valid_pxs:
+    image: 0.9 # at least 90% valid image pixels
+  focal_target: null
+  non_overlapping_test_grid: true
 
 # blocks partition
 partition:

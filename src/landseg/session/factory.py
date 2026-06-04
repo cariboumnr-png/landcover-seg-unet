@@ -162,7 +162,7 @@ def build_continous_training_session(
     dispatcher = instrument.build_dispatcher(
         trackers=['tb'],
         uri=context.session_paths.logs,
-        reclass_color_map=dataspecs.meta.reclass_color_map,
+        label_color_map=dataspecs.meta.label_color_map,
         verbose=context.verbose_runner
     )
     # epoch engine context
@@ -215,7 +215,7 @@ def build_curriculum_training_session(
     dispatcher = instrument.build_dispatcher(
         trackers=['tb'],
         uri=context.session_paths.logs,
-        reclass_color_map=dataspecs.meta.reclass_color_map,
+        label_color_map=dataspecs.meta.label_color_map,
         verbose=context.verbose_runner
     )
     # epoch engine context

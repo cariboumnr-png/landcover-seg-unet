@@ -65,16 +65,9 @@ class _BlockBuilderMeta(typing.TypedDict):
     The required keys are a subset of `geo_core.DataBlockMeta`, which is
     used when building each block.
     '''
-
-    # required
-    label_num_cls: int
-    label_ignore_cls: list[int]
-    label_reclass_map: dict[str, list[int]]
     image_band_map: dict[str, int]
-    # optional
-    label_class_name: typing.NotRequired[dict[str, str]]
-    label_reclass_name: typing.NotRequired[dict[str, str]]
-    label_reclass_color_map: typing.NotRequired[dict[int, list[int]]]
+    label_specs: dict[str, geo_core.LabelSpecs]
+    label_color_map: typing.NotRequired[dict[str, list[int]]]
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -99,12 +92,12 @@ class BlockBuilderConfig:
 class _BlockCreationContext:
     '''Immutable, per-block inputs required to build a single block.'''
     name: str
-    ignore_index: int
     dem_pad_px: int
     img_path: str
     img_window: alias.RasterWindow
     lbl_path: str | None
     lbl_window: alias.RasterWindow | None
+    meta_src: _BlockBuilderMeta
 
 # --------------------------------Public  Class--------------------------------
 class BlockBuilder:
@@ -177,20 +170,16 @@ class BlockBuilder:
         '''Return a fresh block meta dict with values from meta source.'''
         _meta = {}
         assert self.meta_src
-        _meta['label_num_cls'] = self.meta_src['label_num_cls']
-        _meta['label_ignore_cls'] = self.meta_src['label_ignore_cls']
-        _meta['label_reclass_map'] = self.meta_src['label_reclass_map']
         _meta['image_band_map'] = self.meta_src['image_band_map']
-        # cast for type checker
-        _meta = typing.cast(geo_core.DataBlockMeta, _meta)
+        _meta['ignore_index'] = self.config.ignore_index
+        _meta = typing.cast(geo_core.DataBlockMeta, _meta) # cast for type
         return _meta
 
     @property
-    def reclass_color_map(self) -> dict[int, list[int]] | None:
+    def label_color_map(self) -> dict[str, list[int]] | None:
         '''Return the reclass color map from config JSON if provided.'''
         assert self.meta_src # typing
-        _map = self.meta_src.get('label_reclass_color_map', None)
-        return {int(k): v for k, v in _map.items()} if _map else None
+        return self.meta_src.get('label_color_map')
 
     def build_single_block(
         self,
@@ -394,14 +383,15 @@ class BlockBuilder:
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''
 
+        assert self.meta_src # typing
         return _BlockCreationContext(
             name=geo_utils.xy_name(coords),
-            ignore_index=self.config.ignore_index,
             dem_pad_px=self.config.dem_pad_px,
             img_path=self.config.image_fpath,
             img_window=self.img_windows[coords],
             lbl_path=self.config.label_fpath,
-            lbl_window=self.lbl_windows[coords] if self.has_label else None
+            lbl_window=self.lbl_windows[coords] if self.has_label else None,
+            meta_src=self.meta_src
         )
 
 # ------------------------------private functions------------------------------
@@ -431,12 +421,12 @@ def _build_a_blk(
 ) -> geo_core.DataBlock:
     '''Create a block from the input rasters for the given window.'''
 
-    # meta i/o
-    meta['block_name'] = contxt.name # assign name
-    dem_band = meta['image_band_map']['dem']
+    # assign name
+    meta['block_name'] = contxt.name
 
     # read rasters at given window and create blocks
     with geo_utils.open_rasters(contxt.img_path, contxt.lbl_path) as (img, lbl):
+
         # sanity check, image raster must be provided
         assert img, f'Invalid image source: {contxt.img_path}'
         # read image array
@@ -444,16 +434,31 @@ def _build_a_blk(
         img_arr: numpy.ndarray = img.read(window=img_window, boundless=True)
         meta['image_nodata'] = img.nodata
         # get padded dem array from image
+        dem_band = meta['image_band_map']['dem']
         padded_dem = _read_w_pad(img, img_window, dem_band, contxt.dem_pad_px)
+
         # read label array if provided
         lbl_window = contxt.lbl_window
         lbl_arr: numpy.ndarray | None = None
         if lbl is not None and lbl_window is not None:
             lbl_arr = lbl.read(window=lbl_window, boundless=True)
+            assert isinstance(lbl_arr, numpy.ndarray) # typing
             meta['label_nodata'] = lbl.nodata
+            # sanity check
+            expected_bands = len(contxt.meta_src['label_specs'])
+            if lbl_arr.shape[0] != expected_bands:
+                raise ValueError(
+                    f'Label targets number != input label array shape on axis 0'
+                    f' {lbl_arr.shape[0]} != {expected_bands}'
+                )
 
     # create and return DataBlock instance
-    output_block = geo_core.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
+    output_block = geo_core.DataBlock.build(
+        raw_arrays=(img_arr, lbl_arr),
+        img_padded_dem=padded_dem,
+        lbl_specs=contxt.meta_src['label_specs'],
+        block_meta=meta
+    )
     # by default save to provided target path
     if save:
         assert save_fpath

@@ -41,7 +41,7 @@ def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
     uri: str | None = None,
     artifact_path: str | None = None,
-    reclass_color_map: dict[int, list[int]] | None = None,
+    label_color_map: dict[str, list[int]] | None = None,
     verbose: bool = True
 ) -> callbacks.CallbackDispatcher:
     '''
@@ -89,7 +89,7 @@ def build_dispatcher(
         callbacks.LoggingCallback(verbose=verbose),
         tracking.TrainTrackingCallback(_trackers),
         tracking.ValTrackingCallback(_trackers),
-        tracking.InferTrackingCallback(_trackers,reclass_color_map=reclass_color_map)
+        tracking.InferTrackingCallback(_trackers,label_color_map=label_color_map)
     ]
 
     # return dispatcher

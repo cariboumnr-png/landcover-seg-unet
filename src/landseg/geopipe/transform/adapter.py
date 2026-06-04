@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Catalog adapter utilities.
 
@@ -29,6 +31,7 @@ and analysis.
 
 # standard imports
 import dataclasses
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -36,6 +39,15 @@ import landseg.geopipe.core as geo_core
 # typing aliases
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
+
+class _CatalogViewConfig(typing.Protocol):
+    '''Typed configuration container for catalog views.'''
+    @property
+    def valid_pxs(self) -> dict[str, float]: ...
+    @property
+    def focal_target(self) -> str | None: ...
+    @property
+    def non_overlapping_test_grid(self) -> bool: ...
 
 @dataclasses.dataclass
 class DataBlocksView:
@@ -56,10 +68,8 @@ def data_blocks_adapter(
     dev_catalog: str,
     dev_schema: str,
     test_catalog: str,
-    *,
-    valid_px_threshold: float,
-    non_overlapping_test_grid: bool = True
-):
+    config: _CatalogViewConfig
+) -> DataBlocksView:
     '''
     Load and adapt development and test blocks into a structured view.
 
@@ -71,14 +81,19 @@ def data_blocks_adapter(
         dev_catalog: Path to development blocks catalog JSON.
         dev_schema: Path to dataset schema JSON.
         test_catalog: Path to external test blocks catalog JSON.
-        valid_px_threshold: Minimum fraction/amount of valid pixels
-            required for a block to be included.
+        valid_thresholds: Dictionary mapping metric names to minimum
+            fraction of valid pixels required for a block to be included.
+        focal_target: Label head name used to derive class counts for
+            partitioning.
         non_overlapping_test_grid: If True, restrict test blocks to the
             base non-overlapping grid aligned with schema block size.
 
     Returns:
         DataBlocksView containing filtered dev metadata and optional
         test blocks.
+
+    Note:
+        Currently we only support a single focal target.
     '''
 
     # try load schema first
@@ -90,11 +105,11 @@ def data_blocks_adapter(
     block_size = (image_shape['H'], image_shape['W'])
 
     # parse dev data catalog
-    t = valid_px_threshold
-    dev = _parse(dev_catalog, t, block_size)
+    assert config.focal_target in data_schema['labels']['label_ignore_cls']
+    dev = _parse(dev_catalog, block_size, config.valid_pxs, config.focal_target)
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, t, block_size)
+        test = _parse(test_catalog, block_size, config.valid_pxs, config.focal_target)
     except artifacts.ArtifactError:
         test = None
 
@@ -103,7 +118,7 @@ def data_blocks_adapter(
         test_blocks = None
     else:
     # whether to filter test blocks only on a non-overlapping grid (base)
-        if non_overlapping_test_grid:
+        if config.non_overlapping_test_grid:
             test_blocks = list(
                 v for k, v in test.valid_file_paths.items()
                 if k in test.base_class_counts
@@ -121,9 +136,10 @@ def data_blocks_adapter(
 
 def _parse(
     fpath: str,
-    valid_px_threshold: float,
     block_size: tuple[int, int],
-):
+    valid_px_thresholds: dict[str, float],
+    focal_target: str | None = None
+) -> _Parsed:
     '''Parse acatalog JSON into filtered class counts and file paths.'''
 
     # read catalog JSON to instantiate a class object
@@ -131,10 +147,16 @@ def _parse(
     assert catalog_dict # typing assertion
     catalog = geo_core.DataCatalog.from_dict(catalog_dict)
 
+    # TEMP fallback to the first target if no focus target is specified
+    if not focal_target:
+        focal_target = list(next(iter(catalog.values()))['class_count'].keys())[0]
+
     # all valid entries from catalog
-    t = valid_px_threshold
-    work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px'] > t}
-    catalog_counts = {k: v['base_class_count'] for k, v in work_catalog.items()}
+    work_catalog = {
+        k: v for k, v in catalog.items()
+        if _is_valid_block(valid_px_thresholds, v['valid_px_ratios'])
+    }
+    catalog_counts = {k: v['class_count'][focal_target] for k, v in work_catalog.items()}
 
     # entries on the base grid (no overlap)
     row_size, col_size = block_size
@@ -143,7 +165,7 @@ def _parse(
         # both row and col are divisible
         if v['row_col'][0] % row_size == 0 and v['row_col'][1] % col_size == 0
     }
-    base_counts = {k: v['base_class_count'] for k, v in base_catalog.items()}
+    base_counts = {k: v['class_count'][focal_target] for k, v in base_catalog.items()}
 
     # all block file paths
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
@@ -153,3 +175,16 @@ def _parse(
         valid_class_counts=catalog_counts,
         valid_file_paths=valid_file_paths
     )
+
+def _is_valid_block(
+    valid_thresholds: dict[str, float],
+    valid_ratios: dict[str, float]
+) -> bool:
+    '''Return `True` if all valid thresholds are met.'''
+
+    # iterate ratios and check against threshold (might not be present)
+    for k, v in valid_ratios.items():
+        threshold = valid_thresholds.get(k)
+        if threshold and v < threshold:
+            return False
+    return True

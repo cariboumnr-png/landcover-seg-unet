@@ -83,18 +83,28 @@ class DataBlockMeta(typing.TypedDict):
     valid_ratios: dict[str, float]
     # label metadata
     label_nodata: int
-    label_num_cls: int
-    label_ignore_cls: list[int]
-    label_reclass_map: dict[str, list[int]]
-    label_ch_parent: dict[str, str | None]
-    label_ch_parent_cls: dict[str, int | None]
+    label_num_cls: dict[str, int]
+    label_ignore_cls: dict[str, list[int]]
+    label_parent: dict[str, str | None]
+    label_parent_cls: dict[str, int | None]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
+    label_names: dict[str, list[str]]
     # image metadata
     image_nodata: float
     image_dem_pad: int
     image_band_map: dict[str, int]
     image_stats: dict[str, dict[str, int | float]]
+
+class LabelSpecs(typing.TypedDict):
+    '''Typed dictionary for label specification.'''
+    # required
+    num_cls: int
+    ignore_cls: list[int]
+    # optional
+    class_name: typing.NotRequired[dict[str, str]]
+    reclass: typing.NotRequired[dict[str, list[int]]]
+    reclass_name: typing.NotRequired[dict[str, str]]
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -137,19 +147,22 @@ class DataBlock:
         label, and block-level features are computed sequentially.
     '''
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        *,
+        ignore_index: int = 255,
+        dem_pad: int = 8,
+    ):
         '''
-        nitialize an empty `DataBlock` instance.
+        Initialize an empty `DataBlock` instance.
 
         The instance is created with placeholder data structures and a
         default metadata dictionary. It can be populated using either
         `build()` (from arrays) or `load()` (from disk).
 
         Args:
-            **kwargs:
-                Optional overrides for default metadata values such as:
-                - ignore_index: Label ignore value (default: 255)
-                - dem_pad: Padding size for DEM-based computations
+            ignore_index: Label ignore value (default: 255)
+            dem_pad: Padding size for DEM-based computations (default: 8)
         '''
 
         # init with empty block data
@@ -158,30 +171,33 @@ class DataBlock:
         self.meta: DataBlockMeta = {
             'block_name': '',
             'has_label': True,
-            'ignore_index': kwargs.get('ignore_index', 255),
+            'ignore_index': ignore_index,
             'valid_ratios': {},
             'label_nodata': 0,
-            'label_num_cls': 0,
-            'label_ignore_cls': [],
-            'label_reclass_map': {},
-            'label_ch_parent': {},
-            'label_ch_parent_cls': {},
+            'label_num_cls': {},
+            'label_ignore_cls': {},
+            'label_parent': {},
+            'label_parent_cls': {},
             'label_count': {},
             'label_entropy': {},
+            'label_names': {},
             'image_nodata': numpy.nan,
-            'image_dem_pad': kwargs.get('dem_pad', 8),
+            'image_dem_pad': dem_pad,
             'image_band_map': {},
             'image_stats': {}
         }
+        # label specs type
+        self.lbl_specs: dict[str, LabelSpecs]
 
     # ----- alternative constructor
     @classmethod
     def build(
         cls,
-        img_arr: numpy.ndarray,
-        lbl_arr: numpy.ndarray | None,
-        padded_dem: numpy.ndarray,
-        meta: DataBlockMeta,
+        *,
+        raw_arrays: tuple[numpy.ndarray, numpy.ndarray | None],
+        img_padded_dem: numpy.ndarray,
+        lbl_specs: dict[str, LabelSpecs],
+        block_meta: DataBlockMeta,
     ) -> 'DataBlock':
         '''
         Construct a `DataBlock` from in-memory arrays and metadata.
@@ -195,38 +211,34 @@ class DataBlock:
             - Per-band statistical summaries
 
         Args:
-            img_arr:
-                Image array of shape (C, H, W).
-            lbl_arr:
-                Optional label array of shape (1, H, W). If None, the
-                block is treated as unlabeled.
-            padded_dem:
-                DEM array padded on all sides to support neighborhood
-                operations.
-            meta:
-                Dictionary containing block configuration and metadata.
+            img_arr: Image array of shape (C, H, W).
+            lbl_arr: Optional label array of shape (T, H, W). If None,
+                the block is treated as unlabeled.
+            padded_dem: DEM array padded on all sides to support
+                neighborhood operations.
+            meta: Dictionary with block configuration and metadata.
 
         Returns:
-            DataBlock:
-                A fully populated block instance.
+            DataBlock: A fully populated block instance.
 
         Notes: The method mutates internal state and returns the instance
         to support chaining.
         '''
 
         self = cls()
+        self.lbl_specs = lbl_specs
+        img_arr, lbl_arr = raw_arrays
         # update meta with input
-        self.meta.update(meta)
+        self.meta.update(block_meta)
         # assign image
         self.data.image = img_arr.astype(numpy.float32) # remote sensing default
-        self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
+        self.data.image_dem_padded = img_padded_dem.astype(numpy.float32) # padded
         # assign label if provided:
         if lbl_arr is not None:
-            # assertions - both 3 dims and the same H and W read by rasterio
+            # assertions - both 3 dims with the same H and W
             assert len(lbl_arr.shape) == 3 and len(img_arr.shape) == 3
             assert lbl_arr.shape[-2] == img_arr.shape[-2]
-            # (1, H, W) -> (H, W)
-            self.data.label = lbl_arr.astype(numpy.uint8)[0]
+            self.data.label = lbl_arr.astype(numpy.uint8) # [0, 256)
             self.meta['has_label'] = True
         # otherwise give label related data a place holder
         else:
@@ -235,17 +247,20 @@ class DataBlock:
             self.meta['has_label'] = False
 
         # process data sequence
-        # image bands related
-        self._add_spectral_indices()
-        self._add_topographical_metrics()
-        # labels related - only if labels are provided
+        # --- add image bands
+        self._image_add_spectral()
+        self._image_add_topography()
+
+        # --- image specs
+        self._image_get_valid_mask()
+        self._image_get_stats()
+
+        # ---labels specs
+        # only if labels are provided
         if self.meta['has_label']:
-            self._build_label_stack()
-            self._get_topology()
-            self._count_label_classes()
-        # block-wise
-        self._get_block_valid_mask()
-        self._get_block_image_stats()
+            self._label_get_stack()
+            self._label_build_topology()
+            self._label_get_stats()
 
         # sanity check self.data and return self to allow chained calls
         self.data.validate()
@@ -260,12 +275,10 @@ class DataBlock:
         from a previously saved block artifact.
 
         Args:
-            fpath:
-                Path to the `.npz` file containing serialized block data.
+            fpath: Path to the `.npz` file containing serialized data.
 
         Returns:
-            DataBlock:
-                A populated block instance with restored state.
+            DataBlock: A populated block instance with restored state.
 
         Notes:
             Unknown fields in the archive are ignored during loading.
@@ -296,9 +309,8 @@ class DataBlock:
         (stored as a compact JSON string) into a single artifact.
 
         Args:
-            fpath:
-                Output file path. Must end with `.npz`. Existing files
-                will be overwritten.
+            fpath: Output file path. Must end with `.npz`. Existing files
+                **will** be overwritten.
 
         Notes:
             Metadata is serialized using JSON to ensure portability.
@@ -315,41 +327,43 @@ class DataBlock:
         numpy.savez_compressed(fpath, **to_save)
 
     # ----- private method
-    def _add_spectral_indices(self) -> None:
-        '''Add spectral indices using loaded Landsat bands.'''
+    def _image_add_spectral(self) -> None:
+        '''Add spectral indices if related bands are available.'''
 
         # retrieve from meta
-        band_indices = self.meta['image_band_map']
+        band_idx = self.meta['image_band_map']
         nodata = self.meta['image_nodata']
 
         # mask off nodata pixels to avoid overflow
         # 32 bit increased to 64 bit float
-        red = _Calc.mask(self.data.image[band_indices['red']], nodata)
+        red = _Calc.mask(self.data.image[band_idx['red']], nodata)
         # add spectral indices depending on band availability
         indices_stack = []
         n = len(self.meta['image_band_map'])
-        if 'nir' in band_indices:
-            nir = _Calc.mask(self.data.image[band_indices['nir']], nodata)
+        if 'nir' in band_idx:
+            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
             indices_stack.append(_Calc.ndvi(nir, red, nodata))
             self.meta['image_band_map']['NDVI'] = n
-            if 'swir1' in band_indices:
-                swir1 = _Calc.mask(self.data.image[band_indices['swir1']], nodata)
+            if 'swir1' in band_idx:
+                swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
                 indices_stack.append(_Calc.ndmi(nir, swir1, nodata))
                 self.meta['image_band_map']['NDMI'] = n + 1
-            if 'swir2' in band_indices:
-                swir2 = _Calc.mask(self.data.image[band_indices['swir2']], nodata)
+            if 'swir2' in band_idx:
+                swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
                 indices_stack.append(_Calc.nbr(nir, swir2, nodata))
                 self.meta['image_band_map']['NBR'] = n + 2
 
         # add to image array
-        add_indices = numpy.stack(indices_stack ).astype(numpy.float32)
-        self.data.image = numpy.append(self.data.image, add_indices, axis=0)
+        if indices_stack:
+            added = numpy.stack(indices_stack ).astype(numpy.float32)
+            self.data.image = numpy.append(self.data.image, added, axis=0)
 
-    def _add_topographical_metrics(self) -> None:
+    def _image_add_topography(self) -> None:
         '''Add topographical metrics to the image array.'''
 
-        # get vars
+        # retrieve from meta
         nodata = self.meta['image_nodata']
+        pad = self.meta['image_dem_pad']
 
         # prep metrics to add
         slope = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
@@ -357,21 +371,22 @@ class DataBlock:
         sin_a = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
         tpi = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
 
-        # padding
-        pad = self.meta['image_dem_pad']
         # sanity check on image/padded image shape
         max_h, max_w = self.data.image_dem_padded.shape
         if not self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad):
-            raise ValueError(f'{self.data.image[0].shape} {max_h}, {max_w}, {pad}')
+            raise ValueError(
+                f'Mismatch in image dimensions: {self.data.image[0].shape} vs'
+                f'({max_h - 2 * pad}, {max_w - 2 * pad}), padding: {pad}'
+            )
 
         # iterate through pixels from the original block in padded dem
         for y in range(pad, max_h - pad):
             for x in range(pad, max_w - pad):
-                # slope and aspect - pad neighbors, radius 1
+                # slope and aspect - pad neighbors, radius=1
                 pxs = _Calc.get_px_group(self.data.image_dem_padded, x, y, 1)
                 slope[y - pad, x - pad], cos_a[y - pad, x - pad], \
                     sin_a[y - pad, x - pad] = _Calc.slope_n_aspect(pxs, nodata)
-                # tpi - 224 neighbors, radius pad-1
+                # tpi - radius=pad-1 (default 8, so 15x15 window)
                 r = pad - 1
                 pxs =  _Calc.get_px_group(self.data.image_dem_padded, x, y, r)
                 tpi[y - pad, x - pad] = _Calc.tpi(pxs, nodata)
@@ -389,157 +404,22 @@ class DataBlock:
             'tpi': n + 3
         })
 
-    def _build_label_stack(self) -> None:
-        '''Build the label stack and update its valid pixel ratios.'''
-
-        # get values from meta
-        ignore_index = self.meta['ignore_index']
-        reclass_map = self.meta['label_reclass_map']
-
-        # get labels to be ignored
-        labels_to_ignore = list(self.meta['label_ignore_cls'])
-        labels_to_ignore.append(self.meta['label_nodata'])
-        labels_to_ignore = [x for x in labels_to_ignore if x is not None]
-
-        # base as the first element of the list
-        raw_mask = ~numpy.isin(self.data.label, labels_to_ignore)
-        raw_valid = numpy.where(raw_mask, self.data.label, ignore_index)
-        fn_stack = [raw_valid]
-        self.meta['valid_ratios'].update({
-            'base': float(numpy.sum(raw_mask) / raw_valid.size)
-        })
-
-        # if no reclass, assign the only base label channel to self.data
-        if not reclass_map:
-            self.data.label_stack = numpy.stack(fn_stack, axis=0)
-            return
-
-        # iterate through reclass map
-        for band_num, classes in reclass_map.items():
-            # mask to the current base channel class IDs (parent)
-            _mask = numpy.isin(self.data.label, classes)
-            # in-place reclass relevant pixels in layer1
-            fn_stack[0][_mask] = int(band_num)
-            # create a new array to add to stack
-            reclass_new = numpy.where(_mask, self.data.label, ignore_index)
-            # reclass from 1 to n
-            for i, cls in enumerate(classes, 1):
-                reclass_new[reclass_new == cls] = int(i)
-            # append the to the stack
-            fn_stack.append(reclass_new)
-        # stack all the arrays and assign to self.data
-        self.data.label_stack = numpy.stack(fn_stack, axis=0)
-
-        # update valid pixel ratios for the stack
-        for i in range(1, len(reclass_map) + 1):
-            _valid = fn_stack[i] != ignore_index
-            _ratio = float(numpy.sum(_valid) / raw_valid.size)
-            self.meta['valid_ratios'].update({f'reclass_{i}': _ratio})
-
-    def _get_topology(self) -> None:
-        '''Derive label topology (parent-child).'''
-
-        # iterate through label counts
-        for layer_name in self.meta['valid_ratios']:
-            # emit topology
-            if layer_name == 'base':
-                self.meta['label_ch_parent'][layer_name] = None
-                self.meta['label_ch_parent_cls'][layer_name] = None
-            elif layer_name.startswith('reclass_'):
-                cls_id = int(layer_name.split('reclass_')[1])
-                self.meta['label_ch_parent'][layer_name] = 'base'
-                self.meta['label_ch_parent_cls'][layer_name] = cls_id
-            else:
-                pass
-
-    def _count_label_classes(self) -> None:
-        '''Count present label values and calculate entropy.'''
-
-        # supposed number of classes for each label layer
-        label_num = self.meta['label_num_cls']
-        reclass_map = self.meta['label_reclass_map']
-
-        # when no reclass, treat layer1 as original classes
-        if not reclass_map:
-            n_classes = [label_num, label_num]
-        # count of original label and reclassed layer1 groups
-        else:
-            n_classes = [label_num, len(reclass_map)]
-            # counts of layer2 groups
-            n_classes.extend([len(v) for v in reclass_map.values()])
-
-        # all arrays to be counted
-        channels = numpy.concatenate(
-            [self.data.label[None, :, :], self.data.label_stack], axis=0
-        ) # (L, H, W)
-
-        # iterate label layers
-        assert len(n_classes) == len(channels) # sanity check
-        for i, band in enumerate(channels):
-            # count unique values for each label layer
-            label_unique = numpy.arange(1, n_classes[i] + 1) # start from 1
-            filtered = band[numpy.isin(band, label_unique)]
-            uniques, counts = numpy.unique(filtered, return_counts=True)
-
-            # convert to list. avoid using arr.tolist()
-            uniques = [int(_) for _ in uniques]
-            counts = [int(_) for _ in counts]
-
-            # get shannon entropy
-            ent = _Calc.entropy(counts)
-
-            # assign zero count to no_show classes
-            cc = []
-            for _ in range(n_classes[i]):
-                idx = _ + 1
-                if idx in uniques:
-                    count_idx = uniques.index(idx)
-                    cc.append(counts[count_idx])
-                else:
-                    cc.append(0)
-
-            # add to metadata
-            if i == 0:
-                self.meta['label_count'].update({'original': cc})
-                self.meta['label_entropy'].update({'original': ent})
-            elif i == 1:
-                self.meta['label_count'].update({'base': cc})
-                self.meta['label_entropy'].update({'base': ent})
-            else:
-                self.meta['label_count'].update({f'reclass_{i - 1}': cc})
-                self.meta['label_entropy'].update({f'reclass_{i - 1}': ent})
-
-    def _get_block_valid_mask(self):
+    def _image_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
-
-        # get image nodata and ignore label index
-        ignore_index = self.meta['ignore_index']
-        image_nodata = self.meta['image_nodata']
-
-        # for label data: if provided, True where label layer1 is valid
-        if self.meta['has_label']:
-            valid_label = self.data.label_stack[0] != ignore_index
-        # otherwise no effect
-        else:
-            valid_label = True # easy broadcast
 
         # for image data: True where all image bands are valid
         invalid_img = (
             numpy.isnan(self.data.image) |
-            numpy.isclose(self.data.image, image_nodata)
+            numpy.isclose(self.data.image, self.meta['image_nodata'])
         )
         valid_img = ~numpy.any(invalid_img, axis=0) # shape (256, 256)
 
-        # final mask as combined
-        self.data.valid_mask = valid_label & valid_img # (256, 256)
-
-        # add to meta
         self.meta['valid_ratios'].update({
             'image': float((numpy.sum(valid_img) / valid_img.size)),
-            'block': float((numpy.sum(self.data.valid_mask) / valid_img.size))
         })
+        self.data.valid_mask = valid_img # (256, 256)
 
-    def _get_block_image_stats(self):
+    def _image_get_stats(self):
         '''Per block stats for later aggregation using Welford's.'''
 
         # image_nodata
@@ -572,27 +452,160 @@ class DataBlock:
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
+    def _label_get_stack(self) -> None:
+        '''
+        Construct a multi-layer label stack based on label specs.
+
+        Input arrays are processed sequentially to create base layers,
+        child layers for reclassification, and grouping layers.
+        '''
+
+        stack: list[numpy.ndarray] = []
+        ignore_index = self.meta['ignore_index']
+
+        # iterate label specs
+        for i, spec in enumerate(self.lbl_specs.values()):
+            arr = self.data.label[i]
+
+            # append base layer from original Class IDs with masking)
+            to_ignore = list(spec['ignore_cls']) + [ignore_index]
+            mask = ~numpy.isin(arr, to_ignore)
+            stack.append(numpy.where(mask, arr, ignore_index))
+
+            # skip if no reclass is defined for this label
+            reclass = spec.get('reclass')
+            if not reclass:
+                continue
+            # grouping layers and children
+            group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+            for group_id, classes in reclass.items():
+                mask = numpy.isin(arr, classes)
+                group_layer[mask] = int(group_id) # modify in-place
+
+                # create child slice: re-index original classes to 1..N
+                child_arr = numpy.where(mask, arr, ignore_index)
+                for k, cls_id in enumerate(classes, 1):
+                    child_arr[child_arr == cls_id] = int(k)
+                stack.append(child_arr)
+
+            # append grouping layer last for this specification
+            stack.append(group_layer)
+
+        # store the final stack
+        self.data.label_stack = numpy.stack(stack, axis=0)
+
+    def _label_build_topology(self) -> None:
+        '''
+        Construct the metadata topology for the label stack.
+
+        Populates self.meta with hierarchy, class counts, and naming
+        conventions derived from the label specifications.
+        '''
+
+        # containers
+        num_cls: dict[str, int] = {}
+        ignore_cls: dict[str, list[int]] = {}
+        parent_map: dict[str, str | None] = {}
+        parent_cls_map: dict[str, int | None] = {}
+        label_names: dict[str, list[str]] = {}
+
+        # iterate label specs
+        for name, spec in self.lbl_specs.items():
+            cls_name = spec.get('class_name', {})
+
+            # base metadata
+            num_cls[name] = spec['num_cls']
+            ignore_cls[name] = spec['ignore_cls']
+            parent_map[name] = None
+            parent_cls_map[name] = None
+            label_names[name] = [
+                cls_name.get(str(j + 1), f'cls_{j + 1}')
+                for j in range(spec['num_cls'])
+            ]
+
+            # skip if no reclass is defined for this label
+            reclass = spec.get('reclass')
+            if not reclass:
+                continue
+
+            # children metadata
+            grp_name = f'{name}_groups' # fallback genric name
+            reclass_name = spec.get('reclass_name', {})
+            for gid, classes in reclass.items():
+                child_name = reclass_name.get(gid, f'{grp_name}_{gid}')
+                num_cls[child_name] = len(classes)
+                ignore_cls[child_name] = []
+                parent_map[child_name] = grp_name
+                parent_cls_map[child_name] = int(gid)
+                label_names[child_name] = [
+                    cls_name.get(str(c), f'cls_{c}')
+                    for c in classes
+                ]
+
+            # parent metadata
+            num_cls[grp_name] = len(reclass)
+            ignore_cls[grp_name] = []
+            parent_map[grp_name] = None
+            parent_cls_map[grp_name] = None
+            label_names[grp_name] = [
+                reclass_name.get(gid, f'grp_{gid}')
+                for gid in sorted(reclass.keys(), key=int)
+            ]
+
+        # populate meta dict
+        self.meta['label_num_cls'] = num_cls
+        self.meta['label_ignore_cls'] = ignore_cls
+        self.meta['label_parent'] = parent_map
+        self.meta['label_parent_cls'] = parent_cls_map
+        self.meta['label_names'] = label_names
+
+    def _label_get_stats(self) -> None:
+        '''Count present label values and calculate entropy.'''
+
+        # the meta dict defines the names and sizes of every target in stack
+        heads = list(self.meta['label_num_cls'].items())
+
+        for i, (name, n_cls) in enumerate(heads):
+            band = self.data.label_stack[i]
+
+            # calculate valid pixel ratios
+            valid = band != self.meta['ignore_index']
+            self.meta['valid_ratios'].update({
+                name: float(valid.sum() / (valid.size))
+                if valid.size > 0 else 0.0
+            })
+
+            # count unique values for the current head (classes 1..N)
+            label_unique = numpy.arange(1, n_cls + 1)
+            filtered = band[numpy.isin(band, label_unique)]
+            uniques, counts = numpy.unique(filtered, return_counts=True)
+
+            # calculate shannon entropy
+            ent = float(_Calc.entropy(counts))
+
+            # align counts to the fixed class size defined in schema
+            final_counts = [0] * n_cls
+            for val, count in zip(uniques, counts):
+                final_counts[int(val) - 1] = int(count)
+
+            # store results in meta
+            self.meta['label_count'][name] = final_counts
+            self.meta['label_entropy'][name] = ent
+
 # --------------------------------private class--------------------------------
 class _Calc:
     '''Calculator namespace.'''
-    # spectral indices related
     @staticmethod
     def mask(band, nodata):
-        '''
-        Returns a masked array where band == nodata.
-        If nodata is None, no values are masked.
-        '''
+        '''Returns a masked array where band == nodata.'''
         band = band.astype(numpy.float64)
-        if nodata is None:
+        if nodata is None: # if nodata is None, no values are masked.
             return numpy.ma.array(band, mask=False)
-        return numpy.ma.masked_where(
-            numpy.isclose(band, nodata),
-            band
-        )
+        return numpy.ma.masked_where(numpy.isclose(band, nodata), band)
 
     @staticmethod
     def entropy(counts):
-        '''Shannon entropy.'''
+        '''Returns Shannon entropy.'''
         ent = 0.0
         ss = sum(counts)
         for c in counts:
@@ -603,19 +616,19 @@ class _Calc:
 
     @staticmethod
     def ndvi(nir, red, nodata):
-        '''Returns NDVI.'''
+        '''Returns Normalized Difference Vegetation Index.'''
         out = (nir - red) / (nir + red)
         return out.filled(nodata)
 
     @staticmethod
     def ndmi(nir, swir1, nodata):
-        '''Returns NDMI'''
+        '''Returns Normalized Difference Moisture Index.'''
         out = (nir - swir1) / (nir + swir1)
         return out.filled(nodata)
 
     @staticmethod
     def nbr(nir, swir2, nodata):
-        '''Returns Normalized Burn Ratio (NBR).'''
+        '''Returns Normalized Burn Ratio.'''
         out = (nir - swir2) / (nir + swir2)
         return out.filled(nodata)
 
@@ -627,7 +640,7 @@ class _Calc:
 
     @staticmethod
     def slope_n_aspect(arr, nodata):
-        '''Returns slope and aspect from DEM.'''
+        '''Returns slope and aspect (in radians) from DEM.'''
         # all 9 cells need to have a valid value (Horn's)
         invalid = numpy.isnan(arr).any() or numpy.isinf(arr).any()
         if nodata is not None:
@@ -656,7 +669,7 @@ class _Calc:
 
     @staticmethod
     def tpi(arr, nodata):
-        '''Returns Topographical Position Index (TPI) from DEM.'''
+        '''Returns Topographical Position Indexfrom DEM.'''
         # topographical position index
         h, w = arr.shape
         c_row, c_col = h // 2, w // 2

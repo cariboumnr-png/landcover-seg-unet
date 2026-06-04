@@ -43,7 +43,7 @@ def build_schema(
     original: geo_core.DataSchema | None,
     sources: tuple[str, str | None],
     mapped_grid_id: str,
-    reclass_color_map: dict[int, list[int]] | None
+    label_color_map: dict[str, list[int]] | None
 ) -> geo_core.DataSchema:
     '''
     Create or update the dataset-level `schema.json`.
@@ -60,14 +60,10 @@ def build_schema(
         sample_block_fpath: File path to a representative block artifact
             used to infer dataset-wide shapes, dtypes, and label settings
             when initializing schema.
-        original_meta: Existing `BlocksMetadata` object if present,
-            otherwise `None` when creating new schema.
+        original: Existing `DataSchema` object if present, otherwise `None`.
+        sources: Tuple containing paths to source image and optional label.
         mapped_grid_id: Identifier of the spatial grid to which blocks
             are aligned.
-        source_image: File path or identifier of the source image used
-            to generate dataset blocks.
-        source_label: File path or identifier of the source label data,
-            if applicable. May be `None` for image-only datasets.
 
     Returns:
         A fully populated `BlocksMetadata` object reflecting updated or
@@ -147,11 +143,12 @@ def build_schema(
         },
 
         'labels': {
-            'label_num_classes': sample_blk.meta['label_num_cls'],
-            'label_to_ignore': sample_blk.meta['label_ignore_cls'],
-            'channel_parent': sample_blk.meta['label_ch_parent'],
-            'channel_parent_cls': sample_blk.meta['label_ch_parent_cls'],
-            'reclass_color_map': reclass_color_map
+            'label_num_cls': sample_blk.meta['label_num_cls'],
+            'label_ignore_cls': sample_blk.meta['label_ignore_cls'],
+            'label_parent': sample_blk.meta['label_parent'],
+            'label_parent_cls': sample_blk.meta['label_parent_cls'],
+            'label_names': sample_blk.meta['label_names'],
+            'label_color_map': label_color_map
         },
     }
     return new

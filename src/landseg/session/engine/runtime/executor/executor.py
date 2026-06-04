@@ -315,7 +315,7 @@ class BatchEngine:
             _domain = {}
         # enforce domain dict key names
         _domain = {
-            'ids_domain': _domain.get('ids'), 
+            'ids_domain': _domain.get('ids'),
             'vec_domain': _domain.get('vec')
         }
 

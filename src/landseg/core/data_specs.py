@@ -108,7 +108,7 @@ class Meta:
     # general - currently unclassified
     blk_bytes: int
     test_blks_grid: tuple[int, int]
-    reclass_color_map: dict[int, list[int]] | None
+    label_color_map: dict[str, list[int]] | None
     # image specs
     image_specs: Image
     # lable specs
