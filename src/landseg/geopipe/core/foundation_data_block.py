@@ -89,6 +89,7 @@ class DataBlockMeta(typing.TypedDict):
     label_parent_cls: dict[str, int | None]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
+    label_names: dict[str, list[str]]
     # image metadata
     image_nodata: float
     image_dem_pad: int
@@ -169,6 +170,7 @@ class DataBlock:
             'label_parent_cls': {},
             'label_count': {},
             'label_entropy': {},
+            'label_names': {},
             'image_nodata': numpy.nan,
             'image_dem_pad': dem_pad,
             'image_band_map': {},

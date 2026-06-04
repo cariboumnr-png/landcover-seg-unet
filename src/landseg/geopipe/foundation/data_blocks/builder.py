@@ -65,22 +65,19 @@ class _BlockBuilderMeta(typing.TypedDict):
     The required keys are a subset of `geo_core.DataBlockMeta`, which is
     used when building each block.
     '''
-
     image_band_map: dict[str, int]
     label_specs: dict[str, _LabelSpecs]
+    label_color_map: typing.NotRequired[dict[str, list[int]]]
 
 class _LabelSpecs(typing.TypedDict):
-    '''doc'''
-
+    '''Typed dictionary for label specification.'''
     # required
     num_cls: int
     ignore_cls: list[int]
     # optional
     class_name: typing.NotRequired[dict[str, str]]
-    class_color_map: typing.NotRequired[dict[str, list[int]]]
     reclass: typing.NotRequired[dict[str, list[int]]]
     reclass_name: typing.NotRequired[dict[str, str]]
-    reclass_color_map: typing.NotRequired[dict[int, list[int]]]
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -189,11 +186,10 @@ class BlockBuilder:
         return _meta
 
     @property
-    def reclass_color_map(self) -> dict[int, list[int]] | None:
+    def label_color_map(self) -> dict[str, list[int]] | None:
         '''Return the reclass color map from config JSON if provided.'''
         assert self.meta_src # typing
-        _map = self.meta_src.get('label_reclass_color_map', None)
-        return {int(k): v for k, v in _map.items()} if _map else None
+        return self.meta_src.get('label_color_map')
 
     def build_single_block(
         self,
@@ -524,6 +520,7 @@ def _get_label_stack(
     ignore_cls: dict[str, list[int]] = {}
     parent_map: dict[str, str | None] = {}
     parent_cls_map: dict[str, int | None] = {}
+    label_names: dict[str, list[str]] = {}
 
     # sanity check
     expected_bands = len(meta_src['label_specs'])
@@ -540,12 +537,18 @@ def _get_label_stack(
 
         arr = label_array[i]
         reclass_name = spec.get('reclass_name', {})
+        cls_name = spec.get('class_name', {})
 
         # 1. Add the Raw Masked band (Original Class IDs)
         to_ignore = list(spec['ignore_cls']) + [ignore_index]
         raw_mask = ~numpy.isin(arr, to_ignore)
         raw_valid = numpy.where(raw_mask, arr, ignore_index)
         stack.append(raw_valid)
+
+        label_names[name] = [
+            cls_name.get(str(j + 1), f'cls_{j + 1}')
+            for j in range(spec['num_cls'])
+        ]
 
         num_cls[name] = spec['num_cls']
         ignore_cls[name] = spec['ignore_cls']
@@ -582,6 +585,12 @@ def _get_label_stack(
             parent_map[child_name] = grp_name
             parent_cls_map[child_name] = int(group_id)
 
+            # Child class names (derived from original class names)
+            label_names[child_name] = [
+                cls_name.get(str(c), f'cls_{c}')
+                for c in classes
+            ]
+
             # Temporary list to manage push order if needed,
             # but here we just append to the global stack
             stack.append(child_arr)
@@ -596,6 +605,13 @@ def _get_label_stack(
         parent_map[grp_name] = None
         parent_cls_map[grp_name] = None
 
+        # Group names (sorted by group ID to match class indices 1..N)
+        sorted_gids = sorted(reclass.keys(), key=int)
+        label_names[grp_name] = [
+            reclass_name.get(gid, f'grp_{gid}')
+            for gid in sorted_gids
+        ]
+
     # stack all the arrays
     _label_array = numpy.stack(stack, axis=0)
 
@@ -604,5 +620,6 @@ def _get_label_stack(
     meta['label_ignore_cls'] = ignore_cls
     meta['label_parent'] = parent_map
     meta['label_parent_cls'] = parent_cls_map
+    meta['label_names'] = label_names
 
     return _label_array, meta
