@@ -231,18 +231,18 @@ class DataBlock:
             self.meta['has_label'] = False
 
         # process data sequence
-        # --- image bands
+        # --- add image bands
         self._image_add_spectral()
         self._image_add_topography()
 
-        # ---labels stack
+        # --- image specs
+        self._image_get_valid_mask()
+        self._image_get_stats()
+
+        # ---labels specs
         # only if labels are provided
         if self.meta['has_label']:
             self._label_get_stats()
-
-        # --- block-wise
-        self._block_get_valid_mask()
-        self._block_get_image_stats()
 
         # sanity check self.data and return self to allow chained calls
         self.data.validate()
@@ -386,63 +386,22 @@ class DataBlock:
             'tpi': n + 3
         })
 
-    def _label_get_stats(self) -> None:
-        '''Count present label values and calculate entropy.'''
-
-        # the meta dict defines the names and sizes of every channel in stack
-        heads = list(self.meta['label_num_cls'].items())
-
-        for i, (name, n_cls) in enumerate(heads):
-            band = self.data.label_stack[i]
-
-            # count unique values for the current head (classes 1..N)
-            label_unique = numpy.arange(1, n_cls + 1)
-            filtered = band[numpy.isin(band, label_unique)]
-            uniques, counts = numpy.unique(filtered, return_counts=True)
-
-            # calculate shannon entropy
-            ent = float(_Calc.entropy(counts))
-
-            # align counts to the fixed class size defined in schema
-            final_counts = [0] * n_cls
-            for val, count in zip(uniques, counts):
-                final_counts[int(val) - 1] = int(count)
-
-            # store results in meta
-            self.meta['label_count'][name] = final_counts
-            self.meta['label_entropy'][name] = ent
-
-    def _block_get_valid_mask(self):
+    def _image_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
-
-        # get image nodata and ignore label index
-        ignore_index = self.meta['ignore_index']
-        image_nodata = self.meta['image_nodata']
-
-        # for label data: if provided, True where label layer1 is valid
-        if self.meta['has_label']:
-            valid_label = self.data.label_stack[0] != ignore_index
-        # otherwise no effect
-        else:
-            valid_label = True # easy broadcast
 
         # for image data: True where all image bands are valid
         invalid_img = (
             numpy.isnan(self.data.image) |
-            numpy.isclose(self.data.image, image_nodata)
+            numpy.isclose(self.data.image, self.meta['image_nodata'])
         )
         valid_img = ~numpy.any(invalid_img, axis=0) # shape (256, 256)
 
-        # final mask as combined
-        self.data.valid_mask = valid_label & valid_img # (256, 256)
-
-        # add to meta
         self.meta['valid_ratios'].update({
             'image': float((numpy.sum(valid_img) / valid_img.size)),
-            'block': float((numpy.sum(self.data.valid_mask) / valid_img.size))
         })
+        self.data.valid_mask = valid_img # (256, 256)
 
-    def _block_get_image_stats(self):
+    def _image_get_stats(self):
         '''Per block stats for later aggregation using Welford's.'''
 
         # image_nodata
@@ -474,6 +433,39 @@ class DataBlock:
             self.meta['image_stats'][f'band_{i}'] = {
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
+
+    def _label_get_stats(self) -> None:
+        '''Count present label values and calculate entropy.'''
+
+        # the meta dict defines the names and sizes of every target in stack
+        heads = list(self.meta['label_num_cls'].items())
+
+        for i, (name, n_cls) in enumerate(heads):
+            band = self.data.label_stack[i]
+
+            # calculate valid pixel ratios
+            valid = band != self.meta['ignore_index']
+            self.meta['valid_ratios'].update({
+                name: float(valid.sum() / (valid.size))
+                if valid.size > 0 else 0.0
+            })
+
+            # count unique values for the current head (classes 1..N)
+            label_unique = numpy.arange(1, n_cls + 1)
+            filtered = band[numpy.isin(band, label_unique)]
+            uniques, counts = numpy.unique(filtered, return_counts=True)
+
+            # calculate shannon entropy
+            ent = float(_Calc.entropy(counts))
+
+            # align counts to the fixed class size defined in schema
+            final_counts = [0] * n_cls
+            for val, count in zip(uniques, counts):
+                final_counts[int(val) - 1] = int(count)
+
+            # store results in meta
+            self.meta['label_count'][name] = final_counts
+            self.meta['label_entropy'][name] = ent
 
 # --------------------------------private class--------------------------------
 class _Calc:
