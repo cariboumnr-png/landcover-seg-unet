@@ -87,8 +87,8 @@ class CatalogEntry(typing.TypedDict):
     block_name: str
     file_path: str
     row_col: list[int]
-    base_valid_px: float
-    base_class_count: list[int]
+    valid_px_ratios: dict[str, float]
+    class_count: dict[str, list[int]]
     schema_version: str
     creation_time: str
     sha_256: str
