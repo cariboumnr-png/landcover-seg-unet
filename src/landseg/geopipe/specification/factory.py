@@ -166,7 +166,7 @@ def _get_meta(
     return core.Meta(
         test_blks_grid=(col, row),
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
-        reclass_color_map=data_schema['labels']['reclass_color_map'],
+        label_color_map=data_schema['labels']['label_color_map'],
         image_specs=core.Meta.Image(
             num_channels=data_schema['tensor_shapes']['image']['C'],
             height_width=data_schema['tensor_shapes']['image']['H'],
@@ -190,8 +190,8 @@ def _get_heads(
     return core.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
-        head_parent=data_schema['labels']['channel_parent'],
-        head_parent_cls=data_schema['labels']['channel_parent_cls']
+        head_parent=data_schema['labels']['label_parent'],
+        head_parent_cls=data_schema['labels']['label_parent_cls']
     )
 
 def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:

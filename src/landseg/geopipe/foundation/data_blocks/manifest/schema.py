@@ -148,7 +148,7 @@ def build_schema(
             'label_parent': sample_blk.meta['label_parent'],
             'label_parent_cls': sample_blk.meta['label_parent_cls'],
             'label_names': sample_blk.meta['label_names'],
-            'reclass_color_map': label_color_map
+            'label_color_map': label_color_map
         },
     }
     return new

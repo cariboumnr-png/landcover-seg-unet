@@ -42,15 +42,15 @@ class InferTrackingCallback(callbacks.BaseCallback):
             # add tensors from label, preds, and errors
             head_tensors[f'{head}_labels'] = formatters.colorize(
                 infer_results.infer_labels[head],
-                palette=self._reclass_color_map
+                palette=self._label_color_map
             )
             head_tensors[f'{head}_predictions'] = formatters.colorize(
                 infer_results.infer_preds[head],
-                palette=self._reclass_color_map
+                palette=self._label_color_map
             )
             head_tensors[f'{head}_errors'] = formatters.colorize(
                 infer_results.infer_errors[head],
-                palette={1: [40, 40, 40], 0: [255, 140, 0]} # grey vs orange
+                palette={'1': [40, 40, 40], '0': [255, 140, 0]} # grey vs orange
             )
             # add mean IoU scalar
             head_metrics[f'{head}_IoU'] = results.raw_metrics.inference_metrics

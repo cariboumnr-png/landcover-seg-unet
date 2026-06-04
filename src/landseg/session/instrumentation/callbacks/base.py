@@ -57,7 +57,7 @@ class BaseCallback(common.SessionObserverLike):
         trackers: list[dashboards.BaseTracker] | None = None,
         *,
         verbose: bool = True,
-        reclass_color_map: dict[int, list[int]] | None = None
+        label_color_map: dict[str, list[int]] | None = None
     ):
         '''
         Initializes the callback.
@@ -70,7 +70,7 @@ class BaseCallback(common.SessionObserverLike):
         if trackers:
             self._trackers = trackers
         self.verbose = verbose
-        self._reclass_color_map = reclass_color_map
+        self._label_color_map = label_color_map
 
     # --- session phase begins
     def on_session_phase_begin(self, phase: common.PhaseLike) -> None: ...

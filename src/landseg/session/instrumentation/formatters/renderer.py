@@ -29,12 +29,12 @@ import torch
 def colorize(
     canvas: torch.Tensor,
     *,
-    palette: torch.Tensor | numpy.ndarray | dict[int, list[int]] | None = None
+    palette: torch.Tensor | numpy.ndarray | dict[str, list[int]] | None = None
 ) -> torch.Tensor:
     '''Map class indices [H, W] -> RGB tensor [3, H, W].'''
 
     # palette handling
-    if palette is None:
+    if not bool(palette): # None | empty array, dict, tensor
         max_cls = int(canvas.max().item()) if canvas.numel() > 0 else 0
         palette = _default_palette(max_cls + 1, device=canvas.device)
 
@@ -101,7 +101,7 @@ def _default_palette(
     )
 
 def _palette_from_dict(
-    color_map: dict[int, list[int]],
+    color_map: dict[str, list[int]],
     default_color: tuple[int, int, int] = (0, 0, 0),
     *,
     device: torch.device | None = None
@@ -111,9 +111,7 @@ def _palette_from_dict(
     if not color_map:
         raise ValueError('color_map cannot be empty')
 
-    color_map = {int(k): v for k, v in color_map.items()}
-
-    max_index = max(color_map.keys())
+    max_index = len(color_map)
 
     palette = torch.full(
         (max_index + 1, 3),
@@ -128,14 +126,14 @@ def _palette_from_dict(
         device=device
     )
 
-    for class_index, rgb in color_map.items():
+    for ids, (name, rgb) in enumerate(color_map.items()):
 
         if len(rgb) != 3:
             raise ValueError(
-                f'RGB value for class {class_index} must contain 3 elements'
+                f'RGB value for class {name} must contain 3 elements'
             )
 
-        palette[class_index] = torch.tensor(
+        palette[ids] = torch.tensor(
             rgb,
             dtype=torch.uint8,
             device=device
