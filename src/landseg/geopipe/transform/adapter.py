@@ -57,9 +57,10 @@ def data_blocks_adapter(
     dev_schema: str,
     test_catalog: str,
     *,
-    valid_px_thresholds: dict[str, float],
+    valid_thresholds: dict[str, float],
+    focal_target: str | None = None,
     non_overlapping_test_grid: bool = True
-):
+) -> DataBlocksView:
     '''
     Load and adapt development and test blocks into a structured view.
 
@@ -71,14 +72,19 @@ def data_blocks_adapter(
         dev_catalog: Path to development blocks catalog JSON.
         dev_schema: Path to dataset schema JSON.
         test_catalog: Path to external test blocks catalog JSON.
-        valid_px_threshold: Minimum fraction/amount of valid pixels
-            required for a block to be included.
+        valid_thresholds: Dictionary mapping metric names to minimum
+            fraction of valid pixels required for a block to be included.
+        focal_target: Label head name used to derive class counts for
+            partitioning.
         non_overlapping_test_grid: If True, restrict test blocks to the
             base non-overlapping grid aligned with schema block size.
 
     Returns:
         DataBlocksView containing filtered dev metadata and optional
         test blocks.
+
+    Note:
+        Currently we only support a single focal target.
     '''
 
     # try load schema first
@@ -90,10 +96,11 @@ def data_blocks_adapter(
     block_size = (image_shape['H'], image_shape['W'])
 
     # parse dev data catalog
-    dev = _parse(dev_catalog, block_size, valid_px_thresholds)
+    assert focal_target in data_schema['labels']['label_ignore_cls']
+    dev = _parse(dev_catalog, block_size, valid_thresholds, focal_target)
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, block_size, valid_px_thresholds)
+        test = _parse(test_catalog, block_size, valid_thresholds, focal_target)
     except artifacts.ArtifactError:
         test = None
 
@@ -138,7 +145,7 @@ def _parse(
     # all valid entries from catalog
     work_catalog = {
         k: v for k, v in catalog.items()
-        if _is_valid_block(v['valid_px_ratios'], valid_px_thresholds)
+        if _is_valid_block(valid_px_thresholds, v['valid_px_ratios'])
     }
     catalog_counts = {k: v['class_count'][focal_target] for k, v in work_catalog.items()}
 
