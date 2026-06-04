@@ -125,9 +125,10 @@ class _LabelTensorSpec(typing.TypedDict):
 
 # ----- labels
 class _LabelsInfo(typing.TypedDict):
-    ''''Label schema, hierarchy, and ignore configuration.'''
-    label_num_classes: int
-    label_to_ignore: list[int]
-    channel_parent: dict[str, str | None]
-    channel_parent_cls: dict[str, int | None]
-    reclass_color_map: dict[int, list[int]] | None
+    '''Label schema, hierarchy, and ignore configuration.'''
+    label_num_cls: dict[str, int]
+    label_ignore_cls: dict[str, list[int]]
+    label_parent: dict[str, str | None]
+    label_parent_cls: dict[str, int | None]
+    label_names: dict[str, list[str]]
+    reclass_color_map: dict[str, list[int]] | None

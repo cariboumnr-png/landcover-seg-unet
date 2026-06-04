@@ -52,7 +52,7 @@ class ManifestUpdateContext:
     source_label: str | None        # optional path to the label raster
     mapped_grid_id: str             # id for the grid the blocks are mapped to
     blocks_dir: str                 # where data blocks are
-    reclass_color_map: dict[int, list[int]] | None
+    label_color_map: dict[str, list[int]] | None
 
 # -------------------------------Public Function-------------------------------
 def update_manifest(
@@ -124,7 +124,7 @@ def update_manifest(
         original=current_schema,
         mapped_grid_id=context.mapped_grid_id,
         sources=(context.source_image, context.source_label),
-        reclass_color_map=context.reclass_color_map
+        label_color_map=context.label_color_map
     )
     ctrl.persist(schema_dict)
 
