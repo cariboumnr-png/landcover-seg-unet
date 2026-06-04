@@ -47,7 +47,7 @@ if typing.TYPE_CHECKING:
     from .adapter import DataBlocksView, data_blocks_adapter
     from .data_partition import PartitionParameters, run_datablocks_partition
     from .normal_blocks import run_normaliza_blocks
-    from .schema_build import build_schema
+    from .schema import build_schema
 
 
 def __getattr__(name: str):
@@ -62,6 +62,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.normal_blocks', __package__), name)
 
     if name in {'build_schema'}:
-        return getattr(importlib.import_module('.schema_build', __package__), name)
+        return getattr(importlib.import_module('.schema', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
