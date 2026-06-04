@@ -181,10 +181,11 @@ class DataBlock:
     @classmethod
     def build(
         cls,
-        img_arr: numpy.ndarray,
-        lbl_arr: numpy.ndarray | None,
-        padded_dem: numpy.ndarray,
-        meta: DataBlockMeta,
+        *,
+        raw_arrays: tuple[numpy.ndarray, numpy.ndarray | None],
+        img_padded_dem: numpy.ndarray,
+        lbl_spec: dict[str, typing.Any],
+        block_meta: DataBlockMeta,
     ) -> 'DataBlock':
         '''
         Construct a `DataBlock` from in-memory arrays and metadata.
@@ -213,11 +214,12 @@ class DataBlock:
         '''
 
         self = cls()
+        img_arr, lbl_arr = raw_arrays
         # update meta with input
-        self.meta.update(meta)
+        self.meta.update(block_meta)
         # assign image
         self.data.image = img_arr.astype(numpy.float32) # remote sensing default
-        self.data.image_dem_padded = padded_dem.astype(numpy.float32) # padded
+        self.data.image_dem_padded = img_padded_dem.astype(numpy.float32) # padded
         # assign label if provided:
         if lbl_arr is not None:
             # assertions - both 3 dims with the same H and W
@@ -244,6 +246,7 @@ class DataBlock:
         # ---labels specs
         # only if labels are provided
         if self.meta['has_label']:
+            self._label_get_stack(lbl_spec)
             self._label_get_stats()
 
         # sanity check self.data and return self to allow chained calls
@@ -435,6 +438,113 @@ class DataBlock:
             self.meta['image_stats'][f'band_{i}'] = {
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
+
+    def _label_get_stack(self, lbl_specs: dict[str, typing.Any]):
+        '''
+        Construct a multi-layer label stack based on specs and reclass rules.
+
+        Input arrays are processed sequentially. Bands without reclass maps are
+        added as-is. Bands with reclass maps are converted into group-ID layers,
+        followed by additional slices for each group (child layers).
+        '''
+
+        # containers
+        num_cls: dict[str, int] = {}
+        ignore_cls: dict[str, list[int]] = {}
+        parent_map: dict[str, str | None] = {}
+        parent_cls_map: dict[str, int | None] = {}
+        label_names: dict[str, list[str]] = {}
+
+        stack: list[numpy.ndarray] = []
+        # iterate label specs
+        ignore_index = self.meta['ignore_index']
+        for i, (name, spec) in enumerate(lbl_specs.items()):
+
+            arr = self.data.label[i]
+            reclass_name = spec.get('reclass_name', {})
+            cls_name = spec.get('class_name', {})
+
+            # 1. Add the Raw Masked band (Original Class IDs)
+            to_ignore = list(spec['ignore_cls']) + [ignore_index]
+            raw_mask = ~numpy.isin(arr, to_ignore)
+            raw_valid = numpy.where(raw_mask, arr, ignore_index)
+            stack.append(raw_valid)
+
+            label_names[name] = [
+                cls_name.get(str(j + 1), f'cls_{j + 1}')
+                for j in range(spec['num_cls'])
+            ]
+
+            num_cls[name] = spec['num_cls']
+            ignore_cls[name] = spec['ignore_cls']
+            parent_map[name] = None
+            parent_cls_map[name] = None
+
+            reclass = spec.get('reclass')
+            if not reclass:
+                continue
+
+            # 2. Add a Grouping Band (Group IDs)
+            # This band becomes the "parent" for the child slices
+            grp_name = f'{name}_groups'
+            group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+
+            # Populate Grouping band and create Children
+            for group_id, classes in reclass.items():
+                _mask = numpy.isin(arr, classes)
+                group_layer[_mask] = int(group_id)
+
+                # 3. Create Child slices
+                child_arr = numpy.where(_mask, arr, ignore_index)
+                # re-index original classes in this slice to 1..N
+                for k, cls in enumerate(classes, 1):
+                    child_arr[child_arr == cls] = int(k)
+
+                # Append child to stack after grouping layer is pushed
+                # (We'll handle the stack push order below)
+                child_name = reclass_name.get(group_id, f'{grp_name}_{group_id}')
+
+                # Meta for child (parent is the grouping layer)
+                num_cls[child_name] = len(classes)
+                ignore_cls[child_name] = []
+                parent_map[child_name] = grp_name
+                parent_cls_map[child_name] = int(group_id)
+
+                # Child class names (derived from original class names)
+                label_names[child_name] = [
+                    cls_name.get(str(c), f'cls_{c}')
+                    for c in classes
+                ]
+
+                # Temporary list to manage push order if needed,
+                # but here we just append to the global stack
+                stack.append(child_arr)
+
+            # Insert/Append Group metadata and data
+            # To keep it logical, we add the grouping band to the stack
+            # but we need to track where it is. Let's append it at the end
+            # of the "block" for this spec.
+            stack.append(group_layer)
+            num_cls[grp_name] = len(reclass)
+            ignore_cls[grp_name] = []
+            parent_map[grp_name] = None
+            parent_cls_map[grp_name] = None
+
+            # Group names (sorted by group ID to match class indices 1..N)
+            sorted_gids = sorted(reclass.keys(), key=int)
+            label_names[grp_name] = [
+                reclass_name.get(gid, f'grp_{gid}')
+                for gid in sorted_gids
+            ]
+
+        # stack all the arrays
+        self.data.label_stack = numpy.stack(stack, axis=0)
+        # populate meta dict
+        self.meta['label_num_cls'] = num_cls
+        self.meta['label_ignore_cls'] = ignore_cls
+        self.meta['label_parent'] = parent_map
+        self.meta['label_parent_cls'] = parent_cls_map
+        self.meta['label_names'] = label_names
 
     def _label_get_stats(self) -> None:
         '''Count present label values and calculate entropy.'''

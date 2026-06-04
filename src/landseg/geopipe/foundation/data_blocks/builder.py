@@ -452,13 +452,23 @@ def _build_a_blk(
         lbl_arr: numpy.ndarray | None = None
         if lbl is not None and lbl_window is not None:
             lbl_arr = lbl.read(window=lbl_window, boundless=True)
-            meta['label_nodata'] = lbl.nodata
             assert isinstance(lbl_arr, numpy.ndarray) # typing
-            # label stacking and topology building is now here
-            lbl_arr, meta = _get_label_stack(lbl_arr, contxt.meta_src, meta)
+            meta['label_nodata'] = lbl.nodata
+            # sanity check
+            expected_bands = len(contxt.meta_src['label_specs'])
+            if lbl_arr.shape[0] != expected_bands:
+                raise ValueError(
+                    f'Label targets number != input label array shape on axis 0'
+                    f' {lbl_arr.shape[0]} != {expected_bands}'
+                )
 
     # create and return DataBlock instance
-    output_block = geo_core.DataBlock.build(img_arr, lbl_arr, padded_dem, meta)
+    output_block = geo_core.DataBlock.build(
+        raw_arrays=(img_arr, lbl_arr),
+        img_padded_dem=padded_dem,
+        lbl_spec=contxt.meta_src['label_specs'],
+        block_meta=meta
+    )
     # by default save to provided target path
     if save:
         assert save_fpath
@@ -501,125 +511,3 @@ def _read_w_pad(
         mode='reflect'
     )
     return expanded_padded
-
-def _get_label_stack(
-    label_array: numpy.ndarray,
-    meta_src: _BlockBuilderMeta,
-    meta: geo_core.DataBlockMeta,
-):
-    '''
-    Construct a multi-layer label stack based on specs and reclass rules.
-
-    Input arrays are processed sequentially. Bands without reclass maps are
-    added as-is. Bands with reclass maps are converted into group-ID layers,
-    followed by additional slices for each group (child layers).
-    '''
-
-    # containers
-    num_cls: dict[str, int] = {}
-    ignore_cls: dict[str, list[int]] = {}
-    parent_map: dict[str, str | None] = {}
-    parent_cls_map: dict[str, int | None] = {}
-    label_names: dict[str, list[str]] = {}
-
-    # sanity check
-    expected_bands = len(meta_src['label_specs'])
-    if label_array.shape[0] != expected_bands:
-        raise ValueError(
-            f'Label targets number != input label array shape on axis 0 '
-            f'{label_array.shape[0]} != {expected_bands}'
-        )
-    stack: list[numpy.ndarray] = []
-
-    # iterate label specs
-    ignore_index = meta['ignore_index']
-    for i, (name, spec) in enumerate(meta_src['label_specs'].items()):
-
-        arr = label_array[i]
-        reclass_name = spec.get('reclass_name', {})
-        cls_name = spec.get('class_name', {})
-
-        # 1. Add the Raw Masked band (Original Class IDs)
-        to_ignore = list(spec['ignore_cls']) + [ignore_index]
-        raw_mask = ~numpy.isin(arr, to_ignore)
-        raw_valid = numpy.where(raw_mask, arr, ignore_index)
-        stack.append(raw_valid)
-
-        label_names[name] = [
-            cls_name.get(str(j + 1), f'cls_{j + 1}')
-            for j in range(spec['num_cls'])
-        ]
-
-        num_cls[name] = spec['num_cls']
-        ignore_cls[name] = spec['ignore_cls']
-        parent_map[name] = None
-        parent_cls_map[name] = None
-
-        reclass = spec.get('reclass')
-        if not reclass:
-            continue
-
-        # 2. Add a Grouping Band (Group IDs)
-        # This band becomes the "parent" for the child slices
-        grp_name = f'{name}_groups'
-        group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
-
-        # Populate Grouping band and create Children
-        for group_id, classes in reclass.items():
-            _mask = numpy.isin(arr, classes)
-            group_layer[_mask] = int(group_id)
-
-            # 3. Create Child slices
-            child_arr = numpy.where(_mask, arr, ignore_index)
-            # re-index original classes in this slice to 1..N
-            for k, cls in enumerate(classes, 1):
-                child_arr[child_arr == cls] = int(k)
-
-            # Append child to stack after grouping layer is pushed
-            # (We'll handle the stack push order below)
-            child_name = reclass_name.get(group_id, f'{grp_name}_{group_id}')
-
-            # Meta for child (parent is the grouping layer)
-            num_cls[child_name] = len(classes)
-            ignore_cls[child_name] = []
-            parent_map[child_name] = grp_name
-            parent_cls_map[child_name] = int(group_id)
-
-            # Child class names (derived from original class names)
-            label_names[child_name] = [
-                cls_name.get(str(c), f'cls_{c}')
-                for c in classes
-            ]
-
-            # Temporary list to manage push order if needed,
-            # but here we just append to the global stack
-            stack.append(child_arr)
-
-        # Insert/Append Group metadata and data
-        # To keep it logical, we add the grouping band to the stack
-        # but we need to track where it is. Let's append it at the end
-        # of the "block" for this spec.
-        stack.append(group_layer)
-        num_cls[grp_name] = len(reclass)
-        ignore_cls[grp_name] = []
-        parent_map[grp_name] = None
-        parent_cls_map[grp_name] = None
-
-        # Group names (sorted by group ID to match class indices 1..N)
-        sorted_gids = sorted(reclass.keys(), key=int)
-        label_names[grp_name] = [
-            reclass_name.get(gid, f'grp_{gid}')
-            for gid in sorted_gids
-        ]
-
-    # stack all the arrays
-    _label_array = numpy.stack(stack, axis=0)
-
-    # populate meta dict
-    meta['label_num_cls'] = num_cls
-    meta['label_ignore_cls'] = ignore_cls
-    meta['label_parent'] = parent_map
-    meta['label_parent_cls'] = parent_cls_map
-    meta['label_names'] = label_names
-
-    return _label_array, meta
