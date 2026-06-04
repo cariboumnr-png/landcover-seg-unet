@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Catalog adapter utilities.
 
@@ -29,6 +31,7 @@ and analysis.
 
 # standard imports
 import dataclasses
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -36,6 +39,15 @@ import landseg.geopipe.core as geo_core
 # typing aliases
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
+
+class _CatalogViewConfig(typing.Protocol):
+    '''Typed configuration container for catalog views.'''
+    @property
+    def valid_pxs(self) -> dict[str, float]: ...
+    @property
+    def focal_target(self) -> str | None: ...
+    @property
+    def non_overlapping_test_grid(self) -> bool: ...
 
 @dataclasses.dataclass
 class DataBlocksView:
@@ -56,10 +68,7 @@ def data_blocks_adapter(
     dev_catalog: str,
     dev_schema: str,
     test_catalog: str,
-    *,
-    valid_thresholds: dict[str, float],
-    focal_target: str | None = None,
-    non_overlapping_test_grid: bool = True
+    config: _CatalogViewConfig
 ) -> DataBlocksView:
     '''
     Load and adapt development and test blocks into a structured view.
@@ -96,11 +105,11 @@ def data_blocks_adapter(
     block_size = (image_shape['H'], image_shape['W'])
 
     # parse dev data catalog
-    assert focal_target in data_schema['labels']['label_ignore_cls']
-    dev = _parse(dev_catalog, block_size, valid_thresholds, focal_target)
+    assert config.focal_target in data_schema['labels']['label_ignore_cls']
+    dev = _parse(dev_catalog, block_size, config.valid_pxs, config.focal_target)
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, block_size, valid_thresholds, focal_target)
+        test = _parse(test_catalog, block_size, config.valid_pxs, config.focal_target)
     except artifacts.ArtifactError:
         test = None
 
@@ -109,7 +118,7 @@ def data_blocks_adapter(
         test_blocks = None
     else:
     # whether to filter test blocks only on a non-overlapping grid (base)
-        if non_overlapping_test_grid:
+        if config.non_overlapping_test_grid:
             test_blocks = list(
                 v for k, v in test.valid_file_paths.items()
                 if k in test.base_class_counts

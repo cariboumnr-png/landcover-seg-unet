@@ -36,13 +36,14 @@ field = dataclasses.field
 
 # -------------------------------DATA  TRANSFORM-------------------------------
 @dataclasses.dataclass
-class _Thresholds:
-    blk_thres_dev: float = 0.75
-    blk_thres_test: float = 0.1
+class _CatalogView:
+    valid_pxs: dict[str, float] = field(default_factory=lambda: {'image': 0.9})
+    focal_target: str | None = None
+    non_overlapping_test_grid: bool = True
 
     def validate(self):
-        utils.must_within(self.blk_thres_dev, 'dev block valid px threshold', 0, 1)
-        utils.must_within(self.blk_thres_test, 'test block valid px threshold', 0, 1)
+        for k, v in self.valid_pxs.items():
+            utils.must_within(v, f'{k} valid threshold', 0, 1)
 
 @dataclasses.dataclass
 class _Partition:
@@ -74,7 +75,7 @@ class _Hydration:
 # ----- composite
 @dataclasses.dataclass
 class DataTransform:
-    threshold: _Thresholds = field(default_factory=_Thresholds)
+    catalog: _CatalogView = field(default_factory=_CatalogView)
     partition: _Partition = field(default_factory=_Partition)
     scoring: _Scoring = field(default_factory=_Scoring)
     hydration: _Hydration = field(default_factory=_Hydration)
@@ -84,7 +85,7 @@ class DataTransform:
     )
 
     def validate(self):
-        self.threshold.validate()
+        self.catalog.validate()
         self.partition.validate()
         self.scoring.validate()
         self.hydration.validate()

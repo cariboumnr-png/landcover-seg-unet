@@ -58,10 +58,7 @@ def prepare(config: configs.RootConfig):
         foundation_paths.data_blocks.dev.catalog,
         foundation_paths.data_blocks.dev.schema,
         foundation_paths.data_blocks.test.catalog,
-        # TEMP hardcode for testing
-        valid_thresholds={'polytype': 0.8},
-        focal_target='polytype',
-        non_overlapping_test_grid=True
+        config=config.transform.catalog
     )
 
     # datablocks partition
