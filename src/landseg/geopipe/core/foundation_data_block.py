@@ -186,6 +186,8 @@ class DataBlock:
             'image_band_map': {},
             'image_stats': {}
         }
+        # label specs type
+        self.lbl_specs: dict[str, LabelSpecs]
 
     # ----- alternative constructor
     @classmethod
@@ -224,6 +226,7 @@ class DataBlock:
         '''
 
         self = cls()
+        self.lbl_specs = lbl_specs
         img_arr, lbl_arr = raw_arrays
         # update meta with input
         self.meta.update(block_meta)
@@ -235,8 +238,7 @@ class DataBlock:
             # assertions - both 3 dims with the same H and W
             assert len(lbl_arr.shape) == 3 and len(img_arr.shape) == 3
             assert lbl_arr.shape[-2] == img_arr.shape[-2]
-            self.data.label_stack = lbl_arr.astype(numpy.uint8)
-            self.data.label = self.data.label_stack[0]
+            self.data.label = lbl_arr.astype(numpy.uint8) # [0, 256)
             self.meta['has_label'] = True
         # otherwise give label related data a place holder
         else:
@@ -256,7 +258,8 @@ class DataBlock:
         # ---labels specs
         # only if labels are provided
         if self.meta['has_label']:
-            self._label_get_stack(lbl_specs)
+            self._label_get_stack()
+            self._label_build_topology()
             self._label_get_stats()
 
         # sanity check self.data and return self to allow chained calls
@@ -449,13 +452,54 @@ class DataBlock:
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
-    def _label_get_stack(self, lbl_specs: dict[str, LabelSpecs]):
+    def _label_get_stack(self) -> None:
         '''
-        Construct a multi-layer label stack based on specs and reclass rules.
+        Construct a multi-layer label stack based on label specs.
 
-        Input arrays are processed sequentially. Bands without reclass maps are
-        added as-is. Bands with reclass maps are converted into group-ID layers,
-        followed by additional slices for each group (child layers).
+        Input arrays are processed sequentially to create base layers,
+        child layers for reclassification, and grouping layers.
+        '''
+
+        stack: list[numpy.ndarray] = []
+        ignore_index = self.meta['ignore_index']
+
+        # iterate label specs
+        for i, spec in enumerate(self.lbl_specs.values()):
+            arr = self.data.label[i]
+
+            # append base layer from original Class IDs with masking)
+            to_ignore = list(spec['ignore_cls']) + [ignore_index]
+            mask = ~numpy.isin(arr, to_ignore)
+            stack.append(numpy.where(mask, arr, ignore_index))
+
+            # skip if no reclass is defined for this label
+            reclass = spec.get('reclass')
+            if not reclass:
+                continue
+            # grouping layers and children
+            group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+            for group_id, classes in reclass.items():
+                mask = numpy.isin(arr, classes)
+                group_layer[mask] = int(group_id) # modify in-place
+
+                # create child slice: re-index original classes to 1..N
+                child_arr = numpy.where(mask, arr, ignore_index)
+                for k, cls_id in enumerate(classes, 1):
+                    child_arr[child_arr == cls_id] = int(k)
+                stack.append(child_arr)
+
+            # append grouping layer last for this specification
+            stack.append(group_layer)
+
+        # store the final stack
+        self.data.label_stack = numpy.stack(stack, axis=0)
+
+    def _label_build_topology(self) -> None:
+        '''
+        Construct the metadata topology for the label stack.
+
+        Populates self.meta with hierarchy, class counts, and naming
+        conventions derived from the label specifications.
         '''
 
         # containers
@@ -465,90 +509,49 @@ class DataBlock:
         parent_cls_map: dict[str, int | None] = {}
         label_names: dict[str, list[str]] = {}
 
-        stack: list[numpy.ndarray] = []
         # iterate label specs
-        ignore_index = self.meta['ignore_index']
-        for i, (name, spec) in enumerate(lbl_specs.items()):
-
-            arr = self.data.label[i]
-            reclass_name = spec.get('reclass_name', {})
+        for name, spec in self.lbl_specs.items():
             cls_name = spec.get('class_name', {})
 
-            # 1. Add the Raw Masked band (Original Class IDs)
-            to_ignore = list(spec['ignore_cls']) + [ignore_index]
-            raw_mask = ~numpy.isin(arr, to_ignore)
-            raw_valid = numpy.where(raw_mask, arr, ignore_index)
-            stack.append(raw_valid)
-
+            # base metadata
+            num_cls[name] = spec['num_cls']
+            ignore_cls[name] = spec['ignore_cls']
+            parent_map[name] = None
+            parent_cls_map[name] = None
             label_names[name] = [
                 cls_name.get(str(j + 1), f'cls_{j + 1}')
                 for j in range(spec['num_cls'])
             ]
 
-            num_cls[name] = spec['num_cls']
-            ignore_cls[name] = spec['ignore_cls']
-            parent_map[name] = None
-            parent_cls_map[name] = None
-
+            # skip if no reclass is defined for this label
             reclass = spec.get('reclass')
             if not reclass:
                 continue
 
-            # 2. Add a Grouping Band (Group IDs)
-            # This band becomes the "parent" for the child slices
-            grp_name = f'{name}_groups'
-            group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
-
-            # Populate Grouping band and create Children
-            for group_id, classes in reclass.items():
-                _mask = numpy.isin(arr, classes)
-                group_layer[_mask] = int(group_id)
-
-                # 3. Create Child slices
-                child_arr = numpy.where(_mask, arr, ignore_index)
-                # re-index original classes in this slice to 1..N
-                for k, cls in enumerate(classes, 1):
-                    child_arr[child_arr == cls] = int(k)
-
-                # Append child to stack after grouping layer is pushed
-                # (We'll handle the stack push order below)
-                child_name = reclass_name.get(group_id, f'{grp_name}_{group_id}')
-
-                # Meta for child (parent is the grouping layer)
+            # children metadata
+            grp_name = f'{name}_groups' # fallback genric name
+            reclass_name = spec.get('reclass_name', {})
+            for gid, classes in reclass.items():
+                child_name = reclass_name.get(gid, f'{grp_name}_{gid}')
                 num_cls[child_name] = len(classes)
                 ignore_cls[child_name] = []
                 parent_map[child_name] = grp_name
-                parent_cls_map[child_name] = int(group_id)
-
-                # Child class names (derived from original class names)
+                parent_cls_map[child_name] = int(gid)
                 label_names[child_name] = [
                     cls_name.get(str(c), f'cls_{c}')
                     for c in classes
                 ]
 
-                # Temporary list to manage push order if needed,
-                # but here we just append to the global stack
-                stack.append(child_arr)
-
-            # Insert/Append Group metadata and data
-            # To keep it logical, we add the grouping band to the stack
-            # but we need to track where it is. Let's append it at the end
-            # of the "block" for this spec.
-            stack.append(group_layer)
+            # parent metadata
             num_cls[grp_name] = len(reclass)
             ignore_cls[grp_name] = []
             parent_map[grp_name] = None
             parent_cls_map[grp_name] = None
-
-            # Group names (sorted by group ID to match class indices 1..N)
-            sorted_gids = sorted(reclass.keys(), key=int)
             label_names[grp_name] = [
                 reclass_name.get(gid, f'grp_{gid}')
-                for gid in sorted_gids
+                for gid in sorted(reclass.keys(), key=int)
             ]
 
-        # stack all the arrays
-        self.data.label_stack = numpy.stack(stack, axis=0)
         # populate meta dict
         self.meta['label_num_cls'] = num_cls
         self.meta['label_ignore_cls'] = ignore_cls
