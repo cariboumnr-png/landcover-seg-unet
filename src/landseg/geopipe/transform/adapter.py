@@ -57,7 +57,7 @@ def data_blocks_adapter(
     dev_schema: str,
     test_catalog: str,
     *,
-    valid_px_threshold: float,
+    valid_px_thresholds: dict[str, float],
     non_overlapping_test_grid: bool = True
 ):
     '''
@@ -90,11 +90,10 @@ def data_blocks_adapter(
     block_size = (image_shape['H'], image_shape['W'])
 
     # parse dev data catalog
-    t = valid_px_threshold
-    dev = _parse(dev_catalog, t, block_size)
+    dev = _parse(dev_catalog, block_size, valid_px_thresholds)
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, t, block_size)
+        test = _parse(test_catalog, block_size, valid_px_thresholds)
     except artifacts.ArtifactError:
         test = None
 
@@ -121,9 +120,10 @@ def data_blocks_adapter(
 
 def _parse(
     fpath: str,
-    valid_px_threshold: float,
     block_size: tuple[int, int],
-):
+    valid_px_thresholds: dict[str, float],
+    focal_target: str | None = None
+) -> _Parsed:
     '''Parse acatalog JSON into filtered class counts and file paths.'''
 
     # read catalog JSON to instantiate a class object
@@ -131,10 +131,16 @@ def _parse(
     assert catalog_dict # typing assertion
     catalog = geo_core.DataCatalog.from_dict(catalog_dict)
 
+    # TEMP fallback to the first target if no focus target is specified
+    if not focal_target:
+        focal_target = list(next(iter(catalog.values()))['class_count'].keys())[0]
+
     # all valid entries from catalog
-    t = valid_px_threshold
-    work_catalog = {k: v for k, v in catalog.items() if v['base_valid_px'] > t}
-    catalog_counts = {k: v['base_class_count'] for k, v in work_catalog.items()}
+    work_catalog = {
+        k: v for k, v in catalog.items()
+        if _is_valid_block(v['valid_px_ratios'], valid_px_thresholds)
+    }
+    catalog_counts = {k: v['class_count'][focal_target] for k, v in work_catalog.items()}
 
     # entries on the base grid (no overlap)
     row_size, col_size = block_size
@@ -143,7 +149,7 @@ def _parse(
         # both row and col are divisible
         if v['row_col'][0] % row_size == 0 and v['row_col'][1] % col_size == 0
     }
-    base_counts = {k: v['base_class_count'] for k, v in base_catalog.items()}
+    base_counts = {k: v['class_count'][focal_target] for k, v in base_catalog.items()}
 
     # all block file paths
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
@@ -153,3 +159,16 @@ def _parse(
         valid_class_counts=catalog_counts,
         valid_file_paths=valid_file_paths
     )
+
+def _is_valid_block(
+    valid_thresholds: dict[str, float],
+    valid_ratios: dict[str, float]
+) -> bool:
+    '''Return `True` if all valid thresholds are met.'''
+
+    # iterate ratios and check against threshold (might not be present)
+    for k, v in valid_ratios.items():
+        threshold = valid_thresholds.get(k)
+        if threshold and v < threshold:
+            return False
+    return True
