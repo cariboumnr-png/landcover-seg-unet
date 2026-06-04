@@ -131,4 +131,4 @@ class _LabelsInfo(typing.TypedDict):
     label_parent: dict[str, str | None]
     label_parent_cls: dict[str, int | None]
     label_names: dict[str, list[str]]
-    reclass_color_map: dict[str, list[int]] | None
+    label_color_map: dict[str, list[int]] | None
