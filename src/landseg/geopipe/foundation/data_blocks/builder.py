@@ -66,18 +66,8 @@ class _BlockBuilderMeta(typing.TypedDict):
     used when building each block.
     '''
     image_band_map: dict[str, int]
-    label_specs: dict[str, _LabelSpecs]
+    label_specs: dict[str, geo_core.LabelSpecs]
     label_color_map: typing.NotRequired[dict[str, list[int]]]
-
-class _LabelSpecs(typing.TypedDict):
-    '''Typed dictionary for label specification.'''
-    # required
-    num_cls: int
-    ignore_cls: list[int]
-    # optional
-    class_name: typing.NotRequired[dict[str, str]]
-    reclass: typing.NotRequired[dict[str, list[int]]]
-    reclass_name: typing.NotRequired[dict[str, str]]
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -466,7 +456,7 @@ def _build_a_blk(
     output_block = geo_core.DataBlock.build(
         raw_arrays=(img_arr, lbl_arr),
         img_padded_dem=padded_dem,
-        lbl_spec=contxt.meta_src['label_specs'],
+        lbl_specs=contxt.meta_src['label_specs'],
         block_meta=meta
     )
     # by default save to provided target path

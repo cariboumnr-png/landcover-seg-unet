@@ -49,12 +49,13 @@ __all__ = [
     'GridPayload',
     'GridMeta',
     'ImageBandStats',
+    'LabelSpecs',
     'TransformSchema',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .foundation_data_block import DataBlock, DataBlockMeta
+    from .foundation_data_block import DataBlock, DataBlockMeta, LabelSpecs
     from .foundation_data_catalog import DataCatalog, CatalogEntry
     from .foundation_data_schema import DataSchema
     from .foundation_domain_map import DomainPayload, DomainMeta, DomainTile, DomainTileMap
@@ -63,7 +64,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'DataBlockMeta', 'DataBlock'}:
+    if name in {'DataBlock', 'DataBlockMeta', 'LabelSpecs'}:
         return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
     if name in {'DataCatalog', 'CatalogEntry'}:

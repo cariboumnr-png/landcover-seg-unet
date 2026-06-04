@@ -96,6 +96,16 @@ class DataBlockMeta(typing.TypedDict):
     image_band_map: dict[str, int]
     image_stats: dict[str, dict[str, int | float]]
 
+class LabelSpecs(typing.TypedDict):
+    '''Typed dictionary for label specification.'''
+    # required
+    num_cls: int
+    ignore_cls: list[int]
+    # optional
+    class_name: typing.NotRequired[dict[str, str]]
+    reclass: typing.NotRequired[dict[str, list[int]]]
+    reclass_name: typing.NotRequired[dict[str, str]]
+
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _BlockArrays:
@@ -184,7 +194,7 @@ class DataBlock:
         *,
         raw_arrays: tuple[numpy.ndarray, numpy.ndarray | None],
         img_padded_dem: numpy.ndarray,
-        lbl_spec: dict[str, typing.Any],
+        lbl_specs: dict[str, LabelSpecs],
         block_meta: DataBlockMeta,
     ) -> 'DataBlock':
         '''
@@ -246,7 +256,7 @@ class DataBlock:
         # ---labels specs
         # only if labels are provided
         if self.meta['has_label']:
-            self._label_get_stack(lbl_spec)
+            self._label_get_stack(lbl_specs)
             self._label_get_stats()
 
         # sanity check self.data and return self to allow chained calls
@@ -439,7 +449,7 @@ class DataBlock:
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
-    def _label_get_stack(self, lbl_specs: dict[str, typing.Any]):
+    def _label_get_stack(self, lbl_specs: dict[str, LabelSpecs]):
         '''
         Construct a multi-layer label stack based on specs and reclass rules.
 
