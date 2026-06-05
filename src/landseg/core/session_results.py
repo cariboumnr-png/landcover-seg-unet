@@ -240,6 +240,4 @@ def _get_mean_iou(head_metrics: dict[str, AccumulatedMetrics]) -> float:
     mean_ac /= max(1, len(head_metrics))
 
     # pick iou - prefer iou from active classes if present
-    if not any([mean, mean_ac]):
-        raise ValueError('No validation metrics found')
     return mean_ac if mean_ac else mean
