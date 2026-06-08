@@ -27,7 +27,9 @@ optimizer, and scheduler state along with lightweight training metadata.
 '''
 
 # standard imports
+import os
 import typing
+import time
 # third-party imports
 import torch
 # local imports
@@ -69,7 +71,20 @@ def save_checkpoint(
         'epoch': ckpt_meta['epoch'],
         'step': ckpt_meta['step']
     }
-    torch.save(state, fpath)
+    # safer saving to avoid race conditions
+    tmp = fpath + '.tmp'
+    for attempt in range(10):
+        try:
+            torch.save(state, tmp)
+            # ensure buffers are flushed before rename
+            time.sleep(0.05)
+
+            os.replace(tmp, fpath)
+            return
+        except (PermissionError, RuntimeError) as _:
+            if attempt == 9:
+                raise
+            time.sleep(0.2 * (attempt + 1))
 
 def load_checkpoint(
     *,
