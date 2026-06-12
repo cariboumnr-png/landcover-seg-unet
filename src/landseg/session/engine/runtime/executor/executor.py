@@ -222,8 +222,8 @@ class BatchEngine:
         self.state.batch_out.preds = dict(outputs)
 
         # ----- batch end
-        # update per-head confusion matrix
-        self._update_conf_matrix()
+        # update per-head confusion matrix and aggregate MTL metrics
+        self._update_metrics()
 
     def run_infer_batch(self):
         '''
@@ -260,8 +260,8 @@ class BatchEngine:
         self.state.batch_out.preds = dict(outputs)
 
         # ----- batch end
-        # update per-head confusion matrix
-        self._update_conf_matrix()
+        # update per-head confusion matrix and aggregate MTL metrics
+        self._update_metrics()
         # aggregate to epoch storage (CPU detach)
         self._aggregate_batch_predictions()
 
@@ -394,14 +394,16 @@ class BatchEngine:
         self.state.batch_out.total_loss = total
         self.state.batch_out.head_loss = perhead
 
-    def _update_conf_matrix(self) -> None:
+    def _update_metrics(self) -> None:
         '''
-        Update per-head metric accumulators.
+        Update vertical and horizontal metric accumulators.
 
-        This method performs incremental metric updates only (e.g.
-        confusion matrix accumulation). Final metric computation and
-        reporting are owned by the Trainer or Evaluator at phase
-        boundaries.
+        This method performs incremental updates for:
+        - Per-head confusion matrices (vertical metrics).
+        - Global MTL metrics via the Aggregator (horizontal metrics).
+
+        Final metric computation and reporting are owned by the Trainer
+        or Evaluator at phase boundaries.
         '''
 
         # sanity
