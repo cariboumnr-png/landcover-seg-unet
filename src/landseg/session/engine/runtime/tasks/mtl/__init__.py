@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks`.
+Top-level namespace for `landseg.session.engine.runtime.tasks.mtl`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,40 +32,19 @@ import typing
 
 __all__ = [
     # classes
-    'EngineTasks',
-    'HeadSpec',
-    'CompositeLoss',
-    'ConfusionMatrix',
     'MTLMetricsAggregator',
     'MTLConstraint',
     # functions
-    'build_engine_tasks',
     # types
-    'TaskConfigShape'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import EngineTasks, TaskConfigShape, build_engine_tasks
-    from .heads import HeadSpec
-    from .loss import CompositeLoss
-    from .metrics import ConfusionMatrix
-    from .mtl import MTLMetricsAggregator, MTLConstraint
+    from .aggregator import MTLMetricsAggregator, MTLConstraint
+
 
 def __getattr__(name: str):
 
-    if name in {'EngineTasks', 'TaskConfigShape', 'build_engine_tasks'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'HeadSpec'}:
-        return getattr(importlib.import_module('.heads', __package__), name)
-
-    if name in {'CompositeLoss'}:
-        return getattr(importlib.import_module('.loss', __package__), name)
-
-    if name in {'ConfusionMatrix'}:
-        return getattr(importlib.import_module('.metrics', __package__), name)
-
     if name in {'MTLMetricsAggregator', 'MTLConstraint'}:
-        return getattr(importlib.import_module('.mtl', __package__), name)
+        return getattr(importlib.import_module('.aggregator', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -104,11 +104,20 @@ class _LossTypesConfig:
     tv: _TVLossConfig = field(default_factory=_TVLossConfig)
 
 @dataclasses.dataclass
+class _MTLConstraints:
+    name: str = ''
+    source_head: str = ''
+    trigger_val: int = 0
+    target_head: str = ''
+    forbidden: list[int] = field(default_factory=list)
+
+@dataclasses.dataclass
 class _TasksConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
     excluded_cls: dict[str, list[int]] | None = None
     loss_types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
+    constraints: list[_MTLConstraints] | None = None
 
     def validate(self):
         match self.alpha_fn:

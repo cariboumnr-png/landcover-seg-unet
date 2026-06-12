@@ -16,3 +16,4 @@ loss_types:
     neighbour: 4
   tv:
     weight: 1e-4
+constraints: []

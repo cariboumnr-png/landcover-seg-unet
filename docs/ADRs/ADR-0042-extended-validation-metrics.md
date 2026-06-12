@@ -25,10 +25,10 @@ We will extend the evaluation suite within the `Session` engine (specifically
 targeting the logic in `src/landseg/session/engine/runtime/tasks`) to support a
 "Global MTL Report."
 
-### 2.1. Holistic mIoU Reporting
-The `MetricSuite` will be updated to aggregate mIoU across all registered heads
-in the `HeadManager`. The final report will include a flattened dictionary of
-metrics prefixed by head name (e.g., `val/head_landcover/mIoU`, `val/head_age/mIoU`).
+### 2.1. Holistic mIoU Reporting (existing)
+The `ValStepResults` and `InferStepResults` currently aggregate mIoU across all
+registered (active) heads in the `HeadManager`. The final report includes a
+flattened dictionary of metrics prefixed by head name (via `dict[str, AccumulatedMetrics]` ).
 
 ### 2.2. Global Exact Match (GEM)
 We introduce the **Global Exact Match** metric.

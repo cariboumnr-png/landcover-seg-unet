@@ -21,7 +21,6 @@
 
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
 
 '''
 Engine task construction utilities.
@@ -43,6 +42,7 @@ import landseg.core as core
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
+import landseg.session.engine.runtime.tasks.mtl.aggregator as mtl
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfigShape(typing.Protocol):
@@ -56,40 +56,7 @@ class TaskConfigShape(typing.Protocol):
     @property
     def loss_types(self) -> loss.CompositeLossConfig: ...
     @property
-    def focal(self) -> _FocalLoss: ...
-    @property
-    def dice(self) -> _DiceLoss: ...
-    @property
-    def spectral(self) -> _SpectralLoss: ...
-    @property
-    def tv(self) -> _TotalVariationLoss: ...
-
-class _FocalLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-    @property
-    def gamma(self) -> float: ...
-    @property
-    def reduction(self) -> str: ...
-
-class _DiceLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-    @property
-    def smooth(self) -> float: ...
-
-class _SpectralLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-    @property
-    def alpha(self) -> float: ...
-    @property
-    def neighbour(self) -> int: ...
-
-class _TotalVariationLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-
+    def constraints(self) -> list[mtl.MTLConstraint] | None: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -98,6 +65,7 @@ class EngineTasks:
     headspecs: heads.HeadSpecs
     headlosses: loss.HeadLosses
     headmetrics: metrics.HeadMetrics
+    mtl_aggregator: mtl.MTLMetricsAggregator
 
 # -------------------------------Public Function-------------------------------
 def build_engine_tasks(
@@ -149,10 +117,16 @@ def build_engine_tasks(
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
+    # task - mtl aggregator (GEM and logical constraints)
+    mtl_aggregator = mtl.MTLMetricsAggregator(
+        ignore_index=data_specs.meta.label_specs.ignore_index,
+        constraints=config.constraints or []
+    )
+
     # collect components
     return EngineTasks(
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
-
+        mtl_aggregator=mtl_aggregator
     )
