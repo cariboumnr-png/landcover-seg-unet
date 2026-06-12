@@ -54,10 +54,7 @@ class TaskConfigShape(typing.Protocol):
     @property
     def excluded_cls(self) -> dict[str, list[int]] | None: ...
     @property
-    def loss_types(self) -> _LossTypes: ...
-
-# --------------------------------private  type--------------------------------
-class _LossTypes(typing.Protocol):
+    def loss_types(self) -> loss.CompositeLossConfig: ...
     @property
     def focal(self) -> _FocalLoss: ...
     @property
@@ -142,7 +139,7 @@ def build_engine_tasks(
     # task - heads loss modules
     headlosses = loss.build_headlosses(
         headspecs,
-        config=config,
+        config=config.loss_types,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
