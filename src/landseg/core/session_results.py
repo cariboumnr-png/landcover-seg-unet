@@ -157,16 +157,21 @@ class TrainStepResults:
 class ValStepResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    mtl_metrics: dict[str, float] = field(default_factory=dict)
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
-        return {k: v.as_dict for k, v in self.head_metrics.items()}
+        return {
+            'head_metrics': {k: v.as_dict for k, v in self.head_metrics.items()},
+            'mtl_metrics': self.mtl_metrics
+        }
 
 @dataclasses.dataclass
 class InferStepResults:
     '''Containe for inference results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    mtl_metrics: dict[str, float] = field(default_factory=dict)
     infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)
@@ -174,7 +179,10 @@ class InferStepResults:
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
-        return {k: v.as_dict for k, v in self.head_metrics.items()}
+        return {
+            'head_metrics': {k: v.as_dict for k, v in self.head_metrics.items()},
+            'mtl_metrics': self.mtl_metrics
+        }
 
 @dataclasses.dataclass
 class AccumulatedMetrics:

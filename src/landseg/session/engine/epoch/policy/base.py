@@ -172,25 +172,29 @@ class EngineBase:
         if active_heads is None:
             active_heads = self.state.heads.all_heads
 
+        heads = self.state.heads
         # update runtime state
-        self.state.heads.active_heads = active_heads
-        self.state.heads.frozen_heads = frozen_heads
+        heads.active_heads = active_heads
+        heads.frozen_heads = frozen_heads
 
         # configure model
         self.model.set_active_heads(active_heads)
 
         # deep-copy per-head components into state
-        self.state.heads.active_hspecs = {
+        heads.active_hspecs = {
             h: copy.deepcopy(self.headspecs[h]) for h in active_heads
         }
         # set loss module for active heads
-        self.state.heads.active_hloss = {
+        heads.active_hloss = {
             h: copy.deepcopy(self.headlosses[h]) for h in active_heads
         }
         # set metric module for active heads
-        self.state.heads.active_hmetrics = {
+        heads.active_hmetrics = {
             h: copy.deepcopy(self.headmetrics[h]) for h in active_heads
         }
+        # if more than one head, assign MTL aggregator to state
+        if len(active_heads) > 1:
+            heads.mtl_aggregator = self.runtime.engine_tasks.mtl_aggregator
 
         # set frozen heads to model if provided
         if frozen_heads is not None:
@@ -210,6 +214,7 @@ class EngineBase:
         self.state.heads.active_hspecs = None
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
+        self.state.heads.mtl_aggregator = None
 
     # ----- batch context/output reset
     def _batch_reset(self, bidx: int, _batch: tuple) -> None:
