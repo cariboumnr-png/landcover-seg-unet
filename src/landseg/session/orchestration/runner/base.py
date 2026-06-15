@@ -68,7 +68,7 @@ class BaseRunnerConfig:
     '''
     artifacts_paths: artifacts.ResultsPaths
     metric_name: str = 'iou'
-    track_heads: list[str] | None = None
+    track_heads: dict[str, float] | None = None
     track_mode: str = 'max'
     enable_early_stop: bool = False
     patience_epochs: int | None = 5

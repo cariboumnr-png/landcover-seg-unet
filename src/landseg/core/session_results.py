@@ -96,7 +96,7 @@ class SessionStepResults:
     validation: ValStepResults | None = None
     inference: InferStepResults | None = None
     _metric_name: str = 'iou'
-    _track_heads: list[str] | None = None
+    _track_heads: dict[str, float] | None = None
 
     @property
     def target_objective(self) -> str:
@@ -153,7 +153,7 @@ class SessionStepResults:
     def track(
         self,
         metric_name: str,
-        track_heads: list[str] | None
+        track_heads: dict[str, float] | None
     ):
         '''Tracking configuration'''
 
@@ -265,7 +265,7 @@ def _track_metrics(
     head_metrics: dict[str, AccumulatedMetrics],
     *,
     metric_name: str,
-    track_heads: list[str] | None = None,
+    track_heads: dict[str, float] | None = None,
     mtl_metrics: dict[str, float] | None = None
 ) -> float:
     '''Track metrics as per configuration.'''
@@ -276,27 +276,32 @@ def _track_metrics(
             return mtl_metrics['gem']
 
         case 'iou':
-            if isinstance(track_heads, list):
-                met = [v for k, v in head_metrics.items() if k in track_heads]
-                return _get_mean_iou(met)
+            if isinstance(track_heads, dict):
+                m = {k: v for k, v in head_metrics.items() if k in track_heads}
+                return _get_mean_iou(m, track_heads)
 
             if track_heads is None:
-                met = next(iter(head_metrics.values())) # fall back to 1st head
-                return _get_mean_iou([met])
+                m = next(iter(head_metrics.items())) # fall back to 1st head
+                return _get_mean_iou({m[0]: m[1]}, None)
 
             raise ValueError(f'Invalid tracking head: {track_heads}')
 
         case _:
             raise ValueError(f'Invalid metric name: {metric_name}')
 
-def _get_mean_iou(head_metrics: typing.Sequence[AccumulatedMetrics]) -> float:
+def _get_mean_iou(
+    head_metrics: dict[str, AccumulatedMetrics],
+    head_weights: dict[str, float] | None
+) -> float:
     '''Mean IoU calculation helper.'''
 
     mean = 0.0
     # accumulate from all monitor heads
-    for metrics in head_metrics:
+    for head, metrics in head_metrics.items():
+        # get weight
+        w = head_weights.get(head, 1.0) if head_weights else 1.0
         # pick iou - prefer iou from active classes if present
-        mean += metrics.ac_mean if metrics.ac_mean else metrics.mean
+        mean += w * (metrics.ac_mean if metrics.ac_mean else metrics.mean)
 
     # get average ious
     mean /= max(1, len(head_metrics))

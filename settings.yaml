@@ -135,7 +135,7 @@ session:
     # -----------------------------------------------------------------------
     monitor:
       # head to track for early stopping
-      track_heads: [base]
+      track_heads: {} # empty dict = simple sum IoU from all active heads
       # if True, will stop training early based on validation performance of track_heads
       allow_early_stop: True  # will be DISABLED during <curriculum> training
       # stop training if validation does not improve for this many consecutive epochs
@@ -149,11 +149,11 @@ session:
 
       single: # conitunous training will follow this
         phases:
-          - name: single_phase_parent
+          - name: single_phase
             num_epochs: 10
             start_epoch: 1
             lr_scale: 1.0
-            active_heads: [base]
+            active_heads: null # null = all heads are active
             frozen_heads: null
 
       baseline: # default curriculum training will follow this baseline
