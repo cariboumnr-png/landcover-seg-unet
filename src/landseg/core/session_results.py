@@ -75,6 +75,11 @@ class SessionStepSummary: # pylint: disable=too-many-instance-attributes
         '''Return as a dictionary for serialization.'''
         raw = self.raw_metrics
         return {
+            'phase_name': self.phase_name,
+            'phase_max_epoch': self.phase_max_epoch,
+            'epoch_in_phase': self.epoch_in_phase,
+            'objective_name': self.objective_name,
+            'objective_value': self.objective_value,
             'training': raw.training.as_dict if raw.training else None,
             'validation': raw.validation.as_dict if raw.validation else None,
             'inference': raw.inference.as_dict if raw.inference else None,
@@ -102,14 +107,19 @@ class SessionStepResults:
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
         assert self.validation
-        s = f'Tracking_metrics: {self._metric_name}'
-        if s == 'iou':
+        name = self._metric_name
+        if name == 'iou':
             if self._track_heads is None:
-                _heads = list(self.validation.head_metrics.keys())[0]
-            else:
-                _heads = ', '.join(self._track_heads)
-            s = f'{s} | Active_heads: {_heads}'
-        return s
+                h = list(self.validation.head_metrics.keys())[0]
+                return f'IoU from {h}'
+            h = ' + '.join([f'{k}*{v}' for k, v in self._track_heads.items()])
+            name = f'IoU = {h}'
+            return name
+        if name == 'gem':
+            h = ' & '.join(self.validation.mtl_metrics.keys())
+            return f'Global Exact Match over [{h}]'
+
+        raise ValueError(f'Invalid metric name: {name}')
 
     @property
     def target_metrics(self) -> float:
