@@ -199,7 +199,7 @@ class PhasePolicy:
         '''
 
         epochs: list[core.SessionStepResults] = []
-        for epoch in range(1, self.config.num_epochs + 1):
+        for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
             epoch_metrics = policy.EpochPolicy(
                 epoch_runner=self.runner,
                 phase_name=self.config.name,
@@ -221,12 +221,9 @@ class PhasePolicy:
             return (target_metrics, -1, False)
 
         # update last and current value
-        if epoch == 1:
-            self.tracker.last_value = 0.0
-            self.tracker.curr_value = target_metrics
-        else:
-            self.tracker.last_value = self.tracker.curr_value
-            self.tracker.curr_value = target_metrics
+        is_start = epoch == self.config.start_epoch
+        self.tracker.last_value = 0.0 if is_start else self.tracker.curr_value
+        self.tracker.curr_value = target_metrics
 
         # track by mode
         mode = self.track.track_mode
