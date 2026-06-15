@@ -159,6 +159,10 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.val_results.head_metrics.clear()
         self.val_results.mtl_metrics.clear()
 
+        # reset mtl aggregator if present
+        if self.state.heads.mtl_aggregator is not None:
+            self.state.heads.mtl_aggregator.reset()
+
         # set target dataset
         match self.dataset:
             case 'val': dataloader = self.dataloaders.val
@@ -228,6 +232,10 @@ class MultiHeadEvaluator(policy.EngineBase):
         # reset inference outputs
         self.state.infer_out.clear()
         self.infer_results.mtl_metrics.clear()
+
+        # reset mtl aggregator if present
+        if self.state.heads.mtl_aggregator is not None:
+            self.state.heads.mtl_aggregator.reset()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
