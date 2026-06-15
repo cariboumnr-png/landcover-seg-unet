@@ -161,11 +161,6 @@ class ContinuousRunner(runner.BaseRunner):
                     self._best_epoch_so_far=best_epoch
                     self._is_best_epoch=is_best_epoch
                     self._current_metrics = metrics
-                    # re-assign track_heads per metrics container
-                    self._current_metrics.track(
-                        self.config.metric_name,
-                        self.config.track_heads
-                    )
 
                     # normal yield
                     if not self._is_phase_end:

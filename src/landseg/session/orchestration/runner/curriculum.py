@@ -165,11 +165,6 @@ class CurriculumRunner(runner.BaseRunner):
 
                         # metrics logging
                         self._current_metrics = metrics
-                        # re-assign track_heads per metrics container
-                        self._current_metrics.track(
-                            self.config.metric_name,
-                            self.config.track_heads
-                        )
 
                         # normal yield
                         step = core.SessionStepSummary(

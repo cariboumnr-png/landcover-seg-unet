@@ -141,6 +141,8 @@ class BaseRunner(abc.ABC):
         self.config = base_config
         self.dispatcher = dispatcher
         self.tracking = policy.TrackingConfig(
+            metric_name=self.config.metric_name,
+            track_heads=self.config.track_heads,
             track_mode=self.config.track_mode,
             enable_early_stop=self.config.enable_early_stop,
             patience_epochs=self.config.patience_epochs,
