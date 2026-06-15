@@ -164,7 +164,7 @@ class ValStepResults:
         '''Return as a dictionary for serialization.'''
         return {
             'head_metrics': {k: v.as_dict for k, v in self.head_metrics.items()},
-            'mtl_metrics': self.mtl_metrics
+            'mtl_metrics': dict(self.mtl_metrics) # as a shallow copy
         }
 
 @dataclasses.dataclass
@@ -181,7 +181,7 @@ class InferStepResults:
         '''Return as a dictionary for serialization.'''
         return {
             'head_metrics': {k: v.as_dict for k, v in self.head_metrics.items()},
-            'mtl_metrics': self.mtl_metrics
+            'mtl_metrics': dict(self.mtl_metrics) # as a shallow copy
         }
 
 @dataclasses.dataclass
