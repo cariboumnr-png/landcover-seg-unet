@@ -147,7 +147,7 @@ class _Schedule:
 @dataclasses.dataclass
 class _Monitor:
     metric_name: str = 'iou'
-    track_heads: list[str] = field(default_factory=lambda: ['base'])
+    track_heads: list[str] | None = None
     track_mode: str = 'max'
     allow_early_stop: bool = True
     patience: int | None = 10

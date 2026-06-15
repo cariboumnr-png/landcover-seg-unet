@@ -67,7 +67,8 @@ class BaseRunnerConfig:
         ...
     '''
     artifacts_paths: artifacts.ResultsPaths
-    verbose: bool = True
+    metric_name: str = 'iou'
+    track_heads: list[str] | None = None
     track_mode: str = 'max'
     enable_early_stop: bool = False
     patience_epochs: int | None = 5
@@ -140,15 +141,15 @@ class BaseRunner(abc.ABC):
         self.config = base_config
         self.dispatcher = dispatcher
         self.tracking = policy.TrackingConfig(
-                track_mode=self.config.track_mode,
-                enable_early_stop=self.config.enable_early_stop,
-                patience_epochs=self.config.patience_epochs,
-                delta=self.config.delta,
-            )
+            track_mode=self.config.track_mode,
+            enable_early_stop=self.config.enable_early_stop,
+            patience_epochs=self.config.patience_epochs,
+            delta=self.config.delta,
+        )
         # internal tracking attributes
         self._is_phase_end: bool = False
         self._current_epoch: int = -1
-        self._current_metrics: core.SessionStepResults = core.SessionStepResults() # epoch
+        self._current_metrics = core.SessionStepResults()
 
     @property
     def trainer(self) -> protocols.EngineBaseLike:

@@ -52,8 +52,7 @@ class InferTrackingCallback(callbacks.BaseCallback):
                 infer_results.infer_errors[head],
                 palette={'1': [40, 40, 40], '0': [255, 140, 0]} # grey vs orange
             )
-            # add mean IoU scalar
-            head_metrics[f'{head}_IoU'] = results.raw_metrics.inference_metrics
+            head_metrics[f'{head}_metrics'] = results.raw_metrics.inference_metrics
 
         # broadcast to trackers
         phase = results.phase_name

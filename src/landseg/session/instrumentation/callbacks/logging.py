@@ -61,15 +61,12 @@ class LoggingCallback(callbacks.BaseCallback):
         if self.verbose:
              # training metrics is always neends
             assert metrics.training
-            # validation may or may not be run every epoch
-            mean_iou = metrics.target_metrics # would be -inf if not run
-
             # best so far
             msg = (
-                f'|Total Loss: {metrics.training.total_loss:.4f}|'
-                f'Mean IoU: {mean_iou:.4f}|'
-                f'Best Epoch: {results.best_epoch_so_far}|'
-                f'Best Value: {results.best_value_so_far:.4f}|'
+                f'|Total Loss: {metrics.training.total_loss:.4f}'
+                f'|Tracking Metrics: {metrics.target_metrics:.4f}'
+                f'|Best Epoch: {results.best_epoch_so_far}'
+                f'|Best Value: {results.best_value_so_far:.4f}|'
             )
             t = results.phase_max_epoch
             n = len(str(t))

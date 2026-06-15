@@ -91,16 +91,25 @@ class SessionStepResults:
         validation: Results returned by the evaluator, or None if no
             evaluation step was executed.
     '''
+
     training: TrainStepResults | None = None
     validation: ValStepResults | None = None
     inference: InferStepResults | None = None
+    _metric_name: str = 'iou'
+    _track_heads: list[str] | None = None
 
     @property
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
-        if self.validation:
-            return '|'.join(self.validation.head_metrics.keys())
-        return 'N/A'
+        assert self.validation
+        s = f'Tracking_metrics: {self._metric_name}'
+        if s == 'iou':
+            if self._track_heads is None:
+                _heads = list(self.validation.head_metrics.keys())[0]
+            else:
+                _heads = ', '.join(self._track_heads)
+            s = f'{s} | Active_heads: {_heads}'
+        return s
 
     @property
     def target_metrics(self) -> float:
@@ -111,7 +120,12 @@ class SessionStepResults:
         otherwise compute from all present classes.
         '''
         if self.validation:
-            return _get_mean_iou(self.validation.head_metrics)
+            return _track_metrics(
+                self.validation.head_metrics,
+                metric_name=self._metric_name,
+                track_heads=self._track_heads,
+                mtl_metrics=self.validation.mtl_metrics
+            )
         return -float('inf')
 
     @property
@@ -123,13 +137,31 @@ class SessionStepResults:
         otherwise compute from all present classes.
         '''
         if self.inference:
-            return _get_mean_iou(self.inference.head_metrics)
+            return _track_metrics(
+                self.inference.head_metrics,
+                metric_name=self._metric_name,
+                track_heads=self._track_heads,
+                mtl_metrics=self.inference.mtl_metrics
+            )
         return -float('inf')
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
         return dataclasses.asdict(self)
+
+    def track(
+        self,
+        metric_name: str,
+        track_heads: list[str] | None
+    ):
+        '''Tracking configuration'''
+
+        # force IoU mode if there is only one active head (mtl metrics invalid)
+        if self.validation and len(self.validation.head_metrics) == 1:
+            metric_name = 'iou'
+        object.__setattr__(self, '_metric_name', metric_name)
+        object.__setattr__(self, '_track_heads', track_heads)
 
 @dataclasses.dataclass
 class TrainStepResults:
@@ -229,23 +261,44 @@ class AccumulatedMetrics:
         self._locked = True
 
 # ------------------------------private  function------------------------------
-def _get_mean_iou(head_metrics: dict[str, AccumulatedMetrics]) -> float:
+def _track_metrics(
+    head_metrics: dict[str, AccumulatedMetrics],
+    *,
+    metric_name: str,
+    track_heads: list[str] | None = None,
+    mtl_metrics: dict[str, float] | None = None
+) -> float:
+    '''Track metrics as per configuration.'''
+
+    match metric_name.lower():
+        case 'gem':
+            assert mtl_metrics and 'gem' in mtl_metrics # sanity
+            return mtl_metrics['gem']
+
+        case 'iou':
+            if isinstance(track_heads, list):
+                met = [v for k, v in head_metrics.items() if k in track_heads]
+                return _get_mean_iou(met)
+
+            if track_heads is None:
+                met = next(iter(head_metrics.values())) # fall back to 1st head
+                return _get_mean_iou([met])
+
+            raise ValueError(f'Invalid tracking head: {track_heads}')
+
+        case _:
+            raise ValueError(f'Invalid metric name: {metric_name}')
+
+def _get_mean_iou(head_metrics: typing.Sequence[AccumulatedMetrics]) -> float:
     '''Mean IoU calculation helper.'''
 
-    # retrieve iou metrics from monitor heads
     mean = 0.0
-    mean_ac = 0.0
-
     # accumulate from all monitor heads
-    for metrics in head_metrics.values():
-        # accumulate moniter metrics for stae
-        mean += metrics.mean
-        mean_ac +=  metrics.ac_mean
-        # collect per head metrics formatted strings
+    for metrics in head_metrics:
+        # pick iou - prefer iou from active classes if present
+        mean += metrics.ac_mean if metrics.ac_mean else metrics.mean
 
     # get average ious
     mean /= max(1, len(head_metrics))
-    mean_ac /= max(1, len(head_metrics))
 
-    # pick iou - prefer iou from active classes if present
-    return mean_ac if mean_ac else mean
+    return mean
