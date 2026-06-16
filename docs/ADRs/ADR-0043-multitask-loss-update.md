@@ -1,94 +1,181 @@
-# ADR-0043: Multi-Task Loss Balancing and Logical Consistency Regularization
+# ADR-0043: Consistency Regularization for Multi-Task Learning
 
 **Status:** Proposed
-**Date:** 2026-06-8
+**Date:** 2026-06-16
 
 ## 1. Context
 
-Following **ADR-0041** (Multi-head Architecture) and **ADR-0042** (Extended Metrics),
-we currently calculate loss as a simple arithmetic mean of all head losses.
-Each head currently computes a composite loss:
+Following **ADR-0041** (Multi-head Architecture) and **ADR-0042** (Extended
+Metrics), the framework supports multiple active classification heads with
+per-head validation metrics and cross-head MTL metrics.
 
-$L_{head} = L_{focal} + L_{dice} + L_{spectral} + L_{tv}$.
+The current loss stack already supports configurable weighting at two levels:
 
-While functional, this approach has two primary weaknesses:
-1. **Gradient Imbalance:** Different tasks (e.g., Landcover vs. Canopy Height)
-may have different loss scales and convergence rates. A simple average allows
-tasks with larger loss magnitudes to dominate the shared backbone updates.
-2. **Logical Divergence:** There is no explicit penalty during backpropagation
- when Head A and Head B produce a combination of classes that is physically or
- ecologically impossible.
+1. **Within each head**, `CompositeLoss` combines supervised losses and
+regularizers using configured component weights:
+
+   $$L_{head} =
+   w_f L_{focal} +
+   w_d L_{dice} +
+   w_s R_{spectral} +
+   w_{tv} R_{tv}$$
+
+2. **Across heads**, `multihead_loss` multiplies each head loss by the
+corresponding `HeadSpec.weight` before adding it to the shared total.
+
+Therefore, the main missing piece is not basic loss weighting. The missing piece
+is a differentiable training signal that aligns with the cross-head consistency
+metrics introduced in ADR-0042.
+
+ADR-0042 can detect invalid multi-head predictions after the forward pass, but
+training currently has no explicit penalty for assigning probability mass to
+those invalid states. This means the model can improve per-head focal/dice
+objectives while still learning combinations that are ecologically or physically
+inconsistent.
 
 ## 2. Decision
 
-We will implement a structured MTL Loss Engine that supports weighted aggregation
-and a dedicated "Logical Consistency" loss component.
+We will add an optional **MTL consistency regularizer** that reuses the
+constraint definitions from ADR-0042 and penalizes invalid cross-head probability
+assignments during training.
 
-### 2.1. Weighted Task Aggregation
-Instead of a simple average, the total loss will be defined as:
+This term may be implemented as a PyTorch loss module, but conceptually it is a
+regularizer. Focal and dice remain the primary supervised classification losses.
+Spectral, total variation, and consistency terms are auxiliary regularizers that
+shape the output distribution.
 
-$$L_{total} = \sum_{i \in Heads} (w_i \cdot L_i) + \lambda \cdot L_{consistency}$$
+The total training objective becomes:
 
-*   **Static Weighting:** Initial implementation will allow users to define $w_i$
-in the configuration to manually balance tasks.
-*   **Observability:** Each individual component (Focal, Dice, Spectral, TV) per
-head, as well as the weighted sub-total per head, must be logged to the experiment
-tracker (e.g., MLFlow/WandB).
+$$L_{total} =
+\sum_{h \in Heads} w_h L_h
++ \lambda_{mtl} R_{consistency}$$
 
-### 2.2. Logical Consistency Loss ($L_{consistency}$)
-We will introduce a differentiable penalty for violating domain constraints
-defined in the configuration.
-*   **Mechanism:** Using the "Constraint Matrix" (from ADR-0042), we will calculate
-the probability of "invalid states."
-*   **Soft Constraints:** Rather than a hard check, we use the Softmax outputs of
-the involved heads. If Head A predicts probability $P(A_{water})$ and Head B predicts
-$P(B_{trees})$, and the combination is invalid, the loss is $P(A_{water}) \cdot P(B_{trees})$.
-Minimizing this product forces the model to reduce the confidence of at least one
-of the conflicting predictions.
+where:
 
-### 2.3. Task-Wise Regularization (Spectral/TV)
-The small regularizers (Spectral, TV) will remain local to each head's loss
-calculation to ensure spatial smoothness and spectral integrity are maintained
-for each specific output domain.
+* $L_h$ is the existing per-head composite objective.
+* $w_h$ is the existing head-level weight from `HeadSpec`.
+* $R_{consistency}$ is the new cross-head consistency regularizer.
+* $\lambda_{mtl}$ is a user-configured consistency weight.
 
-### 2.4. Dynamic Weighting Support (Future-Proofing)
-The architecture will be designed to eventually support **Uncertainty Weighting**
-(Kendall et al.), where $w_i$ is a learnable parameter that adjusts based on the
-homoscedastic uncertainty of each task, preventing "noisy" tasks from corrupting
-the backbone.
+### 2.1. Consistency Regularizer
+
+The regularizer uses softmax probabilities rather than hard class IDs. For each
+configured ADR-0042 constraint:
+
+```yaml
+session:
+  engine_tasks:
+    constraints:
+      - name: water_cannot_have_age
+        source_head: landcover
+        trigger_val: 1
+        target_head: age
+        forbidden: [1, 2, 3, 4]
+```
+
+the regularizer computes the probability that a pixel is in the invalid state:
+
+$$P(source = trigger) \cdot P(target \in forbidden)$$
+
+The batch regularizer is the mean invalid probability over valid pixels and
+configured constraints. Minimizing this value encourages the model to reduce
+confidence in at least one side of each invalid combination.
+
+### 2.2. Masking and Ignore Handling
+
+Consistency regularization must follow the same validity semantics as the
+ADR-0042 violation metrics:
+
+* Pixels with `ignore_index` in either involved head are excluded.
+* Constraints are skipped when either involved head is inactive.
+* Constraint class IDs are 1-based in configuration and are mapped to 0-based
+logit/probability indices internally.
+* For hierarchical heads, existing parent-child masking should remain local to
+the supervised head losses unless a consistency constraint explicitly involves
+that parent/child pair.
+
+### 2.3. Configuration
+
+The regularizer should live with session engine task configuration, next to the
+ADR-0042 constraints it consumes:
+
+```yaml
+session:
+  engine_tasks:
+    consistency:
+      weight: 0.0
+      reduction: mean
+    constraints:
+      - name: water_cannot_have_dep
+        source_head: polytype_groups
+        trigger_val: 2
+        target_head: lastdep
+        forbidden: [1, 2, 3]
+```
+
+`weight: 0.0` disables the regularizer while preserving the metric-only
+constraint behavior from ADR-0042.
+
+### 2.4. Observability
+
+The training result should expose the consistency regularizer separately from
+per-head losses so users can tell whether it is active and whether it is
+dominating the supervised objective.
+
+At minimum, training output should distinguish:
+
+* Per-head supervised/composite losses.
+* The unweighted consistency regularizer value.
+* The weighted consistency contribution to total loss.
+
+Full component-level logging for focal, dice, spectral, and TV remains useful,
+but it is a broader loss observability improvement and does not block this ADR.
 
 ## 3. Proposed Implementation Structure
 
-1.  **`MTLLossAggregator`**: A class that takes the collection of head outputs
-and targets.
-2.  **`ConsistencyLoss` Module**: A specific loss module that takes the logic
-map and returns a scalar penalty based on cross-head probability distributions.
-3.  **Configuration Schema Update**:
-    ```yaml
-    training:
-      loss_weights:
-        landcover: 1.0
-        age_class: 0.5
-        consistency_weight: 0.2  # Lambda
-    ```
+1. **`ConsistencyRegularizer`**: A differentiable module that consumes
+`multihead_preds`, `multihead_targets`, active constraints, and `ignore_index`.
+It returns a scalar tensor plus optional per-constraint diagnostic values.
+
+2. **Task factory wiring**: Reuse the validated ADR-0042 constraints when
+constructing the consistency regularizer. Constraint validation should remain
+centralized so metrics and regularization share the same contract.
+
+3. **Loss aggregation update**: Extend `multihead_loss` or wrap it with an MTL
+loss aggregator that adds
+`consistency.weight * consistency_regularizer(...)` after the existing per-head
+loss accumulation.
+
+4. **Training result schema update**: Add a small structured field for auxiliary
+regularizers, rather than mixing consistency values into per-head loss names.
 
 ## 4. Consequences
 
 ### Positive
-*   **Task Synergy:** Encourages the model to learn features that benefit all
-tasks, not just the one with the highest gradient magnitude.
-*   **Physically Plausible Maps:** Drastically reduces "impossible" pixel predictions
-(e.g., forest in the middle of a lake) by penalizing them during training, not
-just flagging them in metrics.
-*   **Better Convergence:** Balancing weights prevents "gradient tug-of-war"
-where tasks pull the backbone in opposite directions.
+
+* **Metric-aligned training:** The training objective directly addresses the
+same invalid states measured by ADR-0042 violation metrics.
+* **More plausible maps:** The model is discouraged from placing probability
+mass on impossible cross-head combinations, not merely flagged after inference.
+* **Scoped extension:** Existing focal/dice losses, spectral regularization, TV
+regularization, and head weighting remain intact.
 
 ### Negative
-*   **Hyperparameter Complexity:** Introduces new weights ($w_i$ and $\lambda$)
-that may require tuning.
-*   **Memory Overhead:** Calculating the consistency loss requires keeping the
-full probability distributions (Softmax) for multiple heads in memory simultaneously before reduction.
+
+* **Additional tuning:** The consistency weight introduces another hyperparameter.
+Poorly tuned values could under-constrain the model or suppress valid supervised
+learning.
+* **Constraint dependence:** Incorrect domain constraints can bias training in
+the wrong direction.
+* **Extra compute:** The regularizer requires softmax probabilities for involved
+heads and additional per-pixel reductions during training.
 
 ## 5. Future Work
-*   Implementation of **GradNorm** or **Equal Design Loss** to automate the
-discovery of optimal $w_i$ values.
+
+* Dynamic task weighting such as uncertainty weighting, GradNorm, or related
+methods for adapting `HeadSpec.weight` during training.
+* Richer component-level loss logging for focal, dice, spectral, TV, and
+consistency terms.
+* Constraint schedules, such as warming up the consistency weight after the
+supervised heads have started learning stable class boundaries.
+* Higher-order constraints involving more than two heads.
