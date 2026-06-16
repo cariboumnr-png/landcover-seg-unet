@@ -142,6 +142,11 @@ def _validate_constraints(
     if constraints is None:
         return None
 
+    # raise if constraints look duplicated (same names)
+    names = [c.name for c in constraints]
+    if len(set(names)) != len(names):
+        raise ValueError(f'Duplicated constraints in {names}')
+
     # get heads/indices as {head_name: list of 1-based indices}
     heads_idx = {
         k: list(range(1, len(v) + 1))
@@ -150,12 +155,35 @@ def _validate_constraints(
 
     # validate all constraints and return
     for c in constraints:
+
+        if c.source_head == c.target_head:
+            raise ValueError(
+                f'Source and target heads can not be the same:'
+                f'souce: {c.source_head} vs target: {c.target_head}'
+            )
+
         if c.source_head not in heads_idx:
-            raise ValueError(f'Invalid source head: {c.source_head}')
+            raise ValueError(
+                f'Invalid source head: {c.source_head}, '
+                f'allowed: {list(heads_idx.keys())}'
+            )
+
         if c.trigger_val not in heads_idx[c.source_head]:
-            raise ValueError(f'Invalid trigger value: {c.trigger_val}')
+            raise ValueError(
+                f'Invalid trigger value: {c.trigger_val}, '
+                f'allowed: {heads_idx[c.source_head]}'
+            )
+
         if c.target_head not in heads_idx:
-            raise ValueError(f'Invalid target head: {c.target_head}')
+            raise ValueError(
+                f'Invalid target head: {c.target_head}, '
+                f'allowed: {list(heads_idx.keys())}'
+
+            )
         if not all(f in heads_idx[c.target_head] for f in c.forbidden):
-            raise ValueError(f'Invalid forbidden classes: {c.forbidden}')
+            raise ValueError(
+                f'Invalid forbidden classes: {c.forbidden}, '
+                f'allowed: {heads_idx[c.target_head]}'
+            )
+
     return constraints
