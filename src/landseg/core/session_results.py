@@ -307,14 +307,14 @@ def _get_mean_iou(
     '''Mean IoU calculation helper.'''
 
     mean = 0.0
+    ws = []
     # accumulate from all monitor heads
     for head, metrics in head_metrics.items():
         # get weight
         w = head_weights.get(head, 1.0) if head_weights else 1.0
+        ws.append(w)
         # pick iou - prefer iou from active classes if present
         mean += w * (metrics.ac_mean if metrics.ac_mean else metrics.mean)
 
-    # get average ious
-    mean /= max(1, len(head_metrics))
-
-    return mean
+    # return the weighted average
+    return mean / sum(ws)
