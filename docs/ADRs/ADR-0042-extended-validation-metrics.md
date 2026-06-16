@@ -1,14 +1,16 @@
 # ADR-0042: Extended Metrics for Multi-Task Learning (MTL) Consistency
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-06-08
+**Accepted:** 2026-06-16
 
 ## 1. Context
 
 With the adoption of **ADR-0041**, the framework supports pixel-level Multi-Task
 Learning (MTL) where multiple classification heads (Factorial or Hierarchical)
-operate on a shared backbone. Currently, metrics are computed and reported primarily
-on a per-head basis (e.g., mIoU for Head A, mIoU for Head B).
+operate on a shared backbone. Metrics are computed and persisted on a per-head
+basis (e.g., mIoU for Head A, mIoU for Head B), but MTL workflows also need
+metrics that evaluate cross-head behavior.
 
 However, in spatial segmentation, the relationship between these tasks is often
 as important as the individual task performance. We need to evaluate:
@@ -21,33 +23,41 @@ Landcover head predicts "Water").
 
 ## 2. Decision
 
-We will extend the evaluation suite within the `Session` engine (specifically
-targeting the logic in `src/landseg/session/engine/runtime/tasks`) to support a
-"Global MTL Report."
+We extended the evaluation suite within the `Session` engine, specifically the
+logic in `src/landseg/session/engine/runtime/tasks`, with an MTL metrics
+aggregator. The aggregator computes cross-head metrics during validation and
+inference and persists them through `ValStepResults` and `InferStepResults`
+alongside the existing per-head metrics.
+
+The current implementation focuses on the runtime metric contract and persisted
+step results. Console/dashboard reporting remains intentionally lightweight and
+can be formalized as part of a broader reporting pass.
 
 ### 2.1. Holistic mIoU Reporting (existing)
 The `ValStepResults` and `InferStepResults` currently aggregate mIoU across all
-registered (active) heads in the `HeadManager`. The final report includes a
-flattened dictionary of metrics prefixed by head name (via `dict[str, AccumulatedMetrics]` ).
+registered active heads. The persisted step results include a dictionary of
+per-head metrics via `dict[str, AccumulatedMetrics]`.
 
 ### 2.2. Global Exact Match (GEM)
-We introduce the **Global Exact Match** metric.
+We introduced the **Global Exact Match** metric.
 * **Definition:** A pixel is counted as a "match" if and only if the predicted
 class ID matches the ground truth for **every** active head simultaneously.
-* **Implementation:** This requires computing a bitwise/logical AND across the
-individual "correctness" masks of all heads before spatial reduction.
+* **Implementation:** The runtime aggregator computes a logical AND across the
+individual correctness masks of all active heads before spatial reduction.
 * **Purpose:** This provides a strict measure of the model's ability to capture
 the factorial state of a pixel correctly.
 
 ### 2.3. Constraint Violation Metrics (Optional/Configurable)
-To support domain-specific logic, we will introduce an optional **Violation Detector**.
-* **Input:** A user-defined "Constraint Matrix" or "Constraint Function" passed
-via configuration.
-* **Mechanism:** The detector evaluates pairs (or sets) of head predictions. A
-"Violation" is recorded if `Head_A == Class_X` and `Head_B == Class_Y` where
-$(X, Y)$ is an invalid state.
-* **Output:** A `ViolationRate` metric ($0.0$ to $1.0$), where $1.0$ indicates
-every pixel violates a constraint and $0.0$ indicates perfect logical consistency.
+To support domain-specific logic, we introduced an optional **Violation
+Detector**.
+* **Input:** User-defined pairwise constraints passed via session engine task
+configuration.
+* **Mechanism:** The detector evaluates configured head-prediction pairs. A
+"Violation" is recorded if `source_head == trigger_val` and `target_head` is in
+the configured `forbidden` class list.
+* **Output:** A `violation_{name}` metric ($0.0$ to $1.0$), where $1.0$
+indicates every valid pixel violates the named constraint and $0.0$ indicates
+perfect logical consistency for that constraint.
 
 ### 2.4. Handling of Ignore Indices
 In MTL scenarios, one head might have an `ignore_index` while another is valid
@@ -58,21 +68,26 @@ areas with complete ground truth.
 * **Violation Rate:** Violations will only be calculated for pixels where all
 involved heads have valid (non-ignored) predictions.
 
-## 3. Proposed Implementation Structure
+## 3. Implementation Structure
 
-1. **`MTLMetricAggregator`**: A new component within the task runtime that consumes
-the `y_dict` (predictions) and `target_dict` (labels).
-2. **Registry-based Constraints**: Users define violations in the experiment YAML, e.g.:
+1. **`MTLMetricsAggregator`**: A task-runtime component that consumes predicted
+and target class-ID dictionaries.
+2. **Validated Constraints**: Users define violations in the experiment YAML,
+using 1-based class IDs consistent with label tensors:
 
    ```yaml
-   metrics:
-     constraints:
-       - name: "water_cannot_have_age"
-         head_a: "landcover"
-         val_a: 0 # Water
-         head_b: "age"
-         invalid_b: [1, 2, 3, 4] # Any age class
+   session:
+     engine_tasks:
+       constraints:
+         - name: water_cannot_have_age
+           source_head: landcover
+           trigger_val: 1
+           target_head: age
+           forbidden: [1, 2, 3, 4]
    ```
+
+Constraint names must be unique, source and target heads must differ, and all
+referenced heads/classes are validated against `DataSpecs`.
 
 ## 4. Consequences
 
@@ -81,12 +96,12 @@ the `y_dict` (predictions) and `target_dict` (labels).
 the relationships between tasks or just memorizing them independently.
 * **Domain Safety:** Specifically addresses ecological validity, ensuring maps
 produced are logically sound.
-* **Standardized Reporting:** Centralizes MTL metrics instead of requiring users
-to post-process results in notebooks.
+* **Standardized Persistence:** Centralizes MTL metrics in session step results
+instead of requiring users to post-process raw predictions in notebooks.
 
 ### Negative
 * **Computational Cost:** Calculating joint masks and iterating over constraint
-lists adds overhead to the validation phase.
+lists adds overhead to validation and inference phases.
 * **Memory Pressure:** Storing multiple correctness masks during the batch
 aggregation might increase CPU/GPU memory usage slightly.
 
@@ -96,6 +111,10 @@ aggregation might increase CPU/GPU memory usage slightly.
 Loss" to penalize logical inconsistencies during training.
 * **Confusion Matrix Overlays:** Visualizing joint confusion between two heads
  to identify where specific class combinations are failing.
+* **Reporting Formalization:** Expanding console, dashboard, and report outputs
+for all metric families, including MTL metrics.
+* **Automated Tests:** Adding focused metric tests once the broader project API
+stabilizes.
 
 
 ### Summary of the ADR focus:
