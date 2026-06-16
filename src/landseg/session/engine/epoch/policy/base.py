@@ -195,6 +195,9 @@ class EngineBase:
         # if more than one head, assign MTL aggregator to state
         if len(active_heads) > 1:
             heads.mtl_aggregator = self.runtime.engine_tasks.mtl_aggregator
+        # avoid stale aggregator if heads change during curriculum training
+        else:
+            heads.mtl_aggregator = None
 
         # set frozen heads to model if provided
         if frozen_heads is not None:
