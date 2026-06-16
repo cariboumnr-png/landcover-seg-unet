@@ -120,7 +120,7 @@ def build_engine_tasks(
     # task - mtl aggregator (GEM and logical constraints)
     mtl_aggregator = mtl.MTLMetricsAggregator(
         ignore_index=data_specs.meta.label_specs.ignore_index,
-        constraints=config.constraints or []
+        constraints=_validate_constraints(config.constraints, data_specs)
     )
 
     # collect components
@@ -130,3 +130,32 @@ def build_engine_tasks(
         headmetrics=headmetrics,
         mtl_aggregator=mtl_aggregator
     )
+
+# ------------------------------private  function------------------------------
+def _validate_constraints(
+    constraints: list[mtl.MTLConstraint] | None,
+    data_specs: core.DataSpecs
+) -> list[mtl.MTLConstraint] | None:
+    '''Validate constraints against data specifications.'''
+
+    # early exit if list is empty
+    if constraints is None:
+        return None
+
+    # get heads/indices as {head_name: list of 1-based indices}
+    heads_idx = {
+        k: list(range(1, len(v) + 1))
+        for k, v, in data_specs.heads.class_counts.items()
+    }
+
+    # validate all constraints and return
+    for c in constraints:
+        if c.source_head not in heads_idx:
+            raise ValueError(f'Invalid source head: {c.source_head}')
+        if c.trigger_val not in heads_idx[c.source_head]:
+            raise ValueError(f'Invalid trigger value: {c.trigger_val}')
+        if c.target_head not in heads_idx:
+            raise ValueError(f'Invalid target head: {c.target_head}')
+        if not all(f in heads_idx[c.target_head] for f in c.forbidden):
+            raise ValueError(f'Invalid forbidden classes: {c.forbidden}')
+    return constraints
