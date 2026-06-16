@@ -33,7 +33,7 @@ class ValTrackingCallback(callbacks.BaseCallback):
         phase = results.phase_name
         step = results.epoch_in_phase
         for tracker in self._trackers:
-            tracker.log_scalar(f'{phase}_mean_IoU', metrics.target_metrics, step)
+            tracker.log_scalar(f'{phase}_metrics', metrics.target_metrics, step)
             tracker.flush()
 
     def on_session_end(self) -> None:

@@ -93,13 +93,13 @@ class EpochPolicy:
         yield events.EpochStart(self.epoch, self.phase)
 
         # delegate execution to epoch runner
-        epoch_metrics = self.runner.run_epoch(self.epoch)
+        epoch_results = self.runner.run_epoch(self.epoch)
 
         # epoch ends
         yield events.EpochEnd(self.epoch, self.phase)
 
         # enables downstream `yield from`
-        return epoch_metrics
+        return epoch_results
 
     def execute(self) -> core.SessionStepResults:
         '''

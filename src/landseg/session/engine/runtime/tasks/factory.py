@@ -21,7 +21,6 @@
 
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
 
 '''
 Engine task construction utilities.
@@ -43,6 +42,7 @@ import landseg.core as core
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
+import landseg.session.engine.runtime.tasks.mtl.aggregator as mtl
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfigShape(typing.Protocol):
@@ -54,45 +54,9 @@ class TaskConfigShape(typing.Protocol):
     @property
     def excluded_cls(self) -> dict[str, list[int]] | None: ...
     @property
-    def loss_types(self) -> _LossTypes: ...
-
-# --------------------------------private  type--------------------------------
-class _LossTypes(typing.Protocol):
+    def loss_types(self) -> loss.CompositeLossConfig: ...
     @property
-    def focal(self) -> _FocalLoss: ...
-    @property
-    def dice(self) -> _DiceLoss: ...
-    @property
-    def spectral(self) -> _SpectralLoss: ...
-    @property
-    def tv(self) -> _TotalVariationLoss: ...
-
-class _FocalLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-    @property
-    def gamma(self) -> float: ...
-    @property
-    def reduction(self) -> str: ...
-
-class _DiceLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-    @property
-    def smooth(self) -> float: ...
-
-class _SpectralLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-    @property
-    def alpha(self) -> float: ...
-    @property
-    def neighbour(self) -> int: ...
-
-class _TotalVariationLoss(typing.Protocol):
-    @property
-    def weight(self) -> float: ...
-
+    def constraints(self) -> list[mtl.MTLConstraint] | None: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -101,6 +65,7 @@ class EngineTasks:
     headspecs: heads.HeadSpecs
     headlosses: loss.HeadLosses
     headmetrics: metrics.HeadMetrics
+    mtl_aggregator: mtl.MTLMetricsAggregator
 
 # -------------------------------Public Function-------------------------------
 def build_engine_tasks(
@@ -142,7 +107,7 @@ def build_engine_tasks(
     # task - heads loss modules
     headlosses = loss.build_headlosses(
         headspecs,
-        config=config,
+        config=config.loss_types,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
@@ -152,10 +117,73 @@ def build_engine_tasks(
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
+    # task - mtl aggregator (GEM and logical constraints)
+    mtl_aggregator = mtl.MTLMetricsAggregator(
+        ignore_index=data_specs.meta.label_specs.ignore_index,
+        constraints=_validate_constraints(config.constraints, data_specs)
+    )
+
     # collect components
     return EngineTasks(
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
-
+        mtl_aggregator=mtl_aggregator
     )
+
+# ------------------------------private  function------------------------------
+def _validate_constraints(
+    constraints: list[mtl.MTLConstraint] | None,
+    data_specs: core.DataSpecs
+) -> list[mtl.MTLConstraint] | None:
+    '''Validate constraints against data specifications.'''
+
+    # early exit if list is empty
+    if constraints is None:
+        return None
+
+    # raise if constraints look duplicated (same names)
+    names = [c.name for c in constraints]
+    if len(set(names)) != len(names):
+        raise ValueError(f'Duplicated constraints in {names}')
+
+    # get heads/indices as {head_name: list of 1-based indices}
+    heads_idx = {
+        k: list(range(1, len(v) + 1))
+        for k, v, in data_specs.heads.class_counts.items()
+    }
+
+    # validate all constraints and return
+    for c in constraints:
+
+        if c.source_head == c.target_head:
+            raise ValueError(
+                f'Source and target heads can not be the same:'
+                f'souce: {c.source_head} vs target: {c.target_head}'
+            )
+
+        if c.source_head not in heads_idx:
+            raise ValueError(
+                f'Invalid source head: {c.source_head}, '
+                f'allowed: {list(heads_idx.keys())}'
+            )
+
+        if c.trigger_val not in heads_idx[c.source_head]:
+            raise ValueError(
+                f'Invalid trigger value: {c.trigger_val}, '
+                f'allowed: {heads_idx[c.source_head]}'
+            )
+
+        if c.target_head not in heads_idx:
+            raise ValueError(
+                f'Invalid target head: {c.target_head}, '
+                f'allowed: {list(heads_idx.keys())}'
+
+            )
+        if not all(f in heads_idx[c.target_head] for f in c.forbidden):
+            raise ValueError(
+                f'Invalid forbidden classes: {c.forbidden}, '
+                f'allowed: {heads_idx[c.target_head]}'
+            )
+
+    return constraints

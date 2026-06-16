@@ -157,6 +157,11 @@ class MultiHeadEvaluator(policy.EngineBase):
             metrics_mod.reset(self.device)
         # reset head metrics dictionary
         self.val_results.head_metrics.clear()
+        self.val_results.mtl_metrics.clear()
+
+        # reset mtl aggregator if present
+        if self.state.heads.mtl_aggregator is not None:
+            self.state.heads.mtl_aggregator.reset()
 
         # set target dataset
         match self.dataset:
@@ -176,8 +181,13 @@ class MultiHeadEvaluator(policy.EngineBase):
             self.dispatcher.on_val_batch_end()
 
         # compute and assign metrics
+        # per head metrics
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             self.val_results.head_metrics[head] = metrics_module.compute()
+        # mtl metrics if applicable
+        mtl_aggregator = self.state.heads.mtl_aggregator
+        if mtl_aggregator is not None:
+            self.val_results.mtl_metrics = mtl_aggregator.compute()
 
         # val phase end
         self.dispatcher.on_val_policy_end(self.val_results)
@@ -221,6 +231,11 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.infer_results.head_metrics.clear()
         # reset inference outputs
         self.state.infer_out.clear()
+        self.infer_results.mtl_metrics.clear()
+
+        # reset mtl aggregator if present
+        if self.state.heads.mtl_aggregator is not None:
+            self.state.heads.mtl_aggregator.reset()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
@@ -238,8 +253,13 @@ class MultiHeadEvaluator(policy.EngineBase):
         self._stitch_patches()
 
         # compute and assign metrics
+        # per head metrics
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             self.infer_results.head_metrics[head] = metrics_module.compute()
+        # mtl metrics if applicable
+        mtl_aggregator = self.state.heads.mtl_aggregator
+        if mtl_aggregator is not None:
+            self.infer_results.mtl_metrics = mtl_aggregator.compute()
 
         # inference phase end
         self.dispatcher.on_infer_policy_end(self.infer_results)

@@ -19,6 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+
 '''
 Composite loss manager for combining multiple primitive loss functions.
 
@@ -33,12 +37,51 @@ The main entry point is `CompositeLoss`, which handles:
     - Computing a weighted sum of all enabled losses
 '''
 
+# standard imports
+from __future__ import annotations
+import typing
 # third-party imports
 import torch
 import torch.nn
 # local imports
-import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+
+# ------------------------------Public  Dataclass------------------------------
+class CompositeLossConfig(typing.Protocol):
+    @property
+    def focal(self) -> _FocalLoss: ...
+    @property
+    def dice(self) -> _DiceLoss: ...
+    @property
+    def spectral(self) -> _SpectralLoss: ...
+    @property
+    def tv(self) -> _TotalVariationLoss: ...
+
+class _FocalLoss(typing.Protocol):
+    @property
+    def weight(self) -> float: ...
+    @property
+    def gamma(self) -> float: ...
+    @property
+    def reduction(self) -> str: ...
+
+class _DiceLoss(typing.Protocol):
+    @property
+    def weight(self) -> float: ...
+    @property
+    def smooth(self) -> float: ...
+
+class _SpectralLoss(typing.Protocol):
+    @property
+    def weight(self) -> float: ...
+    @property
+    def alpha(self) -> float: ...
+    @property
+    def neighbour(self) -> int: ...
+
+class _TotalVariationLoss(typing.Protocol):
+    @property
+    def weight(self) -> float: ...
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -78,7 +121,7 @@ class CompositeLoss(torch.nn.Module):
 
     def __init__(
         self,
-        config: tasks.TaskConfigShape,
+        config: CompositeLossConfig,
         *,
         ignore_index: int,
         focal_alpha: list[float] | None = None,
@@ -108,41 +151,41 @@ class CompositeLoss(torch.nn.Module):
 
         # iterate through support loss types and add loss of non-zero weight
         # focal loss
-        if config.loss_types.focal.weight:
+        if config.focal.weight:
             loss_fn = primitives.FocalLoss(
                 alpha=focal_alpha,
-                gamma=config.loss_types.focal.gamma,
-                reduction=config.loss_types.focal.reduction,
+                gamma=config.focal.gamma,
+                reduction=config.focal.reduction,
                 ignore_index=ignore_index
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.loss_types.focal.weight)
+            self.weights.append(config.focal.weight)
 
         # dice loss
-        if config.loss_types.dice.weight:
+        if config.dice.weight:
             loss_fn = primitives.DiceLoss(
-                smooth=config.loss_types.dice.smooth,
+                smooth=config.dice.smooth,
                 ignore_index=ignore_index
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.loss_types.dice.weight)
+            self.weights.append(config.dice.weight)
 
         # spectral smoothness loss as regularizer
-        if config.loss_types.spectral.weight:
+        if config.spectral.weight:
             loss_fn = primitives.SpectralSmoothnessLoss(
-                alpha=config.loss_types.spectral.alpha,
-                neighbour=config.loss_types.spectral.neighbour,
+                alpha=config.spectral.alpha,
+                neighbour=config.spectral.neighbour,
                 spectral_bands=spectral_band_indices,
                 ignore_index=ignore_index,
             )
             self.losses.append(loss_fn)
-            self.weights.append(config.loss_types.spectral.weight)
+            self.weights.append(config.spectral.weight)
 
         # total variation
-        if config.loss_types.tv.weight:
+        if config.tv.weight:
             loss_fn = primitives.TotalVariationLoss(ignore_index=ignore_index)
             self.losses.append(loss_fn)
-            self.weights.append(config.loss_types.tv.weight)
+            self.weights.append(config.tv.weight)
 
     def forward(
         self,

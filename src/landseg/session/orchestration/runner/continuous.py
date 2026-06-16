@@ -157,10 +157,10 @@ class ContinuousRunner(runner.BaseRunner):
                 ):
 
                     # metrics tracking
-                    self._current_metrics = metrics
                     self._best_value_so_far=best_so_far
                     self._best_epoch_so_far=best_epoch
                     self._is_best_epoch=is_best_epoch
+                    self._current_metrics = metrics
 
                     # normal yield
                     if not self._is_phase_end:

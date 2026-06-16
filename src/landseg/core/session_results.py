@@ -75,6 +75,11 @@ class SessionStepSummary: # pylint: disable=too-many-instance-attributes
         '''Return as a dictionary for serialization.'''
         raw = self.raw_metrics
         return {
+            'phase_name': self.phase_name,
+            'phase_max_epoch': self.phase_max_epoch,
+            'epoch_in_phase': self.epoch_in_phase,
+            'objective_name': self.objective_name,
+            'objective_value': self.objective_value,
             'training': raw.training.as_dict if raw.training else None,
             'validation': raw.validation.as_dict if raw.validation else None,
             'inference': raw.inference.as_dict if raw.inference else None,
@@ -91,16 +96,30 @@ class SessionStepResults:
         validation: Results returned by the evaluator, or None if no
             evaluation step was executed.
     '''
+
     training: TrainStepResults | None = None
     validation: ValStepResults | None = None
     inference: InferStepResults | None = None
+    _metric_name: str = 'iou'
+    _track_heads: dict[str, float] | None = None
 
     @property
     def target_objective(self) -> str:
         '''Return the targert objective from the validation results.'''
-        if self.validation:
-            return '|'.join(self.validation.head_metrics.keys())
-        return 'N/A'
+        assert self.validation
+        name = self._metric_name
+        if name == 'iou':
+            if self._track_heads is None:
+                h = list(self.validation.head_metrics.keys())[0]
+                return f'IoU from {h}'
+            h = ' + '.join([f'{k}*{v}' for k, v in self._track_heads.items()])
+            name = f'IoU = {h}'
+            return name
+        if name == 'gem':
+            h = ' & '.join(self.validation.head_metrics.keys())
+            return f'Global Exact Match over [{h}]'
+
+        raise ValueError(f'Invalid metric name: {name}')
 
     @property
     def target_metrics(self) -> float:
@@ -111,7 +130,12 @@ class SessionStepResults:
         otherwise compute from all present classes.
         '''
         if self.validation:
-            return _get_mean_iou(self.validation.head_metrics)
+            return _track_metrics(
+                self.validation.head_metrics,
+                metric_name=self._metric_name,
+                track_heads=self._track_heads,
+                mtl_metrics=self.validation.mtl_metrics
+            )
         return -float('inf')
 
     @property
@@ -123,13 +147,31 @@ class SessionStepResults:
         otherwise compute from all present classes.
         '''
         if self.inference:
-            return _get_mean_iou(self.inference.head_metrics)
+            return _track_metrics(
+                self.inference.head_metrics,
+                metric_name=self._metric_name,
+                track_heads=self._track_heads,
+                mtl_metrics=self.inference.mtl_metrics
+            )
         return -float('inf')
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
         return dataclasses.asdict(self)
+
+    def track(
+        self,
+        metric_name: str,
+        track_heads: dict[str, float] | None
+    ):
+        '''Tracking configuration'''
+
+        # force IoU mode if there is only one active head (mtl metrics invalid)
+        if self.validation and len(self.validation.head_metrics) == 1:
+            metric_name = 'iou'
+        object.__setattr__(self, '_metric_name', metric_name)
+        object.__setattr__(self, '_track_heads', track_heads)
 
 @dataclasses.dataclass
 class TrainStepResults:
@@ -157,16 +199,21 @@ class TrainStepResults:
 class ValStepResults:
     '''Evaluator aggregated epoch results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    mtl_metrics: dict[str, float] = field(default_factory=dict)
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
-        return {k: v.as_dict for k, v in self.head_metrics.items()}
+        return {
+            'head_metrics': {k: v.as_dict for k, v in self.head_metrics.items()},
+            'mtl_metrics': dict(self.mtl_metrics) # as a shallow copy
+        }
 
 @dataclasses.dataclass
 class InferStepResults:
     '''Containe for inference results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
+    mtl_metrics: dict[str, float] = field(default_factory=dict)
     infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)
@@ -174,7 +221,10 @@ class InferStepResults:
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         '''Return as a dictionary for serialization.'''
-        return {k: v.as_dict for k, v in self.head_metrics.items()}
+        return {
+            'head_metrics': {k: v.as_dict for k, v in self.head_metrics.items()},
+            'mtl_metrics': dict(self.mtl_metrics) # as a shallow copy
+        }
 
 @dataclasses.dataclass
 class AccumulatedMetrics:
@@ -221,23 +271,50 @@ class AccumulatedMetrics:
         self._locked = True
 
 # ------------------------------private  function------------------------------
-def _get_mean_iou(head_metrics: dict[str, AccumulatedMetrics]) -> float:
+def _track_metrics(
+    head_metrics: dict[str, AccumulatedMetrics],
+    *,
+    metric_name: str,
+    track_heads: dict[str, float] | None = None,
+    mtl_metrics: dict[str, float] | None = None
+) -> float:
+    '''Track metrics as per configuration.'''
+
+    match metric_name.lower():
+        case 'gem':
+            if not (mtl_metrics and 'gem' in mtl_metrics):
+                raise ValueError('No valid MTL metrics provided') # sanity
+            return mtl_metrics['gem']
+
+        case 'iou':
+            if isinstance(track_heads, dict):
+                m = {k: v for k, v in head_metrics.items() if k in track_heads}
+                return _get_mean_iou(m, track_heads)
+
+            if track_heads is None:
+                m = next(iter(head_metrics.items())) # fall back to 1st head
+                return _get_mean_iou({m[0]: m[1]}, None)
+
+            raise ValueError(f'Invalid tracking head: {track_heads}')
+
+        case _:
+            raise ValueError(f'Invalid metric name: {metric_name}')
+
+def _get_mean_iou(
+    head_metrics: dict[str, AccumulatedMetrics],
+    head_weights: dict[str, float] | None
+) -> float:
     '''Mean IoU calculation helper.'''
 
-    # retrieve iou metrics from monitor heads
     mean = 0.0
-    mean_ac = 0.0
-
+    ws = []
     # accumulate from all monitor heads
-    for metrics in head_metrics.values():
-        # accumulate moniter metrics for stae
-        mean += metrics.mean
-        mean_ac +=  metrics.ac_mean
-        # collect per head metrics formatted strings
+    for head, metrics in head_metrics.items():
+        # get weight
+        w = head_weights.get(head, 1.0) if head_weights else 1.0
+        ws.append(w)
+        # pick iou - prefer iou from active classes if present
+        mean += w * (metrics.ac_mean if metrics.ac_mean else metrics.mean)
 
-    # get average ious
-    mean /= max(1, len(head_metrics))
-    mean_ac /= max(1, len(head_metrics))
-
-    # pick iou - prefer iou from active classes if present
-    return mean_ac if mean_ac else mean
+    # return the weighted average
+    return mean / sum(ws)

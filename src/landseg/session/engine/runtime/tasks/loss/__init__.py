@@ -33,6 +33,7 @@ import typing
 __all__ = [
     # classes
     'CompositeLoss',
+    'CompositeLossConfig',
     'HeadLosses',
     # functions
     'build_headlosses',
@@ -40,13 +41,13 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .composite import CompositeLoss
+    from .composite import CompositeLoss, CompositeLossConfig
     from .factory import HeadLosses, build_headlosses
 
 
 def __getattr__(name: str):
 
-    if name in {'CompositeLoss'}:
+    if name in {'CompositeLoss', 'CompositeLossConfig'}:
         return getattr(importlib.import_module('.composite', __package__), name)
 
     if name in {'HeadLosses', 'build_headlosses'}:

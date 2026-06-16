@@ -222,8 +222,8 @@ class BatchEngine:
         self.state.batch_out.preds = dict(outputs)
 
         # ----- batch end
-        # update per-head confusion matrix
-        self._update_conf_matrix()
+        # update per-head confusion matrix and aggregate MTL metrics
+        self._update_metrics()
 
     def run_infer_batch(self):
         '''
@@ -260,8 +260,8 @@ class BatchEngine:
         self.state.batch_out.preds = dict(outputs)
 
         # ----- batch end
-        # update per-head confusion matrix
-        self._update_conf_matrix()
+        # update per-head confusion matrix and aggregate MTL metrics
+        self._update_metrics()
         # aggregate to epoch storage (CPU detach)
         self._aggregate_batch_predictions()
 
@@ -394,14 +394,16 @@ class BatchEngine:
         self.state.batch_out.total_loss = total
         self.state.batch_out.head_loss = perhead
 
-    def _update_conf_matrix(self) -> None:
+    def _update_metrics(self) -> None:
         '''
-        Update per-head metric accumulators.
+        Update vertical and horizontal metric accumulators.
 
-        This method performs incremental metric updates only (e.g.
-        confusion matrix accumulation). Final metric computation and
-        reporting are owned by the Trainer or Evaluator at phase
-        boundaries.
+        This method performs incremental updates for:
+        - Per-head confusion matrices (vertical metrics).
+        - Global MTL metrics via the Aggregator (horizontal metrics).
+
+        Final metric computation and reporting are owned by the Trainer
+        or Evaluator at phase boundaries.
         '''
 
         # sanity
@@ -412,6 +414,8 @@ class BatchEngine:
         # get predictions and targets
         preds = self.state.batch_out.preds
         targets = self.state.batch_cxt.y_dict
+
+        # update metrics (per head)
         for head, logits in preds.items():
             parent = self.context.parent_map.get(head)
             parent_1b = targets.get(parent) if parent is not None else None
@@ -422,6 +426,15 @@ class BatchEngine:
                 targets[head],              # 1-based
                 parent_raw_1b=parent_1b     # 1-based (keyword arg)
             )
+
+        # precompute class IDs (1-based) for MTL Aggregator
+        preds_1b = {
+            h: torch.argmax(logits, dim=1) + 1
+            for h, logits in preds.items()
+        }
+        # update horizontal MTL metrics (GEM and Violations)
+        if self.state.heads.mtl_aggregator is not None:
+            self.state.heads.mtl_aggregator.update(preds_1b, targets)
 
     def _aggregate_batch_predictions(self):
         '''

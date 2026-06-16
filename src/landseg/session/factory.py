@@ -184,7 +184,8 @@ def build_continous_training_session(
     # base orchestrator config
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
-        verbose=context.verbose_runner,
+        metric_name=config.orchestration.monitor.metric_name,
+        track_heads=config.orchestration.monitor.track_heads,
         track_mode=config.orchestration.monitor.track_mode,
         enable_early_stop=config.orchestration.monitor.allow_early_stop,
         patience_epochs=config.orchestration.monitor.patience,
@@ -236,7 +237,8 @@ def build_curriculum_training_session(
     # base orchestrator config
     base_config = orchestration.BaseRunnerConfig(
         artifacts_paths=context.session_paths,
-        verbose=context.verbose_runner,
+        metric_name=config.orchestration.monitor.metric_name,
+        track_heads=config.orchestration.monitor.track_heads,
         track_mode=config.orchestration.monitor.track_mode,
         enable_early_stop=config.orchestration.monitor.allow_early_stop,
         patience_epochs=config.orchestration.monitor.patience,

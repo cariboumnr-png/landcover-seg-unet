@@ -40,6 +40,8 @@ import landseg.session.orchestration.protocols as protocols
 @dataclasses.dataclass
 class TrackingConfig:
     '''Configuration for metric tracking and early stopping.'''
+    metric_name: str = 'iou'
+    track_heads: dict[str, float] | None = None
     track_mode: str = 'max'
     enable_early_stop: bool = False
     patience_epochs: int | None = 5
@@ -150,22 +152,24 @@ class PhasePolicy:
         for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
 
             # delegate to epoch policy
-            metrics = yield from policy.EpochPolicy(
+            epoch_results = yield from policy.EpochPolicy(
                 epoch_runner=self.runner,
                 phase_name=self.config.name,
                 epoch_index=epoch,
                 active_heads=self.config.active_heads
             ).run()
 
+            # configure tracking in step results container
+            epoch_results.track(self.track.metric_name, self.track.track_heads)
             # track metrics
-            tracked = self._track(epoch, metrics.target_metrics)
+            tracked = self._track(epoch, epoch_results.target_metrics)
 
             # request checkpointing
             tag = 'best' if self.tracker.is_best_epoch else 'last'
             yield events.CheckpointRequest(tag)
 
             # report tracking results
-            yield events.MetricsReport(*tracked, metrics)
+            yield events.MetricsReport(*tracked, epoch_results)
 
             # early stop check
             if not self.track.enable_early_stop:
@@ -195,7 +199,7 @@ class PhasePolicy:
         '''
 
         epochs: list[core.SessionStepResults] = []
-        for epoch in range(1, self.config.num_epochs + 1):
+        for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
             epoch_metrics = policy.EpochPolicy(
                 epoch_runner=self.runner,
                 phase_name=self.config.name,
@@ -217,12 +221,9 @@ class PhasePolicy:
             return (target_metrics, -1, False)
 
         # update last and current value
-        if epoch == 1:
-            self.tracker.last_value = 0.0
-            self.tracker.curr_value = target_metrics
-        else:
-            self.tracker.last_value = self.tracker.curr_value
-            self.tracker.curr_value = target_metrics
+        is_start = epoch == self.config.start_epoch
+        self.tracker.last_value = 0.0 if is_start else self.tracker.curr_value
+        self.tracker.curr_value = target_metrics
 
         # track by mode
         mode = self.track.track_mode

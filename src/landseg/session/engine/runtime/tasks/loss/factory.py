@@ -36,7 +36,6 @@ objects.
 '''
 
 # local imports
-import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 
@@ -71,7 +70,7 @@ class HeadLosses:
 def build_headlosses(
     headspecs: heads.HeadSpecs,
     *,
-    config: tasks.TaskConfigShape,
+    config: loss.CompositeLossConfig,
     ignore_index: int,
     spectral_band_indices: list[int] | None = None
 ) -> HeadLosses:

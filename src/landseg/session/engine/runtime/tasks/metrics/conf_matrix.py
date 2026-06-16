@@ -37,9 +37,6 @@ import torch
 # local imports
 import landseg.core as core
 
-# aliases
-field = dataclasses.field
-
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class ConfusionMatricConfig:

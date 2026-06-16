@@ -7,7 +7,7 @@ schedule:
 
 monitor:
   metric_name: iou
-  track_heads: [base]
+  track_heads: {}
   track_mode: max
   allow_early_stop: True
   patience: 10
