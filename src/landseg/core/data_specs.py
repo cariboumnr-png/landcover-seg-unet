@@ -96,7 +96,7 @@ class Meta:
             for k, v in self.band_map.items():
                 if k.lower() in SPEC_BAND_NAMES:
                     self.spec_channels.append(v)
-                elif k.lower in TOPO_BAND_NAMES:
+                elif k.lower() in TOPO_BAND_NAMES:
                     self.topo_channels.append(v)
 
     @dataclasses.dataclass

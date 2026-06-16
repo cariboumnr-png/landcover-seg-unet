@@ -116,7 +116,7 @@ class SessionStepResults:
             name = f'IoU = {h}'
             return name
         if name == 'gem':
-            h = ' & '.join(self.validation.mtl_metrics.keys())
+            h = ' & '.join(self.validation.head_metrics.keys())
             return f'Global Exact Match over [{h}]'
 
         raise ValueError(f'Invalid metric name: {name}')
@@ -282,7 +282,8 @@ def _track_metrics(
 
     match metric_name.lower():
         case 'gem':
-            assert mtl_metrics and 'gem' in mtl_metrics # sanity
+            if not (mtl_metrics and 'gem' in mtl_metrics):
+                raise ValueError('No valid MTL metrics provided') # sanity
             return mtl_metrics['gem']
 
         case 'iou':
