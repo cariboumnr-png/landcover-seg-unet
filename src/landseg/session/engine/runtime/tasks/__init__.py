@@ -37,7 +37,6 @@ __all__ = [
     'CompositeLoss',
     'ConfusionMatrix',
     'MTLMetricsAggregator',
-    'MTLConstraint',
     # functions
     'build_engine_tasks',
     # types
@@ -48,8 +47,7 @@ if typing.TYPE_CHECKING:
     from .factory import EngineTasks, TaskConfigShape, build_engine_tasks
     from .heads import HeadSpec
     from .loss import CompositeLoss
-    from .metrics import ConfusionMatrix
-    from .mtl import MTLMetricsAggregator, MTLConstraint
+    from .metrics import ConfusionMatrix, MTLMetricsAggregator
 
 def __getattr__(name: str):
 
@@ -62,10 +60,7 @@ def __getattr__(name: str):
     if name in {'CompositeLoss'}:
         return getattr(importlib.import_module('.loss', __package__), name)
 
-    if name in {'ConfusionMatrix'}:
+    if name in {'ConfusionMatrix','MTLMetricsAggregator'}:
         return getattr(importlib.import_module('.metrics', __package__), name)
-
-    if name in {'MTLMetricsAggregator', 'MTLConstraint'}:
-        return getattr(importlib.import_module('.mtl', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
