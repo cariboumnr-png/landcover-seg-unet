@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.mtl`.
+Top-level namespace for `landseg.session.engine.runtime.tasks.constraints`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,19 +32,20 @@ import typing
 
 __all__ = [
     # classes
-    'MTLMetricsAggregator',
     'MTLConstraint',
+    'CompiledConstraint',
     # functions
+    'compile_constraints'
     # types
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .aggregator import MTLMetricsAggregator, MTLConstraint
+    from .constraints import MTLConstraint, CompiledConstraint, compile_constraints
 
 
 def __getattr__(name: str):
 
-    if name in {'MTLMetricsAggregator', 'MTLConstraint'}:
-        return getattr(importlib.import_module('.aggregator', __package__), name)
+    if name in {'MTLConstraint', 'CompiledConstraint', 'compile_constraint'}:
+        return getattr(importlib.import_module('.constraints', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -35,7 +35,7 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.constraints as constraints
+import landseg.session.engine.runtime.tasks.mtl as mtl
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -58,7 +58,7 @@ class MTLMetricsAggregator:
         self,
         *,
         ignore_index: int,
-        mtl_constraints: list[constraints.CompiledConstraint] | None = None
+        mtl_constraints: list[mtl.CompiledConstraint] | None = None
     ):
         '''
         Initialize the aggregator.

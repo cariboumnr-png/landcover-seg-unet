@@ -39,7 +39,6 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.tasks.constraints as constraints
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
@@ -57,7 +56,7 @@ class TaskConfigShape(typing.Protocol):
     @property
     def loss_types(self) -> loss.CompositeLossConfig: ...
     @property
-    def constraints(self) -> list[constraints.MTLConstraint] | None: ...
+    def constraints(self) -> list[mtl.MTLConstraint] | None: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -107,9 +106,7 @@ def build_engine_tasks(
     )
 
     # multihead learning constraints
-    mtl_constraints = constraints.compile_constraints(
-        config.constraints, data_specs
-    )
+    mtl_constraints = mtl.compile_constraints(config.constraints, data_specs)
 
     # task - heads loss modules
     headlosses = loss.build_headlosses(
