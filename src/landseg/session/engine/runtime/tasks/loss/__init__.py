@@ -41,16 +41,16 @@ __all__ = [
 ]
 # for static check
 if typing.TYPE_CHECKING:
+    from .builder import HeadLosses, build_headlosses
     from .composite import CompositeLoss, CompositeLossConfig
-    from .factory import HeadLosses, build_headlosses
 
 
 def __getattr__(name: str):
 
+    if name in {'HeadLosses', 'build_headlosses'}:
+        return getattr(importlib.import_module('.builder', __package__), name)
+
     if name in {'CompositeLoss', 'CompositeLossConfig'}:
         return getattr(importlib.import_module('.composite', __package__), name)
-
-    if name in {'HeadLosses', 'build_headlosses'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

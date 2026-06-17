@@ -41,15 +41,15 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .builder import HeadMetrics, build_headmetrics
     from .confusion_matrix import ConfusionMatrix
-    from .factory import HeadMetrics, build_headmetrics
 
 def __getattr__(name: str):
 
+    if name in {'HeadMetrics', 'build_headmetrics'}:
+        return getattr(importlib.import_module('.builder', __package__), name)
+
     if name in {'ConfusionMatrix'}:
         return getattr(importlib.import_module('.confusion_matrix', __package__), name)
-
-    if name in {'HeadMetrics', 'build_headmetrics'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
