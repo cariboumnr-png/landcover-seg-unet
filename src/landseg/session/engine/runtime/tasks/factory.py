@@ -43,6 +43,7 @@ import landseg.session.engine.runtime.tasks.constraints as constraints
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
+import landseg.session.engine.runtime.tasks.regularization as regularization
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfigShape(typing.Protocol):
@@ -65,6 +66,7 @@ class EngineTasks:
     headspecs: heads.HeadSpecs
     headlosses: loss.HeadLosses
     headmetrics: metrics.HeadMetrics
+    multihead_regularization: regularization.ConsistencyRegularizer
     multihead_metrics: metrics.MTLMetricsAggregator
 
 # -------------------------------Public Function-------------------------------
@@ -116,6 +118,13 @@ def build_engine_tasks(
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
 
+    # mutlihead regularization (logical consistencies)
+    mtl_regularization = regularization.ConsistencyRegularizer(
+        mtl_constraints=cons,
+        ignore_index=data_specs.meta.label_specs.ignore_index,
+        reduction='mean' # TEMP
+    )
+
     # per-head segmentation metrics
     headmetrics = metrics.build_headmetrics(
         headspecs,
@@ -123,9 +132,9 @@ def build_engine_tasks(
     )
 
     # multihead diagnostic metrics (GEM, logical violations)
-    mtl_aggregator = metrics.MTLMetricsAggregator(
+    mtl_metrics = metrics.MTLMetricsAggregator(
+        mtl_constraints=cons,
         ignore_index=data_specs.meta.label_specs.ignore_index,
-        mtl_constraints=cons
     )
 
     # collect components
@@ -133,5 +142,6 @@ def build_engine_tasks(
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
-        multihead_metrics=mtl_aggregator
+        multihead_regularization=mtl_regularization,
+        multihead_metrics=mtl_metrics
     )
