@@ -39,6 +39,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
+import landseg.session.engine.runtime.tasks.constraints as constraints
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
@@ -56,7 +57,7 @@ class TaskConfigShape(typing.Protocol):
     @property
     def loss_types(self) -> loss.CompositeLossConfig: ...
     @property
-    def constraints(self) -> list[mtl.MTLConstraint] | None: ...
+    def constraints(self) -> list[constraints.MTLConstraint] | None: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -97,13 +98,19 @@ def build_engine_tasks(
           handling and optional exclusions.
     '''
 
-    # task - heads specifications
+    # heads specifications
     headspecs = heads.build_headspecs(
         data_specs,
         alpha_fn=config.alpha_fn,
         en_beta=config.en_beta,
         excluded_cls=config.excluded_cls
     )
+
+    # multihead learning constraints
+    mtl_constraints = constraints.compile_constraints(
+        config.constraints, data_specs
+    )
+
     # task - heads loss modules
     headlosses = loss.build_headlosses(
         headspecs,
@@ -120,7 +127,7 @@ def build_engine_tasks(
     # task - mtl aggregator (GEM and logical constraints)
     mtl_aggregator = mtl.MTLMetricsAggregator(
         ignore_index=data_specs.meta.label_specs.ignore_index,
-        constraints=_validate_constraints(config.constraints, data_specs)
+        mtl_constraints=mtl_constraints
     )
 
     # collect components
@@ -130,60 +137,3 @@ def build_engine_tasks(
         headmetrics=headmetrics,
         mtl_aggregator=mtl_aggregator
     )
-
-# ------------------------------private  function------------------------------
-def _validate_constraints(
-    constraints: list[mtl.MTLConstraint] | None,
-    data_specs: core.DataSpecs
-) -> list[mtl.MTLConstraint] | None:
-    '''Validate constraints against data specifications.'''
-
-    # early exit if list is empty
-    if constraints is None:
-        return None
-
-    # raise if constraints look duplicated (same names)
-    names = [c.name for c in constraints]
-    if len(set(names)) != len(names):
-        raise ValueError(f'Duplicated constraints in {names}')
-
-    # get heads/indices as {head_name: list of 1-based indices}
-    heads_idx = {
-        k: list(range(1, len(v) + 1))
-        for k, v, in data_specs.heads.class_counts.items()
-    }
-
-    # validate all constraints and return
-    for c in constraints:
-
-        if c.source_head == c.target_head:
-            raise ValueError(
-                f'Source and target heads can not be the same:'
-                f'souce: {c.source_head} vs target: {c.target_head}'
-            )
-
-        if c.source_head not in heads_idx:
-            raise ValueError(
-                f'Invalid source head: {c.source_head}, '
-                f'allowed: {list(heads_idx.keys())}'
-            )
-
-        if c.trigger_val not in heads_idx[c.source_head]:
-            raise ValueError(
-                f'Invalid trigger value: {c.trigger_val}, '
-                f'allowed: {heads_idx[c.source_head]}'
-            )
-
-        if c.target_head not in heads_idx:
-            raise ValueError(
-                f'Invalid target head: {c.target_head}, '
-                f'allowed: {list(heads_idx.keys())}'
-
-            )
-        if not all(f in heads_idx[c.target_head] for f in c.forbidden):
-            raise ValueError(
-                f'Invalid forbidden classes: {c.forbidden}, '
-                f'allowed: {heads_idx[c.target_head]}'
-            )
-
-    return constraints

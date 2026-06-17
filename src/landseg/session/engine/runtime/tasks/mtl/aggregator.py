@@ -32,23 +32,10 @@ logical constraint violation detection.
 
 # standard imports
 import dataclasses
-import typing
 # third-party imports
 import torch
-
-# ------------------------------Public  Dataclass------------------------------
-class MTLConstraint(typing.Protocol):
-    '''Definition for a logical constraint violation between two heads.'''
-    @property
-    def name(self) -> str: ...
-    @property
-    def source_head(self) -> str: ...
-    @property
-    def trigger_val(self) -> int: ...
-    @property
-    def target_head(self) -> str: ...
-    @property
-    def forbidden(self) -> list[int]: ...
+# local imports
+import landseg.session.engine.runtime.tasks.constraints as constraints
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -71,7 +58,7 @@ class MTLMetricsAggregator:
         self,
         *,
         ignore_index: int,
-        constraints: list[MTLConstraint] | None = None
+        mtl_constraints: list[constraints.CompiledConstraint] | None = None
     ):
         '''
         Initialize the aggregator.
@@ -83,7 +70,7 @@ class MTLMetricsAggregator:
         '''
 
         self.ignore_index = ignore_index
-        self.constraints = constraints or []
+        self.constraints = mtl_constraints or []
 
         # internal counters
         self.gem_hits: int = 0
