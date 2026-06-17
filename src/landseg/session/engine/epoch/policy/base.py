@@ -192,12 +192,14 @@ class EngineBase:
         heads.active_hmetrics = {
             h: copy.deepcopy(self.headmetrics[h]) for h in active_heads
         }
-        # if more than one head, assign MTL aggregator to state
+        # if more than one head, assign MTL related modules
         if len(active_heads) > 1:
             heads.multihead_metrics = self.runtime.engine_tasks.multihead_metrics
-        # avoid stale aggregator if heads change during curriculum training
+            heads.multihead_consistency = self.runtime.engine_tasks.multihead_regularization
+        # avoid stale modules
         else:
             heads.multihead_metrics = None
+            heads.multihead_consistency = None
 
         # set frozen heads to model if provided
         if frozen_heads is not None:

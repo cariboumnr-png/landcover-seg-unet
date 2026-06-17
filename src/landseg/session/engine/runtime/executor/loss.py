@@ -40,6 +40,9 @@ def multihead_loss(
     features: torch.Tensor,
     headspecs: dict[str, tasks.HeadSpec],
     headlosses: dict[str, tasks.CompositeLoss],
+    # TEMP
+    multihead_consistency: tasks.ConsistencyRegularizer | None,
+    consistency_lambda: float = 0.05
 ) -> tuple[torch.Tensor, dict[str, float]]:
     '''
     Compute weighted multi-head loss with optional hierarchical masking.
@@ -95,7 +98,7 @@ def multihead_loss(
         # sanity check
         assert head_pred.shape[-2:] == multihead_targets[head_name].shape[-2:]
         # calculate loss
-        loss = headlosses[head_name].forward(
+        loss = headlosses[head_name](
             head_pred,
             targets_0b,
             masks=masks,
@@ -104,6 +107,12 @@ def multihead_loss(
         total += headspecs[head_name].weight * loss
         # per_head losses are detached scalars for logging only
         per_head[head_name] = float(loss.item())
+
+    # multihead logical consistency regularization
+    if multihead_consistency is not None:
+        reg = multihead_consistency(multihead_preds, multihead_targets)
+        total *= reg * consistency_lambda
+
     # NaN check before output
     if not torch.isfinite(total):
         raise RuntimeError('Contains NaN/Inf loss.')

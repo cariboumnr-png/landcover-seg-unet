@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Cross-head consistency regularization for multi-task segmentation.
 
@@ -240,8 +238,11 @@ class ConsistencyRegularizer(torch.nn.Module):
         source_target = targets_1b.get(constraint.source_head)
         target_target = targets_1b.get(constraint.target_head)
         # early exit if all tensors present not in batch (e.g., inactive head)
-        if not (
-            source_logits and target_logits and source_target and target_target
+        if (
+            source_logits is None
+            or target_logits is None
+            or source_target is None
+            or target_target is None
         ):
             return None
 
@@ -371,4 +372,8 @@ class ConsistencyRegularizer(torch.nn.Module):
     def _eps(t: torch.Tensor) -> torch.Tensor:
         '''Return dtype-safe epsilon for denominator clamping.'''
 
-        return torch.as_tensor(torch.finfo(t.dtype).eps, t.dtype, t.device)
+        return torch.as_tensor(
+            torch.finfo(t.dtype).eps,
+            dtype=t.dtype,
+            device=t.device
+        )
