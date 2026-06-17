@@ -30,21 +30,10 @@ These components are used during validation and inference to
 accumulate and summarize prediction performance.
 '''
 
-# standard imports
-import dataclasses
 # third-party imports
 import torch
 # local imports
 import landseg.core as core
-
-# ------------------------------Public  Dataclass------------------------------
-@dataclasses.dataclass
-class ConfusionMatricConfig:
-    '''Configuration for confusion-matrix construction and computation.'''
-    num_classes: int
-    ignore_index: int
-    parent_class_1b: int | None
-    exclude_class_1b: tuple[int, ...] | None
 
 # --------------------------------Public  Class--------------------------------
 class ConfusionMatrix:
@@ -56,7 +45,13 @@ class ConfusionMatrix:
     applied during metric reporting.
     '''
 
-    def __init__(self, config: ConfusionMatricConfig):
+    def __init__(
+        self,
+        num_classes: int,
+        ignore_index: int,
+        parent_class_1b: int | None,
+        exclude_class_1b: tuple[int, ...] | None
+    ):
         '''
         Initialize confusion matrix state and configuration.
 
@@ -74,10 +69,10 @@ class ConfusionMatrix:
         '''
 
         # assign attributes
-        self.n_cls = config.num_classes
-        self.ignore_index = config.ignore_index
-        self.parent_class_1b = config.parent_class_1b
-        self.exclude_class_1b = config.exclude_class_1b
+        self.n_cls = num_classes
+        self.ignore_index = ignore_index
+        self.parent_class_1b = parent_class_1b
+        self.exclude_class_1b = exclude_class_1b
 
         # set up running confusion matrix (start with zeros)
         h, w = self.n_cls, self.n_cls

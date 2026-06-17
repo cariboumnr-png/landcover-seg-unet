@@ -43,7 +43,7 @@ import landseg.session.engine.runtime.tasks.constraints as constraints
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
-import landseg.session.engine.runtime.tasks.mtl.aggregator as mtl
+import landseg.session.engine.runtime.tasks.mtl as mtl
 
 # ---------------------------------Public Type---------------------------------
 class TaskConfigShape(typing.Protocol):
@@ -66,7 +66,7 @@ class EngineTasks:
     headspecs: heads.HeadSpecs
     headlosses: loss.HeadLosses
     headmetrics: metrics.HeadMetrics
-    mtl_aggregator: mtl.MTLMetricsAggregator
+    mtl_aggregator: metrics.MTLMetricsAggregator
 
 # -------------------------------Public Function-------------------------------
 def build_engine_tasks(
@@ -125,7 +125,7 @@ def build_engine_tasks(
     )
 
     # task - mtl aggregator (GEM and logical constraints)
-    mtl_aggregator = mtl.MTLMetricsAggregator(
+    mtl_aggregator = metrics.MTLMetricsAggregator(
         ignore_index=data_specs.meta.label_specs.ignore_index,
         mtl_constraints=mtl_constraints
     )
