@@ -45,7 +45,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'MTLConstraint', 'CompiledConstraint', 'compile_constraint'}:
+    if name in {'MTLConstraint', 'CompiledConstraint', 'compile_constraints'}:
         return getattr(importlib.import_module('.constraints', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

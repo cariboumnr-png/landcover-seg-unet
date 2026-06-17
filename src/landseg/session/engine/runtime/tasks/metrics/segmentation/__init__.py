@@ -47,7 +47,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
 
     if name in {'ConfusionMatrix'}:
-        return getattr(importlib.import_module('.conf_matrix', __package__), name)
+        return getattr(importlib.import_module('.confusion_matrix', __package__), name)
 
     if name in {'HeadMetrics', 'build_headmetrics'}:
         return getattr(importlib.import_module('.factory', __package__), name)
