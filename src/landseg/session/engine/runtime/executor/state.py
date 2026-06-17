@@ -64,7 +64,7 @@ class _Heads:
     active_hspecs: dict[str, tasks.HeadSpec] | None = None
     active_hloss: dict[str, tasks.CompositeLoss] | None = None
     active_hmetrics: dict[str, tasks.ConfusionMatrix] | None = None
-    mtl_aggregator: tasks.MTLMetricsAggregator | None = None
+    multihead_metrics: tasks.MTLMetricsAggregator | None = None
 
 # ----- batch context
 @dataclasses.dataclass

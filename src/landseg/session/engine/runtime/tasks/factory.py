@@ -65,7 +65,7 @@ class EngineTasks:
     headspecs: heads.HeadSpecs
     headlosses: loss.HeadLosses
     headmetrics: metrics.HeadMetrics
-    mtl_aggregator: metrics.MTLMetricsAggregator
+    multihead_metrics: metrics.MTLMetricsAggregator
 
 # -------------------------------Public Function-------------------------------
 def build_engine_tasks(
@@ -108,20 +108,21 @@ def build_engine_tasks(
     # multihead learning constraints
     cons = constraints.compile_constraints(config.constraints, data_specs)
 
-    # task - heads loss modules
+    # per-head loss
     headlosses = loss.build_headlosses(
         headspecs,
         config=config.loss_types,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
     )
-    # task - heads metric modules
+
+    # per-head segmentation metrics
     headmetrics = metrics.build_headmetrics(
         headspecs,
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
-    # task - mtl aggregator (GEM and logical constraints)
+    # multihead diagnostic metrics (GEM, logical violations)
     mtl_aggregator = metrics.MTLMetricsAggregator(
         ignore_index=data_specs.meta.label_specs.ignore_index,
         mtl_constraints=cons
@@ -132,5 +133,5 @@ def build_engine_tasks(
         headspecs=headspecs,
         headlosses=headlosses,
         headmetrics=headmetrics,
-        mtl_aggregator=mtl_aggregator
+        multihead_metrics=mtl_aggregator
     )

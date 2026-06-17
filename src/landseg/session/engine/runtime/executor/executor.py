@@ -433,8 +433,8 @@ class BatchEngine:
             for h, logits in preds.items()
         }
         # update horizontal MTL metrics (GEM and Violations)
-        if self.state.heads.mtl_aggregator is not None:
-            self.state.heads.mtl_aggregator.update(preds_1b, targets)
+        if self.state.heads.multihead_metrics is not None:
+            self.state.heads.multihead_metrics.update(preds_1b, targets)
 
     def _aggregate_batch_predictions(self):
         '''

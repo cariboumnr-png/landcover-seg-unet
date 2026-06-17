@@ -194,10 +194,10 @@ class EngineBase:
         }
         # if more than one head, assign MTL aggregator to state
         if len(active_heads) > 1:
-            heads.mtl_aggregator = self.runtime.engine_tasks.mtl_aggregator
+            heads.multihead_metrics = self.runtime.engine_tasks.multihead_metrics
         # avoid stale aggregator if heads change during curriculum training
         else:
-            heads.mtl_aggregator = None
+            heads.multihead_metrics = None
 
         # set frozen heads to model if provided
         if frozen_heads is not None:
@@ -217,7 +217,7 @@ class EngineBase:
         self.state.heads.active_hspecs = None
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
-        self.state.heads.mtl_aggregator = None
+        self.state.heads.multihead_metrics = None
 
     # ----- batch context/output reset
     def _batch_reset(self, bidx: int, _batch: tuple) -> None:
