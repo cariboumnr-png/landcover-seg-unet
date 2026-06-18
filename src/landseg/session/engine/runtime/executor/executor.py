@@ -184,9 +184,9 @@ class BatchEngine:
         self.state.batch_out.preds = dict(predictions)
 
         # ----- batch compute loss
-        # compute loss with autocast context
+        # compute objective with autocast context
         with self._autocast_ctx():
-            self._compute_loss()
+            self._compute_objective()
 
     def run_validate_batch(self) -> None:
         '''
@@ -363,7 +363,7 @@ class BatchEngine:
         stack.enter_context(self._autocast_ctx())
         return stack
 
-    def _compute_loss(self) -> None:
+    def _compute_objective(self) -> None:
         '''
         Compute total and per-head losses for the current batch.
 
@@ -383,7 +383,7 @@ class BatchEngine:
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
         # call loss function
-        total, perhead = executor.multihead_loss(
+        total, perhead = executor.multihead_objective(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features

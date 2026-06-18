@@ -33,14 +33,16 @@ import torch
 import landseg.session.engine.runtime.tasks as tasks
 
 # -------------------------------Public Function-------------------------------
-def multihead_loss(
+def multihead_objective(
     *,
+    # raw inputs
     multihead_preds: dict[str, torch.Tensor],
     multihead_targets: dict[str, torch.Tensor],
     features: torch.Tensor,
+    # per head objective
     headspecs: dict[str, tasks.HeadSpec],
     headlosses: dict[str, tasks.CompositeLoss],
-    # TEMP
+    # multi head objective
     mtl_consistency_reg: tasks.ConsistencyRegularizer | None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     '''
