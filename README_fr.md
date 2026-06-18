@@ -1,306 +1,293 @@
-# Cadre de classification multimodale de l’occupation du sol
+# Cadre de classification multimodale de l'occupation du sol
 
-[English](README.md) | [Français](README_fr.md)
+[English](README.md) | [Francais](README_fr.md)
 
->***Résumé en langage clair :***<br>
->*Ce projet fournit des outils pour préparer des images satellites et entraîner*
->*des modèles de classification de l’occupation du sol. Il aide les utilisateurs à organiser les données, exécuter des modèles d’apprentissage profond*
->*et reproduire les résultats de manière cohérente.*
+> Resume en langage clair:
+> Ce projet prepare des donnees raster geospatiales et entraine des modeles
+> d'apprentissage profond pour la classification de l'occupation du sol au
+> niveau du pixel. Il organise les donnees en artefacts reutilisables, construit
+> des modeles de segmentation a partir de la configuration, et execute des
+> workflows reproductibles d'entrainement, d'evaluation et d'etude.
 
-Un cadre modulaire d’apprentissage profond, orienté artefacts, pour la cartographie
-de l’occupation du sol au niveau du pixel. Le système intègre des **images spectrales Landsat**,
-des **métriques topographiques dérivées de modèles numériques d’élévation (DEM)**,
-et des **caractéristiques métier** au moyen d’un pipeline structuré de préparation
-des données et d’un environnement d’entraînement basé sur des sessions, reposant
-sur des **architectures de segmentation de type U-Net** (implémentation PyTorch).
-La prise en charge actuelle des modèles comprend des variantes U-Net multi-têtes
-configurables, notamment U-Net standard, U-Net++ et des dorsales de type U-Net3+,
-avec des goulots d’étranglement convolutionnels, transformeurs ou hybrides en
-option. La configuration par défaut demeure un U-Net convolutionnel conservateur
-afin d’assurer la stabilité des expériences de référence, tandis que les goulots
-d’étranglement fondés sur les transformeurs sont disponibles pour les expériences
-nécessitant un contexte spatial plus étendu et des interactions de caractéristiques
-à longue portée.
+`landseg` est un cadre modulaire, oriente artefacts, pour la segmentation de
+l'occupation du sol. Il combine l'imagerie satellite, des entrees
+topographiques optionnelles et des caracteristiques de domaine optionnelles au
+moyen d'un pipeline geospatial deterministe et d'un runtime PyTorch base sur
+des sessions.
 
-> **État du projet :**
-> Ce dépôt est actuellement en mode **recherche / expérimental**. Les limites des modules
-> et les API ne sont **pas encore stables**. Certaines interfaces sont stables pour l’utilisation,
-> tandis que d’autres (notamment les couches avancées d’orchestration et d’étude) sont encore en développement.
+La pile de modeles actuelle est centree sur des modeles de segmentation
+configurables de type U-Net, y compris des corps U-Net, U-Net++ et U-Net+++.
+Le runtime prend en charge les sorties multi-tetes, les pertes configurables,
+les metriques de segmentation, le cablage des optimiseurs, les callbacks et les
+adaptateurs de tableaux de bord. La configuration est separee entre des
+parametres racine destines a l'utilisateur et l'arborescence Hydra/schema
+structuree fournie avec le package.
 
----
+## Etat Du Projet
 
-# 📖 Vue d’ensemble
+Ce depot est en developpement actif de recherche et d'experimentation. Le
+workflow principal de preparation des donnees et d'entrainement des modeles est
+utilisable, mais les frontieres de modules, les surfaces de configuration et
+les API avancees d'etude peuvent encore evoluer.
 
-Ce dépôt fournit un flux de travail complet pour préparer des jeux de données géospatiaux
-et entraîner des modèles de segmentation de l’occupation du sol, avec un fort accent sur la reproductibilité
-et une circulation structurée des données.
+Actuellement utilisable:
 
-## Concepts clés
+- Ingestion des donnees et preparation propre a l'experience
+- Construction de grilles, domaines, blocs de donnees, manifestes et datasets a partir d'artefacts
+- Pipelines d'entrainement et d'evaluation autonome des modeles
+- Diagnostics de surapprentissage pour valider la chaine de bout en bout
+- Chemins de code pour les adaptateurs TensorBoard et MLflow
+- Points d'entree de sweep d'etude et d'analyse d'etude orientes Optuna
 
-- **Artefacts fondamentaux (préparation des données)**
+Encore en maturation:
 
-  Les rasters bruts sont transformés en artefacts structurés alignés sur une grille
-  (par exemple : blocs de données, cartes de domaines). Ces artefacts servent de passerelle entre
-  les formats géospatiaux (GeoTIFF) et les entrées de modèles basées sur des tenseurs.
+- Workflows et exemples centres sur les notebooks
+- Ergonomie de l'API programmatique publique
+- Garanties de configuration pour les etudes/sweeps
+- Exports d'evaluation et schemas de rapports standardises
+- Garanties de compatibilite a long terme pour les champs de configuration internes
 
-- **Définition des expériences (DataSpecs + modèle)**
+## Documentation
 
-  Les artefacts préparés sont assemblés dans des `DataSpecs`, qui définissent :
+- [Structure du depot](./docs/project_structure_fr.md)
+- [Schema du workflow](./docs/workflow_chart_fr.md)
+- [Guide de preparation des donnees](./docs/data_preparation_fr.md)
+- [Decisions d'architecture](./docs/ADRs/)
 
-  - Les entrées du modèle
-  - Les partitions du jeu de données
-  - La normalisation
-  - La structure des classes
+## Concepts Cles
 
-  Les modèles sont construits à partir de configurations et associés à ces spécifications.
+### Artefacts De Fondation
 
-- **Session (système d’exécution)**
+Les rasters bruts sont transformes en artefacts reutilisables alignes sur une
+grille, par exemple des grilles monde, cartes de domaine, blocs de donnees,
+manifestes et schemas. Ces artefacts font le lien entre les formats raster
+geospatiaux et les entrees d'entrainement orientees tenseurs.
 
-  L’entraînement et l’évaluation sont exécutés via une session, qui assemble :
+### DataSpecs
 
-  - Les chargeurs de données (*dataloaders*)
-  - Les modèles
-  - Les fonctions de perte et optimiseurs
-  - Les moteurs d’exécution
-  - Les rappels (*callbacks*) et l’instrumentation
+Les artefacts prepares sont assembles en `DataSpecs`, qui decrivent les entrees
+du modele, les partitions du dataset, la normalisation, la structure des
+classes et les autres contrats de donnees utilises par le runtime.
 
-- **Pipelines (couche d’exécution)**
+### Modeles
 
-  Les pipelines CLI orchestrent le flux de travail. Ils résolvent la configuration et les artefacts,
-  puis délèguent la construction au système (ils n’implémentent pas la logique métier principale).
+Les modeles sont construits depuis la configuration via `landseg.models`. La
+couche modele possede la construction des reseaux neuronaux: backbones, frames,
+tetes, helpers de domaine, conditionnement et validation de surete. Les
+objectifs d'entrainement et les metriques restent dans le runtime de session,
+plutot que dans les definitions de modeles.
 
-## Fonctionnalités principales
+### Sessions
 
-- **Flux de travail orienté artefacts**
+Les sessions assemblent la surface runtime pour l'entrainement ou l'evaluation:
 
-  Toutes les données intermédiaires et finales sont stockées comme artefacts versionnés.
-  Les utilisateurs configurent le système ; le cycle de vie des artefacts et leur réutilisation sont gérés automatiquement.
+- datasets et dataloaders
+- liaisons des modeles
+- tetes, pertes, metriques, contraintes et taches de regularisation
+- optimiseurs
+- executors d'epoch et de runtime
+- callbacks, tracking, tableaux de bord et formatage de rapports
+- politiques d'orchestration et runners
 
-- **Préparation déterministe des données**
+### Pipelines D'Execution
 
-  L’alignement des grilles et des domaines garantit une structure spatiale cohérente entre les exécutions.
+La couche d'execution selectionne un pipeline nomme, resout la configuration,
+coordonne la resolution des artefacts et delegue le travail principal aux
+factories et modules runtime. Les implementations de pipelines restent
+volontairement minces.
 
-- **Jeux de données pilotés par spécifications (`DataSpecs`)**
+## Installation
 
-  Un unique objet d’exécution définit toutes les entrées du modèle, les partitions et la normalisation.
+Python 3.12 ou plus recent est requis.
 
-- **Environnement d’exécution basé sur les sessions**
+```bash
+pip install .
+```
 
-  La logique d’entraînement et d’évaluation est encapsulée dans un système d’exécution structuré.
+Cela installe la commande console `landseg`:
 
-- **Suivi découplé (développement préliminaire)**
+```bash
+landseg pipeline=default
+```
 
-  La prise en charge de TensorBoard est disponible via une instrumentation basée sur des callbacks
-  (sans dépendance à un fournisseur spécifique).
+## Configuration
 
-  Des moteurs supplémentaires (par exemple MLflow) sont prévus.
+La plupart des workflows utilisateur devraient commencer avec le fichier
+`settings.yaml` a la racine. L'arborescence Hydra fournie sous
+`src/landseg/configs/hydra/` contient les defaults de composition internes et
+doit etre modifiee avec prudence.
 
----
+Les couches de configuration sont:
 
-## ⚠️ Notes sur la stabilité
+- `settings.yaml`: entrees locales du projet et choix runtime de haut niveau
+- `src/landseg/configs/hydra/`: defaults de composition Hydra fournis avec le package
+- `src/landseg/configs/schema/`: contrats de configuration Python structures
+- `settings_dev.yaml`: configuration locale de developpement, ignoree par git
 
-- **Stables pour utilisation**
+Avant d'executer les pipelines de donnees, lisez le
+[guide de preparation des donnees](./docs/data_preparation_fr.md) et organisez
+les entrees locales sous la racine d'experience configuree.
 
-  - Pipelines d’ingestion et de préparation des données
-  - Construction de jeux de données basée sur des artefacts
-  - Pipelines d’entraînement et d’évaluation
-  - Intégration TensorBoard (suivi de base)
+## Utilisation Des Pipelines
 
-- **En développement actif**
+Les noms de pipelines sont enregistres dans `landseg.execution.pipelines`.
 
-  - Flux de travail basés sur des notebooks
-    *(appelés à devenir le point d’entrée principal)*
-  - Couche d’étude / exploration paramétrique
-    *(utilitaires d’expérimentation basés sur Optuna)*
-  - API de session et d’exécution
-    *(susceptibles d’évoluer dans le temps)*
+### 1. Ingestion Des Donnees
 
----
+Construit les artefacts de fondation a partir des rasters bruts. Cette etape
+s'execute generalement une fois par jeu de donnees source, ou chaque fois que
+les rasters source ou les parametres de grille changent.
 
-**Documentation plus détaillée disponible ici :**
-- [Structure du dépôt](./docs/project_structure.md)
-- [Schéma du flux de travail](./docs/workflow_chart.md)
+```bash
+landseg pipeline=data-ingest
+```
 
----
+### 2. Preparation Des Donnees
 
-## ▶️ Utilisation de l’entrée CLI
+Construit les artefacts propres a l'experience a partir des blocs de donnees
+ingeres, y compris les partitions, la normalisation/statistiques et les schemas
+de dataset.
 
-Avant d’exécuter une expérience, vous devez préparer vos rasters d’entrée et organiser correctement
-le dossier de votre projet. Commencez par consulter le guide de préparation des données :
+```bash
+landseg pipeline=data-prepare
+```
 
-📄 [**Guide de préparation des données**](./docs/data_preparation.md)
+### 3. Entrainement Du Modele
 
-Une fois vos rasters et dossiers prêts, configurez votre projet à l’aide du fichier
-`settings.yaml` situé à la racine. Ce fichier fournit un point d’entrée stable pour spécifier
-les entrées et les options de traitement sans modifier l’arborescence interne de configuration Hydra.
+Construit et execute une session complete d'entrainement a partir des artefacts
+prepares.
 
-Installez le framework :
+```bash
+landseg pipeline=model-train
+```
 
-    pip install .
+### 4. Evaluation Du Modele
 
----
+Execute l'evaluation a partir des artefacts prepares et d'un checkpoint entraine.
 
-### Étapes du pipeline
+```bash
+landseg pipeline=model-evaluate pipeline.model_evaluate.checkpoint=path/to/checkpoint
+```
 
-Ce projet fonctionne à travers des **étapes de pipeline explicites et consécutives**.
-Chaque étape produit ou consomme des artefacts bien définis, gouvernés par des politiques explicites
-de cycle de vie.
+### 5. Diagnostic De Surapprentissage
 
-#### 1. Ingestion des données
+Execute un diagnostic contraint de bout en bout sur un petit perimetre pour
+valider le cablage du modele, du dataset, des pertes, de l'optimiseur, des
+metriques et de l'execution.
 
-Traitez les rasters bruts en **blocs de données stables et catalogués** alignés sur une grille mondiale
-et persistés sous forme d’artefacts fondamentaux réutilisables :
+```bash
+landseg pipeline=diagnose-overfit
+```
 
-    landseg pipeline=data-ingest
+### 6. Sweep D'Etude
 
-Cette étape doit généralement être exécutée **une seule fois par jeu de données**,
-sauf si les rasters d’entrée ou la configuration de la grille changent.
+Execute le point d'entree de sweep oriente Optuna.
 
----
+```bash
+landseg pipeline=study-sweep
+```
 
-#### 2. Préparation des données propre à l’expérience
+### 7. Analyse D'Etude
 
-Préparez les artefacts spécifiques à l’expérience (partitions du jeu de données, normalisation, statistiques,
-schémas) à partir des blocs de données précédemment ingérés :
+Analyse les resultats d'etude via le point d'entree d'analyse.
 
-    landseg pipeline=data-prepare
+```bash
+landseg pipeline=study-analysis
+```
 
-Cette étape peut être réexécutée avec différentes configurations d’expérience sans
-réingérer les données brutes.
+## Organisation Des Artefacts Et Des Sorties
 
----
+L'I/O locale des experiences est normalement placee sous le repertoire
+d'experience configure. Dans l'arborescence de travail par defaut, cela
+correspond a:
 
-#### 3. Entraînement du modèle
+```text
+experiment/
+|-- input/       Entrees source locales
+|-- artifacts/   Artefacts generes reutilisables
+`-- results/     Sorties de pipelines/sessions
+```
 
-Exécutez une tâche complète d’entraînement en utilisant les artefacts de jeu de données actuellement préparés :
+Les artefacts sont destines a servir de source de verite pour la
+reproductibilite. Le framework resout, reutilise, reconstruit ou valide les
+artefacts via un code centralise de politiques d'artefacts, plutot que de
+demander aux utilisateurs de gerer manuellement les fichiers intermediaires.
 
-    landseg pipeline=model-train
+## Frontieres Du Package
 
-Cette étape construit une session complète d’entraînement, incluant l’état d’exécution,
-les moteurs d’exécution et un exécuteur piloté par phases, à partir des artefacts préparés.
+L'organisation actuelle du code source est:
 
-Cette étape consomme les artefacts préparés mais ne modifie pas les données fondamentales.
+```text
+src/landseg/
+|-- adapters/        Surfaces d'entree CLI et API programmatique
+|-- artifacts/       Chemins, persistance, politiques, checkpoints
+|-- configs/         Defaults Hydra YAML et schemas de config structures
+|-- core/            Contrats partages et types de resultats
+|-- execution/       Registre de pipelines et dispatch de haut niveau
+|-- geopipe/         Pipeline geospatial de fondation et transformation
+|-- models/          Frames, backbones, tetes, conditionnement, factories
+|-- session/         Donnees runtime, moteurs, taches, instrumentation, orchestration
+|-- study/           Utilitaires de sweep et d'analyse
+`-- utils/           Helpers partages de logging et multiprocessing
+```
 
----
+Pour une carte plus complete, consultez
+[docs/project_structure_fr.md](./docs/project_structure_fr.md).
 
-#### 4. Évaluation du modèle
+## Suivi Et Instrumentation
 
-Exécutez une tâche d’évaluation autonome à l’aide des artefacts de jeu de données actuellement préparés
-et d’un point de contrôle entraîné :
+Les evenements d'entrainement et d'evaluation sont emis via une instrumentation
+basee sur des callbacks. Le code actuel inclut:
 
-    landseg pipeline=model-evaluate \
-      pipeline.model_evaluate.checkpoint=path/to/checkpoint
+- dispatch de callbacks et callbacks de logging
+- hooks de tracking pour entrainement, validation et inference
+- adaptateur de tableau de bord TensorBoard
+- adaptateur de tableau de bord MLflow
+- helpers de rendu et formatage de rapports
 
-Cette étape construit une session d’évaluation uniquement à partir des artefacts préparés
-et du point de contrôle fourni, puis exécute l’inférence et le calcul des métriques sur la partition
-d’évaluation configurée (par exemple `val` ou `test`) sans effectuer d’entraînement,
-d’optimisation ou de création de point de contrôle. Elle est destinée à l’évaluation post-entraînement
-et à la production de rapports, et consomme les artefacts préparés sans modifier les données fondamentales.
+Ces surfaces sont encore affineees, surtout pour la generation standardisee
+d'apercus, les exports d'evaluation et les rapports de comparaison.
 
----
+## Feuille De Route
 
-#### 5. Test de surapprentissage isolé (*overfit silo test*) (optionnel)
+Objectifs a court terme:
 
-Exécutez un test minimal de surapprentissage sur un petit sous-ensemble afin de valider l’ensemble de la chaîne de traitement.
-Ce pipeline construit une session **sans exécuteur**, en utilisant directement le moteur d’exécution partagé.
-Il ne nécessite ni ingestion ni préparation préalable :
+- Rafraichir les workflows notebook autour des API actuelles de pipeline et de session
+- Mettre a jour les schemas de workflow pour refleter la separation session/runtime actuelle
+- Rendre les rapports d'evaluation et exports de metriques plus coherents entre pipelines
+- Ameliorer les exemples pour labels multi-tetes, contraintes et pertes de regularisation
 
-    landseg pipeline=diagnose-overfit
+Objectifs a moyen terme:
 
+- Renforcer l'API d'etude/sweep et documenter les workflows Optuna recommandes
+- Clarifier l'API programmatique publique pour scripts et notebooks
+- Ameliorer la validation de configuration et les messages d'erreur des settings utilisateur
+- Etendre le support dashboards/rapports pour les apercus et la comparaison inter-executions
 
->🔔 Ces commandes exécutent des configurations Hydra depuis `src/landseg/configs/`. Ces
-fichiers internes contrôlent le comportement du framework et ne devraient être modifiés que par
-des utilisateurs avancés familiers avec Hydra et la structure du projet. Pour la plupart des flux de travail,
-toutes les entrées requises devraient être fournies via le fichier `settings.yaml` à la racine.
+Objectifs a plus long terme:
 
----
+- Ajouter d'autres familles de modeles au-dela de la pile actuelle de type U-Net
+- Definir des chemins d'export stables pour modeles entraines et artefacts d'evaluation
+- Soutenir des workflows plus riches d'analyse inter-experiences
+- Continuer a consolider les frontieres internes a mesure que les ADR se stabilisent
 
-## 📊 Suivi et visualisation
+## Contribution
 
-Les métriques et journaux d’entraînement sont émis via une instrumentation basée sur des callbacks.
+Ce projet reste experimental. Les contributions devraient preserver la
+separation actuelle entre preparation geospatiale, cycle de vie des artefacts,
+construction des modeles, runtime de session et pipelines d'execution.
 
-- TensorBoard est actuellement pris en charge *(utilisation locale)*
-- Le suivi est découplé des composants internes du framework
-- Une prise en charge future est prévue pour des moteurs supplémentaires *(par exemple MLflow)*
+Avant les grands changements structurels, consultez les ADR dans
+[docs/ADRs/](./docs/ADRs/) et ajoutez ou mettez a jour un ADR lorsqu'une
+decision change la responsabilite des modules, les contrats runtime ou le
+comportement visible par l'utilisateur.
 
----
+## Licence
 
-## 🧠 Modèle conceptuel
+Distribue sous la licence Apache, Version 2.0. Consultez [LICENSE](./LICENSE)
+et [NOTICE](./NOTICE) pour plus de details.
 
-Le système impose une séparation stricte des responsabilités :
+Copyright Sa Majeste le Roi du chef de l'Ontario, represente par le ministre
+des Richesses naturelles, 2026.
 
-- **Couche fondamentale**
-  Construction déterministe des données
-  *(grille, domaine, blocs)*
-
-- **Couche des artefacts**
-  Persistance, validation et politiques de réutilisation
-
-- **Couche des expériences**
-  `DataSpecs` et définition des modèles
-
-- **Couche des sessions**
-  Exécution à l’exécution et orchestration du cycle de vie
-
-- **Couche d’exécution**
-  Sélection et coordination des pipelines
-
-**Flux des dépendances**
-
-    foundation → artifacts → experiment → session → execution
-
-## 📦 Comportement des artefacts (résumé orienté utilisateur)
-
-Les artefacts sont générés et réutilisés automatiquement. Les utilisateurs ne gèrent pas manuellement les politiques de cycle de vie.
-
-Les artefacts de jeux de données préparés sont stockés sous :
-
-    <racine-expérience-définie-par-l’utilisateur>/artifacts
-
-Les sorties de session sont stockées sous :
-
-    <racine-expérience-définie-par-l’utilisateur>/results/run_xxxx/
-
-Les artefacts servent de source de vérité pour la reproductibilité.
-
----
-
-## 🚀 Feuille de route
-
-### Court terme
-- Flux de travail centré sur les notebooks (point d’entrée convivial)
-- Amélioration de la visualisation et des rapports d’expériences
-- Intégration TensorBoard améliorée (journalisation enrichie, aperçus)
-
-### Moyen terme
-- Interface stable d’étude / exploration d’hyperparamètres (Optuna)
-- Intégration MLflow pour le suivi des expériences
-- Amélioration de la clarté et des garanties de configuration des sessions
-- Standardisation des sorties d’évaluation et des schémas de rapports
-
-### Long terme
-- Comparaison inter-expériences et flux de travail d’étude
-- Architectures de modèles supplémentaires
-- Surface d’exécution orientée production
-- Utilitaires étendus d’exportation et de déploiement
-
----
-
-## 🤝 Contribution
-
-Ce projet est dans une phase expérimentale. La structure des modules, la nomenclature et le comportement
-CLI peuvent évoluer. Les contributions devraient se concentrer sur l’utilisabilité pour la recherche, sauf
-si elles sont alignées avec un *Architecture Decision Record* (ADR) approuvé.
-
-Veuillez consulter les ADR actifs dans `docs/ADRs/` afin de comprendre les décisions de conception actuelles.
-
----
-
-## 📜 Licence
-
-Distribué sous la **Licence Apache, Version 2.0**.
-Consultez les fichiers `LICENSE` et `NOTICE` pour plus de détails.
-
-© Sa Majesté le Roi du chef de l’Ontario,
-représenté par le ministre des Richesses naturelles, 2026.
-© Imprimeur du Roi pour l’Ontario, 2026.
+Copyright Imprimeur du Roi pour l'Ontario, 2026.

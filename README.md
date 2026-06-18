@@ -1,303 +1,277 @@
 # Multi-Modal Landcover Classification Framework
 
-[English](README.md) | [Français](README_fr.md)
+[English](README.md) | [Francais](README_fr.md)
 
->***Plain‑language summary:***<br>
->*This project provides tools for preparing satellite imagery and training*
->*models that classify land cover. It helps users organize data, run deep‑learning*
->*models, and reproduce results consistently.*
+> Plain-language summary:
+> This project prepares geospatial raster data and trains deep-learning models
+> for pixel-level land-cover classification. It organizes data into reusable
+> artifacts, builds segmentation models from configuration, and runs
+> reproducible training, evaluation, and study workflows.
 
-A modular, artifact‑driven deep learning framework for pixel‑level landcover mapping.
-The system integrates **Landsat spectral imagery**, **DEM‑derived topographic metrics**,
-and **domain features** through a structured data preparation pipeline and a
-session-based training runtime built on **U‑Net–style segmentation architectures**
-(PyTorch implementation). Current model support includes configurable multi-head
-U-Net variants, including standard U-Net, U-Net++, and U-Net3+ style backbones,
-with optional convolutional, transformer, or hybrid bottlenecks. The default is
-set to a conservative convolutional U-Net for baseline stability, while
-transformer-enabled bottlenecks are available for experiments requiring
-broader spatial context and long-range feature interaction.
+`landseg` is a modular, artifact-driven framework for land-cover segmentation.
+It combines satellite imagery, optional topographic inputs, and optional domain
+features through a deterministic geospatial preparation pipeline and a
+session-based PyTorch runtime.
 
-> **Project Status:**
-> This repository is currently in **research / experimental** mode. Module boundaries
-> and APIs are **not yet stable**. Some interfaces are stable for usage, while others
-> (notably advanced orchestration and study layers) are still under development.
+The current model stack centers on configurable U-Net-style segmentation models,
+including U-Net, U-Net++, and U-Net+++ bodies. The runtime supports multi-head
+outputs, configurable losses, segmentation metrics, optimizer wiring, callbacks,
+and dashboard adapters. Configuration is split between user-facing root settings
+and the packaged Hydra/structured-schema configuration tree.
 
----
+## Project Status
 
-# 📖 Overview
+This repository is in active research and experimental development. The main
+data preparation and model training workflow is usable, but module boundaries,
+configuration surfaces, and advanced study APIs can still evolve.
 
-This repository provides an end-to-end workflow for preparing geospatial datasets
-and training land-cover segmentation models, with a strong emphasis on reproducibility
-and structured data flow.
+Currently usable:
+
+- Data ingestion and experiment-scoped data preparation
+- Artifact-backed grid, domain, data block, manifest, and dataset construction
+- Model training and standalone model evaluation pipelines
+- Overfit diagnostics for end-to-end stack validation
+- TensorBoard and MLflow dashboard adapter code paths
+- Optuna-oriented study sweep and study analysis pipeline entry points
+
+Still maturing:
+
+- Notebook-first workflows and examples
+- Public programmatic API ergonomics
+- Study/sweep configuration guarantees
+- Standardized evaluation exports and reporting schemas
+- Long-term compatibility guarantees for internal config fields
+
+## Documentation
+
+- [Repository structure](./docs/project_structure.md)
+- [Workflow chart](./docs/workflow_chart.md)
+- [Data preparation guide](./docs/data_preparation.md)
+- [Architecture decision records](./docs/ADRs/)
 
 ## Core Concepts
 
-- **Foundation Artifacts (Data Preparation)**
+### Foundation Artifacts
 
-  Raw rasters are transformed into structured, grid-aligned artifacts
-  (e.g., data blocks, domain maps). These artifacts act as the bridge between
-  geospatial formats (GeoTIFF) and tensor-based model inputs.
+Raw rasters are transformed into reusable, grid-aligned artifacts such as world
+grids, domain maps, data blocks, manifests, and schemas. These artifacts are the
+bridge between geospatial raster formats and tensor-oriented training inputs.
 
-- **Experiment Definition (DataSpecs + Model)**
+### DataSpecs
 
-  Prepared artifacts are assembled into `DataSpecs`, which define:
+Prepared artifacts are assembled into `DataSpecs`, which describe model inputs,
+dataset splits, normalization, class structure, and other dataset contracts used
+by the runtime.
 
-  - Model inputs
-  - Dataset splits
-  - Normalization
-  - Class structure
+### Models
 
-  Models are constructed from configuration and paired with these specifications.
+Models are built from configuration through `landseg.models`. The model layer
+owns neural network construction: backbones, frames, heads, domain helpers,
+conditioning, and safety validation. Training objectives and metrics are kept in
+the session runtime rather than in model definitions.
 
-- **Session (Runtime System)**
+### Sessions
 
-  Training and evaluation are executed through a session, which assembles:
+Sessions assemble the runtime surface for training or evaluation:
 
-  - Dataloaders
-  - Models
-  - Loss functions and optimizers
-  - Execution engines
-  - Callbacks and instrumentation
+- datasets and dataloaders
+- model bindings
+- heads, losses, metrics, constraints, and regularization tasks
+- optimizers
+- epoch/runtime executors
+- callbacks, tracking, dashboards, and report formatting
+- orchestration policies and runners
 
-- **Pipelines (Execution Layer)**
+### Execution Pipelines
 
-  CLI pipelines orchestrate the workflow. They resolve configuration and artifacts,
-  then delegate construction to the system (they do not implement core logic).
+The execution layer selects a named pipeline, resolves configuration, coordinates
+artifact resolution, and delegates core work to factories and runtime modules.
+Pipeline implementations are intentionally thin.
 
-## Key Features
+## Installation
 
-- **Artifact-Driven Workflow**
+Python 3.12 or newer is required.
 
-  All intermediate and final data are stored as versioned artifacts.
-  Users configure the system; artifact lifecycle and reuse are handled automatically.
+```bash
+pip install .
+```
 
-- **Deterministic Data Preparation**
+This installs the `landseg` console script:
 
-  Grid and domain alignment ensure consistent spatial structure across runs.
+```bash
+landseg pipeline=default
+```
 
-- **Specification-Driven Datasets (`DataSpecs`)**
+## Configuration
 
-  A single runtime object defines all model inputs, splits, and normalization.
+Most user workflows should start from the root-level `settings.yaml`. The
+packaged Hydra tree under `src/landseg/configs/hydra/` contains internal
+composition defaults and should be changed carefully.
 
-- **Session-Based Runtime**
+The configuration layers are:
 
-  Training and evaluation logic are encapsulated in a structured runtime system.
+- `settings.yaml`: local project inputs and high-level runtime choices
+- `src/landseg/configs/hydra/`: packaged Hydra composition defaults
+- `src/landseg/configs/schema/`: structured Python config contracts
+- `settings_dev.yaml`: local development configuration, ignored by git
 
-- **Decoupled Tracking (Early-Stage Dev)**
+Before running data pipelines, read the
+[data preparation guide](./docs/data_preparation.md) and organize local inputs
+under the configured experiment root.
 
-  TensorBoard support is available via callback-based instrumentation
-  (no vendor lock-in).
+## Pipeline Usage
 
-  Additional backends (e.g., MLflow) are planned.
+Pipeline names are registered in `landseg.execution.pipelines`.
 
----
+### 1. Data Ingestion
 
-## ⚠️ Stability Notes
+Build foundation artifacts from raw rasters. This typically runs once per source
+dataset or whenever source rasters/grid settings change.
 
-- **Stable for Use**
+```bash
+landseg pipeline=data-ingest
+```
 
-  - Data ingestion and preparation pipelines
-  - Artifact-based dataset construction
-  - Training and evaluation pipelines
-  - TensorBoard integration (basic tracking)
+### 2. Data Preparation
 
-- **Under Active Development**
+Build experiment-scoped artifacts from ingested data blocks, including splits,
+normalization/statistics, and dataset schemas.
 
-  - Notebook-based workflows
-    *(expected to become the primary entry point)*
-  - Study / sweeping layer
-    *(Optuna-based experimentation utilities)*
-  - Session and execution APIs
-    *(may evolve over time)*
+```bash
+landseg pipeline=data-prepare
+```
 
----
+### 3. Model Training
 
-**More detailed documentation available here**:
-- [Repository Structure](./docs/project_structure.md)
-- [Workflow Chart](./docs/workflow_chart.md)
+Construct and run a full training session from prepared artifacts.
 
----
+```bash
+landseg pipeline=model-train
+```
 
-## ▶️ CLI Entry Usage
+### 4. Model Evaluation
 
-Before running any experiment, you must prepare your input rasters and organize
-your project folder correctly. Please start by reading the data‑preparation guide:
+Run evaluation from prepared artifacts and a trained checkpoint.
 
-📄 [**Data preparation guide**](./docs/data_preparation.md)
+```bash
+landseg pipeline=model-evaluate pipeline.model_evaluate.checkpoint=path/to/checkpoint
+```
 
-Once your rasters and folders are ready, configure your project using the
-root‑level `settings.yaml`. This file provides a stable entry point for specifying
-inputs and processing options without modifying the internal Hydra configuration
-tree.
+### 5. Overfit Diagnostic
 
-Install the framework:
+Run a constrained end-to-end diagnostic on a small scope to validate model,
+dataset, loss, optimizer, metric, and execution wiring.
 
-    pip install .
+```bash
+landseg pipeline=diagnose-overfit
+```
 
----
+### 6. Study Sweep
 
-### Pipeline stages
+Run the Optuna-oriented study sweep entry point.
 
-This project runs through **explicit, consecutive pipeline stages**.
-Each stage produces or consumes well‑defined artifacts governed by explicit
-lifecycle policies.
+```bash
+landseg pipeline=study-sweep
+```
 
-#### 1. Data ingestion
+### 7. Study Analysis
 
-Process raw rasters into **stable, catalogued data blocks** aligned to a world
-grid and persisted as reusable foundation artifacts:
+Analyze study results through the study analysis entry point.
 
-    landseg pipeline=data-ingest
+```bash
+landseg pipeline=study-analysis
+```
 
-This stage typically needs to be run **once per dataset**, unless the input
-rasters or grid configuration change.
+## Artifact And Output Layout
 
----
+Local experiment I/O is normally rooted under the configured experiment
+directory. In the default working tree this corresponds to:
 
-#### 2. Experiment‑scoped data preparation
+```text
+experiment/
+|-- input/       Local source inputs
+|-- artifacts/   Reusable generated artifacts
+`-- results/     Pipeline/session outputs
+```
 
-Prepare experiment‑specific artifacts (dataset splits, normalization, statistics,
-schemas) from previously ingested data blocks:
+Artifacts are intended to be the source of truth for reproducibility. The
+framework resolves, reuses, rebuilds, or validates artifacts through centralized
+artifact policy code rather than requiring users to manually manage intermediate
+files.
 
-    landseg pipeline=data-prepare
+## Package Boundaries
 
-This stage may be rerun with different experiment configurations without
-re‑ingesting raw data.
+The current source layout is:
 
----
+```text
+src/landseg/
+|-- adapters/        CLI and programmatic API entry surfaces
+|-- artifacts/       Artifact paths, persistence, lifecycle policy, checkpoints
+|-- configs/         Hydra YAML defaults and structured config schemas
+|-- core/            Shared contracts and result types
+|-- execution/       Pipeline registry and top-level dispatch
+|-- geopipe/         Geospatial foundation and transform pipeline
+|-- models/          Model frames, backbones, heads, conditioning, factories
+|-- session/         Runtime data, engines, tasks, instrumentation, orchestration
+|-- study/           Sweep and analysis utilities
+`-- utils/           Shared logging and multiprocessing helpers
+```
 
-#### 3. Model training
+For a fuller map, see [docs/project_structure.md](./docs/project_structure.md).
 
-Run a complete training job using the currently prepared dataset artifacts:
+## Tracking And Instrumentation
 
-    landseg pipeline=model-train
+Training and evaluation events are emitted through callback-based
+instrumentation. The current codebase includes:
 
-This stage constructs a full training session, including runtime state,
-execution engines, and a phase‑driven runner, from prepared dataset artifacts.
+- callback dispatch and logging callbacks
+- training, validation, and inference tracking hooks
+- TensorBoard dashboard adapter
+- MLflow dashboard adapter
+- report rendering/formatting helpers
 
-This stage consumes prepared artifacts but does not modify foundation data.
+These surfaces are still being refined, especially around standardized preview
+generation, evaluation exports, and comparison reports.
 
----
+## Roadmap
 
-#### 4. Model evaluation
-Run a standalone evaluation job using the currently prepared dataset artifacts
-and a trained checkpoint:
+Near-term goals:
 
-    landseg pipeline=model-evaluate \
-      pipeline.model_evaluate.checkpoint=path/to/checkpoint
+- Refresh notebook workflows around the current pipeline and session APIs
+- Update workflow charts to match the current session/runtime split
+- Make evaluation reports and metric exports more consistent across pipelines
+- Improve examples for multi-head labels, constraints, and regularization losses
 
-This stage constructs an evaluation-only session from prepared dataset
-artifacts and the supplied checkpoint, then runs inference and metric
-computation on the configured evaluation split (for example, `val` or `test`)
-without performing training, optimization, or checkpoint creation. It is
-intended for post-training assessment and reporting, and consumes prepared
-artifacts without modifying foundation data.
+Medium-term goals:
 
----
+- Harden the study/sweep API and document recommended Optuna workflows
+- Clarify the public programmatic API for scripts and notebooks
+- Improve configuration validation and error messages for user-facing settings
+- Expand dashboard/reporting support for previews and cross-run comparison
 
-#### 5. Overfit silo test (optional)
+Longer-term goals:
 
-Run a minimal overfit test on a small subset to validate the end‑to‑end stack.
-This pipeline constructs a session **without a runner**, exercising the shared
-execution engine directly. It does not require prior ingestion or preparation:
+- Add more model families beyond the current U-Net-style stack
+- Define stable export paths for trained models and evaluation artifacts
+- Support richer cross-experiment analysis workflows
+- Continue consolidating internal boundaries as ADRs settle
 
-    landseg pipeline=diagnose-overfit
+## Contributing
 
+This project is still experimental. Contributions should preserve the current
+separation between geospatial preparation, artifact lifecycle, model
+construction, session runtime, and execution pipelines.
 
->🔔 These commands execute Hydra configurations from `src/landseg/configs/`. These
-internal files control the framework’s behavior and should only be modified by
-advanced users familiar with Hydra and the project structure. For most workflows,
-all required inputs should be provided through the root‑level `settings.yaml`.
+Before large structural changes, review the ADRs in [docs/ADRs/](./docs/ADRs/)
+and add or update an ADR when a decision changes module ownership, runtime
+contracts, or user-facing behavior.
 
----
+## License
 
-## 📊 Tracking & Visualization
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) and
+[NOTICE](./NOTICE) for details.
 
-Training metrics and logs are emitted via callback-based instrumentation.
+Copyright His Majesty the King in right of Ontario, as represented by the
+Minister of Natural Resources, 2026.
 
-- TensorBoard is currently supported *(local usage)*
-- Tracking is decoupled from framework internals
-- Future support planned for additional backends *(e.g., MLflow)*
-
----
-
-## 🧠 Conceptual Model
-
-The system enforces a strict separation of concerns:
-
-- **Foundation Layer**
-  Deterministic data construction
-  *(grid, domain, blocks)*
-
-- **Artifacts Layer**
-  Persistence, validation, and reuse policies
-
-- **Experiment Layer**
-  `DataSpecs` and model definition
-
-- **Session Layer**
-  Runtime execution and lifecycle orchestration
-
-- **Execution Layer**
-  Pipeline selection and coordination
-
-**Dependency Flow**
-
-    foundation → artifacts → experiment → session → execution
-
-## 📦 Artifact behavior (user-facing summary)
-
-Artifacts are automatically generated and reused. Users do not manually manage lifecycle policies.
-
-Prepared dataset artifacts are stored under:
-
-    <user-defined-experiment-root>/artifacts
-
-Session outputs are stored under:
-
-    <user-defined-experiment-root>/results/run_xxxx/
-
-Artifacts serve as the source of truth for reproducibility.
-
----
-
-## 🚀 Roadmap
-
-### Near‑Term
-- Notebook-first workflow (user-friendly entry point)
-- Improved experiment visualization and reporting
-- Enhanced TensorBoard integration (richer logging, previews)
-
-### Medium‑Term
-- Stable study / hyperparameter sweep interface (Optuna)
-- MLflow integration for experiment tracking
-- Improved session configuration clarity and guarantees
-- Standardized evaluation outputs and reporting schemas
-
-### Long‑Term
-- Cross-experiment comparison and study workflows
-- Additional model architectures
-- Production-oriented execution surface
-- Extended export and deployment utilities
-
----
-
-## 🤝 Contributing
-
-This project is in an experimental phase. Module structure, naming, and CLI
-behaviour may evolve. Contributions should focus on research usability unless
-aligned with an approved Architecture Decision Record (ADR).
-
-Please review active ADRs in `docs/ADRs/` to understand current design decisions.
-
----
-
-## 📜 License
-
-Licensed under the **Apache License, Version 2.0**.
-See the `LICENSE` and `NOTICE` file for details.
-
-© His Majesty the King in right of Ontario,
-as represented by the Minister of Natural Resources, 2026.
-© King's Printer for Ontario, 2026.
+Copyright King's Printer for Ontario, 2026.
