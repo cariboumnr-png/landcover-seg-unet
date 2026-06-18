@@ -116,18 +116,19 @@ class _TasksConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
     excluded_cls: dict[str, list[int]] | None = None
-    loss_types: _LossTypesConfig = field(default_factory=_LossTypesConfig)
-    constraints: list[_MTLConstraints] | None = None
+    loss_configs: _LossTypesConfig = field(default_factory=_LossTypesConfig)
+    mtl_constraints: list[_MTLConstraints] | None = None
+    mtl_reg_configs: dict[str, typing.Any] = field(default_factory=dict)
 
     def validate(self):
         match self.alpha_fn:
             case 'effective_n': utils.must_within(self.en_beta, 'EN beta', 0, 1)
             case 'inverse': pass
             case _: raise ValueError('Invalid loss alpha function')
-        utils.must_within(self.loss_types.focal.weight, 'focal loss weight', 0)
-        utils.must_within(self.loss_types.dice.weight, 'dice loss weight', 0)
-        utils.must_within(self.loss_types.spectral.weight, 'spectral loss weight', 0)
-        utils.must_within(self.loss_types.tv.weight, 'tv loss weight', 0)
+        utils.must_within(self.loss_configs.focal.weight, 'focal loss weight', 0)
+        utils.must_within(self.loss_configs.dice.weight, 'dice loss weight', 0)
+        utils.must_within(self.loss_configs.spectral.weight, 'spectral loss weight', 0)
+        utils.must_within(self.loss_configs.tv.weight, 'tv loss weight', 0)
 
 # ----- orchestration
 @dataclasses.dataclass

@@ -119,8 +119,8 @@ session:
     # e.g., set to {head_name: [1, 2]} to exclude class 1&2 for <head_name>
     # class index should be 1-based
     excluded_cls: {} # empty dict = no exclusion
-    # weights of loss types
-    loss_types:
+    # weights of loss configs
+    loss_configs:
       focal:
         weight: 0.5
       dice:

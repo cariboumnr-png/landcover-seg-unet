@@ -389,7 +389,7 @@ class BatchEngine:
             features=self.state.batch_cxt.x, # image array as the features
             headspecs=self.state.heads.active_hspecs,
             headlosses=self.state.heads.active_hloss,
-            multihead_consistency=self.state.heads.multihead_consistency
+            mtl_consistency_reg=self.state.heads.multihead_consistency,
         )
         # pass to state
         self.state.batch_out.total_loss = total

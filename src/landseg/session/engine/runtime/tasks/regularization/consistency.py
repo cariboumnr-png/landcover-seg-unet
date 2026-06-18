@@ -84,6 +84,7 @@ class ConsistencyRegularizer(torch.nn.Module):
         self,
         *,
         mtl_constraints: list[constraints.CompiledConstraint] | None,
+        reg_lambda: float,
         ignore_index: int,
         reduction: typing.Literal['mean', 'sum', 'none'] = 'mean',
     ) -> None:
@@ -127,6 +128,7 @@ class ConsistencyRegularizer(torch.nn.Module):
 
         # init attributes
         self.ignore_index = ignore_index
+        self.reg_lambda = reg_lambda
         self.reduction = reduction
         self.constraints = mtl_constraints
 
@@ -175,14 +177,15 @@ class ConsistencyRegularizer(torch.nn.Module):
             )
 
         if self.reduction == 'none':
-            return torch.stack([value.mean for value in values])
+            return torch.stack([value.mean for value in values]) * self.reg_lambda
 
         invalids = torch.stack([value.invalid_sum for value in values]).sum()
         if self.reduction == 'sum':
-            return invalids
+            return invalids * self.reg_lambda
 
+        # reduction=mean
         valids = torch.stack([value.valid_count for value in values]).sum()
-        return invalids / valids.clamp_min(self._eps(ref)) # reduction=mean
+        return invalids / valids.clamp_min(self._eps(ref)) * self.reg_lambda
 
     def by_constraint(
         self,

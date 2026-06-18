@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
 '''
@@ -34,7 +33,6 @@ training and evaluation artifacts used by the execution engine.
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import typing
 # local imports
@@ -55,9 +53,11 @@ class TaskConfigShape(typing.Protocol):
     @property
     def excluded_cls(self) -> dict[str, list[int]] | None: ...
     @property
-    def loss_types(self) -> loss.CompositeLossConfig: ...
+    def loss_configs(self) -> loss.CompositeLossConfig: ...
     @property
-    def constraints(self) -> list[constraints.MTLConstraint] | None: ...
+    def mtl_constraints(self) -> list[constraints.MTLConstraint] | None: ...
+    @property
+    def mtl_reg_configs(self) -> dict[str, typing.Any]: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -99,7 +99,7 @@ def build_engine_tasks(
           handling and optional exclusions.
     '''
 
-    # heads specifications
+    # per-head specs
     headspecs = heads.build_headspecs(
         data_specs,
         alpha_fn=config.alpha_fn,
@@ -107,22 +107,12 @@ def build_engine_tasks(
         excluded_cls=config.excluded_cls
     )
 
-    # multihead learning constraints
-    cons = constraints.compile_constraints(config.constraints, data_specs)
-
     # per-head loss
     headlosses = loss.build_headlosses(
         headspecs,
-        config=config.loss_types,
+        config=config.loss_configs,
         ignore_index=data_specs.meta.label_specs.ignore_index,
         spectral_band_indices=data_specs.meta.image_specs.spec_channels
-    )
-
-    # mutlihead regularization (logical consistencies)
-    mtl_regularization = regularization.ConsistencyRegularizer(
-        mtl_constraints=cons,
-        ignore_index=data_specs.meta.label_specs.ignore_index,
-        reduction='mean' # TEMP
     )
 
     # per-head segmentation metrics
@@ -131,7 +121,18 @@ def build_engine_tasks(
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
-    # multihead diagnostic metrics (GEM, logical violations)
+    # multi-head learning constraints
+    cons = constraints.compile_constraints(config.mtl_constraints, data_specs)
+
+    # mutli-head regularization (logical consistencies)
+    mtl_regularization = regularization.ConsistencyRegularizer(
+        mtl_constraints=cons,
+        reg_lambda=config.mtl_reg_configs.get('consistency_reg_lambda', 0.05),
+        ignore_index=data_specs.meta.label_specs.ignore_index,
+        reduction=config.mtl_reg_configs.get('consistency_reduction', 'mean')
+    )
+
+    # multi-head diagnostic metrics (GEM, logical violations)
     mtl_metrics = metrics.MTLMetricsAggregator(
         mtl_constraints=cons,
         ignore_index=data_specs.meta.label_specs.ignore_index,
