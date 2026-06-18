@@ -179,8 +179,8 @@ class CurriculumRunner(runner.BaseRunner):
                             is_run_end=self._is_run_end,
                             stop_reason=None,
                             # metrics
-                            objective_name=metrics.target_objective,
-                            objective_value=metrics.target_metrics,
+                            val_metrics_name=metrics.target_objective,
+                            val_metrics_value=metrics.target_metrics,
                             best_value_so_far=best_so_far,
                             best_epoch_so_far=best_epoch,
                             is_best_epoch=is_best_epoch,

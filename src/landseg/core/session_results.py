@@ -63,8 +63,8 @@ class SessionStepSummary: # pylint: disable=too-many-instance-attributes
     is_run_end: bool
     stop_reason: str | None
     # metrics
-    objective_name: str
-    objective_value: float
+    val_metrics_name: str
+    val_metrics_value: float
     best_value_so_far: float
     best_epoch_so_far: int
     is_best_epoch: bool
@@ -78,8 +78,8 @@ class SessionStepSummary: # pylint: disable=too-many-instance-attributes
             'phase_name': self.phase_name,
             'phase_max_epoch': self.phase_max_epoch,
             'epoch_in_phase': self.epoch_in_phase,
-            'objective_name': self.objective_name,
-            'objective_value': self.objective_value,
+            'validation_metrics_name': self.val_metrics_name,
+            'validation_metrics_value': self.val_metrics_value,
             'training': raw.training.as_dict if raw.training else None,
             'validation': raw.validation.as_dict if raw.validation else None,
             'inference': raw.inference.as_dict if raw.inference else None,

@@ -200,8 +200,8 @@ class ContinuousRunner(runner.BaseRunner):
             is_run_end=self._is_phase_end, # single phase
             stop_reason=reason,
             # metrics
-            objective_name=self._current_metrics.target_objective,
-            objective_value=self._current_metrics.target_metrics,
+            val_metrics_name=self._current_metrics.target_objective,
+            val_metrics_value=self._current_metrics.target_metrics,
             best_value_so_far=self._best_value_so_far,
             best_epoch_so_far=self._best_epoch_so_far,
             is_best_epoch=self._is_best_epoch,
