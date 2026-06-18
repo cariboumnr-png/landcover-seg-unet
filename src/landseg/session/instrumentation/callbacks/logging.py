@@ -53,7 +53,10 @@ class LoggingCallback(callbacks.BaseCallback):
                 f'{h}_loss: {l:.4f}'
                 for h, l in results.head_losses.items() if l > 0
             ])
-            text_list.append(f'reg: {results.regularization:.4f}')
+            text_list.extend([
+                f'{r}_reg: {v:.4f}'
+                for r, v in results.regularization.items()
+            ])
             text_list.append(f'LR: {results.current_lr:.4e}')
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
