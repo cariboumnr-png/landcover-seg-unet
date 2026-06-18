@@ -32,6 +32,7 @@ logical constraint violation detection.
 
 # standard imports
 import dataclasses
+import typing
 # third-party imports
 import torch
 # local imports
@@ -56,7 +57,7 @@ class MTLMetricsAggregator:
 
     def __init__(
         self,
-        mtl_constraints: list[constraints.MTLConstraint] | None = None,
+        cons: typing.Sequence[constraints.MTLConstraint] | None,
         *,
         ignore_index: int,
     ):
@@ -64,13 +65,13 @@ class MTLMetricsAggregator:
         Initialize the aggregator.
 
         Args:
+            cons: Optional list of logical constraints to evaluate.
             ignore_index: Index to ignore in ground truth for GEM and
                 validity masks.
-            constraints: Optional list of logical constraints to evaluate.
         '''
 
         self.ignore_index = ignore_index
-        self.constraints = mtl_constraints or []
+        self.constraints = cons or []
 
         # internal counters
         self.gem_hits: int = 0

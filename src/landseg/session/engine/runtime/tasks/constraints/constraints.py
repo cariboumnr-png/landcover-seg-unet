@@ -63,7 +63,7 @@ class CompiledConstraint:
 
 # -------------------------------Public Function-------------------------------
 def compile_constraints(
-    mtl_constraints: list[MTLConstraint] | None,
+    mtl_constraints: typing.Sequence[MTLConstraint] | None,
     data_specs: core.DataSpecs
 ) -> list[CompiledConstraint] | None:
     '''Validate constraints against data specifications.'''
