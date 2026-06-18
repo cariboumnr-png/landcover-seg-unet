@@ -382,14 +382,17 @@ class BatchEngine:
         assert self.state.batch_cxt.y_dict is not None
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
+        objectives = executor.TrainingObjectives(
+            headspecs=self.state.heads.active_hspecs,
+            headlosses=self.state.heads.active_hloss,
+            mtl_regularization=self.state.heads.multihead_regularization,
+        )
         # call loss function
         total, perhead = executor.multihead_objective(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features
-            headspecs=self.state.heads.active_hspecs,
-            headlosses=self.state.heads.active_hloss,
-            mtl_regularization=self.state.heads.multihead_regularization,
+            objectives=objectives
         )
         # pass to state
         self.state.batch_out.total_loss = total

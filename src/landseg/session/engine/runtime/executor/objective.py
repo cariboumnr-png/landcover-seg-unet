@@ -27,23 +27,28 @@ multiple model heads, including support for hierarchical supervision,
 per-head weighting, and auxiliary feature-aware losses.
 '''
 
+# standard imports
+import dataclasses
 # third-party imports
 import torch
 # local imports
 import landseg.session.engine.runtime.tasks as tasks
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class TrainingObjectives:
+    '''Training objectives container.'''
+    headspecs: dict[str, tasks.HeadSpec]
+    headlosses: dict[str, tasks.CompositeLoss]
+    mtl_regularization: tasks.ConsistencyRegularizer | None # optional
+
 # -------------------------------Public Function-------------------------------
 def multihead_objective(
     *,
-    # raw inputs
     multihead_preds: dict[str, torch.Tensor],
     multihead_targets: dict[str, torch.Tensor],
     features: torch.Tensor,
-    # per head objective
-    headspecs: dict[str, tasks.HeadSpec],
-    headlosses: dict[str, tasks.CompositeLoss],
-    # multi head objective
-    mtl_regularization: tasks.ConsistencyRegularizer | None,
+    objectives: TrainingObjectives,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     '''
     Compute weighted multi-head loss with optional hierarchical masking.
@@ -86,32 +91,33 @@ def multihead_objective(
     for head_name, head_pred in multihead_preds.items():
         # resolve parent tensor and class if a child head
         parent_tensor: torch.Tensor | None = None
-        parent_name = headspecs[head_name].parent_head
+        parent_name = objectives.headspecs[head_name].parent_head
         if parent_name is not None:
             parent_tensor = multihead_targets[parent_name]
         # prep target and optional mask tensors per head
         targets_0b, masks = _prep_loss_compute(
             head_target=multihead_targets[head_name],
-            head_spec=headspecs[head_name],
-            head_loss=headlosses[head_name],
+            head_spec=objectives.headspecs[head_name],
+            head_loss=objectives.headlosses[head_name],
             parent_tensor=parent_tensor,
         )
         # sanity check
         assert head_pred.shape[-2:] == multihead_targets[head_name].shape[-2:]
         # calculate loss
-        loss = headlosses[head_name](
+        loss = objectives.headlosses[head_name](
             head_pred,
             targets_0b,
             masks=masks,
             features=features
         )
-        total += headspecs[head_name].weight * loss
+        total += objectives.headspecs[head_name].weight * loss
         # per_head losses are detached scalars for logging only
         per_head[head_name] = float(loss.item())
 
     # multihead logical consistency regularization
-    if mtl_regularization is not None:
-        total += mtl_regularization(multihead_preds, multihead_targets)
+    reg = objectives.mtl_regularization
+    if reg is not None:
+        total += reg(multihead_preds, multihead_targets)
 
     # NaN check before output
     if not torch.isfinite(total):
