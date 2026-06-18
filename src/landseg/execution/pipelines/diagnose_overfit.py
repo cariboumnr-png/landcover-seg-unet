@@ -86,7 +86,8 @@ def overfit(config: configs.RootConfig) -> None:
 
     # set monitor head
     monitor_head = config.session.orchestration.monitor.track_heads
-    runner.set_head_state(monitor_head)
+    assert monitor_head
+    runner.set_head_state(list(monitor_head.keys()))
 
     # run train-evaluate
     max_epoch = c.OVERFIT_MAX_EPOCH
@@ -97,7 +98,7 @@ def overfit(config: configs.RootConfig) -> None:
     for ep in range(1, max_epoch + 1):
         results = runner.run_epoch(ep)
         assert results.training and results.validation # typing
-        los = results.training.total_loss
+        los = results.training.total_objective
         iou = results.target_metrics
         logger.log('INFO', f'Epoch: {ep:04d} | Loss: {los:4f} | IoU: {iou:4f}')
         if iou >= 0.99:
@@ -209,8 +210,8 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
         heads=core.Heads(
             class_counts=cc, # neutral
             logits_adjust={k: [1.0] * len(v) for k, v in cc.items()}, # neutral
-            head_parent=block.meta['label_ch_parent'],
-            head_parent_cls=block.meta['label_ch_parent_cls'],
+            head_parent=block.meta['label_parent'],
+            head_parent_cls=block.meta['label_parent_cls'],
         ),
         splits=core.Splits(
             train={block.meta['block_name']: block_fpath},

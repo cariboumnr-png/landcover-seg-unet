@@ -27,20 +27,37 @@ multiple model heads, including support for hierarchical supervision,
 per-head weighting, and auxiliary feature-aware losses.
 '''
 
+# standard imports
+import dataclasses
 # third-party imports
 import torch
 # local imports
 import landseg.session.engine.runtime.tasks as tasks
 
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class TrainingObjectives:
+    '''Training objectives container.'''
+    headspecs: dict[str, tasks.HeadSpec]
+    headlosses: dict[str, tasks.CompositeLoss]
+    mtl_regularization: tasks.ConsistencyRegularizer | None # optional
+
+# ------------------------------private dataclass------------------------------
+@dataclasses.dataclass
+class _ObjectiveResults:
+    '''Internal container for objective results.'''
+    total: torch.Tensor
+    per_head_loss: dict[str, float]
+    regularization: dict[str, float]
+
 # -------------------------------Public Function-------------------------------
-def multihead_loss(
+def multihead_objective(
     *,
     multihead_preds: dict[str, torch.Tensor],
     multihead_targets: dict[str, torch.Tensor],
     features: torch.Tensor,
-    headspecs: dict[str, tasks.HeadSpec],
-    headlosses: dict[str, tasks.CompositeLoss],
-) -> tuple[torch.Tensor, dict[str, float]]:
+    objectives: TrainingObjectives,
+) -> _ObjectiveResults:
     '''
     Compute weighted multi-head loss with optional hierarchical masking.
 
@@ -72,42 +89,55 @@ def multihead_loss(
         - Per-head losses are not weighted in the returned dictionary.
     '''
 
-    # infer device from preds (assumes all on same device)
-    pred_device = next(iter(multihead_preds.values())).device
     # prep outputs
-    total = torch.zeros((), device=pred_device)
-    per_head: dict[str, float] = {}
+    device = next(iter(multihead_preds.values())).device
+    output = _ObjectiveResults(
+        total=torch.zeros((), device=device),
+        per_head_loss={},
+        regularization={}
+    )
 
     # iterate through multihead prediction dict
     for head_name, head_pred in multihead_preds.items():
         # resolve parent tensor and class if a child head
         parent_tensor: torch.Tensor | None = None
-        parent_name = headspecs[head_name].parent_head
+        parent_name = objectives.headspecs[head_name].parent_head
         if parent_name is not None:
             parent_tensor = multihead_targets[parent_name]
         # prep target and optional mask tensors per head
         targets_0b, masks = _prep_loss_compute(
             head_target=multihead_targets[head_name],
-            head_spec=headspecs[head_name],
-            head_loss=headlosses[head_name],
+            head_spec=objectives.headspecs[head_name],
+            head_loss=objectives.headlosses[head_name],
             parent_tensor=parent_tensor,
         )
         # sanity check
         assert head_pred.shape[-2:] == multihead_targets[head_name].shape[-2:]
         # calculate loss
-        loss = headlosses[head_name].forward(
+        loss: torch.Tensor = objectives.headlosses[head_name](
             head_pred,
             targets_0b,
             masks=masks,
             features=features
-        )
-        total += headspecs[head_name].weight * loss
-        # per_head losses are detached scalars for logging only
-        per_head[head_name] = float(loss.item())
+        ) * objectives.headspecs[head_name].weight
+        output.total += loss
+        # detach and store in dict for outputs
+        output.per_head_loss[head_name] = float(loss.item())
+
+    # multihead logical consistency regularization
+    regularizer = objectives.mtl_regularization
+    if regularizer is not None:
+        if regularizer.reduction == 'none':
+            regularizer.reduction = 'mean' # ensure reg is addable to total
+        reg: torch.Tensor = regularizer(multihead_preds, multihead_targets)
+        output.total += reg
+        # detach and store in dict for outputs
+        output.regularization['mtl_regularization'] = float(reg.item())
+
     # NaN check before output
-    if not torch.isfinite(total):
+    if not torch.isfinite(output.total):
         raise RuntimeError('Contains NaN/Inf loss.')
-    return total, per_head
+    return output
 
 # ------------------------------private  function------------------------------
 def _prep_loss_compute(

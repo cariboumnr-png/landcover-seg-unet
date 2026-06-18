@@ -64,7 +64,8 @@ class _Heads:
     active_hspecs: dict[str, tasks.HeadSpec] | None = None
     active_hloss: dict[str, tasks.CompositeLoss] | None = None
     active_hmetrics: dict[str, tasks.ConfusionMatrix] | None = None
-    mtl_aggregator: tasks.MTLMetricsAggregator | None = None
+    multihead_metrics: tasks.MTLMetricsAggregator | None = None
+    multihead_regularization: tasks.ConsistencyRegularizer | None = None
 
 # ----- batch context
 @dataclasses.dataclass
@@ -96,15 +97,17 @@ class _BatchOutput:
     '''Per-batch outputs: predictions and losses.'''
     bidx: int = 0
     preds: dict[str, torch.Tensor] = field(default_factory=dict)
-    total_loss: torch.Tensor = torch.empty(0)
-    head_loss: dict[str, float] = field(default_factory=dict)
+    total_objective: torch.Tensor = torch.empty(0)
+    head_losses: dict[str, float] = field(default_factory=dict)
+    regularization: dict[str, float] = field(default_factory=dict)
 
     def refresh(self, bidx: int):
         '''Clear outputs to start a new batch.'''
         self.bidx = bidx                            # take input from new batch
         self.preds.clear()                          # clear the old batch
-        self.total_loss = torch.empty(0)            # clear the old batch
-        self.head_loss.clear()                      # clear the old batch
+        self.total_objective = torch.empty(0)       # clear the old batch
+        self.head_losses.clear()                    # clear the old batch
+        self.regularization.clear()                 # clear the old batch
 
 # ----- inference ouputs
 @dataclasses.dataclass

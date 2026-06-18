@@ -160,8 +160,8 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.val_results.mtl_metrics.clear()
 
         # reset mtl aggregator if present
-        if self.state.heads.mtl_aggregator is not None:
-            self.state.heads.mtl_aggregator.reset()
+        if self.state.heads.multihead_metrics is not None:
+            self.state.heads.multihead_metrics.reset()
 
         # set target dataset
         match self.dataset:
@@ -185,7 +185,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             self.val_results.head_metrics[head] = metrics_module.compute()
         # mtl metrics if applicable
-        mtl_aggregator = self.state.heads.mtl_aggregator
+        mtl_aggregator = self.state.heads.multihead_metrics
         if mtl_aggregator is not None:
             self.val_results.mtl_metrics = mtl_aggregator.compute()
 
@@ -234,8 +234,8 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.infer_results.mtl_metrics.clear()
 
         # reset mtl aggregator if present
-        if self.state.heads.mtl_aggregator is not None:
-            self.state.heads.mtl_aggregator.reset()
+        if self.state.heads.multihead_metrics is not None:
+            self.state.heads.multihead_metrics.reset()
 
         # iterate through inference dataset
         assert self.dataloaders.test, 'Inference dataset not provided'
@@ -257,7 +257,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         for head, metrics_module in self.state.heads.active_hmetrics.items():
             self.infer_results.head_metrics[head] = metrics_module.compute()
         # mtl metrics if applicable
-        mtl_aggregator = self.state.heads.mtl_aggregator
+        mtl_aggregator = self.state.heads.multihead_metrics
         if mtl_aggregator is not None:
             self.infer_results.mtl_metrics = mtl_aggregator.compute()
 

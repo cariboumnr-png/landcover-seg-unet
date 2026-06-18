@@ -184,9 +184,9 @@ class BatchEngine:
         self.state.batch_out.preds = dict(predictions)
 
         # ----- batch compute loss
-        # compute loss with autocast context
+        # compute objective with autocast context
         with self._autocast_ctx():
-            self._compute_loss()
+            self._compute_objective()
 
     def run_validate_batch(self) -> None:
         '''
@@ -363,7 +363,7 @@ class BatchEngine:
         stack.enter_context(self._autocast_ctx())
         return stack
 
-    def _compute_loss(self) -> None:
+    def _compute_objective(self) -> None:
         '''
         Compute total and per-head losses for the current batch.
 
@@ -382,17 +382,22 @@ class BatchEngine:
         assert self.state.batch_cxt.y_dict is not None
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
+        objectives = executor.TrainingObjectives(
+            headspecs=self.state.heads.active_hspecs,
+            headlosses=self.state.heads.active_hloss,
+            mtl_regularization=self.state.heads.multihead_regularization,
+        )
         # call loss function
-        total, perhead = executor.multihead_loss(
+        objective_results = executor.multihead_objective(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features
-            headspecs=self.state.heads.active_hspecs,
-            headlosses=self.state.heads.active_hloss
+            objectives=objectives
         )
         # pass to state
-        self.state.batch_out.total_loss = total
-        self.state.batch_out.head_loss = perhead
+        self.state.batch_out.total_objective = objective_results.total
+        self.state.batch_out.head_losses = objective_results.per_head_loss
+        self.state.batch_out.regularization = objective_results.regularization
 
     def _update_metrics(self) -> None:
         '''
@@ -433,8 +438,8 @@ class BatchEngine:
             for h, logits in preds.items()
         }
         # update horizontal MTL metrics (GEM and Violations)
-        if self.state.heads.mtl_aggregator is not None:
-            self.state.heads.mtl_aggregator.update(preds_1b, targets)
+        if self.state.heads.multihead_metrics is not None:
+            self.state.heads.multihead_metrics.update(preds_1b, targets)
 
     def _aggregate_batch_predictions(self):
         '''

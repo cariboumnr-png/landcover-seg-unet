@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks`.
+Top-level namespace for `landseg.session.engine.runtime.tasks.constraints`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,40 +32,20 @@ import typing
 
 __all__ = [
     # classes
-    'EngineTasks',
-    'HeadSpec',
-    'CompositeLoss',
-    'ConfusionMatrix',
-    'MTLMetricsAggregator',
-    'ConsistencyRegularizer',
+    'MTLConstraint',
+    'CompiledConstraint',
     # functions
-    'build_engine_tasks',
+    'compile_constraints'
     # types
-    'TaskConfigShape'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import EngineTasks, TaskConfigShape, build_engine_tasks
-    from .heads import HeadSpec
-    from .loss import CompositeLoss
-    from .metrics import ConfusionMatrix, MTLMetricsAggregator
-    from .regularization import ConsistencyRegularizer
+    from .constraints import MTLConstraint, CompiledConstraint, compile_constraints
+
 
 def __getattr__(name: str):
 
-    if name in {'EngineTasks', 'TaskConfigShape', 'build_engine_tasks'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'HeadSpec'}:
-        return getattr(importlib.import_module('.heads', __package__), name)
-
-    if name in {'CompositeLoss'}:
-        return getattr(importlib.import_module('.loss', __package__), name)
-
-    if name in {'ConfusionMatrix','MTLMetricsAggregator'}:
-        return getattr(importlib.import_module('.metrics', __package__), name)
-
-    if name in {'ConsistencyRegularizer'}:
-        return getattr(importlib.import_module('.regularization', __package__), name)
+    if name in {'MTLConstraint', 'CompiledConstraint', 'compile_constraints'}:
+        return getattr(importlib.import_module('.constraints', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

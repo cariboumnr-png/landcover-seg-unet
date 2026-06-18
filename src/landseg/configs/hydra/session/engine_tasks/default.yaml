@@ -1,8 +1,12 @@
 # engine tasks settings
+
+# head specs
 alpha_fn: 'effective_n' # effective_n | inverse
 en_beta: 0.999
 excluded_cls: {}
-loss_types:
+
+# perhead losses
+loss_configs:
   focal:
     weight: 0.5
     gamma: 2.0
@@ -16,4 +20,10 @@ loss_types:
     neighbour: 4
   tv:
     weight: 1e-4
-constraints: []
+
+# multi task (multihead) learning related
+mtl_constraints: []
+
+mtl_reg_configs:
+  consistency_lambda: 0.05
+  consistency_reduction: mean

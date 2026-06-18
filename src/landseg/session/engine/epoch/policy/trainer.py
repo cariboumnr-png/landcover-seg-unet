@@ -108,9 +108,10 @@ class MultiHeadTrainer(policy.EngineBase):
 
         # init the epoch results container with all heads
         self.results = core.TrainStepResults()
-        # epoch-level accumulated loss tracker
-        self._loss: float
+        # epoch-level accumulated objective tracker
+        self._objective: float
         self._head_losses: dict[str, float]
+        self._regularization: dict[str, float]
 
     def train_one_epoch(self, epoch: int) -> core.TrainStepResults:
         '''
@@ -147,8 +148,9 @@ class MultiHeadTrainer(policy.EngineBase):
         # update epoch tracker
         self.state.progress.epoch = epoch
         # reset loss trackers
-        self._loss = 0.0
+        self._objective = 0.0
         self._head_losses = {h: 0.0 for h in self.state.heads.all_heads}
+        self._regularization = {}
 
         # interate through training data batches
         assert self.dataloaders.train, 'Training dataset not provided'
@@ -165,15 +167,16 @@ class MultiHeadTrainer(policy.EngineBase):
             self.engine.run_train_batch()
 
             # batch backward on total loss
-            total = self.state.batch_out.total_loss
+            total = self.state.batch_out.total_objective
             if self.engine.config.use_amp:
                 self.state.optim.scaler.scale(total).backward()
             else:
                 total.backward()
-            # add to interal loss trackers
-            self._loss += total.detach().item()
-            for head, loss in self.state.batch_out.head_loss.items():
+            # add to interal objective trackers
+            self._objective += total.detach().item()
+            for head, loss in self.state.batch_out.head_losses.items():
                 self._head_losses[head] += loss
+            self._regularization = self.state.batch_out.regularization
 
             # gradient clipping
             # unscale if use AMP
@@ -235,12 +238,14 @@ class MultiHeadTrainer(policy.EngineBase):
         if flush or self.state.batch_cxt.bidx % self.update_every == 0:
             # flip flag
             self.results.metrics_updated = True
-            # --- total loss
-            self.results.total_loss = self._loss / n
+            # --- current learning rate
+            self.results.current_lr = self.state.optim.lr
+            # --- total objective
+            self.results.total_objective = self._objective / n
             # --- perhead loss
             for head in self.state.heads.all_heads:
                 self.results.head_losses[head] = self._head_losses[head] / n
-            # --- current learning rate
-            self.results.current_lr = self.state.optim.lr
+            # --- multihead regularization
+            self.results.regularization = dict(self._regularization) # shallow
         else:
             self.results.metrics_updated = False

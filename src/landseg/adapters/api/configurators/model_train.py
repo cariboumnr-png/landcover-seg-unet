@@ -109,7 +109,7 @@ class TrainingSessionConfigurator:
         tv_loss_weight: float
     ) -> typing.Self:
         '''Set loss weights.'''
-        loss_types = self._cfg.session.engine_tasks.loss_types
+        loss_types = self._cfg.session.engine_tasks.loss_configs
         loss_types.focal.weight = focal_loss_weight
         loss_types.dice.weight = dice_loss_weight
         loss_types.spectral.weight = spectral_loss_weight

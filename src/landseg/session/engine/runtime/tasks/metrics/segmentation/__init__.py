@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.mtl`.
+Top-level namespace for `landseg.session.engine.runtime.tasks.metrics`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,19 +32,24 @@ import typing
 
 __all__ = [
     # classes
-    'MTLMetricsAggregator',
-    'MTLConstraint',
+    'ConfusionMatrix',
+    'HeadMetrics',
     # functions
+    'build_headmetrics',
     # types
 ]
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .aggregator import MTLMetricsAggregator, MTLConstraint
-
+    from .builder import HeadMetrics, build_headmetrics
+    from .confusion_matrix import ConfusionMatrix
 
 def __getattr__(name: str):
 
-    if name in {'MTLMetricsAggregator', 'MTLConstraint'}:
-        return getattr(importlib.import_module('.aggregator', __package__), name)
+    if name in {'HeadMetrics', 'build_headmetrics'}:
+        return getattr(importlib.import_module('.builder', __package__), name)
+
+    if name in {'ConfusionMatrix'}:
+        return getattr(importlib.import_module('.confusion_matrix', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

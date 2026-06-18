@@ -34,23 +34,23 @@ __all__ = [
     # classes
     'ConfusionMatrix',
     'HeadMetrics',
+    'MTLMetricsAggregator',
     # functions
     'build_headmetrics',
     # types
-    'ConfusionMatricConfig'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .conf_matrix import ConfusionMatrix, ConfusionMatricConfig
-    from .factory import HeadMetrics, build_headmetrics
+    from .diagnostics import MTLMetricsAggregator
+    from .segmentation import ConfusionMatrix, HeadMetrics, build_headmetrics
 
 def __getattr__(name: str):
 
-    if name in {'ConfusionMatrix', 'ConfusionMatricConfig'}:
-        return getattr(importlib.import_module('.conf_matrix', __package__), name)
+    if name in {'MTLMetricsAggregator'}:
+        return getattr(importlib.import_module('.diagnostics', __package__), name)
 
-    if name in {'HeadMetrics', 'build_headmetrics'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {'ConfusionMatrix', 'HeadMetrics', 'build_headmetrics'}:
+        return getattr(importlib.import_module('.segmentation', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
