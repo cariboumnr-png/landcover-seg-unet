@@ -19,6 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 '''
 Cross-head consistency regularization for multi-task segmentation.
 
@@ -47,6 +50,13 @@ import torch.nn
 import torch.nn.functional
 # local imports
 import landseg.session.engine.runtime.tasks.constraints as constraints
+
+# ---------------------------------Public Type---------------------------------
+class ConsistencyRegConfigShape(typing.Protocol):
+    @property
+    def consistency_lambda(self) -> float: ...
+    @property
+    def consistency_reduction(self) -> str: ...
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass(frozen=True)
@@ -83,10 +93,9 @@ class ConsistencyRegularizer(torch.nn.Module):
     def __init__(
         self,
         mtl_constraints: list[constraints.CompiledConstraint] | None,
+        configs: ConsistencyRegConfigShape,
         *,
-        reg_lambda: float,
         ignore_index: int,
-        reduction: typing.Literal['mean', 'sum', 'none'] = 'mean',
     ) -> None:
         '''
         Initialize the consistency regularizer.
@@ -117,8 +126,11 @@ class ConsistencyRegularizer(torch.nn.Module):
         super().__init__()
 
         # sanity checks - reduction methods
-        if reduction not in {'mean', 'sum', 'none'}:
-            raise ValueError(f'Invalid reduction: {reduction}')
+        if configs.consistency_reduction not in {'mean', 'sum', 'none'}:
+            raise ValueError(
+                f'Invalid reduction: {configs.consistency_reduction}, '
+                f'expected: ["mean", "sum", "none"]'
+            )
 
         # sanity checks - provided constrants
         mtl_constraints = mtl_constraints or []
@@ -128,8 +140,8 @@ class ConsistencyRegularizer(torch.nn.Module):
 
         # init attributes
         self.ignore_index = ignore_index
-        self.reg_lambda = reg_lambda
-        self.reduction = reduction
+        self.reg_lambda = configs.consistency_lambda
+        self.reduction = configs.consistency_reduction
         self.constraints = mtl_constraints
 
     def forward(

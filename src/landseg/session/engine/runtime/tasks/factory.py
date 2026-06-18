@@ -57,7 +57,7 @@ class TaskConfigShape(typing.Protocol):
     @property
     def mtl_constraints(self) -> list[constraints.MTLConstraint] | None: ...
     @property
-    def mtl_reg_configs(self) -> dict[str, typing.Any]: ...
+    def mtl_reg_configs(self) -> regularization.ConsistencyRegConfigShape: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -123,11 +123,11 @@ def build_engine_tasks(
 
     # mutli-head regularization (logical consistencies)
     # compiled constraints - 0-based indices
+    cons = constraints.compile_constraints(config.mtl_constraints, data_specs)
     mtl_regularization = regularization.ConsistencyRegularizer(
-        constraints.compile_constraints(config.mtl_constraints, data_specs),
-        reg_lambda=config.mtl_reg_configs.get('consistency_reg_lambda', 0.05),
+        cons,
+        config.mtl_reg_configs,
         ignore_index=data_specs.meta.label_specs.ignore_index,
-        reduction=config.mtl_reg_configs.get('consistency_reduction', 'mean')
     )
 
     # multi-head diagnostic metrics (GEM, logical violations)

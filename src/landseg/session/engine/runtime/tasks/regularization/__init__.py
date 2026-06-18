@@ -35,13 +35,15 @@ __all__ = [
     'ConsistencyRegularizer',
     # functions
     # types
+    'ConsistencyRegConfigShape'
 ]
 # for static check
 if typing.TYPE_CHECKING:
-    from .consistency import ConsistencyRegularizer
-
+    from .consistency import ConsistencyRegularizer, ConsistencyRegConfigShape
 
 def __getattr__(name: str):
 
-    if name in {'ConsistencyRegularizer'}:
+    if name in {'ConsistencyRegularizer', 'ConsistencyRegConfigShape'}:
         return getattr(importlib.import_module('.consistency', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

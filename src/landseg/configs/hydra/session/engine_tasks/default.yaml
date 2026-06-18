@@ -24,4 +24,6 @@ loss_configs:
 # multi task (multihead) learning related
 mtl_constraints: []
 
-mtl_reg_configs: {}
+mtl_reg_configs:
+  consistency_lambda: 0.05
+  consistency_reduction: mean

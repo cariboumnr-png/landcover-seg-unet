@@ -112,13 +112,18 @@ class _MTLConstraints:
     forbidden: list[int] = field(default_factory=list)
 
 @dataclasses.dataclass
+class _MTLRegularization:
+    consistency_lambda: float = 0.05
+    consistency_reduction: str = 'mean'
+
+@dataclasses.dataclass
 class _TasksConfig:
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
     excluded_cls: dict[str, list[int]] | None = None
     loss_configs: _LossTypesConfig = field(default_factory=_LossTypesConfig)
     mtl_constraints: list[_MTLConstraints] | None = None
-    mtl_reg_configs: dict[str, typing.Any] = field(default_factory=dict)
+    mtl_reg_configs: _MTLRegularization = field(default_factory=_MTLRegularization)
 
     def validate(self):
         match self.alpha_fn:
