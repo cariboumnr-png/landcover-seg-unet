@@ -127,6 +127,8 @@ def multihead_objective(
     # multihead logical consistency regularization
     regularizer = objectives.mtl_regularization
     if regularizer is not None:
+        if regularizer.reduction == 'none':
+            regularizer.reduction = 'mean' # ensure reg is addable to total
         reg: torch.Tensor = regularizer(multihead_preds, multihead_targets)
         output.total += reg
         # detach and store in dict for outputs
