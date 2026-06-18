@@ -195,11 +195,11 @@ class EngineBase:
         # if more than one head, assign MTL related modules
         if len(active_heads) > 1:
             heads.multihead_metrics = self.runtime.engine_tasks.multihead_metrics
-            heads.multihead_consistency = self.runtime.engine_tasks.multihead_regularization
+            heads.multihead_regularization = self.runtime.engine_tasks.multihead_regularization
         # avoid stale modules
         else:
             heads.multihead_metrics = None
-            heads.multihead_consistency = None
+            heads.multihead_regularization = None
 
         # set frozen heads to model if provided
         if frozen_heads is not None:
@@ -220,6 +220,7 @@ class EngineBase:
         self.state.heads.active_hloss = None
         self.state.heads.active_hmetrics = None
         self.state.heads.multihead_metrics = None
+        self.state.heads.multihead_regularization = None
 
     # ----- batch context/output reset
     def _batch_reset(self, bidx: int, _batch: tuple) -> None:

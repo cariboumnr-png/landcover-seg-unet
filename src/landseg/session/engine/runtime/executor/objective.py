@@ -43,7 +43,7 @@ def multihead_objective(
     headspecs: dict[str, tasks.HeadSpec],
     headlosses: dict[str, tasks.CompositeLoss],
     # multi head objective
-    mtl_consistency_reg: tasks.ConsistencyRegularizer | None,
+    mtl_regularization: tasks.ConsistencyRegularizer | None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     '''
     Compute weighted multi-head loss with optional hierarchical masking.
@@ -110,8 +110,8 @@ def multihead_objective(
         per_head[head_name] = float(loss.item())
 
     # multihead logical consistency regularization
-    if mtl_consistency_reg is not None:
-        total += mtl_consistency_reg(multihead_preds, multihead_targets)
+    if mtl_regularization is not None:
+        total += mtl_regularization(multihead_preds, multihead_targets)
 
     # NaN check before output
     if not torch.isfinite(total):
