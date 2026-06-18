@@ -82,8 +82,8 @@ class ConsistencyRegularizer(torch.nn.Module):
 
     def __init__(
         self,
-        *,
         mtl_constraints: list[constraints.CompiledConstraint] | None,
+        *,
         reg_lambda: float,
         ignore_index: int,
         reduction: typing.Literal['mean', 'sum', 'none'] = 'mean',

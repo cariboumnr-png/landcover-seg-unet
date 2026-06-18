@@ -121,20 +121,19 @@ def build_engine_tasks(
         ignore_index=data_specs.meta.label_specs.ignore_index
     )
 
-    # multi-head learning constraints
-    cons = constraints.compile_constraints(config.mtl_constraints, data_specs)
-
     # mutli-head regularization (logical consistencies)
+    # compiled constraints - 0-based indices
     mtl_regularization = regularization.ConsistencyRegularizer(
-        mtl_constraints=cons,
+        constraints.compile_constraints(config.mtl_constraints, data_specs),
         reg_lambda=config.mtl_reg_configs.get('consistency_reg_lambda', 0.05),
         ignore_index=data_specs.meta.label_specs.ignore_index,
         reduction=config.mtl_reg_configs.get('consistency_reduction', 'mean')
     )
 
     # multi-head diagnostic metrics (GEM, logical violations)
+    # raw constraints - 1-based indices
     mtl_metrics = metrics.MTLMetricsAggregator(
-        mtl_constraints=cons,
+        config.mtl_constraints,
         ignore_index=data_specs.meta.label_specs.ignore_index,
     )
 

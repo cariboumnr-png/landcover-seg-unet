@@ -56,8 +56,8 @@ class MTLMetricsAggregator:
 
     def __init__(
         self,
+        mtl_constraints: list[constraints.MTLConstraint] | None = None,
         *,
-        mtl_constraints: list[constraints.CompiledConstraint] | None = None,
         ignore_index: int,
     ):
         '''
