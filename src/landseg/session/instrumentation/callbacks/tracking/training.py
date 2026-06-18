@@ -33,7 +33,7 @@ class TrainTrackingCallback(callbacks.BaseCallback):
             return
         step = results.global_step
         for tracker in self._trackers:
-            tracker.log_scalar('total_loss', results.total_loss, step)
+            tracker.log_scalar('total_loss', results.total_objective, step)
             tracker.log_scalar('lr', results.current_lr or 0.0, step)
             tracker.flush()
 

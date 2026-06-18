@@ -42,6 +42,14 @@ class TrainingObjectives:
     headlosses: dict[str, tasks.CompositeLoss]
     mtl_regularization: tasks.ConsistencyRegularizer | None # optional
 
+# ------------------------------private dataclass------------------------------
+@dataclasses.dataclass
+class _ObjectiveResults:
+    '''Internal container for objective results.'''
+    total: torch.Tensor
+    per_head_loss: dict[str, float]
+    regularization: dict[str, float]
+
 # -------------------------------Public Function-------------------------------
 def multihead_objective(
     *,
@@ -49,7 +57,7 @@ def multihead_objective(
     multihead_targets: dict[str, torch.Tensor],
     features: torch.Tensor,
     objectives: TrainingObjectives,
-) -> tuple[torch.Tensor, dict[str, float]]:
+) -> _ObjectiveResults:
     '''
     Compute weighted multi-head loss with optional hierarchical masking.
 
@@ -81,11 +89,13 @@ def multihead_objective(
         - Per-head losses are not weighted in the returned dictionary.
     '''
 
-    # infer device from preds (assumes all on same device)
-    pred_device = next(iter(multihead_preds.values())).device
     # prep outputs
-    total = torch.zeros((), device=pred_device)
-    per_head: dict[str, float] = {}
+    device = next(iter(multihead_preds.values())).device
+    output = _ObjectiveResults(
+        total=torch.zeros((), device=device),
+        per_head_loss={},
+        regularization={}
+    )
 
     # iterate through multihead prediction dict
     for head_name, head_pred in multihead_preds.items():
@@ -104,25 +114,28 @@ def multihead_objective(
         # sanity check
         assert head_pred.shape[-2:] == multihead_targets[head_name].shape[-2:]
         # calculate loss
-        loss = objectives.headlosses[head_name](
+        loss: torch.Tensor = objectives.headlosses[head_name](
             head_pred,
             targets_0b,
             masks=masks,
             features=features
-        )
-        total += objectives.headspecs[head_name].weight * loss
-        # per_head losses are detached scalars for logging only
-        per_head[head_name] = float(loss.item())
+        ) * objectives.headspecs[head_name].weight
+        output.total += loss
+        # detach and store in dict for outputs
+        output.per_head_loss[head_name] = float(loss.item())
 
     # multihead logical consistency regularization
-    reg = objectives.mtl_regularization
-    if reg is not None:
-        total += reg(multihead_preds, multihead_targets)
+    regularizer = objectives.mtl_regularization
+    if regularizer is not None:
+        reg: torch.Tensor = regularizer(multihead_preds, multihead_targets)
+        output.total += reg
+        # detach and store in dict for outputs
+        output.regularization['mtl_regularization'] = float(reg.item())
 
     # NaN check before output
-    if not torch.isfinite(total):
+    if not torch.isfinite(output.total):
         raise RuntimeError('Contains NaN/Inf loss.')
-    return total, per_head
+    return output
 
 # ------------------------------private  function------------------------------
 def _prep_loss_compute(

@@ -48,11 +48,12 @@ class LoggingCallback(callbacks.BaseCallback):
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
         if self.verbose and results.metrics_updated:
             text_list: list[str] = []
-            text_list.append(f'total_loss: {results.total_loss:.4f}')
+            text_list.append(f'total_obj: {results.total_objective:.4f}')
             text_list.extend([
                 f'{h}_loss: {l:.4f}'
                 for h, l in results.head_losses.items() if l > 0
             ])
+            text_list.append(f'reg: {results.regularization:.4f}')
             text_list.append(f'LR: {results.current_lr:.4e}')
             print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
@@ -63,7 +64,7 @@ class LoggingCallback(callbacks.BaseCallback):
             assert metrics.training
             # best so far
             msg = (
-                f'|Total Loss: {metrics.training.total_loss:.4f}'
+                f'|Total Objective: {metrics.training.total_objective:.4f}'
                 f'|Tracking Metrics: {metrics.target_metrics:.4f}'
                 f'|Best Epoch: {results.best_epoch_so_far}'
                 f'|Best Value: {results.best_value_so_far:.4f}|'

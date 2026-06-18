@@ -388,15 +388,16 @@ class BatchEngine:
             mtl_regularization=self.state.heads.multihead_regularization,
         )
         # call loss function
-        total, perhead = executor.multihead_objective(
+        objective_results = executor.multihead_objective(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features
             objectives=objectives
         )
         # pass to state
-        self.state.batch_out.total_loss = total
-        self.state.batch_out.head_loss = perhead
+        self.state.batch_out.total_objective = objective_results.total
+        self.state.batch_out.head_losses = objective_results.per_head_loss
+        self.state.batch_out.regularization = objective_results.regularization
 
     def _update_metrics(self) -> None:
         '''

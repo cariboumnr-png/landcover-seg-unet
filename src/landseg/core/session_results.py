@@ -179,16 +179,19 @@ class TrainStepResults:
     epoch_step: int = 1
     global_step: int = 1
     metrics_updated: bool = False
-    total_loss: float = 0.0
     current_lr: float | None = None
+    total_objective: float = 0.0
     head_losses: dict[str, float] = field(default_factory=dict)
+    regularization: dict[str, float] = field(default_factory=dict)
 
     def clear(self) -> None:
         '''Reset all loss values to `0.0`.'''
 
-        self.total_loss = 0.0
+        self.total_objective = 0.0
         for h in self.head_losses:
             self.head_losses[h] = 0.0
+        for r in self.regularization:
+            self.regularization[r] = 0.0
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
