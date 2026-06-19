@@ -142,14 +142,25 @@ def obj_conditioning(
 
     study_cfg = trial_cfg.study.conditioning
 
-    # concat conditioner names into a string
-    choices_str = ','.join([f'{c}' for c in study_cfg.conditioners])
-    conditioners_str_concat = trial.suggest_categorical(
-        name='model.conditioners',
-        choices=choices_str,
+    # auto construct conditioners mapping
+    # e.g., {'film_concat': ['film', 'concat']}
+    choice_map = {}
+    for conditioners in study_cfg.conditioners:
+        if not conditioners:
+            key = "none"
+        else:
+            key = "_".join(conditioners)
+        choice_map[key] = conditioners
+
+    selected = trial.suggest_categorical(
+        "model.conditioners",
+        list(choice_map.keys()),
     )
-    # reconstruct list of strings from the concat
-    conditioners = conditioners_str_concat.split(',')
-    trial_cfg.set_model_conditioners(conditioners)
+
+    # reconstruct list of strs from mapping
+    # e.g., 'film_concat' -> ['film', 'concat']
+    trial_cfg.set_model_conditioners(
+        choice_map[selected]
+    )
 
     return trial_cfg
