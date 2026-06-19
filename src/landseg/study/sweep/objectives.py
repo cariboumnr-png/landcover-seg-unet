@@ -85,30 +85,26 @@ def make_objective(
         # - last metric
         last_value = 0.0
 
-        # drive the runner
-        for step in run():
-
-            # get value from step
-            value = step.val_metrics_value
-            last_value = value
-
-            # report intermediate result
-            trial.report(value, step.epoch_in_phase)
-
-            # collect step results
-            steps.append(step.as_dict)
-
-            # check pruning condition
-            if trial.should_prune():
-                raise optuna.TrialPruned()
-
-        # persist the step results to JSON with additional trial metadata
-        steps_ctrl = artifacts.Controller[dict](step_results_path)
-        steps_ctrl.persist({
-            'trial_number': trial.number,
-            'params': trial.params,
-            'metrics': steps,
-        })
+        try:
+            # drive the runner
+            for step in run():
+                value = step.val_metrics_value
+                last_value = value
+                trial.report(value, step.epoch_in_phase)
+                steps.append(step.as_dict)
+                if trial.should_prune():
+                    raise optuna.TrialPruned()
+        
+        except optuna.TrialPruned:
+            # persist partial step results before propagating the exception
+            steps_ctrl = artifacts.Controller[dict](step_results_path)
+            steps_ctrl.persist({
+                'trial_number': trial.number,
+                'params': trial.params,
+                'metrics': steps,
+                'state': 'pruned'
+            })
+            raise
 
         # return the last value
         return last_value
