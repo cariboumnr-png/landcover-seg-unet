@@ -21,15 +21,14 @@
 
 '''Multi-task preset objectives.'''
 
-# standard imports
-import copy
+
 # third-party imports
 import optuna
 # local imports
 import landseg.study.sweep as sweep
 
 def obj_head_weights(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -37,8 +36,7 @@ def obj_head_weights(
       - logit adjust alpha weight (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.head_weights
+    study_cfg = trial_cfg.study.head_weights
 
     trial_cfg.set_runtime_logit_adjust_alpha(
         alpha=trial.suggest_float(
@@ -51,7 +49,7 @@ def obj_head_weights(
     return trial_cfg
 
 def obj_mtl_joint(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -60,8 +58,7 @@ def obj_mtl_joint(
       - logit adjust alpha (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.mtl_joint
+    study_cfg = trial_cfg.study.mtl_joint
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(
@@ -82,7 +79,7 @@ def obj_mtl_joint(
     return trial_cfg
 
 def obj_hierarchy(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -91,8 +88,7 @@ def obj_hierarchy(
       - consistency reduction (`str`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.hierarchy
+    study_cfg = trial_cfg.study.hierarchy
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

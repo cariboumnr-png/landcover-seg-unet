@@ -21,15 +21,13 @@
 
 '''Optimizer preset objectives.'''
 
-# standard imports
-import copy
 # third-party imports
 import optuna
 # local imports
 import landseg.study.sweep as sweep
 
 def obj_optimizer(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -38,8 +36,7 @@ def obj_optimizer(
       - weight decay (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.optimizer
+    study_cfg = trial_cfg.study.optimizer
 
     trial_cfg.set_optimizer_lr(
         lr=trial.suggest_float(
@@ -62,7 +59,7 @@ def obj_optimizer(
     return trial_cfg
 
 def obj_throughput(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -71,8 +68,7 @@ def obj_throughput(
       - AMP usage (`bool`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.throughput
+    study_cfg = trial_cfg.study.throughput
 
     trial_cfg.set_data_batch_size(
         batch_size=trial.suggest_int(

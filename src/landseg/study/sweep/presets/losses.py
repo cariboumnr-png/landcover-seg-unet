@@ -21,15 +21,13 @@
 
 '''Loss and regularization preset objectives.'''
 
-# standard imports
-import copy
 # third-party imports
 import optuna
 # local imports
 import landseg.study.sweep as sweep
 
 def obj_loss_balance(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -38,8 +36,7 @@ def obj_loss_balance(
       - Dice loss weight (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.loss_balance
+    study_cfg = trial_cfg.study.loss_balance
 
     trial_cfg.set_objective_focal_weight(
         weight=trial.suggest_float(
@@ -60,7 +57,7 @@ def obj_loss_balance(
     return trial_cfg
 
 def obj_loss_aux(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -69,8 +66,7 @@ def obj_loss_aux(
       - TV loss weight (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.regularization
+    study_cfg = trial_cfg.study.regularization
 
     trial_cfg.set_objective_spectral_weight(
         weight=trial.suggest_float(
@@ -91,7 +87,7 @@ def obj_loss_aux(
     return trial_cfg
 
 def obj_regularization(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -99,8 +95,7 @@ def obj_regularization(
       - consistency regularizer lambda weight (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.mtl_consistency
+    study_cfg = trial_cfg.study.mtl_consistency
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

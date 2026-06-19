@@ -21,15 +21,13 @@
 
 '''Architecture preset objectives.'''
 
-# standard imports
-import copy
 # third-party imports
 import optuna
 # local imports
 import landseg.study.sweep as sweep
 
 def obj_architecture(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -39,8 +37,7 @@ def obj_architecture(
       - Bottleneck type (`str`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.architecture
+    study_cfg = trial_cfg.study.architecture
 
     trial_cfg.set_model_body(
         model_body=trial.suggest_categorical(
@@ -68,7 +65,7 @@ def obj_architecture(
     return trial_cfg
 
 def obj_bottleneck(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -77,8 +74,7 @@ def obj_bottleneck(
       - Transformer hyperparameters
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.bottleneck
+    study_cfg = trial_cfg.study.bottleneck
 
     bottleneck = trial.suggest_categorical(
         name='model.bottleneck',
@@ -136,7 +132,7 @@ def obj_bottleneck(
     return trial_cfg
 
 def obj_conditioning(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -144,8 +140,7 @@ def obj_conditioning(
       - Conditioner selection (`list[str]`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.conditioning
+    study_cfg = trial_cfg.study.conditioning
 
     # concat conditioner names into a string
     choices_str = ','.join([f'{c}' for c in study_cfg.conditioners])

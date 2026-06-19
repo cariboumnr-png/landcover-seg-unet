@@ -21,15 +21,13 @@
 
 '''Base objective preset. Intended for sweep layer smoke test.'''
 
-# standard imports
-import copy
 # third-party imports
 import optuna
 # local imports
 import landseg.study.sweep as sweep
 
 def obj_base(
-    cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
@@ -38,8 +36,7 @@ def obj_base(
       - Data batch size (`int`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.base
+    study_cfg = trial_cfg.study.base
 
     # optimizer domain example
     trial_cfg.set_optimizer_lr(

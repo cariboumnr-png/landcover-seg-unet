@@ -33,9 +33,8 @@ aggregation are intentionally out of scope and belong to the study
 analysis layer defined in ADR-0026.
 '''
 
-# landseg/tuning/objective.py
-
 # standard imports
+import copy
 import typing
 # third-party imports
 import optuna
@@ -73,7 +72,8 @@ def make_objective(
 
         # get trial config depending on the objective preset
         objectives_fn = presets.resolve(cfg.pipeline.study_sweep.preset_name)
-        trial_cfg = objectives_fn(cfg, trial)
+        _cfg = copy.deepcopy(cfg)
+        trial_cfg = objectives_fn(_cfg, trial)
 
         # build the runner with trial config
         step_results_path, run = runner_builder(trial_cfg)
