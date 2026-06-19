@@ -20,63 +20,86 @@
 # =========================================================================== #
 
 '''
-Base objective preset. Intended for sweep layer smoke test
+Loss and regularization preset objectives.
 '''
 
-# standard imports
 from __future__ import annotations
 import copy
-# third-party imports
 import optuna
-# local imports
 import landseg.study.sweep as sweep
 
-def base_objectives(
+def loss_balance_objectives(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Base preset: minimal cross-domain parameter mutation.'''
+    '''Loss balance preset: focal and dice loss weights mutation.'''
 
     trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.base
+    study_cfg = cfg.study.loss_balance
 
-    # optimizer domain
-    trial_cfg.set_optimizer_lr(
-        lr=trial.suggest_float(
-            name='optimizer.lr',
-            low=study_cfg.learning_rate[0],
-            high=study_cfg.learning_rate[1],
-            log=True,
+    trial_cfg.set_objective_focal_weight(
+        weight=trial.suggest_float(
+            name='objective.focal_weight',
+            low=study_cfg.focal_weight[0],
+            high=study_cfg.focal_weight[1],
         )
     )
 
-    trial_cfg.set_optimizer_weight_decay(
-        weight_decay=trial.suggest_float(
-            name='optimizer.weight_decay',
-            low=study_cfg.weight_decay[0],
-            high=study_cfg.weight_decay[1],
-            log=True,
-        )
-    )
-
-    # data geometry domain
-    trial_cfg.set_data_patch_size(
-        patch_size=trial.suggest_int(
-            name='data.patch_size',
-            low=study_cfg.patch_size[0],
-            high=study_cfg.patch_size[1],
-            step=study_cfg.patch_size[2],
-        )
-    )
-
-    trial_cfg.set_data_batch_size(
-        batch_size=trial.suggest_int(
-            name='data.batch_size',
-            low=study_cfg.batch_size[0],
-            high=study_cfg.batch_size[1],
-            step=study_cfg.batch_size[2],
+    trial_cfg.set_objective_dice_weight(
+        weight=trial.suggest_float(
+            name='objective.dice_weight',
+            low=study_cfg.dice_weight[0],
+            high=study_cfg.dice_weight[1],
         )
     )
 
     return trial_cfg
 
+def regularization_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Regularization preset: spectral and TV loss weights mutation.'''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.regularization
+
+    trial_cfg.set_objective_spectral_weight(
+        weight=trial.suggest_float(
+            name='objective.spectral_weight',
+            low=study_cfg.spectral_weight[0],
+            high=study_cfg.spectral_weight[1],
+        )
+    )
+
+    trial_cfg.set_objective_tv_weight(
+        weight=trial.suggest_float(
+            name='objective.tv_weight',
+            low=study_cfg.tv_weight[0],
+            high=study_cfg.tv_weight[1],
+        )
+    )
+
+    return trial_cfg
+
+def mtl_consistency_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''
+    Multi-task consistency preset: consistency regularizer lambda
+    weight mutation.
+    '''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.mtl_consistency
+
+    trial_cfg.set_mtl_consistency_lambda(
+        value=trial.suggest_float(
+            name='mtl.consistency_lambda',
+            low=study_cfg.consistency_lambda[0],
+            high=study_cfg.consistency_lambda[1],
+        )
+    )
+
+    return trial_cfg

@@ -20,48 +20,59 @@
 # =========================================================================== #
 
 '''
-Sweep objective presets registry and resolver.
+Data geometry preset objectives.
 '''
 
-# standard imports
 from __future__ import annotations
-import typing
-# third-party imports
+import copy
 import optuna
-# local imports
 import landseg.study.sweep as sweep
-import landseg.study.sweep.presets as presets
 
-PresetFn = typing.Callable[
-    [sweep.RootConfigShape, optuna.Trial],
-    sweep.RootConfigShape,
-]
+def data_geometry_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Data geometry preset: patch size and batch size mutation.'''
 
-_REGISTRY: dict[str, PresetFn] = {
-    "base": presets.base_objectives,
-    "optimizer": presets.optimizer_objectives,
-    "throughput": presets.throughput_objectives,
-    "data_geometry": presets.data_geometry_objectives,
-    "context_window": presets.context_window_objectives,
-    "architecture": presets.architecture_objectives,
-    "bottleneck": presets.bottleneck_objectives,
-    "conditioning": presets.conditioning_objectives,
-    "loss_balance": presets.loss_balance_objectives,
-    "regularization": presets.regularization_objectives,
-    "mtl_consistency": presets.mtl_consistency_objectives,
-    "head_weights": presets.head_weights_objectives,
-    "mtl_joint": presets.mtl_joint_objectives,
-    "hierarchy": presets.hierarchy_objectives,
-    "quick": presets.quick_objectives,
-    "capacity": presets.capacity_objectives,
-    "mtl_quality": presets.mtl_quality_objectives,
-    "production_candidate": presets.production_candidate_objectives,
-}
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.data_geometry
 
-#
-def resolve(name: str) -> PresetFn:
-    '''Resolve presets from name'''
-    try:
-        return _REGISTRY[name]
-    except KeyError as e:
-        raise ValueError(f"Unknown preset: {name}") from e
+    trial_cfg.set_data_patch_size(
+        patch_size=trial.suggest_int(
+            name='data.patch_size',
+            low=study_cfg.patch_size[0],
+            high=study_cfg.patch_size[1],
+            step=study_cfg.patch_size[2],
+        )
+    )
+
+    trial_cfg.set_data_batch_size(
+        batch_size=trial.suggest_int(
+            name='data.batch_size',
+            low=study_cfg.batch_size[0],
+            high=study_cfg.batch_size[1],
+            step=study_cfg.batch_size[2],
+        )
+    )
+
+    return trial_cfg
+
+def context_window_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Context window preset: patch size mutation only.'''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.context_window
+
+    trial_cfg.set_data_patch_size(
+        patch_size=trial.suggest_int(
+            name='data.patch_size',
+            low=study_cfg.patch_size[0],
+            high=study_cfg.patch_size[1],
+            step=study_cfg.patch_size[2],
+        )
+    )
+
+    return trial_cfg

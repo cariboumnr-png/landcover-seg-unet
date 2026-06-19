@@ -20,63 +20,88 @@
 # =========================================================================== #
 
 '''
-Base objective preset. Intended for sweep layer smoke test
+Multi-task preset objectives.
 '''
 
-# standard imports
 from __future__ import annotations
 import copy
-# third-party imports
 import optuna
-# local imports
 import landseg.study.sweep as sweep
 
-def base_objectives(
+def head_weights_objectives(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Base preset: minimal cross-domain parameter mutation.'''
+    '''Head weights preset: logit adjust alpha weight mutation.'''
 
     trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.base
+    study_cfg = cfg.study.head_weights
 
-    # optimizer domain
-    trial_cfg.set_optimizer_lr(
-        lr=trial.suggest_float(
-            name='optimizer.lr',
-            low=study_cfg.learning_rate[0],
-            high=study_cfg.learning_rate[1],
-            log=True,
-        )
-    )
-
-    trial_cfg.set_optimizer_weight_decay(
-        weight_decay=trial.suggest_float(
-            name='optimizer.weight_decay',
-            low=study_cfg.weight_decay[0],
-            high=study_cfg.weight_decay[1],
-            log=True,
-        )
-    )
-
-    # data geometry domain
-    trial_cfg.set_data_patch_size(
-        patch_size=trial.suggest_int(
-            name='data.patch_size',
-            low=study_cfg.patch_size[0],
-            high=study_cfg.patch_size[1],
-            step=study_cfg.patch_size[2],
-        )
-    )
-
-    trial_cfg.set_data_batch_size(
-        batch_size=trial.suggest_int(
-            name='data.batch_size',
-            low=study_cfg.batch_size[0],
-            high=study_cfg.batch_size[1],
-            step=study_cfg.batch_size[2],
+    trial_cfg.set_runtime_logit_adjust_alpha(
+        alpha=trial.suggest_float(
+            name='runtime.logit_adjust_alpha',
+            low=study_cfg.logit_adjust_alpha[0],
+            high=study_cfg.logit_adjust_alpha[1],
         )
     )
 
     return trial_cfg
 
+def mtl_joint_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''
+    MTL joint preset: consistency lambda and logit adjust alpha
+    mutation.
+    '''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.mtl_joint
+
+    trial_cfg.set_mtl_consistency_lambda(
+        value=trial.suggest_float(
+            name='mtl.consistency_lambda',
+            low=study_cfg.consistency_lambda[0],
+            high=study_cfg.consistency_lambda[1],
+        )
+    )
+
+    trial_cfg.set_runtime_logit_adjust_alpha(
+        alpha=trial.suggest_float(
+            name='runtime.logit_adjust_alpha',
+            low=study_cfg.logit_adjust_alpha[0],
+            high=study_cfg.logit_adjust_alpha[1],
+        )
+    )
+
+    return trial_cfg
+
+def hierarchy_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''
+    Hierarchy preset: consistency lambda and consistency reduction
+    mutation.
+    '''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.hierarchy
+
+    trial_cfg.set_mtl_consistency_lambda(
+        value=trial.suggest_float(
+            name='mtl.consistency_lambda',
+            low=study_cfg.consistency_lambda[0],
+            high=study_cfg.consistency_lambda[1],
+        )
+    )
+
+    trial_cfg.set_mtl_consistency_reduction(
+        reduction=trial.suggest_categorical(
+            name='mtl.consistency_reduction',
+            choices=study_cfg.consistency_reduction,
+        )
+    )
+
+    return trial_cfg

@@ -34,6 +34,23 @@ __all__ = [
     # classes
     # functions
     'base_objectives',
+    'optimizer_objectives',
+    'throughput_objectives',
+    'data_geometry_objectives',
+    'context_window_objectives',
+    'architecture_objectives',
+    'bottleneck_objectives',
+    'conditioning_objectives',
+    'loss_balance_objectives',
+    'regularization_objectives',
+    'mtl_consistency_objectives',
+    'head_weights_objectives',
+    'mtl_joint_objectives',
+    'hierarchy_objectives',
+    'quick_objectives',
+    'capacity_objectives',
+    'mtl_quality_objectives',
+    'production_candidate_objectives',
     'resolve'
     # types
 ]
@@ -42,6 +59,35 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from ._registry import resolve
     from .base import base_objectives
+    from .optimizer import (
+        optimizer_objectives,
+        throughput_objectives,
+    )
+    from .data import (
+        data_geometry_objectives,
+        context_window_objectives,
+    )
+    from .architecture import (
+        architecture_objectives,
+        bottleneck_objectives,
+        conditioning_objectives,
+    )
+    from .losses import (
+        loss_balance_objectives,
+        regularization_objectives,
+        mtl_consistency_objectives,
+    )
+    from .multitask import (
+        head_weights_objectives,
+        mtl_joint_objectives,
+        hierarchy_objectives,
+    )
+    from .composite import (
+        quick_objectives,
+        capacity_objectives,
+        mtl_quality_objectives,
+        production_candidate_objectives,
+    )
 
 def __getattr__(name: str):
 
@@ -51,4 +97,40 @@ def __getattr__(name: str):
     if name in {'base_objectives'}:
         return getattr(importlib.import_module('.base', __package__), name)
 
+    if name in {'optimizer_objectives', 'throughput_objectives'}:
+        return getattr(importlib.import_module('.optimizer', __package__), name)
+
+    if name in {'data_geometry_objectives', 'context_window_objectives'}:
+        return getattr(importlib.import_module('.data', __package__), name)
+
+    if name in {
+        'architecture_objectives',
+        'bottleneck_objectives',
+        'conditioning_objectives',
+    }:
+        return getattr(importlib.import_module('.architecture', __package__), name)
+
+    if name in {
+        'loss_balance_objectives',
+        'regularization_objectives',
+        'mtl_consistency_objectives',
+    }:
+        return getattr(importlib.import_module('.losses', __package__), name)
+
+    if name in {
+        'head_weights_objectives',
+        'mtl_joint_objectives',
+        'hierarchy_objectives',
+    }:
+        return getattr(importlib.import_module('.multitask', __package__), name)
+
+    if name in {
+        'quick_objectives',
+        'capacity_objectives',
+        'mtl_quality_objectives',
+        'production_candidate_objectives',
+    }:
+        return getattr(importlib.import_module('.composite', __package__), name)
+
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
