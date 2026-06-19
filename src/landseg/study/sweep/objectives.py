@@ -75,15 +75,15 @@ def make_objective(
         _cfg = copy.deepcopy(cfg)
         trial_cfg = objectives_fn(_cfg, trial)
 
+
         # build the runner with trial config
         step_results_path, run = runner_builder(trial_cfg)
 
-        # last metric tracking
-        last_value = 0.0
-
-        # step results tracking and persisting
-        ctrl = artifacts.Controller[list[dict]](step_results_path)
+        # tracking
+        # - step results
         steps: list[dict] = []
+        # - last metric
+        last_value = 0.0
 
         # drive the runner
         for step in run():
@@ -102,8 +102,13 @@ def make_objective(
             if trial.should_prune():
                 raise optuna.TrialPruned()
 
-        # persist the step results JSON
-        ctrl.persist(steps)
+        # persist the step results to JSON with additional trial metadata
+        steps_ctrl = artifacts.Controller[dict](step_results_path)
+        steps_ctrl.persist({
+            'trial_number': trial.number,
+            'params': trial.params,
+            'metrics': steps,
+        })
 
         # return the last value
         return last_value
