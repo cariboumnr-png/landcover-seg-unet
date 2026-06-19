@@ -188,3 +188,15 @@ session:
             active_heads: [base]
             frozen_heads: null
           # append more phases as needed
+
+  # -------------------------------------------------------------------------
+  # PIPELINES /
+  # -------------------------------------------------------------------------
+  pipelines:
+    study_sweep:
+      study_name: study_test
+      storage: sqlite:///optuna.db
+      preset_name: base
+      direction: maximize
+      n_trials: 50
+      seed: 42
