@@ -19,42 +19,32 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Pipieline schema
+Sweep objective presets registry and resolver.
 '''
 
 # standard imports
-import dataclasses
+from __future__ import annotations
+import typing
+# third-party imports
+import optuna
+# local imports
+import landseg.study.sweep as sweep
+import landseg.study.sweep.presets as presets
 
-# alias
-field = dataclasses.field
+PresetFn = typing.Callable[
+    [sweep.RootConfigShape, optuna.Trial],
+    sweep.RootConfigShape,
+]
 
-# ------------------------------PIPELINE  CONFIGS------------------------------
-@dataclasses.dataclass
-class _TrainModel:
-    pass  # training uses session config only (for now)
+_REGISTRY: dict[str, PresetFn] = {
+    "base": presets.base_objectives,
+}
 
-@dataclasses.dataclass
-class _EvaluateModel:
-    checkpoint: str | None = None
-    split: str = 'test'
-    export_previews: bool = False
-
-@dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'default_study'
-    preset_name: str = 'base'
-    storage: str = 'sqlite:///optuna.db'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
-
-@dataclasses.dataclass
-class PipelineConfig:
-    name: str = 'default'
-    model_train: _TrainModel = field(default_factory=_TrainModel)
-    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
+#
+def resolve(name: str) -> PresetFn:
+    '''Resolve presets from name'''
+    try:
+        return _REGISTRY[name]
+    except KeyError as e:
+        raise ValueError(f"Unknown preset: {name}") from e
