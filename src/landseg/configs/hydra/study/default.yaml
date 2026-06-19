@@ -1,13 +1,10 @@
-# base objectives
-# for two numbers: [low, high]
-# for three numbers: [low, high, step]
-# for categorical variable: [val1, val2, val3]
-# for boolean variables: [true, false]
+# NOTES
+# for two floats: [low, high]
+# for three integers: [low, high, step]
+# for categorical variables: [val1, val2, val3]
 
 base:
   learning_rate: [1e-5, 1e-1]
-  weight_decay: [1e-6, 1e-2]
-  patch_size: [64, 128, 64]
   batch_size: [16, 64, 16]
 
 optimizer:
@@ -40,7 +37,7 @@ bottleneck:
   attn_dropout: [0.0, 0.5]
 
 conditioning:
-  conditioners: [[], ['film'], ['concat']]
+  conditioners: [[], ['film'], ['concat'], ['film', 'concat']]
 
 loss_balance:
   focal_weight: [0.0, 1.0]

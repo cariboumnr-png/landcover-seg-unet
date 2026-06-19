@@ -19,22 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Architecture preset objectives.
-'''
+'''Architecture preset objectives.'''
 
-from __future__ import annotations
+# standard imports
 import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def architecture_objectives(
+def obj_architecture(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Architecture preset: model body, base channel count, and
-    bottleneck type mutation.
+    Architecture preset mutations:
+      - Model body (`str`)
+      - Base channel count (`int`)
+      - Bottleneck type (`str`)
     '''
 
     trial_cfg = copy.deepcopy(cfg)
@@ -65,13 +67,14 @@ def architecture_objectives(
 
     return trial_cfg
 
-def bottleneck_objectives(
+def obj_bottleneck(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Bottleneck structure preset: blocks count and transformer
-    hyperparameters mutation.
+    Bottlenect preset mutations:
+      - Blocks count (`int`)
+      - Transformer hyperparameters
     '''
 
     trial_cfg = copy.deepcopy(cfg)
@@ -132,20 +135,26 @@ def bottleneck_objectives(
 
     return trial_cfg
 
-def conditioning_objectives(
+def obj_conditioning(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Conditioning preset: conditioners mutation.'''
+    '''
+    Conditioning preset mutations:
+      - Conditioner selection (`list[str]`)
+    '''
 
     trial_cfg = copy.deepcopy(cfg)
     study_cfg = cfg.study.conditioning
 
-    tuple_choices = [tuple(c) for c in study_cfg.conditioners]
-    chosen_tuple = trial.suggest_categorical(
+    # concat conditioner names into a string
+    choices_str = ','.join([f'{c}' for c in study_cfg.conditioners])
+    conditioners_str_concat = trial.suggest_categorical(
         name='model.conditioners',
-        choices=tuple_choices,
+        choices=choices_str,
     )
-    trial_cfg.set_model_conditioners(list(chosen_tuple))
+    # reconstruct list of strings from the concat
+    conditioners = conditioners_str_concat.split(',')
+    trial_cfg.set_model_conditioners(conditioners)
 
     return trial_cfg

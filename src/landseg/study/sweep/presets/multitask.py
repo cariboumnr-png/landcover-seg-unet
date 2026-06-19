@@ -19,20 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Multi-task preset objectives.
-'''
+'''Multi-task preset objectives.'''
 
-from __future__ import annotations
+# standard imports
 import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def head_weights_objectives(
+def obj_head_weights(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Head weights preset: logit adjust alpha weight mutation.'''
+    '''
+    Head weights preset mutations:
+      - logit adjust alpha weight (`float`)
+    '''
 
     trial_cfg = copy.deepcopy(cfg)
     study_cfg = cfg.study.head_weights
@@ -47,13 +50,14 @@ def head_weights_objectives(
 
     return trial_cfg
 
-def mtl_joint_objectives(
+def obj_mtl_joint(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    MTL joint preset: consistency lambda and logit adjust alpha
-    mutation.
+    MTL joint preset mutations:
+      - consistency lambda (`float`)
+      - logit adjust alpha (`float`)
     '''
 
     trial_cfg = copy.deepcopy(cfg)
@@ -77,13 +81,14 @@ def mtl_joint_objectives(
 
     return trial_cfg
 
-def hierarchy_objectives(
+def obj_hierarchy(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Hierarchy preset: consistency lambda and consistency reduction
-    mutation.
+    Hierarchy preset mutations:
+      - consistency lambda (`float`)
+      - consistency reduction (`str`)
     '''
 
     trial_cfg = copy.deepcopy(cfg)

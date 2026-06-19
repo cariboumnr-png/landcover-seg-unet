@@ -19,20 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Loss and regularization preset objectives.
-'''
+'''Loss and regularization preset objectives.'''
 
-from __future__ import annotations
+# standard imports
 import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def loss_balance_objectives(
+def obj_loss_balance(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Loss balance preset: focal and dice loss weights mutation.'''
+    '''
+    Main loss balance mutations:
+      - Focal loss weight (`float`)
+      - Dice loss weight (`float`)
+    '''
 
     trial_cfg = copy.deepcopy(cfg)
     study_cfg = cfg.study.loss_balance
@@ -55,11 +59,15 @@ def loss_balance_objectives(
 
     return trial_cfg
 
-def regularization_objectives(
+def obj_loss_aux(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Regularization preset: spectral and TV loss weights mutation.'''
+    '''
+    Auxiliary loss mutations:
+      - Spectral loss weight (`float`)
+      - TV loss weight (`float`)
+    '''
 
     trial_cfg = copy.deepcopy(cfg)
     study_cfg = cfg.study.regularization
@@ -82,13 +90,13 @@ def regularization_objectives(
 
     return trial_cfg
 
-def mtl_consistency_objectives(
+def obj_regularization(
     cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Multi-task consistency preset: consistency regularizer lambda
-    weight mutation.
+    Regularization mutations:
+      - consistency regularizer lambda weight (`float`)
     '''
 
     trial_cfg = copy.deepcopy(cfg)
