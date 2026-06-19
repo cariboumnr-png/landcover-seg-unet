@@ -40,6 +40,7 @@ import typing
 # third-party imports
 import optuna
 # local imports
+import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.study.sweep as sweep
 import landseg.study.sweep.presets as presets
@@ -50,7 +51,7 @@ StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
 # -------------------------------Public Function-------------------------------
 def make_objective(
-    runner_builder: typing.Callable[..., StepRunner],
+    runner_builder: typing.Callable[..., tuple[str, StepRunner]],
     cfg: sweep.RootConfigShape,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''
@@ -75,10 +76,14 @@ def make_objective(
         trial_cfg = objectives_fn(cfg, trial)
 
         # build the runner with trial config
-        run = runner_builder(trial_cfg)
+        step_results_path, run = runner_builder(trial_cfg)
 
         # last metric tracking
         last_value = 0.0
+
+        # step results tracking and persisting
+        ctrl = artifacts.Controller[list[dict]](step_results_path)
+        steps: list[dict] = []
 
         # drive the runner
         for step in run():
@@ -90,9 +95,15 @@ def make_objective(
             # report intermediate result
             trial.report(value, step.epoch_in_phase)
 
+            # collect step results
+            steps.append(step.as_dict)
+
             # check pruning condition
             if trial.should_prune():
                 raise optuna.TrialPruned()
+
+        # persist the step results JSON
+        ctrl.persist(steps)
 
         # return the last value
         return last_value
