@@ -1,6 +1,6 @@
 # ADR-0044: Sweep Objective Presets and Objective Module Structure
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-06-18
 **Related ADRs:** ADR-0026, ADR-0038, ADR-0039, ADR-0040, ADR-0041, ADR-0042, ADR-0043
 
@@ -35,16 +35,16 @@ configuration sampling and human-guided experimentation.
 
 ## 2. Decision
 
-The sweep objective layer is defined as a **mechanical configuration
+We have defined the sweep objective layer as a **mechanical configuration
 transformation system**.
 
-A preset is a deterministic function:
+Presets are implemented as deterministic functions:
 
 ```text
 (cfg: RootConfigShape, trial: optuna.Trial) -> RootConfigShape
 ```
 
-It produces a trial-specific configuration by mutating a copied root config
+They produce a trial-specific configuration by mutating a copied root config
 using Optuna parameter suggestions.
 
 The sweep objective layer strictly owns:
@@ -70,21 +70,21 @@ The scalar Optuna objective contract remains unchanged.
 
 ## 3. Parameter Grouping Presets
 
-Presets are organized into families based on grouping of related configuration
-parameters.
+We have organized presets into families based on grouping of related
+configuration parameters.
 
 These groupings are determined by configuration structure and parameter
 dependencies, not by intended modeling outcomes.
 
 ### 3.1. Runtime Optimization Presets
 
-Mutate optimizer and runtime-level parameters:
+We have implemented these to mutate optimizer and runtime-level parameters:
 
 - optimizer learning rate
 - optimizer weight decay
 - optimizer-related scheduler parameters (if exposed)
 
-Suggested presets:
+Implemented presets:
 
 - `optimizer`
 - `throughput`
@@ -93,13 +93,14 @@ Suggested presets:
 
 ### 3.2. Data Geometry Presets
 
-Mutate parameters affecting data sampling and spatial structure:
+We have implemented these to mutate parameters affecting data sampling and
+spatial structure:
 
 - patch size
 - batch size
 - data loader parameters influencing spatial context
 
-Suggested presets:
+Implemented presets:
 
 - `data_geometry`
 - `context_window`
@@ -108,14 +109,14 @@ Suggested presets:
 
 ### 3.3. Architecture Presets
 
-Mutate parameters describing model structure:
+We have implemented these to mutate parameters describing model structure:
 
 * model body selection
 * channel counts
 * bottleneck configuration
 * conditioning mechanisms
 
-Suggested presets:
+Implemented presets:
 
 * `architecture`
 * `bottleneck`
@@ -125,13 +126,14 @@ Suggested presets:
 
 ### 3.4. Objective (Loss and Regularization) Presets
 
-Mutate parameters associated with the training objective:
+We have implemented these to mutate parameters associated with the training
+objective:
 
 * per-head loss weights (e.g., focal, dice)
 * regularization weights (e.g., spectral, total variation)
 * multi-head consistency parameters
 
-Suggested presets:
+Implemented presets:
 
 * `loss_balance`
 * `regularization`
@@ -141,13 +143,14 @@ Suggested presets:
 
 ### 3.5. Multi-Task Presets
 
-Mutate parameters describing relationships between heads:
+We have implemented these to mutate parameters describing relationships
+between heads:
 
 * per-head weights
 * multi-head consistency weighting
 * hierarchical head configuration where exposed
 
-Suggested presets:
+Implemented presets:
 
 * `head_weights`
 * `mtl_joint`
@@ -157,34 +160,24 @@ Suggested presets:
 
 ### 3.6. Composite Presets
 
-Composite presets combine multiple parameter-group mutations into a single
-preset.
+We have implemented composite presets to combine multiple parameter-group
+mutations into a single preset.
 
 These presets invoke other preset functions in a fixed order.
 
-Suggested presets:
+Implemented presets:
 
 * `quick`
 * `capacity`
 * `mtl_quality`
 * `production_candidate`
 
+***
 
 ### Smoke-test Preset
 
-Additionally, we will provide a minimal, low-dimensional mutation for validation
-of the sweep pipeline.
-
-Suggested presets:
-
-- `smoke`
-
-This preset:
-
-- mutates a very small number of parameters
-- uses narrow ranges
-- is intended for fast validation of sweep mechanics
-- does not correspond to any configuration domain
+Additionally, we have preserved `base_objectives` (`base`) to serve as the
+smoke-test.
 
 ***
 
@@ -196,16 +189,17 @@ The Optuna-facing adapter remains:
 src/landseg/study/sweep/objectives.py
 ```
 
-Preset logic is moved into a dedicated package:
+We have placed preset logic into a dedicated package `presets/` instead of
+`objective_presets/` to align with implementation imports:
 
 ```text
 src/landseg/study/sweep/
   objectives.py
-  objective_presets/
+  presets/
     __init__.py
-    registry.py
-    types.py
+    _registry.py
     base.py
+    optimizer.py
     data.py
     architecture.py
     losses.py
@@ -222,7 +216,7 @@ logic.
 
 ## 5. Preset Contract
 
-Each preset must:
+Each preset implements the following contract:
 
 * accept `(cfg, trial)` and return a new config
 * operate on a deep copy of the root config
@@ -268,7 +262,7 @@ This separation ensures that the sweep layer remains:
 
 ## 6. Configuration Direction
 
-Configuration evolves toward a preset-oriented structure:
+We have structured the configuration in a preset-oriented format:
 
 ```yaml
 pipeline:
@@ -314,20 +308,17 @@ Backward compatibility with `objective: base` is preserved.
 
 ***
 
-## 8. Implementation Notes for the Feature Branch
+## 8. Implementation Notes
 
-Suggested sequence:
+We have executed the following sequence:
 
-1. Create `objective_presets` package
-2. Move existing `base` preset into `base.py`
-3. Implement preset registry
-4. Update `objectives.py` to resolve presets via registry
-5. Preserve current `objective: base` behavior
-6. Implement a small number of additional presets (e.g., `optimizer`, `loss_balance`)
-7. Add validation for preset/config compatibility
-8. Document Hydra overrides for implemented presets
-
-Initial branch scope should remain limited.
+1. Created `presets` package
+2. Moved existing `base` preset into `base.py`
+3. Implemented preset registry `_registry.py`
+4. Updated `objectives.py` to resolve presets via registry
+5. Preserved current `objective: base` behavior as the smoke test
+6. Implemented all presets (`optimizer`, `throughput`, `data_geometry`, `context_window`, `architecture`, `bottleneck`, `conditioning`, `loss_balance`, `regularization`, `mtl_consistency`, `head_weights`, `mtl_joint`, `hierarchy`, `quick`, `capacity`, `mtl_quality`, `production_candidate`)
+7. Added configuration defaults in `default.yaml`
 
 ***
 
