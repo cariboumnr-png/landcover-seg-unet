@@ -109,7 +109,7 @@ def _from_base_objectives(
 
     trial_cfg = copy.deepcopy(cfg)
     # learning rate
-    trial_cfg.set_lr(
+    trial_cfg.set_optimizer_lr(
         lr=trial.suggest_float(
             name='lr',
             low=cfg.study.base.learning_rate[0],
@@ -118,7 +118,7 @@ def _from_base_objectives(
         )
     )
     # weight decay
-    trial_cfg.set_weight_decay(
+    trial_cfg.set_optimizer_weight_decay(
         weight_decay=trial.suggest_float(
             name='weight_decay',
             low=cfg.study.base.weight_decay[0],
@@ -127,7 +127,7 @@ def _from_base_objectives(
         )
     )
     # patch size
-    trial_cfg.set_patch_size(
+    trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(
             name='patch_size',
             low=cfg.study.base.patch_size[0],
@@ -136,7 +136,7 @@ def _from_base_objectives(
         )
     )
     # batch size
-    trial_cfg.set_batch_size(
+    trial_cfg.set_data_batch_size(
         batch_size=trial.suggest_int(
             name='batch_size',
             low=cfg.study.base.batch_size[0],
