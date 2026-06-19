@@ -36,13 +36,13 @@ analysis layer defined in ADR-0026.
 # landseg/tuning/objective.py
 
 # standard imports
-import copy
 import typing
 # third-party imports
 import optuna
 # local imports
 import landseg.core as core
 import landseg.study.sweep as sweep
+import landseg.study.sweep.presets as presets
 
 # aliases
 StepGenerator = typing.Generator[core.SessionStepSummary, None, None]
@@ -69,11 +69,10 @@ def make_objective(
 
     # Optuna objective invoked once per trial
     def objective(trial: optuna.Trial) -> float:
-        # get trial config depending on objectives
-        obj = cfg.pipeline.study_sweep.objective
-        match obj:
-            case 'base': trial_cfg = _from_base_objectives(cfg, trial)
-            case _: raise ValueError(f'Invalid objective: {obj}')
+
+        # get trial config depending on the objective preset
+        objectives_fn = presets.resolve(cfg.pipeline.study_sweep.preset_name)
+        trial_cfg = objectives_fn(cfg, trial)
 
         # build the runner with trial config
         run = runner_builder(trial_cfg)
@@ -99,50 +98,3 @@ def make_objective(
         return last_value
 
     return objective
-
-# ------------------------------private  function------------------------------
-def _from_base_objectives(
-    cfg: sweep.RootConfigShape,
-    trial: optuna.Trial
-) -> sweep.RootConfigShape:
-    '''Derive a trial-specific config from base study objectives.'''
-
-    trial_cfg = copy.deepcopy(cfg)
-    # learning rate
-    trial_cfg.set_lr(
-        lr=trial.suggest_float(
-            name='lr',
-            low=cfg.study.base.learning_rate[0],
-            high=cfg.study.base.learning_rate[1],
-            log=True
-        )
-    )
-    # weight decay
-    trial_cfg.set_weight_decay(
-        weight_decay=trial.suggest_float(
-            name='weight_decay',
-            low=cfg.study.base.weight_decay[0],
-            high=cfg.study.base.weight_decay[1],
-            log=True
-        )
-    )
-    # patch size
-    trial_cfg.set_patch_size(
-        patch_size=trial.suggest_int(
-            name='patch_size',
-            low=cfg.study.base.patch_size[0],
-            high=cfg.study.base.patch_size[1],
-            step=cfg.study.base.patch_size[2],
-        )
-    )
-    # batch size
-    trial_cfg.set_batch_size(
-        batch_size=trial.suggest_int(
-            name='batch_size',
-            low=cfg.study.base.batch_size[0],
-            high=cfg.study.base.batch_size[1],
-            step=cfg.study.base.batch_size[2],
-        )
-    )
-    # return trial config
-    return trial_cfg

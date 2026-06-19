@@ -19,42 +19,49 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Pipieline schema
+Sweep objective presets registry and resolver.
 '''
 
 # standard imports
-import dataclasses
+from __future__ import annotations
+import typing
+# third-party imports
+import optuna
+# local imports
+import landseg.study.sweep as sweep
+import landseg.study.sweep.presets as presets
 
-# alias
-field = dataclasses.field
+PresetFn = typing.Callable[
+    [sweep.RootConfigShape, optuna.Trial],
+    sweep.RootConfigShape,
+]
 
-# ------------------------------PIPELINE  CONFIGS------------------------------
-@dataclasses.dataclass
-class _TrainModel:
-    pass  # training uses session config only (for now)
+_REGISTRY: dict[str, PresetFn] = {
+    "base": presets.base_objectives,
+    "optimizer": presets.optimizer_objectives,
+    "throughput": presets.throughput_objectives,
+    "data_geometry": presets.data_geometry_objectives,
+    "context_window": presets.context_window_objectives,
+    "architecture": presets.architecture_objectives,
+    "bottleneck": presets.bottleneck_objectives,
+    "conditioning": presets.conditioning_objectives,
+    "loss_balance": presets.loss_balance_objectives,
+    "regularization": presets.regularization_objectives,
+    "mtl_consistency": presets.mtl_consistency_objectives,
+    "head_weights": presets.head_weights_objectives,
+    "mtl_joint": presets.mtl_joint_objectives,
+    "hierarchy": presets.hierarchy_objectives,
+    "quick": presets.quick_objectives,
+    "capacity": presets.capacity_objectives,
+    "mtl_quality": presets.mtl_quality_objectives,
+    "production_candidate": presets.production_candidate_objectives,
+}
 
-@dataclasses.dataclass
-class _EvaluateModel:
-    checkpoint: str | None = None
-    split: str = 'test'
-    export_previews: bool = False
-
-@dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'default_study'
-    preset_name: str = 'base'
-    storage: str = 'sqlite:///optuna.db'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
-
-@dataclasses.dataclass
-class PipelineConfig:
-    name: str = 'default'
-    model_train: _TrainModel = field(default_factory=_TrainModel)
-    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
+#
+def resolve(name: str) -> PresetFn:
+    '''Resolve presets from name'''
+    try:
+        return _REGISTRY[name]
+    except KeyError as e:
+        raise ValueError(f"Unknown preset: {name}") from e

@@ -19,42 +19,67 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Pipieline schema
+Optimizer preset objectives.
 '''
 
-# standard imports
-import dataclasses
+from __future__ import annotations
+import copy
+import optuna
+import landseg.study.sweep as sweep
 
-# alias
-field = dataclasses.field
+def optimizer_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Optimizer preset: learning rate and weight decay mutation.'''
 
-# ------------------------------PIPELINE  CONFIGS------------------------------
-@dataclasses.dataclass
-class _TrainModel:
-    pass  # training uses session config only (for now)
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.optimizer
 
-@dataclasses.dataclass
-class _EvaluateModel:
-    checkpoint: str | None = None
-    split: str = 'test'
-    export_previews: bool = False
+    trial_cfg.set_optimizer_lr(
+        lr=trial.suggest_float(
+            name='optimizer.lr',
+            low=study_cfg.learning_rate[0],
+            high=study_cfg.learning_rate[1],
+            log=True,
+        )
+    )
 
-@dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'default_study'
-    preset_name: str = 'base'
-    storage: str = 'sqlite:///optuna.db'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
+    trial_cfg.set_optimizer_weight_decay(
+        weight_decay=trial.suggest_float(
+            name='optimizer.weight_decay',
+            low=study_cfg.weight_decay[0],
+            high=study_cfg.weight_decay[1],
+            log=True,
+        )
+    )
 
-@dataclasses.dataclass
-class PipelineConfig:
-    name: str = 'default'
-    model_train: _TrainModel = field(default_factory=_TrainModel)
-    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
+    return trial_cfg
+
+def throughput_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Throughput preset: batch size and AMP usage mutation.'''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.throughput
+
+    trial_cfg.set_data_batch_size(
+        batch_size=trial.suggest_int(
+            name='data.batch_size',
+            low=study_cfg.batch_size[0],
+            high=study_cfg.batch_size[1],
+            step=study_cfg.batch_size[2],
+        )
+    )
+
+    trial_cfg.set_runtime_use_amp(
+        use_amp=trial.suggest_categorical(
+            name='runtime.use_amp',
+            choices=study_cfg.use_amp,
+        )
+    )
+
+    return trial_cfg

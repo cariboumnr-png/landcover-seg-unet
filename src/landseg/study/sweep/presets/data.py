@@ -19,42 +19,60 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Pipieline schema
+Data geometry preset objectives.
 '''
 
-# standard imports
-import dataclasses
+from __future__ import annotations
+import copy
+import optuna
+import landseg.study.sweep as sweep
 
-# alias
-field = dataclasses.field
+def data_geometry_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Data geometry preset: patch size and batch size mutation.'''
 
-# ------------------------------PIPELINE  CONFIGS------------------------------
-@dataclasses.dataclass
-class _TrainModel:
-    pass  # training uses session config only (for now)
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.data_geometry
 
-@dataclasses.dataclass
-class _EvaluateModel:
-    checkpoint: str | None = None
-    split: str = 'test'
-    export_previews: bool = False
+    trial_cfg.set_data_patch_size(
+        patch_size=trial.suggest_int(
+            name='data.patch_size',
+            low=study_cfg.patch_size[0],
+            high=study_cfg.patch_size[1],
+            step=study_cfg.patch_size[2],
+        )
+    )
 
-@dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'default_study'
-    preset_name: str = 'base'
-    storage: str = 'sqlite:///optuna.db'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
+    trial_cfg.set_data_batch_size(
+        batch_size=trial.suggest_int(
+            name='data.batch_size',
+            low=study_cfg.batch_size[0],
+            high=study_cfg.batch_size[1],
+            step=study_cfg.batch_size[2],
+        )
+    )
 
-@dataclasses.dataclass
-class PipelineConfig:
-    name: str = 'default'
-    model_train: _TrainModel = field(default_factory=_TrainModel)
-    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
+    return trial_cfg
+
+def context_window_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Context window preset: patch size mutation only.'''
+
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.context_window
+
+    trial_cfg.set_data_patch_size(
+        patch_size=trial.suggest_int(
+            name='data.patch_size',
+            low=study_cfg.patch_size[0],
+            high=study_cfg.patch_size[1],
+            step=study_cfg.patch_size[2],
+        )
+    )
+
+    return trial_cfg

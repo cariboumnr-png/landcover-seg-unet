@@ -19,7 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
 
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
@@ -68,31 +70,105 @@ class RootConfig:
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
-        '''Dict representation.'''
         return dataclasses.asdict(self)
 
     def validate_all(self) -> None:
-        '''Validation'''
-        # delegated to subtrees.
+        # To be completed for all sections
         self.foundation.validate()
         self.transform.validate()
         self.models.validate()
         self.session.validate()
-        # To be completed
 
-    # set parameters
-    def set_lr(self, lr: float) -> None:
-        '''Set learning rate.'''
-        self.session.engine_optim.lr = lr
-
-    def set_weight_decay(self, weight_decay: float) -> None:
-        '''Set weight decay.'''
-        self.session.engine_optim.weight_decay = weight_decay
-
-    def set_patch_size(self, patch_size: int) -> None:
-        '''Set patch size'''
+    # hyperparameter setters (for sweeping)
+    # ----- data geometry
+    def set_data_patch_size(self, patch_size: int) -> None:
         self.session.data_loader.patch_size = patch_size
 
-    def set_batch_size(self, batch_size: int) -> None:
-        '''Set batch size'''
+    def set_data_batch_size(self, batch_size: int) -> None:
         self.session.data_loader.batch_size = batch_size
+
+    # ----- runtime optimization
+    def set_optimizer_lr(self, lr: float) -> None:
+        self.session.engine_optim.lr = lr
+
+    def set_optimizer_weight_decay(self, weight_decay: float) -> None:
+        self.session.engine_optim.weight_decay = weight_decay
+
+    def set_optimizer_type(self, opt_cls: str) -> None:
+        self.session.engine_optim.opt_cls = opt_cls
+
+    def set_optimizer_scheduler_type(self, sched_cls: str | None) -> None:
+        self.session.engine_optim.sched_cls = sched_cls
+
+    def set_optimizer_scheduler_args(self, sched_args: dict[str, typing.Any]) -> None:
+        self.session.engine_optim.sched_args = sched_args
+
+    def set_optimizer_grad_clip_norm(self, grad_clip_norm: float | None) -> None:
+        self.session.engine_optim.grad_clip_norm = grad_clip_norm
+
+    def set_runtime_use_amp(self, use_amp: bool) -> None:
+        self.session.engine_exec.use_amp = use_amp
+
+    def set_runtime_logit_adjust_alpha(self, alpha: float) -> None:
+        self.session.engine_exec.logit_adjust_alpha = alpha
+
+    # ----- objective (loss + regularization)
+    def set_objective_focal_weight(self, weight: float) -> None:
+        self.session.engine_tasks.loss_configs.focal.weight = weight
+
+    def set_objective_dice_weight(self, weight: float) -> None:
+        self.session.engine_tasks.loss_configs.dice.weight = weight
+
+    def set_objective_spectral_weight(self, weight: float) -> None:
+        self.session.engine_tasks.loss_configs.spectral.weight = weight
+
+    def set_objective_tv_weight(self, weight: float) -> None:
+        self.session.engine_tasks.loss_configs.tv.weight = weight
+
+    # ----- multitask
+    def set_mtl_consistency_lambda(self, value: float) -> None:
+        reg_config = self.session.engine_tasks.mtl_reg_configs
+        reg_config.consistency_lambda = value
+
+    def set_mtl_consistency_reduction(self, reduction: str) -> None:
+        reg_config = self.session.engine_tasks.mtl_reg_configs
+        reg_config.consistency_reduction = reduction
+
+    # ----- architecture
+    def set_model_body(self, model_body: str) -> None:
+        self.models.model_body = model_body
+
+    def set_model_base_channel(self, base_channel: int) -> None:
+        self.models.set_base_channel(base_channel)
+
+    def set_model_bottleneck(self, bottleneck: str) -> None:
+        self.models.bottleneck = bottleneck
+
+    def set_model_conditioners(self, conditioners: list[str]) -> None:
+        self.models.conditioners = conditioners
+
+    # ----- bottleneck structure (architecture sub-domain)
+    def set_bottleneck_convolution_blocks(self, num_blocks: int | None) -> None:
+        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
+        bottleneck.num_conv_blocks = num_blocks
+
+    def set_bottleneck_transformer_blocks(self, num_blocks: int | None) -> None:
+        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
+        bottleneck.num_transformer_blocks = num_blocks
+
+    # ----- transformer parameters (architecture sub-domain)
+    def set_transformer_num_heads(self, num_heads: int) -> None:
+        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
+        bottleneck.transformer_params.num_heads = num_heads
+
+    def set_transformer_mlp_ratio(self, mlp_ratio: float) -> None:
+        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
+        bottleneck.transformer_params.mlp_ratio = mlp_ratio
+
+    def set_transformer_dropout(self, dropout: float) -> None:
+        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
+        bottleneck.transformer_params.dropout = dropout
+
+    def set_transformer_attn_dropout(self, attn_dropout: float) -> None:
+        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
+        bottleneck.transformer_params.attn_dropout = attn_dropout

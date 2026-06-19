@@ -19,42 +19,64 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Pipieline schema
+Base objective preset. Intended for sweep layer smoke test
 '''
 
 # standard imports
-import dataclasses
+from __future__ import annotations
+import copy
+# third-party imports
+import optuna
+# local imports
+import landseg.study.sweep as sweep
 
-# alias
-field = dataclasses.field
+def base_objectives(
+    cfg: sweep.RootConfigShape,
+    trial: optuna.Trial,
+) -> sweep.RootConfigShape:
+    '''Base preset: minimal cross-domain parameter mutation.'''
 
-# ------------------------------PIPELINE  CONFIGS------------------------------
-@dataclasses.dataclass
-class _TrainModel:
-    pass  # training uses session config only (for now)
+    trial_cfg = copy.deepcopy(cfg)
+    study_cfg = cfg.study.base
 
-@dataclasses.dataclass
-class _EvaluateModel:
-    checkpoint: str | None = None
-    split: str = 'test'
-    export_previews: bool = False
+    # optimizer domain
+    trial_cfg.set_optimizer_lr(
+        lr=trial.suggest_float(
+            name='optimizer.lr',
+            low=study_cfg.learning_rate[0],
+            high=study_cfg.learning_rate[1],
+            log=True,
+        )
+    )
 
-@dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'default_study'
-    preset_name: str = 'base'
-    storage: str = 'sqlite:///optuna.db'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
+    trial_cfg.set_optimizer_weight_decay(
+        weight_decay=trial.suggest_float(
+            name='optimizer.weight_decay',
+            low=study_cfg.weight_decay[0],
+            high=study_cfg.weight_decay[1],
+            log=True,
+        )
+    )
 
-@dataclasses.dataclass
-class PipelineConfig:
-    name: str = 'default'
-    model_train: _TrainModel = field(default_factory=_TrainModel)
-    model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
+    # data geometry domain
+    trial_cfg.set_data_patch_size(
+        patch_size=trial.suggest_int(
+            name='data.patch_size',
+            low=study_cfg.patch_size[0],
+            high=study_cfg.patch_size[1],
+            step=study_cfg.patch_size[2],
+        )
+    )
+
+    trial_cfg.set_data_batch_size(
+        batch_size=trial.suggest_int(
+            name='data.batch_size',
+            low=study_cfg.batch_size[0],
+            high=study_cfg.batch_size[1],
+            step=study_cfg.batch_size[2],
+        )
+    )
+
+    return trial_cfg
+
