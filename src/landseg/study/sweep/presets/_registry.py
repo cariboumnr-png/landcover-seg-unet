@@ -35,24 +35,24 @@ PresetFn = typing.Callable[
 ]
 
 _REGISTRY: dict[str, PresetFn] = {
-    "base": presets.obj_base,
-    "optimizer": presets.obj_optimizer,
-    "throughput": presets.obj_throughput,
-    "data_geometry": presets.obj_data_geometry,
-    "context_window": presets.obj_context_window,
-    "architecture": presets.obj_architecture,
-    "bottleneck": presets.obj_bottleneck,
-    "conditioning": presets.obj_conditioning,
-    "loss_balance": presets.obj_loss_balance,
-    "regularization": presets.obj_loss_aux,
-    "mtl_consistency": presets.obj_regularization,
-    "head_weights": presets.obj_head_weights,
-    "mtl_joint": presets.obj_mtl_joint,
-    "hierarchy": presets.obj_hierarchy,
-    "quick": presets.comp_quick,
-    "capacity": presets.comp_capacity,
-    "mtl_quality": presets.comp_mtl_quality,
-    "production_candidate": presets.comp_candidate,
+    'base': presets.obj_base,
+    'optimizer': presets.obj_optimizer,
+    'throughput': presets.obj_throughput,
+    'data_geometry': presets.obj_data_geometry,
+    'context_window': presets.obj_context_window,
+    'architecture': presets.obj_architecture,
+    'bottleneck': presets.obj_bottleneck,
+    'conditioning': presets.obj_conditioning,
+    'loss_major': presets.obj_loss_balance,
+    'loss_auxiliary': presets.obj_loss_aux,
+    'regularization': presets.obj_regularization,
+    'head_weights': presets.obj_head_weights,
+    'mtl_joint': presets.obj_mtl_joint,
+    'hierarchy': presets.obj_hierarchy,
+    'quick': presets.comp_quick,
+    'capacity': presets.comp_capacity,
+    'mtl_quality': presets.comp_mtl_quality,
+    'production_candidate': presets.comp_candidate,
 }
 
 #
@@ -61,4 +61,4 @@ def resolve(name: str) -> PresetFn:
     try:
         return _REGISTRY[name]
     except KeyError as e:
-        raise ValueError(f"Unknown preset: {name}") from e
+        raise ValueError(f'Unknown preset: {name}') from e
