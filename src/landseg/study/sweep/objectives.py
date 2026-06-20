@@ -85,8 +85,11 @@ def make_objective(
         # - last metric
         last_value = 0.0
 
+        # step results JSON persistence
+        steps_ctrl = artifacts.Controller[dict](step_results_path)
+
+        # drive the runner and persist JSON if successfully completed
         try:
-            # drive the runner
             for step in run():
                 value = step.val_metrics_value
                 last_value = value
@@ -94,10 +97,16 @@ def make_objective(
                 steps.append(step.as_dict)
                 if trial.should_prune():
                     raise optuna.TrialPruned()
-        
+
+            steps_ctrl.persist({
+                'trial_number': trial.number,
+                'params': trial.params,
+                'metrics': steps,
+                'state': 'completed'
+            })
+
+        # persist partial step results before propagating the exception
         except optuna.TrialPruned:
-            # persist partial step results before propagating the exception
-            steps_ctrl = artifacts.Controller[dict](step_results_path)
             steps_ctrl.persist({
                 'trial_number': trial.number,
                 'params': trial.params,
