@@ -19,23 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Loss and regularization preset objectives.
-'''
+'''Loss and regularization preset objectives.'''
 
-from __future__ import annotations
-import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def loss_balance_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_loss_balance(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Loss balance preset: focal and dice loss weights mutation.'''
+    '''
+    Main loss balance mutations:
+      - Focal loss weight (`float`)
+      - Dice loss weight (`float`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.loss_balance
+    study_cfg = trial_cfg.study.loss_balance
 
     trial_cfg.set_objective_focal_weight(
         weight=trial.suggest_float(
@@ -55,14 +56,17 @@ def loss_balance_objectives(
 
     return trial_cfg
 
-def regularization_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_loss_aux(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Regularization preset: spectral and TV loss weights mutation.'''
+    '''
+    Auxiliary loss mutations:
+      - Spectral loss weight (`float`)
+      - TV loss weight (`float`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.regularization
+    study_cfg = trial_cfg.study.loss_auxiliary
 
     trial_cfg.set_objective_spectral_weight(
         weight=trial.suggest_float(
@@ -82,17 +86,16 @@ def regularization_objectives(
 
     return trial_cfg
 
-def mtl_consistency_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_regularization(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Multi-task consistency preset: consistency regularizer lambda
-    weight mutation.
+    Regularization mutations:
+      - consistency regularizer lambda weight (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.mtl_consistency
+    study_cfg = trial_cfg.study.regularization
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

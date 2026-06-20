@@ -19,26 +19,25 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Architecture preset objectives.
-'''
+'''Architecture preset objectives.'''
 
-from __future__ import annotations
-import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def architecture_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_architecture(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Architecture preset: model body, base channel count, and
-    bottleneck type mutation.
+    Architecture preset mutations:
+      - Model body (`str`)
+      - Base channel count (`int`)
+      - Bottleneck type (`str`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.architecture
+    study_cfg = trial_cfg.study.architecture
 
     trial_cfg.set_model_body(
         model_body=trial.suggest_categorical(
@@ -65,17 +64,17 @@ def architecture_objectives(
 
     return trial_cfg
 
-def bottleneck_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_bottleneck(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Bottleneck structure preset: blocks count and transformer
-    hyperparameters mutation.
+    Bottlenect preset mutations:
+      - Blocks count (`int`)
+      - Transformer hyperparameters
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.bottleneck
+    study_cfg = trial_cfg.study.bottleneck
 
     bottleneck = trial.suggest_categorical(
         name='model.bottleneck',
@@ -132,20 +131,36 @@ def bottleneck_objectives(
 
     return trial_cfg
 
-def conditioning_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_conditioning(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Conditioning preset: conditioners mutation.'''
+    '''
+    Conditioning preset mutations:
+      - Conditioner selection (`list[str]`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.conditioning
+    study_cfg = trial_cfg.study.conditioning
 
-    tuple_choices = [tuple(c) for c in study_cfg.conditioners]
-    chosen_tuple = trial.suggest_categorical(
-        name='model.conditioners',
-        choices=tuple_choices,
+    # auto construct conditioners mapping
+    # e.g., {'film_concat': ['film', 'concat']}
+    choice_map = {}
+    for conditioners in study_cfg.conditioners:
+        if not conditioners:
+            key = "none"
+        else:
+            key = "_".join(conditioners)
+        choice_map[key] = conditioners
+
+    selected = trial.suggest_categorical(
+        "model.conditioners",
+        list(choice_map.keys()),
     )
-    trial_cfg.set_model_conditioners(list(chosen_tuple))
+
+    # reconstruct list of strs from mapping
+    # e.g., 'film_concat' -> ['film', 'concat']
+    trial_cfg.set_model_conditioners(
+        choice_map[selected]
+    )
 
     return trial_cfg

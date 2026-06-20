@@ -19,23 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Data geometry preset objectives.
-'''
+'''Data geometry preset objectives.'''
 
-from __future__ import annotations
-import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def data_geometry_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_data_geometry(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Data geometry preset: patch size and batch size mutation.'''
+    '''
+    Data geometry mutations:
+      - Patch size (`int`)
+      - Batch size (`int`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.data_geometry
+    study_cfg = trial_cfg.study.data_geometry
 
     trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(
@@ -57,14 +58,16 @@ def data_geometry_objectives(
 
     return trial_cfg
 
-def context_window_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_context_window(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Context window preset: patch size mutation only.'''
+    '''
+    Context window mutation:
+      - Patch size (`int`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.context_window
+    study_cfg = trial_cfg.study.context_window
 
     trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(

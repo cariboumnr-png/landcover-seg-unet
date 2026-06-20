@@ -33,13 +33,13 @@ aggregation are intentionally out of scope and belong to the study
 analysis layer defined in ADR-0026.
 '''
 
-# landseg/tuning/objective.py
-
 # standard imports
+import copy
 import typing
 # third-party imports
 import optuna
 # local imports
+import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.study.sweep as sweep
 import landseg.study.sweep.presets as presets
@@ -50,7 +50,7 @@ StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
 # -------------------------------Public Function-------------------------------
 def make_objective(
-    runner_builder: typing.Callable[..., StepRunner],
+    runner_builder: typing.Callable[..., tuple[str, StepRunner]],
     cfg: sweep.RootConfigShape,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''
@@ -72,27 +72,48 @@ def make_objective(
 
         # get trial config depending on the objective preset
         objectives_fn = presets.resolve(cfg.pipeline.study_sweep.preset_name)
-        trial_cfg = objectives_fn(cfg, trial)
+        _cfg = copy.deepcopy(cfg)
+        trial_cfg = objectives_fn(_cfg, trial)
+
 
         # build the runner with trial config
-        run = runner_builder(trial_cfg)
+        step_results_path, run = runner_builder(trial_cfg)
 
-        # last metric tracking
+        # tracking
+        # - step results
+        steps: list[dict] = []
+        # - last metric
         last_value = 0.0
 
-        # drive the runner
-        for step in run():
+        # step results JSON persistence
+        steps_ctrl = artifacts.Controller[dict](step_results_path)
 
-            # get value from step
-            value = step.val_metrics_value
-            last_value = value
+        # drive the runner and persist JSON if successfully completed
+        try:
+            for step in run():
+                value = step.val_metrics_value
+                last_value = value
+                trial.report(value, step.epoch_in_phase)
+                steps.append(step.as_dict)
+                if trial.should_prune():
+                    raise optuna.TrialPruned()
 
-            # report intermediate result
-            trial.report(value, step.epoch_in_phase)
+            steps_ctrl.persist({
+                'trial_number': trial.number,
+                'params': trial.params,
+                'metrics': steps,
+                'state': 'completed'
+            })
 
-            # check pruning condition
-            if trial.should_prune():
-                raise optuna.TrialPruned()
+        # persist partial step results before propagating the exception
+        except optuna.TrialPruned:
+            steps_ctrl.persist({
+                'trial_number': trial.number,
+                'params': trial.params,
+                'metrics': steps,
+                'state': 'pruned'
+            })
+            raise
 
         # return the last value
         return last_value

@@ -19,23 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Multi-task preset objectives.
-'''
+'''Multi-task preset objectives.'''
 
-from __future__ import annotations
-import copy
+
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def head_weights_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_head_weights(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Head weights preset: logit adjust alpha weight mutation.'''
+    '''
+    Head weights preset mutations:
+      - logit adjust alpha weight (`float`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.head_weights
+    study_cfg = trial_cfg.study.head_weights
 
     trial_cfg.set_runtime_logit_adjust_alpha(
         alpha=trial.suggest_float(
@@ -47,17 +48,17 @@ def head_weights_objectives(
 
     return trial_cfg
 
-def mtl_joint_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_mtl_joint(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    MTL joint preset: consistency lambda and logit adjust alpha
-    mutation.
+    MTL joint preset mutations:
+      - consistency lambda (`float`)
+      - logit adjust alpha (`float`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.mtl_joint
+    study_cfg = trial_cfg.study.mtl_joint
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(
@@ -77,17 +78,17 @@ def mtl_joint_objectives(
 
     return trial_cfg
 
-def hierarchy_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_hierarchy(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
     '''
-    Hierarchy preset: consistency lambda and consistency reduction
-    mutation.
+    Hierarchy preset mutations:
+      - consistency lambda (`float`)
+      - consistency reduction (`str`)
     '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.hierarchy
+    study_cfg = trial_cfg.study.hierarchy
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

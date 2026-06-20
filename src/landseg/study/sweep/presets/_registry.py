@@ -19,12 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Sweep objective presets registry and resolver.
-'''
+'''Sweep objective presets registry and resolver.'''
 
 # standard imports
-from __future__ import annotations
 import typing
 # third-party imports
 import optuna
@@ -38,24 +35,24 @@ PresetFn = typing.Callable[
 ]
 
 _REGISTRY: dict[str, PresetFn] = {
-    "base": presets.base_objectives,
-    "optimizer": presets.optimizer_objectives,
-    "throughput": presets.throughput_objectives,
-    "data_geometry": presets.data_geometry_objectives,
-    "context_window": presets.context_window_objectives,
-    "architecture": presets.architecture_objectives,
-    "bottleneck": presets.bottleneck_objectives,
-    "conditioning": presets.conditioning_objectives,
-    "loss_balance": presets.loss_balance_objectives,
-    "regularization": presets.regularization_objectives,
-    "mtl_consistency": presets.mtl_consistency_objectives,
-    "head_weights": presets.head_weights_objectives,
-    "mtl_joint": presets.mtl_joint_objectives,
-    "hierarchy": presets.hierarchy_objectives,
-    "quick": presets.quick_objectives,
-    "capacity": presets.capacity_objectives,
-    "mtl_quality": presets.mtl_quality_objectives,
-    "production_candidate": presets.production_candidate_objectives,
+    'base': presets.obj_base,
+    'optimizer': presets.obj_optimizer,
+    'throughput': presets.obj_throughput,
+    'data_geometry': presets.obj_data_geometry,
+    'context_window': presets.obj_context_window,
+    'architecture': presets.obj_architecture,
+    'bottleneck': presets.obj_bottleneck,
+    'conditioning': presets.obj_conditioning,
+    'loss_major': presets.obj_loss_balance,
+    'loss_auxiliary': presets.obj_loss_aux,
+    'regularization': presets.obj_regularization,
+    'head_weights': presets.obj_head_weights,
+    'mtl_joint': presets.obj_mtl_joint,
+    'hierarchy': presets.obj_hierarchy,
+    'quick': presets.comp_quick,
+    'capacity': presets.comp_capacity,
+    'mtl_quality': presets.comp_mtl_quality,
+    'production_candidate': presets.comp_candidate,
 }
 
 #
@@ -64,4 +61,4 @@ def resolve(name: str) -> PresetFn:
     try:
         return _REGISTRY[name]
     except KeyError as e:
-        raise ValueError(f"Unknown preset: {name}") from e
+        raise ValueError(f'Unknown preset: {name}') from e

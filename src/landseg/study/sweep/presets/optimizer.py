@@ -19,23 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Optimizer preset objectives.
-'''
+'''Optimizer preset objectives.'''
 
-from __future__ import annotations
-import copy
+# third-party imports
 import optuna
+# local imports
 import landseg.study.sweep as sweep
 
-def optimizer_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_optimizer(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Optimizer preset: learning rate and weight decay mutation.'''
+    '''
+    Optimizer preset mutations:
+      - Learning rate (`float`)
+      - weight decay (`float`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.optimizer
+    study_cfg = trial_cfg.study.optimizer
 
     trial_cfg.set_optimizer_lr(
         lr=trial.suggest_float(
@@ -57,14 +58,17 @@ def optimizer_objectives(
 
     return trial_cfg
 
-def throughput_objectives(
-    cfg: sweep.RootConfigShape,
+def obj_throughput(
+    trial_cfg: sweep.RootConfigShape,
     trial: optuna.Trial,
 ) -> sweep.RootConfigShape:
-    '''Throughput preset: batch size and AMP usage mutation.'''
+    '''
+    Throughput preset mutations:
+      - Batch size (`int`)
+      - AMP usage (`bool`)
+    '''
 
-    trial_cfg = copy.deepcopy(cfg)
-    study_cfg = cfg.study.throughput
+    study_cfg = trial_cfg.study.throughput
 
     trial_cfg.set_data_batch_size(
         batch_size=trial.suggest_int(

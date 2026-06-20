@@ -60,18 +60,22 @@ def sweep(config: configs.RootConfig):
     '''
 
     # run sweep and return
-    s = study.run_sweep(_build_runner, config)
+    s = study.run_sweep(_runner_builder, config)
     return {
         'best_value': s.best_value,
         'best_params': s.best_params,
     }
 
-def _build_runner(config: configs.RootConfig) -> StepRunner:
-    '''Build a continuous training orchestraction runner.'''
+def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
+    '''Build a continuous training session runner.'''
 
     # init run io folder tree
     paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     paths.init(trace_to_last=False)
+
+    # save running config per session
+    config_ctrl = artifacts.Controller[dict](paths.config) # no policy
+    config_ctrl.persist(config.as_dict)
 
     # create a centralized main logger
     logger = utils.Logger(
@@ -117,4 +121,4 @@ def _build_runner(config: configs.RootConfig) -> StepRunner:
         logger=logger
     )
     # return the runner
-    return runner.run
+    return paths.step_results, runner.run
