@@ -88,12 +88,12 @@ class _LossBalanceObj:
     dice_weight: tuple[float, float] = (0.0, 1.0)
 
 @dataclasses.dataclass
-class _RegularizationObj:
+class _LossAuxiliaryObj:
     spectral_weight: tuple[float, float] = (0.0, 1e-2)
     tv_weight: tuple[float, float] = (0.0, 1e-3)
 
 @dataclasses.dataclass
-class _MtlConsistencyObj:
+class _RegularizationObj:
     consistency_lambda: tuple[float, float] = (0.0, 1.0)
 
 @dataclasses.dataclass
@@ -121,8 +121,8 @@ class StudyConfig:
     bottleneck: _BottleneckObj = field(default_factory=_BottleneckObj)
     conditioning: _ConditioningObj = field(default_factory=_ConditioningObj)
     loss_balance: _LossBalanceObj = field(default_factory=_LossBalanceObj)
+    loss_auxiliary: _LossAuxiliaryObj = field(default_factory=_LossAuxiliaryObj)
     regularization: _RegularizationObj = field(default_factory=_RegularizationObj)
-    mtl_consistency: _MtlConsistencyObj = field(default_factory=_MtlConsistencyObj)
     head_weights: _HeadWeightsObj = field(default_factory=_HeadWeightsObj)
     mtl_joint: _MtlJointObj = field(default_factory=_MtlJointObj)
     hierarchy: _HierarchyObj = field(default_factory=_HierarchyObj)

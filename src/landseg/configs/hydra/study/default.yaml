@@ -43,11 +43,11 @@ loss_balance:
   focal_weight: [0.0, 1.0]
   dice_weight: [0.0, 1.0]
 
-regularization:
+loss_auxiliary:
   spectral_weight: [0.0, 1e-2]
   tv_weight: [0.0, 1e-3]
 
-mtl_consistency:
+regularization:
   consistency_lambda: [0.0, 1.0]
 
 head_weights:

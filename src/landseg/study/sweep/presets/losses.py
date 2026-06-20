@@ -66,7 +66,7 @@ def obj_loss_aux(
       - TV loss weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.regularization
+    study_cfg = trial_cfg.study.loss_auxiliary
 
     trial_cfg.set_objective_spectral_weight(
         weight=trial.suggest_float(
@@ -95,7 +95,7 @@ def obj_regularization(
       - consistency regularizer lambda weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.mtl_consistency
+    study_cfg = trial_cfg.study.regularization
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(
