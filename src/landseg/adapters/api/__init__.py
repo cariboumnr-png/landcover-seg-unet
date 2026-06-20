@@ -34,6 +34,7 @@ __all__ = [
     'DataIngestionConfigurator',
     'DataPreparationConfigurator',
     'TrainingSessionConfigurator',
+    'StudySweepConfigurator',
     # functions
     'run'
     # types
@@ -45,7 +46,8 @@ if typing.TYPE_CHECKING:
     from .configurators import (
         DataIngestionConfigurator,
         DataPreparationConfigurator,
-        TrainingSessionConfigurator
+        TrainingSessionConfigurator,
+        StudySweepConfigurator
     )
 
 def __getattr__(name: str):
@@ -56,7 +58,8 @@ def __getattr__(name: str):
     if name in {
         'DataIngestionConfigurator',
         'DataPreparationConfigurator',
-        'TrainingSessionConfigurator'
+        'TrainingSessionConfigurator',
+        'StudySweepConfigurator'
     }:
         return getattr(importlib.import_module('.configurators', __package__), name)
 
