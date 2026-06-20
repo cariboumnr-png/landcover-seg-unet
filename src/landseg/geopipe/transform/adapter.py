@@ -102,14 +102,15 @@ def data_blocks_adapter(
 
     # get block size from schema
     image_shape = data_schema['tensor_shapes']['image']
-    block_size = (image_shape['H'], image_shape['W'])
+    blk_size = (image_shape['H'], image_shape['W'])
 
     # parse dev data catalog
-    assert config.focal_target in data_schema['labels']['label_ignore_cls']
-    dev = _parse(dev_catalog, block_size, config.valid_pxs, config.focal_target)
+    if config.focal_target:
+        assert config.focal_target in data_schema['labels']['label_ignore_cls']
+    dev = _parse(dev_catalog, blk_size, config.valid_pxs, config.focal_target)
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, block_size, config.valid_pxs, config.focal_target)
+        test = _parse(test_catalog, blk_size, config.valid_pxs, config.focal_target)
     except artifacts.ArtifactError:
         test = None
 
