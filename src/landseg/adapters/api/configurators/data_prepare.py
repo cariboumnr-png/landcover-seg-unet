@@ -39,6 +39,7 @@ class DataPreparationConfigurator:
         '''Initialize the configurator'''
 
         self._cfg = configs.RootConfig() # with all default values
+        self._cfg.foundation.datablocks.name = dataset_name # give name
         # set output dirpaths
         self._cfg.execution.exp_root = experiment_root
         self._cfg.foundation.output_dpath = (

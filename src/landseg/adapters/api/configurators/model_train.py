@@ -39,6 +39,7 @@ class TrainingSessionConfigurator:
         '''Initialize the configurator'''
 
         self._cfg = configs.RootConfig() # with all default values
+        self._cfg.foundation.datablocks.name = dataset_name # give name
         # set experiment root
         self._cfg.execution.exp_root = experiment_root
         # set datablocks source
