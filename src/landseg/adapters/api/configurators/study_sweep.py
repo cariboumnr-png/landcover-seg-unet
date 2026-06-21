@@ -80,59 +80,17 @@ class StudySweepConfigurator:
         self,
         max_epochs: int,
         active_heads: list[str] | None,
+        exclude_classes: dict[str, list[int]] | None,
         track_heads: dict[str, float] | None,
         patience_epoch: int | None,
-        logit_adjust_alpha: float
     ) -> typing.Self:
         '''Set training runtime behaviour.'''
         orchestration = self._cfg.session.orchestration
         orchestration.curriculum.single.phases[0].num_epochs = max_epochs
         orchestration.curriculum.single.phases[0].active_heads = active_heads
+        self._cfg.session.engine_tasks.excluded_cls = exclude_classes
         orchestration.monitor.track_heads = track_heads
         orchestration.monitor.patience = patience_epoch
-        self._cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
-        return self
-
-    def set_model(
-        self,
-        body: str,
-        bottleneck: str,
-        base_channel: int
-    ) -> typing.Self:
-        '''Set model body.'''
-        self._cfg.models.model_body = body
-        self._cfg.models.bottleneck = bottleneck
-        self._cfg.models.set_base_channel(base_channel)
-        return self
-
-    def set_optimization(
-        self,
-        optimizer: typing.Literal['AdamW'],
-        learning_rate: float,
-        weight_decay: float,
-        scheduler: typing.Literal['CosAnneal']
-    ) -> typing.Self:
-        '''Set model optimization.'''
-        engine_optim = self._cfg.session.engine_optim
-        engine_optim.opt_cls = optimizer
-        engine_optim.lr = learning_rate
-        engine_optim.weight_decay = weight_decay
-        engine_optim.sched_cls  = scheduler
-        return self
-
-    def set_objectives(
-        self,
-        focal_loss_weight: float,
-        dice_loss_weight: float,
-        spectral_loss_weight: float,
-        tv_loss_weight: float
-    ) -> typing.Self:
-        '''Set loss weights.'''
-        loss_types = self._cfg.session.engine_tasks.loss_configs
-        loss_types.focal.weight = focal_loss_weight
-        loss_types.dice.weight = dice_loss_weight
-        loss_types.spectral.weight = spectral_loss_weight
-        loss_types.tv.weight = tv_loss_weight
         return self
 
     # ----- sweep configs
