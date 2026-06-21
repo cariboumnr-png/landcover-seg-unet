@@ -41,7 +41,7 @@ def normalize_blocks(
     stats: dict[str, geo_core.ImageBandStats],
     output_dir: str,
     *,
-    rebuild: bool = False
+    rebuild: bool = False,
 ) -> dict[str, str]:
     '''
     Normalize a collection of raw data blocks using global image stats.
@@ -91,7 +91,8 @@ def normalize_blocks(
     for fpath in os.listdir(output_dir):
         if fpath.endswith('.npz'):
             name, _ = os.path.splitext(os.path.basename(fpath))
-            indexed_files[name] = f'{output_dir}/{fpath}'
+            fp = os.path.abspath(f'{output_dir}/{fpath}') # use absolute fpath
+            indexed_files[name] = fp
     return indexed_files
 
 def _normalize_one_block(
