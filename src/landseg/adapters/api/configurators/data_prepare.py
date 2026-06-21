@@ -67,14 +67,12 @@ class DataPreparationConfigurator:
         self._cfg.transform.partition.test_ratio = test_holdout_blocks_ratio
         return self
 
-    def set_scoring(
+    def set_oversampling(
         self,
+        target_head: str | None,
         reward_classes: dict[int, float]
     ) -> typing.Self:
-        '''Set block scoring criteria.'''
+        '''Set blocks hydration for reward classes in the target head'''
+        self._cfg.transform.catalog.focal_target = target_head
         self._cfg.transform.scoring.reward = reward_classes
-        return self
-
-    def set_hydration(self) -> typing.Self:
-        '''Set blocks hydration'''
         return self
