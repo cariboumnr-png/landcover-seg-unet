@@ -27,6 +27,7 @@ Study sweep configurator
 import typing
 # local imports
 import landseg.configs as configs
+import landseg.study.sweep.presets as presets
 
 class StudySweepConfigurator:
     '''Configure a study sweep session.'''
@@ -54,6 +55,7 @@ class StudySweepConfigurator:
         self._cfg.session.validate()
         return self._cfg
 
+    # ----- essential/shared configs
     def set_data_loading(
         self,
         batch_size: int,
@@ -72,6 +74,23 @@ class StudySweepConfigurator:
         '''Set data source'''
         self._cfg.dataspecs.domain_ids_name = category_domain
         self._cfg.dataspecs.domain_vec_name = continuous_domain
+        return self
+
+    def set_runtime(
+        self,
+        max_epochs: int,
+        active_heads: list[str] | None,
+        track_heads: dict[str, float] | None,
+        patience_epoch: int | None,
+        logit_adjust_alpha: float
+    ) -> typing.Self:
+        '''Set training runtime behaviour.'''
+        orchestration = self._cfg.session.orchestration
+        orchestration.curriculum.single.phases[0].num_epochs = max_epochs
+        orchestration.curriculum.single.phases[0].active_heads = active_heads
+        orchestration.monitor.track_heads = track_heads
+        orchestration.monitor.patience = patience_epoch
+        self._cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
         return self
 
     def set_model(
@@ -116,19 +135,7 @@ class StudySweepConfigurator:
         loss_types.tv.weight = tv_loss_weight
         return self
 
-    def set_runtime(
-        self,
-        max_epochs: int,
-        patience_epoch: int | None,
-        logit_adjust_alpha: float
-    ) -> typing.Self:
-        '''Set training runtime behaviour.'''
-        orchestration = self._cfg.session.orchestration
-        orchestration.curriculum.single.phases[0].num_epochs = max_epochs
-        orchestration.monitor.patience = patience_epoch
-        self._cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
-        return self
-
+    # ----- sweep configs
     def set_sweep(
         self,
         study_name: str,
@@ -139,9 +146,8 @@ class StudySweepConfigurator:
         seed: int = 42
     ) -> typing.Self:
         '''Set study sweep parameters.'''
-        import landseg.study.sweep.presets as presets
-        presets.resolve(preset_name)
 
+        presets.resolve(preset_name)
         sweep_cfg = self._cfg.pipeline.study_sweep
         sweep_cfg.study_name = study_name
         sweep_cfg.preset_name = preset_name
