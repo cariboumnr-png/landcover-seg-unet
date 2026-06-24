@@ -36,6 +36,7 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         self,
         experiment_root: str,
         dataset_name: str,
+        *,
         optuna_storage: str,
         seed: int = 42
     ):
