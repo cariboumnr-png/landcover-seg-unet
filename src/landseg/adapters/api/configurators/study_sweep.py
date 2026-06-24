@@ -32,15 +32,25 @@ import landseg.study.sweep.presets as presets
 class StudySweepConfigurator(configurators.BaseConfigurator):
     '''Configure a study sweep session.'''
 
+    def __init__(
+        self,
+        experiment_root: str,
+        dataset_name: str,
+        optuna_storage: str,
+        seed: int = 42
+    ):
+        super().__init__(experiment_root, dataset_name, 'study-sweep')
+        #
+        self._cfg.pipeline.study_sweep.storage = optuna_storage
+        self._cfg.pipeline.study_sweep.seed = seed
+
     # ----- sweep configs
     def set_sweep(
         self,
         study_name: str,
         preset_name: str,
         n_trials: int,
-        storage: str = 'sqlite:///optuna.db',
         direction: str = 'maximize',
-        seed: int = 42
     ) -> typing.Self:
         '''Set study sweep parameters.'''
 
@@ -49,9 +59,7 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         sweep_cfg.study_name = study_name
         sweep_cfg.preset_name = preset_name
         sweep_cfg.n_trials = n_trials
-        sweep_cfg.storage = storage
         sweep_cfg.direction = direction
-        sweep_cfg.seed = seed
         return self
 
     def set_base_preset_ranges(
