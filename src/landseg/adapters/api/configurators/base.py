@@ -80,3 +80,34 @@ class BaseConfigurator:
         self._cfg.dataspecs.domain_ids_name = category_domain
         self._cfg.dataspecs.domain_vec_name = continuous_domain
         return self
+
+    def set_tasks(
+        self,
+        logit_adjust_alpha: float,
+        exclude_classes: dict[str, list[int]] | None,
+        loss_weights: dict[str, float],
+    ) -> typing.Self:
+        '''Set engine tasks.'''
+        self._cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
+        self._cfg.session.engine_tasks.excluded_cls = exclude_classes
+        losses = self._cfg.session.engine_tasks.loss_configs
+        losses.focal.weight = loss_weights.get('focal', 0.5)
+        losses.dice.weight =loss_weights.get('dice', 0.5)
+        losses.spectral.weight = loss_weights.get('spectral', 1e-3)
+        losses.tv.weight = loss_weights.get('tv', 1e-4)
+        return self
+
+    def set_runtime(
+        self,
+        max_epochs: int,
+        active_heads: list[str] | None,
+        patience_epoch: int | None,
+        track_heads: dict[str, float] | None,
+    ) -> typing.Self:
+        '''Set training runtime behaviour.'''
+        orchestration = self._cfg.session.orchestration
+        orchestration.curriculum.single.phases[0].num_epochs = max_epochs
+        orchestration.curriculum.single.phases[0].active_heads = active_heads
+        orchestration.monitor.patience = patience_epoch
+        orchestration.monitor.track_heads = track_heads
+        return self

@@ -57,31 +57,3 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         engine_optim.weight_decay = weight_decay
         engine_optim.sched_cls  = scheduler
         return self
-
-    def set_objectives(
-        self,
-        focal_loss_weight: float,
-        dice_loss_weight: float,
-        spectral_loss_weight: float,
-        tv_loss_weight: float
-    ) -> typing.Self:
-        '''Set loss weights.'''
-        loss_types = self._cfg.session.engine_tasks.loss_configs
-        loss_types.focal.weight = focal_loss_weight
-        loss_types.dice.weight = dice_loss_weight
-        loss_types.spectral.weight = spectral_loss_weight
-        loss_types.tv.weight = tv_loss_weight
-        return self
-
-    def set_runtime(
-        self,
-        max_epochs: int,
-        patience_epoch: int | None,
-        logit_adjust_alpha: float
-    ) -> typing.Self:
-        '''Set training runtime behaviour.'''
-        orchestration = self._cfg.session.orchestration
-        orchestration.curriculum.single.phases[0].num_epochs = max_epochs
-        orchestration.monitor.patience = patience_epoch
-        self._cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
-        return self

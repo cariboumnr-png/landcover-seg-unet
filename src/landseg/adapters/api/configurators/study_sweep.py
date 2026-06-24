@@ -32,24 +32,6 @@ import landseg.study.sweep.presets as presets
 class StudySweepConfigurator(configurators.BaseConfigurator):
     '''Configure a study sweep session.'''
 
-    # ----- essential runtime configs
-    def set_runtime(
-        self,
-        max_epochs: int,
-        active_heads: list[str] | None,
-        exclude_classes: dict[str, list[int]] | None,
-        track_heads: dict[str, float] | None,
-        patience_epoch: int | None,
-    ) -> typing.Self:
-        '''Set training runtime behaviour.'''
-        orchestration = self._cfg.session.orchestration
-        orchestration.curriculum.single.phases[0].num_epochs = max_epochs
-        orchestration.curriculum.single.phases[0].active_heads = active_heads
-        self._cfg.session.engine_tasks.excluded_cls = exclude_classes
-        orchestration.monitor.track_heads = track_heads
-        orchestration.monitor.patience = patience_epoch
-        return self
-
     # ----- sweep configs
     def set_sweep(
         self,
