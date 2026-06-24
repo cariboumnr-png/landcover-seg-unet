@@ -31,6 +31,13 @@ import landseg.adapters.api.configurators as configurators
 class DataPreparationConfigurator(configurators.BaseConfigurator):
     '''Configure data preparation.'''
 
+    def __init__(
+        self,
+        experiment_root: str,
+        dataset_name: str,
+    ):
+        super().__init__(experiment_root, dataset_name, 'data-prepare')
+
     def set_partition(
         self,
         validation_blocks_ratio: float,

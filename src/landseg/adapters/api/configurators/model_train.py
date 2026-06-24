@@ -31,6 +31,13 @@ import landseg.adapters.api.configurators as configurators
 class TrainingSessionConfigurator(configurators.BaseConfigurator):
     '''Configure a training session.'''
 
+    def __init__(
+        self,
+        experiment_root: str,
+        dataset_name: str,
+    ):
+        super().__init__(experiment_root, dataset_name, 'model-train')
+
     def set_model(
         self,
         body: str,

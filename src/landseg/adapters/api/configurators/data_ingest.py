@@ -31,6 +31,13 @@ import landseg.adapters.api.configurators as configurators
 class DataIngestionConfigurator(configurators.BaseConfigurator):
     '''Configure data ingestion.'''
 
+    def __init__(
+        self,
+        experiment_root: str,
+        dataset_name: str,
+    ):
+        super().__init__(experiment_root, dataset_name, 'data-ingest')
+
     def set_grid(
         self,
         crs: str,
