@@ -26,56 +26,13 @@ Study sweep configurator
 # standard imports
 import typing
 # local imports
-import landseg.configs as configs
+import landseg.adapters.api.configurators as configurators
 import landseg.study.sweep.presets as presets
 
-class StudySweepConfigurator:
+class StudySweepConfigurator(configurators.BaseConfigurator):
     '''Configure a study sweep session.'''
 
-    def __init__(
-        self,
-        experiment_root: str,
-        dataset_name: str
-    ):
-        '''Initialize the configurator'''
-
-        self._cfg = configs.RootConfig() # with all default values
-        self._cfg.foundation.datablocks.name = dataset_name # give name
-        # set experiment root
-        self._cfg.execution.exp_root = experiment_root
-        # set datablocks source
-        self._cfg.foundation.datablocks.name = dataset_name
-        # set pipeline to study-sweep
-        self._cfg.pipeline.name = 'study-sweep'
-
-    @property
-    def running_root_config(self) -> configs.RootConfig:
-        '''Validate and return the `RootConfig`,'''
-        self._cfg.models.validate()
-        self._cfg.session.validate()
-        return self._cfg
-
-    # ----- essential/shared configs
-    def set_data_loading(
-        self,
-        batch_size: int,
-        patch_size: int
-    ) -> typing.Self:
-        '''Set data sizes.'''
-        self._cfg.session.data_loader.batch_size = batch_size
-        self._cfg.session.data_loader.patch_size = patch_size
-        return self
-
-    def set_domain_source(
-        self,
-        category_domain: str | None,
-        continuous_domain: str | None,
-    ) -> typing.Self:
-        '''Set data source'''
-        self._cfg.dataspecs.domain_ids_name = category_domain
-        self._cfg.dataspecs.domain_vec_name = continuous_domain
-        return self
-
+    # ----- essential runtime configs
     def set_runtime(
         self,
         max_epochs: int,

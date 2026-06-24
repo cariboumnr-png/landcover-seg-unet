@@ -26,54 +26,10 @@ Programmatic API entry
 # standard imports
 import typing
 # local imports
-import landseg.configs as configs
+import landseg.adapters.api.configurators as configurators
 
-class TrainingSessionConfigurator:
+class TrainingSessionConfigurator(configurators.BaseConfigurator):
     '''Configure a training session.'''
-
-    def __init__(
-        self,
-        experiment_root: str,
-        dataset_name: str
-    ):
-        '''Initialize the configurator'''
-
-        self._cfg = configs.RootConfig() # with all default values
-        self._cfg.foundation.datablocks.name = dataset_name # give name
-        # set experiment root
-        self._cfg.execution.exp_root = experiment_root
-        # set datablocks source
-        self._cfg.foundation.datablocks.name = dataset_name
-        # here we default to run a continuous training session
-        self._cfg.pipeline.name = 'model-train'
-
-    @property
-    def running_root_config(self) -> configs.RootConfig:
-        '''Validate and return the `RootConfig`,'''
-        # here we are only validating settings related to the training
-        self._cfg.models.validate()
-        self._cfg.session.validate()
-        return self._cfg
-
-    def set_data_loading(
-        self,
-        batch_size: int,
-        patch_size: int
-    ) -> typing.Self:
-        '''Set data sizes.'''
-        self._cfg.session.data_loader.batch_size = batch_size
-        self._cfg.session.data_loader.patch_size = patch_size
-        return self
-
-    def set_domain_source(
-        self,
-        category_domain: str | None,
-        continuous_domain: str | None,
-    ) -> typing.Self:
-        '''Set data source'''
-        self._cfg.dataspecs.domain_ids_name = category_domain
-        self._cfg.dataspecs.domain_vec_name = continuous_domain
-        return self
 
     def set_model(
         self,

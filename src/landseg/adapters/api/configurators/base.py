@@ -20,62 +20,63 @@
 # =========================================================================== #
 
 '''
-Data ingestion configurator
+Configurator base class
 '''
 
 # standard imports
 import typing
 # local imports
-import landseg.adapters.api.configurators as configurators
+import landseg.configs as configs
 
-class DataIngestionConfigurator(configurators.BaseConfigurator):
+class BaseConfigurator:
     '''Configure data ingestion.'''
 
-    def set_grid(
+    def __init__(
         self,
-        crs: str,
-        reference_raster_fpath: str,
-        tile_size: int,
-        tile_overlap: int
+        experiment_root: str,
+        dataset_name: str,
+        pipeline_name: str
+    ):
+        '''Initialize the configurator'''
+
+        # init a default RootConfig instance
+        self._cfg = configs.RootConfig()
+        # set dataset name
+        self._cfg.foundation.datablocks.name = dataset_name
+        # set artifact output dirpaths
+        self._cfg.execution.exp_root = experiment_root
+        self._cfg.foundation.output_dpath = (
+            f'{experiment_root}/artifacts/{dataset_name}/foundation'
+        )
+        self._cfg.transform.output_dpath = (
+            f'{experiment_root}/artifacts/{dataset_name}/transform'
+        )
+        # set pipeline name
+        self._cfg.pipeline.name = pipeline_name
+
+    @property
+    def running_root_config(self) -> configs.RootConfig:
+        '''Validate and return the `RootConfig`,'''
+        self._cfg.foundation.validate()
+        return self._cfg
+
+    # ----- shared methods for configuring runtime sessions
+    def set_data_loading(
+        self,
+        batch_size: int,
+        patch_size: int
     ) -> typing.Self:
-        '''Set study extent and grid specs.'''
-        self._cfg.foundation.grid.crs = crs
-        self._cfg.foundation.grid.extent.filepath = reference_raster_fpath
-        self._cfg.foundation.grid.tile_specs.size_row = tile_size
-        self._cfg.foundation.grid.tile_specs.size_col = tile_size
-        self._cfg.foundation.grid.tile_specs.overlap_row = tile_overlap
-        self._cfg.foundation.grid.tile_specs.overlap_col = tile_overlap
+        '''Set data sizes.'''
+        self._cfg.session.data_loader.batch_size = batch_size
+        self._cfg.session.data_loader.patch_size = patch_size
         return self
 
-    def set_domains(
+    def set_domain_source(
         self,
-        domains: list[tuple[str, int]]
+        category_domain: str | None,
+        continuous_domain: str | None,
     ) -> typing.Self:
-        '''Set domain data source.'''
-        for fpath, index_base in domains:
-            self._cfg.foundation.domains.add_domain(fpath, index_base)
-        return self
-
-    def set_model_dev_data(
-        self,
-        model_dev_image: str,
-        model_dev_label: str,
-        data_config: str
-    ) -> typing.Self:
-        '''Set trainig data source.'''
-        self._cfg.foundation.datablocks.filepaths.dev_image = model_dev_image
-        self._cfg.foundation.datablocks.filepaths.dev_label = model_dev_label
-        self._cfg.foundation.datablocks.filepaths.config = data_config
-        return self
-
-    def set_test_holdout_data(
-        self,
-        test_holdout_image: str | None,
-        test_holdout_label: str | None
-    ) -> typing.Self:
-        '''Set test holdout data source.'''
-        if not test_holdout_image or not test_holdout_label:
-            return self
-        self._cfg.foundation.datablocks.filepaths.test_image = test_holdout_image
-        self._cfg.foundation.datablocks.filepaths.test_label = test_holdout_label
+        '''Set data source'''
+        self._cfg.dataspecs.domain_ids_name = category_domain
+        self._cfg.dataspecs.domain_vec_name = continuous_domain
         return self
