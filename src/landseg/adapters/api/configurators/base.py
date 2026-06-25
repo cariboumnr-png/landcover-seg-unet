@@ -92,9 +92,9 @@ class BaseConfigurator:
         self._cfg.session.engine_tasks.excluded_cls = exclude_classes
         losses = self._cfg.session.engine_tasks.loss_configs
         losses.focal.weight = loss_weights.get('focal', 0.5)
-        losses.dice.weight =loss_weights.get('dice', 0.5)
+        losses.dice.weight = loss_weights.get('dice', 0.5)
         losses.spectral.weight = loss_weights.get('spectral', 1e-3)
-        losses.tv.weight = loss_weights.get('tv', 1e-4)
+        losses.tv.weight = loss_weights.get('total_var', 1e-4)
         return self
 
     def set_runtime(
