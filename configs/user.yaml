@@ -1,0 +1,70 @@
+# =============================================================================
+# USER SETTINGS / PARAMÈTRES UTILISATEUR
+# Notes:
+# 1. This file contains the basic experiment configuration. Adjust the parameters as needed.
+# 2. All parameters will be validated prior to execution, but ensure that they are set correctly.
+# 3. The settings are organized into sections for clarity. Refer to the comments for guidance.
+# 4. Ensure that file paths and parameters are correctly set to avoid runtime errors.
+# 5. Use absolute file paths to ensure consistency across different environments.
+
+# -----------------------------------------------------------------------------
+# PROJECT ROOT / RACINE DU PROJET
+# -----------------------------------------------------------------------------
+execution:
+  exp_root: ./experiment
+
+# -----------------------------------------------------------------------------
+# INPUT DEFINITIONS / DÉFINITION DES ENTRÉES
+# -----------------------------------------------------------------------------
+foundation:
+
+# GRID SETTINGS / PARAMÈTRES DE LA GRILLE
+  grid:
+    mode: ref
+    crs: EPSG:2958 # MUST use a projected CRS with proper EPSG code
+    extent:
+      filepath: ./experiment/input/extent_reference/example_extent.tif
+    tile_specs: # currently only support fixed-size, square tiles with fixed overlaps.
+      size_row: 256
+      size_col: 256
+      overlap_row: 128
+      overlap_col: 128
+
+# DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
+  domains:
+    # add more files as needed in the same format
+    # all rasters will be processed to both categorical and continuous artifacts
+    # which one to use is determined by dataspecs.domain_ids_name and domain_vec_name
+    files:
+      - path: ./experiment/input/domain_knowledge/example_domain_1.tif
+        index_base: 1
+      - path: ./experiment/input/domain_knowledge/example_domain_2.tif
+        index_base: 1
+
+# RAW DATASET / JEU DE DONNÉES BRUT
+  datablocks:
+    name: demo_data
+    filepaths:
+      # dev_image/label MUST be provided together
+      dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
+      dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
+      # test_image/label are optional but must be provided together if used
+      test_image: ./experiment/input/data/demo_data/test/example_image.tif
+      test_label: ./experiment/input/data/demo_data/test/example_label.tif
+      # MUST be consistent between dev and test data
+      config: ./experiment/input/data/demo_data/example_config.json
+
+# -----------------------------------------------------------------------------
+# DATA PREPARATION SETTINGS / PARAMÈTRES DE PRÉPARATION DES DONNÉES
+# -----------------------------------------------------------------------------
+# set data augmentation and sampling strategy for oversampling under-represented classes in the training data
+# augemntation will source from overlapping tiles and will be skipped if tile_overlap is set to 0 in the grid configuration
+# set target_head to None or leave reward_classes dictionary empty for no oversampling
+transform:
+  catalog:
+    focal_target: None
+  partition:
+    val_ratio: 0.15
+    test_ratio: 0.10 # will be IGNORED if test_image & test_label are provided
+  scoring:
+    reward: {} # 0-based

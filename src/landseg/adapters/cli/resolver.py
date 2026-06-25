@@ -53,10 +53,10 @@ def resolve_configs(
     # - might override by additional settings (*yaml) below in CLI mode
     config_list.append(config)
 
-    # add user settings - this should contain the complete config values
-    # resolve absolute path to the user settings at root
+    # add user settings - this contains the essesion I/O to start the program
+    # resolve absolute path to the user settings at root/configs
     # root/src/landseg/execution/resolver.py -> the 4th parent
-    user = pathlib.Path(__file__).resolve().parents[3] / 'settings.yaml'
+    user = pathlib.Path(__file__).resolve().parents[3]/'configs'/'user.yaml'
     if os.path.exists(user) and use_additional_settings:
         user_settings = omegaconf.OmegaConf.load(user)
         assert isinstance(user_settings, omegaconf.DictConfig)
