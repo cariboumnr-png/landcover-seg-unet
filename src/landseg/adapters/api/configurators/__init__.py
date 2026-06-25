@@ -31,20 +31,27 @@ import typing
 
 __all__ = [
     # classes
+    'BaseConfigurator',
     'DataIngestionConfigurator',
     'DataPreparationConfigurator',
-    'TrainingSessionConfigurator'
+    'TrainingSessionConfigurator',
+    'StudySweepConfigurator'
     # functions
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .base import BaseConfigurator
     from .data_ingest import DataIngestionConfigurator
     from .data_prepare import DataPreparationConfigurator
     from .model_train import TrainingSessionConfigurator
+    from .study_sweep import StudySweepConfigurator
 
 def __getattr__(name: str):
+
+    if name in {'BaseConfigurator'}:
+        return getattr(importlib.import_module('.base', __package__), name)
 
     if name in {'DataIngestionConfigurator'}:
         return getattr(importlib.import_module('.data_ingest', __package__), name)
@@ -54,5 +61,8 @@ def __getattr__(name: str):
 
     if name in {'TrainingSessionConfigurator'}:
         return getattr(importlib.import_module('.model_train', __package__), name)
+
+    if name in {'StudySweepConfigurator'}:
+        return getattr(importlib.import_module('.study_sweep', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

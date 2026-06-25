@@ -34,6 +34,7 @@ __all__ = [
     'DataIngestionConfigurator',
     'DataPreparationConfigurator',
     'TrainingSessionConfigurator',
+    'StudySweepConfigurator',
     # functions
     'run'
     # types
@@ -45,7 +46,8 @@ if typing.TYPE_CHECKING:
     from .configurators import (
         DataIngestionConfigurator,
         DataPreparationConfigurator,
-        TrainingSessionConfigurator
+        TrainingSessionConfigurator,
+        StudySweepConfigurator
     )
 
 def __getattr__(name: str):
@@ -53,13 +55,12 @@ def __getattr__(name: str):
     if name in {'run'}:
         return getattr(importlib.import_module('.api', __package__), name)
 
-    if name in {'DataIngestionConfigurator'}:
-        return getattr(importlib.import_module('.data_ingest', __package__), name)
-
-    if name in {'DataPreparationConfigurator'}:
-        return getattr(importlib.import_module('.data_prepare', __package__), name)
-
-    if name in {'TrainingSessionConfigurator'}:
-        return getattr(importlib.import_module('.model_train', __package__), name)
+    if name in {
+        'DataIngestionConfigurator',
+        'DataPreparationConfigurator',
+        'TrainingSessionConfigurator',
+        'StudySweepConfigurator'
+    }:
+        return getattr(importlib.import_module('.configurators', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

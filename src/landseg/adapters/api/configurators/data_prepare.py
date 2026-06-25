@@ -26,35 +26,17 @@ Data preparation configurator
 # standard imports
 import typing
 # local imports
-import landseg.configs as configs
+import landseg.adapters.api.configurators as configurators
 
-class DataPreparationConfigurator:
-    '''Configure data ingestion.'''
+class DataPreparationConfigurator(configurators.BaseConfigurator):
+    '''Configure data preparation.'''
 
     def __init__(
         self,
         experiment_root: str,
-        dataset_name: str
+        dataset_name: str,
     ):
-        '''Initialize the configurator'''
-
-        self._cfg = configs.RootConfig() # with all default values
-        # set output dirpaths
-        self._cfg.execution.exp_root = experiment_root
-        self._cfg.foundation.output_dpath = (
-            f'{experiment_root}/artifacts/{dataset_name}/foundation'
-        )
-        self._cfg.transform.output_dpath = (
-            f'{experiment_root}/artifacts/{dataset_name}/transform'
-        )
-        # here we set pipeline to data-prepare
-        self._cfg.pipeline.name = 'data-prepare'
-
-    @property
-    def running_root_config(self) -> configs.RootConfig:
-        '''Validate and return the `RootConfig`,'''
-        self._cfg.transform.validate()
-        return self._cfg
+        super().__init__(experiment_root, dataset_name, 'data-prepare')
 
     def set_partition(
         self,
@@ -66,14 +48,12 @@ class DataPreparationConfigurator:
         self._cfg.transform.partition.test_ratio = test_holdout_blocks_ratio
         return self
 
-    def set_scoring(
+    def set_oversampling(
         self,
+        target_head: str | None,
         reward_classes: dict[int, float]
     ) -> typing.Self:
-        '''Set block scoring criteria.'''
+        '''Set blocks hydration for reward classes in the target head'''
+        self._cfg.transform.catalog.focal_target = target_head
         self._cfg.transform.scoring.reward = reward_classes
-        return self
-
-    def set_hydration(self) -> typing.Self:
-        '''Set blocks hydration'''
         return self

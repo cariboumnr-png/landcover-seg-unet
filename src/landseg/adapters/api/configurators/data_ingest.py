@@ -26,32 +26,17 @@ Data ingestion configurator
 # standard imports
 import typing
 # local imports
-import landseg.configs as configs
+import landseg.adapters.api.configurators as configurators
 
-class DataIngestionConfigurator:
+class DataIngestionConfigurator(configurators.BaseConfigurator):
     '''Configure data ingestion.'''
 
     def __init__(
         self,
         experiment_root: str,
-        dataset_name: str
+        dataset_name: str,
     ):
-        '''Initialize the configurator'''
-
-        self._cfg = configs.RootConfig() # with all default values
-        # set output dirpaths
-        self._cfg.execution.exp_root = experiment_root
-        self._cfg.foundation.output_dpath = (
-            f'{experiment_root}/artifacts/{dataset_name}/foundation'
-        )
-        # here we set pipeline to data-ingest
-        self._cfg.pipeline.name = 'data-ingest'
-
-    @property
-    def running_root_config(self) -> configs.RootConfig:
-        '''Validate and return the `RootConfig`,'''
-        self._cfg.foundation.validate()
-        return self._cfg
+        super().__init__(experiment_root, dataset_name, 'data-ingest')
 
     def set_grid(
         self,
