@@ -61,10 +61,10 @@ foundation:
 # augemntation will source from overlapping tiles and will be skipped if tile_overlap is set to 0 in the grid configuration
 # set target_head to None or leave reward_classes dictionary empty for no oversampling
 transform:
-  catalog:
-    focal_target: None
+  # val/test blocks splitting configs
   partition:
     val_ratio: 0.15
     test_ratio: 0.10 # will be IGNORED if test_image & test_label are provided
-  scoring:
-    reward: {} # 0-based
+  # training blocks oversampling configs
+  target_head: None
+  reward_classes: {} # 0-based
