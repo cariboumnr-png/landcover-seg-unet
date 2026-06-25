@@ -1,70 +1,91 @@
+
 # =============================================================================
-# USER SETTINGS / PARAMÈTRES UTILISATEUR
-# Notes:
-# 1. This file contains the basic experiment configuration. Adjust the parameters as needed.
-# 2. All parameters will be validated prior to execution, but ensure that they are set correctly.
-# 3. The settings are organized into sections for clarity. Refer to the comments for guidance.
-# 4. Ensure that file paths and parameters are correctly set to avoid runtime errors.
-# 5. Use absolute file paths to ensure consistency across different environments.
+# USER CONFIGURATION
+# -----------------------------------------------------------------------------
+# This file defines the minimal inputs required to run an experiment.
+#
+# Guidelines:
+# - Provide all dataset paths and spatial settings under `foundation`
+# - Optional parameters have safe defaults and can be omitted
+# - All values are validated before execution
+# - Prefer absolute paths for portability and reproducibility
+# -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
-# PROJECT ROOT / RACINE DU PROJET
+# PROJECT SETUP
 # -----------------------------------------------------------------------------
 execution:
-  exp_root: ./experiment
+  exp_root: ./experiment   # root directory for all outputs
 
 # -----------------------------------------------------------------------------
-# INPUT DEFINITIONS / DÉFINITION DES ENTRÉES
+# DATA INPUTS (REQUIRED)
 # -----------------------------------------------------------------------------
 foundation:
 
-# GRID SETTINGS / PARAMÈTRES DE LA GRILLE
+  # ---------------------------------------------------------------------------
+  # GRID DEFINITION (spatial reference + tiling)
+  # ---------------------------------------------------------------------------
   grid:
     mode: ref
-    crs: EPSG:2958 # MUST use a projected CRS with proper EPSG code
+    crs: EPSG:2958   # MUST be a valid projected CRS (EPSG:XXXX)
     extent:
       filepath: ./experiment/input/extent_reference/example_extent.tif
-    tile_specs: # currently only support fixed-size, square tiles with fixed overlaps.
+    tile_specs:
       size_row: 256
       size_col: 256
-      overlap_row: 128
+      overlap_row: 128   # controls tile overlap (affects augmentation)
       overlap_col: 128
 
-# DOMAIN KNOWLEDGE LAYERS / COUCHES THÉMATIQUES
+  # ---------------------------------------------------------------------------
+  # DOMAIN FEATURES (OPTIONAL CONTEXT LAYERS)
+  # ---------------------------------------------------------------------------
   domains:
-    # add more files as needed in the same format
-    # all rasters will be processed to both categorical and continuous artifacts
-    # which one to use is determined by dataspecs.domain_ids_name and domain_vec_name
+    # External rasters used for conditioning or feature augmentation
+    # Each file can be used as categorical (IDs) or continuous (vector)
     files:
       - path: ./experiment/input/domain_knowledge/example_domain_1.tif
         index_base: 1
       - path: ./experiment/input/domain_knowledge/example_domain_2.tif
         index_base: 1
 
-# RAW DATASET / JEU DE DONNÉES BRUT
+  # ---------------------------------------------------------------------------
+  # DATASET (REQUIRED)
+  # ---------------------------------------------------------------------------
   datablocks:
     name: demo_data
     filepaths:
-      # dev_image/label MUST be provided together
+      # Development data (REQUIRED)
       dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
       dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
-      # test_image/label are optional but must be provided together if used
+
+      # Test data (OPTIONAL, must be paired if provided)
       test_image: ./experiment/input/data/demo_data/test/example_image.tif
       test_label: ./experiment/input/data/demo_data/test/example_label.tif
-      # MUST be consistent between dev and test data
+
+      # Dataset metadata/config (REQUIRED)
       config: ./experiment/input/data/demo_data/example_config.json
 
 # -----------------------------------------------------------------------------
-# DATA PREPARATION SETTINGS / PARAMÈTRES DE PRÉPARATION DES DONNÉES
+# DATA PREPARATION (OPTIONAL — defaults are safe)
 # -----------------------------------------------------------------------------
-# set data augmentation and sampling strategy for oversampling under-represented classes in the training data
-# augemntation will source from overlapping tiles and will be skipped if tile_overlap is set to 0 in the grid configuration
-# set target_head to None or leave reward_classes dictionary empty for no oversampling
+# Controls dataset splitting and class balancing behavior.
+#
+# Concepts:
+# - validation/test splits: how blocks are partitioned
+# - focal_head: target label head for oversampling
+# - reward_classes: increases sampling probability for specific classes (0-based)
+#
+# Notes:
+# - Test split is ignored if explicit test dataset is provided
+# - Oversampling is disabled if reward_classes is empty or focal_head is null
+# -----------------------------------------------------------------------------
 transform:
-  # val/test blocks splitting configs
+  # dataset split ratios for validation and testing
   partition:
     val_ratio: 0.15
-    test_ratio: 0.10 # will be IGNORED if test_image & test_label are provided
-  # training blocks oversampling configs
-  target_head: None
-  reward_classes: {} # 0-based
+    test_ratio: 0.10
+
+  # oversampling target (set null to disable)
+  focal_head: null
+  # class reweighting for oversampling (0-based class indices)
+  reward_classes: {}
