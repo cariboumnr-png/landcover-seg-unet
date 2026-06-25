@@ -80,14 +80,13 @@ class DataTransform:
     partition: _Partition = field(default_factory=_Partition)
     scoring: _Scoring = field(default_factory=_Scoring)
     hydration: _Hydration = field(default_factory=_Hydration)
-    # ----- user facing flat API
-    target_head: str | None = None
-    reward_classes: dict[int, float] | None = None
-    # ----- output
     output_dpath: str = (
         '${execution.exp_root}/artifacts/'
         '${foundation.datablocks.name}/transform'
     )
+    # ----- user facing flat API
+    target_head: str | None = None
+    reward_classes: dict[int, float] | None = None
 
     def _normalize(self) -> None:
         # Map user-facing flat fields into internal structured config.
