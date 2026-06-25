@@ -72,12 +72,12 @@ foundation:
 #
 # Concepts:
 # - validation/test splits: how blocks are partitioned
-# - focal_head: target label head for oversampling
+# - target_head: target label head for oversampling
 # - reward_classes: increases sampling probability for specific classes (0-based)
 #
 # Notes:
 # - Test split is ignored if explicit test dataset is provided
-# - Oversampling is disabled if reward_classes is empty or focal_head is null
+# - Oversampling is disabled if reward_classes is empty or target_head is null
 # -----------------------------------------------------------------------------
 transform:
   # dataset split ratios for validation and testing
@@ -86,6 +86,6 @@ transform:
     test_ratio: 0.10
 
   # oversampling target (set null to disable)
-  focal_head: null
+  target_head: null
   # class reweighting for oversampling (0-based class indices)
   reward_classes: {}
