@@ -1,4 +1,3 @@
-
 # =============================================================================
 # USER CONFIGURATION
 # -----------------------------------------------------------------------------
@@ -89,3 +88,28 @@ transform:
   target_head: null
   # class reweighting for oversampling (0-based class indices)
   reward_classes: {}
+
+# Basic runtime configs
+dataspecs:
+  # which domain to be used as categorical (ids) or continuous (vec)
+  domain_ids_name: null
+  domain_vec_name: null
+
+# model body and bottleneck
+models:
+  model_body: unetppp
+  bottleneck: transformer
+  conditioners: [concat, film]
+
+session:
+
+  data_loader:
+    patch_size: 128 # needs to be divisible by data tile size
+    batch_size: 16 # higher means more GPU mem
+
+  orchestration:
+    curriculum:
+      single:
+        phases:
+          name: demo_train
+          num_epochs: 10
