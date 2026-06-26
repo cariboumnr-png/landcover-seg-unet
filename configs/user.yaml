@@ -1,115 +1,111 @@
 # =============================================================================
 # USER CONFIGURATION
 # -----------------------------------------------------------------------------
-# This file defines the minimal inputs required to run an experiment.
+# This file provides inputs for the three sequential experiment pipelines:
 #
-# Guidelines:
-# - Provide all dataset paths and spatial settings under `foundation`
-# - Optional parameters have safe defaults and can be omitted
-# - All values are validated before execution
-# - Prefer absolute paths for portability and reproducibility
-# -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
-# PROJECT SETUP
-# -----------------------------------------------------------------------------
-execution:
-  exp_root: ./experiment   # root directory for all outputs
-
-# -----------------------------------------------------------------------------
-# DATA INPUTS (REQUIRED)
-# -----------------------------------------------------------------------------
-foundation:
-
-  # ---------------------------------------------------------------------------
-  # GRID DEFINITION (spatial reference + tiling)
-  # ---------------------------------------------------------------------------
-  grid:
-    mode: ref
-    crs: EPSG:2958   # MUST be a valid projected CRS (EPSG:XXXX)
-    extent:
-      filepath: ./experiment/input/extent_reference/example_extent.tif
-    tile_specs:
-      size_row: 256
-      size_col: 256
-      overlap_row: 128   # controls tile overlap (affects augmentation)
-      overlap_col: 128
-
-  # ---------------------------------------------------------------------------
-  # DOMAIN FEATURES (OPTIONAL CONTEXT LAYERS)
-  # ---------------------------------------------------------------------------
-  domains:
-    # External rasters used for conditioning or feature augmentation
-    # Each file can be used as categorical (IDs) or continuous (vector)
-    files:
-      - path: ./experiment/input/domain_knowledge/example_domain_1.tif
-        index_base: 1
-      - path: ./experiment/input/domain_knowledge/example_domain_2.tif
-        index_base: 1
-
-  # ---------------------------------------------------------------------------
-  # DATASET (REQUIRED)
-  # ---------------------------------------------------------------------------
-  datablocks:
-    name: demo_data
-    filepaths:
-      # Development data (REQUIRED)
-      dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
-      dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
-
-      # Test data (OPTIONAL, must be paired if provided)
-      test_image: ./experiment/input/data/demo_data/test/example_image.tif
-      test_label: ./experiment/input/data/demo_data/test/example_label.tif
-
-      # Dataset metadata/config (REQUIRED)
-      config: ./experiment/input/data/demo_data/example_config.json
-
-# -----------------------------------------------------------------------------
-# DATA PREPARATION (OPTIONAL — defaults are safe)
-# -----------------------------------------------------------------------------
-# Controls dataset splitting and class balancing behavior.
+#   1. data-ingest: Ingests datasets, grid references, & domains.
+#      - Typically run once (unless raw input datasets/rasters change).
 #
-# Concepts:
-# - validation/test splits: how blocks are partitioned
-# - target_head: target label head for oversampling
-# - reward_classes: increases sampling probability for specific classes (0-based)
+#   2. data-prepare: Handles block splits & class balancing.
+#      - The middle preparation layer, occasionally adjusted.
 #
-# Notes:
-# - Test split is ignored if explicit test dataset is provided
-# - Oversampling is disabled if reward_classes is empty or target_head is null
-# -----------------------------------------------------------------------------
-transform:
-  # dataset split ratios for validation and testing
-  partition:
-    val_ratio: 0.15
-    test_ratio: 0.10
+#   3. model-train: Configures model structure & session params.
+#      - Modified frequently during iterative modeling/hyperparameter tuning.
+# =============================================================================
 
-  # oversampling target (set null to disable)
-  target_head: null
-  # class reweighting for oversampling (0-based class indices)
-  reward_classes: {}
+data-ingest:
+  # ---------------------------------------------------------------------------
+  # Spatial reference & grid tiling details
+  # ---------------------------------------------------------------------------
+  # grid_mode: mode of spatial reference. Choices: "ref" (reference raster), "aoi", "tiles"
+  grid_mode: ref
+  
+  # grid_crs: must be a valid projected Coordinate Reference System (e.g., EPSG:XXXX)
+  grid_crs: EPSG:2958
+  
+  # grid_extent_path: path to the reference raster defining extent (required for mode: ref)
+  grid_extent_path: ./experiment/input/extent_reference/example_extent.tif
+  
+  # tile_size: tile dimension in pixels (both row and column sizes)
+  tile_size: 256
+  
+  # tile_overlap: tile overlap in pixels (used for spatial augmentation/coverage)
+  tile_overlap: 128
 
-# Basic runtime configs
-dataspecs:
-  # which domain to be used as categorical (ids) or continuous (vec)
+  # ---------------------------------------------------------------------------
+  # Domain Rasters (Optional auxiliary context layers)
+  # ---------------------------------------------------------------------------
+  # domain_files: external rasters used for conditioning or feature augmentation
+  domain_files:
+    - path: ./experiment/input/domain_knowledge/example_domain_1.tif
+      index_base: 1
+    - path: ./experiment/input/domain_knowledge/example_domain_2.tif
+      index_base: 1
+      
+  # domain_ids_name: which domain layer to be used as categorical IDs (set null to disable)
   domain_ids_name: null
+  
+  # domain_vec_name: which domain layer to be used as continuous vectors (set null to disable)
   domain_vec_name: null
 
-# model body and bottleneck
-models:
+  # ---------------------------------------------------------------------------
+  # Datablock Inputs (Required raster inputs & metadata)
+  # ---------------------------------------------------------------------------
+  # dataset_name: unique name identifying this dataset configuration
+  dataset_name: demo_data
+  
+  # dev_image: path to the training/development image raster (e.g. multi-band geotiff)
+  dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
+  
+  # dev_label: path to the training/development label/target raster
+  dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
+  
+  # test_image: path to the optional test image raster (paired with test_label)
+  test_image: ./experiment/input/data/demo_data/test/example_image.tif
+  
+  # test_label: path to the optional test label raster (paired with test_image)
+  test_label: ./experiment/input/data/demo_data/test/example_label.tif
+  
+  # dataset_config: path to the dataset metadata JSON file
+  dataset_config: ./experiment/input/data/demo_data/example_config.json
+
+data-prepare:
+  # ---------------------------------------------------------------------------
+  # Dataset Splitting & Class Balancing
+  # ---------------------------------------------------------------------------
+  # val_ratio: ratio of data blocks partitioned for validation (0.0 to 1.0)
+  val_ratio: 0.15
+  
+  # test_ratio: ratio of data blocks partitioned for testing (ignored if explicit test files are given)
+  test_ratio: 0.10
+  
+  # target_head: oversampling target head name (set null to disable class-based oversampling)
+  target_head: null
+  
+  # reward_classes: dictionary mapping 0-based class indices to float sampling weight rewards (e.g. {1: 2.0})
+  reward_classes: {}
+
+model-train:
+  # ---------------------------------------------------------------------------
+  # Paths, Training Hyperparameters & Model Body
+  # ---------------------------------------------------------------------------
+  # exp_root: root directory for all experiment outputs, logs, and checkpoints
+  exp_root: ./experiment
+  
+  # model_body: model architecture body name. Choices: "unet", "unetpp", "unetppp"
   model_body: unetppp
+  
+  # bottleneck: model bottleneck layer type. Choices: "conv", "transformer", "hybrid"
   bottleneck: transformer
+  
+  # conditioners: feature conditioning/fusion methods. Choices: list of ["concat", "film"]
   conditioners: [concat, film]
-
-session:
-
-  data_loader:
-    patch_size: 128 # needs to be divisible by data tile size
-    batch_size: 16 # higher means more GPU mem
-
-  orchestration:
-    curriculum:
-      single:
-        phases:
-          name: demo_train
-          num_epochs: 10
+  
+  # patch_size: patch size in pixels cropped from tiles for loader (must divide tile size)
+  patch_size: 128
+  
+  # batch_size: number of samples per training batch
+  batch_size: 16
+  
+  # epochs: maximum number of training epochs
+  epochs: 10

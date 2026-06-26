@@ -84,20 +84,8 @@ class DataTransform:
         '${execution.exp_root}/artifacts/'
         '${foundation.datablocks.name}/transform'
     )
-    # ----- user facing flat API
-    target_head: str | None = None
-    reward_classes: dict[int, float] | None = None
-
-    def _normalize(self) -> None:
-        # Map user-facing flat fields into internal structured config.
-        if self.target_head is not None:
-            self.catalog.focal_target = self.target_head
-        if self.reward_classes is not None:
-            self.scoring.reward = self.reward_classes
 
     def validate(self):
-        # apply user → internal mapping first
-        self._normalize()
         self.catalog.validate()
         self.partition.validate()
         self.scoring.validate()
