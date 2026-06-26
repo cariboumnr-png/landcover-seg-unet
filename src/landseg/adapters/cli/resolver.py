@@ -29,7 +29,8 @@ import pathlib
 import typing
 # third-party imports
 import omegaconf
-# local imports
+## local imports
+import landseg.adapters.cli.translate as translate
 import landseg.configs as configs
 
 # register omegaconf.OmegaConf.resolvers
@@ -53,21 +54,22 @@ def resolve_configs(
     # - might override by additional settings (*yaml) below in CLI mode
     config_list.append(config)
 
-    # add user settings - this should contain the complete config values
-    # resolve absolute path to the user settings at root
-    # root/src/landseg/execution/resolver.py -> the 4th parent
-    user = pathlib.Path(__file__).resolve().parents[3] / 'settings.yaml'
+    # add user settings - this contains the essesion I/O to start the program
+    # resolve absolute path to the user settings at root/configs
+    # root/src/landseg/adapters/cli/resolver.py -> the 5th parent (parents[4])
+    user = pathlib.Path(__file__).resolve().parents[4]/'configs'/'user.yaml'
     if os.path.exists(user) and use_additional_settings:
         user_settings = omegaconf.OmegaConf.load(user)
         assert isinstance(user_settings, omegaconf.DictConfig)
-        config_list.append(user_settings)
+        translated_settings = translate.translate_user_config(user_settings)
+        config_list.append(translated_settings)
 
     # add dev settings (optional and untracked)
-    dev = omegaconf.OmegaConf.select(config, 'execution.dev_settings', default=None)
+    dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)
     if dev and os.path.exists(dev) and use_additional_settings:
-        dev_settings = omegaconf.OmegaConf.load(dev)
-        assert isinstance(dev_settings, omegaconf.DictConfig)
-        config_list.append(dev_settings)
+        dev_cfg = omegaconf.OmegaConf.load(dev)
+        assert isinstance(dev_cfg, omegaconf.DictConfig)
+        config_list.append(dev_cfg)
 
     # merging configs in order (last wins)
     # dev -> user -> hydra defaults -> schema defaults

@@ -44,7 +44,7 @@ class _ExecutionContext:
     '''Mutable execution context.'''
     exp_root: str = './experiment' # root directory for this experiment run
     verbosity: str = 'full' # 'full', 'logging_only', 'silent'
-    dev_settings: str | None = None # developer-only override config
+    dev_cfg: str | None = None # developer-only override config
 
 # --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass

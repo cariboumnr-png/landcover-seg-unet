@@ -22,7 +22,7 @@ defaults:
 execution:
   exp_root: ./experiment
   verbosity: select # 'full', 'select', 'silent'
-  dev_settings: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
+  dev_cfg: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
 
 # hydra settings
 hydra:

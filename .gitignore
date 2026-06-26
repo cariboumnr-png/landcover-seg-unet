@@ -70,7 +70,7 @@ ruff_cache/
 
 # Developer scratch workspace
 /dev/*
-*settings_dev.yaml
+*dev.yaml
 
 # ==============================================================================
 # HYDRA OUTPUTS

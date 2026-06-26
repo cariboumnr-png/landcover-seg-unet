@@ -75,6 +75,7 @@ class _Hydration:
 # ----- composite
 @dataclasses.dataclass
 class DataTransform:
+    # ----- internal
     catalog: _CatalogView = field(default_factory=_CatalogView)
     partition: _Partition = field(default_factory=_Partition)
     scoring: _Scoring = field(default_factory=_Scoring)
