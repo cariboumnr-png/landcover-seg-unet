@@ -28,10 +28,9 @@ import typing
 # third-party imports
 import omegaconf
 
-def translate_user_config(
-    user_raw: omegaconf.DictConfig
-) -> omegaconf.DictConfig:
+def translate_user_config(raw: omegaconf.DictConfig) -> omegaconf.DictConfig:
     '''Translate user.yaml DictConfig into RootConfig overrides.'''
+
     translated: dict[str, typing.Any] = {
         'execution': {},
         'foundation': {
@@ -63,212 +62,113 @@ def translate_user_config(
         },
     }
 
-    if 'data-ingest' in user_raw:
-        _translate_data_ingest(user_raw['data-ingest'], translated)
+    if 'data-ingest' in raw:
+        _translate_data_ingest(raw['data-ingest'], translated)
 
-    if 'data-prepare' in user_raw:
-        _translate_data_prepare(user_raw['data-prepare'], translated)
+    if 'data-prepare' in raw:
+        _translate_data_prepare(raw['data-prepare'], translated)
 
-    if 'model-train' in user_raw:
-        _translate_model_train(user_raw['model-train'], translated)
+    if 'model-train' in raw:
+        _translate_model_train(raw['model-train'], translated)
 
     return omegaconf.OmegaConf.create(translated)
-
-def _set_path(
-    d: dict,
-    path: str,
-    val: typing.Any
-) -> None:
-    '''Heper to set nested key-value pairs.'''
-    parts = path.split('.')
-    curr = d
-    for part in parts[:-1]:
-        if part not in curr:
-            curr[part] = {}
-        curr = curr[part]
-    curr[parts[-1]] = val
-
 
 def _translate_data_ingest(
     fdn: omegaconf.DictConfig,
     translated: dict
 ) -> None:
     '''Map data-ingest settings to foundation fields.'''
-    if 'grid_mode' in fdn:
-        _set_path(
-            translated,
-            'foundation.grid.mode',
-            fdn['grid_mode']
-        )
-    if 'grid_crs' in fdn:
-        _set_path(
-            translated,
-            'foundation.grid.crs',
-            fdn['grid_crs']
-        )
-    if 'grid_extent_path' in fdn:
-        _set_path(
-            translated,
-            'foundation.grid.extent.filepath',
-            fdn['grid_extent_path']
-        )
-    if 'tile_size' in fdn:
-        _set_path(
-            translated,
+
+    mapping = {
+        'grid_mode': ['foundation.grid.mode'],
+        'grid_crs': ['foundation.grid.crs'],
+        'grid_extent_path': ['foundation.grid.extent.filepath'],
+        'tile_size': [
             'foundation.grid.tile_specs.size_row',
-            fdn['tile_size']
-        )
-        _set_path(
-            translated,
-            'foundation.grid.tile_specs.size_col',
-            fdn['tile_size']
-        )
-    if 'tile_overlap' in fdn:
-        _set_path(
-            translated,
+            'foundation.grid.tile_specs.size_col'
+        ],
+        'tile_overlap': [
             'foundation.grid.tile_specs.overlap_row',
-            fdn['tile_overlap']
-        )
-        _set_path(
-            translated,
-            'foundation.grid.tile_specs.overlap_col',
-            fdn['tile_overlap']
-        )
-
-    # domains
-    if 'domain_files' in fdn:
-        _set_path(
-            translated,
-            'foundation.domains.files',
-            fdn['domain_files']
-        )
-    if 'domain_ids_name' in fdn:
-        _set_path(
-            translated,
-            'dataspecs.domain_ids_name',
-            fdn['domain_ids_name']
-        )
-    if 'domain_vec_name' in fdn:
-        _set_path(
-            translated,
-            'dataspecs.domain_vec_name',
-            fdn['domain_vec_name']
-        )
-
-    # datablocks
-    if 'dataset_name' in fdn:
-        _set_path(
-            translated,
-            'foundation.datablocks.name',
-            fdn['dataset_name']
-        )
-    if 'dev_image' in fdn:
-        _set_path(
-            translated,
-            'foundation.datablocks.filepaths.dev_image',
-            fdn['dev_image']
-        )
-    if 'dev_label' in fdn:
-        _set_path(
-            translated,
-            'foundation.datablocks.filepaths.dev_label',
-            fdn['dev_label']
-        )
-    if 'test_image' in fdn:
-        _set_path(
-            translated,
-            'foundation.datablocks.filepaths.test_image',
-            fdn['test_image']
-        )
-    if 'test_label' in fdn:
-        _set_path(
-            translated,
-            'foundation.datablocks.filepaths.test_label',
-            fdn['test_label']
-        )
-    if 'dataset_config' in fdn:
-        _set_path(
-            translated,
-            'foundation.datablocks.filepaths.config',
-            fdn['dataset_config']
-        )
-
+            'foundation.grid.tile_specs.overlap_col'
+        ],
+        'domain_files': ['foundation.domains.files'],
+        'domain_ids_name': ['dataspecs.domain_ids_name'],
+        'domain_vec_name': ['dataspecs.domain_vec_name'],
+        'dataset_name': ['foundation.datablocks.name'],
+        'dev_image': ['foundation.datablocks.filepaths.dev_image'],
+        'dev_label': ['foundation.datablocks.filepaths.dev_label'],
+        'test_image': ['foundation.datablocks.filepaths.test_image'],
+        'test_label': ['foundation.datablocks.filepaths.test_label'],
+        'dataset_config': ['foundation.datablocks.filepaths.config'],
+    }
+    _apply_mapping(fdn, translated, mapping)
 
 def _translate_data_prepare(
     tf: omegaconf.DictConfig,
     translated: dict
 ) -> None:
     '''Map data-prepare settings to transform fields.'''
-    if 'val_ratio' in tf:
-        _set_path(
-            translated,
-            'transform.partition.val_ratio',
-            tf['val_ratio']
-        )
-    if 'test_ratio' in tf:
-        _set_path(
-            translated,
-            'transform.partition.test_ratio',
-            tf['test_ratio']
-        )
-    if 'target_head' in tf:
-        _set_path(
-            translated,
-            'transform.catalog.focal_target',
-            tf['target_head']
-        )
-    if 'reward_classes' in tf:
-        _set_path(
-            translated,
-            'transform.scoring.reward',
-            tf['reward_classes']
-        )
 
+    mapping = {
+        'val_ratio': ['transform.partition.val_ratio'],
+        'test_ratio': ['transform.partition.test_ratio'],
+        'target_head': ['transform.catalog.focal_target'],
+        'reward_classes': ['transform.scoring.reward'],
+    }
+    _apply_mapping(tf, translated, mapping)
 
 def _translate_model_train(
     rt: omegaconf.DictConfig,
     translated: dict
 ) -> None:
     '''Map model-train settings to models and session fields.'''
-    if 'exp_root' in rt:
-        _set_path(
-            translated,
-            'execution.exp_root',
-            rt['exp_root']
-        )
-    if 'model_body' in rt:
-        _set_path(
-            translated,
-            'models.model_body',
-            rt['model_body']
-        )
-    if 'bottleneck' in rt:
-        _set_path(
-            translated,
-            'models.bottleneck',
-            rt['bottleneck']
-        )
-    if 'conditioners' in rt:
-        _set_path(
-            translated,
-            'models.conditioners',
-            rt['conditioners']
-        )
-    if 'patch_size' in rt:
-        _set_path(
-            translated,
-            'session.data_loader.patch_size',
-            rt['patch_size']
-        )
-    if 'batch_size' in rt:
-        _set_path(
-            translated,
-            'session.data_loader.batch_size',
-            rt['batch_size']
-        )
+    
+    mapping = {
+        'exp_root': ['execution.exp_root'],
+        'model_body': ['models.model_body'],
+        'bottleneck': ['models.bottleneck'],
+        'conditioners': ['models.conditioners'],
+        'patch_size': ['session.data_loader.patch_size'],
+        'batch_size': ['session.data_loader.batch_size'],
+    }
+    _apply_mapping(rt, translated, mapping)
+
     if 'epochs' in rt:
-        _set_path(
+        _set_paths(
             translated,
-            'session.orchestration.curriculum.single.phases',
+            ['session.orchestration.curriculum.single.phases'],
             [{'name': 'demo_train', 'num_epochs': rt['epochs']}]
         )
+
+def _apply_mapping(
+    src: omegaconf.DictConfig,
+    translated: dict,
+    mapping: dict[str, list[str]]
+) -> None:
+    '''Apply mapping from source DictConfig to translated dictionary.'''
+    for src_key, dest_paths in mapping.items():
+        if src_key in src:
+            _set_paths(translated, dest_paths, src[src_key])
+
+def _set_paths(
+    translated: dict,
+    paths: list[str],
+    val: typing.Any
+) -> None:
+    '''Set value at multiple target paths.'''
+
+    def _set_path(
+        d: dict,
+        path: str,
+        val: typing.Any
+    ) -> None:
+        parts = path.split('.')
+        curr = d
+        for part in parts[:-1]:
+            if part not in curr:
+                curr[part] = {}
+            curr = curr[part]
+        curr[parts[-1]] = val
+
+    for path in paths:
+        _set_path(translated, path, val)
