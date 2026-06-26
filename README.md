@@ -102,18 +102,26 @@ This installs the `landseg` console script:
 landseg pipeline=default
 ```
 
+For running in remote environments (such as Databricks job compute nodes or VMs)
+without installing the package, you can run the bootstrap entry point:
+
+```bash
+python scripts/run.py pipeline=default
+```
+
 ## Configuration
 
-Most user workflows should start from the root-level `settings.yaml`. The
-packaged Hydra tree under `src/landseg/configs/hydra/` contains internal
-composition defaults and should be changed carefully.
+Most user workflows should start from `configs/user.yaml` under the root-level
+`configs/` directory. The packaged Hydra tree under `src/landseg/configs/hydra/`
+contains internal composition defaults and should be changed carefully.
 
 The configuration layers are:
 
-- `settings.yaml`: local project inputs and high-level runtime choices
+- `configs/user.yaml`: local project dataset inputs and high-level choices
 - `src/landseg/configs/hydra/`: packaged Hydra composition defaults
 - `src/landseg/configs/schema/`: structured Python config contracts
-- `settings_dev.yaml`: local development configuration, ignored by git
+- Development Overrides: resolved from the path in `execution.dev_cfg`
+  (typically defaults to the `AUX_SETTINGS_PATH` environment variable)
 
 Before running data pipelines, read the
 [data preparation guide](./docs/data_preparation.md) and organize local inputs
@@ -235,26 +243,28 @@ generation, evaluation exports, and comparison reports.
 
 ## Roadmap
 
-Near-term goals:
+Recently completed or stabilized:
 
-- Refresh notebook workflows around the current pipeline and session APIs
-- Update workflow charts to match the current session/runtime split
-- Make evaluation reports and metric exports more consistent across pipelines
-- Improve examples for multi-head labels, constraints, and regularization losses
+- Programmatic API surfaces for interactive environments and Jupyter Notebooks
+  (`TrainingSessionConfigurator`, etc.).
+- Hardening model contracts and strict configuration validation boundaries.
+- Multi-head label mechanisms, regularized losses (consistency losses), and
+  extended evaluation metrics.
+- Initial Optuna study sweep presets and objective metrics integrations.
 
-Medium-term goals:
+Near-term / Medium-term focus:
 
-- Harden the study/sweep API and document recommended Optuna workflows
-- Clarify the public programmatic API for scripts and notebooks
-- Improve configuration validation and error messages for user-facing settings
-- Expand dashboard/reporting support for previews and cross-run comparison
+- Update workflow charts to match the current session/runtime execution split.
+- Document recommended Optuna workflow guides and publish programmatic
+  tutorials.
+- Stabilize metrics reporting formats and cross-run comparisons.
 
 Longer-term goals:
 
-- Add more model families beyond the current U-Net-style stack
-- Define stable export paths for trained models and evaluation artifacts
-- Support richer cross-experiment analysis workflows
-- Continue consolidating internal boundaries as ADRs settle
+- Add more model families beyond the current U-Net-style stack.
+- Define stable export paths for trained models and evaluation artifacts.
+- Support richer cross-experiment analysis workflows.
+- Continue consolidating internal boundaries as ADRs settle.
 
 ## Contributing
 

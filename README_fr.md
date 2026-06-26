@@ -110,19 +110,29 @@ Cela installe la commande console `landseg`:
 landseg pipeline=default
 ```
 
+Pour executer dans des environnements distants (tels que des noeuds de calcul
+Databricks ou des machines virtuelles) sans installer le package, vous pouvez
+utiliser le script de demarrage :
+
+```bash
+python scripts/run.py pipeline=default
+```
+
 ## Configuration
 
 La plupart des workflows utilisateur devraient commencer avec le fichier
-`settings.yaml` a la racine. L'arborescence Hydra fournie sous
-`src/landseg/configs/hydra/` contient les defaults de composition internes et
-doit etre modifiee avec prudence.
+`configs/user.yaml` sous le repertoire `configs/` a la racine. L'arborescence
+Hydra fournie sous `src/landseg/configs/hydra/` contient les defaults de
+composition internes et doit etre modifiee avec prudence.
 
 Les couches de configuration sont:
 
-- `settings.yaml`: entrees locales du projet et choix runtime de haut niveau
-- `src/landseg/configs/hydra/`: defaults de composition Hydra fournis avec le package
+- `configs/user.yaml`: entrees locales de donnees et choix de haut niveau
+- `src/landseg/configs/hydra/`: defaults de composition Hydra du package
 - `src/landseg/configs/schema/`: contrats de configuration Python structures
-- `settings_dev.yaml`: configuration locale de developpement, ignoree par git
+- Surcharges de developpement: resolues depuis le chemin defini dans
+  `execution.dev_cfg` (generalement via la variable d'environnement
+  `AUX_SETTINGS_PATH`)
 
 Avant d'executer les pipelines de donnees, lisez le
 [guide de preparation des donnees](./docs/data_preparation_fr.md) et organisez
@@ -250,26 +260,34 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 ## Feuille De Route
 
-Objectifs a court terme:
+Recemment complete ou stabilise :
 
-- Rafraichir les workflows notebook autour des API actuelles de pipeline et de session
-- Mettre a jour les schemas de workflow pour refleter la separation session/runtime actuelle
-- Rendre les rapports d'evaluation et exports de metriques plus coherents entre pipelines
-- Ameliorer les exemples pour labels multi-tetes, contraintes et pertes de regularisation
+- Surfaces d'API programmatiques pour les environnements interactifs et les
+  Jupyter Notebooks (`TrainingSessionConfigurator`, etc.).
+- Renforcement des contrats de modeles et limites strictes de validation de
+  configuration.
+- Mecanismes d'etiquettes multi-tetes, pertes regularisees (pertes de
+  coherence) et metriques d'evaluation etendues.
+- Prereglages initiaux de sweep d'etude Optuna et integration des metriques
+  d'objectifs.
 
-Objectifs a moyen terme:
+Objectifs a court et moyen terme :
 
-- Renforcer l'API d'etude/sweep et documenter les workflows Optuna recommandes
-- Clarifier l'API programmatique publique pour scripts et notebooks
-- Ameliorer la validation de configuration et les messages d'erreur des settings utilisateur
-- Etendre le support dashboards/rapports pour les apercus et la comparaison inter-executions
+- Mettre a jour les schemas de workflow pour refleter la separation d'execution
+  session/runtime actuelle.
+- Documenter les guides de workflow Optuna recommandes et publier des tutoriels
+  programmatiques.
+- Stabiliser les formats de rapports de metriques et les comparaisons entre
+  executions.
 
-Objectifs a plus long terme:
+Objectifs a plus long terme :
 
-- Ajouter d'autres familles de modeles au-dela de la pile actuelle de type U-Net
-- Definir des chemins d'export stables pour modeles entraines et artefacts d'evaluation
-- Soutenir des workflows plus riches d'analyse inter-experiences
-- Continuer a consolider les frontieres internes a mesure que les ADR se stabilisent
+- Ajouter d'autres familles de modeles au-dela de la pile actuelle de type U-Net.
+- Definir des chemins d'export stables pour les modeles entraines et les
+  artefacts d'evaluation.
+- Soutenir des workflows plus riches d'analyse inter-experiences.
+- Continuer a consolider les frontieres internes a mesure que les ADR se
+  stabilisent.
 
 ## Contribution
 
