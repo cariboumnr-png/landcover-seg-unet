@@ -55,9 +55,15 @@ def resolve_configs(
     config_list.append(config)
 
     # add user settings - this contains the essesion I/O to start the program
-    # resolve absolute path to the user settings at root/configs
-    # root/src/landseg/adapters/cli/resolver.py -> the 5th parent (parents[4])
-    user = pathlib.Path(__file__).resolve().parents[4]/'configs'/'user.yaml'
+    # if provided externally
+    user = omegaconf.OmegaConf.select(config, 'execution.user_cfg', default=None)
+    # otherwise fallback to shipped user config
+    if user is None:
+        # resolve absolute path to the user settings at root/configs bewtween
+        # root/src/landseg/adapters/cli/resolver.py and
+        # root/configs/user.yaml
+        # -> root as the 5th parent of .../resolver.py
+        user = pathlib.Path(__file__).resolve().parents[4]/'configs'/'user.yaml'
     if os.path.exists(user) and use_additional_settings:
         user_settings = omegaconf.OmegaConf.load(user)
         assert isinstance(user_settings, omegaconf.DictConfig)

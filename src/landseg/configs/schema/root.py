@@ -42,8 +42,9 @@ field = dataclasses.field
 @dataclasses.dataclass
 class _ExecutionContext:
     '''Mutable execution context.'''
-    exp_root: str = './experiment' # root directory for this experiment run
     verbosity: str = 'full' # 'full', 'logging_only', 'silent'
+    exp_root: str = './experiment' # root directory for this experiment run
+    user_cfg: str | None = None # external user configs
     dev_cfg: str | None = None # developer-only override config
 
 # --------------------------------ROOT  CONFIGS--------------------------------
