@@ -65,11 +65,11 @@ def resolve_configs(
         config_list.append(translated_settings)
 
     # add dev settings (optional and untracked)
-    dev = omegaconf.OmegaConf.select(config, 'execution.dev_settings', default=None)
+    dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)
     if dev and os.path.exists(dev) and use_additional_settings:
-        dev_settings = omegaconf.OmegaConf.load(dev)
-        assert isinstance(dev_settings, omegaconf.DictConfig)
-        config_list.append(dev_settings)
+        dev_cfg = omegaconf.OmegaConf.load(dev)
+        assert isinstance(dev_cfg, omegaconf.DictConfig)
+        config_list.append(dev_cfg)
 
     # merging configs in order (last wins)
     # dev -> user -> hydra defaults -> schema defaults
