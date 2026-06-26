@@ -80,7 +80,6 @@ def _translate_data_ingest(
     '''Map data-ingest settings to foundation fields.'''
 
     mapping = {
-        'grid_mode': ['foundation.grid.mode'],
         'grid_crs': ['foundation.grid.crs'],
         'grid_extent_path': ['foundation.grid.extent.filepath'],
         'tile_size': [
