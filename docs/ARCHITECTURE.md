@@ -1,7 +1,6 @@
-
 # Architecture Overview
 
-**Last updated: 2026-05-12**
+**Last updated: 2026-06-26**
 
 ---
 
@@ -45,14 +44,22 @@ This document defines **how the system fits together** — not details.
 
 ### Session
 - Defines *how to run*
-- Builds loaders, model bindings, losses, runtime
-- Owns lifecycle (train / eval)
+- Assembles dataloaders, model frames, optimizers, and tracking instrumentation
+- Orchestrated via continuous or curriculum runners
+- Executes epoch policies and batch-level tasks (losses, metrics, regularizations)
+
+---
+
+### Configuration (CLI vs. API)
+- CLI: Flat, pipeline-oriented inputs (`configs/user.yaml`) translated dynamically
+- API: Notebook-first configurators with typed, programmatically safe helper methods
+- Core Schemas: Kept strictly isomorphic and isolated from user-facing ergonomics
 
 ---
 
 ### Execution
 - Defines *when and which pipeline runs*
-- Resolves config + artifacts
+- Resolves configuration + artifact lifecycles
 - Delegates to factories (does not build internals)
 
 ---
@@ -64,6 +71,7 @@ This document defines **how the system fits together** — not details.
 - No construction in pipelines
 - Session is fully assembled before execution
 - DataSpecs is the only dataset contract
+- User config mappings and programmatic configurators are decoupled from core schemas
 
 ---
 
@@ -73,6 +81,7 @@ This document defines **how the system fits together** — not details.
 - **Artifacts make it reusable**
 - **Experiment defines training**
 - **Session runs it**
+- **Configuration adapts it**
 - **Execution orchestrates it**
 
 ---
@@ -82,3 +91,4 @@ This document defines **how the system fits together** — not details.
 - Deterministic outputs given same inputs + config
 - No silent rebuilds
 - Clear separation: build-time vs runtime
+- Isomorphic schemas: no validation/normalization logic leaks into core classes
