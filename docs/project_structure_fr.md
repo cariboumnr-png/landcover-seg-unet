@@ -11,8 +11,8 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |-- docs/                         Documentation, diagrammes et ADRs
 |   |-- ADRs/                     Decisions d'architecture
 |   |-- images/                   Images de documentation
-|   |-- data_preparation.md       Guide de preparation des donnees
-|   |-- workflow_chart.md         Diagramme general du workflow
+|   |-- data_preparation_fr.md    Guide de preparation des donnees
+|   |-- workflow_chart_fr.md      Diagramme general du workflow
 |   `-- project_structure_fr.md   Ce fichier
 |
 |-- dev/                          Espace ignore de notes, references et essais
@@ -40,9 +40,13 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- _constants.py             Constantes partagees
 |   `-- __init__.py
 |
+|-- configs/                      Fichiers de configuration utilisateur
+|   `-- user.yaml                 Configuration locale principale par pipeline
+|
+|-- scripts/                      Scripts helpers et points d'entree
+|   `-- run.py                    Script de demarrage pour machines virtuelles/Databricks
+|
 |-- pyproject.toml                Metadonnees du package et entree console `landseg`
-|-- settings.yaml                 Configuration locale principale
-|-- settings_dev.yaml             Configuration de developpement
 |-- README.md                     Vue d'ensemble du projet
 `-- CONTRIBUTING.md               Notes de contribution
 ```
@@ -57,7 +61,8 @@ src/landseg/
 |   |   `-- configurators/        Helpers API pour ingest, prepare et train
 |   `-- cli/
 |       |-- cli.py                Implementation CLI pilotee par Hydra
-|       `-- resolver.py           Helpers de resolution de config CLI
+|       |-- resolver.py           Helpers de resolution de config CLI
+|       `-- translate.py          Couche de traduction de config utilisateur
 |
 |-- artifacts/
 |   |-- checkpoint.py             Sauvegarde/chargement de checkpoints

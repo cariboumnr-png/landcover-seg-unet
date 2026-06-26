@@ -40,9 +40,13 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- _constants.py             Shared constants
 |   `-- __init__.py
 |
+|-- configs/                      User-facing configuration files
+|   `-- user.yaml                 Main local pipeline-oriented configuration
+|
+|-- scripts/                      Helper scripts and entry points
+|   `-- run.py                    Bootstrap script for VM/Databricks executions
+|
 |-- pyproject.toml                Package metadata and `landseg` console entry point
-|-- settings.yaml                 Main local configuration
-|-- settings_dev.yaml             Development configuration
 |-- README.md                     Project overview
 `-- CONTRIBUTING.md               Contribution notes
 ```
@@ -57,7 +61,8 @@ src/landseg/
 |   |   `-- configurators/        API helpers for ingest, prepare, and train flows
 |   `-- cli/
 |       |-- cli.py                Hydra-driven CLI implementation
-|       `-- resolver.py           CLI config resolution helpers
+|       |-- resolver.py           CLI config resolution helpers
+|       `-- translate.py          User config translation layer
 |
 |-- artifacts/
 |   |-- checkpoint.py             Checkpoint save/load helpers
