@@ -17,6 +17,9 @@ defaults:
   - study: default
   # pipeline
   - pipeline: default
+  # disable logging entirely
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
 
 # execution options
 execution:

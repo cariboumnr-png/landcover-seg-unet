@@ -42,7 +42,8 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
 
     # cli logger
-    logger = utils.Logger('cli', './cli.log')
+    # /tmp/ is databricks compute node friendly
+    logger = utils.Logger('cli', '/tmp/cli.log')
 
     # run specified mode with exceptions handling
     try:
