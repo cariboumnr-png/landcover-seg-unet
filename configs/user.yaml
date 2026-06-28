@@ -88,3 +88,5 @@ model-train:
   batch_size: 16
   # epochs: maximum number of training epochs
   epochs: 10
+  # active_tasks: tasks (heads) to train (set to [] for all active). Must be defined in dataset_config.json
+  active_tasks: []

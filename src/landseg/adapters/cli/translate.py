@@ -136,10 +136,28 @@ def _translate_model_train(
     _apply_mapping(rt, translated, mapping)
 
     if 'epochs' in rt:
+        phase = {'name': 'demo_train', 'num_epochs': rt['epochs']}
+        if 'active_tasks' in rt:
+            active_tasks = rt['active_tasks']
+            if active_tasks is None or len(active_tasks) == 0:
+                phase['active_heads'] = None
+            else:
+                phase['active_heads'] = list(active_tasks)
         _set_paths(
             translated,
             ['session.orchestration.curriculum.single.phases'],
-            [{'name': 'demo_train', 'num_epochs': rt['epochs']}]
+            [phase]
+        )
+    elif 'active_tasks' in rt:
+        active_tasks = rt['active_tasks']
+        if active_tasks is None or len(active_tasks) == 0:
+            active_heads = None
+        else:
+            active_heads = list(active_tasks)
+        _set_paths(
+            translated,
+            ['session.orchestration.curriculum.single.phases'],
+            [{'name': 'demo_train', 'active_heads': active_heads}]
         )
 
 def _apply_mapping(
