@@ -62,6 +62,9 @@ def translate_user_config(raw: omegaconf.DictConfig) -> omegaconf.DictConfig:
         },
     }
 
+    if 'exp_root' in raw:
+        _set_paths(translated, ['execution.exp_root'], raw['exp_root'])
+
     if 'data-ingest' in raw:
         _translate_data_ingest(raw['data-ingest'], translated)
 

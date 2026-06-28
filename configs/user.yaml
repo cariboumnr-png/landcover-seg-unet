@@ -13,6 +13,9 @@
 #      - Modified frequently during iterative modeling/hyperparameter tuning.
 # =============================================================================
 
+# exp_root: root directory for all experiment outputs, logs, and checkpoints
+exp_root: ./experiment
+
 data-ingest:
   # ---------------------------------------------------------------------------
   # Spatial reference & grid tiling details
@@ -73,8 +76,6 @@ model-train:
   # ---------------------------------------------------------------------------
   # Paths, Training Hyperparameters & Model Body
   # ---------------------------------------------------------------------------
-  # exp_root: root directory for all experiment outputs, logs, and checkpoints
-  exp_root: ./experiment
   # model_body: model architecture body name. Choices: "unet", "unetpp", "unetppp"
   model_body: unetppp
   # bottleneck: model bottleneck layer type. Choices: "conv", "transformer", "hybrid"
