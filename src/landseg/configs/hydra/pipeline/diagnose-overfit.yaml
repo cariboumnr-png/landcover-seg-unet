@@ -17,7 +17,7 @@ session:
     grad_clip_norm: null
 
   engine_tasks:
-    loss_types:
+    loss_configs:
       focal:
         weight: 0.5
         gamma: 0.0
@@ -30,7 +30,7 @@ session:
 
   orchestration:
     monitor:
-      track_heads: [base]
+      track_heads: {base: 1.0}
 
 pipeline:
   name: diagnose-overfit
