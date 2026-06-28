@@ -34,7 +34,7 @@ import landseg.adapters.cli.translate as translate
 import landseg.configs as configs
 
 # register omegaconf.OmegaConf.resolvers
-omegaconf.OmegaConf.register_new_resolver("concat", lambda x, y: x + y)
+omegaconf.OmegaConf.register_new_resolver('concat', lambda x, y: x + y)
 
 def resolve_configs(
     config: omegaconf.DictConfig,
@@ -64,18 +64,31 @@ def resolve_configs(
         # root/configs/user.yaml
         # -> root as the 5th parent of .../resolver.py
         user = pathlib.Path(__file__).resolve().parents[4]/'configs'/'user.yaml'
-    if os.path.exists(user) and use_additional_settings:
-        user_settings = omegaconf.OmegaConf.load(user)
-        assert isinstance(user_settings, omegaconf.DictConfig)
-        translated_settings = translate.translate_user_config(user_settings)
-        config_list.append(translated_settings)
+        is_fallback = True
+    else:
+        is_fallback = False
+    if use_additional_settings:
+        if os.path.exists(user):
+            user_settings = omegaconf.OmegaConf.load(user)
+            assert isinstance(user_settings, omegaconf.DictConfig)
+            translated_settings = translate.translate_user_config(user_settings)
+            config_list.append(translated_settings)
+        elif not is_fallback:
+            raise FileNotFoundError(
+                f'User configuration file not found at: {user}'
+            )
 
     # add dev settings (optional and untracked)
     dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)
-    if dev and os.path.exists(dev) and use_additional_settings:
-        dev_cfg = omegaconf.OmegaConf.load(dev)
-        assert isinstance(dev_cfg, omegaconf.DictConfig)
-        config_list.append(dev_cfg)
+    if dev and use_additional_settings:
+        if os.path.exists(dev):
+            dev_cfg = omegaconf.OmegaConf.load(dev)
+            assert isinstance(dev_cfg, omegaconf.DictConfig)
+            config_list.append(dev_cfg)
+        else:
+            raise FileNotFoundError(
+                f'Developer override configuration file not found at: {dev}'
+            )
 
     # merging configs in order (last wins)
     # dev -> user -> hydra defaults -> schema defaults
