@@ -16,15 +16,15 @@ monitor:
 curriculum:
   schema: single
 
-  # single training phase on the parent head only
+  # single training phase with all heads active
   single:
     name: single
     phases:
-      - name: single_phase_parent
+      - name: continuous_training
         num_epochs: 10
         start_epoch: 1
         lr_scale: 1.0
-        active_heads: [base]
+        active_heads: null
         frozen_heads: null
 
   # default top-down phase schema
