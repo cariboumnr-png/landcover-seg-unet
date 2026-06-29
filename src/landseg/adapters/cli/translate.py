@@ -124,7 +124,7 @@ def _translate_model_train(
     translated: dict
 ) -> None:
     '''Map model-train settings to models and session fields.'''
-    
+
     mapping = {
         'exp_root': ['execution.exp_root'],
         'model_body': ['models.model_body'],

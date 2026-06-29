@@ -38,7 +38,7 @@ data-ingest:
     - path: ./experiment/input/domain_knowledge/example_domain_1.tif
       index_base: 1
     - path: ./experiment/input/domain_knowledge/example_domain_2.tif
-      index_base: 1    
+      index_base: 1
   # Domain layer for categorical IDs (null to disable)
   domain_ids_name: null
   # Domain layer for continuous vectors (null to disable)
@@ -90,5 +90,6 @@ model-train:
   batch_size: 16
   # Maximum number of training epochs
   epochs: 10
-  # Tasks to train ([] -> all active). Must be defined in dataset_config.json
+  # Tasks/heads to train. [] or null means all heads are active.
+  # Heads Must be defined in dataset_config.json
   active_tasks: []
