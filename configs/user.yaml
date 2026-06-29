@@ -13,77 +13,83 @@
 #      - Modified frequently during iterative modeling/hyperparameter tuning.
 # =============================================================================
 
+# Root directory for experiment outputs, logs, and checkpoints
+exp_root: ./experiment
+
 data-ingest:
   # ---------------------------------------------------------------------------
-  # Spatial reference & grid tiling details
+  # Spatial Reference & Grid Tiling Details
   # ---------------------------------------------------------------------------
-  # grid_crs: must be a valid projected Coordinate Reference System (e.g., EPSG:XXXX)
-  grid_crs: EPSG:2958  
-  # grid_extent_path: path to the reference raster defining extent (required for mode: ref)
+  # Projected Coordinate Reference System (must be valid EPSG code)
+  # NOTE: CRS must be the same for ALL input rasters below!
+  grid_crs: EPSG:2958
+  # Path to reference raster defining extent
   grid_extent_path: ./experiment/input/extent_reference/example_extent.tif
-  # tile_size: tile dimension in pixels (both row and column sizes)
+  # Tile dimension in pixels (both row and column sizes)
   tile_size: 256
-  # tile_overlap: tile overlap in pixels (used for spatial augmentation/coverage)
+  # Tile overlap in pixels for spatial augmentation/coverage
   tile_overlap: 128
 
   # ---------------------------------------------------------------------------
-  # Domain Rasters (Optional auxiliary context layers)
+  # Optional Domain Context Rasters
   # ---------------------------------------------------------------------------
-  # domain_files: external rasters used for conditioning or feature augmentation
+  # External rasters for conditioning or feature augmentation
   domain_files:
     - path: ./experiment/input/domain_knowledge/example_domain_1.tif
       index_base: 1
     - path: ./experiment/input/domain_knowledge/example_domain_2.tif
-      index_base: 1    
-  # domain_ids_name: which domain layer to be used as categorical IDs (set null to disable)
+      index_base: 1
+  # Domain layer for categorical IDs (null to disable)
   domain_ids_name: null
-  # domain_vec_name: which domain layer to be used as continuous vectors (set null to disable)
+  # Domain layer for continuous vectors (null to disable)
   domain_vec_name: null
 
   # ---------------------------------------------------------------------------
-  # Datablock Inputs (Required raster inputs & metadata)
+  # Datablock Inputs
   # ---------------------------------------------------------------------------
-  # dataset_name: unique name identifying this dataset configuration
+  # Unique name identifying this dataset configuration
   dataset_name: demo_data
-  # dev_image: path to the training/development image raster (e.g. multi-band geotiff)
+
+  # Development dataset paths (training image/label)
   dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
-  # dev_label: path to the training/development label/target raster
   dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
-  # test_image: path to the optional test image raster (paired with test_label)
+
+  # Optional test dataset paths (eval image/label)
   test_image: ./experiment/input/data/demo_data/test/example_image.tif
-  # test_label: path to the optional test label raster (paired with test_image)
   test_label: ./experiment/input/data/demo_data/test/example_label.tif
-  # dataset_config: path to the dataset metadata JSON file
+
+  # Path to the dataset metadata JSON file
   dataset_config: ./experiment/input/data/demo_data/example_config.json
 
 data-prepare:
   # ---------------------------------------------------------------------------
   # Dataset Splitting & Class Balancing
   # ---------------------------------------------------------------------------
-  # val_ratio: ratio of data blocks partitioned for validation (0.0 to 1.0)
+  # Ratio of data blocks partitioned for validation (0.0 to 1.0)
   val_ratio: 0.15
-  # test_ratio: ratio of data blocks partitioned for testing (ignored if explicit test files are given)
+  # Test partition ratio (ignored if explicit test files provided above)
   test_ratio: 0.10
-  # target_head: oversampling target head name (set null to disable class-based oversampling)
+  # Oversampling target head name (null to disable)
   target_head: null
-  # reward_classes: dictionary mapping 0-based class indices to float sampling weight rewards (e.g. {1: 2.0})
+  # Map of class index (0-based) to oversampling reward (e.g., {1: 2.0})
   reward_classes: {}
 
 model-train:
   # ---------------------------------------------------------------------------
-  # Paths, Training Hyperparameters & Model Body
+  # Model Architecture & Training Hyperparameters
   # ---------------------------------------------------------------------------
-  # exp_root: root directory for all experiment outputs, logs, and checkpoints
-  exp_root: ./experiment
-  # model_body: model architecture body name. Choices: "unet", "unetpp", "unetppp"
+  # Model body name (choices: "unet", "unetpp", "unetppp")
   model_body: unetppp
-  # bottleneck: model bottleneck layer type. Choices: "conv", "transformer", "hybrid"
+  # Bottleneck type (choices: "conv", "transformer", "hybrid")
   bottleneck: transformer
-  # conditioners: feature conditioning/fusion methods. Choices: list of ["concat", "film"]
+  # Conditioning/fusion methods (choices: list of [concat, film])
   conditioners: [concat, film]
-  # patch_size: patch size in pixels cropped from tiles for loader (must divide tile size)
+  # Pixel patch size for loader (must divide tile_size)
   patch_size: 128
-  # batch_size: number of samples per training batch
+  # Number of samples per training batch
   batch_size: 16
-  # epochs: maximum number of training epochs
+  # Maximum number of training epochs
   epochs: 10
+  # Tasks/heads to train. [] or null means all heads are active.
+  # Heads Must be defined in dataset_config.json
+  active_tasks: []

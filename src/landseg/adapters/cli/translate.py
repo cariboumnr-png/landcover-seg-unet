@@ -62,6 +62,9 @@ def translate_user_config(raw: omegaconf.DictConfig) -> omegaconf.DictConfig:
         },
     }
 
+    if 'exp_root' in raw:
+        _set_paths(translated, ['execution.exp_root'], raw['exp_root'])
+
     if 'data-ingest' in raw:
         _translate_data_ingest(raw['data-ingest'], translated)
 
@@ -121,7 +124,7 @@ def _translate_model_train(
     translated: dict
 ) -> None:
     '''Map model-train settings to models and session fields.'''
-    
+
     mapping = {
         'exp_root': ['execution.exp_root'],
         'model_body': ['models.model_body'],
@@ -133,10 +136,28 @@ def _translate_model_train(
     _apply_mapping(rt, translated, mapping)
 
     if 'epochs' in rt:
+        phase = {'name': 'demo_train', 'num_epochs': rt['epochs']}
+        if 'active_tasks' in rt:
+            active_tasks = rt['active_tasks']
+            if active_tasks is None or len(active_tasks) == 0:
+                phase['active_heads'] = None
+            else:
+                phase['active_heads'] = list(active_tasks)
         _set_paths(
             translated,
             ['session.orchestration.curriculum.single.phases'],
-            [{'name': 'demo_train', 'num_epochs': rt['epochs']}]
+            [phase]
+        )
+    elif 'active_tasks' in rt:
+        active_tasks = rt['active_tasks']
+        if active_tasks is None or len(active_tasks) == 0:
+            active_heads = None
+        else:
+            active_heads = list(active_tasks)
+        _set_paths(
+            translated,
+            ['session.orchestration.curriculum.single.phases'],
+            [{'name': 'demo_train', 'active_heads': active_heads}]
         )
 
 def _apply_mapping(

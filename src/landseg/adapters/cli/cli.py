@@ -26,7 +26,9 @@ CLI entry.
 '''
 
 # standard imports
+import os
 import sys
+import tempfile
 import typing
 # third-party imports
 import hydra
@@ -42,8 +44,9 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
 
     # cli logger
-    # /tmp/ is databricks compute node friendly
-    logger = utils.Logger('cli', '/tmp/cli.log')
+    # use platform-agnostic temp directory 
+    # /tmp is databricks compute node friendly
+    logger = utils.Logger('cli', os.path.join(tempfile.gettempdir(), 'cli.log'))
 
     # run specified mode with exceptions handling
     try:
