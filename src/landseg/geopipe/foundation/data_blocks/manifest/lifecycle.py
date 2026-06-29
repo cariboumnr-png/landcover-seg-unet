@@ -164,7 +164,14 @@ def _catalog_status(
         (False, False): 4,  # catalog absent, no new blocks
         (False, True): 5,   # catalog absent, has new blocks
     }[(bool(cataloged), bool(updated))]
-    logger.log('INFO', f'Cataloging status: {catalog_status}')
+    # log descriptive status
+    status_text = {
+        2: 'Catalog is present; there are no new blocks',
+        3: 'Catalog is present; there are new blocks not in catalog',
+        4: 'Catalog is absent; there are no blocks to be catalogued',
+        5: 'Catalog is absent; there are new blocks to be catalogued'
+    }
+    logger.log('INFO', f'Cataloging status: {status_text[catalog_status]}')
 
     # policy choices
     match policy:
