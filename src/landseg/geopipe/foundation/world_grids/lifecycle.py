@@ -60,12 +60,22 @@ def prepare_world_grid(
     payload = ctrl.load()
     if payload:
         output_grid = geo_core.GridLayout.from_payload(payload)
-        logger.log('INFO', f'World grid loaded successfully; {grid_fpath}')
+        logger.log('INFO', f'World grid {output_grid.gid} loaded successfully')
+        logger.log('DEBUG', f'- Grid filepath: {grid_fpath}')
+        logger.log('DEBUG', f'- Grid CRS: {output_grid.crs}')
+        logger.log('DEBUG', f'- Grid pixel size: {output_grid.pixel_size}')
+        logger.log('DEBUG', f'- Grid tile size: {output_grid.tile_size}')
+        logger.log('DEBUG', f'- Grid tile overlap: {output_grid.tile_overlap}')
         return output_grid
 
     # build if needed
     output_grid = world_grids.build_grid(config)
     payload = output_grid.to_payload()
     ctrl.save(payload)
-    logger.log('INFO', f'World grid saved {grid_fpath}')
+    logger.log('INFO', f'World grid {output_grid.gid} created and loaded')
+    logger.log('DEBUG', f'- Grid filepath: {grid_fpath}')
+    logger.log('DEBUG', f'- Grid CRS: {output_grid.crs}')
+    logger.log('DEBUG', f'- Grid pixel size: {output_grid.pixel_size}')
+    logger.log('DEBUG', f'- Grid tile size: {output_grid.tile_size}')
+    logger.log('DEBUG', f'- Grid tile overlap: {output_grid.tile_overlap}')
     return output_grid
