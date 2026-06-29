@@ -40,7 +40,9 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.foundation.data_blocks as data_blocks
+import landseg.geopipe.foundation.data_blocks.builder as builder
+import landseg.geopipe.foundation.data_blocks.manifest as manifest
+import landseg.geopipe.foundation.data_blocks.mapper as mapper
 import landseg.utils as utils
 
 # --------------------------------private types--------------------------------
@@ -106,7 +108,7 @@ def run_blocks_building(
     logger = logger.get_child('dblks')
 
     # map model dev rasters to grid
-    ras_windows = data_blocks.map_rasters_to_grid(
+    ras_windows = mapper.map_rasters_to_grid(
         world_grid,
         config.image_fpath,
         config.label_fpath,
@@ -117,7 +119,7 @@ def run_blocks_building(
     logger.log('INFO', 'Rasters mapped to input world grid')
 
     # block builder for model dev rasters
-    builder_config = data_blocks.BlockBuilderConfig(
+    builder_config = builder.BlockBuilderConfig(
         output_root=artfact_paths.blocks,
         image_fpath=config.image_fpath,
         label_fpath=config.label_fpath,
@@ -126,7 +128,7 @@ def run_blocks_building(
         ignore_index=config.ignore_index,
         block_size=ras_windows.tile_shape
     )
-    block_builder = data_blocks.BlockBuilder(
+    block_builder = builder.BlockBuilder(
         ras_windows.image,
         ras_windows.label,
         builder_config,
@@ -138,7 +140,7 @@ def run_blocks_building(
     logger.log('INFO', 'Data blocks building finished')
 
     # create/update catalog and metadata JSON
-    updated = data_blocks.ManifestUpdateContext(
+    updated = manifest.ManifestUpdateContext(
         updated_coords=new_blocks,
         source_image=config.image_fpath,
         source_label=config.label_fpath,
@@ -146,7 +148,7 @@ def run_blocks_building(
         blocks_dir=artfact_paths.blocks,
         label_color_map=block_builder.label_color_map
     )
-    data_blocks.update_manifest(
+    manifest.update_manifest(
         updated,
         artfact_paths.catalog,
         artfact_paths.schema,
