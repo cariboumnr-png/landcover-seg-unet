@@ -48,6 +48,7 @@ def ingest(config: configs.RootConfig):
 
     # init a logger
     logger = utils.Logger('ingest', f'{config.execution.exp_root}/ingest.log')
+    logger.log_sep()
 
     # config aliases
     domain_cfg = config.foundation.domains
@@ -136,4 +137,5 @@ def ingest(config: configs.RootConfig):
         logger.log('INFO', 'Test holdout dataset not provided')
 
     # close logger
+    logger.log_sep()
     logger.close()

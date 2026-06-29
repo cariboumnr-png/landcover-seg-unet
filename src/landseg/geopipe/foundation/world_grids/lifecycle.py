@@ -61,11 +61,7 @@ def prepare_world_grid(
     if payload:
         output_grid = geo_core.GridLayout.from_payload(payload)
         logger.log('INFO', f'World grid {output_grid.gid} loaded successfully')
-        logger.log('DEBUG', f'- Grid filepath: {grid_fpath}')
-        logger.log('DEBUG', f'- Grid CRS: {output_grid.crs}')
-        logger.log('DEBUG', f'- Grid pixel size: {output_grid.pixel_size}')
-        logger.log('DEBUG', f'- Grid tile size: {output_grid.tile_size}')
-        logger.log('DEBUG', f'- Grid tile overlap: {output_grid.tile_overlap}')
+        _log_grid_details(output_grid, grid_fpath, logger)
         return output_grid
 
     # build if needed
@@ -73,9 +69,18 @@ def prepare_world_grid(
     payload = output_grid.to_payload()
     ctrl.save(payload)
     logger.log('INFO', f'World grid {output_grid.gid} created and loaded')
-    logger.log('DEBUG', f'- Grid filepath: {grid_fpath}')
-    logger.log('DEBUG', f'- Grid CRS: {output_grid.crs}')
-    logger.log('DEBUG', f'- Grid pixel size: {output_grid.pixel_size}')
-    logger.log('DEBUG', f'- Grid tile size: {output_grid.tile_size}')
-    logger.log('DEBUG', f'- Grid tile overlap: {output_grid.tile_overlap}')
+    _log_grid_details(output_grid, grid_fpath, logger)
     return output_grid
+
+def _log_grid_details(
+    grid: geo_core.GridLayout,
+    grid_fpath: str,
+    logger: utils.Logger
+) -> None:
+    '''Grid details ogging helper.'''
+
+    logger.log('DEBUG', f' | Grid filepath: {grid_fpath}')
+    logger.log('DEBUG', f' | Grid CRS: {grid.crs}')
+    logger.log('DEBUG', f' | Grid pixel size: {grid.pixel_size}')
+    logger.log('DEBUG', f' | Grid tile size: {grid.tile_size}')
+    logger.log('DEBUG', f' | Grid tile overlap: {grid.tile_overlap}')
