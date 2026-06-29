@@ -67,7 +67,6 @@ def map_domain_to_grid(
         _DomainTilesPackage containing re-indexed tiles and grid metadata.
     '''
 
-    logger.log('INFO', 'Mapping domain onto input world grid')
     # read domain raster and get arrays indexed to the grid tiles
     tiles, nodata = _read_raster(world_grid, raster_path)
 

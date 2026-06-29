@@ -77,7 +77,7 @@ def _log_grid_details(
     grid_fpath: str,
     logger: utils.Logger
 ) -> None:
-    '''Grid details ogging helper.'''
+    '''Grid details logging helper.'''
 
     logger.log('DEBUG', f' | Grid filepath: {grid_fpath}')
     logger.log('DEBUG', f' | Grid CRS: {grid.crs}')
