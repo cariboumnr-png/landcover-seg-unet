@@ -107,7 +107,7 @@ def run_blocks_building(
     # get a child logger
     logger = logger.get_child('dblks')
 
-    # map model dev rasters to grid
+    # map rasters to the provided world grid
     ras_windows = mapper.map_rasters_to_grid(
         world_grid,
         config.image_fpath,
@@ -118,7 +118,7 @@ def run_blocks_building(
     )
     logger.log('INFO', 'Rasters mapped to input world grid')
 
-    # block builder for model dev rasters
+    # create a data block builder
     builder_config = builder.BlockBuilderConfig(
         output_root=artfact_paths.blocks,
         image_fpath=config.image_fpath,
@@ -135,7 +135,7 @@ def run_blocks_building(
         logger=logger,
     )
 
-    # build all model dev blocks
+    # build data blocks
     new_blocks = block_builder.build_blocks()
     logger.log('INFO', 'Data blocks building finished')
 

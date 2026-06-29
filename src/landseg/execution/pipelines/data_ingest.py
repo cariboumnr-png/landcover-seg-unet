@@ -58,6 +58,7 @@ def ingest(config: configs.RootConfig):
     paths = artifacts.FoundationPaths(config.foundation.output_dpath)
 
     # world grid
+    logger.log('INFO', 'Create or load world grid')
     grid_config = foundation.GridParameters(
         mode=grid_cfg.mode, # type: ignore
         crs=grid_cfg.crs,
@@ -76,24 +77,29 @@ def ingest(config: configs.RootConfig):
     )
 
     # domain maps
-    domain_config = [
-        foundation.DomainBuildingParameters(
-        input_fpath=dom.path,
-        domain_fpath=paths.domains.domain_map_fpath(dom.name),
-        tiles_fpath=paths.domains.mapped_tiles_fpath(dom.name, world_grid.gid),
-        index_base=dom.index_base,
-        valid_threshold=domain_cfg.valid_threshold,
-        target_variance=domain_cfg.target_variance,
-        ) for dom in domain_cfg.files
-    ]
-    foundation.prepare_domain_maps(
-        world_grid,
-        domain_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
-        logger=logger,
-    )
+    if domain_cfg.files:
+        logger.log('INFO', 'Create or load domain knowledge layers')
+        domain_config = [
+            foundation.DomainBuildingParameters(
+            input_fpath=d.path,
+            domain_fpath=paths.domains.domain_map_fpath(d.name),
+            tiles_fpath=paths.domains.mapped_tiles_fpath(d.name, world_grid.gid),
+            index_base=d.index_base,
+            valid_threshold=domain_cfg.valid_threshold,
+            target_variance=domain_cfg.target_variance,
+            ) for d in domain_cfg.files
+        ]
+        foundation.prepare_domain_maps(
+            world_grid,
+            domain_config,
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            logger=logger,
+        )
+    else:
+        logger.log('INFO', 'No domain knowledge layers provided')
 
     # build dev data blocks
+    logger.log('INFO', 'Build data blocks from development dataset')
     data_blocks_config = foundation.BlockBuildingParameters(
         image_fpath=datablocks_cfg.filepaths.dev_image,
         label_fpath=datablocks_cfg.filepaths.dev_label,
@@ -111,7 +117,7 @@ def ingest(config: configs.RootConfig):
 
     # build test data blocks - if provided
     if datablocks_cfg.has_test_data:
-        logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
+        logger.log('INFO', 'Build data blocks from test holdout dataset')
         data_blocks_config = foundation.BlockBuildingParameters(
             image_fpath=datablocks_cfg.filepaths.test_image,
             label_fpath=datablocks_cfg.filepaths.test_label,
@@ -127,7 +133,7 @@ def ingest(config: configs.RootConfig):
             logger=logger,
         )
     else:
-        logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
+        logger.log('INFO', 'Test holdout dataset not provided')
 
     # close logger
     logger.close()
