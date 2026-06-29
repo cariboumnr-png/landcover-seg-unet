@@ -93,6 +93,7 @@ def update_manifest(
         logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
         raise artifacts.ArtifactError from exc
     # action
+    logger.log('DEBUG', 'STEP/ Checking datablock catalog status')
     current, to_update = _catalog_status(
         data_dict,
         context,
@@ -109,13 +110,14 @@ def update_manifest(
         )
         catalog_json = catalog.to_json_payload()
         ctrl.persist(catalog_json)
+    logger.log('INFO', 'PROGRESS/ Catalog JSON for data blocks created/updated')
 
     # load schema JSON
     ctrl = SchemaCtrl(schema_fpath, policy)
     try:
         current_schema = ctrl.fetch()
     except artifacts.ArtifactError as exc:
-        logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
+        logger.log('ERROR', f'loading {ctrl.fp}: {exc}')
         raise artifacts.ArtifactError from exc
     # action
     sample_block = _sample(context.blocks_dir)
@@ -127,6 +129,7 @@ def update_manifest(
         label_color_map=context.label_color_map
     )
     ctrl.persist(schema_dict)
+    logger.log('INFO', 'PROGRESS/ Schema JSON for data blocks created/updated')
 
 def _catalog_status(
     data_dict: dict[str, geo_core.CatalogEntry] | None,
@@ -149,15 +152,15 @@ def _catalog_status(
     current = [f for f in os.listdir(blocks_dir) if f.endswith('npz')]
     if not current:
         raise FileNotFoundError('No block files found')
-    logger.log('INFO', f'All block files on disk count: {len(current)}')
+    logger.log('DEBUG', f'DETAILS/ Number of blocks on disk: {len(current)}')
 
     # get filenames from the updated coordinates (parse from coords)
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in context.updated_coords]
-    logger.log('INFO', f'Updated block files to disk count: {len(updated)}')
+    logger.log('DEBUG', f'DETAILS/ Number of updated blocks on disk: {len(updated)}')
 
     # determine status
     cataloged = [os.path.basename(c['file_path']) for c in catalog.values()]
-    logger.log('INFO', f'Catalogued blocks files count: {len(cataloged)}')
+    logger.log('DEBUG', f'DETAILS/ Number of catalogued blocks: {len(cataloged)}')
     catalog_status = {
         (True, False): 2,   # catalog present, no new blocks
         (True, True): 3,    # catalog present, has new blocks
@@ -171,7 +174,7 @@ def _catalog_status(
         4: 'Catalog is absent; there are no blocks to be catalogued',
         5: 'Catalog is absent; there are new blocks to be catalogued'
     }
-    logger.log('INFO', f'Cataloging status: {status_text[catalog_status]}')
+    logger.log('DEBUG', f'DETAILS/ Catalog status: {status_text[catalog_status]}')
 
     # policy choices
     match policy:

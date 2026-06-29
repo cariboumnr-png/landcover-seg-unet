@@ -272,6 +272,7 @@ class BlockBuilder:
         self._prepare_block_windows()
         self._structural_validation()
         self._create_missing_blocks()
+        self.logger.log('INFO', 'PROGRESS/ Data blocks built/updated')
         # return coords where blocks were created
         return self.coords_todo
 
@@ -291,7 +292,7 @@ class BlockBuilder:
         else:
             self.common_coords = set(self.img_windows.keys())
         n = len(self.common_coords)
-        self.logger.log('DEBUG', f'Loaded {n} raster windows')
+        self.logger.log('DEBUG', f'STEP/ Fetched {n} shared raster windows')
 
         # remove windows or irregular shapes, e.g., edge windows
         _common = copy.deepcopy(self.common_coords) # for safe iteration
@@ -304,7 +305,7 @@ class BlockBuilder:
                 lw and (lw.height, lw.width) != self.config.block_size):
                 self.common_coords.remove(coord)
         n = len(self.common_coords)
-        self.logger.log('DEBUG', f'Number of windows with expected shape: {n}')
+        self.logger.log('DEBUG', f'DETAILS/ Number of windows with expected shape: {n}')
 
     def _structural_validation(self) -> None:
         '''
@@ -322,7 +323,7 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        self.logger.log('INFO', 'Checking block .npz files')
+        self.logger.log('DEBUG', 'STEP/ Checking block .npz files')
         for c in self.common_coords:
             name = geo_utils.xy_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
@@ -350,8 +351,8 @@ class BlockBuilder:
                 continue
 
         # log checking results
-        self.logger.log('INFO', f'Found {len(self.coords_todo)} invalid blocks')
-        self.logger.log('INFO', f'Removed {removed} damaged files')
+        self.logger.log('DEBUG', f'DETAILS/ Found {len(self.coords_todo)} blocks to process')
+        self.logger.log('DEBUG', f'DETAILS/ Removed {removed} damaged block files')
 
     def _create_missing_blocks(self) -> None:
         '''
@@ -363,9 +364,9 @@ class BlockBuilder:
         '''
 
         if not self.coords_todo:
-            self.logger.log('INFO', 'No data blocks to be created')
+            self.logger.log('DEBUG', 'DETAILS/ No data blocks to be created')
             return
-        self.logger.log('INFO', f'{len(self.coords_todo)} blocks to be created')
+        self.logger.log('DEBUG', f'DETAILS/ {len(self.coords_todo)} blocks to be created')
 
         # prep block creation jobs
         jobs = []

@@ -137,7 +137,7 @@ def _get_domain_dict(
     )
 
     # first iteration to get indices of valid tiles and index range
-    logger.log('INFO', 'Filter input raster tiles')
+    logger.log('DEBUG', 'STEP/ Filter input raster tiles')
     for c, tile in raster_tiles.items():
         if c in domain_dict: # skip keys that already in data
             continue
@@ -152,7 +152,7 @@ def _get_domain_dict(
             context.valid_coords.append(c)
 
     # get majority index for valid tiles - calc here
-    logger.log('INFO', 'Calculate majority class from new tiles')
+    logger.log('DEBUG', 'STEP/ Calculate majority class from new tiles')
     for c in set(raster_tiles.keys()):
         if all(domain_dict[c].values()): # skip keys that already have data
             continue
@@ -168,7 +168,7 @@ def _get_domain_dict(
     context.major_freq_mean /= len(context.valid_coords)
 
     # get pca transform for valid tiles - calc delegated to transform.py
-    logger.log('INFO', 'PCA transforming all valid tiles')
+    logger.log('DEBUG', 'STEP/ PCA transforming all valid tiles')
     freqs: dict[tuple[int, int], numpy.ndarray] = {}
     for c in context.valid_coords: # calculate on all valid tiles
         tile = raster_tiles[c]

@@ -131,7 +131,7 @@ def _check_raster_proj(
 
     # if both image and label provided
     if lbl is not None:
-        logger.log('DEBUG', ' | Both image & label rasters provided')
+        logger.log('DEBUG', 'DETAILS/ Both image & label rasters provided')
         # get projection names, raster.crs might return differently
         try:
             crs_1 = img.crs.to_string().split('"')[1]
@@ -142,10 +142,12 @@ def _check_raster_proj(
 
         # check if the projection systems are the same
         if crs_1 != crs_2:
-            m = f' | Projections do not match: \n1: {crs_1} != 2: {crs_2}'
-            logger.log('ERROR', m)
+            logger.log(
+                'ERROR',
+                f'DETAILS/ CRS doese not match img vs lbl: {crs_1}!={crs_2}'
+            )
             raise ValueError('The rasters must have the same projection')
-        logger.log('DEBUG', f' | Matching projections: {crs_1}')
+        logger.log('DEBUG', f'DETAILS/ Matching projections: {crs_1}')
         return crs_1
     # or only image provided
     try:
@@ -182,9 +184,11 @@ def _check_raster_pixels(
 
         # check if the pixel sizes match
         if not _is_close((x1, y1), (x2, y2)):
-            m = f' | Input rasters have different pixel sizes: '\
+            logger.log(
+                'ERROR',
+                f'DETAILS/ Input rasters have different pixel sizes: '
                 f'Raster1: ({x1}, {-y1}), Raster2: ({x2}, {-y2})'
-            logger.log('ERROR', m)
+            )
             raise ValueError('Input rasters must have the same pixel size')
     # or only image provided
     else:
@@ -192,7 +196,7 @@ def _check_raster_pixels(
         x1, y1 = transform_1[0], -transform_1[4]
 
     # assign value and log out
-    logger.log('DEBUG', f' | Image raster pixel size: {x1:.6f} x {-y1:.6f}')
+    logger.log('DEBUG', f'DETAILS/ Raster pixel size: {x1:.6f} x {-y1:.6f}')
     return x1, y1
 
 def _compute_overlap_extent(
@@ -229,7 +233,7 @@ def _compute_overlap_extent(
 
         # if the two do not overlop
         if lft >= rgt or btm >= top:
-            logger.log('ERROR', ' | Input rasters have no overlaps')
+            logger.log('ERROR', 'DETAILS/ Input rasters have no overlaps')
             raise ValueError('Input rasters must have overlapping extents')
 
         # get the overlapping extent if no error and retrun a summary

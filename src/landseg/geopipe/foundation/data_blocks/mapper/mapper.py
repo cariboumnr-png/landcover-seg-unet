@@ -75,7 +75,7 @@ def map_rasters(
     data_crs = geom['crs']
     if grid_crs != data_crs:
         e = f'Data CRS [{data_crs}] != world CRS [{grid_crs}]'
-        logger.log('ERROR', e)
+        logger.log('ERROR', f'{e}')
         raise ValueError(e)
 
     # focus on tiles inside the intersected extent

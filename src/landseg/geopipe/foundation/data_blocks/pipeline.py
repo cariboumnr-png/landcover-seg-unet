@@ -116,7 +116,6 @@ def run_blocks_building(
         policy=policy,
         logger=logger,
     )
-    logger.log('INFO', 'Rasters mapped to input world grid')
 
     # create a data block builder
     builder_config = builder.BlockBuilderConfig(
@@ -134,10 +133,8 @@ def run_blocks_building(
         builder_config,
         logger=logger,
     )
-
     # build data blocks
     new_blocks = block_builder.build_blocks()
-    logger.log('INFO', 'Data blocks building finished')
 
     # create/update catalog and metadata JSON
     updated = manifest.ManifestUpdateContext(
@@ -155,4 +152,3 @@ def run_blocks_building(
         policy=policy,
         logger=logger
     )
-    logger.log('INFO', 'Data blocks catalog and schema updated')

@@ -107,12 +107,11 @@ def prepare_domain_maps(
         )
         payload = ctrl.load()
         if payload:
-            logger.log('INFO', f'Domain [{name}] loaded successfully')
+            logger.log('INFO', f'PROGRESS/ Domain layer [{name}] loaded')
         else:
+            logger.log('DEBUG', f'STEP/ Create domain layer [{name}]')
             # check mapped tiles before building
-            logger.log('INFO', f'Mapping domain [{name}] onto world grid')
             mapped = _prep_mapping(grid, config, policy=policy, logger=logger)
-
             # build domain map
             domain = domain_maps.build_domain(
                 grid.gid,
@@ -123,7 +122,7 @@ def prepare_domain_maps(
             )
             payload = domain.to_json_payload()
             ctrl.save(payload)
-            logger.log('INFO', f'Domain [{name}] created successfully')
+            logger.log('INFO', f'PROGRESS/ Domain layer [{name}] created')
 
 # ------------------------------private  function------------------------------
 def _prep_mapping(
@@ -151,6 +150,6 @@ def _prep_mapping(
             logger=logger
         )
         ctrl.persist(mapped)
-        logger.log('INFO', f'Mapped tiles from {grid.gid} created')
 
+    logger.log('DEBUG', f'STEP/ Domain tiles mapped to grid {grid.gid}')
     return mapped

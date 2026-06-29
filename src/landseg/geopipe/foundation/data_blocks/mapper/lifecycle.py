@@ -95,11 +95,12 @@ def map_rasters_to_grid(
     ctrl = MappingCtrl(mapped_windows_path, policy)
 
     # mapped windows fpath
-    logger.log('INFO', f'Try to load mapped windows from {world_grid.gid}')
     payload = ctrl.fetch()
+    if payload:
+        logger.log('INFO', 'PROGRESS/ Mapped windows loaded')
 
     # build if needed
-    if not payload:
+    else:
         mapped_windows = mapper.map_rasters(
             world_grid,
             image_path,
@@ -113,7 +114,7 @@ def map_rasters_to_grid(
             'label': _canonicalize(mapped_windows.label)
         }
         ctrl.persist(payload)
-        logger.log('INFO', f'Mapped windows from {world_grid.gid} created')
+        logger.log('INFO', 'PROGRESS/ Mapped windows created')
 
     # build from payload and return
     mapped_windows = mapper.MappedRasterWindows(

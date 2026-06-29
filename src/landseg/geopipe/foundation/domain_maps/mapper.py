@@ -70,11 +70,11 @@ def map_domain_to_grid(
     # read domain raster and get arrays indexed to the grid tiles
     tiles, nodata = _read_raster(world_grid, raster_path)
 
-    logger.log('INFO', 'Generating index mapping')
+    logger.log('DEBUG', 'STEP/ Generating index mapping')
     # global mapping: raw i..K  ->  0..K-1 ----
     idx_map = _get_index_mapping(tiles, nodata, index_base)
 
-    logger.log('INFO', 'Re-indexing domain to [0...k-1]')
+    logger.log('DEBUG', 'STEP/ Re-indexing domain to [0...k-1]')
     # Map each block: valid raw -> index in [0..K-1], nodata -> -1
     _tiles = _re_index(tiles, nodata, idx_map)
 
@@ -83,7 +83,7 @@ def map_domain_to_grid(
     max_idx = idx_map.size - 1
     _tiles[(-999, -999)] = numpy.full(shape, max_idx, dtype=numpy.int16)
 
-    logger.log('INFO', 'Domain mapped onto input world grid')
+    logger.log('DEBUG', 'STEP/ Domain mapped onto input world grid')
     return _tiles
 
 # ------------------------------private  function------------------------------
