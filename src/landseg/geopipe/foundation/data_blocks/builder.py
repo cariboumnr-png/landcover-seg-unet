@@ -335,13 +335,14 @@ class BlockBuilder:
         # create checking jobs
         jobs = [(_check_npz, (c, fp), {}) for c, fp in blks_to_check.items()]
         # parallel processing
-        raw = utils.ParallelExecutor().run(jobs, desc='Checking datablocks')
-        results = {k: v for rr in raw for k, v in rr.items()}
+        results: list[dict[tuple[int, int], bool]]
+        results = utils.ParallelExecutor().run(jobs, ' - Checking datablocks')
+        parsed = {k: v for rr in results for k, v in rr.items()}
 
         # parse results
         rm: list[str] = [] # damaged files to be removed
         on_disk = 0
-        for c, valid in results.items():
+        for c, valid in parsed.items():
             if not valid:
                 self.coords_todo.append(c)
                 rm.append(blks_to_check[c])

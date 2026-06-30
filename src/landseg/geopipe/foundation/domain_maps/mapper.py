@@ -104,9 +104,9 @@ def _read_raster(
 
     # read through all windows via multiprocessing
     jobs = [(_read, (k, v, fpath, grid.tile_size), {})for k, v in grid.items()]
-    desc = 'Mapping domain tiles'
-    all_tiles: list[alias.RasterTile] = utils.ParallelExecutor().run(jobs, desc)
-    all_tiles = [(_, t) for (_, t) in all_tiles if t.sum() != 0] # filter
+    results: list[alias.RasterTile]
+    results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
+    all_tiles = [(_, t) for (_, t) in results if t.sum() != 0] # filter
     return dict(all_tiles), nodata
 
 def _read(
