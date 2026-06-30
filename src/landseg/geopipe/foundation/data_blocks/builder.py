@@ -335,16 +335,18 @@ class BlockBuilder:
         # create checking jobs
         jobs = [(_check_npz, (c, fp), {}) for c, fp in blks_to_check.items()]
         # parallel processing
-        raw_results: list[dict[tuple[int, int], bool]]
-        raw_results = utils.ParallelExecutor().run(jobs)
-        results = {k: v for rr in raw_results for k, v in rr.items()}
+        raw = utils.ParallelExecutor().run(jobs, desc='Checking datablocks')
+        results = {k: v for rr in raw for k, v in rr.items()}
 
         # parse results
         rm: list[str] = [] # damaged files to be removed
+        on_disk = 0
         for c, valid in results.items():
             if not valid:
                 self.coords_todo.append(c)
                 rm.append(blks_to_check[c])
+            else:
+                on_disk += 1
         # remove corrupted/damaged files if present
         removed = 0
         for fpath in rm:
@@ -354,7 +356,7 @@ class BlockBuilder:
             except FileNotFoundError:
                 continue
 
-        self.stats['blocks_on_disk_before'] = sum(1 for valid in results.values() if valid)
+        self.stats['blocks_on_disk_before'] = on_disk
         self.stats['damaged_blocks_removed'] = removed
         self.stats['blocks_to_process'] = len(self.coords_todo)
 
@@ -383,7 +385,7 @@ class BlockBuilder:
             jobs.append((_build_a_blk, (self.meta, co_contxt,), save_args))
 
         # parallel processing through all raster windows
-        utils.ParallelExecutor().run(jobs)
+        utils.ParallelExecutor().run(jobs, desc='Creating datablocks')
 
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''
