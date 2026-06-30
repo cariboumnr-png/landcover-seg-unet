@@ -144,6 +144,14 @@ class BlockBuilder:
         # declare class attributes
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
+        self.stats = {
+            'shared_raster_windows': 0,
+            'expected_shape_windows': 0,
+            'blocks_on_disk_before': 0,
+            'blocks_to_process': 0,
+            'damaged_blocks_removed': 0,
+            'blocks_created': 0,
+        }
 
         # read data config JSON
         ctrl = artifacts.Controller[_BlockBuilderMeta].load_json_or_fail
@@ -272,7 +280,6 @@ class BlockBuilder:
         self._prepare_block_windows()
         self._structural_validation()
         self._create_missing_blocks()
-        self.logger.log('INFO', 'PROGRESS/ Data blocks built/updated')
         # return coords where blocks were created
         return self.coords_todo
 
@@ -291,8 +298,7 @@ class BlockBuilder:
                 & set(self.lbl_windows.keys())
         else:
             self.common_coords = set(self.img_windows.keys())
-        n = len(self.common_coords)
-        self.logger.log('DEBUG', f'STEP/ Fetched {n} shared raster windows')
+        self.stats['shared_raster_windows'] = len(self.common_coords)
 
         # remove windows or irregular shapes, e.g., edge windows
         _common = copy.deepcopy(self.common_coords) # for safe iteration
@@ -304,8 +310,7 @@ class BlockBuilder:
             if ((iw.height, iw.width) != self.config.block_size or
                 lw and (lw.height, lw.width) != self.config.block_size):
                 self.common_coords.remove(coord)
-        n = len(self.common_coords)
-        self.logger.log('DEBUG', f'DETAILS/ Number of windows with expected shape: {n}')
+        self.stats['expected_shape_windows'] = len(self.common_coords)
 
     def _structural_validation(self) -> None:
         '''
@@ -323,7 +328,6 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        self.logger.log('DEBUG', 'STEP/ Checking block .npz files')
         for c in self.common_coords:
             name = geo_utils.xy_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
@@ -350,9 +354,9 @@ class BlockBuilder:
             except FileNotFoundError:
                 continue
 
-        # log checking results
-        self.logger.log('DEBUG', f'DETAILS/ Found {len(self.coords_todo)} blocks to process')
-        self.logger.log('DEBUG', f'DETAILS/ Removed {removed} damaged block files')
+        self.stats['blocks_on_disk_before'] = sum(1 for valid in results.values() if valid)
+        self.stats['damaged_blocks_removed'] = removed
+        self.stats['blocks_to_process'] = len(self.coords_todo)
 
     def _create_missing_blocks(self) -> None:
         '''
@@ -364,9 +368,9 @@ class BlockBuilder:
         '''
 
         if not self.coords_todo:
-            self.logger.log('DEBUG', 'DETAILS/ No data blocks to be created')
+            self.stats['blocks_created'] = 0
             return
-        self.logger.log('DEBUG', f'DETAILS/ {len(self.coords_todo)} blocks to be created')
+        self.stats['blocks_created'] = len(self.coords_todo)
 
         # prep block creation jobs
         jobs = []

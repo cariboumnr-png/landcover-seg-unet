@@ -36,6 +36,7 @@ Public API:
 
 # standard imports
 import dataclasses
+import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -74,6 +75,7 @@ def run_blocks_building(
     *,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
+    stage_key: typing.Literal['dev', 'test'] = 'dev',
 ) -> str | None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
@@ -83,29 +85,18 @@ def run_blocks_building(
     `metadata.json`. Blocks are built directly from raster windows
     without normalization or dataset splitting.
 
-    Workflow:
-    1) Map development rasters to the world grid.
-    2) Build raw data blocks and update the catalog.
-    3) Optionally repeat steps (1-2) for test holdout rasters.
-    4) Optionally build a single block for debugging or overfit runs.
-
     Args:
         world_grid: World grid definition used to locate raster windows.
         config: Configuration for block building inputs and parameters.
-        output_root: Root directory where block artifacts are written.
         logger: Logger instance used for progress and status reporting.
-        single_block_mode: If True, build and persist only one valid
-            block (e.g., for overfit or debugging workflows).
-        **kwargs: Optional overrides for single-block mode behavior
-            (e.g., validity threshold, monitor head, output path).
+        stage_key: Flag indicating whether these are development or test data blocks.
 
     Returns:
         Path to the saved block when `single_block_mode` is enabled;
         otherwise `None`.
     '''
 
-    # get a child logger
-    logger = logger.get_child('dblks')
+    start_time = time.perf_counter()
 
     # map rasters to the provided world grid
     ras_windows = mapper.map_rasters_to_grid(
@@ -145,10 +136,35 @@ def run_blocks_building(
         blocks_dir=artfact_paths.blocks,
         label_color_map=block_builder.label_color_map
     )
-    manifest.update_manifest(
+    manifest_report = manifest.update_manifest(
         updated,
         artfact_paths.catalog,
         artfact_paths.schema,
         policy=policy,
-        logger=logger
     )
+
+    duration = time.perf_counter() - start_time
+
+    # update structured log if FoundationLogger wrapper is used
+    if hasattr(logger, 'set_data_blocks_report'):
+        report = {
+            'stage': stage_key,
+            'duration_sec': duration,
+            'stats': {
+                'shared_raster_windows': int(block_builder.stats['shared_raster_windows']),
+                'expected_shape_windows': int(block_builder.stats['expected_shape_windows']),
+                'blocks_on_disk_before': int(block_builder.stats['blocks_on_disk_before']),
+                'blocks_to_process': int(block_builder.stats['blocks_to_process']),
+                'damaged_blocks_removed': int(block_builder.stats['damaged_blocks_removed']),
+                'blocks_created': int(block_builder.stats['blocks_created']),
+            },
+            'manifest': {
+                'catalog_status': manifest_report['catalog_status'],
+                'catalog_updated': manifest_report['catalog_updated'],
+                'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
+                'schema_updated': manifest_report['schema_updated'],
+            }
+        }
+        logger.set_data_blocks_report(stage_key, report)
+
+    return None
