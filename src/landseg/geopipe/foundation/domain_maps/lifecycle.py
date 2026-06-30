@@ -26,6 +26,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import os
+import time
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -89,11 +90,9 @@ def prepare_domain_maps(
     schema id and integrity hash for compatibility checks.
     '''
 
-    # get a child logger
-    logger = logger.get_child('dkmap')
-
     # read provided domain rasters
     for config in domain_configs:
+        start_time = time.perf_counter()
 
         # copy the world grid instance
         grid = copy.deepcopy(world_grid)
@@ -106,23 +105,50 @@ def prepare_domain_maps(
             policy=policy
         )
         payload = ctrl.load()
+        
+        loaded_from_disk = False
+        domain = None
         if payload:
-            logger.log('INFO', f'PROGRESS/ Domain layer [{name}] loaded')
+            loaded_from_disk = True
+            logger.log('INFO', f'[CHECKPOINT] Loaded domain layer [{name}]')
         else:
-            logger.log('DEBUG', f'STEP/ Create domain layer [{name}]')
+            logger.log('INFO', f'[CHECKPOINT] Mapping domain [{name}] to world grid')
             # check mapped tiles before building
-            mapped = _prep_mapping(grid, config, policy=policy, logger=logger)
+            mapped = _prep_mapping(grid, config, policy=policy)
             # build domain map
             domain = domain_maps.build_domain(
                 grid.gid,
                 mapped,
                 valid_threshold=config.valid_threshold,
                 target_variance=config.target_variance,
-                logger=logger
             )
             payload = domain.to_json_payload()
             ctrl.save(payload)
-            logger.log('INFO', f'PROGRESS/ Domain layer [{name}] created')
+            logger.log('INFO', f'[CHECKPOINT] Created domain layer [{name}]')
+
+        duration = time.perf_counter() - start_time
+
+        # update structured log if FoundationLogger wrapper is used
+        if hasattr(logger, 'add_domain_report'):
+            meta = payload['artifact_meta'] if loaded_from_disk else domain.meta
+            valid_coords_count = len(payload['data']) if loaded_from_disk else len(domain)
+            report = {
+                'name': name,
+                'status': 'loaded' if loaded_from_disk else 'created',
+                'input_filepath': config.input_fpath,
+                'domain_filepath': config.domain_fpath,
+                'tiles_filepath': config.tiles_fpath,
+                'duration_sec': duration,
+                'stats': {
+                    'max_index': int(meta['max_index']),
+                    'valid_coords_count': valid_coords_count,
+                    'major_freq_mean': float(meta['major_freq_mean']),
+                    'major_freq_min': float(meta['major_freq_min']),
+                    'pca_axes_n': int(meta['pca_axes_n']),
+                    'explained_variance': float(meta['explained_variance']),
+                }
+            }
+            logger.add_domain_report(report)
 
 # ------------------------------private  function------------------------------
 def _prep_mapping(
@@ -130,7 +156,6 @@ def _prep_mapping(
     config: DomainBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
 ) -> alias.RasterTileDict:
     '''doc'''
 
@@ -139,7 +164,6 @@ def _prep_mapping(
     try:
         mapped = ctrl.fetch()
     except artifacts.ArtifactError as exc:
-        logger.log('ERROR', f'Error loading {config.tiles_fpath}: {exc}')
         raise artifacts.ArtifactError from exc
     # create a new mapping if not valid
     if not mapped:
@@ -147,9 +171,7 @@ def _prep_mapping(
             grid,
             config.input_fpath,
             index_base=config.index_base,
-            logger=logger
         )
         ctrl.persist(mapped)
 
-    logger.log('DEBUG', f'STEP/ Domain tiles mapped to grid {grid.gid}')
     return mapped
