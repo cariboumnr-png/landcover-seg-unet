@@ -38,7 +38,6 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks.manifest as manifest
 import landseg.geopipe.utils as geo_utils
-import landseg.utils as utils
 
 # typing aliases
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
@@ -48,7 +47,7 @@ SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 @dataclasses.dataclass
 class ManifestUpdateContext:
     '''Context describing a manifest update operation.'''
-    updated_coords: list[tuple[int, int]]   # grid coords for blocks that were created
+    updated_coords: list[tuple[int, int]]   # grid coords for created blocks
     source_image: str               # path to the source image raster
     source_label: str | None        # optional path to the label raster
     mapped_grid_id: str             # id for the grid the blocks are mapped to
@@ -74,26 +73,22 @@ def update_manifest(
     integrity hashes.
     '''
 
-    # load catalog JSON
+    # ----- catalog
     ctrl = CatalogDictCtrl(catalog_fpath, policy)
     try:
-        data_dict = ctrl.fetch()
-    except artifacts.ArtifactError as exc:
+        catalog_dict = ctrl.fetch()
+    except artifacts.ArtifactError as exc: # e.g., current catalog corrupted
         raise artifacts.ArtifactError from exc
 
-    current, to_update = _catalog_status(
-        data_dict,
-        context,
-        policy=policy,
-    )
-    
-    catalog_status = "present"
-    if not data_dict:
-        catalog_status = "absent"
+    # get catalog status
+    current, to_update = _catalog_status(catalog_dict, context, policy=policy)
+    catalog_status = 'present'
+    if not catalog_dict:
+        catalog_status = 'absent'
     elif to_update:
-        catalog_status = "stale"
+        catalog_status = 'stale'
 
-    catalog_updated = False
+    # update catalog if needed
     if to_update:
         catalog = manifest.build_catalog(
             to_update,
@@ -104,34 +99,30 @@ def update_manifest(
         )
         catalog_json = catalog.to_json_payload()
         ctrl.persist(catalog_json)
-        catalog_updated = True
+    else:
+        catalog = current
 
-    # load schema JSON
-    ctrl_schema = SchemaCtrl(schema_fpath, policy)
+    # ----- schema
+    ctrl = SchemaCtrl(schema_fpath, policy)
     try:
-        current_schema = ctrl_schema.fetch()
-    except artifacts.ArtifactError as exc:
+        schema_dict = ctrl.fetch()
+    except artifacts.ArtifactError as exc: # e.g., current schema corrupted
         raise artifacts.ArtifactError from exc
 
     sample_block = _sample(context.blocks_dir)
     schema_dict = manifest.build_schema(
         sample_block,
-        original=current_schema,
+        original=schema_dict,
         mapped_grid_id=context.mapped_grid_id,
         sources=(context.source_image, context.source_label),
         label_color_map=context.label_color_map
     )
-    ctrl_schema.persist(schema_dict)
-
-    if catalog_updated:
-        cataloged_blocks_count = len(catalog)
-    else:
-        cataloged_blocks_count = len(current)
+    ctrl.persist(schema_dict)
 
     return {
         'catalog_status': catalog_status,
-        'catalog_updated': catalog_updated,
-        'cataloged_blocks_count': cataloged_blocks_count,
+        'catalog_updated': to_update,
+        'cataloged_blocks_count': len(catalog),
         'schema_updated': True
     }
 

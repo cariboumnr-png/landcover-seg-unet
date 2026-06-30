@@ -41,10 +41,10 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.data_blocks.builder as builder
 import landseg.geopipe.foundation.data_blocks.manifest as manifest
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
-import landseg.utils as utils
 
 # --------------------------------private types--------------------------------
 class _PipelinePaths(typing.Protocol):
@@ -61,6 +61,7 @@ class _PipelinePaths(typing.Protocol):
 @dataclasses.dataclass
 class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
+    stage: typing.Literal['dev', 'test']
     image_fpath: str
     label_fpath: str | None
     data_config_fpath: str
@@ -74,9 +75,8 @@ def run_blocks_building(
     config: BlockBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
-    stage_key: typing.Literal['dev', 'test'] = 'dev',
-) -> str | None:
+    logger: common.FoundationLogger,
+) -> None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
 
@@ -89,11 +89,6 @@ def run_blocks_building(
         world_grid: World grid definition used to locate raster windows.
         config: Configuration for block building inputs and parameters.
         logger: Logger instance used for progress and status reporting.
-        stage_key: Flag indicating whether these are development or test data blocks.
-
-    Returns:
-        Path to the saved block when `single_block_mode` is enabled;
-        otherwise `None`.
     '''
 
     start_time = time.perf_counter()
@@ -105,7 +100,6 @@ def run_blocks_building(
         config.label_fpath,
         artfact_paths.mapped_window(world_grid.gid),
         policy=policy,
-        logger=logger,
     )
 
     # create a data block builder
@@ -143,28 +137,26 @@ def run_blocks_building(
         policy=policy,
     )
 
-    duration = time.perf_counter() - start_time
-
     # update structured log if FoundationLogger wrapper is used
-    if hasattr(logger, 'set_data_blocks_report'):
-        report = {
-            'stage': stage_key,
-            'duration_sec': duration,
-            'stats': {
-                'shared_raster_windows': int(block_builder.stats['shared_raster_windows']),
-                'expected_shape_windows': int(block_builder.stats['expected_shape_windows']),
-                'blocks_on_disk_before': int(block_builder.stats['blocks_on_disk_before']),
-                'blocks_to_process': int(block_builder.stats['blocks_to_process']),
-                'damaged_blocks_removed': int(block_builder.stats['damaged_blocks_removed']),
-                'blocks_created': int(block_builder.stats['blocks_created']),
-            },
-            'manifest': {
-                'catalog_status': manifest_report['catalog_status'],
-                'catalog_updated': manifest_report['catalog_updated'],
-                'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
-                'schema_updated': manifest_report['schema_updated'],
-            }
+    duration = time.perf_counter() - start_time
+    stats = block_builder.stats
+    report: common.DataBlocksReport = {
+        'image_filepath': config.image_fpath,
+        'label_filepath': config.label_fpath,
+        'duration_sec': duration,
+        'stats': {
+            'shared_raster_windows': int(stats['shared_raster_windows']),
+            'expected_shape_windows': int(stats['expected_shape_windows']),
+            'blocks_on_disk_before': int(stats['blocks_on_disk_before']),
+            'blocks_to_process': int(stats['blocks_to_process']),
+            'damaged_blocks_removed': int(stats['damaged_blocks_removed']),
+            'blocks_created': int(stats['blocks_created']),
+        },
+        'manifest': {
+            'catalog_status': manifest_report['catalog_status'],
+            'catalog_updated': manifest_report['catalog_updated'],
+            'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
+            'schema_updated': manifest_report['schema_updated'],
         }
-        logger.set_data_blocks_report(stage_key, report)
-
-    return None
+    }
+    logger.set_data_blocks_report(config.stage, report)

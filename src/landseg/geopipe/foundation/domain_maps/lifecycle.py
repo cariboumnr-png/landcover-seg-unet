@@ -30,9 +30,9 @@ import time
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.domain_maps as domain_maps
-import landseg.utils as utils
 
 # typing aliases
 D = dict[str, geo_core.DomainTile]
@@ -57,7 +57,7 @@ def prepare_domain_maps(
     domain_configs: list[DomainBuildingParameters],
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
+    logger: common.FoundationLogger,
 ) -> None:
     '''
     Prepare and persist domain tile maps for categorical raster(s).
@@ -104,51 +104,47 @@ def prepare_domain_maps(
             schema_id=geo_core.DomainTileMap.SCHEMA_ID,
             policy=policy
         )
-        payload = ctrl.load()
-        
-        loaded_from_disk = False
-        domain = None
+        payload = ctrl.load() # empty = domain absent
+
+        # load or create domain layer
+        loaded = False
         if payload:
-            loaded_from_disk = True
+            loaded = True
             logger.log('INFO', f'[CHECKPOINT] Loaded domain layer [{name}]')
         else:
-            logger.log('INFO', f'[CHECKPOINT] Mapping domain [{name}] to world grid')
             # check mapped tiles before building
             mapped = _prep_mapping(grid, config, policy=policy)
             # build domain map
-            domain = domain_maps.build_domain(
+            payload = domain_maps.build_domain(
                 grid.gid,
                 mapped,
                 valid_threshold=config.valid_threshold,
                 target_variance=config.target_variance,
-            )
-            payload = domain.to_json_payload()
+            ).to_json_payload()
             ctrl.save(payload)
             logger.log('INFO', f'[CHECKPOINT] Created domain layer [{name}]')
 
         duration = time.perf_counter() - start_time
 
-        # update structured log if FoundationLogger wrapper is used
-        if hasattr(logger, 'add_domain_report'):
-            meta = payload['artifact_meta'] if loaded_from_disk else domain.meta
-            valid_coords_count = len(payload['data']) if loaded_from_disk else len(domain)
-            report = {
-                'name': name,
-                'status': 'loaded' if loaded_from_disk else 'created',
-                'input_filepath': config.input_fpath,
-                'domain_filepath': config.domain_fpath,
-                'tiles_filepath': config.tiles_fpath,
-                'duration_sec': duration,
-                'stats': {
-                    'max_index': int(meta['max_index']),
-                    'valid_coords_count': valid_coords_count,
-                    'major_freq_mean': float(meta['major_freq_mean']),
-                    'major_freq_min': float(meta['major_freq_min']),
-                    'pca_axes_n': int(meta['pca_axes_n']),
-                    'explained_variance': float(meta['explained_variance']),
-                }
+        # update structured log
+        meta = payload['artifact_meta']
+        report: common.DomainMapReport = {
+            'name': name,
+            'status': 'loaded' if loaded else 'created',
+            'input_filepath': config.input_fpath,
+            'domain_filepath': config.domain_fpath,
+            'tiles_filepath': config.tiles_fpath,
+            'duration_sec': duration,
+            'stats': {
+                'max_index': int(meta['max_index']),
+                'valid_coords_count': len(payload['data']),
+                'major_freq_mean': float(meta['major_freq_mean']),
+                'major_freq_min': float(meta['major_freq_min']),
+                'pca_axes_n': int(meta['pca_axes_n']),
+                'explained_variance': float(meta['explained_variance']),
             }
-            logger.add_domain_report(report)
+        }
+        logger.add_domain_report(report)
 
 # ------------------------------private  function------------------------------
 def _prep_mapping(

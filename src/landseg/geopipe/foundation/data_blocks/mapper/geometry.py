@@ -38,7 +38,6 @@ import rasterio.coords
 # local imports
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.utils as geo_utils
-import landseg.utils as utils
 
 # ---------------------------------Public Type---------------------------------
 class GeometrySummary(typing.TypedDict):
@@ -56,8 +55,6 @@ class GeometrySummary(typing.TypedDict):
 def validate_geometry(
     image_fpath: str,
     label_fpath: str | None,
-    *,
-    logger: utils.Logger
 ) -> GeometrySummary:
     '''
     Ingest raster inputs and validate their alignment.
@@ -104,11 +101,11 @@ def validate_geometry(
         else:
             summary['label_transform'] = None
         # check if both rasters have the same projection system
-        summary['crs'] = _check_raster_proj(img, lbl, logger=logger)
+        summary['crs'] = _check_raster_proj(img, lbl)
         # check if both rasters have the same squared pixels
-        summary['pixel_size'] = _check_raster_pixels(img, lbl, logger=logger)
+        summary['pixel_size'] = _check_raster_pixels(img, lbl)
         # get the overlapping extent from the input rasters
-        bbox = _compute_overlap_extent(img, lbl, logger=logger)
+        bbox = _compute_overlap_extent(img, lbl)
         summary.update(**bbox)
 
     # return a summary
@@ -118,8 +115,6 @@ def validate_geometry(
 def _check_raster_proj(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
-    *,
-    logger: utils.Logger
 ) -> str:
     '''
     Check if the input rasters have the same CRS.
@@ -131,7 +126,6 @@ def _check_raster_proj(
 
     # if both image and label provided
     if lbl is not None:
-        logger.log('DEBUG', 'DETAILS/ Both image & label rasters provided')
         # get projection names, raster.crs might return differently
         try:
             crs_1 = img.crs.to_string().split('"')[1]
@@ -142,26 +136,18 @@ def _check_raster_proj(
 
         # check if the projection systems are the same
         if crs_1 != crs_2:
-            logger.log(
-                'ERROR',
-                f'DETAILS/ CRS doese not match img vs lbl: {crs_1}!={crs_2}'
-            )
-            raise ValueError('The rasters must have the same projection')
-        logger.log('DEBUG', f'DETAILS/ Matching projections: {crs_1}')
+            raise ValueError(f'CRS does not match img!=lbl: {crs_1}!={crs_2}')
         return crs_1
     # or only image provided
     try:
         crs_1 = img.crs.to_string().split('"')[1]
     except IndexError:
         crs_1 = img.crs
-    logger.log('INFO', f'CRS from image raster: {crs_1}')
     return crs_1
 
 def _check_raster_pixels(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
-    *,
-    logger: utils.Logger
 ) -> tuple[float, float]:
     '''
     Check if the input rasters have the same squared pixels.
@@ -184,26 +170,21 @@ def _check_raster_pixels(
 
         # check if the pixel sizes match
         if not _is_close((x1, y1), (x2, y2)):
-            logger.log(
-                'ERROR',
+            raise ValueError(
                 f'DETAILS/ Input rasters have different pixel sizes: '
                 f'Raster1: ({x1}, {-y1}), Raster2: ({x2}, {-y2})'
             )
-            raise ValueError('Input rasters must have the same pixel size')
     # or only image provided
     else:
         transform_1 = img.transform
         x1, y1 = transform_1[0], -transform_1[4]
 
     # assign value and log out
-    logger.log('DEBUG', f'DETAILS/ Raster pixel size: {x1:.6f} x {-y1:.6f}')
     return x1, y1
 
 def _compute_overlap_extent(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
-    *,
-    logger: utils.Logger
 ) -> dict[str, typing.Any]:
     '''
     Get the overlapping extent of the input rasters.
@@ -233,7 +214,6 @@ def _compute_overlap_extent(
 
         # if the two do not overlop
         if lft >= rgt or btm >= top:
-            logger.log('ERROR', 'DETAILS/ Input rasters have no overlaps')
             raise ValueError('Input rasters must have overlapping extents')
 
         # get the overlapping extent if no error and retrun a summary

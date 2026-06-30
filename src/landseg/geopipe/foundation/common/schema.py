@@ -34,7 +34,7 @@ class WorldGridReport(typing.TypedDict):
     crs: str
     pixel_size: tuple[float, float]
     tile_size: tuple[int, int]
-    tile_overlap: int
+    tile_overlap: tuple[int, int]
     duration_sec: float
 
 class DomainStats(typing.TypedDict):
@@ -74,7 +74,6 @@ class ManifestStats(typing.TypedDict):
 
 class DataBlocksReport(typing.TypedDict):
     '''Execution report for data block partitioning (dev or test holdout).'''
-    status: typing.Literal['built_and_updated', 'skipped']
     image_filepath: str
     label_filepath: str | None
     duration_sec: float

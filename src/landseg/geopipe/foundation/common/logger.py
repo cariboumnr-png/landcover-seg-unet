@@ -23,8 +23,11 @@
 Subclass wrapper of Logger to handle structured execution summaries.
 '''
 
+# standard imports
 from __future__ import annotations
 import typing
+# local imports
+import landseg.artifacts as artifacts
 import landseg.utils as utils
 
 if typing.TYPE_CHECKING:
@@ -87,9 +90,5 @@ class FoundationLogger(utils.Logger):
     def on_close(self) -> None:
         '''Persist the collected summary JSON report.'''
         if self.summary is not None:
-            try:
-                import landseg.artifacts as artifacts
-                ctrl = artifacts.Controller(self.log_file)
-                ctrl.persist(self.summary)
-            except Exception as exc:
-                self.log('ERROR', f'Failed to save run summary json: {exc}')
+            ctrl = artifacts.Controller(self.log_file)
+            ctrl.persist(self.summary)
