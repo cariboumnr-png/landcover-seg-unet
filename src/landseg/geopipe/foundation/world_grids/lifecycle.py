@@ -21,6 +21,8 @@
 
 '''World grid artifacts lifecycle management.'''
 
+# standard imports
+import time
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -48,9 +50,7 @@ def prepare_world_grid(
     and grid profile, saved to disk, and returned.
     '''
 
-    # get a child logger
-    logger = logger.get_child('wgrid')
-
+    start_time = time.perf_counter()
     # payload controller
     ctrl = CTRL(
         grid_fpath,
@@ -58,30 +58,32 @@ def prepare_world_grid(
         policy=policy
     )
     payload = ctrl.load()
+    
+    loaded_from_disk = False
     # load if present
     if payload:
         _grid = geo_core.GridLayout.from_payload(payload)
-        logger.log('INFO', f'PROGRESS/ World grid {_grid.gid} loaded')
-        _log_grid_details(_grid, grid_fpath, logger)
-        return _grid
+        loaded_from_disk = True
+    else:
+        # build if absent
+        _grid = world_grids.build_grid(config)
+        payload = _grid.to_payload()
+        ctrl.save(payload)
 
-    # build if absent
-    _grid = world_grids.build_grid(config)
-    payload = _grid.to_payload()
-    ctrl.save(payload)
-    logger.log('INFO', f'PROGRESS/ World grid {_grid.gid} created and loaded')
-    _log_grid_details(_grid, grid_fpath, logger)
+    duration = time.perf_counter() - start_time
+
+    # update structured log if FoundationLogger wrapper is used
+    if hasattr(logger, 'set_world_grid_report'):
+        report = {
+            'grid_id': _grid.gid,
+            'status': 'loaded' if loaded_from_disk else 'created_and_loaded',
+            'grid_filepath': grid_fpath,
+            'crs': str(_grid.crs),
+            'pixel_size': tuple(_grid.pixel_size),
+            'tile_size': tuple(_grid.tile_size),
+            'tile_overlap': _grid.tile_overlap,
+            'duration_sec': duration,
+        }
+        logger.set_world_grid_report(report)
+
     return _grid
-
-def _log_grid_details(
-    grid: geo_core.GridLayout,
-    grid_fpath: str,
-    logger: utils.Logger
-) -> None:
-    '''Grid details logging helper.'''
-
-    logger.log('DEBUG', f'DETAILS/ Grid filepath: {grid_fpath}')
-    logger.log('DEBUG', f'DETAILS/ Grid CRS: {grid.crs}')
-    logger.log('DEBUG', f'DETAILS/ Grid pixel size: {grid.pixel_size}')
-    logger.log('DEBUG', f'DETAILS/ Grid tile size: {grid.tile_size}')
-    logger.log('DEBUG', f'DETAILS/ Grid tile overlap: {grid.tile_overlap}')
