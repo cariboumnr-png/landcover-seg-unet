@@ -79,7 +79,8 @@ class Logger:
         name: str | None = None,
         log_file: str | None = None,
         log_lvl: int = logging.DEBUG,
-        console_lvl: int | None = logging.INFO
+        console_lvl: int | None = logging.INFO,
+        enable_file_log: bool = True
     ):
         '''
         Initializes the Logger instance.
@@ -95,6 +96,8 @@ class Logger:
             log_lvl (int, optional): Logging level for the file handler.
             console_lvl (int, optional): Logging level for the console
                 handler. If None, console logging is disabled.
+            enable_file_log (bool, optional): Whether to write text logs 
+            to file.
         '''
 
         # gather arguments
@@ -123,16 +126,17 @@ class Logger:
 
         # check if the logger already has handlers to avoid duplication
         if not self.logger.hasHandlers():
-
-            # create a file handler - delay=True to create file upon first log
-            file_handler = logging.FileHandler(log_file, delay=True)
-            file_handler.setLevel(log_lvl)
-            # create a formatter and set it for the file handler
             formatter = logging.Formatter(
                 '%(asctime)s-%(name)s-%(levelname)s\t- %(message)s')
-            file_handler.setFormatter(formatter)
-            # add the file handler to the logger
-            self.logger.addHandler(file_handler)
+
+            # create a file handler if enabled
+            if enable_file_log:
+                # create a file handler - delay=True to create file upon first log
+                file_handler = logging.FileHandler(log_file, delay=True)
+                file_handler.setLevel(log_lvl)
+                file_handler.setFormatter(formatter)
+                # add the file handler to the logger
+                self.logger.addHandler(file_handler)
 
             # add a console handler if chosen to
             if console_lvl is not None:
@@ -214,9 +218,14 @@ class Logger:
 
         self.log('INFO', sep * ln)
 
+    def on_close(self) -> None:
+        '''Hook for subclasses to execute code when close() is called.'''
+        pass
+
     def close(self) -> None:
         '''Closes the file handler.'''
 
+        self.on_close()
         handlers = self.logger.handlers[:]
         for handler in handlers:
             handler.close()
