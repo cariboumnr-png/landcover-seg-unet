@@ -32,13 +32,14 @@ writes normalized block artifacts along with updated split mappings.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.transform.normal_blocks as normal_blocks
+import landseg.geopipe.transform.normal_blocks.normalize as normalize
+import landseg.geopipe.transform.normal_blocks.stats as stats
 
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
-def run_normaliza_blocks(
+def run_normalize_blocks(
     paths: artifacts.TransformPaths,
     *,
     policy: artifacts.LifecyclePolicy
@@ -72,10 +73,10 @@ def run_normaliza_blocks(
 
     # aggregate stats on training blocks
     ctrl = ImageStatsCtrl(paths.image_stats, policy)
-    stats = ctrl.fetch()
-    if not stats:
-        stats = normal_blocks.aggregate_image_stats(train)
-        ctrl.persist(stats)
+    agg_stats = ctrl.fetch()
+    if not agg_stats:
+        agg_stats = stats.aggregate_image_stats(train)
+        ctrl.persist(agg_stats)
 
     # save dirs
     train_dpath = paths.train_blocks
@@ -88,8 +89,8 @@ def run_normaliza_blocks(
     transform = ctrl.fetch()
     if not transform:
         transform = {
-            'train': normal_blocks.normalize_blocks(train, stats, train_dpath),
-            'val': normal_blocks.normalize_blocks(val, stats, val_dpath),
-            'test': normal_blocks.normalize_blocks(test, stats, test_dpath)
+            'train': normalize.normalize_blocks(train, agg_stats, train_dpath),
+            'val': normalize.normalize_blocks(val, agg_stats, val_dpath),
+            'test': normalize.normalize_blocks(test, agg_stats, test_dpath)
         }
         ctrl.persist(transform)

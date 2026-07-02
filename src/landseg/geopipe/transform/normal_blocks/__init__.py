@@ -33,27 +33,17 @@ import typing
 __all__ = [
     # classes
     # functions
-    'aggregate_image_stats',
-    'run_normaliza_blocks',
-    'normalize_blocks'
+    'run_normalize_blocks',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .normalize import normalize_blocks
-    from .pipeline import run_normaliza_blocks
-    from .stats import aggregate_image_stats
+    from .pipeline import run_normalize_blocks
 
 def __getattr__(name: str):
 
-    if name in {'normalize_blocks'}:
-        return getattr(importlib.import_module('.normalize', __package__), name)
-
-    if name in {'run_normaliza_blocks'}:
+    if name in {'run_normalize_blocks'}:
         return getattr(importlib.import_module('.pipeline', __package__), name)
-
-    if name in {'aggregate_image_stats'}:
-        return getattr(importlib.import_module('.stats', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

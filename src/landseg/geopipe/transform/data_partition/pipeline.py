@@ -34,7 +34,7 @@ import numpy
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform as transform
-import landseg.geopipe.transform.data_partition as data_partition
+import landseg.geopipe.transform.data_partition.split as split
 import landseg.utils as utils
 
 # typing aliases
@@ -45,7 +45,7 @@ LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 def run_datablocks_partition(
     parsed_catalog: transform.DataBlocksView,
     paths: artifacts.TransformPaths,
-    partition_config: data_partition.PartitionParameters,
+    partition_config: split.PartitionParameters,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: utils.Logger,
@@ -81,7 +81,7 @@ def run_datablocks_partition(
     if not splits_src:
         # get split blocks and persist the main results
         logger.log('INFO', 'Split data blocks')
-        splits_src, summary = data_partition.create_blocks_partition(
+        splits_src, summary = split.create_blocks_partition(
             parsed_catalog.dev_base_class_counts,
             parsed_catalog.dev_valid_class_counts,
             parsed_catalog.dev_blocks,

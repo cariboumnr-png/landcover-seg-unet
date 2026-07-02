@@ -34,7 +34,6 @@ __all__ = [
     # classes
     'PartitionParameters',
     # functions
-    'create_blocks_partition',
     'run_datablocks_partition',
     # typing
 ]
@@ -42,23 +41,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .pipeline import run_datablocks_partition
-    from .split import PartitionParameters, create_blocks_partition
+    from .split import PartitionParameters
 
 def __getattr__(name: str):
-
-    if name in {'filter_safe_tiles'}:
-        return getattr(importlib.import_module('.filter', __package__), name)
-
-    if name in {'hydrate_train_split'}:
-        return getattr(importlib.import_module('.hydrate', __package__), name)
 
     if name in {'run_datablocks_partition'}:
         return getattr(importlib.import_module('.pipeline', __package__), name)
 
-    if name in {'score_blocks'}:
-        return getattr(importlib.import_module('.score', __package__), name)
-
-    if name in {'PartitionParameters', 'create_blocks_partition'}:
+    if name in {'PartitionParameters'}:
         return getattr(importlib.import_module('.split', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
