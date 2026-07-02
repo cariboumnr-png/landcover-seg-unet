@@ -125,6 +125,8 @@ def create_blocks_partition(
         '       Training blocks': f'{len(blks_src['train'])}',
         '     Validation blocks': f'{len(blks_src['val'])}',
         '           Test blocks': f'{len(blks_src['test'])}',
+        'base_label_count': [int(x) for x in global_count],
+        'hydrated_label_count': [int(x) for x in current_count],
     }
     summary.update(_summary_split_result(global_count, current_count))
     return blks_src, summary
