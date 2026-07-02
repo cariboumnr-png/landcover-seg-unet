@@ -41,7 +41,6 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
-import landseg.utils as utils
 
 # typing aliases
 MappingCtrl = artifacts.Controller[dict]
@@ -54,7 +53,6 @@ def map_rasters_to_grid(
     mapped_windows_path: str,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
 ) -> mapper.MappedRasterWindows:
     '''
     Map raster images and label raster onto a predefined grid layout.
@@ -95,17 +93,10 @@ def map_rasters_to_grid(
     ctrl = MappingCtrl(mapped_windows_path, policy)
 
     # mapped windows fpath
-    logger.log('INFO', f'Try to load mapped windows from {world_grid.gid}')
     payload = ctrl.fetch()
-
     # build if needed
     if not payload:
-        mapped_windows = mapper.map_rasters(
-            world_grid,
-            image_path,
-            label_path,
-            logger=logger
-        )
+        mapped_windows = mapper.map_rasters(world_grid, image_path, label_path)
         payload = {
             'grid_id': mapped_windows.grid_id,
             'tile_shape': list(mapped_windows.tile_shape),
@@ -113,7 +104,6 @@ def map_rasters_to_grid(
             'label': _canonicalize(mapped_windows.label)
         }
         ctrl.persist(payload)
-        logger.log('INFO', f'Mapped windows from {world_grid.gid} created')
 
     # build from payload and return
     mapped_windows = mapper.MappedRasterWindows(

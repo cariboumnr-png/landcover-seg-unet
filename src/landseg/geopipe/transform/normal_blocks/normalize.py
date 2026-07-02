@@ -42,6 +42,7 @@ def normalize_blocks(
     output_dir: str,
     *,
     rebuild: bool = False,
+    logger: utils.Logger | None = None,
 ) -> dict[str, str]:
     '''
     Normalize a collection of raw data blocks using global image stats.
@@ -77,14 +78,14 @@ def normalize_blocks(
 
     # purge blocks not belong
     purged = _purge(names, output_dir)
-    if purged:
-        print(f'{purged} unwanted block files removed')
+    if purged and logger:
+        logger.log('INFO', f'{purged} unwanted block files removed')
 
     # normalize blocks
     os.makedirs(output_dir, exist_ok=True)
     jobs = [(_normalize_one_block, (b, stats, output_dir), {}) for b in work]
     if jobs:
-        utils.multip.ParallelExecutor().run(jobs)
+        utils.ParallelExecutor(desc='Normalize data blocks').run(jobs)
 
     # return current file paths
     indexed_files: dict[str, str] = {}

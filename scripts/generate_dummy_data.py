@@ -95,21 +95,31 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
     px_size = 10.0
     orig_x = 500000.0
     orig_y = 5000000.0
-    width, height = 512, 512 # this gives 4 256*256 tiles
+    width, height = 512, 512 # this gives 4 256*256 tiles per image
     shape = (height, width)
+    
+    # Combined extent shape covers both dev and test side-by-side
+    extent_shape = (height, width * 2)
 
-    # create affine transform for spatial referencing
-    transform = rasterio.transform.from_origin(orig_x, orig_y, px_size, px_size)
+    # create affine transforms for spatial referencing
+    dev_transform = rasterio.transform.from_origin(
+        orig_x, orig_y, px_size, px_size
+    )
+    # offset test image by 512 pixels * 10m/px = 5120 meters
+    test_transform = rasterio.transform.from_origin(
+        orig_x + (width * px_size), orig_y, px_size, px_size
+    )
+    extent_transform = dev_transform
 
-    # create extent reference (single band constant value)
+    # create extent reference (single band constant value on the wide extent)
     extent_path = f'{input_root}/extent_reference/example_extent.tif'
     print(f'Creating extent reference: {extent_path}')
     create_dummy_geotiff(
         extent_path,
-        shape=shape,
+        shape=extent_shape,
         bands=1,
         crs=crs,
-        transform=transform,
+        transform=extent_transform,
         dtype=numpy.uint8,
         data_gen_func=lambda s, b: numpy.ones(s, dtype=numpy.uint8),
     )
@@ -124,7 +134,7 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
         shape=shape,
         bands=4,
         crs=crs,
-        transform=transform,
+        transform=dev_transform,
         dtype=numpy.float32,  # float32 due to DEM float band
         data_gen_func=_gen_image_data,
     )
@@ -135,7 +145,7 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
         shape=shape,
         bands=4,
         crs=crs,
-        transform=transform,
+        transform=test_transform,
         dtype=numpy.float32,
         data_gen_func=_gen_image_data,
     )
@@ -150,7 +160,7 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
         shape=shape,
         bands=1,
         crs=crs,
-        transform=transform,
+        transform=dev_transform,
         dtype=numpy.uint8,
         data_gen_func=_gen_label_data,
     )
@@ -161,22 +171,22 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
         shape=shape,
         bands=1,
         crs=crs,
-        transform=transform,
+        transform=test_transform,
         dtype=numpy.uint8,
         data_gen_func=_gen_label_data,
     )
 
-    # domain knowledge layers 
+    # domain knowledge layers (covering the wide extent)
     domain_1_path = f'{input_root}/domain_knowledge/example_domain_1.tif'
     domain_2_path = f'{input_root}/domain_knowledge/example_domain_2.tif'
 
     print(f'Creating domain knowledge 1: {domain_1_path}')
     create_dummy_geotiff(
         domain_1_path,
-        shape=shape,
+        shape=extent_shape,
         bands=1,
         crs=crs,
-        transform=transform,
+        transform=extent_transform,
         dtype=numpy.uint8,
         data_gen_func=lambda s, b: numpy.random.randint(
             1, 5, size=s, dtype=numpy.uint8
@@ -186,10 +196,10 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
     print(f'Creating domain knowledge 2: {domain_2_path}')
     create_dummy_geotiff(
         domain_2_path,
-        shape=shape,
+        shape=extent_shape,
         bands=1,
         crs=crs,
-        transform=transform,
+        transform=extent_transform,
         dtype=numpy.uint8,
         data_gen_func=lambda s, b: numpy.random.randint(
             1, 10, size=s, dtype=numpy.uint8

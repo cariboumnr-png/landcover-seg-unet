@@ -32,12 +32,12 @@ their recorded schema throughout data preparation and update workflows.
 # standard imports
 import dataclasses
 import os
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.data_blocks.manifest as manifest
 import landseg.geopipe.utils as geo_utils
-import landseg.utils as utils
 
 # typing aliases
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
@@ -47,7 +47,7 @@ SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 @dataclasses.dataclass
 class ManifestUpdateContext:
     '''Context describing a manifest update operation.'''
-    updated_coords: list[tuple[int, int]]   # grid coords for blocks that were created
+    updated_coords: list[tuple[int, int]]   # grid coords for created blocks
     source_image: str               # path to the source image raster
     source_label: str | None        # optional path to the label raster
     mapped_grid_id: str             # id for the grid the blocks are mapped to
@@ -61,8 +61,7 @@ def update_manifest(
     schema_fpath: str,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
-):
+) -> dict[str, typing.Any]:
     '''
     Update dataset manifest artifacts according to lifecycle policy.
 
@@ -72,33 +71,24 @@ def update_manifest(
     disk, applies the specified lifecycle policy to decide whether to
     rebuild or append entries, and writes updated JSON artifacts with
     integrity hashes.
-
-    Args:
-        context: A `ManifestUpdateContext` describing updated block
-            coordinates and their source provenance.
-        logger: Logger instance used to report status, decisions, and
-            errors.
-        artifacts_dir: Root dir containing `blocks/`, `catalog.json`,
-            and `schema.json`.
-        policy: Lifecycle policy controlling whether manifests are
-            rebuilt unconditionally or only when stale.
     '''
 
-
-    # load catalog JSON
+    # ----- catalog
     ctrl = CatalogDictCtrl(catalog_fpath, policy)
     try:
-        data_dict = ctrl.fetch()
-    except artifacts.ArtifactError as exc:
-        logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
+        catalog_dict = ctrl.fetch()
+    except artifacts.ArtifactError as exc: # e.g., current catalog corrupted
         raise artifacts.ArtifactError from exc
-    # action
-    current, to_update = _catalog_status(
-        data_dict,
-        context,
-        policy=policy,
-        logger=logger,
-    )
+
+    # get catalog status
+    current, to_update = _catalog_status(catalog_dict, context, policy=policy)
+    catalog_status = 'present'
+    if not catalog_dict:
+        catalog_status = 'absent'
+    elif to_update:
+        catalog_status = 'stale'
+
+    # update catalog if needed
     if to_update:
         catalog = manifest.build_catalog(
             to_update,
@@ -109,31 +99,38 @@ def update_manifest(
         )
         catalog_json = catalog.to_json_payload()
         ctrl.persist(catalog_json)
+    else:
+        catalog = current
 
-    # load schema JSON
+    # ----- schema
     ctrl = SchemaCtrl(schema_fpath, policy)
     try:
-        current_schema = ctrl.fetch()
-    except artifacts.ArtifactError as exc:
-        logger.log('ERROR', f'Error loading {ctrl.fp}: {exc}')
+        schema_dict = ctrl.fetch()
+    except artifacts.ArtifactError as exc: # e.g., current schema corrupted
         raise artifacts.ArtifactError from exc
-    # action
+
     sample_block = _sample(context.blocks_dir)
     schema_dict = manifest.build_schema(
         sample_block,
-        original=current_schema,
+        original=schema_dict,
         mapped_grid_id=context.mapped_grid_id,
         sources=(context.source_image, context.source_label),
         label_color_map=context.label_color_map
     )
     ctrl.persist(schema_dict)
 
+    return {
+        'catalog_status': catalog_status,
+        'catalog_updated': to_update,
+        'cataloged_blocks_count': len(catalog),
+        'schema_updated': True
+    }
+
 def _catalog_status(
     data_dict: dict[str, geo_core.CatalogEntry] | None,
     context: ManifestUpdateContext,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
 ) -> tuple[geo_core.DataCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
 
@@ -144,27 +141,22 @@ def _catalog_status(
         catalog = geo_core.DataCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
-    # this include new/updated blocks
     blocks_dir = context.blocks_dir
     current = [f for f in os.listdir(blocks_dir) if f.endswith('npz')]
     if not current:
         raise FileNotFoundError('No block files found')
-    logger.log('INFO', f'All block files on disk count: {len(current)}')
 
     # get filenames from the updated coordinates (parse from coords)
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in context.updated_coords]
-    logger.log('INFO', f'Updated block files to disk count: {len(updated)}')
 
     # determine status
     cataloged = [os.path.basename(c['file_path']) for c in catalog.values()]
-    logger.log('INFO', f'Catalogued blocks files count: {len(cataloged)}')
     catalog_status = {
         (True, False): 2,   # catalog present, no new blocks
         (True, True): 3,    # catalog present, has new blocks
         (False, False): 4,  # catalog absent, no new blocks
         (False, True): 5,   # catalog absent, has new blocks
     }[(bool(cataloged), bool(updated))]
-    logger.log('INFO', f'Cataloging status: {catalog_status}')
 
     # policy choices
     match policy:

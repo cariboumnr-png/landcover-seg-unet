@@ -25,3 +25,39 @@ Top-level namespace for `landseg.geopipe.transform.common`.
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    'DataPartitionReport',
+    'NormalizationReport',
+    'SchemaReport',
+    'TransformReportSchema',
+    'TransformLogger',
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .schema import (
+        DataPartitionReport,
+        NormalizationReport,
+        SchemaReport,
+        TransformReportSchema,
+    )
+    from .logger import TransformLogger
+
+def __getattr__(name: str):
+    if name in {
+        'DataPartitionReport',
+        'NormalizationReport',
+        'SchemaReport',
+        'TransformReportSchema',
+    }:
+        return getattr(importlib.import_module('.schema', __package__), name)
+
+    if name in {'TransformLogger'}:
+        return getattr(importlib.import_module('.logger', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

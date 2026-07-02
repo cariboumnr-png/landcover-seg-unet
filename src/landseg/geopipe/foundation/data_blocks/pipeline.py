@@ -36,12 +36,15 @@ Public API:
 
 # standard imports
 import dataclasses
+import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.foundation.data_blocks as data_blocks
-import landseg.utils as utils
+import landseg.geopipe.foundation.common as common
+import landseg.geopipe.foundation.data_blocks.builder as builder
+import landseg.geopipe.foundation.data_blocks.manifest as manifest
+import landseg.geopipe.foundation.data_blocks.mapper as mapper
 
 # --------------------------------private types--------------------------------
 class _PipelinePaths(typing.Protocol):
@@ -58,6 +61,7 @@ class _PipelinePaths(typing.Protocol):
 @dataclasses.dataclass
 class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
+    stage: typing.Literal['dev', 'test']
     image_fpath: str
     label_fpath: str | None
     data_config_fpath: str
@@ -71,8 +75,8 @@ def run_blocks_building(
     config: BlockBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
-) -> str | None:
+    logger: common.FoundationLogger,
+) -> None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
 
@@ -81,43 +85,25 @@ def run_blocks_building(
     `metadata.json`. Blocks are built directly from raster windows
     without normalization or dataset splitting.
 
-    Workflow:
-    1) Map development rasters to the world grid.
-    2) Build raw data blocks and update the catalog.
-    3) Optionally repeat steps (1-2) for test holdout rasters.
-    4) Optionally build a single block for debugging or overfit runs.
-
     Args:
         world_grid: World grid definition used to locate raster windows.
         config: Configuration for block building inputs and parameters.
-        output_root: Root directory where block artifacts are written.
         logger: Logger instance used for progress and status reporting.
-        single_block_mode: If True, build and persist only one valid
-            block (e.g., for overfit or debugging workflows).
-        **kwargs: Optional overrides for single-block mode behavior
-            (e.g., validity threshold, monitor head, output path).
-
-    Returns:
-        Path to the saved block when `single_block_mode` is enabled;
-        otherwise `None`.
     '''
 
-    # get a child logger
-    logger = logger.get_child('dblks')
+    start_time = time.perf_counter()
 
-    # map model dev rasters to grid
-    ras_windows = data_blocks.map_rasters_to_grid(
+    # map rasters to the provided world grid
+    ras_windows = mapper.map_rasters_to_grid(
         world_grid,
         config.image_fpath,
         config.label_fpath,
         artfact_paths.mapped_window(world_grid.gid),
         policy=policy,
-        logger=logger,
     )
-    logger.log('INFO', 'Rasters mapped to input world grid')
 
-    # block builder for model dev rasters
-    builder_config = data_blocks.BlockBuilderConfig(
+    # create a data block builder
+    builder_config = builder.BlockBuilderConfig(
         output_root=artfact_paths.blocks,
         image_fpath=config.image_fpath,
         label_fpath=config.label_fpath,
@@ -126,19 +112,17 @@ def run_blocks_building(
         ignore_index=config.ignore_index,
         block_size=ras_windows.tile_shape
     )
-    block_builder = data_blocks.BlockBuilder(
+    block_builder = builder.BlockBuilder(
         ras_windows.image,
         ras_windows.label,
         builder_config,
         logger=logger,
     )
-
-    # build all model dev blocks
+    # build data blocks
     new_blocks = block_builder.build_blocks()
-    logger.log('INFO', 'Data blocks building finished')
 
     # create/update catalog and metadata JSON
-    updated = data_blocks.ManifestUpdateContext(
+    updated = manifest.ManifestUpdateContext(
         updated_coords=new_blocks,
         source_image=config.image_fpath,
         source_label=config.label_fpath,
@@ -146,11 +130,33 @@ def run_blocks_building(
         blocks_dir=artfact_paths.blocks,
         label_color_map=block_builder.label_color_map
     )
-    data_blocks.update_manifest(
+    manifest_report = manifest.update_manifest(
         updated,
         artfact_paths.catalog,
         artfact_paths.schema,
         policy=policy,
-        logger=logger
     )
-    logger.log('INFO', 'Data blocks catalog and schema updated')
+
+    # update structured log if FoundationLogger wrapper is used
+    duration = time.perf_counter() - start_time
+    stats = block_builder.stats
+    report: common.DataBlocksReport = {
+        'image_filepath': config.image_fpath,
+        'label_filepath': config.label_fpath,
+        'duration_sec': duration,
+        'stats': {
+            'shared_raster_windows': int(stats['shared_raster_windows']),
+            'expected_shape_windows': int(stats['expected_shape_windows']),
+            'blocks_on_disk_before': int(stats['blocks_on_disk_before']),
+            'blocks_to_process': int(stats['blocks_to_process']),
+            'damaged_blocks_removed': int(stats['damaged_blocks_removed']),
+            'blocks_created': int(stats['blocks_created']),
+        },
+        'manifest': {
+            'catalog_status': manifest_report['catalog_status'],
+            'catalog_updated': manifest_report['catalog_updated'],
+            'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
+            'schema_updated': manifest_report['schema_updated'],
+        }
+    }
+    logger.set_data_blocks_report(config.stage, report)

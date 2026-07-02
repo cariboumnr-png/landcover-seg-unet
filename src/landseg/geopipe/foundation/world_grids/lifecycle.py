@@ -21,11 +21,13 @@
 
 '''World grid artifacts lifecycle management.'''
 
+# standard imports
+import time
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.world_grids as world_grids
-import landseg.utils as utils
 
 # typing aliases
 D = list[list[int]]
@@ -38,7 +40,7 @@ def prepare_world_grid(
     config: world_grids.GridParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
+    logger: common.FoundationLogger,
 ) -> geo_core.GridLayout:
     '''
     Build or load a persisted world grid.
@@ -48,9 +50,7 @@ def prepare_world_grid(
     and grid profile, saved to disk, and returned.
     '''
 
-    # get a child logger
-    logger = logger.get_child('wgrid')
-
+    start_time = time.perf_counter()
     # payload controller
     ctrl = CTRL(
         grid_fpath,
@@ -58,14 +58,31 @@ def prepare_world_grid(
         policy=policy
     )
     payload = ctrl.load()
-    if payload:
-        output_grid = geo_core.GridLayout.from_payload(payload)
-        logger.log('INFO', f'World grid loaded successfully; {grid_fpath}')
-        return output_grid
 
-    # build if needed
-    output_grid = world_grids.build_grid(config)
-    payload = output_grid.to_payload()
-    ctrl.save(payload)
-    logger.log('INFO', f'World grid saved {grid_fpath}')
-    return output_grid
+    loaded_from_disk = False
+    # load if present
+    if payload:
+        _grid = geo_core.GridLayout.from_payload(payload)
+        loaded_from_disk = True
+    else:
+        # build if absent
+        _grid = world_grids.build_grid(config)
+        payload = _grid.to_payload()
+        ctrl.save(payload)
+
+    duration = time.perf_counter() - start_time
+
+    # update structured log
+    report: common.WorldGridReport = {
+        'grid_id': _grid.gid,
+        'status': 'loaded' if loaded_from_disk else 'created_and_loaded',
+        'grid_filepath': grid_fpath,
+        'crs': str(_grid.crs),
+        'pixel_size': _grid.pixel_size,
+        'tile_size': _grid.tile_size,
+        'tile_overlap': _grid.tile_overlap,
+        'duration_sec': duration,
+    }
+    logger.set_world_grid_report(report)
+
+    return _grid

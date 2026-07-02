@@ -144,6 +144,14 @@ class BlockBuilder:
         # declare class attributes
         self.common_coords: set[tuple[int, int]] = set()
         self.coords_todo: list[tuple[int, int]] = []
+        self.stats = {
+            'shared_raster_windows': 0,
+            'expected_shape_windows': 0,
+            'blocks_on_disk_before': 0,
+            'blocks_to_process': 0,
+            'damaged_blocks_removed': 0,
+            'blocks_created': 0,
+        }
 
         # read data config JSON
         ctrl = artifacts.Controller[_BlockBuilderMeta].load_json_or_fail
@@ -290,8 +298,7 @@ class BlockBuilder:
                 & set(self.lbl_windows.keys())
         else:
             self.common_coords = set(self.img_windows.keys())
-        n = len(self.common_coords)
-        self.logger.log('DEBUG', f'Loaded {n} raster windows')
+        self.stats['shared_raster_windows'] = len(self.common_coords)
 
         # remove windows or irregular shapes, e.g., edge windows
         _common = copy.deepcopy(self.common_coords) # for safe iteration
@@ -303,8 +310,7 @@ class BlockBuilder:
             if ((iw.height, iw.width) != self.config.block_size or
                 lw and (lw.height, lw.width) != self.config.block_size):
                 self.common_coords.remove(coord)
-        n = len(self.common_coords)
-        self.logger.log('DEBUG', f'Number of windows with expected shape: {n}')
+        self.stats['expected_shape_windows'] = len(self.common_coords)
 
     def _structural_validation(self) -> None:
         '''
@@ -322,7 +328,6 @@ class BlockBuilder:
 
         # block files to check from common coordinates
         blks_to_check: dict[tuple[int, int], str] = {}
-        self.logger.log('INFO', 'Checking block .npz files')
         for c in self.common_coords:
             name = geo_utils.xy_name(c)
             blks_to_check[c] = f'{self.blks_dir}/{name}.npz'
@@ -330,16 +335,19 @@ class BlockBuilder:
         # create checking jobs
         jobs = [(_check_npz, (c, fp), {}) for c, fp in blks_to_check.items()]
         # parallel processing
-        raw_results: list[dict[tuple[int, int], bool]]
-        raw_results = utils.ParallelExecutor().run(jobs)
-        results = {k: v for rr in raw_results for k, v in rr.items()}
+        results: list[dict[tuple[int, int], bool]]
+        results = utils.ParallelExecutor().run(jobs, ' - Checking datablocks')
+        parsed = {k: v for rr in results for k, v in rr.items()}
 
         # parse results
         rm: list[str] = [] # damaged files to be removed
-        for c, valid in results.items():
+        on_disk = 0
+        for c, valid in parsed.items():
             if not valid:
                 self.coords_todo.append(c)
                 rm.append(blks_to_check[c])
+            else:
+                on_disk += 1
         # remove corrupted/damaged files if present
         removed = 0
         for fpath in rm:
@@ -349,9 +357,9 @@ class BlockBuilder:
             except FileNotFoundError:
                 continue
 
-        # log checking results
-        self.logger.log('INFO', f'Found {len(self.coords_todo)} invalid blocks')
-        self.logger.log('INFO', f'Removed {removed} damaged files')
+        self.stats['blocks_on_disk_before'] = on_disk
+        self.stats['damaged_blocks_removed'] = removed
+        self.stats['blocks_to_process'] = len(self.coords_todo)
 
     def _create_missing_blocks(self) -> None:
         '''
@@ -363,9 +371,9 @@ class BlockBuilder:
         '''
 
         if not self.coords_todo:
-            self.logger.log('INFO', 'No data blocks to be created')
+            self.stats['blocks_created'] = 0
             return
-        self.logger.log('INFO', f'{len(self.coords_todo)} blocks to be created')
+        self.stats['blocks_created'] = len(self.coords_todo)
 
         # prep block creation jobs
         jobs = []
@@ -378,7 +386,7 @@ class BlockBuilder:
             jobs.append((_build_a_blk, (self.meta, co_contxt,), save_args))
 
         # parallel processing through all raster windows
-        utils.ParallelExecutor().run(jobs)
+        utils.ParallelExecutor().run(jobs, desc='Creating datablocks')
 
     def _get_context(self, coords: tuple[int, int]) -> _BlockCreationContext:
         '''Return a the immutable block-creation context.'''

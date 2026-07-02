@@ -34,19 +34,21 @@ __all__ = [
     # classes
     'DataBlocksView',
     'PartitionParameters',
+    'TransformLogger',
     # functions
     'build_schema',
     'data_blocks_adapter',
     'run_datablocks_partition',
-    'run_normaliza_blocks',
+    'run_normalize_blocks',
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .adapter import DataBlocksView, data_blocks_adapter
+    from .common import TransformLogger
     from .data_partition import PartitionParameters, run_datablocks_partition
-    from .normal_blocks import run_normaliza_blocks
+    from .normal_blocks import run_normalize_blocks
     from .schema import build_schema
 
 
@@ -55,10 +57,13 @@ def __getattr__(name: str):
     if name in {'DataBlocksView', 'data_blocks_adapter'}:
         return getattr(importlib.import_module('.adapter', __package__), name)
 
+    if name in {'TransformLogger'}:
+        return getattr(importlib.import_module('.common', __package__), name)
+
     if name in {'PartitionParameters', 'run_datablocks_partition'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
 
-    if name in {'run_normaliza_blocks'}:
+    if name in {'run_normalize_blocks'}:
         return getattr(importlib.import_module('.normal_blocks', __package__), name)
 
     if name in {'build_schema'}:

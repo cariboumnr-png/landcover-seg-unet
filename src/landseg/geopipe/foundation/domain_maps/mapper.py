@@ -41,7 +41,6 @@ def map_domain_to_grid(
     raster_path: str,
     *,
     index_base: int,
-    logger: utils.Logger,
 ) -> alias.RasterTileDict:
     '''
     Map a domain raster onto a world grid and re-index labels.
@@ -67,15 +66,12 @@ def map_domain_to_grid(
         _DomainTilesPackage containing re-indexed tiles and grid metadata.
     '''
 
-    logger.log('INFO', 'Mapping domain onto input world grid')
     # read domain raster and get arrays indexed to the grid tiles
     tiles, nodata = _read_raster(world_grid, raster_path)
 
-    logger.log('INFO', 'Generating index mapping')
     # global mapping: raw i..K  ->  0..K-1 ----
     idx_map = _get_index_mapping(tiles, nodata, index_base)
 
-    logger.log('INFO', 'Re-indexing domain to [0...k-1]')
     # Map each block: valid raw -> index in [0..K-1], nodata -> -1
     _tiles = _re_index(tiles, nodata, idx_map)
 
@@ -84,7 +80,6 @@ def map_domain_to_grid(
     max_idx = idx_map.size - 1
     _tiles[(-999, -999)] = numpy.full(shape, max_idx, dtype=numpy.int16)
 
-    logger.log('INFO', 'Domain mapped onto input world grid')
     return _tiles
 
 # ------------------------------private  function------------------------------
@@ -109,8 +104,9 @@ def _read_raster(
 
     # read through all windows via multiprocessing
     jobs = [(_read, (k, v, fpath, grid.tile_size), {})for k, v in grid.items()]
-    all_tiles: list[alias.RasterTile] = utils.ParallelExecutor().run(jobs)
-    all_tiles = [(_, t) for (_, t) in all_tiles if t.sum() != 0] # filter
+    results: list[alias.RasterTile]
+    results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
+    all_tiles = [(_, t) for (_, t) in results if t.sum() != 0] # filter
     return dict(all_tiles), nodata
 
 def _read(

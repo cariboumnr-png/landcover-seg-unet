@@ -74,7 +74,8 @@ class ParallelExecutor:
             use_threads: bool= False,
             show_progress: bool= True,
             *,
-            progress_bar_len: int = 100
+            progress_bar_len: int = 100,
+            desc: str | None = None
         ):
         '''
         Initialize the executor.
@@ -83,30 +84,34 @@ class ParallelExecutor:
             max_workers (int): Number of workers. Default core - 4.
             use_threads (bool): Use threads instead of processes.
             show_progress (bool): Show tqdm progress bar.
+            progress_bar_len (int): Width of the progress bar.
+            desc (str): Optional leading description for progress bar.
         '''
         self.max_workers = max_workers
         self.use_threads = use_threads
         self.show_progress = show_progress
         self.ncol = progress_bar_len
+        self.desc = desc
 
-    def run(self, jobs: list) -> list[typing.Any]:
+    def run(self, jobs: list, desc: str | None = None) -> list[typing.Any]:
         '''
         Execute jobs in parallel.
 
         Args:
             jobs (list): List of tuples (func, args, kwargs).
+            desc (str): Optional leading description for progress bar.
 
         Returns:
             list: Results from executing all jobs.
         '''
         if self.use_threads:
-            return self._run_with_threads(jobs)
-        return self._run_with_processes(jobs)
+            return self._run_with_threads(jobs, desc=desc)
+        return self._run_with_processes(jobs, desc=desc)
 
     def place_holder(self):
         '''Place holder public method.'''
 
-    def _run_with_threads(self, jobs: list):
+    def _run_with_threads(self, jobs: list, desc: str | None = None):
         '''Run jobs using ThreadPoolExecutor with error handling.'''
         results = []
         with concurrent.futures.ThreadPoolExecutor(self.max_workers) as exe:
@@ -116,17 +121,17 @@ class ParallelExecutor:
             ]
             it = (f.result() for f in futures)
             if self.show_progress:
-                results = list(tqdm.tqdm(it, total=len(jobs), ncols=self.ncol))
+                results = list(tqdm.tqdm(it, total=len(jobs), ncols=self.ncol, desc=desc or self.desc))
             else:
                 results = list(it)
         return results
 
-    def _run_with_processes(self, jobs: list):
+    def _run_with_processes(self, jobs: list, desc: str | None = None):
         '''Run jobs using multiprocessing Pool with error handling.'''
         with multiprocessing.Pool(self.max_workers) as pool:
             it = pool.imap(self._wrapper_func, jobs)
             if self.show_progress:
-                results = list(tqdm.tqdm(it, total=len(jobs), ncols=self.ncol))
+                results = list(tqdm.tqdm(it, total=len(jobs), ncols=self.ncol, desc=desc or self.desc))
             else:
                 results = list(it)
         return results

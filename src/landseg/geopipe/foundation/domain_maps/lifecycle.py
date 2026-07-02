@@ -26,12 +26,13 @@ from __future__ import annotations
 import copy
 import dataclasses
 import os
+import time
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.domain_maps as domain_maps
-import landseg.utils as utils
 
 # typing aliases
 D = dict[str, geo_core.DomainTile]
@@ -56,7 +57,7 @@ def prepare_domain_maps(
     domain_configs: list[DomainBuildingParameters],
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
+    logger: common.FoundationLogger,
 ) -> None:
     '''
     Prepare and persist domain tile maps for categorical raster(s).
@@ -89,11 +90,9 @@ def prepare_domain_maps(
     schema id and integrity hash for compatibility checks.
     '''
 
-    # get a child logger
-    logger = logger.get_child('dkmap')
-
     # read provided domain rasters
     for config in domain_configs:
+        start_time = time.perf_counter()
 
         # copy the world grid instance
         grid = copy.deepcopy(world_grid)
@@ -105,25 +104,47 @@ def prepare_domain_maps(
             schema_id=geo_core.DomainTileMap.SCHEMA_ID,
             policy=policy
         )
-        payload = ctrl.load()
+        payload = ctrl.load() # empty = domain absent
+
+        # load or create domain layer
+        loaded = False
         if payload:
-            logger.log('INFO', f'Domain {name} loaded successfully')
+            loaded = True
+            logger.log('INFO', f'[CHECKPOINT] Loaded domain layer [{name}]')
         else:
-
             # check mapped tiles before building
-            mapped = _prep_mapping(grid, config, policy=policy, logger=logger)
-
+            mapped = _prep_mapping(grid, config, policy=policy)
             # build domain map
-            domain = domain_maps.build_domain(
+            payload = domain_maps.build_domain(
                 grid.gid,
                 mapped,
                 valid_threshold=config.valid_threshold,
                 target_variance=config.target_variance,
-                logger=logger
-            )
-            payload = domain.to_json_payload()
+            ).to_json_payload()
             ctrl.save(payload)
-            logger.log('INFO', f'Domain {name} created successfully')
+            logger.log('INFO', f'[CHECKPOINT] Created domain layer [{name}]')
+
+        duration = time.perf_counter() - start_time
+
+        # update structured log
+        meta = payload['artifact_meta']
+        report: common.DomainMapReport = {
+            'name': name,
+            'status': 'loaded' if loaded else 'created',
+            'input_filepath': config.input_fpath,
+            'domain_filepath': config.domain_fpath,
+            'tiles_filepath': config.tiles_fpath,
+            'duration_sec': duration,
+            'stats': {
+                'max_index': int(meta['max_index']),
+                'valid_coords_count': len(payload['data']),
+                'major_freq_mean': float(meta['major_freq_mean']),
+                'major_freq_min': float(meta['major_freq_min']),
+                'pca_axes_n': int(meta['pca_axes_n']),
+                'explained_variance': float(meta['explained_variance']),
+            }
+        }
+        logger.add_domain_report(report)
 
 # ------------------------------private  function------------------------------
 def _prep_mapping(
@@ -131,7 +152,6 @@ def _prep_mapping(
     config: DomainBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: utils.Logger,
 ) -> alias.RasterTileDict:
     '''doc'''
 
@@ -140,7 +160,6 @@ def _prep_mapping(
     try:
         mapped = ctrl.fetch()
     except artifacts.ArtifactError as exc:
-        logger.log('ERROR', f'Error loading {config.tiles_fpath}: {exc}')
         raise artifacts.ArtifactError from exc
     # create a new mapping if not valid
     if not mapped:
@@ -148,9 +167,7 @@ def _prep_mapping(
             grid,
             config.input_fpath,
             index_base=config.index_base,
-            logger=logger
         )
         ctrl.persist(mapped)
-        logger.log('INFO', f'Mapped tiles from {grid.gid} created')
 
     return mapped

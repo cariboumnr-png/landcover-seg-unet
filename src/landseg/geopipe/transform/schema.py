@@ -31,10 +31,12 @@ Public APIs:
 
 # standard imports
 import datetime
+import time
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.transform.common as common
 
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
@@ -47,14 +49,16 @@ Resolver = artifacts.Controller.load_json_or_fail
 def build_schema(
     paths: artifacts.TransformPaths,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: common.TransformLogger
 ) -> None:
     '''
     Generate and persist the dataset schema JSON from data and grid.
 
     Args:
-        root_dir: Root folder for the dataset transform; The schema JSON
-        file is written here.
+        paths: Transform paths container.
+        policy: Lifecycle policy guiding rebuild behavior.
+        logger: Logger for progress and diagnostic output.
 
     Raises:
         FileNotFoundError: If hash records for referenced artifacts are
@@ -65,9 +69,12 @@ def build_schema(
     JSON to disk.
     '''
 
+    start_time = time.perf_counter()
+
     # schema artifact controller
     schema_ctrl = SchemaCtrl(paths.schema, policy)
     schema = schema_ctrl.fetch()
+    loaded = schema is not None
 
     if not schema:
         # artifacts file paths
@@ -116,3 +123,20 @@ def build_schema(
             'label_array_key': 'label', # current convention
         }
         schema_ctrl.persist(schema)
+        logger.log('INFO', '[CHECKPOINT] Created dataset transform schema')
+    else:
+        logger.log('INFO', '[CHECKPOINT] Loaded dataset transform schema')
+
+    # compile report
+    duration = time.perf_counter() - start_time
+    ctrl = LabelStatsCtrl.load_json_or_fail(paths.label_stats)
+    label_stats = ctrl.fetch() or {}
+    classes_mapped = list(label_stats.keys())
+
+    report: common.SchemaReport = {
+        'status': 'loaded' if loaded else 'created',
+        'duration_sec': duration,
+        'schema_filepath': paths.schema,
+        'classes_mapped': classes_mapped,
+    }
+    logger.set_schema_report(report)

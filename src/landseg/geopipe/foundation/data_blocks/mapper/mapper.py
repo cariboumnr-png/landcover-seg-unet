@@ -35,7 +35,6 @@ import dataclasses
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
-import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -51,8 +50,6 @@ def map_rasters(
     world_grid: geo_core.GridLayout,
     image_fpath: str,
     label_fpath: str | None,
-    *,
-    logger: utils.Logger,
 ) -> MappedRasterWindows:
     '''
     Map input rasters to the world grid and serialize read windows.
@@ -68,15 +65,13 @@ def map_rasters(
     '''
 
     # get geometry summary
-    geom = mapper.validate_geometry(image_fpath, label_fpath, logger=logger)
+    geom = mapper.validate_geometry(image_fpath, label_fpath)
 
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
     data_crs = geom['crs']
     if grid_crs != data_crs:
-        e = f'Data CRS [{data_crs}] != world CRS [{grid_crs}]'
-        logger.log('ERROR', e)
-        raise ValueError(e)
+        raise ValueError(f'Data CRS [{data_crs}] != world CRS [{grid_crs}]')
 
     # focus on tiles inside the intersected extent
     inside = _crop(world_grid, geom)

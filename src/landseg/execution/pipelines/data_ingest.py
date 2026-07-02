@@ -26,12 +26,15 @@ Prepares the world grid, materializes domain knowledge, and builds
 the immutable raw block catalogue for later experiments.
 '''
 
+# standard imports
+import datetime
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
-import landseg.utils as utils
 
+# -------------------------------Public Function-------------------------------
 def ingest(config: configs.RootConfig):
     '''
     Run the ingestion pipeline.
@@ -46,88 +49,143 @@ def ingest(config: configs.RootConfig):
         config: RootConfig with foundation settings.
     '''
 
-    # init a logger
-    logger = utils.Logger('ingest', f'{config.execution.exp_root}/ingest.log')
-
-    # config aliases
-    domain_cfg = config.foundation.domains
-    grid_cfg = config.foundation.grid
-    datablocks_cfg = config.foundation.datablocks
-
     # artifact paths
     paths = artifacts.FoundationPaths(config.foundation.output_dpath)
 
-    # world grid
-    grid_config = foundation.GridParameters(
-        mode=grid_cfg.mode, # type: ignore
-        crs=grid_cfg.crs,
-        ref_fpath=grid_cfg.extent.filepath,
-        origin=grid_cfg.extent.origin,
-        pixel_size=grid_cfg.extent.pixel_size,
-        grid_extent=grid_cfg.extent.grid_extent,
-        grid_shape=grid_cfg.extent.grid_shape,
-        tile_specs=grid_cfg.tile_specs_tuple,
+    # init a FoundationLogger with summary
+    logger = foundation.FoundationLogger(
+        name='ingest',
+        log_file=f'{config.execution.exp_root}/ingest_report.json',
+        enable_file_log=False
     )
-    world_grid = foundation.prepare_world_grid(
-        paths.grids.fpath(grid_cfg.tile_specs_tuple),
-        grid_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
-        logger=logger,
-    )
+    time_stamp = datetime.datetime.now().strftime(c.TF_ISO8601)
+    logger.init_summary(f'ingest_{time_stamp}', time_stamp)
+    assert logger.summary # typing
 
-    # domain maps
-    domain_config = [
-        foundation.DomainBuildingParameters(
-        input_fpath=dom.path,
-        domain_fpath=paths.domains.domain_map_fpath(dom.name),
-        tiles_fpath=paths.domains.mapped_tiles_fpath(dom.name, world_grid.gid),
-        index_base=dom.index_base,
-        valid_threshold=domain_cfg.valid_threshold,
-        target_variance=domain_cfg.target_variance,
-        ) for dom in domain_cfg.files
-    ]
-    foundation.prepare_domain_maps(
-        world_grid,
-        domain_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
-        logger=logger,
-    )
+    try:
+        logger.log_sep()
 
-    # build dev data blocks
-    data_blocks_config = foundation.BlockBuildingParameters(
-        image_fpath=datablocks_cfg.filepaths.dev_image,
-        label_fpath=datablocks_cfg.filepaths.dev_label,
-        data_config_fpath=datablocks_cfg.filepaths.config,
-        dem_pad=datablocks_cfg.general.image_dem_pad,
-        ignore_index=datablocks_cfg.general.ignore_index,
-    )
-    foundation.run_blocks_building(
-        world_grid,
-        paths.data_blocks.dev,
-        data_blocks_config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
-        logger=logger,
-    )
+        # config aliases
+        domain_cfg = config.foundation.domains
+        grid_cfg = config.foundation.grid
+        datablocks_cfg = config.foundation.datablocks
 
-    # build test data blocks - if provided
-    if datablocks_cfg.has_test_data:
-        logger.log('INFO', 'Evaluation holdout rasters provided, proceed')
+        # world grid
+        logger.log('INFO', '[START] World grid preparation')
+        grid_config = foundation.GridParameters(
+            mode=grid_cfg.mode, # type: ignore
+            crs=grid_cfg.crs,
+            ref_fpath=grid_cfg.extent.filepath,
+            origin=grid_cfg.extent.origin,
+            pixel_size=grid_cfg.extent.pixel_size,
+            grid_extent=grid_cfg.extent.grid_extent,
+            grid_shape=grid_cfg.extent.grid_shape,
+            tile_specs=grid_cfg.tile_specs_tuple,
+        )
+        world_grid = foundation.prepare_world_grid(
+            paths.grids.fpath(grid_cfg.tile_specs_tuple),
+            grid_config,
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            logger=logger,
+        )
+        assert logger.summary['world_grid'] # should have been populated
+
+        # log to console with duration
+        d = logger.summary['world_grid']['duration_sec']
+        logger.log('INFO', f'[COMPLETE] World grid preparation (D_{d:.2f}s)')
+
+        # domain maps
+        if not domain_cfg.files:
+            logger.log('INFO', '[NOTE] No domain knowledge layers provided')
+        else:
+            logger.log('INFO', '[START] Domain maps preparation')
+            gid = world_grid.gid
+            domain_config = [
+                foundation.DomainBuildingParameters(
+                    input_fpath=d.path,
+                    domain_fpath=paths.domains.domain_map_fpath(d.name),
+                    tiles_fpath=paths.domains.mapped_tiles_fpath(d.name, gid),
+                    index_base=d.index_base,
+                    valid_threshold=domain_cfg.valid_threshold,
+                    target_variance=domain_cfg.target_variance,
+                ) for d in domain_cfg.files
+            ]
+            foundation.prepare_domain_maps(
+                world_grid,
+                domain_config,
+                policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+                logger=logger,
+            )
+            assert logger.summary['domain_maps'] # should have been poplulated
+
+            # log to console with duration
+            d = sum(dm['duration_sec'] for dm in logger.summary['domain_maps'])
+            logger.log(
+                'INFO',
+                f'[COMPLETE] Domain maps preparation (D_{d:.2f}s)'
+            )
+
+        # build dev data blocks
+        logger.log('INFO', '[START] Development data blocks building')
         data_blocks_config = foundation.BlockBuildingParameters(
-            image_fpath=datablocks_cfg.filepaths.test_image,
-            label_fpath=datablocks_cfg.filepaths.test_label,
+            stage='dev',
+            image_fpath=datablocks_cfg.filepaths.dev_image,
+            label_fpath=datablocks_cfg.filepaths.dev_label,
             data_config_fpath=datablocks_cfg.filepaths.config,
             dem_pad=datablocks_cfg.general.image_dem_pad,
             ignore_index=datablocks_cfg.general.ignore_index,
         )
         foundation.run_blocks_building(
             world_grid,
-            paths.data_blocks.test,
+            paths.data_blocks.dev,
             data_blocks_config,
             policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
             logger=logger,
         )
-    else:
-        logger.log('INFO', 'Evaluation holdout rasters not provided, exit')
+        assert logger.summary['data_blocks']['dev']
+
+        # log to console with duration
+        d = logger.summary['data_blocks']['dev']['duration_sec']
+        logger.log(
+            'INFO',
+            f'[COMPLETE] Development data blocks preparation (D_{d:.2f}s)'
+        )
+
+        # build test data blocks - if provided
+        if not datablocks_cfg.has_test_data:
+            logger.log('INFO', '[NOTE] Test holdout dataset not provided')
+        else:
+            logger.log('INFO', '[START] Test data blocks building')
+            data_blocks_config = foundation.BlockBuildingParameters(
+                stage='test',
+                image_fpath=datablocks_cfg.filepaths.test_image,
+                label_fpath=datablocks_cfg.filepaths.test_label,
+                data_config_fpath=datablocks_cfg.filepaths.config,
+                dem_pad=datablocks_cfg.general.image_dem_pad,
+                ignore_index=datablocks_cfg.general.ignore_index,
+            )
+            foundation.run_blocks_building(
+                world_grid,
+                paths.data_blocks.test,
+                data_blocks_config,
+                policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+                logger=logger,
+            )
+            assert logger.summary['data_blocks']['test']
+
+            d = logger.summary['data_blocks']['test']['duration_sec']
+            logger.log(
+                'INFO',
+                f'[COMPLETE] Test data blocks preparation (D_{d:.2f}s)'
+            )
+
+    # propagate all exceptions here
+    except Exception as e:
+        logger.set_summary_status('FAILED')
+        logger.log('ERROR', f'Ingestion pipeline failed: {e}', exc_info=True)
+        raise e
 
     # close logger
-    logger.close()
+    finally:
+        logger.log_sep()
+        logger.close()
