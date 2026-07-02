@@ -46,16 +46,19 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .adapter import DataBlocksView, data_blocks_adapter
+    from .common import TransformLogger
     from .data_partition import PartitionParameters, run_datablocks_partition
     from .normal_blocks import run_normalize_blocks
     from .schema import build_schema
-    from .common import TransformLogger
 
 
 def __getattr__(name: str):
 
     if name in {'DataBlocksView', 'data_blocks_adapter'}:
         return getattr(importlib.import_module('.adapter', __package__), name)
+
+    if name in {'TransformLogger'}:
+        return getattr(importlib.import_module('.common', __package__), name)
 
     if name in {'PartitionParameters', 'run_datablocks_partition'}:
         return getattr(importlib.import_module('.data_partition', __package__), name)
@@ -65,8 +68,5 @@ def __getattr__(name: str):
 
     if name in {'build_schema'}:
         return getattr(importlib.import_module('.schema', __package__), name)
-
-    if name in {'TransformLogger'}:
-        return getattr(importlib.import_module('.common', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

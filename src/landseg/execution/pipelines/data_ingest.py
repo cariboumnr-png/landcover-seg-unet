@@ -33,7 +33,6 @@ import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.geopipe.foundation as foundation
-import landseg.geopipe.foundation.common as common
 
 # -------------------------------Public Function-------------------------------
 def ingest(config: configs.RootConfig):
@@ -54,7 +53,7 @@ def ingest(config: configs.RootConfig):
     paths = artifacts.FoundationPaths(config.foundation.output_dpath)
 
     # init a FoundationLogger with summary
-    logger = common.FoundationLogger(
+    logger = foundation.FoundationLogger(
         name='ingest',
         log_file=f'{config.execution.exp_root}/ingest_report.json',
         enable_file_log=False
