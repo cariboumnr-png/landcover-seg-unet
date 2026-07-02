@@ -70,7 +70,6 @@ def build_schema(
     '''
 
     start_time = time.perf_counter()
-    child_logger = logger.get_child('schema')
 
     # schema artifact controller
     schema_ctrl = SchemaCtrl(paths.schema, policy)
@@ -78,7 +77,6 @@ def build_schema(
     loaded = schema is not None
 
     if not schema:
-        child_logger.log('INFO', 'Generating transform schema')
         # artifacts file paths
         collected_artifacts = {
             'block_source': paths.splits_source_blocks,
@@ -125,6 +123,9 @@ def build_schema(
             'label_array_key': 'label', # current convention
         }
         schema_ctrl.persist(schema)
+        logger.log('INFO', '[CHECKPOINT] Created dataset transform schema')
+    else:
+        logger.log('INFO', '[CHECKPOINT] Loaded dataset transform schema')
 
     # compile report
     duration = time.perf_counter() - start_time

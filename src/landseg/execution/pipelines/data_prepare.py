@@ -73,6 +73,7 @@ def prepare(config: configs.RootConfig):
         )
 
         # datablocks partition
+        logger.log('INFO', '[START] Dataset partitioning splits')
         # data transform config aliases
         partition = config.transform.partition
         scoring = config.transform.scoring
@@ -94,20 +95,32 @@ def prepare(config: configs.RootConfig):
             policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
             logger=logger,
         )
+        assert logger.summary
+        assert logger.summary['data_partition']
+        d = logger.summary['data_partition']['duration_sec']
+        logger.log('INFO', f'[COMPLETE] Dataset partitioning splits (D_{d:.2f}s)')
 
         # normalize
+        logger.log('INFO', '[START] Block normalization')
         transform.run_normalize_blocks(
             transform_paths,
             policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
             logger=logger
         )
+        assert logger.summary['normalization']
+        d = logger.summary['normalization']['duration_sec']
+        logger.log('INFO', f'[COMPLETE] Block normalization (D_{d:.2f}s)')
 
         # build schema
+        logger.log('INFO', '[START] Transform schema building')
         transform.build_schema(
             transform_paths,
             policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
             logger=logger
         )
+        assert logger.summary['schema']
+        d = logger.summary['schema']['duration_sec']
+        logger.log('INFO', f'[COMPLETE] Transform schema building (D_{d:.2f}s)')
 
     except Exception as e:
         logger.set_summary_status('FAILED')

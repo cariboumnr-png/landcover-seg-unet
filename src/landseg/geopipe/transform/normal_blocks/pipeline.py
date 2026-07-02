@@ -64,7 +64,6 @@ def run_normalize_blocks(
     '''
 
     start_time = time.perf_counter()
-    child_logger = logger.get_child('norm')
 
     # load source blocks file lists
     ctrl = PartitionCtrl.load_json_or_fail(paths.splits_source_blocks)
@@ -82,6 +81,9 @@ def run_normalize_blocks(
     if not agg_stats:
         agg_stats = stats.aggregate_image_stats(train)
         ctrl.persist(agg_stats)
+        logger.log('INFO', '[CHECKPOINT] Created training partition image stats')
+    else:
+        logger.log('INFO', '[CHECKPOINT] Loaded training partition image stats')
 
     # save dirs
     train_dpath = paths.train_blocks
@@ -103,11 +105,14 @@ def run_normalize_blocks(
     loaded = transform is not None
     if not transform:
         transform = {
-            'train': normalize.normalize_blocks(train, agg_stats, train_dpath, logger=child_logger),
-            'val': normalize.normalize_blocks(val, agg_stats, val_dpath, logger=child_logger),
-            'test': normalize.normalize_blocks(test, agg_stats, test_dpath, logger=child_logger)
+            'train': normalize.normalize_blocks(train, agg_stats, train_dpath, logger=logger),
+            'val': normalize.normalize_blocks(val, agg_stats, val_dpath, logger=logger),
+            'test': normalize.normalize_blocks(test, agg_stats, test_dpath, logger=logger)
         }
         ctrl.persist(transform)
+        logger.log('INFO', '[CHECKPOINT] Created normalized dataset blocks')
+    else:
+        logger.log('INFO', '[CHECKPOINT] Loaded normalized dataset blocks')
 
     # compile report
     duration = time.perf_counter() - start_time

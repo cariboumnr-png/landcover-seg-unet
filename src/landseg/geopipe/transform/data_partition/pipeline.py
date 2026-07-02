@@ -69,7 +69,6 @@ def run_datablocks_partition(
     '''
 
     start_time = time.perf_counter()
-    child_logger = logger.get_child('split')
 
     # partition results controller
     ctrl = PartitionCtrl(paths.splits_source_blocks, policy)
@@ -78,7 +77,6 @@ def run_datablocks_partition(
 
     if not splits_src:
         # get split blocks and persist the main results
-        child_logger.log('INFO', 'Split data blocks')
         splits_src, summary = split.create_blocks_partition(
             parsed_catalog.dev_base_class_counts,
             parsed_catalog.dev_valid_class_counts,
@@ -89,9 +87,12 @@ def run_datablocks_partition(
         ctrl.persist(splits_src)
         # if split is run persist a splits summary as well
         artifacts.Controller(paths.splits_summary, policy).persist(summary)
+        logger.log('INFO', '[CHECKPOINT] Created dataset partition splits')
         # log partition summary
         for m in summary.items():
-            child_logger.log('INFO', f'{m[0]}: {m[1]}')
+            logger.log('INFO', f'{m[0]}: {m[1]}')
+    else:
+        logger.log('INFO', '[CHECKPOINT] Loaded dataset partition splits')
 
     # label count results controller
     ctrl = LabelStatsCtrl(paths.label_stats, policy)
