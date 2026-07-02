@@ -34,6 +34,7 @@ __all__ = [
     # classes
     'DataBlocksView',
     'PartitionParameters',
+    'TransformLogger',
     # functions
     'build_schema',
     'data_blocks_adapter',
@@ -48,6 +49,7 @@ if typing.TYPE_CHECKING:
     from .data_partition import PartitionParameters, run_datablocks_partition
     from .normal_blocks import run_normalize_blocks
     from .schema import build_schema
+    from .common import TransformLogger
 
 
 def __getattr__(name: str):
@@ -63,5 +65,8 @@ def __getattr__(name: str):
 
     if name in {'build_schema'}:
         return getattr(importlib.import_module('.schema', __package__), name)
+
+    if name in {'TransformLogger'}:
+        return getattr(importlib.import_module('.common', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
