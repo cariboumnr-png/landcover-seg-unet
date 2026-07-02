@@ -29,9 +29,13 @@ training blocks only, normalizes all splits using these statistics, and
 writes normalized block artifacts along with updated split mappings.
 '''
 
+# standard imports
+import os
+import time
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.transform.common as common
 import landseg.geopipe.transform.normal_blocks.normalize as normalize
 import landseg.geopipe.transform.normal_blocks.stats as stats
 
@@ -42,7 +46,8 @@ ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 def run_normalize_blocks(
     paths: artifacts.TransformPaths,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
+    logger: common.TransformLogger
 ):
     '''
     Build normalized data blocks from raw block splits.
@@ -52,14 +57,14 @@ def run_normalize_blocks(
     train, validation, and test splits. Normalized blocks are written to
     split-specific directories and registered in `block_splits.json`.
 
-    Artifacts written:
-    - `image_stats.json`: train-only image statistics
-    - `block_splits.json`: normalized block paths indexed by split
-
     Args:
-        root_dir: Transform root directory containing split manifests and
-            receiving normalized artifacts.
+        paths: Transform paths container.
+        policy: Lifecycle policy guiding rebuild behavior.
+        logger: Logger for progress and diagnostic output.
     '''
+
+    start_time = time.perf_counter()
+    child_logger = logger.get_child('norm')
 
     # load source blocks file lists
     ctrl = PartitionCtrl.load_json_or_fail(paths.splits_source_blocks)
@@ -83,14 +88,34 @@ def run_normalize_blocks(
     val_dpath = paths.val_blocks
     test_dpath = paths.test_blocks
 
+    # Pre-calculate purged blocks for the report
+    purged_total = 0
+    for dpath, block_set in [(train_dpath, train), (val_dpath, val), (test_dpath, test)]:
+        if os.path.exists(dpath):
+            names = {os.path.basename(b) for b in block_set}
+            for fpath in os.listdir(dpath):
+                if fpath.endswith('.npz') and fpath not in names:
+                    purged_total += 1
 
     # build normalized blocks for each split
     ctrl = PartitionCtrl(paths.splits_transformed_blocks, policy)
     transform = ctrl.fetch()
+    loaded = transform is not None
     if not transform:
         transform = {
-            'train': normalize.normalize_blocks(train, agg_stats, train_dpath),
-            'val': normalize.normalize_blocks(val, agg_stats, val_dpath),
-            'test': normalize.normalize_blocks(test, agg_stats, test_dpath)
+            'train': normalize.normalize_blocks(train, agg_stats, train_dpath, logger=child_logger),
+            'val': normalize.normalize_blocks(val, agg_stats, val_dpath, logger=child_logger),
+            'test': normalize.normalize_blocks(test, agg_stats, test_dpath, logger=child_logger)
         }
         ctrl.persist(transform)
+
+    # compile report
+    duration = time.perf_counter() - start_time
+    report: common.NormalizationReport = {
+        'status': 'loaded' if loaded else 'created',
+        'duration_sec': duration,
+        'unwanted_blocks_removed': purged_total,
+        'rebuild': False,
+        'stats_filepath': paths.image_stats,
+    }
+    logger.set_normalization_report(report)
