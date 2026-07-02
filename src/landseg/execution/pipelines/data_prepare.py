@@ -85,7 +85,7 @@ def prepare(config: configs.RootConfig):
     )
 
     # normalize
-    transform.run_normaliza_blocks(
+    transform.run_normalize_blocks(
         transform_paths,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
