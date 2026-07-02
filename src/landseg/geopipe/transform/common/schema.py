@@ -20,44 +20,42 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.transform.common`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+TypedDict definitions for data preparation/transform execution summaries.
 '''
 
 from __future__ import annotations
-import importlib
 import typing
 
-__all__ = [
-    'DataPartitionReport',
-    'NormalizationReport',
-    'SchemaReport',
-    'TransformReportSchema',
-    'TransformLogger',
-]
+class DataPartitionReport(typing.TypedDict):
+    '''Execution report for dataset splitting and hydration.'''
+    status: typing.Literal['loaded', 'created']
+    duration_sec: float
+    training_blocks: int
+    validation_blocks: int
+    test_blocks: int
+    base_label_count: list[int]
+    hydrated_label_count: list[int]
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        DataPartitionReport,
-        NormalizationReport,
-        SchemaReport,
-        TransformReportSchema,
-    )
-    from .logger import TransformLogger
+class NormalizationReport(typing.TypedDict):
+    '''Execution report for block normalization and materialization.'''
+    status: typing.Literal['loaded', 'created']
+    duration_sec: float
+    unwanted_blocks_removed: int
+    rebuild: bool
+    stats_filepath: str
 
-def __getattr__(name: str):
-    if name in {
-        'DataPartitionReport',
-        'NormalizationReport',
-        'SchemaReport',
-        'TransformReportSchema',
-    }:
-        return getattr(importlib.import_module('.schema', __package__), name)
+class SchemaReport(typing.TypedDict):
+    '''Execution report for dataset schema generation.'''
+    status: typing.Literal['loaded', 'created']
+    duration_sec: float
+    schema_filepath: str
+    classes_mapped: list[str]
 
-    if name in {'TransformLogger'}:
-        return getattr(importlib.import_module('.logger', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+class TransformReportSchema(typing.TypedDict):
+    '''Root report mapping the entire data-prepare pipeline run.'''
+    run_id: str
+    timestamp: str
+    status: typing.Literal['SUCCESS', 'FAILED']
+    data_partition: DataPartitionReport | None
+    normalization: NormalizationReport | None
+    schema: SchemaReport | None
