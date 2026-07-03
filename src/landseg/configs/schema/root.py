@@ -46,6 +46,8 @@ class _ExecutionContext:
     exp_root: str = './experiment' # root directory for this experiment run
     user_cfg: str | None = None # external user configs
     dev_cfg: str | None = None # developer-only override config
+    rebuild: bool = False # force rebuild data ingestion and/or data prepare pipelines
+    cli_mode: bool = False # indicates whether the execution was initiated through the CLI resolver
 
 # --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass

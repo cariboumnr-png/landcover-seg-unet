@@ -60,6 +60,8 @@ data-ingest:
 
   # Path to the dataset metadata JSON file
   dataset_config: ./experiment/input/data/demo_data/example_config.json
+  # Force rebuild all ingestion artifacts even if they exist
+  rebuild: false
 
 data-prepare:
   # ---------------------------------------------------------------------------
@@ -73,6 +75,8 @@ data-prepare:
   target_head: null
   # Map of class index (0-based) to oversampling reward (e.g., {1: 2.0})
   reward_classes: {}
+  # Force rebuild splits & normalization even if they exist
+  rebuild: false
 
 model-train:
   # ---------------------------------------------------------------------------
