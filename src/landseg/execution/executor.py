@@ -24,18 +24,250 @@ Pipeline execution
 '''
 
 # standard imports
+import dataclasses
+import os
+import sys
 import typing
 # local imports
-import landseg.execution.pipelines as piplines
+import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.execution.pipelines as piplines
 
-#
+
+# -------------------------------Public Function------------------------------
 def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
-    '''Run the selected CLI pipeline with resolved configuration.'''
+    '''
+    Run the selected CLI pipeline with resolved configuration.
+    '''
 
     # get running pipeline
     pipeline_name = root_config.pipeline.name
+
+    # upstream detection checks
+    _validate_upstream_pipelines(root_config, pipeline_name)
+
+    # config staleness checks (if in CLI mode)
+    _check_config_staleness(root_config, pipeline_name)
+
     # get command from pipeline
     command = piplines.get(pipeline_name)
     # run command and return result
     return command(root_config)
+
+# -------------------------------private functions------------------------------
+def _validate_upstream_pipelines(
+    config: configs.RootConfig,
+    pipeline_name: str
+) -> None:
+    '''
+    Verify that upstream pipelines have run and completed successfully.
+    '''
+
+    # no checks if at the start of the pipeline chain
+    if pipeline_name in ('default', 'data-ingest'):
+        return
+
+    # fetch data pipeline artifacts paths
+    foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
+    transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
+
+    # all pipelines (except ingest/default) need ingest to run successfully
+    ingest_report_path = foundation_paths.report
+    ctrl_ingest = artifacts.Controller.load_json_or_fail(ingest_report_path)
+    try:
+        report = ctrl_ingest.fetch()
+    except artifacts.ArtifactError as e:
+        raise artifacts.ArtifactError(
+            'Upstream pipeline "data-ingest" has not been executed yet. '
+            f'Missing or invalid ingestion report at canonical path: '
+            f'{ingest_report_path}'
+        ) from e
+
+    if report.get('status') != 'SUCCESS':
+        status_val = report.get('status')
+        raise artifacts.ArtifactError(
+            'Upstream pipeline "data-ingest" status is '
+            f'"{status_val}", not "SUCCESS". '
+            'Please re-run "data-ingest" successfully first.'
+        )
+
+    # downstream pipelines (except ingest/prep) need prep to run successfully
+    if pipeline_name != 'data-prepare':
+        prep_report_path = transform_paths.report
+        ctrl_prep = artifacts.Controller.load_json_or_fail(prep_report_path)
+        try:
+            report = ctrl_prep.fetch()
+        except artifacts.ArtifactError as e:
+            raise artifacts.ArtifactError(
+                'Upstream pipeline "data-prepare" has not been executed yet. '
+                f'Missing or invalid preparation report at canonical path: '
+                f'{prep_report_path}'
+            ) from e
+
+        if report.get('status') != 'SUCCESS':
+            status_val = report.get('status')
+            raise artifacts.ArtifactError(
+                'Upstream pipeline "data-prepare" status is '
+                f'"{status_val}", not "SUCCESS". '
+                'Please re-run "data-prepare" successfully first.'
+            )
+
+def _check_config_staleness(
+    config: configs.RootConfig,
+    pipeline: str
+) -> None:
+    '''
+    Check if active configs match those from previous pipeline runs.
+    '''
+
+    # staleness checks apply only in CLI mode and for dependent pipelines
+    if not config.execution.cli_mode or pipeline in ('default', 'data-ingest'):
+        return
+
+    # fetch data pipeline artifacts paths
+    foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
+    transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
+
+    # initialize difference tracker
+    diffs = {}
+
+    # compare foundation configuration
+    foundation_cfg_path = foundation_paths.config
+    ctrl_found = artifacts.Controller.load_json_or_fail(foundation_cfg_path)
+    try:
+        saved_config = ctrl_found.fetch()
+    except artifacts.ArtifactError:
+        saved_config = None
+
+    if saved_config is not None:
+        try:
+            saved_foundation = saved_config.get('foundation', {})
+            current_foundation = _normalize_val(
+                dataclasses.asdict(config.foundation)
+            )
+            normalized_saved = _normalize_val(saved_foundation)
+
+            # compare the foundation sections
+            diffs.update(
+                _diff_configs(
+                    current_foundation,
+                    normalized_saved,
+                    'foundation'
+                )
+            )
+        except Exception:
+            diffs['foundation.config_file_read'] = (True, False)
+
+    # compare transform configuration
+    if pipeline != 'data-prepare':
+        transform_cfg_path = transform_paths.config
+        ctrl_trans = artifacts.Controller.load_json_or_fail(transform_cfg_path)
+        try:
+            saved_config = ctrl_trans.fetch()
+        except artifacts.ArtifactError:
+            saved_config = None
+
+        if saved_config is not None:
+            try:
+                saved_transform = saved_config.get('transform', {})
+                current_transform = _normalize_val(
+                    dataclasses.asdict(config.transform)
+                )
+                normalized_saved = _normalize_val(saved_transform)
+
+                # compare the transform sections
+                diffs.update(
+                    _diff_configs(
+                        current_transform,
+                        normalized_saved,
+                        'transform'
+                    )
+                )
+            except Exception:
+                diffs['transform.config_file_read'] = (True, False)
+
+    if diffs:
+        # display warning message
+        print('\n' + '=' * 80)
+        print(
+            '[WARNING] Active configuration does not match settings '
+            'used to build data artifacts:'
+        )
+        for path, (active, saved) in diffs.items():
+            print(f'  - {path}: active={active} vs recorded={saved}')
+        print('=' * 80)
+
+        # check if stdin is a TTY for interactive confirmation
+        if sys.stdin.isatty():
+            sys.stdout.write(
+                '\nStale artifacts detected. Do you want to proceed '
+                'with execution anyway? [y/N]: '
+            )
+            sys.stdout.flush()
+            response = sys.stdin.readline().strip().lower()
+            if response not in ('y', 'yes'):
+                print('Execution aborted by user due to config mismatch.')
+                sys.exit(1)
+        else:
+            print(
+                '\nNon-interactive environment detected. '
+                'Proceeding execution with warning.'
+            )
+            print('=' * 80 + '\n')
+
+def _normalize_val(val: typing.Any) -> typing.Any:
+    '''
+    Normalize values for robust config comparison (handles slash paths).
+    '''
+    if isinstance(val, dict):
+        return {k: _normalize_val(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_normalize_val(v) for v in val]
+    if isinstance(val, str):
+        # normalize slashes and paths
+        if '/' in val or '\\' in val or val.startswith('.'):
+            try:
+                return os.path.abspath(val).replace('\\', '/')
+            except Exception:
+                return val.replace('\\', '/')
+        return val
+    return val
+
+def _diff_configs(
+    dict1: dict,
+    dict2: dict,
+    prefix: str = ''
+) -> dict[str, tuple[typing.Any, typing.Any]]:
+    '''
+    Recursively compare two normalized configuration dictionaries.
+    '''
+    diffs = {}
+    for k, v in dict1.items():
+        path = f'{prefix}.{k}' if prefix else k
+        if k not in dict2:
+            diffs[path] = (v, None)
+            continue
+
+        v2 = dict2[k]
+        if isinstance(v, dict) and isinstance(v2, dict):
+            diffs.update(_diff_configs(v, v2, path))
+        elif isinstance(v, list) and isinstance(v2, list):
+            if len(v) != len(v2):
+                diffs[path] = (v, v2)
+            else:
+                for i, (item1, item2) in enumerate(zip(v, v2)):
+                    list_path = f'{path}[{i}]'
+                    if isinstance(item1, dict) and isinstance(item2, dict):
+                        diffs.update(_diff_configs(item1, item2, list_path))
+                    elif item1 != item2:
+                        diffs[list_path] = (item1, item2)
+        else:
+            if v != v2:
+                diffs[path] = (v, v2)
+
+    for k, v2 in dict2.items():
+        path = f'{prefix}.{k}' if prefix else k
+        if k not in dict1:
+            diffs[path] = (None, v2)
+
+    return diffs
