@@ -48,10 +48,13 @@ def prepare(config: configs.RootConfig):
         config: RootConfig with transform settings.
     '''
 
+    # artifact paths
+    transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
+
     # init a TransformLogger
     logger = transform.TransformLogger(
         name='prep',
-        log_file=f'{config.execution.exp_root}/prep_report.json',
+        log_file=transform_paths.report,
         enable_file_log=False
     )
     time_stamp = datetime.datetime.now().strftime(c.TF_ISO8601)
@@ -62,7 +65,6 @@ def prepare(config: configs.RootConfig):
 
         # artifact paths
         foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
-        transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
 
         # parse catalog from data foundation
         parsed_catalog = transform.data_blocks_adapter(
@@ -121,6 +123,10 @@ def prepare(config: configs.RootConfig):
         assert logger.summary['schema']
         d = logger.summary['schema']['duration_sec']
         logger.log('INFO', f'[COMPLETE] Transform schema building (D_{d:.2f}s)')
+
+        # Write config JSON sidecar upon successful execution
+        config_ctrl = artifacts.Controller[dict](transform_paths.config)
+        config_ctrl.persist(config.as_dict)
 
     except Exception as e:
         logger.set_summary_status('FAILED')

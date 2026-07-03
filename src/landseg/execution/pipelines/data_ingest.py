@@ -55,7 +55,7 @@ def ingest(config: configs.RootConfig):
     # init a FoundationLogger with summary
     logger = foundation.FoundationLogger(
         name='ingest',
-        log_file=f'{config.execution.exp_root}/ingest_report.json',
+        log_file=paths.report,
         enable_file_log=False
     )
     time_stamp = datetime.datetime.now().strftime(c.TF_ISO8601)
@@ -178,6 +178,10 @@ def ingest(config: configs.RootConfig):
                 'INFO',
                 f'[COMPLETE] Test data blocks preparation (D_{d:.2f}s)'
             )
+
+        # Write config JSON sidecar upon successful execution
+        config_ctrl = artifacts.Controller[dict](paths.config)
+        config_ctrl.persist(config.as_dict)
 
     # propagate all exceptions here
     except Exception as e:

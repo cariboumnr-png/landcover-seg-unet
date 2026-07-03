@@ -135,6 +135,16 @@ class FoundationPaths:
     def data_blocks(self):
         return _DataBlocks(os.path.join(self.root, 'data_blocks'))
 
+    @property
+    def report(self) -> str:
+        '''Return the file path of the ingestion execution report.'''
+        return os.path.join(self.root, 'ingest_report.json')
+
+    @property
+    def config(self) -> str:
+        '''Return the file path of the persisted ingestion configuration.'''
+        return os.path.join(self.root, 'config.json')
+
 # artifacts/foundation/world_grids/
 @dataclasses.dataclass
 class _WorldGrids:
@@ -204,6 +214,16 @@ class _DataBlockPaths:
 class TransformPaths:
     '''Paths for transformed datasets and split artifacts.'''
     root: str
+
+    @property
+    def report(self) -> str:
+        '''Return the file path of the preparation execution report.'''
+        return os.path.join(self.root, 'prep_report.json')
+
+    @property
+    def config(self) -> str:
+        '''Return the file path of the persisted preparation configuration.'''
+        return os.path.join(self.root, 'config.json')
 
     @property
     def train_blocks(self) -> str:
