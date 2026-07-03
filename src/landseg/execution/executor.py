@@ -33,12 +33,11 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as piplines
 
+DictControl = artifacts.Controller[dict[str, typing.Any]]
 
 # -------------------------------Public Function------------------------------
 def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
-    '''
-    Run the selected CLI pipeline with resolved configuration.
-    '''
+    '''Run the selected CLI pipeline with resolved configuration.'''
 
     # get running pipeline
     pipeline_name = root_config.pipeline.name
@@ -59,9 +58,7 @@ def _validate_upstream_pipelines(
     config: configs.RootConfig,
     pipeline_name: str
 ) -> None:
-    '''
-    Verify that upstream pipelines have run and completed successfully.
-    '''
+    '''Verify if upstream pipelines have completed successfully.'''
 
     # no checks if at the start of the pipeline chain
     if pipeline_name in ('default', 'data-ingest'):
@@ -71,16 +68,16 @@ def _validate_upstream_pipelines(
     foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
     transform_paths = artifacts.TransformPaths(config.transform.output_dpath)
 
-    # all pipelines (except ingest/default) need ingest to run successfully
-    ingest_report_path = foundation_paths.report
-    ctrl_ingest = artifacts.Controller.load_json_or_fail(ingest_report_path)
+    # pipelines downstream of data-ingest
+    ctrl_ingest = DictControl.load_json_or_fail(foundation_paths.report)
     try:
         report = ctrl_ingest.fetch()
+        assert report # typing guard
     except artifacts.ArtifactError as e:
         raise artifacts.ArtifactError(
             'Upstream pipeline "data-ingest" has not been executed yet. '
             f'Missing or invalid ingestion report at canonical path: '
-            f'{ingest_report_path}'
+            f'{foundation_paths.report}'
         ) from e
 
     if report.get('status') != 'SUCCESS':
@@ -91,17 +88,17 @@ def _validate_upstream_pipelines(
             'Please re-run "data-ingest" successfully first.'
         )
 
-    # downstream pipelines (except ingest/prep) need prep to run successfully
+    # pipelines downstream of data-prepare
     if pipeline_name != 'data-prepare':
-        prep_report_path = transform_paths.report
-        ctrl_prep = artifacts.Controller.load_json_or_fail(prep_report_path)
+        ctrl_prep = DictControl.load_json_or_fail(transform_paths.report)
         try:
             report = ctrl_prep.fetch()
+            assert report # typing guard
         except artifacts.ArtifactError as e:
             raise artifacts.ArtifactError(
                 'Upstream pipeline "data-prepare" has not been executed yet. '
                 f'Missing or invalid preparation report at canonical path: '
-                f'{prep_report_path}'
+                f'{transform_paths.report}'
             ) from e
 
         if report.get('status') != 'SUCCESS':
@@ -116,9 +113,7 @@ def _check_config_staleness(
     config: configs.RootConfig,
     pipeline: str
 ) -> None:
-    '''
-    Check if active configs match those from previous pipeline runs.
-    '''
+    '''Check if active configs match those from previous runs.'''
 
     # staleness checks apply only in CLI mode and for dependent pipelines
     if not config.execution.cli_mode or pipeline in ('default', 'data-ingest'):
@@ -132,93 +127,84 @@ def _check_config_staleness(
     diffs = {}
 
     # compare foundation configuration
-    foundation_cfg_path = foundation_paths.config
-    ctrl_found = artifacts.Controller.load_json_or_fail(foundation_cfg_path)
-    try:
-        saved_config = ctrl_found.fetch()
-    except artifacts.ArtifactError:
-        saved_config = None
-
-    if saved_config is not None:
-        try:
-            saved_foundation = saved_config.get('foundation', {})
-            current_foundation = _normalize_val(
-                dataclasses.asdict(config.foundation)
-            )
-            normalized_saved = _normalize_val(saved_foundation)
-
-            # compare the foundation sections
-            diffs.update(
-                _diff_configs(
-                    current_foundation,
-                    normalized_saved,
-                    'foundation'
-                )
-            )
-        except Exception:
-            diffs['foundation.config_file_read'] = (True, False)
+    diffs.update(
+        _compare_config_section(
+            foundation_paths.config,
+            'foundation',
+            config.foundation,
+        )
+    )
 
     # compare transform configuration
     if pipeline != 'data-prepare':
-        transform_cfg_path = transform_paths.config
-        ctrl_trans = artifacts.Controller.load_json_or_fail(transform_cfg_path)
-        try:
-            saved_config = ctrl_trans.fetch()
-        except artifacts.ArtifactError:
-            saved_config = None
-
-        if saved_config is not None:
-            try:
-                saved_transform = saved_config.get('transform', {})
-                current_transform = _normalize_val(
-                    dataclasses.asdict(config.transform)
-                )
-                normalized_saved = _normalize_val(saved_transform)
-
-                # compare the transform sections
-                diffs.update(
-                    _diff_configs(
-                        current_transform,
-                        normalized_saved,
-                        'transform'
-                    )
-                )
-            except Exception:
-                diffs['transform.config_file_read'] = (True, False)
-
-    if diffs:
-        # display warning message
-        print('\n' + '=' * 80)
-        print(
-            '[WARNING] Active configuration does not match settings '
-            'used to build data artifacts:'
+        diffs.update(
+            _compare_config_section(
+                transform_paths.config,
+                'transform',
+                config.transform,
+            )
         )
-        for path, (active, saved) in diffs.items():
-            print(f'  - {path}: active={active} vs recorded={saved}')
-        print('=' * 80)
 
-        # check if stdin is a TTY for interactive confirmation
-        if sys.stdin.isatty():
-            sys.stdout.write(
-                '\nStale artifacts detected. Do you want to proceed '
-                'with execution anyway? [y/N]: '
-            )
-            sys.stdout.flush()
-            response = sys.stdin.readline().strip().lower()
-            if response not in ('y', 'yes'):
-                print('Execution aborted by user due to config mismatch.')
-                sys.exit(1)
-        else:
-            print(
-                '\nNon-interactive environment detected. '
-                'Proceeding execution with warning.'
-            )
-            print('=' * 80 + '\n')
+    if not diffs:
+        return
+    # display warning message
+    print('\n' + '=' * 80)
+    print(
+        '[WARNING] Active configuration does not match settings '
+        'used to build data artifacts:'
+    )
+    for path, (active, saved) in diffs.items():
+        print(f'  - {path}: active={active} vs recorded={saved}')
+    print('=' * 80)
+
+    # check if stdin is a TTY for interactive confirmation
+    if sys.stdin.isatty():
+        sys.stdout.write(
+            '\nStale artifacts detected. Do you want to proceed '
+            'with execution anyway? [y/N]: '
+        )
+        sys.stdout.flush()
+        response = sys.stdin.readline().strip().lower()
+        if response not in ('y', 'yes'):
+            print('Execution aborted by user due to config mismatch.')
+            sys.exit(1)
+    else:
+        print(
+            '\nNon-interactive environment detected. '
+            'Proceeding execution with warning.'
+        )
+        print('=' * 80 + '\n')
+
+def _compare_config_section(
+    artifact_path: str,
+    section_name: str,
+    current: typing.Any,
+) -> dict[str, tuple[typing.Any, typing.Any]]:
+    '''Helper to compare a config section'''
+
+    ctrl = DictControl.load_json_or_fail(artifact_path)
+
+    try:
+        saved = ctrl.fetch()          # or fetch()+check
+        assert saved # typing
+    except artifacts.ArtifactError:
+        return {}
+
+    try:
+        saved_section = _normalize_val(saved.get(section_name, {}))
+        current_section = _normalize_val(dataclasses.asdict(current))
+    except (TypeError, AttributeError):
+        return {f'{section_name}.config_file_read': (True, False)}
+
+    return _diff_configs(
+        current_section,
+        saved_section,
+        section_name,
+    )
 
 def _normalize_val(val: typing.Any) -> typing.Any:
-    '''
-    Normalize values for robust config comparison (handles slash paths).
-    '''
+    '''Normalize values for robust config comparison'''
+
     if isinstance(val, dict):
         return {k: _normalize_val(v) for k, v in val.items()}
     if isinstance(val, list):
@@ -226,10 +212,7 @@ def _normalize_val(val: typing.Any) -> typing.Any:
     if isinstance(val, str):
         # normalize slashes and paths
         if '/' in val or '\\' in val or val.startswith('.'):
-            try:
-                return os.path.abspath(val).replace('\\', '/')
-            except Exception:
-                return val.replace('\\', '/')
+            return os.path.abspath(val).replace('\\', '/')
         return val
     return val
 
@@ -238,9 +221,8 @@ def _diff_configs(
     dict2: dict,
     prefix: str = ''
 ) -> dict[str, tuple[typing.Any, typing.Any]]:
-    '''
-    Recursively compare two normalized configuration dictionaries.
-    '''
+    '''Recursively compare two normalized configuration dictionaries.'''
+
     diffs = {}
     for k, v in dict1.items():
         path = f'{prefix}.{k}' if prefix else k
