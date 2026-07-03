@@ -152,6 +152,7 @@ class DataFoundation:
     grid: _Grid = field(default_factory=_Grid)
     domains: _Domains = field(default_factory=_Domains)
     datablocks: _DataBlocks = field(default_factory=_DataBlocks)
+    rebuild: bool = False
     output_dpath: str = (
         '${execution.exp_root}/artifacts/'
         '${foundation.datablocks.name}/foundation'

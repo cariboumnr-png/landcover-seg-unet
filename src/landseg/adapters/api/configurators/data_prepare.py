@@ -57,3 +57,9 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         self._cfg.transform.catalog.focal_target = target_head
         self._cfg.transform.scoring.reward = reward_classes
         return self
+
+    def set_rebuild(self, rebuild: bool) -> typing.Self:
+        '''Set whether to force rebuild preparation artifacts.'''
+        self._cfg.transform.rebuild = rebuild
+        return self
+

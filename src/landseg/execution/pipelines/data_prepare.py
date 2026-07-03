@@ -66,7 +66,7 @@ def prepare(config: configs.RootConfig):
         # resolve lifecycle policy dynamically
         policy = (
             artifacts.LifecyclePolicy.REBUILD
-            if config.execution.rebuild
+            if config.transform.rebuild
             else artifacts.LifecyclePolicy.BUILD_IF_MISSING
         )
 

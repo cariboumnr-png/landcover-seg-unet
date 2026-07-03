@@ -111,8 +111,3 @@ class BaseConfigurator:
         orchestration.monitor.patience = patience_epoch
         orchestration.monitor.track_heads = track_heads
         return self
-
-    def set_rebuild(self, rebuild: bool) -> typing.Self:
-        '''Set whether to force rebuild pipeline artifacts.'''
-        self._cfg.execution.rebuild = rebuild
-        return self

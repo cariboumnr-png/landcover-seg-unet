@@ -26,21 +26,25 @@ pipeline execution layer.
 ### 2.1. Dynamic Caching Policies via Rebuild Setting
 We introduced a user-facing `rebuild` context setting (defaulting to `false`) within the
 structured configurations:
-* Mapped `rebuild` from `user.yaml` (either globally or within `data-ingest` and `data-prepare`
-  blocks) to `execution.rebuild`.
-* Exposed the rebuild configuration in python programmatic configurators for Jupyter notebook
-  environments.
-* Refactored `data_ingest.py` and `data_prepare.py` orchestrators to dynamically resolve the
-  `LifecyclePolicy`:
+* Mapped `rebuild` from `user.yaml` within the `data-ingest` and `data-prepare` blocks to `foundation.rebuild` and `transform.rebuild` respectively.
+* Exposed the rebuild configurations in python programmatic configurators for Jupyter notebook environments.
+* Refactored `data_ingest.py` and `data_prepare.py` orchestrators to dynamically resolve the `LifecyclePolicy` from the respective configuration section:
   ```python
+  # inside data_ingest.py
   policy = (
       artifacts.LifecyclePolicy.REBUILD
-      if config.execution.rebuild
+      if config.foundation.rebuild
+      else artifacts.LifecyclePolicy.BUILD_IF_MISSING
+  )
+
+  # inside data_prepare.py
+  policy = (
+      artifacts.LifecyclePolicy.REBUILD
+      if config.transform.rebuild
       else artifacts.LifecyclePolicy.BUILD_IF_MISSING
   )
   ```
-  This resolved policy is passed directly to all data preparation tasks, allowing force-rebuilding
-  of data blocks from scratch when desired.
+  These resolved policies are passed directly to the corresponding tasks, allowing selective force-rebuilding.
 
 ### 2.2. Relocated Reports and Persistent Configuration Sidecars
 To keep execution reports centrally managed under the `artifacts` module rather than directly in

@@ -86,3 +86,9 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         self._cfg.foundation.datablocks.filepaths.test_image = test_holdout_image
         self._cfg.foundation.datablocks.filepaths.test_label = test_holdout_label
         return self
+
+    def set_rebuild(self, rebuild: bool) -> typing.Self:
+        '''Set whether to force rebuild ingestion artifacts.'''
+        self._cfg.foundation.rebuild = rebuild
+        return self
+

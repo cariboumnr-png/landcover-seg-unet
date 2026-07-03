@@ -65,9 +65,6 @@ def translate_user_config(raw: omegaconf.DictConfig) -> omegaconf.DictConfig:
     if 'exp_root' in raw:
         _set_paths(translated, ['execution.exp_root'], raw['exp_root'])
 
-    if 'rebuild' in raw:
-        _set_paths(translated, ['execution.rebuild'], raw['rebuild'])
-
     if 'data-ingest' in raw:
         _translate_data_ingest(raw['data-ingest'], translated)
 
@@ -105,7 +102,7 @@ def _translate_data_ingest(
         'test_image': ['foundation.datablocks.filepaths.test_image'],
         'test_label': ['foundation.datablocks.filepaths.test_label'],
         'dataset_config': ['foundation.datablocks.filepaths.config'],
-        'rebuild': ['execution.rebuild'],
+        'rebuild': ['foundation.rebuild'],
     }
     _apply_mapping(fdn, translated, mapping)
 
@@ -120,7 +117,7 @@ def _translate_data_prepare(
         'test_ratio': ['transform.partition.test_ratio'],
         'target_head': ['transform.catalog.focal_target'],
         'reward_classes': ['transform.scoring.reward'],
-        'rebuild': ['execution.rebuild'],
+        'rebuild': ['transform.rebuild'],
     }
     _apply_mapping(tf, translated, mapping)
 
