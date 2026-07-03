@@ -19,12 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Utility script to generate dummy/mock geospatial datasets (GeoTIFFs)
 and corresponding configurations for local pipeline runs and testing.
 '''
 
 # standard imports
+import dataclasses
 import json
 import os
 import sys
@@ -34,15 +37,52 @@ import numpy
 import rasterio
 import rasterio.transform
 
-# --------------------------------Public Function-------------------------------
+# Public Dataclass
+@dataclasses.dataclass
+class TIFFConfig:
+    '''Container for creating a dummy GeoTIFF file via `rasterio`.'''
+    shape: tuple[int, int]
+    bands: int
+    crs: str
+    transform: rasterio.transform.Affine
+    dtype: typing.Any
+
+# ------------------------------private dataclass------------------------------
+@dataclasses.dataclass
+class _TIFFPaths:
+    '''Container for dummy TIFF file paths.'''
+    input_root: str
+
+    @property
+    def extent(self) -> str:
+        return f'{self.input_root}/extent_reference/example_extent.tif'
+    @property
+    def domain_1(self) -> str:
+        return f'{self.input_root}/domain_knowledge/example_domain_1.tif'
+    @property
+    def domain_2(self) -> str:
+        return f'{self.input_root}/domain_knowledge/example_domain_2.tif'
+    @property
+    def dev_image(self) -> str:
+        return f'{self.input_root}/data/demo_data/dev/example_image.tif'
+    @property
+    def test_image(self) -> str:
+        return f'{self.input_root}/data/demo_data/test/example_image.tif'
+    @property
+    def dev_label(self) -> str:
+        return f'{self.input_root}/data/demo_data/dev/example_label.tif'
+    @property
+    def test_label(self) -> str:
+        return f'{self.input_root}/data/demo_data/test/example_label.tif'
+    @property
+    def config(self) -> str:
+        return f'{self.input_root}/data/demo_data/example_config.json'
+
+# -------------------------------Public  Function------------------------------
 def create_dummy_geotiff(
     fpath: str,
     *,
-    shape: tuple[int, int],
-    bands: int,
-    crs: str,
-    transform: rasterio.transform.Affine,
-    dtype: typing.Any,
+    config: TIFFConfig,
     data_gen_func: typing.Callable[[tuple[int, int], int], numpy.ndarray],
 ) -> None:
     '''Write a multi-band GeoTIFF with coordinate metadata.
@@ -61,8 +101,8 @@ def create_dummy_geotiff(
     os.makedirs(os.path.dirname(fpath), exist_ok=True)
     # set nodata based on dtype
     nodata_val = (
-        0 if dtype == numpy.uint8
-        else 255 if dtype == numpy.uint16
+        0 if config.dtype == numpy.uint8
+        else 255 if config.dtype == numpy.uint16
         else -9999.0
     )
     # write GeoTIFF
@@ -70,16 +110,16 @@ def create_dummy_geotiff(
         fpath,
         'w',
         driver='GTiff',
-        height=shape[0],
-        width=shape[1],
-        count=bands,
-        dtype=dtype,
-        crs=crs,
-        transform=transform,
+        height=config.shape[0],
+        width=config.shape[1],
+        count=config.bands,
+        dtype=config.dtype,
+        crs=config.crs,
+        transform=config.transform,
         nodata=nodata_val,
     ) as dst:
-        for b in range(1, bands + 1):
-            band_data = data_gen_func(shape, b)
+        for b in range(1, config.bands + 1):
+            band_data = data_gen_func(config.shape, b)
             dst.write(band_data, b)
 
 def generate_dummy_data(input_root: str = './experiment/input') -> None:
@@ -97,8 +137,8 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
     orig_y = 5000000.0
     width, height = 512, 512 # this gives 4 256*256 tiles per image
     shape = (height, width)
-    
-    # Combined extent shape covers both dev and test side-by-side
+
+    # combined extent shape covers both dev and test side-by-side
     extent_shape = (height, width * 2)
 
     # create affine transforms for spatial referencing
@@ -111,104 +151,111 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
     )
     extent_transform = dev_transform
 
+    # TIFF file paths
+    paths = _TIFFPaths(input_root=input_root)
+
     # create extent reference (single band constant value on the wide extent)
-    extent_path = f'{input_root}/extent_reference/example_extent.tif'
-    print(f'Creating extent reference: {extent_path}')
+    print(f'Creating extent reference: {paths.extent}')
     create_dummy_geotiff(
-        extent_path,
-        shape=extent_shape,
-        bands=1,
-        crs=crs,
-        transform=extent_transform,
-        dtype=numpy.uint8,
+        paths.extent,
+        config=TIFFConfig(
+            shape=extent_shape,
+            bands=1,
+            crs=crs,
+            transform=extent_transform,
+            dtype=numpy.uint8,
+        ),
         data_gen_func=lambda s, b: numpy.ones(s, dtype=numpy.uint8),
     )
 
-    # dev and test images w/ 4 bands: DEM+RGB
-    dev_image_path = f'{input_root}/data/demo_data/dev/example_image.tif'
-    test_image_path = f'{input_root}/data/demo_data/test/example_image.tif'
-
-    print(f'Creating dev image: {dev_image_path}')
-    create_dummy_geotiff(
-        dev_image_path,
-        shape=shape,
-        bands=4,
-        crs=crs,
-        transform=dev_transform,
-        dtype=numpy.float32,  # float32 due to DEM float band
-        data_gen_func=_gen_image_data,
-    )
-
-    print(f'Creating test image: {test_image_path}')
-    create_dummy_geotiff(
-        test_image_path,
-        shape=shape,
-        bands=4,
-        crs=crs,
-        transform=test_transform,
-        dtype=numpy.float32,
-        data_gen_func=_gen_image_data,
-    )
-
-    # dev and test labels
-    dev_label_path = f'{input_root}/data/demo_data/dev/example_label.tif'
-    test_label_path = f'{input_root}/data/demo_data/test/example_label.tif'
-
-    print(f'Creating dev label: {dev_label_path}')
-    create_dummy_geotiff(
-        dev_label_path,
-        shape=shape,
-        bands=1,
-        crs=crs,
-        transform=dev_transform,
-        dtype=numpy.uint8,
-        data_gen_func=_gen_label_data,
-    )
-
-    print(f'Creating test label: {test_label_path}')
-    create_dummy_geotiff(
-        test_label_path,
-        shape=shape,
-        bands=1,
-        crs=crs,
-        transform=test_transform,
-        dtype=numpy.uint8,
-        data_gen_func=_gen_label_data,
-    )
-
     # domain knowledge layers (covering the wide extent)
-    domain_1_path = f'{input_root}/domain_knowledge/example_domain_1.tif'
-    domain_2_path = f'{input_root}/domain_knowledge/example_domain_2.tif'
-
-    print(f'Creating domain knowledge 1: {domain_1_path}')
+    print(f'Creating domain knowledge 1: {paths.domain_1}')
     create_dummy_geotiff(
-        domain_1_path,
-        shape=extent_shape,
-        bands=1,
-        crs=crs,
-        transform=extent_transform,
-        dtype=numpy.uint8,
+        paths.domain_1,
+        config=TIFFConfig(
+            shape=extent_shape,
+            bands=1,
+            crs=crs,
+            transform=extent_transform,
+            dtype=numpy.uint8,
+        ),
         data_gen_func=lambda s, b: numpy.random.randint(
             1, 5, size=s, dtype=numpy.uint8
         ),
     )
 
-    print(f'Creating domain knowledge 2: {domain_2_path}')
+    print(f'Creating domain knowledge 2: {paths.domain_2}')
     create_dummy_geotiff(
-        domain_2_path,
-        shape=extent_shape,
-        bands=1,
-        crs=crs,
-        transform=extent_transform,
-        dtype=numpy.uint8,
+        paths.domain_2,
+        config=TIFFConfig(
+            shape=extent_shape,
+            bands=1,
+            crs=crs,
+            transform=extent_transform,
+            dtype=numpy.uint8,
+        ),
         data_gen_func=lambda s, b: numpy.random.randint(
             1, 10, size=s, dtype=numpy.uint8
         ),
     )
 
+    # dev and test images w/ 4 bands: DEM+RGB
+
+    print(f'Creating dev image: {paths.dev_image}')
+    create_dummy_geotiff(
+        paths.dev_image,
+        config=TIFFConfig(
+            shape=shape,
+            bands=4,
+            crs=crs,
+            transform=dev_transform,
+            dtype=numpy.float32,  # float32 due to DEM float band
+        ),
+        data_gen_func=_gen_image_data,
+    )
+
+    print(f'Creating test image: {paths.test_image}')
+    create_dummy_geotiff(
+        paths.test_image,
+        config=TIFFConfig(
+            shape=shape,
+            bands=4,
+            crs=crs,
+            transform=test_transform,
+            dtype=numpy.float32,
+        ),
+        data_gen_func=_gen_image_data,
+    )
+
+    # dev and test labels
+    print(f'Creating dev label: {paths.dev_label}')
+    create_dummy_geotiff(
+        paths.dev_label,
+        config=TIFFConfig(
+            shape=shape,
+            bands=1,
+            crs=crs,
+            transform=dev_transform,
+            dtype=numpy.uint8,
+        ),
+        data_gen_func=_gen_label_data,
+    )
+
+    print(f'Creating test label: {paths.test_label}')
+    create_dummy_geotiff(
+        paths.test_label,
+        config=TIFFConfig(
+            shape=shape,
+            bands=1,
+            crs=crs,
+            transform=test_transform,
+            dtype=numpy.uint8,
+        ),
+        data_gen_func=_gen_label_data,
+    )
+
     # dataset config JSON
-    config_path = f'{input_root}/data/demo_data/example_config.json'
-    print(f'Creating dataset configuration: {config_path}')
+    print(f'Creating dataset configuration: {paths.config}')
     config_data = {
         'image_band_map': {
             'dem': 0,
@@ -223,9 +270,8 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
             }
         },
     }
-
-    os.makedirs(os.path.dirname(config_path), exist_ok=True)
-    with open(config_path, 'w', encoding='utf-8') as f:
+    os.makedirs(os.path.dirname(paths.config), exist_ok=True)
+    with open(paths.config, 'w', encoding='utf-8') as f:
         json.dump(config_data, f, indent=4)
 
     print('\nDummy data generation completed successfully!')
@@ -252,18 +298,17 @@ def _gen_label_data(shape: tuple[int, int], _: int) -> numpy.ndarray:
 
 # -------------------------------Main Executable-------------------------------
 if __name__ == '__main__':
-    
+
     # check if the directory already exists and is not empty
-    target_dir = './experiment/input'
-    if os.path.exists(target_dir) and os.listdir(target_dir):
+    DEFAULT_DIR = './experiment/input'
+    M = 'Generating dummy data will overwrite existing files. Proceed? [y/N]: '
+    if os.path.exists(DEFAULT_DIR) and os.listdir(DEFAULT_DIR):
         print(
-            f'WARNING: Target directory "{target_dir}" ' 
+            f'WARNING: Target directory "{DEFAULT_DIR}" '
             f'already exists and is not empty.'
         )
-        response = input(
-            'Generating dummy data will overwrite existing files. Proceed? [y/N]: '
-        )
+        response = input(M)
         if response.strip().lower() not in ('y', 'yes'):
             print('Aborted.')
             sys.exit(0)
-    generate_dummy_data(target_dir)
+    generate_dummy_data(DEFAULT_DIR)
