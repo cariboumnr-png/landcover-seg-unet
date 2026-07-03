@@ -95,9 +95,9 @@ def ingest(config: configs.RootConfig):
             policy=policy,
             logger=logger,
         )
-        assert logger.summary['world_grid'] # should have been populated
 
         # log to console with duration
+        assert logger.summary['world_grid'] # typing: should already populate
         d = logger.summary['world_grid']['duration_sec']
         logger.log('INFO', f'[COMPLETE] World grid preparation (D_{d:.2f}s)')
 
@@ -109,13 +109,13 @@ def ingest(config: configs.RootConfig):
             gid = world_grid.gid
             domain_config = [
                 foundation.DomainBuildingParameters(
-                    input_fpath=d.path,
-                    domain_fpath=paths.domains.domain_map_fpath(d.name),
-                    tiles_fpath=paths.domains.mapped_tiles_fpath(d.name, gid),
-                    index_base=d.index_base,
+                    input_fpath=dm.path,
+                    domain_fpath=paths.domains.domain_map_fpath(dm.name),
+                    tiles_fpath=paths.domains.mapped_tiles_fpath(dm.name, gid),
+                    index_base=dm.index_base,
                     valid_threshold=domain_cfg.valid_threshold,
                     target_variance=domain_cfg.target_variance,
-                ) for d in domain_cfg.files
+                ) for dm in domain_cfg.files
             ]
             foundation.prepare_domain_maps(
                 world_grid,
@@ -123,7 +123,6 @@ def ingest(config: configs.RootConfig):
                 policy=policy,
                 logger=logger,
             )
-            assert logger.summary['domain_maps'] # should have been poplulated
 
             # log to console with duration
             d = sum(dm['duration_sec'] for dm in logger.summary['domain_maps'])
@@ -149,7 +148,6 @@ def ingest(config: configs.RootConfig):
             policy=policy,
             logger=logger,
         )
-        assert logger.summary['data_blocks']['dev']
 
         # log to console with duration
         d = logger.summary['data_blocks']['dev']['duration_sec']
@@ -187,8 +185,7 @@ def ingest(config: configs.RootConfig):
             )
 
         # write config JSON sidecar upon successful execution
-        config_ctrl = artifacts.Controller[dict](paths.config)
-        config_ctrl.persist(config.as_dict)
+        artifacts.Controller[dict](paths.config).persist(config.as_dict)
 
     # propagate all exceptions here
     except Exception as e:
