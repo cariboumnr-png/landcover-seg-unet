@@ -247,7 +247,13 @@ class Controller(typing.Generic[T]):
     def _npz_read_dict(fp):
         '''Load a dictionary of arrays from a compressed NPZ file.'''
         data = numpy.load(fp)
-        return dict(zip(data['keys'], data['values']))
+        keys = data['keys']
+        if keys.ndim == 2:
+            resolved_keys = [tuple(int(x) for x in k) for k in keys]
+        else:
+            resolved_keys = [k.item() if hasattr(k, 'item') else k for k in keys]
+        return dict(zip(resolved_keys, data['values']))
+
 
     @staticmethod
     def _npz_write_dict(fp, src):
