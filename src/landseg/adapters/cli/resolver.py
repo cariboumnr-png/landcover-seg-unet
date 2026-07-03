@@ -99,6 +99,7 @@ def resolve_configs(
 
     # construct and cast config dataclass
     root = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
+    root.execution.cli_mode = True
 
     # final validation checks before returning
     root.validate_all()

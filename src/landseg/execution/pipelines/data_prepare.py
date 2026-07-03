@@ -63,6 +63,13 @@ def prepare(config: configs.RootConfig):
     try:
         logger.log_sep()
 
+        # resolve lifecycle policy dynamically
+        policy = (
+            artifacts.LifecyclePolicy.REBUILD
+            if config.execution.rebuild
+            else artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        )
+
         # artifact paths
         foundation_paths = artifacts.FoundationPaths(config.foundation.output_dpath)
 
@@ -94,7 +101,7 @@ def prepare(config: configs.RootConfig):
             parsed_catalog,
             transform_paths,
             partition_config,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            policy=policy,
             logger=logger,
         )
         assert logger.summary
@@ -106,7 +113,7 @@ def prepare(config: configs.RootConfig):
         logger.log('INFO', '[START] Block normalization')
         transform.run_normalize_blocks(
             transform_paths,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            policy=policy,
             logger=logger
         )
         assert logger.summary['normalization']
@@ -117,14 +124,14 @@ def prepare(config: configs.RootConfig):
         logger.log('INFO', '[START] Transform schema building')
         transform.build_schema(
             transform_paths,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            policy=policy,
             logger=logger
         )
         assert logger.summary['schema']
         d = logger.summary['schema']['duration_sec']
         logger.log('INFO', f'[COMPLETE] Transform schema building (D_{d:.2f}s)')
 
-        # Write config JSON sidecar upon successful execution
+        # write config JSON sidecar upon successful execution
         config_ctrl = artifacts.Controller[dict](transform_paths.config)
         config_ctrl.persist(config.as_dict)
 

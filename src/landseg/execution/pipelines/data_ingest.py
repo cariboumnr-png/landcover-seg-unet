@@ -65,6 +65,13 @@ def ingest(config: configs.RootConfig):
     try:
         logger.log_sep()
 
+        # resolve lifecycle policy dynamically
+        policy = (
+            artifacts.LifecyclePolicy.REBUILD
+            if config.execution.rebuild
+            else artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        )
+
         # config aliases
         domain_cfg = config.foundation.domains
         grid_cfg = config.foundation.grid
@@ -85,7 +92,7 @@ def ingest(config: configs.RootConfig):
         world_grid = foundation.prepare_world_grid(
             paths.grids.fpath(grid_cfg.tile_specs_tuple),
             grid_config,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            policy=policy,
             logger=logger,
         )
         assert logger.summary['world_grid'] # should have been populated
@@ -113,7 +120,7 @@ def ingest(config: configs.RootConfig):
             foundation.prepare_domain_maps(
                 world_grid,
                 domain_config,
-                policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+                policy=policy,
                 logger=logger,
             )
             assert logger.summary['domain_maps'] # should have been poplulated
@@ -139,7 +146,7 @@ def ingest(config: configs.RootConfig):
             world_grid,
             paths.data_blocks.dev,
             data_blocks_config,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            policy=policy,
             logger=logger,
         )
         assert logger.summary['data_blocks']['dev']
@@ -168,7 +175,7 @@ def ingest(config: configs.RootConfig):
                 world_grid,
                 paths.data_blocks.test,
                 data_blocks_config,
-                policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+                policy=policy,
                 logger=logger,
             )
             assert logger.summary['data_blocks']['test']
@@ -179,7 +186,7 @@ def ingest(config: configs.RootConfig):
                 f'[COMPLETE] Test data blocks preparation (D_{d:.2f}s)'
             )
 
-        # Write config JSON sidecar upon successful execution
+        # write config JSON sidecar upon successful execution
         config_ctrl = artifacts.Controller[dict](paths.config)
         config_ctrl.persist(config.as_dict)
 
