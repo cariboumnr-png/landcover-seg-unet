@@ -30,3 +30,15 @@ include = ["landseg*"]
 
 [tool.setuptools.package-data]
 landseg = ["configs/**/*.yaml", "configs/*.yaml"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "pytest-cov>=4.1"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--cov=landseg --cov-report=term-missing"
