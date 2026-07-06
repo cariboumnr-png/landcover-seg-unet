@@ -20,51 +20,32 @@
 # =========================================================================== #
 
 '''
-Shared configuration and fixtures for the landseg test suite.
+Top-level namespace for `landseg.testing`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# standard imports
-import pytest
-# third-party imports
-import numpy
-import rasterio.transform
-# local imports
-import landseg.testing as testing
+from __future__ import annotations
+import importlib
+import typing
 
-@pytest.fixture
-def dummy_geotiff_factory(tmp_path):
-    '''
-    Factory fixture to create temporary, tiny GeoTIFF files for tests.
+__all__ = [
+    # classes
+    'TIFFConfig',
+    # functions
+    'create_dummy_geotiff',
+    'generate_dummy_data'
+    # types
+]
 
-    Returns a function that creates a GeoTIFF and returns its file path.
-    '''
+# for static check
+if typing.TYPE_CHECKING:
+    from .dummy_data import TIFFConfig, create_dummy_geotiff, generate_dummy_data
 
-    def _create_dummy_geotiff(
-        filename='dummy.tif',
-        width=16,
-        height=16,
-        bands=3,
-        dtype=numpy.uint8
-    ):
-        file_path = tmp_path / filename
+def __getattr__(name: str):
 
-        config = testing.TIFFConfig(
-            shape=(height, width),
-            bands=bands,
-            crs='+proj=latlong',
-            transform=rasterio.transform.from_origin(0, 0, 1, 1),
-            dtype=dtype
-        )
+    if name in {'TIFFConfig', 'create_dummy_geotiff', 'generate_dummy_data'}:
+        return getattr(importlib.import_module('.dummy_data', __package__), name)
 
-        def _data_gen_func(shape, _):
-            return numpy.random.randint(0, 256, shape).astype(dtype)
-
-        testing.create_dummy_geotiff(
-            str(file_path),
-            config=config,
-            data_gen_func=_data_gen_func
-        )
-
-        return file_path
-
-    return _create_dummy_geotiff
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
