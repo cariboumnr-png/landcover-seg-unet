@@ -19,15 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Unit tests for the parallel execution framework (multip.py).
-'''
+# pylint: disable=missing-function-docstring
+
+'''Unit tests for the parallel execution framework (multip.py).'''
 
 # local imports
 import landseg.utils.multip as multip
 
 def test_parallel_executor_threads():
-    '''Test ParallelExecutor running successfully using threads.'''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=True,
@@ -39,7 +38,6 @@ def test_parallel_executor_threads():
     assert results == [0, 1, 4, 9, 16]
 
 def test_parallel_executor_processes():
-    '''Test ParallelExecutor running successfully using processes.'''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=False,
@@ -51,7 +49,6 @@ def test_parallel_executor_processes():
     assert results == [0, 1, 4, 9, 16]
 
 def test_parallel_executor_captures_exceptions():
-    '''Test that individual job failures are captured in the results.'''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=True,
@@ -66,15 +63,14 @@ def test_parallel_executor_captures_exceptions():
 
     assert results[0] == 4
     assert isinstance(results[1], dict)
-    assert "error" in results[1]
-    assert "Failed with input 3" in results[1]["error"]
-    assert "ValueError" in results[1]["traceback"]
+    assert 'error' in results[1]
+    assert 'Failed with input 3' in results[1]['error']
+    assert 'ValueError' in results[1]['traceback']
     assert results[2] == 16
 
 def test_parallel_executor_with_progress(mocker):
-    '''Test that progress reporting code path is hit without issues.'''
     mock_tqdm = mocker.patch(
-        "tqdm.tqdm",
+        'tqdm.tqdm',
         side_effect=lambda it, **kwargs: list(it)
     )
 
@@ -82,7 +78,7 @@ def test_parallel_executor_with_progress(mocker):
         max_workers=2,
         use_threads=True,
         show_progress=True,
-        desc="Testing"
+        desc='Testing'
     )
     jobs = [(_square, (i,), {}) for i in range(3)]
     results = executor.run(jobs)
@@ -94,4 +90,4 @@ def _square(x):
     return x * x
 
 def _failing_func(x):
-    raise ValueError(f"Failed with input {x}")
+    raise ValueError(f'Failed with input {x}')

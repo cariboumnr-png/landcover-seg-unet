@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Unit tests for the custom logger (logger.py).
-'''
+# pylint: disable=missing-function-docstring
+
+'''Unit tests for the custom logger (logger.py).'''
 
 # standard imports
 import logging
@@ -30,7 +30,6 @@ import os
 import landseg.utils.logger as logger
 
 def test_logger_initialization(tmp_path):
-    '''Test logger initialization and correct attribute assignments.'''
     log_file = tmp_path / 'test_init.log'
     log_inst = logger.Logger(
         name='test_logger',
@@ -45,7 +44,6 @@ def test_logger_initialization(tmp_path):
     log_inst.close()
 
 def test_logger_silent_property(tmp_path):
-    '''Test the silent property when console_lvl is None.'''
     log_file = tmp_path / 'test_silent.log'
     log_inst = logger.Logger(
         name='test_silent_logger',
@@ -58,7 +56,6 @@ def test_logger_silent_property(tmp_path):
     log_inst.close()
 
 def test_logger_writes_to_file(tmp_path):
-    '''Test that messages are written to the log file correctly.'''
     log_file = tmp_path / 'test_write.log'
     log_inst = logger.Logger(
         name='test_writer',
@@ -81,7 +78,6 @@ def test_logger_writes_to_file(tmp_path):
     assert 'Test message debug' not in content
 
 def test_logger_get_child(tmp_path):
-    '''Test child logger creation and handler propagation.'''
     log_file = tmp_path / 'test_child.log'
     parent = logger.Logger(
         name='parent',
@@ -105,7 +101,6 @@ def test_logger_get_child(tmp_path):
     assert 'Message from child' in content
 
 def test_logger_separator(tmp_path):
-    '''Test that logger correctly logs separators.'''
     log_file = tmp_path / 'test_sep.log'
     log_inst = logger.Logger(
         name='test_sep',
