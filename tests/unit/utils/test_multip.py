@@ -51,7 +51,7 @@ def test_parallel_executor_processes():
     assert results == [0, 1, 4, 9, 16]
 
 def test_parallel_executor_captures_exceptions():
-    '''Test that individual job failures are captured in the results list.'''
+    '''Test that individual job failures are captured in the results.'''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=True,

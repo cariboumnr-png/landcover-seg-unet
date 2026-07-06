@@ -45,7 +45,7 @@ def test_logger_initialization(tmp_path):
     log_inst.close()
 
 def test_logger_silent_property(tmp_path):
-    '''Test the silent property behaves correctly when console_lvl is None.'''
+    '''Test the silent property when console_lvl is None.'''
     log_file = tmp_path / 'test_silent.log'
     log_inst = logger.Logger(
         name='test_silent_logger',
