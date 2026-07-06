@@ -27,7 +27,7 @@ Shared configuration and fixtures for the landseg test suite.
 import pytest
 # third-party imports
 import numpy
-import rasterio
+import rasterio.transform
 # local imports
 import scripts.generate_dummy_data as generate_dummy_data
 
