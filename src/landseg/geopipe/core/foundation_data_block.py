@@ -384,6 +384,8 @@ class DataBlock:
             for x in range(pad, max_w - pad):
                 # slope and aspect - pad neighbors, radius=1
                 pxs = _Calc.get_px_group(self.data.image_dem_padded, x, y, 1)
+                # pxs' shape should be [3, 3] with radius=1
+                assert pxs.shape == (3, 3)
                 slope[y - pad, x - pad], cos_a[y - pad, x - pad], \
                     sin_a[y - pad, x - pad] = _Calc.slope_n_aspect(pxs, nodata)
                 # tpi - radius=pad-1 (default 8, so 15x15 window)
@@ -634,9 +636,9 @@ class _Calc:
 
     # topographical metrics related
     @staticmethod
-    def get_px_group(arr, x, y, np):
+    def get_px_group(arr, x, y, rr):
         '''Get neighbouring pixels as an array.'''
-        return arr[slice(y - np, y + np + 1), slice(x - np, x + np + 1)]
+        return arr[slice(y - rr, y + rr + 1), slice(x - rr, x + rr + 1)]
 
     @staticmethod
     def slope_n_aspect(arr, nodata):
@@ -658,10 +660,13 @@ class _Calc:
         ) / 8.0
         # calculate slope
         slope = numpy.sqrt(dz_dx ** 2 + dz_dy ** 2)
+        # deterministically handle cos/sin when slope == 0
+        if slope == 0.0:
+            return 0.0, 1.0, 0.0
         # calculate aspect angle in radians
         aspect_rad = numpy.arctan2(dz_dy, -dz_dx)
         if aspect_rad < 0:
-            aspect_rad += 2 * numpy.pi  # Normalize to [0, 2π]
+            aspect_rad += 2 * numpy.pi  # normalize to [0, 2π]
         # compute cosine and sine of aspect
         cos_aspect = numpy.cos(aspect_rad)
         sin_aspect = numpy.sin(aspect_rad)
