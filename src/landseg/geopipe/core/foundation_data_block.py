@@ -96,6 +96,7 @@ class DataBlockMeta(typing.TypedDict):
     image_band_map: dict[str, int]
     image_stats: dict[str, dict[str, int | float]]
 
+
 class LabelSpecs(typing.TypedDict):
     '''Typed dictionary for label specification.'''
     # required
@@ -105,6 +106,71 @@ class LabelSpecs(typing.TypedDict):
     class_name: typing.NotRequired[dict[str, str]]
     reclass: typing.NotRequired[dict[str, list[int]]]
     reclass_name: typing.NotRequired[dict[str, str]]
+
+
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class DataBlockBuildContext:
+    '''Container for source materials needed to build a `DataBlock`.'''
+    block_meta: DataBlockMeta
+    image_array: numpy.ndarray
+    image_padded_dem: numpy.ndarray | None
+    image_add_spectral: list[str] | None
+    image_add_topo: bool
+    label_array: numpy.ndarray | None
+    label_specs: dict[str, LabelSpecs] | None
+
+    def __post_init__(self):
+        meta = self.block_meta
+
+        if self.image_array.ndim != 3:
+            raise ValueError('Image array is not of shape [C, H, W]')
+
+        if self.label_array is not None:
+            if self.label_array.ndim != 3:
+                raise ValueError('Label array is not of shape [C, H, W]')
+            if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
+                raise ValueError('Image and label arrays have differnt H*w')
+
+        if self.image_add_spectral is not None:
+            spectral = [s.lower() for s in self.image_add_spectral]
+            invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
+            if invalid:
+                raise ValueError(f'Invalid spectral indices: {invalid}')
+
+            band_map = [b.lower() for b in meta['image_band_map']]
+            if 'red' not in band_map:
+                raise ValueError('Unable to add spectrals: red band missing')
+            if 'ndvi' in spectral and not 'nir' in band_map:
+                raise ValueError('NDVI calculation: NIR band missing')
+            if 'ndmi' in spectral and not 'swir1' in band_map:
+                raise ValueError('NDMI calculation: SWIR1 band missing')
+            if 'nbr' in spectral and not 'swir2' in band_map:
+                raise ValueError('NBR calculation: SWIR2 band missing')
+
+        if self.image_add_topo and not self.image_padded_dem:
+            e = 'Topographical features construction: padded DEM missing'
+            raise ValueError(e)
+
+    @property
+    def spectral_indices(self) -> list[str]:
+        '''Return names of the spectral indices to add.'''
+        return [item.lower() for item in self.image_add_spectral or []]
+
+    @property
+    def pad_dem(self) -> numpy.ndarray:
+        '''Return padded DEM array if provided.'''
+        if self.image_padded_dem is None:
+            raise ValueError('Cannot access padded DEM as it is not provided')
+        return self.image_padded_dem
+
+    @property
+    def lbl_specs(self) -> dict[str, LabelSpecs]:
+        '''Return label specs dict if provided.'''
+        if self.label_specs is None:
+            raise ValueError('Cannot access label specs as it is not provided')
+        return self.label_specs
+
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -118,9 +184,11 @@ class _BlockArrays:
 
     def validate(self):
         '''Validate if all attr has been populated.'''
-        for field in dataclasses.fields(self):
-            if not hasattr(self, field.name):
-                raise ValueError(f'{field.name} has not been populated yet')
+        required = ('image', 'valid_mask')
+        for name in required:
+            if not hasattr(self, name):
+                raise ValueError(f'{name} has not been populated yet')
+
 
 # --------------------------------Public  Class--------------------------------
 class DataBlock:
@@ -164,13 +232,12 @@ class DataBlock:
             ignore_index: Label ignore value (default: 255)
             dem_pad: Padding size for DEM-based computations (default: 8)
         '''
-
         # init with empty block data
         self.data = _BlockArrays()
         # meta dict with default foo values
         self.meta: DataBlockMeta = {
             'block_name': '',
-            'has_label': True,
+            'has_label': False,
             'ignore_index': ignore_index,
             'valid_ratios': {},
             'label_nodata': 0,
@@ -186,19 +253,12 @@ class DataBlock:
             'image_band_map': {},
             'image_stats': {}
         }
-        # label specs type
-        self.lbl_specs: dict[str, LabelSpecs]
+        # label specs type declaration
+        self.lbl_specs: dict[str, LabelSpecs] = {}
 
     # ----- alternative constructor
     @classmethod
-    def build(
-        cls,
-        *,
-        raw_arrays: tuple[numpy.ndarray, numpy.ndarray | None],
-        img_padded_dem: numpy.ndarray,
-        lbl_specs: dict[str, LabelSpecs],
-        block_meta: DataBlockMeta,
-    ) -> 'DataBlock':
+    def build(cls, context: DataBlockBuildContext) -> 'DataBlock':
         '''
         Construct a `DataBlock` from in-memory arrays and metadata.
 
@@ -224,43 +284,34 @@ class DataBlock:
         Notes: The method mutates internal state and returns the instance
         to support chaining.
         '''
-
         self = cls()
-        self.lbl_specs = lbl_specs
-        img_arr, lbl_arr = raw_arrays
-        # update meta with input
-        self.meta.update(block_meta)
-        # assign image
-        self.data.image = img_arr.astype(numpy.float32) # remote sensing default
-        self.data.image_dem_padded = img_padded_dem.astype(numpy.float32) # padded
-        # assign label if provided:
-        if lbl_arr is not None:
-            # assertions - both 3 dims with the same H and W
-            assert len(lbl_arr.shape) == 3 and len(img_arr.shape) == 3
-            assert lbl_arr.shape[-2] == img_arr.shape[-2]
-            self.data.label = lbl_arr.astype(numpy.uint8) # [0, 256)
-            self.meta['has_label'] = True
-        # otherwise give label related data a place holder
-        else:
-            self.data.label = numpy.array([1])
-            self.data.label_stack = numpy.array([1])
-            self.meta['has_label'] = False
+        # update meta
+        self.meta.update(context.block_meta)
 
-        # process data sequence
-        # --- add image bands
-        self._image_add_spectral()
-        self._image_add_topography()
-
-        # --- image specs
+        # image dtype conversion and processing
+        # float32 as remote sensing default
+        self.data.image = context.image_array.astype(numpy.float32)
+        if context.spectral_indices:
+            self._image_add_spectral(context.spectral_indices)
+        if context.image_add_topo:
+            self.data.image_dem_padded = context.pad_dem.astype(numpy.float32)
+            self._image_add_topography()
         self._image_get_valid_mask()
         self._image_get_stats()
 
-        # ---labels specs
-        # only if labels are provided
-        if self.meta['has_label']:
+        # if label array is provided:
+        if context.label_array is not None:
+            # currently support labels range [0, 256)
+            self.data.label = context.label_array.astype(numpy.uint8)
+            self.lbl_specs = context.lbl_specs
             self._label_get_stack()
             self._label_build_topology()
             self._label_get_stats()
+            self.meta['has_label'] = True
+        else:
+            self.data.label = numpy.array([1]) # dummy placeholders
+            self.data.label_stack = numpy.array([1])
+            self.meta['has_label'] = False
 
         # sanity check self.data and return self to allow chained calls
         self.data.validate()
@@ -327,7 +378,7 @@ class DataBlock:
         numpy.savez_compressed(fpath, **to_save)
 
     # ----- private method
-    def _image_add_spectral(self) -> None:
+    def _image_add_spectral(self, indices: list[str]) -> None:
         '''Add spectral indices if related bands are available.'''
 
         # retrieve from meta
@@ -337,25 +388,33 @@ class DataBlock:
         # mask off nodata pixels to avoid overflow
         # 32 bit increased to 64 bit float
         red = _Calc.mask(self.data.image[band_idx['red']], nodata)
-        # add spectral indices depending on band availability
-        indices_stack = []
-        n = len(self.meta['image_band_map'])
-        if 'nir' in band_idx:
+        next_idx = self.data.image.shape[0]
+
+        # add spectral indices on demand
+        spectrals: list[numpy.ndarray] = []
+        if 'ndvi' in indices:
             nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
-            indices_stack.append(_Calc.ndvi(nir, red, nodata))
-            self.meta['image_band_map']['NDVI'] = n
-            if 'swir1' in band_idx:
-                swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
-                indices_stack.append(_Calc.ndmi(nir, swir1, nodata))
-                self.meta['image_band_map']['NDMI'] = n + 1
-            if 'swir2' in band_idx:
-                swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
-                indices_stack.append(_Calc.nbr(nir, swir2, nodata))
-                self.meta['image_band_map']['NBR'] = n + 2
+            spectrals.append(_Calc.ndvi(nir, red, nodata))
+            band_idx['ndvi'] = next_idx
+            next_idx += 1
+
+        if 'ndmi' in indices:
+            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
+            swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
+            spectrals.append(_Calc.ndmi(nir, swir1, nodata))
+            band_idx['ndmi'] = next_idx
+            next_idx += 1
+
+        if 'nbr' in indices:
+            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
+            swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
+            spectrals.append(_Calc.nbr(nir, swir2, nodata))
+            band_idx['nbr'] = next_idx
+            next_idx += 1
 
         # add to image array
-        if indices_stack:
-            added = numpy.stack(indices_stack ).astype(numpy.float32)
+        if spectrals:
+            added = numpy.stack(spectrals).astype(numpy.float32)
             self.data.image = numpy.append(self.data.image, added, axis=0)
 
     def _image_add_topography(self) -> None:
