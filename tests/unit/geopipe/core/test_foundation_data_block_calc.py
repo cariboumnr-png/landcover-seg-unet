@@ -22,7 +22,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
-'''Unit tests for DataBlock related classes and functions.'''
+'''Unit tests for DataBlock related calculator methods.'''
 
 # standard imports
 import numpy
