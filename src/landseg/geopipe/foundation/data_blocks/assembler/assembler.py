@@ -36,7 +36,6 @@ Public APIs:
 '''
 
 # standard imports
-import copy
 import dataclasses
 import os
 import random
@@ -56,6 +55,7 @@ class BlockBuildConfig:
     '''
     img_path: str
     lbl_path: str | None
+    image_band_map: dict[str, int]
     label_specs: dict[str, geo_core.LabelSpecs] | None = None
     dem_pad_px: int = 0
     add_spectral: list[str] | None = None
@@ -83,12 +83,13 @@ class TestBlockJob:
     monitor_head: str
     need_all_classes: bool
     logger: utils.Logger
+    ignore_index: int = 255
 
 
 def build_single_block(
-    meta: geo_core.DataBlockMeta,
     context: BlockCreationContext,
     config: BlockBuildConfig,
+    ignore_index: int = 255,
     *,
     save: bool = False,
     save_fpath: str | None = None
@@ -97,46 +98,47 @@ def build_single_block(
     Create a DataBlock from input rasters for the window context.
 
     Args:
-        meta: Canonical block metadata template.
         context: Context object defining spatial window.
         config: Configuration parameters for path and features.
+        ignore_index: Label ignore value.
         save: If True, compresses and writes the block to disk.
         save_fpath: Target destination path for saving the block.
 
     Returns:
         DataBlock: A populated and validated block instance.
     '''
-    meta_copy = copy.deepcopy(meta)
-    meta_copy['block_name'] = context.name
-
     read_inputs = assembler.RasterReadInput(
         image_fpath=config.img_path,
         label_fpath=config.lbl_path,
         image_window=context.img_window,
         label_window=context.lbl_window,
         dem_pad_px=config.dem_pad_px,
-        image_band_map=meta_copy['image_band_map'],
+        image_band_map=config.image_band_map,
         label_specs=config.label_specs
     )
     read_outputs = assembler.read_block_raster_data(read_inputs)
 
-    meta_copy['image_nodata'] = read_outputs.image_nodata
-    meta_copy['image_dem_pad'] = config.dem_pad_px
-    if read_outputs.label_nodata is not None:
-        meta_copy['label_nodata'] = read_outputs.label_nodata
-
     has_lbl = read_outputs.label_array is not None
 
+    core_config = geo_core.DataBlockConfig(
+        image_band_map=config.image_band_map,
+        ignore_index=ignore_index,
+        dem_pad_px=config.dem_pad_px,
+        image_nodata=read_outputs.image_nodata,
+        label_nodata=read_outputs.label_nodata,
+        add_spectral=config.add_spectral,
+        add_topo=config.add_topo
+    )
+
     build_ctx = geo_core.DataBlockBuildContext(
-        block_meta=meta_copy,
+        block_name=context.name,
         image_array=read_outputs.image_array,
         image_padded_dem=(
             read_outputs.padded_dem if config.add_topo else None
         ),
-        image_add_spectral=config.add_spectral,
-        image_add_topo=config.add_topo,
         label_array=read_outputs.label_array,
-        label_specs=config.label_specs if has_lbl else None
+        label_specs=config.label_specs if has_lbl else None,
+        config=core_config
     )
 
     block = geo_core.DataBlock.build(build_ctx)
@@ -148,7 +150,6 @@ def build_single_block(
 
 
 def build_test_block(
-    meta: geo_core.DataBlockMeta,
     contexts: list[BlockCreationContext],
     job: TestBlockJob
 ) -> str | None:
@@ -160,7 +161,6 @@ def build_test_block(
     criteria. Normalizes the block using local mean/std before saving.
 
     Args:
-        meta: Core metadata dictionary.
         contexts: List of candidate block creation contexts.
         job: Execution parameters including config, criteria, and logger.
 
@@ -175,7 +175,9 @@ def build_test_block(
     for ctx in shuffled_contexts:
         print('Searching for a valid block...', end='\r', flush=True)
         try:
-            temp_blk = build_single_block(meta, ctx, job.config, save=False)
+            temp_blk = build_single_block(
+                ctx, job.config, job.ignore_index, save=False
+            )
             blk_meta = temp_blk.meta
 
             # Check valid pixel ratios based on image band (fix KeyError)

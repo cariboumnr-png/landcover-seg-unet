@@ -110,6 +110,7 @@ def build_blocks(
 
     build_cfg = dataclasses.replace(
         config.build_config,
+        image_band_map=meta_src['image_band_map'],
         label_specs=meta_src.get('label_specs')
     )
 
@@ -214,15 +215,6 @@ def _create_missing_blocks(
     windows: _PipelineWindows
 ) -> None:
     '''Build all missing coordinates in parallel.'''
-    ctrl = artifacts.Controller.load_json_or_fail(config.config_fpath)
-    ctrl.hash(overwrite=False)  # Hash once
-    meta_src = ctrl.fetch()
-
-    base_meta = {
-        'image_band_map': meta_src['image_band_map'],
-        'ignore_index': config.ignore_index
-    }
-
     has_label = (
         bool(build_cfg.lbl_path) and os.path.exists(build_cfg.lbl_path)
     )
@@ -243,7 +235,11 @@ def _create_missing_blocks(
             'save_fpath': save_fpath
         }
         creation_jobs.append(
-            (assembler.build_single_block, (base_meta, ctx, build_cfg), save_args)
+            (
+                assembler.build_single_block,
+                (ctx, build_cfg, config.ignore_index),
+                save_args,
+            )
         )
 
     if coords_todo:

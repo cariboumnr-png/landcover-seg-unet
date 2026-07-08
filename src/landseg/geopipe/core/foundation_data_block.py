@@ -109,20 +109,29 @@ class LabelSpecs(typing.TypedDict):
 
 
 # ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass(frozen=True)
+class DataBlockConfig:
+    '''Configuration parameters for building a data block from source.'''
+    image_band_map: dict[str, int]
+    ignore_index: int
+    dem_pad_px: int
+    image_nodata: float
+    label_nodata: int | None = None
+    add_spectral: list[str] | None = None
+    add_topo: bool = False
+
+
 @dataclasses.dataclass
 class DataBlockBuildContext:
     '''Container for source materials needed to build a `DataBlock`.'''
-    block_meta: DataBlockMeta
+    block_name: str
     image_array: numpy.ndarray
     image_padded_dem: numpy.ndarray | None
-    image_add_spectral: list[str] | None
-    image_add_topo: bool
     label_array: numpy.ndarray | None
     label_specs: dict[str, LabelSpecs] | None
+    config: DataBlockConfig
 
     def __post_init__(self):
-        meta = self.block_meta
-
         if self.image_array.ndim != 3:
             raise ValueError('Image array is not of shape [C, H, W]')
 
@@ -132,13 +141,13 @@ class DataBlockBuildContext:
             if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
                 raise ValueError('Image and label arrays have different H*w')
 
-        if self.image_add_spectral:
-            spectral = [s.lower() for s in self.image_add_spectral]
+        if self.config.add_spectral:
+            spectral = [s.lower() for s in self.config.add_spectral]
             invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
             if invalid:
                 raise ValueError(f'Invalid spectral indices: {invalid}')
 
-            band_map = [b.lower() for b in meta['image_band_map']]
+            band_map = [b.lower() for b in self.config.image_band_map]
             if 'red' not in band_map:
                 raise ValueError('Unable to add spectrals: red band missing')
             if 'ndvi' in spectral and not 'nir' in band_map:
@@ -148,14 +157,14 @@ class DataBlockBuildContext:
             if 'nbr' in spectral and not 'swir2' in band_map:
                 raise ValueError('NBR calculation: SWIR2 band missing')
 
-        if self.image_add_topo and self.image_padded_dem is None:
+        if self.config.add_topo and self.image_padded_dem is None:
             e = 'Topographical features construction: padded DEM missing'
             raise ValueError(e)
 
     @property
     def spectral_indices(self) -> list[str]:
         '''Return names of the spectral indices to add.'''
-        return [item.lower() for item in self.image_add_spectral or []]
+        return [item.lower() for item in self.config.add_spectral or []]
 
     @property
     def pad_dem(self) -> numpy.ndarray:
@@ -284,16 +293,22 @@ class DataBlock:
         Notes: The method mutates internal state and returns the instance
         to support chaining.
         '''
-        self = cls()
-        # update meta
-        self.meta.update(context.block_meta)
+        self = cls(
+            ignore_index=context.config.ignore_index,
+            dem_pad=context.config.dem_pad_px
+        )
+        self.meta['block_name'] = context.block_name
+        self.meta['image_band_map'] = context.config.image_band_map
+        self.meta['image_nodata'] = context.config.image_nodata
+        if context.config.label_nodata is not None:
+            self.meta['label_nodata'] = context.config.label_nodata
 
         # image dtype conversion and processing
         # float32 as remote sensing default
         self.data.image = context.image_array.astype(numpy.float32)
         if context.spectral_indices:
             self._image_add_spectral(context.spectral_indices)
-        if context.image_add_topo:
+        if context.config.add_topo:
             self.data.image_dem_padded = context.pad_dem.astype(numpy.float32)
             self._image_add_topography()
         self._image_get_valid_mask()
