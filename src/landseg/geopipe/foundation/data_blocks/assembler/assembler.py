@@ -30,194 +30,149 @@ test-block extraction with in-place normalization and criteria
 checking.
 
 Public APIs:
-    - BlockCreationContext: Parameter object holding block read specs.
     - build_single_block: Constructs a block from input rasters.
     - build_test_block: Finds, normalizes, and saves a test block.
 '''
 
 # standard imports
-import dataclasses
 import os
 import random
 # third-party imports
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.assembler as assembler
-import landseg.utils as utils
-
-
-@dataclasses.dataclass(frozen=True)
-class BlockBuildConfig:
-    '''
-    Configuration parameters for building a data block from source.
-    '''
-    img_path: str
-    lbl_path: str | None
-    image_band_map: dict[str, int]
-    label_specs: dict[str, geo_core.LabelSpecs] | None = None
-    dem_pad_px: int = 0
-    add_spectral: list[str] | None = None
-    add_topo: bool = False
-
-
-@dataclasses.dataclass(frozen=True)
-class BlockCreationContext:
-    '''
-    Spatial coordinate contexts for a single block build.
-    '''
-    name: str
-    img_window: alias.RasterWindow
-    lbl_window: alias.RasterWindow | None
-
-
-@dataclasses.dataclass(frozen=True)
-class TestBlockJob:
-    '''
-    Execution job parameters for test block search.
-    '''
-    config: BlockBuildConfig
-    save_dpath: str
-    valid_px_per: float
-    monitor_head: str
-    need_all_classes: bool
-    logger: utils.Logger
-    ignore_index: int = 255
 
 
 def build_single_block(
-    context: BlockCreationContext,
-    config: BlockBuildConfig,
-    ignore_index: int = 255,
+    name: str,
+    inputs: assembler.RasterReadInput,
+    save_fpath: str | None = None,
     *,
-    save: bool = False,
-    save_fpath: str | None = None
+    ignore_index: int = 255,
+    add_spectral: list[str] | None = None,
+    add_topo: bool = False,
 ) -> geo_core.DataBlock:
     '''
     Create a DataBlock from input rasters for the window context.
 
     Args:
-        context: Context object defining spatial window.
-        config: Configuration parameters for path and features.
-        ignore_index: Label ignore value.
-        save: If True, compresses and writes the block to disk.
-        save_fpath: Target destination path for saving the block.
+        name:
+            Unique identifier for the block.
+        inputs:
+            Raster inputs and metadata required to construct the block.
+        save_fpath:
+            Optional output path. If provided, the constructed block is
+            serialized to this location.
+        ignore_index:
+            Label value assigned to ignored pixels in the output block.
+        add_spectral:
+            Optional list of spectral indices to compute and append as
+            image bands.
+        add_topo:
+            Whether to compute and append topographic features derived
+            from the DEM.
 
     Returns:
         DataBlock: A populated and validated block instance.
     '''
-    read_inputs = assembler.RasterReadInput(
-        image_fpath=config.img_path,
-        label_fpath=config.lbl_path,
-        image_window=context.img_window,
-        label_window=context.lbl_window,
-        dem_pad_px=config.dem_pad_px,
-        image_band_map=config.image_band_map,
-        label_specs=config.label_specs
+    read_outputs = assembler.read_block_raster_data(inputs)
+
+    datablock_inputs = geo_core.DataBlockInputs(
+        block_name=name,
+        image_array=read_outputs.image_array,
+        image_padded_dem=read_outputs.image_padded_dem,
+        label_array=read_outputs.label_array,
+        label_specs=inputs.label_specs,
     )
-    read_outputs = assembler.read_block_raster_data(read_inputs)
-
-    has_lbl = read_outputs.label_array is not None
-
-    core_config = geo_core.DataBlockConfig(
-        image_band_map=config.image_band_map,
-        ignore_index=ignore_index,
-        dem_pad_px=config.dem_pad_px,
+    datablock_config = geo_core.DataBlockConfig(
+        image_band_map=inputs.image_band_map,
+        image_dem_pad_px=inputs.image_dem_pad_px,
         image_nodata=read_outputs.image_nodata,
         label_nodata=read_outputs.label_nodata,
-        add_spectral=config.add_spectral,
-        add_topo=config.add_topo
+
+        label_ignore_index=ignore_index,
+        add_spectral=add_spectral,
+        add_topo=add_topo
     )
+    block = geo_core.DataBlock.build(datablock_inputs, datablock_config)
 
-    build_ctx = geo_core.DataBlockBuildContext(
-        block_name=context.name,
-        image_array=read_outputs.image_array,
-        image_padded_dem=(
-            read_outputs.padded_dem if config.add_topo else None
-        ),
-        label_array=read_outputs.label_array,
-        label_specs=config.label_specs if has_lbl else None,
-        config=core_config
-    )
-
-    block = geo_core.DataBlock.build(build_ctx)
-
-    if save:
-        assert save_fpath
+    if save_fpath:
         block.save(save_fpath)
     return block
 
 
 def build_test_block(
-    contexts: list[BlockCreationContext],
-    job: TestBlockJob
+    save_dpath: str,
+    inputs: dict[str, assembler.RasterReadInput],
+    *,
+    target_head: str,
+    valid_px_per: float,
+    need_all_classes: bool,
 ) -> str | None:
     '''
     Build, normalize, and persist a single valid block for testing.
 
-    Iterates deterministically over available block contexts to find
-    the first block satisfying the validity and label-coverage
-    criteria. Normalizes the block using local mean/std before saving.
+    Iterates over the available block inputs in a deterministic shuffled
+    order to find the first block meeting the validity and label-coverage
+    criteria. The selected block is normalized using its own image mean
+    and standard deviation before being saved.
 
     Args:
-        contexts: List of candidate block creation contexts.
-        job: Execution parameters including config, criteria, and logger.
+        save_dpath:
+            Directory where the test block will be written.
+        inputs:
+            Mapping from block name to raster inputs.
+        target_head:
+            Label head used when checking class coverage.
+        valid_px_per:
+            Minimum required proportion of valid image pixels.
+        need_all_classes:
+            Whether every class in the target head must be present for a
+            block to be accepted.
 
     Returns:
-        str | None: The saved block path if found, otherwise None.
+        str | None: Path to the saved test block if one is found;
+            otherwise, ``None``.
     '''
-    shuffled_contexts = list(contexts)
-    random.Random(42).shuffle(shuffled_contexts)
+    shuffled_inputs = list(inputs.items())
+    random.Random(42).shuffle(shuffled_inputs)
 
-    blk: geo_core.DataBlock | None = None
-    chosen_context: BlockCreationContext | None = None
-    for ctx in shuffled_contexts:
+    name: str | None = None
+    candidate: geo_core.DataBlock | None = None
+    for name, candidate_input in shuffled_inputs:
         print('Searching for a valid block...', end='\r', flush=True)
         try:
-            temp_blk = build_single_block(
-                ctx, job.config, job.ignore_index, save=False
-            )
-            blk_meta = temp_blk.meta
+            candidate = build_single_block(name, candidate_input)
+            manifest = candidate.manifest
 
-            # Check valid pixel ratios based on image band (fix KeyError)
-            ratios = blk_meta['valid_ratios']
-            block_ratio_ok = ratios.get('image', 0.0) >= job.valid_px_per
+            # check valid pixel ratios based on image band
+            valid_ratio = manifest['valid_ratios'].get('image', 0.0)
 
-            has_all_labels = True
-            if job.monitor_head in blk_meta['label_count']:
-                has_all_labels = all(
-                    blk_meta['label_count'][job.monitor_head]
-                )
+            # check if all classes are present
+            has_all_classes = True
+            if target_head in manifest['label_count']:
+                has_all_classes = all(manifest['label_count'][target_head])
             else:
-                has_all_labels = False
+                has_all_classes = False
 
-            if block_ratio_ok and (
-                has_all_labels or not job.need_all_classes
+            if (
+                valid_ratio >= valid_px_per and
+                (has_all_classes or not need_all_classes)
             ):
-                blk = temp_blk
-                chosen_context = ctx
                 break
         except ValueError:
             continue
 
-    if not blk:
-        job.logger.log('WARNING', 'No valid block for testing.')
+    if not candidate:
         return None
 
     # In-place image normalization for debugging block
-    mean = numpy.mean(blk.data.image)
-    std = numpy.std(blk.data.image)
-    blk.data.image = (blk.data.image - mean) / (std or 1.0)
+    mean = numpy.mean(candidate.data.image)
+    std = numpy.std(candidate.data.image)
+    candidate.data.image = (candidate.data.image - mean) / (std or 1.0)
 
-    msg = f'Fetched a valid block at context: {chosen_context.name}'
-    job.logger.log('INFO', msg)
-    job.logger.log('DEBUG', 'Criteria:')
-    job.logger.log('DEBUG', f'Minimum valid pixel: {job.valid_px_per:.2f}')
-    job.logger.log('DEBUG', f'Focused head: {job.monitor_head}')
-    job.logger.log('DEBUG', f'Requires all classes: {job.need_all_classes}')
-
-    os.makedirs(job.save_dpath, exist_ok=True)
-    fpath = os.path.join(job.save_dpath, f'{chosen_context.name}.npz')
-    blk.save(fpath)
+    os.makedirs(save_dpath, exist_ok=True)
+    fpath = os.path.join(save_dpath, f'test_{name}.npz')
+    candidate.save(fpath)
     return fpath

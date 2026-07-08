@@ -51,9 +51,6 @@ __all__ = [
     # classes
     'BlockBuilderConfig',
     'BlockBuilderResult',
-    'BlockBuildConfig',
-    'BlockCreationContext',
-    'TestBlockJob',
     'RasterReadInput',
     'RasterReadOutput',
     # functions
@@ -71,9 +68,6 @@ if typing.TYPE_CHECKING:
         build_blocks,
     )
     from .assembler import (
-        BlockBuildConfig,
-        BlockCreationContext,
-        TestBlockJob,
         build_single_block,
         build_test_block,
     )
@@ -96,9 +90,6 @@ def __getattr__(name: str):
         )
 
     if name in {
-        'BlockBuildConfig',
-        'BlockCreationContext',
-        'TestBlockJob',
         'build_single_block',
         'build_test_block',
     }:
