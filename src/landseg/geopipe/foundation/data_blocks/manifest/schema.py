@@ -121,8 +121,8 @@ def build_schema(
                 'image': 'float32',
                 'label': 'uint8',
             },
-            'image_band_map': sample_blk.meta['image_band_map'],
-            'ignore_index': sample_blk.meta['ignore_index']
+            'image_band_map': sample_blk.manifest['image_band_map'],
+            'ignore_index': sample_blk.manifest['ignore_index']
         },
 
         'tensor_shapes': {
@@ -143,11 +143,11 @@ def build_schema(
         },
 
         'labels': {
-            'label_num_cls': sample_blk.meta['label_num_cls'],
-            'label_ignore_cls': sample_blk.meta['label_ignore_cls'],
-            'label_parent': sample_blk.meta['label_parent'],
-            'label_parent_cls': sample_blk.meta['label_parent_cls'],
-            'label_names': sample_blk.meta['label_names'],
+            'label_num_cls': sample_blk.manifest['label_num_cls'],
+            'label_ignore_cls': sample_blk.manifest['label_ignore_cls'],
+            'label_parent': sample_blk.manifest['label_parent'],
+            'label_parent_cls': sample_blk.manifest['label_parent_cls'],
+            'label_names': sample_blk.manifest['label_names'],
             'label_color_map': label_color_map
         },
     }

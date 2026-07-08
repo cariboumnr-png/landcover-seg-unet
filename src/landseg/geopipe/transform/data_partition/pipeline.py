@@ -125,7 +125,7 @@ def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
     # iterate current traing blocks to get label class counts
     lbl_stats: dict[str, list[int]] = {}
     for fpath in block_file_list:
-        blk_meta = geo_core.DataBlock.load(fpath).meta
+        blk_meta = geo_core.DataBlock.load(fpath).manifest
         for channel, counts in blk_meta['label_count'].items():
             cls_count = numpy.asarray(counts)
             if channel in lbl_stats:

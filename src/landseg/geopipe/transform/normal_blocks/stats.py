@@ -69,7 +69,7 @@ def aggregate_image_stats(
     # iterate through provided block files
     for fpath in input_blocks:
         # prep
-        stats = geo_core.DataBlock.load(fpath).meta['image_stats']
+        stats = geo_core.DataBlock.load(fpath).manifest['image_stats']
         # return dict and stats dict have the same keys
         for key, value_dict in stats.items():
             stats_dict[key] = _welfords_online(value_dict, stats_dict[key])
