@@ -231,7 +231,7 @@ def _create_missing_blocks(
         )
         # keyword args
         kwargs = {
-            'ignore_index': True,
+            'ignore_index': config.ignore_index,
             'add_spectral': config.add_spectral,
             'add_topo': config.add_topo,
             'save_fpath': os.path.join(inputs.output_root, f'{name}.npz'),

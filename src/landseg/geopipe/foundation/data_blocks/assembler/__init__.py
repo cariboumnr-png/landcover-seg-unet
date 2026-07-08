@@ -29,11 +29,10 @@ coordinates the parallelized assembly of blocks over mapped raster
 windows.
 
 Public APIs:
-    - BlockBuilderConfig: Config options for lifecycle pipeline.
-    - BlockBuilderResult: Dataclass result wrapping builder execution outputs.
-    - BlockBuildConfig: Path and feature config container.
-    - BlockCreationContext: Spatial coordinate contexts for single blocks.
-    - TestBlockJob: execution job parameters for test block search.
+    - BlockBuildingInput: I/O path options for lifecycle pipeline.
+    - BlockBuildingContext: Mapped read windows for pipeline execution.
+    - BlockBuildingConfig: Container for block building configurations.
+    - BlockBuildingOutput: Dataclass result wrapping builder execution outputs.
     - RasterReadInput: Dataclass specs parameter for reading rasters.
     - RasterReadOutput: Dataclass container for read raster arrays.
     - build_single_block: Constructs a block from windowed rasters.
