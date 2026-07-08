@@ -33,14 +33,14 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
-    'DataBlockBuildContext',
+    'DataBlockInputs',
     'DataBlockConfig',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
     # functions
     # typing
-    'DataBlockMeta',
+    'DataBlockManifest',
     'DataCatalog',
     'DataSchema',
     'BlocksPartition',
@@ -57,7 +57,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .foundation_data_block import DataBlock, DataBlockBuildContext, DataBlockConfig, DataBlockMeta, LabelSpecs
+    from .foundation_data_block import (
+        DataBlock,
+        DataBlockConfig,
+        DataBlockInputs,
+        DataBlockManifest,
+        LabelSpecs
+    )
     from .foundation_data_catalog import DataCatalog, CatalogEntry
     from .foundation_data_schema import DataSchema
     from .foundation_domain_map import DomainPayload, DomainMeta, DomainTile, DomainTileMap
@@ -66,7 +72,13 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
 
-    if name in {'DataBlock', 'DataBlockBuildContext', 'DataBlockConfig', 'DataBlockMeta', 'LabelSpecs'}:
+    if name in {
+        'DataBlock',
+        'DataBlockConfig',
+        'DataBlockInputs',
+        'DataBlockManifest',
+        'LabelSpecs'
+    }:
         return getattr(importlib.import_module('.foundation_data_block', __package__), name)
 
     if name in {'DataCatalog', 'CatalogEntry'}:
