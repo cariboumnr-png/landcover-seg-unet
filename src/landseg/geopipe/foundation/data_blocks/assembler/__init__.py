@@ -80,8 +80,8 @@ if typing.TYPE_CHECKING:
     from .io import (
         RasterReadInput,
         RasterReadOutput,
-        read_block_raster_data,
         check_npz_integrity,
+        read_block_raster_data,
     )
 
 
@@ -109,8 +109,8 @@ def __getattr__(name: str):
     if name in {
         'RasterReadInput',
         'RasterReadOutput',
-        'read_block_raster_data',
         'check_npz_integrity',
+        'read_block_raster_data',
     }:
         return getattr(
             importlib.import_module('.io', __package__), name

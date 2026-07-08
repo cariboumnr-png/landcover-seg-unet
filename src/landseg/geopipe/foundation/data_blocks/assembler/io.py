@@ -51,21 +51,21 @@ import landseg.geopipe.utils as geo_utils
 class RasterReadInput:
     '''Specifications of parameters needed to read raster windows.'''
     image_fpath: str
-    label_fpath: str | None
     image_window: alias.RasterWindow
-    label_window: alias.RasterWindow | None
-    dem_pad_px: int
     image_band_map: dict[str, int]
+    image_dem_pad_px: int
+    label_fpath: str | None
+    label_window: alias.RasterWindow | None
     label_specs: dict[str, geo_core.LabelSpecs] | None
 
 
 @dataclasses.dataclass(frozen=True)
 class RasterReadOutput:
-    '''Containers holding loaded raster data arrays and metadata.'''
+    '''Container holding loaded raster data arrays and metadata.'''
     image_array: numpy.ndarray
-    label_array: numpy.ndarray | None
-    padded_dem: numpy.ndarray | None
+    image_padded_dem: numpy.ndarray | None
     image_nodata: float
+    label_array: numpy.ndarray | None
     label_nodata: float | None
 
 
@@ -106,22 +106,24 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
     with geo_utils.open_rasters(
         inputs.image_fpath, inputs.label_fpath
     ) as (img, lbl):
-        assert img, f'Invalid image source: {inputs.image_fpath}'
 
+        # a valid image array is required
+        assert img, f'Invalid image source: {inputs.image_fpath}'
         img_arr = img.read(window=inputs.image_window, boundless=True)
         image_nodata = img.nodata
 
         # read padded DEM if 'dem' is in band map
         padded_dem = None
         if 'dem' in inputs.image_band_map:
-            dem_band = inputs.image_band_map['dem']
+            dem_band = inputs.image_band_map['dem'] # 0-based
             padded_dem = _read_w_pad(
                 img,
                 inputs.image_window,
-                dem_band,
-                inputs.dem_pad_px
+                dem_band + 1, # convert to 1-based for rasterio read
+                inputs.image_dem_pad_px
             )
 
+        # load label array if provided
         lbl_arr = None
         label_nodata = None
         if lbl is not None and inputs.label_window is not None:
@@ -132,17 +134,16 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
             if inputs.label_specs is not None:
                 expected_bands = len(inputs.label_specs)
                 if lbl_arr.shape[0] != expected_bands:
-                    msg = (
+                    raise ValueError (
                         f'Label targets number != input label array shape '
                         f'on axis 0: {lbl_arr.shape[0]} != {expected_bands}'
                     )
-                    raise ValueError(msg)
 
         return RasterReadOutput(
             image_array=img_arr,
-            label_array=lbl_arr,
-            padded_dem=padded_dem,
+            image_padded_dem=padded_dem,
             image_nodata=image_nodata,
+            label_array=lbl_arr,
             label_nodata=label_nodata
         )
 
@@ -160,16 +161,12 @@ def _read_w_pad(
     se_x = min(window.col_off + window.width + pad, img.width)
     se_y = min(window.row_off + window.height + pad, img.height)
     try:
-        _window = alias.RasterWindow(
-            nw_x, nw_y, se_x - nw_x, se_y - nw_y
-        )  # type: ignore
-    except ValueError:
-        print(nw_x, nw_y, se_x - nw_x, se_y - nw_y)
-        raise
-
-    # get expanded array using the new window
-    # band number in rasterio.read is 1-based
-    expanded = img.read(dem_band + 1, window=_window)
+        _window = alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+    except ValueError as e:
+        raise ValueError(
+            f'Error reading DEM with pad ({pad}), padded raster window: '
+            f'{nw_x}, {nw_y}, {se_x - nw_x}, {se_y - nw_y}'
+        ) from e
 
     # get required padding on each side - no padding if within raster bound
     pad_top = max(0, pad - window.row_off)
@@ -177,10 +174,10 @@ def _read_w_pad(
     pad_bottom = max(0, (window.row_off + window.height + pad) - img.height)
     pad_right = max(0, (window.col_off + window.width + pad) - img.width)
 
-    # pad the expanded arr accordingly controlled by pad_width and return
+    # pad the expanded array accordingly controlled by pad_width and return
     expanded_padded = numpy.pad(
-        array=expanded,
-        pad_width=((pad_top, pad_bottom), (pad_left, pad_right)),
-        mode='reflect'
+        img.read(dem_band, window=_window),                 # array
+        ((pad_top, pad_bottom), (pad_left, pad_right)),     # pad_width
+        'reflect'                                           # mode
     )
     return expanded_padded
