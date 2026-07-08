@@ -49,8 +49,10 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuilderConfig',
-    'BlockBuilderResult',
+    'BlockBuildingInput',
+    'BlockBuildingContext',
+    'BlockBuildingConfig',
+    'BlockBuildingOutput',
     'RasterReadInput',
     'RasterReadOutput',
     # functions
@@ -63,8 +65,10 @@ __all__ = [
 
 if typing.TYPE_CHECKING:
     from .lifecycle import (
-        BlockBuilderConfig,
-        BlockBuilderResult,
+        BlockBuildingInput,
+        BlockBuildingContext,
+        BlockBuildingConfig,
+        BlockBuildingOutput,
         build_blocks,
     )
     from .assembler import (
@@ -81,8 +85,10 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'BlockBuilderConfig',
-        'BlockBuilderResult',
+        'BlockBuildingInput',
+        'BlockBuildingContext',
+        'BlockBuildingConfig',
+        'BlockBuildingOutput',
         'build_blocks',
     }:
         return getattr(

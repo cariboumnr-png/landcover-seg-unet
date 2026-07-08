@@ -38,35 +38,48 @@ import dataclasses
 import os
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.assembler as assembler
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
 
-@dataclasses.dataclass
-class BlockBuilderConfig:
-    '''
-    I/O paths and configuration parameters used during block construction.
-    '''
+@dataclasses.dataclass(frozen=True)
+class BlockBuildingInput:
+    '''I/O paths used during block construction.'''
     output_root: str            # path to output artifacts
+    image_fpath: str            # path to input image data (.tiff)
+    label_fpath: str | None     # path to input label data (.tiff)
     config_fpath: str           # path to input metadata (.json)
-    ignore_index: int           # global ignore label index
-    block_size: tuple[int, int]  # block size in row, col
-    build_config: assembler.BlockBuildConfig
+
+    @property
+    def has_label(self) -> bool:
+        '''Return `True` is label raster is provided.'''
+        return bool(self.label_fpath) and os.path.exists(self.label_fpath)
 
 
 @dataclasses.dataclass(frozen=True)
-class _PipelineWindows:
-    '''
-    Mapped read windows for the pipeline execution.
-    '''
+class BlockBuildingContext:
+    '''Mapped read windows for the pipeline execution.'''
     image: alias.RasterWindowDict
     label: alias.RasterWindowDict
 
 
 @dataclasses.dataclass(frozen=True)
-class BlockBuilderResult:
+class BlockBuildingConfig:
+    '''Container for block building configurations'''
+    ignore_index: int               # global ignore label index
+    dem_pad_px: int                 # image DEM channel padding in pixels
+    block_size: tuple[int, int]     # block size in row, col
+    image_band_map: dict[str, int]
+    label_specs: dict[str, geo_core.LabelSpecs]
+    add_spectral: list[str] | None = None
+    add_topo: bool = False
+
+
+@dataclasses.dataclass(frozen=True)
+class BlockBuildingOutput:
     '''Results and statistics from a multi-block building execution.'''
     coords_created: list[tuple[int, int]]
     stats: dict[str, int]
@@ -74,53 +87,46 @@ class BlockBuilderResult:
 
 
 def build_blocks(
-    config: BlockBuilderConfig,
-    image_windows: alias.RasterWindowDict,
-    label_windows: alias.RasterWindowDict,
-) -> BlockBuilderResult:
+    inputs: BlockBuildingInput,
+    context: BlockBuildingContext,
+    config: BlockBuildingConfig,
+) -> BlockBuildingOutput:
     '''
     Validate on-disk blocks, clear corrupt ones, and build missing.
 
     Args:
+        inputs:
+        context:
         config: The block builder configuration container.
-        image_windows: Mapped read windows for the image raster.
-        label_windows: Mapped read windows for the label raster.
 
     Returns:
         BlockBuilderResult: Struct holding created coords and
             execution stats.
     '''
-    windows = _PipelineWindows(image=image_windows, label=label_windows)
 
-    valid_coords, shared_count, expected_shape_count = _prepare_block_windows(
-        config, windows
-    )
-
-    # Load metadata source JSON
-    ctrl = artifacts.Controller.load_json_or_fail(config.config_fpath)
+    # load dataset configuration JSON
+    ctrl = artifacts.Controller[dict].load_json_or_fail(inputs.config_fpath)
     ctrl.hash(overwrite=False)  # Hash once
-    meta_src = ctrl.fetch()
+    dataset_config = ctrl.fetch()
+    assert dataset_config # typing only
 
-    blks_dir = config.output_root
+    blks_dir = inputs.output_root
     os.makedirs(blks_dir, exist_ok=True)
 
+    # prepare raster read windows
+    valid_coords, shared_count, expected_shape_count = _prepare_block_windows(
+        inputs, context, config
+    )
+
+    # inspect existing blocks
     coords_todo, removed_count, on_disk_before = _structural_validation(
         blks_dir, valid_coords
     )
 
-    build_cfg = dataclasses.replace(
-        config.build_config,
-        image_band_map=meta_src['image_band_map'],
-        label_specs=meta_src.get('label_specs')
-    )
+    # create blocks if missing
+    _create_missing_blocks(inputs, coords_todo, context, config)
 
-    _create_missing_blocks(
-        config,
-        build_cfg,
-        coords_todo,
-        windows
-    )
-
+    # simple runtime stats
     stats = {
         'shared_raster_windows': shared_count,
         'expected_shape_windows': expected_shape_count,
@@ -130,12 +136,10 @@ def build_blocks(
         'blocks_created': len(coords_todo)
     }
 
-    label_color_map = meta_src.get('label_color_map')
-
-    return BlockBuilderResult(
+    return BlockBuildingOutput(
         coords_created=coords_todo,
         stats=stats,
-        label_color_map=label_color_map
+        label_color_map=dataset_config.get('label_color_map') # pass-through
     )
 
 
@@ -144,25 +148,22 @@ def build_blocks(
 # --------------------------------------------------------------------------- #
 
 def _prepare_block_windows(
-    config: BlockBuilderConfig,
-    windows: _PipelineWindows
+    inputs: BlockBuildingInput,
+    context: BlockBuildingContext,
+    config: BlockBuildingConfig
 ) -> tuple[set[tuple[int, int]], int, int]:
     '''Find coordinates matching block size and compute window counts.'''
-    has_label = (
-        bool(config.build_config.lbl_path)
-        and os.path.exists(config.build_config.lbl_path)
-    )
-    if has_label:
-        common_coords = set(windows.image.keys()) & set(windows.label.keys())
+    if inputs.has_label:
+        common_coords = set(context.image.keys()) & set(context.label.keys())
     else:
-        common_coords = set(windows.image.keys())
+        common_coords = set(context.image.keys())
 
     shared_count = len(common_coords)
 
     valid_coords = set(common_coords)
     for coord in common_coords:
-        iw = windows.image[coord]
-        lw = windows.label[coord] if has_label else None
+        iw = context.image[coord]
+        lw = context.label[coord] if inputs.has_label else None
         if (iw.height, iw.width) != config.block_size or (
             lw is not None and (lw.height, lw.width) != config.block_size
         ):
@@ -209,40 +210,36 @@ def _structural_validation(
 
 
 def _create_missing_blocks(
-    config: BlockBuilderConfig,
-    build_cfg: assembler.BlockBuildConfig,
+    inputs: BlockBuildingInput,
     coords_todo: list[tuple[int, int]],
-    windows: _PipelineWindows
+    windows: BlockBuildingContext,
+    config: BlockBuildingConfig
 ) -> None:
     '''Build all missing coordinates in parallel.'''
-    has_label = (
-        bool(build_cfg.lbl_path) and os.path.exists(build_cfg.lbl_path)
-    )
-
     creation_jobs = []
     for c in coords_todo:
+        # positionals
         name = geo_utils.xy_name(c)
-        save_fpath = os.path.join(config.output_root, f'{name}.npz')
-
-        ctx = assembler.BlockCreationContext(
-            name=name,
-            img_window=windows.image[c],
-            lbl_window=windows.label[c] if has_label else None
+        block_inputs = assembler.RasterReadInput(
+            image_fpath=inputs.image_fpath,
+            image_window=windows.image[c],
+            image_band_map=config.image_band_map,
+            image_dem_pad_px=config.dem_pad_px,
+            label_fpath=inputs.label_fpath,
+            label_window=windows.label[c] if inputs.has_label else None,
+            label_specs=config.label_specs
         )
-
-        save_args = {
-            'save': True,
-            'save_fpath': save_fpath
+        # keyword args
+        kwargs = {
+            'ignore_index': True,
+            'add_spectral': config.add_spectral,
+            'add_topo': config.add_topo,
+            'save_fpath': os.path.join(inputs.output_root, f'{name}.npz'),
         }
-        creation_jobs.append(
-            (
-                assembler.build_single_block,
-                (ctx, build_cfg, config.ignore_index),
-                save_args,
-            )
-        )
 
-    if coords_todo:
-        utils.ParallelExecutor().run(
-            creation_jobs, desc='Creating datablocks'
-        )
+        # add job
+        job = (assembler.build_single_block, (name, block_inputs), kwargs,)
+        creation_jobs.append(job)
+
+    if creation_jobs:
+        utils.ParallelExecutor().run(creation_jobs, desc='Creating datablocks')

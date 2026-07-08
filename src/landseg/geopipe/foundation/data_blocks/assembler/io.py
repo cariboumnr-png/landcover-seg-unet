@@ -66,7 +66,7 @@ class RasterReadOutput:
     image_padded_dem: numpy.ndarray | None
     image_nodata: float
     label_array: numpy.ndarray | None
-    label_nodata: float | None
+    label_nodata: int | None
 
 
 def check_npz_integrity(

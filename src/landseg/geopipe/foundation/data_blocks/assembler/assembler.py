@@ -47,11 +47,11 @@ import landseg.geopipe.foundation.data_blocks.assembler as assembler
 def build_single_block(
     name: str,
     inputs: assembler.RasterReadInput,
-    save_fpath: str | None = None,
     *,
     ignore_index: int = 255,
     add_spectral: list[str] | None = None,
     add_topo: bool = False,
+    save_fpath: str | None = None,
 ) -> geo_core.DataBlock:
     '''
     Create a DataBlock from input rasters for the window context.
