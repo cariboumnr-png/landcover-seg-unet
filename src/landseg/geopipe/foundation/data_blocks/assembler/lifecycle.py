@@ -36,7 +36,6 @@ Public APIs:
 # standard imports
 import dataclasses
 import os
-
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.foundation.common.alias as alias
@@ -44,18 +43,26 @@ import landseg.geopipe.foundation.data_blocks.assembler as assembler
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
+
 @dataclasses.dataclass
 class BlockBuilderConfig:
     '''
     I/O paths and configuration parameters used during block construction.
     '''
     output_root: str            # path to output artifacts
-    image_fpath: str            # path to input image data (.tiff)
-    label_fpath: str | None     # path to input label data (.tiff)
     config_fpath: str           # path to input metadata (.json)
     ignore_index: int           # global ignore label index
-    dem_pad_px: int             # image DEM channel padding in pixels
     block_size: tuple[int, int]  # block size in row, col
+    build_config: assembler.BlockBuildConfig
+
+
+@dataclasses.dataclass(frozen=True)
+class _PipelineWindows:
+    '''
+    Mapped read windows for the pipeline execution.
+    '''
+    image: alias.RasterWindowDict
+    label: alias.RasterWindowDict
 
 
 @dataclasses.dataclass(frozen=True)
@@ -83,14 +90,11 @@ def build_blocks(
         BlockBuilderResult: Struct holding created coords and
             execution stats.
     '''
-    has_label = (
-        bool(config.label_fpath) and os.path.exists(config.label_fpath)
-    )
+    windows = _PipelineWindows(image=image_windows, label=label_windows)
 
-    res = _prepare_block_windows(
-        config, image_windows, label_windows, has_label
+    valid_coords, shared_count, expected_shape_count = _prepare_block_windows(
+        config, windows
     )
-    valid_coords, shared_count, expected_shape_count = res
 
     # Load metadata source JSON
     ctrl = artifacts.Controller.load_json_or_fail(config.config_fpath)
@@ -104,14 +108,16 @@ def build_blocks(
         blks_dir, valid_coords
     )
 
+    build_cfg = dataclasses.replace(
+        config.build_config,
+        label_specs=meta_src.get('label_specs')
+    )
+
     _create_missing_blocks(
         config,
+        build_cfg,
         coords_todo,
-        meta_src,
-        blks_dir,
-        image_windows,
-        label_windows,
-        has_label
+        windows
     )
 
     stats = {
@@ -138,22 +144,24 @@ def build_blocks(
 
 def _prepare_block_windows(
     config: BlockBuilderConfig,
-    image_windows: alias.RasterWindowDict,
-    label_windows: alias.RasterWindowDict,
-    has_label: bool
+    windows: _PipelineWindows
 ) -> tuple[set[tuple[int, int]], int, int]:
     '''Find coordinates matching block size and compute window counts.'''
+    has_label = (
+        bool(config.build_config.lbl_path)
+        and os.path.exists(config.build_config.lbl_path)
+    )
     if has_label:
-        common_coords = set(image_windows.keys()) & set(label_windows.keys())
+        common_coords = set(windows.image.keys()) & set(windows.label.keys())
     else:
-        common_coords = set(image_windows.keys())
+        common_coords = set(windows.image.keys())
 
     shared_count = len(common_coords)
 
     valid_coords = set(common_coords)
     for coord in common_coords:
-        iw = image_windows[coord]
-        lw = label_windows[coord] if has_label else None
+        iw = windows.image[coord]
+        lw = windows.label[coord] if has_label else None
         if (iw.height, iw.width) != config.block_size or (
             lw is not None and (lw.height, lw.width) != config.block_size
         ):
@@ -201,32 +209,33 @@ def _structural_validation(
 
 def _create_missing_blocks(
     config: BlockBuilderConfig,
+    build_cfg: assembler.BlockBuildConfig,
     coords_todo: list[tuple[int, int]],
-    meta_src: dict,
-    blks_dir: str,
-    image_windows: alias.RasterWindowDict,
-    label_windows: alias.RasterWindowDict,
-    has_label: bool
+    windows: _PipelineWindows
 ) -> None:
     '''Build all missing coordinates in parallel.'''
+    ctrl = artifacts.Controller.load_json_or_fail(config.config_fpath)
+    ctrl.hash(overwrite=False)  # Hash once
+    meta_src = ctrl.fetch()
+
     base_meta = {
         'image_band_map': meta_src['image_band_map'],
         'ignore_index': config.ignore_index
     }
 
+    has_label = (
+        bool(build_cfg.lbl_path) and os.path.exists(build_cfg.lbl_path)
+    )
+
     creation_jobs = []
     for c in coords_todo:
         name = geo_utils.xy_name(c)
-        save_fpath = os.path.join(blks_dir, f'{name}.npz')
+        save_fpath = os.path.join(config.output_root, f'{name}.npz')
 
         ctx = assembler.BlockCreationContext(
             name=name,
-            dem_pad_px=config.dem_pad_px,
-            img_path=config.image_fpath,
-            img_window=image_windows[c],
-            lbl_path=config.label_fpath,
-            lbl_window=label_windows[c] if has_label else None,
-            label_specs=meta_src.get('label_specs')
+            img_window=windows.image[c],
+            lbl_window=windows.label[c] if has_label else None
         )
 
         save_args = {
@@ -234,7 +243,7 @@ def _create_missing_blocks(
             'save_fpath': save_fpath
         }
         creation_jobs.append(
-            (assembler.build_single_block, (base_meta, ctx), save_args)
+            (assembler.build_single_block, (base_meta, ctx, build_cfg), save_args)
         )
 
     if coords_todo:

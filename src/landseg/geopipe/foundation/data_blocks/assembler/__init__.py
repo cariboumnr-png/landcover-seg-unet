@@ -31,7 +31,9 @@ windows.
 Public APIs:
     - BlockBuilderConfig: Config options for lifecycle pipeline.
     - BlockBuilderResult: Dataclass result wrapping builder execution outputs.
-    - BlockCreationContext: Source parameters for single blocks.
+    - BlockBuildConfig: Path and feature config container.
+    - BlockCreationContext: Spatial coordinate contexts for single blocks.
+    - TestBlockJob: execution job parameters for test block search.
     - RasterReadInput: Dataclass specs parameter for reading rasters.
     - RasterReadOutput: Dataclass container for read raster arrays.
     - build_single_block: Constructs a block from windowed rasters.
@@ -49,7 +51,9 @@ __all__ = [
     # classes
     'BlockBuilderConfig',
     'BlockBuilderResult',
+    'BlockBuildConfig',
     'BlockCreationContext',
+    'TestBlockJob',
     'RasterReadInput',
     'RasterReadOutput',
     # functions
@@ -61,9 +65,15 @@ __all__ = [
 ]
 
 if typing.TYPE_CHECKING:
-    from .lifecycle import BlockBuilderConfig, BlockBuilderResult, build_blocks
+    from .lifecycle import (
+        BlockBuilderConfig,
+        BlockBuilderResult,
+        build_blocks,
+    )
     from .assembler import (
+        BlockBuildConfig,
         BlockCreationContext,
+        TestBlockJob,
         build_single_block,
         build_test_block,
     )
@@ -76,13 +86,19 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'BlockBuilderConfig', 'BlockBuilderResult', 'build_blocks'}:
+    if name in {
+        'BlockBuilderConfig',
+        'BlockBuilderResult',
+        'build_blocks',
+    }:
         return getattr(
             importlib.import_module('.lifecycle', __package__), name
         )
 
     if name in {
+        'BlockBuildConfig',
         'BlockCreationContext',
+        'TestBlockJob',
         'build_single_block',
         'build_test_block',
     }:
