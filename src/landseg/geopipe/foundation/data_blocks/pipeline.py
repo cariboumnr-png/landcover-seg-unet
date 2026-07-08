@@ -42,7 +42,7 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common as common
-import landseg.geopipe.foundation.data_blocks.builder as builder
+import landseg.geopipe.foundation.data_blocks.assembler as assembler
 import landseg.geopipe.foundation.data_blocks.manifest as manifest
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
 
@@ -102,33 +102,45 @@ def run_blocks_building(
         policy=policy,
     )
 
-    # create a data block builder
-    builder_config = builder.BlockBuilderConfig(
+    # load dataset config JSON
+    ctrl = artifacts.Controller[dict].load_json_or_fail(config.data_config_fpath)
+    ctrl.hash(overwrite=False)  # Hash once
+    dataset_config = ctrl.fetch()
+    assert dataset_config
+
+    # create a data block builder inputs, context, and config
+    building_input = assembler.BlockBuildingInput(
         output_root=artfact_paths.blocks,
         image_fpath=config.image_fpath,
         label_fpath=config.label_fpath,
         config_fpath=config.data_config_fpath,
-        dem_pad_px=config.dem_pad,
-        ignore_index=config.ignore_index,
-        block_size=ras_windows.tile_shape
     )
-    block_builder = builder.BlockBuilder(
-        ras_windows.image,
-        ras_windows.label,
-        builder_config,
-        logger=logger,
+    building_context = assembler.BlockBuildingContext(
+        image=ras_windows.image,
+        label=ras_windows.label,
+    )
+    building_config = assembler.BlockBuildingConfig(
+        ignore_index=config.ignore_index,
+        dem_pad_px=config.dem_pad,
+        block_size=ras_windows.tile_shape,
+        image_band_map=dataset_config['image_band_map'],
+        label_specs=dataset_config.get('label_specs'),
     )
     # build data blocks
-    new_blocks = block_builder.build_blocks()
+    result = assembler.build_blocks(
+        inputs=building_input,
+        context=building_context,
+        config=building_config,
+    )
 
     # create/update catalog and metadata JSON
     updated = manifest.ManifestUpdateContext(
-        updated_coords=new_blocks,
+        updated_coords=result.coords_created,
         source_image=config.image_fpath,
         source_label=config.label_fpath,
         mapped_grid_id=world_grid.gid,
         blocks_dir=artfact_paths.blocks,
-        label_color_map=block_builder.label_color_map
+        label_color_map=result.label_color_map
     )
     manifest_report = manifest.update_manifest(
         updated,
@@ -139,7 +151,7 @@ def run_blocks_building(
 
     # update structured log if FoundationLogger wrapper is used
     duration = time.perf_counter() - start_time
-    stats = block_builder.stats
+    stats = result.stats
     report: common.DataBlocksReport = {
         'image_filepath': config.image_fpath,
         'label_filepath': config.label_fpath,
