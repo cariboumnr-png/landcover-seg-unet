@@ -130,9 +130,9 @@ class DataBlockBuildContext:
             if self.label_array.ndim != 3:
                 raise ValueError('Label array is not of shape [C, H, W]')
             if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
-                raise ValueError('Image and label arrays have differnt H*w')
+                raise ValueError('Image and label arrays have different H*w')
 
-        if self.image_add_spectral is not None:
+        if self.image_add_spectral:
             spectral = [s.lower() for s in self.image_add_spectral]
             invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
             if invalid:
@@ -148,7 +148,7 @@ class DataBlockBuildContext:
             if 'nbr' in spectral and not 'swir2' in band_map:
                 raise ValueError('NBR calculation: SWIR2 band missing')
 
-        if self.image_add_topo and not self.image_padded_dem:
+        if self.image_add_topo and self.image_padded_dem is None:
             e = 'Topographical features construction: padded DEM missing'
             raise ValueError(e)
 
@@ -183,7 +183,7 @@ class _BlockArrays:
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
 
     def validate(self):
-        '''Validate if all attr has been populated.'''
+        '''Validate if all attributes have been populated.'''
         required = ('image', 'valid_mask')
         for name in required:
             if not hasattr(self, name):
