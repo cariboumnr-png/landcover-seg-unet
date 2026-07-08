@@ -36,6 +36,7 @@ __all__ = [
     'UNet',
     'UNetPP',
     'UNetPPP',
+    'UNetBodyConfig'
     # functions
     # types
 ]

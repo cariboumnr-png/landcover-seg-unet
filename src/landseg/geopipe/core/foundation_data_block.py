@@ -20,12 +20,12 @@
 # =========================================================================== #
 
 '''
-DataBlock: compile per-block arrays and metadata for geospatial ML.
+DataBlock: compile per-block arrays and manifest for geospatial ML.
 
 This module defines a lightweight container and builder for a single
 raster *block* (window), designed for geospatial machine learning
 pipelines. It operates purely on in-memory NumPy arrays and enriches
-them with derived features and structured metadata, without performing
+them with derived features and structured manifest, without performing
 any raster I/O.
 
 Key capabilities:
@@ -46,8 +46,9 @@ Assumptions:
 - Input arrays are pre-aligned, windowed, and padded upstream.
 - Image arrays follow (C, H, W); labels are (1, H, W) or None.
 - DEM padding is sufficient for neighborhood operations.
-- Metadata provides required configuration (band mappings, nodata
-  values, label schema, etc.).
+- Build configuration provides feature engineering options, while the
+  persisted manifest records the dataset schema, provenance, and
+  per-block statistics.
 
 This module serves as a canonical representation of block-level data,
 ensuring consistency and reproducibility across downstream workflows.
@@ -63,38 +64,33 @@ import typing
 import numpy
 
 # ---------------------------------Public Type---------------------------------
-class DataBlockMeta(typing.TypedDict):
+class DataBlockManifest(typing.TypedDict):
     '''
-    Typed dictionary defining metadata for a single data block.
+    Typed dictionary defining the persisted manifest for a data block.
 
-    This structure captures configuration, provenance, and summary
-    statistics associated with a block, covering image, label, and
-    derived attributes.
-
-    Categories:
-        - General metadata (block identity, validity metrics)
-        - Label metadata (schema, hierarchy, distributions)
-        - Image metadata (band mapping, nodata handling, statistics)
+    The manifest records block provenance, dataset schema, and derived
+    statistics required to interpret the serialized arrays independently
+    of the original dataset configuration.
     '''
-    # general metadata
+    # provenance
     block_name: str
     has_label: bool
     ignore_index: int
-    valid_ratios: dict[str, float]
-    # label metadata
+    # dataset description
+    image_nodata: float
+    image_band_map: dict[str, int]
     label_nodata: int
     label_num_cls: dict[str, int]
     label_ignore_cls: dict[str, list[int]]
     label_parent: dict[str, str | None]
     label_parent_cls: dict[str, int | None]
+    label_names: dict[str, list[str]]
+    # derived stats
+    valid_ratios: dict[str, float]
+    image_stats: dict[str, dict[str, int | float]]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
-    label_names: dict[str, list[str]]
-    # image metadata
-    image_nodata: float
-    image_dem_pad: int
-    image_band_map: dict[str, int]
-    image_stats: dict[str, dict[str, int | float]]
+
 
 class LabelSpecs(typing.TypedDict):
     '''Typed dictionary for label specification.'''
@@ -106,6 +102,76 @@ class LabelSpecs(typing.TypedDict):
     reclass: typing.NotRequired[dict[str, list[int]]]
     reclass_name: typing.NotRequired[dict[str, str]]
 
+
+# ------------------------------Public  Dataclass------------------------------
+@dataclasses.dataclass
+class DataBlockInputs:
+    '''Container for source materials needed to build a `DataBlock`.'''
+    block_name: str
+    image_array: numpy.ndarray
+    image_padded_dem: numpy.ndarray | None
+    label_array: numpy.ndarray | None
+    label_specs: dict[str, LabelSpecs] | None
+
+    def __post_init__(self):
+        if self.image_array.ndim != 3:
+            raise ValueError('Image array is not of shape [C, H, W]')
+
+        if self.label_array is not None:
+            if self.label_array.ndim != 3:
+                raise ValueError('Label array is not of shape [C, H, W]')
+            if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
+                raise ValueError('Image and label arrays have different H*w')
+
+    @property
+    def pad_dem(self) -> numpy.ndarray:
+        '''Return padded DEM array if provided.'''
+        if self.image_padded_dem is None:
+            raise ValueError('Cannot access padded DEM as it is not provided')
+        return self.image_padded_dem
+
+    @property
+    def lbl_specs(self) -> dict[str, LabelSpecs]:
+        '''Return label specs dict if provided.'''
+        if self.label_specs is None:
+            raise ValueError('Cannot access label specs as it is not provided')
+        return self.label_specs
+
+
+@dataclasses.dataclass(frozen=True)
+class DataBlockConfig:
+    '''Build-time config for feature engineering and data encoding.'''
+    image_band_map: dict[str, int]
+    image_nodata: float
+    image_dem_pad_px: int
+    label_ignore_index: int
+    label_nodata: int | None = None
+    add_spectral: list[str] | None = None
+    add_topo: bool = False
+
+    def __post_init__(self):
+        if self.add_spectral:
+            spectral = [s.lower() for s in self.add_spectral]
+            invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
+            if invalid:
+                raise ValueError(f'Invalid spectral indices: {invalid}')
+
+            band_map = [b.lower() for b in self.image_band_map]
+            if 'red' not in band_map:
+                raise ValueError('Unable to add spectrals: red band missing')
+            if 'ndvi' in spectral and not 'nir' in band_map:
+                raise ValueError('NDVI calculation: NIR band missing')
+            if 'ndmi' in spectral and not 'swir1' in band_map:
+                raise ValueError('NDMI calculation: SWIR1 band missing')
+            if 'nbr' in spectral and not 'swir2' in band_map:
+                raise ValueError('NBR calculation: SWIR2 band missing')
+
+    @property
+    def spectral_indices(self) -> list[str]:
+        '''Return names of the spectral indices to add.'''
+        return [item.lower() for item in self.add_spectral or []]
+
+
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _BlockArrays:
@@ -113,22 +179,23 @@ class _BlockArrays:
     label: numpy.ndarray = dataclasses.field(init=False)
     label_stack: numpy.ndarray = dataclasses.field(init=False)
     image: numpy.ndarray = dataclasses.field(init=False)
-    image_dem_padded: numpy.ndarray = dataclasses.field(init=False)
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
 
     def validate(self):
-        '''Validate if all attr has been populated.'''
-        for field in dataclasses.fields(self):
-            if not hasattr(self, field.name):
-                raise ValueError(f'{field.name} has not been populated yet')
+        '''Validate if all attributes have been populated.'''
+        required = ('image', 'valid_mask')
+        for name in required:
+            if not hasattr(self, name):
+                raise ValueError(f'{name} has not been populated yet')
+
 
 # --------------------------------Public  Class--------------------------------
 class DataBlock:
     '''
-    Container for per-block raster data and derived metadata.
+    Container for per-block raster data and its associated manifest.
 
     A `DataBlock` encapsulates a single raster window along with its
-    associated metadata and derived features. It augments raw input
+    associated manifest and derived features. It augments raw input
     arrays with spectral indices, topographic metrics, label
     hierarchies, and statistical summaries.
 
@@ -138,7 +205,7 @@ class DataBlock:
     artifacts.
 
     Typical workflow:
-        - Use `build()` to construct a block from arrays and metadata
+        - Use `build()` to construct a block from arrays and manifest
         - Use `save()` to persist the block
         - Use `load()` to restore a previously saved block
 
@@ -147,60 +214,51 @@ class DataBlock:
         label, and block-level features are computed sequentially.
     '''
 
-    def __init__(
-        self,
-        *,
-        ignore_index: int = 255,
-        dem_pad: int = 8,
-    ):
+    def __init__(self, *, ignore_index: int = 255):
         '''
         Initialize an empty `DataBlock` instance.
 
         The instance is created with placeholder data structures and a
-        default metadata dictionary. It can be populated using either
-        `build()` (from arrays) or `load()` (from disk).
+        default manifest. It can be populated using either `build()`
+        (from arrays) or `load()` (from disk).
 
         Args:
             ignore_index: Label ignore value (default: 255)
-            dem_pad: Padding size for DEM-based computations (default: 8)
         '''
-
-        # init with empty block data
+        # init shared state/variables for construction
         self.data = _BlockArrays()
-        # meta dict with default foo values
-        self.meta: DataBlockMeta = {
+        self.padded_dem = numpy.array([1])
+        self.lbl_specs: dict[str, LabelSpecs] = {}
+        self.manifest: DataBlockManifest = {
+            # provenance
             'block_name': '',
-            'has_label': True,
+            'has_label': False,
             'ignore_index': ignore_index,
-            'valid_ratios': {},
+            # dataset description
+            'image_nodata': numpy.nan,
+            'image_band_map': {},
             'label_nodata': 0,
             'label_num_cls': {},
             'label_ignore_cls': {},
             'label_parent': {},
             'label_parent_cls': {},
+            'label_names': {},
+            # derived stats
+            'valid_ratios': {},
+            'image_stats': {},
             'label_count': {},
             'label_entropy': {},
-            'label_names': {},
-            'image_nodata': numpy.nan,
-            'image_dem_pad': dem_pad,
-            'image_band_map': {},
-            'image_stats': {}
         }
-        # label specs type
-        self.lbl_specs: dict[str, LabelSpecs]
 
     # ----- alternative constructor
     @classmethod
     def build(
         cls,
-        *,
-        raw_arrays: tuple[numpy.ndarray, numpy.ndarray | None],
-        img_padded_dem: numpy.ndarray,
-        lbl_specs: dict[str, LabelSpecs],
-        block_meta: DataBlockMeta,
+        inputs: DataBlockInputs,
+        config: DataBlockConfig
     ) -> 'DataBlock':
         '''
-        Construct a `DataBlock` from in-memory arrays and metadata.
+        Construct a DataBlock from source arrays and build configuration.
 
         This method initializes a block, assigns input arrays, and
         executes the full feature engineering pipeline, including:
@@ -211,12 +269,12 @@ class DataBlock:
             - Per-band statistical summaries
 
         Args:
-            img_arr: Image array of shape (C, H, W).
-            lbl_arr: Optional label array of shape (T, H, W). If None,
-                the block is treated as unlabeled.
-            padded_dem: DEM array padded on all sides to support
-                neighborhood operations.
-            meta: Dictionary with block configuration and metadata.
+            inputs:
+                Source arrays and dataset schema required to construct
+                the block.
+            config:
+                Build configuration controlling feature engineering and
+                data encoding.
 
         Returns:
             DataBlock: A fully populated block instance.
@@ -224,43 +282,37 @@ class DataBlock:
         Notes: The method mutates internal state and returns the instance
         to support chaining.
         '''
+        self = cls(ignore_index=config.label_ignore_index)
+        self.manifest['block_name'] = inputs.block_name
+        self.manifest['image_nodata'] = config.image_nodata
+        self.manifest['image_band_map'] = dict(config.image_band_map) # shallow
+        if config.label_nodata is not None:
+            self.manifest['label_nodata'] = config.label_nodata
 
-        self = cls()
-        self.lbl_specs = lbl_specs
-        img_arr, lbl_arr = raw_arrays
-        # update meta with input
-        self.meta.update(block_meta)
-        # assign image
-        self.data.image = img_arr.astype(numpy.float32) # remote sensing default
-        self.data.image_dem_padded = img_padded_dem.astype(numpy.float32) # padded
-        # assign label if provided:
-        if lbl_arr is not None:
-            # assertions - both 3 dims with the same H and W
-            assert len(lbl_arr.shape) == 3 and len(img_arr.shape) == 3
-            assert lbl_arr.shape[-2] == img_arr.shape[-2]
-            self.data.label = lbl_arr.astype(numpy.uint8) # [0, 256)
-            self.meta['has_label'] = True
-        # otherwise give label related data a place holder
-        else:
-            self.data.label = numpy.array([1])
-            self.data.label_stack = numpy.array([1])
-            self.meta['has_label'] = False
-
-        # process data sequence
-        # --- add image bands
-        self._image_add_spectral()
-        self._image_add_topography()
-
-        # --- image specs
+        # image dtype conversion and processing
+        # float32 as remote sensing default
+        self.data.image = inputs.image_array.astype(numpy.float32)
+        if config.spectral_indices:
+            self._image_add_spectral(config.spectral_indices)
+        if config.add_topo:
+            self.padded_dem = inputs.pad_dem.astype(numpy.float32)
+            self._image_add_topography(config.image_dem_pad_px)
         self._image_get_valid_mask()
         self._image_get_stats()
 
-        # ---labels specs
-        # only if labels are provided
-        if self.meta['has_label']:
+        # if label array is provided:
+        if inputs.label_array is not None:
+            # currently support labels range [0, 256)
+            self.data.label = inputs.label_array.astype(numpy.uint8)
+            self.lbl_specs = inputs.lbl_specs
             self._label_get_stack()
             self._label_build_topology()
             self._label_get_stats()
+            self.manifest['has_label'] = True
+        else:
+            self.data.label = numpy.array([1]) # dummy placeholders
+            self.data.label_stack = numpy.array([1])
+            self.manifest['has_label'] = False
 
         # sanity check self.data and return self to allow chained calls
         self.data.validate()
@@ -271,99 +323,102 @@ class DataBlock:
         '''
         Load a `DataBlock` from a serialized `.npz` file.
 
-        This method reconstructs both the data arrays and metadata
-        from a previously saved block artifact.
+        This method reconstructs both the data arrays and manifest from
+        a previously saved block artifact.
 
         Args:
-            fpath: Path to the `.npz` file containing serialized data.
+            fpath:
+                Path to the `.npz` file containing serialized data.
 
         Returns:
-            DataBlock: A populated block instance with restored state.
+            DataBlock:
+                A populated block instance with restored state.
 
         Notes:
             Unknown fields in the archive are ignored during loading.
         '''
-
         self = cls()
         # load npz file
         loaded = numpy.load(fpath)
         # populate self.data
         for key in loaded:
-            if key == 'meta_json':
+            if key == 'manifest_json':
                 continue
             try:
                 setattr(self.data, key, loaded[key])
             except AttributeError:
                 continue
-        # populate self.meta
-        self.meta = json.loads(loaded['meta_json'].item())
-        # return self to allow chained calls
-        return self
+
+        self.manifest = json.loads(loaded['manifest_json'].item())
+        return self # return self to allow chained calls
 
     # ----- public method
     def save(self, fpath: str) -> None:
         '''
         Save the `DataBlock` to a compressed `.npz` file.
 
-        The method serializes all internal arrays along with metadata
+        The method serializes all internal arrays along with manifest
         (stored as a compact JSON string) into a single artifact.
 
         Args:
-            fpath: Output file path. Must end with `.npz`. Existing files
+            fpath:
+                Output file path. Must end with `.npz`. Existing files
                 **will** be overwritten.
 
         Notes:
             Metadata is serialized using JSON to ensure portability.
         '''
+        assert fpath.endswith('.npz') # sanity check
 
-        # sanity check
-        assert fpath.endswith('.npz')
         # convert self.data dataclass to dict
         to_save = vars(self.data).copy()
         # add meta dict (json dumps to compact plain text)
-        meta_json = json.dumps(self.meta, separators=(',', ':'))
-        to_save.update({'meta_json': meta_json})
-        # save file - allow pickle to write meta dict
+        manifest = json.dumps(self.manifest, separators=(',', ':'))
+        to_save.update({'manifest_json': manifest})
+        # save file - allow pickle to write dict
         numpy.savez_compressed(fpath, **to_save)
 
     # ----- private method
-    def _image_add_spectral(self) -> None:
+    def _image_add_spectral(self, indices: list[str]) -> None:
         '''Add spectral indices if related bands are available.'''
-
-        # retrieve from meta
-        band_idx = self.meta['image_band_map']
-        nodata = self.meta['image_nodata']
+        band_idx = self.manifest['image_band_map']
+        nodata = self.manifest['image_nodata']
 
         # mask off nodata pixels to avoid overflow
         # 32 bit increased to 64 bit float
         red = _Calc.mask(self.data.image[band_idx['red']], nodata)
-        # add spectral indices depending on band availability
-        indices_stack = []
-        n = len(self.meta['image_band_map'])
-        if 'nir' in band_idx:
+        next_idx = self.data.image.shape[0]
+
+        # add spectral indices on demand
+        spectrals: list[numpy.ndarray] = []
+        if 'ndvi' in indices:
             nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
-            indices_stack.append(_Calc.ndvi(nir, red, nodata))
-            self.meta['image_band_map']['NDVI'] = n
-            if 'swir1' in band_idx:
-                swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
-                indices_stack.append(_Calc.ndmi(nir, swir1, nodata))
-                self.meta['image_band_map']['NDMI'] = n + 1
-            if 'swir2' in band_idx:
-                swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
-                indices_stack.append(_Calc.nbr(nir, swir2, nodata))
-                self.meta['image_band_map']['NBR'] = n + 2
+            spectrals.append(_Calc.ndvi(nir, red, nodata))
+            band_idx['ndvi'] = next_idx
+            next_idx += 1
+
+        if 'ndmi' in indices:
+            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
+            swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
+            spectrals.append(_Calc.ndmi(nir, swir1, nodata))
+            band_idx['ndmi'] = next_idx
+            next_idx += 1
+
+        if 'nbr' in indices:
+            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
+            swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
+            spectrals.append(_Calc.nbr(nir, swir2, nodata))
+            band_idx['nbr'] = next_idx
+            next_idx += 1
 
         # add to image array
-        if indices_stack:
-            added = numpy.stack(indices_stack ).astype(numpy.float32)
+        if spectrals:
+            added = numpy.stack(spectrals).astype(numpy.float32)
             self.data.image = numpy.append(self.data.image, added, axis=0)
 
-    def _image_add_topography(self) -> None:
+    def _image_add_topography(self, pad: int) -> None:
         '''Add topographical metrics to the image array.'''
-
-        # retrieve from meta
-        nodata = self.meta['image_nodata']
-        pad = self.meta['image_dem_pad']
+        nodata = self.manifest['image_nodata']
 
         # prep metrics to add
         slope = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
@@ -372,7 +427,7 @@ class DataBlock:
         tpi = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
 
         # sanity check on image/padded image shape
-        max_h, max_w = self.data.image_dem_padded.shape
+        max_h, max_w = self.padded_dem.shape
         if not self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad):
             raise ValueError(
                 f'Mismatch in image dimensions: {self.data.image[0].shape} vs'
@@ -383,12 +438,14 @@ class DataBlock:
         for y in range(pad, max_h - pad):
             for x in range(pad, max_w - pad):
                 # slope and aspect - pad neighbors, radius=1
-                pxs = _Calc.get_px_group(self.data.image_dem_padded, x, y, 1)
+                pxs = _Calc.get_px_group(self.padded_dem, x, y, 1)
+                # pxs' shape should be [3, 3] with radius=1
+                assert pxs.shape == (3, 3)
                 slope[y - pad, x - pad], cos_a[y - pad, x - pad], \
                     sin_a[y - pad, x - pad] = _Calc.slope_n_aspect(pxs, nodata)
                 # tpi - radius=pad-1 (default 8, so 15x15 window)
                 r = pad - 1
-                pxs =  _Calc.get_px_group(self.data.image_dem_padded, x, y, r)
+                pxs =  _Calc.get_px_group(self.padded_dem, x, y, r)
                 tpi[y - pad, x - pad] = _Calc.tpi(pxs, nodata)
 
         # add to image array
@@ -396,8 +453,8 @@ class DataBlock:
         self.data.image = numpy.append(self.data.image, to_add, axis=0)
 
         # add to band map
-        n = len(self.meta['image_band_map'])
-        self.meta['image_band_map'].update({
+        n = len(self.manifest['image_band_map'])
+        self.manifest['image_band_map'].update({
             'slope': n,
             'cos_aspect': n + 1,
             'sin_aspect': n + 2,
@@ -406,24 +463,22 @@ class DataBlock:
 
     def _image_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
-
         # for image data: True where all image bands are valid
         invalid_img = (
             numpy.isnan(self.data.image) |
-            numpy.isclose(self.data.image, self.meta['image_nodata'])
+            numpy.isclose(self.data.image, self.manifest['image_nodata'])
         )
         valid_img = ~numpy.any(invalid_img, axis=0) # shape (256, 256)
 
-        self.meta['valid_ratios'].update({
+        self.manifest['valid_ratios'].update({
             'image': float((numpy.sum(valid_img) / valid_img.size)),
         })
         self.data.valid_mask = valid_img # (256, 256)
 
     def _image_get_stats(self):
         '''Per block stats for later aggregation using Welford's.'''
-
         # image_nodata
-        image_nodata = self.meta['image_nodata']
+        image_nodata = self.manifest['image_nodata']
         # iterate through image channels
         for i, band in enumerate(self.data.image):
             # get where pixel is invalid and inverse to get valid pixels
@@ -448,7 +503,7 @@ class DataBlock:
                     mean_sq = 0.0
 
             # give to self.image_stats
-            self.meta['image_stats'][f'band_{i}'] = {
+            self.manifest['image_stats'][f'band_{i}'] = {
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
@@ -459,9 +514,8 @@ class DataBlock:
         Input arrays are processed sequentially to create base layers,
         child layers for reclassification, and grouping layers.
         '''
-
         stack: list[numpy.ndarray] = []
-        ignore_index = self.meta['ignore_index']
+        ignore_index = self.manifest['ignore_index']
 
         # iterate label specs
         for i, spec in enumerate(self.lbl_specs.values()):
@@ -496,12 +550,11 @@ class DataBlock:
 
     def _label_build_topology(self) -> None:
         '''
-        Construct the metadata topology for the label stack.
+        Construct the label schema recorded in the block manifest.
 
-        Populates self.meta with hierarchy, class counts, and naming
+        Populates self.manifest with hierarchy, class counts, and naming
         conventions derived from the label specifications.
         '''
-
         # containers
         num_cls: dict[str, int] = {}
         ignore_cls: dict[str, list[int]] = {}
@@ -513,7 +566,7 @@ class DataBlock:
         for name, spec in self.lbl_specs.items():
             cls_name = spec.get('class_name', {})
 
-            # base metadata
+            # base
             num_cls[name] = spec['num_cls']
             ignore_cls[name] = spec['ignore_cls']
             parent_map[name] = None
@@ -528,7 +581,7 @@ class DataBlock:
             if not reclass:
                 continue
 
-            # children metadata
+            # children
             grp_name = f'{name}_groups' # fallback genric name
             reclass_name = spec.get('reclass_name', {})
             for gid, classes in reclass.items():
@@ -542,7 +595,7 @@ class DataBlock:
                     for c in classes
                 ]
 
-            # parent metadata
+            # parent
             num_cls[grp_name] = len(reclass)
             ignore_cls[grp_name] = []
             parent_map[grp_name] = None
@@ -553,24 +606,23 @@ class DataBlock:
             ]
 
         # populate meta dict
-        self.meta['label_num_cls'] = num_cls
-        self.meta['label_ignore_cls'] = ignore_cls
-        self.meta['label_parent'] = parent_map
-        self.meta['label_parent_cls'] = parent_cls_map
-        self.meta['label_names'] = label_names
+        self.manifest['label_num_cls'] = num_cls
+        self.manifest['label_ignore_cls'] = ignore_cls
+        self.manifest['label_parent'] = parent_map
+        self.manifest['label_parent_cls'] = parent_cls_map
+        self.manifest['label_names'] = label_names
 
     def _label_get_stats(self) -> None:
         '''Count present label values and calculate entropy.'''
-
-        # the meta dict defines the names and sizes of every target in stack
-        heads = list(self.meta['label_num_cls'].items())
+        # the manifest defines the names and sizes of every target in stack
+        heads = list(self.manifest['label_num_cls'].items())
 
         for i, (name, n_cls) in enumerate(heads):
             band = self.data.label_stack[i]
 
             # calculate valid pixel ratios
-            valid = band != self.meta['ignore_index']
-            self.meta['valid_ratios'].update({
+            valid = band != self.manifest['ignore_index']
+            self.manifest['valid_ratios'].update({
                 name: float(valid.sum() / (valid.size))
                 if valid.size > 0 else 0.0
             })
@@ -589,12 +641,13 @@ class DataBlock:
                 final_counts[int(val) - 1] = int(count)
 
             # store results in meta
-            self.meta['label_count'][name] = final_counts
-            self.meta['label_entropy'][name] = ent
+            self.manifest['label_count'][name] = final_counts
+            self.manifest['label_entropy'][name] = ent
 
 # --------------------------------private class--------------------------------
 class _Calc:
     '''Calculator namespace.'''
+
     @staticmethod
     def mask(band, nodata):
         '''Returns a masked array where band == nodata.'''
@@ -634,9 +687,9 @@ class _Calc:
 
     # topographical metrics related
     @staticmethod
-    def get_px_group(arr, x, y, np):
+    def get_px_group(arr, x, y, rr):
         '''Get neighbouring pixels as an array.'''
-        return arr[slice(y - np, y + np + 1), slice(x - np, x + np + 1)]
+        return arr[slice(y - rr, y + rr + 1), slice(x - rr, x + rr + 1)]
 
     @staticmethod
     def slope_n_aspect(arr, nodata):
@@ -658,10 +711,13 @@ class _Calc:
         ) / 8.0
         # calculate slope
         slope = numpy.sqrt(dz_dx ** 2 + dz_dy ** 2)
+        # deterministically handle cos/sin when slope == 0
+        if slope == 0.0:
+            return 0.0, 1.0, 0.0
         # calculate aspect angle in radians
         aspect_rad = numpy.arctan2(dz_dy, -dz_dx)
         if aspect_rad < 0:
-            aspect_rad += 2 * numpy.pi  # Normalize to [0, 2π]
+            aspect_rad += 2 * numpy.pi  # normalize to [0, 2π]
         # compute cosine and sine of aspect
         cos_aspect = numpy.cos(aspect_rad)
         sin_aspect = numpy.sin(aspect_rad)
@@ -669,7 +725,7 @@ class _Calc:
 
     @staticmethod
     def tpi(arr, nodata):
-        '''Returns Topographical Position Indexfrom DEM.'''
+        '''Returns Topographical Position Index (TPI) from a DEM.'''
         # topographical position index
         h, w = arr.shape
         c_row, c_col = h // 2, w // 2

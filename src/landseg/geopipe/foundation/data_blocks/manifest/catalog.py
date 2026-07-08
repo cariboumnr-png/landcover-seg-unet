@@ -88,7 +88,7 @@ def build_catalog(
     # add to current catalog dict
     for fp in input_block_fpaths:
         ctrl = artifacts.Controller(fp) # with no policy here
-        meta = geo_core.DataBlock.load(fp).meta
+        meta = geo_core.DataBlock.load(fp).manifest
         row, col = geo_utils.name_xy(meta['block_name'])
         entry: geo_core.CatalogEntry = {
             'block_name': meta['block_name'],
