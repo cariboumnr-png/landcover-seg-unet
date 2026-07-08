@@ -34,8 +34,10 @@ import landseg.configs as configs
 import landseg.core as core
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.world_grids as world_grids
-import landseg.geopipe.foundation.data_blocks as data_blocks
+import landseg.artifacts as artifacts
+import landseg.geopipe.foundation.data_blocks.assembler as assembler
 import landseg.geopipe.foundation.data_blocks.mapper as mapper
+import landseg.geopipe.utils as geo_utils
 import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
@@ -127,7 +129,8 @@ def _build_a_block(
             return block_fpath
 
     logger.log('INFO', 'Preparing world grid')
-    # world grid
+
+    # get world grid
     grid_cfg = config.foundation.grid
     grid_config = world_grids.GridParameters(
         mode=grid_cfg.mode, # type: ignore
@@ -148,31 +151,37 @@ def _build_a_block(
         world_grid,
         datablocks_cfg.filepaths.dev_image,
         datablocks_cfg.filepaths.dev_label,
-        logger=logger
     )
 
     logger.log('INFO', 'Building a single data block')
     # search windows and build a single block
-    builder_config = data_blocks.BlockBuilderConfig(
-        image_fpath=datablocks_cfg.filepaths.dev_image,
-        label_fpath=datablocks_cfg.filepaths.dev_label,
-        config_fpath=datablocks_cfg.filepaths.config,
-        output_root=save_dpath,
-        dem_pad_px=datablocks_cfg.general.image_dem_pad,
-        ignore_index=datablocks_cfg.general.ignore_index,
-        block_size=mapped.tile_shape
-    )
-    block_builder = data_blocks.BlockBuilder(
-        mapped.image,
-        mapped.label,
-        builder_config,
-        logger=logger,
-    )
-    block_fpath = block_builder.build_single_block(
-        save_dpath,
+    # load dataset config JSON
+    ctrl = artifacts.Controller[dict].load_json_or_fail(datablocks_cfg.filepaths.config)
+    ctrl.hash(overwrite=False)
+    dataset_config = ctrl.fetch()
+    assert dataset_config
+
+    # map coordinate names to RasterReadInput objects
+    inputs_map = {}
+    for coord in mapped.image:
+        name = geo_utils.xy_name(coord)
+        inputs_map[name] = assembler.RasterReadInput(
+            image_fpath=datablocks_cfg.filepaths.dev_image,
+            image_window=mapped.image[coord],
+            image_band_map=dataset_config['image_band_map'],
+            image_dem_pad_px=datablocks_cfg.general.image_dem_pad,
+            label_fpath=datablocks_cfg.filepaths.dev_label,
+            label_window=mapped.label[coord] if mapped.label else None,
+            label_specs=dataset_config.get('label_specs'),
+        )
+
+    # build a single block matching criteria for testing
+    block_fpath = assembler.build_test_block(
+        save_dpath=save_dpath,
+        inputs=inputs_map,
+        target_head=kwargs.get('monitor_head', 'base'),
         valid_px_per=kwargs.get('valid_px_per', 0.8),
-        monitor_head=kwargs.get('monitor_head', 'base'),
-        need_all_classes=kwargs.get('need_all_classes', True)
+        need_all_classes=kwargs.get('need_all_classes', True),
     )
     if not block_fpath:
         raise ValueError('No valid block for testing is found')
@@ -185,7 +194,7 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
 
     # read the block
     block = geo_core.DataBlock.load(block_fpath)
-    counts = block.meta['label_count']
+    counts = block.manifest['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original'}
 
     # returgeocorerectly from schema dict
@@ -200,22 +209,22 @@ def _build_dataspec_a_block(block_fpath: str) -> core.DataSpecs:
                 num_channels=block.data.image.shape[0],
                 height_width=block.data.label.shape[1], # here assume H==W
                 array_key='image',
-                band_map=block.meta['image_band_map'],
+                band_map=block.manifest['image_band_map'],
             ),
             label_specs=core.Meta.Label(
                 array_key='label_stack',
-                ignore_index=block.meta['ignore_index']
+                ignore_index=block.manifest['ignore_index']
             )
         ),
         heads=core.Heads(
             class_counts=cc, # neutral
             logits_adjust={k: [1.0] * len(v) for k, v in cc.items()}, # neutral
-            head_parent=block.meta['label_parent'],
-            head_parent_cls=block.meta['label_parent_cls'],
+            head_parent=block.manifest['label_parent'],
+            head_parent_cls=block.manifest['label_parent_cls'],
         ),
         splits=core.Splits(
-            train={block.meta['block_name']: block_fpath},
-            val={block.meta['block_name']: block_fpath},
+            train={block.manifest['block_name']: block_fpath},
+            val={block.manifest['block_name']: block_fpath},
             test={}
         ),
         domains=core.Domains(
