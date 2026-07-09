@@ -20,29 +20,32 @@
 # =========================================================================== #
 
 '''
-Utility script to generate dummy/mock geospatial datasets (GeoTIFFs)
-and corresponding configurations for local pipeline runs and testing.
+Top-level namespace for `landseg.testing`.
+
+Exposes selected public functions via lazy resolution to keep import
+order simple and circular-free.
 '''
 
-# standard imports
-import os
-import sys
-# local imports
-import landseg.testing as testing
+from __future__ import annotations
+import importlib
+import typing
 
-# -------------------------------Main Executable-------------------------------
-if __name__ == '__main__':
+__all__ = [
+    # classes
+    'TIFFConfig',
+    # functions
+    'create_dummy_geotiff',
+    'generate_dummy_data'
+    # types
+]
 
-    # check if the directory already exists and is not empty
-    DEFAULT_DIR = './experiment/input'
-    M = 'Generating dummy data will overwrite existing files. Proceed? [y/N]: '
-    if os.path.exists(DEFAULT_DIR) and os.listdir(DEFAULT_DIR):
-        print(
-            f'WARNING: Target directory "{DEFAULT_DIR}" '
-            f'already exists and is not empty.'
-        )
-        response = input(M)
-        if response.strip().lower() not in ('y', 'yes'):
-            print('Aborted.')
-            sys.exit(0)
-    testing.generate_dummy_data(DEFAULT_DIR)
+# for static check
+if typing.TYPE_CHECKING:
+    from .dummy_data import TIFFConfig, create_dummy_geotiff, generate_dummy_data
+
+def __getattr__(name: str):
+
+    if name in {'TIFFConfig', 'create_dummy_geotiff', 'generate_dummy_data'}:
+        return getattr(importlib.import_module('.dummy_data', __package__), name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

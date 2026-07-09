@@ -19,30 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Utility script to generate dummy/mock geospatial datasets (GeoTIFFs)
-and corresponding configurations for local pipeline runs and testing.
-'''
+# pylint: disable=missing-function-docstring
+
+'''Unit tests for the CLI adapter module.'''
 
 # standard imports
-import os
+import subprocess
 import sys
-# local imports
-import landseg.testing as testing
 
-# -------------------------------Main Executable-------------------------------
-if __name__ == '__main__':
 
-    # check if the directory already exists and is not empty
-    DEFAULT_DIR = './experiment/input'
-    M = 'Generating dummy data will overwrite existing files. Proceed? [y/N]: '
-    if os.path.exists(DEFAULT_DIR) and os.listdir(DEFAULT_DIR):
-        print(
-            f'WARNING: Target directory "{DEFAULT_DIR}" '
-            f'already exists and is not empty.'
-        )
-        response = input(M)
-        if response.strip().lower() not in ('y', 'yes'):
-            print('Aborted.')
-            sys.exit(0)
-    testing.generate_dummy_data(DEFAULT_DIR)
+# ----- smoke tests
+def test_cli_help_smoke():
+    result = subprocess.run(
+        [sys.executable, '-m', 'landseg.adapters.cli.cli', '--help'],
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    assert result.returncode == 0
+    assert 'Config' in result.stdout
+    assert 'pipeline:' in result.stdout
