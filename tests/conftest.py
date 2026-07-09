@@ -24,12 +24,55 @@ Shared configuration and fixtures for the landseg test suite.
 '''
 
 # standard imports
+import os
 import pytest
 # third-party imports
 import numpy
 import rasterio.transform
 # local imports
 import landseg.testing as testing
+
+# Absolute path to the repo root folder
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+
+
+@pytest.fixture
+def dummy_data_paths():
+    '''Fixture providing paths to the pre-generated dummy data.'''
+    ref_fpath = os.path.join(
+        ROOT_DIR, 'experiment', 'input', 'extent_reference',
+        'example_extent.tif'
+    )
+    dev_image = os.path.join(
+        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'dev',
+        'example_image.tif'
+    )
+    dev_label = os.path.join(
+        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'dev',
+        'example_label.tif'
+    )
+    test_image = os.path.join(
+        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'test',
+        'example_image.tif'
+    )
+    test_label = os.path.join(
+        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'test',
+        'example_label.tif'
+    )
+    dataset_config = os.path.join(
+        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data',
+        'example_config.json'
+    )
+
+    return {
+        'ref_fpath': ref_fpath,
+        'dev_image': dev_image,
+        'dev_label': dev_label,
+        'test_image': test_image,
+        'test_label': test_label,
+        'dataset_config': dataset_config
+    }
+
 
 @pytest.fixture
 def dummy_geotiff_factory(tmp_path):
