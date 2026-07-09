@@ -26,38 +26,11 @@
 # standard imports
 import json
 import os
-# third-party imports
-import pytest
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.foundation as foundation
 import landseg.geopipe.foundation.common as common
-import landseg.geopipe.foundation.data_blocks.pipeline as pipeline
-
-# Absolute path to the repo root folder
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../'))
-
-
-# ----- fixtures
-@pytest.fixture
-def dummy_data_paths():
-    '''Fixture providing paths to the pre-generated dummy data under experiment/input.'''
-    ref_fpath = os.path.join(ROOT_DIR, 'experiment', 'input', 'extent_reference', 'example_extent.tif')
-    dev_image = os.path.join(ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'dev', 'example_image.tif')
-    dev_label = os.path.join(ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'dev', 'example_label.tif')
-    test_image = os.path.join(ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'test', 'example_image.tif')
-    test_label = os.path.join(ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'test', 'example_label.tif')
-    dataset_config = os.path.join(ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'example_config.json')
-
-    return {
-        'ref_fpath': ref_fpath,
-        'dev_image': dev_image,
-        'dev_label': dev_label,
-        'test_image': test_image,
-        'test_label': test_label,
-        'dataset_config': dataset_config
-    }
-
+import landseg.geopipe.foundation.data_blocks as data_blocks
 
 # ----- pipeline execution
 def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
@@ -93,7 +66,7 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     paths = artifacts.FoundationPaths(str(tmp_path))
 
     # Set pipeline configurations
-    config = pipeline.BlockBuildingParameters(
+    config = data_blocks.BlockBuildingParameters(
         stage='dev',
         image_fpath=dummy_data_paths['dev_image'],
         label_fpath=dummy_data_paths['dev_label'],
@@ -103,7 +76,7 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     )
 
     # Run the pipeline
-    pipeline.run_blocks_building(
+    data_blocks.run_blocks_building(
         world_grid,
         paths.data_blocks.dev,
         config,
@@ -118,7 +91,7 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     assert os.path.exists(dev_paths.blocks)
 
     # Read and inspect catalog
-    with open(dev_paths.catalog, 'r') as f:
+    with open(dev_paths.catalog, 'r', encoding='UTF-8') as f:
         catalog_data = json.load(f)
     assert len(catalog_data) > 0
     first_key = list(catalog_data.keys())[0]
@@ -167,7 +140,7 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     paths = artifacts.FoundationPaths(str(tmp_path))
 
     # Set pipeline configurations
-    config = pipeline.BlockBuildingParameters(
+    config = data_blocks.BlockBuildingParameters(
         stage='test',
         image_fpath=dummy_data_paths['test_image'],
         label_fpath=dummy_data_paths['test_label'],
@@ -177,7 +150,7 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     )
 
     # Run the pipeline
-    pipeline.run_blocks_building(
+    data_blocks.run_blocks_building(
         world_grid,
         paths.data_blocks.test,
         config,
@@ -192,7 +165,7 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     assert os.path.exists(test_paths.blocks)
 
     # Read and inspect catalog
-    with open(test_paths.catalog, 'r') as f:
+    with open(test_paths.catalog, 'r', encoding='UTF-8') as f:
         catalog_data = json.load(f)
     assert len(catalog_data) > 0
     first_key = list(catalog_data.keys())[0]

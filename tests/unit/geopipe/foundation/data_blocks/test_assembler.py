@@ -62,7 +62,7 @@ def fixture_assembler_config_json(tmp_path):
         }
     }
     fpath = tmp_path / 'config.json'
-    with open(fpath, 'w') as f:
+    with open(fpath, 'w', encoding='UTF-8') as f:
         json.dump(data, f)
     return fpath
 
@@ -97,14 +97,14 @@ def test_check_npz_integrity_missing():
 
 def test_check_npz_integrity_corrupted(tmp_path):
     fpath = tmp_path / 'corrupt.npz'
-    with open(fpath, 'w') as f:
+    with open(fpath, 'w', encoding='UTF-8') as f:
         f.write('not a zip file')
     res = io.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): False}
 
 
 # ----- single block construction
-def test_build_single_block_success(dummy_geotiff_factory, assembler_config_json):
+def test_build_single_block_success(dummy_geotiff_factory):
     # Create mock 16x16 geotiffs
     img_path = str(dummy_geotiff_factory('image.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
@@ -141,7 +141,7 @@ def test_build_single_block_success(dummy_geotiff_factory, assembler_config_json
     assert block.data.image.shape == (5 + 1 + 4, 8, 8) # 5 bands + 1 spectral (NDVI) + 4 topo
 
 
-def test_build_single_block_defaults(dummy_geotiff_factory, assembler_config_json):
+def test_build_single_block_defaults(dummy_geotiff_factory):
     img_path = str(dummy_geotiff_factory('image2.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label2.tif', 16, 16, 1))
 
@@ -233,7 +233,7 @@ def test_build_blocks_orchestrator(dummy_geotiff_factory, assembler_config_json,
 
 
 # ----- test block construction
-def test_build_test_block_success(dummy_geotiff_factory, assembler_config_json, tmp_path):
+def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
     img_path = str(dummy_geotiff_factory('image.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
 
@@ -264,9 +264,7 @@ def test_build_test_block_success(dummy_geotiff_factory, assembler_config_json, 
         label_specs=label_specs
     )
 
-    inputs = {
-        'test_block': read_input
-    }
+    inputs = {'test_block': read_input}
 
     fpath = assembler.build_test_block(
         save_dpath=str(tmp_path / 'test_blocks'),
