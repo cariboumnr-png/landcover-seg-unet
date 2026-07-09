@@ -173,21 +173,16 @@ def test_session_step_summary_as_dict_returns_snapshot():
 # ----- SessionStepResults
 def test_session_step_results_target_objective_default():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.5),
-        }
+        head_metrics=_make_head_metrics(head={'mean': 0.5})
     )
     results = core.SessionStepResults(validation=validation)
 
-    assert results.target_objective == 'IoU from head1'
+    assert results.target_objective == 'IoU from head'
 
 
 def test_session_step_results_target_objective_weighted():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(),
-            'head2': core.AccumulatedMetrics(),
-        }
+        head_metrics=_make_head_metrics(head1={}, head2={})
     )
     results = core.SessionStepResults(validation=validation)
     results.track('iou', {'head1': 0.25, 'head2': 0.75})
@@ -197,13 +192,8 @@ def test_session_step_results_target_objective_weighted():
 
 def test_session_step_results_target_objective_gem():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(),
-            'head2': core.AccumulatedMetrics(),
-        },
-        mtl_metrics={
-            'gem': 0.9,
-        },
+        head_metrics=_make_head_metrics(head1={}, head2={}),
+        mtl_metrics={'gem': 0.9},
     )
     results = core.SessionStepResults(validation=validation)
     results.track('gem', None)
@@ -213,12 +203,10 @@ def test_session_step_results_target_objective_gem():
 
 def test_session_step_results_target_objective_invalid_metric():
     validation = core.ValStepResults(
-        head_metrics={
-            'head': core.AccumulatedMetrics(),
-        }
+        head_metrics=_make_head_metrics(head1={}, head2={}) # placeholder
     )
     results = core.SessionStepResults(validation=validation)
-    object.__setattr__(results, '_metric_name', 'invalid') # as in .track()
+    object.__setattr__(results, '_metric_name', 'foo') # as in .track()
 
     with pytest.raises(ValueError, match='Invalid metric name'):
         _ = results.target_objective
@@ -232,10 +220,10 @@ def test_session_step_results_target_metrics_no_validation():
 
 def test_session_step_results_target_metrics_default_first_head():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.6),
-            'head2': core.AccumulatedMetrics(mean=0.9),
-        }
+        head_metrics=_make_head_metrics(
+            head1={'mean': 0.6},
+            head2={'mean': 0.9}
+        )
     )
     results = core.SessionStepResults(validation=validation)
 
@@ -250,10 +238,10 @@ def test_session_step_results_inference_metrics_no_inference():
 
 def test_session_step_results_inference_metrics_default_first_head():
     inference = core.InferStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.75),
-            'head2': core.AccumulatedMetrics(mean=0.9),
-        }
+        head_metrics=_make_head_metrics(
+            head1={'mean': 0.75},
+            head2={'mean': 0.9}
+        )
     )
     results = core.SessionStepResults(inference=inference)
 
@@ -264,9 +252,7 @@ def test_session_step_results_as_dict():
     results = core.SessionStepResults(
         training=core.TrainStepResults(total_objective=1.5),
         validation=core.ValStepResults(
-            head_metrics={
-                'head': core.AccumulatedMetrics(mean=0.6)
-            }
+            head_metrics=_make_head_metrics(head={'mean': 0.6})
         ),
     )
     d = results.as_dict
@@ -277,10 +263,10 @@ def test_session_step_results_as_dict():
 
 def test_session_step_results_track_weighted_heads():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.5),
-            'head2': core.AccumulatedMetrics(mean=0.9),
-        }
+        head_metrics=_make_head_metrics(
+            head1={'mean': 0.6},
+            head2={'mean': 0.9}
+        )
     )
     results = core.SessionStepResults(validation=validation)
     results.track('iou', {'head2': 2.0})
@@ -290,10 +276,6 @@ def test_session_step_results_track_weighted_heads():
 
 def test_session_step_results_track_gem():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.5),
-            'head2': core.AccumulatedMetrics(mean=0.8),
-        },
         mtl_metrics={'gem': 0.94},
     )
     results = core.SessionStepResults(validation=validation)
@@ -304,14 +286,12 @@ def test_session_step_results_track_gem():
 
 def test_session_step_results_track_single_head_forces_iou():
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.8)
-        }
+        head_metrics=_make_head_metrics(head={'mean': 0.8})
     )
     results = core.SessionStepResults(validation=validation)
     results.track('gem', None)
 
-    assert results.target_objective == 'IoU from head1'
+    assert results.target_objective == 'IoU from head'
     assert results.target_metrics == pytest.approx(0.8)
 
 
@@ -338,7 +318,7 @@ def test_train_step_results_clear():
 @pytest.mark.parametrize('cls', [core.ValStepResults, core.InferStepResults])
 def test_val_infer_step_results_as_dict_shape(cls):
     results = cls(
-        head_metrics={'base_head': core.AccumulatedMetrics(mean=0.5)},
+        head_metrics=_make_head_metrics(base_head={'mean': 0.5}),
         mtl_metrics={'consistency': 0.2}
     )
     d = results.as_dict
@@ -362,11 +342,10 @@ def test_val_infer_step_results_as_dict_shape(cls):
 @pytest.mark.parametrize('cls', [core.ValStepResults, core.InferStepResults])
 def test_val_infer_step_results_as_dict_returns_snapshot(cls):
     results = cls(
-        head_metrics={'base_head': core.AccumulatedMetrics(mean=0.5)},
         mtl_metrics={'consistency': 0.2}
     )
     d = results.as_dict # snapshot here for later JSON serialization
-    results.mtl_metrics['consistency'] = 0.1 # mutated afterward
+    results.mtl_metrics['consistency'] = 0.1 # can be mutated between epochs
 
     assert d['mtl_metrics']['consistency'] == 0.2
 
@@ -451,10 +430,10 @@ def test_track_metrics_gem_requires_metric(mtl_metrics):
 
 
 def test_track_metrics_iou_uses_requested_heads():
-    metrics = {
-        'head1': core.AccumulatedMetrics(mean=0.5),
-        'head2': core.AccumulatedMetrics(mean=0.8),
-    }
+    metrics = _make_head_metrics(
+        head1={'mean': 0.5},
+        head2={'mean': 0.8}
+    )
     result = session_results._track_metrics(
         metrics,
         metric_name='iou',
@@ -465,10 +444,10 @@ def test_track_metrics_iou_uses_requested_heads():
 
 
 def test_track_metrics_iou_defaults_to_first_head():
-    metrics = {
-        'head1': core.AccumulatedMetrics(mean=0.4),
-        'head2': core.AccumulatedMetrics(mean=0.9),
-    }
+    metrics = _make_head_metrics(
+        head1={'mean': 0.4},
+        head2={'mean': 0.8}
+    )
     result = session_results._track_metrics(
         metrics,
         metric_name='iou',
@@ -477,9 +456,9 @@ def test_track_metrics_iou_defaults_to_first_head():
     assert result == pytest.approx(0.4)
 
 
-@pytest.mark.parametrize('track_heads', [[], 'head1', 1, 3.14])
+@pytest.mark.parametrize('track_heads', [[], 'head', 1, 3.14])
 def test_track_metrics_invalid_tracking_head(track_heads):
-    metrics = {'head1': core.AccumulatedMetrics(mean=0.5)}
+    metrics = _make_head_metrics(head={'mean': 0.75})
     with pytest.raises(ValueError, match='Invalid tracking head'):
         session_results._track_metrics(
             metrics,
@@ -499,34 +478,34 @@ def test_track_metrics_invalid_metric_name():
 
 # ----- _get_mean_iou(...)
 def test_get_mean_iou_single_head_uses_mean():
-    metrics = {'head1': core.AccumulatedMetrics(mean=0.75)}
+    metrics = _make_head_metrics(head={'mean': 0.75})
     result = session_results._get_mean_iou(metrics, None)
 
     assert result == pytest.approx(0.75)
 
 
 def test_get_mean_iou_prefers_active_mean():
-    metrics = {'head': core.AccumulatedMetrics(mean=0.60, ac_mean=0.85)}
+    metrics = _make_head_metrics(head={'mean': 0.6, 'ac_mean': 0.85})
     result = session_results._get_mean_iou(metrics, None)
 
     assert result == pytest.approx(0.85)
 
 
 def test_get_mean_iou_multiple_heads_unweighted():
-    metrics = {
-        'head1': core.AccumulatedMetrics(mean=0.5),
-        'head2': core.AccumulatedMetrics(mean=0.7),
-    }
+    metrics = _make_head_metrics(
+        head1={'mean': 0.5},
+        head2={'mean': 0.7}
+    )
     result = session_results._get_mean_iou(metrics, None)
 
     assert result == pytest.approx(0.6)
 
 
 def test_get_mean_iou_weighted():
-    metrics = {
-        'head1': core.AccumulatedMetrics(mean=0.5),
-        'head2': core.AccumulatedMetrics(mean=0.8),
-    }
+    metrics = _make_head_metrics(
+        head1={'mean': 0.5},
+        head2={'mean': 0.8}
+    )
     weights = {'head1': 1.0, 'head2': 3.0}
     result = session_results._get_mean_iou(metrics, weights)
     expected = (1.0 * 0.5 + 3.0 * 0.8) / 4.0
@@ -535,10 +514,10 @@ def test_get_mean_iou_weighted():
 
 
 def test_get_mean_iou_missing_weight_defaults_to_one():
-    metrics = {
-        'head1': core.AccumulatedMetrics(mean=0.5),
-        'head2': core.AccumulatedMetrics(mean=0.9),
-    }
+    metrics = _make_head_metrics(
+        head1={'mean': 0.5},
+        head2={'mean': 0.9}
+    )
     weights = {'head1': 2.0}
     result = session_results._get_mean_iou(metrics, weights)
     expected = (2.0 * 0.5 + 1.0 * 0.9) / 3.0
@@ -547,11 +526,20 @@ def test_get_mean_iou_missing_weight_defaults_to_one():
 
 
 def test_get_mean_iou_active_mean_selected_per_head():
-    metrics = {
-        'head1': core.AccumulatedMetrics(mean=0.4, ac_mean=0.8),
-        'head2': core.AccumulatedMetrics(mean=0.6, ac_mean=0.0),
-    }
+    metrics = _make_head_metrics(
+        head1={'mean': 0.4, 'ac_mean': 0.8},
+        head2={'mean': 0.6, 'ac_mean': 0.0}
+    )
     result = session_results._get_mean_iou(metrics, None)
     expected = (0.8 + 0.6) / 2
 
     assert result == pytest.approx(expected)
+
+
+# ----- builders
+def _make_head_metrics(**heads) -> dict[str, core.AccumulatedMetrics]:
+    '''Construct a head_metrics dictionary.'''
+    return {
+        name: core.AccumulatedMetrics(**kwargs)
+        for name, kwargs in heads.items()
+    }
