@@ -38,7 +38,11 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 @pytest.fixture
 def dummy_data_paths():
-    '''Fixture providing paths to the pre-generated dummy data.'''
+    '''Fixture providing paths to the pre-generated dummy data.
+
+    If the dummy files do not exist locally, they will be automatically
+    generated to ensure the integration tests pass out-of-the-box.
+    '''
     ref_fpath = os.path.join(
         ROOT_DIR, 'experiment', 'input', 'extent_reference',
         'example_extent.tif'
@@ -63,6 +67,20 @@ def dummy_data_paths():
         ROOT_DIR, 'experiment', 'input', 'data', 'demo_data',
         'example_config.json'
     )
+
+    paths = [
+        ref_fpath,
+        dev_image,
+        dev_label,
+        test_image,
+        test_label,
+        dataset_config,
+    ]
+
+    # If any dummy data files are missing, auto-generate the dummy dataset
+    if not all(os.path.exists(p) for p in paths):
+        input_root = os.path.join(ROOT_DIR, 'experiment', 'input')
+        testing.generate_dummy_data(input_root)
 
     return {
         'ref_fpath': ref_fpath,
