@@ -31,10 +31,11 @@ import pytest
 # local imports
 import landseg.geopipe.core.foundation_data_block as data_block # direct import
 
-# alises
+# aliases
 rng = numpy.random.default_rng()
 
-# ----- _Calc calculators
+
+# ----- `_Calc` calculators
 def test_mask_with_nodata():
     band = numpy.ones((256, 256), dtype=numpy.float32)
     nodata = -999.9

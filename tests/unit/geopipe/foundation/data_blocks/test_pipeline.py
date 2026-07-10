@@ -35,7 +35,7 @@ import landseg.geopipe.foundation.data_blocks as data_blocks
 # ----- pipeline execution
 def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     # Setup logger and execution summary
-    report_file = os.path.join(tmp_path, 'ingest_report.json')
+    report_file = str(tmp_path / 'ingest_report.json')
     logger = common.FoundationLogger(
         name='test_ingest_dev',
         log_file=report_file,
@@ -54,7 +54,7 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
         grid_shape=None,
         tile_specs=(256, 256, 128, 128)
     )
-    grid_file = os.path.join(tmp_path, 'grid.json')
+    grid_file = str(tmp_path / 'grid.json')
     world_grid = foundation.prepare_world_grid(
         grid_file,
         grid_config,
@@ -109,7 +109,7 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
 
 def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     # Setup logger and execution summary
-    report_file = os.path.join(tmp_path, 'ingest_report.json')
+    report_file = str(tmp_path / 'ingest_report.json')
     logger = common.FoundationLogger(
         name='test_ingest_test',
         log_file=report_file,
@@ -128,7 +128,7 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
         grid_shape=None,
         tile_specs=(256, 256, 128, 128)
     )
-    grid_file = os.path.join(tmp_path, 'grid.json')
+    grid_file = str(tmp_path / 'grid.json')
     world_grid = foundation.prepare_world_grid(
         grid_file,
         grid_config,

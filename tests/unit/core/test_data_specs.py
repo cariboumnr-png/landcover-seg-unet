@@ -39,10 +39,7 @@ def test_dataspecs_fixture_constructs_valid_instance(dataspecs):
 
 # ----- image specs
 def test_image_collects_spectral_channels():
-    image = core.Meta.Image(
-        num_channels=4,
-        height_width=256,
-        array_key='image',
+    image = _make_image_meta(
         band_map={
             'red': 0,
             'green': 1,
@@ -56,10 +53,7 @@ def test_image_collects_spectral_channels():
 
 
 def test_image_collects_topographic_channels():
-    image = core.Meta.Image(
-        num_channels=5,
-        height_width=256,
-        array_key='image',
+    image = _make_image_meta(
         band_map={
             'dem': 0,
             'slope': 1,
@@ -74,10 +68,7 @@ def test_image_collects_topographic_channels():
 
 
 def test_image_band_names_are_case_insensitive():
-    image = core.Meta.Image(
-        num_channels=3,
-        height_width=256,
-        array_key='image',
+    image = _make_image_meta(
         band_map={
             'Red': 0,
             'NIR': 1,
@@ -90,10 +81,7 @@ def test_image_band_names_are_case_insensitive():
 
 
 def test_image_ignores_unknown_band_names():
-    image = core.Meta.Image(
-        num_channels=3,
-        height_width=256,
-        array_key='image',
+    image = _make_image_meta(
         band_map={
             'foo': 0,
             'bar': 1,
@@ -106,10 +94,7 @@ def test_image_ignores_unknown_band_names():
 
 
 def test_image_preserves_channel_indices():
-    image = core.Meta.Image(
-        num_channels=10,
-        height_width=256,
-        array_key='image',
+    image = _make_image_meta(
         band_map={
             'red': 7,
             'dem': 2,
@@ -118,6 +103,7 @@ def test_image_preserves_channel_indices():
 
     assert image.spec_channels == [7]
     assert image.topo_channels == [2]
+
 
 # ----- domains
 def test_domain_accept_expected_structure():
@@ -137,3 +123,13 @@ def test_domain_accept_expected_structure():
     assert domains.train['vec_domain']['blk1'] == [0.1, 0.2]
     assert domains.ids_num == 3
     assert domains.vec_dim == 2
+
+
+# ----- builders
+def _make_image_meta(*, band_map: dict[str, int], **overrides):
+    return core.Meta.Image(
+        num_channels=len(band_map),
+        height_width=overrides.get('height_width', 256),
+        array_key='image',
+        band_map=band_map,
+    )
