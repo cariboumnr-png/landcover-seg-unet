@@ -35,7 +35,6 @@ import rasterio
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.foundation.common.alias as alias
 import landseg.geopipe.foundation.data_blocks.assembler as assembler
-import landseg.geopipe.foundation.data_blocks.assembler.io as io
 import landseg.geopipe.utils as geo_utils
 
 
@@ -72,7 +71,13 @@ def test_check_npz_integrity_success(tmp_path):
     fpath = tmp_path / 'test.npz'
     img = numpy.ones((5, 8, 8), dtype=numpy.float32)
     cfg = geo_core.DataBlockConfig(
-        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'nir': 3, 'dem': 4},
+        image_band_map={
+            'red': 0,
+            'green': 1,
+            'blue': 2,
+            'nir': 3,
+            'dem': 4,
+        },
         image_nodata=numpy.nan,
         image_dem_pad_px=8,
         label_ignore_index=255
@@ -86,12 +91,12 @@ def test_check_npz_integrity_success(tmp_path):
     )
     block = geo_core.DataBlock.build(inputs, cfg)
     block.save(str(fpath))
-    res = io.check_npz_integrity((0, 0), str(fpath))
+    res = assembler.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): True}
 
 
 def test_check_npz_integrity_missing():
-    res = io.check_npz_integrity((0, 0), 'non_existent_file.npz')
+    res = assembler.check_npz_integrity((0, 0), 'non_existent_file.npz')
     assert res == {(0, 0): False}
 
 
@@ -99,7 +104,7 @@ def test_check_npz_integrity_corrupted(tmp_path):
     fpath = tmp_path / 'corrupt.npz'
     with open(fpath, 'w', encoding='UTF-8') as f:
         f.write('not a zip file')
-    res = io.check_npz_integrity((0, 0), str(fpath))
+    res = assembler.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): False}
 
 
@@ -122,7 +127,13 @@ def test_build_single_block_success(dummy_geotiff_factory):
     inputs = assembler.RasterReadInput(
         image_fpath=img_path,
         image_window=window,
-        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'nir': 3, 'dem': 4},
+        image_band_map={
+            'red': 0,
+            'green': 1,
+            'blue': 2,
+            'nir': 3,
+            'dem': 4,
+        },
         image_dem_pad_px=2,
         label_fpath=lbl_path,
         label_window=window,
@@ -138,7 +149,8 @@ def test_build_single_block_success(dummy_geotiff_factory):
     )
     assert block.manifest['block_name'] == 'block_4_4'
     assert block.manifest['has_label'] is True
-    assert block.data.image.shape == (5 + 1 + 4, 8, 8) # 5 bands + 1 spectral (NDVI) + 4 topo
+    # 5 bands + 1 spectral (NDVI) + 4 topo
+    assert block.data.image.shape == (5 + 1 + 4, 8, 8)
 
 
 def test_build_single_block_defaults(dummy_geotiff_factory):
@@ -156,7 +168,13 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     inputs = assembler.RasterReadInput(
         image_fpath=img_path,
         image_window=window,
-        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'nir': 3, 'dem': 4},
+        image_band_map={
+            'red': 0,
+            'green': 1,
+            'blue': 2,
+            'nir': 3,
+            'dem': 4,
+        },
         image_dem_pad_px=2,
         label_fpath=lbl_path,
         label_window=window,
@@ -173,7 +191,11 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
 
 
 # ----- batch block construction
-def test_build_blocks_orchestrator(dummy_geotiff_factory, assembler_config_json, tmp_path):
+def test_build_blocks_orchestrator(
+    dummy_geotiff_factory,
+    assembler_config_json,
+    tmp_path
+):
     img_path = str(dummy_geotiff_factory('image.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
 
@@ -209,7 +231,13 @@ def test_build_blocks_orchestrator(dummy_geotiff_factory, assembler_config_json,
         ignore_index=255,
         dem_pad_px=2,
         block_size=(8, 8),
-        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'nir': 3, 'dem': 4},
+        image_band_map={
+            'red': 0,
+            'green': 1,
+            'blue': 2,
+            'nir': 3,
+            'dem': 4,
+        },
         label_specs=label_specs,
         add_spectral=['ndvi'],
         add_topo=True
@@ -257,7 +285,13 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
     read_input = assembler.RasterReadInput(
         image_fpath=img_path,
         image_window=window,
-        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'nir': 3, 'dem': 4},
+        image_band_map={
+            'red': 0,
+            'green': 1,
+            'blue': 2,
+            'nir': 3,
+            'dem': 4,
+        },
         image_dem_pad_px=2,
         label_fpath=lbl_path,
         label_window=window,
