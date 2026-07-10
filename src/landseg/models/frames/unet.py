@@ -306,7 +306,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             x = self.concat(x, concat)
 
         # force float32 with clamping control for gradient stability
-        with self.num_safety.autocast_context(dtype=torch.float32):
+        with self.num_safety.autocast_context(enable=False):
             # encoders
             x1, x2, x3, x4, xb = self.body.encode(self.num_safety.clamp(x))
             xb = self.num_safety.clamp(xb)
