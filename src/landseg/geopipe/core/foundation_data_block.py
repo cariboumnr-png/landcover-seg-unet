@@ -118,10 +118,12 @@ class DataBlockInputs:
             raise ValueError('Image array is not of shape [C, H, W]')
 
         if self.label_array is not None:
+            if self.label_specs is None:
+                raise ValueError('Label array present but specs not provided')
             if self.label_array.ndim != 3:
                 raise ValueError('Label array is not of shape [C, H, W]')
             if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
-                raise ValueError('Image and label arrays have different H*w')
+                raise ValueError('Image and label arrays have different H / W')
 
     @property
     def pad_dem(self) -> numpy.ndarray:
@@ -464,28 +466,23 @@ class DataBlock:
     def _image_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
         # for image data: True where all image bands are valid
-        invalid_img = (
-            numpy.isnan(self.data.image) |
-            numpy.isclose(self.data.image, self.manifest['image_nodata'])
-        )
-        valid_img = ~numpy.any(invalid_img, axis=0) # shape (256, 256)
+        nodata = self.manifest['image_nodata']
+        invalid_img = self._get_image_invalid_mask(self.data.image, nodata)
+        valid_img = ~numpy.any(invalid_img, axis=0)
 
         self.manifest['valid_ratios'].update({
             'image': float((numpy.sum(valid_img) / valid_img.size)),
         })
-        self.data.valid_mask = valid_img # (256, 256)
+        self.data.valid_mask = valid_img
 
     def _image_get_stats(self):
         '''Per block stats for later aggregation using Welford's.'''
         # image_nodata
-        image_nodata = self.manifest['image_nodata']
+        nodata = self.manifest['image_nodata']
         # iterate through image channels
         for i, band in enumerate(self.data.image):
             # get where pixel is invalid and inverse to get valid pixels
-            if isinstance(image_nodata, float) and numpy.isnan(image_nodata):
-                mask = numpy.isnan(band)
-            else:
-                mask = numpy.isclose(band, image_nodata)
+            mask = self._get_image_invalid_mask(band, nodata)
             valid = band[~mask]
 
             num = valid.size
@@ -643,6 +640,20 @@ class DataBlock:
             # store results in meta
             self.manifest['label_count'][name] = final_counts
             self.manifest['label_entropy'][name] = ent
+
+    @staticmethod
+    def _get_image_invalid_mask(
+        image: numpy.ndarray,
+        nodata: float | None
+    ):
+        '''Return True where image values are invalid.'''
+        invalid = numpy.isnan(image)
+
+        if nodata is not None:
+            if not (isinstance(nodata, float) and numpy.isnan(nodata)):
+                invalid |= numpy.isclose(image, nodata)
+
+        return invalid
 
 # --------------------------------private class--------------------------------
 class _Calc:
