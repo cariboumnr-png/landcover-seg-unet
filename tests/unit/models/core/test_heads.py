@@ -29,7 +29,8 @@ import torch
 # local imports
 import landseg.models.core.heads as heads
 
-# ----- HeadManager initialization
+
+# ----- `HeadManager` initialization
 def test_head_manager_initialization():
     in_ch = 16
     heads_dict = {'head_a': 3, 'head_b': 5}
@@ -50,7 +51,7 @@ def test_head_manager_initialization():
     assert hm.frozen is None
 
 
-# ----- HeadManager forward passes
+# ----- `HeadManager` forward passes
 def test_head_manager_forward_active_heads():
     in_ch = 8
     heads_dict = {'head_a': 2, 'head_b': 3}
@@ -88,7 +89,7 @@ def test_head_manager_forward_default_active_heads():
     assert out['head_b'].shape == (2, 3, 16, 16)
 
 
-# ----- HeadManager freezing
+# ----- `HeadManager` freezing
 def test_head_manager_freeze():
     in_ch = 8
     heads_dict = {'head_a': 2, 'head_b': 3}
@@ -103,7 +104,7 @@ def test_head_manager_freeze():
         assert p.requires_grad
 
 
-# ----- HeadManager logit adjustment
+# ----- `HeadManager` logit adjustment
 def test_head_manager_logit_adjustment():
     logits = torch.ones(1, 2, 1, 1)
     prior = torch.tensor([0.5, -0.5]).view(1, 2, 1, 1)
@@ -136,7 +137,7 @@ def test_head_manager_logit_adjustment():
     assert torch.allclose(adjusted_missing, logits)
 
 
-# ----- HeadManager numerical stability
+# ----- `HeadManager`numerical stability
 def test_head_manager_nan_to_num():
     in_ch = 4
     hm = heads.HeadManager(in_ch, {'head_a': 1})

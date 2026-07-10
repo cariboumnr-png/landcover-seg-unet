@@ -32,7 +32,7 @@ import rasterio.transform
 # local imports
 import landseg.testing as testing
 
-# Absolute path to the repo root folder
+# absolute path to the repo root folder
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
@@ -77,7 +77,7 @@ def dummy_data_paths():
         dataset_config,
     ]
 
-    # If any dummy data files are missing, auto-generate the dummy dataset
+    # if any dummy data files are missing, auto-generate the dummy dataset
     if not all(os.path.exists(p) for p in paths):
         input_root = os.path.join(ROOT_DIR, 'experiment', 'input')
         testing.generate_dummy_data(input_root)
@@ -99,7 +99,6 @@ def dummy_geotiff_factory(tmp_path):
 
     Returns a function that creates a GeoTIFF and returns its file path.
     '''
-
     def _create_dummy_geotiff(
         filename='dummy.tif',
         width=16,

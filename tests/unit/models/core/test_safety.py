@@ -30,7 +30,7 @@ import torch
 import landseg.models.core.safety as safety
 
 
-# ----- NumericSafety initialization
+# ----- `NumericSafety` initialization
 def test_numeric_safety_initialization():
     ns = safety.NumericSafety(
         enable_clamp=True, clamp_range=(0.1, 1.0), device='cpu'
@@ -41,7 +41,7 @@ def test_numeric_safety_initialization():
     assert ns.device == 'cpu'
 
 
-# ----- NumericSafety clamping
+# ----- `NumericSafety` clamping
 def test_numeric_safety_clamp_enabled():
     ns = safety.NumericSafety(
         enable_clamp=True, clamp_range=(0.0, 5.0), device='cpu'
@@ -63,7 +63,7 @@ def test_numeric_safety_clamp_disabled():
     assert torch.allclose(clamped, x)
 
 
-# ----- NumericSafety autocast context
+# ----- `NumericSafety` autocast context
 def test_numeric_safety_autocast_context():
     ns = safety.NumericSafety(
         enable_clamp=True, clamp_range=(0.0, 5.0), device='cpu'

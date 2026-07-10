@@ -34,10 +34,10 @@ import landseg.execution.pipelines as pipelines
 
 # ----- pipeline execution
 def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
-    # Compose config with OmegaConf
+    # compose config with OmegaConf
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
 
-    # Override foundation fields
+    # override foundation fields
     grid_cfg = cfg_schema.foundation.grid
     grid_cfg.mode = 'ref'
     grid_cfg.crs = 'EPSG:2958'
@@ -58,13 +58,13 @@ def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
     cfg_schema.foundation.output_dpath = str(tmp_path / 'foundation')
     cfg_schema.foundation.rebuild = True
 
-    # Convert back to standard typed RootConfig dataclass
+    # convert back to standard typed `RootConfig` dataclass
     config = omegaconf.OmegaConf.to_object(cfg_schema)
 
-    # Run the ingestion pipeline
+    # run the ingestion pipeline
     pipelines.ingest(config)
 
-    # Verify the generated outputs
+    # verify the generated outputs
     out_dpath = config.foundation.output_dpath
     assert os.path.exists(
         os.path.join(out_dpath, 'data_blocks', 'model_dev', 'catalog.json')

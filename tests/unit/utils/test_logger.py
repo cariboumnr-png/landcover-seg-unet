@@ -29,6 +29,7 @@ import os
 # local imports
 import landseg.utils.logger as logger
 
+
 def test_logger_initialization(tmp_path):
     log_file = tmp_path / 'test_init.log'
     log_inst = logger.Logger(
@@ -43,6 +44,7 @@ def test_logger_initialization(tmp_path):
 
     log_inst.close()
 
+
 def test_logger_silent_property(tmp_path):
     log_file = tmp_path / 'test_silent.log'
     log_inst = logger.Logger(
@@ -54,6 +56,7 @@ def test_logger_silent_property(tmp_path):
     assert log_inst.silent is True
 
     log_inst.close()
+
 
 def test_logger_writes_to_file(tmp_path):
     log_file = tmp_path / 'test_write.log'
@@ -77,6 +80,7 @@ def test_logger_writes_to_file(tmp_path):
     assert 'Test message info' in content
     assert 'Test message debug' not in content
 
+
 def test_logger_get_child(tmp_path):
     log_file = tmp_path / 'test_child.log'
     parent = logger.Logger(
@@ -99,6 +103,7 @@ def test_logger_get_child(tmp_path):
 
     assert 'parent.child-INFO' in content
     assert 'Message from child' in content
+
 
 def test_logger_separator(tmp_path):
     log_file = tmp_path / 'test_sep.log'

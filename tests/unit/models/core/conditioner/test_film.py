@@ -33,7 +33,7 @@ import landseg.models.core.conditioner.film as film
 import landseg.models.core.domains as domains
 
 
-# ----- FilmConditioner tests
+# ----- `FilmConditioner` tests
 def test_film_conditioner_pass_through():
     cond = film.FilmConditioner(embed_dim=0, bottleneck_ch=16)
     x = torch.randn(2, 16, 8, 8)
@@ -101,7 +101,7 @@ def test_film_conditioner_build_z_mismatched_output_dim():
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16)
     ids_embd = torch.randn(2, 6)
     payload = domains.DomainTargetPayload(ids_embd=ids_embd, vec_proj=None)
-    
+
     with pytest.raises(ValueError, match='Expected embedding dim=8, got 6'):
         cond._build_z(payload)
 

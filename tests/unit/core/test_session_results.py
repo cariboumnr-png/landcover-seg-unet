@@ -30,7 +30,8 @@ import pytest
 import landseg.core as core
 import landseg.core.session_results as session_results # for private access
 
-# ----- SessionStepSummary
+
+# ----- `SessionStepSummary`
 def test_session_step_summary_as_dict_contains_expected_keys():
     summary = core.SessionStepSummary(
         phase_name='train',
@@ -170,7 +171,7 @@ def test_session_step_summary_as_dict_returns_snapshot():
     assert d['training']['head_losses']['loss'] == 0.5
 
 
-# ----- SessionStepResults
+# ----- `SessionStepResults`
 def test_session_step_results_target_objective_default():
     validation = core.ValStepResults(
         head_metrics=_make_head_metrics(head={'mean': 0.5})
@@ -295,7 +296,7 @@ def test_session_step_results_track_single_head_forces_iou():
     assert results.target_metrics == pytest.approx(0.8)
 
 
-# ----- TrainStepResults
+# ----- `TrainStepResults`
 def test_train_step_results_clear():
     results = core.TrainStepResults(
         total_objective=3.14,
@@ -314,7 +315,7 @@ def test_train_step_results_clear():
     assert results.regularization == {'consistency': 0.0}
 
 
-# ----- ValStepResults & InferStepResults
+# ----- `ValStepResults` & `InferStepResults`
 @pytest.mark.parametrize('cls', [core.ValStepResults, core.InferStepResults])
 def test_val_infer_step_results_as_dict_shape(cls):
     results = cls(
@@ -350,7 +351,7 @@ def test_val_infer_step_results_as_dict_returns_snapshot(cls):
     assert d['mtl_metrics']['consistency'] == 0.2
 
 
-# ----- AccumulatedMetrics
+# ----- `AccumulatedMetrics`
 def test_accumulated_metrics_as_dict():
     metrics = core.AccumulatedMetrics(
         cmatrix=[[1, 2], [3, 4]],
@@ -408,7 +409,7 @@ def test_accumulated_metrics_lock():
         metrics.ious = {}
 
 
-# ----- _track_metrics(...)
+# ----- `_track_metrics`(...)
 def test_track_metrics_returns_gem_metric():
     result = session_results._track_metrics(
         {},
@@ -476,7 +477,7 @@ def test_track_metrics_invalid_metric_name():
         )
 
 
-# ----- _get_mean_iou(...)
+# ----- `_get_mean_iou`(...)
 def test_get_mean_iou_single_head_uses_mean():
     metrics = _make_head_metrics(head={'mean': 0.75})
     result = session_results._get_mean_iou(metrics, None)

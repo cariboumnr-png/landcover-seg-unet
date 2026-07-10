@@ -26,6 +26,7 @@
 # local imports
 import landseg.utils.multip as multip
 
+
 def test_parallel_executor_threads():
     executor = multip.ParallelExecutor(
         max_workers=2,
@@ -37,6 +38,7 @@ def test_parallel_executor_threads():
 
     assert results == [0, 1, 4, 9, 16]
 
+
 def test_parallel_executor_processes():
     executor = multip.ParallelExecutor(
         max_workers=2,
@@ -47,6 +49,7 @@ def test_parallel_executor_processes():
     results = executor.run(jobs)
 
     assert results == [0, 1, 4, 9, 16]
+
 
 def test_parallel_executor_captures_exceptions():
     executor = multip.ParallelExecutor(
@@ -68,6 +71,7 @@ def test_parallel_executor_captures_exceptions():
     assert 'ValueError' in results[1]['traceback']
     assert results[2] == 16
 
+
 def test_parallel_executor_with_progress(mocker):
     mock_tqdm = mocker.patch(
         'tqdm.tqdm',
@@ -86,8 +90,10 @@ def test_parallel_executor_with_progress(mocker):
     assert results == [0, 1, 4]
     mock_tqdm.assert_called_once()
 
+
 def _square(x):
     return x * x
+
 
 def _failing_func(x):
     raise ValueError(f'Failed with input {x}')

@@ -33,7 +33,6 @@ import landseg.models.core.config as config
 import landseg.models.backbones.unet.components as components
 import landseg.models.backbones.unet.body as body
 
-
 # aliases
 field = dataclasses.field
 

@@ -31,7 +31,7 @@ import pytest
 import landseg.models.core.domains as domains
 
 
-# ----- Domain projection helpers
+# ----- domain projection helpers
 def test_make_projection_linear():
     proj = domains._make_projection(
         in_dim=4,
@@ -95,7 +95,7 @@ def test_make_projection_unsupported_activation():
         )
 
 
-# ----- DomainContextRouter
+# ----- `DomainContextRouter`
 def test_router_initialization(mock_domain_config_factory):
     target_a = mock_domain_config_factory(use_ids=True, ids_embd_dims=16)
     target_b = mock_domain_config_factory(use_vec=True, vec_proj_dims=32)

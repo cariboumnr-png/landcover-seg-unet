@@ -31,7 +31,7 @@ import pytest
 import landseg.models.frames.unet as frames_unet
 
 
-# ----- MultiHeadUNet tests
+# ----- `MultiHeadUNet` tests
 def test_multihead_unet_initialization(
     dataspecs,
     mock_backbone_config_factory,
@@ -86,7 +86,7 @@ def test_multihead_unet_incompatible_spatial_size(
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     # spatial_divisor is 16.
     # input height_width in dataspecs (from tests/unit/conftest.py) is 256.
-    # If we force the heights to be indivisible, it should raise RuntimeError.
+    # if we force the heights to be indivisible, it should raise RuntimeError.
     dataspecs.meta.image_specs = dataspecs.meta.image_specs.__class__(
         num_channels=4,
         height_width=15, # indivisible by 16

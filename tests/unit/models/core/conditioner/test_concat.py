@@ -32,7 +32,7 @@ import landseg.models.core.conditioner.concat as concat
 import landseg.models.core.domains as domains
 
 
-# ----- ConcatAdapter tests
+# ----- `ConcatAdapter` tests
 def test_concat_adapter_pass_through():
     adapter = concat.ConcatAdapter(concat_dim=0)
     x = torch.randn(2, 4, 16, 16)
