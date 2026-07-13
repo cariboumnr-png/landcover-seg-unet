@@ -107,10 +107,20 @@ def data_blocks_adapter(
     # parse dev data catalog
     if config.focal_target:
         assert config.focal_target in data_schema['labels']['label_ignore_cls']
-    dev = _parse(dev_catalog, blk_size, config.valid_pxs, config.focal_target)
+    dev = _parse(
+        dev_catalog,
+        blk_size,
+        config.valid_pxs,
+        focal_target=config.focal_target
+     )
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, blk_size, config.valid_pxs, config.focal_target)
+        test = _parse(
+            test_catalog,
+            blk_size,
+            config.valid_pxs,
+            focal_target=config.focal_target
+        )
     except artifacts.ArtifactError:
         test = None
 
@@ -139,6 +149,7 @@ def _parse(
     fpath: str,
     block_size: tuple[int, int],
     valid_px_thresholds: dict[str, float],
+    *,
     focal_target: str | None = None
 ) -> _Parsed:
     '''Parse acatalog JSON into filtered class counts and file paths.'''
@@ -150,14 +161,17 @@ def _parse(
 
     # TEMP fallback to the first target if no focus target is specified
     if not focal_target:
-        focal_target = list(next(iter(catalog.values()))['class_count'].keys())[0]
+        class_count = next(iter(catalog.values()))['class_count']
+        focal_target = next(iter(class_count.keys()))
 
     # all valid entries from catalog
     work_catalog = {
         k: v for k, v in catalog.items()
         if _is_valid_block(valid_px_thresholds, v['valid_px_ratios'])
     }
-    catalog_counts = {k: v['class_count'][focal_target] for k, v in work_catalog.items()}
+    catalog_counts = {
+        k: v['class_count'][focal_target] for k, v in work_catalog.items()
+    }
 
     # entries on the base grid (no overlap)
     row_size, col_size = block_size
@@ -166,7 +180,9 @@ def _parse(
         # both row and col are divisible
         if v['row_col'][0] % row_size == 0 and v['row_col'][1] % col_size == 0
     }
-    base_counts = {k: v['class_count'][focal_target] for k, v in base_catalog.items()}
+    base_counts = {
+        k: v['class_count'][focal_target] for k, v in base_catalog.items()
+    }
 
     # all block file paths
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}

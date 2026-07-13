@@ -42,8 +42,7 @@ def normalize_blocks(
     output_dir: str,
     *,
     rebuild: bool = False,
-    logger: utils.Logger | None = None,
-) -> dict[str, str]:
+) -> tuple[dict[str, str], int]:
     '''
     Normalize a collection of raw data blocks using global image stats.
 
@@ -78,8 +77,6 @@ def normalize_blocks(
 
     # purge blocks not belong
     purged = _purge(names, output_dir)
-    if purged and logger:
-        logger.log('INFO', f'{purged} unwanted block files removed')
 
     # normalize blocks
     os.makedirs(output_dir, exist_ok=True)
@@ -94,7 +91,7 @@ def normalize_blocks(
             name, _ = os.path.splitext(os.path.basename(fpath))
             fp = os.path.abspath(f'{output_dir}/{fpath}') # use absolute fpath
             indexed_files[name] = fp
-    return indexed_files
+    return indexed_files, purged
 
 def _normalize_one_block(
     block_fpath: str,
