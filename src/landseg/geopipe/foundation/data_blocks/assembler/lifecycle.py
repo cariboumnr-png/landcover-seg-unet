@@ -242,4 +242,4 @@ def _create_missing_blocks(
         creation_jobs.append(job)
 
     if creation_jobs:
-        utils.ParallelExecutor().run(creation_jobs, desc='Creating datablocks')
+        utils.ParallelExecutor().run(creation_jobs, desc=' - Creating blocks')

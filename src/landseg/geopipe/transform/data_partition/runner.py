@@ -30,14 +30,13 @@ label statistics for downstream normalization and schema generation.
 
 # standard imports
 import time
-# third-party imports
-import numpy
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform as transform
 import landseg.geopipe.transform.common as common
 import landseg.geopipe.transform.data_partition.split as split
+import landseg.geopipe.transform.data_partition.stats as stats
 
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
@@ -100,7 +99,7 @@ def run_datablocks_partition(
 
     if not lbl_stats:
         # iterate current traing blocks to get label class counts
-        lbl_stats = _count_label(list(splits_src['train'].values()))
+        lbl_stats = stats.count_label(list(splits_src['train'].values()))
         ctrl.persist(lbl_stats)
 
     # compile partition report
@@ -118,19 +117,3 @@ def run_datablocks_partition(
         'hydrated_label_count': summary_data.get('hydrated_label_count', []),
     }
     logger.set_data_partition_report(report)
-
-def _count_label(block_file_list: list[str]) -> dict[str, list[int]]:
-    '''Aggregate label class counts across a list of block files.'''
-
-    # iterate current traing blocks to get label class counts
-    lbl_stats: dict[str, list[int]] = {}
-    for fpath in block_file_list:
-        blk_meta = geo_core.DataBlock.load(fpath).manifest
-        for channel, counts in blk_meta['label_count'].items():
-            cls_count = numpy.asarray(counts)
-            if channel in lbl_stats:
-                lbl_stats[channel] += cls_count
-            else:
-                lbl_stats[channel] = list(cls_count)
-            lbl_stats[channel] = [int(x) for x in lbl_stats[channel]]
-    return lbl_stats
