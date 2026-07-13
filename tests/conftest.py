@@ -38,59 +38,20 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 @pytest.fixture
 def dummy_data_paths():
-    '''Fixture providing paths to the pre-generated dummy data.
-
-    If the dummy files do not exist locally, they will be automatically
-    generated to ensure the integration tests pass out-of-the-box.
     '''
-    ref_fpath = os.path.join(
-        ROOT_DIR, 'experiment', 'input', 'extent_reference',
-        'example_extent.tif'
-    )
-    dev_image = os.path.join(
-        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'dev',
-        'example_image.tif'
-    )
-    dev_label = os.path.join(
-        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'dev',
-        'example_label.tif'
-    )
-    test_image = os.path.join(
-        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'test',
-        'example_image.tif'
-    )
-    test_label = os.path.join(
-        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data', 'test',
-        'example_label.tif'
-    )
-    dataset_config = os.path.join(
-        ROOT_DIR, 'experiment', 'input', 'data', 'demo_data',
-        'example_config.json'
-    )
+    Fixture providing paths to the pre-generated dummy data.
 
-    paths = [
-        ref_fpath,
-        dev_image,
-        dev_label,
-        test_image,
-        test_label,
-        dataset_config,
-    ]
+    The created dummy data (.TIFF and .JSON) file paths match those that
+    are defined in `root/configs/user.yaml` and are locally persisted.
+    If any files do not exist, they will be automatically generated to
+    ensure the integration tests pass out-of-the-box.
+    '''
+    in_dir = os.path.join(ROOT_DIR, 'experiment', 'input')
+    paths = testing.TIFFPaths(input_root=in_dir)
 
-    # if any dummy data files are missing, auto-generate the dummy dataset
-    if not all(os.path.exists(p) for p in paths):
-        input_root = os.path.join(ROOT_DIR, 'experiment', 'input')
-        testing.generate_dummy_data(input_root)
-
-    return {
-        'ref_fpath': ref_fpath,
-        'dev_image': dev_image,
-        'dev_label': dev_label,
-        'test_image': test_image,
-        'test_label': test_label,
-        'dataset_config': dataset_config
-    }
-
+    if not paths.all_paths_exist:
+        testing.generate_dummy_data(in_dir)
+    return paths
 
 @pytest.fixture
 def dummy_geotiff_factory(tmp_path):

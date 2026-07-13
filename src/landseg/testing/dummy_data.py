@@ -48,34 +48,56 @@ class TIFFConfig:
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
-class _TIFFPaths:
+class TIFFPaths:
     '''Container for dummy TIFF file paths.'''
     input_root: str
 
     @property
     def extent(self) -> str:
-        return f'{self.input_root}/extent_reference/example_extent.tif'
+        return f'{self.input_root}/extent_reference/sample_extent.tif'
+
     @property
     def domain_1(self) -> str:
-        return f'{self.input_root}/domain_knowledge/example_domain_1.tif'
+        return f'{self.input_root}/domain_knowledge/sample_domain_1.tif'
+
     @property
     def domain_2(self) -> str:
-        return f'{self.input_root}/domain_knowledge/example_domain_2.tif'
+        return f'{self.input_root}/domain_knowledge/sample_domain_2.tif'
+
     @property
     def dev_image(self) -> str:
-        return f'{self.input_root}/data/demo_data/dev/example_image.tif'
-    @property
-    def test_image(self) -> str:
-        return f'{self.input_root}/data/demo_data/test/example_image.tif'
+        return f'{self.input_root}/data/sample_dev_image.tif'
+
     @property
     def dev_label(self) -> str:
-        return f'{self.input_root}/data/demo_data/dev/example_label.tif'
+        return f'{self.input_root}/data/sample_dev_label.tif'
+
+    @property
+    def test_image(self) -> str:
+        return f'{self.input_root}/data/sample_test_image.tif'
+
     @property
     def test_label(self) -> str:
-        return f'{self.input_root}/data/demo_data/test/example_label.tif'
+        return f'{self.input_root}/data/sample_test_label.tif'
+
     @property
     def config(self) -> str:
-        return f'{self.input_root}/data/demo_data/example_config.json'
+        return f'{self.input_root}/data/sample_config.json'
+
+    @property
+    def all_paths_exist(self) -> bool:
+        return all(
+            os.path.exists(p) for p in[
+                self.extent,
+                self.domain_1,
+                self.domain_2,
+                self.dev_image,
+                self.dev_label,
+                self.test_image,
+                self.test_label,
+                self.config
+            ]
+        )
 
 # -------------------------------Public  Function------------------------------
 def create_dummy_geotiff(
@@ -121,7 +143,7 @@ def create_dummy_geotiff(
             band_data = data_gen_func(config.shape, b)
             dst.write(band_data, b)
 
-def generate_dummy_data(input_root: str = './experiment/input') -> None:
+def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
     '''Generate the full dummy dataset under input root.
 
     Args:
@@ -151,7 +173,7 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
     extent_transform = dev_transform
 
     # TIFF file paths
-    paths = _TIFFPaths(input_root=input_root)
+    paths = TIFFPaths(input_root=input_root)
 
     # create extent reference (single band constant value on the wide extent)
     print(f'Creating extent reference: {paths.extent}')
@@ -274,6 +296,7 @@ def generate_dummy_data(input_root: str = './experiment/input') -> None:
         json.dump(config_data, f, indent=4)
 
     print('\nDummy data generation completed successfully!')
+    return paths
 
 # -------------------------------Private Functions-----------------------------
 def _gen_image_data(shape: tuple[int, int], band_idx: int) -> numpy.ndarray:

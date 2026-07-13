@@ -47,7 +47,7 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     grid_config = foundation.GridParameters(
         mode='ref',
         crs='EPSG:2958',
-        ref_fpath=dummy_data_paths['ref_fpath'],
+        ref_fpath=dummy_data_paths.extent,
         origin=(0.0, 0.0),
         pixel_size=(0.0, 0.0),
         grid_extent=None,
@@ -68,9 +68,9 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     # Set pipeline configurations
     config = data_blocks.BlockBuildingParameters(
         stage='dev',
-        image_fpath=dummy_data_paths['dev_image'],
-        label_fpath=dummy_data_paths['dev_label'],
-        data_config_fpath=dummy_data_paths['dataset_config'],
+        image_fpath=dummy_data_paths.dev_image,
+        label_fpath=dummy_data_paths.dev_label,
+        data_config_fpath=dummy_data_paths.config,
         dem_pad=8,
         ignore_index=255
     )
@@ -103,8 +103,8 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
     assert 'data_blocks' in logger.summary
     assert 'dev' in logger.summary['data_blocks']
     report = logger.summary['data_blocks']['dev']
-    assert report['image_filepath'] == dummy_data_paths['dev_image']
-    assert report['label_filepath'] == dummy_data_paths['dev_label']
+    assert report['image_filepath'] == dummy_data_paths.dev_image
+    assert report['label_filepath'] == dummy_data_paths.dev_label
 
 
 def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
@@ -121,7 +121,7 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     grid_config = foundation.GridParameters(
         mode='ref',
         crs='EPSG:2958',
-        ref_fpath=dummy_data_paths['ref_fpath'],
+        ref_fpath=dummy_data_paths.extent,
         origin=(0.0, 0.0),
         pixel_size=(0.0, 0.0),
         grid_extent=None,
@@ -142,9 +142,9 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     # Set pipeline configurations
     config = data_blocks.BlockBuildingParameters(
         stage='test',
-        image_fpath=dummy_data_paths['test_image'],
-        label_fpath=dummy_data_paths['test_label'],
-        data_config_fpath=dummy_data_paths['dataset_config'],
+        image_fpath=dummy_data_paths.test_image,
+        label_fpath=dummy_data_paths.test_label,
+        data_config_fpath=dummy_data_paths.config,
         dem_pad=8,
         ignore_index=255
     )
@@ -177,5 +177,5 @@ def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
     assert 'data_blocks' in logger.summary
     assert 'test' in logger.summary['data_blocks']
     report = logger.summary['data_blocks']['test']
-    assert report['image_filepath'] == dummy_data_paths['test_image']
-    assert report['label_filepath'] == dummy_data_paths['test_label']
+    assert report['image_filepath'] == dummy_data_paths.test_image
+    assert report['label_filepath'] == dummy_data_paths.test_label

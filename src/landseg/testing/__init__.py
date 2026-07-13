@@ -33,6 +33,7 @@ import typing
 __all__ = [
     # classes
     'TIFFConfig',
+    'TIFFPaths',
     # functions
     'create_dummy_geotiff',
     'generate_dummy_data'
@@ -41,11 +42,21 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dummy_data import TIFFConfig, create_dummy_geotiff, generate_dummy_data
+    from .dummy_data import (
+        TIFFConfig,
+        TIFFPaths,
+        create_dummy_geotiff,
+        generate_dummy_data
+    )
 
 def __getattr__(name: str):
 
-    if name in {'TIFFConfig', 'create_dummy_geotiff', 'generate_dummy_data'}:
+    if name in {
+        'TIFFConfig',
+        'TIFFPaths',
+        'create_dummy_geotiff',
+        'generate_dummy_data'
+    }:
         return getattr(importlib.import_module('.dummy_data', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

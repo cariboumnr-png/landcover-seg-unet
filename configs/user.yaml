@@ -22,9 +22,9 @@ data-ingest:
   # ---------------------------------------------------------------------------
   # Projected Coordinate Reference System (must be valid EPSG code)
   # NOTE: CRS must be the same for ALL input rasters below!
-  grid_crs: EPSG:2958
+  grid_crs: EPSG:3161
   # Path to reference raster defining extent
-  grid_extent_path: ./experiment/input/extent_reference/example_extent.tif
+  grid_extent_path: ./experiment/input/extent_reference/sample_extent.tif
   # Tile dimension in pixels (both row and column sizes)
   tile_size: 256
   # Tile overlap in pixels for spatial augmentation/coverage
@@ -35,9 +35,9 @@ data-ingest:
   # ---------------------------------------------------------------------------
   # External rasters for conditioning or feature augmentation
   domain_files:
-    - path: ./experiment/input/domain_knowledge/example_domain_1.tif
+    - path: ./experiment/input/domain_knowledge/sample_domain_1.tif
       index_base: 1
-    - path: ./experiment/input/domain_knowledge/example_domain_2.tif
+    - path: ./experiment/input/domain_knowledge/sample_domain_2.tif
       index_base: 1
   # Domain layer for categorical IDs (null to disable)
   domain_ids_name: null
@@ -48,18 +48,18 @@ data-ingest:
   # Datablock Inputs
   # ---------------------------------------------------------------------------
   # Unique name identifying this dataset configuration
-  dataset_name: demo_data
+  dataset_name: sample_data
 
   # Development dataset paths (training image/label)
-  dev_image: ./experiment/input/data/demo_data/dev/example_image.tif
-  dev_label: ./experiment/input/data/demo_data/dev/example_label.tif
+  dev_image: ./experiment/input/data/sample_dev_image.tif
+  dev_label: ./experiment/input/data/sample_dev_label.tif
 
   # Optional test dataset paths (eval image/label)
-  test_image: ./experiment/input/data/demo_data/test/example_image.tif
-  test_label: ./experiment/input/data/demo_data/test/example_label.tif
+  test_image: ./experiment/input/data/sample_test_image.tif
+  test_label: ./experiment/input/data/sample_test_label.tif
 
   # Path to the dataset metadata JSON file
-  dataset_config: ./experiment/input/data/demo_data/example_config.json
+  dataset_config: ./experiment/input/data/sample_config.json
   # Force rebuild all ingestion artifacts even if they exist
   rebuild: false
 
