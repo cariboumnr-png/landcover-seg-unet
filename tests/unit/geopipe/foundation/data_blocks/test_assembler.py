@@ -115,7 +115,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
 
     # 8x8 window inside the 16x16 raster
-    window = alias.RasterWindow(col_off=4, row_off=4, width=8, height=8)
+    window = alias.RasterWindow(col_off=4, row_off=4, width=8, height=8) # type: ignore
 
     label_specs = {
         'class_head': {
@@ -137,7 +137,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
         image_dem_pad_px=2,
         label_fpath=lbl_path,
         label_window=window,
-        label_specs=label_specs
+        label_specs=label_specs # type: ignore
     )
 
     block = assembler.build_single_block(
@@ -157,7 +157,7 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     img_path = str(dummy_geotiff_factory('image2.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label2.tif', 16, 16, 1))
 
-    window = alias.RasterWindow(col_off=4, row_off=4, width=8, height=8)
+    window = alias.RasterWindow(col_off=4, row_off=4, width=8, height=8) # type: ignore
     label_specs = {
         'class_head': {
             'num_cls': 2,
@@ -178,7 +178,7 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         image_dem_pad_px=2,
         label_fpath=lbl_path,
         label_window=window,
-        label_specs=label_specs
+        label_specs=label_specs # type: ignore
     )
 
     block = assembler.build_single_block(
@@ -208,10 +208,10 @@ def test_build_blocks_orchestrator(
 
     # 4 non-overlapping 8x8 windows for a 16x16 grid
     image_windows = {
-        (0, 0): alias.RasterWindow(col_off=0, row_off=0, width=8, height=8),
-        (0, 8): alias.RasterWindow(col_off=8, row_off=0, width=8, height=8),
-        (8, 0): alias.RasterWindow(col_off=0, row_off=8, width=8, height=8),
-        (8, 8): alias.RasterWindow(col_off=8, row_off=8, width=8, height=8)
+        (0, 0): alias.RasterWindow(col_off=0, row_off=0, width=8, height=8), # type: ignore
+        (0, 8): alias.RasterWindow(col_off=8, row_off=0, width=8, height=8), # type: ignore
+        (8, 0): alias.RasterWindow(col_off=0, row_off=8, width=8, height=8), # type: ignore
+        (8, 8): alias.RasterWindow(col_off=8, row_off=8, width=8, height=8), # type: ignore
     }
 
     label_windows = dict(image_windows)
@@ -238,7 +238,7 @@ def test_build_blocks_orchestrator(
             'nir': 3,
             'dem': 4,
         },
-        label_specs=label_specs,
+        label_specs=label_specs, # type: ignore
         add_spectral=['ndvi'],
         add_topo=True
     )
@@ -273,7 +273,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
         arr[0, 8:16, :] = 2
         src.write(arr)
 
-    window = alias.RasterWindow(col_off=0, row_off=0, width=16, height=16)
+    window = alias.RasterWindow(col_off=0, row_off=0, width=16, height=16) # type: ignore
 
     label_specs = {
         'class_head': {
@@ -295,7 +295,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
         image_dem_pad_px=2,
         label_fpath=lbl_path,
         label_window=window,
-        label_specs=label_specs
+        label_specs=label_specs # type: ignore
     )
 
     inputs = {'test_block': read_input}
