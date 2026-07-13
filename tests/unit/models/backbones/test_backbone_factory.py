@@ -66,6 +66,6 @@ def test_build_unet_backbone_invalid_body(mock_backbone_config_factory):
 
 def test_build_unet_backbone_indivisible_size(mock_backbone_config_factory):
     cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
-    
+
     with pytest.raises(ValueError, match='is not divisible by'):
         factory.build_unet_backbone(in_ch=3, input_size=15, config=cfg)
