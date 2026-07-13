@@ -73,9 +73,9 @@ def dummy_geotiff_factory(tmp_path):
             shape=(height, width),
             bands=bands,
             crs='+proj=latlong',
-            transform=rasterio.transform.from_origin(0, 0, 1, 1),
+            transform=rasterio.transform.from_origin(0.5, 0.5, 1, 1),
             dtype=dtype
-        )
+        ) # use a non-identity transform to avoid GDAL warning
 
         def _data_gen_func(shape, _):
             return numpy.random.randint(0, 256, shape).astype(dtype)
