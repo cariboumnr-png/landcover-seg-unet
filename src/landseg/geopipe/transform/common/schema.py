@@ -30,11 +30,34 @@ class DataPartitionReport(typing.TypedDict):
     '''Execution report for dataset splitting and hydration.'''
     status: typing.Literal['loaded', 'created']
     duration_sec: float
-    training_blocks: int
-    validation_blocks: int
-    test_blocks: int
-    base_label_count: list[int]
-    hydrated_label_count: list[int]
+    original_splits: _Splits
+    hydration: _Hydration
+
+
+class _Splits(typing.TypedDict):
+    '''Splits section.'''
+    training: _Partition
+    validation: _Partition
+    testing: _Partition
+
+
+class _Partition(typing.TypedDict):
+    '''Details for each split.'''
+    num_of_blocks: int
+    class_count: list[int]
+    class_distribution: list[float]
+
+
+class _Hydration(typing.TypedDict):
+    '''Hydration details.'''
+    performed: bool
+    n_training_blocks: int
+    n_training_blocks_change: int
+    hydrated_class_count: list[int]
+    class_count_change: list[int]
+    hydrated_class_distribution: list[float]
+    class_distribution_change: list[float]
+
 
 class NormalizationReport(typing.TypedDict):
     '''Execution report for block normalization and materialization.'''
@@ -44,12 +67,14 @@ class NormalizationReport(typing.TypedDict):
     rebuild: bool
     stats_filepath: str
 
+
 class SchemaReport(typing.TypedDict):
     '''Execution report for dataset schema generation.'''
     status: typing.Literal['loaded', 'created']
     duration_sec: float
     schema_filepath: str
     classes_mapped: list[str]
+
 
 class TransformReportSchema(typing.TypedDict):
     '''Root report mapping the entire data-prepare pipeline run.'''
