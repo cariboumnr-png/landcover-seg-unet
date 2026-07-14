@@ -49,9 +49,10 @@ class _CatalogViewConfig(typing.Protocol):
     @property
     def non_overlapping_test_grid(self) -> bool: ...
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class DataBlocksView:
     '''High-level view of data blocks from dev and optional test data.'''
+    focal_head: str
     dev_base_class_counts: dict[tuple[int, int], list[int]]
     dev_valid_class_counts: dict[tuple[int, int], list[int]]
     dev_blocks: dict[tuple[int, int], str]
@@ -60,6 +61,7 @@ class DataBlocksView:
 @dataclasses.dataclass
 class _Parsed:
     '''Internal parsed representation of a blocks catalog.'''
+    focal_head: str
     base_class_counts: dict[tuple[int, int], list[int]]
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
@@ -139,6 +141,7 @@ def data_blocks_adapter(
 
     # return
     return DataBlocksView(
+        focal_head=dev.focal_head,
         dev_base_class_counts=dev.base_class_counts,
         dev_valid_class_counts=dev.valid_class_counts,
         dev_blocks=dev.valid_file_paths,
@@ -188,6 +191,7 @@ def _parse(
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
 
     return _Parsed(
+        focal_head=focal_target,
         base_class_counts=base_counts,
         valid_class_counts=catalog_counts,
         valid_file_paths=valid_file_paths
