@@ -75,7 +75,7 @@ def score_blocks(
     # score blocks from list with parallel processing
     jobs = [(_score, (blk, p), kws) for blk in input_blocks.items()]
     scores: list[tuple[tuple[int, int], float | None, list[int]]]
-    scores = utils.ParallelExecutor().run(jobs)
+    scores = utils.ParallelExecutor(desc=' - Scoring data blocks').run(jobs)
     # sort blocks to rank in descending order
     sorted_scores = sorted(scores, key=lambda x: x[1] or -1e9, reverse=True)
 

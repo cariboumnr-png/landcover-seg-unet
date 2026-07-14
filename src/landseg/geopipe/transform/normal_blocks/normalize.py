@@ -82,7 +82,7 @@ def normalize_blocks(
     os.makedirs(output_dir, exist_ok=True)
     jobs = [(_normalize_one_block, (b, stats, output_dir), {}) for b in work]
     if jobs:
-        utils.ParallelExecutor(desc='Normalize data blocks').run(jobs)
+        utils.ParallelExecutor(desc=' - Normalize data blocks').run(jobs)
 
     # return current file paths
     indexed_files: dict[str, str] = {}
