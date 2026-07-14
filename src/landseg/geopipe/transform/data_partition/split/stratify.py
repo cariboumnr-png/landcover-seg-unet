@@ -80,28 +80,6 @@ class SplitsResult:
             for split_name, class_count in self.class_counts.items()
         }
 
-    @property
-    def report_as_string_list(self) -> list[str]:
-        '''Return a human-readable report of class distributions.'''
-
-        def _format_header(n_classes: int) -> str:
-            return '  '.join(f'cls_{i + 1}' for i in range(n_classes))
-
-        def _format_distribution(values: typing.Sequence[float]) -> str:
-            return ', '.join(f'{x:.3f}' for x in values)
-
-        distributions = self.class_distributions
-        n_classes = len(self.global_class_count)
-
-        return [
-            'Class distributions:',
-            f'              {_format_header(n_classes)}',
-            f'Global:       {_format_distribution(distributions['global'])}',
-            f'Split_train:  {_format_distribution(distributions['train'])}',
-            f'Split_val:    {_format_distribution(distributions['val'])}',
-            f'Split_test:   {_format_distribution(distributions['test'])}',
-        ]
-
 
 # -------------------------------Public Function-------------------------------
 def stratified_splitter(

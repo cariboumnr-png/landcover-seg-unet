@@ -31,8 +31,6 @@ label statistics for downstream normalization and schema generation.
 # standard imports
 import dataclasses
 import os
-# third-party imports
-import numpy
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.data_partition.split as split
@@ -67,6 +65,14 @@ class PartitionParameters:
             raise ValueError('Block stride must be positive.')
 
 
+@dataclasses.dataclass
+class PartitionResults:
+    '''Container for partition results.'''
+    blocks_partition_fpaths: geo_core.BlocksPartition
+    raw_splits: split.SplitsResult
+    hydration_results: list[int] # simple list for now
+
+
 # -------------------------------Public Function-------------------------------
 def create_blocks_partition(
     base_class_counts: dict[tuple[int, int], list[int]],
@@ -75,35 +81,33 @@ def create_blocks_partition(
     config: PartitionParameters,
     *,
     ext_test_blks: list[str] | None
-) -> tuple[geo_core.BlocksPartition, dict[str, str]]:
+) -> PartitionResults:
     '''Split blocks with spatial safety and class balance.'''
-
-    # split dataset
-    splits = split.stratified_splitter(
+    # ----- initial splitting from ratios
+    raw_splits = split.stratified_splitter(
         base_class_counts,
         val_ratio=config.val_test_ratios[0],
         test_ratio=(0 if ext_test_blks else config.val_test_ratios[1]),
         weight_mode = 'inverse' # default
     )
 
+    # ------ hydration process
     # filter candidate blocks for hydration
     safe_candidates = split.filter_safe_tiles(
         list(valid_class_counts.keys()),
-        splits.val + splits.test,
+        raw_splits.val + raw_splits.test,
         block_size=config.block_spec[0],
         block_stride=config.block_spec[2],
         buffer_steps=config.buffer_step
     )
 
     # score and rank the safe candidate tiles
-    global_count = numpy.sum(list(base_class_counts.values()), axis=0)
-    global_count = [int(x) for x in global_count] # type guard
     blocks_to_score = {
         k: v for k, v in valid_class_counts.items()
         if k in safe_candidates
     }
     ranked_candidates = split.score_blocks(
-        global_count,
+        list(raw_splits.global_class_count),
         blocks_to_score,
         reward=tuple(config.reward_ratios.keys()),
         alpha=config.scoring_alpha,
@@ -111,93 +115,62 @@ def create_blocks_partition(
     )
 
     # hydrate using the safe candidates
-    selected, current_count = split.hydrate_train_split(
-        list(splits.train_class_count),
+    hydrated_train_blocks, after_hydration_count = split.hydrate_train_split(
+        list(raw_splits.train_class_count),
         ranked_candidates,
         target_ratios=config.reward_ratios,
         max_skew_rate=config.max_skew_rate
     )
 
-    # block fpaths for each split
-    ps: dict[str, list[str]] = {}
-    ps['train'] = [valid_blocks[c] for c in splits.train + selected]
-    ps['val'] = [valid_blocks[c] for c in splits.val]
-    ps['test'] = (ext_test_blks or []) + [valid_blocks[c] for c in splits.test]
-    blks_src: geo_core.BlocksPartition = {
-        'train': _index_fpath(ps['train']),
-        'val': _index_fpath(ps['val']),
-        'test': _index_fpath(ps['test'])
-    }
+    # ----- final blocks partitions
+    blocks_partition = _finalize_partition(
+        valid_blocks,
+        raw_splits,
+        hydrated_train_blocks,
+        ext_test_blks=ext_test_blks
+    )
 
-    # data leakage sanity
-    _leak_check(blks_src)
-    # return splits and a formatted summary
-    summary = {
-        '----------Blocks Count': '',
-        '       Training blocks': f'{len(blks_src['train'])}',
-        '     Validation blocks': f'{len(blks_src['val'])}',
-        '           Test blocks': f'{len(blks_src['test'])}',
-        'base_label_count': [int(x) for x in global_count],
-        'hydrated_label_count': [int(x) for x in current_count],
-    }
-    summary.update(_summary_split_result(global_count, current_count))
-    return blks_src, summary
+    return PartitionResults(
+        blocks_partition_fpaths=blocks_partition,
+        raw_splits=raw_splits,
+        hydration_results=after_hydration_count
+    )
 
-def _index_fpath(fpaths: list[str]) -> dict[str, str]:
-    '''Index block file paths by block name without file extension.'''
+# ----- internal helpers
+def _finalize_partition(
+    valid_blocks: dict[tuple[int, int], str],
+    splits: split.SplitsResult,
+    additional_train: list[tuple[int, int]],
+    *,
+    ext_test_blks: list[str] | None
+) -> geo_core.BlocksPartition:
+    '''Finalize the partition process with leakage sanity checks.'''
 
-    indexed: dict[str, str] = {}
-    for fpath in fpaths:
-        filename = os.path.basename(fpath)
-        name, _ = os.path.splitext(filename)
-        indexed[name] = fpath # name is the same as core.xy_name()
-    return indexed
+    def _index_fpath(fpaths: list[str]) -> dict[str, str]:
+        '''Index block file paths by block name no file extension.'''
+        indexed: dict[str, str] = {}
+        for fpath in fpaths:
+            filename = os.path.basename(fpath)
+            name, _ = os.path.splitext(filename)
+            indexed[name] = fpath # name is the same as core.xy_name()
+        return indexed
 
-def _leak_check(blks_src: geo_core.BlocksPartition) -> None:
-    '''Check if any blockshared across train, val, or test splits.'''
+    # get block fpaths for each split
+    train = [valid_blocks[c] for c in splits.train + additional_train]
+    val = [valid_blocks[c] for c in splits.val]
+    test = [valid_blocks[c] for c in splits.test] + (ext_test_blks or [])
 
-    leak = set(blks_src['train']) & set(blks_src['val'])
-    assert not leak, f'Data leaked between train and val! {leak}'
-    leak = set(blks_src['train']) & set(blks_src['test'])
-    assert not leak, f'Data leaked between train and test! {leak}'
+    # leakage sanity checks
+    leak = set(train) & set(val)
+    if leak:
+        raise ValueError (f'Data leaked between train and val! {leak}')
 
-def _summary_split_result(
-    start: list[int],
-    current: list[int],
-) -> dict[str, str]:
-    '''Pretty-log class count&ratio changes before/after splitting.'''
-
-    max_num_str_len = len(f'{max(start + current)}')
-    adjust_len = max_num_str_len + max_num_str_len // 3 + 1 # plus commas
-
-    def _per_w_sign(c: float, sign: bool = False) -> str:
-        if not sign:
-            return f'{abs(c) * 100:.02f}%'
-        if c > 0:
-            return f'+{abs(c) * 100:.02f}%'
-        if c == 0:
-            return 'n/a'
-        return f'-{abs(c) * 100:.02f}%'
-
-    def _join_per(inputs: list[float], sign: bool = False) -> str:
-        return ' '.join(_per_w_sign(c, sign).rjust(adjust_len) for c in inputs)
-
-    def _join_int(inputs: list[int]) -> str:
-        return ' '.join(f'{x:,}'.rjust(adjust_len) for x in inputs)
-
-    start_sum = sum(start) or 1.0
-    start_per = [float(x / start_sum) for x in start]
-    current_sum = sum(current) or 1.0
-    current_per = [float(x / current_sum) for x in current]
-    count_diff = [x - y for (x, y) in zip(current, start)]
-    per_diff = [float(x - y) for (x, y) in zip(current_per, start_per)]
+    leak = set(train) & set(test)
+    if leak:
+        raise ValueError(f'Data leaked between train and test! {leak}')
 
     return {
-        '-----Hydration Results': '',
-        'Prev. base label count': f'{_join_int(start)}',
-        'Curr. base label count': f'{_join_int(current)}',
-        '            - increase': f'{_join_int(count_diff)}',
-        'Prev. base label ratio': f'{_join_per(start_per)}',
-        'Curr. base label ratio': f'{_join_per(current_per)}',
-        '              - change': f'{_join_per(per_diff, True)}',
+        'train': _index_fpath(train),
+        'val': _index_fpath(val),
+        'test': _index_fpath(test)
     }
