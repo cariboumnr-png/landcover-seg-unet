@@ -35,6 +35,7 @@ __all__ = [
     'PartitionParameters',
     'PartitionResults',
     'SplitsResult',
+    'HydrationResults',
     # functions
     'create_blocks_partition',
     'filter_safe_tiles',
@@ -47,7 +48,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .filter import filter_safe_tiles
-    from .hydrate import hydrate_train_split
+    from .hydrate import HydrationResults, hydrate_train_split
     from .pipeline import PartitionParameters, PartitionResults, create_blocks_partition
     from .score import score_blocks
     from .stratify import SplitsResult, stratified_splitter
@@ -57,7 +58,7 @@ def __getattr__(name: str):
     if name in {'filter_safe_tiles'}:
         return getattr(importlib.import_module('.filter', __package__), name)
 
-    if name in {'hydrate_train_split'}:
+    if name in {'HydrationResults', 'hydrate_train_split'}:
         return getattr(importlib.import_module('.hydrate', __package__), name)
 
     if name in {'PartitionParameters', 'PartitionResults', 'create_blocks_partition'}:

@@ -32,11 +32,21 @@ detection.
 '''
 
 # standard imports
+import dataclasses
 import collections
 
 # global hyperparameters
 EPS = 1e-6          # safety
 LOOKBACK = 20       # rolling window size for skew tracking
+
+#
+@dataclasses.dataclass(frozen=True)
+class HydrationResults:
+    '''Container for hydration results.'''
+    hydrated_train_blocks: list[tuple[int, int]] # as coordinates
+    hydrated_class_count: list[int]
+    stop_message: str # for downstream logging
+
 
 # -------------------------------Public Function-------------------------------
 def hydrate_train_split(
@@ -45,7 +55,7 @@ def hydrate_train_split(
     *,
     target_ratios: dict[int, float],
     max_skew_rate: float
-) -> tuple[list[tuple[int, int]], list[int]]:
+) -> HydrationResults:
     '''
     Greedily select candidate blocks to move class counts toward targets.
 
@@ -75,60 +85,76 @@ def hydrate_train_split(
             grow 5x faster recently in the past `LOOKBACK` blocks.
 
     Returns:
-        (selected_names, updated_counts).
+        (selected_names, updated_counts, stop_reason).
     '''
-
-    # defensive copy to define the current count
-    current = list(current_class_count)
-    assert all(len(c) == len(current) for c in candidates.values()) # sanity check
+    # sanity check
+    assert all(len(c) == len(current_class_count) for c in candidates.values())
 
     # target total for each class is initial * ratio (default ratio = 1.0)
-    targets = [current[i] * target_ratios.get(i, 1.0) for i in range(len(current))]
+    targets = [
+        current_class_count[i] * target_ratios.get(i, 1.0)
+        for i in range(len(current_class_count))
+    ]
     target_set = {i for i, r in target_ratios.items() if r > 1.0}
+
+    # early exits
+    if not target_set:
+        return HydrationResults(
+            hydrated_train_blocks=[],
+            hydrated_class_count=[],
+            stop_message='no hydration requested'
+        )
+
+    if all(current_class_count[i] + EPS >= targets[i] for i in target_set):
+        return HydrationResults(
+            hydrated_train_blocks=[],
+            hydrated_class_count=[],
+            stop_message='hydration targets already satisfied'
+        )
 
     # selected blocks
     selected: list[tuple[int, int]] = []
     # rolling history of (target_gain, non_target_gain)
     recent = collections.deque[tuple[int, int]](maxlen=LOOKBACK)
 
-    # early exits
-    # if no targets requested
-    if not target_set:
-        return selected, current
-    # if already meeting all targets
-    if all(current[i] + EPS >= targets[i] for i in target_set):
-        return selected, current
-
     # init priorities
-    priorities = _priorities(targets, current, EPS)
+    priorities = _priorities(targets, current_class_count, EPS)
     # iterate in given (score-sorted) order
+    msg = 'iterated all candidate blocks'
     for coords, blk_count in candidates.items():
 
         # compute reward
-        if _no_reward(priorities, blk_count, current):
+        if _no_reward(priorities, blk_count, current_class_count):
             continue
 
         # prospective skew check (without committing the block)
         tgt_gain = sum(blk_count[i] for i in target_set)
         non_gain = sum(blk_count) - tgt_gain
-        if _skew_stop(tgt_gain, non_gain, recent, max_skew_rate):
+        stopped, msg = _skew_stop(tgt_gain, non_gain, recent, max_skew_rate)
+        if stopped:
             break
 
         # accept block
         selected.append(coords)
 
         # updates and tracking
-        current = [int(a + b) for a, b in zip(current, blk_count)]
+        current_class_count = [
+            int(a + b) for a, b in zip(current_class_count, blk_count)
+        ]
         recent.append((tgt_gain, non_gain))
-        priorities = _priorities(targets, current, EPS)
+        priorities = _priorities(targets, current_class_count, EPS)
 
         # stop if all targets are met
-        if all(current[i] + EPS >= targets[i] for i in target_set):
-            print('stop searching due to [all targets met]')
+        if all(current_class_count[i] + EPS >= targets[i] for i in target_set):
+            msg = 'stop searching due to [all targets met]'
             break
 
-    # return
-    return selected, current
+    return HydrationResults(
+        hydrated_train_blocks=selected,
+        hydrated_class_count=current_class_count,
+        stop_message=msg
+    )
+
 
 def _priorities(
     target_ratios: list[float],
@@ -143,6 +169,7 @@ def _priorities(
         short = max(0.0, target_ratios[i] - current_counts[i])
         p.append(short / (target_ratios[i] + eps))
     return p
+
 
 def _no_reward(priorities, blk_count, current_count) -> bool:
     '''Return True when the block yields no reward toward targets.'''
@@ -160,12 +187,13 @@ def _no_reward(priorities, blk_count, current_count) -> bool:
         return True
     return False
 
+
 def _skew_stop(
     target_gain: int,
     non_target_gain: int,
     recent: collections.deque[tuple[int, int]],
     skew_tol: float
-) -> bool:
+) -> tuple[bool, str]:
     '''Decide if recent additions skew too far toward non-targets.'''
 
     # compute rolling totals as if we add this block
@@ -178,14 +206,12 @@ def _skew_stop(
             'skew stop: recent additions add non-targets but yield no '
             'target-class gain'
         )
-        print(stop_reason)
-        return True
+        return True, stop_reason
     ratio = (roll_non / roll_tgt) if roll_tgt > 0 else float('inf')
     if roll_tgt > 0 and ratio > skew_tol:
         stop_reason = (
             f'skew stop: non-target/target gain ratio {ratio:.2f} exceeds '
             f'tolerance {skew_tol:.2f}'
         )
-        print(stop_reason)
-        return True
-    return False
+        return True, stop_reason
+    return False, ''
