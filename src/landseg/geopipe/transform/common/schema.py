@@ -51,6 +51,8 @@ class _Partition(typing.TypedDict):
 class _Hydration(typing.TypedDict):
     '''Hydration details.'''
     performed: bool
+    focal_head: str
+    stop_reason: str
     n_training_blocks: int
     n_training_blocks_change: int
     hydrated_class_count: list[int]
