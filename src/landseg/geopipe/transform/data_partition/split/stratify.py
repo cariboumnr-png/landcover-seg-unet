@@ -1,3 +1,4 @@
+# src/landseg/geopipe/transform/data_partition/split/stratify.py
 # =========================================================================== #
 #           Copyright (c) His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
@@ -23,22 +24,14 @@
 Utilities for stratified selection of validation/test blocks.
 
 This module provides:
-    - A validation-first (and optional test) selection that matches
-      global class proportions using a simple greedy strategy,
-    - Block-atomic splits to prevent spatial leakage across splits,
-    - Deterministic ordering by block mass for stable, reusable splits,
+    - A validation-first and optional test split selection strategy,
+    - Block-atomic splits to reduce spatial leakage,
+    - Deterministic ordering by block mass for stable split generation,
     - Optional inverse-frequency weighting to emphasize rare classes,
-    - Budgets defined by block count; set test_ratio=0.0 to skip test.
+    - SplitResult, which exposes counts, distributions, and report text.
 
-Typical workflow:
-    1) Prepare per-block class counts with shape [n_blocks, n_classes],
-    2) Call `stratified_splitter` to select validation (and test),
-    3) Assign all remaining blocks to training,
-    4) Apply any training-time oversampling or loss reweighting
-       independently of the split.
-
-The main entry point is `stratified_splitter`, which returns a structured
-`_SplitIndices` containing sorted `train`, `val`, and `test` index lists.
+The main entry point is `stratified_splitter` (returns `SplitsResult`).
+The caller decides whether to log, print, or persist the report string.
 '''
 
 # standard imports
@@ -49,14 +42,66 @@ import numpy
 # local imports
 import landseg.geopipe.transform.common.alias as alias
 
-# ------------------------------private dataclass------------------------------
-@dataclasses.dataclass
-class _Split:
-    '''Container for block indices from a split.'''
+
+# -------------------------------Public Class---------------------------------
+@dataclasses.dataclass(frozen=True)
+class SplitsResult:
+    '''Container for split coordinates and derived class statistics.'''
     train: list[tuple[int, int]]
     val: list[tuple[int, int]]
     test: list[tuple[int, int]]
-    train_class_count: list[int]
+    global_class_count: tuple[int, ...]
+    train_class_count: tuple[int, ...]
+    val_class_count: tuple[int, ...]
+    test_class_count: tuple[int, ...]
+
+    @property
+    def class_counts(self) -> dict[str, list[int]]:
+        '''Return per-split class counts.'''
+        return {
+            'global': list(self.global_class_count),
+            'train': list(self.train_class_count),
+            'val': list(self.val_class_count),
+            'test': list(self.test_class_count),
+        }
+
+    @property
+    def class_distributions(self) -> dict[str, list[float]]:
+        '''Return per-split normalized class distributions.'''
+
+        def _safe_distribution(cc: typing.Sequence[int]) -> list[float]:
+            total = sum(cc)
+            if total <= 0:
+                return [0.0 for _ in cc]
+            return [float(count / total) for count in cc]
+
+        return {
+            split_name: _safe_distribution(class_count)
+            for split_name, class_count in self.class_counts.items()
+        }
+
+    @property
+    def report_as_string_list(self) -> list[str]:
+        '''Return a human-readable report of class distributions.'''
+
+        def _format_header(n_classes: int) -> str:
+            return '  '.join(f'cls_{i + 1}' for i in range(n_classes))
+
+        def _format_distribution(values: typing.Sequence[float]) -> str:
+            return ', '.join(f'{x:.3f}' for x in values)
+
+        distributions = self.class_distributions
+        n_classes = len(self.global_class_count)
+
+        return [
+            'Class distributions:',
+            f'              {_format_header(n_classes)}',
+            f'Global:       {_format_distribution(distributions['global'])}',
+            f'Split_train:  {_format_distribution(distributions['train'])}',
+            f'Split_val:    {_format_distribution(distributions['val'])}',
+            f'Split_test:   {_format_distribution(distributions['test'])}',
+        ]
+
 
 # -------------------------------Public Function-------------------------------
 def stratified_splitter(
@@ -65,104 +110,130 @@ def stratified_splitter(
     val_ratio: float = 0.15,
     test_ratio: float = 0.0,
     weight_mode: typing.Literal['none', 'inverse'] = 'inverse',
-) -> _Split:
+) -> SplitsResult:
     '''
     Stratified three-way splitter to generate train/val/test splits.
 
-    Pick validation (and optionally test) blocks to match global class
-    proportions, and the remaining blocks are assigned to training.
+    Pick validation and optionally test blocks to match global class
+    proportions. Remaining blocks are assigned to training.
 
     Args:
-        base_counts: Per-block integer class counts indexed by coords.
+        base_counts: Per-block integer class counts indexed by coordinates.
         val_ratio: Target fraction of blocks in validation.
         test_ratio: Target fraction of blocks in test. Use 0.0 to skip.
-        weight_mode: 'inverse' upweights rare classes via
-            1 / max(gloabl_k, 1).
+        weight_mode: Weighting strategy for deviation scoring. ``'inverse'``
+            upweights rare classes using ``1 / max(global_count_k, 1)``.
 
     Returns:
-        Indices of each split in a container `_SplitIndices`.
+        SplitResult containing split coordinates, class counts,
+        distributions, and a formatted report string.
     '''
+    # base class counts dict to array
+    counts = numpy.array(list(base_counts.values())) # [n_blocks, n_classes]
+    coords = list(base_counts.keys()) # order matches with counts
+    global_counts = counts.sum(axis=0).astype(numpy.int64) # global per class
+    n_blocks = counts.shape[0]
 
-    # from the base class counts dict
-    counts = numpy.array(list(base_counts.values())) # counts into an array
-    coords = list(base_counts.keys()) # coordinates - order matches with counts
+    _validate_inputs(counts, val_ratio, test_ratio) # shape, dtype, ratios
 
-    # input validations
-    if counts.ndim != 2:
-        raise ValueError(f'counts must be 2D [n_blks, n_cls]: {counts.ndim}')
-    if counts.shape[0] == 0 or counts.shape[1] == 0:
-        raise ValueError('counts must be non-empty.')
-    if not numpy.issubdtype(counts.dtype, numpy.integer):
-        raise ValueError('counts must be integer dtype.')
-    if val_ratio < 0 or test_ratio < 0:
-        raise ValueError('ratios must be non-negative.')
-    if val_ratio + test_ratio >= 1.0:
-        raise ValueError('val_ratio + test_ratio must be < 1.0.')
+    val_budget, test_budget = _get_budgets(n_blocks, val_ratio, test_ratio)
 
-    # first dim as the number of blocks
-    n_blks = counts.shape[0]
-
-    # get block budgets
-    val_budget, test_budget = _block_budgets(n_blks, val_ratio, test_ratio)
-
-    # get targets
-    global_counts = counts.sum(axis=0).astype(numpy.float64)
     weights = _get_weights(global_counts, weight_mode)
-    target_val = global_counts * val_ratio
-    target_test = global_counts * test_ratio
 
-    # deterministic order: larger total-count blocks first
-    full = numpy.argsort(counts.sum(axis=1))[::-1].tolist() # reversed
-
-    # validation selection
-    val_idx = _pick_subset(counts, full, val_budget, target_val, weights)
-    remain = [i for i in range(n_blks) if i not in val_idx] # remainder
-
-    # test selection - returns empty set if budget is zero
-    test_idx = _pick_subset(counts, remain, test_budget, target_test, weights)
-
-    # rest goes to train
-    train_idx = set(range(n_blks)) - (val_idx | test_idx)
-    train_class_count = list(numpy.sum(counts[list(train_idx)], axis=0))
-
-    # report
-    _report(counts, list(train_idx), list(val_idx), list(test_idx))
-
-    # return lists coords for each split
-    return _Split(
-        train=[coords[i] for i in train_idx],
-        val=[coords[i] for i in val_idx],
-        test=[coords[i] for i in test_idx],
-        train_class_count=train_class_count
+    # deterministic order: larger total-count blocks first.
+    all_sorted = numpy.argsort(counts.sum(axis=1))[::-1].tolist()
+    val_idx = _pick_subset(
+        counts=counts,
+        candidates=all_sorted, # from all
+        budget=val_budget,
+        target=global_counts * val_ratio,
+        weights=weights,
     )
 
-# ---------- internal helpers ----------
-def _block_budgets(
+    test_idx = _pick_subset(
+        counts=counts,
+        candidates=[i for i in range(n_blocks) if i not in val_idx], # from rest
+        budget=test_budget,
+        target=global_counts * test_ratio,
+        weights=weights,
+    )
+
+    train_idx = set(range(n_blocks)) - val_idx - test_idx # rest
+
+    return SplitsResult(
+        train=[coords[i] for i in sorted(train_idx)],
+        val=[coords[i] for i in sorted(val_idx)],
+        test=[coords[i] for i in sorted(test_idx)],
+        global_class_count=_sum_class_counts(counts, range(n_blocks)),
+        train_class_count=_sum_class_counts(counts, train_idx),
+        val_class_count=_sum_class_counts(counts, val_idx),
+        test_class_count=_sum_class_counts(counts, test_idx),
+    )
+
+
+# ------------------------------Private Helpers--------------------------------
+def _validate_inputs(
+    counts: numpy.ndarray,
+    val_ratio: float,
+    test_ratio: float,
+) -> None:
+    '''Validate splitter inputs.'''
+    if counts.shape[0] == 0 or counts.shape[1] == 0:
+        raise ValueError('Counts must be non-empty.')
+
+    if counts.ndim != 2:
+        raise ValueError(
+            f'Counts must be 2D [n_blocks, n_classes], got: {counts.ndim}'
+        )
+
+    if not numpy.issubdtype(counts.dtype, numpy.integer):
+        raise ValueError(
+            f'Counts must be of integer dtype, got: {counts.dtype}'
+        )
+
+    if val_ratio < 0 or test_ratio < 0:
+        raise ValueError(
+            f'Ratios must be > 0, got val: {val_ratio}, test: {test_ratio}'
+        )
+
+    if val_ratio + test_ratio >= 1.0:
+        raise ValueError(
+            f'val + test ratios must be < 1, got: {val_ratio + test_ratio}'
+        )
+
+
+def _get_budgets(
     n: int,
     val_ratio: float,
-    test_ratio: float
+    test_ratio: float,
 ) -> tuple[int, int]:
-    '''Compute integer budgets for val and test by block count.'''
-
+    '''Compute integer budgets for validation and test by block count.'''
     val_budget = int(round(val_ratio * n))
     val_budget = max(0, min(val_budget, n))
-    rem = n - val_budget
+
+    remaining = n - val_budget
+
     test_budget = int(round(test_ratio * n))
-    test_budget = max(0, min(test_budget, rem))
+    test_budget = max(0, min(test_budget, remaining))
+
     return val_budget, test_budget
+
 
 def _get_weights(
     global_counts: alias.Float64Array,
     mode: typing.Literal['none', 'inverse']
 ) -> alias.Float64Array:
     '''Build per-class weights for deviation scoring.'''
+    safe_counts = numpy.maximum(global_counts, 1.0)
 
-    safe = numpy.maximum(global_counts, 1.0)
     if mode == 'none':
         return numpy.ones_like(global_counts, dtype=numpy.float64)
+
     if mode == 'inverse':
-        return 1.0 / safe
-    raise ValueError("weight_mode must be 'none' or 'inverse'.")
+        return 1.0 / safe_counts
+
+    raise ValueError('weight_mode must be "none" or "inverse".')
+
 
 def _pick_subset(
     counts: alias.Int64Array,
@@ -171,64 +242,42 @@ def _pick_subset(
     target: alias.Float64Array,
     weights: alias.Float64Array,
 ) -> set[int]:
-    '''Greedy selection that minimizes weighted L1 dev. to target.'''
-
-    # early exit
+    '''Greedily select blocks that minimize weighted L1 to target.'''
     if budget <= 0 or not candidates:
         return set()
 
-    # init vars
     selected: list[int] = []
     current = numpy.zeros(counts.shape[1], dtype=numpy.float64)
     remaining = candidates[:]
 
-    # selection process
     while len(selected) < budget and remaining:
         best_i = None
         best_score = float('inf')
+
         for i in remaining:
             vec = counts[i].astype(numpy.float64)
             score = numpy.sum(weights * numpy.abs((current + vec) - target))
+
             if score < best_score:
                 best_score = score
                 best_i = i
-        # exit if no more good blocks
+
         if best_i is None:
             break
 
-        # add/remove best
         selected.append(best_i)
         remaining.remove(best_i)
         current += counts[best_i].astype(numpy.float64)
 
     return set(selected)
 
-def _report(
+
+def _sum_class_counts(
     counts: alias.Int64Array,
-    train_idx: list[int],
-    val_idx: list[int],
-    test_idx: list[int]
-):
-    '''Report class contribution in each split.'''
-
-    # class counts at each split
-    train_counts = counts[train_idx]
-    val_counts = counts[val_idx]
-    test_counts = counts[test_idx]
-
-    # class distribution at each split
-    global_dist = numpy.sum(counts, axis=0) / counts.sum()
-    train_dist = numpy.sum(train_counts, axis=0) / train_counts.sum()
-    val_dist = numpy.sum(val_counts, axis=0) / val_counts.sum()
-    test_dist = numpy.sum(test_counts, axis=0) / (test_counts.sum() or 1.0)
-
-    ncol = counts.shape[1]
-    # print out
-    print('=' * 70)
-    print('Class distributions:')
-    print('             ', '  '.join([f'cls_{i + 1}' for i in range(ncol)]))
-    print('Global:      ', ', '.join([f'{x:.3f}' for x in global_dist]))
-    print('Split_train: ', ', '.join([f'{x:.3f}' for x in train_dist]))
-    print('Split_val:   ', ', '.join([f'{x:.3f}' for x in val_dist]))
-    print('Split_test:  ', ', '.join([f'{x:.3f}' for x in test_dist]))
-    print('=' * 70)
+    indices: typing.Iterable[int],
+) -> tuple[int, ...]:
+    '''Sum class counts for selected block indices.'''
+    idx = list(indices)
+    if not idx:
+        return tuple(0 for _ in range(counts.shape[1]))
+    return tuple(int(x) for x in numpy.sum(counts[idx], axis=0))

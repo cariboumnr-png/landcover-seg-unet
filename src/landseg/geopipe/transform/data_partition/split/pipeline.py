@@ -112,7 +112,7 @@ def create_blocks_partition(
 
     # hydrate using the safe candidates
     selected, current_count = split.hydrate_train_split(
-        splits.train_class_count,
+        list(splits.train_class_count),
         ranked_candidates,
         target_ratios=config.reward_ratios,
         max_skew_rate=config.max_skew_rate
