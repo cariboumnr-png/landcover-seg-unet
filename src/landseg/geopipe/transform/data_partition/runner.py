@@ -83,12 +83,17 @@ def run_datablocks_partition(
             partition_config,
             ext_test_blks=parsed_catalog.external_test_blocks
         )
-        partition_fpaths = partition_results.blocks_partition_fpaths
+        partition_fpaths = partition_results.partition_fpaths
         ctrl.persist(partition_fpaths)
         logger.log('INFO', '[CHECKPOINT] Created dataset partition splits')
 
         duration = time.perf_counter() - start_time
-        report = _report(partition_results, loaded=loaded, duration=duration)
+        report = _report(
+            partition_results,
+            focal_head=parsed_catalog.focal_head,
+            loaded=loaded,
+            duration=duration
+        )
 
     else:
         logger.log('INFO', '[CHECKPOINT] Loaded dataset partition splits')
@@ -110,6 +115,7 @@ def run_datablocks_partition(
 def _report(
     partition_results: split.PartitionResults,
     *,
+    focal_head: str,
     loaded: bool,
     duration: float
 ) -> common.DataPartitionReport:
@@ -119,11 +125,11 @@ def _report(
     start_count = list(splits.global_class_count)
     distb = splits.class_distributions
 
-    current_n_train = len(partition_results.blocks_partition_fpaths['train'])
+    current_n_train = len(partition_results.partition_fpaths['train'])
     n_train_diff = current_n_train - len(splits.train)
 
     if n_train_diff: # hydration performed
-        current_count = partition_results.hydration_results
+        current_count = partition_results.hydration.hydrated_class_count
 
         count_diff = [x - y for (x, y) in zip(current_count, start_count)]
 
@@ -163,6 +169,8 @@ def _report(
         },
         'hydration': {
             'performed': bool(n_train_diff),
+            'focal_head': focal_head,
+            'stop_reason': partition_results.hydration.stop_message,
             'n_training_blocks': current_n_train,
             'n_training_blocks_change': n_train_diff,
             'hydrated_class_count': current_count,

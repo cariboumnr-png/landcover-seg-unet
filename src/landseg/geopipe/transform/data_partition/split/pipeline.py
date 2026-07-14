@@ -65,12 +65,12 @@ class PartitionParameters:
             raise ValueError('Block stride must be positive.')
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class PartitionResults:
     '''Container for partition results.'''
-    blocks_partition_fpaths: geo_core.BlocksPartition
+    partition_fpaths: geo_core.BlocksPartition
     raw_splits: split.SplitsResult
-    hydration_results: list[int] # simple list for now
+    hydration: split.HydrationResults
 
 
 # -------------------------------Public Function-------------------------------
@@ -115,7 +115,7 @@ def create_blocks_partition(
     )
 
     # hydrate using the safe candidates
-    hydrated_train_blocks, after_hydration_count = split.hydrate_train_split(
+    hydration_results = split.hydrate_train_split(
         list(raw_splits.train_class_count),
         ranked_candidates,
         target_ratios=config.reward_ratios,
@@ -126,14 +126,14 @@ def create_blocks_partition(
     blocks_partition = _finalize_partition(
         valid_blocks,
         raw_splits,
-        hydrated_train_blocks,
+        hydration_results.hydrated_train_blocks,
         ext_test_blks=ext_test_blks
     )
 
     return PartitionResults(
-        blocks_partition_fpaths=blocks_partition,
+        partition_fpaths=blocks_partition,
         raw_splits=raw_splits,
-        hydration_results=after_hydration_count
+        hydration=hydration_results
     )
 
 # ----- internal helpers
