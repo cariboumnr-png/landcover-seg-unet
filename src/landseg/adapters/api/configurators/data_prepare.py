@@ -62,4 +62,3 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         '''Set whether to force rebuild preparation artifacts.'''
         self._cfg.transform.rebuild = rebuild
         return self
-

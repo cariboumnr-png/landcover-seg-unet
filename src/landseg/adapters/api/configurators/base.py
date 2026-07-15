@@ -57,7 +57,17 @@ class BaseConfigurator:
     @property
     def running_root_config(self) -> configs.RootConfig:
         '''Validate and return the `RootConfig`,'''
-        self._cfg.foundation.validate()
+        match self._cfg.pipeline.name:
+            case 'data-ingest':
+                self._cfg.foundation.validate()
+            case 'data-prepare':
+                self._cfg.transform.validate()
+            case 'model-train':
+                self._cfg.models.validate()
+                self._cfg.session.validate()
+            case 'study-sweep':
+                self._cfg.models.validate()
+                self._cfg.session.validate()
         return self._cfg
 
     # ----- shared methods for configuring runtime sessions
