@@ -38,15 +38,17 @@ __all__ = [
     # typing
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import run_datablocks_partition
+    from .runner import run_datablocks_partition
     from .split import PartitionParameters
+
 
 def __getattr__(name: str):
 
     if name in {'run_datablocks_partition'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+        return getattr(importlib.import_module('.runner', __package__), name)
 
     if name in {'PartitionParameters'}:
         return getattr(importlib.import_module('.split', __package__), name)

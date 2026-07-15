@@ -19,55 +19,26 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.geopipe.transform`.
+'''Label-count aggregation utilities.'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
-
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    # classes
-    'DataBlocksView',
-    'PartitionParameters',
-    'TransformLogger',
-    # functions
-    'build_schema',
-    'data_blocks_adapter',
-    'run_datablocks_partition',
-    'run_normalize_blocks',
-    # types
-]
+# third-party imports
+import numpy
+# local imports
+import landseg.geopipe.core as geo_core
 
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .adapter import DataBlocksView, data_blocks_adapter
-    from .common import TransformLogger
-    from .data_partition import PartitionParameters, run_datablocks_partition
-    from .normal_blocks import run_normalize_blocks
-    from .schema import build_schema
-
-
-def __getattr__(name: str):
-
-    if name in {'DataBlocksView', 'data_blocks_adapter'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
-
-    if name in {'TransformLogger'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'PartitionParameters', 'run_datablocks_partition'}:
-        return getattr(importlib.import_module('.data_partition', __package__), name)
-
-    if name in {'run_normalize_blocks'}:
-        return getattr(importlib.import_module('.normal_blocks', __package__), name)
-
-    if name in {'build_schema'}:
-        return getattr(importlib.import_module('.schema', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+# ----- `count_label` function
+def count_label(block_file_list: list[str]) -> dict[str, list[int]]:
+    '''Aggregate label class counts across a list of block files.'''
+    # iterate current training blocks to get label class counts
+    lbl_stats: dict[str, list[int]] = {}
+    for fpath in block_file_list:
+        blk_meta = geo_core.DataBlock.load(fpath).manifest
+        for channel, counts in blk_meta['label_count'].items():
+            cls_count = numpy.asarray(counts)
+            if channel in lbl_stats:
+                lbl_stats[channel] += cls_count
+            else:
+                lbl_stats[channel] = list(cls_count)
+            lbl_stats[channel] = [int(x) for x in lbl_stats[channel]]
+    return lbl_stats

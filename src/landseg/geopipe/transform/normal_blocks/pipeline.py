@@ -30,7 +30,6 @@ writes normalized block artifacts along with updated split mappings.
 '''
 
 # standard imports
-import os
 import time
 # local imports
 import landseg.artifacts as artifacts
@@ -43,6 +42,8 @@ import landseg.geopipe.transform.normal_blocks.stats as stats
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
+
+# ----- `run_normalize_blocks` execution
 def run_normalize_blocks(
     paths: artifacts.TransformPaths,
     *,
@@ -62,7 +63,6 @@ def run_normalize_blocks(
         policy: Lifecycle policy guiding rebuild behavior.
         logger: Logger for progress and diagnostic output.
     '''
-
     start_time = time.perf_counter()
 
     # load source blocks file lists
@@ -77,42 +77,31 @@ def run_normalize_blocks(
 
     # aggregate stats on training blocks
     ctrl = ImageStatsCtrl(paths.image_stats, policy)
-    agg_stats = ctrl.fetch()
-    if not agg_stats:
-        agg_stats = stats.aggregate_image_stats(train)
-        ctrl.persist(agg_stats)
-        logger.log('INFO', '[CHECKPOINT] Created training partition image stats')
+    aggregated_stats = ctrl.fetch()
+    if aggregated_stats:
+        logger.log('INFO', '[CHECKPOINT] Loaded image stats from training split')
     else:
-        logger.log('INFO', '[CHECKPOINT] Loaded training partition image stats')
+        aggregated_stats = stats.aggregate_image_stats(train)
+        ctrl.persist(aggregated_stats)
+        logger.log('INFO', '[CHECKPOINT] Created image stats from training split')
 
-    # save dirs
-    train_dpath = paths.train_blocks
-    val_dpath = paths.val_blocks
-    test_dpath = paths.test_blocks
-
-    # Pre-calculate purged blocks for the report
-    purged_total = 0
-    for dpath, block_set in [(train_dpath, train), (val_dpath, val), (test_dpath, test)]:
-        if os.path.exists(dpath):
-            names = {os.path.basename(b) for b in block_set}
-            for fpath in os.listdir(dpath):
-                if fpath.endswith('.npz') and fpath not in names:
-                    purged_total += 1
-
-    # build normalized blocks for each split
+    # load or build normalized blocks for each split
     ctrl = PartitionCtrl(paths.splits_transformed_blocks, policy)
     transform = ctrl.fetch()
     loaded = transform is not None
-    if not transform:
-        transform = {
-            'train': normalize.normalize_blocks(train, agg_stats, train_dpath, logger=logger),
-            'val': normalize.normalize_blocks(val, agg_stats, val_dpath, logger=logger),
-            'test': normalize.normalize_blocks(test, agg_stats, test_dpath, logger=logger)
-        }
+
+    purged_total = 0
+    if transform:
+        logger.log('INFO', '[CHECKPOINT] Loaded normalized dataset blocks')
+    else:
+        transform, purged_total = _normalize(
+            (train, val, test),
+            aggregated_stats,
+            paths,
+            logger=logger
+        )
         ctrl.persist(transform)
         logger.log('INFO', '[CHECKPOINT] Created normalized dataset blocks')
-    else:
-        logger.log('INFO', '[CHECKPOINT] Loaded normalized dataset blocks')
 
     # compile report
     duration = time.perf_counter() - start_time
@@ -124,3 +113,49 @@ def run_normalize_blocks(
         'stats_filepath': paths.image_stats,
     }
     logger.set_normalization_report(report)
+
+
+# ----- `_normalize` helper
+def _normalize(
+    splits: tuple[set[str], set[str], set[str]],
+    aggregated_stats: dict[str, geo_core.ImageBandStats],
+    paths: artifacts.TransformPaths,
+    *,
+    logger: common.TransformLogger
+):
+    '''Normalize each split.'''
+    train_split, val_split, test_split = splits
+
+    purged_total = 0
+    train_norm, purged = normalize.normalize_blocks(
+        train_split,
+        aggregated_stats,
+        paths.train_blocks
+    )
+    if purged:
+        purged_total += purged
+        logger.log('DEBUG', f'{purged} stale training block files removed')
+    val_norm, purged = normalize.normalize_blocks(
+        val_split,
+        aggregated_stats,
+        paths.val_blocks
+    )
+    if purged:
+        purged_total += purged
+        logger.log('DEBUG', f'{purged} stale validation block files removed')
+    test_norm, purged = normalize.normalize_blocks(
+        test_split,
+        aggregated_stats,
+        paths.test_blocks
+    )
+    if purged:
+        purged_total += purged
+        logger.log('DEBUG', f'{purged} stale testing block files removed')
+
+    transform = {
+        'train': train_norm,
+        'val': val_norm,
+        'test': test_norm
+    }
+
+    return transform, purged_total

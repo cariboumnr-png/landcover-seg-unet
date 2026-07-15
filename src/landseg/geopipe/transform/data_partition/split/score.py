@@ -40,9 +40,10 @@ import numpy
 import landseg.utils as utils
 
 # global hyperparameters
-EPS = 1e-6 # safety
+EPS = 1e-6  # safety
 
-# -------------------------------Public Function-------------------------------
+
+# ----- `score_blocks` implementation
 def score_blocks(
     global_class_count: list[int],
     input_blocks: dict[tuple[int, int], list[int]],
@@ -62,7 +63,6 @@ def score_blocks(
         params: Scoring parameters (head/alpha/beta/eps/reward classes).
         mode: Scoring mode. Default to 'log_lift'.
     '''
-
     # target inverse probability (p) from global class distribution
     p = _count_to_prob_w_temp(global_class_count, alpha=1.0)
     # scoring kwargs
@@ -75,14 +75,15 @@ def score_blocks(
     # score blocks from list with parallel processing
     jobs = [(_score, (blk, p), kws) for blk in input_blocks.items()]
     scores: list[tuple[tuple[int, int], float | None, list[int]]]
-    scores = utils.ParallelExecutor().run(jobs)
+    scores = utils.ParallelExecutor(desc=' - Scoring data blocks').run(jobs)
     # sort blocks to rank in descending order
     sorted_scores = sorted(scores, key=lambda x: x[1] or -1e9, reverse=True)
 
     # return just the ranked blocks with count
     return {n: c for n, _, c in sorted_scores}
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _score(
     block: tuple[tuple[int, int], list[int]],
     target_p: numpy.ndarray,
@@ -93,7 +94,6 @@ def _score(
     **kwargs
 ) -> tuple[tuple[int, int], float | None, list[int]]:
     '''Score a single block against the target distribution.'''
-
     # parse
     blk_coord, blk_count = block
     mode = kwargs.get('mode', 'log_lift')
@@ -121,13 +121,13 @@ def _score(
     # return
     return blk_coord, _score, blk_count
 
+
 def _count_to_prob_w_temp(
     cls_counts: list[int],
     *,
     alpha: float,
 ) -> numpy.ndarray:
     '''Counts to a smoothed prob. distrib. with temperature scaling.'''
-
     # safe count to probability distribution
     arr = numpy.asarray(cls_counts)
     total = arr.sum()
@@ -143,6 +143,7 @@ def _count_to_prob_w_temp(
         p /= p.sum()
     return p
 
+
 def _log_lift_on_reward(
     p: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
     q: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
@@ -150,13 +151,14 @@ def _log_lift_on_reward(
     reward_cls: tuple[int, ...]
 ) -> float | None:
     '''Mass-weighted log-lift.'''
-
     # p as target q as test
     # no-ops if q is all zeros
     if sum(q) == 0:
         return None
     return sum(q[i] * math.log((q[i] + EPS) / (p[i] + EPS)) for i in reward_cls)
 
+
+# ----- legacy helpers
 # now legacy
 def _weighted_l1_w_reward(
     p: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
@@ -166,7 +168,6 @@ def _weighted_l1_w_reward(
     beta: float,
 ) -> float:
     '''Weighted L1 distance with bonus on specified reward classes.'''
-
     # sanity checks
     assert numpy.isclose(p.sum(), 1), p.sum()
     assert numpy.isclose(q.sum(), 1), q.sum()

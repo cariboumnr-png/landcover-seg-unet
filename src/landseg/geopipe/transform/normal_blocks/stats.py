@@ -34,7 +34,8 @@ import math
 # local imports
 import landseg.geopipe.core as geo_core
 
-# -------------------------------Public Function-------------------------------
+
+# ----- `aggregate_image_stats` implementation
 def aggregate_image_stats(
     input_blocks: set[str]
 ) -> dict[str, geo_core.ImageBandStats]:
@@ -51,6 +52,10 @@ def aggregate_image_stats(
         dict: A mapping of band keys to statistics, including
             "total_count", "current_mean", "accum_m2", and "std".
     '''
+    if not input_blocks:
+        raise ValueError(
+            'input_blocks cannot be empty for image stats aggregation'
+        )
 
     # get image channel count from the first block
     sample = geo_core.DataBlock.load(next(iter(input_blocks))).data
@@ -81,12 +86,13 @@ def aggregate_image_stats(
     # return
     return stats_dict
 
+
+# ----- private helpers
 def _welfords_online(
     input_stats: dict[str, int | float],
     current_results: geo_core.ImageBandStats
 ) -> geo_core.ImageBandStats:
     '''Combine per-block stats using Welford's online algorithm.'''
-
     # block stats from stats dict
     # NOTE: see key and value type conventions at geopipe.core.block
     nb = input_stats['count']

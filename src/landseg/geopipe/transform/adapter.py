@@ -40,6 +40,7 @@ import landseg.geopipe.core as geo_core
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
+
 class _CatalogViewConfig(typing.Protocol):
     '''Typed configuration container for catalog views.'''
     @property
@@ -49,20 +50,25 @@ class _CatalogViewConfig(typing.Protocol):
     @property
     def non_overlapping_test_grid(self) -> bool: ...
 
-@dataclasses.dataclass
+
+@dataclasses.dataclass(frozen=True)
 class DataBlocksView:
     '''High-level view of data blocks from dev and optional test data.'''
+    focal_head: str
     dev_base_class_counts: dict[tuple[int, int], list[int]]
     dev_valid_class_counts: dict[tuple[int, int], list[int]]
     dev_blocks: dict[tuple[int, int], str]
     external_test_blocks: list[str] | None
 
+
 @dataclasses.dataclass
 class _Parsed:
     '''Internal parsed representation of a blocks catalog.'''
+    focal_head: str
     base_class_counts: dict[tuple[int, int], list[int]]
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
+
 
 def data_blocks_adapter(
     dev_catalog: str,
@@ -95,7 +101,6 @@ def data_blocks_adapter(
     Note:
         Currently we only support a single focal target.
     '''
-
     # try load schema first
     data_schema = SchemaCtrl.load_json_or_fail(dev_schema).fetch()
     assert data_schema # typing assertion
@@ -107,10 +112,20 @@ def data_blocks_adapter(
     # parse dev data catalog
     if config.focal_target:
         assert config.focal_target in data_schema['labels']['label_ignore_cls']
-    dev = _parse(dev_catalog, blk_size, config.valid_pxs, config.focal_target)
+    dev = _parse(
+        dev_catalog,
+        blk_size,
+        config.valid_pxs,
+        focal_target=config.focal_target
+     )
     # try parse test data catalog
     try:
-        test = _parse(test_catalog, blk_size, config.valid_pxs, config.focal_target)
+        test = _parse(
+            test_catalog,
+            blk_size,
+            config.valid_pxs,
+            focal_target=config.focal_target
+        )
     except artifacts.ArtifactError:
         test = None
 
@@ -129,20 +144,22 @@ def data_blocks_adapter(
 
     # return
     return DataBlocksView(
+        focal_head=dev.focal_head,
         dev_base_class_counts=dev.base_class_counts,
         dev_valid_class_counts=dev.valid_class_counts,
         dev_blocks=dev.valid_file_paths,
         external_test_blocks=test_blocks
     )
 
+
 def _parse(
     fpath: str,
     block_size: tuple[int, int],
     valid_px_thresholds: dict[str, float],
+    *,
     focal_target: str | None = None
 ) -> _Parsed:
     '''Parse acatalog JSON into filtered class counts and file paths.'''
-
     # read catalog JSON to instantiate a class object
     catalog_dict = CatalogDictCtrl.load_json_or_fail(fpath).fetch()
     assert catalog_dict # typing assertion
@@ -150,14 +167,17 @@ def _parse(
 
     # TEMP fallback to the first target if no focus target is specified
     if not focal_target:
-        focal_target = list(next(iter(catalog.values()))['class_count'].keys())[0]
+        class_count = next(iter(catalog.values()))['class_count']
+        focal_target = next(iter(class_count.keys()))
 
     # all valid entries from catalog
     work_catalog = {
         k: v for k, v in catalog.items()
         if _is_valid_block(valid_px_thresholds, v['valid_px_ratios'])
     }
-    catalog_counts = {k: v['class_count'][focal_target] for k, v in work_catalog.items()}
+    catalog_counts = {
+        k: v['class_count'][focal_target] for k, v in work_catalog.items()
+    }
 
     # entries on the base grid (no overlap)
     row_size, col_size = block_size
@@ -166,23 +186,26 @@ def _parse(
         # both row and col are divisible
         if v['row_col'][0] % row_size == 0 and v['row_col'][1] % col_size == 0
     }
-    base_counts = {k: v['class_count'][focal_target] for k, v in base_catalog.items()}
+    base_counts = {
+        k: v['class_count'][focal_target] for k, v in base_catalog.items()
+    }
 
     # all block file paths
     valid_file_paths = {k: v['file_path'] for k, v in work_catalog.items()}
 
     return _Parsed(
+        focal_head=focal_target,
         base_class_counts=base_counts,
         valid_class_counts=catalog_counts,
         valid_file_paths=valid_file_paths
     )
+
 
 def _is_valid_block(
     valid_thresholds: dict[str, float],
     valid_ratios: dict[str, float]
 ) -> bool:
     '''Return `True` if all valid thresholds are met.'''
-
     # iterate ratios and check against threshold (might not be present)
     for k, v in valid_ratios.items():
         threshold = valid_thresholds.get(k)

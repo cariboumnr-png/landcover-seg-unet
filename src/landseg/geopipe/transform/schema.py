@@ -43,9 +43,10 @@ PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
-Resolver = artifacts.Controller.load_json_or_fail
+load = artifacts.Controller.load_json_or_fail
 
-# -------------------------------Public Function-------------------------------
+
+# ----- `build_schema` execution
 def build_schema(
     paths: artifacts.TransformPaths,
     *,
@@ -68,7 +69,6 @@ def build_schema(
     Note: this function does not return a schema dict, but write one as
     JSON to disk.
     '''
-
     start_time = time.perf_counter()
 
     # schema artifact controller
@@ -87,10 +87,10 @@ def build_schema(
 
         # checksum the artifacts
         checksums = {
-            'block_source': Resolver(paths.splits_source_blocks).sha256,
-            'block_transform': Resolver(paths.splits_transformed_blocks).sha256,
-            'label_stats': Resolver(paths.label_stats).sha256,
-            'image_stats': Resolver(paths.image_stats).sha256
+            'block_source': load(paths.splits_source_blocks).sha256,
+            'block_transform': load(paths.splits_transformed_blocks).sha256,
+            'label_stats': load(paths.label_stats).sha256,
+            'image_stats': load(paths.image_stats).sha256
         }
 
         # read blocks splits
@@ -129,14 +129,11 @@ def build_schema(
 
     # compile report
     duration = time.perf_counter() - start_time
-    ctrl = LabelStatsCtrl.load_json_or_fail(paths.label_stats)
-    label_stats = ctrl.fetch() or {}
-    classes_mapped = list(label_stats.keys())
 
     report: common.SchemaReport = {
         'status': 'loaded' if loaded else 'created',
         'duration_sec': duration,
         'schema_filepath': paths.schema,
-        'classes_mapped': classes_mapped,
+        'classes_mapped': list(schema['label_stats'].keys()),
     }
     logger.set_schema_report(report)
