@@ -42,7 +42,11 @@ def test_build_schema(mocker):
     def mock_load(filepath):
         mock_ctrl = mocker.Mock()
         mock_ctrl.sha256 = 'mock-hash-value'
-        if 'splits_transformed_blocks' in filepath or 'block_splits' in filepath or 'transformed' in filepath:
+        if (
+            'splits_transformed_blocks' in filepath or
+            'block_splits' in filepath or
+            'transformed' in filepath
+        ):
             mock_ctrl.fetch.return_value = {
                 'train': {'block_0': 'path/to/block_0.npz'},
                 'val': {},
