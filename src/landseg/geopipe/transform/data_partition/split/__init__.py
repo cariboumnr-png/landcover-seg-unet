@@ -45,6 +45,7 @@ __all__ = [
     # typing
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
     from .filter import filter_safe_tiles
@@ -52,6 +53,7 @@ if typing.TYPE_CHECKING:
     from .pipeline import PartitionParameters, PartitionResults, create_blocks_partition
     from .score import score_blocks
     from .stratify import SplitsResult, stratified_splitter
+
 
 def __getattr__(name: str):
 

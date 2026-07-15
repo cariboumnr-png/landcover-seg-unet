@@ -26,11 +26,11 @@ import numpy
 # local imports
 import landseg.geopipe.core as geo_core
 
-# -------------------------------Public Function-------------------------------
+
+# ----- `count_label` function
 def count_label(block_file_list: list[str]) -> dict[str, list[int]]:
     '''Aggregate label class counts across a list of block files.'''
-
-    # iterate current traing blocks to get label class counts
+    # iterate current training blocks to get label class counts
     lbl_stats: dict[str, list[int]] = {}
     for fpath in block_file_list:
         blk_meta = geo_core.DataBlock.load(fpath).manifest

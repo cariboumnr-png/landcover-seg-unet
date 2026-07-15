@@ -42,7 +42,7 @@ field = dataclasses.field
 EPS = 1e-6          # safety
 LOOKBACK = 20       # rolling window size for skew tracking
 
-#
+# ----- `HydrationResults` container
 @dataclasses.dataclass(frozen=True)
 class HydrationResults:
     '''Container for hydration results.'''
@@ -51,7 +51,7 @@ class HydrationResults:
     info: str = 'no hydration requested' # for downstream logging
 
 
-# -------------------------------Public Function-------------------------------
+# ----- `hydrate_train_split` implementation
 def hydrate_train_split(
     current_class_count: list[int],
     candidates: dict[tuple[int, int], list[int]],
@@ -157,7 +157,6 @@ def _priorities(
     eps: float
 ) -> list[float]:
     '''Compute normalized shortfall priorities (range 0..1).'''
-
     p: list[float] = []
     number_class = len(target_ratios)
     for i in range(number_class):
@@ -168,7 +167,6 @@ def _priorities(
 
 def _no_reward(priorities, blk_count, current_count) -> bool:
     '''Return True when the block yields no reward toward targets.'''
-
     reward = 0.0
     k = len(priorities)
     assert k == len(blk_count) == len(current_count) # sanity
@@ -190,7 +188,6 @@ def _skew_stop(
     skew_tol: float
 ) -> tuple[bool, str]:
     '''Decide if recent additions skew too far toward non-targets.'''
-
     # compute rolling totals as if we add this block
     roll_tgt = sum(t for t, _ in recent) + target_gain
     roll_non = sum(n for _, n in recent) + non_target_gain

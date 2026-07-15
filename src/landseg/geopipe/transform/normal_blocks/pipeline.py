@@ -42,6 +42,8 @@ import landseg.geopipe.transform.normal_blocks.stats as stats
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
+
+# ----- `run_normalize_blocks` execution
 def run_normalize_blocks(
     paths: artifacts.TransformPaths,
     *,
@@ -112,7 +114,8 @@ def run_normalize_blocks(
     }
     logger.set_normalization_report(report)
 
-#
+
+# ----- `_normalize` helper
 def _normalize(
     splits: tuple[set[str], set[str], set[str]],
     aggregated_stats: dict[str, geo_core.ImageBandStats],

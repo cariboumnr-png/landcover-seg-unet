@@ -38,6 +38,7 @@ __all__ = [
     'TransformLogger',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
     from .schema import (
@@ -47,6 +48,7 @@ if typing.TYPE_CHECKING:
         TransformReportSchema,
     )
     from .logger import TransformLogger
+
 
 def __getattr__(name: str):
     if name in {

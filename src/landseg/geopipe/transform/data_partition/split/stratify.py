@@ -43,7 +43,7 @@ import numpy
 import landseg.geopipe.transform.common.alias as alias
 
 
-# -------------------------------Public Class---------------------------------
+# ----- `SplitsResult` container
 @dataclasses.dataclass(frozen=True)
 class SplitsResult:
     '''Container for split coordinates and derived class statistics.'''
@@ -68,7 +68,6 @@ class SplitsResult:
     @property
     def class_distributions(self) -> dict[str, list[float]]:
         '''Return per-split normalized class distributions.'''
-
         def _safe_distribution(cc: typing.Sequence[int]) -> list[float]:
             total = sum(cc)
             if total <= 0:
@@ -81,7 +80,7 @@ class SplitsResult:
         }
 
 
-# -------------------------------Public Function-------------------------------
+# ----- `stratified_splitter` implementation
 def stratified_splitter(
     base_counts: dict[tuple[int, int], list[int]],
     *,
@@ -149,7 +148,7 @@ def stratified_splitter(
     )
 
 
-# ------------------------------Private Helpers--------------------------------
+# ----- private helpers
 def _validate_inputs(
     counts: numpy.ndarray,
     val_ratio: float,

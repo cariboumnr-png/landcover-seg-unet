@@ -45,7 +45,8 @@ LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
 load = artifacts.Controller.load_json_or_fail
 
-# -------------------------------Public Function-------------------------------
+
+# ----- `build_schema` execution
 def build_schema(
     paths: artifacts.TransformPaths,
     *,

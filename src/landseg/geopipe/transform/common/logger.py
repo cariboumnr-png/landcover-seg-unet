@@ -24,10 +24,12 @@ Subclass wrapper of Logger to handle structured data-prepare summaries.
 '''
 
 from __future__ import annotations
+# standard imports
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.utils as utils
+
 
 if typing.TYPE_CHECKING:
     from .schema import (
@@ -36,6 +38,7 @@ if typing.TYPE_CHECKING:
         SchemaReport,
         TransformReportSchema,
     )
+
 
 class TransformLogger(utils.Logger):
     '''

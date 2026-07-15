@@ -36,6 +36,8 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.common.alias as alias
 import landseg.utils as utils
 
+
+# ----- `normalize_blocks` implementation
 def normalize_blocks(
     input_blocks: set[str],
     stats: dict[str, geo_core.ImageBandStats],
@@ -62,8 +64,6 @@ def normalize_blocks(
         Dictionary mapping block names (without extension) to normalized
         block file paths.
     '''
-
-    #
     names: list[str] = []
     work: list[str] = []
     for b in input_blocks:
@@ -93,13 +93,14 @@ def normalize_blocks(
             indexed_files[name] = fp
     return indexed_files, purged
 
+
+# ----- private helpers
 def _normalize_one_block(
     block_fpath: str,
     global_stats: dict[str, geo_core.ImageBandStats],
     target_dpath: str
 ):
     '''Normalize a single data block and write it to disk.'''
-
     # read block
     data = geo_core.DataBlock.load(block_fpath).data
 
@@ -114,13 +115,13 @@ def _normalize_one_block(
     save_fpath = os.path.join(target_dpath, filename)
     numpy.savez_compressed(save_fpath, **to_write)
 
+
 def _normalize_image(
     raw_image_arr: alias.Float32Array,
     valid_mask: alias.MaskArray,
     global_stats: dict[str, geo_core.ImageBandStats],
 ) -> alias.Float32Array:
     '''Apply per-band normalization using global stats.'''
-
     # assertion
     assert raw_image_arr.ndim == 3
     assert len(global_stats) == len(raw_image_arr)
@@ -145,6 +146,7 @@ def _normalize_image(
     # return
     return image_normalized
 
+
 def _purge(
     filenames_to_keep: list[str],
     target_dir: str
@@ -154,7 +156,6 @@ def _purge(
 
     Returns the number of removed files.
     '''
-
     if not os.path.exists(target_dir) or not os.listdir(target_dir):
         return 0
 

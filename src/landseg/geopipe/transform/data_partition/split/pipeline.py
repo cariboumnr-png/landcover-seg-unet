@@ -35,7 +35,8 @@ import os
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.data_partition.split as split
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- `PartitionParameters` configuration
 @dataclasses.dataclass
 class PartitionParameters:
     '''Configuration for the dataset partitioning pipeline.'''
@@ -64,7 +65,7 @@ class PartitionParameters:
         if row_stride <= 0:
             raise ValueError('Block stride must be positive.')
 
-
+# ----- `PartitionResults` container
 @dataclasses.dataclass(frozen=True)
 class PartitionResults:
     '''Container for partition results.'''
@@ -73,7 +74,7 @@ class PartitionResults:
     hydration: split.HydrationResults
 
 
-# -------------------------------Public Function-------------------------------
+# ----- `create_blocks_partition` implementation
 def create_blocks_partition(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
@@ -148,7 +149,6 @@ def _finalize_partition(
     ext_test_blks: list[str] | None
 ) -> geo_core.BlocksPartition:
     '''Finalize the partition process with leakage sanity checks.'''
-
     def _index_fpath(fpaths: list[str]) -> dict[str, str]:
         '''Index block file paths by block name no file extension.'''
         indexed: dict[str, str] = {}

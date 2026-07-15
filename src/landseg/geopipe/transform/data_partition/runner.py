@@ -43,7 +43,8 @@ PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 ReportCtrl = artifacts.Controller[common.DataPartitionReport]
 
-# -------------------------------Public Function-------------------------------
+
+# ----- `run_datablocks_partition` execution
 def run_datablocks_partition(
     parsed_catalog: transform.DataBlocksView,
     paths: artifacts.TransformPaths,
@@ -107,11 +108,12 @@ def run_datablocks_partition(
 
     # label count results JSON controller
     ctrl = LabelStatsCtrl(paths.label_stats, policy)
-    # iterate current traing blocks to get label class counts
+    # iterate current training blocks to get label class counts
     lbl_stats = stats.count_label(list(partition_fpaths['train'].values()))
     ctrl.persist(lbl_stats)
 
 
+# ----- `_report` helper
 def _report(
     partition_results: split.PartitionResults,
     *,
@@ -120,7 +122,6 @@ def _report(
     duration: float
 ) -> common.DataPartitionReport:
     '''Summarize class count & ratio changes.'''
-
     splits = partition_results.raw_splits
     start_count = list(splits.global_class_count)
     distb = splits.class_distributions

@@ -40,6 +40,7 @@ import landseg.geopipe.core as geo_core
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
+
 class _CatalogViewConfig(typing.Protocol):
     '''Typed configuration container for catalog views.'''
     @property
@@ -48,6 +49,7 @@ class _CatalogViewConfig(typing.Protocol):
     def focal_target(self) -> str | None: ...
     @property
     def non_overlapping_test_grid(self) -> bool: ...
+
 
 @dataclasses.dataclass(frozen=True)
 class DataBlocksView:
@@ -58,6 +60,7 @@ class DataBlocksView:
     dev_blocks: dict[tuple[int, int], str]
     external_test_blocks: list[str] | None
 
+
 @dataclasses.dataclass
 class _Parsed:
     '''Internal parsed representation of a blocks catalog.'''
@@ -65,6 +68,7 @@ class _Parsed:
     base_class_counts: dict[tuple[int, int], list[int]]
     valid_class_counts: dict[tuple[int, int], list[int]]
     valid_file_paths: dict[tuple[int, int], str]
+
 
 def data_blocks_adapter(
     dev_catalog: str,
@@ -97,7 +101,6 @@ def data_blocks_adapter(
     Note:
         Currently we only support a single focal target.
     '''
-
     # try load schema first
     data_schema = SchemaCtrl.load_json_or_fail(dev_schema).fetch()
     assert data_schema # typing assertion
@@ -148,6 +151,7 @@ def data_blocks_adapter(
         external_test_blocks=test_blocks
     )
 
+
 def _parse(
     fpath: str,
     block_size: tuple[int, int],
@@ -156,7 +160,6 @@ def _parse(
     focal_target: str | None = None
 ) -> _Parsed:
     '''Parse acatalog JSON into filtered class counts and file paths.'''
-
     # read catalog JSON to instantiate a class object
     catalog_dict = CatalogDictCtrl.load_json_or_fail(fpath).fetch()
     assert catalog_dict # typing assertion
@@ -197,12 +200,12 @@ def _parse(
         valid_file_paths=valid_file_paths
     )
 
+
 def _is_valid_block(
     valid_thresholds: dict[str, float],
     valid_ratios: dict[str, float]
 ) -> bool:
     '''Return `True` if all valid thresholds are met.'''
-
     # iterate ratios and check against threshold (might not be present)
     for k, v in valid_ratios.items():
         threshold = valid_thresholds.get(k)
