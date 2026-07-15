@@ -170,7 +170,7 @@ def _report(
         'hydration': {
             'performed': bool(n_train_diff),
             'focal_head': focal_head,
-            'stop_reason': partition_results.hydration.stop_message,
+            'stop_reason': partition_results.hydration.info,
             'n_training_blocks': current_n_train,
             'n_training_blocks_change': n_train_diff,
             'hydrated_class_count': current_count,

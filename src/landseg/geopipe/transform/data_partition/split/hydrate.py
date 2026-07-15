@@ -35,6 +35,9 @@ detection.
 import dataclasses
 import collections
 
+# aliases
+field = dataclasses.field
+
 # global hyperparameters
 EPS = 1e-6          # safety
 LOOKBACK = 20       # rolling window size for skew tracking
@@ -43,9 +46,9 @@ LOOKBACK = 20       # rolling window size for skew tracking
 @dataclasses.dataclass(frozen=True)
 class HydrationResults:
     '''Container for hydration results.'''
-    hydrated_train_blocks: list[tuple[int, int]] # as coordinates
-    hydrated_class_count: list[int]
-    stop_message: str # for downstream logging
+    hydrated_train_blocks: list[tuple[int, int]] = field(default_factory=list)
+    hydrated_class_count: list[int] = field(default_factory=list)
+    info: str = 'no hydration requested' # for downstream logging
 
 
 # -------------------------------Public Function-------------------------------
@@ -99,18 +102,10 @@ def hydrate_train_split(
 
     # early exits
     if not target_set:
-        return HydrationResults(
-            hydrated_train_blocks=[],
-            hydrated_class_count=[],
-            stop_message='no hydration requested'
-        )
+        return HydrationResults()
 
     if all(current_class_count[i] + EPS >= targets[i] for i in target_set):
-        return HydrationResults(
-            hydrated_train_blocks=[],
-            hydrated_class_count=[],
-            stop_message='hydration targets already satisfied'
-        )
+        return HydrationResults(info='hydration targets already satisfied')
 
     # selected blocks
     selected: list[tuple[int, int]] = []
@@ -152,7 +147,7 @@ def hydrate_train_split(
     return HydrationResults(
         hydrated_train_blocks=selected,
         hydrated_class_count=current_class_count,
-        stop_message=msg
+        info=msg
     )
 
 

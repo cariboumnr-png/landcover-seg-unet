@@ -91,36 +91,39 @@ def create_blocks_partition(
         weight_mode = 'inverse' # default
     )
 
-    # ------ hydration process
-    # filter candidate blocks for hydration
-    safe_candidates = split.filter_safe_tiles(
-        list(valid_class_counts.keys()),
-        raw_splits.val + raw_splits.test,
-        block_size=config.block_spec[0],
-        block_stride=config.block_spec[2],
-        buffer_steps=config.buffer_step
-    )
+    # ------ hydration process (optional)
+    if bool(config.reward_ratios):
+        # filter candidate blocks for hydration
+        safe_candidates = split.filter_safe_tiles(
+            list(valid_class_counts.keys()),
+            raw_splits.val + raw_splits.test,
+            block_size=config.block_spec[0],
+            block_stride=config.block_spec[2],
+            buffer_steps=config.buffer_step
+        )
 
-    # score and rank the safe candidate tiles
-    blocks_to_score = {
-        k: v for k, v in valid_class_counts.items()
-        if k in safe_candidates
-    }
-    ranked_candidates = split.score_blocks(
-        list(raw_splits.global_class_count),
-        blocks_to_score,
-        reward=tuple(config.reward_ratios.keys()),
-        alpha=config.scoring_alpha,
-        beta=config.scoring_beta
-    )
+        # score and rank the safe candidate tiles
+        blocks_to_score = {
+            k: v for k, v in valid_class_counts.items()
+            if k in safe_candidates
+        }
+        ranked_candidates = split.score_blocks(
+            list(raw_splits.global_class_count),
+            blocks_to_score,
+            reward=tuple(config.reward_ratios.keys()),
+            alpha=config.scoring_alpha,
+            beta=config.scoring_beta
+        )
 
-    # hydrate using the safe candidates
-    hydration_results = split.hydrate_train_split(
-        list(raw_splits.train_class_count),
-        ranked_candidates,
-        target_ratios=config.reward_ratios,
-        max_skew_rate=config.max_skew_rate
-    )
+        # hydrate using the safe candidates
+        hydration_results = split.hydrate_train_split(
+            list(raw_splits.train_class_count),
+            ranked_candidates,
+            target_ratios=config.reward_ratios,
+            max_skew_rate=config.max_skew_rate
+        )
+    else:
+        hydration_results = split.HydrationResults()
 
     # ----- final blocks partitions
     blocks_partition = _finalize_partition(
