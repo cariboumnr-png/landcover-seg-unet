@@ -31,8 +31,8 @@ They ensure consistency, traceability, and validation of outputs across
 the transformation pipeline.
 '''
 
-# standard imports
 from __future__ import annotations
+# standard imports
 import typing
 
 TRANSFORM_SCHEMA_ID = 'transform_schema/v1'
@@ -126,3 +126,41 @@ class TransformSchema(typing.TypedDict):
     image_stats: dict[str, ImageBandStats]
     image_array_key: str
     label_array_key: str
+
+
+class PartitionSummary(typing.TypedDict):
+    '''
+    Summary of raw splits and hydration statistics.
+
+    This structure captures details of the initial block splitting
+    along with any subsequent hydration results.
+    '''
+    original_splits: _SplitsStats
+    hydration: _HydrationStats
+
+
+class _SplitsStats(typing.TypedDict):
+    '''Splits section.'''
+    training: _PartitionStats
+    validation: _PartitionStats
+    testing: _PartitionStats
+
+
+class _PartitionStats(typing.TypedDict):
+    '''Details for each split.'''
+    num_of_blocks: int
+    class_count: list[int]
+    class_distribution: list[float]
+
+
+class _HydrationStats(typing.TypedDict):
+    '''Hydration details.'''
+    performed: bool
+    focal_head: str
+    stop_reason: str
+    n_training_blocks: int
+    n_training_blocks_change: int
+    hydrated_class_count: list[int]
+    class_count_change: list[int]
+    hydrated_class_distribution: list[float]
+    class_distribution_change: list[float]

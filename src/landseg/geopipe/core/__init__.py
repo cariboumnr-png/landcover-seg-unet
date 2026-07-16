@@ -53,6 +53,7 @@ __all__ = [
     'ImageBandStats',
     'LabelSpecs',
     'TransformSchema',
+    'PartitionSummary',
 ]
 
 # for static check
@@ -68,7 +69,12 @@ if typing.TYPE_CHECKING:
     from .foundation_data_schema import DataSchema
     from .foundation_domain_map import DomainPayload, DomainMeta, DomainTile, DomainTileMap
     from .foundation_world_grid import GridSpec, GridPayload, GridMeta, GridLayout
-    from .transform_types import BlocksPartition, ImageBandStats, TransformSchema
+    from .transform_types import (
+        BlocksPartition,
+        ImageBandStats,
+        TransformSchema,
+        PartitionSummary
+    )
 
 def __getattr__(name: str):
 
@@ -93,7 +99,12 @@ def __getattr__(name: str):
     if name in {'GridSpec', 'GridPayload', 'GridMeta', 'GridLayout'}:
         return getattr(importlib.import_module('.foundation_world_grid', __package__), name)
 
-    if name in {'BlocksPartition', 'ImageBandStats', 'TransformSchema'}:
+    if name in {
+        'BlocksPartition',
+        'ImageBandStats',
+        'TransformSchema',
+        'PartitionSummary'
+    }:
         return getattr(importlib.import_module('.transform_types', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

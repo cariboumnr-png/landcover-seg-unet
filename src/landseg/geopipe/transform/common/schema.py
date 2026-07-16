@@ -30,35 +30,6 @@ class DataPartitionReport(typing.TypedDict):
     '''Execution report for dataset splitting and hydration.'''
     status: typing.Literal['loaded', 'created']
     duration_sec: float
-    original_splits: _Splits
-    hydration: _Hydration
-
-
-class _Splits(typing.TypedDict):
-    '''Splits section.'''
-    training: _Partition
-    validation: _Partition
-    testing: _Partition
-
-
-class _Partition(typing.TypedDict):
-    '''Details for each split.'''
-    num_of_blocks: int
-    class_count: list[int]
-    class_distribution: list[float]
-
-
-class _Hydration(typing.TypedDict):
-    '''Hydration details.'''
-    performed: bool
-    focal_head: str
-    stop_reason: str
-    n_training_blocks: int
-    n_training_blocks_change: int
-    hydrated_class_count: list[int]
-    class_count_change: list[int]
-    hydrated_class_distribution: list[float]
-    class_distribution_change: list[float]
 
 
 class NormalizationReport(typing.TypedDict):

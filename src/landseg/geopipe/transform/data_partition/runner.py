@@ -41,7 +41,7 @@ import landseg.geopipe.transform.data_partition.stats as stats
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-ReportCtrl = artifacts.Controller[common.DataPartitionReport]
+SplitsSummaryCtrl = artifacts.Controller[geo_core.PartitionSummary]
 
 
 # ----- `run_datablocks_partition` execution
@@ -70,13 +70,14 @@ def run_datablocks_partition(
     '''
     start_time = time.perf_counter()
 
-    # partition block filepaths JSON controller
-    ctrl = PartitionCtrl(paths.splits_source_blocks, policy)
-    partition_fpaths = ctrl.fetch()
-    loaded = partition_fpaths is not None
+    # partition fpaths and summary JSON controller
+    partition_ctrl = PartitionCtrl(paths.splits_source_blocks, policy)
+    partition_fpaths = partition_ctrl.fetch()
+    summary_ctrl = SplitsSummaryCtrl(paths.splits_summary, policy)
+    summary = summary_ctrl.fetch()
 
-    if not partition_fpaths:
-        # get split blocks and persist the main results
+    if not (partition_fpaths and summary): # rebuild if either is missing
+        # blocks fpaths
         partition_results = split.create_blocks_partition(
             parsed_catalog.dev_base_class_counts,
             parsed_catalog.dev_valid_class_counts,
@@ -85,25 +86,31 @@ def run_datablocks_partition(
             ext_test_blks=parsed_catalog.external_test_blocks
         )
         partition_fpaths = partition_results.partition_fpaths
-        ctrl.persist(partition_fpaths)
-        logger.log('INFO', '[CHECKPOINT] Created dataset partition splits')
+        partition_ctrl.persist(partition_fpaths)
 
-        duration = time.perf_counter() - start_time
-        report = _report(
+        # summary
+        splits_summary = _build_splits_summary(
             partition_results,
             focal_head=parsed_catalog.focal_head,
-            loaded=loaded,
-            duration=duration
         )
+        summary_ctrl.persist(splits_summary)
 
+        status = 'created'
+        logger.log('INFO', '[CHECKPOINT] Created dataset partition splits')
     else:
+        status = 'loaded'
         logger.log('INFO', '[CHECKPOINT] Loaded dataset partition splits')
-        # partition report JSON controller
-        duration = time.perf_counter() - start_time
-        ctrl = ReportCtrl(paths.report, policy)
-        report = ctrl.fetch()
-        assert report # typing
 
+    # label count results JSON controller - ALWAYS run
+    label_ctrl = LabelStatsCtrl(paths.label_stats, policy)
+    lbl_stats = stats.count_label(list(partition_fpaths['train'].values()))
+    label_ctrl.persist(lbl_stats)
+
+    duration = time.perf_counter() - start_time
+    report: common.DataPartitionReport = {
+        'status': status,
+        'duration_sec': duration
+    }
     logger.set_data_partition_report(report)
 
     # label count results JSON controller
@@ -114,13 +121,11 @@ def run_datablocks_partition(
 
 
 # ----- `_report` helper
-def _report(
+def _build_splits_summary(
     partition_results: split.PartitionResults,
     *,
     focal_head: str,
-    loaded: bool,
-    duration: float
-) -> common.DataPartitionReport:
+) -> geo_core.PartitionSummary:
     '''Summarize class count & ratio changes.'''
     splits = partition_results.raw_splits
     start_count = list(splits.global_class_count)
@@ -149,8 +154,6 @@ def _report(
         per_diff = []
 
     return {
-        'status': 'loaded' if loaded else 'created',
-        'duration_sec': duration,
         'original_splits': {
             'training': {
                 'num_of_blocks': len(splits.train),
