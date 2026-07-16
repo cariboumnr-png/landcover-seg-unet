@@ -62,7 +62,7 @@ class PartitionParameters:
         if row_size <= 0:
             raise ValueError('Block size must be positive.')
 
-        if row_stride <= 0:
+        if row_stride < 0:
             raise ValueError('Block stride must be positive.')
 
 # ----- `PartitionResults` container
