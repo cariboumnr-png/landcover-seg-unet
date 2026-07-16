@@ -29,22 +29,24 @@ import os
 # third-party imports
 import numpy
 # local imports
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.transform.normal_blocks.normalize as normalize
 
 
 # ----- `_normalize_image` tests
 def test_normalize_image_math():
-    raw_img = numpy.array([[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32) # [1, 2, 2]
-    mask = numpy.array([[True, True], [True, False]], dtype=bool) # pixel (1,1) is invalid
+    # [1, 2, 2]
+    raw_img = numpy.array([[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32)
+    # pixel (1,1) is invalid
+    mask = numpy.array([[True, True], [True, False]], dtype=bool)
 
-    global_stats = {
-        'band_0': {
-            'total_count': 100,
-            'current_mean': 20.0,
-            'accum_m2': 100.0,
-            'std': 5.0
-        }
+    _stats: geo_core.ImageBandStats = {
+        'total_count': 100,
+        'current_mean': 20.0,
+        'accum_m2': 100.0,
+        'std': 5.0
     }
+    global_stats = {'band_0': _stats}
 
     norm_img = normalize._normalize_image(raw_img, mask, global_stats)
 

@@ -20,12 +20,9 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Unit tests for training split hydration logic (hydrate.py).'''
 
-# third-party imports
-import pytest
 # local imports
 import landseg.geopipe.transform.data_partition.split.hydrate as hydrate
 
@@ -53,7 +50,8 @@ def test_hydrate_train_split_no_targets():
 
 
 def test_hydrate_train_split_targets_satisfied():
-    # targeted class is 0 (current count is 0, so target count is 0 * 1.5 = 0, which is satisfied)
+    # targeted class is 0
+    # current count is 0, so target count is 0 * 1.5 = 0, which is satisfied
     current_counts = [0, 200]
     candidates = {
         (0, 0): [10, 20]
@@ -100,7 +98,8 @@ def test_hydrate_train_split_skew_stop():
     # target class 0 to grow from 10 to 50
     current_counts = [10, 10]
     candidates = {
-        (0, 0): [1, 20], # advances target 0 by 1, but adds 20 of class 1 (skew ratio = 20)
+        # advances target 0 by 1, but adds 20 of class 1 (skew ratio = 20)
+        (0, 0): [1, 20],
     }
     ratios = {0: 5.0}
 

@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Unit tests for raster open context manager (raster_context.py).'''
 
@@ -35,7 +34,8 @@ def test_open_rasters_success(mocker):
     '''
     Given: A mixture of valid raster file paths and None entries.
     When: `open_rasters` is executed.
-    Then: Yields opened readers for paths and None for None entries, closing all on exit.
+    Then: Yields opened readers for paths and None for None entries,
+        closing all on exit.
     '''
     # mock os.path.exists to confirm existence
     mocker.patch('os.path.exists', return_value=True)
@@ -45,7 +45,9 @@ def test_open_rasters_success(mocker):
     mock_open = mocker.patch('rasterio.open')
     mock_open.return_value.__enter__.return_value = mock_reader
 
-    with raster_context.open_rasters('raster1.tif', None, 'raster2.tif') as readers:
+    with raster_context.open_rasters(
+        'raster1.tif', None, 'raster2.tif'
+    ) as readers:
         assert len(readers) == 3
         assert readers[0] == mock_reader
         assert readers[1] is None

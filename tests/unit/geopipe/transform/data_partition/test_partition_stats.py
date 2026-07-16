@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Unit tests for data partition label statistics (stats.py).'''
 

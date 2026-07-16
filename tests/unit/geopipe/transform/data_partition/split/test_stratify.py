@@ -55,7 +55,9 @@ def test_stratified_splitter_success():
         weight_mode='inverse'
     )
 
-    # 10 blocks total: val budget = 2 (round(0.2*10)), test budget = 1 (round(0.1*10))
+    # 10 blocks total:
+    # val budget = 2 (round(0.2*10)),
+    # test budget = 1 (round(0.1*10))
     # train budget = 7
     assert len(result.train) == 7
     assert len(result.val) == 2
@@ -65,9 +67,9 @@ def test_stratified_splitter_success():
     train_set = set(result.train)
     val_set = set(result.val)
     test_set = set(result.test)
-    assert not (train_set & val_set)
-    assert not (train_set & test_set)
-    assert not (val_set & test_set)
+    assert not train_set & val_set
+    assert not train_set & test_set
+    assert not val_set & test_set
 
     # verify totals sum up
     global_total = numpy.array(list(base_counts.values())).sum(axis=0)
@@ -100,12 +102,9 @@ def test_stratified_splitter_invalid_inputs():
 
 
 def test_stratified_splitter_reproducibility():
-    base_counts = {
-        (i, j): [i + 1, j + 2] for i in range(5) for j in range(5)
-    }
-
-    res1 = stratify.stratified_splitter(base_counts, val_ratio=0.2, test_ratio=0.2)
-    res2 = stratify.stratified_splitter(base_counts, val_ratio=0.2, test_ratio=0.2)
+    base = {(i, j): [i + 1, j + 2] for i in range(5) for j in range(5)}
+    res1 = stratify.stratified_splitter(base, val_ratio=0.2, test_ratio=0.2)
+    res2 = stratify.stratified_splitter(base, val_ratio=0.2, test_ratio=0.2)
 
     assert res1.train == res2.train
     assert res1.val == res2.val

@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Unit tests for transform schema builder logic (schema.py).'''
 

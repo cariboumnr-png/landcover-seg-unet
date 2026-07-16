@@ -53,7 +53,7 @@ def test_domain_tile_map_container():
 
     # index check
     with pytest.raises(TypeError, match='Index must be \\(x, y\\) in pixels'):
-        _ = tile_map['invalid']
+        _ = tile_map['invalid'] # type: ignore
 
 
 def test_domain_tile_map_from_dict():
@@ -62,14 +62,12 @@ def test_domain_tile_map_from_dict():
     When: Constructed via `from_dict`.
     Then: Restore values and correctly expose descriptive properties.
     '''
-    tiles = {
-        (10, 20): {
-            'majority': 2,
-            'major_freq': 0.9,
-            'pca_feature': [0.5]
-        }
+    _tile: domain_map.DomainTile = {
+        'majority': 2,
+        'major_freq': 0.9,
+        'pca_feature': [0.5]
     }
-
+    tiles = {(10, 20): _tile}
     tile_map = domain_map.DomainTileMap.from_dict(tiles)
 
     assert len(tile_map) == 1
@@ -88,13 +86,12 @@ def test_domain_tile_map_serialization_roundtrip():
     When: Exported and restored via JSON payloads.
     Then: State, metadata, and string-to-tuple coordinates are fully preserved.
     '''
-    tiles = {
-        (0, 0): {
-            'majority': 1,
-            'major_freq': 0.8,
-            'pca_feature': [0.1, 0.2]
-        }
+    _tile: domain_map.DomainTile = {
+        'majority': 1,
+        'major_freq': 0.8,
+        'pca_feature': [0.1, 0.2]
     }
+    tiles = {(0, 0): _tile}
     tile_map = domain_map.DomainTileMap.from_dict(tiles)
 
     # populate meta to satisfy serialization assertions

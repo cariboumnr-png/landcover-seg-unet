@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Unit tests for coordinates-to-string format utilities (coords_str.py).'''
 

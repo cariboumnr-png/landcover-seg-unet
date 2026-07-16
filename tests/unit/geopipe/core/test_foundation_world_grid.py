@@ -38,7 +38,7 @@ def test_gridspec_validation():
     When: `GridSpec` is initialized.
     Then: Raise a ValueError in post-init.
     '''
-    with pytest.raises(ValueError, match='Overlap must be smaller than block size'):
+    with pytest.raises(ValueError, match='Overlap must be smaller'):
         world_grid.GridSpec(
             crs='EPSG:32617',
             origin=(500000.0, 5000000.0),
@@ -53,7 +53,8 @@ def test_gridlayout_bbox_generation():
     '''
     Given: A GridSpec with spatial extent.
     When: `GridLayout` is constructed in `'bbox'` mode.
-    Then: Correct row/col tiles are generated within extent boundary constraints.
+    Then: Correct row/col tiles are generated within extent boundary
+        constraints.
     '''
     spec = world_grid.GridSpec(
         crs='EPSG:32617',
@@ -67,7 +68,8 @@ def test_gridlayout_bbox_generation():
     layout = world_grid.GridLayout(mode='bbox', spec=spec)
 
     # 512x512 grid, tile size 256, step size = 256-128 = 128.
-    # coordinates row/col step ranges: row in range(0, 512, 128) -> [0, 128, 256, 384]
+    # coordinates row/col step ranges:
+    # row in range(0, 512, 128) -> [0, 128, 256, 384]
     # col in range(0, 512, 128) -> [0, 128, 256, 384]
     # total tiles = 4 * 4 = 16
     assert len(layout) == 16
@@ -107,7 +109,8 @@ def test_gridlayout_container_protocol():
     '''
     Given: A constructed `GridLayout`.
     When: Running dictionary protocol checks.
-    Then: Iteration, length, keys, index validation, and value type checks succeed.
+    Then: Iteration, length, keys, index validation, and value type
+        checks succeed.
     '''
     spec = world_grid.GridSpec(
         crs='EPSG:32617',
@@ -124,10 +127,10 @@ def test_gridlayout_container_protocol():
     assert isinstance(layout[(0, 0)], rasterio.windows.Window)
 
     with pytest.raises(TypeError, match='Index must be \\(x, y\\) in pixels'):
-        _ = layout['invalid']
+        _ = layout['invalid'] # type: ignore
 
     with pytest.raises(TypeError, match='Index must be \\(x, y\\) in pixels'):
-        _ = layout[(0.5, 0)]
+        _ = layout[(0.5, 0)] # type: ignore
 
 
 def test_gridlayout_offset_alignment():

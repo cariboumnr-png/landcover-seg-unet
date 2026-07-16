@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Unit tests for normal blocks image statistics aggregation (stats.py).'''
 
