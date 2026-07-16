@@ -49,21 +49,6 @@ class PartitionParameters:
     block_spec: tuple[int, int, int, int]
     # row_size, col_size, row_stride, col_stride
 
-    def __post_init__(self):
-        row_size, col_size, row_stride, col_stride = self.block_spec
-
-        # current we only accept equal row and col sizes and strides
-        if row_size != col_size:
-            raise ValueError('Only square blocks are supported.')
-
-        if row_stride != col_stride:
-            raise ValueError('Only equal row/column stride is supported.')
-
-        if row_size <= 0:
-            raise ValueError('Block size must be positive.')
-
-        if row_stride < 0:
-            raise ValueError('Block stride must be positive.')
 
 # ----- `PartitionResults` container
 @dataclasses.dataclass(frozen=True)
