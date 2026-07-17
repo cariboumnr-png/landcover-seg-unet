@@ -69,6 +69,42 @@ def test_build_unet_backbone_unetppp(mock_backbone_config_factory):
     assert backbone.spatial_divisor == 16
 
 
+def test_build_unet_w_transformer_bottleneck(mock_backbone_config_factory):
+    '''
+    Given: UNet backbone type config with a transformer bottleneck.
+    When: Running build_unet_backbone.
+    Then: Return a valid UNet body backbone with targeted output channels.
+    '''
+    cfg = mock_backbone_config_factory(
+        body_type='unet',
+        base_ch=16,
+        bottleneck='transformer'
+    )
+    backbone = factory.build_unet_backbone(in_ch=3, input_size=256, config=cfg)
+
+    assert isinstance(backbone, body.UNet)
+    assert backbone.spatial_divisor == 16
+    assert backbone.out_channels == 16
+
+
+def test_build_unet_w_hybrid_bottleneck(mock_backbone_config_factory):
+    '''
+    Given: UNet backbone type config with a hybrid bottleneck.
+    When: Running build_unet_backbone.
+    Then: Return a valid UNet body backbone with targeted output channels.
+    '''
+    cfg = mock_backbone_config_factory(
+        body_type='unet',
+        base_ch=16,
+        bottleneck='hybrid'
+    )
+    backbone = factory.build_unet_backbone(in_ch=3, input_size=256, config=cfg)
+
+    assert isinstance(backbone, body.UNet)
+    assert backbone.spatial_divisor == 16
+    assert backbone.out_channels == 16
+
+
 def test_build_unet_backbone_invalid_body(mock_backbone_config_factory):
     '''
     Given: An invalid backbone body type.
