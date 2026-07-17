@@ -70,10 +70,8 @@ import numpy
 import torch
 import torch.utils.data
 import torchvision.transforms.functional
-import tqdm
 # local imports
 import landseg.session.common.alias as alias
-import landseg.utils as utils
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -174,7 +172,9 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         self,
         block_src: dict[str, str],
         config: BlockConfig,
-        logger: utils.Logger,
+        *,
+        preload: bool = False,
+        augment_flip: bool = False,
         **kwargs
     ):
         '''
@@ -187,30 +187,22 @@ class MultiBlockDataset(torch.utils.data.Dataset):
                 RAM; else stream with an LRU-like cache.
             blk_cache_num (int): Max number of blocks to keep in cache.
         '''
-
-        # from parent class
         super().__init__()
 
-        # process args
         self.blks = block_src
         self.blk_cfg = config
-        self.preload = kwargs.get('preload', False)
-        self.aug_flip = kwargs.get('augment_flip', False)
+        self.preload = preload
+        self.aug_flip = augment_flip
 
-        # init data container
         self.data = _MultiBlockData()
-        # load all files into one dataset
-        if self.preload:
-            logger.log('INFO', 'Preloading blocks into RAM')
+        self._counter: tuple[int, int] = (0, 0)
+
+        if self.preload: # load all files into one dataset
             _imgs: list[numpy.ndarray] = []
             _lbls: list[numpy.ndarray] = []
             self.data.dom = []
             # no progress bar if logger is silent
-            for blk_name, blk_fpath in tqdm.tqdm(
-                block_src.items(),
-                ncols=100,
-                disable=logger.silent
-            ):
+            for blk_name, blk_fpath in block_src.items():
                 dom = self._get_domain(blk_name)
                 blk_data = _BlockDataset(blk_fpath, config, dom, self.aug_flip)
                 _imgs.append(blk_data.imgs)
@@ -220,12 +212,9 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self.data.img = numpy.concatenate(_imgs, axis=0)
             self.data.lbl = numpy.concatenate(_lbls, axis=0)
             self._len = int(self.data.img.shape[0])
-            logger.log('INFO', f'{len(block_src)} blocks preloaded into RAM')
+            self._counter = len(block_src), 0
 
-        # otherwise streaming
-        else:
-            logger.log('INFO', 'Setting up block streaming')
-            logger.log('DEBUG', f'Config: {config}')
+        else: # otherwise streaming
             blk_cache_num = kwargs.get('blk_cache_num', 16)
             self._len = self.blk_cfg.patch_per_blk * len(block_src)
             # below not needed for uniform n
@@ -234,7 +223,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self.data.img = _CacheDict(maxsize=blk_cache_num)
             self.data.lbl = _CacheDict(maxsize=blk_cache_num)
             self.data.dom = _CacheDict(maxsize=blk_cache_num)
-            logger.log('INFO', f'Streaming cache: {blk_cache_num} blocks')
+            self._counter = 0, len(block_src)
 
     def __len__(self):
         return self._len
@@ -264,6 +253,16 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         else:
             y = torch.empty(0, dtype=torch.long)
         return torch.from_numpy(x), y, dom
+
+    @property
+    def n_preloaded(self) -> int:
+        '''Return number of blocks pre-loaded into RAM.'''
+        return self._counter[0]
+
+    @property
+    def n_cached(self) -> int:
+        '''Return number of blocks cached in RAM.'''
+        return self._counter[1]
 
     def _global_to_local(self, idx: int) -> tuple[int, int]:
         '''Map global patch to block/patch indices (uniform blocks).'''
