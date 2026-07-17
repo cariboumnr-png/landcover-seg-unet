@@ -1,6 +1,6 @@
 ## Current Project Structure
 
-Last updated: 2026-06-18
+Last updated: 2026-07-17
 
 This document summarizes the repository's current package layout and the main
 responsibility of each area. It favors the working boundaries that matter when
@@ -44,7 +44,12 @@ adding or moving code over a fully exhaustive file listing.
 |   `-- user.yaml                 Main local pipeline-oriented configuration
 |
 |-- scripts/                      Helper scripts and entry points
+|   |-- generate_dummy_data.py    Local dummy dataset generator script
 |   `-- run.py                    Bootstrap script for VM/Databricks executions
+|
+|-- tests/                        Unit and integration test suites
+|   |-- conftest.py               Global test fixtures and setups
+|   `-- unit/                     Unit tests mirroring package structure
 |
 |-- pyproject.toml                Package metadata and `landseg` console entry point
 |-- README.md                     Project overview
@@ -114,7 +119,9 @@ src/landseg/
 |   |-- transform/
 |   |   |-- common/               Transform aliases
 |   |   |-- data_partition/       Split, filter, hydrate, and scoring pipeline
-|   |   `-- normal_blocks/        Normalization stats and normalization pipeline
+|   |   |-- normal_blocks/        Normalization stats and normalization pipeline
+|   |   |-- adapter.py            Catalog data blocks adapter
+|   |   `-- schema.py             Transform schema compiler
 |   `-- utils/                    Raster context and coordinate string helpers
 |
 |-- models/
@@ -157,9 +164,9 @@ src/landseg/
 |   |-- analysis/                 Trial/result analysis helpers
 |   `-- sweep/                    Optuna objective, config, and optimization helpers
 |
-`-- utils/
-    |-- logger.py                 Logging setup
-    `-- multip.py                 Multiprocessing helpers
+|-- utils/
+|   |-- logger.py                 Logging setup
+|   `-- multip.py                 Multiprocessing helpers
 ```
 
 ### Current Boundary Notes

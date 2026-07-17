@@ -1,6 +1,6 @@
 ## Structure actuelle du projet
 
-Derniere mise a jour: 2026-06-18
+Derniere mise a jour: 2026-07-17
 
 Ce document resume l'organisation actuelle du depot et la responsabilite
 principale de chaque zone. Il privilegie les frontieres utiles pour ajouter ou
@@ -44,7 +44,12 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   `-- user.yaml                 Configuration locale principale par pipeline
 |
 |-- scripts/                      Scripts helpers et points d'entree
+|   |-- generate_dummy_data.py    Script de generation locale de donnees fictives
 |   `-- run.py                    Script de demarrage pour machines virtuelles/Databricks
+|
+|-- tests/                        Suites de tests unitaires et d'integration
+|   |-- conftest.py               Fixtures et configurations de test globales
+|   `-- unit/                     Tests unitaires calques sur la structure du package
 |
 |-- pyproject.toml                Metadonnees du package et entree console `landseg`
 |-- README.md                     Vue d'ensemble du projet
@@ -114,7 +119,9 @@ src/landseg/
 |   |-- transform/
 |   |   |-- common/               Alias de transformation
 |   |   |-- data_partition/       Split, filter, hydrate et scoring
-|   |   `-- normal_blocks/        Statistiques et pipeline de normalisation
+|   |   |-- normal_blocks/        Statistiques et pipeline de normalisation
+|   |   |-- adapter.py            Adaptateur de catalogue de blocs de donnees
+|   |   `-- schema.py             Compilateur de schema de transformation
 |   `-- utils/                    Contexte raster et helpers de coordonnees
 |
 |-- models/
@@ -157,9 +164,9 @@ src/landseg/
 |   |-- analysis/                 Helpers d'analyse de trials/resultats
 |   `-- sweep/                    Objectif Optuna, config et optimisation
 |
-`-- utils/
-    |-- logger.py                 Configuration du logging
-    `-- multip.py                 Helpers de multiprocessing
+|-- utils/
+|   |-- logger.py                 Configuration du logging
+|   `-- multip.py                 Helpers de multiprocessing
 ```
 
 ### Notes Sur Les Frontieres Actuelles
