@@ -26,6 +26,8 @@ Builds data specifications from produced artifacts, constructs the
 model, and runs the multi-phase training runner.
 '''
 
+# standard imports
+import datetime
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
@@ -33,9 +35,9 @@ import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
-import landseg.utils as utils
 
-def train(config: configs.RootConfig) -> session.SessionMetadata:
+
+def train(config: configs.RootConfig) -> None:
     '''
     Run a full training job.
 
@@ -46,29 +48,18 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         config: RootConfig with model, trainer, and runner settings.
     '''
 
-    # init run io folder tree
-    session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
-    session_paths.init(config.session.orchestration.schedule.resume_from_last)
+    def _cur_time():
+        return datetime.datetime.now().strftime(c.TF_ISO8601)
 
-    # create the session metadata dict
-    meta_ctrl = artifacts.Controller[dict](session_paths.meta)
-    meta: session.SessionMetadata = {
-        'status': 'running',
-        'run_id': session_paths.run_id,
-        'intent': 'training',
-        'pipeline': config.pipeline.name,
-        'created_at': session_paths.time(c.TF_ISO8601),
-        'completed_at': None,
-        'inputs': {},
-        'summary': {}
-    }
-    meta_ctrl.persist(meta)
+    # init session results paths and create run io folder tree
+    ss_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
+    ss_paths.init(config.session.orchestration.schedule.resume_from_last)
 
-    # save running config per run
-    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
+    # persist running config as JSON
+    config_ctrl = artifacts.Controller[dict](ss_paths.config) # no policy
     config_ctrl.persist(config.as_dict)
 
-    # verbosity
+    # parse verbosity
     match config.execution.verbosity:
         case 'full':
             console_level = 10
@@ -82,76 +73,91 @@ def train(config: configs.RootConfig) -> session.SessionMetadata:
         case _:
             raise ValueError(f'Invalid option: {config.execution.verbosity}')
 
-    # create a centralized main logger
-    logger = utils.Logger(
-        name='main',
-        log_file=session_paths.main_log_file,
-        console_lvl=console_level
+    # init a SessionLogger
+    logger = session.SessionLogger(
+        name='session',
+        log_file=ss_paths.summary,
+        console_lvl=console_level,
+        enable_file_log=False
     )
-
-    # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(
-        f'{config.execution.exp_root}/artifacts/'
-        f'{config.foundation.datablocks.name}'
+    logger.init_summary(
+        run_id=ss_paths.run_id,
+        pipeline=config.pipeline.name,
+        start_time=_cur_time()
     )
-    dataspecs = geopipe.build_dataspec(
-        artifact_paths,
-        mode='default',
-        ids_domain_name=config.dataspecs.domain_ids_name,
-        vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=print_out
-    )
+    assert logger.summary # typing
 
-    # setup the model
-    model = models.build_multihead_unet(
-        patch_size=config.session.data_loader.patch_size,
-        dataspecs=dataspecs,
-        unet_backbone_config=config.models.unet_backbone_config,
-        conditioning_config=config.models.conditioning_config,
-        enable_clamp=config.models.numeric_safety.enable_clamp,
-        clamp_range=config.models.numeric_safety.clamp_range
-    )
+    try:
+        logger.log_sep()
 
-    # build the session
-    match config.session.mode:
-        case 'continuous':
-            session_context=session.SessionBuildContext(
-                device=c.DEVICE,
-                verbose_runner=print_out,
-                session_paths=session_paths,
-            )
-            runner = session.factory.build_continous_training_session(
-                dataspecs=dataspecs,
-                model=model,
-                config=config.session,
-                context=session_context,
-                logger=logger
-            )
-        case 'curriculum':
-            session_context=session.SessionBuildContext(
-                device=c.DEVICE,
-                verbose_runner=print_out,
-                session_paths=session_paths,
-            )
-            runner = session.factory.build_curriculum_training_session(
-                dataspecs=dataspecs,
-                model=model,
-                config=config.session,
-                context=session_context,
-                logger=logger
-            )
-        case _:
-            raise ValueError(f'Invalid training mode: {config.session.mode}')
+        # collect artifacts and build dataspsec
+        artifact_paths=artifacts.ArtifactPaths(
+            f'{config.execution.exp_root}/artifacts/'
+            f'{config.foundation.datablocks.name}'
+        )
+        dataspecs = geopipe.build_dataspec(
+            artifact_paths,
+            mode='default',
+            ids_domain_name=config.dataspecs.domain_ids_name,
+            vec_domain_name=config.dataspecs.domain_vec_name,
+            print_out=print_out
+        )
 
-    # run session in a block
-    final = runner.execute()
+        # setup the model
+        model = models.build_multihead_unet(
+            patch_size=config.session.data_loader.patch_size,
+            dataspecs=dataspecs,
+            unet_backbone_config=config.models.unet_backbone_config,
+            conditioning_config=config.models.conditioning_config,
+            enable_clamp=config.models.numeric_safety.enable_clamp,
+            clamp_range=config.models.numeric_safety.clamp_range
+        )
+
+        # build the session
+        match config.session.mode:
+            case 'continuous':
+                session_context=session.SessionBuildContext(
+                    device=c.DEVICE,
+                    verbose_runner=print_out,
+                    session_paths=ss_paths,
+                )
+                runner = session.factory.build_continous_training_session(
+                    dataspecs=dataspecs,
+                    model=model,
+                    config=config.session,
+                    context=session_context,
+                    logger=logger
+                )
+            case 'curriculum':
+                session_context=session.SessionBuildContext(
+                    device=c.DEVICE,
+                    verbose_runner=print_out,
+                    session_paths=ss_paths,
+                )
+                runner = session.factory.build_curriculum_training_session(
+                    dataspecs=dataspecs,
+                    model=model,
+                    config=config.session,
+                    context=session_context,
+                    logger=logger
+                )
+            case _:
+                raise ValueError(f'Invalid training mode: {config.session.mode}')
+
+        # run session in a block
+        final = runner.execute()
+
+        # update summary
+        logger.summary['completed_at'] = _cur_time()
+        logger.set_summary_status('SUCCESS')
+        logger.set_results({'best_value': final})
+
+    except Exception as e:
+        logger.set_summary_status('FAILED')
+        logger.log('ERROR', f'Ingestion pipeline failed: {e}', exc_info=True)
+        raise e
 
     # close logger
-    logger.close()
-
-    # update metadata and return
-    meta['completed_at'] = session_paths.time(c.TF_ISO8601)
-    meta['summary'] = {}
-    meta['summary']['best_value'] = final
-    meta_ctrl.persist(meta)
-    return meta
+    finally:
+        logger.log_sep()
+        logger.close() # summary JSON will be persisted

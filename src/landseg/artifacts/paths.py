@@ -31,9 +31,7 @@ transformed outputs.
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
-import datetime
 import os
 
 # artifacts file structure from data ingestion and preparation piplines
@@ -283,11 +281,6 @@ class ResultsPaths:
         return os.path.join(self.run_folder, 'logs')
 
     @property
-    def main_log_file(self) -> str:
-        # e.g., 20001234_567
-        return os.path.join(self.logs, f'main_{self.time('%Y%m%d_%H%M%S')}.log')
-
-    @property
     def plots(self) -> str:
         return os.path.join(self.run_folder, 'plots')
 
@@ -304,8 +297,8 @@ class ResultsPaths:
         return os.path.join(self.run_folder, 'evaluation.json')
 
     @property
-    def meta(self) -> str:
-        return os.path.join(self.run_folder, 'metadata.json')
+    def summary(self) -> str:
+        return os.path.join(self.run_folder, 'summary.json')
 
     @property
     def step_results(self) -> str:
@@ -339,7 +332,3 @@ class ResultsPaths:
 
     def last_checkpoint(self, name: str) -> str:
         return os.path.join(self.checkpoints, f'{name}_last.pt')
-
-    @staticmethod
-    def time(time_format: str) -> str:
-        return datetime.datetime.now().strftime(time_format)
