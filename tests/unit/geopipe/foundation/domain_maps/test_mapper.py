@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for domain mapper (mapper.py).'''
 
 # third-party imports

@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for world grid builder (builder.py).'''
 
 # third-party imports

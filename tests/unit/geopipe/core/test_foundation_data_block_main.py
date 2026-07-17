@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for DataBlock, DataBlockInputs, and DataBlockConfig.'''
 
 # standard imports

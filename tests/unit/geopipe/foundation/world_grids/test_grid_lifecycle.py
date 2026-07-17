@@ -19,12 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for world grid lifecycle management (lifecycle.py).'''
 
-# third-party imports
-import pytest
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.foundation.world_grids.builder as grid_builder
