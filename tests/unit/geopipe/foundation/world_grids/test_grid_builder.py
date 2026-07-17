@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for world grid builder (builder.py).'''
@@ -35,7 +34,8 @@ def test_build_grid_ref(dummy_geotiff_factory):
     '''
     Given: A reference raster created on disk.
     When: `build_grid` is executed in `'ref'` mode.
-    Then: Correctly parse the reference bounds, resolutions, and construct the GridLayout.
+    Then: Correctly parse reference bounds and resolutions, and
+        construct the GridLayout.
     '''
     ref_path = str(dummy_geotiff_factory('ref_raster.tif', 16, 16, 1))
 
@@ -65,7 +65,8 @@ def test_build_grid_aoi():
     '''
     Given: Explicit grid geometries and coordinates.
     When: `build_grid` is executed in `'aoi'` mode.
-    Then: Create the GridLayout matching the provided spatial extent bounds.
+    Then: Create the GridLayout matching the provided spatial
+        extent bounds.
     '''
     config = grid_builder.GridParameters(
         mode='aoi',
@@ -86,7 +87,8 @@ def test_build_grid_tiles():
     '''
     Given: Explicit coordinates and a fixed tile shape count.
     When: `build_grid` is executed in `'tiles'` mode.
-    Then: Construct a grid matching the specified row/col tile dimensions.
+    Then: Construct a grid matching the specified row/col tile
+        dimensions.
     '''
     config = grid_builder.GridParameters(
         mode='tiles',

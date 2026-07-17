@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for the canonical block-building pipeline module.'''
 
 # standard imports
@@ -32,8 +30,15 @@ import landseg.geopipe.foundation as foundation
 import landseg.geopipe.foundation.common as common
 import landseg.geopipe.foundation.data_blocks as data_blocks
 
+
 # ----- pipeline execution
 def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
+    '''
+    Given: A clean layout, grid parameters, and development inputs.
+    When: Running data blocks building for the dev stage.
+    Then: Compile development block datasets, manifest catalogs,
+        and schemas.
+    '''
     # Setup logger and execution summary
     report_file = str(tmp_path / 'ingest_report.json')
     logger = common.FoundationLogger(
@@ -108,6 +113,11 @@ def test_pipeline_run_dev_stage(tmp_path, dummy_data_paths):
 
 
 def test_pipeline_run_test_stage(tmp_path, dummy_data_paths):
+    '''
+    Given: A clean layout, grid parameters, and test inputs.
+    When: Running data blocks building for the test stage.
+    Then: Compile holdout test block datasets, manifests, and catalogs.
+    '''
     # Setup logger and execution summary
     report_file = str(tmp_path / 'ingest_report.json')
     logger = common.FoundationLogger(

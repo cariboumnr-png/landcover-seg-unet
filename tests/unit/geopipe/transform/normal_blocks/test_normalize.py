@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for block normalization logic (normalize.py).'''
@@ -35,6 +34,11 @@ import landseg.geopipe.transform.normal_blocks.normalize as normalize
 
 # ----- `_normalize_image` tests
 def test_normalize_image_math():
+    '''
+    Given: A raw image array, a valid pixel mask, and global band stats.
+    When: Running _normalize_image.
+    Then: Correctly apply z-score normalization and replace invalid values.
+    '''
     # [1, 2, 2]
     raw_img = numpy.array([[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32)
     # pixel (1,1) is invalid
@@ -60,6 +64,11 @@ def test_normalize_image_math():
 
 # ----- `_purge` tests
 def test_purge_removes_stale_files(tmp_path):
+    '''
+    Given: A target directory containing a mixture of expected and stale files.
+    When: Running _purge.
+    Then: Remove stale files and keep the expected ones.
+    '''
     target_dir = tmp_path / 'normalized_blocks'
     os.makedirs(target_dir, exist_ok=True)
 

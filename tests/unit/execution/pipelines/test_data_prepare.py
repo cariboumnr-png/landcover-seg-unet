@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for the data preparation execution pipeline.'''
 
 # standard imports
@@ -38,7 +36,7 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     '''
     Given: A RootConfig pointing to valid raster inputs and temporary
         output directories.
-    When: Running the data ingest followed by the data prepare pipelines.
+    When: Running data ingest followed by data prepare pipelines.
     Then: Correctly partition the data blocks, aggregate image stats,
         normalize blocks, and compile schemas.
     '''

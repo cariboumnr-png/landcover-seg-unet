@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for domain map builder (builder.py).'''
@@ -36,7 +35,8 @@ def test_build_domain_success():
     '''
     Given: A dict of mapped grid tiles including the max_idx marker.
     When: `build_domain` is executed.
-    Then: Construct the DomainTileMap with resolved majorities, frequencies, and projected PCA features.
+    Then: Construct the DomainTileMap with resolved majorities,
+        frequencies, and projected PCA features.
     '''
     # 2 classes: 0 and 1
     mapped_tiles = {

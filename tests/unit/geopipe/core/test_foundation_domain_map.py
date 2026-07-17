@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for domain mapping module (foundation_domain_map.py).'''
@@ -35,7 +34,8 @@ def test_domain_tile_map_container():
     '''
     Given: An empty initialized `DomainTileMap`.
     When: Setting data elements and testing container protocol.
-    Then: Correctly stores entries, validates indices, and tracks length.
+    Then: Correctly stores entries, validates indices, and tracks
+        length.
     '''
     tile_map = domain_map.DomainTileMap()
     assert len(tile_map) == 0
@@ -84,7 +84,8 @@ def test_domain_tile_map_serialization_roundtrip():
     '''
     Given: A populated `DomainTileMap`.
     When: Exported and restored via JSON payloads.
-    Then: State, metadata, and string-to-tuple coordinates are fully preserved.
+    Then: State, metadata, and string-to-tuple coordinates are
+        fully preserved.
     '''
     _tile: domain_map.DomainTile = {
         'majority': 1,

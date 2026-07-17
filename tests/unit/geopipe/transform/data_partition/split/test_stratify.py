@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for stratified splitter logic (stratify.py).'''
@@ -33,6 +32,12 @@ import landseg.geopipe.transform.data_partition.split.stratify as stratify
 
 # ----- `stratified_splitter` tests
 def test_stratified_splitter_success():
+    '''
+    Given: Block coordinates and multi-class counts list.
+    When: Running stratified_splitter.
+    Then: Correctly partition blocks into train/val/test splits without
+        any overlaps.
+    '''
     # base counts: 10 blocks, 3 classes
     # block coords mapping to class count lists
     base_counts = {
@@ -87,6 +92,11 @@ def test_stratified_splitter_success():
 
 
 def test_stratified_splitter_invalid_inputs():
+    '''
+    Given: Invalid ratios or empty counts dictionary.
+    When: Running stratified_splitter.
+    Then: Raise a ValueError.
+    '''
     # counts must be non-empty
     with pytest.raises(ValueError, match='Counts must be non-empty'):
         stratify.stratified_splitter({}, val_ratio=0.1)
@@ -102,6 +112,11 @@ def test_stratified_splitter_invalid_inputs():
 
 
 def test_stratified_splitter_reproducibility():
+    '''
+    Given: A fixed coordinate counts map.
+    When: Running stratified_splitter multiple times.
+    Then: Produce identical split partitions.
+    '''
     base = {(i, j): [i + 1, j + 2] for i in range(5) for j in range(5)}
     res1 = stratify.stratified_splitter(base, val_ratio=0.2, test_ratio=0.2)
     res2 = stratify.stratified_splitter(base, val_ratio=0.2, test_ratio=0.2)

@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for data partition label statistics (stats.py).'''
 
 # local imports
@@ -29,6 +27,12 @@ import landseg.geopipe.transform.data_partition.stats as part_stats
 
 # ----- `count_label` tests
 def test_count_label_success(mocker):
+    '''
+    Given: A list of DataBlock file paths.
+    When: Running count_label to compute class statistics.
+    Then: Correctly aggregate absolute class frequency counts across
+        all blocks.
+    '''
     mock_block = mocker.Mock()
     mock_block.manifest = {
         'label_count': {

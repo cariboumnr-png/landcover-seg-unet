@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for transform schema builder logic (schema.py).'''
 
 # local imports
@@ -29,6 +27,13 @@ import landseg.geopipe.transform.schema as schema
 
 # ----- `build_schema` tests
 def test_build_schema(mocker):
+    '''
+    Given: Mocked controller values for transformed blocks, stats,
+        and paths.
+    When: Running build_schema.
+    Then: Correctly construct the dataset schema, compile checksums,
+        and log the schema report.
+    '''
     # mock SchemaCtrl
     mock_schema_ctrl = mocker.Mock()
     mock_schema_ctrl.fetch.return_value = None # force schema creation

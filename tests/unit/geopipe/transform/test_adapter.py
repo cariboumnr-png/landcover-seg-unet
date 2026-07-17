@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for catalog data blocks adapter logic (adapter.py).'''
@@ -30,6 +29,12 @@ import landseg.geopipe.transform.adapter as adapter
 
 # ----- `data_blocks_adapter` tests
 def test_data_blocks_adapter(mocker):
+    '''
+    Given: Mocked catalogs and schemas with varying valid-pixel ratios.
+    When: Running data_blocks_adapter.
+    Then: Correctly filters blocks falling below thresholds and parses
+        coordinate indexes.
+    '''
     # mock schema and catalog dicts
     mock_schema = {
         'tensor_shapes': {
@@ -96,6 +101,11 @@ def test_data_blocks_adapter(mocker):
 
 
 def test_is_valid_block():
+    '''
+    Given: A dict of pixel threshold configurations.
+    When: Running _is_valid_block helper.
+    Then: Return True if all block ratios meet or exceed thresholds.
+    '''
     thresholds = {'image': 0.9, 'label': 0.8}
 
     # case 1: all ratios met

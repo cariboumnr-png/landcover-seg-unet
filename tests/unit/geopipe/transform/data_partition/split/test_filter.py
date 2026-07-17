@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for tile coordinate filtering logic (filter.py).'''
 
 # local imports
@@ -29,13 +27,17 @@ import landseg.geopipe.transform.data_partition.split.filter as filter_mod
 
 # ----- `filter_safe_tiles` tests
 def test_filter_safe_tiles_overlap():
-    # candidates list
+    '''
+    Given: candidate tiles that overlap with holdout base tiles.
+    When: Running filter_safe_tiles.
+    Then: Filter out any overlapping candidate blocks.
+    '''
     candidates = [
         (0, 0),
-        (0, 50),  # overlaps (0,0) if size is 256
-        (500, 500), # safe block
+        (0, 50),
+        (500, 500),
     ]
-    base_tiles = [(0, 0)] # e.g. validation block
+    base_tiles = [(0, 0)]
 
     result = filter_mod.filter_safe_tiles(
         candidates,
@@ -45,17 +47,15 @@ def test_filter_safe_tiles_overlap():
         buffer_steps=0
     )
 
-    # (0,0) and (0,50) overlap (0,0) with size 256. (500, 500) is far away.
     assert result == [(500, 500)]
 
 
 def test_filter_safe_tiles_buffer():
-    # base tile at (0, 0)
-    # candidate at (300, 0) -> distance is 300
-    # block size is 256.
-    # if buffer_steps = 1 and block_stride = 128:
-    # threshold = block_size + buffer_steps * block_stride = 256 + 128 = 384.
-    # distance (300) < threshold (384), so it should be filtered out.
+    '''
+    Given: Candidate tiles near base tiles.
+    When: Running filter_safe_tiles with a buffer_step > 0.
+    Then: Exclude candidates falling within the spatial buffer zone.
+    '''
     candidates = [(300, 0), (600, 0)]
     base_tiles = [(0, 0)]
 

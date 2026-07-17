@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for normal blocks image statistics aggregation (stats.py).'''
 
 # third-party imports
@@ -32,6 +30,11 @@ import landseg.geopipe.transform.normal_blocks.stats as norm_stats
 
 # ----- `aggregate_image_stats` tests
 def test_aggregate_image_stats_success(mocker):
+    '''
+    Given: A list of DataBlock paths with mock band metrics.
+    When: Running aggregate_image_stats.
+    Then: Correctly aggregate band means and standard deviations.
+    '''
     # mock geo_core.DataBlock.load to return a fake data block with sample data
     mock_block = mocker.Mock()
     mock_block.data.image = numpy.random.rand(2, 256, 256).astype(numpy.float32)
@@ -67,5 +70,10 @@ def test_aggregate_image_stats_success(mocker):
 
 
 def test_aggregate_image_stats_empty():
+    '''
+    Given: An empty input block set.
+    When: Running aggregate_image_stats.
+    Then: Raise a ValueError.
+    '''
     with pytest.raises(ValueError, match='input_blocks cannot be empty'):
         norm_stats.aggregate_image_stats(set())

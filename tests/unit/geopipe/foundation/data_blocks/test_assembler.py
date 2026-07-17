@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for assembler modules build blocks API.'''
@@ -68,6 +67,11 @@ def fixture_assembler_config_json(tmp_path):
 
 # ----- integrity checks
 def test_check_npz_integrity_success(tmp_path):
+    '''
+    Given: A valid DataBlock saved as an npz file on disk.
+    When: Running check_npz_integrity.
+    Then: Return a dictionary flagging the file as valid.
+    '''
     fpath = tmp_path / 'test.npz'
     img = numpy.ones((5, 8, 8), dtype=numpy.float32)
     cfg = geo_core.DataBlockConfig(
@@ -96,11 +100,21 @@ def test_check_npz_integrity_success(tmp_path):
 
 
 def test_check_npz_integrity_missing():
+    '''
+    Given: A non-existent file path.
+    When: Running check_npz_integrity.
+    Then: Return a dictionary flagging the file as invalid.
+    '''
     res = assembler.check_npz_integrity((0, 0), 'non_existent_file.npz')
     assert res == {(0, 0): False}
 
 
 def test_check_npz_integrity_corrupted(tmp_path):
+    '''
+    Given: A corrupted text file acting as a mock npz file.
+    When: Running check_npz_integrity.
+    Then: Return a dictionary flagging the file as invalid.
+    '''
     fpath = tmp_path / 'corrupt.npz'
     with open(fpath, 'w', encoding='UTF-8') as f:
         f.write('not a zip file')
@@ -110,11 +124,14 @@ def test_check_npz_integrity_corrupted(tmp_path):
 
 # ----- single block construction
 def test_build_single_block_success(dummy_geotiff_factory):
-    # Create mock 16x16 geotiffs
+    '''
+    Given: Valid image and label rasters with DEM and spectral config.
+    When: Running build_single_block.
+    Then: Return a DataBlock containing calculated indices and labels.
+    '''
     img_path = str(dummy_geotiff_factory('image.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
 
-    # 8x8 window inside the 16x16 raster
     window = alias.RasterWindow(col_off=4, row_off=4, width=8, height=8) # type: ignore
 
     label_specs = {
@@ -149,11 +166,15 @@ def test_build_single_block_success(dummy_geotiff_factory):
     )
     assert block.manifest['block_name'] == 'block_4_4'
     assert block.manifest['has_label'] is True
-    # 5 bands + 1 spectral (NDVI) + 4 topo
     assert block.data.image.shape == (5 + 1 + 4, 8, 8)
 
 
 def test_build_single_block_defaults(dummy_geotiff_factory):
+    '''
+    Given: Valid image and label rasters without extra features requested.
+    When: Running build_single_block with default options.
+    Then: Return a block containing only the original image bands.
+    '''
     img_path = str(dummy_geotiff_factory('image2.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label2.tif', 16, 16, 1))
 
@@ -185,8 +206,6 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         name='block_defaults',
         inputs=inputs
     )
-    # Default is add_spectral=None and add_topo=False
-    # Only 5 bands of the original image should be present, shape is (5, 8, 8)
     assert block.data.image.shape == (5, 8, 8)
 
 
@@ -196,6 +215,11 @@ def test_build_blocks_orchestrator(
     assembler_config_json,
     tmp_path
 ):
+    '''
+    Given: Configuration file paths and image/label window maps.
+    When: Running build_blocks orchestrator.
+    Then: Save built DataBlocks to the output path.
+    '''
     img_path = str(dummy_geotiff_factory('image.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
 
@@ -206,7 +230,6 @@ def test_build_blocks_orchestrator(
         config_fpath=str(assembler_config_json)
     )
 
-    # 4 non-overlapping 8x8 windows for a 16x16 grid
     image_windows = {
         (0, 0): alias.RasterWindow(col_off=0, row_off=0, width=8, height=8), # type: ignore
         (0, 8): alias.RasterWindow(col_off=8, row_off=0, width=8, height=8), # type: ignore
@@ -254,7 +277,6 @@ def test_build_blocks_orchestrator(
     assert result.stats['blocks_on_disk_before'] == 0
     assert result.label_color_map == {'1': [0, 255, 0]}
 
-    # Verify that the files were written
     for coord in image_windows:
         name = geo_utils.xy_name(coord)
         assert os.path.exists(os.path.join(inputs.output_root, f'{name}.npz'))
@@ -262,12 +284,15 @@ def test_build_blocks_orchestrator(
 
 # ----- test block construction
 def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
+    '''
+    Given: Large label and image inputs meeting class coverage requirements.
+    When: Running build_test_block.
+    Then: Return the path to a serialized DataBlock with valid coverage.
+    '''
     img_path = str(dummy_geotiff_factory('image.tif', 16, 16, 5))
     lbl_path = str(dummy_geotiff_factory('label.tif', 16, 16, 1))
 
-    # Force a mock label setup so all labels are present
     with rasterio.open(lbl_path, 'r+') as src:
-        # Write classes 1 and 2 to ensure class coverage
         arr = numpy.ones((1, 16, 16), dtype=numpy.uint8)
         arr[0, 0:8, :] = 1
         arr[0, 8:16, :] = 2

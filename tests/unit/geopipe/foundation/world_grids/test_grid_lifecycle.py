@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for world grid lifecycle management (lifecycle.py).'''
@@ -37,7 +36,8 @@ def test_prepare_world_grid_build(tmp_path, mocker):
     '''
     Given: A clean temporary folder (no saved grid JSON exists).
     When: `prepare_world_grid` is executed.
-    Then: Build a new GridLayout, save it, and log status as 'created_and_loaded'.
+    Then: Build a new GridLayout, save it, and log status as
+        'created_and_loaded'.
     '''
     grid_fpath = str(tmp_path / 'world_grid.json')
     config = grid_builder.GridParameters(
@@ -75,7 +75,8 @@ def test_prepare_world_grid_load(tmp_path, mocker):
     '''
     Given: An already persisted grid JSON file on disk.
     When: `prepare_world_grid` is executed.
-    Then: Load the grid from disk directly without rebuilding, and log status as 'loaded'.
+    Then: Load the grid from disk directly without rebuilding, and
+        log status as 'loaded'.
     '''
     grid_fpath = str(tmp_path / 'world_grid.json')
     config = grid_builder.GridParameters(

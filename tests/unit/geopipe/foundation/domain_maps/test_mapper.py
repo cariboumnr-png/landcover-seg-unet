@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for domain mapper (mapper.py).'''
@@ -36,9 +35,11 @@ import landseg.geopipe.foundation.domain_maps.mapper as domain_mapper
 # ----- `map_domain_to_grid` tests
 def test_map_domain_to_grid_success(dummy_geotiff_factory):
     '''
-    Given: A dummy categorical GeoTIFF with label values [10, 11] and index_base=10.
+    Given: A dummy categorical GeoTIFF with labels [10, 11]
+        and index_base=10.
     When: `map_domain_to_grid` is executed.
-    Then: Remap labels to zero-based range [0, 1] and return tile dictionary package.
+    Then: Remap labels to zero-based range [0, 1] and return
+        tile dictionary package.
     '''
     raster_path = str(dummy_geotiff_factory('categorical.tif', 16, 16, 1, dtype=numpy.int16))
 
@@ -107,7 +108,8 @@ def test_map_domain_to_grid_wrong_base(dummy_geotiff_factory):
 
 def test_map_domain_to_grid_empty(dummy_geotiff_factory):
     '''
-    Given: A dummy categorical GeoTIFF with all values equal to nodata.
+    Given: A dummy categorical GeoTIFF with all values equal
+        to nodata.
     When: Running `map_domain_to_grid`.
     Then: Raise a ValueError due to lack of valid categories.
     '''

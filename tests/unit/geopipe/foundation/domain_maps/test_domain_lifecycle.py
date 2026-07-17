@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for domain maps lifecycle management (lifecycle.py).'''
@@ -37,7 +36,8 @@ def test_prepare_domain_maps_build_and_load(tmp_path, mocker):
     '''
     Given: A grid, configs, and mock raster tiles.
     When: `prepare_domain_maps` is executed.
-    Then: Build a new DomainTileMap, serialize it to disk, and load it on subsequent calls.
+    Then: Build a new DomainTileMap, serialize it to disk, and
+        load it on subsequent calls.
     '''
     grid_spec = geo_core.GridSpec(
         crs='EPSG:32617',

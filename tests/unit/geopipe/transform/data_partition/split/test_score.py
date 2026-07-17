@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for block scoring calculations (score.py).'''
@@ -33,6 +32,11 @@ import landseg.geopipe.transform.data_partition.split.score as score
 
 # ----- `score_blocks` tests
 def test_score_blocks(mocker):
+    '''
+    Given: Multi-class counts for a pool of candidates.
+    When: Running score_blocks using parallel executor.
+    Then: Return a dict of blocks scored and sorted by value.
+    '''
     # mock ParallelExecutor to run synchronously in the same process
     mocker.patch(
         'landseg.utils.ParallelExecutor.run',
@@ -63,27 +67,39 @@ def test_score_blocks(mocker):
 
 
 def test_count_to_prob_w_temp():
-    # standard counts to prob conversion
+    '''
+    Given: Raw frequency counts of categories.
+    When: Running _count_to_prob_w_temp with temperature alpha.
+    Then: Return a normalized probability vector.
+    '''
     counts = [10, 10]
     prob = score._count_to_prob_w_temp(counts, alpha=1.0)
     assert numpy.allclose(prob, [0.5, 0.5])
 
-    # with alpha/temperature scaling
     prob_scaled = score._count_to_prob_w_temp(counts, alpha=2.0)
     assert numpy.allclose(prob_scaled, [0.5, 0.5])
 
 
 def test_log_lift_on_reward():
+    '''
+    Given: Reference and candidate probability distributions.
+    When: Running _log_lift_on_reward.
+    Then: Calculate the log lift score on the target categories.
+    '''
     p = numpy.array([0.5, 0.5])
     q = numpy.array([0.8, 0.2])
 
     val = score._log_lift_on_reward(p, q, reward_cls=(0,))
-    # q[0] * log((q[0]+eps)/(p[0]+eps))
     expected = 0.8 * numpy.log((0.8 + score.EPS) / (0.5 + score.EPS))
     assert val == pytest.approx(expected)
 
 
 def test_weighted_l1_w_reward():
+    '''
+    Given: Reference and candidate probability distributions.
+    When: Running _weighted_l1_w_reward.
+    Then: Calculate the weighted L1 distance on target categories.
+    '''
     p = numpy.array([0.5, 0.5])
     q = numpy.array([0.8, 0.2])
 
