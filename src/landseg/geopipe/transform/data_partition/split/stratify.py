@@ -95,11 +95,15 @@ def stratified_splitter(
     proportions. Remaining blocks are assigned to training.
 
     Args:
-        base_counts: Per-block integer class counts indexed by coordinates.
-        val_ratio: Target fraction of blocks in validation.
-        test_ratio: Target fraction of blocks in test. Use 0.0 to skip.
-        weight_mode: Weighting strategy for deviation scoring. ``'inverse'``
-            upweights rare classes using ``1 / max(global_count_k, 1)``.
+        base_counts:
+            Per-block integer class counts indexed by coordinates.
+        val_ratio:
+            Target fraction of blocks in validation.
+        test_ratio:
+            Target fraction of blocks in test. Use 0.0 to skip.
+        weight_mode:
+            Weighting strategy for deviation scoring. `'inverse'`
+            upweights rare classes using `1 / max(global_count_k, 1)`.
 
     Returns:
         SplitResult containing split coordinates, class counts,
@@ -136,6 +140,19 @@ def stratified_splitter(
     )
 
     train_idx = set(range(n_blocks)) - val_idx - test_idx # rest
+
+    # sanity checks on leakage before return
+    leak = train_idx & val_idx
+    if leak:
+        raise ValueError (f'Data leaked between [train] and [val]! {leak}')
+
+    leak = train_idx & test_idx
+    if leak:
+        raise ValueError(f'Data leaked between [train] and [test]! {leak}')
+
+    leak = val_idx & test_idx
+    if leak:
+        raise ValueError(f'Data leaked between [val] and [test]! {leak}')
 
     return SplitsResult(
         train=[coords[i] for i in sorted(train_idx)],

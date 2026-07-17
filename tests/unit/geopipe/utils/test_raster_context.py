@@ -19,44 +19,51 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.testing`.
+'''Unit tests for raster open context manager (raster_context.py).'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# third-party imports
+import pytest
+# local imports
+import landseg.geopipe.utils.raster_context as raster_context
 
-from __future__ import annotations
-import importlib
-import typing
 
-__all__ = [
-    # classes
-    'TIFFConfig',
-    'TIFFPaths',
-    # functions
-    'create_dummy_geotiff',
-    'generate_dummy_data'
-    # types
-]
+# ----- `open_rasters` tests
+def test_open_rasters_success(mocker):
+    '''
+    Given: A mixture of valid raster file paths and None entries.
+    When: `open_rasters` is executed.
+    Then: Yields opened readers for paths and None for None entries,
+        closing all on exit.
+    '''
+    # mock os.path.exists to confirm existence
+    mocker.patch('os.path.exists', return_value=True)
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dummy_data import (
-        TIFFConfig,
-        TIFFPaths,
-        create_dummy_geotiff,
-        generate_dummy_data
-    )
+    # mock rasterio.open context manager behavior
+    mock_reader = mocker.Mock()
+    mock_open = mocker.patch('rasterio.open')
+    mock_open.return_value.__enter__.return_value = mock_reader
 
-def __getattr__(name: str):
+    with raster_context.open_rasters(
+        'raster1.tif', None, 'raster2.tif'
+    ) as readers:
+        assert len(readers) == 3
+        assert readers[0] == mock_reader
+        assert readers[1] is None
+        assert readers[2] == mock_reader
 
-    if name in {
-        'TIFFConfig',
-        'TIFFPaths',
-        'create_dummy_geotiff',
-        'generate_dummy_data'
-    }:
-        return getattr(importlib.import_module('.dummy_data', __package__), name)
+    # check entering and exit behavior
+    assert mock_open.call_count == 2
+    assert mock_open.return_value.__exit__.call_count == 2
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
+def test_open_rasters_missing_file(mocker):
+    '''
+    Given: A raster file path that does not exist.
+    When: `open_rasters` is executed.
+    Then: Raise an AssertionError.
+    '''
+    mocker.patch('os.path.exists', return_value=False)
+
+    with pytest.raises(AssertionError, match='Raster not found'):
+        with raster_context.open_rasters('missing.tif') as _:
+            pass

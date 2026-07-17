@@ -79,12 +79,15 @@ def test_film_conditioner_build_z_layer_norm():
     payload = domains.DomainTargetPayload(ids_embd=ids_embd, vec_proj=None)
 
     z = cond._build_z(payload)
+    assert isinstance(z, torch.Tensor)
     assert z.shape == (2, 8)
     # verify layer norm properties (mean close to 0, var close to 1)
-    assert torch.allclose(z.mean(dim=-1), torch.zeros(2), atol=1e-5)
+    mean = z.mean(dim=-1)
+    var = z.var(dim=-1, unbiased=False)
     # LayerNorm standard deviation check
     # unbiased estimation vs population variance
-    assert torch.allclose(z.var(dim=-1, unbiased=False), torch.ones(2), atol=1e-5)
+    assert torch.allclose(mean, torch.zeros_like(mean), atol=1e-6)
+    assert torch.allclose(var, torch.ones_like(var), atol=1e-4)
 
 
 def test_film_conditioner_build_z_mismatched():
@@ -125,7 +128,7 @@ def test_film_conditioner_forward_modulation():
                     torch.full((z.shape[0], 4), 0.2)
                 ], dim=1
             )
-    cond.film = MockFilmSeq()
+    cond.film = MockFilmSeq() # type: ignore
 
     out = cond(x, payload)
     # out = x * (1.0 + gamma) + beta

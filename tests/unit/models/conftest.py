@@ -44,8 +44,12 @@ class MockDomainTargetConfig:
     use_vec: bool = False
     ids_embd_dims: int = 0
     vec_proj_dims: int = 0
-    vec_proj_config: config.DomainProjectionConfig = field(default_factory=dict)
-    conditioner_config: config.DomainConditionerAdapterConfig = field(default_factory=dict)
+    vec_proj_config: config.DomainProjectionConfig = field(
+        default_factory=lambda: {}
+    )
+    conditioner_config: config.DomainConditionerAdapterConfig = field(
+        default_factory=lambda: {}
+    )
 
 
 @dataclasses.dataclass(frozen=True)

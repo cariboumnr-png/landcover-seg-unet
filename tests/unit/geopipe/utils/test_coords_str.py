@@ -19,44 +19,29 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.testing`.
+'''Unit tests for coordinates-to-string format utilities (coords_str.py).'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.geopipe.utils.coords_str as coords_str
 
-from __future__ import annotations
-import importlib
-import typing
 
-__all__ = [
-    # classes
-    'TIFFConfig',
-    'TIFFPaths',
-    # functions
-    'create_dummy_geotiff',
-    'generate_dummy_data'
-    # types
-]
+# ----- `xy_name` tests
+def test_xy_name():
+    '''
+    Given: A tuple of (x, y) coordinates.
+    When: Converting to a canonical string name.
+    Then: Formats as 'row_YYYYYY_col_XXXXXX' with zero-padding.
+    '''
+    assert coords_str.xy_name((12, 34)) == 'row_000034_col_000012'
+    assert coords_str.xy_name((0, 0)) == 'row_000000_col_000000'
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dummy_data import (
-        TIFFConfig,
-        TIFFPaths,
-        create_dummy_geotiff,
-        generate_dummy_data
-    )
 
-def __getattr__(name: str):
-
-    if name in {
-        'TIFFConfig',
-        'TIFFPaths',
-        'create_dummy_geotiff',
-        'generate_dummy_data'
-    }:
-        return getattr(importlib.import_module('.dummy_data', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+# ----- `name_xy` tests
+def test_name_xy():
+    '''
+    Given: A canonical row/col block name string.
+    When: Converting back to coordinates.
+    Then: Correctly parses out the (x, y) integer tuple.
+    '''
+    assert coords_str.name_xy('row_000034_col_000012') == (12, 34)
+    assert coords_str.name_xy('row_000000_col_000000') == (0, 0)

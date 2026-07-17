@@ -53,6 +53,21 @@ class _TileSpecs:
     overlap_row: int = 0
     overlap_col: int = 0
 
+    def validate(self):
+        # current we only accept equal row and col sizes and strides
+        if self.size_row != self.size_col:
+            raise ValueError('Only square blocks are supported.')
+
+        if self.overlap_row != self.overlap_col:
+            raise ValueError('Only equal row/column stride is supported.')
+
+        if self.size_row <= 0:
+            raise ValueError('Block size must be positive.')
+
+        if self.overlap_row < 0:
+            raise ValueError('Block stride must be zero or positive.')
+
+
 @dataclasses.dataclass
 class _Grid:
     mode: str = 'ref'
@@ -66,7 +81,7 @@ class _Grid:
         return dataclasses.astuple(self.tile_specs)
 
     def validate(self) -> None:
-        # grid mode validation
+        # grid mode and corresponding extent configs
         match self.mode:
             case 'ref':
                 utils.must_exist(self.extent.filepath, 'extent reference raster')
@@ -82,9 +97,11 @@ class _Grid:
                     raise ValueError('Grid shape has zero(s)')
             case _:
                 raise ValueError(f'Invalid grid mode: {self.mode}')
-        # crs validation
+        # crs string format
         if not bool(re.fullmatch(r'epsg:\d+', self.crs, re.I)):
             raise ValueError('Invalid CRS identifier. Must be [EPSG:....]')
+        # tile specs
+        self.tile_specs.validate()
 
 # ----- domain
 @dataclasses.dataclass

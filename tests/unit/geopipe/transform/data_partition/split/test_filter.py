@@ -19,44 +19,52 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.testing`.
+'''Unit tests for tile coordinate filtering logic (filter.py).'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.geopipe.transform.data_partition.split.filter as filter_mod
 
-from __future__ import annotations
-import importlib
-import typing
 
-__all__ = [
-    # classes
-    'TIFFConfig',
-    'TIFFPaths',
-    # functions
-    'create_dummy_geotiff',
-    'generate_dummy_data'
-    # types
-]
+# ----- `filter_safe_tiles` tests
+def test_filter_safe_tiles_overlap():
+    '''
+    Given: candidate tiles that overlap with holdout base tiles.
+    When: Running filter_safe_tiles.
+    Then: Filter out any overlapping candidate blocks.
+    '''
+    candidates = [
+        (0, 0),
+        (0, 50),
+        (500, 500),
+    ]
+    base_tiles = [(0, 0)]
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dummy_data import (
-        TIFFConfig,
-        TIFFPaths,
-        create_dummy_geotiff,
-        generate_dummy_data
+    result = filter_mod.filter_safe_tiles(
+        candidates,
+        base_tiles,
+        block_size=256,
+        block_stride=128,
+        buffer_steps=0
     )
 
-def __getattr__(name: str):
+    assert result == [(500, 500)]
 
-    if name in {
-        'TIFFConfig',
-        'TIFFPaths',
-        'create_dummy_geotiff',
-        'generate_dummy_data'
-    }:
-        return getattr(importlib.import_module('.dummy_data', __package__), name)
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+def test_filter_safe_tiles_buffer():
+    '''
+    Given: Candidate tiles near base tiles.
+    When: Running filter_safe_tiles with a buffer_step > 0.
+    Then: Exclude candidates falling within the spatial buffer zone.
+    '''
+    candidates = [(300, 0), (600, 0)]
+    base_tiles = [(0, 0)]
+
+    result = filter_mod.filter_safe_tiles(
+        candidates,
+        base_tiles,
+        block_size=256,
+        block_stride=128,
+        buffer_steps=1
+    )
+
+    assert result == [(600, 0)]

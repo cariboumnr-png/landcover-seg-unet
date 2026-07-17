@@ -19,44 +19,30 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.testing`.
+'''Unit tests for data partition label statistics (stats.py).'''
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+# local imports
+import landseg.geopipe.transform.data_partition.stats as part_stats
 
-from __future__ import annotations
-import importlib
-import typing
 
-__all__ = [
-    # classes
-    'TIFFConfig',
-    'TIFFPaths',
-    # functions
-    'create_dummy_geotiff',
-    'generate_dummy_data'
-    # types
-]
+# ----- `count_label` tests
+def test_count_label_success(mocker):
+    '''
+    Given: A list of DataBlock file paths.
+    When: Running count_label to compute class statistics.
+    Then: Correctly aggregate absolute class frequency counts across
+        all blocks.
+    '''
+    mock_block = mocker.Mock()
+    mock_block.manifest = {
+        'label_count': {
+            'head1': [10, 20],
+        }
+    }
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .dummy_data import (
-        TIFFConfig,
-        TIFFPaths,
-        create_dummy_geotiff,
-        generate_dummy_data
-    )
+    mocker.patch('landseg.geopipe.core.DataBlock.load', return_value=mock_block)
 
-def __getattr__(name: str):
+    block_files = ['file1.npz', 'file2.npz']
+    result = part_stats.count_label(block_files)
 
-    if name in {
-        'TIFFConfig',
-        'TIFFPaths',
-        'create_dummy_geotiff',
-        'generate_dummy_data'
-    }:
-        return getattr(importlib.import_module('.dummy_data', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    assert result == {'head1': [20, 40]}
