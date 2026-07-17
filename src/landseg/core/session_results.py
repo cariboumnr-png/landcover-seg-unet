@@ -109,9 +109,9 @@ class SessionStepResults:
         assert self.validation
         name = self._metric_name
         if name == 'iou':
-            if self._track_heads is None:
+            if not bool(self._track_heads):
                 h = list(self.validation.head_metrics.keys())[0]
-                return f'IoU from {h}'
+                return f'IoU from [{h}] (simple mean)'
             h = ' + '.join([f'{k}*{v}' for k, v in self._track_heads.items()])
             name = f'IoU = {h}'
             return name
@@ -290,15 +290,12 @@ def _track_metrics(
             return mtl_metrics['gem']
 
         case 'iou':
-            if isinstance(track_heads, dict):
-                m = {k: v for k, v in head_metrics.items() if k in track_heads}
-                return _get_mean_iou(m, track_heads)
+            # fall back to track the simple mean of all active heads
+            if not bool(track_heads): # empty dict or None
+                return _get_mean_iou(head_metrics, None)
 
-            if track_heads is None:
-                m = next(iter(head_metrics.items())) # fall back to 1st head
-                return _get_mean_iou({m[0]: m[1]}, None)
-
-            raise ValueError(f'Invalid tracking head: {track_heads}')
+            m = {k: v for k, v in head_metrics.items() if k in track_heads}
+            return _get_mean_iou(m, track_heads)
 
         case _:
             raise ValueError(f'Invalid metric name: {metric_name}')
