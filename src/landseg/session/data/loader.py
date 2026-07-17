@@ -47,9 +47,10 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.core as core
+import landseg.session.common as common
 import landseg.session.common.alias as alias
 import landseg.session.data as data
-import landseg.utils as utils
+
 
 # ---------------------------------Public Type---------------------------------
 class DataLoaderConfig(typing.Protocol):
@@ -89,7 +90,7 @@ def build_dataloaders(
     data_specs: core.DataSpecs,
     config: DataLoaderConfig,
     *,
-    logger: utils.Logger,
+    logger: common.SessionLogger,
 ) -> DataLoaders:
     '''
     Construct train/val/test dataloaders and metadata from dataset specs.
@@ -119,10 +120,6 @@ def build_dataloaders(
         - Returned loaders are aligned with dataset structure and
           orchestration requirements.
     '''
-
-    # get a child from the base logger
-    logger = logger.get_child('dldrs')
-
     # meta to be shipped
     h_w = data_specs.meta.image_specs.height_width
     assert h_w % config.patch_size == 0
@@ -204,7 +201,7 @@ def _load(
     batch_size: int,
     patch_size: int,
     *,
-    logger: utils.Logger
+    logger: common.SessionLogger,
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
 
@@ -228,10 +225,22 @@ def _load(
     dataset = data.MultiBlockDataset(
         data_blocks,
         dataset_config,
-        logger,
-        preload=load_flags[f'preload_{mode}'],
+        preload=bool(load_flags[f'preload_{mode}']),
         augment_flip=bool(mode == 'train'),
         blk_cache_num=load_flags[f'cache_{mode}']
+    )
+    # log dataloading info
+    logger.set_inputs({
+        mode: {
+            'loaded': dataset.n_preloaded,
+            'cached': dataset.n_cached
+        }
+    })
+    logger.log(
+        'INFO',
+        f'Blocks type\t[{mode}]: '
+        f'Loaded {dataset.n_preloaded} blocks | '
+        f'Cached {dataset.n_cached} blocks'
     )
 
     # get dataloader
