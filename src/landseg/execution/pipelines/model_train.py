@@ -28,6 +28,7 @@ model, and runs the multi-phase training runner.
 
 # standard imports
 import datetime
+import time
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
@@ -90,8 +91,10 @@ def train(config: configs.RootConfig) -> None:
     try:
         logger.log_sep()
 
-        # collect artifacts and build dataspsec
-        artifact_paths=artifacts.ArtifactPaths(
+        # collect artifacts and build `DataSpecs`
+        logger.log('INFO', '[START] Data specifications setup')
+        start_time = time.perf_counter()
+        artifact_paths = artifacts.ArtifactPaths(
             f'{config.execution.exp_root}/artifacts/'
             f'{config.foundation.datablocks.name}'
         )
@@ -102,8 +105,14 @@ def train(config: configs.RootConfig) -> None:
             vec_domain_name=config.dataspecs.domain_vec_name,
             print_out=print_out
         )
+        d_setup = time.perf_counter() - start_time
+        logger.log('INFO', f'[COMPLETE] Data specs setup (D_{d_setup:.2f}s)')
+
+        logger.log_sep()
 
         # setup the model
+        logger.log('INFO', '[START] Model assembly')
+        start_time = time.perf_counter()
         model = models.build_multihead_unet(
             patch_size=config.session.data_loader.patch_size,
             dataspecs=dataspecs,
@@ -112,11 +121,16 @@ def train(config: configs.RootConfig) -> None:
             enable_clamp=config.models.numeric_safety.enable_clamp,
             clamp_range=config.models.numeric_safety.clamp_range
         )
+        d_model = time.perf_counter() - start_time
+        logger.log('INFO', f'[COMPLETE] Model assembly (D_{d_model:.2f}s)')
+
+        logger.log_sep()
 
         # build the session
+        # build session based on continuous or curriculum mode
         match config.session.mode:
             case 'continuous':
-                session_context=session.SessionBuildContext(
+                session_context = session.SessionBuildContext(
                     device=c.DEVICE,
                     verbose_runner=print_out,
                     session_paths=ss_paths,
@@ -129,7 +143,7 @@ def train(config: configs.RootConfig) -> None:
                     logger=logger
                 )
             case 'curriculum':
-                session_context=session.SessionBuildContext(
+                session_context = session.SessionBuildContext(
                     device=c.DEVICE,
                     verbose_runner=print_out,
                     session_paths=ss_paths,
@@ -144,17 +158,24 @@ def train(config: configs.RootConfig) -> None:
             case _:
                 raise ValueError(f'Invalid training mode: {config.session.mode}')
 
-        # run session in a block
+        # run session execution
+        logger.log('INFO', '[START] Training session')
+        start_time = time.perf_counter()
         final = runner.execute()
+        d_exec = time.perf_counter() - start_time
+        logger.log('INFO', f'[COMPLETE] Training session (D_{d_exec:.2f}s)')
 
         # update summary
         logger.summary['completed_at'] = _cur_time()
         logger.set_summary_status('SUCCESS')
-        logger.set_results({'best_value': final})
+        logger.set_results({
+            'best_value': final,
+            'duration_sec': d_setup + d_model + d_exec
+        })
 
     except Exception as e:
         logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Ingestion pipeline failed: {e}', exc_info=True)
+        logger.log('ERROR', f'Training pipeline failed: {e}', exc_info=True)
         raise e
 
     # close logger
