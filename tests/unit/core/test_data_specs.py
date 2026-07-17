@@ -19,15 +19,19 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for `DataSpec` core contract (data_specs.py)'''
 
 # local imports
 import landseg.core as core
 
+
 # ----- composition
 def test_dataspecs_fixture_constructs_valid_instance(dataspecs):
+    '''
+    Given: The standard dataspecs fixture.
+    When: Testing its composition.
+    Then: Return a valid DataSpec instance with expected schema subparts.
+    '''
     assert dataspecs.name == "test_dataset"
     assert dataspecs.mode == "default"
 
@@ -39,6 +43,11 @@ def test_dataspecs_fixture_constructs_valid_instance(dataspecs):
 
 # ----- image specs
 def test_image_collects_spectral_channels():
+    '''
+    Given: An Image metadata object containing spectral bands.
+    When: Accessing spec_channels.
+    Then: Extract correct channel indexes and zero topographic channels.
+    '''
     image = _make_image_meta(
         band_map={
             'red': 0,
@@ -53,6 +62,11 @@ def test_image_collects_spectral_channels():
 
 
 def test_image_collects_topographic_channels():
+    '''
+    Given: An Image metadata object containing elevation and aspect bands.
+    When: Accessing topo_channels.
+    Then: Extract correct channel indexes and zero spectral channels.
+    '''
     image = _make_image_meta(
         band_map={
             'dem': 0,
@@ -68,6 +82,11 @@ def test_image_collects_topographic_channels():
 
 
 def test_image_band_names_are_case_insensitive():
+    '''
+    Given: An Image metadata object with mixed-case band names.
+    When: Parsing band mappings.
+    Then: Correctly parse the band types case-insensitively.
+    '''
     image = _make_image_meta(
         band_map={
             'Red': 0,
@@ -81,6 +100,11 @@ def test_image_band_names_are_case_insensitive():
 
 
 def test_image_ignores_unknown_band_names():
+    '''
+    Given: An Image metadata object with unknown band names.
+    When: Parsing band mappings.
+    Then: Ignore the unknown bands entirely.
+    '''
     image = _make_image_meta(
         band_map={
             'foo': 0,
@@ -94,6 +118,11 @@ def test_image_ignores_unknown_band_names():
 
 
 def test_image_preserves_channel_indices():
+    '''
+    Given: An Image metadata object containing mixed band mappings.
+    When: Resolving channel mappings.
+    Then: Retain original integer band layout indexes.
+    '''
     image = _make_image_meta(
         band_map={
             'red': 7,
@@ -107,6 +136,11 @@ def test_image_preserves_channel_indices():
 
 # ----- domains
 def test_domain_accept_expected_structure():
+    '''
+    Given: A multi-modal domain tracking structure.
+    When: Building a Domains instance.
+    Then: Correctly save ID mappings, vectors, and feature dimensions.
+    '''
     domains = core.Domains(
         train=core.Domains.Dom(
             ids_domain={'blk1': 1},

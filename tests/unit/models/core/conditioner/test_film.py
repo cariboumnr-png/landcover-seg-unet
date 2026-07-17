@@ -19,15 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for FiLM domain conditioning adapter (film.py).'''
 
 # third-party imports
-import torch
 import pytest
+import torch
 # local imports
 import landseg.models.core.conditioner.film as film
 import landseg.models.core.domains as domains
@@ -35,6 +33,11 @@ import landseg.models.core.domains as domains
 
 # ----- `FilmConditioner` tests
 def test_film_conditioner_pass_through():
+    '''
+    Given: FilmConditioner initialized with embed_dim=0.
+    When: Running forward pass.
+    Then: Return the input tensor unchanged.
+    '''
     cond = film.FilmConditioner(embed_dim=0, bottleneck_ch=16)
     x = torch.randn(2, 16, 8, 8)
     out = cond(x, None)
@@ -44,6 +47,11 @@ def test_film_conditioner_pass_through():
 
 
 def test_film_conditioner_none_payload():
+    '''
+    Given: FilmConditioner with non-zero embed_dim but a None payload.
+    When: Running forward pass.
+    Then: Pass through the input tensor unmodified.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16)
     x = torch.randn(2, 16, 8, 8)
     out = cond(x, None)
@@ -52,6 +60,11 @@ def test_film_conditioner_none_payload():
 
 
 def test_film_conditioner_empty_payload():
+    '''
+    Given: FilmConditioner with non-zero embed_dim but empty payload.
+    When: Running forward pass.
+    Then: Pass through the input tensor unmodified.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16)
     x = torch.randn(2, 16, 8, 8)
     payload = domains.DomainTargetPayload(ids_embd=None, vec_proj=None)
@@ -61,19 +74,28 @@ def test_film_conditioner_empty_payload():
 
 
 def test_film_conditioner_initialization():
+    '''
+    Given: Bottleneck channels and hidden dimensions.
+    When: Initializing a FilmConditioner.
+    Then: Construct the linear projection MLP modules correctly.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16, hidden_dim=4)
 
     assert cond.embed_dim == 8
     assert cond.film is not None
-    # film is Sequential: Linear(8, 4) -> ReLU -> Linear(4, 32)
     assert len(cond.film) == 3
     assert isinstance(cond.film[0], torch.nn.Linear)
     assert isinstance(cond.film[2], torch.nn.Linear)
     assert cond.film[0].out_features == 4
-    assert cond.film[2].out_features == 32 # 2 * bottleneck_ch
+    assert cond.film[2].out_features == 32
 
 
 def test_film_conditioner_build_z_layer_norm():
+    '''
+    Given: ID embedding payload.
+    When: Building normalized embedding context z.
+    Then: Standardize outputs to 0 mean and unit variance.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16)
     ids_embd = torch.randn(2, 8)
     payload = domains.DomainTargetPayload(ids_embd=ids_embd, vec_proj=None)
@@ -81,16 +103,18 @@ def test_film_conditioner_build_z_layer_norm():
     z = cond._build_z(payload)
     assert isinstance(z, torch.Tensor)
     assert z.shape == (2, 8)
-    # verify layer norm properties (mean close to 0, var close to 1)
     mean = z.mean(dim=-1)
     var = z.var(dim=-1, unbiased=False)
-    # LayerNorm standard deviation check
-    # unbiased estimation vs population variance
     assert torch.allclose(mean, torch.zeros_like(mean), atol=1e-6)
     assert torch.allclose(var, torch.ones_like(var), atol=1e-4)
 
 
 def test_film_conditioner_build_z_mismatched():
+    '''
+    Given: A payload containing conflicting ids and projection inputs.
+    When: Building the embedding context z.
+    Then: Raise a ValueError indicating mismatched dimensions.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16)
     ids_embd = torch.randn(2, 8)
     vec_proj = torch.randn(2, 6)
@@ -101,6 +125,11 @@ def test_film_conditioner_build_z_mismatched():
 
 
 def test_film_conditioner_build_z_mismatched_output_dim():
+    '''
+    Given: A payload with wrong embedding dimensionality.
+    When: Building the embedding context z.
+    Then: Raise a ValueError.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=16)
     ids_embd = torch.randn(2, 6)
     payload = domains.DomainTargetPayload(ids_embd=ids_embd, vec_proj=None)
@@ -110,13 +139,14 @@ def test_film_conditioner_build_z_mismatched_output_dim():
 
 
 def test_film_conditioner_forward_modulation():
+    '''
+    Given: Mocked linear scale and bias parameters from film network.
+    When: Modulating inputs.
+    Then: Compute affine transform scaling: x * (1.0 + gamma) + beta.
+    '''
     cond = film.FilmConditioner(embed_dim=8, bottleneck_ch=4)
     x = torch.ones(2, 4, 8, 8)
 
-    # mock film network outputs
-    # output dimension is 2 * bottleneck_ch = 8.
-    # we want gamma=0.5 (first 4 channels) and beta=0.2 (next 4 channels)
-    # so we mock the forward pass of self.film
     ids_embd = torch.randn(2, 8)
     payload = domains.DomainTargetPayload(ids_embd=ids_embd, vec_proj=None)
 
@@ -131,7 +161,5 @@ def test_film_conditioner_forward_modulation():
     cond.film = MockFilmSeq() # type: ignore
 
     out = cond(x, payload)
-    # out = x * (1.0 + gamma) + beta
-    # out = 1.0 * (1.0 + 0.5) + 0.2 = 1.7
     assert out.shape == (2, 4, 8, 8)
     assert torch.allclose(out, torch.full((2, 4, 8, 8), 1.7))

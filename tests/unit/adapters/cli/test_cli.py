@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for the CLI adapter module.'''
 
 # standard imports
@@ -30,6 +28,11 @@ import sys
 
 # ----- smoke tests
 def test_cli_help_smoke():
+    '''
+    Given: The command line interface arguments.
+    When: Running the CLI module with the help flag.
+    Then: Return a successful return code and print the usage help.
+    '''
     result = subprocess.run(
         [sys.executable, '-m', 'landseg.adapters.cli.cli', '--help'],
         capture_output=True,

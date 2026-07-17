@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for the custom logger (logger.py).'''
 
 # standard imports
@@ -31,6 +29,11 @@ import landseg.utils.logger as logger
 
 
 def test_logger_initialization(tmp_path):
+    '''
+    Given: A target file path and logging level.
+    When: Initializing a Logger instance.
+    Then: Return a valid Logger instance with expected defaults.
+    '''
     log_file = tmp_path / 'test_init.log'
     log_inst = logger.Logger(
         name='test_logger',
@@ -46,6 +49,11 @@ def test_logger_initialization(tmp_path):
 
 
 def test_logger_silent_property(tmp_path):
+    '''
+    Given: A console logging level of None.
+    When: Initializing a Logger instance.
+    Then: The silent property evaluates to True.
+    '''
     log_file = tmp_path / 'test_silent.log'
     log_inst = logger.Logger(
         name='test_silent_logger',
@@ -59,6 +67,11 @@ def test_logger_silent_property(tmp_path):
 
 
 def test_logger_writes_to_file(tmp_path):
+    '''
+    Given: A log path with file logging enabled.
+    When: Logging messages of varying levels.
+    Then: Write eligible level messages to file and exclude debugs.
+    '''
     log_file = tmp_path / 'test_write.log'
     log_inst = logger.Logger(
         name='test_writer',
@@ -68,7 +81,6 @@ def test_logger_writes_to_file(tmp_path):
     )
 
     log_inst.log('info', 'Test message info')
-    # should not be logged as log_lvl is INFO
     log_inst.log('debug', 'Test message debug')
     log_inst.close()
 
@@ -82,6 +94,12 @@ def test_logger_writes_to_file(tmp_path):
 
 
 def test_logger_get_child(tmp_path):
+    '''
+    Given: A parent Logger instance.
+    When: Creating a child logger.
+    Then: The child logger inherits parent characteristics and updates
+        the logging scope prefix name.
+    '''
     log_file = tmp_path / 'test_child.log'
     parent = logger.Logger(
         name='parent',
@@ -106,6 +124,11 @@ def test_logger_get_child(tmp_path):
 
 
 def test_logger_separator(tmp_path):
+    '''
+    Given: A Logger instance.
+    When: Invoking log_sep.
+    Then: Output a line separator containing the character repeated.
+    '''
     log_file = tmp_path / 'test_sep.log'
     log_inst = logger.Logger(
         name='test_sep',

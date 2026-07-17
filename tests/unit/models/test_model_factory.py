@@ -19,14 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for top-level model factory and validation (factory.py).'''
 
 # third-party imports
-import torch
 import pytest
+import torch
 # local imports
 import landseg.models.factory as factory
 import landseg.models.frames as frames
@@ -38,6 +37,11 @@ def test_build_multihead_unet(
     mock_backbone_config_factory,
     mock_domain_config_factory,
 ):
+    '''
+    Given: A DataSpec and conditioning configurations.
+    When: Building a multihead UNet model.
+    Then: Return a valid instance of MultiHeadBaseModel.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     conditioning_cfg = {
         'concat': mock_domain_config_factory(use_ids=True, ids_embd_dims=4),
@@ -59,6 +63,11 @@ def test_validate_model_build_success(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A correctly constructed model.
+    When: Validating the build integrity.
+    Then: Complete successfully without raising any exceptions.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -67,7 +76,6 @@ def test_validate_model_build_success(
         conditioning_config={},
     )
 
-    # should pass without error
     factory._validate_model_build(model, dataspecs)
 
 
@@ -75,6 +83,11 @@ def test_validate_model_build_output_not_dict(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A model whose forward pass outputs a list instead of a dict.
+    When: Validating the build integrity.
+    Then: Raise a RuntimeError alerting output type mismatch.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -83,7 +96,6 @@ def test_validate_model_build_output_not_dict(
         conditioning_config={},
     )
 
-    # mock forward pass to return a list instead of dict
     model.forward = lambda *args, **kwargs: [torch.randn(2, 2, 256, 256)]
 
     with pytest.raises(RuntimeError, match='Expected dict'):
@@ -94,6 +106,11 @@ def test_validate_model_build_head_mismatch(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A model with output keys mismatching dataspec heads.
+    When: Validating the build integrity.
+    Then: Raise a RuntimeError indicating head mismatch.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -102,7 +119,6 @@ def test_validate_model_build_head_mismatch(
         conditioning_config={},
     )
 
-    # mock forward pass to return a different key than 'head1'
     model.forward = lambda *args, **kwargs: {
         'wrong_head': torch.randn(2, 2, 256, 256)
     }
@@ -115,6 +131,11 @@ def test_validate_model_build_invalid_ndim(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A model whose outputs are not 4-dimensional tensors.
+    When: Validating the build integrity.
+    Then: Raise a RuntimeError indicating non-BCHW shape.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -123,7 +144,6 @@ def test_validate_model_build_invalid_ndim(
         conditioning_config={},
     )
 
-    # mock forward pass to return a 3D tensor
     model.forward = lambda *args, **kwargs: {'head1': torch.randn(2, 2, 256)}
 
     with pytest.raises(RuntimeError, match='must be BCHW'):
@@ -134,6 +154,11 @@ def test_validate_model_build_batch_mismatch(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A model output whose batch size is incorrect.
+    When: Validating the build integrity.
+    Then: Raise a RuntimeError indicating batch dimension mismatch.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -142,7 +167,6 @@ def test_validate_model_build_batch_mismatch(
         conditioning_config={},
     )
 
-    # batch_size is 2 in validation default, mock returns batch size of 3
     model.forward = lambda *args, **kwargs: {
         'head1': torch.randn(3, 2, 256, 256)
     }
@@ -155,6 +179,11 @@ def test_validate_model_build_channel_mismatch(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A model output whose channel dimension is incorrect.
+    When: Validating the build integrity.
+    Then: Raise a RuntimeError indicating class channels mismatch.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -163,7 +192,6 @@ def test_validate_model_build_channel_mismatch(
         conditioning_config={},
     )
 
-    # dataspec head1 expects length 2 class counts, mock returns channel count of 3
     model.forward = lambda *args, **kwargs: {
         'head1': torch.randn(2, 3, 256, 256)
     }
@@ -176,6 +204,11 @@ def test_validate_model_build_non_finite(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A model output containing non-finite values like NaN.
+    When: Validating the build integrity.
+    Then: Raise a RuntimeError.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = factory.build_multihead_unet(
         patch_size=256,
@@ -184,7 +217,6 @@ def test_validate_model_build_non_finite(
         conditioning_config={},
     )
 
-    # return tensor with NaNs
     nan_tensor = torch.randn(2, 2, 256, 256)
     nan_tensor[0, 0, 0, 0] = float('nan')
     model.forward = lambda *args, **kwargs: {'head1': nan_tensor}

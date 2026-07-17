@@ -19,14 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
-
 '''Unit tests for MultiHeadUNet frame (unet.py).'''
 
 # third-party imports
-import torch
 import pytest
+import torch
 # local imports
 import landseg.models.frames.unet as frames_unet
 
@@ -37,6 +34,11 @@ def test_multihead_unet_initialization(
     mock_backbone_config_factory,
     mock_domain_config_factory,
 ):
+    '''
+    Given: A DataSpec and configuration objects.
+    When: Initializing a MultiHeadUNet frame.
+    Then: Correctly construct model heads, conditioners, divisor, and safety.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     conditioning_cfg = {
         'concat': mock_domain_config_factory(use_ids=True, ids_embd_dims=4),
@@ -61,7 +63,11 @@ def test_multihead_unet_initialization_no_domain(
     dataspecs,
     mock_backbone_config_factory,
 ):
-    # modify dataspecs to have no domains
+    '''
+    Given: A DataSpec without any domain dimensions.
+    When: Initializing a MultiHeadUNet frame.
+    Then: Construct the model without any concat/film conditioning blocks.
+    '''
     dataspecs.domains = dataspecs.domains.__class__(
         train=None, val=None, test=None, ids_num=0, vec_dim=0
     )
@@ -83,13 +89,15 @@ def test_multihead_unet_incompatible_spatial_size(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A patch size that is indivisible by the model divisor.
+    When: Initializing a MultiHeadUNet frame.
+    Then: Raise a RuntimeError alerting spatial size incompatibility.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
-    # spatial_divisor is 16.
-    # input height_width in dataspecs (from tests/unit/conftest.py) is 256.
-    # if we force the heights to be indivisible, it should raise RuntimeError.
     dataspecs.meta.image_specs = dataspecs.meta.image_specs.__class__(
         num_channels=4,
-        height_width=15, # indivisible by 16
+        height_width=15,
         array_key='image',
         band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3}
     )
@@ -107,6 +115,11 @@ def test_multihead_unet_build_dummy_batch(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A constructed MultiHeadUNet model.
+    When: Invoking build_dummy_batch.
+    Then: Generate a batch dictionary containing x, ids, and vec tensors.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = frames_unet.MultiHeadUNet(
         input_patch_size=256,
@@ -118,7 +131,6 @@ def test_multihead_unet_build_dummy_batch(
     batch = model.build_dummy_batch(batch_size=3, device='cpu')
 
     assert 'x' in batch
-    # dataspecs has ids_num=3 and vec_dim=2, so they should be present
     assert 'ids_domain' in batch
     assert 'vec_domain' in batch
 
@@ -131,6 +143,11 @@ def test_multihead_unet_head_management(
     dataspecs,
     mock_backbone_config_factory,
 ):
+    '''
+    Given: A constructed MultiHeadUNet model.
+    When: Setting active/frozen heads or resetting them.
+    Then: Correctly apply active, frozen state and reset to None.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     model = frames_unet.MultiHeadUNet(
         input_patch_size=256,
@@ -139,15 +156,12 @@ def test_multihead_unet_head_management(
         conditioning_config={},
     )
 
-    # test active heads
     model.set_active_heads(['head1'])
     assert model.heads.active == ['head1']
 
-    # test frozen heads
     model.set_frozen_heads(['head1'])
     assert model.heads.frozen == ['head1']
 
-    # test reset
     model.reset_heads()
     assert model.heads.active is None
     assert model.heads.frozen is None
@@ -157,7 +171,11 @@ def test_multihead_unet_logit_adjust_properties(
     dataspecs,
     mock_backbone_config_factory,
 ):
-    # register logits adjustments in dataspecs
+    '''
+    Given: A DataSpec containing logits adjustments.
+    When: Initializing a MultiHeadUNet frame.
+    Then: Correctly load logit adjustments tensors and scale properties.
+    '''
     dataspecs.heads = dataspecs.heads.__class__(
         class_counts={'head1': [100, 200]},
         logits_adjust={'head1': [0.2, 0.1]},
@@ -186,8 +204,12 @@ def test_multihead_unet_forward_pass(
     mock_backbone_config_factory,
     mock_domain_config_factory,
 ):
+    '''
+    Given: A MultiHeadUNet model with concats and film conditioners.
+    When: Running forward pass with dummy batch inputs.
+    Then: Return a dictionary containing the predicted head tensors.
+    '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
-    # enable concat and film conditioning
     conditioning_cfg = {
         'concat': mock_domain_config_factory(use_ids=True, ids_embd_dims=4),
         'film': mock_domain_config_factory(use_vec=True, vec_proj_dims=4),
@@ -202,7 +224,6 @@ def test_multihead_unet_forward_pass(
 
     batch = model.build_dummy_batch(batch_size=2)
 
-    # execute forward
     outputs = model(
         batch['x'],
         ids_domain=batch['ids_domain'],
@@ -211,5 +232,4 @@ def test_multihead_unet_forward_pass(
 
     assert isinstance(outputs, dict)
     assert 'head1' in outputs
-    # output channel counts for 'head1' is 2 (since class_counts is [100, 200], which is length 2)
     assert outputs['head1'].shape == (2, 2, 256, 256)

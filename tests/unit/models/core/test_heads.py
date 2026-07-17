@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for HeadManager (heads.py).'''
@@ -32,6 +31,11 @@ import landseg.models.core.heads as heads
 
 # ----- `HeadManager` initialization
 def test_head_manager_initialization():
+    '''
+    Given: Input channel sizes and a configuration dictionary of heads.
+    When: Initializing a HeadManager.
+    Then: Correctly construct 2D convolutional layers for each head.
+    '''
     in_ch = 16
     heads_dict = {'head_a': 3, 'head_b': 5}
     hm = heads.HeadManager(in_ch, heads_dict)
@@ -53,6 +57,11 @@ def test_head_manager_initialization():
 
 # ----- `HeadManager` forward passes
 def test_head_manager_forward_active_heads():
+    '''
+    Given: An input tensor and active heads selector lists.
+    When: Running forward pass.
+    Then: Only run convolutions and output tensors for active heads.
+    '''
     in_ch = 8
     heads_dict = {'head_a': 2, 'head_b': 3}
     hm = heads.HeadManager(in_ch, heads_dict)
@@ -71,6 +80,11 @@ def test_head_manager_forward_active_heads():
 
 
 def test_head_manager_forward_default_active_heads():
+    '''
+    Given: An input tensor and active_heads set to None.
+    When: Running forward pass.
+    Then: Default to executing and returning output tensors for all heads.
+    '''
     in_ch = 8
     heads_dict = {'head_a': 2, 'head_b': 3}
     hm = heads.HeadManager(in_ch, heads_dict)
@@ -91,6 +105,11 @@ def test_head_manager_forward_default_active_heads():
 
 # ----- `HeadManager` freezing
 def test_head_manager_freeze():
+    '''
+    Given: HeadManager instance with multiple heads.
+    When: Freezing a target list of heads.
+    Then: Lock parameters of the frozen heads while keeping others active.
+    '''
     in_ch = 8
     heads_dict = {'head_a': 2, 'head_b': 3}
     hm = heads.HeadManager(in_ch, heads_dict)
@@ -106,6 +125,11 @@ def test_head_manager_freeze():
 
 # ----- `HeadManager` logit adjustment
 def test_head_manager_logit_adjustment():
+    '''
+    Given: Logits and logit adjustment priors mapping dictionary.
+    When: Invoking _apply_logit_adjust with different scaling factors.
+    Then: Return correctly offset logits scaled by the alpha factor.
+    '''
     logits = torch.ones(1, 2, 1, 1)
     prior = torch.tensor([0.5, -0.5]).view(1, 2, 1, 1)
     logit_adjust = {'head_a': prior}
@@ -139,6 +163,11 @@ def test_head_manager_logit_adjustment():
 
 # ----- `HeadManager`numerical stability
 def test_head_manager_nan_to_num():
+    '''
+    Given: Outputs containing non-finite float values like NaN or Inf.
+    When: Forward pass runs.
+    Then: Apply safety clamps and map values to finite numeric limits.
+    '''
     in_ch = 4
     hm = heads.HeadManager(in_ch, {'head_a': 1})
 

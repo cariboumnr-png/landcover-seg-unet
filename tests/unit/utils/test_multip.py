@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for the parallel execution framework (multip.py).'''
 
 # local imports
@@ -28,6 +26,11 @@ import landseg.utils.multip as multip
 
 
 def test_parallel_executor_threads():
+    '''
+    Given: A list of tasks.
+    When: Running ParallelExecutor in multi-threading mode.
+    Then: Return the expected mapped calculation results.
+    '''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=True,
@@ -40,6 +43,11 @@ def test_parallel_executor_threads():
 
 
 def test_parallel_executor_processes():
+    '''
+    Given: A list of tasks.
+    When: Running ParallelExecutor in multi-processing mode.
+    Then: Return the expected mapped calculation results.
+    '''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=False,
@@ -52,6 +60,12 @@ def test_parallel_executor_processes():
 
 
 def test_parallel_executor_captures_exceptions():
+    '''
+    Given: A list of tasks containing a failing function.
+    When: Running ParallelExecutor.
+    Then: Return the valid results and catch/serialize the failure
+        traceback.
+    '''
     executor = multip.ParallelExecutor(
         max_workers=2,
         use_threads=True,
@@ -73,6 +87,11 @@ def test_parallel_executor_captures_exceptions():
 
 
 def test_parallel_executor_with_progress(mocker):
+    '''
+    Given: A list of tasks.
+    When: Running ParallelExecutor with show_progress enabled.
+    Then: Render progress bar via tqdm during execution.
+    '''
     mock_tqdm = mocker.patch(
         'tqdm.tqdm',
         side_effect=lambda it, **kwargs: list(it)

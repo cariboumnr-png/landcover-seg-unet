@@ -19,9 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
-
 '''Unit tests for backbone factory (factory.py).'''
 
 # third-party imports
@@ -33,6 +30,11 @@ import landseg.models.backbones.unet.body as body
 
 # ----- build_unet_backbone tests
 def test_build_unet_backbone_unet(mock_backbone_config_factory):
+    '''
+    Given: UNet backbone type config.
+    When: Running build_unet_backbone.
+    Then: Return a valid UNet body backbone with targeted output channels.
+    '''
     cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     backbone = factory.build_unet_backbone(in_ch=3, input_size=256, config=cfg)
 
@@ -42,6 +44,11 @@ def test_build_unet_backbone_unet(mock_backbone_config_factory):
 
 
 def test_build_unet_backbone_unetpp(mock_backbone_config_factory):
+    '''
+    Given: UNet++ backbone type config.
+    When: Running build_unet_backbone.
+    Then: Return a valid UNetPP body backbone.
+    '''
     cfg = mock_backbone_config_factory(body_type='unetpp', base_ch=16)
     backbone = factory.build_unet_backbone(in_ch=3, input_size=256, config=cfg)
 
@@ -50,6 +57,11 @@ def test_build_unet_backbone_unetpp(mock_backbone_config_factory):
 
 
 def test_build_unet_backbone_unetppp(mock_backbone_config_factory):
+    '''
+    Given: UNet+++ backbone type config.
+    When: Running build_unet_backbone.
+    Then: Return a valid UNetPPP body backbone.
+    '''
     cfg = mock_backbone_config_factory(body_type='unetppp', base_ch=16)
     backbone = factory.build_unet_backbone(in_ch=3, input_size=256, config=cfg)
 
@@ -58,6 +70,11 @@ def test_build_unet_backbone_unetppp(mock_backbone_config_factory):
 
 
 def test_build_unet_backbone_invalid_body(mock_backbone_config_factory):
+    '''
+    Given: An invalid backbone body type.
+    When: Running build_unet_backbone.
+    Then: Raise a ValueError.
+    '''
     cfg = mock_backbone_config_factory(body_type='invalid', base_ch=16)
 
     with pytest.raises(ValueError, match='Invalid backbone body: invalid'):
@@ -65,6 +82,11 @@ def test_build_unet_backbone_invalid_body(mock_backbone_config_factory):
 
 
 def test_build_unet_backbone_indivisible_size(mock_backbone_config_factory):
+    '''
+    Given: An input spatial size indivisible by the divisor (16).
+    When: Running build_unet_backbone.
+    Then: Raise a ValueError.
+    '''
     cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
 
     with pytest.raises(ValueError, match='is not divisible by'):

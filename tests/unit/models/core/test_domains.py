@@ -19,20 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Unit tests for domain context routing (domains.py).'''
 
 # third-party imports
-import torch
 import pytest
+import torch
 # local imports
 import landseg.models.core.domains as domains
 
 
 # ----- domain projection helpers
 def test_make_projection_linear():
+    '''
+    Given: Dimension parameters and config disabling mlp.
+    When: Running _make_projection.
+    Then: Return a basic linear layer.
+    '''
     proj = domains._make_projection(
         in_dim=4,
         out_dim=8,
@@ -44,6 +48,11 @@ def test_make_projection_linear():
 
 
 def test_make_projection_mlp_structure():
+    '''
+    Given: MLP configuration dictionaries.
+    When: Running _make_projection.
+    Then: Construct a Sequential MLP module.
+    '''
     proj = domains._make_projection(
         in_dim=4,
         out_dim=8,
@@ -56,14 +65,6 @@ def test_make_projection_mlp_structure():
         }
     )
     assert isinstance(proj, torch.nn.Sequential)
-    # MLP structure:
-    # layer 0: Linear(4, 16)
-    # layer 1: ReLU
-    # layer 2: Dropout(0.1)
-    # layer 3: Linear(16, 16)
-    # layer 4: ReLU
-    # layer 5: Dropout(0.1)
-    # layer 6: Linear(16, 8)
     assert len(proj) == 7
     assert isinstance(proj[0], torch.nn.Linear)
     assert proj[0].in_features == 4
@@ -84,6 +85,11 @@ def test_make_projection_mlp_structure():
 
 
 def test_make_projection_unsupported_activation():
+    '''
+    Given: An invalid activation function name.
+    When: Running _make_projection.
+    Then: Raise a ValueError.
+    '''
     with pytest.raises(ValueError, match='Unsupported activation: invalid'):
         domains._make_projection(
             in_dim=4,
@@ -97,6 +103,11 @@ def test_make_projection_unsupported_activation():
 
 # ----- `DomainContextRouter`
 def test_router_initialization(mock_domain_config_factory):
+    '''
+    Given: Target config maps.
+    When: Initializing a DomainContextRouter.
+    Then: Correctly allocate ids embeddings and vector projections.
+    '''
     target_a = mock_domain_config_factory(use_ids=True, ids_embd_dims=16)
     target_b = mock_domain_config_factory(use_vec=True, vec_proj_dims=32)
 
@@ -121,6 +132,11 @@ def test_router_initialization(mock_domain_config_factory):
 
 
 def test_router_forward(mock_domain_config_factory):
+    '''
+    Given: Domain indexes and embedding vectors.
+    When: Forwarding through router.
+    Then: Output projected payloads maps.
+    '''
     target_a = mock_domain_config_factory(use_ids=True, ids_embd_dims=16)
     target_b = mock_domain_config_factory(use_vec=True, vec_proj_dims=32)
 
@@ -148,6 +164,11 @@ def test_router_forward(mock_domain_config_factory):
 
 
 def test_router_forward_none_inputs(mock_domain_config_factory):
+    '''
+    Given: None values for domain inputs.
+    When: Forwarding through router.
+    Then: Return payload mapping populated with None tensors.
+    '''
     target_a = mock_domain_config_factory(use_ids=True, ids_embd_dims=16)
     target_b = mock_domain_config_factory(use_vec=True, vec_proj_dims=32)
 

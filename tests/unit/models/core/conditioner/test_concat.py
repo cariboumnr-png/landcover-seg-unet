@@ -19,14 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
-
 '''Unit tests for spatial domain concatenation adapter (concat.py).'''
 
 # third-party imports
-import torch
 import pytest
+import torch
 # local imports
 import landseg.models.core.conditioner.concat as concat
 import landseg.models.core.domains as domains
@@ -34,6 +31,11 @@ import landseg.models.core.domains as domains
 
 # ----- `ConcatAdapter` tests
 def test_concat_adapter_pass_through():
+    '''
+    Given: ConcatAdapter initialized with concat_dim=0.
+    When: Running forward pass.
+    Then: Return the input tensor unchanged.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=0)
     x = torch.randn(2, 4, 16, 16)
     out = adapter(x, None)
@@ -42,6 +44,11 @@ def test_concat_adapter_pass_through():
 
 
 def test_concat_adapter_missing_payload():
+    '''
+    Given: ConcatAdapter with non-zero concat_dim and a None payload.
+    When: Running forward pass.
+    Then: Raise a ValueError.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
 
@@ -50,6 +57,11 @@ def test_concat_adapter_missing_payload():
 
 
 def test_concat_adapter_empty_payload():
+    '''
+    Given: ConcatAdapter with non-zero concat_dim and empty payload.
+    When: Running forward pass.
+    Then: Raise a ValueError.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
     payload = domains.DomainTargetPayload(ids_embd=None, vec_proj=None)
@@ -59,6 +71,11 @@ def test_concat_adapter_empty_payload():
 
 
 def test_concat_adapter_ids_only():
+    '''
+    Given: Payload containing only ID embeddings.
+    When: Running forward pass.
+    Then: Concatenate expanded ID embedding values along channel dim.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
     ids_embd = torch.randn(2, 8)
@@ -66,12 +83,16 @@ def test_concat_adapter_ids_only():
     out = adapter(x, payload)
 
     assert out.shape == (2, 12, 16, 16)
-    # verify concatenated content
     expected_slice = ids_embd.view(2, 8, 1, 1).expand(2, 8, 16, 16)
     assert torch.allclose(out[:, 4:], expected_slice)
 
 
 def test_concat_adapter_vec_only():
+    '''
+    Given: Payload containing only vector projections.
+    When: Running forward pass.
+    Then: Concatenate expanded vector projections along channel dim.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
     vec_proj = torch.randn(2, 8)
@@ -84,6 +105,12 @@ def test_concat_adapter_vec_only():
 
 
 def test_concat_adapter_both():
+    '''
+    Given: Payload containing both ID embedding and vector projections.
+    When: Running forward pass.
+    Then: Concatenate the element-wise sum of both payloads along channel
+        dim.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
     ids_embd = torch.randn(2, 8)
@@ -98,6 +125,11 @@ def test_concat_adapter_both():
 
 
 def test_concat_adapter_mismatched_both():
+    '''
+    Given: Conflicting shapes for both ID embedding and vector projection.
+    When: Running forward pass.
+    Then: Raise a ValueError indicating mismatched dimensions.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
     ids_embd = torch.randn(2, 8)
@@ -109,6 +141,11 @@ def test_concat_adapter_mismatched_both():
 
 
 def test_concat_adapter_mismatched_output_dim():
+    '''
+    Given: An ID embedding payload of wrong dimensionality.
+    When: Running forward pass.
+    Then: Raise a ValueError.
+    '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)
     ids_embd = torch.randn(2, 6)
