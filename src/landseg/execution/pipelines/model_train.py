@@ -29,6 +29,9 @@ model, and runs the multi-phase training runner.
 # standard imports
 import datetime
 import time
+# third-party imports
+import psutil
+import torch
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
@@ -124,6 +127,33 @@ def train(config: configs.RootConfig) -> None:
         d_model = time.perf_counter() - start_time
         logger.log('INFO', f'[COMPLETE] Model assembly (D_{d_model:.2f}s)')
 
+        # get device info
+        device_name = 'cpu'
+        if c.DEVICE.startswith('cuda'):
+            if torch.cuda.is_available():
+                device_name = torch.cuda.get_device_name(0)
+            else:
+                device_name = 'cuda (unavailable)'
+        else:
+            device_name = c.DEVICE
+
+        logger.set_inputs({
+            'system': {
+                'device': device_name,
+                'torch_version': torch.__version__
+            },
+            'model': {
+                'backbone': 'unet',
+                'total_parameters': sum(p.numel() for p in model.parameters()),
+                'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
+                'heads': list(dataspecs.heads.class_counts.keys())
+            },
+            'data': {
+                'dataset_name': config.foundation.datablocks.name,
+                'patch_size': config.session.data_loader.patch_size
+            }
+        })
+
         logger.log_sep()
 
         # build the session
@@ -165,12 +195,30 @@ def train(config: configs.RootConfig) -> None:
         d_exec = time.perf_counter() - start_time
         logger.log('INFO', f'[COMPLETE] Training session (D_{d_exec:.2f}s)')
 
+        # get memory usage
+        # peak cpu memory
+        process = psutil.Process()
+        peak_cpu_mb = float(process.memory_info().rss / (1024 * 1024))
+        # peak gpu memory
+        peak_gpu_mb = 0.0
+        if torch.cuda.is_available():
+            peak_gpu_mb = float(torch.cuda.max_memory_allocated() / (1024 * 1024))
+
         # update summary
         logger.summary['completed_at'] = _cur_time()
         logger.set_summary_status('SUCCESS')
         logger.set_results({
             'best_value': final,
-            'duration_sec': d_setup + d_model + d_exec
+            'duration_sec': d_setup + d_model + d_exec,
+            'durations': {
+                'data_specs_setup_sec': d_setup,
+                'model_assembly_sec': d_model,
+                'execution_sec': d_exec
+            },
+            'system': {
+                'peak_cpu_memory_mb': peak_cpu_mb,
+                'peak_gpu_memory_mb': peak_gpu_mb
+            }
         })
 
     except Exception as e:
