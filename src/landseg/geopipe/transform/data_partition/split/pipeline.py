@@ -125,6 +125,7 @@ def create_blocks_partition(
         hydration=hydration_results
     )
 
+
 # ----- internal helpers
 def _finalize_partition(
     valid_blocks: dict[tuple[int, int], str],
@@ -134,6 +135,7 @@ def _finalize_partition(
     ext_test_blks: list[str] | None
 ) -> geo_core.BlocksPartition:
     '''Finalize the partition process with leakage sanity checks.'''
+
     def _index_fpath(fpaths: list[str]) -> dict[str, str]:
         '''Index block file paths by block name no file extension.'''
         indexed: dict[str, str] = {}
@@ -151,11 +153,15 @@ def _finalize_partition(
     # leakage sanity checks
     leak = set(train) & set(val)
     if leak:
-        raise ValueError (f'Data leaked between train and val! {leak}')
+        raise ValueError (f'Data leaked between [train] and [val]! {leak}')
 
     leak = set(train) & set(test)
     if leak:
-        raise ValueError(f'Data leaked between train and test! {leak}')
+        raise ValueError(f'Data leaked between [train] and [test]! {leak}')
+
+    leak = set(val) & set(test)
+    if leak:
+        raise ValueError(f'Data leaked between [val] and [test]! {leak}')
 
     return {
         'train': _index_fpath(train),
