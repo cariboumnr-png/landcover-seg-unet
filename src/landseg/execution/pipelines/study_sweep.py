@@ -103,9 +103,9 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
                 artifact_paths,
                 mode='default',
                 ids_domain_name=config.dataspecs.domain_ids_name,
-                vec_domain_name=config.dataspecs.domain_vec_name,
-                print_out=False
+                vec_domain_name=config.dataspecs.domain_vec_name
             )
+            logger.set_inputs({'dataspecs': dataspecs.to_dict()})
 
             # setup the model
             model = models.build_multihead_unet(

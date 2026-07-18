@@ -91,11 +91,13 @@ def train(config: configs.RootConfig) -> None:
             artifact_paths,
             mode='default',
             ids_domain_name=config.dataspecs.domain_ids_name,
-            vec_domain_name=config.dataspecs.domain_vec_name,
-            print_out=console_level is not None
+            vec_domain_name=config.dataspecs.domain_vec_name
         )
         d_setup = time.perf_counter() - start_t
         logger.log('INFO', f'[COMPLETE] Data specs setup (D_{d_setup:.2f}s)')
+
+        # log a clean summary of dataspecs to console when verbose
+        _log_dataspecs_summary(logger, dataspecs, console_level)
 
         logger.log_sep()
 
@@ -189,7 +191,8 @@ def _log_inputs(
         'data': {
             'dataset_name': config.foundation.datablocks.name,
             'patch_size': config.session.data_loader.patch_size
-        }
+        },
+        'dataspecs': dataspecs.to_dict()
     })
 
 
@@ -259,3 +262,36 @@ def _log_results(
             'peak_gpu_memory_mb': peak_gpu_mb
         }
     })
+
+
+def _log_dataspecs_summary(
+    logger: session.SessionLogger,
+    dataspecs: geopipe.core.DataSpecs,
+    console_level: int | None
+) -> None:
+    '''Log a concise, human-readable summary of the dataset specifications.'''
+    if console_level is not None:
+        img_ch = dataspecs.meta.image_specs.num_channels
+        img_hw = dataspecs.meta.image_specs.height_width
+        heads_str = ', '.join(dataspecs.heads.class_counts.keys())
+        train_n = len(dataspecs.splits.train)
+        val_n = len(dataspecs.splits.val)
+        test_n = len(dataspecs.splits.test or {})
+
+        logger.log(
+            'INFO',
+            f'Dataset name:\t{dataspecs.name} (mode: {dataspecs.mode})'
+        )
+        logger.log(
+            'INFO',
+            f'Image size:\t{img_ch} channels | {img_hw}x{img_hw}'
+        )
+        logger.log(
+            'INFO',
+            f'Target heads:\t{heads_str}'
+        )
+        logger.log(
+            'INFO',
+            f'Data splits:\t{train_n} train | {val_n} val | '
+            f'{test_n} test blocks'
+        )
