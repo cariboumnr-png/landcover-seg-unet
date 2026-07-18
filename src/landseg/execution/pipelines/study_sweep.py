@@ -120,7 +120,6 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
             # build session runner
             session_context = session.SessionBuildContext(
                 device=c.DEVICE,
-                verbose_runner=False,
                 session_paths=paths,
             )
             runner = session.factory.build_continous_training_session(

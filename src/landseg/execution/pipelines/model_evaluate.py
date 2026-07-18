@@ -116,7 +116,6 @@ def evaluate(config: configs.RootConfig):
         # build session runner
         session_context = session.SessionBuildContext(
             device=c.DEVICE,
-            verbose_runner=True,
             session_paths=session_paths,
         )
         runner = session.factory.build_evaluate_session(
