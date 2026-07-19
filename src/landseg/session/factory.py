@@ -104,6 +104,7 @@ def build_overfit_session(
 
     # callback dispatcher
     dispatcher = instrument.build_dispatcher(
+        logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
     # context
@@ -133,6 +134,7 @@ def build_evaluate_session(
 
     # callback dispatcher
     dispatcher = instrument.build_dispatcher(
+        logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
     # context
@@ -166,6 +168,7 @@ def build_continous_training_session(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
+        logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
     # epoch engine context
@@ -220,6 +223,7 @@ def build_curriculum_training_session(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
+        logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
     # epoch engine context

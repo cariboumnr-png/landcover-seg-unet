@@ -363,9 +363,8 @@ class _BlockDataset(torch.utils.data.Dataset):
         try:
             self.imgs = self._get_patches(loaded[img_key])
             self.lbls = self._get_patches(loaded[lbl_key])
-        except ValueError:
-            print(f'Bad patch at {block_fpath}')
-            raise
+        except ValueError as err:
+            raise ValueError(f'Bad patch at {block_fpath}') from err
 
         # parse domain if provided
         for key, dom in block_domain.items():
