@@ -171,34 +171,6 @@ def _get_device_name() -> str:
     return c.DEVICE
 
 
-def _log_inputs(
-    logger: session.SessionLogger,
-    config: configs.RootConfig,
-    model: torch.nn.Module,
-    dataspecs: core.DataSpecs
-) -> None:
-    '''Log pipeline run environment and model metadata inputs.'''
-    total_p = sum(p.numel() for p in model.parameters())
-    trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.set_inputs({
-        'system': {
-            'device': _get_device_name(),
-            'torch_version': torch.__version__
-        },
-        'model': {
-            'backbone': 'unet',
-            'total_parameters': total_p,
-            'trainable_parameters': trainable_p,
-            'heads': list(dataspecs.heads.class_counts.keys())
-        },
-        'data': {
-            'dataset_name': config.foundation.datablocks.name,
-            'patch_size': config.session.data_loader.patch_size
-        },
-        'dataspecs': dataspecs.to_dict()
-    })
-
-
 def _build_session_runner(
     config: configs.RootConfig,
     dataspecs: core.DataSpecs,
@@ -236,6 +208,76 @@ def _build_session_runner(
             raise ValueError(f'Invalid training mode: {config.session.mode}')
 
 
+def _log_dataspecs_summary(
+    logger: session.SessionLogger,
+    dataspecs: core.DataSpecs,
+    console_level: int | None
+) -> None:
+    '''Log a concise, human-readable summary of the dataset specifications.'''
+
+    def summarize_heads(items: list[str], max_items: int = 3) -> str:
+        if len(items) <= max_items:
+            return ', '.join(map(str, items))
+
+        remaining = len(items) - max_items
+        head = ', '.join(map(str, items[:max_items]))
+        return f'{head}, and {remaining} more heads... '
+
+    if console_level is not None:
+        img_ch = dataspecs.meta.image_specs.num_channels
+        img_hw = dataspecs.meta.image_specs.height_width
+        heads_str = summarize_heads(list(dataspecs.heads.class_counts.keys()))
+        train_n = len(dataspecs.splits.train)
+        val_n = len(dataspecs.splits.val)
+        test_n = len(dataspecs.splits.test or {})
+
+        logger.log(
+            'INFO',
+            f'Dataset name:    {dataspecs.name} (mode: {dataspecs.mode})'
+        )
+        logger.log(
+            'INFO',
+            f'Image size:      {img_ch} channels | {img_hw}x{img_hw}'
+        )
+        logger.log(
+            'INFO',
+            f'Trainable heads: {heads_str}'
+        )
+        logger.log(
+            'INFO',
+            f'Data splits:     {train_n} train | {val_n} val | '
+            f'{test_n} test blocks'
+        )
+
+
+def _log_inputs(
+    logger: session.SessionLogger,
+    config: configs.RootConfig,
+    model: torch.nn.Module,
+    dataspecs: core.DataSpecs
+) -> None:
+    '''Log pipeline run environment and model metadata inputs.'''
+    total_p = sum(p.numel() for p in model.parameters())
+    trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.set_inputs({
+        'system': {
+            'device': _get_device_name(),
+            'torch_version': torch.__version__
+        },
+        'model': {
+            'backbone': 'unet',
+            'total_parameters': total_p,
+            'trainable_parameters': trainable_p,
+            'heads': list(dataspecs.heads.class_counts.keys())
+        },
+        'data': {
+            'dataset_name': config.foundation.datablocks.name,
+            'patch_size': config.session.data_loader.patch_size
+        },
+        'dataspecs': dataspecs.to_dict()
+    })
+
+
 def _log_results(
     logger: session.SessionLogger,
     final: float,
@@ -267,38 +309,6 @@ def _log_results(
         }
     })
 
-
-def _log_dataspecs_summary(
-    logger: session.SessionLogger,
-    dataspecs: geopipe.core.DataSpecs,
-    console_level: int | None
-) -> None:
-    '''Log a concise, human-readable summary of the dataset specifications.'''
-    if console_level is not None:
-        img_ch = dataspecs.meta.image_specs.num_channels
-        img_hw = dataspecs.meta.image_specs.height_width
-        heads_str = ', '.join(dataspecs.heads.class_counts.keys())
-        train_n = len(dataspecs.splits.train)
-        val_n = len(dataspecs.splits.val)
-        test_n = len(dataspecs.splits.test or {})
-
-        logger.log(
-            'INFO',
-            f'Dataset name:\t{dataspecs.name} (mode: {dataspecs.mode})'
-        )
-        logger.log(
-            'INFO',
-            f'Image size:\t{img_ch} channels | {img_hw}x{img_hw}'
-        )
-        logger.log(
-            'INFO',
-            f'Target heads:\t{heads_str}'
-        )
-        logger.log(
-            'INFO',
-            f'Data splits:\t{train_n} train | {val_n} val | '
-            f'{test_n} test blocks'
-        )
 
 def _current_time() -> str:
     '''Return current time as a formatted string.'''
