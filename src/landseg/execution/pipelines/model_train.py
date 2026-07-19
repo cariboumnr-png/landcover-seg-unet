@@ -37,6 +37,7 @@ import torch
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.core as core
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
@@ -73,7 +74,7 @@ def train(config: configs.RootConfig) -> None:
     logger.init_summary(
         run_id=ss_paths.run_id,
         pipeline=config.pipeline.name,
-        start_time=datetime.datetime.now().strftime(c.TF_ISO8601)
+        start_time=_current_time()
     )
     assert logger.summary # typing
 
@@ -174,9 +175,11 @@ def _log_inputs(
     logger: session.SessionLogger,
     config: configs.RootConfig,
     model: torch.nn.Module,
-    dataspecs: geopipe.core.DataSpecs
+    dataspecs: core.DataSpecs
 ) -> None:
     '''Log pipeline run environment and model metadata inputs.'''
+    total_p = sum(p.numel() for p in model.parameters())
+    trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.set_inputs({
         'system': {
             'device': _get_device_name(),
@@ -184,8 +187,8 @@ def _log_inputs(
         },
         'model': {
             'backbone': 'unet',
-            'total_parameters': sum(p.numel() for p in model.parameters()),
-            'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
+            'total_parameters': total_p,
+            'trainable_parameters': trainable_p,
             'heads': list(dataspecs.heads.class_counts.keys())
         },
         'data': {
@@ -198,12 +201,12 @@ def _log_inputs(
 
 def _build_session_runner(
     config: configs.RootConfig,
-    dataspecs: geopipe.core.DataSpecs,
-    model: torch.nn.Module,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
     ss_paths: artifacts.ResultsPaths,
     logger: session.SessionLogger
 ) -> typing.Any:
-    '''Build the session runner based on continuous or curriculum mode.'''
+    '''Build the session runner based on mode.'''
     match config.session.mode:
         case 'continuous':
             session_context = session.SessionBuildContext(
@@ -247,7 +250,8 @@ def _log_results(
     if torch.cuda.is_available():
         peak_gpu_mb = float(torch.cuda.max_memory_allocated() / (1024 * 1024))
 
-    logger.summary['completed_at'] = datetime.datetime.now().strftime(c.TF_ISO8601)
+    assert logger.summary is not None
+    logger.summary['completed_at'] = _current_time()
     logger.set_summary_status('SUCCESS')
     logger.set_results({
         'best_value': final,
@@ -295,3 +299,7 @@ def _log_dataspecs_summary(
             f'Data splits:\t{train_n} train | {val_n} val | '
             f'{test_n} test blocks'
         )
+
+def _current_time() -> str:
+    '''Return current time as a formatted string.'''
+    return datetime.datetime.now().strftime(c.TF_ISO8601)
