@@ -155,12 +155,14 @@ def test_router_forward(mock_domain_config_factory):
     assert 'target_b' in routed
 
     assert isinstance(routed['target_a'], domains.DomainTargetPayload)
+    assert routed['target_a'].ids_embd
     assert routed['target_a'].ids_embd.shape == (2, 16)
     assert routed['target_a'].vec_proj is None
 
     assert isinstance(routed['target_b'], domains.DomainTargetPayload)
-    assert routed['target_b'].ids_embd is None
+    assert routed['target_b'].vec_proj
     assert routed['target_b'].vec_proj.shape == (2, 32)
+    assert routed['target_b'].ids_embd is None
 
 
 def test_router_forward_none_inputs(mock_domain_config_factory):
