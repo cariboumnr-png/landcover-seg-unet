@@ -24,6 +24,7 @@ Evaluating a model.
 '''
 
 # standard imports
+import datetime
 import typing
 # local imports
 import landseg._constants as c
@@ -32,7 +33,7 @@ import landseg.configs as configs
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
-import landseg.utils as utils
+
 
 def evaluate(config: configs.RootConfig):
     '''
@@ -44,7 +45,6 @@ def evaluate(config: configs.RootConfig):
     Args:
         config: RootConfig with model, trainer, and runner settings.
     '''
-
     # init run io folder tree
     session_paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     session_paths.init()
@@ -56,96 +56,99 @@ def evaluate(config: configs.RootConfig):
         raise ValueError(f"Invalid split: {eval_config.split}")
     split: typing.Literal['val', 'test'] = eval_config.split
 
-    # create the session metadata dict
-    meta_ctrl = artifacts.Controller[dict](session_paths.meta)
-    meta: session.SessionMetadata = {
-        'status': 'running',
-        'run_id': session_paths.run_id,
-        'intent': 'evaluation',
-        'pipeline': config.pipeline.name,
-        'created_at': session_paths.time(c.TF_ISO8601),
-        'completed_at': None,
-        'inputs': {
-            'checkpoint': eval_config.checkpoint,
-            'split': split
-        },
-        'summary': {}
-    }
-    meta_ctrl.persist(meta)
-
     # save running config per run
-    ctrl = artifacts.Controller[dict](session_paths.config) # generic, no policy
+    ctrl = artifacts.Controller[dict](session_paths.config) # no policy
     ctrl.persist(config.as_dict)
 
-    # create a logger
-    logger = utils.Logger('main', session_paths.main_log_file)
-
-    # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(
-        f'{config.execution.exp_root}/artifacts/'
-        f'{config.foundation.datablocks.name}'
+    # init a SessionLogger
+    logger = session.SessionLogger(
+        name='session',
+        log_file=session_paths.summary,
+        console_lvl=20,
+        enable_file_log=False
     )
-    dataspecs = geopipe.build_dataspec(
-        artifact_paths,
-        mode='test_only' if split == 'test' else 'val_only',
-        ids_domain_name=config.dataspecs.domain_ids_name,
-        vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=False
+    logger.init_summary(
+        run_id=session_paths.run_id,
+        pipeline=config.pipeline.name,
+        start_time=datetime.datetime.now().strftime(c.TF_ISO8601)
     )
+    logger.set_inputs({
+        'checkpoint': eval_config.checkpoint,
+        'split': split
+    })
+    assert logger.summary # typing
 
-    # setup the model
-    model = models.build_multihead_unet(
-        patch_size=config.session.data_loader.patch_size,
-        dataspecs=dataspecs,
-        unet_backbone_config=config.models.unet_backbone_config,
-        conditioning_config=config.models.conditioning_config,
-        enable_clamp=config.models.numeric_safety.enable_clamp,
-        clamp_range=config.models.numeric_safety.clamp_range
-    )
+    try:
+        logger.log_sep()
 
-    # load checkpoint with no optimizer nor scheduler
-    artifacts.load_checkpoint(
-        model=model,
-        fpath=eval_config.checkpoint,
-        map_device=c.DEVICE,
-        optimizer=None,
-        scheduler=None,
-    )
+        # collect artifacts and build `DataSpecs`
+        artifact_paths = artifacts.ArtifactPaths(
+            f'{config.execution.exp_root}/artifacts/'
+            f'{config.foundation.datablocks.name}'
+        )
+        dataspecs = geopipe.build_dataspec(
+            artifact_paths,
+            mode='test_only' if split == 'test' else 'val_only',
+            ids_domain_name=config.dataspecs.domain_ids_name,
+            vec_domain_name=config.dataspecs.domain_vec_name
+        )
+        logger.set_inputs({'dataspecs': dataspecs.to_dict()})
 
-    # build session runner
-    session_context=session.SessionBuildContext(
-        device=c.DEVICE,
-        verbose_runner=True,
-        session_paths=session_paths,
-    )
-    runner = session.factory.build_evaluate_session(
-        dataspecs=dataspecs,
-        model=model,
-        config=config.session,
-        context=session_context,
-        logger=logger
-    )
+        # setup the model
+        model = models.build_multihead_unet(
+            patch_size=config.session.data_loader.patch_size,
+            dataspecs=dataspecs,
+            unet_backbone_config=config.models.unet_backbone_config,
+            conditioning_config=config.models.conditioning_config,
+            enable_clamp=config.models.numeric_safety.enable_clamp,
+            clamp_range=config.models.numeric_safety.clamp_range
+        )
 
-    # evaluate
-    evaluation_results = runner.run_epoch(0) # will always run
-    assert evaluation_results.validation
-    _metrics = evaluation_results.validation.head_metrics
-    metrics = {h: m.as_dict for h, m in _metrics.items()}
+        # load checkpoint with no optimizer nor scheduler
+        artifacts.load_checkpoint(
+            model=model,
+            fpath=eval_config.checkpoint,
+            map_device=c.DEVICE,
+            optimizer=None,
+            scheduler=None,
+        )
 
-    # # produce previews on all the heads
-    # if eval_config.export_previews:
-    #     pipeline_session.runner.evaluator.infer(session_paths.previews)
+        # build session runner
+        session_context = session.SessionBuildContext(
+            device=c.DEVICE,
+            session_paths=session_paths,
+        )
+        runner = session.factory.build_evaluate_session(
+            dataspecs=dataspecs,
+            model=model,
+            config=config.session,
+            context=session_context,
+            logger=logger
+        )
 
-    # persist the validation log as the current outputs
-    output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
-    output_ctrl.persist(metrics)
+        # evaluate
+        evaluation_results = runner.run_epoch(0) # will always run
+        assert evaluation_results.validation
+        _metrics = evaluation_results.validation.head_metrics
+        metrics = {h: m.as_dict for h, m in _metrics.items()}
+
+        # persist the validation log as the current outputs
+        output_ctrl = artifacts.Controller[dict](session_paths.evaluation)
+        output_ctrl.persist(metrics)
+
+        # update summary
+        logger.summary['completed_at'] = datetime.datetime.now().strftime(c.TF_ISO8601)
+        logger.set_summary_status('SUCCESS')
+        logger.set_results({'final': evaluation_results.target_metrics})
+
+    except Exception as e:
+        logger.set_summary_status('FAILED')
+        logger.log('ERROR', f'Evaluation pipeline failed: {e}', exc_info=True)
+        raise e
 
     # close logger
-    logger.close()
+    finally:
+        logger.log_sep()
+        logger.close() # summary dict will be persisted
 
-    # update metadata and return
-    meta['completed_at'] = session_paths.time(c.TF_ISO8601)
-    meta['summary'] = {}
-    meta['summary']['final'] = evaluation_results.target_metrics
-    meta_ctrl.persist(meta)
     return evaluation_results.target_metrics

@@ -100,9 +100,10 @@ def build_engine_runtime(
     p = dataloaders.meta.patch_size
     s = model.spatial_divisor
     if not p % s == 0:
-        print(f'Dataloader patch size (H*W): {p}')
-        print(f'Model spatial divisor (H*W): {s}')
-        raise ValueError(f'Invalid patch dimension: {p} not divible by {s}')
+        raise ValueError(
+            f'Invalid patch dimension: patch size ({p}) is not divisible '
+            f'by spatial divisor ({s})'
+        )
 
     # aliases
     exec_config = config.engine_exec

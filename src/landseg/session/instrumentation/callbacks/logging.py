@@ -25,28 +25,35 @@
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.instrumentation.callbacks as callbacks
+import landseg.utils as utils
 
 class LoggingCallback(callbacks.BaseCallback):
     '''Logging callback'''
 
+    def __init__(
+        self,
+        logger: utils.Logger | None = None,
+        *,
+        verbose: bool = True
+    ):
+        '''Initialize the logging callback.'''
+        super().__init__(verbose=verbose)
+        self.logger = logger
+
     def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
-        if self.verbose:
-            print('__Phase details__')
-            text = '\n'.join([
-                f'- Phase Name:\t{phase.name}',
-                f'- Max Epochs:\t{phase.num_epochs}',
-                f'- LR Scale:\t{phase.lr_scale}',
-                f'- Active Heads:\t{phase.active_heads}',
-                f'- Frozen Heads:\t{phase.frozen_heads}',
-            ])
-            print(text)
+        if self.logger:
+            self.logger.log('INFO', f'[START] Phase {phase.name}')
+            self.logger.log('INFO', f'- Max Epochs:\t{phase.num_epochs}')
+            self.logger.log('INFO', f'- LR Scale:\t{phase.lr_scale}')
+            self.logger.log('INFO', f'- Active Heads:\t{phase.active_heads}')
+            self.logger.log('INFO', f'- Frozen Heads:\t{phase.frozen_heads}')
 
     def on_batch_begin(self, action: str, bidx: int) -> None:
-        if self.verbose:
-            print(f'{action}... batch_{bidx:04d}', end='\r', flush=True)
+        if self.logger:
+            self.logger.log('DEBUG', f'{action}... batch_{bidx:04d}')
 
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
-        if self.verbose and results.metrics_updated:
+        if self.logger and results.metrics_updated:
             text_list: list[str] = []
             text_list.append(f'total_obj: {results.total_objective:.4f}')
             text_list.extend([
@@ -58,12 +65,12 @@ class LoggingCallback(callbacks.BaseCallback):
                 for r, v in results.regularization.items()
             ])
             text_list.append(f'LR: {results.current_lr:.4e}')
-            print(f'batch_{bidx:04d} | ' + '|'.join(text_list))
+            self.logger.log('DEBUG', f'batch_{bidx:04d} | ' + '|'.join(text_list))
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         metrics = results.raw_metrics
-        if self.verbose:
-             # training metrics is always neends
+        if self.logger:
+            # training metrics is always present
             assert metrics.training
             # best so far
             msg = (
@@ -74,12 +81,13 @@ class LoggingCallback(callbacks.BaseCallback):
             )
             t = results.phase_max_epoch
             n = len(str(t))
-            print(f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}')
+            epoch_str = f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}'
+            self.logger.log('INFO', epoch_str)
 
     def on_session_phase_end(self, phase: str, reason: str) -> None:
-        if self.verbose:
-            print(f'Exiting training phase {phase}: {reason}')
+        if self.logger:
+            self.logger.log('INFO', f'[COMPLETE] Phase {phase} ({reason})')
 
     def on_checkpointing(self, fp: str) -> None:
-        if self.verbose:
-            print(f'Checkpoint saved: {fp}')
+        if self.logger:
+            self.logger.log('INFO', f'Checkpoint saved: {fp}')

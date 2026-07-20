@@ -32,6 +32,7 @@ analysis are handled elsewhere.
 '''
 
 # standard imports
+import datetime
 import typing
 # local imports
 import landseg._constants as c
@@ -41,14 +42,13 @@ import landseg.core as core
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
-import landseg.utils as utils
 import landseg.study as study
 
 # aliases
 StepGenerator = typing.Generator[core.SessionStepSummary, None, None]
 StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
-#
+
 def sweep(config: configs.RootConfig):
     '''
     Execute a configured study sweep.
@@ -58,7 +58,6 @@ def sweep(config: configs.RootConfig):
     consumption. Full study inspection is performed separately by the
     study analysis pipeline.
     '''
-
     # run sweep and return
     s = study.run_sweep(_runner_builder, config)
     return {
@@ -66,9 +65,9 @@ def sweep(config: configs.RootConfig):
         'best_params': s.best_params,
     }
 
+
 def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
     '''Build a continuous training session runner.'''
-
     # init run io folder tree
     paths = artifacts.ResultsPaths(f'{config.execution.exp_root}/results')
     paths.init(trace_to_last=False)
@@ -77,48 +76,73 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
     config_ctrl = artifacts.Controller[dict](paths.config) # no policy
     config_ctrl.persist(config.as_dict)
 
-    # create a centralized main logger
-    logger = utils.Logger(
-        name='main',
-        log_file=paths.main_log_file,
-        console_lvl=None
+    # init a SessionLogger
+    logger = session.SessionLogger(
+        name='session',
+        log_file=paths.summary,
+        console_lvl=None,
+        enable_file_log=False
     )
 
-    # collect artifacts and build dataspsec
-    artifact_paths=artifacts.ArtifactPaths(
-        f'{config.execution.exp_root}/artifacts/'
-        f'{config.foundation.datablocks.name}'
-    )
+    def run_wrapper():
+        logger.init_summary(
+            run_id=paths.run_id,
+            pipeline=config.pipeline.name,
+            start_time=datetime.datetime.now().strftime(c.TF_ISO8601)
+        )
+        logger.set_inputs(config.as_dict)
+        try:
+            logger.log_sep()
 
-    # collect artifacts and build dataspsec
-    dataspecs = geopipe.build_dataspec(
-        artifact_paths,
-        mode='default',
-        ids_domain_name=config.dataspecs.domain_ids_name,
-        vec_domain_name=config.dataspecs.domain_vec_name,
-        print_out=False
-    )
-    # setup the model
-    model = models.build_multihead_unet(
-        patch_size=config.session.data_loader.patch_size,
-        dataspecs=dataspecs,
-        unet_backbone_config=config.models.unet_backbone_config,
-        conditioning_config=config.models.conditioning_config,
-        enable_clamp=config.models.numeric_safety.enable_clamp,
-        clamp_range=config.models.numeric_safety.clamp_range
-    )
-    # build the session
-    session_context=session.SessionBuildContext(
-        device=c.DEVICE,
-        verbose_runner=False,
-        session_paths=paths,
-    )
-    runner = session.factory.build_continous_training_session(
-        dataspecs=dataspecs,
-        model=model,
-        config=config.session,
-        context=session_context,
-        logger=logger
-    )
-    # return the runner
-    return paths.step_results, runner.run
+            # collect artifacts and build `DataSpecs`
+            artifact_paths = artifacts.ArtifactPaths(
+                f'{config.execution.exp_root}/artifacts/'
+                f'{config.foundation.datablocks.name}'
+            )
+            dataspecs = geopipe.build_dataspec(
+                artifact_paths,
+                mode='default',
+                ids_domain_name=config.dataspecs.domain_ids_name,
+                vec_domain_name=config.dataspecs.domain_vec_name
+            )
+            logger.set_inputs({'dataspecs': dataspecs.to_dict()})
+
+            # setup the model
+            model = models.build_multihead_unet(
+                patch_size=config.session.data_loader.patch_size,
+                dataspecs=dataspecs,
+                unet_backbone_config=config.models.unet_backbone_config,
+                conditioning_config=config.models.conditioning_config,
+                enable_clamp=config.models.numeric_safety.enable_clamp,
+                clamp_range=config.models.numeric_safety.clamp_range
+            )
+
+            # build session runner
+            session_context = session.SessionBuildContext(
+                device=c.DEVICE,
+                session_paths=paths,
+            )
+            runner = session.factory.build_continous_training_session(
+                dataspecs=dataspecs,
+                model=model,
+                config=config.session,
+                context=session_context,
+                logger=logger
+            )
+
+            yield from runner.run()
+
+            # update summary
+            logger.summary['completed_at'] = datetime.datetime.now().strftime(c.TF_ISO8601)
+            logger.set_summary_status('SUCCESS')
+
+        except Exception as e:
+            logger.set_summary_status('FAILED')
+            logger.log('ERROR', f'Trial execution failed: {e}', exc_info=True)
+            raise e
+
+        finally:
+            logger.log_sep()
+            logger.close() # summary dict will be persisted
+
+    return paths.step_results, run_wrapper

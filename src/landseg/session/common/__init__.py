@@ -32,6 +32,7 @@ import typing
 
 __all__ = [
     # classes
+    'SessionLogger',
     # functions
     # types
     'PhaseLike',
@@ -42,12 +43,16 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .events import SessionObserverLike
+    from .logger import SessionLogger
     from .orchestration import OrchestrationConfigShape, PhaseLike
 
 def __getattr__(name: str):
 
     if name in {'SessionObserverLike'}:
         return getattr(importlib.import_module('.events', __package__), name)
+
+    if name in {'SessionLogger'}:
+        return getattr(importlib.import_module('.logger', __package__), name)
 
     if name in {'OrchestrationConfigShape', 'PhaseLike'}:
         return getattr(importlib.import_module('.orchestration', __package__), name)

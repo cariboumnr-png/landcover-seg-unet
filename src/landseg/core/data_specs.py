@@ -77,6 +77,34 @@ class DataSpecs:
             str(self.domains)
         ])
 
+    def to_dict(self) -> dict[str, typing.Any]:
+        '''Serialize the specifications into a lean, schematic dictionary.'''
+        return {
+            'name': self.name,
+            'mode': self.mode,
+            'meta': {
+                'num_channels': self.meta.image_specs.num_channels,
+                'height_width': self.meta.image_specs.height_width,
+                'ignore_index': self.meta.label_specs.ignore_index,
+                'blk_bytes': self.meta.blk_bytes,
+                'test_blks_grid': self.meta.test_blks_grid
+            },
+            'heads': {
+                'names': list(self.heads.class_counts.keys()),
+                'class_counts': self.heads.class_counts,
+                'head_parent': self.heads.head_parent
+            },
+            'splits': {
+                'train_count': len(self.splits.train),
+                'val_count': len(self.splits.val),
+                'test_count': len(self.splits.test or {})
+            },
+            'domains': {
+                'ids_num': self.domains.ids_num,
+                'vec_dim': self.domains.vec_dim
+            }
+        }
+
 @dataclasses.dataclass
 class Meta:
     '''General dataset metadata.'''

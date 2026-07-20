@@ -33,23 +33,23 @@ import typing
 __all__ = [
     # classes
     'SessionBuildContext',
+    'SessionLogger',
     # functions
     # types
     'SessionConfigShape',
-    'SessionMetadata',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .common import SessionLogger
     from .factory import SessionConfigShape, SessionBuildContext
-    from .metadata import SessionMetadata
 
 def __getattr__(name: str):
 
+    if name in {'SessionLogger'}:
+        return getattr(importlib.import_module('.common', __package__), name)
+
     if name in {'SessionConfigShape', 'SessionBuildContext'}:
         return getattr(importlib.import_module('.factory', __package__), name)
-
-    if name in {'SessionMetadata'}:
-        return getattr(importlib.import_module('.metadata', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

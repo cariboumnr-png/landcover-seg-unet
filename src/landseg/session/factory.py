@@ -88,7 +88,6 @@ class SessionConfigShape(typing.Protocol):
 class SessionBuildContext:
     '''Context for session construction.'''
     device: str
-    verbose_runner: bool = True
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.ResultsPaths | None = None
 
@@ -104,7 +103,10 @@ def build_overfit_session(
     '''Build an epoch engine for overfit training with evaluation.'''
 
     # callback dispatcher
-    dispatcher = instrument.build_dispatcher(verbose=context.verbose_runner)
+    dispatcher = instrument.build_dispatcher(
+        logger=logger,
+        verbose=(getattr(logger, 'console_lvl', None) is not None)
+    )
     # context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -131,7 +133,10 @@ def build_evaluate_session(
     '''Build an epoch engine for evaluation-only execution.'''
 
     # callback dispatcher
-    dispatcher = instrument.build_dispatcher(verbose=context.verbose_runner)
+    dispatcher = instrument.build_dispatcher(
+        logger=logger,
+        verbose=(getattr(logger, 'console_lvl', None) is not None)
+    )
     # context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -163,7 +168,8 @@ def build_continous_training_session(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
-        verbose=context.verbose_runner
+        logger=logger,
+        verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
     # epoch engine context
     engine_context = engine.EpochEngineContext(
@@ -217,7 +223,8 @@ def build_curriculum_training_session(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
-        verbose=context.verbose_runner
+        logger=logger,
+        verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
     # epoch engine context
     engine_context = engine.EpochEngineContext(

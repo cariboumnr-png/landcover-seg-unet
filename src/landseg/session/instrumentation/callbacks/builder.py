@@ -36,12 +36,14 @@ import typing
 import landseg.session.instrumentation.callbacks as callbacks
 import landseg.session.instrumentation.callbacks.tracking as tracking
 import landseg.session.instrumentation.dashboards as dashboards
+import landseg.utils as utils
 
 def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
     uri: str | None = None,
     artifact_path: str | None = None,
     label_color_map: dict[str, list[int]] | None = None,
+    logger: utils.Logger | None = None,
     verbose: bool = True
 ) -> callbacks.CallbackDispatcher:
     '''
@@ -58,6 +60,7 @@ def build_dispatcher(
         artifact_path: Artifact storage path (required for MLflow).
         reclass_color_map: Optional mapping for visualization
             reclassification.
+        logger: Logger instance for recording session logging messages.
         verbose: Whether logging callback should emit console output.
 
     Returns:
@@ -86,7 +89,7 @@ def build_dispatcher(
 
     # callbacks list
     callbacks_list: list[callbacks.BaseCallback] = [
-        callbacks.LoggingCallback(verbose=verbose),
+        callbacks.LoggingCallback(logger=logger, verbose=verbose),
         tracking.TrainTrackingCallback(_trackers),
         tracking.ValTrackingCallback(_trackers),
         tracking.InferTrackingCallback(_trackers,label_color_map=label_color_map)

@@ -43,8 +43,7 @@ def build_dataspec(
     *,
     mode: typing.Literal['default', 'single', 'val_only', 'test_only'],
     ids_domain_name: str | None = None,
-    vec_domain_name: str | None = None,
-    print_out: bool = False
+    vec_domain_name: str | None = None
 ) -> core.DataSpecs:
     '''
     Build a `DataSpecs` object from catalog metadata and transform schema.
@@ -63,7 +62,6 @@ def build_dataspec(
         ids_domain_fpath: Optional path to categorical domain map JSON.
         vec_domain_fpath: Optional path to vector domain map JSON.
         transform_schema_fpath: Path to the transform schema JSON.
-        print_out: If True, print the constructed `DataSpecs` to stdout.
 
     Returns:
         DataSpecs instance describing dataset structure and artifacts.
@@ -105,9 +103,6 @@ def build_dataspec(
         domains=_get_domain(transform_schema, ids_domain, vec_domain)
     )
 
-    # print to screen and return
-    if print_out:
-        print(specs)
     return specs
 
 # ------------------------------private  function------------------------------
