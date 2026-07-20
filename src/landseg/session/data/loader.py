@@ -275,10 +275,8 @@ def _config_by_mode(
     return data.BlockConfig(
         block_size=data_specs.meta.image_specs.height_width,
         patch_size=patch_size,
-        array_keys = {
-            'image_key': data_specs.meta.image_specs.array_key,
-            'label_key': data_specs.meta.label_specs.array_key
-        },
+        image_key=data_specs.meta.image_specs.array_key,
+        label_key=data_specs.meta.label_specs.array_key,
         ids_domain=domain['ids_domain'] if domain else None,
         vec_domain=domain['vec_domain'] if domain else None
     )

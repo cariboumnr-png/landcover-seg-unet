@@ -61,6 +61,7 @@ Notes:
     division; a cumulative index array is unnecessary.
 '''
 
+
 from __future__ import annotations
 # standard imports
 import collections
@@ -72,6 +73,7 @@ import torch.utils.data
 import torchvision.transforms.functional
 # local imports
 import landseg.session.common.alias as alias
+
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -86,40 +88,42 @@ class BlockConfig:
     vectors to be attached to each returned sample.
 
     Attributes:
-        augment_flip (bool): Whether to apply random horizontal/vertical
-            flips to both image and label tensors during sampling.
-        block_size (int): Size (pxs) of the square input block (H == W).
-        patch_size (int): Size (pxs) of each square patch extracted.
-        domain_map (dict | None): Optional mapping from a block ID to a
-            domain feature dictionary. Each dict value should be either
-            an `int` (categorical ID) or a `list[float]` (vector of
-            continuous features).
-        patch_per_dim (int): Derived number of patches per spatial
-            dimension, set in `__post_init__`.
-        patch_per_block (int): Derived total patches per block, set in
-            `__post_init__`.
+        block_size: Size (pxs) of the square input block (H == W).
+        patch_size: Size (pxs) of each square patch extracted.
+        array_keys:
+        ids_domain:
+        vec_domain:
+        image_key:
+        label_key:
 
     Raises:
-        AssertionError: If `block_size < patch_size` or `block_size` is
+        ValueError: If `block_size < patch_size` or `block_size` is
             not divisible by `patch_size`.
     '''
-
     block_size: int
     patch_size: int
-    array_keys: dict[str, str]
+    image_key: str
+    label_key: str
     ids_domain: dict[str, int] | None = None
     vec_domain: dict[str, list[float]] | None = None
-    patch_per_dim: int = dataclasses.field(init=False)
-    patch_per_blk: int = dataclasses.field(init=False)
 
     def __post_init__(self):
-        assert self.block_size >= self.patch_size
-        assert self.block_size % self.patch_size == 0
-        self.patch_per_dim = int(self.block_size // self.patch_size)
-        self.patch_per_blk = self.patch_per_dim ** 2
+        if self.block_size < self.patch_size:
+            raise ValueError('Data block size must > dataset patch size')
 
-    def __repr__(self):
-        return repr(dataclasses.asdict(self))
+        if self.block_size % self.patch_size != 0:
+            raise ValueError('Data block size must be divisible by patch size')
+
+    @property
+    def patch_per_dim(self) -> int:
+        '''Return number of patches per dimention (same in H and W).'''
+        return int(self.block_size // self.patch_size)
+
+    @property
+    def patch_per_blk(self) -> int:
+        '''Return number of patches per data block.'''
+        return self.patch_per_dim ** 2
+
 
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
@@ -128,6 +132,7 @@ class _MultiBlockData:
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     dom: list[alias.TorchDict] | _CacheDict = dataclasses.field(init=False)
+
 
 # --------------------------------Public  Class--------------------------------
 class MultiBlockDataset(torch.utils.data.Dataset):
@@ -203,8 +208,12 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             self.data.dom = []
             # no progress bar if logger is silent
             for blk_name, blk_fpath in block_src.items():
-                dom = self._get_domain(blk_name)
-                blk_data = _BlockDataset(blk_fpath, config, dom, self.aug_flip)
+                blk_data = _BlockDataset(
+                    blk_fpath,
+                    config,
+                    self._get_domain(blk_name),
+                    augment_flip=self.aug_flip
+                )
                 _imgs.append(blk_data.imgs)
                 _lbls.append(blk_data.lbls)
                 self.data.dom.extend([blk_data.domain] * config.patch_per_blk)
@@ -266,29 +275,29 @@ class MultiBlockDataset(torch.utils.data.Dataset):
 
     def _global_to_local(self, idx: int) -> tuple[int, int]:
         '''Map global patch to block/patch indices (uniform blocks).'''
-
         blk_idx = idx // self.blk_cfg.patch_per_blk
         pch_idx = idx % self.blk_cfg.patch_per_blk
         return int(blk_idx), int(pch_idx)
 
     def _load_block_to_cache(self, blk_idx: int) -> None:
         '''Load a block into streaming caches if not already present.'''
-
         # skip loading if block already in the cache
         if blk_idx in self.data.img:
             return
         # otherwise proceed
         blk_name = list(self.blks.keys())[blk_idx] # find blk name by block idx
-        blk_fpath = self.blks[blk_name]
-        dom = self._get_domain(blk_name)
-        blk_data = _BlockDataset(blk_fpath, self.blk_cfg, dom, self.aug_flip)
+        blk_data = _BlockDataset(
+            self.blks[blk_name],
+            self.blk_cfg,
+            self._get_domain(blk_name),
+            augment_flip=self.aug_flip
+        )
         self.data.img[blk_idx] = blk_data.imgs.astype(numpy.float32)
         self.data.lbl[blk_idx] = blk_data.lbls.astype(numpy.int64)
         self.data.dom[blk_idx] = blk_data.domain
 
     def _get_domain(self, name: str) -> dict[str, int | list[float] | None]:
         '''Retrieve the per-block domain dict if available.'''
-
         ids: int | None = None
         vec: list[float] | None = None
         if self.blk_cfg.ids_domain:
@@ -327,9 +336,10 @@ class _BlockDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        block_fpath: str,
-        block_config: BlockConfig,
-        block_domain: dict[str, int | list[float] | None],
+        fpath: str,
+        config: BlockConfig,
+        domains: dict[str, int | list[float] | None],
+        *,
         augment_flip: bool
     ):
         '''
@@ -351,23 +361,21 @@ class _BlockDataset(torch.utils.data.Dataset):
         super().__init__()
 
         # process args
-        self.config = block_config
+        self.config = config
         self.domain: alias.TorchDict = {}
         self.augment_flip = augment_flip
 
         # load data directly from npz
-        loaded = numpy.load(block_fpath, allow_pickle=True)
-        img_key = block_config.array_keys.get('image_key')
-        lbl_key = block_config.array_keys.get('label_key')
-        assert img_key in loaded and lbl_key in loaded
+        loaded = numpy.load(fpath, allow_pickle=True)
+        assert config.image_key in loaded and config.label_key in loaded
         try:
-            self.imgs = self._get_patches(loaded[img_key])
-            self.lbls = self._get_patches(loaded[lbl_key])
+            self.imgs = self._get_patches(loaded[config.image_key])
+            self.lbls = self._get_patches(loaded[config.label_key])
         except ValueError as err:
-            raise ValueError(f'Bad patch at {block_fpath}') from err
+            raise ValueError(f'Bad patch at {fpath}') from err
 
         # parse domain if provided
-        for key, dom in block_domain.items():
+        for key, dom in domains.items():
             if isinstance(dom, int):
                 self.domain[key] = torch.tensor(dom, dtype=torch.long)
             elif isinstance(dom, list):
@@ -397,7 +405,6 @@ class _BlockDataset(torch.utils.data.Dataset):
 
     def _get_patches(self, arr: numpy.ndarray) -> numpy.ndarray:
         '''Patchify a square block into configured patches.'''
-
         # if input is an unlabeled placeholder. see dataset/blocks/block.py
         if arr.ndim == 1 and arr.shape == (1,):
             return arr  # keep as-is to signal 'no labels'
