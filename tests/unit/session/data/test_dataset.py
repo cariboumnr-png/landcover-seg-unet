@@ -94,7 +94,7 @@ def test_cache_dict_setitem_no_eviction():
     assert 10 in cache_dict and cache_dict[10] == 11 # sanity
 
 
-def test_cache_dict_setitem_witn_evivtion():
+def test_cache_dict_setitem_with_eviction():
     '''
     Given: A `_CacheDict` instance initiated with `maxsize=n`.
     When: Set a (key, value) pair when maximum length has been reached.
@@ -171,7 +171,7 @@ def test_block_dataset_getitem_no_augment_flip(tmp_path):
     '''
     Given: A `_BlockDataset` configured with no augment flip.
     When: call `__getitem__` from the class object.
-    Then: Corrently return the original values from the called key.
+    Then: Correctly return the original values from the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=False)
     x, y, domains = dt[0]
@@ -198,7 +198,7 @@ def test_block_dataset_getitem_hflip_only(tmp_path):
     '''
     Given: A `_BlockDataset` configured with augment flip.
     When: manually set hflip only and call `__getitem__`.
-    Then: Corrently return horizontal flipped values from the called key.
+    Then: Correctly return horizontal flipped values from the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=True)
 
@@ -225,7 +225,7 @@ def test_block_dataset_getitem_vflip_only(tmp_path):
     '''
     Given: A `_BlockDataset` configured with augment flip.
     When: manually set vflip only and call `__getitem__`.
-    Then: Corrently return vertically flipped values from the called key.
+    Then: Correctly return vertically flipped values from the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=True)
 
@@ -252,7 +252,7 @@ def test_block_dataset_getitem_both_flip(tmp_path):
     '''
     Given: A `_BlockDataset` configured with augment flip.
     When: manually set to flip both directions and call `__getitem__`.
-    Then: Corrently return double-flipped values from the called key.
+    Then: Correctly return double-flipped values from the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=True)
 
@@ -485,7 +485,7 @@ def _test_block_dataset(tmp_path, *, aug_flip: bool, **kwargs):
 
 
 def _test_multiblock_dataset(tmp_path, preload: bool, cache_size: int = 16):
-    '''Return a 'MultiBlockDataset obj.'''
+    '''Return a `MultiBlockDataset` obj.'''
     # create two temp blocks
     _ = _test_block_dataset(
         tmp_path,
