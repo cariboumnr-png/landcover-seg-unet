@@ -39,7 +39,6 @@ DataLoaders object containing train/val/test loaders and metadata.
 from __future__ import annotations
 # standard imports
 import dataclasses
-import functools
 import typing
 # third-party imports
 import psutil
@@ -137,62 +136,57 @@ def build_dataloaders(
     h_w = data_specs.meta.image_specs.height_width
     assert h_w % config.patch_size == 0
 
-    # partial load function
-    load_partial = functools.partial(
-        _load,
-        data_specs=data_specs,
-        batch_size=config.batch_size,
-        patch_size=config.patch_size,
-        logger=logger
-    )
-
-    # partial metadata
-    meta_partial = functools.partial(
-        _DataLoadersMeta,
-        batch_size=config.batch_size,
-        patch_size=config.patch_size,
-    )
-
     # return dataloaders container by mode
     match data_specs.mode:
 
         # if single block mode (for overfit test)
         case 'single':
-            single_loader = load_partial('single')
+            single_loader = _load('single', data_specs, config, logger=logger)
             # pass the same as val dataloader for minimal disturbance downstream
-            assert single_loader
             return DataLoaders(
                 train=single_loader,
                 val=single_loader,
                 test=None,
-                meta=meta_partial(preview_context=None)
+                meta=_DataLoadersMeta(
+                    config.batch_size,
+                    config.patch_size,
+                    preview_context=None
+                )
             )
 
         # val only mode
         case 'val_only':
-            val_loader = load_partial('val')
+            val_loader = _load('val', data_specs, config, logger=logger)
             return DataLoaders(
                 train=None,
                 val=val_loader,
                 test=None,
-                meta=meta_partial(preview_context=None)
+                meta=_DataLoadersMeta(
+                    config.batch_size,
+                    config.patch_size,
+                    preview_context=None
+                )
             )
 
         # test only mode
         case 'test_only':
-            test_loader = load_partial('test')
+            test_loader = _load('test', data_specs, config, logger=logger)
             return DataLoaders(
                 train=None,
                 val=None,
                 test=test_loader,
-                meta=meta_partial(preview_context=None)
+                meta=_DataLoadersMeta(
+                    config.batch_size,
+                    config.patch_size,
+                    preview_context=None
+                )
             )
 
         # default normal experiment
         case 'default':
-            train = load_partial('train')
-            val = load_partial('val')
-            test = load_partial('test')
+            train = _load('train', data_specs, config, logger=logger)
+            val = _load('val', data_specs, config, logger=logger)
+            test = _load('test', data_specs, config, logger=logger)
             if test is not None:
                 preview_context = _generate_preview_context(
                     per_blk=int(h_w / config.patch_size) ** 2,
@@ -204,16 +198,39 @@ def build_dataloaders(
                 train=train,
                 val=val,
                 test=test,
-                meta=meta_partial(preview_context=preview_context)
+                meta=_DataLoadersMeta(
+                    config.batch_size,
+                    config.patch_size,
+                    preview_context=preview_context
+                )
             )
 
 
 # ----- helper functions
+@typing.overload
+def _load(
+    mode: typing.Literal['single'],
+    data_specs: core.DataSpecs,
+    config: DataLoaderConfig,
+    *,
+    logger: common.SessionLogger | None = None,
+) -> torch.utils.data.DataLoader: ...
+
+
+@typing.overload
+def _load(
+    mode: typing.Literal['train', 'val', 'test'],
+    data_specs: core.DataSpecs,
+    config: DataLoaderConfig,
+    *,
+    logger: common.SessionLogger | None = None,
+) -> torch.utils.data.DataLoader | None: ...
+
+
 def _load(
     mode: typing.Literal['train', 'val', 'test', 'single'],
     data_specs: core.DataSpecs,
-    batch_size: int,
-    patch_size: int,
+    config: DataLoaderConfig,
     *,
     logger: common.SessionLogger | None = None,
 ) -> torch.utils.data.DataLoader | None:
@@ -233,7 +250,7 @@ def _load(
         return None
 
     # dataset configuration
-    dataset_config = _config_by_mode(mode, data_specs, patch_size)
+    dataset_config = _config_by_mode(mode, data_specs, config.patch_size)
 
     # preload/cache config
     flags = _infer_memory_flags(data_specs)
@@ -266,7 +283,7 @@ def _load(
 
     # torch dataloader arguments dict
     dataloader_args = {
-        'batch_size': 1 if mode == 'single' else batch_size,
+        'batch_size': 1 if mode == 'single' else config.batch_size,
         'shuffle': mode == 'train',
         'collate_fn': _collate_multi_block
     }
