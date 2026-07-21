@@ -36,8 +36,8 @@ DataLoaders object containing train/val/test loaders and metadata.
 
 # pylint: disable=missing-function-docstring
 
-# standard imports
 from __future__ import annotations
+# standard imports
 import dataclasses
 import functools
 import typing
@@ -52,30 +52,31 @@ import landseg.session.common.alias as alias
 import landseg.session.data as data
 
 
-# ---------------------------------Public Type---------------------------------
+# ----- `DataLoaderConfig` protocol
 class DataLoaderConfig(typing.Protocol):
-    '''Shape of a container for configuring data loading.'''
     @property
     def batch_size(self) -> int: ...
     @property
     def patch_size(self) -> int: ...
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- `DataLoaders` dataclasses
 @dataclasses.dataclass
 class DataLoaders:
-    '''Train/Val/Test dataloader for the trainer.'''
+    '''Train/Val/Test dataloader container for the trainer.'''
     train: torch.utils.data.DataLoader | None
     val: torch.utils.data.DataLoader | None
     test: torch.utils.data.DataLoader | None
     meta: _DataLoadersMeta
 
-# ------------------------------private dataclass------------------------------
+
 @dataclasses.dataclass
 class _DataLoadersMeta:
     '''Data loaders' metadata.'''
     batch_size: int
     patch_size: int
     preview_context: _PreviewContext | None
+
 
 @dataclasses.dataclass
 class _PreviewContext:
@@ -85,12 +86,24 @@ class _PreviewContext:
     block_columns: int
     patch_grid_shape: tuple[int, int]
 
-# -------------------------------Public Function-------------------------------
+
+@dataclasses.dataclass
+class _MemoryFlags:
+    '''Dataset memory preload and caching strategy flags.'''
+    preload_train: bool
+    cache_train: int
+    preload_val: bool
+    cache_val: int
+    preload_test: bool
+    cache_test: int
+
+
+# ----- `build_dataloaders` function
 def build_dataloaders(
     data_specs: core.DataSpecs,
     config: DataLoaderConfig,
     *,
-    logger: common.SessionLogger,
+    logger: common.SessionLogger | None = None,
 ) -> DataLoaders:
     '''
     Construct train/val/test dataloaders and metadata from dataset specs.
@@ -103,7 +116,7 @@ def build_dataloaders(
         data_specs: Dataset specification describing data layout, splits,
             block structure, and global metadata.
         config: Data loading configuration (e.g., batch and patch size).
-        logger: Logger used for reporting build progress and decisions.
+        logger: Optional logger used for reporting build progress.
 
     Returns:
         DataLoaders: Container with:
@@ -140,7 +153,7 @@ def build_dataloaders(
         patch_size=config.patch_size,
     )
 
-    # return by mode
+    # return dataloaders container by mode
     match data_specs.mode:
 
         # if single block mode (for overfit test)
@@ -175,7 +188,7 @@ def build_dataloaders(
                 meta=meta_partial(preview_context=None)
             )
 
-        # defualt normal experiment
+        # default normal experiment
         case 'default':
             train = load_partial('train')
             val = load_partial('val')
@@ -194,14 +207,15 @@ def build_dataloaders(
                 meta=meta_partial(preview_context=preview_context)
             )
 
-# ------------------------------private  function------------------------------
+
+# ----- helper functions
 def _load(
     mode: typing.Literal['train', 'val', 'test', 'single'],
     data_specs: core.DataSpecs,
     batch_size: int,
     patch_size: int,
     *,
-    logger: common.SessionLogger,
+    logger: common.SessionLogger | None = None,
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader.'''
 
@@ -217,47 +231,53 @@ def _load(
     # early exit if no data blocks are available, e.g., no test dataset
     if not data_blocks:
         return None
+
     # dataset configuration
     dataset_config = _config_by_mode(mode, data_specs, patch_size)
+
     # preload/cache config
-    load_flags = _flags(data_specs)
+    flags = _infer_memory_flags(data_specs)
+    preload = getattr(flags, f'preload_{mode}', False)
+    cache_num = getattr(flags, f'cache_{mode}', 0)
+
     # get multiblock dataset
     dataset = data.MultiBlockDataset(
         data_blocks,
         dataset_config,
-        preload=bool(load_flags[f'preload_{mode}']),
+        preload=preload,
         augment_flip=bool(mode == 'train'),
-        blk_cache_num=load_flags[f'cache_{mode}']
-    )
-    # log dataloading info
-    logger.set_inputs({
-        mode: {
-            'loaded': dataset.n_preloaded,
-            'cached': dataset.n_cached
-        }
-    })
-    logger.log(
-        'INFO',
-        f'Blocks type\t[{mode}]: '
-        f'Loaded {dataset.n_preloaded} blocks | '
-        f'Cached {dataset.n_cached} blocks'
+        blk_cache_num=cache_num
     )
 
-    # get dataloader
+    # log dataloading info if logger is present
+    if logger is not None:
+        logger.set_inputs({
+            mode: {
+                'loaded': dataset.n_preloaded,
+                'cached': dataset.n_cached
+            }
+        })
+        logger.log(
+            'INFO',
+            f'Blocks type\t[{mode}]: '
+            f'Loaded {dataset.n_preloaded} blocks | '
+            f'Cached {dataset.n_cached} blocks'
+        )
+
     # torch dataloader arguments dict
-    dataloader_args =  {
+    dataloader_args = {
         'batch_size': 1 if mode == 'single' else batch_size,
         'shuffle': mode == 'train',
         'collate_fn': _collate_multi_block
     }
-    # return dataloader
     return torch.utils.data.DataLoader(dataset, **dataloader_args)
+
 
 def _config_by_mode(
     mode: str,
     data_specs: core.DataSpecs,
     patch_size: int,
-):
+) -> data.BlockConfig:
     '''Configure dataloading by mode.'''
 
     # fetch domain by mode
@@ -281,24 +301,36 @@ def _config_by_mode(
         vec_domain=domain['vec_domain'] if domain else None
     )
 
-def _flags(data_specs: core.DataSpecs) -> dict[str, int | bool]:
-    '''Get dataset loading flags.'''
+
+def _infer_memory_flags(
+    data_specs: core.DataSpecs,
+    available_bytes: int | None = None
+) -> _MemoryFlags:
+    '''Infer dataset preload and caching strategy flags based on RAM.'''
 
     # fit block byte size
     fbytes = data_specs.meta.blk_bytes
     # early exit for single block test (fbytes = 0)
     if not fbytes:
-        return {
-            'preload_single': True,
-            'cache_single': 0
-        }
+        return _MemoryFlags(
+            preload_train=True,
+            cache_train=0,
+            preload_val=True,
+            cache_val=0,
+            preload_test=True,
+            cache_test=0
+        )
 
     # get dataset sizes
     train_bytes = len(data_specs.splits.train or {}) * fbytes
     val_bytes = len(data_specs.splits.val or {}) * fbytes
 
     # decision on preload and cache size
-    mem = psutil.virtual_memory().available
+    mem = (
+        available_bytes
+        if available_bytes is not None
+        else psutil.virtual_memory().available
+    )
     _val = _train = False
     _val_n = train_n = 0
 
@@ -313,15 +345,16 @@ def _flags(data_specs: core.DataSpecs) -> dict[str, int | bool]:
         _val_n = round(0.3 * mem / fbytes)
         train_n = round(0.2 * mem / fbytes)
 
-    # return flags
-    return {
-        'preload_train': _train,
-        'cache_train': train_n,
-        'preload_val': _val,
-        'cache_val': _val_n,
-        'preload_test': True,
-        'cache_test': 0
-    }
+    # return flags container
+    return _MemoryFlags(
+        preload_train=_train,
+        cache_train=train_n,
+        preload_val=_val,
+        cache_val=_val_n,
+        preload_test=True,
+        cache_test=0
+    )
+
 
 def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
     '''
@@ -333,22 +366,18 @@ def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
       - Domain: all items share the same keys; each stacks to [B, ...]
     '''
 
-    # unpack batch as a list
-    xs, ys, ds = zip(*batch)            # length B:
-    xs = [x for x, _, _ in batch]       # list[Tensor]
-    ys = [y for _, y, _ in batch]       # list[Tensor]
-    ds = [d for _, _, d in batch]       # list[TorchDict]
+    # unpack batch items into separate lists
+    xs, ys, ds = zip(*batch)
 
     # x is always stackable
-    xs = torch.stack(xs, dim=0) # x -> [B, C, H, W]
+    xs_out = torch.stack(xs, dim=0) # x -> [B, C, H, W]
 
-    # y can be labeled or unlabeled - fail fast if mixed
     # determine if this is a labeled or unlabeled batch from the first item
-    y0 = ys[0] # read first and determined. assuming homogeny
+    y0 = ys[0]
     labeled_batch = y0.numel() > 0
-    # if labeled/training
+
     if labeled_batch:
-        # Guard: ensure all y match shape of first_y
+        # ensure all y match shape of first y
         exp_shape = y0.shape
         for i, y in enumerate(ys):
             if y.shape != exp_shape:
@@ -357,14 +386,13 @@ def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
                     f'expected {tuple(exp_shape)} but got {tuple(y.shape)}'
                 )
         ys_out = torch.stack(ys, dim=0).long()
-    # unlabeled/inference: all y must be empty tensors
     else:
+        # unlabeled/inference: all y must be empty tensors
         for i, y in enumerate(ys):
             if y.numel() != 0:
                 raise ValueError(
                     f'mixed labeled/unlabeled batch: item {i} has non-empty y'
                 )
-        # Stack to [B, 0]; torch.stack works for same shape zero-length tensors
         ys_out = torch.stack(ys, dim=0).long()
 
     # domain assumes consistent keys across batch
@@ -373,23 +401,25 @@ def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
     for key in first_dom.keys():
         dom_out[key] = torch.stack([d[key] for d in ds], dim=0)
 
-    # return
-    return xs, ys_out, dom_out
+    return xs_out, ys_out, dom_out
+
 
 def _generate_preview_context(
     per_blk: int,
     test_blks_grid: tuple[int, int]
-):
+) -> _PreviewContext:
     '''Resolve patch-block layout for preview context.'''
 
     # resolve patch-block layout
     per_dim = int(per_blk ** 0.5)
     assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
+
     # resolve block col/row numbers
     blk_col, blk_row = test_blks_grid
+
     # resolve patch col/row numbers
     pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
-    # return dataclasee
+
     return _PreviewContext(
         patch_per_blk=per_blk,
         patch_per_dim=per_dim,
