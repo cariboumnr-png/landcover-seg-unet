@@ -243,7 +243,10 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx: int) -> alias.DatasetItem:
         if self.preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
-            if isinstance(self.data.lbl, numpy.ndarray) and self.data.lbl.ndim == 1:
+            if (
+                isinstance(self.data.lbl, numpy.ndarray) and
+                self.data.lbl.ndim == 1
+            ):
                 y = numpy.array([1])
             else:
                 y = self.data.lbl[idx].astype(numpy.int64)  # [ps, ps]
@@ -253,7 +256,10 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             blk_idx, pch_idx = self._global_to_local(idx)
             self._load_block_to_cache(blk_idx)
             x = self.data.img[blk_idx][pch_idx]
-            if isinstance(self.data.lbl, numpy.ndarray) and self.data.lbl.ndim == 1:
+            if (
+                isinstance(self.data.lbl[blk_idx], numpy.ndarray) and
+                self.data.lbl[blk_idx].ndim == 1
+            ):
                 y = numpy.array([1])
             else:
                 y = self.data.lbl[blk_idx][pch_idx].astype(numpy.int64)  # [ps, ps]

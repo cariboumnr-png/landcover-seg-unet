@@ -276,6 +276,174 @@ def test_block_dataset_getitem_both_flip(tmp_path):
 
 
 # ----- `MultiBlockDataset` tests
+def test_multiblock_dataset_instantiation_preload(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` configured with `preload=True`.
+    When: Instantiation of `MultiBlockDataset`.
+    Then: Correctly set dataset length and preload count attributes.
+    '''
+    dt = _test_multiblock_dataset(tmp_path, preload=True)
+
+    assert len(dt) == 8
+    assert dt.n_preloaded == 2
+    assert dt.n_cached == 0
+
+
+def test_multiblock_dataset_instantiation_streaming(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` configured with `preload=False`.
+    When: Instantiation of `MultiBlockDataset`.
+    Then: Correctly set dataset length and cached count attributes.
+    '''
+    dt = _test_multiblock_dataset(tmp_path, preload=False)
+
+    assert len(dt) == 8
+    assert dt.n_preloaded == 0
+    assert dt.n_cached == 2
+
+
+def test_multiblock_dataset_global_to_local(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` object.
+    When: Map global patch index to local block and patch index.
+    Then: Correctly return tuple of block index and patch index.
+    '''
+    dt = _test_multiblock_dataset(tmp_path, preload=False)
+
+    assert dt._global_to_local(0) == (0, 0)
+    assert dt._global_to_local(3) == (0, 3)
+    assert dt._global_to_local(4) == (1, 0)
+    assert dt._global_to_local(7) == (1, 3)
+
+
+def test_multiblock_dataset_getitem_preload(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` configured with `preload=True`.
+    When: Call `__getitem__` across different data blocks.
+    Then: Correctly return image tensor, label tensor, and domain dictionary.
+    '''
+    dt = _test_multiblock_dataset(tmp_path, preload=True)
+    x0, y0, _ = dt[0]
+    x4, y4, _ = dt[4]
+
+    assert torch.equal(
+        x0,
+        torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.float32)
+    )
+    assert torch.equal(
+        y0,
+        torch.tensor([[[5, 6], [7, 8]]], dtype=torch.long)
+    )
+    assert torch.equal(
+        x4,
+        torch.tensor([[[11.0, 12.0], [13.0, 14.0]]], dtype=torch.float32)
+    )
+    assert torch.equal(
+        y4,
+        torch.tensor([[[5, 6], [7, 8]]], dtype=torch.long)
+    )
+
+
+def test_multiblock_dataset_getitem_streaming(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` configured with `preload=False`.
+    When: Call `__getitem__` across different data blocks.
+    Then: Dynamically load blocks to cache and return matching tensors.
+    '''
+    dt = _test_multiblock_dataset(tmp_path, preload=False)
+    x0, y0, _ = dt[0]
+    x4, y4, _ = dt[4]
+
+    assert torch.equal(
+        x0,
+        torch.tensor([[[1.0, 2.0], [3.0, 4.0]]], dtype=torch.float32)
+    )
+    assert torch.equal(
+        y0,
+        torch.tensor([[[5, 6], [7, 8]]], dtype=torch.long)
+    )
+    assert torch.equal(
+        x4,
+        torch.tensor([[[11.0, 12.0], [13.0, 14.0]]], dtype=torch.float32)
+    )
+    assert torch.equal(
+        y4,
+        torch.tensor([[[5, 6], [7, 8]]], dtype=torch.long)
+    )
+
+
+def test_multiblock_dataset_getitem_no_label(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` created from blocks with placeholder labels.
+    When: Call `__getitem__` to retrieve samples.
+    Then: Return label as an empty `torch.Tensor`.
+    '''
+    fpath = str(tmp_path / 'unlbl.npz')
+    image = numpy.array([[[1.0, 2.0], [3.0, 4.0]]])
+    label = numpy.array([1]) # placeholder label
+    numpy.savez(fpath, image=image, label=label)
+
+    config = dataset.BlockConfig(
+        block_size=2,
+        patch_size=2,
+        image_key='image',
+        label_key='label'
+    )
+    dt = dataset.MultiBlockDataset(
+        {'unlbl': fpath},
+        config,
+        preload=False
+    )
+    _, y, _ = dt[0]
+
+    assert y.numel() == 0
+
+
+def test_multiblock_dataset_domain_features(tmp_path):
+    '''
+    Given: A `MultiBlockDataset` with categorical and vector domains configured.
+    When: Retrieve samples using `__getitem__`.
+    Then: Correctly populate domain dictionary with formatted tensors.
+    '''
+    _ = _test_block_dataset(tmp_path, aug_flip=False, name='blk1.npz')
+    config = dataset.BlockConfig(
+        block_size=4,
+        patch_size=2,
+        image_key='image',
+        label_key='label',
+        ids_domain={'blk1': 42},
+        vec_domain={'blk1': [0.5, 0.75]}
+    )
+    dt = dataset.MultiBlockDataset(
+        {'blk1': str(tmp_path / 'blk1.npz')},
+        config,
+        preload=True
+    )
+    _, _, dom = dt[0]
+
+    assert torch.equal(dom['ids'], torch.tensor(42, dtype=torch.long))
+    assert torch.equal(
+        dom['vec'],
+        torch.tensor([0.5, 0.75], dtype=torch.float32)
+    )
+
+
+def test_multiblock_dataset_cache_eviction(tmp_path):
+    '''
+    Given: A streaming `MultiBlockDataset` with cache size `blk_cache_num=1`.
+    When: Access items belonging to different blocks sequentially.
+    Then: Evict oldest cached block to maintain cache size constraint.
+    '''
+    dt = _test_multiblock_dataset(tmp_path, preload=False, cache_size=1)
+
+    _ = dt[0] # loads block index 0 into cache
+    assert 0 in dt.data.img
+    assert len(dt.data.img) == 1
+
+    _ = dt[4] # loads block index 1 into cache, evicts block 0
+    assert 1 in dt.data.img
+    assert 0 not in dt.data.img
+    assert len(dt.data.img) == 1
 
 
 # ----- helper factories
