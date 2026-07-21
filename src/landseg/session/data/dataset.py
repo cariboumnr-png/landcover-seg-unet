@@ -75,7 +75,6 @@ import torchvision.transforms.functional
 import landseg.session.common.alias as alias
 
 
-# ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class BlockConfig:
     '''
@@ -124,7 +123,6 @@ class BlockConfig:
         return self.patch_per_dim ** 2
 
 
-# ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _MultiBlockData:
     '''Small container for multiblock data.'''
@@ -133,7 +131,6 @@ class _MultiBlockData:
     dom: list[alias.TorchDict] | _CacheDict = dataclasses.field(init=False)
 
 
-# --------------------------------Public  Class--------------------------------
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
     Unified dataset over multiple block .npz files with patch extraction
@@ -315,7 +312,8 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             vec = self.cfg.vec_domain[name]
         return {'ids': ids, 'vec': vec}
 
-# --------------------------------priavte class--------------------------------
+
+
 class _BlockDataset(torch.utils.data.Dataset):
     '''
     Prepare per-patch `(x, y, dom)` samples from a single data block.

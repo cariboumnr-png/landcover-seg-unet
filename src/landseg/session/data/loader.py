@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Utilities for constructing training/validation/test dataloaders.
 
@@ -34,7 +36,6 @@ The main entry point is `build_dataloaders`, returning a structured
 DataLoaders object containing train/val/test loaders and metadata.
 '''
 
-# pylint: disable=missing-function-docstring
 
 from __future__ import annotations
 # standard imports
@@ -53,6 +54,7 @@ import landseg.session.data as data
 
 # ----- `DataLoaderConfig` protocol
 class DataLoaderConfig(typing.Protocol):
+    '''Shape of the the configs needed for building dataloaders.'''
     @property
     def batch_size(self) -> int: ...
     @property
@@ -234,16 +236,13 @@ def _load(
     *,
     logger: common.SessionLogger | None = None,
 ) -> torch.utils.data.DataLoader | None:
-    '''Get a specific dataloader.'''
-
-    # fetch data blocks by mode
-    data_blocks_registry: dict[str, dict[str, str]] = {
+    '''Get a specific dataloader by mode.'''
+    data_blocks = {
         'train': data_specs.splits.train,
         'val': data_specs.splits.val,
         'test': data_specs.splits.test,
         'single': data_specs.splits.train
-    }
-    data_blocks = data_blocks_registry[mode]
+    }[mode] # fetch data blocks by mode
 
     # early exit if no data blocks are available, e.g., no test dataset
     if not data_blocks:
@@ -295,20 +294,17 @@ def _config_by_mode(
     data_specs: core.DataSpecs,
     patch_size: int,
 ) -> data.BlockConfig:
-    '''Configure dataloading by mode.'''
+    '''Return a `BlockConfig` object by dataloading mode.'''
+    if mode == 'single':
+        patch_size = data_specs.meta.image_specs.height_width # single block
 
-    # fetch domain by mode
-    domains_registry = {
+    domain = {
         'train': data_specs.domains.train,
         'val': data_specs.domains.val,
         'test': data_specs.domains.test,
         'single': None
-    }
-    domain = domains_registry[mode]
+    }[mode] # fetch domain by mode
 
-    # return config by mode
-    if mode == 'single':
-        patch_size = data_specs.meta.image_specs.height_width # single block
     return data.BlockConfig(
         block_size=data_specs.meta.image_specs.height_width,
         patch_size=patch_size,
@@ -324,8 +320,6 @@ def _infer_memory_flags(
     available_bytes: int | None = None
 ) -> _MemoryFlags:
     '''Infer dataset preload and caching strategy flags based on RAM.'''
-
-    # fit block byte size
     fbytes = data_specs.meta.blk_bytes
     # early exit for single block test (fbytes = 0)
     if not fbytes:
@@ -382,7 +376,6 @@ def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
       - Unlabeled: every y is empty tensor -> stacked to [B, 0] (long)
       - Domain: all items share the same keys; each stacks to [B, ...]
     '''
-
     # unpack batch items into separate lists
     xs, ys, ds = zip(*batch)
 
@@ -426,7 +419,6 @@ def _generate_preview_context(
     test_blks_grid: tuple[int, int]
 ) -> _PreviewContext:
     '''Resolve patch-block layout for preview context.'''
-
     # resolve patch-block layout
     per_dim = int(per_blk ** 0.5)
     assert per_dim * per_dim == per_blk, 'patch_per_blk must be square'
