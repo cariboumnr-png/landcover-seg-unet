@@ -198,11 +198,12 @@ def test_session_step_results_target_objective_default():
     Then: Return default validation metric name.
     '''
     validation = core.ValStepResults(
-        head_metrics=_make_head_metrics(head={'mean': 0.5})
+        head_metrics=_make_head_metrics(head_1={'mean': 0.5})
     )
     results = core.SessionStepResults(validation=validation)
 
-    assert results.target_objective == 'IoU from head'
+    # as no track head is specified
+    assert results.target_objective == 'IoU from [head_1] (simple mean)'
 
 
 def test_session_step_results_target_objective_weighted():
@@ -217,6 +218,7 @@ def test_session_step_results_target_objective_weighted():
     results = core.SessionStepResults(validation=validation)
     results.track('iou', {'head1': 0.25, 'head2': 0.75})
 
+    # two heads specified
     assert results.target_objective == 'IoU = head1*0.25 + head2*0.75'
 
 
@@ -263,11 +265,11 @@ def test_session_step_results_target_metrics_no_validation():
     assert results.target_metrics == -float('inf')
 
 
-def test_session_step_results_target_metrics_default_first_head():
+def test_session_step_results_target_metrics_default_mean():
     '''
     Given: SessionStepResults with unweighted multi-head validation.
     When: Fetching target_metrics.
-    Then: Return target metrics for the first head.
+    Then: Return target metrics as the simple mean of all heads.
     '''
     validation = core.ValStepResults(
         head_metrics=_make_head_metrics(
@@ -277,7 +279,7 @@ def test_session_step_results_target_metrics_default_first_head():
     )
     results = core.SessionStepResults(validation=validation)
 
-    assert results.target_metrics == pytest.approx(0.6)
+    assert results.target_metrics == pytest.approx(0.75)
 
 
 def test_session_step_results_inference_metrics_no_inference():
@@ -291,21 +293,21 @@ def test_session_step_results_inference_metrics_no_inference():
     assert results.inference_metrics == -float('inf')
 
 
-def test_session_step_results_inference_metrics_default_first_head():
+def test_session_step_results_inference_metrics_default_mean():
     '''
     Given: SessionStepResults with unweighted multi-head inference.
     When: Fetching inference_metrics.
-    Then: Return target metrics for the first head.
+    Then: Return target metrics as a simple mean of all heads.
     '''
     inference = core.InferStepResults(
         head_metrics=_make_head_metrics(
-            head1={'mean': 0.75},
+            head1={'mean': 0.7},
             head2={'mean': 0.9}
         )
     )
     results = core.SessionStepResults(inference=inference)
 
-    assert results.inference_metrics == pytest.approx(0.75)
+    assert results.inference_metrics == pytest.approx(0.8)
 
 
 def test_session_step_results_as_dict():
@@ -366,12 +368,12 @@ def test_session_step_results_track_single_head_forces_iou():
     Then: Force target_objective back to single-head IoU format.
     '''
     validation = core.ValStepResults(
-        head_metrics=_make_head_metrics(head={'mean': 0.8})
+        head_metrics=_make_head_metrics(head1={'mean': 0.8})
     )
     results = core.SessionStepResults(validation=validation)
     results.track('gem', None)
 
-    assert results.target_objective == 'IoU from head'
+    assert results.target_objective == 'IoU from [head1] (simple mean)'
     assert results.target_metrics == pytest.approx(0.8)
 
 
@@ -573,11 +575,11 @@ def test_track_metrics_iou_uses_requested_heads():
     assert result == pytest.approx(0.8)
 
 
-def test_track_metrics_iou_defaults_to_first_head():
+def test_track_metrics_iou_defaults_to_mean():
     '''
     Given: Multi-head validation metrics.
     When: Running tracking with no specified heads map.
-    Then: Default to the first head in the metrics catalog.
+    Then: Default to mean head imetrics.
     '''
     metrics = _make_head_metrics(
         head1={'mean': 0.4},
@@ -588,7 +590,7 @@ def test_track_metrics_iou_defaults_to_first_head():
         metric_name='iou',
     )
 
-    assert result == pytest.approx(0.4)
+    assert result == pytest.approx(0.6)
 
 
 @pytest.mark.parametrize('track_heads', [[], 'head', 1, 3.14])
@@ -604,6 +606,20 @@ def test_track_metrics_invalid_tracking_head(track_heads):
             metrics,
             metric_name='iou',
             track_heads=track_heads,
+        )
+
+def test_track_metrics_invalid_tracking_weight():
+    '''
+    Given: Invalid target track heads weight (needs to be number).
+    When: Running tracking.
+    Then: Raise a ValueError.
+    '''
+    metrics = _make_head_metrics(head={'mean': 0.75})
+    with pytest.raises(ValueError, match='weights need to be a number'):
+        session_results._track_metrics(
+            metrics,
+            metric_name='iou',
+            track_heads={'head': 'wrong weight'}, # type: ignore
         )
 
 

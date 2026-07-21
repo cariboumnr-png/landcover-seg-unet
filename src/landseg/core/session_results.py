@@ -283,6 +283,17 @@ def _track_metrics(
 ) -> float:
     '''Track metrics as per configuration.'''
 
+    if track_heads is not None:
+
+        if not isinstance(track_heads, dict):
+            raise ValueError(
+                f'Invalid tracking head type: {type(track_heads)}, '
+                f'expect a dict[str, float] if not `None`'
+            )
+
+        if not all(isinstance(v, (float, int)) for v in track_heads.values()):
+            raise ValueError('All track head weights need to be a number')
+
     match metric_name.lower():
         case 'gem':
             if not (mtl_metrics and 'gem' in mtl_metrics):
