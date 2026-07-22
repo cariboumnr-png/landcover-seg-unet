@@ -32,16 +32,14 @@ def test_mtl_aggregator_init(mock_constraint):
     When: Instantiating `MTLMetricsAggregator`.
     Then: Initialize internal counters and violation tallies correctly.
     '''
-    cons = [
-        mock_constraint(
-            name='rule1',
-            source_head='head_a',
-            trigger_val=1,
-            target_head='head_b',
-            forbidden=[2]
-        )
-    ]
-    agg = aggregator_module.MTLMetricsAggregator(cons, ignore_index=255)
+    cons = mock_constraint(
+        name='rule1',
+        source_head='head_a',
+        trigger_val=1,
+        target_head='head_b',
+        forbidden=[2]
+    )
+    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     assert agg.ignore_index == 255
     assert len(agg.constraints) == 1
@@ -115,16 +113,14 @@ def test_mtl_aggregator_constraint_violations(mock_constraint):
     When: Calling `update`.
     Then: Correctly tally constraint violation hits and valid samples.
     '''
-    cons = [
-        mock_constraint(
-            name='c1',
-            source_head='head_a',
-            trigger_val=1,
-            target_head='head_b',
-            forbidden=[2, 3]
-        )
-    ]
-    agg = aggregator_module.MTLMetricsAggregator(cons, ignore_index=255)
+    cons = mock_constraint(
+        name='c1',
+        source_head='head_a',
+        trigger_val=1,
+        target_head='head_b',
+        forbidden=[2, 3]
+    )
+    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     # pixel (0,0): source=1 (triggered), target=2 (forbidden) -> violation!
     # pixel (0,1): source=1 (triggered), target=1 (allowed) -> no violation
@@ -150,16 +146,14 @@ def test_mtl_aggregator_compute_and_reset(mock_constraint):
     When: Calling `compute` and then `reset`.
     Then: Return calculated metrics dict and reset all counters to zero.
     '''
-    cons = [
-        mock_constraint(
-            name='c1',
-            source_head='head_a',
-            trigger_val=1,
-            target_head='head_b',
-            forbidden=[2]
-        )
-    ]
-    agg = aggregator_module.MTLMetricsAggregator(cons, ignore_index=255)
+    cons = mock_constraint(
+        name='c1',
+        source_head='head_a',
+        trigger_val=1,
+        target_head='head_b',
+        forbidden=[2]
+    )
+    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     preds = {
         'head_a': torch.tensor([[1, 1]]),
@@ -193,16 +187,14 @@ def test_mtl_aggregator_constraint_skipped_missing_head(mock_constraint):
     When: Calling `update`.
     Then: Skip constraint check without raising error.
     '''
-    cons = [
-        mock_constraint(
-            name='c1',
-            source_head='head_a',
-            trigger_val=1,
-            target_head='head_c',  # head_c not in preds_1b
-            forbidden=[2]
-        )
-    ]
-    agg = aggregator_module.MTLMetricsAggregator(cons, ignore_index=255)
+    cons = mock_constraint(
+        name='c1',
+        source_head='head_a',
+        trigger_val=1,
+        target_head='head_c',  # head_c not in preds_1b
+        forbidden=[2]
+    )
+    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     preds = {
         'head_a': torch.tensor([[1, 1]]),
