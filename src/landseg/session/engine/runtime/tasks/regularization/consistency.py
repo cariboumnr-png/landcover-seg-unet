@@ -197,7 +197,7 @@ class ConsistencyRegularizer(torch.nn.Module):
 
         # reduction=mean
         valids = torch.stack([value.valid_count for value in values]).sum()
-        return invalids / valids.clamp_min(self._eps(ref)) * self.reg_lambda
+        return invalids / valids.clamp_min(_eps(ref)) * self.reg_lambda
 
     def by_constraint(
         self,
@@ -250,37 +250,37 @@ class ConsistencyRegularizer(torch.nn.Module):
         # retrieve tensors
         source_logits = logits.get(constraint.source_head)
         target_logits = logits.get(constraint.target_head)
-        source_target = targets_1b.get(constraint.source_head)
-        target_target = targets_1b.get(constraint.target_head)
-        # early exit if all tensors present not in batch (e.g., inactive head)
+        source_labels = targets_1b.get(constraint.source_head)
+        target_labels = targets_1b.get(constraint.target_head)
+        # early exit if not all tensors present in batch (e.g., inactive head)
         if (
             source_logits is None
             or target_logits is None
-            or source_target is None
-            or target_target is None
+            or source_labels is None
+            or target_labels is None
         ):
             return None
 
         # tensor shape sanity checks
-        self._validate_shapes(
+        _validate_shapes(
             constraint=constraint,
             source_logits=source_logits,
             target_logits=target_logits,
-            source_target=source_target,
-            target_target=target_target,
+            source_labels=source_labels,
+            target_labels=target_labels,
         )
 
         # build valid pixel mask
         valid_mask = (
-            (source_target != self.ignore_index) &
-            (target_target != self.ignore_index)
+            (source_labels != self.ignore_index) &
+            (target_labels != self.ignore_index)
         )
         # early exit if no valid values
         if valid_mask.sum().item() == 0:
             return None
 
         # compute invalid state probability & align valid mask to the result
-        invalid_prob = self._invalid_state_probability(
+        invalid_prob = _invalid_state_probability(
             constraint=constraint,
             source_logits=source_logits,
             target_logits=target_logits,
@@ -290,7 +290,7 @@ class ConsistencyRegularizer(torch.nn.Module):
         # aggregate and return
         invalid_sum = (invalid_prob * valid).sum()
         valid_count = valid.sum()
-        mean = invalid_sum / valid_count.clamp_min(self._eps(invalid_prob))
+        mean = invalid_sum / valid_count.clamp_min(_eps(invalid_prob))
         return _ConstraintValue(
             name=constraint.name,
             mean=mean,
@@ -298,97 +298,90 @@ class ConsistencyRegularizer(torch.nn.Module):
             valid_count=valid_count,
         )
 
-    @staticmethod
-    def _validate_shapes(
-        *,
-        constraint: constraints.CompiledConstraint,
-        source_logits: torch.Tensor,
-        target_logits: torch.Tensor,
-        source_target: torch.Tensor,
-        target_target: torch.Tensor,
-    ) -> None:
-        '''Validate tensor ranks, spatial alignment, class indices.'''
 
-        if source_logits.ndim != 4 or target_logits.ndim != 4:
-            raise ValueError(
-                f'Constraint {constraint.name} expects logits shaped '
-                '[B, C, H, W].'
-            )
-        if source_target.ndim != 3 or target_target.ndim != 3:
-            raise ValueError(
-                f'Constraint {constraint.name} expects targets shaped '
-                '[B, H, W].'
-            )
-        if source_logits.shape[0] != target_logits.shape[0]:
-            raise ValueError(
-                f'Constraint {constraint.name} has mismatched logit batches.'
-            )
-        if source_target.shape != target_target.shape:
-            raise ValueError(
-                f'Constraint {constraint.name} has mismatched target shapes: '
-                f'{source_target.shape} vs {target_target.shape}.'
-            )
-        if source_logits.shape[0] != source_target.shape[0]:
-            raise ValueError(
-                f'Constraint {constraint.name} has mismatched source batch.'
-            )
-        if source_logits.shape[-2:] != source_target.shape[-2:]:
-            raise ValueError(
-                f'Constraint {constraint.name} has mismatched source spatial '
-                'shape.'
-            )
-        if target_logits.shape[-2:] != target_target.shape[-2:]:
-            raise ValueError(
-                f'Constraint {constraint.name} has mismatched target spatial '
-                'shape.'
-            )
-        if source_logits.shape[-2:] != target_logits.shape[-2:]:
-            raise ValueError(
-                f'Constraint {constraint.name} has mismatched logit spatial '
-                'shape.'
-            )
-        if constraint.trigger_val >= source_logits.shape[1]:
-            raise ValueError(
-                f'Constraint {constraint.name} source class index '
-                f'{constraint.trigger_val} exceeds {source_logits.shape[1]} '
-                'classes.'
-            )
-        if max(constraint.forbidden) >= target_logits.shape[1]:
-            raise ValueError(
-                f'Constraint {constraint.name} forbidden class indices '
-                f'{constraint.forbidden} exceed {target_logits.shape[1]} '
-                'classes.'
-            )
+# ----- internal helpers
+def _validate_shapes(
+    *,
+    constraint: constraints.CompiledConstraint,
+    source_logits: torch.Tensor,
+    target_logits: torch.Tensor,
+    source_labels: torch.Tensor,
+    target_labels: torch.Tensor,
+) -> None:
+    '''Validate tensor ranks, spatial alignment, class indices.'''
+    cons = f'Constraint {constraint.name}'
 
-    @staticmethod
-    def _invalid_state_probability(
-        *,
-        constraint: constraints.CompiledConstraint,
-        source_logits: torch.Tensor,
-        target_logits: torch.Tensor,
-    ) -> torch.Tensor:
-        '''Compute per-pixel probability of one invalid state.'''
+    # ensure both source and target tensors of the corrent shape/size/spatial
+    _validate_head_pair(f'{cons} source', source_logits, source_labels)
+    _validate_head_pair(f'{cons} target', target_logits, target_labels)
 
-        source_probs = torch.nn.functional.softmax(source_logits, dim=1)
-        target_probs = torch.nn.functional.softmax(target_logits, dim=1)
+    # additional checks between source and target
+    if source_logits.shape[0] != target_logits.shape[0]:
+        raise ValueError(f'{cons}: source and target have mismatched batches.')
 
-        forbidden_idx = torch.as_tensor(
-            constraint.forbidden,
-            device=target_logits.device,
-            dtype=torch.long,
+    if source_logits.shape[-2:] != target_logits.shape[-2:]:
+        raise ValueError(f'{cons}: source and target have mismatched H * W.')
+
+    # constraint vs logits channel
+    if constraint.trigger_val >= source_logits.shape[1]:
+        raise IndexError(
+            f'{cons} source trigger class index {constraint.trigger_val} '
+            f'exceeds {source_logits.shape[1]} classes.'
         )
 
-        source_prob = source_probs[:, constraint.trigger_val, ...]
-        target_prob = target_probs.index_select(1, forbidden_idx).sum(dim=1)
-
-        return source_prob * target_prob
-
-    @staticmethod
-    def _eps(t: torch.Tensor) -> torch.Tensor:
-        '''Return dtype-safe epsilon for denominator clamping.'''
-
-        return torch.as_tensor(
-            torch.finfo(t.dtype).eps,
-            dtype=t.dtype,
-            device=t.device
+    if max(constraint.forbidden) >= target_logits.shape[1]:
+        raise IndexError(
+            f'{cons} forbidden class indices {constraint.forbidden}'
+            f' exceed {target_logits.shape[1]} classes.'
         )
+
+
+def _validate_head_pair(
+    name: str,
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+):
+    '''Validate dim and shape of a logits-labels tensor pair.'''
+    if logits.ndim != 4:
+        raise ValueError(f'{name} logits must be [B,C,H,W]')
+
+    if labels.ndim != 3:
+        raise ValueError(f'{name} labels must be [B,H,W]')
+
+    if logits.shape[0] != labels.shape[0]:
+        raise ValueError(f'{name} batch size mismatch between logits & labels')
+
+    if logits.shape[-2:] != labels.shape[-2:]:
+        raise ValueError(f'{name} H * W mismatch between logits & labels')
+
+
+def _invalid_state_probability(
+    *,
+    constraint: constraints.CompiledConstraint,
+    source_logits: torch.Tensor,
+    target_logits: torch.Tensor,
+) -> torch.Tensor:
+    '''Compute per-pixel probability of one invalid state.'''
+
+    source_probs = torch.nn.functional.softmax(source_logits, dim=1)
+    target_probs = torch.nn.functional.softmax(target_logits, dim=1)
+
+    forbidden_idx = torch.as_tensor(
+        constraint.forbidden,
+        device=target_logits.device,
+        dtype=torch.long,
+    )
+
+    source_prob = source_probs[:, constraint.trigger_val, ...]
+    target_prob = target_probs.index_select(1, forbidden_idx).sum(dim=1)
+
+    return source_prob * target_prob
+
+def _eps(t: torch.Tensor) -> torch.Tensor:
+    '''Return dtype-safe epsilon for denominator clamping.'''
+
+    return torch.as_tensor(
+        torch.finfo(t.dtype).eps,
+        dtype=t.dtype,
+        device=t.device
+    )
