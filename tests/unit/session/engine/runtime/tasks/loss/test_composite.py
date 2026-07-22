@@ -54,9 +54,11 @@ def test_composite_loss_init_no_losses(session_config):
 
 def test_composite_loss_init_all_losses(session_config):
     '''
-    Given: A composite configuration enabling focal, dice, spectral, and tv losses.
+    Given: A composite configuration enabling focal/dice/spectral/tv
+        losses.
     When: Instantiating `CompositeLoss`.
-    Then: Register all 4 primitive losses and compute weighted composite loss.
+    Then: Register all 4 primitive losses and compute weighted composite
+        loss.
     '''
     cfg = session_config.engine_tasks.loss_configs
     cfg.focal.weight = 0.5
@@ -88,7 +90,7 @@ def test_composite_loss_forward_weighted_sum(session_config):
     '''
     Given: Composite loss with focal and dice enabled.
     When: Calling `forward`.
-    Then: Total loss equals weight_focal * loss_focal + weight_dice * loss_dice.
+    Then: Total loss == weight_focal*loss_focal+weight_dice*loss_dice.
     '''
     cfg = session_config.engine_tasks.loss_configs
     cfg.focal.weight = 0.6

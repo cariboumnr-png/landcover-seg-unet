@@ -33,9 +33,10 @@ import landseg.session.engine.runtime.tasks.metrics.segmentation.confusion_matri
 
 def test_confusion_matrix_init():
     '''
-    Given: Number of classes, ignore index, parent class, and exclude classes.
-    When: Instantiating `ConfusionMatrix`.
-    Then: Correctly set attributes and initialize a zero matrix of shape (C, C).
+    Given: Number of classes, ignore index, parent class, and exclude
+        classes.
+    When: Instantiating CM module.
+    Then: Correctly set attributes and initialize a zero matrix [C, C].
     '''
     cm = cm_module.ConfusionMatrix(
         num_classes=3,
@@ -55,9 +56,10 @@ def test_confusion_matrix_init():
 
 def test_confusion_matrix_update_basic():
     '''
-    Given: Predictions of shape [B, C, H, W] and targets of shape [B, H, W].
+    Given: Predictions [B, C, H, W] and targets [B, H, W].
     When: Calling `update`.
-    Then: Increment confusion matrix entries according to (true, pred) pairs.
+    Then: Increment confusion matrix entries according to (true, pred)
+        pairs.
     '''
     cm = cm_module.ConfusionMatrix(
         num_classes=2,
@@ -69,8 +71,16 @@ def test_confusion_matrix_update_basic():
     # logits: B=1, C=2, H=1, W=2
     # pixel 0: argmax = class 0
     # pixel 1: argmax = class 1
-    preds = torch.tensor([[[[10.0, -10.0]], [[-10.0, 10.0]]]], dtype=torch.float32)
-    # targets (1-based): pixel 0 is target 1 (class 0), pixel 1 is target 2 (class 1)
+    preds = torch.tensor(
+        [[
+            [[10.0, -10.0]],
+            [[-10.0, 10.0]]
+        ]],
+        dtype=torch.float32
+    )
+    # targets (1-based):
+    # pixel 0 is target 1 (class 0),
+    # pixel 1 is target 2 (class 1)
     targets = torch.tensor([[[1, 2]]], dtype=torch.long)
 
     cm.update(preds, targets)
@@ -96,7 +106,13 @@ def test_confusion_matrix_update_ignore_index():
         exclude_class_1b=None
     )
 
-    preds = torch.tensor([[[[10.0, 10.0]], [[-10.0, -10.0]]]], dtype=torch.float32)
+    preds = torch.tensor(
+        [[
+            [[10.0, 10.0]],
+            [[-10.0, -10.0]]
+        ]],
+        dtype=torch.float32
+    )
     targets = torch.tensor([[[1, 255]]], dtype=torch.long)
 
     cm.update(preds, targets)
@@ -107,7 +123,7 @@ def test_confusion_matrix_update_ignore_index():
 
 def test_confusion_matrix_update_parent_gating():
     '''
-    Given: Optional `parent_raw_1b` kwarg and configured `parent_class_1b`.
+    Given: Optional `parent_raw_1b` kwarg and `parent_class_1b`.
     When: Calling `update`.
     Then: Only count pixels matching the required parent class.
     '''
@@ -118,7 +134,13 @@ def test_confusion_matrix_update_parent_gating():
         exclude_class_1b=None
     )
 
-    preds = torch.tensor([[[[10.0, 10.0]], [[-10.0, -10.0]]]], dtype=torch.float32)
+    preds = torch.tensor(
+        [[
+            [[10.0, 10.0]],
+            [[-10.0, -10.0]]
+        ]],
+        dtype=torch.float32
+    )
     targets = torch.tensor([[[1, 1]]], dtype=torch.long)
     # parent raw labels: pixel 0 has parent 1, pixel 1 has parent 2
     parent_raw = torch.tensor([[[1, 2]]], dtype=torch.long)
@@ -153,7 +175,7 @@ def test_confusion_matrix_update_all_ignored():
 
 def test_confusion_matrix_compute():
     '''
-    Given: A populated `ConfusionMatrix`.
+    Given: A populated CM module.
     When: Calling `compute`.
     Then: Return a locked `AccumulatedMetrics` object with IoUs.
     '''
@@ -164,7 +186,13 @@ def test_confusion_matrix_compute():
         exclude_class_1b=None
     )
 
-    preds = torch.tensor([[[[10.0, -10.0]], [[-10.0, 10.0]]]], dtype=torch.float32)
+    preds = torch.tensor(
+        [[
+            [[10.0, -10.0]],
+            [[-10.0, 10.0]]
+        ]],
+        dtype=torch.float32
+    )
     targets = torch.tensor([[[1, 2]]], dtype=torch.long)
     cm.update(preds, targets)
 
@@ -179,9 +207,10 @@ def test_confusion_matrix_compute():
 
 def test_confusion_matrix_compute_exclude_classes():
     '''
-    Given: `ConfusionMatrix` configured with `exclude_class_1b`.
+    Given: CM module configured with `exclude_class_1b`.
     When: Calling `compute`.
-    Then: Calculate active class IoUs (`ac_ious`) excluding specified classes.
+    Then: Calculate active class IoUs (`ac_ious`) excluding specified
+        classes.
     '''
     cm = cm_module.ConfusionMatrix(
         num_classes=3,
@@ -205,7 +234,7 @@ def test_confusion_matrix_compute_exclude_classes():
 
 def test_confusion_matrix_compute_exclude_classes_out_of_range():
     '''
-    Given: `ConfusionMatrix` configured with out-of-range `exclude_class_1b`.
+    Given: CM module configured with out-of-range `exclude_class_1b`.
     When: Calling `compute`.
     Then: Raise `IndexError`.
     '''
@@ -222,7 +251,7 @@ def test_confusion_matrix_compute_exclude_classes_out_of_range():
 
 def test_confusion_matrix_compute_invalid_shape():
     '''
-    Given: `ConfusionMatrix` with a non-square confusion matrix tensor.
+    Given: CM module with a non-square confusion matrix tensor.
     When: Calling `compute`.
     Then: Raise `ValueError`.
     '''
@@ -234,13 +263,13 @@ def test_confusion_matrix_compute_invalid_shape():
     )
     cm.cm = torch.zeros((2, 3), dtype=torch.int64)
 
-    with pytest.raises(ValueError, match='Confusion matrix must be a square 2D tensor'):
+    with pytest.raises(ValueError, match='must be a square 2D tensor'):
         cm.compute()
 
 
 def test_confusion_matrix_reset():
     '''
-    Given: A populated `ConfusionMatrix`.
+    Given: A populated CM module.
     When: Calling `reset`.
     Then: Zero out confusion matrix tensor.
     '''

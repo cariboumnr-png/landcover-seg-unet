@@ -31,7 +31,8 @@ def test_headmetrics_wrapper():
     '''
     Given: A mapping of head names to `ConfusionMatrix` instances.
     When: Instantiating `HeadMetrics`.
-    Then: Support dictionary key access `__getitem__`, `__len__`, and `as_dict`.
+    Then: Support dictionary key access `__getitem__`, `__len__`, and
+        `as_dict`.
     '''
     cm_a = cm_module.ConfusionMatrix(
         num_classes=2,
@@ -59,7 +60,8 @@ def test_build_headmetrics():
     '''
     Given: `HeadSpecs` describing prediction heads and an ignore index.
     When: Calling `build_headmetrics`.
-    Then: Return a `HeadMetrics` container mapping head names to configured `ConfusionMatrix` objects.
+    Then: Return a `HeadMetrics` container mapping head names to
+        configured `ConfusionMatrix` objects.
     '''
     head_1 = head_specs.HeadSpec(
         name='head_1',

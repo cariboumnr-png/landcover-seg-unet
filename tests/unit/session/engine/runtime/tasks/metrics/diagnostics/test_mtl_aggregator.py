@@ -161,7 +161,7 @@ def test_mtl_aggregator_compute_and_reset():
     '''
     Given: An aggregator populated with update samples.
     When: Calling `compute` and then `reset`.
-    Then: Return calculated metrics dict and reset all state counters to zero.
+    Then: Return calculated metrics dict and reset all counters to zero.
     '''
     cons = [
         DummyConstraint(
@@ -196,7 +196,8 @@ def test_mtl_aggregator_compute_and_reset():
     assert agg.gem_samples == 0
     assert agg.violations['c1'].hits == 0
     assert agg.violations['c1'].samples == 0
-    assert agg.compute() == {}
+    results = agg.compute()
+    assert isinstance(results, dict) and len(results) == 0
 
 
 def test_mtl_aggregator_constraint_skipped_missing_head():
@@ -229,4 +230,3 @@ def test_mtl_aggregator_constraint_skipped_missing_head():
 
     assert agg.violations['c1'].hits == 0
     assert agg.violations['c1'].samples == 0
-

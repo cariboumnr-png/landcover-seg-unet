@@ -29,7 +29,7 @@ import landseg.session.engine.runtime.tasks.loss.composite as composite_loss
 
 def test_headlosses_wrapper(session_config):
     '''
-    Given: A dictionary of head names mapped to `CompositeLoss` instances.
+    Given: A dict of head names mapped to `CompositeLoss` instances.
     When: Instantiating `HeadLosses`.
     Then: Correctly support `__getitem__`, `__len__`, and `as_dict`.
     '''
@@ -48,9 +48,11 @@ def test_headlosses_wrapper(session_config):
 
 def test_build_headlosses(session_config):
     '''
-    Given: HeadSpecs describing prediction heads and a CompositeLossConfig.
+    Given: `HeadSpecs` describing prediction heads and a
+        `CompositeLossConfig`.
     When: `build_headlosses` is called.
-    Then: Return a `HeadLosses` instance mapping each head name to a `CompositeLoss`.
+    Then: Return a `HeadLosses` instance mapping each head name to a
+        `CompositeLoss`.
     '''
     head_1 = head_specs.HeadSpec(
         name='head_1',
