@@ -52,6 +52,7 @@ class FocalLoss(primitives.PrimitiveLoss):
 
     def __init__(
         self,
+        *,
         alpha: list[float] | None,
         gamma: float,
         reduction: str,
