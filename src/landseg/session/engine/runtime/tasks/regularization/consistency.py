@@ -234,72 +234,80 @@ class ConsistencyRegularizer(torch.nn.Module):
         values: list[_ConstraintValue] = []
         # filters out missing heads or zero-valid-pixel constraints
         for constraint in self.constraints:
-            value = self._constraint_value(constraint, logits, targets_1b)
+            value = _constraint_value(
+                constraint,
+                logits,
+                targets_1b,
+                ignore_index=self.ignore_index
+            )
             if value is not None:
                 values.append(value)
         return values
 
-    def _constraint_value(
-        self,
-        constraint: constraints.CompiledConstraint,
-        logits: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor],
-    ) -> _ConstraintValue | None:
-        '''Compute the mean invalid probability for one constraint.'''
-
-        # retrieve tensors
-        source_logits = logits.get(constraint.source_head)
-        target_logits = logits.get(constraint.target_head)
-        source_labels = targets_1b.get(constraint.source_head)
-        target_labels = targets_1b.get(constraint.target_head)
-        # early exit if not all tensors present in batch (e.g., inactive head)
-        if (
-            source_logits is None
-            or target_logits is None
-            or source_labels is None
-            or target_labels is None
-        ):
-            return None
-
-        # tensor shape sanity checks
-        _validate_shapes(
-            constraint=constraint,
-            source_logits=source_logits,
-            target_logits=target_logits,
-            source_labels=source_labels,
-            target_labels=target_labels,
-        )
-
-        # build valid pixel mask
-        valid_mask = (
-            (source_labels != self.ignore_index) &
-            (target_labels != self.ignore_index)
-        )
-        # early exit if no valid values
-        if valid_mask.sum().item() == 0:
-            return None
-
-        # compute invalid state probability & align valid mask to the result
-        invalid_prob = _invalid_state_probability(
-            constraint=constraint,
-            source_logits=source_logits,
-            target_logits=target_logits,
-        )
-        valid = valid_mask.to(invalid_prob.device, invalid_prob.dtype)
-
-        # aggregate and return
-        invalid_sum = (invalid_prob * valid).sum()
-        valid_count = valid.sum()
-        mean = invalid_sum / valid_count.clamp_min(_eps(invalid_prob))
-        return _ConstraintValue(
-            name=constraint.name,
-            mean=mean,
-            invalid_sum=invalid_sum,
-            valid_count=valid_count,
-        )
-
 
 # ----- internal helpers
+def _constraint_value(
+    constraint: constraints.CompiledConstraint,
+    logits: dict[str, torch.Tensor],
+    targets_1b: dict[str, torch.Tensor],
+    *,
+    ignore_index: int
+) -> _ConstraintValue | None:
+    '''Compute the mean invalid probability for one constraint.'''
+
+    # retrieve tensors
+    source_logits = logits.get(constraint.source_head)
+    target_logits = logits.get(constraint.target_head)
+    source_labels = targets_1b.get(constraint.source_head)
+    target_labels = targets_1b.get(constraint.target_head)
+    # early exit if not all tensors present in batch (e.g., inactive head)
+    if (
+        source_logits is None
+        or target_logits is None
+        or source_labels is None
+        or target_labels is None
+    ):
+        return None
+
+    # tensor shape sanity checks
+    _validate_shapes(
+        constraint=constraint,
+        source_logits=source_logits,
+        target_logits=target_logits,
+        source_labels=source_labels,
+        target_labels=target_labels,
+    )
+
+    # build valid pixel mask
+    valid_mask = (
+        (source_labels != ignore_index) &
+        (target_labels != ignore_index)
+    )
+    # early exit if no valid values
+    if valid_mask.sum().item() == 0:
+        return None
+
+    # compute invalid state probability & align valid mask to the result
+    invalid_prob = _invalid_state_probability(
+        trigger_val=constraint.trigger_val,
+        forbidden=constraint.forbidden,
+        source_logits=source_logits,
+        target_logits=target_logits,
+    )
+    valid = valid_mask.to(invalid_prob.device, invalid_prob.dtype)
+
+    # aggregate and return
+    invalid_sum = (invalid_prob * valid).sum()
+    valid_count = valid.sum()
+    mean = invalid_sum / valid_count.clamp_min(_eps(invalid_prob))
+    return _ConstraintValue(
+        name=constraint.name,
+        mean=mean,
+        invalid_sum=invalid_sum,
+        valid_count=valid_count,
+    )
+
+
 def _validate_shapes(
     *,
     constraint: constraints.CompiledConstraint,
@@ -357,31 +365,25 @@ def _validate_head_pair(
 
 def _invalid_state_probability(
     *,
-    constraint: constraints.CompiledConstraint,
+    trigger_val: int,
+    forbidden: tuple[int, ...],
     source_logits: torch.Tensor,
     target_logits: torch.Tensor,
 ) -> torch.Tensor:
     '''Compute per-pixel probability of one invalid state.'''
-
+    # softmax probability from logits [B, C, H, W]
     source_probs = torch.nn.functional.softmax(source_logits, dim=1)
     target_probs = torch.nn.functional.softmax(target_logits, dim=1)
-
-    forbidden_idx = torch.as_tensor(
-        constraint.forbidden,
-        device=target_logits.device,
-        dtype=torch.long,
-    )
-
-    source_prob = source_probs[:, constraint.trigger_val, ...]
+    # tuple[int, ...] -> tensor
+    device = target_logits.device # match
+    forbidden_idx = torch.as_tensor(forbidden, dtype=torch.long, device=device)
+    # at dim C
+    source_prob = source_probs[:, trigger_val, ...]
     target_prob = target_probs.index_select(1, forbidden_idx).sum(dim=1)
-
     return source_prob * target_prob
+
 
 def _eps(t: torch.Tensor) -> torch.Tensor:
     '''Return dtype-safe epsilon for denominator clamping.'''
-
-    return torch.as_tensor(
-        torch.finfo(t.dtype).eps,
-        dtype=t.dtype,
-        device=t.device
-    )
+    eps = torch.finfo(t.dtype).eps
+    return torch.as_tensor(eps, dtype=t.dtype, device=t.device)
