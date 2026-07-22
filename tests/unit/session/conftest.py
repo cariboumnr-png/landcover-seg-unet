@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
+# pylint: disable=protected-access
 
 '''Fixtures for testing `landseg.session` module.'''
 
@@ -32,3 +33,21 @@ import landseg.configs.schema.sections.session as session_schema
 @pytest.fixture
 def session_config():
     return session_schema.SessionConfig()
+
+@pytest.fixture
+def mock_constraint():
+    def _create(
+        name: str,
+        source_head: str,
+        trigger_val: int,
+        target_head: str,
+        forbidden: list[int]
+    ):
+        return session_schema._MTLConstraints(
+            name=name,
+            source_head=source_head,
+            trigger_val=trigger_val,
+            target_head=target_head,
+            forbidden=forbidden
+        )
+    return _create

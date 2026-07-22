@@ -21,32 +21,19 @@
 
 '''Unit tests for MTL metrics aggregator module (mtl_aggregator.py).'''
 
-# standard imports
-import dataclasses
 # third-party imports
 import torch
 # local imports
 import landseg.session.engine.runtime.tasks.metrics.diagnostics.mtl_aggregator as aggregator_module
 
-
-@dataclasses.dataclass
-class DummyConstraint:
-    '''Dummy constraint conforming to `MTLConstraint` protocol.'''
-    name: str
-    source_head: str
-    trigger_val: int
-    target_head: str
-    forbidden: list[int]
-
-
-def test_mtl_aggregator_init():
+def test_mtl_aggregator_init(mock_constraint):
     '''
     Given: Optional list of constraints and ignore index.
     When: Instantiating `MTLMetricsAggregator`.
     Then: Initialize internal counters and violation tallies correctly.
     '''
     cons = [
-        DummyConstraint(
+        mock_constraint(
             name='rule1',
             source_head='head_a',
             trigger_val=1,
@@ -122,14 +109,14 @@ def test_mtl_aggregator_gem_calculation():
     assert agg.gem_samples == 1
 
 
-def test_mtl_aggregator_constraint_violations():
+def test_mtl_aggregator_constraint_violations(mock_constraint):
     '''
     Given: Predictions triggering a logical constraint violation.
     When: Calling `update`.
     Then: Correctly tally constraint violation hits and valid samples.
     '''
     cons = [
-        DummyConstraint(
+        mock_constraint(
             name='c1',
             source_head='head_a',
             trigger_val=1,
@@ -157,14 +144,14 @@ def test_mtl_aggregator_constraint_violations():
     assert agg.violations['c1'].samples == 3
 
 
-def test_mtl_aggregator_compute_and_reset():
+def test_mtl_aggregator_compute_and_reset(mock_constraint):
     '''
     Given: An aggregator populated with update samples.
     When: Calling `compute` and then `reset`.
     Then: Return calculated metrics dict and reset all counters to zero.
     '''
     cons = [
-        DummyConstraint(
+        mock_constraint(
             name='c1',
             source_head='head_a',
             trigger_val=1,
@@ -200,14 +187,14 @@ def test_mtl_aggregator_compute_and_reset():
     assert isinstance(results, dict) and len(results) == 0
 
 
-def test_mtl_aggregator_constraint_skipped_missing_head():
+def test_mtl_aggregator_constraint_skipped_missing_head(mock_constraint):
     '''
     Given: A constraint referencing a head not present in `preds_1b`.
     When: Calling `update`.
     Then: Skip constraint check without raising error.
     '''
     cons = [
-        DummyConstraint(
+        mock_constraint(
             name='c1',
             source_head='head_a',
             trigger_val=1,
