@@ -49,10 +49,16 @@ def dataspecs():
             )
         ),
         heads=core.Heads(
-            class_counts={'head1': [100, 200]},
-            logits_adjust={'head1': [0.2, 0.1]},
-            head_parent={'head1': None},
-            head_parent_cls={'head1': None},
+            class_counts={
+                'head_1': [100, 200],
+                'head_2': [50, 150, 250],
+            },
+            logits_adjust={
+                'head_1': [0.2, 0.1],
+                'head_2': [0.1, 0.1, 0.1],
+            },
+            head_parent={'head_1': None, 'head_2': None},
+            head_parent_cls={'head_1': None, 'head_2': None},
         ),
         splits=core.Splits(
             train={'block_1': 'file//path//1'},

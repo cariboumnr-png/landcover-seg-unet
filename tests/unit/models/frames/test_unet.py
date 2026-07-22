@@ -156,11 +156,11 @@ def test_multihead_unet_head_management(
         conditioning_config={},
     )
 
-    model.set_active_heads(['head1'])
-    assert model.heads.active == ['head1']
+    model.set_active_heads(['head_1'])
+    assert model.heads.active == ['head_1']
 
-    model.set_frozen_heads(['head1'])
-    assert model.heads.frozen == ['head1']
+    model.set_frozen_heads(['head_1'])
+    assert model.heads.frozen == ['head_1']
 
     model.reset_heads()
     assert model.heads.active is None
@@ -177,10 +177,10 @@ def test_multihead_unet_logit_adjust_properties(
     Then: Correctly load logit adjustments tensors and scale properties.
     '''
     dataspecs.heads = dataspecs.heads.__class__(
-        class_counts={'head1': [100, 200]},
-        logits_adjust={'head1': [0.2, 0.1]},
-        head_parent={'head1': None},
-        head_parent_cls={'head1': None},
+        class_counts={'head_1': [100, 200]},
+        logits_adjust={'head_1': [0.2, 0.1]},
+        head_parent={'head_1': None},
+        head_parent_cls={'head_1': None},
     )
 
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
@@ -191,8 +191,8 @@ def test_multihead_unet_logit_adjust_properties(
         conditioning_config={},
     )
 
-    assert 'head1' in model.logit_adjust
-    assert model.logit_adjust['head1'].shape == (1, 2, 1, 1)
+    assert 'head_1' in model.logit_adjust
+    assert model.logit_adjust['head_1'].shape == (1, 2, 1, 1)
     assert model.logit_adjust_alpha == 1.0
 
     model.set_logit_adjust_alpha(0.5)
@@ -231,5 +231,7 @@ def test_multihead_unet_forward_pass(
     )
 
     assert isinstance(outputs, dict)
-    assert 'head1' in outputs
-    assert outputs['head1'].shape == (2, 2, 256, 256)
+    assert 'head_1' in outputs
+    assert 'head_2' in outputs
+    assert outputs['head_1'].shape == (2, 2, 256, 256)
+    assert outputs['head_2'].shape == (2, 3, 256, 256)

@@ -144,7 +144,10 @@ def test_validate_model_build_invalid_ndim(
         conditioning_config={},
     )
 
-    model.forward = lambda *args, **kwargs: {'head1': torch.randn(2, 2, 256)}
+    model.forward = lambda *args, **kwargs: {
+        'head_1': torch.randn(2, 2, 256),
+        'head_2': torch.randn(2, 3, 256, 256),
+    }
 
     with pytest.raises(RuntimeError, match='must be BCHW'):
         factory._validate_model_build(model, dataspecs)
@@ -168,7 +171,8 @@ def test_validate_model_build_batch_mismatch(
     )
 
     model.forward = lambda *args, **kwargs: {
-        'head1': torch.randn(3, 2, 256, 256)
+        'head_1': torch.randn(3, 2, 256, 256),
+        'head_2': torch.randn(3, 3, 256, 256),
     }
 
     with pytest.raises(RuntimeError, match='Batch mismatch in head'):
@@ -193,7 +197,8 @@ def test_validate_model_build_channel_mismatch(
     )
 
     model.forward = lambda *args, **kwargs: {
-        'head1': torch.randn(2, 3, 256, 256)
+        'head_1': torch.randn(2, 5, 256, 256),
+        'head_2': torch.randn(2, 3, 256, 256),
     }
 
     with pytest.raises(RuntimeError, match='Channel mismatch in head'):
@@ -219,7 +224,10 @@ def test_validate_model_build_non_finite(
 
     nan_tensor = torch.randn(2, 2, 256, 256)
     nan_tensor[0, 0, 0, 0] = float('nan')
-    model.forward = lambda *args, **kwargs: {'head1': nan_tensor}
+    model.forward = lambda *args, **kwargs: {
+        'head_1': nan_tensor,
+        'head_2': torch.randn(2, 3, 256, 256),
+    }
 
     with pytest.raises(RuntimeError, match='Non-finite values in head'):
         factory._validate_model_build(model, dataspecs)
