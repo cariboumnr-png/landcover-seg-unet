@@ -37,12 +37,14 @@ def session_config():
 @pytest.fixture
 def mock_constraint():
     def _create(
-        name: str,
-        source_head: str,
-        trigger_val: int,
-        target_head: str,
-        forbidden: list[int]
+        name: str = 'rule_1',
+        source_head: str = 'head_1',
+        trigger_val: int = 1,
+        target_head: str = 'head_2',
+        forbidden: list[int] | None = None
     ):
+        if forbidden is None:
+            forbidden = [2]
         return session_schema._MTLConstraints(
             name=name,
             source_head=source_head,
