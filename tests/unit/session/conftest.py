@@ -21,18 +21,41 @@
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
+# pylint: disable=redefined-outer-name
 
 '''Fixtures for testing `landseg.session` module.'''
 
 # third-party imports
 import pytest
+import torch
 # local imports
 import landseg.configs.schema.sections.session as session_schema
+
+
+# ----- dummy model fixture for session & engine tests
+class DummyModel(torch.nn.Module):
+    '''Simple module exposing parameters for testing.'''
+    def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(2, 2)
+
+    def forward(self, x):
+        return self.linear(x)
+
+
+@pytest.fixture
+def dummy_model():
+    return DummyModel()
 
 
 @pytest.fixture
 def session_config():
     return session_schema.SessionConfig()
+
+
+@pytest.fixture
+def dummy_optimizer(dummy_model):
+    return torch.optim.AdamW(dummy_model.parameters(), lr=1e-3)
 
 @pytest.fixture
 def mock_constraint():
