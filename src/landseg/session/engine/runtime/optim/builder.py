@@ -114,7 +114,10 @@ def build_optimization(
 
     # exit if scheduler class in not configured
     if config.sched_cls is None:
-        return optim.Optimization(optimizer=optimizer)
+        return optim.Optimization(
+            optimizer=optimizer,
+            grad_clip_norm=config.grad_clip_norm
+        )
 
     # set scheduler
     sched_factory = _SCHEDULERS.get(config.sched_cls)
