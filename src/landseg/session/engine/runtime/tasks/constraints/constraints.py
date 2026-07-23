@@ -94,8 +94,8 @@ def compile_constraints(
     data_specs: core.DataSpecs
 ) -> list[CompiledConstraint] | None:
     '''Validate constraints against data specifications.'''
-    # early exit if list is empty
-    if mtl_constraints is None:
+    # early exit if list is empty or none provided
+    if not bool(mtl_constraints):
         return None
 
     # raise if constraints look duplicated (same names)
@@ -110,11 +110,10 @@ def compile_constraints(
     }
 
     # validate all constraints and return
-    cc: list[CompiledConstraint] = []
+    compiled: list[CompiledConstraint] = []
     for c in mtl_constraints:
-
         _validate_constraint(c, heads_idx)
-        cc.append(
+        compiled.append(
             CompiledConstraint(
                 name=c.name,
                 source_head=c.source_head,
@@ -123,63 +122,61 @@ def compile_constraints(
                 forbidden=tuple(v - 1 for v in c.forbidden),
             )
         )
-
-    return cc if len(cc) > 0 else None
+    return compiled
 
 
 # ----- internal helpers
 def _validate_constraint(
-    contraint: MTLConstraint,
+    constraint: MTLConstraint,
     heads_idx: dict[str, list[int]]
 ) -> None:
-    '''Validate constrain.'''
-    if contraint.source_head == contraint.target_head:
+    '''Validate constraint for invalid inputs.'''
+    _prefix = f'Constraint: {constraint.name}'
+    if constraint.source_head == constraint.target_head:
         raise ValueError(
-            f'Source and target heads can not be the same:'
-            f'souce: {contraint.source_head} vs target: {contraint.target_head}'
+            f'{_prefix}: source and target heads can not be the same:'
+            f'{constraint.source_head} == {constraint.target_head}'
         )
 
-    if contraint.source_head not in heads_idx:
+    if constraint.source_head not in heads_idx:
         raise ValueError(
-            f'Invalid source head: {contraint.source_head}, '
+            f'{_prefix}: invalid source head; '
+            f'got: {constraint.source_head}; '
             f'allowed: {list(heads_idx.keys())}'
         )
 
-    if contraint.trigger_val < 1:
+    if constraint.trigger_val < 1:
         raise ValueError(
-            f'Constraint {contraint.name} trigger_val must be 1-based; '
-            f'got: {contraint.trigger_val}'
+            f'{_prefix}: trigger value must be 1-based; '
+            f'got: {constraint.trigger_val}'
         )
 
-    if contraint.trigger_val not in heads_idx[contraint.source_head]:
+    if constraint.trigger_val not in heads_idx[constraint.source_head]:
         raise ValueError(
-            f'Invalid trigger value: {contraint.trigger_val}, '
-            f'allowed: {heads_idx[contraint.source_head]}'
+            f'{_prefix}: trigger value is out of range; '
+            f'got: {constraint.trigger_val}; '
+            f'allowed: {heads_idx[constraint.source_head]}'
         )
 
-    if contraint.target_head not in heads_idx:
+    if constraint.target_head not in heads_idx:
         raise ValueError(
-            f'Invalid target head: {contraint.target_head}, '
+            f'{_prefix}: invalid target head; '
+            f'got: {constraint.target_head}; '
             f'allowed: {list(heads_idx.keys())}'
-
         )
 
-    if not contraint.forbidden:
+    if not constraint.forbidden:
+        raise ValueError(f'{_prefix}: empty forbidden class list provided')
+
+    if any(v < 1 for v in constraint.forbidden):
         raise ValueError(
-            f'Constraint {contraint.name} must contain '
-            f'at least one forbidden class, got None'
+            f'{_prefix}: forbidden classes must be 1-based; '
+            f'got: {constraint.forbidden}'
         )
 
-    if any(v < 1 for v in contraint.forbidden):
+    if set(constraint.forbidden) - set(heads_idx[constraint.target_head]):
         raise ValueError(
-            f'Constraint {contraint.name} forbidden classes must be 1-based; '
-            f'got: {contraint.forbidden}'
-        )
-
-    if not all(
-        f in heads_idx[contraint.target_head] for f in contraint.forbidden
-    ):
-        raise ValueError(
-            f'Invalid forbidden classes: {contraint.forbidden}, '
-            f'allowed: {heads_idx[contraint.target_head]}'
+            f'{_prefix}: out of range forbidden classes found; '
+            f'got: {constraint.forbidden}; '
+            f'allowed: {heads_idx[constraint.target_head]}'
         )
