@@ -52,7 +52,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.base', __package__), name)
 
     if name in {'MLFlowTracker'}:
-        return getattr(importlib.import_module('ml_flow', __package__), name)
+        return getattr(importlib.import_module('.ml_flow', __package__), name)
 
     if name in {'TensorBoardTracker'}:
         return getattr(importlib.import_module('.tensor_board', __package__), name)

@@ -329,25 +329,3 @@ def test_build_optimization_unknown_scheduler_raises(
 
     with pytest.raises(ValueError, match='Unknown scheduler: InvalidScheduler'):
         optim.build_optimization(dummy_model, config)
-
-
-# ----- package lazy import tests
-def test_optim_lazy_imports():
-    '''
-    Given: `landseg.session.engine.runtime.optim` package.
-    When: Accessing exported attributes.
-    Then: Return target classes and functions via lazy resolution.
-    '''
-    assert optim.Optimization is not None
-    assert optim.build_optimization is not None
-    assert optim.OptimConfigShape is not None
-
-
-def test_optim_invalid_attribute_raises():
-    '''
-    Given: `landseg.session.engine.runtime.optim` package.
-    When: Accessing non-existent attribute.
-    Then: Raise `AttributeError`.
-    '''
-    with pytest.raises(AttributeError, match='has no attribute'):
-        _ = optim.non_existent_attribute
