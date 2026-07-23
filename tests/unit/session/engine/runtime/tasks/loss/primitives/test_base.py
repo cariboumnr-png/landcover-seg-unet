@@ -54,7 +54,8 @@ def test_compose_pixel_weights_ignore_index():
     '''
     Given: An ignore_index value and target labels containing it.
     When: `_compose_pixel_weights` is called.
-    Then: Return a weight map where targets matching ignore_index have weight 0.0.
+    Then: Return a weight map where targets matching `ignore_index` have
+        weight 0.0.
     '''
     targets = torch.tensor([[1, 255], [3, 4]], dtype=torch.long)
     ws = base.PrimitiveLoss._compose_pixel_weights(
@@ -85,7 +86,7 @@ def test_compose_pixel_weights_with_masks():
     masks = {
         0.5: mask_1,
         0.2: mask_2,
-        1.5: torch.ones_like(targets, dtype=torch.bool)  # clamped to 1.0 (no effect)
+        1.5: torch.ones_like(targets, dtype=torch.bool)  # clamped to 1.0
     }
 
     ws = base.PrimitiveLoss._compose_pixel_weights(
@@ -112,32 +113,96 @@ def test_compose_pixel_weights_assertions():
     '''
     targets = torch.tensor([[1, 2], [3, 4]], dtype=torch.long)
 
-    # invalid key (not int/float)
+    # invalid key - not int/float
+    invalid_mask = {'not_a_number': torch.ones_like(targets, dtype=torch.bool)}
     with pytest.raises(AssertionError, match='Invalid mask keys'):
         _ = base.PrimitiveLoss._compose_pixel_weights(
-            masks={'not_a_number': torch.ones_like(targets, dtype=torch.bool)},
+            masks=invalid_mask, # type: ignore
             targets=targets,
             ignore_index=None,
             device=targets.device,
             dtype=torch.float32
         )
 
-    # invalid value type
+    # invalid value type - not a tensor
+    invalid_mask = {0.5: [1, 2, 3]}
     with pytest.raises(AssertionError, match='Invalid mask type'):
         _ = base.PrimitiveLoss._compose_pixel_weights(
-            masks={0.5: [1, 2, 3]},
+            masks=invalid_mask, # type: ignore
             targets=targets,
             ignore_index=None,
             device=targets.device,
             dtype=torch.float32
         )
 
-    # mismatched shape
+    # mismatched shape - should be [2, 2]
+    invalid_mask = {0.5: torch.ones((3, 3), dtype=torch.bool)}
     with pytest.raises(AssertionError, match='!= '):
         _ = base.PrimitiveLoss._compose_pixel_weights(
-            masks={0.5: torch.ones((3, 3), dtype=torch.bool)},
+            masks=invalid_mask,
             targets=targets,
             ignore_index=None,
             device=targets.device,
             dtype=torch.float32
+        )
+
+
+def test_inputs_validation():
+    '''
+    Given: Inputs with invalid shapes.
+    When: `_validate_inputs()` is called.
+    Then: Raise `ValueError`.
+    '''
+    logits = torch.randn((1, 2, 3, 3), dtype=torch.float32)
+    targets = torch.zeros((1, 3, 3), dtype=torch.long)
+
+    # logits and targets validation (no features)
+    with pytest.raises(ValueError, match=r'Expected \[B,C,H,W\] logits'):
+        base.PrimitiveLoss._validate_inputs(
+            torch.randn((1, 2, 3)),
+            targets,
+            None
+        )
+
+    with pytest.raises(ValueError, match=r'Expected \[B,H,W\] targets'):
+        base.PrimitiveLoss._validate_inputs(
+            logits,
+            torch.zeros((1, 3)),
+            None
+        )
+
+    with pytest.raises(ValueError, match=r'Batch.*logits & targets'):
+        base.PrimitiveLoss._validate_inputs(
+            logits,
+            torch.zeros((2, 3, 3), dtype=torch.long),
+            None
+        )
+
+    with pytest.raises(ValueError, match=r'Spatial.*logits & targets'):
+        base.PrimitiveLoss._validate_inputs(
+            logits,
+            torch.zeros((1, 4, 4), dtype=torch.long),
+            None
+        )
+
+    # when features are provided
+    with pytest.raises(ValueError, match=r'Expected \[B,D,H,W\] features'):
+        base.PrimitiveLoss._validate_inputs(
+            logits,
+            targets,
+            features=torch.randn((1, 4, 3))
+        )
+
+    with pytest.raises(ValueError, match=r'Batch.*features & logits'):
+        base.PrimitiveLoss._validate_inputs(
+            logits,
+            targets,
+            features=torch.randn((2, 4, 3, 3))
+        )
+
+    with pytest.raises(ValueError, match=r'Spatial.*features & logits'):
+        base.PrimitiveLoss._validate_inputs(
+            logits,
+            targets,
+            features=torch.randn((1, 4, 4, 4))
         )

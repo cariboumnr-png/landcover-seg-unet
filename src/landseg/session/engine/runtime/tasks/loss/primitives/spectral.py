@@ -86,28 +86,30 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
         Initialize the smoothness loss.
 
         Args:
-            ignore_index:
-                Label to exclude entirely from the loss.
             alpha:
                 Controls the sharpness of the feature-similarity weight.
                 Lower alpha = stronger/higher penalty for predicting
                 different classes over similar pixels.
             neighbour:
                 Neighborhood connectivity, either 4 or 8.
+            spectral_bands:
+                0-based indices mapping logits channels as spectral
+            ignore_index:
+                Label to exclude entirely from the loss.
         '''
         super().__init__()
 
-        # assign attributes
         self.alpha = alpha
-        # neighbourhood
+        self.ignore_index = ignore_index
+
         match neighbour:
             case 4: self.offsets = [(0, 1), (1, 0), (0, -1), (-1, 0)]
             case 8: self.offsets = [(0, 1), (1, 0), (0, -1), (-1, 0),
                                     (1, 1), (1, -1), (-1, 1), (-1, -1)]
             case _: raise ValueError('Neighbourhood must be 4 or 8.')
-        self.ignore_index = ignore_index
+
         if spectral_bands:
-            self.spec_idx = torch.as_tensor(spectral_bands,dtype=torch.long)
+            self.spec_idx = torch.as_tensor(spectral_bands, dtype=torch.long)
         else:
             self.spec_idx = None
 
@@ -136,21 +138,15 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
         Returns:
             A scalar loss tensor.
         '''
+        # validate input tensors where features are needed
+        if features is None:
+            raise ValueError('Features are required for smoothness loss')
+        self._validate_inputs(logits, targets, features)
 
-        # validate inputs
-        features = self._is_valid_inputs(features, logits, targets)
-        # filter feature channels if provided
-        if self.spec_idx is not None:
-            self.spec_idx = self.spec_idx.to(features.device)
-            features = features.index_select(1, self.spec_idx)
-        # Normalize features along channel dimension.
-        features = torch.nn.functional.normalize(features, p=2, dim=1) # L2
-
-        # Convert logits to probabilities.
+        # prepare inputs
+        features = self._prepare_features(features)
         probs = torch.nn.functional.softmax(logits, dim=1)
-
-        # Compose per-pixel weights from masks and ignore_index.
-        pixel_weights = self._compose_pixel_weights(
+        weights = self._compose_pixel_weights(
             masks=masks,
             targets=targets,
             ignore_index=self.ignore_index,
@@ -163,64 +159,38 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
         weight_shift_list: list[torch.Tensor] = []
         valid_mask_list: list[torch.Tensor] = []
 
-        # logits: [B, C, H, W]
-        _, _, height, width = logits.shape
-
-        for dy, dx in self.offsets:
-            feat_shift_list.append(
-                torch.roll(features, shifts=(dy, dx), dims=(2, 3))
-            )
-            prob_shift_list.append(
-                torch.roll(probs, shifts=(dy, dx), dims=(2, 3))
-            )
-            weight_shift_list.append(
-                torch.roll(pixel_weights, shifts=(dy, dx), dims=(1, 2))
-            )
-
-            valid = torch.ones(
-                (height, width),
-                device=logits.device,
-                dtype=logits.dtype,
+        for offset in self.offsets: # dy, dx
+            feat_shift_list.append(torch.roll(features, offset, dims=(2, 3)))
+            prob_shift_list.append(torch.roll(probs, offset, dims=(2, 3)))
+            weight_shift_list.append(torch.roll(weights, offset, dims=(1, 2)))
+            valid_mask_list.append(
+                self._valid_neighbors(
+                    (logits.shape[2], logits.shape[3]), # [_, _, H, W]
+                    offset,
+                    dtype=logits.dtype,
+                    device=logits.device
+                )
             )
 
-            if dy > 0:
-                valid[:dy, :] = 0
-            elif dy < 0:
-                valid[dy:, :] = 0
-
-            if dx > 0:
-                valid[:, :dx] = 0
-            elif dx < 0:
-                valid[:, dx:] = 0
-
-            valid_mask_list.append(valid)
-
-        # Stack shifted tensors across the neighbour dimension N.
+        # stack shifted tensors across the neighbour dimension N.
         feat_shift = torch.stack(feat_shift_list, dim=1)
         prob_shift = torch.stack(prob_shift_list, dim=1)
         weight_shift = torch.stack(weight_shift_list, dim=1).unsqueeze(2)
+        # stack valid masks: (1, N, 1, H, W)
+        mask = torch.stack(valid_mask_list, dim=0).unsqueeze(0).unsqueeze(2)
 
         # Shape:
         #   features_center -> (B, 1, D, H, W)
         #   probs_center    -> (B, 1, C, H, W)
         #   weight_center   -> (B, 1, 1, H, W)
-        features_center = features.unsqueeze(1)
-        probs_center = probs.unsqueeze(1)
-        weight_center = pixel_weights.unsqueeze(1).unsqueeze(2)
+        feat_centre = features.unsqueeze(1)
+        probs_centre = probs.unsqueeze(1)
+        weight_centre = weights.unsqueeze(1).unsqueeze(2)
 
-        # Shape: (1, N, 1, H, W)
-        valid_mask = torch.stack(valid_mask_list, dim=0)
-        valid_mask = valid_mask.unsqueeze(0).unsqueeze(2)
 
         # Pairwise feature distance and prediction distance.
-        dist_x = ((features_center - feat_shift) ** 2).sum(
-            dim=2,
-            keepdim=True,
-        )
-        dist_p = ((probs_center - prob_shift) ** 2).sum(
-            dim=2,
-            keepdim=True,
-        )
+        dist_x = ((feat_centre - feat_shift) ** 2).sum(dim=2, keepdim=True)
+        dist_p = ((probs_centre - prob_shift) ** 2).sum(dim=2, keepdim=True)
 
         # Feature similarity weight.
         spectral_weight = torch.exp(-self.alpha * dist_x)
@@ -229,63 +199,43 @@ class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
         # - respects ignore_index and upstream mask values,
         # - zeroes a pair if either endpoint is invalid,
         # - preserves your min-based down-weighting semantics.
-        pair_weight = torch.minimum(weight_center, weight_shift) * valid_mask
-
+        pair_weight = torch.minimum(weight_centre, weight_shift) * mask
         weighted_loss = spectral_weight * dist_p * pair_weight
 
+        # safe division and return
         eps = torch.finfo(logits.dtype).eps
-        denom = pair_weight.sum().clamp_min(eps)
+        return weighted_loss.sum() / pair_weight.sum().clamp_min(eps)
 
-        return weighted_loss.sum() / denom
-
-    @staticmethod
-    def _is_valid_inputs(
-        features: torch.Tensor | None,
-        logits: torch.Tensor,
-        targets: torch.Tensor
-    ) -> torch.Tensor:
-
-        if features is None:
-            raise ValueError('Features are required for smoothness loss.')
-
-        if logits.ndim != 4:
-            raise ValueError(
-                f'Expected logits with shape (B, C, H, W), got {logits.shape}.'
-            )
-
-        if targets.ndim != 3:
-            raise ValueError(
-                f'Expected targets with shape (B, H, W), got {targets.shape}.'
-            )
-
-        if features.ndim != 4:
-            raise ValueError(
-                f'Expected features with shape (B, D, H, W), '
-                f'got {features.shape}.'
-            )
-
-        if logits.shape[0] != targets.shape[0]:
-            raise ValueError('Batch size mismatch between logits and targets.')
-
-        if logits.shape[-2:] != targets.shape[-2:]:
-            raise ValueError(
-                'Spatial size mismatch between logits and targets.'
-            )
-
-        if features.shape[0] != logits.shape[0]:
-            raise ValueError('Batch size mismatch between features and logits.')
-
-        if features.shape[-2:] != logits.shape[-2:]:
-            raise ValueError(
-                'Spatial size mismatch between features and logits.'
-            )
-
+    def _prepare_features(self, features: torch.Tensor) -> torch.Tensor:
+        '''Filter and normalize features.'''
+        # filter feature channels if indices provided
+        if self.spec_idx is not None:
+            self.spec_idx = self.spec_idx.to(features.device)
+            features = features.index_select(1, self.spec_idx)
+        # normalize features along channel dimension.
+        features = torch.nn.functional.normalize(features, p=2, dim=1) # L2
         return features
 
-# overfit test to show implementation success
-# same single block - row_028032_col_025088.npz
-# CE is the focal with gamma=0
-# CE*1.0             : Epoch: 0582|Loss: 0.011668|IoU: 0.991210
-# CE*1.0+spectral*0.1: Epoch: 0487|Loss: 0.024920|IoU: 0.991482 # all 14 chs
-# CE*1.0+spectral*0.1: Epoch: 0515|Loss: 0.020206|IoU: 0.990011 # only spec chs
-# CE*1.0+spectral*1.0: Epoch: 1000|Loss: 0.087507|IoU: 0.826833 (cannot overfit)
+    @staticmethod
+    def _valid_neighbors(
+        size: tuple[int, int],
+        offsets: tuple[int, int],
+        *,
+        dtype: torch.dtype,
+        device: torch.device
+    ):
+        '''Return mask of valid neighbouring pixels.'''
+        valid = torch.ones(size, dtype=dtype, device=device,)
+        dy, dx = offsets
+
+        if dy > 0:
+            valid[:dy, :] = 0
+        elif dy < 0:
+            valid[dy:, :] = 0
+
+        if dx > 0:
+            valid[:, :dx] = 0
+        elif dx < 0:
+            valid[:, dx:] = 0
+
+        return valid

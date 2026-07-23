@@ -34,13 +34,6 @@ def test_focal_loss_forward():
     When: `forward` is called on `FocalLoss`.
     Then: Return a valid loss tensor conforming to the reduction mode.
     '''
-    # mean reduction
-    loss_mean = focal_loss.FocalLoss(
-        alpha=None,
-        gamma=2.0,
-        reduction='mean',
-        ignore_index=255
-    )
     logits = torch.tensor(
         [[
             [[1.0, 2.0], [3.0, 4.0]],
@@ -49,6 +42,14 @@ def test_focal_loss_forward():
         dtype=torch.float32
     )
     targets = torch.tensor([[[0, 1], [0, 1]]], dtype=torch.long)
+
+    # mean reduction
+    loss_mean = focal_loss.FocalLoss(
+        alpha=None,
+        gamma=2.0,
+        reduction='mean',
+        ignore_index=255
+    )
 
     out_mean = loss_mean(logits, targets, masks=None)
     assert out_mean.ndim == 0
@@ -116,7 +117,7 @@ def test_focal_loss_alpha_weighting():
         ignore_index=255
     )
 
-    logits = torch.zeros((1, 2, 1, 2), dtype=torch.float32)  # B=1, C=2, H=1, W=2
+    logits = torch.zeros((1, 2, 1, 2), dtype=torch.float32) # [B, C, H, W]
     targets = torch.tensor([[[0, 1]]], dtype=torch.long)
 
     out_weighted = loss_weighted(logits, targets, masks=None)
@@ -151,7 +152,8 @@ def test_focal_loss_gamma_effect():
         ignore_index=255
     )
 
-    # pixel 0: correct and confident (p_t ~ 0.95), pixel 1: incorrect/hard (p_t ~ 0.05)
+    # pixel 0: correct and confident (p_t ~ 0.95);
+    # pixel 1: incorrect/hard (p_t ~ 0.05)
     logits = torch.tensor([[[[3.0, -3.0]], [[-3.0, 3.0]]]], dtype=torch.float32)
     targets = torch.tensor([[[0, 0]]], dtype=torch.long)  # both true label is 0
 
@@ -166,11 +168,11 @@ def test_focal_loss_gamma_effect():
     assert ratio_confident < ratio_hard
 
 
-def test_focal_loss_assertions():
+def test_focal_loss_target_out_of_range():
     '''
     Given: Target index out of bounds of class count.
     When: `forward` is called on `FocalLoss`.
-    Then: Raise `AssertionError`.
+    Then: Raise `IndexError`.
     '''
     loss_module = focal_loss.FocalLoss(
         alpha=None,
@@ -182,5 +184,5 @@ def test_focal_loss_assertions():
     targets = torch.tensor([[[0, 2], [0, 0]]], dtype=torch.long)
     # target index 2 is invalid (max class should be < 2)
 
-    with pytest.raises(AssertionError, match='Invalid target index'):
+    with pytest.raises(IndexError, match='target out of range'):
         _ = loss_module(logits, targets, masks=None)

@@ -72,6 +72,50 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
         '''
 
     @staticmethod
+    def _validate_inputs(
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        features: torch.Tensor | None,
+    ) -> None:
+        '''
+        Validate shape and dimension of input tensors.
+
+        Raises:
+            ValueError: when the following:
+                - logits not of [B, C, H, W]
+                - targets not of [B, H, W]
+                - logits and targets have different batch size
+                - logits and targets have different spatial size (H * W)
+                - features not of [B, C, H, W] when provided
+                - features and logts have different batch size
+                - features and logts have different spatial size
+
+        '''
+        if logits.ndim != 4:
+            raise ValueError(f'Expected [B,C,H,W] logits: {logits.shape}')
+
+        if targets.ndim != 3:
+            raise ValueError(f'Expected [B,H,W] targets: {targets.shape}')
+
+        if logits.shape[0] != targets.shape[0]:
+            raise ValueError('Batch size mismatch between logits & targets')
+
+        if logits.shape[-2:] != targets.shape[-2:]:
+            raise ValueError('Spatial size mismatch between logits & targets')
+
+        if features is None:
+            return
+
+        if features.ndim != 4:
+            raise ValueError(f'Expected [B,D,H,W] features: {features.shape}')
+
+        if features.shape[0] != logits.shape[0]:
+            raise ValueError('Batch size mismatch between features & logits')
+
+        if features.shape[-2:] != logits.shape[-2:]:
+            raise ValueError('Spatial size mismatch between features & logits')
+
+    @staticmethod
     def _compose_pixel_weights(
         *,
         masks: dict[float, torch.Tensor] | None,

@@ -47,6 +47,7 @@ class DiceLoss(primitives.PrimitiveLoss):
 
     def __init__(
         self,
+        *,
         smooth: float,
         ignore_index: int
     ):
@@ -85,6 +86,7 @@ class DiceLoss(primitives.PrimitiveLoss):
         Returns:
             A scalar tensor containing the Dice loss (1 - mean Dice).
         '''
+        self._validate_inputs(logits, targets, features)
 
         # get per-pixel weights
         w = self._compose_pixel_weights(

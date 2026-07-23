@@ -96,6 +96,7 @@ class FocalLoss(primitives.PrimitiveLoss):
         Returns:
             A scalar loss tensor (after reduction).
         '''
+        self._validate_inputs(logits, targets, features)
 
         # logits: [B, C, H, W]
         # targets: [B, H, W]
@@ -109,6 +110,7 @@ class FocalLoss(primitives.PrimitiveLoss):
             device=logits.device,
             dtype=logits.dtype
         )
+        w = w.reshape(-1) # flatten to 1d
         # validity: only compute for pixels with weight > 0 (e.g., valid labels)
         valid = w > 0
 
@@ -116,27 +118,26 @@ class FocalLoss(primitives.PrimitiveLoss):
         if valid.sum().item() == 0:
             return logits.new_zeros(())
 
-        # flatten N = B × H × W
+        w = w[valid] # [M]
+
+        # flatten logits and targets (N = B × H × W)
         logits_flat = logits.permute(0, 2, 3, 1).reshape(-1, c)     # [N, C]
         targets_flat = targets.reshape(-1)                          # [N]
-        w_flat = w.reshape(-1)                                      # [N]
         # select valid entries: M -> number of valid pixels
-        logits_flat = logits_flat[valid.reshape(-1)]                # [M, C]
-        targets_flat = targets_flat[valid.reshape(-1)]              # [M]
-        w_flat = w_flat[valid.reshape(-1)]                          # [M]
+        logits_flat = logits_flat[valid]                            # [M, C]
+        targets_flat = targets_flat[valid]                          # [M]
 
         # sanity - no index out of bounds
-        assert targets_flat.max() < c, \
-            f'Invalid target index: {targets_flat.max()} >= {c}'
+        if targets_flat.max() >= c:
+            raise IndexError(f'target out of range: {targets_flat.max()}>={c}')
 
         # logits -> probabilities with clamp to avoid extreme grads
         log_probs = torch.nn.functional.log_softmax(logits_flat, dim=1)
         log_probs = torch.clamp(log_probs, min=-30.0, max=30.0)
-        probs = log_probs.exp()
 
         # select true class probabilities
-        log_pt = log_probs.gather(1, targets_flat.unsqueeze(1)).squeeze(1)# [M]
-        pt = probs.gather(1, targets_flat.unsqueeze(1)).squeeze(1)        # [M]
+        log_pt = log_probs.gather(1, targets_flat.unsqueeze(1)).squeeze(1)
+        pt = log_probs.exp().gather(1, targets_flat.unsqueeze(1)).squeeze(1)
 
         # clamp again for stability
         log_pt = torch.clamp(log_pt, min=-20.0)  # avoid -inf
@@ -149,9 +150,9 @@ class FocalLoss(primitives.PrimitiveLoss):
             alpha_t = torch.tensor(self.alpha).to(logits.device)[targets_flat]
 
         # focal loss weighted by pixel weights
-        weighted = -alpha_t * (1 - pt).pow(self.gamma) * log_pt * w_flat # [M]
+        weighted = -alpha_t * (1 - pt).pow(self.gamma) * log_pt * w
         if self.reduction == 'mean':
-            return weighted.sum() / w_flat.sum()
+            return weighted.sum() / w.sum()
         if self.reduction == 'sum':
             return weighted.sum()
         return weighted

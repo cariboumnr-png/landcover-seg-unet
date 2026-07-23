@@ -71,8 +71,7 @@ class TotalVariationLoss(primitives.PrimitiveLoss):
         Returns:
             Scalar TV loss
         '''
-
-        assert logits.dim() == 4, f'Expected (B, C, H, W), got {logits.shape}'
+        self._validate_inputs(logits, targets, features)
 
         # convert to probabilities
         probs = torch.nn.functional.softmax(logits, dim=1)
@@ -110,10 +109,3 @@ class TotalVariationLoss(primitives.PrimitiveLoss):
             loss = torch.tensor(0.0, device=logits.device, dtype=logits.dtype)
 
         return loss
-
-# overfit test to show implementation success
-# same single block - row_028032_col_025088.npz
-# CE is the focal with gamma=0
-# CE*1.0          : Epoch: 0432|Loss: 0.015551 IoU: 0.990121
-# CE*1.0+tv*0.001 : Epoch: 0540|Loss: 0.009389|IoU: 0.990057
-# CE*1.0+tv*0.1   : Epoch: 0555|Loss: 0.017215|IoU: 0.990685 (loss unstable)

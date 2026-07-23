@@ -46,13 +46,16 @@ def test_spectral_loss_invalid_neighbour():
 def test_spectral_loss_forward_4_neighbour():
     '''
     Given: Logits, targets, and features.
-    When: `forward` is called on `SpectralSmoothnessLoss` with 4-neighborhood offsets.
+    When: `forward` is called on `SpectralSmoothnessLoss` with
+        4-neighborhood offsets.
     Then: Return a valid scalar smoothness loss tensor.
     '''
     loss_module = spectral.SpectralSmoothnessLoss(
-        alpha=1.0, neighbour=4, spectral_bands=None, ignore_index=255
+        alpha=1.0,
+        neighbour=4,
+        spectral_bands=None,
+        ignore_index=255
     )
-    # B=1, C=2, H=3, W=3
     logits = torch.randn((1, 2, 3, 3), dtype=torch.float32)
     targets = torch.zeros((1, 3, 3), dtype=torch.long)
     features = torch.randn((1, 4, 3, 3), dtype=torch.float32)
@@ -66,11 +69,15 @@ def test_spectral_loss_forward_4_neighbour():
 def test_spectral_loss_forward_8_neighbour():
     '''
     Given: Logits, targets, and features.
-    When: `forward` is called on `SpectralSmoothnessLoss` with 8-neighborhood offsets.
+    When: `forward` is called on `SpectralSmoothnessLoss` with
+        8-neighborhood offsets.
     Then: Return a valid scalar smoothness loss tensor.
     '''
     loss_module = spectral.SpectralSmoothnessLoss(
-        alpha=1.0, neighbour=8, spectral_bands=None, ignore_index=255
+        alpha=1.0,
+        neighbour=8,
+        spectral_bands=None,
+        ignore_index=255
     )
     logits = torch.randn((1, 2, 3, 3), dtype=torch.float32)
     targets = torch.zeros((1, 3, 3), dtype=torch.long)
@@ -82,9 +89,9 @@ def test_spectral_loss_forward_8_neighbour():
     assert not torch.isnan(loss)
 
 
-def test_spectral_loss_validation():
+def test_spectral_loss_forward_no_features_raise():
     '''
-    Given: Invalid shapes or missing features.
+    Given: Inputs with missing features.
     When: `forward` is called on `SpectralSmoothnessLoss`.
     Then: Raise `ValueError`.
     '''
@@ -94,78 +101,13 @@ def test_spectral_loss_validation():
         spectral_bands=None,
         ignore_index=255
     )
-    logits = torch.randn((1, 2, 3, 3), dtype=torch.float32)
-    targets = torch.zeros((1, 3, 3), dtype=torch.long)
-    features = torch.randn((1, 4, 3, 3), dtype=torch.float32)
 
-    # missing features
-    with pytest.raises(ValueError, match='Features are required'):
+    with pytest.raises(ValueError, match=r'Features are required'):
         _ = loss_mod(
-            logits,
-            targets,
+            torch.randn((1, 2, 3, 3), dtype=torch.float32),
+            torch.zeros((1, 3, 3), dtype=torch.long),
             masks=None,
             features=None
-        )
-
-    # wrong logits dimensions
-    with pytest.raises(ValueError, match='Expected logits with shape'):
-        _ = loss_mod(
-            torch.randn((1, 2, 3)),
-            targets,
-            masks=None,
-            features=features
-        )
-
-    # wrong targets dimensions
-    with pytest.raises(ValueError, match='Expected targets with shape'):
-        _ = loss_mod(
-            logits,
-            torch.zeros((1, 3)),
-            masks=None,
-            features=features
-        )
-
-    # wrong features dimensions
-    with pytest.raises(ValueError, match='Expected features with shape'):
-        _ = loss_mod(
-            logits,
-            targets,
-            masks=None,
-            features=torch.randn((1, 4, 3))
-        )
-
-    # mismatch batch size
-    with pytest.raises(ValueError, match=r'Batch.*logits.*targets'):
-        _ = loss_mod(
-            logits,
-            torch.zeros((2, 3, 3), dtype=torch.long),
-            masks=None,
-            features=features
-        )
-
-    with pytest.raises(ValueError, match=r'Batch.*features.*logits'):
-        _ = loss_mod(
-            logits,
-            targets,
-            masks=None,
-            features=torch.randn((2, 4, 3, 3))
-        )
-
-    # mismatch spatial size
-    with pytest.raises(ValueError, match=r'Spatial.*logits.*targets'):
-        _ = loss_mod(
-            logits,
-            torch.zeros((1, 4, 4), dtype=torch.long),
-            masks=None,
-            features=features
-        )
-
-    with pytest.raises(ValueError, match=r'Spatial.*features.*logits'):
-        _ = loss_mod(
-            logits,
-            targets,
-            masks=None,
-            features=torch.randn((1, 4, 4, 4))
         )
 
 
@@ -177,7 +119,10 @@ def test_spectral_loss_spectral_bands():
     '''
     # only use features from channels 1 and 3
     loss_module = spectral.SpectralSmoothnessLoss(
-        alpha=1.0, neighbour=4, spectral_bands=[1, 3], ignore_index=255
+        alpha=1.0,
+        neighbour=4,
+        spectral_bands=[1, 3],
+        ignore_index=255
     )
     logits = torch.randn((1, 2, 3, 3), dtype=torch.float32)
     targets = torch.zeros((1, 3, 3), dtype=torch.long)
