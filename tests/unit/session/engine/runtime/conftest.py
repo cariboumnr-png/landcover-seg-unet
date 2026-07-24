@@ -29,6 +29,7 @@
 # third-party imports
 import pytest
 # local imports
+import landseg.configs.schema.sections.session as session_schema
 import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
 import landseg.session.engine.runtime.tasks.metrics.segmentation.builder as metrics_builder
 import landseg.session.engine.runtime.tasks.heads.specs as headspecs
@@ -53,10 +54,10 @@ def mock_hspecs(dataspecs):
 
 
 @pytest.fixture
-def mock_hlosses(mock_hspecs, session_config):
+def mock_hlosses(mock_hspecs):
     return loss_builder.build_headlosses(
         mock_hspecs,
-        config=session_config.engine_tasks.loss_configs,
+        config=session_schema._LossTypesConfig(),
         ignore_index=255,
         spectral_band_indices=None
     )
@@ -68,3 +69,24 @@ def mock_hmetrics(mock_hspecs):
         mock_hspecs,
         ignore_index=255
     )
+
+
+@pytest.fixture
+def mock_constraint():
+    def _create(
+        name: str = 'rule_1',
+        source_head: str = 'head_1',
+        trigger_val: int = 1,
+        target_head: str = 'head_2',
+        forbidden: list[int] | None = None
+    ):
+        if forbidden is None:
+            forbidden = [2]
+        return session_schema._MTLConstraints(
+            name=name,
+            source_head=source_head,
+            trigger_val=trigger_val,
+            target_head=target_head,
+            forbidden=forbidden
+        )
+    return _create

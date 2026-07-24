@@ -67,31 +67,11 @@ class _DummyModel(torch.nn.Module):
 def mock_model():
     return _DummyModel()
 
+
 # ----- session config and constraint fixtures
 @pytest.fixture
 def session_config():
     return session_schema.SessionConfig()
-
-
-@pytest.fixture
-def mock_constraint():
-    def _create(
-        name: str = 'rule_1',
-        source_head: str = 'head_1',
-        trigger_val: int = 1,
-        target_head: str = 'head_2',
-        forbidden: list[int] | None = None
-    ):
-        if forbidden is None:
-            forbidden = [2]
-        return session_schema._MTLConstraints(
-            name=name,
-            source_head=source_head,
-            trigger_val=trigger_val,
-            target_head=target_head,
-            forbidden=forbidden
-        )
-    return _create
 
 
 # ----- dataloader and logger helper classes
