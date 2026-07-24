@@ -172,7 +172,8 @@ def _count_to_effective_num(counts: list[int], *, b: float) -> list[float]:
     '''Convert count to EN weights Cui et al. 2019'''
 
     counts_arr = numpy.array(counts)
-    weights = numpy.zeros_like(counts_arr)
+    # NOTE: float dtype prevents truncation of weights < 1 to zero
+    weights = numpy.zeros_like(counts_arr, dtype=float)
     # assign weight only to non-zero classes
     n_zeros = counts_arr > 0
     weights[n_zeros] = (1.0 - b) / (1.0 - numpy.power(b, counts_arr[n_zeros]))
