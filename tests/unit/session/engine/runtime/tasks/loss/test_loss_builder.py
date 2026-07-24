@@ -23,8 +23,8 @@
 
 # local imports
 import landseg.session.engine.runtime.tasks.heads.specs as head_specs
-import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
-import landseg.session.engine.runtime.tasks.loss.composite as composite_loss
+import landseg.session.engine.runtime.tasks.loss.builder as builder
+import landseg.session.engine.runtime.tasks.loss.composite as composite
 
 
 def test_build_headlosses(dataspecs, session_config):
@@ -37,16 +37,16 @@ def test_build_headlosses(dataspecs, session_config):
     '''
     hspecs = head_specs.build_headspecs(dataspecs, alpha_fn='inverse')
 
-    hlosses = loss_builder.build_headlosses(
+    hlosses = builder.build_headlosses(
         hspecs,
         config=session_config.engine_tasks.loss_configs,
         ignore_index=255,
         spectral_band_indices=[0, 1]
     )
 
-    assert isinstance(hlosses, loss_builder.HeadLosses)
+    assert isinstance(hlosses, builder.HeadLosses)
     assert len(hlosses) == 2
-    assert isinstance(hlosses.as_dict()['head_1'], composite_loss.CompositeLoss)
-    assert isinstance(hlosses.as_dict()['head_2'], composite_loss.CompositeLoss)
-    assert isinstance(hlosses['head_1'], composite_loss.CompositeLoss)
-    assert isinstance(hlosses['head_2'], composite_loss.CompositeLoss)
+    assert isinstance(hlosses.as_dict()['head_1'], composite.CompositeLoss)
+    assert isinstance(hlosses.as_dict()['head_2'], composite.CompositeLoss)
+    assert isinstance(hlosses['head_1'], composite.CompositeLoss)
+    assert isinstance(hlosses['head_2'], composite.CompositeLoss)

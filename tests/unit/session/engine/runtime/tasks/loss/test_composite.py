@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.composite as composite_loss
+import landseg.session.engine.runtime.tasks.loss.composite as composite
 
 
 def test_composite_loss_init_no_losses(session_config):
@@ -39,7 +39,7 @@ def test_composite_loss_init_no_losses(session_config):
     cfg.spectral.weight = 0.0
     cfg.tv.weight = 0.0
 
-    loss_module = composite_loss.CompositeLoss(cfg, ignore_index=255)
+    loss_module = composite.CompositeLoss(cfg, ignore_index=255)
 
     assert len(loss_module.losses) == 0
     assert len(loss_module.weights) == 0
@@ -66,7 +66,7 @@ def test_composite_loss_init_all_losses(session_config):
     cfg.spectral.weight = 0.1
     cfg.tv.weight = 0.1
 
-    loss_module = composite_loss.CompositeLoss(
+    loss_module = composite.CompositeLoss(
         cfg,
         ignore_index=255,
         focal_alpha=[0.5, 0.5],
@@ -98,7 +98,7 @@ def test_composite_loss_forward_weighted_sum(session_config):
     cfg.spectral.weight = 0.0
     cfg.tv.weight = 0.0
 
-    loss_module = composite_loss.CompositeLoss(cfg, ignore_index=255)
+    loss_module = composite.CompositeLoss(cfg, ignore_index=255)
 
     p = torch.tensor(
         [[
@@ -131,7 +131,7 @@ def test_composite_loss_passes_masks(session_config):
     cfg.spectral.weight = 0.0
     cfg.tv.weight = 0.0
 
-    loss_module = composite_loss.CompositeLoss(cfg, ignore_index=255)
+    loss_module = composite.CompositeLoss(cfg, ignore_index=255)
 
     p = torch.tensor(
         [[
