@@ -27,26 +27,7 @@ import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
 import landseg.session.engine.runtime.tasks.loss.composite as composite_loss
 
 
-def test_headlosses_wrapper(session_config):
-    '''
-    Given: A dict of head names mapped to `CompositeLoss` instances.
-    When: Instantiating `HeadLosses`.
-    Then: Correctly support `__getitem__`, `__len__`, and `as_dict`.
-    '''
-    cfg = session_config.engine_tasks.loss_configs
-    loss_1 = composite_loss.CompositeLoss(cfg, ignore_index=255)
-    loss_2 = composite_loss.CompositeLoss(cfg, ignore_index=255)
-
-    mapping = {'head_a': loss_1, 'head_b': loss_2}
-    hlosses = loss_builder.HeadLosses(mapping)
-
-    assert len(hlosses) == 2
-    assert hlosses['head_a'] is loss_1
-    assert hlosses['head_b'] is loss_2
-    assert hlosses.as_dict() == mapping
-
-
-def test_build_headlosses(session_config):
+def test_build_headlosses(dataspecs, session_config):
     '''
     Given: `HeadSpecs` describing prediction heads and a
         `CompositeLossConfig`.
@@ -54,38 +35,18 @@ def test_build_headlosses(session_config):
     Then: Return a `HeadLosses` instance mapping each head name to a
         `CompositeLoss`.
     '''
-    head_1 = head_specs.HeadSpec(
-        name='head_1',
-        count=[10, 20],
-        loss_alpha=[0.4, 0.6],
-        parent_head=None,
-        parent_cls=None,
-        weight=1.0,
-        exclude_cls=None
-    )
-    head_2 = head_specs.HeadSpec(
-        name='head_2',
-        count=[30, 40],
-        loss_alpha=[0.3, 0.7],
-        parent_head=None,
-        parent_cls=None,
-        weight=1.0,
-        exclude_cls=None
-    )
-
-    hspecs = head_specs.HeadSpecs({'head_1': head_1, 'head_2': head_2})
-    cfg = session_config.engine_tasks.loss_configs
+    hspecs = head_specs.build_headspecs(dataspecs, alpha_fn='inverse')
 
     hlosses = loss_builder.build_headlosses(
         hspecs,
-        config=cfg,
+        config=session_config.engine_tasks.loss_configs,
         ignore_index=255,
         spectral_band_indices=[0, 1]
     )
 
     assert isinstance(hlosses, loss_builder.HeadLosses)
     assert len(hlosses) == 2
-    assert 'head_1' in hlosses.as_dict()
-    assert 'head_2' in hlosses.as_dict()
+    assert isinstance(hlosses.as_dict()['head_1'], composite_loss.CompositeLoss)
+    assert isinstance(hlosses.as_dict()['head_2'], composite_loss.CompositeLoss)
     assert isinstance(hlosses['head_1'], composite_loss.CompositeLoss)
     assert isinstance(hlosses['head_2'], composite_loss.CompositeLoss)

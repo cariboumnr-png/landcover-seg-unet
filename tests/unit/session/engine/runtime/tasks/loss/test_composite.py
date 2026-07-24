@@ -100,8 +100,13 @@ def test_composite_loss_forward_weighted_sum(session_config):
 
     loss_module = composite_loss.CompositeLoss(cfg, ignore_index=255)
 
-    p = torch.tensor([[[[-10.0, 10.0], [10.0, 10.0]],
-                        [[10.0, -10.0], [-10.0, -10.0]]]], dtype=torch.float32)
+    p = torch.tensor(
+        [[
+            [[-10.0,  10.0], [ 10.0,  10.0]],
+            [[ 10.0, -10.0], [-10.0, -10.0]]
+        ]],
+        dtype=torch.float32
+    )
     t = torch.tensor([[[1, 0], [0, 0]]], dtype=torch.long)
 
     total_loss = loss_module(p, t)
@@ -128,8 +133,13 @@ def test_composite_loss_passes_masks(session_config):
 
     loss_module = composite_loss.CompositeLoss(cfg, ignore_index=255)
 
-    p = torch.tensor([[[[10.0, 10.0], [10.0, 10.0]],
-                        [[-10.0, -10.0], [-10.0, -10.0]]]], dtype=torch.float32)
+    p = torch.tensor(
+        [[
+            [[ 10.0,  10.0], [ 10.0,  10.0]],
+            [[-10.0, -10.0], [-10.0, -10.0]]
+        ]],
+        dtype=torch.float32
+    )
     t = torch.tensor([[[1, 1], [1, 1]]], dtype=torch.long)
     mask = torch.ones((1, 2, 2), dtype=torch.bool)
 
