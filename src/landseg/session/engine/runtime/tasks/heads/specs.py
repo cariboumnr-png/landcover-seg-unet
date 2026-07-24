@@ -47,8 +47,9 @@ class HeadSpec:
     loss_alpha: list[float]
     parent_head: str | None
     parent_cls: int | None # 1-based
-    weight: float
     exclude_cls: tuple[int, ...] | None
+    weight: float = 1.0 # here each head has the default weight of 1.0
+    # TODO but the weights are not altered downstream, e.g., via user cfg
 
 # --------------------------------Public  Class--------------------------------
 class HeadSpecs:
@@ -116,23 +117,35 @@ def build_headspecs(
         - Head weights default to 1.0 and can be adjusted later.
     '''
 
-    # alpha compute functions
+    # currently supported alpha compute functions
     alpha_fn_registry = {
         'effective_n': _count_to_effective_num,
         'inverse': _count_to_inv_weights
     }
 
-    # regester alpha function and kwargs
-    if alpha_fn == 'effective_n':
-        assert en_beta
-        fn_kwargs = {'b': en_beta}
-    elif alpha_fn == 'inverse':
-        fn_kwargs = {}
-    else:
-        raise ValueError(f'Invalid alpha calc fn: {alpha_fn}')
+    # select alpha function generate kwargs if applicable
+    match alpha_fn:
 
-    # iterate heads in data and create headspec for each
+        case 'effective_n':
+            if not en_beta:
+                raise ValueError(
+                    'Beta parameter missing for "Effective Number" '
+                    'class weights computation. See Cui et al. 2019'
+                )
+            fn_kwargs = {'b': en_beta}
+
+        case 'inverse':
+            fn_kwargs = {}
+
+        case _:
+            raise ValueError(
+                f'Invalid class weights function; '
+                f'got: {alpha_fn}'
+                f'allowed: "effective_n", "inverse"; '
+            )
+
     headspecs_dict: dict[str, heads.HeadSpec] = {}
+    # iterate heads in data and create headspec for each
     for name, counts in data.heads.class_counts.items():
         exclude = tuple(excluded_cls.get(name, [])) if excluded_cls else None
         headspec = heads.HeadSpec(
@@ -141,11 +154,10 @@ def build_headspecs(
             loss_alpha=alpha_fn_registry[alpha_fn](list(counts), **fn_kwargs),
             parent_head=data.heads.head_parent[name],
             parent_cls=data.heads.head_parent_cls[name],
-            weight=1.0,
-            exclude_cls=exclude
+            exclude_cls=exclude,
         )
         headspecs_dict[name] = headspec
-    # return
+
     return HeadSpecs(headspecs_dict)
 
 def _count_to_inv_weights(count: list[int]) -> list[float]:
@@ -156,11 +168,7 @@ def _count_to_inv_weights(count: list[int]) -> list[float]:
     assert inv_sum != 0
     return [float(x / inv_sum) for x in inv]
 
-def _count_to_effective_num(
-    counts: list[int],
-    *,
-    b: float
-) -> list[float]:
+def _count_to_effective_num(counts: list[int], *, b: float) -> list[float]:
     '''Convert count to EN weights Cui et al. 2019'''
 
     counts_arr = numpy.array(counts)
