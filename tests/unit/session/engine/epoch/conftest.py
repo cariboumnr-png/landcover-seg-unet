@@ -36,7 +36,7 @@ import torch
 import landseg.session.engine.runtime.executor as executor_mod
 import landseg.session.engine.runtime.executor.state as state_mod
 import landseg.session.engine.runtime.optim.builder as optim_builder
-import landseg.session.engine.runtime.tasks.heads.specs as specs_mod
+import landseg.session.engine.runtime.tasks.heads.specs as headspecs
 
 
 # ----- mock helper classes
@@ -186,7 +186,7 @@ class MockEngineTasks:
     '''Mock tasks bundle containing per-head components.'''
     def __init__(self):
         self.headspecs = {
-            'head_1': specs_mod.HeadSpec(
+            'head_1': headspecs.HeadSpec(
                 name='head_1',
                 count=[10, 10],
                 loss_alpha=[0.5, 0.5],

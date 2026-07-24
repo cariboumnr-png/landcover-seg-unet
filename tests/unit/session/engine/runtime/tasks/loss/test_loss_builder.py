@@ -22,12 +22,11 @@
 '''Unit tests for loss builder module (builder.py).'''
 
 # local imports
-import landseg.session.engine.runtime.tasks.heads.specs as head_specs
 import landseg.session.engine.runtime.tasks.loss.builder as builder
 import landseg.session.engine.runtime.tasks.loss.composite as composite
 
 
-def test_build_headlosses(dataspecs, session_config):
+def test_build_headlosses(mock_hspecs, session_config):
     '''
     Given: `HeadSpecs` describing prediction heads and a
         `CompositeLossConfig`.
@@ -35,10 +34,8 @@ def test_build_headlosses(dataspecs, session_config):
     Then: Return a `HeadLosses` instance mapping each head name to a
         `CompositeLoss`.
     '''
-    hspecs = head_specs.build_headspecs(dataspecs, alpha_fn='inverse')
-
     hlosses = builder.build_headlosses(
-        hspecs,
+        mock_hspecs,
         config=session_config.engine_tasks.loss_configs,
         ignore_index=255,
         spectral_band_indices=[0, 1]

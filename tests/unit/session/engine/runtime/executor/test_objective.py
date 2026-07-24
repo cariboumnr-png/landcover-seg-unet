@@ -90,19 +90,19 @@ def test_get_masks_exclusion_and_parent():
 
 
 # ----- `_prep_loss_compute` helper tests
-def test_prep_loss_compute(dummy_head_loss, dummy_head_spec):
+def test_prep_loss_compute(mock_hlosses, mock_hspecs):
     '''
     Given: Head target tensor, HeadSpec, and `dummy_head_loss`.
     When: Calling `_prep_loss_compute`.
     Then: Return 0-based shifted target tensor and computed masks.
     '''
     head_target = torch.tensor([[1, 2]])
-    head_spec = dataclasses.replace(dummy_head_spec, exclude_cls=(2,))
+    head_spec = dataclasses.replace(mock_hspecs['head_1'], exclude_cls=(2,))
 
     target_0b, masks = obj_mod._prep_loss_compute(
         head_target=head_target,
         head_spec=head_spec,
-        head_loss=dummy_head_loss,
+        head_loss=mock_hlosses['head_1'],
         parent_tensor=None
     )
 
@@ -112,21 +112,17 @@ def test_prep_loss_compute(dummy_head_loss, dummy_head_spec):
 
 
 # ----- `multihead_objective` public function tests
-def test_multihead_objective_basic(dummy_head_loss, dummy_head_spec):
+def test_multihead_objective_basic(mock_hlosses, mock_hspecs):
     '''
     Given: Multihead predictions, targets, features, and TrainingObjectives.
     When: Calling `multihead_objective`.
     Then: Calculate per-head loss, total loss, and return `_ObjectiveResults`.
     '''
-    preds = {'head_1': torch.tensor([[1.0, 2.0]])}
-    targets = {'head_1': torch.tensor([[1, 2]])}
-    features = torch.tensor([[0.1, 0.2]])
+    preds = {'head_1': torch.tensor([[[[1.0]], [[2.0]]]])} # [1, 2, 1, 1]
+    targets = {'head_1': torch.tensor([[[1]]])} # [1, 1, 1]
+    features = torch.tensor([[[[0.1]], [[0.2]]]]) # [1, 2, 1, 1]
 
-    objectives = obj_mod.TrainingObjectives(
-        headspecs={'head_1': dummy_head_spec},
-        headlosses={'head_1': dummy_head_loss},
-        mtl_regularization=None
-    )
+    objectives =_get_objective(mock_hspecs, mock_hlosses)
 
     result = obj_mod.multihead_objective(
         multihead_preds=preds,
@@ -140,27 +136,17 @@ def test_multihead_objective_basic(dummy_head_loss, dummy_head_spec):
     assert torch.isfinite(result.total)
 
 
-def test_multihead_objective_with_regularizer(
-    dummy_head_loss,
-    dummy_head_spec,
-    dummy_regularizer
-):
+def test_multihead_objective_with_regularizer(mock_hlosses, mock_hspecs):
     '''
     Given: `TrainingObjectives` configured with a regularizer.
     When: Calling `multihead_objective`.
     Then: Add regularizer output to total loss and store in regularization dict.
     '''
-    preds = {'head_1': torch.tensor([[1.0, 2.0]])}
-    targets = {'head_1': torch.tensor([[1, 2]])}
-    features = torch.tensor([[0.1, 0.2]])
+    preds = {'head_1': torch.tensor([[[[1.0]], [[2.0]]]])}
+    targets = {'head_1': torch.tensor([[[1]]])}
+    features = torch.tensor([[[[0.1]], [[0.2]]]])
 
-    dummy_regularizer.reduction = 'none'
-
-    objectives = obj_mod.TrainingObjectives(
-        headspecs={'head_1': dummy_head_spec},
-        headlosses={'head_1': dummy_head_loss},
-        mtl_regularization=dummy_regularizer
-    )
+    objectives = _get_objective(mock_hspecs, mock_hlosses, has_regularizer=True)
 
     result = obj_mod.multihead_objective(
         multihead_preds=preds,
@@ -169,28 +155,20 @@ def test_multihead_objective_with_regularizer(
         objectives=objectives
     )
 
-    assert result.regularization['mtl_regularization'] == 0.5
-    assert dummy_regularizer.reduction == 'mean'
+    assert result.regularization['mtl_regularization'] == 0.5 # constant
 
 
-def test_multihead_objective_nan_loss_raises(
-    dummy_head_loss,
-    dummy_head_spec
-):
+def test_multihead_objective_nan_loss_raises(mock_hlosses, mock_hspecs):
     '''
     Given: Predictions resulting in NaN total loss.
     When: Calling `multihead_objective`.
     Then: Raise `RuntimeError` matching 'Contains NaN/Inf loss.'.
     '''
-    preds = {'head_1': torch.tensor([[float('nan')]])}
-    targets = {'head_1': torch.tensor([[1]])}
-    features = torch.tensor([[0.1]])
+    preds = {'head_1': torch.tensor([[[[1.0]], [[float('nan')]]]])}
+    targets = {'head_1': torch.tensor([[[1]]])}
+    features = torch.tensor([[[[0.1]], [[0.2]]]])
 
-    objectives = obj_mod.TrainingObjectives(
-        headspecs={'head_1': dummy_head_spec},
-        headlosses={'head_1': dummy_head_loss},
-        mtl_regularization=None
-    )
+    objectives = _get_objective(mock_hspecs, mock_hlosses)
 
     with pytest.raises(RuntimeError, match='Contains NaN/Inf loss'):
         obj_mod.multihead_objective(
@@ -199,3 +177,34 @@ def test_multihead_objective_nan_loss_raises(
             features=features,
             objectives=objectives
         )
+
+
+# ----- internal helpers
+def _get_objective(mock_hspecs, mock_hlosses, has_regularizer = False):
+
+    class _MockRegularizer(torch.nn.Module):
+        def __init__(self, reduction: str = 'mean', val: float = 0.5):
+            super().__init__()
+            self.reduction = reduction
+            self.val = val
+
+        def forward(
+            self,
+            multihead_preds: dict[str, torch.Tensor],
+            multihead_targets: dict[str, torch.Tensor]
+        ) -> torch.Tensor:
+            '''Mock forward.'''
+            _ = multihead_preds, multihead_targets
+            return torch.tensor(self.val)
+
+    if not has_regularizer:
+        return obj_mod.TrainingObjectives(
+            headspecs={'head_1': mock_hspecs['head_1']},
+            headlosses={'head_1': mock_hlosses['head_1']},
+            mtl_regularization=None
+        )
+    return obj_mod.TrainingObjectives(
+        headspecs={'head_1': mock_hspecs['head_1']},
+        headlosses={'head_1': mock_hlosses['head_1']},
+        mtl_regularization=_MockRegularizer() # type: ignore | mock
+    )

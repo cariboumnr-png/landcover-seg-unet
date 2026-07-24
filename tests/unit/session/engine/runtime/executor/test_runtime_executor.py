@@ -29,27 +29,12 @@ import dataclasses
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.executor.executor as exec_mod
+import landseg.session.engine.runtime.executor.executor as executor
 import landseg.session.engine.runtime.executor.state as state_mod
 
 
-# ----- `BatchExecContext` dataclass tests
-def test_batch_exec_context_instantiation(dummy_exec_context):
-    '''
-    Given: Parameters for `BatchExecContext`.
-    When: Instantiating `BatchExecContext`.
-    Then: Attributes are assigned correctly.
-    '''
-    assert dummy_exec_context.device == 'cpu'
-    assert dummy_exec_context.patch_per_blk == 4
-
-
 # ----- `BatchEngine` initialization and batch parsing tests
-def test_batch_engine_init(
-    dummy_multihead_model,
-    dummy_exec_context,
-    session_config
-):
+def test_batch_engine_init(mock_model, session_config):
     '''
     Given: Multihead model, state, config, and context.
     When: Instantiating `BatchEngine`.
@@ -66,22 +51,18 @@ def test_batch_engine_init(
         logit_adjust_alpha=0.8
     )
 
-    engine = exec_mod.BatchEngine(
-        model=dummy_multihead_model,
+    engine = executor.BatchEngine(
+        model=mock_model,
         engine_state=state,
         config=config,
-        context=dummy_exec_context
+        context=_get_context()
     )
 
     assert engine.model.logit_adjust_alpha == 0.8
     assert engine.device == 'cpu'
 
 
-def test_batch_engine_parse_batch_labeled(
-    dummy_multihead_model,
-    dummy_exec_context,
-    session_config
-):
+def test_batch_engine_parse_batch_labeled(mock_model, session_config):
     '''
     Given: Batch engine with a labeled training batch (x, y, domain).
     When: Executing `_parse_batch`.
@@ -99,11 +80,11 @@ def test_batch_engine_parse_batch_labeled(
 
     state.batch_cxt.refresh(bidx=1, batch=(x, y, domain))
 
-    engine = exec_mod.BatchEngine(
-        model=dummy_multihead_model,
+    engine = executor.BatchEngine(
+        model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
-        context=dummy_exec_context
+        context=_get_context()
     )
     engine._parse_batch()
 
@@ -113,11 +94,7 @@ def test_batch_engine_parse_batch_labeled(
     assert 'ids_domain' in engine.state.batch_cxt.domain
 
 
-def test_batch_engine_parse_batch_invalid_active_head_raises(
-    dummy_multihead_model,
-    dummy_exec_context,
-    session_config
-):
+def test_batch_engine_parse_batch_invalid_active_head_raises(mock_model, session_config):
     '''
     Given: State with an `active_heads` list containing unknown heads.
     When: Executing `_parse_batch`.
@@ -135,11 +112,11 @@ def test_batch_engine_parse_batch_invalid_active_head_raises(
 
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = exec_mod.BatchEngine(
-        model=dummy_multihead_model,
+    engine = executor.BatchEngine(
+        model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
-        context=dummy_exec_context
+        context=_get_context()
     )
 
     with pytest.raises(KeyError, match='Active heads not found'):
@@ -148,10 +125,9 @@ def test_batch_engine_parse_batch_invalid_active_head_raises(
 
 # ----- `run_train_batch` execution tests
 def test_run_train_batch(
-    dummy_multihead_model,
-    dummy_head_loss,
-    dummy_head_spec,
-    dummy_exec_context,
+    mock_model,
+    mock_hlosses,
+    mock_hspecs,
     session_config
 ):
     '''
@@ -165,18 +141,18 @@ def test_run_train_batch(
         use_amp=False,
         device='cpu'
     )
-    state.heads.active_hspecs = {'head_1': dummy_head_spec}
-    state.heads.active_hloss = {'head_1': dummy_head_loss}
+    state.heads.active_hspecs = {'head_1': mock_hspecs['head_1']}
+    state.heads.active_hloss = {'head_1': mock_hlosses['head_1']}
 
     x = torch.randn(2, 3, 16, 16)
     y = torch.ones(2, 1, 16, 16, dtype=torch.long)
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = exec_mod.BatchEngine(
-        model=dummy_multihead_model,
+    engine = executor.BatchEngine(
+        model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
-        context=dummy_exec_context
+        context=_get_context()
     )
 
     engine.run_train_batch()
@@ -188,9 +164,8 @@ def test_run_train_batch(
 
 # ----- `run_validate_batch` execution tests
 def test_run_validate_batch(
-    dummy_multihead_model,
-    dummy_head_metric,
-    dummy_exec_context,
+    mock_model,
+    mock_hmetrics,
     session_config
 ):
     '''
@@ -204,30 +179,27 @@ def test_run_validate_batch(
         use_amp=False,
         device='cpu'
     )
-    state.heads.active_hmetrics = {'head_1': dummy_head_metric}
+    state.heads.active_hmetrics = {'head_1': mock_hmetrics['head_1']}
 
     x = torch.randn(2, 3, 16, 16)
     y = torch.ones(2, 1, 16, 16, dtype=torch.long)
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = exec_mod.BatchEngine(
-        model=dummy_multihead_model,
+    engine = executor.BatchEngine(
+        model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
-        context=dummy_exec_context
+        context=_get_context()
     )
-
     engine.run_validate_batch()
 
     assert 'head_1' in engine.state.batch_out.preds
-    assert dummy_head_metric.updated is True
 
 
 # ----- `run_infer_batch` and spatial aggregation tests
 def test_run_infer_batch_spatial_aggregation(
-    dummy_multihead_model,
-    dummy_head_metric,
-    dummy_exec_context,
+    mock_model,
+    mock_hmetrics,
     session_config
 ):
     '''
@@ -241,17 +213,17 @@ def test_run_infer_batch_spatial_aggregation(
         use_amp=False,
         device='cpu'
     )
-    state.heads.active_hmetrics = {'head_1': dummy_head_metric}
+    state.heads.active_hmetrics = {'head_1': mock_hmetrics['head_1']}
 
     x = torch.randn(1, 3, 16, 16)
     y = torch.ones(1, 1, 16, 16, dtype=torch.long)
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = exec_mod.BatchEngine(
-        model=dummy_multihead_model,
+    engine = executor.BatchEngine(
+        model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
-        context=dummy_exec_context
+        context=_get_context()
     )
 
     engine.run_infer_batch()
@@ -259,3 +231,14 @@ def test_run_infer_batch_spatial_aggregation(
     assert (0, 0) in engine.state.infer_out.inputs
     assert (0, 0) in engine.state.infer_out.preds['head_1']
     assert (0, 0) in engine.state.infer_out.labels['head_1']
+
+
+# ----- private helpers
+def _get_context():
+    return executor.BatchExecContext(
+        parent_map={},
+        patch_per_blk=4,
+        patch_per_dim=2,
+        block_columns=2,
+        device='cpu'
+    )

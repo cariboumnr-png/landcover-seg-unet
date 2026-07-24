@@ -19,6 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
 # pylint: disable=protected-access
 
 '''Fixtures for testing `landseg.session` module.'''
@@ -34,13 +35,13 @@ import landseg.configs.schema.sections.session as session_schema
 
 # ----- `_DummyModel` helper class
 class _DummyModel(torch.nn.Module):
-    '''Simple module exposing parameters and head control protocol stubs for testing.'''
 
     def __init__(self, spatial_divisor: int = 16):
         super().__init__()
         self.conv = torch.nn.Conv2d(3, 2, kernel_size=1)
         self.linear = torch.nn.Linear(2, 2)
         self.spatial_divisor = spatial_divisor
+        self.logit_adjust_alpha = 1.0
 
     def set_active_heads(self, active_heads: list[str] | None) -> None:
         _ = active_heads
@@ -52,7 +53,7 @@ class _DummyModel(torch.nn.Module):
         pass
 
     def set_logit_adjust_alpha(self, alpha: float) -> None:
-        _ = alpha
+        self.logit_adjust_alpha = alpha
 
     def forward(self, x, ids_domain=None, vec_domain=None):
         _ = ids_domain, vec_domain
@@ -64,19 +65,16 @@ class _DummyModel(torch.nn.Module):
 # ----- mock model and optimizer fixtures
 @pytest.fixture
 def mock_model():
-    '''Return a `_DummyModel` instance for testing.'''
     return _DummyModel()
 
 # ----- session config and constraint fixtures
 @pytest.fixture
 def session_config():
-    '''Return a default `SessionConfig` schema instance.'''
     return session_schema.SessionConfig()
 
 
 @pytest.fixture
 def mock_constraint():
-    '''Return a factory creating dummy `_MTLConstraints` instances.'''
     def _create(
         name: str = 'rule_1',
         source_head: str = 'head_1',
@@ -99,7 +97,6 @@ def mock_constraint():
 # ----- dataloader and logger helper classes
 @dataclasses.dataclass
 class _MockDataloaderMeta:
-    '''Mock metadata container for dataloaders.'''
     batch_size: int = 2
     patch_size: int = 16
     preview_context: None = None
@@ -107,7 +104,6 @@ class _MockDataloaderMeta:
 
 @dataclasses.dataclass
 class _MockDataLoaders:
-    '''Mock dataloaders container matching `DataLoadersLike`.'''
     meta: _MockDataloaderMeta = dataclasses.field(
         default_factory=_MockDataloaderMeta
     )
@@ -117,30 +113,25 @@ class _MockDataLoaders:
 
 
 class _MockLogger:
-    '''Mock logger instance for session tests.'''
     console_lvl = 'INFO'
 
 
 @dataclasses.dataclass
 class _MockSessionPaths:
-    '''Mock session results paths manager.'''
     logs: str = 'dummy_logs_dir'
 
 
 # ----- dataloader, logger, and paths fixtures
 @pytest.fixture
 def mock_dataloaders():
-    '''Return a `_MockDataLoaders` instance for testing.'''
     return _MockDataLoaders()
 
 
 @pytest.fixture
 def mock_logger():
-    '''Return a `_MockLogger` instance for testing.'''
     return _MockLogger()
 
 
 @pytest.fixture
 def mock_session_paths(tmp_path):
-    '''Return a `_MockSessionPaths` instance bound to a temporary directory.'''
     return _MockSessionPaths(logs=str(tmp_path / 'logs'))

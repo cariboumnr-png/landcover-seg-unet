@@ -2,7 +2,7 @@
 #           Copyright (c) His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      © King's Printer for Ontario, 2026.                    #
+#                      (c) King's Printer for Ontario, 2026.                  #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -19,25 +19,52 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for segmentation metrics builder module (builder.py).'''
+# pylint: disable=missing-function-docstring
+# pylint: disable=protected-access
+# pylint: disable=redefined-outer-name
+# pylint: disable=too-few-public-methods
 
+'''Fixtures for testing `landseg.session.engine.runtime.executor` module.'''
+
+# third-party imports
+import pytest
 # local imports
-import landseg.session.engine.runtime.tasks.metrics.segmentation.builder as builder
-import landseg.session.engine.runtime.tasks.metrics.segmentation.confusion_matrix as cm_module
+import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
+import landseg.session.engine.runtime.tasks.metrics.segmentation.builder as metrics_builder
+import landseg.session.engine.runtime.tasks.heads.specs as headspecs
 
 
-def test_build_headmetrics(mock_hspecs):
-    '''
-    Given: `HeadSpecs` describing prediction heads and an ignore index.
-    When: Calling `build_headmetrics`.
-    Then: Return a `HeadMetrics` container mapping head names to
-        configured `ConfusionMatrix` objects.
-    '''
-    hmetrics = builder.build_headmetrics(mock_hspecs, ignore_index=255)
+@pytest.fixture
+def mock_hspecs(dataspecs):
+    return headspecs.build_headspecs(dataspecs, alpha_fn='inverse')
 
-    assert isinstance(hmetrics, builder.HeadMetrics)
-    assert len(hmetrics) == 2
-    assert isinstance(hmetrics.as_dict()['head_1'], cm_module.ConfusionMatrix)
-    assert isinstance(hmetrics.as_dict()['head_2'], cm_module.ConfusionMatrix)
-    assert isinstance(hmetrics['head_1'], cm_module.ConfusionMatrix)
-    assert isinstance(hmetrics['head_2'], cm_module.ConfusionMatrix)
+    # defined in dataspecs fixture @unit/conftest.py
+    # includes two heads as:
+    # class_counts={
+    #     'head_1': [100, 200],
+    #     'head_2': [50, 150, 250],
+    # },
+    # logits_adjust={
+    #     'head_1': [0.2, 0.1],
+    #     'head_2': [0.1, 0.1, 0.1],
+    # },
+    # head_parent={'head_1': None, 'head_2': None},
+    # head_parent_cls={'head_1': None, 'head_2': None},
+
+
+@pytest.fixture
+def mock_hlosses(mock_hspecs, session_config):
+    return loss_builder.build_headlosses(
+        mock_hspecs,
+        config=session_config.engine_tasks.loss_configs,
+        ignore_index=255,
+        spectral_band_indices=None
+    )
+
+
+@pytest.fixture
+def mock_hmetrics(mock_hspecs):
+    return metrics_builder.build_headmetrics(
+        mock_hspecs,
+        ignore_index=255
+    )
