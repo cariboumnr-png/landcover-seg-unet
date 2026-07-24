@@ -192,8 +192,7 @@ class CurriculumRunner(runner.BaseRunner):
                     case events.CheckpointRequest(tag=tag):
                         self._save_progress(phase.name, is_best=tag=='best')
 
-                # end of current phase
-                if self._is_phase_end:
-                    reason = 'Max epoch reached'
-                    self.dispatcher.on_session_phase_end(phase.name, reason)
-                    break
+                    case events.PhaseEnd:
+                        reason = 'Max epoch reached'
+                        self.dispatcher.on_session_phase_end(phase.name, reason)
+                        break
