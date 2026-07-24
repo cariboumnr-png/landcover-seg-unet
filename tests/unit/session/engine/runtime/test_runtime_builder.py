@@ -31,7 +31,7 @@ import landseg.session.engine.runtime.builder as builder_mod
 def test_build_engine_runtime_patch_size_divisibility_error(
     session_config,
     dataspecs,
-    dummy_model,
+    mock_model,
     mock_dataloaders
 ):
     '''
@@ -40,13 +40,13 @@ def test_build_engine_runtime_patch_size_divisibility_error(
     Then: Raise `ValueError` matching patch dimension divisibility.
     '''
     mock_dataloaders.meta.patch_size = 15
-    dummy_model.spatial_divisor = 16
+    mock_model.spatial_divisor = 16
 
     with pytest.raises(ValueError, match='Invalid patch dimension'):
         builder_mod.build_engine_runtime(
             dataspecs=dataspecs,
             dataloaders=mock_dataloaders,
-            model=dummy_model,
+            model=mock_model,
             config=session_config,
             device='cpu'
         )
@@ -55,7 +55,7 @@ def test_build_engine_runtime_patch_size_divisibility_error(
 def test_build_engine_runtime_success(
     session_config,
     dataspecs,
-    dummy_model,
+    mock_model,
     mock_dataloaders
 ):
     '''
@@ -66,7 +66,7 @@ def test_build_engine_runtime_success(
     runtime = builder_mod.build_engine_runtime(
         dataspecs=dataspecs,
         dataloaders=mock_dataloaders,
-        model=dummy_model,
+        model=mock_model,
         config=session_config,
         device='cpu'
     )

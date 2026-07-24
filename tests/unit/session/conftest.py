@@ -63,16 +63,9 @@ class _DummyModel(torch.nn.Module):
 
 # ----- mock model and optimizer fixtures
 @pytest.fixture
-def dummy_model():
+def mock_model():
     '''Return a `_DummyModel` instance for testing.'''
     return _DummyModel()
-
-
-@pytest.fixture
-def dummy_optimizer(dummy_model):
-    '''Return an `AdamW` optimizer instance initialized with `dummy_model` parameters.'''
-    return torch.optim.AdamW(dummy_model.parameters(), lr=1e-3)
-
 
 # ----- session config and constraint fixtures
 @pytest.fixture

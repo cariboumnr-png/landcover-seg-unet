@@ -31,7 +31,7 @@ import landseg.session.orchestration as orchestration_mod
 def test_build_overfit_session(
     session_config,
     dataspecs,
-    dummy_model,
+    mock_model,
     mock_logger,
     mock_dataloaders,
     monkeypatch
@@ -49,7 +49,7 @@ def test_build_overfit_session(
 
     engine_session = factory_mod.build_overfit_session(
         dataspecs=dataspecs,
-        model=dummy_model,
+        model=mock_model,
         config=session_config,
         context=context,
         logger=mock_logger  # type: ignore
@@ -62,7 +62,7 @@ def test_build_overfit_session(
 def test_build_evaluate_session(
     session_config,
     dataspecs,
-    dummy_model,
+    mock_model,
     mock_logger,
     mock_dataloaders,
     monkeypatch
@@ -80,7 +80,7 @@ def test_build_evaluate_session(
 
     engine_session = factory_mod.build_evaluate_session(
         dataspecs=dataspecs,
-        model=dummy_model,
+        model=mock_model,
         config=session_config,
         context=context,
         logger=mock_logger  # type: ignore
@@ -93,7 +93,7 @@ def test_build_evaluate_session(
 def test_build_continuous_training_session(
     session_config,
     dataspecs,
-    dummy_model,
+    mock_model,
     mock_logger,
     mock_dataloaders,
     mock_session_paths,
@@ -116,7 +116,7 @@ def test_build_continuous_training_session(
 
     runner = factory_mod.build_continous_training_session(
         dataspecs=dataspecs,
-        model=dummy_model,
+        model=mock_model,
         config=session_config,
         context=context,
         logger=mock_logger  # type: ignore

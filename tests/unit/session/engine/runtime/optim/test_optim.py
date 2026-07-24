@@ -33,15 +33,16 @@ import landseg.session.engine.runtime.optim as optim
 
 
 # ----- `Optimization` runtime wrapper tests
-def test_optimization_init_defaults(dummy_optimizer):
+def test_optimization_init_defaults(mock_model):
     '''
     Given: PyTorch optimizer instance.
     When: Instantiating `Optimization` with default parameters.
     Then: Scheduler is None and tracking metadata defaults to None.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
 
-    assert opt_wrap.optimizer is dummy_optimizer
+    assert opt_wrap.optimizer is optimizer
     assert opt_wrap.scheduler is None
     assert opt_wrap.grad_clip_norm is None
     assert opt_wrap._sched_cls is None
@@ -49,66 +50,71 @@ def test_optimization_init_defaults(dummy_optimizer):
     assert opt_wrap._sched_args is None
 
 
-def test_optimization_lrs_property(dummy_optimizer):
+def test_optimization_lrs_property(mock_model):
     '''
     Given: `Optimization` wrapping an optimizer with parameter groups.
     When: Accessing `lrs` property.
     Then: Return list of learning rates for all parameter groups.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
 
     assert opt_wrap.lrs == [1e-3]
 
 
-def test_optimization_step_optimizer(dummy_model, dummy_optimizer):
+def test_optimization_step_optimizer(mock_model):
     '''
     Given: `Optimization` wrapper around an optimizer with gradients.
     When: Calling `step_optimizer`.
     Then: Delegate execution to underlying optimizer.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
-    out = dummy_model.linear(torch.tensor([[1.0, 1.0]]))
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
+    out = mock_model.linear(torch.tensor([[1.0, 1.0]]))
     loss = out.sum()
     loss.backward()
 
     opt_wrap.step_optimizer()
 
 
-def test_optimization_zero_grad(dummy_model, dummy_optimizer):
+def test_optimization_zero_grad(mock_model):
     '''
     Given: `Optimization` wrapper after backward pass.
     When: Calling `zero_grad(set_to_none=True)`.
     Then: Parameter gradients are reset to None.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
-    out = dummy_model.linear(torch.tensor([[1.0, 1.0]]))
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
+    out = mock_model.linear(torch.tensor([[1.0, 1.0]]))
     loss = out.sum()
     loss.backward()
 
-    assert dummy_model.linear.weight.grad is not None
+    assert mock_model.linear.weight.grad is not None
     opt_wrap.zero_grad(set_to_none=True)
-    assert dummy_model.linear.weight.grad is None
+    assert mock_model.linear.weight.grad is None
 
 
-def test_optimization_step_scheduler_none(dummy_optimizer):
+def test_optimization_step_scheduler_none(mock_model):
     '''
     Given: `Optimization` without a scheduler.
     When: Calling `step_scheduler`.
     Then: No operation occurs and no exception is raised.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer, scheduler=None)
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer, scheduler=None)
 
     opt_wrap.step_scheduler()
 
 
-def test_optimization_step_scheduler_active(dummy_optimizer):
+def test_optimization_step_scheduler_active(mock_model):
     '''
     Given: `Optimization` with active `CosineAnnealingLR` scheduler.
     When: Calling `step_scheduler`.
     Then: Advance scheduler state and update learning rate.
     '''
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(dummy_optimizer, T_max=10)
-    opt_wrap = optim.Optimization(dummy_optimizer, scheduler=sched)
+    optimizer = _get_mock_optimizer(mock_model)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
+    opt_wrap = optim.Optimization(optimizer, scheduler=sched)
 
     initial_lr = opt_wrap.lrs[0]
     opt_wrap.step_scheduler()
@@ -116,28 +122,30 @@ def test_optimization_step_scheduler_active(dummy_optimizer):
 
 
 # ----- `Optimization.reconfigure` tests
-def test_reconfigure_lr_only(dummy_optimizer):
+def test_reconfigure_lr_only(mock_model):
     '''
     Given: `Optimization` wrapper.
     When: Calling `reconfigure` with new learning rate.
     Then: Learning rate is updated across all parameter groups.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
     opt_wrap.reconfigure(lr=5e-4)
 
     assert opt_wrap.lrs == [5e-4]
 
 
-def test_reconfigure_disable_scheduler(dummy_optimizer):
+def test_reconfigure_disable_scheduler(mock_model):
     '''
     Given: `Optimization` wrapper with active scheduler.
     When: Calling `reconfigure(disable_scheduler=True)`.
     Then: Scheduler instance and stored configuration metadata are cleared.
     '''
+    optimizer = _get_mock_optimizer(mock_model)
     sched_factory = torch.optim.lr_scheduler.CosineAnnealingLR
-    sched = sched_factory(dummy_optimizer, T_max=10)
+    sched = sched_factory(optimizer, T_max=10)
     opt_wrap = optim.Optimization(
-        dummy_optimizer,
+        optimizer,
         scheduler=sched,
         sched_cls='CosAnneal',
         sched_factory=sched_factory,
@@ -152,40 +160,43 @@ def test_reconfigure_disable_scheduler(dummy_optimizer):
     assert opt_wrap._sched_args is None
 
 
-def test_reconfigure_no_op(dummy_optimizer):
+def test_reconfigure_no_op(mock_model):
     '''
     Given: `Optimization` wrapper without scheduler arguments.
     When: Calling `reconfigure` with no parameters.
     Then: No state changes occur.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
     opt_wrap.reconfigure()
 
     assert opt_wrap.scheduler is None
 
 
-def test_reconfigure_incomplete_config_raises(dummy_optimizer):
+def test_reconfigure_incomplete_config_raises(mock_model):
     '''
     Given: `Optimization` wrapper without stored scheduler factory.
     When: Calling `reconfigure` with new `sched_args`.
     Then: Raise `ValueError`.
     '''
-    opt_wrap = optim.Optimization(dummy_optimizer)
+    optimizer = _get_mock_optimizer(mock_model)
+    opt_wrap = optim.Optimization(optimizer)
 
     with pytest.raises(ValueError, match='Scheduler configuration incomplete'):
         opt_wrap.reconfigure(sched_args={'T_max': 20})
 
 
-def test_reconfigure_scheduler_rebuild(dummy_optimizer):
+def test_reconfigure_scheduler_rebuild(mock_model):
     '''
     Given: `Optimization` wrapper initialized with scheduler metadata.
     When: Calling `reconfigure` with updated `sched_args`.
     Then: Rebuild scheduler instance with merged arguments.
     '''
+    optimizer = _get_mock_optimizer(mock_model)
     sched_factory = torch.optim.lr_scheduler.CosineAnnealingLR
-    sched = sched_factory(dummy_optimizer, T_max=10)
+    sched = sched_factory(optimizer, T_max=10)
     opt_wrap = optim.Optimization(
-        dummy_optimizer,
+        optimizer,
         scheduler=sched,
         sched_cls='CosAnneal',
         sched_factory=sched_factory,
@@ -199,17 +210,14 @@ def test_reconfigure_scheduler_rebuild(dummy_optimizer):
 
 
 # ----- `build_optimization` factory tests
-def test_build_optimization_from_session_config(
-    dummy_model,
-    session_config
-):
+def test_build_optimization_from_session_config(mock_model, session_config):
     '''
     Given: Default `SessionConfig` from `session_config` fixture.
     When: Calling `build_optimization` with `session_config.engine_optim`.
     Then: Successfully construct `Optimization` wrapper.
     '''
     opt_wrap = optim.build_optimization(
-        dummy_model,
+        mock_model,
         session_config.engine_optim
     )
 
@@ -217,10 +225,7 @@ def test_build_optimization_from_session_config(
     assert opt_wrap.scheduler is not None
 
 
-def test_build_optimization_adamw_no_scheduler(
-    dummy_model,
-    session_config
-):
+def test_build_optimization_adamw_no_scheduler(mock_model, session_config):
     '''
     Given: `_OptimConfig` specifying AdamW with no scheduler.
     When: Calling `build_optimization`.
@@ -233,18 +238,14 @@ def test_build_optimization_adamw_no_scheduler(
         sched_args={},
         grad_clip_norm=1.0
     )
-
-    opt_wrap = optim.build_optimization(dummy_model, config)
+    opt_wrap = optim.build_optimization(mock_model, config)
 
     assert isinstance(opt_wrap.optimizer, torch.optim.AdamW)
     assert opt_wrap.scheduler is None
     assert opt_wrap.grad_clip_norm == 1.0
 
 
-def test_build_optimization_sgd_with_cosanneal_scheduler(
-    dummy_model,
-    session_config
-):
+def test_build_optimization_sgd_w_cosanneal_scheduler(mock_model, session_config):
     '''
     Given: `_OptimConfig` specifying SGD and `CosAnneal` scheduler.
     When: Calling `build_optimization`.
@@ -259,8 +260,7 @@ def test_build_optimization_sgd_with_cosanneal_scheduler(
         sched_args={'T_max': 10},
         grad_clip_norm=0.5
     )
-
-    opt_wrap = optim.build_optimization(dummy_model, config)
+    opt_wrap = optim.build_optimization(mock_model, config)
 
     assert isinstance(opt_wrap.optimizer, torch.optim.SGD)
     assert isinstance(
@@ -271,10 +271,7 @@ def test_build_optimization_sgd_with_cosanneal_scheduler(
     assert opt_wrap._sched_cls == 'CosAnneal'
 
 
-def test_build_optimization_onecycle_scheduler(
-    dummy_model,
-    session_config
-):
+def test_build_optimization_onecycle_scheduler(mock_model, session_config):
     '''
     Given: `_OptimConfig` specifying `OneCycle` scheduler.
     When: Calling `build_optimization`.
@@ -286,8 +283,7 @@ def test_build_optimization_onecycle_scheduler(
         sched_cls='OneCycle',
         sched_args={'max_lr': 1e-2, 'total_steps': 100}
     )
-
-    opt_wrap = optim.build_optimization(dummy_model, config)
+    opt_wrap = optim.build_optimization(mock_model, config)
 
     assert isinstance(
         opt_wrap.scheduler,
@@ -295,10 +291,7 @@ def test_build_optimization_onecycle_scheduler(
     )
 
 
-def test_build_optimization_unknown_optimizer_raises(
-    dummy_model,
-    session_config
-):
+def test_build_optimization_unknown_optimizer_raises(mock_model, session_config):
     '''
     Given: `_OptimConfig` with unregistered `opt_cls`.
     When: Calling `build_optimization`.
@@ -310,13 +303,10 @@ def test_build_optimization_unknown_optimizer_raises(
     )
 
     with pytest.raises(ValueError, match='Unknown optimizer: InvalidOptimizer'):
-        optim.build_optimization(dummy_model, config)
+        optim.build_optimization(mock_model, config)
 
 
-def test_build_optimization_unknown_scheduler_raises(
-    dummy_model,
-    session_config
-):
+def test_build_optimization_unknown_scheduler_raises(mock_model, session_config):
     '''
     Given: `_OptimConfig` with unregistered `sched_cls`.
     When: Calling `build_optimization`.
@@ -328,4 +318,10 @@ def test_build_optimization_unknown_scheduler_raises(
     )
 
     with pytest.raises(ValueError, match='Unknown scheduler: InvalidScheduler'):
-        optim.build_optimization(dummy_model, config)
+        optim.build_optimization(mock_model, config)
+
+
+# ----- helper factory
+def _get_mock_optimizer(mock_model):
+    '''Return an `AdamW` optimizer instance from mock model fixture.'''
+    return torch.optim.AdamW(mock_model.parameters(), lr=1e-3)
