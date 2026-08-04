@@ -1,0 +1,879 @@
+{
+  "model_name": "BAAI/bge-base-en-v1.5",
+  "num_classes": 145,
+  "embedding_dim": 768,
+  "normalized": true,
+  "key_column": "species_code",
+  "classes": [
+    {
+      "index": 0,
+      "code": "SB",
+      "name": "Black Spruce",
+      "text_prompt": "Species: Picea mariana (Black Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Boreal to subarctic cold climates. Topography & Elevation: Found in Lowland depressions, valley bottoms, peat bogs; Lowland to mid-elevation flat terrain. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Acidic organic peat, cold poorly drained soils. Ecological Traits: Tolerant shade tolerance; Climax species in peatlands."
+    },
+    {
+      "index": 1,
+      "code": "SW",
+      "name": "White Spruce",
+      "text_prompt": "Species: Picea glauca (White Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Well-drained riverbanks, upland slopes, lake margins; Lowland terraces to upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Rich loams, alluvial silt, well-drained clays. Ecological Traits: Tolerant shade tolerance; Climax species."
+    },
+    {
+      "index": 2,
+      "code": "SR",
+      "name": "Red Spruce",
+      "text_prompt": "Species: Picea rubens (Red Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool humid temperate climates. Topography & Elevation: Found in Cool moist mountain slopes and plateaus; Mid-to-high elevation uplands. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Acidic, cool, moist organic or sandy loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 3,
+      "code": "SN",
+      "name": "Norway Spruce",
+      "text_prompt": "Species: Picea abies (Norway Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Upland plantations, moist valleys; Lowland to upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Moist well-drained loams and clay loams. Ecological Traits: Tolerant shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 4,
+      "code": "SE",
+      "name": "Engelmann Spruce",
+      "text_prompt": "Species: Picea engelmannii (Engelmann Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Subalpine and cold montane climates. Topography & Elevation: Found in High elevation mountain slopes and basins; Subalpine high elevation slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cold moist loams and rocky gravels. Ecological Traits: Tolerant shade tolerance; Subalpine climax species."
+    },
+    {
+      "index": 5,
+      "code": "SS",
+      "name": "Sitka Spruce",
+      "text_prompt": "Species: Picea sitchensis (Sitka Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool maritime humid climates. Topography & Elevation: Found in Coastal fog belts, alluvial lowlands; Lowland coastal plains. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Deep, moist, rich alluvial loams. Ecological Traits: Tolerant shade tolerance; Coastal climax species."
+    },
+    {
+      "index": 6,
+      "code": "PUN",
+      "name": "Colorado Blue Spruce",
+      "text_prompt": "Species: Picea pungens (Colorado Blue Spruce). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool temperate planted climates. Topography & Elevation: Found in Urban parks, windbreaks, valley streamsides; Lowland to mid-elevation plains. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Rich, moist, well-drained sandy loams. Ecological Traits: Intermediate shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 7,
+      "code": "SP",
+      "name": "Spruce (Unspecified)",
+      "text_prompt": "Species: Picea spp. (Spruce (Unspecified)). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Variable lowland to upland terrain; Adaptable elevations. Soil & Hydrology: Prefers Mesic to hydric moisture regimes and Moist organic to mineral loams. Ecological Traits: Tolerant shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 8,
+      "code": "PJ",
+      "name": "Jack Pine",
+      "text_prompt": "Species: Pinus banksiana (Jack Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Dry sandy plains, rocky ridges, glaciated uplands; Upland flats and rocky crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse sandy loams, shallow soils over bedrock. Ecological Traits: Very intolerant shade tolerance; Fire-adapted pioneer species."
+    },
+    {
+      "index": 9,
+      "code": "PW",
+      "name": "Eastern White Pine",
+      "text_prompt": "Species: Pinus strobus (Eastern White Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Rolling upland hills, sandy plains, river valleys; Lowland terraces to high ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained sandy to loamy soils. Ecological Traits: Intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 10,
+      "code": "PR",
+      "name": "Red Pine",
+      "text_prompt": "Species: Pinus resinosa (Red Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Sandy plains, rocky ridges, dry uplands; Upland plateaus and crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse dry acidic sands and gravelly loams. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 11,
+      "code": "PS",
+      "name": "Scots Pine",
+      "text_prompt": "Species: Pinus sylvestris (Scots Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Dry sandy plains, disturbed fields, plantations; Lowland to upland flats. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse sandy loams, poor acidic soils. Ecological Traits: Intolerant shade tolerance; Early successional introduced species."
+    },
+    {
+      "index": 12,
+      "code": "PI",
+      "name": "Pitch Pine",
+      "text_prompt": "Species: Pinus rigida (Pitch Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Warm temperate to cool temperate pockets. Topography & Elevation: Found in Dry sandy plains, rocky crests; Upland sandy flats and crests. Soil & Hydrology: Prefers Xeric moisture regimes and Sterile coarse acidic sands, gravelly slopes. Ecological Traits: Intolerant shade tolerance; Fire-dependent pioneer species."
+    },
+    {
+      "index": 13,
+      "code": "PC",
+      "name": "Lodgepole Pine",
+      "text_prompt": "Species: Pinus contorta (Lodgepole Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Montane to boreal transition climates. Topography & Elevation: Found in Glaciated plains, mountain slopes, sandy plateaus; Mid-to-high elevation plateaus. Soil & Hydrology: Prefers Xeric to mesic moisture regimes and Coarse gravelly sands, shallow rocky soils. Ecological Traits: Very intolerant shade tolerance; Fire-dependent pioneer species."
+    },
+    {
+      "index": 14,
+      "code": "PL",
+      "name": "Ponderosa Pine",
+      "text_prompt": "Species: Pinus ponderosa (Ponderosa Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Dry warm temperate to continental climates. Topography & Elevation: Found in Dry mountain slopes, foothills, sandy basins; Foothills and mid-elevation crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse dry gravelly loams, basaltic soils. Ecological Traits: Intolerant shade tolerance; Climax on dry sites."
+    },
+    {
+      "index": 15,
+      "code": "PM",
+      "name": "Mugo Pine",
+      "text_prompt": "Species: Pinus mugo (Mugo Pine). Taxonomy & Functional Type: Coniferous shrub / small tree. Climate Niche: Thrives in Montane alpine introduced climates. Topography & Elevation: Found in Exposed rocky slopes, ornamental plantings; Subalpine to rocky gardens. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Shallow, rocky, dry gravelly loams. Ecological Traits: Intolerant shade tolerance; Pioneer on alpine slopes."
+    },
+    {
+      "index": 16,
+      "code": "PZ",
+      "name": "Austrian Pine",
+      "text_prompt": "Species: Pinus nigra (Austrian Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Warm to cool temperate introduced climates. Topography & Elevation: Found in Coastal dunes, urban windbreaks, dry slopes; Lowland to upland flats. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Alkaline limestone, dry sterile sands, clay loams. Ecological Traits: Intolerant shade tolerance; Early successional introduced species."
+    },
+    {
+      "index": 17,
+      "code": "PX",
+      "name": "Western White Pine",
+      "text_prompt": "Species: Pinus monticola (Western White Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool humid montane climates. Topography & Elevation: Found in Moist mountain slopes, valley basins; Mid-elevation mountain slopes. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Deep, well-drained, granite loams. Ecological Traits: Intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 18,
+      "code": "PF",
+      "name": "Limber Pine",
+      "text_prompt": "Species: Pinus flexilis (Limber Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cold continental montane climates. Topography & Elevation: Found in Wind-swept alpine ridges, rocky escarpments; High subalpine ridges. Soil & Hydrology: Prefers Xeric moisture regimes and Shallow, rocky, limestone soils. Ecological Traits: Intolerant shade tolerance; Subalpine pioneer species."
+    },
+    {
+      "index": 19,
+      "code": "PA",
+      "name": "Whitebark Pine",
+      "text_prompt": "Species: Pinus albicaulis (Whitebark Pine). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Alpine and subarctic cold climates. Topography & Elevation: Found in Subalpine timberlines, rocky peaks; High alpine timberline. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse rocky scree, shallow granitic soils. Ecological Traits: Intolerant shade tolerance; Subalpine pioneer climax species."
+    },
+    {
+      "index": 20,
+      "code": "PN",
+      "name": "Pine (Unspecified)",
+      "text_prompt": "Species: Pinus spp. (Pine (Unspecified)). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Dry plains, ridges, plantations; Lowland to upland crests. Soil & Hydrology: Prefers Xeric to mesic moisture regimes and Sandy loams, coarse gravels. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 21,
+      "code": "BF",
+      "name": "Balsam Fir",
+      "text_prompt": "Species: Abies balsamea (Balsam Fir). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Moist lowlands, cold mountain slopes, river valleys; Lowland flats to high mountain ridges. Soil & Hydrology: Prefers Mesic to hydric moisture regimes and Cool moist acidic organic soils and heavy loams. Ecological Traits: Very tolerant shade tolerance; Climax species."
+    },
+    {
+      "index": 22,
+      "code": "FB",
+      "name": "Fraser Fir",
+      "text_prompt": "Species: Abies fraseri (Fraser Fir). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool humid montane climates. Topography & Elevation: Found in High elevation mountain summits and ridges; High mountain peaks. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cool, moist, acidic loams. Ecological Traits: Very tolerant shade tolerance; High-elevation climax species."
+    },
+    {
+      "index": 23,
+      "code": "FG",
+      "name": "Grand Fir",
+      "text_prompt": "Species: Abies grandis (Grand Fir). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool maritime to humid continental climates. Topography & Elevation: Found in Valley bottoms, stream terraces, gentle slopes; Lowland to mid-elevation valleys. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist alluvial soils. Ecological Traits: Tolerant shade tolerance; Late-successional species."
+    },
+    {
+      "index": 24,
+      "code": "FL",
+      "name": "Subalpine Fir",
+      "text_prompt": "Species: Abies lasiocarpa (Subalpine Fir). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cold alpine and subarctic climates. Topography & Elevation: Found in High elevation mountain basins, timberline ridges; Subalpine timberlines. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cold, moist, rocky gravelly loams. Ecological Traits: Very tolerant shade tolerance; Subalpine climax species."
+    },
+    {
+      "index": 25,
+      "code": "FM",
+      "name": "Pacific Silver Fir",
+      "text_prompt": "Species: Abies amabilis (Pacific Silver Fir). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool wet maritime climates. Topography & Elevation: Found in High precipitation mountain slopes; Mid-to-high mountain slopes. Soil & Hydrology: Prefers Mesic to hydric moisture regimes and Deep, cool, moist acidic organic loams. Ecological Traits: Very tolerant shade tolerance; Climax species."
+    },
+    {
+      "index": 26,
+      "code": "FS",
+      "name": "White Fir",
+      "text_prompt": "Species: Abies concolor (White Fir). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool dry continental montane climates. Topography & Elevation: Found in Mountain slopes, high plateaus; Mid-elevation mountain slopes. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Deep, rich, well-drained gravelly loams. Ecological Traits: Tolerant shade tolerance; Climax species."
+    },
+    {
+      "index": 27,
+      "code": "CE",
+      "name": "Eastern White Cedar",
+      "text_prompt": "Species: Thuja occidentalis (Eastern White Cedar). Taxonomy & Functional Type: Coniferous scale-leaf tree. Climate Niche: Thrives in Boreal and Great Lakes-St. Lawrence climates. Topography & Elevation: Found in Limestone cliff edges, cedar swamps, riverbanks; Lowland swamps to rocky bluffs. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Alkaline calcareous soils, organic peat, moist limestone. Ecological Traits: Very tolerant shade tolerance; Climax species in swamps and bluffs."
+    },
+    {
+      "index": 28,
+      "code": "CW",
+      "name": "Western Redcedar",
+      "text_prompt": "Species: Thuja plicata (Western Redcedar). Taxonomy & Functional Type: Coniferous scale-leaf tree. Climate Niche: Thrives in Cool humid maritime and inland wet-belt climates. Topography & Elevation: Found in Moist river valleys, alluvial flats, shaded ravines; Lowland to mid-elevation valleys. Soil & Hydrology: Prefers Mesic to hydric moisture regimes and Deep, moist, rich organic silt and clay loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 29,
+      "code": "CY",
+      "name": "Yellow Cedar",
+      "text_prompt": "Species: Chamaecyparis nootkatensis (Yellow Cedar). Taxonomy & Functional Type: Coniferous scale-leaf tree. Climate Niche: Thrives in Cool wet maritime alpine transition climates. Topography & Elevation: Found in Snowpack mountain slopes, avalanche chutes, bogs; Subalpine moist slopes. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Cold organic muck, wet shallow rocky soils. Ecological Traits: Very tolerant shade tolerance; Subalpine climax species."
+    },
+    {
+      "index": 30,
+      "code": "CR",
+      "name": "Eastern Redcedar",
+      "text_prompt": "Species: Juniperus virginiana (Eastern Redcedar). Taxonomy & Functional Type: Coniferous scale-leaf tree. Climate Niche: Thrives in Deciduous and Carolinian warm temperate climates. Topography & Elevation: Found in Dry limestone outcrops, abandoned pastures, sandy bluffs; Upland exposed crests and fields. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Shallow rocky limestone, alkaline dry sands. Ecological Traits: Intolerant shade tolerance; Pioneer species on dry limestone."
+    },
+    {
+      "index": 31,
+      "code": "LA",
+      "name": "Tamarack",
+      "text_prompt": "Species: Larix laricina (Tamarack). Taxonomy & Functional Type: Deciduous coniferous tree. Climate Niche: Thrives in Boreal to subarctic cold climates. Topography & Elevation: Found in Open bogs, fen margins, wet lowlands; Lowland depressions and flat bogs. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet organic peat, poorly drained cold mineral soils. Ecological Traits: Very intolerant shade tolerance; Pioneer species on wet bogs."
+    },
+    {
+      "index": 32,
+      "code": "LE",
+      "name": "European Larch",
+      "text_prompt": "Species: Larix decidua (European Larch). Taxonomy & Functional Type: Deciduous coniferous tree. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Upland plantations, well-drained hillsides; Lowland to mid-elevation slopes. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Deep, well-drained loams and gravels. Ecological Traits: Very intolerant shade tolerance; Pioneer introduced species."
+    },
+    {
+      "index": 33,
+      "code": "LW",
+      "name": "Western Larch",
+      "text_prompt": "Species: Larix occidentalis (Western Larch). Taxonomy & Functional Type: Deciduous coniferous tree. Climate Niche: Thrives in Cool humid montane climates. Topography & Elevation: Found in Moist mountain slopes, valley benches; Mid-elevation mountain slopes. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Deep, moist, gravelly loams. Ecological Traits: Very intolerant shade tolerance; Fire-adapted pioneer species."
+    },
+    {
+      "index": 34,
+      "code": "LS",
+      "name": "Siberian Larch",
+      "text_prompt": "Species: Larix sibirica (Siberian Larch). Taxonomy & Functional Type: Deciduous coniferous tree. Climate Niche: Thrives in Severe cold continental boreal climates. Topography & Elevation: Found in Lowland plains, river basins; Lowland plains. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cold mineral clays and wet peat. Ecological Traits: Very intolerant shade tolerance; Pioneer species."
+    },
+    {
+      "index": 35,
+      "code": "HE",
+      "name": "Eastern Hemlock",
+      "text_prompt": "Species: Tsuga canadensis (Eastern Hemlock). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Cool moist ravines, north-facing slopes, lake shores; Upland valleys and shaded slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, moist, highly acidic loams and organic soils. Ecological Traits: Extremely tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 36,
+      "code": "HW",
+      "name": "Western Hemlock",
+      "text_prompt": "Species: Tsuga heterophylla (Western Hemlock). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Cool wet maritime and inland rainforest climates. Topography & Elevation: Found in Moist coastal slopes, shaded river valleys; Lowland coastal to mid-elevation slopes. Soil & Hydrology: Prefers Mesic to hydric moisture regimes and Deep, moist, acidic organic-rich soils. Ecological Traits: Very tolerant shade tolerance; Climax species."
+    },
+    {
+      "index": 37,
+      "code": "HM",
+      "name": "Mountain Hemlock",
+      "text_prompt": "Species: Tsuga mertensiana (Mountain Hemlock). Taxonomy & Functional Type: Coniferous needleleaf tree. Climate Niche: Thrives in Subalpine snowy alpine transition climates. Topography & Elevation: Found in High elevation mountain ridges, snowfields; High subalpine timberline. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cold, moist, shallow gravelly loams. Ecological Traits: Very tolerant shade tolerance; Subalpine climax species."
+    },
+    {
+      "index": 38,
+      "code": "TA",
+      "name": "Pacific Yew",
+      "text_prompt": "Species: Taxus brevifolia (Pacific Yew). Taxonomy & Functional Type: Coniferous evergreen understory tree. Climate Niche: Thrives in Cool wet maritime climates. Topography & Elevation: Found in Shaded stream banks, deep moist forest ravines; Lowland to mid-elevation shaded understories. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, moist, rich organic loams. Ecological Traits: Extremely tolerant shade tolerance; Understory climax species."
+    },
+    {
+      "index": 39,
+      "code": "TE",
+      "name": "Canada Yew",
+      "text_prompt": "Species: Taxus canadensis (Canada Yew). Taxonomy & Functional Type: Coniferous evergreen shrub. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Shaded coniferous forests, moist swamps, riverbanks; Moist forest understory. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cool, moist, acidic loams and peat. Ecological Traits: Extremely tolerant shade tolerance; Understory climax shrub."
+    },
+    {
+      "index": 40,
+      "code": "OC",
+      "name": "Conifer (Unspecified)",
+      "text_prompt": "Species: Coniferae spp. (Conifer (Unspecified)). Taxonomy & Functional Type: Coniferous tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Variable coniferous forest sites; Lowland to upland sites. Soil & Hydrology: Prefers Xeric to hydric moisture regimes and Variable mineral and organic soils. Ecological Traits: Variable shade tolerance; Variable successional stage."
+    },
+    {
+      "index": 41,
+      "code": "PO",
+      "name": "Trembling Aspen",
+      "text_prompt": "Species: Populus tremuloides (Trembling Aspen). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Disturbed uplands, burn sites, forest edges; Lowland flats to high ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Adaptable loams, sandy loams, shallow clays. Ecological Traits: Very intolerant shade tolerance; Pioneer species after fire or logging."
+    },
+    {
+      "index": 42,
+      "code": "PL",
+      "name": "Largetooth Aspen",
+      "text_prompt": "Species: Populus grandidentata (Largetooth Aspen). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Sand plains, dry upland slopes, logged areas; Upland crests and upper slopes. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse sandy loams, gravelly well-drained soils. Ecological Traits: Intolerant shade tolerance; Pioneer species on dry sands."
+    },
+    {
+      "index": 43,
+      "code": "PB",
+      "name": "Balsam Poplar",
+      "text_prompt": "Species: Populus balsamifera (Balsam Poplar). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Boreal to subarctic climates. Topography & Elevation: Found in River floodplains, sandbars, moist lowlands; Lowland alluvial flats and stream banks. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Rich moist alluvial silt, clay, wet sand. Ecological Traits: Intolerant shade tolerance; Early successional floodplain species."
+    },
+    {
+      "index": 44,
+      "code": "PD",
+      "name": "Eastern Cottonwood",
+      "text_prompt": "Species: Populus deltoides (Eastern Cottonwood). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Temperate to Carolinian climates. Topography & Elevation: Found in Active river sandbars, floodplains, lake shores; Lowland alluvial banks. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Deep, moist, sandy and silty alluvial soils. Ecological Traits: Very intolerant shade tolerance; Pioneer riparian species."
+    },
+    {
+      "index": 45,
+      "code": "PX",
+      "name": "Carolina Poplar / Hybrid Poplar",
+      "text_prompt": "Species: Populus x canadensis (Carolina Poplar / Hybrid Poplar). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Temperate planted climates. Topography & Elevation: Found in Plantations, shelterbelts, floodplain margins; Lowland to mid-elevation plains. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Rich moist fertile loams and silts. Ecological Traits: Very intolerant shade tolerance; Early successional fast-growing hybrid."
+    },
+    {
+      "index": 46,
+      "code": "PA",
+      "name": "White Poplar",
+      "text_prompt": "Species: Populus alba (White Poplar). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Disturbed roadsides, old fields, river banks; Lowland to upland flats. Soil & Hydrology: Prefers Dry-mesic to wet-mesic moisture regimes and Adaptable sandy loams, gravelly alkaline soils. Ecological Traits: Intolerant shade tolerance; Pioneer introduced species."
+    },
+    {
+      "index": 47,
+      "code": "BP",
+      "name": "Lombardy Poplar / Black Poplar",
+      "text_prompt": "Species: Populus nigra (Lombardy Poplar / Black Poplar). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Urban windbreaks, field margins, roadsides; Lowland plains. Soil & Hydrology: Prefers Mesic moisture regimes and Rich moist fertile loams. Ecological Traits: Very intolerant shade tolerance; Introduced ornamental species."
+    },
+    {
+      "index": 48,
+      "code": "BW",
+      "name": "Paper Birch",
+      "text_prompt": "Species: Betula papyrifera (Paper Birch). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Burned and logged uplands, rocky slopes, lake margins; Lowland flats to high mountain ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained sandy loams, rocky acidic soils. Ecological Traits: Intolerant shade tolerance; Pioneer species."
+    },
+    {
+      "index": 49,
+      "code": "BY",
+      "name": "Yellow Birch",
+      "text_prompt": "Species: Betula alleghaniensis (Yellow Birch). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Rich moist hardwood forests, cool ravines, north slopes; Mid-elevation moist uplands. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, moist, rich well-drained acidic loams. Ecological Traits: Intermediate to tolerant shade tolerance; Late-successional species."
+    },
+    {
+      "index": 50,
+      "code": "BT",
+      "name": "Gray Birch",
+      "text_prompt": "Species: Betula populifolia (Gray Birch). Taxonomy & Functional Type: Deciduous small broadleaf tree. Climate Niche: Thrives in Cool temperate climates. Topography & Elevation: Found in Abandoned pastures, burned sites, sterile sand plains; Lowland to upland disturbed flats. Soil & Hydrology: Prefers Xeric to wet-mesic moisture regimes and Poor sterile sandy or gravelly acidic soils. Ecological Traits: Very intolerant shade tolerance; Pioneer species on poor soils."
+    },
+    {
+      "index": 51,
+      "code": "BL",
+      "name": "Sweet Birch / Cherry Birch",
+      "text_prompt": "Species: Betula lenta (Sweet Birch / Cherry Birch). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Cool humid temperate climates. Topography & Elevation: Found in Moist mountain slopes, rocky ridges, ravines; Upland rocky slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, moist, well-drained acidic loams. Ecological Traits: Intolerant to intermediate shade tolerance; Mid-successional species."
+    },
+    {
+      "index": 52,
+      "code": "BM",
+      "name": "River Birch",
+      "text_prompt": "Species: Betula nigra (River Birch). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Warm temperate to Carolinian transition climates. Topography & Elevation: Found in Stream banks, floodplains, swamp margins; Lowland alluvial riverbanks. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Moist to wet alluvial silt and acidic sandy loams. Ecological Traits: Intolerant shade tolerance; Pioneer riparian species."
+    },
+    {
+      "index": 53,
+      "code": "BC",
+      "name": "Water Birch",
+      "text_prompt": "Species: Betula occidentalis (Water Birch). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Montane to boreal transition climates. Topography & Elevation: Found in Mountain stream banks, moist canyon bottoms; Montane stream corridors. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Moist gravelly and sandy alluvial soils. Ecological Traits: Intolerant shade tolerance; Riparian pioneer shrub."
+    },
+    {
+      "index": 54,
+      "code": "BUN",
+      "name": "European White Birch",
+      "text_prompt": "Species: Betula pendula (European White Birch). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Urban lawns, parks, disturbed woods; Lowland to upland urban sites. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained sandy to clay loams. Ecological Traits: Intolerant shade tolerance; Introduced ornamental pioneer."
+    },
+    {
+      "index": 55,
+      "code": "MH",
+      "name": "Sugar Maple",
+      "text_prompt": "Species: Acer saccharum (Sugar Maple). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich upland hardwood forests, rolling hills; Mid-to-high upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, fertile loams and silt loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 56,
+      "code": "MS",
+      "name": "Red Maple",
+      "text_prompt": "Species: Acer rubrum (Red Maple). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Boreal to Carolinian temperate climates. Topography & Elevation: Found in Swamps, rocky ridges, upland hardwood stands; Lowland swamps to dry mountain ridges. Soil & Hydrology: Prefers Hydric to xeric moisture regimes and Adaptable from wet organic peat to dry sandy loams. Ecological Traits: Intermediate to tolerant shade tolerance; Mid-successional generalist species."
+    },
+    {
+      "index": 57,
+      "code": "AG",
+      "name": "Silver Maple",
+      "text_prompt": "Species: Acer saccharinum (Silver Maple). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern and central temperate climates. Topography & Elevation: Found in Floodplains, river margins, swampy bottomlands; Lowland alluvial basins. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Rich alluvial silt, moist clays, heavy wet soils. Ecological Traits: Intolerant to intermediate shade tolerance; Early-to-mid successional floodplain species."
+    },
+    {
+      "index": 58,
+      "code": "MB",
+      "name": "Manitoba Maple",
+      "text_prompt": "Species: Acer negundo (Manitoba Maple). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Temperate to boreal fringe climates. Topography & Elevation: Found in Disturbed floodplains, stream banks, urban edges; Lowland stream banks. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Rich moist soils, adaptable clays and sands. Ecological Traits: Intolerant shade tolerance; Pioneer riparian species."
+    },
+    {
+      "index": 59,
+      "code": "MN",
+      "name": "Norway Maple",
+      "text_prompt": "Species: Acer platanoides (Norway Maple). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Temperate introduced invasive climates. Topography & Elevation: Found in Urban woodlots, disturbed forests, ravine slopes; Lowland to mid-elevation woodlots. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Adaptable fertile loams, clays, sandy soils. Ecological Traits: Very tolerant shade tolerance; Invasive introduced shade-tolerant species."
+    },
+    {
+      "index": 60,
+      "code": "MM",
+      "name": "Mountain Maple",
+      "text_prompt": "Species: Acer spicatum (Mountain Maple). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Cool moist woods, rocky slopes, ravines; Moist upland slopes and understories. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Damp rich rocky loams. Ecological Traits: Tolerant shade tolerance; Understory climax species."
+    },
+    {
+      "index": 61,
+      "code": "ST",
+      "name": "Striped Maple",
+      "text_prompt": "Species: Acer pensylvanicum (Striped Maple). Taxonomy & Functional Type: Deciduous small tree / understory. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Cool moist hardwood forests, shaded ravines; Moist upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Rich cool acidic well-drained loams. Ecological Traits: Very tolerant shade tolerance; Understory late-successional species."
+    },
+    {
+      "index": 62,
+      "code": "MP",
+      "name": "Sycamore Maple",
+      "text_prompt": "Species: Acer pseudoplatanus (Sycamore Maple). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Coastal urban areas, parks, disturbed slopes; Lowland urban slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Fertile well-drained loams. Ecological Traits: Intermediate shade tolerance; Introduced ornamental tree."
+    },
+    {
+      "index": 63,
+      "code": "OR",
+      "name": "Northern Red Oak",
+      "text_prompt": "Species: Quercus rubra (Northern Red Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Dry to mesic upland ridges, sandy plains, slopes; Upland crests and upper slopes. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained sandy loams, gravelly acidic loams. Ecological Traits: Intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 64,
+      "code": "OW",
+      "name": "White Oak",
+      "text_prompt": "Species: Quercus alba (White Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern Ontario and Carolinian climates. Topography & Elevation: Found in Upland hardwood forests, well-drained slopes, dry plains; Upland plateaus and mid-slopes. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Deep well-drained loams, sandy clay loams. Ecological Traits: Intermediate shade tolerance; Climax species in hardwood stands."
+    },
+    {
+      "index": 65,
+      "code": "OB",
+      "name": "Bur Oak",
+      "text_prompt": "Species: Quercus macrocarpa (Bur Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern to northwestern Ontario temperate climates. Topography & Elevation: Found in Prairie margins, dry limestone plains, moist floodplains; Lowland floodplains to dry oak savannas. Soil & Hydrology: Prefers Xeric to wet-mesic moisture regimes and Heavy clays, alkaline soils, coarse dry sands. Ecological Traits: Intolerant to intermediate shade tolerance; Early-to-mid successional savanna species."
+    },
+    {
+      "index": 66,
+      "code": "OK",
+      "name": "Black Oak",
+      "text_prompt": "Species: Quercus velutina (Black Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian and southern Ontario climates. Topography & Elevation: Found in Dry sandy plains, oak savannas, dry ridges; Upland sandy ridges. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse dry infertile sands and gravels. Ecological Traits: Intolerant shade tolerance; Mid-successional dry forest species."
+    },
+    {
+      "index": 67,
+      "code": "OP",
+      "name": "Pin Oak",
+      "text_prompt": "Species: Quercus palustris (Pin Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Wet clay flatwoods, river bottoms, depressions; Lowland clay basins. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Heavy poorly drained acidic clay soils. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional wet woods species."
+    },
+    {
+      "index": 68,
+      "code": "OS",
+      "name": "Swamp White Oak",
+      "text_prompt": "Species: Quercus bicolor (Swamp White Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Floodplains, swamp margins, wet bottomlands; Lowland alluvial flats. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Poorly drained moist heavy silt and clay loams. Ecological Traits: Intermediate shade tolerance; Mid-to-late successional swamp species."
+    },
+    {
+      "index": 69,
+      "code": "OC",
+      "name": "Chinquapin Oak",
+      "text_prompt": "Species: Quercus muehlenbergii (Chinquapin Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Dry limestone bluffs, calcareous ridges, slopes; Upland limestone ridges. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Shallow alkaline limestone soils, gravelly loams. Ecological Traits: Intolerant to intermediate shade tolerance; Climax on dry limestone sites."
+    },
+    {
+      "index": 70,
+      "code": "OE",
+      "name": "Northern Pin Oak / Hill's Oak",
+      "text_prompt": "Species: Quercus ellipsoidalis (Northern Pin Oak / Hill's Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Cool temperate continental climates. Topography & Elevation: Found in Dry sand plains, oak barrens, rocky ridges; Upland sandy barrens. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Sterile coarse acidic sands and gravels. Ecological Traits: Intolerant shade tolerance; Pioneer to mid-successional dry species."
+    },
+    {
+      "index": 71,
+      "code": "OX",
+      "name": "Scarlet Oak",
+      "text_prompt": "Species: Quercus coccinea (Scarlet Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Dry sandy ridges, upland ridges; Upland dry crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Light dry sandy acidic soils. Ecological Traits: Intolerant shade tolerance; Mid-successional dry forest species."
+    },
+    {
+      "index": 72,
+      "code": "OY",
+      "name": "Chestnut Oak",
+      "text_prompt": "Species: Quercus montana (Chestnut Oak). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Dry rocky mountain ridges, sandstone bluffs; Upland rocky crests. Soil & Hydrology: Prefers Xeric moisture regimes and Shallow, sterile, acidic rocky sandstone loams. Ecological Traits: Intermediate shade tolerance; Climax on rocky dry ridges."
+    },
+    {
+      "index": 73,
+      "code": "OL",
+      "name": "Bear Oak / Scrub Oak",
+      "text_prompt": "Species: Quercus ilicifolia (Bear Oak / Scrub Oak). Taxonomy & Functional Type: Deciduous shrub / small tree. Climate Niche: Thrives in Temperate dry climates. Topography & Elevation: Found in Dry sandy barrens, rocky ridges; Upland dry barrens. Soil & Hydrology: Prefers Xeric moisture regimes and Coarse infertile dry sands. Ecological Traits: Intolerant shade tolerance; Pioneer fire shrub."
+    },
+    {
+      "index": 74,
+      "code": "AB",
+      "name": "Black Ash",
+      "text_prompt": "Species: Fraxinus nigra (Black Ash). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Cold forested swamps, riverbanks, fen edges; Lowland swampy flats. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet organic muck, cold peat, wet rich silt. Ecological Traits: Intolerant shade tolerance; Climax species in wet swamps."
+    },
+    {
+      "index": 75,
+      "code": "AW",
+      "name": "White Ash",
+      "text_prompt": "Species: Fraxinus americana (White Ash). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich upland hardwood forests, well-drained slopes; Mid-elevation upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, fertile well-drained loams. Ecological Traits: Intolerant to intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 76,
+      "code": "AX",
+      "name": "Green Ash",
+      "text_prompt": "Species: Fraxinus pennsylvanica (Green Ash). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern and central Ontario climates. Topography & Elevation: Found in Floodplains, stream banks, moist woods; Lowland alluvial banks. Soil & Hydrology: Prefers Wet-mesic to mesic moisture regimes and Moist rich alluvial soils, adaptable clays. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional riparian species."
+    },
+    {
+      "index": 77,
+      "code": "AH",
+      "name": "Blue Ash",
+      "text_prompt": "Species: Fraxinus quadrangulata (Blue Ash). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Dry limestone ridges, calcareous clay plains; Upland limestone plains. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Shallow alkaline limestone soils and heavy clay loams. Ecological Traits: Intolerant to intermediate shade tolerance; Mid-successional species on limestone."
+    },
+    {
+      "index": 78,
+      "code": "AM",
+      "name": "Ash (Unspecified)",
+      "text_prompt": "Species: Fraxinus spp. (Ash (Unspecified)). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate climates. Topography & Elevation: Found in Variable lowland swamps to upland slopes; Lowland to upland. Soil & Hydrology: Prefers Wet-mesic to mesic moisture regimes and Moist loams and alluvial silts. Ecological Traits: Intolerant to intermediate shade tolerance; Mid-successional species."
+    },
+    {
+      "index": 79,
+      "code": "EA",
+      "name": "American Elm",
+      "text_prompt": "Species: Ulmus americana (American Elm). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in River floodplains, rich bottomlands, moist uplands; Lowland stream banks and flats. Soil & Hydrology: Prefers Wet-mesic to mesic moisture regimes and Deep, rich, moist alluvial silts and heavy clays. Ecological Traits: Intermediate shade tolerance; Mid-successional floodplain species."
+    },
+    {
+      "index": 80,
+      "code": "ER",
+      "name": "Rock Elm",
+      "text_prompt": "Species: Ulmus thomasii (Rock Elm). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern and eastern Ontario climates. Topography & Elevation: Found in Rocky limestone ridges, heavy clay slopes; Upland limestone crests. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Heavy clay soils, shallow calcareous rocky loams. Ecological Traits: Intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 81,
+      "code": "ES",
+      "name": "Slippery Elm",
+      "text_prompt": "Species: Ulmus rubra (Slippery Elm). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern Ontario climates. Topography & Elevation: Found in Moist ravines, stream banks, rich lower slopes; Lowland terraces and lower slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Rich fertile well-drained moist silt loams. Ecological Traits: Intermediate shade tolerance; Mid-successional species."
+    },
+    {
+      "index": 82,
+      "code": "EU",
+      "name": "Siberian Elm / English Elm",
+      "text_prompt": "Species: Ulmus pumila / Ulmus procera (Siberian Elm / English Elm). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Disturbed roadsides, shelterbelts, urban waste sites; Lowland plains. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Poor, dry, alkaline or compacted clay soils. Ecological Traits: Intolerant shade tolerance; Pioneer introduced species."
+    },
+    {
+      "index": 83,
+      "code": "EX",
+      "name": "Wych Elm",
+      "text_prompt": "Species: Ulmus glabra (Wych Elm). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Moist mountain valleys, urban parks; Lowland to mid-elevation slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep rich moist calcareous loams. Ecological Traits: Intermediate shade tolerance; Introduced ornamental species."
+    },
+    {
+      "index": 84,
+      "code": "HB",
+      "name": "Bitternut Hickory",
+      "text_prompt": "Species: Carya cordiformis (Bitternut Hickory). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern and central Ontario climates. Topography & Elevation: Found in Rich moist bottomlands, river banks, fertile slopes; Lowland flats to lower slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Rich moist silts and well-drained loams. Ecological Traits: Intolerant shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 85,
+      "code": "HS",
+      "name": "Shagbark Hickory",
+      "text_prompt": "Species: Carya ovata (Shagbark Hickory). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern Ontario and Carolinian climates. Topography & Elevation: Found in Well-drained upland slopes, rich hardwood stands; Upland mid-slopes and crests. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Deep, rich, well-drained loams and heavy clays. Ecological Traits: Intolerant shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 86,
+      "code": "HC",
+      "name": "Shellbark Hickory",
+      "text_prompt": "Species: Carya laciniosa (Shellbark Hickory). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Moist river floodplains, clay flatwoods, swamps; Lowland alluvial floodplains. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Deep, rich, heavy alluvial clay and silt loams. Ecological Traits: Intolerant to intermediate shade tolerance; Late-successional floodplain species."
+    },
+    {
+      "index": 87,
+      "code": "HG",
+      "name": "Pignut Hickory",
+      "text_prompt": "Species: Carya glabra (Pignut Hickory). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Dry upland ridges, well-drained hardwood slopes; Upland ridges. Soil & Hydrology: Prefers Dry-mesic to xeric moisture regimes and Well-drained dry loams and gravelly acidic soils. Ecological Traits: Intolerant to intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 88,
+      "code": "WB",
+      "name": "Black Walnut",
+      "text_prompt": "Species: Juglans nigra (Black Walnut). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian and southern Ontario climates. Topography & Elevation: Found in Rich alluvial bottomlands, fertile lower slopes; Lowland alluvial flats. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, well-drained fertile loams. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 89,
+      "code": "BU",
+      "name": "Butternut",
+      "text_prompt": "Species: Juglans cinerea (Butternut). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern and eastern Ontario climates. Topography & Elevation: Found in River floodplains, rocky ravines, moist slopes; Lowland terraces and lower slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Rich, moist, well-drained loams and limestone soils. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 90,
+      "code": "CB",
+      "name": "Black Cherry",
+      "text_prompt": "Species: Prunus serotina (Black Cherry). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Hardwood fence rows, rich forest gaps, upland slopes; Upland plateaus and mid-slopes. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Deep, fertile, well-drained moist loams. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 91,
+      "code": "CP",
+      "name": "Pin Cherry",
+      "text_prompt": "Species: Prunus pensylvanica (Pin Cherry). Taxonomy & Functional Type: Deciduous broadleaf small tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Burned lands, logged clearings, forest gaps; Lowland to upland clearings. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Coarse sandy or rocky acidic loams. Ecological Traits: Very intolerant shade tolerance; Pioneer species after disturbance."
+    },
+    {
+      "index": 92,
+      "code": "CV",
+      "name": "Chokecherry",
+      "text_prompt": "Species: Prunus virginiana (Chokecherry). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in Forest edges, fencerows, thickets, rocky slopes; Adaptable clearings and borders. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Adaptable sandy, loamy, and rocky soils. Ecological Traits: Intermediate shade tolerance; Pioneer shrub."
+    },
+    {
+      "index": 93,
+      "code": "CD",
+      "name": "European Bird Cherry",
+      "text_prompt": "Species: Prunus padus (European Bird Cherry). Taxonomy & Functional Type: Deciduous tree / shrub. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Urban parks, ravines, moist stream thickets; Lowland moist woods. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Moist, rich, well-drained loams. Ecological Traits: Intermediate to tolerant shade tolerance; Introduced naturalized shrub."
+    },
+    {
+      "index": 94,
+      "code": "CH",
+      "name": "Sweet Cherry / Mazzard",
+      "text_prompt": "Species: Prunus avium (Sweet Cherry / Mazzard). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Warm temperate introduced climates. Topography & Elevation: Found in Abandoned orchards, forest gaps, hedgerows; Lowland to upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, well-drained fertile loams. Ecological Traits: Intermediate shade tolerance; Introduced escape species."
+    },
+    {
+      "index": 95,
+      "code": "SA",
+      "name": "Black Willow",
+      "text_prompt": "Species: Salix nigra (Black Willow). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate to Carolinian climates. Topography & Elevation: Found in River sandbars, muddy banks, wetland edges; Lowland stream corridors. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet alluvial mud, silt, sand. Ecological Traits: Very intolerant shade tolerance; Pioneer wetland species."
+    },
+    {
+      "index": 96,
+      "code": "SBW",
+      "name": "White Willow",
+      "text_prompt": "Species: Salix alba (White Willow). Taxonomy & Functional Type: Deciduous tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Pond edges, stream banks, wet lowlands; Lowland riparian basins. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet alluvial silt and clay. Ecological Traits: Very intolerant shade tolerance; Introduced riparian pioneer."
+    },
+    {
+      "index": 97,
+      "code": "SF",
+      "name": "Peachleaf Willow",
+      "text_prompt": "Species: Salix amygdaloides (Peachleaf Willow). Taxonomy & Functional Type: Deciduous tree. Climate Niche: Thrives in Temperate to prairie transition climates. Topography & Elevation: Found in Prairie stream banks, lake shores; Lowland alluvial plains. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet alluvial sands and silts. Ecological Traits: Very intolerant shade tolerance; Pioneer riparian tree."
+    },
+    {
+      "index": 98,
+      "code": "SH",
+      "name": "Sandbar Willow",
+      "text_prompt": "Species: Salix interior (Sandbar Willow). Taxonomy & Functional Type: Deciduous shrub. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Active sandbars, gravel bars, stream banks; Lowland active river channels. Soil & Hydrology: Prefers Hydric moisture regimes and Coarse wet alluvial sand and gravel. Ecological Traits: Very intolerant shade tolerance; Active sandbar pioneer shrub."
+    },
+    {
+      "index": 99,
+      "code": "SK",
+      "name": "Bebb's Willow",
+      "text_prompt": "Species: Salix bebbiana (Bebb's Willow). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Moist thickets, stream margins, fen edges; Lowland to upland damp thickets. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Moist loams, wet organic muck. Ecological Traits: Intolerant shade tolerance; Wetland thicket pioneer."
+    },
+    {
+      "index": 100,
+      "code": "SL",
+      "name": "Shining Willow",
+      "text_prompt": "Species: Salix lucida (Shining Willow). Taxonomy & Functional Type: Deciduous shrub / small tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in River margins, lake shores, fens; Lowland wet margins. Soil & Hydrology: Prefers Hydric moisture regimes and Wet sand, peat, alluvial mud. Ecological Traits: Intolerant shade tolerance; Pioneer riparian shrub."
+    },
+    {
+      "index": 101,
+      "code": "SM",
+      "name": "Willow (Unspecified)",
+      "text_prompt": "Species: Salix spp. (Willow (Unspecified)). Taxonomy & Functional Type: Deciduous tree / shrub. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Wetlands, stream banks, lowlands; Lowland wet corridors. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet alluvial mud, sand, peat. Ecological Traits: Intolerant shade tolerance; Pioneer species."
+    },
+    {
+      "index": 102,
+      "code": "SNW",
+      "name": "Pussy Willow",
+      "text_prompt": "Species: Salix discolor (Pussy Willow). Taxonomy & Functional Type: Deciduous shrub / small tree. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Swamp edges, damp thickets, roadside ditches; Lowland damp depressions. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Wet organic muck, clay loams. Ecological Traits: Intolerant shade tolerance; Pioneer wetland shrub."
+    },
+    {
+      "index": 103,
+      "code": "SO",
+      "name": "Crack Willow",
+      "text_prompt": "Species: Salix fragilis (Crack Willow). Taxonomy & Functional Type: Deciduous tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Riverbanks, floodplains, pond margins; Lowland riparian banks. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet alluvial silt and clay. Ecological Traits: Very intolerant shade tolerance; Introduced riparian tree."
+    },
+    {
+      "index": 104,
+      "code": "AL",
+      "name": "Speckled Alder",
+      "text_prompt": "Species: Alnus incana ssp. rugosa (Speckled Alder). Taxonomy & Functional Type: Deciduous shrub / small tree. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Stream banks, swamp margins, alder thickets; Lowland wetland margins. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet organic peat, cold muck, alluvial silt. Ecological Traits: Intolerant shade tolerance; Nitrogen-fixing pioneer shrub."
+    },
+    {
+      "index": 105,
+      "code": "AGL",
+      "name": "European Black Alder",
+      "text_prompt": "Species: Alnus glutinosa (European Black Alder). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Riverbanks, flooded bottomlands; Lowland floodplains. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet rich alluvial loams and peat. Ecological Traits: Intolerant shade tolerance; Introduced riparian pioneer tree."
+    },
+    {
+      "index": 106,
+      "code": "AR",
+      "name": "Red Alder",
+      "text_prompt": "Species: Alnus rubra (Red Alder). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Cool wet maritime climates. Topography & Elevation: Found in Moist stream floodplains, logged slopes; Lowland to mid-elevation valleys. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, moist, well-drained loams. Ecological Traits: Very intolerant shade tolerance; Nitrogen-fixing pioneer tree."
+    },
+    {
+      "index": 107,
+      "code": "AV",
+      "name": "Mountain Alder",
+      "text_prompt": "Species: Alnus viridis ssp. crispa (Mountain Alder). Taxonomy & Functional Type: Deciduous shrub. Climate Niche: Thrives in Subarctic and boreal alpine climates. Topography & Elevation: Found in Rocky mountain slopes, stream banks; Subalpine rocky slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Coarse rocky gravels, acidic shallow soils. Ecological Traits: Intolerant shade tolerance; Pioneer alpine shrub."
+    },
+    {
+      "index": 108,
+      "code": "BE",
+      "name": "American Beech",
+      "text_prompt": "Species: Fagus grandifolia (American Beech). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich upland hardwood forests, beech-maple ridges; Mid-elevation rolling slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, well-drained fertile loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 109,
+      "code": "BI",
+      "name": "European Beech",
+      "text_prompt": "Species: Fagus sylvatica (European Beech). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Urban parks, estate plantings; Lowland to upland parks. Soil & Hydrology: Prefers Mesic moisture regimes and Deep fertile moist loams. Ecological Traits: Very tolerant shade tolerance; Introduced climax tree."
+    },
+    {
+      "index": 110,
+      "code": "CA",
+      "name": "American Chestnut",
+      "text_prompt": "Species: Castanea dentata (American Chestnut). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Dry sandy upland ridges, acidic hardwood stands; Upland sandy ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Deep, well-drained, acidic sandy loams. Ecological Traits: Intermediate shade tolerance; Historical climax canopy species."
+    },
+    {
+      "index": 111,
+      "code": "BA",
+      "name": "Basswood",
+      "text_prompt": "Species: Tilia americana (Basswood). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich hardwood forests, fertile slopes, river valleys; Lower-to-mid upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, calcareous silt loams. Ecological Traits: Intermediate to tolerant shade tolerance; Late-successional species."
+    },
+    {
+      "index": 112,
+      "code": "BD",
+      "name": "Littleleaf Linden",
+      "text_prompt": "Species: Tilia cordata (Littleleaf Linden). Taxonomy & Functional Type: Deciduous tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Urban streetscapes, parks; Lowland urban sites. Soil & Hydrology: Prefers Mesic moisture regimes and Moist, rich, well-drained loams. Ecological Traits: Tolerant shade tolerance; Introduced ornamental tree."
+    },
+    {
+      "index": 113,
+      "code": "IW",
+      "name": "Ironwood / Hop-hornbeam",
+      "text_prompt": "Species: Ostrya virginiana (Ironwood / Hop-hornbeam). Taxonomy & Functional Type: Deciduous understory hardwood tree. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Understory of rich hardwood forests, dry slopes; Mid-to-upper upland slopes. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained loams, shallow dry limestone soils. Ecological Traits: Very tolerant shade tolerance; Understory climax species."
+    },
+    {
+      "index": 114,
+      "code": "BLUE",
+      "name": "Blue Beech / Musclewood",
+      "text_prompt": "Species: Carpinus caroliniana (Blue Beech / Musclewood). Taxonomy & Functional Type: Deciduous understory hardwood tree. Climate Niche: Thrives in Southern and Carolinian Ontario climates. Topography & Elevation: Found in Understory of moist hardwood forests, stream margins; Lowland stream margins and lower slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, rich, moist, fertile loams. Ecological Traits: Very tolerant shade tolerance; Understory climax species."
+    },
+    {
+      "index": 115,
+      "code": "SY",
+      "name": "American Sycamore",
+      "text_prompt": "Species: Platanus occidentalis (American Sycamore). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in River floodplains, sandbars, alluvial riverbanks; Lowland active floodplains. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Rich moist alluvial silt, gravel, and sand. Ecological Traits: Intolerant shade tolerance; Pioneer riparian species."
+    },
+    {
+      "index": 116,
+      "code": "TU",
+      "name": "Tulip Tree",
+      "text_prompt": "Species: Liriodendron tulipifera (Tulip Tree). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Rich sheltered coves, lower slopes, fertile bottomlands; Lowland coves and gentle slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, well-drained organic loams. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 117,
+      "code": "HK",
+      "name": "Hackberry",
+      "text_prompt": "Species: Celtis occidentalis (Hackberry). Taxonomy & Functional Type: Deciduous broadleaf hardwood tree. Climate Niche: Thrives in Southern and eastern Ontario climates. Topography & Elevation: Found in Floodplains, limestone ridges, sand dunes; Lowland floodplains to dry limestone crests. Soil & Hydrology: Prefers Dry-mesic to wet-mesic moisture regimes and Rich moist alluvial soils to dry rocky limestone. Ecological Traits: Intermediate shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 118,
+      "code": "SAS",
+      "name": "Sassafras",
+      "text_prompt": "Species: Sassafras albidum (Sassafras). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Old fields, dry forest margins, sandy ridges; Upland sandy ridges and fields. Soil & Hydrology: Prefers Dry-mesic to xeric moisture regimes and Well-drained, sandy, acidic loams. Ecological Traits: Intolerant shade tolerance; Pioneer species on dry sands."
+    },
+    {
+      "index": 119,
+      "code": "GYM",
+      "name": "Kentucky Coffeetree",
+      "text_prompt": "Species: Gymnocladus dioicus (Kentucky Coffeetree). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Carolinian rare warm temperate climates. Topography & Elevation: Found in Floodplain edges, rich limestone ravines; Lowland fertile terraces. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, rich, moist limestone and alluvial loams. Ecological Traits: Intolerant shade tolerance; Rare early-to-mid successional tree."
+    },
+    {
+      "index": 120,
+      "code": "GLED",
+      "name": "Honey Locust",
+      "text_prompt": "Species: Gleditsia triacanthos (Honey Locust). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Carolinian to southern Ontario climates. Topography & Elevation: Found in River bottomlands, urban fields, lake shorelines; Lowland floodplains. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Adaptable, rich, moist or dry alkaline soils. Ecological Traits: Very intolerant shade tolerance; Pioneer to early successional species."
+    },
+    {
+      "index": 121,
+      "code": "MAG",
+      "name": "Cucumber Tree",
+      "text_prompt": "Species: Magnolia acuminata (Cucumber Tree). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Carolinian warm humid climates. Topography & Elevation: Found in Rich sheltered hardwood coves, fertile ravines; Moist sheltered ravines. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, well-drained acidic loams. Ecological Traits: Intermediate shade tolerance; Rare climax forest species."
+    },
+    {
+      "index": 122,
+      "code": "PT",
+      "name": "Common Hoptree",
+      "text_prompt": "Species: Ptelea trifoliata (Common Hoptree). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Carolinian shoreline climates. Topography & Elevation: Found in Lake Erie sand dunes, beach crests, limestone openings; Coastal dune crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Dry sandy dunes, shallow rocky limestone. Ecological Traits: Intolerant shade tolerance; Coastal dune pioneer shrub."
+    },
+    {
+      "index": 123,
+      "code": "NYS",
+      "name": "Blackgum / Tupelo",
+      "text_prompt": "Species: Nyssa sylvatica (Blackgum / Tupelo). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Wooded swamps, wet clay flats, ravines; Lowland swamp basins. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Poorly drained wet acidic clay and muck. Ecological Traits: Tolerant shade tolerance; Late-successional wet forest species."
+    },
+    {
+      "index": 124,
+      "code": "HAM",
+      "name": "Witch-hazel",
+      "text_prompt": "Species: Hamamelis virginiana (Witch-hazel). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Temperate to Carolinian climates. Topography & Elevation: Found in Rich hardwood forest understory, moist ravines; Moist forest understory. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, moist, acidic organic loams. Ecological Traits: Tolerant shade tolerance; Understory shrub."
+    },
+    {
+      "index": 125,
+      "code": "RHO",
+      "name": "Staghorn Sumac",
+      "text_prompt": "Species: Rhus typhina (Staghorn Sumac). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Temperate climates. Topography & Elevation: Found in Roadsides, dry bank cuts, abandoned fields; Upland disturbed banks. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Poor dry gravels, sands, rocky soils. Ecological Traits: Very intolerant shade tolerance; Pioneer clonal shrub."
+    },
+    {
+      "index": 126,
+      "code": "ROB",
+      "name": "Black Locust",
+      "text_prompt": "Species: Robinia pseudoacacia (Black Locust). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Disturbed roadsides, sand plains, old quarries; Lowland to upland disturbed sites. Soil & Hydrology: Prefers Dry-mesic to xeric moisture regimes and Coarse dry sandy and gravelly soils. Ecological Traits: Very intolerant shade tolerance; Invasive nitrogen-fixing pioneer tree."
+    },
+    {
+      "index": 127,
+      "code": "RHA",
+      "name": "European Buckthorn",
+      "text_prompt": "Species: Rhamnus cathartica (European Buckthorn). Taxonomy & Functional Type: Deciduous invasive shrub / small tree. Climate Niche: Thrives in Temperate introduced invasive climates. Topography & Elevation: Found in Forest edges, abandoned fields, disturbed woodlots; Adaptable woodlots. Soil & Hydrology: Prefers Dry-mesic to wet-mesic moisture regimes and Adaptable fertile to clay soils. Ecological Traits: Tolerant shade tolerance; Invasive persistent shrub."
+    },
+    {
+      "index": 128,
+      "code": "RHF",
+      "name": "Glossy Buckthorn",
+      "text_prompt": "Species: Frangula alnus (Glossy Buckthorn). Taxonomy & Functional Type: Deciduous invasive shrub. Climate Niche: Thrives in Temperate introduced invasive climates. Topography & Elevation: Found in Fens, bogs, wet meadows, damp forest gaps; Lowland wetland margins. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Wet acidic organic peat, damp sandy loams. Ecological Traits: Intermediate to tolerant shade tolerance; Invasive wetland shrub."
+    },
+    {
+      "index": 129,
+      "code": "SOR",
+      "name": "American Mountain-Ash",
+      "text_prompt": "Species: Sorbus americana (American Mountain-Ash). Taxonomy & Functional Type: Deciduous small tree. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Cool moist rocky slopes, forest margins, bogs; Subalpine to rocky uplands. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Cool, moist, acidic rocky loams. Ecological Traits: Intermediate shade tolerance; Subalpine to boreal understory tree."
+    },
+    {
+      "index": 130,
+      "code": "SOU",
+      "name": "Showy Mountain-Ash",
+      "text_prompt": "Species: Sorbus decora (Showy Mountain-Ash). Taxonomy & Functional Type: Deciduous small tree. Climate Niche: Thrives in Boreal cold climates. Topography & Elevation: Found in Rocky shores, boreal forest gaps, high bluffs; High rocky shores and crests. Soil & Hydrology: Prefers Mesic to dry-mesic moisture regimes and Coarse acidic shallow rocky soils. Ecological Traits: Intermediate shade tolerance; Boreal forest gap tree."
+    },
+    {
+      "index": 131,
+      "code": "SOE",
+      "name": "European Mountain-Ash / Rowan",
+      "text_prompt": "Species: Sorbus aucuparia (European Mountain-Ash / Rowan). Taxonomy & Functional Type: Deciduous tree. Climate Niche: Thrives in Cool temperate introduced climates. Topography & Elevation: Found in Urban areas, woodlot edges, roadsides; Lowland to mid-elevation plains. Soil & Hydrology: Prefers Mesic moisture regimes and Well-drained acidic loams. Ecological Traits: Intermediate shade tolerance; Introduced naturalized tree."
+    },
+    {
+      "index": 132,
+      "code": "EUG",
+      "name": "Eastern Wahoo / Burningbush",
+      "text_prompt": "Species: Euonymus atropurpureus (Eastern Wahoo / Burningbush). Taxonomy & Functional Type: Deciduous shrub / small tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Rich floodplain woods, moist ravines; Lowland moist woods. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Rich, moist, calcareous alluvial soils. Ecological Traits: Tolerant shade tolerance; Understory shrub."
+    },
+    {
+      "index": 133,
+      "code": "AT",
+      "name": "Serviceberry / Juneberry / Saskatoon",
+      "text_prompt": "Species: Amelanchier spp. (Serviceberry / Juneberry / Saskatoon). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in Rocky ridges, forest edges, cliff tops, sand dunes; Lowland to high rocky bluffs. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Adaptable sandy, gravelly, and rocky loams. Ecological Traits: Intermediate shade tolerance; Early successional small tree."
+    },
+    {
+      "index": 134,
+      "code": "CRB",
+      "name": "Hawthorn (Unspecified)",
+      "text_prompt": "Species: Crataegus spp. (Hawthorn (Unspecified)). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Temperate climates. Topography & Elevation: Found in Abandoned pastures, fencerows, open savannas; Upland fields and pastures. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Heavy clay, limestone soils, compact loams. Ecological Traits: Intolerant shade tolerance; Old-field pioneer shrub."
+    },
+    {
+      "index": 135,
+      "code": "AP",
+      "name": "Sweet Crabapple",
+      "text_prompt": "Species: Malus coronaria (Sweet Crabapple). Taxonomy & Functional Type: Deciduous small tree. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Open thickets, stream borders, old fields; Lowland to mid-elevation thickets. Soil & Hydrology: Prefers Mesic moisture regimes and Rich moist loams and heavy clays. Ecological Traits: Intolerant shade tolerance; Old-field pioneer tree."
+    },
+    {
+      "index": 136,
+      "code": "APM",
+      "name": "Apple",
+      "text_prompt": "Species: Malus domestica (Apple). Taxonomy & Functional Type: Deciduous tree. Climate Niche: Thrives in Temperate introduced climates. Topography & Elevation: Found in Abandoned orchards, fencerows, pasture edges; Lowland to upland fields. Soil & Hydrology: Prefers Mesic moisture regimes and Well-drained fertile loams. Ecological Traits: Intolerant shade tolerance; Introduced escape pioneer."
+    },
+    {
+      "index": 137,
+      "code": "CORN",
+      "name": "Flowering Dogwood",
+      "text_prompt": "Species: Cornus florida (Flowering Dogwood). Taxonomy & Functional Type: Deciduous small tree / understory. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Understory of rich hardwood slopes, sheltered ravines; Moist upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, acidic organic loams. Ecological Traits: Tolerant shade tolerance; Understory climax tree."
+    },
+    {
+      "index": 138,
+      "code": "CORA",
+      "name": "Alternate-leaf Dogwood / Pagoda Dogwood",
+      "text_prompt": "Species: Cornus alternifolia (Alternate-leaf Dogwood / Pagoda Dogwood). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Rich hardwood forest understory, moist ravines; Moist understory slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, cool, moist acidic loams. Ecological Traits: Tolerant shade tolerance; Understory shrub."
+    },
+    {
+      "index": 139,
+      "code": "CORS",
+      "name": "Red-osier Dogwood",
+      "text_prompt": "Species: Cornus sericea (Red-osier Dogwood). Taxonomy & Functional Type: Deciduous shrub. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Swamp edges, stream margins, wet meadows; Lowland wetland corridors. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet organic muck, rich alluvial silt. Ecological Traits: Intermediate to tolerant shade tolerance; Wetland thicket shrub."
+    },
+    {
+      "index": 140,
+      "code": "VIB",
+      "name": "Nannyberry",
+      "text_prompt": "Species: Viburnum lentago (Nannyberry). Taxonomy & Functional Type: Deciduous small tree / shrub. Climate Niche: Thrives in Temperate climates. Topography & Elevation: Found in Forest edges, stream banks, swamp borders; Lowland to upland damp borders. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Rich, moist, well-drained loams. Ecological Traits: Intermediate shade tolerance; Early-to-mid successional shrub."
+    },
+    {
+      "index": 141,
+      "code": "VIBL",
+      "name": "Highbush Cranberry",
+      "text_prompt": "Species: Viburnum trilobum (Highbush Cranberry). Taxonomy & Functional Type: Deciduous shrub. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Moist thickets, swamp borders, stream banks; Lowland wet thickets. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Moist organic muck, wet mineral silts. Ecological Traits: Intermediate to tolerant shade tolerance; Wetland shrub."
+    },
+    {
+      "index": 142,
+      "code": "CEPH",
+      "name": "Buttonbush",
+      "text_prompt": "Species: Cephalanthus occidentalis (Buttonbush). Taxonomy & Functional Type: Deciduous wetland shrub. Climate Niche: Thrives in Temperate to Carolinian climates. Topography & Elevation: Found in Shallow water swamps, pond margins, marshes; Lowland active wetland basins. Soil & Hydrology: Prefers Hydric moisture regimes and Organic muck in standing water. Ecological Traits: Intermediate shade tolerance; Wetland pioneer shrub."
+    },
+    {
+      "index": 143,
+      "code": "OH",
+      "name": "Other Hardwood (Unspecified)",
+      "text_prompt": "Species: Angiospermae spp. (Other Hardwood (Unspecified)). Taxonomy & Functional Type: Deciduous broadleaf tree. Climate Niche: Thrives in Temperate to boreal climates. Topography & Elevation: Found in Variable hardwood forest stands; Lowland to upland. Soil & Hydrology: Prefers Dry-mesic to wet-mesic moisture regimes and Variable mineral soils. Ecological Traits: Variable shade tolerance; Variable successional stage."
+    },
+    {
+      "index": 144,
+      "code": "U",
+      "name": "Unclassified / Unknown Tree",
+      "text_prompt": "Species: Unknown species (Unclassified / Unknown Tree). Taxonomy & Functional Type: Tree / Woody vegetation. Climate Niche: Thrives in Unclassified. Topography & Elevation: Found in Unclassified site; Unclassified elevation. Soil & Hydrology: Prefers Unclassified moisture regimes and Unclassified substrate. Ecological Traits: Unclassified shade tolerance; Unclassified stage."
+    }
+  ]
+}

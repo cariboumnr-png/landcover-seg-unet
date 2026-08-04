@@ -1,0 +1,189 @@
+{
+  "model_name": "BAAI/bge-base-en-v1.5",
+  "num_classes": 30,
+  "embedding_dim": 768,
+  "normalized": true,
+  "key_column": "group_code",
+  "classes": [
+    {
+      "index": 0,
+      "code": "SB_BLACK_SPRUCE",
+      "name": "Black Spruce",
+      "text_prompt": "Tree Group: Black Spruce (FRI Codes: SB). Ecological Guild: Boreal Lowland / Peatland Specialist Conifer. Climate Niche: Thrives in Boreal to subarctic cold climates. Topography & Elevation: Found in Lowland depressions, valley bottoms, organic peat bogs; Lowland to mid-elevation flat terrain. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Acidic organic peat, cold poorly drained soils. Ecological Traits: Tolerant shade tolerance; Climax species in peatlands."
+    },
+    {
+      "index": 1,
+      "code": "SW_WHITE_SPRUCE",
+      "name": "White Spruce",
+      "text_prompt": "Tree Group: White Spruce (FRI Codes: SW). Ecological Guild: Upland Boreal / Temperate Spruce. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Well-drained riverbanks, upland slopes, lake margins; Lowland terraces to mid-elevation upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Rich loams, alluvial silt, well-drained clays. Ecological Traits: Tolerant shade tolerance; Climax upland species."
+    },
+    {
+      "index": 2,
+      "code": "SR_RED_SPRUCE",
+      "name": "Red Spruce",
+      "text_prompt": "Tree Group: Red Spruce (FRI Codes: SR). Ecological Guild: Cool Montane / Humid Temperate Spruce. Climate Niche: Thrives in Cool humid temperate climates. Topography & Elevation: Found in Cool moist mountain slopes, shaded plateaus, upland ravines; Mid-to-high elevation uplands. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Acidic, cool, moist organic or sandy loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 3,
+      "code": "PJ_JACK_PINE",
+      "name": "Jack Pine",
+      "text_prompt": "Tree Group: Jack Pine (FRI Codes: PJ). Ecological Guild: Dry Sandy Upland / Fire Pioneer Conifer. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Dry sandy plains, rocky ridges, glaciated outwash plains; Upland flats and rocky crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse sandy loams, shallow soils over bedrock. Ecological Traits: Very intolerant shade tolerance; Fire-adapted pioneer species."
+    },
+    {
+      "index": 4,
+      "code": "PW_WHITE_PINE",
+      "name": "Eastern White Pine",
+      "text_prompt": "Tree Group: Eastern White Pine (FRI Codes: PW). Ecological Guild: Great Lakes Temperate Upland Pine. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Rolling upland hills, sandy plains, river valleys, lake ridges; Lowland terraces to high ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained sandy to loamy soils. Ecological Traits: Intermediate shade tolerance; Mid-to-late successional canopy giant."
+    },
+    {
+      "index": 5,
+      "code": "PR_RED_PINE",
+      "name": "Red Pine",
+      "text_prompt": "Tree Group: Red Pine (FRI Codes: PR). Ecological Guild: Dry Upland Sandy Pine. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Sandy outwash plains, rocky ridges, dry uplands, plantations; Upland plateaus and crests. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Coarse dry acidic sands and gravelly loams. Ecological Traits: Intolerant shade tolerance; Early-to-mid successional species."
+    },
+    {
+      "index": 6,
+      "code": "BF_BALSAM_FIR",
+      "name": "Balsam Fir",
+      "text_prompt": "Tree Group: Balsam Fir (FRI Codes: BF). Ecological Guild: Shade-Tolerant Boreal / Montane Conifer. Climate Niche: Thrives in Boreal to cool temperate climates. Topography & Elevation: Found in Moist lowlands, cold mountain slopes, river valleys, shaded understory; Lowland flats to high mountain ridges. Soil & Hydrology: Prefers Mesic to hydric moisture regimes and Cool moist acidic organic soils and heavy loams. Ecological Traits: Very tolerant shade tolerance; Climax understory/canopy species."
+    },
+    {
+      "index": 7,
+      "code": "CE_WHITE_CEDAR",
+      "name": "Eastern White Cedar",
+      "text_prompt": "Tree Group: Eastern White Cedar (FRI Codes: CE). Ecological Guild: Swamp & Limestone Bluff Specialist Conifer. Climate Niche: Thrives in Boreal and Great Lakes-St. Lawrence climates. Topography & Elevation: Found in Limestone cliff edges, organic cedar swamps, riverbanks; Lowland swamps to rocky limestone bluffs. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Alkaline calcareous soils, organic peat, moist limestone. Ecological Traits: Very tolerant shade tolerance; Climax species in swamps and bluffs."
+    },
+    {
+      "index": 8,
+      "code": "LA_TAMARACK",
+      "name": "Tamarack / Larch",
+      "text_prompt": "Tree Group: Tamarack / Larch (FRI Codes: LA). Ecological Guild: Deciduous Lowland Bog Conifer. Climate Niche: Thrives in Boreal to subarctic cold climates. Topography & Elevation: Found in Open peat bogs, fen margins, wet lowlands, swamp edges; Lowland depressions and flat bogs. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet organic peat, poorly drained cold mineral soils. Ecological Traits: Very intolerant shade tolerance; Pioneer species on wet bogs."
+    },
+    {
+      "index": 9,
+      "code": "HE_EASTERN_HEMLOCK",
+      "name": "Eastern Hemlock",
+      "text_prompt": "Tree Group: Eastern Hemlock (FRI Codes: HE). Ecological Guild: Shaded Ravine / Late-Successional Conifer. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Cool moist ravines, north-facing slopes, shaded lake shores; Upland valleys and shaded slopes. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, moist, highly acidic loams and organic soils. Ecological Traits: Extremely tolerant shade tolerance; Late-successional climax canopy species."
+    },
+    {
+      "index": 10,
+      "code": "CR_RED_CEDAR",
+      "name": "Eastern Redcedar",
+      "text_prompt": "Tree Group: Eastern Redcedar (FRI Codes: CR). Ecological Guild: Dry Limestone Outcrop / Old Field Conifer. Climate Niche: Thrives in Deciduous and Carolinian warm temperate climates. Topography & Elevation: Found in Dry limestone outcrops, abandoned pastures, sandy bluffs; Upland exposed crests and old fields. Soil & Hydrology: Prefers Xeric to dry-mesic moisture regimes and Shallow rocky limestone, alkaline dry sands. Ecological Traits: Intolerant shade tolerance; Pioneer species on dry limestone."
+    },
+    {
+      "index": 11,
+      "code": "EXOTIC_OTHER_CONIFERS",
+      "name": "Exotic & Minor Conifers",
+      "text_prompt": "Tree Group: Exotic & Minor Conifers (FRI Codes: SN, SE, SS, PUN, SP, PS, PI, PC, PL, PM, PZ, PX, PF, PA, PN, FB, FG, FL, FM, FS, CW, CY, LE, LW, LS, HW, HM, TA, TE, OC). Ecological Guild: Minor, Introduced, Plantation, or Subalpine Conifers. Climate Niche: Thrives in Various temperate, subalpine, or introduced climates. Topography & Elevation: Found in Plantations, parks, mountain slopes, or specialized sites; Variable lowland to subalpine terrain. Soil & Hydrology: Prefers Xeric to hydric moisture regimes and Variable mineral and organic substrates. Ecological Traits: Variable shade tolerance; Pioneer to climax depending on species."
+    },
+    {
+      "index": 12,
+      "code": "PO_ASPEN_GROUP",
+      "name": "Aspens (Trembling & Largetooth)",
+      "text_prompt": "Tree Group: Aspens (Trembling & Largetooth) (FRI Codes: PO, PL). Ecological Guild: Disturbed Upland Pioneer Hardwood. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Disturbed uplands, burn sites, logged areas, sand plains; Lowland flats to high upland ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Adaptable sandy loams, gravelly loams, shallow clays. Ecological Traits: Very intolerant shade tolerance; Pioneer clonal species after disturbance."
+    },
+    {
+      "index": 13,
+      "code": "PB_PD_POPLAR_COTTONWOOD",
+      "name": "Lowland Poplars & Cottonwood",
+      "text_prompt": "Tree Group: Lowland Poplars & Cottonwood (FRI Codes: PB, PD, PX, PA, BP). Ecological Guild: Floodplain / Riparian Poplar. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in River floodplains, sandbars, moist lowlands, stream banks; Lowland alluvial flats and active sandbars. Soil & Hydrology: Prefers Wet-mesic to hydric moisture regimes and Rich moist alluvial silt, clay, wet sand. Ecological Traits: Very intolerant shade tolerance; Early successional riparian species."
+    },
+    {
+      "index": 14,
+      "code": "BW_WHITE_BIRCH",
+      "name": "White / Paper Birch",
+      "text_prompt": "Tree Group: White / Paper Birch (FRI Codes: BW, BT). Ecological Guild: Disturbed Upland Pioneer Birch. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Burned and logged uplands, rocky slopes, lake margins; Lowland flats to mountain ridges. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Well-drained sandy loams, rocky acidic soils. Ecological Traits: Intolerant shade tolerance; Pioneer species after fire or clearcutting."
+    },
+    {
+      "index": 15,
+      "code": "BY_YELLOW_BIRCH",
+      "name": "Yellow Birch",
+      "text_prompt": "Tree Group: Yellow Birch (FRI Codes: BY, BL). Ecological Guild: Rich Moist Hardwood Forest Birch. Climate Niche: Thrives in Great Lakes-St. Lawrence temperate climates. Topography & Elevation: Found in Rich moist hardwood forests, cool ravines, north slopes; Mid-elevation moist uplands. Soil & Hydrology: Prefers Mesic to wet-mesic moisture regimes and Deep, moist, rich well-drained acidic loams. Ecological Traits: Intermediate to tolerant shade tolerance; Late-successional hardwood species."
+    },
+    {
+      "index": 16,
+      "code": "MH_HARD_MAPLE",
+      "name": "Sugar Maple (Hard Maple)",
+      "text_prompt": "Tree Group: Sugar Maple (Hard Maple) (FRI Codes: MH). Ecological Guild: Upland Rich Hardwood Climax Maple. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich upland hardwood forests, rolling hills, fertile slopes; Mid-to-high upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, fertile loams and silt loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 17,
+      "code": "MS_AG_SOFT_MAPLE",
+      "name": "Soft Maples (Red, Silver & Manitoba)",
+      "text_prompt": "Tree Group: Soft Maples (Red, Silver & Manitoba) (FRI Codes: MS, AG, MB, MM, ST, MN, MP). Ecological Guild: Generalist / Riparian Soft Maple. Climate Niche: Thrives in Boreal to Carolinian temperate climates. Topography & Elevation: Found in Swamps, floodplains, rocky slopes, upland stands; Lowland swamps to dry ridges. Soil & Hydrology: Prefers Hydric to xeric (highly adaptable) moisture regimes and Adaptable organic peat, alluvial silt, loams. Ecological Traits: Intermediate to tolerant shade tolerance; Mid-successional generalist / riparian species."
+    },
+    {
+      "index": 18,
+      "code": "BE_BEECH",
+      "name": "American Beech",
+      "text_prompt": "Tree Group: American Beech (FRI Codes: BE, BI). Ecological Guild: Rich Upland Climax Hardwood. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich upland hardwood forests, beech-maple ridges; Mid-elevation rolling slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, well-drained fertile loams. Ecological Traits: Very tolerant shade tolerance; Late-successional climax species."
+    },
+    {
+      "index": 19,
+      "code": "OAK_GROUP",
+      "name": "Oaks (Red, White, Bur & Black)",
+      "text_prompt": "Tree Group: Oaks (Red, White, Bur & Black) (FRI Codes: OR, OW, OB, OK, OP, OS, OC, OE, OX, OY, OL). Ecological Guild: Upland Ridge / Savanna Hardwood. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Dry to mesic upland ridges, sandy plains, floodplains, savannas; Upland crests, plateaus, and river terraces. Soil & Hydrology: Prefers Xeric to wet-mesic moisture regimes and Well-drained sandy loams, gravels, heavy clay plains. Ecological Traits: Intermediate to intolerant shade tolerance; Mid-to-late successional fire-adapted species."
+    },
+    {
+      "index": 20,
+      "code": "ASH_GROUP",
+      "name": "Ashes (Black, White & Green)",
+      "text_prompt": "Tree Group: Ashes (Black, White & Green) (FRI Codes: AB, AW, AX, AH, AM). Ecological Guild: Wetland & Rich Upland Ash. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in Forested swamps, riverbanks, rich upland slopes; Lowland swamps to mid-slope uplands. Soil & Hydrology: Prefers Hydric to mesic moisture regimes and Organic muck, wet peat, fertile loams. Ecological Traits: Intolerant to intermediate shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 21,
+      "code": "ELM_GROUP",
+      "name": "Elms (American, Rock & Slippery)",
+      "text_prompt": "Tree Group: Elms (American, Rock & Slippery) (FRI Codes: EA, ER, ES, EU, EX). Ecological Guild: Floodplain & Limestone Slope Elm. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in River floodplains, bottomlands, rocky limestone ridges; Lowland stream flats to rocky limestone crests. Soil & Hydrology: Prefers Wet-mesic to mesic moisture regimes and Deep alluvial silts, heavy clays, calcareous loams. Ecological Traits: Intermediate shade tolerance; Mid-successional species."
+    },
+    {
+      "index": 22,
+      "code": "HICKORY_WALNUT_GROUP",
+      "name": "Hickories & Walnuts",
+      "text_prompt": "Tree Group: Hickories & Walnuts (FRI Codes: HB, HS, HC, HG, WB, BU). Ecological Guild: Rich Fertile Soil Hardwood. Climate Niche: Thrives in Southern Ontario and Carolinian climates. Topography & Elevation: Found in Rich alluvial bottomlands, well-drained slopes, fertile terraces; Lowland flats to mid-slopes. Soil & Hydrology: Prefers Dry-mesic to wet-mesic moisture regimes and Deep, rich, fertile, well-drained loams and heavy clays. Ecological Traits: Intolerant shade tolerance; Mid-to-late successional species."
+    },
+    {
+      "index": 23,
+      "code": "CHERRY_GROUP",
+      "name": "Cherries & Plums",
+      "text_prompt": "Tree Group: Cherries & Plums (FRI Codes: CB, CP, CV, CD, CH). Ecological Guild: Early-to-Mid Successional Gap Hardwood. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in Forest gaps, fence rows, burned clearings, upland slopes; Upland plateaus and forest clearings. Soil & Hydrology: Prefers Dry-mesic to mesic moisture regimes and Deep fertile loams, sandy or rocky acidic loams. Ecological Traits: Intolerant shade tolerance; Pioneer to mid-successional species."
+    },
+    {
+      "index": 24,
+      "code": "BA_BASSWOOD",
+      "name": "Basswood / Linden",
+      "text_prompt": "Tree Group: Basswood / Linden (FRI Codes: BA, BD). Ecological Guild: Rich Slopes / Calcareous Hardwood. Climate Niche: Thrives in Great Lakes-St. Lawrence and Carolinian climates. Topography & Elevation: Found in Rich hardwood forests, fertile lower slopes, river valleys; Lower-to-mid upland slopes. Soil & Hydrology: Prefers Mesic moisture regimes and Deep, rich, moist, calcareous silt loams. Ecological Traits: Intermediate to tolerant shade tolerance; Late-successional species."
+    },
+    {
+      "index": 25,
+      "code": "WILLOW_GROUP",
+      "name": "Willows (Salix spp.)",
+      "text_prompt": "Tree Group: Willows (Salix spp.) (FRI Codes: SA, SBW, SF, SH, SK, SL, SM, SNW, SO). Ecological Guild: Wetland / Riparian Pioneer Shrub/Tree. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in Active river sandbars, muddy banks, wetland borders, ditches; Lowland riparian stream corridors. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet alluvial mud, silt, sand, peat. Ecological Traits: Very intolerant shade tolerance; Pioneer riparian shrub/tree."
+    },
+    {
+      "index": 26,
+      "code": "ALDER_GROUP",
+      "name": "Alders (Alnus spp.)",
+      "text_prompt": "Tree Group: Alders (Alnus spp.) (FRI Codes: AL, AGL, AR, AV). Ecological Guild: Lowland Wetland / Nitrogen-Fixing Shrub. Climate Niche: Thrives in Boreal to temperate climates. Topography & Elevation: Found in Stream banks, swamp margins, alder thickets, rocky slopes; Lowland wetland corridors. Soil & Hydrology: Prefers Hydric to wet-mesic moisture regimes and Wet organic peat, cold muck, alluvial silt. Ecological Traits: Intolerant shade tolerance; Nitrogen-fixing pioneer thicket shrub."
+    },
+    {
+      "index": 27,
+      "code": "CAROLINIAN_MINOR_HARDWOODS",
+      "name": "Carolinian Minor Hardwoods",
+      "text_prompt": "Tree Group: Carolinian Minor Hardwoods (FRI Codes: SY, TU, HK, SAS, GYM, GLED, MAG, PT, NYS, CA). Ecological Guild: Southern Carolinian Specialty / Rare Hardwood. Climate Niche: Thrives in Carolinian warm temperate climates. Topography & Elevation: Found in Rich sheltered coves, floodplains, sand dunes, fertile terraces; Lowland coves, floodplains, and dune ridges. Soil & Hydrology: Prefers Xeric to hydric moisture regimes and Deep rich organic loams, alluvial silt, dry sand. Ecological Traits: Intolerant to intermediate shade tolerance; Early to climax Carolinian species."
+    },
+    {
+      "index": 28,
+      "code": "UNDERSTORY_HARDWOODS_SHRUBS",
+      "name": "Minor Understory Trees & Shrubs",
+      "text_prompt": "Tree Group: Minor Understory Trees & Shrubs (FRI Codes: IW, BLUE, HAM, RHO, ROB, RHA, RHF, SOR, SOU, SOE, EUG, AT, CRB, AP, APM, CORN, CORA, CORS, VIB, VIBL, CEPH). Ecological Guild: Forest Understory & Non-Commercial Shrub. Climate Niche: Thrives in Boreal to Carolinian climates. Topography & Elevation: Found in Understory of hardwood stands, forest edges, rocky ridges, thickets; Understory and forest margins. Soil & Hydrology: Prefers Dry-mesic to wet-mesic moisture regimes and Deep organic loams, rocky limestone, acidic soils. Ecological Traits: Tolerant to intolerant shade tolerance; Understory climax to pioneer shrub."
+    },
+    {
+      "index": 29,
+      "code": "UNCLASSIFIED_OTHER",
+      "name": "Unclassified & Other Species",
+      "text_prompt": "Tree Group: Unclassified & Other Species (FRI Codes: OH, U). Ecological Guild: Unclassified / Generic Tree Layer. Climate Niche: Thrives in Unclassified. Topography & Elevation: Found in Unclassified site; Unclassified elevation. Soil & Hydrology: Prefers Unclassified moisture regimes and Unclassified substrate. Ecological Traits: Unclassified shade tolerance; Unclassified stage."
+    }
+  ]
+}
