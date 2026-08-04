@@ -44,20 +44,43 @@ of our domain knowledge integration strategy.
      overhead.
 
 2. **Similarity Matrix Supervision:**
-   - We will load `species_similarity_matrix.pt` ($S \in \mathbb{R}^{N \times N}$) during training.
+   - We will load `species_similarity_matrix.pt` ($S \in \mathbb{R}^{N \times N}$)
+     during training.
    - We will compute a domain-aware distance penalty:
 
      $$
      \mathcal{L}_{\text{eco}} = \sum_{c=1}^N p_c \cdot (1 - S_{y, c})
      $$
 
-     where $p_c$ is the predicted softmax probability for class $c$ and $y$ is the ground truth target class.
+     where $p_c$ is the predicted softmax probability for class $c$ and $y$ is
+     the ground truth target class.
 
 3. **Loss Composite Integration:**
    - We will implement `EcologicalSimilarityLoss` as a primitive loss
      subclass under `session/components/task/loss/primitives/`.
    - The loss will be composable via `CompositeLoss` with a configurable
      weight $\lambda$.
+
+## Canonical Species Taxonomy Resolver (ETL & Ingestion Phase)
+
+To guarantee that target raster integer labels $y \in \{0, \dots, N-1\}$
+align deterministically with the rows and columns of the similarity matrix
+$S$, we will introduce a **Canonical Species Taxonomy Resolver** executed
+during ETL dataset preparation or custom raster ingestion:
+
+1. **Explicit Ingestion Specifications:** Users will declare target species
+   layer types and their associated FRI codes (e.g. `["SB", "SW", "PJ"]` or
+   29 group codes) in their dataset ingestion configuration (`dataspecs`).
+2. **Ingestion-Time Validation:** The resolver will validate all user-supplied
+   species codes against canonical knowledge base profiles
+   (`species_metadata.json`). If unlisted or misspelled codes are detected,
+   the ingestion pipeline will halt immediately with an explicit error.
+3. **Canonical Label Encoding:** The rasterizer/ingestion module will map
+   species codes to canonical metadata indices ($0 \dots N-1$) and encode
+   target mask pixel values accordingly.
+4. **Deterministic Matrix Indexing:** During UNet training, target pixel
+   value $y$ will index matrix row $S_{y, c}$ with zero index ambiguity or
+   dynamic re-mapping overhead.
 
 ## Implementation Plan
 
@@ -66,7 +89,8 @@ of our domain knowledge integration strategy.
 2. Add Hydra configuration schema and validation for
    `ecological_similarity_weight`.
 3. Register the loss in loss factory builders.
-4. Execute overfit and validation benchmarks against baseline
+4. Integrate Canonical Species Resolver into data ingestion/ETL workflows.
+5. Execute overfit and validation benchmarks against baseline
    Cross-Entropy.
 
 ## Consequences
@@ -78,6 +102,7 @@ of our domain knowledge integration strategy.
   misclassifications.
 - Low-risk, highly modular, and backwards-compatible addition to the training
   stack.
+- Deterministic label indexing via canonical ETL species resolution.
 
 ### Negative
 
