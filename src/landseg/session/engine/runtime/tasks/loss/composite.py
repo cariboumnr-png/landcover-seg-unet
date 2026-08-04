@@ -56,6 +56,8 @@ class CompositeLossConfig(typing.Protocol):
     def spectral(self) -> _SpectralLoss: ...
     @property
     def tv(self) -> _TotalVariationLoss: ...
+    @property
+    def ecological(self) -> _EcologicalLoss: ...
 
 class _FocalLoss(typing.Protocol):
     @property
@@ -82,6 +84,12 @@ class _SpectralLoss(typing.Protocol):
 class _TotalVariationLoss(typing.Protocol):
     @property
     def weight(self) -> float: ...
+
+class _EcologicalLoss(typing.Protocol):
+    @property
+    def weight(self) -> float: ...
+    @property
+    def matrix_path(self) -> str | None: ...
 
 # --------------------------------Public  Class--------------------------------
 class CompositeLoss(torch.nn.Module):
@@ -125,7 +133,8 @@ class CompositeLoss(torch.nn.Module):
         *,
         ignore_index: int,
         focal_alpha: list[float] | None = None,
-        spectral_band_indices: list[int] | None = None
+        spectral_band_indices: list[int] | None = None,
+        ecological_similarity_matrix: torch.Tensor | None = None
     ):
         '''
         Initialize the composite loss from a configuration dictionary.
@@ -186,6 +195,20 @@ class CompositeLoss(torch.nn.Module):
             loss_fn = primitives.TotalVariationLoss(ignore_index=ignore_index)
             self.losses.append(loss_fn)
             self.weights.append(config.tv.weight)
+
+        # ecological similarity regularizer
+        if config.ecological.weight:
+            if ecological_similarity_matrix is None:
+                raise ValueError(
+                    'ecological_similarity_matrix must be provided when '
+                    'config.ecological.weight is non-zero.'
+                )
+            loss_fn = primitives.EcologicalSimilarityLoss(
+                similarity_matrix=ecological_similarity_matrix,
+                ignore_index=ignore_index
+            )
+            self.losses.append(loss_fn)
+            self.weights.append(config.ecological.weight)
 
     def forward(
         self,

@@ -121,6 +121,9 @@ class RootConfig:
     def set_objective_tv_weight(self, weight: float) -> None:
         self.session.engine_tasks.loss_configs.tv.weight = weight
 
+    def set_objective_ecological_weight(self, weight: float) -> None:
+        self.session.engine_tasks.loss_configs.ecological.weight = weight
+
     # ----- multitask
     def set_mtl_consistency_lambda(self, value: float) -> None:
         reg_config = self.session.engine_tasks.mtl_reg_configs

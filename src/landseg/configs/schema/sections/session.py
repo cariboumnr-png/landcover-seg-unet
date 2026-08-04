@@ -97,11 +97,20 @@ class _TVLossConfig:
     weight: float = 1e-4
 
 @dataclasses.dataclass
+class _EcologicalLossConfig:
+    weight: float = 0.0
+    matrix_path: str | None = (
+        'knowledge/embeddings/ontario_tree_species_grouped_profiles/'
+        'species_similarity_matrix.pt'
+    )
+
+@dataclasses.dataclass
 class _LossTypesConfig:
     focal: _FocalLossConfig = field(default_factory=_FocalLossConfig)
     dice: _DiceLossConfig = field(default_factory=_DiceLossConfig)
     spectral: _SpectralLossConfig = field(default_factory=_SpectralLossConfig)
     tv: _TVLossConfig = field(default_factory=_TVLossConfig)
+    ecological: _EcologicalLossConfig = field(default_factory=_EcologicalLossConfig)
 
 @dataclasses.dataclass
 class _MTLConstraints:
@@ -138,6 +147,7 @@ class _TasksConfig:
         utils.must_within(self.loss_configs.dice.weight, 'dice loss weight', 0)
         utils.must_within(self.loss_configs.spectral.weight, 'spectral loss weight', 0)
         utils.must_within(self.loss_configs.tv.weight, 'tv loss weight', 0)
+        utils.must_within(self.loss_configs.ecological.weight, 'ecological loss weight', 0)
 
 # ----- orchestration
 @dataclasses.dataclass

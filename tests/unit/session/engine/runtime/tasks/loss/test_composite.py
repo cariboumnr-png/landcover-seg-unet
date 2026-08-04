@@ -38,6 +38,7 @@ def test_composite_loss_init_no_losses(session_config):
     cfg.dice.weight = 0.0
     cfg.spectral.weight = 0.0
     cfg.tv.weight = 0.0
+    cfg.ecological.weight = 0.0
 
     loss_module = composite.CompositeLoss(cfg, ignore_index=255)
 
@@ -147,3 +148,34 @@ def test_composite_loss_passes_masks(session_config):
     out = loss_module(p, t, masks={0.0: mask})
 
     assert out.item() == 0.0
+
+
+def test_composite_loss_init_with_ecological(session_config):
+    '''
+    Given: Composite loss with ecological weight > 0.0 and similarity matrix.
+    When: Instantiating `CompositeLoss`.
+    Then: Register EcologicalSimilarityLoss primitive loss module.
+    '''
+    cfg = session_config.engine_tasks.loss_configs
+    cfg.focal.weight = 0.0
+    cfg.dice.weight = 0.0
+    cfg.spectral.weight = 0.0
+    cfg.tv.weight = 0.0
+    cfg.ecological.weight = 0.2
+
+    sim_matrix = torch.eye(2, dtype=torch.float32)
+    loss_module = composite.CompositeLoss(
+        cfg,
+        ignore_index=255,
+        ecological_similarity_matrix=sim_matrix
+    )
+
+    assert len(loss_module.losses) == 1
+    assert loss_module.weights == [0.2]
+
+    p = torch.randn((1, 2, 3, 3), dtype=torch.float32)
+    t = torch.zeros((1, 3, 3), dtype=torch.long)
+    out = loss_module(p, t)
+
+    assert out.ndim == 0
+    assert not torch.isnan(out)

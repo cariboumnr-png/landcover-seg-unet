@@ -106,6 +106,7 @@ class BaseConfigurator:
         losses.dice.weight = loss_weights.get('dice', 0.5)
         losses.spectral.weight = loss_weights.get('spectral', 1e-3)
         losses.tv.weight = loss_weights.get('total_var', 1e-4)
+        losses.ecological.weight = loss_weights.get('ecological', 0.0)
         return self
 
     def set_runtime(

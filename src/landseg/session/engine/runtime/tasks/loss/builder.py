@@ -35,6 +35,10 @@ Used by the trainer to supply consistent, per-head loss computation
 objects.
 '''
 
+# standard imports
+import os
+# third-party imports
+import torch
 # local imports
 import landseg.session.engine.runtime.tasks.heads as heads
 import landseg.session.engine.runtime.tasks.loss as loss
@@ -72,14 +76,15 @@ def build_headlosses(
     *,
     config: loss.CompositeLossConfig,
     ignore_index: int,
-    spectral_band_indices: list[int] | None = None
+    spectral_band_indices: list[int] | None = None,
+    ecological_similarity_matrix: torch.Tensor | None = None
 ) -> HeadLosses:
     '''
     Construct a mapping of head names to configured `CompositeLoss`
     instances.
 
     Args:
-        headspecs A structure describing the model's prediction heads,
+        headspecs: A structure describing the model's prediction heads,
             including each head's name and its loss-specific parameters
             (e.g., per-head a values for focal loss).
         config: Base loss configuration shared across heads. Each enabled
@@ -88,17 +93,24 @@ def build_headlosses(
             dictionary is modified per head if focal a values are
             provided.
         ignore_index: Label index to exclude from all loss computations.
+        spectral_band_indices: Optional list of spectral band indices.
+        ecological_similarity_matrix: Optional precomputed similarity tensor.
 
     Returns:
         A `HeadLosses` container, providing typed access to the concrete
         `CompositeLoss` objects keyed by head name.
-
-    Notes:
-        - If focal loss is enabled, its a parameter is replaced for each
-          head using values from `headspecs`.
-        - The function expects alignment between head names and the
-          configuration dictionary.
     '''
+    if (
+        config.ecological.weight > 0
+        and ecological_similarity_matrix is None
+        and config.ecological.matrix_path
+    ):
+        if os.path.isfile(config.ecological.matrix_path):
+            ecological_similarity_matrix = torch.load(
+                config.ecological.matrix_path,
+                map_location='cpu',
+                weights_only=True
+            )
 
     loss_dict: dict[str, loss.CompositeLoss] = {}
     # iterate through names
@@ -106,13 +118,13 @@ def build_headlosses(
         h.name: h.loss_alpha for h in headspecs.as_dict().values()
     }
     for name in per_head_alphas.keys():
-        # update loss alpha dein head
         # init loss compute module for each head
         loss_cls = loss.CompositeLoss(
             config,
             ignore_index=ignore_index,
             focal_alpha=per_head_alphas[name],
-            spectral_band_indices=spectral_band_indices
+            spectral_band_indices=spectral_band_indices,
+            ecological_similarity_matrix=ecological_similarity_matrix
         )
         loss_dict[name] = loss_cls
     return HeadLosses(loss_dict)

@@ -21,6 +21,9 @@ loss_configs:
     neighbour: 4
   tv:
     weight: 1e-4
+  ecological:
+    weight: 0.0
+    matrix_path: 'knowledge/embeddings/ontario_tree_species_grouped_profiles/species_similarity_matrix.pt'
 
 # multi task (multihead) learning related
 mtl_constraints: []
