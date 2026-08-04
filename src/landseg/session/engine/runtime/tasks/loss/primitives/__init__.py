@@ -34,6 +34,7 @@ __all__ = [
     # classes
     'PrimitiveLoss',
     'DiceLoss',
+    'EcologicalSimilarityLoss',
     'FocalLoss',
     'SpectralSmoothnessLoss',
     'TotalVariationLoss',
@@ -44,6 +45,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import PrimitiveLoss
     from .dice import DiceLoss
+    from .ecological import EcologicalSimilarityLoss
     from .focal import FocalLoss
     from .spectral import SpectralSmoothnessLoss
     from .tv import TotalVariationLoss
@@ -56,6 +58,11 @@ def __getattr__(name: str):
 
     if name in {'DiceLoss'}:
         return getattr(importlib.import_module('.dice', __package__), name)
+
+    if name in {'EcologicalSimilarityLoss'}:
+        return getattr(
+            importlib.import_module('.ecological', __package__), name
+        )
 
     if name in {'FocalLoss'}:
         return getattr(importlib.import_module('.focal', __package__), name)
