@@ -132,14 +132,27 @@ class _Domains:
 class _DataBlocks:
     ignore_index: int = 255
     image_dem_pad: int = 8
-    add_topo: bool = False
+    add_topo: list[str] | None = None
     add_spectral: list[str] | None = None
 
     def validate(self) -> None:
-        if not isinstance(self.add_topo, bool):
-            raise TypeError(
-                f'add_topo must be a bool, got {type(self.add_topo)}'
-            )
+        if self.add_topo is not None:
+            if not isinstance(self.add_topo, (list, tuple)):
+                raise TypeError(
+                    f'add_topo must be a list, '
+                    f'got {type(self.add_topo)}'
+                )
+            for item in self.add_topo:
+                if not isinstance(item, str):
+                    raise TypeError(
+                        f'Topo feature must be a string, got {type(item)}'
+                    )
+                if item.lower() not in ('slope', 'tpi'):
+                    raise ValueError(
+                        f'Invalid spectral index "{item}". '
+                        'Supported featires are: slope, tpi.'
+                    )
+
         if self.add_spectral is not None:
             if not isinstance(self.add_spectral, (list, tuple)):
                 raise TypeError(

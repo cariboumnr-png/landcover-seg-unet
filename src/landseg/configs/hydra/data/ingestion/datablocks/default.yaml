@@ -1,4 +1,4 @@
 ignore_index: 255
 image_dem_pad: 8
-add_topo: false
+add_topo: null
 add_spectral: null

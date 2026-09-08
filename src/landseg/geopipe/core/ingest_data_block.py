@@ -153,16 +153,17 @@ class DataBlockConfig:
     label_ignore_index: int
     label_nodata: int | None = None
     add_spectral: list[str] | None = None
-    add_topo: bool = False
+    add_topo: list[str] | None = None
 
     def __post_init__(self):
+        band_map = [b.lower() for b in self.image_band_map]
+
         if self.add_spectral:
             spectral = [s.lower() for s in self.add_spectral]
             invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
             if invalid:
                 raise ValueError(f'Invalid spectral indices: {invalid}')
 
-            band_map = [b.lower() for b in self.image_band_map]
             if 'red' not in band_map:
                 raise ValueError('Unable to add spectrals: red band missing')
             if 'ndvi' in spectral and not 'nir' in band_map:
@@ -172,10 +173,24 @@ class DataBlockConfig:
             if 'nbr' in spectral and not 'swir2' in band_map:
                 raise ValueError('NBR calculation: SWIR2 band missing')
 
+        if self.add_topo:
+            topo  = [t.lower() for t in self.add_topo]
+            invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
+            if invalid:
+                raise ValueError(f'Invalid topo features: {invalid}')
+
+            if 'dem' not in band_map:
+                raise ValueError('DEM band missing for topographical features')
+
     @property
     def spectral_indices(self) -> list[str]:
         '''Return names of the spectral indices to add.'''
         return [item.lower() for item in self.add_spectral or []]
+
+    @property
+    def topographical_features(self) -> list[str]:
+        '''Return names of the topographical features to add.'''
+        return [item.lower() for item in self.add_topo or []]
 
 
 # ------------------------------private dataclass------------------------------
@@ -303,7 +318,10 @@ class DataBlock:
             self._image_add_spectral(config.spectral_indices)
         if config.add_topo:
             self.padded_dem = inputs.pad_dem.astype(numpy.float32)
-            self._image_add_topography(config.image_dem_pad_px)
+            self._image_add_topography(
+                config.topographical_features,
+                config.image_dem_pad_px
+            )
         self._image_get_valid_mask()
         self._image_get_stats()
 
@@ -391,13 +409,11 @@ class DataBlock:
         band_idx = self.manifest['image_band_map']
         nodata = self.manifest['image_nodata']
 
-        # mask off nodata pixels to avoid overflow
-        # 32 bit increased to 64 bit float
         red = _Calc.mask(self.data.image[band_idx['red']], nodata)
-        next_idx = self.data.image.shape[0]
 
         # add spectral indices on demand
         spectrals: list[numpy.ndarray] = []
+        next_idx = self.data.image.shape[0]
         if 'ndvi' in indices:
             nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
             spectrals.append(_Calc.ndvi(nir, red, nodata))
@@ -423,15 +439,18 @@ class DataBlock:
             added = numpy.stack(spectrals).astype(numpy.float32)
             self.data.image = numpy.append(self.data.image, added, axis=0)
 
-    def _image_add_topography(self, pad: int) -> None:
+    def _image_add_topography(self, features: list[str], pad: int) -> None:
         '''Add topographical metrics to the image array.'''
-        nodata = self.manifest['image_nodata']
+        _arrs = {
+            'slope': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
+            'cos_a': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
+            'sin_a': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
+            'tpi': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
 
-        # prep metrics to add
-        slope = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
-        cos_a = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
-        sin_a = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
-        tpi = numpy.zeros_like(self.data.image[0], dtype=numpy.float32)
+        } # use first array as dim reference
+
+        band_idx = self.manifest['image_band_map']
+        nodata = self.manifest['image_nodata']
 
         # sanity check on image/padded image shape
         max_h, max_w = self.padded_dem.shape
@@ -442,31 +461,43 @@ class DataBlock:
             )
 
         # iterate through pixels from the original block in padded dem
+        topos: list[numpy.ndarray] =  []
+        next_idx = self.data.image.shape[0]
         for y in range(pad, max_h - pad):
             for x in range(pad, max_w - pad):
-                # slope and aspect - pad neighbors, radius=1
-                pxs = _Calc.get_px_group(self.padded_dem, x, y, 1)
-                # pxs' shape should be [3, 3] with radius=1
-                assert pxs.shape == (3, 3)
-                slope[y - pad, x - pad], cos_a[y - pad, x - pad], \
-                    sin_a[y - pad, x - pad] = _Calc.slope_n_aspect(pxs, nodata)
-                # tpi - radius=pad-1 (default 8, so 15x15 window)
-                r = pad - 1
-                pxs =  _Calc.get_px_group(self.padded_dem, x, y, r)
-                tpi[y - pad, x - pad] = _Calc.tpi(pxs, nodata)
+
+                if 'slope' in features:
+                    # slope and aspect - pad neighbors, radius=1
+                    pxs = _Calc.get_px_group(self.padded_dem, x, y, 1)
+                    assert pxs.shape == (3, 3) # 3x3 window
+                    (
+                        _arrs['slope'][y - pad, x - pad],
+                        _arrs['cos_a'][y - pad, x - pad],
+                        _arrs['sin_a'][y - pad, x - pad]
+                    ) = _Calc.slope_n_aspect(pxs, nodata)
+
+                if 'tpi' in features:
+                    # tpi - radius=pad-1 (default pad=8, radius=7)
+                    pxs =  _Calc.get_px_group(self.padded_dem, x, y, pad - 1)
+                    assert pxs.shape == (2* pad - 1, 2* pad - 1) # 15x15 window
+                    _arrs['tpi'][y - pad, x - pad] = _Calc.tpi(pxs, nodata)
 
         # add to image array
-        to_add = numpy.stack([slope, cos_a, sin_a, tpi], axis=0)
-        self.data.image = numpy.append(self.data.image, to_add, axis=0)
+        if 'slope' in features:
+            topos.extend([_arrs['slope'], _arrs['cos_a'], _arrs['sin_a']])
+            band_idx['slope'] = next_idx
+            band_idx['cos_a'] = next_idx + 1
+            band_idx['sin_a'] = next_idx + 2
+            next_idx += 3
 
-        # add to band map
-        n = len(self.manifest['image_band_map'])
-        self.manifest['image_band_map'].update({
-            'slope': n,
-            'cos_aspect': n + 1,
-            'sin_aspect': n + 2,
-            'tpi': n + 3
-        })
+        if 'tpi' in features:
+            topos.append(_arrs['tpi'])
+            band_idx['tpi'] = next_idx
+            next_idx +=1
+
+        if topos:
+            added = numpy.stack(topos, axis=0)
+            self.data.image = numpy.append(self.data.image, added, axis=0)
 
     def _image_get_valid_mask(self):
         '''Get a valid mask for the whole block.'''
@@ -714,7 +745,7 @@ class _Calc:
     # topographical metrics related
     @staticmethod
     def get_px_group(arr, x, y, rr):
-        '''Get neighbouring pixels as an array.'''
+        '''Get neighbouring pixels as an array'''
         return arr[slice(y - rr, y + rr + 1), slice(x - rr, x + rr + 1)]
 
     @staticmethod

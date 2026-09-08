@@ -60,13 +60,16 @@ data-ingest:
   # ---------------------------------------------------------------------------
   # Feature Engineering for Ingested Data Blocks (Optional)
   # ---------------------------------------------------------------------------
-  # Compute and append derived topographic layers (slope, cos/sin
-  # aspect, tpi). Requires DEM channel in input features:
-  add_topo: true
+  # Compute and append derived topographic layers
+  # Suppored: [slope, tpi]
+  # Required bands: DEM
+  # Set null/[] to disable
+  add_topo: [slope, tpi]
 
   # Derived spectral indices to compute and append to data blocks.
-  # Supported: [ndvi, ndmi, nbr] (requires red, nir, swir1/swir2 bands):
-  #   add_spectral: [ndvi, ndmi]
+  # Supported: [ndvi, ndmi, nbr]
+  # Required bands: red, nir, swir1/swir2
+  # Set null/[] to disable
   add_spectral: [ndvi, ndmi, nbr]
 
 

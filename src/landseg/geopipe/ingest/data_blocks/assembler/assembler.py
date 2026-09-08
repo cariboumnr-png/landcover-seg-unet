@@ -50,7 +50,7 @@ def build_single_block(
     *,
     ignore_index: int = 255,
     add_spectral: list[str] | None = None,
-    add_topo: bool = False,
+    add_topo: list[str] | None = None,
     save_fpath: str | None = None,
 ) -> geo_core.DataBlock:
     '''
