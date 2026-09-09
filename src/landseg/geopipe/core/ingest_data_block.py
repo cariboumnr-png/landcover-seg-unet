@@ -75,17 +75,23 @@ class DataBlockManifest(typing.TypedDict):
     # provenance
     block_name: str
     has_label: bool
-    ignore_index: int
-    # dataset description
-    image_nodata: float
+    # image description
     image_band_map: dict[str, int]
+    image_nodata: float
+    # label descriptions
+    label_band_map: dict[str, int] # head name: index
     label_nodata: int
+    label_ignore_index: int # ignore_idx to convert to globally
+    label_ignore_cls: dict[str, list[int]] # head name: list of ignores
     label_num_cls: dict[str, int]
-    label_ignore_cls: dict[str, list[int]]
-    label_parent: dict[str, str | None]
-    label_parent_cls: dict[str, int | None]
-    label_names: dict[str, list[str]]
-    label_taxonomy: dict[str, typing.Any]
+    label_cls_names: dict[str, list[str]] # head name: class names as a list
+    label_cls_clr_map: dict[str, dict[str, list[int]]] # head name: {class name: RGB color}
+
+    # NOTE: to migrate to data prep
+    # label_parent: dict[str, str | None]
+    # label_parent_cls: dict[str, int | None]
+    # label_taxonomy: dict[str, typing.Any]
+
     # derived stats
     valid_ratios: dict[str, float]
     image_stats: dict[str, dict[str, int | float]]
@@ -101,10 +107,12 @@ class LabelSpecs(typing.TypedDict):
     index_base: int
     # optional
     class_name: typing.NotRequired[dict[str, str]]
-    reclass: typing.NotRequired[dict[str, list[int]]]
-    reclass_name: typing.NotRequired[dict[str, str]]
     color_map: typing.NotRequired[dict[str, list[int]]]
-    taxonomy: typing.NotRequired[dict[str, typing.Any]]
+
+    # NOTE: to migrate to data prep
+    # reclass: typing.NotRequired[dict[str, list[int]]]
+    # reclass_name: typing.NotRequired[dict[str, str]]
+    # taxonomy: typing.NotRequired[dict[str, typing.Any]]
 
 
 # ------------------------------Public  Dataclass------------------------------
@@ -115,19 +123,23 @@ class DataBlockInputs:
     image_array: numpy.ndarray
     image_padded_dem: numpy.ndarray | None
     label_array: numpy.ndarray | None
-    label_specs: dict[str, LabelSpecs] | None
 
     def __post_init__(self):
         if self.image_array.ndim != 3:
             raise ValueError('Image array is not of shape [C, H, W]')
 
         if self.label_array is not None:
-            if self.label_specs is None:
-                raise ValueError('Label array present but specs not provided')
+            # if self.label_specs is None:
+            #     raise ValueError('Label array present but specs not provided')
             if self.label_array.ndim != 3:
                 raise ValueError('Label array is not of shape [C, H, W]')
             if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
                 raise ValueError('Image and label arrays have different H / W')
+
+    @property
+    def has_label(self) -> bool:
+        '''Return `True` if label array is provided.'''
+        return self.label_array is not None
 
     @property
     def pad_dem(self) -> numpy.ndarray:
@@ -136,22 +148,19 @@ class DataBlockInputs:
             raise ValueError('Cannot access padded DEM as it is not provided')
         return self.image_padded_dem
 
-    @property
-    def lbl_specs(self) -> dict[str, LabelSpecs]:
-        '''Return label specs dict if provided.'''
-        if self.label_specs is None:
-            raise ValueError('Cannot access label specs as it is not provided')
-        return self.label_specs
-
 
 @dataclasses.dataclass(frozen=True)
 class DataBlockConfig:
     '''Build-time config for feature engineering and data encoding.'''
-    image_band_map: dict[str, int]
     image_nodata: float
+    image_band_map: dict[str, int]
     image_dem_pad_px: int
-    label_ignore_index: int
-    label_nodata: int | None = None
+
+    label_nodata: int = 0
+    label_ignore_index: int = 255
+    label_band_map: dict[str, int] = dataclasses.field(default_factory=dict)
+    label_specs: dict[str, LabelSpecs] = dataclasses.field(default_factory=dict)
+
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
 
@@ -182,23 +191,11 @@ class DataBlockConfig:
             if 'dem' not in band_map:
                 raise ValueError('DEM band missing for topographical features')
 
-    @property
-    def spectral_indices(self) -> list[str]:
-        '''Return names of the spectral indices to add.'''
-        return [item.lower() for item in self.add_spectral or []]
-
-    @property
-    def topographical_features(self) -> list[str]:
-        '''Return names of the topographical features to add.'''
-        return [item.lower() for item in self.add_topo or []]
-
-
 # ------------------------------private dataclass------------------------------
 @dataclasses.dataclass
 class _BlockArrays:
     '''Simple dataclass for block-wise image/label data.'''
     label: numpy.ndarray = dataclasses.field(init=False)
-    label_stack: numpy.ndarray = dataclasses.field(init=False)
     image: numpy.ndarray = dataclasses.field(init=False)
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
 
@@ -235,7 +232,7 @@ class DataBlock:
         label, and block-level features are computed sequentially.
     '''
 
-    def __init__(self, *, ignore_index: int = 255):
+    def __init__(self):
         '''
         Initialize an empty `DataBlock` instance.
 
@@ -244,33 +241,34 @@ class DataBlock:
         (from arrays) or `load()` (from disk).
 
         Args:
-            ignore_index: Label ignore value (default: 255)
+            add_spectral
+            add_topo
         '''
         # init shared state/variables for construction
         self.data = _BlockArrays()
         self.padded_dem = numpy.array([1])
-        self.lbl_specs: dict[str, LabelSpecs] = {}
         self.manifest: DataBlockManifest = {
             # provenance
             'block_name': '',
             'has_label': False,
-            'ignore_index': ignore_index,
             # dataset description
-            'image_nodata': numpy.nan,
             'image_band_map': {},
+            'image_nodata': numpy.nan,
+            'label_band_map': {},
             'label_nodata': 0,
-            'label_num_cls': {},
+            'label_ignore_index': 255,
             'label_ignore_cls': {},
-            'label_parent': {},
-            'label_parent_cls': {},
-            'label_names': {},
-            'label_taxonomy': {},
+            'label_num_cls': {},
+            'label_cls_names': {},
+            'label_cls_clr_map': {},
             # derived stats
             'valid_ratios': {},
             'image_stats': {},
             'label_count': {},
             'label_entropy': {},
         }
+        # labels speces
+        self.lbl_specs: dict[str, LabelSpecs] = {}
 
     # ----- alternative constructor
     @classmethod
@@ -304,39 +302,57 @@ class DataBlock:
         Notes: The method mutates internal state and returns the instance
         to support chaining.
         '''
-        self = cls(ignore_index=config.label_ignore_index)
-        self.manifest['block_name'] = inputs.block_name
-        self.manifest['image_nodata'] = config.image_nodata
-        self.manifest['image_band_map'] = dict(config.image_band_map) # shallow
-        if config.label_nodata is not None:
-            self.manifest['label_nodata'] = config.label_nodata
+        self = cls()
+
+        # update manifest dict
+        self.manifest.update({
+            'block_name': inputs.block_name,
+            'image_nodata': config.image_nodata,
+            'image_band_map': dict(config.image_band_map), # shallow copy
+        })
 
         # image dtype conversion and processing
         # float32 as remote sensing default
         self.data.image = inputs.image_array.astype(numpy.float32)
-        if config.spectral_indices:
-            self._image_add_spectral(config.spectral_indices)
+
+        if config.add_spectral:
+            self._image_add_spectral(
+                [item.lower() for item in config.add_spectral or []]
+            )
+
         if config.add_topo:
             self.padded_dem = inputs.pad_dem.astype(numpy.float32)
             self._image_add_topography(
-                config.topographical_features,
+                [item.lower() for item in config.add_topo or []],
                 config.image_dem_pad_px
             )
+
         self._image_get_valid_mask()
         self._image_get_stats()
 
         # if label array is provided:
-        if inputs.label_array is not None:
+        if inputs.has_label:
+
+            if not config.label_band_map:
+                raise ValueError('"label_band_map" must not provide')
+            if not config.label_specs:
+                raise ValueError('"label_specs" not provided')
+
+            self.manifest.update({
+                'label_nodata': config.label_nodata,
+                'label_band_map': dict(config.label_band_map),
+                'label_ignore_index': config.label_ignore_index,
+            })
+
             # currently support labels range [0, 256)
+            assert inputs.label_array is not None
             self.data.label = inputs.label_array.astype(numpy.uint8)
-            self.lbl_specs = inputs.lbl_specs
-            self._label_get_stack()
-            self._label_build_topology()
-            self._label_get_stats()
+            self.lbl_specs = dict(config.label_specs)
+            self._label_canonicalize()
             self.manifest['has_label'] = True
+
         else:
             self.data.label = numpy.array([1]) # dummy placeholders
-            self.data.label_stack = numpy.array([1])
             self.manifest['has_label'] = False
 
         # sanity check self.data and return self to allow chained calls
@@ -540,152 +556,141 @@ class DataBlock:
                 'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
             }
 
-    def _label_get_stack(self) -> None:
-        '''
-        Construct a multi-layer label stack based on label specs.
-
-        Input arrays are processed sequentially to create base layers,
-        child layers for reclassification, and grouping layers.
-        '''
+    def _label_canonicalize(self) -> None:
+        '''Normalize the label stack based on label specs.'''
         stack: list[numpy.ndarray] = []
-        ignore_index = self.manifest['ignore_index']
+        band_map = self.manifest['label_band_map']
+        nodata = self.manifest['label_nodata']
+        ignore_index = self.manifest['label_ignore_index']
 
-        # iterate label specs
-        for i, spec in enumerate(self.lbl_specs.values()):
+        # iterate sorted bands sorted by index
+        for name, i in sorted(band_map.items(), key=lambda item: item[1]):
+            spec = self.lbl_specs[name]
             arr = self.data.label[i]
-            index_base = spec.get('index_base', 1)
 
             # append base layer from original Class IDs with masking)
-            to_ignore = list(spec['ignore_cls']) + [ignore_index]
+            self.manifest['label_ignore_cls'][name] = list(spec['ignore_cls'])
+            to_ignore = list(spec['ignore_cls']) + [nodata, ignore_index]
             mask = ~numpy.isin(arr, to_ignore)
-            shifted_arr = arr + (1 - index_base)
-            stack.append(numpy.where(mask, shifted_arr, ignore_index))
+            shifted_arr = arr + (1 - spec['index_base'])
+            normalized = numpy.where(mask, shifted_arr, ignore_index)
 
-            # skip if no reclass is defined for this label
-            reclass = spec.get('reclass')
-            if not reclass:
-                continue
-            # grouping layers and children
-            group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
-            for group_id, classes in reclass.items():
-                mask = numpy.isin(arr, classes)
-                group_layer[mask] = int(group_id) # modify in-place
+            # # skip if no reclass is defined for this label
+            # reclass = spec.get('reclass')
+            # if not reclass:
+            #     continue
+            # # grouping layers and children
+            # group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+            # for group_id, classes in reclass.items():
+            #     mask = numpy.isin(arr, classes)
+            #     group_layer[mask] = int(group_id) # modify in-place
 
-                # create child slice: re-index original classes to 1..N
-                child_arr = numpy.where(mask, arr, ignore_index)
-                for k, cls_id in enumerate(classes, 1):
-                    child_arr[child_arr == cls_id] = int(k)
-                stack.append(child_arr)
+            #     # create child slice: re-index original classes to 1..N
+            #     child_arr = numpy.where(mask, arr, ignore_index)
+            #     for k, cls_id in enumerate(classes, 1):
+            #         child_arr[child_arr == cls_id] = int(k)
+            #     stack.append(child_arr)
 
-            # append grouping layer last for this specification
-            stack.append(group_layer)
-
-        # store the final stack
-        self.data.label_stack = numpy.stack(stack, axis=0)
-
-    def _label_build_topology(self) -> None:
-        '''
-        Construct the label schema recorded in the block manifest.
-
-        Populates self.manifest with hierarchy, class counts, and naming
-        conventions derived from the label specifications.
-        '''
-        # containers
-        num_cls: dict[str, int] = {}
-        ignore_cls: dict[str, list[int]] = {}
-        parent_map: dict[str, str | None] = {}
-        parent_cls_map: dict[str, int | None] = {}
-        label_names: dict[str, list[str]] = {}
-
-        # iterate label specs
-        for name, spec in self.lbl_specs.items():
-            cls_name = spec.get('class_name', {})
-            index_base = spec.get('index_base', 1)
-
-            # base
-            num_cls[name] = spec['num_cls']
-            ignore_cls[name] = spec['ignore_cls']
-            parent_map[name] = None
-            parent_cls_map[name] = None
-            label_names[name] = [
-                cls_name.get(str(j + index_base), f'cls_{j + 1}')
-                for j in range(spec['num_cls'])
-            ]
-
-            # skip if no reclass is defined for this label
-            reclass = spec.get('reclass')
-            if not reclass:
-                continue
-
-            # children
-            grp_name = f'{name}_groups' # fallback genric name
-            reclass_name = spec.get('reclass_name', {})
-            for gid, classes in reclass.items():
-                child_name = reclass_name.get(gid, f'{grp_name}_{gid}')
-                num_cls[child_name] = len(classes)
-                ignore_cls[child_name] = []
-                parent_map[child_name] = grp_name
-                parent_cls_map[child_name] = int(gid)
-                label_names[child_name] = [
-                    cls_name.get(str(c), f'cls_{c}')
-                    for c in classes
-                ]
-
-            # parent
-            num_cls[grp_name] = len(reclass)
-            ignore_cls[grp_name] = []
-            parent_map[grp_name] = None
-            parent_cls_map[grp_name] = None
-            label_names[grp_name] = [
-                reclass_name.get(gid, f'grp_{gid}')
-                for gid in sorted(reclass.keys(), key=int)
-            ]
-
-        # populate meta dict
-        self.manifest['label_num_cls'] = num_cls
-        self.manifest['label_ignore_cls'] = ignore_cls
-        self.manifest['label_parent'] = parent_map
-        self.manifest['label_parent_cls'] = parent_cls_map
-        self.manifest['label_names'] = label_names
-
-        label_taxonomy: dict[str, typing.Any] = {}
-        for name, spec in self.lbl_specs.items():
-            if 'taxonomy' in spec and spec['taxonomy']:
-                label_taxonomy[name] = spec['taxonomy']
-        if label_taxonomy:
-            self.manifest['label_taxonomy'] = label_taxonomy
-
-    def _label_get_stats(self) -> None:
-        '''Count present label values and calculate entropy.'''
-        # the manifest defines the names and sizes of every target in stack
-        heads = list(self.manifest['label_num_cls'].items())
-
-        for i, (name, n_cls) in enumerate(heads):
-            band = self.data.label_stack[i]
+            # # append grouping layer last for this specification
+            # stack.append(group_layer)
 
             # calculate valid pixel ratios
-            valid = band != self.manifest['ignore_index']
-            self.manifest['valid_ratios'].update({
-                name: float(valid.sum() / (valid.size))
-                if valid.size > 0 else 0.0
-            })
+            valid = normalized != ignore_index
+            ratio = float(valid.sum() / (valid.size)) if valid.size > 0 else 0.0
+            self.manifest['valid_ratios'][name] = ratio
 
             # count unique values for the current head (classes 1..N)
-            label_unique = numpy.arange(1, n_cls + 1)
-            filtered = band[numpy.isin(band, label_unique)]
-            uniques, counts = numpy.unique(filtered, return_counts=True)
+            n_cls = spec['num_cls']
+            self.manifest['label_num_cls'][name] = n_cls
+            valids = normalized[valid].astype(numpy.int64)
+            counts = numpy.bincount(valids, minlength=n_cls + 1)[1:n_cls + 1]
+            self.manifest['label_count'][name] = [int(c) for c in counts]
 
-            # calculate shannon entropy
-            ent = float(_Calc.entropy(counts))
+            # entropy
+            self.manifest['label_entropy'][name] = float(_Calc.entropy(counts))
 
-            # align counts to the fixed class size defined in schema
-            final_counts = [0] * n_cls
-            for val, count in zip(uniques, counts):
-                final_counts[int(val) - 1] = int(count)
+            # attach class names and color map if provided
+            if 'class_name' in spec and spec['class_name']:
+                self.manifest['label_cls_names'][name] = list(spec['class_name'].values())
+            if 'color_map' in spec and spec['color_map']:
+                self.manifest['label_cls_clr_map'][name] = spec['color_map']
 
-            # store results in meta
-            self.manifest['label_count'][name] = final_counts
-            self.manifest['label_entropy'][name] = ent
+            stack.append(normalized)
+
+        self.data.label = numpy.stack(stack, axis=0)
+
+    # NOTE: to migrate to data prep
+    # def _label_build_topology(self) -> None:
+    #     '''
+    #     Construct the label schema recorded in the block manifest.
+
+    #     Populates self.manifest with hierarchy, class counts, and naming
+    #     conventions derived from the label specifications.
+    #     '''
+    #     # containers
+    #     num_cls: dict[str, int] = {}
+    #     ignore_cls: dict[str, list[int]] = {}
+    #     parent_map: dict[str, str | None] = {}
+    #     parent_cls_map: dict[str, int | None] = {}
+    #     label_names: dict[str, list[str]] = {}
+
+    #     # iterate label specs
+    #     for name, spec in self.lbl_specs.items():
+    #         cls_name = spec.get('class_name', {})
+    #         index_base = spec.get('index_base', 1)
+
+    #         # base
+    #         num_cls[name] = spec['num_cls']
+    #         ignore_cls[name] = spec['ignore_cls']
+    #         parent_map[name] = None
+    #         parent_cls_map[name] = None
+    #         label_names[name] = [
+    #             cls_name.get(str(j + index_base), f'cls_{j + 1}')
+    #             for j in range(spec['num_cls'])
+    #         ]
+
+    #         # skip if no reclass is defined for this label
+    #         reclass = spec.get('reclass')
+    #         if not reclass:
+    #             continue
+
+    #         # children
+    #         grp_name = f'{name}_groups' # fallback genric name
+    #         reclass_name = spec.get('reclass_name', {})
+    #         for gid, classes in reclass.items():
+    #             child_name = reclass_name.get(gid, f'{grp_name}_{gid}')
+    #             num_cls[child_name] = len(classes)
+    #             ignore_cls[child_name] = []
+    #             parent_map[child_name] = grp_name
+    #             parent_cls_map[child_name] = int(gid)
+    #             label_names[child_name] = [
+    #                 cls_name.get(str(c), f'cls_{c}')
+    #                 for c in classes
+    #             ]
+
+    #         # parent
+    #         num_cls[grp_name] = len(reclass)
+    #         ignore_cls[grp_name] = []
+    #         parent_map[grp_name] = None
+    #         parent_cls_map[grp_name] = None
+    #         label_names[grp_name] = [
+    #             reclass_name.get(gid, f'grp_{gid}')
+    #             for gid in sorted(reclass.keys(), key=int)
+    #         ]
+
+    #     # populate meta dict
+    #     self.manifest['label_num_cls'] = num_cls
+    #     self.manifest['label_ignore_cls'] = ignore_cls
+    #     self.manifest['label_parent'] = parent_map
+    #     self.manifest['label_parent_cls'] = parent_cls_map
+    #     self.manifest['label_names'] = label_names
+
+    #     label_taxonomy: dict[str, typing.Any] = {}
+    #     for name, spec in self.lbl_specs.items():
+    #         if 'taxonomy' in spec and spec['taxonomy']:
+    #             label_taxonomy[name] = spec['taxonomy']
+    #     if label_taxonomy:
+    #         self.manifest['label_taxonomy'] = label_taxonomy
 
     @staticmethod
     def _get_image_invalid_mask(
