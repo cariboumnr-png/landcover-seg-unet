@@ -36,7 +36,7 @@ class ManifestEntry(typing.TypedDict):
     path: str
     band_mapping: dict[int, str]
     category: AllowedCategory
-    categorical_specs: CategoricalSpecs | None
+    categorical_specs: geo_core.CategoricalSpecs | None
     schemes: LabelSchemes | FeatureSchemes | None
 
 
@@ -48,18 +48,6 @@ AllowedCategory = typing.Literal[
     'labels',
     'label',
 ]
-
-
-class CategoricalSpecs(typing.TypedDict):
-    '''Typed dictionary for categorical raster specifications.'''
-    # required
-    index_base: int
-    num_cls: int
-    ignore_cls: list[int]
-    # optional
-    class_name: typing.NotRequired[dict[str, str]]
-    color_map: typing.NotRequired[dict[str, list[int]]] # requires RGB
-    taxonomy: typing.NotRequired[geo_core.TaxonomySpecs]
 
 
 class _LabelScheme(typing.TypedDict):

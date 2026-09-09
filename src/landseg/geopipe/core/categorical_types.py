@@ -24,7 +24,20 @@ Harmonization pipeline types.
 '''
 
 # standard imports
+from __future__ import annotations
 import typing
+
+
+class CategoricalSpecs(typing.TypedDict):
+    '''Typed dictionary for categorical raster specifications.'''
+    # required
+    index_base: int
+    num_cls: int
+    ignore_cls: list[int]
+    # optional
+    class_name: typing.NotRequired[dict[str, str]]
+    color_map: typing.NotRequired[dict[str, list[int]]] # requires RGB
+    taxonomy: typing.NotRequired[TaxonomySpecs]
 
 
 class TaxonomySpecs(typing.TypedDict):

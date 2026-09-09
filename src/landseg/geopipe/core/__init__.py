@@ -40,6 +40,7 @@ __all__ = [
     'GridSpec',
     # functions
     # typing
+    'CategoricalSpecs',
     'DataBlockManifest',
     'DataCatalog',
     'DataSchema',
@@ -59,19 +60,20 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .harmonize_data_taxonomy import (
+    from .categorical_types import (
+        CategoricalSpecs,
         TaxonomySpecs
     )
-    from .ingest_data_block import (
+    from .data_block import (
         DataBlock,
         DataBlockConfig,
         DataBlockInputs,
         DataBlockManifest,
         LabelSpecs,
     )
-    from .ingest_data_catalog import DataCatalog, CatalogEntry
-    from .ingest_data_schema import DataSchema
-    from .ingest_domain_map import (
+    from .data_catalog import DataCatalog, CatalogEntry
+    from .data_schema import DataSchema
+    from .domain_tilemap import (
         DomainPayload,
         DomainMeta,
         DomainTile,
@@ -83,7 +85,7 @@ if typing.TYPE_CHECKING:
         GridMeta,
         GridLayout
     )
-    from .prepare_blocks_types import (
+    from .prepared_dateset_types import (
         BlocksPartition,
         ImageBandStats,
         TransformSchema,
@@ -93,9 +95,10 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
+        'CategoricalSpecs',
         'TaxonomySpecs',
     }:
-        obj = importlib.import_module('.harmonize_data_taxonomy', __package__)
+        obj = importlib.import_module('.categorical_types', __package__)
         return getattr(obj, name)
 
     if name in {
@@ -114,18 +117,18 @@ def __getattr__(name: str):
         'DataBlockManifest',
         'LabelSpecs',
     }:
-        obj = importlib.import_module('.ingest_data_block', __package__)
+        obj = importlib.import_module('.data_block', __package__)
         return getattr(obj, name)
 
     if name in {
         'DataCatalog',
         'CatalogEntry'
     }:
-        obj = importlib.import_module('.ingest_data_catalog', __package__)
+        obj = importlib.import_module('.data_catalog', __package__)
         return getattr(obj, name)
 
     if name in {'DataSchema'}:
-        obj = importlib.import_module('.ingest_data_schema', __package__)
+        obj = importlib.import_module('.data_schema', __package__)
         return getattr(obj, name)
 
     if name in {
@@ -134,7 +137,7 @@ def __getattr__(name: str):
         'DomainTile',
         'DomainTileMap'
     }:
-        obj = importlib.import_module('.ingest_domain_map', __package__)
+        obj = importlib.import_module('.domain_tilemap', __package__)
         return getattr(obj, name)
 
     if name in {
