@@ -61,7 +61,7 @@ class RasterReadInput:
     image_dem_pad_px: int
     label_fpath: str | None
     label_window: alias.RasterWindow | None
-    label_specs: dict[str, geo_core.LabelSpecs] | None
+    label_specs: dict[str, geo_core.CategoricalSpecs] | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -101,109 +101,43 @@ def read_band_map(fpath: str) -> dict[str, int]:
     return {name: index for index, name in enumerate(names)}
 
 
-def read_label_specs(fpath: str | None) -> dict[str, geo_core.LabelSpecs]:
-    '''Return per-band label specifications embedded in a raster, or {}.'''
+def read_label_specs(fpath: str | None) -> dict[str, geo_core.CategoricalSpecs]:
+    '''Return per-band label specifications embedded in a raster.'''
     if fpath is None:
         return {}
 
     try:
         with rasterio.open(fpath) as src:
             descriptions = src.descriptions
-            band_tags = {
-                index: {
-                    **(src.tags() if src.count == 1 else {}),
-                    **src.tags(index),
+            common_tags = src.tags() if src.count == 1 else {}
+
+            specs = {}
+
+            for index, description in enumerate(descriptions, start=1):
+                tags = {**common_tags, **src.tags(index)}
+                # required keys
+                spec = {
+                    key: _parse_vrt_tag(tags[key])
+                    for key in ('num_cls', 'ignore_cls', 'index_base')
                 }
-                for index in src.indexes
-            }
-    except rasterio.errors.RasterioError:
-        return {}
+                # optional keys
+                for key in ('class_name', 'color_map', 'taxonomy'):
+                    if key in tags:
+                        value = _parse_vrt_tag(tags[key])
+                        if value:
+                            spec[key] = value
 
-    if not descriptions:
-        return {}
+                name = (
+                    description.strip()
+                    if description and description.strip()
+                    else f'band_{index}'
+                )
+                specs[name] = spec
 
-    names = [
-        description.strip()
-        if description and description.strip()
-        else f'band_{index}'
-        for index, description in enumerate(descriptions, start=1)
-    ]
+            return specs
 
-    if len(set(names)) != len(names):
-        return {}
-
-    specs: dict[str, geo_core.LabelSpecs] = {}
-
-    for index, name in enumerate(names, start=1):
-        tags = band_tags[index]
-
-        try:
-            num_cls = _parse_vrt_tag(tags['num_cls'])
-            ignore_cls = _parse_vrt_tag(tags['ignore_cls'])
-        except (KeyError, ValueError, SyntaxError, json.JSONDecodeError):
-            return {}
-
-        if (
-            not isinstance(num_cls, int)
-            or num_cls < 1
-            or not isinstance(ignore_cls, list)
-            or not all(isinstance(value, int) for value in ignore_cls)
-        ):
-            return {}
-
-        base_val = 0
-        if 'index_base' in tags:
-            try:
-                parsed_base = _parse_vrt_tag(tags['index_base'])
-                if isinstance(parsed_base, int):
-                    base_val = parsed_base
-            except (ValueError, SyntaxError, json.JSONDecodeError):
-                pass
-
-        spec: geo_core.LabelSpecs = {
-            'num_cls': num_cls,
-            'ignore_cls': ignore_cls,
-            'index_base': base_val,
-        }
-
-        for key in ('class_name', 'reclass', 'reclass_name', 'color_map'):
-            if key not in tags:
-                continue
-            try:
-                value = _parse_vrt_tag(tags[key])
-            except (ValueError, SyntaxError, json.JSONDecodeError):
-                return {}
-            if value:
-                if not isinstance(value, dict):
-                    return {}
-                spec[key] = value
-
-        if 'taxonomy' in tags:
-            try:
-                tax_val = _parse_vrt_tag(tags['taxonomy'])
-            except (ValueError, SyntaxError, json.JSONDecodeError):
-                return {}
-            if tax_val:
-                if not isinstance(tax_val, dict):
-                    return {}
-                profile = tax_val.get('profile')
-                if not isinstance(profile, str):
-                    return {}
-
-                spec['taxonomy'] = {}
-                spec['taxonomy']['profile'] = profile
-                if (
-                    'canonical_indices' in tax_val and
-                    isinstance(tax_val['canonical_indices'], dict)
-                ):
-                    spec['taxonomy']['canonical_indices'] = {
-                        str(k): int(v)
-                        for k, v in tax_val['canonical_indices'].items()
-                    }
-
-        specs[name] = spec
-
-    return specs
+    except rasterio.errors.RasterioError as e:
+        raise ValueError(f'Unable to read label specs from {fpath}') from e
 
 
 def read_schemes(fpath: str | None) -> dict[str, typing.Any]:
@@ -239,14 +173,6 @@ def read_schemes(fpath: str | None) -> dict[str, typing.Any]:
             return all_schemes
     except (rasterio.errors.RasterioError, ValueError, SyntaxError):
         return {}
-
-
-def _parse_vrt_tag(value: str) -> object:
-    '''Decode GDAL metadata serialized as JSON or a Python literal.'''
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError:
-        return ast.literal_eval(value)
 
 
 def check_npz_integrity(
@@ -335,6 +261,15 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
             label_array=lbl_arr,
             label_nodata=label_nodata
         )
+
+
+# ----- private helpers
+def _parse_vrt_tag(value: str) -> object:
+    '''Decode GDAL metadata serialized as JSON or a Python literal.'''
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return ast.literal_eval(value)
 
 
 def _read_w_pad(

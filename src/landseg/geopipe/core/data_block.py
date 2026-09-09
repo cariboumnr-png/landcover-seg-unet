@@ -92,11 +92,11 @@ class DataBlockManifest(typing.TypedDict):
     label_num_cls: dict[str, int]
     label_cls_names: dict[str, list[str]] # head name: class names as a list
     label_cls_clr_map: dict[str, dict[str, list[int]]] # head name: {class name: RGB color}
+    label_taxonomy: dict[str, geo_core.TaxonomySpecs]
 
     # NOTE: to migrate to data prep
     # label_parent: dict[str, str | None]
     # label_parent_cls: dict[str, int | None]
-    # label_taxonomy: dict[str, typing.Any]
 
     # derived stats
     valid_ratios: dict[str, float]
@@ -146,7 +146,7 @@ class DataBlockConfig:
     image_band_map: dict[str, int]
     image_dem_pad_px: int
 
-    label_nodata: int = 0
+    label_nodata: int | None = None
     label_ignore_index: int = 255
     label_band_map: dict[str, int] = field(default_factory=dict)
     label_specs: dict[str, geo_core.CategoricalSpecs] = field(default_factory=dict)
@@ -251,6 +251,7 @@ class DataBlock:
             'label_num_cls': {},
             'label_cls_names': {},
             'label_cls_clr_map': {},
+            'label_taxonomy': {},
             # derived stats
             'valid_ratios': {},
             'image_stats': {},
@@ -329,7 +330,7 @@ class DataBlock:
                 raise ValueError('"label_specs" not provided')
 
             self.manifest.update({
-                'label_nodata': config.label_nodata,
+                'label_nodata': config.label_nodata or -1,
                 'label_band_map': dict(config.label_band_map),
                 'label_ignore_index': config.label_ignore_index,
             })
@@ -599,11 +600,13 @@ class DataBlock:
             # entropy
             self.manifest['label_entropy'][name] = float(_Calc.entropy(counts))
 
-            # attach class names and color map if provided
+            # attach class names, color map and taxonomy if provided
             if 'class_name' in spec and spec['class_name']:
                 self.manifest['label_cls_names'][name] = list(spec['class_name'].values())
             if 'color_map' in spec and spec['color_map']:
                 self.manifest['label_cls_clr_map'][name] = spec['color_map']
+            if 'taxonomy' in spec and spec['taxonomy']:
+                self.manifest['label_taxonomy'][name] = spec['taxonomy']
 
             stack.append(normalized)
 

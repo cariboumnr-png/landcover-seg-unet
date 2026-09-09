@@ -33,6 +33,7 @@ from __future__ import annotations
 import typing
 import pathlib
 # local imports
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.taxonomy as taxonomy
 
@@ -125,14 +126,14 @@ class ManifestEntryNormalizer:
 
         return typing.cast(manifest.AllowedCategory, cat)
 
-    def _normalize_categorical_specs(self) -> manifest.CategoricalSpecs:
+    def _normalize_categorical_specs(self) -> geo_core.CategoricalSpecs:
         specs = _require_dict(self.cat_specs)
 
         # init w mandatory fields
         index_base = _require_int_w_min(specs.get('index_base'), 0)
         num_cls = _require_int_w_min(specs.get('num_cls'), 1)
         ignore_cls = _require_int_list(specs.get('ignore_cls'))
-        _specs: manifest.CategoricalSpecs = {
+        _specs: geo_core.CategoricalSpecs = {
             'index_base': index_base,
             'num_cls': num_cls,
             'ignore_cls': ignore_cls

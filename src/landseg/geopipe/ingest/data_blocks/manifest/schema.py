@@ -103,11 +103,11 @@ def build_schema(
     # read from the sample block
     sample_blk = geo_core.DataBlock.load(sample_block_fpath)
     image_shape = sample_blk.data.image.shape
-    label_shape = sample_blk.data.label_stack.shape
+    label_shape = sample_blk.data.label.shape
 
     # create route
     new: geo_core.DataSchema = {
-        'schema_id': geo_core.ingest_data_schema.SCHEMA_ID,
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'dataset': {
             'name': '', # TBD
             'last_updated': t,
@@ -131,7 +131,7 @@ def build_schema(
                 'label': 'uint8',
             },
             'image_band_map': sample_blk.manifest['image_band_map'],
-            'ignore_index': sample_blk.manifest['ignore_index']
+            'ignore_index': sample_blk.manifest['label_ignore_index']
         },
 
         'tensor_shapes': {
@@ -144,7 +144,7 @@ def build_schema(
             },
             'label': {
                 'order': 'L,H,W',
-                'shape': [*sample_blk.data.label_stack.shape],
+                'shape': [*sample_blk.data.label.shape],
                 'L': label_shape[0],
                 'H': label_shape[1],
                 'W': label_shape[2]
@@ -154,10 +154,8 @@ def build_schema(
         'labels': {
             'label_num_cls': sample_blk.manifest['label_num_cls'],
             'label_ignore_cls': sample_blk.manifest['label_ignore_cls'],
-            'label_parent': sample_blk.manifest['label_parent'],
-            'label_parent_cls': sample_blk.manifest['label_parent_cls'],
-            'label_names': sample_blk.manifest['label_names'],
-            'label_color_map': label_color_map,
+            'label_class_names': sample_blk.manifest['label_cls_names'],
+            'label_class_color_map': label_color_map,
             'label_taxonomy': sample_blk.manifest.get('label_taxonomy', {}),
         },
     }

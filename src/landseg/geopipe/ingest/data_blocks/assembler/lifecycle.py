@@ -71,7 +71,7 @@ class BlockBuildingConfig:
     dem_pad_px: int                 # image DEM channel padding in pixels
     block_size: tuple[int, int]     # block size in row, col
     image_band_map: dict[str, int]
-    label_specs: dict[str, geo_core.LabelSpecs]
+    label_specs: dict[str, geo_core.CategoricalSpecs]
     add_spectral: list[str] | None = None
     add_topo: bool = False
 

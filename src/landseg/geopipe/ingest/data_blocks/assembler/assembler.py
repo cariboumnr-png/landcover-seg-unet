@@ -83,14 +83,12 @@ def build_single_block(
         image_array=read_outputs.image_array,
         image_padded_dem=read_outputs.image_padded_dem,
         label_array=read_outputs.label_array,
-        label_specs=inputs.label_specs,
     )
     datablock_config = geo_core.DataBlockConfig(
         image_band_map=inputs.image_band_map,
         image_dem_pad_px=inputs.image_dem_pad_px,
         image_nodata=read_outputs.image_nodata,
         label_nodata=read_outputs.label_nodata,
-
         label_ignore_index=ignore_index,
         add_spectral=add_spectral,
         add_topo=add_topo

@@ -129,8 +129,6 @@ class _LabelsInfo(typing.TypedDict):
     '''Label schema, hierarchy, and ignore configuration.'''
     label_num_cls: dict[str, int]
     label_ignore_cls: dict[str, list[int]]
-    label_parent: dict[str, str | None]
-    label_parent_cls: dict[str, int | None]
-    label_names: dict[str, list[str]]
-    label_color_map: dict[str, list[int]] | None
+    label_class_names: dict[str, list[str]]
+    label_class_color_map: dict[str, list[int]] | None
     label_taxonomy: dict[str, typing.Any]
