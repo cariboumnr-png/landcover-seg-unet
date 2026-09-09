@@ -35,7 +35,6 @@ __all__ = [
     'DatasetManifestError',
     # typing
     'AllowedCategory',
-    'CategoricalSpecs',
     'FeatureSchemes',
     'LabelSchemes',
     'ManifestEntry',
@@ -55,7 +54,6 @@ if typing.TYPE_CHECKING:
 
     from .schema import (
         AllowedCategory,
-        CategoricalSpecs,
         FeatureSchemes,
         LabelSchemes,
         ManifestEntry,
@@ -81,7 +79,6 @@ def __getattr__(name: str):
 
     if name in {
         'AllowedCategory',
-        'CategoricalSpecs',
         'FeatureSchemes',
         'LabelSchemes',
         'ManifestEntry',

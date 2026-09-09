@@ -62,6 +62,12 @@ import math
 import typing
 # third party imports
 import numpy
+# local imports
+import landseg.geopipe.core as geo_core
+
+# aliases
+field = dataclasses.field
+
 
 # ---------------------------------Public Type---------------------------------
 class DataBlockManifest(typing.TypedDict):
@@ -97,22 +103,6 @@ class DataBlockManifest(typing.TypedDict):
     image_stats: dict[str, dict[str, int | float]]
     label_count: dict[str, list[int]]
     label_entropy: dict[str, float]
-
-
-class LabelSpecs(typing.TypedDict):
-    '''Typed dictionary for label specification.'''
-    # required
-    num_cls: int
-    ignore_cls: list[int]
-    index_base: int
-    # optional
-    class_name: typing.NotRequired[dict[str, str]]
-    color_map: typing.NotRequired[dict[str, list[int]]]
-
-    # NOTE: to migrate to data prep
-    # reclass: typing.NotRequired[dict[str, list[int]]]
-    # reclass_name: typing.NotRequired[dict[str, str]]
-    # taxonomy: typing.NotRequired[dict[str, typing.Any]]
 
 
 # ------------------------------Public  Dataclass------------------------------
@@ -158,8 +148,8 @@ class DataBlockConfig:
 
     label_nodata: int = 0
     label_ignore_index: int = 255
-    label_band_map: dict[str, int] = dataclasses.field(default_factory=dict)
-    label_specs: dict[str, LabelSpecs] = dataclasses.field(default_factory=dict)
+    label_band_map: dict[str, int] = field(default_factory=dict)
+    label_specs: dict[str, geo_core.CategoricalSpecs] = field(default_factory=dict)
 
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
@@ -268,7 +258,7 @@ class DataBlock:
             'label_entropy': {},
         }
         # labels speces
-        self.lbl_specs: dict[str, LabelSpecs] = {}
+        self.lbl_specs: dict[str, geo_core.CategoricalSpecs] = {}
 
     # ----- alternative constructor
     @classmethod
