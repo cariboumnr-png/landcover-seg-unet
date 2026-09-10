@@ -89,6 +89,7 @@ def build_single_block(
         image_dem_pad_px=inputs.image_dem_pad_px,
         image_nodata=read_outputs.image_nodata,
         label_nodata=read_outputs.label_nodata,
+        label_specs=inputs.label_specs,
         label_ignore_index=ignore_index,
         add_spectral=add_spectral,
         add_topo=add_topo

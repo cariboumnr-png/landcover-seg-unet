@@ -147,9 +147,8 @@ class DataBlockConfig:
     image_dem_pad_px: int
 
     label_nodata: int | None = None
+    label_specs: dict[str, geo_core.CategoricalSpecs] | None = None
     label_ignore_index: int = 255
-    label_band_map: dict[str, int] = field(default_factory=dict)
-    label_specs: dict[str, geo_core.CategoricalSpecs] = field(default_factory=dict)
 
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
@@ -324,14 +323,11 @@ class DataBlock:
         # if label array is provided:
         if inputs.has_label:
 
-            if not config.label_band_map:
-                raise ValueError('"label_band_map" must not provide')
             if not config.label_specs:
                 raise ValueError('"label_specs" not provided')
 
             self.manifest.update({
                 'label_nodata': config.label_nodata or -1,
-                'label_band_map': dict(config.label_band_map),
                 'label_ignore_index': config.label_ignore_index,
             })
 
@@ -550,14 +546,14 @@ class DataBlock:
     def _label_canonicalize(self) -> None:
         '''Normalize the label stack based on label specs.'''
         stack: list[numpy.ndarray] = []
-        band_map = self.manifest['label_band_map']
         nodata = self.manifest['label_nodata']
         ignore_index = self.manifest['label_ignore_index']
 
         # iterate sorted bands sorted by index
-        for name, i in sorted(band_map.items(), key=lambda item: item[1]):
-            spec = self.lbl_specs[name]
-            arr = self.data.label[i]
+        for i, (name, spec) in enumerate(self.lbl_specs.items(), 1):
+            self.manifest['label_band_map'][name] = i
+
+            arr = self.data.label[i - 1]
 
             # append base layer from original Class IDs with masking)
             self.manifest['label_ignore_cls'][name] = list(spec['ignore_cls'])

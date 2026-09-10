@@ -73,7 +73,7 @@ class BlockBuildingConfig:
     image_band_map: dict[str, int]
     label_specs: dict[str, geo_core.CategoricalSpecs]
     add_spectral: list[str] | None = None
-    add_topo: bool = False
+    add_topo: list[str] | None = None
 
 
 @dataclasses.dataclass(frozen=True)

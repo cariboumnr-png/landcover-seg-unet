@@ -66,7 +66,7 @@ class BlockBuildingParameters:
     dem_pad: int
     ignore_index: int
     add_spectral: list[str] | None = None
-    add_topo: bool = False
+    add_topo: list[str] | None = None
 
 
 # -------------------------------Public Function-------------------------------
