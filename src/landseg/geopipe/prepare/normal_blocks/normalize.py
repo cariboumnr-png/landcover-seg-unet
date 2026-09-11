@@ -45,7 +45,7 @@ def normalize_blocks(
     output_dir: str,
     *,
     channel_indices: list[int] | None = None,
-    target_reclass: dict[str, typing.Any] | None = None,
+    target_reclass: dict[str, geo_core.LabelScheme | None] | None = None,
     rebuild: bool = False,
 ) -> tuple[dict[str, str], int]:
     '''
@@ -114,7 +114,7 @@ def _normalize_one_block(
     global_stats: dict[str, geo_core.ImageBandStats],
     target_dpath: str,
     channel_indices: list[int] | None = None,
-    target_reclass: dict[str, typing.Any] | None = None,
+    target_reclass: dict[str, geo_core.LabelScheme | None] | None = None,
 ):
     '''Normalize a single data block and write it to disk.'''
     # read block
@@ -125,14 +125,14 @@ def _normalize_one_block(
     if channel_indices is not None:
         raw_image = raw_image[channel_indices]
 
-    raw_label = data.label_stack
+    raw_label = data.label
     if target_reclass and any(target_reclass.values()):
-        layer_names = list(block.manifest.get('label_names', {}).keys())
+        layer_names = list(block.manifest['label_band_map'].keys())
         raw_label = _reclassify_label_stack(
             data.label,
             layer_names,
             target_reclass,
-            ignore_index=block.manifest['ignore_index']
+            ignore_index=block.manifest['label_ignore_index']
         )
 
     # prep dict of arrays to write
@@ -150,7 +150,7 @@ def _normalize_one_block(
 def _reclassify_label_stack(
     raw_labels: numpy.ndarray | typing.Sequence[numpy.ndarray],
     label_layer_names: typing.Sequence[str],
-    target_reclass: typing.Mapping[str, typing.Mapping[str, typing.Any] | None],
+    target_reclass: typing.Mapping[str, geo_core.LabelScheme | None],
     ignore_index: int,
 ) -> numpy.ndarray:
     '''

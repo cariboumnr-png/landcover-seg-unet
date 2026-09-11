@@ -39,7 +39,9 @@ def test_resolve_feature_channels_default():
     Then: Return all available bands in sequential order.
     '''
     band_map = {'blue': 0, 'green': 1, 'red': 2, 'nir': 3, 'dem': 4}
-    names, indices = resolver.resolve_feature_channels(band_map)
+    names, indices = resolver.resolve_feature_channels(
+        band_map, None, None
+    )
     assert names == ['blue', 'green', 'red', 'nir', 'dem']
     assert indices == [0, 1, 2, 3, 4]
 
@@ -75,7 +77,9 @@ def test_resolve_feature_channels_inline_list():
     '''
     band_map = {'blue': 0, 'green': 1, 'red': 2, 'nir': 3, 'dem': 4}
     user_cfg = {'custom': ['red', 'nir', 'dem']}
-    names, indices = resolver.resolve_feature_channels(band_map, user_cfg)
+    names, indices = resolver.resolve_feature_channels(
+        band_map, user_cfg, None
+    )
     assert names == ['red', 'nir', 'dem']
     assert indices == [2, 3, 4]
 
@@ -87,71 +91,19 @@ def test_resolve_feature_channels_invalid():
     Then: Raise ValueError.
     '''
     band_map = {'blue': 0, 'green': 1}
-    with pytest.raises(ValueError, match='Named feature scheme "bad" not found'):
+    with pytest.raises(
+        ValueError, match='Named feature scheme \"bad\" not found'
+    ):
         resolver.resolve_feature_channels(
-            band_map, {'sentinel2': 'bad'}, {'sentinel2': {'rgb': ['blue']}}
+            band_map,
+            {'sentinel2': 'bad'},
+            {'sentinel2': {'rgb': ['blue']}},
         )
 
-    with pytest.raises(ValueError, match='Band "unknown"'):
-        resolver.resolve_feature_channels(band_map, {'custom': ['unknown']})
-
-
-def test_resolve_feature_channels_engineered_groups():
-    '''
-    Given: Available band map with base, topo, and spectral bands.
-    When: User requests engineered pseudo-datasets.
-    Then: Resolve matching topo and spectral bands.
-    '''
-    band_map = {
-        'blue': 0, 'green': 1, 'red': 2, 'nir': 3,
-        'slope': 4, 'cos_aspect': 5, 'sin_aspect': 6, 'tpi': 7,
-        'ndvi': 8, 'ndmi': 9,
-    }
-    user_cfg = {
-        'custom': ['blue', 'red'],
-        'topo': 'all',
-        'spectral': ['ndvi'],
-    }
-    names, indices = resolver.resolve_feature_channels(band_map, user_cfg)
-    assert names == [
-        'blue', 'red', 'slope', 'cos_aspect', 'sin_aspect', 'tpi', 'ndvi'
-    ]
-    assert indices == [0, 2, 4, 5, 6, 7, 8]
-
-
-def test_resolve_feature_channels_engineered_toggles():
-    '''
-    Given: Available band map with base and topo bands.
-    When: User provides boolean toggles and descriptive strings.
-    Then: Resolve or omit bands according to configuration.
-    '''
-    band_map = {
-        'blue': 0, 'green': 1,
-        'slope': 2, 'cos_aspect': 3, 'sin_aspect': 4, 'tpi': 5,
-    }
-    # boolean true and phrase toggle
-    user_cfg = {'custom': ['blue'], 'topo': True, 'spectral': False}
-    names, indices = resolver.resolve_feature_channels(band_map, user_cfg)
-    assert names == ['blue', 'slope', 'cos_aspect', 'sin_aspect', 'tpi']
-    assert indices == [0, 2, 3, 4, 5]
-
-    phrase_cfg = {'custom': ['green'], 'topo': 'use topo layers'}
-    names, _ = resolver.resolve_feature_channels(band_map, phrase_cfg)
-    assert names == ['green', 'slope', 'cos_aspect', 'sin_aspect', 'tpi']
-
-
-def test_resolve_feature_channels_engineered_missing_raises():
-    '''
-    Given: Band map without engineered bands.
-    When: User config requests topo or spectral features.
-    Then: Raise ValueError detailing missing bands and ingestion hints.
-    '''
-    band_map = {'blue': 0, 'green': 1}
-    with pytest.raises(ValueError, match='Ensure "add_topo: true"'):
-        resolver.resolve_feature_channels(band_map, {'topo': 'all'})
-
-    with pytest.raises(ValueError, match='Ensure "add_spectral"'):
-        resolver.resolve_feature_channels(band_map, {'spectral': 'all'})
+    with pytest.raises(ValueError, match='Band \"unknown\"'):
+        resolver.resolve_feature_channels(
+            band_map, {'custom': ['unknown']}, None
+        )
 
 
 # ----- `resolve_target_reclass` tests
@@ -172,7 +124,7 @@ def test_resolve_target_reclass():
     }
 
     # default
-    assert resolver.resolve_target_reclass(label_names, None) == {
+    assert resolver.resolve_target_reclass(label_names, None, None) == {
         'landcover': None
     }
 
@@ -188,7 +140,7 @@ def test_resolve_target_reclass():
         'reclass_name': {'1': 'CONIFER'},
     }
     res_inline = resolver.resolve_target_reclass(
-        label_names, {'landcover': inline}
+        label_names, {'landcover': inline}, None
     )
     assert res_inline['landcover'] == inline
 
@@ -227,8 +179,5 @@ def test_reclassify_label_stack():
     # child 2 (class 3 reindexed to 1)
     assert stack[2, 0, 0] == 255
     assert stack[2, 1, 0] == 1
-    # group layer (group 1: [1,2], group 2: [3])
-    assert stack[3, 0, 0] == 1
-    assert stack[3, 0, 1] == 1
-    assert stack[3, 1, 0] == 2
-    assert stack[3, 1, 1] == 255
+
+

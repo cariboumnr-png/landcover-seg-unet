@@ -65,7 +65,7 @@ def run_normalize_blocks(
     paths: _PipelinePaths,
     *,
     channel_indices: list[int] | None = None,
-    target_reclass: dict[str, typing.Any] | None = None,
+    target_reclass: dict[str, geo_core.LabelScheme | None] | None = None,
     policy: artifacts.LifecyclePolicy,
     logger: common.PreparationLogger
 ):
@@ -148,7 +148,7 @@ def _normalize(
     paths: _PipelinePaths,
     *,
     channel_indices: list[int] | None = None,
-    target_reclass: dict[str, typing.Any] | None = None,
+    target_reclass: dict[str, geo_core.LabelScheme | None] | None = None,
     logger: common.PreparationLogger
 ):
     '''Normalize each split.'''
