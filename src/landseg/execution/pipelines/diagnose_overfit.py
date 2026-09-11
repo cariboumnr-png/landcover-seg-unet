@@ -166,15 +166,19 @@ def _prepare_dataspecs(
                 band_map=block.manifest['image_band_map'],
             ),
             label_specs=core.Meta.Label(
-                array_key='label_stack',
-                ignore_index=block.manifest['ignore_index'],
+                array_key='label',
+                ignore_index=block.manifest['label_ignore_index'],
             ),
         ),
         heads=core.Heads(
             class_counts=cc,  # neutral
             logits_adjust={k: [1.0] * len(v) for k, v in cc.items()}, # neutral
-            head_parent=block.manifest['label_parent'],
-            head_parent_cls=block.manifest['label_parent_cls'],
+            head_parent={
+                k: None for k in block.manifest['label_band_map']
+            },
+            head_parent_cls={
+                k: None for k in block.manifest['label_band_map']
+            },
             taxonomy=tax,
             similarity_matrices=sim_matrices,
         ),
@@ -279,7 +283,7 @@ def _create_block(
 # ----- target head resolution helper
 def _resolve_target_head(
     config: configs.RootConfig,
-    label_specs: dict[str, geo_core.LabelSpecs],
+    label_specs: dict[str, geo_core.CategoricalSpecs],
 ) -> str:
     '''Resolve the target head for test block filtering.'''
     if not label_specs:

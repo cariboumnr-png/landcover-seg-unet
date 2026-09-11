@@ -34,8 +34,6 @@ Key capabilities:
   topographic analysis.
 - Compute derived spectral indices (e.g., NDVI, NDMI, NBR) and
   topographic metrics (slope, aspect components, TPI).
-- Construct hierarchical label representations via configurable
-  reclassification mappings.
 - Generate per-block statistics, including class distributions, Shannon
   entropy, valid pixel ratios, and per-band summary statistics (count,
   mean, M2) suitable for streaming aggregation.
@@ -94,10 +92,6 @@ class DataBlockManifest(typing.TypedDict):
     label_cls_clr_map: dict[str, dict[str, list[int]]] # head name: {class name: RGB color}
     label_taxonomy: dict[str, geo_core.TaxonomySpecs]
 
-    # NOTE: to migrate to data prep
-    # label_parent: dict[str, str | None]
-    # label_parent_cls: dict[str, int | None]
-
     # derived stats
     valid_ratios: dict[str, float]
     image_stats: dict[str, dict[str, int | float]]
@@ -119,8 +113,6 @@ class DataBlockInputs:
             raise ValueError('Image array is not of shape [C, H, W]')
 
         if self.label_array is not None:
-            # if self.label_specs is None:
-            #     raise ValueError('Label array present but specs not provided')
             if self.label_array.ndim != 3:
                 raise ValueError('Label array is not of shape [C, H, W]')
             if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
@@ -562,25 +554,6 @@ class DataBlock:
             shifted_arr = arr + (1 - spec['index_base'])
             normalized = numpy.where(mask, shifted_arr, ignore_index)
 
-            # # skip if no reclass is defined for this label
-            # reclass = spec.get('reclass')
-            # if not reclass:
-            #     continue
-            # # grouping layers and children
-            # group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
-            # for group_id, classes in reclass.items():
-            #     mask = numpy.isin(arr, classes)
-            #     group_layer[mask] = int(group_id) # modify in-place
-
-            #     # create child slice: re-index original classes to 1..N
-            #     child_arr = numpy.where(mask, arr, ignore_index)
-            #     for k, cls_id in enumerate(classes, 1):
-            #         child_arr[child_arr == cls_id] = int(k)
-            #     stack.append(child_arr)
-
-            # # append grouping layer last for this specification
-            # stack.append(group_layer)
-
             # calculate valid pixel ratios
             valid = normalized != ignore_index
             ratio = float(valid.sum() / (valid.size)) if valid.size > 0 else 0.0
@@ -607,79 +580,6 @@ class DataBlock:
             stack.append(normalized)
 
         self.data.label = numpy.stack(stack, axis=0)
-
-    # NOTE: to migrate to data prep
-    # def _label_build_topology(self) -> None:
-    #     '''
-    #     Construct the label schema recorded in the block manifest.
-
-    #     Populates self.manifest with hierarchy, class counts, and naming
-    #     conventions derived from the label specifications.
-    #     '''
-    #     # containers
-    #     num_cls: dict[str, int] = {}
-    #     ignore_cls: dict[str, list[int]] = {}
-    #     parent_map: dict[str, str | None] = {}
-    #     parent_cls_map: dict[str, int | None] = {}
-    #     label_names: dict[str, list[str]] = {}
-
-    #     # iterate label specs
-    #     for name, spec in self.lbl_specs.items():
-    #         cls_name = spec.get('class_name', {})
-    #         index_base = spec.get('index_base', 1)
-
-    #         # base
-    #         num_cls[name] = spec['num_cls']
-    #         ignore_cls[name] = spec['ignore_cls']
-    #         parent_map[name] = None
-    #         parent_cls_map[name] = None
-    #         label_names[name] = [
-    #             cls_name.get(str(j + index_base), f'cls_{j + 1}')
-    #             for j in range(spec['num_cls'])
-    #         ]
-
-    #         # skip if no reclass is defined for this label
-    #         reclass = spec.get('reclass')
-    #         if not reclass:
-    #             continue
-
-    #         # children
-    #         grp_name = f'{name}_groups' # fallback genric name
-    #         reclass_name = spec.get('reclass_name', {})
-    #         for gid, classes in reclass.items():
-    #             child_name = reclass_name.get(gid, f'{grp_name}_{gid}')
-    #             num_cls[child_name] = len(classes)
-    #             ignore_cls[child_name] = []
-    #             parent_map[child_name] = grp_name
-    #             parent_cls_map[child_name] = int(gid)
-    #             label_names[child_name] = [
-    #                 cls_name.get(str(c), f'cls_{c}')
-    #                 for c in classes
-    #             ]
-
-    #         # parent
-    #         num_cls[grp_name] = len(reclass)
-    #         ignore_cls[grp_name] = []
-    #         parent_map[grp_name] = None
-    #         parent_cls_map[grp_name] = None
-    #         label_names[grp_name] = [
-    #             reclass_name.get(gid, f'grp_{gid}')
-    #             for gid in sorted(reclass.keys(), key=int)
-    #         ]
-
-    #     # populate meta dict
-    #     self.manifest['label_num_cls'] = num_cls
-    #     self.manifest['label_ignore_cls'] = ignore_cls
-    #     self.manifest['label_parent'] = parent_map
-    #     self.manifest['label_parent_cls'] = parent_cls_map
-    #     self.manifest['label_names'] = label_names
-
-    #     label_taxonomy: dict[str, typing.Any] = {}
-    #     for name, spec in self.lbl_specs.items():
-    #         if 'taxonomy' in spec and spec['taxonomy']:
-    #             label_taxonomy[name] = spec['taxonomy']
-    #     if label_taxonomy:
-    #         self.manifest['label_taxonomy'] = label_taxonomy
 
     @staticmethod
     def _get_image_invalid_mask(

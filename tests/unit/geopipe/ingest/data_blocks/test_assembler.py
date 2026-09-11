@@ -90,7 +90,6 @@ def test_check_npz_integrity_success(tmp_path):
         image_array=img,
         image_padded_dem=None,
         label_array=None,
-        label_specs=None
     )
     block = geo_core.DataBlock.build(inputs, cfg)
     block.save(str(fpath))
@@ -137,7 +136,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
 
     window = alias.RasterWindow(4, 4, 8, 8)  # type: ignore
 
-    label_specs: dict[str, geo_core.LabelSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpecs] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],
@@ -166,7 +165,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
         inputs=inputs,
         ignore_index=255,
         add_spectral=['ndvi'],
-        add_topo=True
+        add_topo=['slope', 'aspect', 'tpi']
     )
     assert block.manifest['block_name'] == 'block_4_4'
     assert block.manifest['has_label'] is True
@@ -187,7 +186,7 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     ))
 
     window = alias.RasterWindow(4, 4, 8, 8)  # type: ignore
-    label_specs: dict[str, geo_core.LabelSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpecs] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],
@@ -257,7 +256,7 @@ def test_build_blocks_orchestrator(
         label=label_windows
     )
 
-    label_specs: dict[str, geo_core.LabelSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpecs] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],
@@ -278,7 +277,7 @@ def test_build_blocks_orchestrator(
         },
         label_specs=label_specs,
         add_spectral=['ndvi'],
-        add_topo=True
+        add_topo=['slope', 'aspect', 'tpi']
     )
 
     result = assembler.build_blocks(
@@ -320,7 +319,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
 
     window = alias.RasterWindow(0, 0, 16, 16)  # type: ignore
 
-    label_specs: dict[str, geo_core.LabelSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpecs] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],

@@ -39,31 +39,33 @@ def dataspecs(tmp_path):
     if not os.path.exists(f'{tmp_path}/train_block.npz'):
         img = numpy.random.rand(4, 256, 256).astype(numpy.float32)
         lbl = numpy.random.randint(1, 3, size=(2, 256, 256)).astype(numpy.int64)
-        cfg = geo_core.DataBlockConfig(
-            image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
-            image_nodata=numpy.nan,
-            image_dem_pad_px=0,
-            label_ignore_index=255,
-        )
-        label_specs: dict[str, geo_core.LabelSpecs] = {
+        label_specs: dict[str, geo_core.CategoricalSpecs] = {
             'head_1': {
                 'num_cls': 2,
                 'ignore_cls': [255],
+                'index_base': 1,
                 'class_name': {'1': 'bg', '2': 'fg'},
             },
             'head_2': {
                 'num_cls': 3,
                 'ignore_cls': [255],
-                'class_name': {'0': 'c0', '1': 'c1', '2': 'c2'},
+                'index_base': 1,
+                'class_name': {'1': 'c0', '2': 'c1', '3': 'c2'},
             },
         }
+        cfg = geo_core.DataBlockConfig(
+            image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
+            image_nodata=numpy.nan,
+            image_dem_pad_px=0,
+            label_ignore_index=255,
+            label_specs=label_specs,
+        )
         for name in ('train_block', 'val_block', 'test_block'):
             inputs = geo_core.DataBlockInputs(
                 block_name=name,
                 image_array=img,
                 image_padded_dem=None,
                 label_array=lbl,
-                label_specs=label_specs,
             )
             block = geo_core.DataBlock.build(inputs, cfg)
             block.save(f'{tmp_path}/{name}.npz')
