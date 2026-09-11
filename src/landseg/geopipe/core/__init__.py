@@ -149,7 +149,7 @@ def __getattr__(name: str):
         'TransformSchema',
         'PartitionSummary'
     }:
-        obj = importlib.import_module('.prepare_blocks_types', __package__)
+        obj = importlib.import_module('.prepared_dateset_types', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -39,6 +39,7 @@ import typing
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.core.prepared_dateset_types as geo_types
 import landseg.geopipe.prepare.common as common
 
 # --------------------------------private types--------------------------------
@@ -124,7 +125,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_version': geo_core.prepare_blocks_types.TRANSFORM_SCHEMA_ID,
+            'schema_version': geo_types.TRANSFORM_SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,
