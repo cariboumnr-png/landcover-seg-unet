@@ -36,6 +36,7 @@ __all__ = [
     # typing
     'AllowedCategory',
     'FeatureSchemes',
+    'LabelScheme',
     'LabelSchemes',
     'ManifestEntry',
     'ManifestEntryNormalizer',
@@ -55,6 +56,7 @@ if typing.TYPE_CHECKING:
     from .schema import (
         AllowedCategory,
         FeatureSchemes,
+        LabelScheme,
         LabelSchemes,
         ManifestEntry,
     )
@@ -80,6 +82,7 @@ def __getattr__(name: str):
     if name in {
         'AllowedCategory',
         'FeatureSchemes',
+        'LabelScheme',
         'LabelSchemes',
         'ManifestEntry',
         'Resolver'

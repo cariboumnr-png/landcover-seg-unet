@@ -52,6 +52,8 @@ __all__ = [
     'GridPayload',
     'GridMeta',
     'ImageBandStats',
+    'LabelScheme',
+    'LabelSchemes',
     'TaxonomySpecs',
     'TransformSchema',
     'PartitionSummary',
@@ -61,7 +63,9 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .categorical_types import (
         CategoricalSpecs,
-        TaxonomySpecs
+        LabelScheme,
+        LabelSchemes,
+        TaxonomySpecs,
     )
     from .data_block import (
         DataBlock,
@@ -94,6 +98,8 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {
         'CategoricalSpecs',
+        'LabelScheme',
+        'LabelSchemes',
         'TaxonomySpecs',
     }:
         obj = importlib.import_module('.categorical_types', __package__)

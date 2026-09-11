@@ -267,10 +267,16 @@ class _PreparationCfg:
         self.hydration.validate()
 
         for k, v in self.features.items():
-            if not isinstance(k, str) or not isinstance(v, (str, list, bool)):
+            if not isinstance(k, str) or not (
+                isinstance(v, str)
+                or (
+                    isinstance(v, list)
+                    and all(isinstance(item, str) for item in v)
+                )
+            ):
                 raise ValueError(
                     f'Invalid features config for "{k}": '
-                    f'expected string, list of strings, or boolean'
+                    f'expected string scheme name or list of band strings'
                 )
 
         for k, v in self.targets.items():

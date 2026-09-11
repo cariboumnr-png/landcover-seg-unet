@@ -50,13 +50,6 @@ AllowedCategory = typing.Literal[
 ]
 
 
-class _LabelScheme(typing.TypedDict):
-    '''Named reclassification scheme for label raster.'''
-    reclass: dict[str, list[int]]
-    reclass_name: dict[str, str]
-
-
-LabelSchemes = dict[str, _LabelScheme]
-
-
+LabelScheme = geo_core.LabelScheme
+LabelSchemes = geo_core.LabelSchemes
 FeatureSchemes = dict[str, list[str]]

@@ -105,19 +105,12 @@ Layer** across `landseg.geopipe`.
   This enables optional on-the-fly calculation of topographic metrics (slope,
   aspect sine/cosine, TPI) and spectral indices (NDVI, NDMI, NBR) during block
   construction.
-- **Engineered Pseudo-Datasets in Preparation Resolution**:
-  Extended `geopipe.prepare.resolver.resolve_feature_channels` to recognize
-  `topo` and `spectral` pseudo-datasets directly within `features:`. Supports:
-  - Global group selection via `'all'`, `True`, or descriptive keywords
-    (`'use topo layers'`, `'use spectral indices'`).
-  - Selective granular slicing via band lists (e.g., `topo: [slope, tpi]`,
-    `spectral: [ndvi]`).
-  - Explicit exclusion via `False`.
-- **Actionable Diagnostic Messaging**:
-  Added explicit validation that detects when users select engineered groups
-  in `data-prepare: features:` that were not materialized during ingestion,
-  raising informative `ValueError`s directing the user to enable `add_topo` or
-  `add_spectral` in the ingestion configuration.
+- **Explicit Preparation Channel Selection**:
+  Ingested blocks record all raw and engineered channels into
+  `image_band_map`. Preparation resolution in `geopipe.prepare.resolver`
+  is kept deliberately simple and boring: it maps explicit band lists or
+  manifest-defined feature schemes directly against `image_band_map` without
+  pseudo-dataset groups, fuzzy phrases, or boolean heuristics.
 
 ---
 
@@ -129,17 +122,15 @@ Layer** across `landseg.geopipe`.
 - **Experiment Agility**: Data scientists can test different feature subsets
   and target definitions in `user.yaml` or notebooks without re-running data
   harmonization or ingestion.
-- **Ingestion-Preparation Cohesion**: Unified configuration ergonomics
-  between materializing derived layers during ingestion (`data-ingest`)
-  and selecting subsets for training in `data-prepare: features:`.
 - **Immutability of Ingested Blocks**: Ingested `.npz` blocks remain pure,
   canonical representations of the underlying geospatial layers.
-- **Single Responsibility & Cohesion**: Clear separation between metadata
+- **Single Responsibility & Simplicity**: Clear separation between metadata
   resolution (`resolver.py`), catalog filtering (`adapter.py`), and tensor
-  operations (`normal_blocks/`).
+  operations (`normal_blocks/`). The resolver operates strictly with explicit
+  mappings and deterministic types.
 - **Fail-Fast Configuration Validation**: Explicit resolver checks detect
-  misconfigurations early (e.g., selecting unmaterialized derived layers
-  or non-existent sidecar schemes) before block normalization begins.
+  misconfigurations early (e.g. unknown bands or non-existent sidecar schemes)
+  before block normalization begins.
 
 ### Negative / Migration
 - **Sidecar Schema Migration**: Existing dataset manifests and sidecars must
@@ -166,9 +157,8 @@ Layer** across `landseg.geopipe`.
 5. **Ingestion Feature Engineering**: Exposed `add_topo` and `add_spectral` in
    dataclass schemas, Hydra defaults, execution pipelines, CLI translators,
    and `user.yaml`.
-6. **Preparation Channel Cohesion**: Extended channel resolution with
-   pseudo-dataset support for `topo` and `spectral` groups, supporting 'all',
-   boolean toggles, descriptive phrases, and granular band lists.
+6. **Explicit Channel and Target Resolution**: Kept channel resolution simple
+   and explicit against `image_band_map`, removing pseudo-dataset aliases.
 7. **Quality Assurance**: Added full unit test suites for schema validation,
    manifest verification, CLI translation, channel resolution, and pipeline
    execution.

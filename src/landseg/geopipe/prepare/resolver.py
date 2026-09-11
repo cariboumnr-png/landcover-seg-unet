@@ -29,106 +29,15 @@ input feature channels and multi-head target hierarchies.
 
 # standard imports
 import typing
+# local imports
+import landseg.geopipe.core as geo_core
 
 
-# ------------------------------private constants------------------------------
-_ENGINEERED_GROUPS: dict[str, tuple[tuple[str, ...], str]] = {
-    'topo': (
-        ('slope', 'cos_aspect', 'sin_aspect', 'tpi'),
-        'add_topo: true',
-    ),
-    'topography': (
-        ('slope', 'cos_aspect', 'sin_aspect', 'tpi'),
-        'add_topo: true',
-    ),
-    'spectral': (
-        ('ndvi', 'ndmi', 'nbr'),
-        'add_spectral',
-    ),
-    'spectral_indices': (
-        ('ndvi', 'ndmi', 'nbr'),
-        'add_spectral',
-    ),
-    'indices': (
-        ('ndvi', 'ndmi', 'nbr'),
-        'add_spectral',
-    ),
-}
-
-
-# ------------------------------private functions------------------------------
-def _resolve_engineered_group(
-    group_name: str,
-    selection: typing.Any,
-    available_band_map: typing.Mapping[str, int],
-) -> list[str]:
-    '''
-    Resolve bands for engineered pseudo-datasets (topo or spectral).
-    '''
-    known_bands, ingest_hint = _ENGINEERED_GROUPS[group_name]
-    if selection is False:
-        return []
-
-    is_all = (
-        selection is None
-        or selection is True
-        or (
-            isinstance(selection, str)
-            and selection.lower() in (
-                'all',
-                'use topo layers',
-                'use spectral indices',
-            )
-        )
-    )
-    if is_all:
-        matched = [b for b in available_band_map if b in known_bands]
-        if not matched:
-            raise ValueError(
-                f'Engineered features requested for "{group_name}", but '
-                f'no matching bands ({list(known_bands)}) exist in data '
-                f'blocks. Ensure "{ingest_hint}" was set during data '
-                'ingestion.'
-            )
-        return matched
-
-    if isinstance(selection, str):
-        band = selection.lower()
-        if band in available_band_map and band in known_bands:
-            return [band]
-        available_known = [
-            b for b in available_band_map if b in known_bands
-        ]
-        raise ValueError(
-            f'Band "{selection}" for "{group_name}" not found in data '
-            f'blocks. Available: {available_known}'
-        )
-
-    if isinstance(selection, list):
-        result: list[str] = []
-        for item in selection:
-            band = str(item).lower()
-            if band not in available_band_map:
-                raise ValueError(
-                    f'Band "{band}" for "{group_name}" not found in data '
-                    f'blocks. Ensure "{ingest_hint}" was set during '
-                    'data ingestion.'
-                )
-            result.append(band)
-        return result
-
-    return []
-
-
-# ----- public functions
+# ----- `resolve_feature_channels`
 def resolve_feature_channels(
     available_band_map: typing.Mapping[str, int],
-    user_features_cfg: (
-        typing.Mapping[str, str | list[str] | bool] | None
-    ) = None,
-    raster_schemes: (
-        typing.Mapping[str, typing.Mapping[str, list[str]]] | None
-    ) = None,
+    user_features_cfg: typing.Mapping[str, list[str] | str] | None,
+    raster_schemes: typing.Mapping[str, typing.Mapping[str, list[str]]] | None,
 ) -> tuple[list[str], list[int]]:
     '''
     Resolve active feature band names and 0-based channel indices.
@@ -139,9 +48,9 @@ def resolve_feature_channels(
     Args:
         available_band_map: Mapping of lower-case band names to 0-based
             channel indices in the ingested data blocks.
-        user_features_cfg: Mapping of raster dataset name to scheme name
-            (e.g. 'rgb_nir', 'all'), inline list of band names, or
-            engineered pseudo-dataset toggles ('topo', 'spectral').
+        user_features_cfg: Mapping of raster dataset or selection name to
+            a scheme name (e.g. 'rgb_nir', 'all') or an explicit list of
+            band names.
         raster_schemes: Mapping of raster dataset name to its named
             schemes dictionary from dataset manifest metadata.
 
@@ -158,28 +67,21 @@ def resolve_feature_channels(
     schemes_dict = raster_schemes or {}
 
     for raster_name, selection in user_features_cfg.items():
-        r_lower = raster_name.lower()
-        if r_lower in _ENGINEERED_GROUPS:
-            selected_names.extend(
-                _resolve_engineered_group(
-                    r_lower, selection, available_band_map
-                )
-            )
-            continue
-
-        if selection is None or selection == 'all':
-            # select all bands that contain raster prefix or match
+        if selection == 'all':
             matched = [
                 b for b in available_band_map
                 if b == raster_name or b.startswith(f'{raster_name}_')
             ]
             if not matched:
                 matched = [b for b in available_band_map if b == raster_name]
+            if not matched:
+                raise ValueError(
+                    f'No bands matching raster "{raster_name}" found in '
+                    f'available bands: {list(available_band_map.keys())}'
+                )
             selected_names.extend(matched)
-            continue
 
-        if isinstance(selection, str):
-            # look up named scheme in raster schemes
+        elif isinstance(selection, str):
             r_schemes = schemes_dict.get(raster_name, {})
             if not r_schemes and selection in schemes_dict:
                 r_schemes = schemes_dict
@@ -189,11 +91,21 @@ def resolve_feature_channels(
                     f'raster "{raster_name}". Available: '
                     f'{list(r_schemes.keys())}'
                 )
-            selected_names.extend(r_schemes[selection])
+            scheme_bands = r_schemes[selection]
+            for band in scheme_bands:
+                if band not in available_band_map:
+                    raise ValueError(
+                        f'Band "{band}" from scheme "{selection}" not found '
+                        f'in available bands: {list(available_band_map.keys())}'
+                    )
+            selected_names.extend(scheme_bands)
 
         elif isinstance(selection, list):
-            # inline list of band names
             for band in selection:
+                if not isinstance(band, str):
+                    raise TypeError(
+                        f'Band name must be a string, got {type(band)}'
+                    )
                 if band not in available_band_map:
                     raise ValueError(
                         f'Band "{band}" in feature selection not found in '
@@ -201,44 +113,41 @@ def resolve_feature_channels(
                     )
                 selected_names.append(band)
 
-    # deduplicate while preserving order
+        else:
+            raise TypeError(
+                f'Invalid feature selection type for "{raster_name}": '
+                f'expected str or list of str, got {type(selection)}'
+            )
+
+    # deduplicate while preserving selection order
     deduped_names = [
         b for b in dict.fromkeys(selected_names) if b in available_band_map
     ]
-
-    if not deduped_names:
-        # fallback to all available if selection matched nothing
-        deduped_names = sorted(
-            available_band_map.keys(), key=lambda k: available_band_map[k]
-        )
 
     selected_indices = [available_band_map[b] for b in deduped_names]
     return deduped_names, selected_indices
 
 
+# ----- `resolve_target_reclass`
 def resolve_target_reclass(
     label_names_map: typing.Mapping[str, list[str]] | typing.Sequence[str],
-    user_targets_cfg: (
-        typing.Mapping[str, str | dict[str, typing.Any]] | None
-    ) = None,
-    raster_schemes: (
-        typing.Mapping[str, typing.Mapping[str, typing.Any]] | None
-    ) = None,
-) -> dict[str, dict[str, typing.Any] | None]:
+    user_targets_cfg: typing.Mapping[str, str | geo_core.LabelScheme] | None,
+    raster_schemes: typing.Mapping[str, typing.Mapping[str, geo_core.LabelScheme]] | None,
+) -> dict[str, geo_core.LabelScheme | None]:
     '''
     Resolve active reclassification settings per target label layer.
 
     Args:
         label_names_map: Mapping of label layer name to list of class
             names or sequence of label layer names.
-        user_targets_cfg: Mapping of label name to scheme name or inline
-            reclassification dictionary.
+        user_targets_cfg: Mapping of label name to scheme name or explicit
+            reclassification specification dictionary.
         raster_schemes: Mapping of raster name to named label schemes.
 
     Returns:
         Mapping of label layer name to resolved LabelScheme or None.
     '''
-    resolved: dict[str, dict[str, typing.Any] | None] = {}
+    resolved: dict[str, geo_core.LabelScheme | None] = {}
     if not user_targets_cfg:
         return {k: None for k in label_names_map}
 
@@ -259,9 +168,20 @@ def resolve_target_reclass(
                     f'Named target scheme "{cfg}" not found for label '
                     f'"{label_name}". Available: {list(r_schemes.keys())}'
                 )
-            resolved[label_name] = dict(r_schemes[cfg])
+            resolved[label_name] = dict(r_schemes[cfg])  # type: ignore[assignment]
 
         elif isinstance(cfg, dict):
+            if 'reclass' not in cfg or not isinstance(cfg['reclass'], dict):
+                raise ValueError(
+                    f'Target reclassification dict for "{label_name}" must '
+                    'contain a "reclass" mapping'
+                )
             resolved[label_name] = cfg
+
+        else:
+            raise TypeError(
+                f'Invalid target config type for "{label_name}": '
+                f'expected str or dict, got {type(cfg)}'
+            )
 
     return resolved
