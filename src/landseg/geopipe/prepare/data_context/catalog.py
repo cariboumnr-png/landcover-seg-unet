@@ -42,7 +42,6 @@ import landseg.geopipe.core as geo_core
 
 # typing aliases
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
-SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 
 class _CatalogViewConfig(typing.Protocol):
@@ -66,26 +65,27 @@ class DataBlocksView:
 
 def read_catalog(
     catalog_fpath: str,
-    schema_fpath: str,
+    data_schema: geo_core.DataSchema,
     config: _CatalogViewConfig,
 ) -> DataBlocksView:
     '''
-    Load and adapt canonical blocks into a structured view for partitioning.
+    Load and adapt canonical blocks into a structured view for
+    partitioning.
 
     Filters blocks based on a minimum valid-pixel threshold, derives
-    class counts, and optionally incorporates external holdout test blocks.
+    class counts, and optionally incorporates external holdout test
+    blocks.
 
     Args:
-        catalog: Path to canonical blocks catalog JSON.
-        schema: Path to dataset schema JSON.
+        catalog_fpath: Path to canonical blocks catalog JSON.
+        data_schema: Ingested dataset schema instance.
         config: Catalog view configuration.
-        test_catalog: Optional path to external holdout catalog JSON.
 
     Returns:
-        DataBlocksView containing filtered metadata for partitioning.
+        A `DataBlocksView` containing filtered metadata for
+        partitioning.
     '''
     # retrieve image paths and shape from schema
-    data_schema = SchemaCtrl.load_json_or_fail(schema_fpath).fetch()
     image_paths = data_schema['dataset']['data_source']['image_paths']
     image_shape = data_schema['tensor_shapes']['image']
 

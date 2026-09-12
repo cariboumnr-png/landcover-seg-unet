@@ -20,11 +20,11 @@
 # =========================================================================== #
 
 '''
-Block normalization utilities.
+Label reclassification utilities.
 
-Applies global image normalization to raw data blocks using statistics
-computed from training data. Produces normalized block artifacts and
-maintains split-indexed file mappings for downstream schema generation.
+Builds a multi-head label stack applying active target
+reclassifications, including base layers, child slices, and grouping
+layers.
 '''
 
 # standard imports
@@ -42,16 +42,16 @@ def reclassify_label_stack(
     ignore_index: int,
 ) -> numpy.ndarray:
     '''
-    Build a multi-head label stack applying active target reclassifications.
+    Build multi-head label stack applying active target reclasses.
 
     Args:
         raw_labels: 3D array of shape [L, H, W] or list of 2D arrays.
         label_layer_names: Names corresponding to each base label layer.
         target_reclass: Mapping of label layer name to reclass config.
-        ignore_index: Integer index for invalid/masked pixels (e.g. 255).
+        ignore_index: Integer index for masked pixels (e.g. 255).
 
     Returns:
-        A 3D numpy array of shape [L, H, W] containing the transformed stack.
+        A 3D numpy array of shape [L, H, W] with the transformed stack.
     '''
     if isinstance(raw_labels, numpy.ndarray):
         if raw_labels.ndim == 3:

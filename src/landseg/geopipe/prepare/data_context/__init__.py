@@ -20,12 +20,13 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.prepare`.
+Top-level namespace for `landseg.geopipe.prepare.data_context`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -33,8 +34,13 @@ import typing
 __all__ = [
     # classes
     'DataBlocksView',
+    'DatasetContext',
+    'FeatureSelection',
+    'TargetHeadsContext',
     # functions
+    'build_dataset_context',
     'read_catalog',
+    'reclassify_label_stack',
     'resolve_feature_channels',
     'resolve_target_heads',
     # types
@@ -44,7 +50,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .catalog import DataBlocksView, read_catalog
-    from .sematics import resolve_feature_channels, resolve_target_heads
+    from .context import DatasetContext, build_dataset_context
+    from .reclassify import reclassify_label_stack
+    from .semantics import (
+        FeatureSelection,
+        TargetHeadsContext,
+        resolve_feature_channels,
+        resolve_target_heads,
+    )
 
 
 def __getattr__(name: str):
@@ -52,7 +65,22 @@ def __getattr__(name: str):
     if name in {'DataBlocksView', 'read_catalog'}:
         return getattr(importlib.import_module('.catalog', __package__), name)
 
-    if name in {'resolve_feature_channels', 'resolve_target_heads'}:
-        return getattr(importlib.import_module('.semantics', __package__), name)
+    if name in {'DatasetContext', 'build_dataset_context'}:
+        return getattr(importlib.import_module('.context', __package__), name)
+
+    if name in {'reclassify_label_stack'}:
+        return getattr(
+            importlib.import_module('.reclassify', __package__), name
+        )
+
+    if name in {
+        'FeatureSelection',
+        'TargetHeadsContext',
+        'resolve_feature_channels',
+        'resolve_target_heads',
+    }:
+        return getattr(
+            importlib.import_module('.semantics', __package__), name
+        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
