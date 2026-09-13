@@ -39,10 +39,13 @@ __all__ = [
     'TargetHeadsContext',
     # functions
     'build_dataset_context',
+    'derive_head_class_counts',
     'read_catalog',
     'reclassify_label_stack',
     'resolve_feature_channels',
+    'resolve_focal_head',
     'resolve_target_heads',
+    'resolve_target_reclass',
     # types
 ]
 
@@ -55,8 +58,11 @@ if typing.TYPE_CHECKING:
     from .semantics import (
         FeatureSelection,
         TargetHeadsContext,
+        derive_head_class_counts,
         resolve_feature_channels,
+        resolve_focal_head,
         resolve_target_heads,
+        resolve_target_reclass,
     )
 
 
@@ -76,8 +82,11 @@ def __getattr__(name: str):
     if name in {
         'FeatureSelection',
         'TargetHeadsContext',
+        'derive_head_class_counts',
         'resolve_feature_channels',
+        'resolve_focal_head',
         'resolve_target_heads',
+        'resolve_target_reclass',
     }:
         return getattr(
             importlib.import_module('.semantics', __package__), name

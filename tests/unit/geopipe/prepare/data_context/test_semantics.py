@@ -250,3 +250,113 @@ def test_resolve_target_heads_validation_errors():
             label_names_map=label_names,
             user_targets_cfg={'landcover': 12345},  # type: ignore[arg-type]
         )
+
+
+# ----- `FeatureSelection` unpack tests
+def test_feature_selection_iteration():
+    '''
+    Given: A FeatureSelection instance.
+    When: Unpacking as a 2-tuple.
+    Then: Unpack into names and indices lists.
+    '''
+    sel = semantics.FeatureSelection(names=('a', 'b'), indices=(0, 1))
+    names, indices = sel
+    assert names == ['a', 'b']
+    assert indices == [0, 1]
+
+
+# ----- `derive_head_class_counts` tests
+def test_derive_head_class_counts():
+    '''
+    Given: Raw base class counts and target heads hierarchy.
+    When: Deriving head class counts in memory.
+    Then: Calculate exact pixel counts for base, child, and group heads.
+    '''
+    label_names = {'landcover': ['c1', 'c2', 'c3']}
+    reclass_scheme = {
+        'reclass': {'1': [1, 2], '2': [3]},
+        'reclass_name': {'1': 'VEG', '2': 'WAT'},
+    }
+    heads_ctx = semantics.resolve_target_heads(
+        label_names_map=label_names,
+        user_targets_cfg={
+            'landcover': reclass_scheme  # type: ignore[arg-type]
+        },
+    )
+
+    raw_counts = {'landcover': [50, 100, 200, 300]}
+    derived = semantics.derive_head_class_counts(raw_counts, heads_ctx)
+
+    # 1. base head
+    assert derived['landcover'] == [50, 100, 200, 300]
+    # 2. child slices
+    # VEG: classes 1 and 2 reindexed to 1, 2
+    assert derived['landcover_VEG'] == [0, 100, 200]
+    # WAT: class 3 reindexed to 1
+    assert derived['landcover_WAT'] == [0, 300]
+    # 3. grouping head
+    # group 1 = 100 + 200 = 300, group 2 = 300
+    assert derived['landcover_group'] == [0, 300, 300]
+
+
+# ----- `resolve_focal_head` tests
+def test_resolve_focal_head():
+    '''
+    Given: Target heads context and various focal target requests.
+    When: Resolving the focal head name.
+    Then: Correctly resolve head from head name, class name, or default.
+    '''
+    label_names = {'landcover': ['c1', 'c2', 'c3']}
+    reclass_scheme = {
+        'reclass': {'1': [1, 2], '2': [3]},
+        'reclass_name': {'1': 'VEG', '2': 'WAT'},
+    }
+    heads_ctx = semantics.resolve_target_heads(
+        label_names_map=label_names,
+        user_targets_cfg={
+            'landcover': reclass_scheme  # type: ignore[arg-type]
+        },
+    )
+
+    # default: prefers grouping head if reclassified
+    assert semantics.resolve_focal_head(heads_ctx, None) == 'landcover_group'
+
+    # direct head name match
+    assert semantics.resolve_focal_head(
+        heads_ctx, 'landcover_VEG'
+    ) == 'landcover_VEG'
+    assert semantics.resolve_focal_head(
+        heads_ctx, 'landcover'
+    ) == 'landcover'
+
+    # class name match (VEG is class name in landcover_group)
+    assert semantics.resolve_focal_head(
+        heads_ctx, 'VEG'
+    ) == 'landcover_group'
+
+    # unknown target error
+    with pytest.raises(KeyError, match='Focal target "unknown" not found'):
+        semantics.resolve_focal_head(heads_ctx, 'unknown')
+
+
+# ----- `resolve_target_reclass` compatibility tests
+def test_resolve_target_reclass_compat():
+    '''
+    Given: Label names and named label schemes.
+    When: Running resolve_target_reclass compatibility helper.
+    Then: Return mapping of layer name to resolved LabelScheme.
+    '''
+    schemes = {
+        'landcover': {
+            'binary': {
+                'reclass': {'1': [1, 2]},
+                'reclass_name': {'1': 'VEG'},
+            }
+        }
+    }
+    res = semantics.resolve_target_reclass(
+        {'landcover': ['c1', 'c2']},
+        {'landcover': 'binary'},
+        schemes,
+    )
+    assert res['landcover'] == schemes['landcover']['binary']

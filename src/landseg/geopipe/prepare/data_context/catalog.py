@@ -24,9 +24,9 @@
 '''
 Catalog adapter utilities.
 
-Provides helpers to load and filter a canonical blocks catalog and schema
-to extract class counts and file paths needed for downstream sampling
-and analysis.
+Provides helpers to load and filter a canonical blocks catalog and
+schema to extract class counts and file paths needed for downstream
+sampling and analysis.
 '''
 
 # standard imports
@@ -49,6 +49,8 @@ class _CatalogViewConfig(typing.Protocol):
     @property
     def valid_pxs(self) -> dict[str, float]: ...
     @property
+    def focal_target(self) -> str | None: ...
+    @property
     def test_catalog(self) -> str | None: ...
     @property
     def non_overlapping_test_grid(self) -> bool: ...
@@ -61,8 +63,19 @@ class DataBlocksView:
     external_test_blocks: list[str] | None
     crs: str
     transform: rasterio.transform.Affine
+    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]] = (
+        dataclasses.field(default_factory=dict)
+    )
+    valid_class_counts: dict[tuple[int, int], list[int]] = (
+        dataclasses.field(default_factory=dict)
+    )
+    base_class_counts: dict[tuple[int, int], list[int]] = (
+        dataclasses.field(default_factory=dict)
+    )
+    focal_head: str = ''
 
 
+# ----- `read_catalog`
 def read_catalog(
     catalog_fpath: str,
     data_schema: geo_core.DataSchema,
@@ -124,11 +137,37 @@ def read_catalog(
     else:
         test_blocks = None
 
+    # raw class counts from catalog entries
+    raw_counts = {k: v['class_count'] for k, v in valid_blocks.items()}
+
+    # preliminary focal head derivation from config or catalog entry
+    focal_head = getattr(config, 'focal_target', None) or ''
+    if not focal_head and valid_blocks:
+        first_entry = next(iter(valid_blocks.values()))
+        if 'class_count' in first_entry and first_entry['class_count']:
+            focal_head = next(iter(first_entry['class_count'].keys()))
+
+    valid_counts: dict[tuple[int, int], list[int]] = {}
+    base_counts: dict[tuple[int, int], list[int]] = {}
+    if focal_head:
+        valid_counts = {
+            k: v['class_count'][focal_head] for k, v in valid_blocks.items()
+            if focal_head in v.get('class_count', {})
+        }
+        base_counts = {
+            k: v['class_count'][focal_head] for k, v in valid_blocks.items()
+            if k in base_coords and focal_head in v.get('class_count', {})
+        }
+
     return DataBlocksView(
         valid_blocks={k: v['file_path'] for k, v in valid_blocks.items()},
         external_test_blocks=test_blocks,
         crs=canvas_crs,
         transform=canvas_transform,
+        raw_class_counts=raw_counts,
+        valid_class_counts=valid_counts,
+        base_class_counts=base_counts,
+        focal_head=focal_head,
     )
 
 
@@ -137,7 +176,7 @@ def _filter_blocks(
     fpath: str,
     valid_px_thresholds: dict[str, float],
 ) -> dict[tuple[int, int], geo_core.CatalogEntry]:
-    '''Parse a catalog JSON into filtered class counts and file paths.'''
+    '''Parse catalog JSON into filtered class counts and file paths.'''
 
     def _is_valid_block(
         valid_thresholds: dict[str, float],

@@ -31,6 +31,8 @@ self-contained dataset preparation context.
 from __future__ import annotations
 import dataclasses
 import typing
+# third-party imports
+import rasterio.transform
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -53,6 +55,41 @@ class DatasetContext:
     features: semantics.FeatureSelection
     targets: semantics.TargetHeadsContext
 
+    @property
+    def focal_head(self) -> str:
+        '''Active focal head name for partitioning.'''
+        return self.catalog.focal_head
+
+    @property
+    def base_class_counts(self) -> dict[tuple[int, int], list[int]]:
+        '''Base grid block per-class counts for active focal head.'''
+        return self.catalog.base_class_counts
+
+    @property
+    def valid_class_counts(self) -> dict[tuple[int, int], list[int]]:
+        '''Valid block per-class counts for active focal head.'''
+        return self.catalog.valid_class_counts
+
+    @property
+    def valid_blocks(self) -> dict[tuple[int, int], str]:
+        '''Mapping of block coordinate to file path.'''
+        return self.catalog.valid_blocks
+
+    @property
+    def external_test_blocks(self) -> list[str] | None:
+        '''Optional external holdout test block file paths.'''
+        return self.catalog.external_test_blocks
+
+    @property
+    def crs(self) -> str:
+        '''Coordinate reference system string of the dataset canvas.'''
+        return self.catalog.crs
+
+    @property
+    def transform(self) -> rasterio.transform.Affine:
+        '''Affine transform of the dataset canvas.'''
+        return self.catalog.transform
+
 
 # ----- `build_dataset_context`
 def build_dataset_context(
@@ -69,6 +106,8 @@ def build_dataset_context(
 
     Orchestrates catalog parsing, feature channel resolution, and
     multi-head target hierarchy construction into a unified container.
+    Derives per-class pixel counts for all target heads in memory
+    without reading block files or raster data from disk.
 
     Args:
         catalog_fpath: Path to canonical blocks catalog JSON.
@@ -115,8 +154,37 @@ def build_dataset_context(
         label_ignore_cls=label_ignore,
     )
 
+    # resolve focal head from target heads and config
+    focal_target = getattr(catalog_config, 'focal_target', None)
+    focal_head = semantics.resolve_focal_head(target_heads, focal_target)
+
+    # image shape to determine base grid coordinates
+    image_shape = schema['tensor_shapes']['image']
+    row_size, col_size = image_shape['H'], image_shape['W']
+
+    # derive class counts for focal head in memory
+    valid_counts: dict[tuple[int, int], list[int]] = {}
+    base_counts: dict[tuple[int, int], list[int]] = {}
+
+    for coord, raw_counts in blocks_view.raw_class_counts.items():
+        head_counts = semantics.derive_head_class_counts(
+            raw_counts, target_heads
+        )
+        if focal_head in head_counts:
+            counts = head_counts[focal_head]
+            valid_counts[coord] = counts
+            if coord[0] % row_size == 0 and coord[1] % col_size == 0:
+                base_counts[coord] = counts
+
+    enriched_view = dataclasses.replace(
+        blocks_view,
+        focal_head=focal_head,
+        valid_class_counts=valid_counts,
+        base_class_counts=base_counts,
+    )
+
     return DatasetContext(
-        catalog=blocks_view,
+        catalog=enriched_view,
         features=feature_selection,
         targets=target_heads,
     )

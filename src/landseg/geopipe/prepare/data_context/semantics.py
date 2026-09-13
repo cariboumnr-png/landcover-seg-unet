@@ -42,6 +42,9 @@ class FeatureSelection:
     names: tuple[str, ...]
     indices: tuple[int, ...]
 
+    def __iter__(self) -> typing.Iterator[list[str] | list[int]]:
+        return iter([list(self.names), list(self.indices)])
+
 
 # ----- `TargetHeadsContext`
 @dataclasses.dataclass(frozen=True)
@@ -266,6 +269,144 @@ def resolve_target_heads(
         class_names=class_names,
         ignore_classes=ignore_classes,
     )
+
+
+# ----- `derive_head_class_counts`
+def derive_head_class_counts(
+    raw_class_counts: typing.Mapping[str, typing.Sequence[int]],
+    target_heads: TargetHeadsContext,
+) -> dict[str, list[int]]:
+    '''
+    Derive per-class pixel counts for all target heads in memory.
+
+    Given raw base label class counts for a block, computes exact class
+    counts for all heads including child slices and grouping layers.
+
+    Args:
+        raw_class_counts: Mapping of base label name to raw per-block
+            class counts.
+        target_heads: Resolved multi-head hierarchy and reclass schemes.
+
+    Returns:
+        Mapping of head name to derived per-class pixel counts list.
+    '''
+    derived: dict[str, list[int]] = {}
+
+    for base_name in target_heads.head_names:
+        if base_name in raw_class_counts:
+            raw = list(raw_class_counts[base_name])
+            derived[base_name] = raw
+
+            reclass_cfg = target_heads.target_reclass.get(base_name)
+            if not reclass_cfg or not reclass_cfg.get('reclass'):
+                continue
+
+            reclass = reclass_cfg['reclass']
+            reclass_name = reclass_cfg.get('reclass_name') or {}
+            group_head_name = f'{base_name}_group'
+
+            # 1. child slices
+            for group_id, child_classes in reclass.items():
+                grp_name = reclass_name.get(str(group_id))
+                child_head = (
+                    f'{base_name}_{grp_name}'
+                    if grp_name
+                    else f'{base_name}_sub{group_id}'
+                )
+                child_counts = [0] * (len(child_classes) + 1)
+                for k, cls_id in enumerate(child_classes, 1):
+                    if 0 <= cls_id < len(raw):
+                        child_counts[k] = raw[cls_id]
+                derived[child_head] = child_counts
+
+            # 2. grouping head
+            max_gid = max(int(g) for g in reclass.keys())
+            group_counts = [0] * (max_gid + 1)
+            for group_id, child_classes in reclass.items():
+                gid = int(group_id)
+                group_counts[gid] = sum(
+                    raw[c] for c in child_classes if 0 <= c < len(raw)
+                )
+            derived[group_head_name] = group_counts
+
+    return derived
+
+
+# ----- `resolve_focal_head`
+def resolve_focal_head(
+    target_heads: TargetHeadsContext,
+    focal_target: str | None = None,
+) -> str:
+    '''
+    Resolve active focal target head for partitioning.
+
+    Matches direct head names, child slice or grouping class names,
+    or falls back to the default grouping or primary head.
+
+    Args:
+        target_heads: Resolved multi-head hierarchy context.
+        focal_target: Optional requested focal head or class name.
+
+    Returns:
+        The resolved focal head name string.
+    '''
+    if not target_heads.head_names:
+        raise ValueError('No target heads available in context')
+
+    if focal_target is None:
+        # prefer grouping head if reclassified, else primary base head
+        for h in target_heads.head_names:
+            if h.endswith('_group'):
+                return h
+        return target_heads.head_names[0]
+
+    # 1. exact match with head name
+    if focal_target in target_heads.head_names:
+        return focal_target
+
+    # 2. match against class names across heads
+    for head_name, cnames in target_heads.class_names.items():
+        if focal_target in cnames:
+            return head_name
+
+    # 3. match against child slice group prefix/suffix
+    for head_name in target_heads.head_names:
+        if head_name.endswith(f'_{focal_target}'):
+            return head_name
+
+    raise KeyError(
+        f'Focal target "{focal_target}" not found in available target '
+        f'heads {list(target_heads.head_names)} or class names'
+    )
+
+
+# ----- `resolve_target_reclass`
+def resolve_target_reclass(
+    label_names_map: typing.Mapping[str, list[str]] | typing.Sequence[str],
+    user_targets_cfg: (
+        typing.Mapping[str, str | geo_core.LabelScheme] | None
+    ) = None,
+    raster_schemes: typing.Mapping[
+        str, typing.Mapping[str, geo_core.LabelScheme]
+    ] | None = None,
+) -> dict[str, geo_core.LabelScheme | None]:
+    '''
+    Resolve target reclassifications mapping per label layer.
+
+    Args:
+        label_names_map: Label layer names or mapping to class names.
+        user_targets_cfg: Optional user target reclassification config.
+        raster_schemes: Optional dataset manifest schemes metadata.
+
+    Returns:
+        Dictionary mapping label name to LabelScheme or None.
+    '''
+    ctx = resolve_target_heads(
+        label_names_map=label_names_map,
+        user_targets_cfg=user_targets_cfg,
+        label_schemes=raster_schemes,
+    )
+    return ctx.target_reclass
 
 
 # ----- `_require_key`
