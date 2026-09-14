@@ -41,6 +41,7 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 
 # typing aliases
+field = dataclasses.field
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 
 
@@ -63,15 +64,9 @@ class DataBlocksView:
     external_test_blocks: list[str] | None
     crs: str
     transform: rasterio.transform.Affine
-    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]] = (
-        dataclasses.field(default_factory=dict)
-    )
-    valid_class_counts: dict[tuple[int, int], list[int]] = (
-        dataclasses.field(default_factory=dict)
-    )
-    base_class_counts: dict[tuple[int, int], list[int]] = (
-        dataclasses.field(default_factory=dict)
-    )
+    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]] = field(default_factory=dict)
+    valid_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
+    base_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
     focal_head: str = ''
 
 
@@ -142,7 +137,7 @@ def read_catalog(
 
     # preliminary focal head derivation from config or catalog entry
     focal_head = getattr(config, 'focal_target', None) or ''
-    if not focal_head and valid_blocks:
+    if not focal_head and valid_blocks: # fallback to 1st available head
         first_entry = next(iter(valid_blocks.values()))
         if 'class_count' in first_entry and first_entry['class_count']:
             focal_head = next(iter(first_entry['class_count'].keys()))

@@ -45,7 +45,6 @@ __all__ = [
     'resolve_feature_channels',
     'resolve_focal_head',
     'resolve_target_heads',
-    'resolve_target_reclass',
     # types
 ]
 
@@ -62,7 +61,6 @@ if typing.TYPE_CHECKING:
         resolve_feature_channels,
         resolve_focal_head,
         resolve_target_heads,
-        resolve_target_reclass,
     )
 
 
@@ -86,7 +84,6 @@ def __getattr__(name: str):
         'resolve_feature_channels',
         'resolve_focal_head',
         'resolve_target_heads',
-        'resolve_target_reclass',
     }:
         return getattr(
             importlib.import_module('.semantics', __package__), name

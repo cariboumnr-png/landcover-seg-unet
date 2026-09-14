@@ -41,7 +41,7 @@ import landseg.geopipe.prepare.data_context.semantics as semantics
 
 
 # typing aliases
-SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
+DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 
 # ----- `DatasetContext`
@@ -95,11 +95,9 @@ class DatasetContext:
 def build_dataset_context(
     catalog_fpath: str,
     schema_fpath: str,
-    catalog_config: catalog._CatalogViewConfig,
-    user_features_cfg: typing.Mapping[str, str] | list[str] | None = None,
-    user_targets_cfg: (
-        typing.Mapping[str, str | geo_core.LabelScheme] | None
-    ) = None,
+    config: catalog._CatalogViewConfig,
+    user_features: typing.Mapping[str, str] | list[str] | None = None,
+    user_targets: typing.Mapping[str, str | geo_core.LabelScheme] | None = None,
 ) -> DatasetContext:
     '''
     Build complete dataset context from catalog, schema, and config.
@@ -119,72 +117,57 @@ def build_dataset_context(
     Returns:
         A `DatasetContext` combining catalog, features, and targets.
     '''
-    # load schema
-    schema_ctrl = SchemaCtrl.load_json_or_fail(schema_fpath)
-    schema = schema_ctrl.fetch()
+    # load ingested data schema
+    schema= DataSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
 
-    # read catalog blocks view using loaded schema
-    blocks_view = catalog.read_catalog(
-        catalog_fpath=catalog_fpath,
-        data_schema=schema,
-        config=catalog_config,
-    )
+    # initial catalog view
+    view = catalog.read_catalog(catalog_fpath, schema, config)
 
     # resolve feature channels
-    image_band_map = schema.get('io_conventions', {}).get(
-        'image_band_map', {}
-    )
-    dataset_schemes = schema.get('dataset', {}).get('schemes', {})
-    feature_selection = semantics.resolve_feature_channels(
-        band_map=image_band_map,
-        user_features_cfg=user_features_cfg,
-        feature_schemes=dataset_schemes,
-    )
+    feature_selection = semantics.resolve_feature_channels(schema, user_features)
 
     # resolve target heads
-    labels_info = schema.get('labels', {})
-    label_names = labels_info.get(
-        'label_class_names', labels_info.get('label_names', {})
-    )
-    label_ignore = labels_info.get('label_ignore_cls', {})
-    target_heads = semantics.resolve_target_heads(
-        label_names_map=label_names,
-        user_targets_cfg=user_targets_cfg,
-        label_schemes=dataset_schemes,
-        label_ignore_cls=label_ignore,
-    )
+    targets = semantics.resolve_target_heads(schema, user_targets)
 
     # resolve focal head from target heads and config
-    focal_target = getattr(catalog_config, 'focal_target', None)
-    focal_head = semantics.resolve_focal_head(target_heads, focal_target)
+    focal_head = semantics.resolve_focal_head(targets, config.focal_target)
 
-    # image shape to determine base grid coordinates
-    image_shape = schema['tensor_shapes']['image']
-    row_size, col_size = image_shape['H'], image_shape['W']
+    # enriched catalog view with class counts
+    enriched_view = _enrich_view_w_class_counts(view, schema, targets, focal_head)
 
-    # derive class counts for focal head in memory
+    context = DatasetContext(
+        catalog=enriched_view,
+        features=feature_selection,
+        targets=targets,
+    )
+    return context
+
+
+# ----- private helpers
+def _enrich_view_w_class_counts(
+    catalog_view: catalog.DataBlocksView,
+    data_schema: geo_core.DataSchema,
+    targets: semantics.TargetHeadsContext,
+    focal_head: str,
+) -> catalog.DataBlocksView:
+    '''Enrich catalog view with derived class counts for focal head.'''
+    row_size = data_schema['tensor_shapes']['image']['H']
+    col_size = data_schema['tensor_shapes']['image']['W']
+
     valid_counts: dict[tuple[int, int], list[int]] = {}
     base_counts: dict[tuple[int, int], list[int]] = {}
 
-    for coord, raw_counts in blocks_view.raw_class_counts.items():
-        head_counts = semantics.derive_head_class_counts(
-            raw_counts, target_heads
-        )
+    for coord, raw_counts in catalog_view.raw_class_counts.items():
+        head_counts = semantics.derive_head_class_counts(targets, raw_counts)
         if focal_head in head_counts:
             counts = head_counts[focal_head]
             valid_counts[coord] = counts
             if coord[0] % row_size == 0 and coord[1] % col_size == 0:
                 base_counts[coord] = counts
 
-    enriched_view = dataclasses.replace(
-        blocks_view,
+    return dataclasses.replace(
+        catalog_view,
         focal_head=focal_head,
         valid_class_counts=valid_counts,
         base_class_counts=base_counts,
-    )
-
-    return DatasetContext(
-        catalog=enriched_view,
-        features=feature_selection,
-        targets=target_heads,
     )
