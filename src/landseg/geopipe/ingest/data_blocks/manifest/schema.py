@@ -80,9 +80,8 @@ def build_schema(
     # parse schemes from sources
     image_schemes = assembler.read_schemes(source_image)
     label_schemes = assembler.read_schemes(source_label) if source_label else {}
-    schemes = {**image_schemes, **label_schemes}
 
-    # update route
+    # update route # NOTE need to review this route
     if original:
         # aliases
         grids = original['dataset']['mapped_grids']
@@ -96,8 +95,10 @@ def build_schema(
             images.append(source_image)
         if source_label and not source_label in labels:
             labels.append(source_label)
-        original['dataset'].setdefault('schemes', {})
-        original['dataset']['schemes'].update(schemes)
+        original['dataset'].setdefault('image_schemes', {})
+        original['dataset']['image_schemes'].update(image_schemes)
+        original['dataset'].setdefault('label_schemes', {})
+        original['dataset']['label_schemes'].update(label_schemes)
         return original
 
     # read from the sample block
@@ -117,7 +118,8 @@ def build_schema(
                 'image_paths': [source_image],
                 'label_paths': [source_label] if source_label else [],
             },
-            'schemes': schemes,
+            'image_schemes': image_schemes,
+            'label_schemes': label_schemes,
         },
 
         'io_conventions': {
@@ -131,6 +133,7 @@ def build_schema(
                 'label': 'uint8',
             },
             'image_band_map': sample_blk.manifest['image_band_map'],
+            'label_band_map': sample_blk.manifest['label_band_map'],
             'ignore_index': sample_blk.manifest['label_ignore_index']
         },
 

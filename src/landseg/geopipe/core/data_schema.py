@@ -18,7 +18,6 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 '''
 Dataset-level metadata schema for block catalogs.
 
@@ -35,6 +34,8 @@ reproducibility across the data pipeline.
 # standard imports
 from __future__ import annotations
 import typing
+# local imports
+import landseg.geopipe.core as geo_core
 
 SCHEMA_ID = 'data_schema/v1.1'
 
@@ -76,7 +77,8 @@ class _DatasetInfo(typing.TypedDict):
     dataprep_commit: str
     mapped_grids: list[str]
     data_source: _DataSource
-    schemes: dict[str, typing.Any]
+    image_schemes: dict[str, dict[str, list[str]]]
+    label_schemes: dict[str, geo_core.LabelSchemes]
 
 class _DataSource(typing.TypedDict):
     '''Input data source paths for images and labels.'''
@@ -90,6 +92,7 @@ class _IOConventions(typing.TypedDict):
     shapes: _IOShapes
     dtypes: _IODtypes
     image_band_map: dict[str, int]
+    label_band_map: dict[str, int]
     ignore_index: int
 
 class _IOShapes(typing.TypedDict):
@@ -131,4 +134,4 @@ class _LabelsInfo(typing.TypedDict):
     label_ignore_cls: dict[str, list[int]]
     label_class_names: dict[str, list[str]]
     label_class_color_map: dict[str, list[int]] | None
-    label_taxonomy: dict[str, typing.Any]
+    label_taxonomy: dict[str, geo_core.TaxonomySpecs]
