@@ -41,7 +41,6 @@ __all__ = [
     'build_dataset_context',
     'derive_head_class_counts',
     'read_catalog',
-    'reclassify_label_stack',
     'resolve_feature_channels',
     'resolve_focal_head',
     'resolve_target_heads',
@@ -53,7 +52,6 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .catalog import DataBlocksView, read_catalog
     from .context import DatasetContext, build_dataset_context
-    from .reclassify import reclassify_label_stack
     from .semantics import (
         FeatureSelection,
         TargetHeadsContext,
@@ -71,11 +69,6 @@ def __getattr__(name: str):
 
     if name in {'DatasetContext', 'build_dataset_context'}:
         return getattr(importlib.import_module('.context', __package__), name)
-
-    if name in {'reclassify_label_stack'}:
-        return getattr(
-            importlib.import_module('.reclassify', __package__), name
-        )
 
     if name in {
         'FeatureSelection',

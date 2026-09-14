@@ -36,8 +36,8 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
-import landseg.geopipe.prepare.normal_blocks.normalize as normalize
-import landseg.geopipe.prepare.normal_blocks.stats as stats
+import landseg.geopipe.prepare.materialize_blocks.normalize as normalize
+import landseg.geopipe.prepare.materialize_blocks.stats as stats
 
 # --------------------------------private types--------------------------------
 class _PipelinePaths(typing.Protocol):
@@ -65,7 +65,6 @@ def run_normalize_blocks(
     paths: _PipelinePaths,
     *,
     channel_indices: list[int] | None = None,
-    target_reclass: dict[str, geo_core.LabelScheme | None] | None = None,
     policy: artifacts.LifecyclePolicy,
     logger: common.PreparationLogger
 ):

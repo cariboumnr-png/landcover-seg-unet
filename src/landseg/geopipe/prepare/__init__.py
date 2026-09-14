@@ -39,8 +39,6 @@ __all__ = [
     # functions
     'build_dataset_context',
     'build_schema',
-    'resolve_feature_channels',
-    'resolve_target_reclass',
     'run_datablocks_partition',
     'run_normalize_blocks',
     # types
@@ -54,11 +52,9 @@ if typing.TYPE_CHECKING:
         DataBlocksView,
         DatasetContext,
         build_dataset_context,
-        resolve_feature_channels,
-        resolve_target_reclass,
     )
     from .data_partition import PartitionParameters, run_datablocks_partition
-    from .normal_blocks import run_normalize_blocks
+    from .materialize_blocks import run_normalize_blocks
     from .schema import build_schema
 
 
@@ -68,8 +64,6 @@ def __getattr__(name: str):
         'DataBlocksView',
         'DatasetContext',
         'build_dataset_context',
-        'resolve_feature_channels',
-        'resolve_target_reclass',
     }:
         return getattr(
             importlib.import_module('.data_context', __package__), name
@@ -85,7 +79,7 @@ def __getattr__(name: str):
 
     if name in {'run_normalize_blocks'}:
         return getattr(
-            importlib.import_module('.normal_blocks', __package__), name
+            importlib.import_module('.materialize_blocks', __package__), name
         )
 
     if name in {'build_schema'}:
