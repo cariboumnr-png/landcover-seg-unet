@@ -81,8 +81,7 @@ def run_normalize_blocks(
         paths: Transform paths container.
         channel_indices: Optional list of 0-based channel indices to
             select for the normalized blocks.
-        target_reclass: Optional dictionary of target reclassification
-            settings per label layer.
+        target_reclass: Deprecated/unused target reclass parameter.
         policy: Lifecycle policy guiding rebuild behavior.
         logger: Logger for progress and diagnostic output.
     '''
@@ -123,8 +122,7 @@ def run_normalize_blocks(
             aggregated_stats,
             paths,
             channel_indices=channel_indices,
-            target_reclass=target_reclass,
-            logger=logger
+            logger=logger,
         )
         ctrl.persist(transform)
         logger.log('INFO', '[CHECKPOINT] Created normalized dataset blocks')
@@ -148,8 +146,7 @@ def _normalize(
     paths: _PipelinePaths,
     *,
     channel_indices: list[int] | None = None,
-    target_reclass: dict[str, geo_core.LabelScheme | None] | None = None,
-    logger: common.PreparationLogger
+    logger: common.PreparationLogger,
 ):
     '''Normalize each split.'''
     train_split, val_split, test_split = splits
@@ -160,7 +157,6 @@ def _normalize(
         aggregated_stats,
         paths.train_blocks,
         channel_indices=channel_indices,
-        target_reclass=target_reclass,
     )
     if purged:
         purged_total += purged
@@ -170,7 +166,6 @@ def _normalize(
         aggregated_stats,
         paths.val_blocks,
         channel_indices=channel_indices,
-        target_reclass=target_reclass,
     )
     if purged:
         purged_total += purged
@@ -180,7 +175,6 @@ def _normalize(
         aggregated_stats,
         paths.test_blocks,
         channel_indices=channel_indices,
-        target_reclass=target_reclass,
     )
     if purged:
         purged_total += purged

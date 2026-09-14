@@ -31,13 +31,14 @@ label statistics for downstream normalization and schema generation.
 '''
 
 # standard imports
+from __future__ import annotations
 import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare as prepare_data
 import landseg.geopipe.prepare.common as common
+import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.data_partition.split as split
 import landseg.geopipe.prepare.data_partition.stats as stats
 
@@ -59,7 +60,7 @@ SplitsSummaryCtrl = artifacts.Controller[geo_core.PartitionSummary]
 
 # ----- `run_datablocks_partition` execution
 def run_datablocks_partition(
-    parsed_catalog: prepare_data.DataBlocksView,
+    context: data_context.DatasetContext,
     paths: _PipelinePaths,
     partition_config: split.PartitionParameters,
     *,
@@ -69,19 +70,27 @@ def run_datablocks_partition(
     '''
     Partition canonical data blocks into train/val/test splits.
 
-    Loads the ingestion catalog, optionally incorporates external test
-    (holdout) blocks, and performs stratified splitting followed by
-    spatially safe hydration of training blocks. Writes split manifests
-    and label statistics for downstream normalization and schema generation.
+    Consumes the dataset preparation context, performs stratified
+    splitting followed by spatially safe hydration of training blocks,
+    and writes split manifests and label statistics for downstream
+    normalization and schema generation.
 
     Args:
-        parsed_catalog: DataBlocksView with loaded blocks.
+        context: DatasetContext with loaded catalog and resolved
+            semantics.
         paths: Output paths container.
         partition_config: Parameters dict guiding split and hydration
             behavior.
+        policy: Artifact lifecycle policy.
         logger: Logger for progress and diagnostic output.
     '''
     start_time = time.perf_counter()
+
+    # ensure canvas CRS and transform default from context if unconfigured
+    if partition_config.canvas_crs == 'EPSG:3161' and context.crs:
+        partition_config.canvas_crs = context.crs
+    if partition_config.canvas_transform is None and context.transform:
+        partition_config.canvas_transform = context.transform
 
     # partition fpaths and summary JSON controller
     partition_ctrl = PartitionCtrl(paths.splits_source_blocks, policy)
@@ -96,11 +105,11 @@ def run_datablocks_partition(
 
         # blocks fpaths
         partition_results = split.create_blocks_partition(
-            parsed_catalog.base_class_counts,
-            parsed_catalog.valid_class_counts,
-            parsed_catalog.blocks,
+            context.base_class_counts,
+            context.valid_class_counts,
+            context.valid_blocks,
             partition_config,
-            ext_test_blks=parsed_catalog.external_test_blocks,
+            ext_test_blks=context.external_test_blocks,
             logger=logger,
         )
 
@@ -110,7 +119,7 @@ def run_datablocks_partition(
         # summary
         splits_summary = _build_splits_summary(
             partition_results,
-            focal_head=parsed_catalog.focal_head,
+            focal_head=context.focal_head,
         )
         summary_ctrl.persist(splits_summary)
 
@@ -131,12 +140,6 @@ def run_datablocks_partition(
         'duration_sec': duration
     }
     logger.set_data_partition_report(report)
-
-    # label count results JSON controller
-    ctrl = LabelStatsCtrl(paths.label_stats, policy)
-    # iterate current training blocks to get label class counts
-    lbl_stats = stats.count_label(list(partition_fpaths['train'].values()))
-    ctrl.persist(lbl_stats)
 
 
 # ----- `_report` helper

@@ -33,11 +33,12 @@ import typing
 __all__ = [
     # classes
     'DataBlocksView',
+    'DatasetContext',
     'PartitionParameters',
     'PreparationLogger',
     # functions
+    'build_dataset_context',
     'build_schema',
-    'data_blocks_adapter',
     'resolve_feature_channels',
     'resolve_target_reclass',
     'run_datablocks_partition',
@@ -48,30 +49,44 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .adapter import DataBlocksView, data_blocks_adapter
     from .common import PreparationLogger
+    from .data_context import (
+        DataBlocksView,
+        DatasetContext,
+        build_dataset_context,
+        resolve_feature_channels,
+        resolve_target_reclass,
+    )
     from .data_partition import PartitionParameters, run_datablocks_partition
     from .normal_blocks import run_normalize_blocks
-    from .resolver import resolve_feature_channels, resolve_target_reclass
     from .schema import build_schema
 
 
 def __getattr__(name: str):
 
-    if name in {'DataBlocksView', 'data_blocks_adapter'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
+    if name in {
+        'DataBlocksView',
+        'DatasetContext',
+        'build_dataset_context',
+        'resolve_feature_channels',
+        'resolve_target_reclass',
+    }:
+        return getattr(
+            importlib.import_module('.data_context', __package__), name
+        )
 
     if name in {'PreparationLogger'}:
         return getattr(importlib.import_module('.common', __package__), name)
 
     if name in {'PartitionParameters', 'run_datablocks_partition'}:
-        return getattr(importlib.import_module('.data_partition', __package__), name)
+        return getattr(
+            importlib.import_module('.data_partition', __package__), name
+        )
 
     if name in {'run_normalize_blocks'}:
-        return getattr(importlib.import_module('.normal_blocks', __package__), name)
-
-    if name in {'resolve_feature_channels', 'resolve_target_reclass'}:
-        return getattr(importlib.import_module('.resolver', __package__), name)
+        return getattr(
+            importlib.import_module('.normal_blocks', __package__), name
+        )
 
     if name in {'build_schema'}:
         return getattr(importlib.import_module('.schema', __package__), name)
