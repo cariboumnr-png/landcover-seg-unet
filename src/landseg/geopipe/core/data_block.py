@@ -543,8 +543,7 @@ class DataBlock:
 
         # iterate sorted bands sorted by index
         for i, (name, spec) in enumerate(self.lbl_specs.items(), 1):
-            self.manifest['label_band_map'][name] = i
-
+            self.manifest['label_band_map'][name] = i - 1
             arr = self.data.label[i - 1]
 
             # append base layer from original Class IDs with masking)
