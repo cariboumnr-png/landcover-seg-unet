@@ -40,7 +40,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.data_partition.split as split
-import landseg.geopipe.prepare.data_partition.stats as stats
 
 # --------------------------------private types--------------------------------
 class _PipelinePaths(typing.Protocol):
@@ -49,12 +48,10 @@ class _PipelinePaths(typing.Protocol):
     def splits_source_blocks(self) -> str: ...
     @property
     def splits_summary(self) -> str: ...
-    @property
-    def label_stats(self) -> str: ...
+
 
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
-LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 SplitsSummaryCtrl = artifacts.Controller[geo_core.PartitionSummary]
 
 
@@ -128,11 +125,6 @@ def run_datablocks_partition(
     else:
         status = 'loaded'
         logger.log('INFO', '[CHECKPOINT] Loaded dataset partition splits')
-
-    # label count results JSON controller - ALWAYS run
-    label_ctrl = LabelStatsCtrl(paths.label_stats, policy)
-    lbl_stats = stats.count_label(list(partition_fpaths['train'].values()))
-    label_ctrl.persist(lbl_stats)
 
     duration = time.perf_counter() - start_time
     report: common.DataPartitionReport = {

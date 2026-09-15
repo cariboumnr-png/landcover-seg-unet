@@ -154,11 +154,13 @@ def _enrich_view_w_class_counts(
     row_size = data_schema['tensor_shapes']['image']['H']
     col_size = data_schema['tensor_shapes']['image']['W']
 
+    updated_raw_counts: dict[tuple[int, int], dict[str, list[int]]] = {}
     valid_counts: dict[tuple[int, int], list[int]] = {}
     base_counts: dict[tuple[int, int], list[int]] = {}
 
     for coord, raw_counts in catalog_view.raw_class_counts.items():
         head_counts = semantics.derive_head_class_counts(targets, raw_counts)
+        updated_raw_counts[coord] = head_counts
         if focal_head in head_counts:
             counts = head_counts[focal_head]
             valid_counts[coord] = counts
@@ -168,6 +170,7 @@ def _enrich_view_w_class_counts(
     return dataclasses.replace(
         catalog_view,
         focal_head=focal_head,
+        raw_counts=updated_raw_counts,
         valid_class_counts=valid_counts,
         base_class_counts=base_counts,
     )
