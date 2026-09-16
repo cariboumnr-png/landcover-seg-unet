@@ -20,7 +20,8 @@
 # =========================================================================== #
 
 '''
-Unit tests for spatial AOI raster block intersection and split resolution.
+Unit tests for spatial AOI raster block intersection and split
+resolution.
 '''
 
 # standard imports
@@ -68,7 +69,9 @@ def test_intersect_aoi_raster_basic(tmp_path):
     When: Intersecting against a 2x2 grid of candidate blocks.
     Then: Only the intersecting block (0, 0) is selected.
     '''
-    canvas_transform = rasterio.transform.from_origin(500000.0, 600000.0, 20.0, 20.0)
+    canvas_transform = rasterio.transform.from_origin(
+        500000.0, 600000.0, 20.0, 20.0
+    )
     aoi_path = str(tmp_path / 'test_aoi.tif')
     _create_dummy_geotiff(
         aoi_path,
@@ -133,7 +136,9 @@ def test_resolve_aoi_partitions_priority_conflict(tmp_path, mocker):
     When: Resolving partitions.
     Then: Priority rule assigns the block to test and logs a warning.
     '''
-    canvas_transform = rasterio.transform.from_origin(500000.0, 600000.0, 20.0, 20.0)
+    canvas_transform = rasterio.transform.from_origin(
+        500000.0, 600000.0, 20.0, 20.0
+    )
     test_aoi = str(tmp_path / 'test_aoi.tif')
     val_aoi = str(tmp_path / 'val_aoi.tif')
     _create_dummy_geotiff(
@@ -164,15 +169,17 @@ def test_resolve_aoi_partitions_priority_conflict(tmp_path, mocker):
     assert mock_logger.log.called
 
 
-
 def test_resolve_aoi_partitions_scenario_1_three_splits(tmp_path):
     '''
-    Given: Three distinct non-overlapping AOI rasters for test, val, train.
+    Given: Three distinct non-overlapping AOI rasters for test, val,
+        train.
     When: Resolving partitions.
     Then: Each block is cleanly assigned to its corresponding split.
     '''
     t_test = rasterio.transform.from_origin(500000.0, 600000.0, 20.0, 20.0)
-    t_val = rasterio.transform.from_origin(500000.0 + 256 * 20, 600000.0, 20.0, 20.0)
+    t_val = rasterio.transform.from_origin(
+        500000.0 + 256 * 20, 600000.0, 20.0, 20.0
+    )
     t_train = rasterio.transform.from_origin(
         500000.0, 600000.0 - 256 * 20, 20.0, 20.0
     )

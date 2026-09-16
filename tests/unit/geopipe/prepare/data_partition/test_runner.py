@@ -47,7 +47,8 @@ def test_run_datablocks_partition(tmp_path, mocker):
     '''
     Given: A DatasetContext with in-memory class counts.
     When: Running run_datablocks_partition.
-    Then: Create splits, save summary with focal head, and persist paths.
+    Then: Create splits, save summary with focal head, and persist
+        paths.
     '''
     paths = _DummyPaths(
         splits_source_blocks=str(tmp_path / 'block_source.json'),
@@ -66,13 +67,13 @@ def test_run_datablocks_partition(tmp_path, mocker):
     )
     features = data_context.FeatureSelection(names=('blue',), indices=(0,))
     targets = data_context.TargetHeadsContext(
-        target_reclass={'landcover': None},
-        head_names=('landcover_group',),
+        head_names=['landcover_group'],
         head_parent={'landcover_group': None},
         head_parent_cls={'landcover_group': None},
         num_classes={'landcover_group': 2},
         class_names={'landcover_group': ['VEG', 'WAT']},
         ignore_classes={'landcover_group': [255]},
+        resolved_reclass={'landcover': None},
     )
     ctx = data_context.DatasetContext(
         catalog=catalog_view,
@@ -96,12 +97,6 @@ def test_run_datablocks_partition(tmp_path, mocker):
         enable_file_log=False,
     )
     logger.init_summary(run_id='test')
-
-    # mock count_label to avoid reading non-existent .npz files on disk
-    mocker.patch(
-        'landseg.geopipe.prepare.data_partition.stats.count_label',
-        return_value={'landcover': [100]},
-    )
 
     runner.run_datablocks_partition(
         ctx,

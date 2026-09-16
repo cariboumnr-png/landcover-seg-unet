@@ -28,6 +28,46 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.data_context.semantics as semantics
 
 
+# ----- test helpers
+def _make_dummy_schema(
+    *,
+    image_bands: dict[str, int] | None = None,
+    image_schemes: dict[str, dict[str, list[str]]] | None = None,
+    label_bands: dict[str, int] | None = None,
+    label_num_cls: dict[str, int] | None = None,
+    label_class_names: dict[str, list[str]] | None = None,
+    label_ignore_cls: dict[str, list[int]] | None = None,
+    label_schemes: (
+        dict[str, dict[str, geo_core.LabelScheme]] | None
+    ) = None,
+) -> geo_core.DataSchema:
+    '''Construct mock DataSchema dictionary for testing.'''
+    img_map = image_bands or {'blue': 0, 'green': 1, 'red': 2}
+    lbl_map = label_bands or {'landcover': 0}
+    num_cls = label_num_cls or {'landcover': 3}
+    c_names = label_class_names or {
+        'landcover': ['c1', 'c2', 'c3']
+    }
+    ign_cls = label_ignore_cls or {'landcover': [255]}
+    return {
+        'schema_id': 'data_schema/v1.1',
+        'tensor_shapes': {'image': {'H': 256, 'W': 256}},
+        'io_conventions': {
+            'image_band_map': img_map,
+            'label_band_map': lbl_map,
+        },
+        'labels': {
+            'label_num_cls': num_cls,
+            'label_class_names': c_names,
+            'label_ignore_cls': ign_cls,
+        },
+        'dataset': {
+            'image_schemes': image_schemes or {},
+            'label_schemes': label_schemes or {},
+        },
+    }  # type: ignore[return-value]
+
+
 # ----- `resolve_feature_channels` tests
 def test_resolve_feature_channels_default():
     '''
@@ -35,8 +75,10 @@ def test_resolve_feature_channels_default():
     When: Resolving feature channels with no user config.
     Then: Return all available bands in sequential index order.
     '''
-    band_map = {'blue': 0, 'green': 1, 'red': 2, 'nir': 3}
-    res = semantics.resolve_feature_channels(band_map, None, None)
+    schema = _make_dummy_schema(
+        image_bands={'blue': 0, 'green': 1, 'red': 2, 'nir': 3}
+    )
+    res = semantics.resolve_feature_channels(schema, None)
     assert res.names == ('blue', 'green', 'red', 'nir')
     assert res.indices == (0, 1, 2, 3)
 
@@ -47,15 +89,23 @@ def test_resolve_feature_channels_named_scheme():
     When: Resolving feature channels.
     Then: Correctly resolve selected band names and indices.
     '''
-    band_map = {'blue': 0, 'green': 1, 'red': 2, 'nir': 3, 'dem': 4}
-    schemes = {
-        'sentinel2': {
-            'rgb': ['blue', 'green', 'red'],
-            'rgb_nir': ['blue', 'green', 'red', 'nir'],
-        }
-    }
+    schema = _make_dummy_schema(
+        image_bands={
+            'blue': 0,
+            'green': 1,
+            'red': 2,
+            'nir': 3,
+            'dem': 4,
+        },
+        image_schemes={
+            'sentinel2': {
+                'rgb': ['blue', 'green', 'red'],
+                'rgb_nir': ['blue', 'green', 'red', 'nir'],
+            }
+        },
+    )
     user_cfg = {'sentinel2': 'rgb_nir'}
-    res = semantics.resolve_feature_channels(band_map, user_cfg, schemes)
+    res = semantics.resolve_feature_channels(schema, user_cfg)
     assert res.names == ('blue', 'green', 'red', 'nir')
     assert res.indices == (0, 1, 2, 3)
 
@@ -66,10 +116,10 @@ def test_resolve_feature_channels_explicit_list():
     When: Resolving feature channels.
     Then: Return requested bands in specified order.
     '''
-    band_map = {'blue': 0, 'green': 1, 'red': 2, 'nir': 3}
-    res = semantics.resolve_feature_channels(
-        band_map, ['red', 'blue'], None
+    schema = _make_dummy_schema(
+        image_bands={'blue': 0, 'green': 1, 'red': 2, 'nir': 3}
     )
+    res = semantics.resolve_feature_channels(schema, ['red', 'blue'])
     assert res.names == ('red', 'blue')
     assert res.indices == (2, 0)
 
@@ -80,18 +130,17 @@ def test_resolve_feature_channels_errors():
     When: Resolving feature channels.
     Then: Raise KeyError.
     '''
-    band_map = {'blue': 0, 'green': 1}
+    schema = _make_dummy_schema(
+        image_bands={'blue': 0, 'green': 1},
+        image_schemes={'sentinel2': {'rgb': ['blue']}},
+    )
     with pytest.raises(KeyError, match='feature scheme'):
         semantics.resolve_feature_channels(
-            band_map,
-            {'sentinel2': 'missing'},
-            {'sentinel2': {'rgb': ['blue']}},
+            schema, {'sentinel2': 'missing'}
         )
 
     with pytest.raises(KeyError, match='feature band'):
-        semantics.resolve_feature_channels(
-            band_map, ['unknown'], None
-        )
+        semantics.resolve_feature_channels(schema, ['unknown'])
 
 
 # ----- `resolve_target_heads` tests
@@ -101,31 +150,28 @@ def test_resolve_target_heads_default():
     When: Resolving target heads.
     Then: Return single base head per layer with empty parents.
     '''
-    label_names = {'landcover': ['conifer', 'decid', 'water']}
-    ignore_cls = {'landcover': [255]}
-    ctx = semantics.resolve_target_heads(
-        label_names_map=label_names,
-        user_targets_cfg=None,
-        label_schemes=None,
-        label_ignore_cls=ignore_cls,
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 3},
+        label_class_names={'landcover': ['conifer', 'decid', 'water']},
+        label_ignore_cls={'landcover': [255]},
     )
-    assert ctx.head_names == ('landcover',)
+    ctx = semantics.resolve_target_heads(schema, None)
+    assert ctx.head_names == ['landcover']
     assert ctx.head_parent == {'landcover': None}
     assert ctx.head_parent_cls == {'landcover': None}
     assert ctx.num_classes == {'landcover': 3}
     assert ctx.class_names == {'landcover': ['conifer', 'decid', 'water']}
     assert ctx.ignore_classes == {'landcover': [255]}
-    assert ctx.target_reclass == {'landcover': None}
+    assert ctx.resolved_reclass == {'landcover': None}
 
 
 def test_resolve_target_heads_reclass_with_names():
     '''
     Given: Reclass scheme containing human-readable `reclass_name`.
     When: Resolving target heads.
-    Then: Produce base, named child heads, and group head.
+    Then: Produce base, group head, and named child heads.
     '''
-    label_names = {'landcover': ['conifer', 'decid', 'water']}
-    ignore_cls = {'landcover': [255]}
     schemes: dict[str, dict[str, geo_core.LabelScheme]] = {
         'landcover': {
             'binary': {
@@ -134,56 +180,58 @@ def test_resolve_target_heads_reclass_with_names():
             }
         }
     }
-    user_cfg = {'landcover': 'binary'}
-
-    ctx = semantics.resolve_target_heads(
-        label_names_map=label_names,
-        user_targets_cfg=user_cfg,
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 3},
+        label_class_names={'landcover': ['conifer', 'decid', 'water']},
+        label_ignore_cls={'landcover': [255]},
         label_schemes=schemes,
-        label_ignore_cls=ignore_cls,
     )
+    user_cfg = {'landcover': 'binary'}
+    ctx = semantics.resolve_target_heads(schema, user_cfg)
 
-    expected_heads = (
+    expected_heads = [
         'landcover',
+        'landcover_group',
         'landcover_VEG',
         'landcover_WAT',
-        'landcover_group',
-    )
+    ]
     assert ctx.head_names == expected_heads
 
     # verify parent hierarchy
     assert ctx.head_parent == {
         'landcover': None,
+        'landcover_group': None,
         'landcover_VEG': 'landcover_group',
         'landcover_WAT': 'landcover_group',
-        'landcover_group': None,
     }
     assert ctx.head_parent_cls == {
         'landcover': None,
+        'landcover_group': None,
         'landcover_VEG': 1,
         'landcover_WAT': 2,
-        'landcover_group': None,
     }
 
     # verify class counts and class names
     assert ctx.num_classes == {
         'landcover': 3,
+        'landcover_group': 2,
         'landcover_VEG': 2,
         'landcover_WAT': 1,
-        'landcover_group': 2,
     }
     assert ctx.class_names == {
         'landcover': ['conifer', 'decid', 'water'],
+        'landcover_group': ['VEG', 'WAT'],
         'landcover_VEG': ['conifer', 'decid'],
         'landcover_WAT': ['water'],
-        'landcover_group': ['VEG', 'WAT'],
     }
     assert ctx.ignore_classes == {
         'landcover': [255],
+        'landcover_group': [255],
         'landcover_VEG': [255],
         'landcover_WAT': [255],
-        'landcover_group': [255],
     }
+    assert ctx.resolved_reclass['landcover'] is not None
 
 
 def test_resolve_target_heads_reclass_fallback_names():
@@ -192,23 +240,27 @@ def test_resolve_target_heads_reclass_fallback_names():
     When: Resolving target heads.
     Then: Fall back to easily understood auto-generated names.
     '''
-    label_names = {'landcover': ['c1', 'c2', 'c3']}
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 3},
+        label_class_names={'landcover': ['c1', 'c2', 'c3']},
+    )
     inline_scheme = {
         'reclass': {'1': [1, 2], '2': [3]}
     }
     user_cfg = {'landcover': inline_scheme}
 
     ctx = semantics.resolve_target_heads(
-        label_names_map=label_names,
-        user_targets_cfg=user_cfg,  # type: ignore[arg-type]
+        schema,
+        user_cfg,  # type: ignore[arg-type]
     )
 
-    assert ctx.head_names == (
+    assert ctx.head_names == [
         'landcover',
+        'landcover_group',
         'landcover_sub1',
         'landcover_sub2',
-        'landcover_group',
-    )
+    ]
     assert ctx.class_names['landcover_group'] == ['group_1', 'group_2']
     assert ctx.head_parent['landcover_sub1'] == 'landcover_group'
     assert ctx.head_parent_cls['landcover_sub1'] == 1
@@ -220,14 +272,18 @@ def test_resolve_target_heads_bypass_keywords():
     When: Resolving target heads.
     Then: Treat as un-reclassified base layer.
     '''
-    label_names = {'landcover': ['c1', 'c2']}
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 2},
+        label_class_names={'landcover': ['c1', 'c2']},
+    )
     for kw in ('base', 'raw', 'none'):
         ctx = semantics.resolve_target_heads(
-            label_names_map=label_names,
-            user_targets_cfg={'landcover': kw},
+            schema,
+            {'landcover': kw},
         )
-        assert ctx.head_names == ('landcover',)
-        assert ctx.target_reclass['landcover'] is None
+        assert ctx.head_names == ['landcover']
+        assert ctx.resolved_reclass['landcover'] is None
 
 
 def test_resolve_target_heads_validation_errors():
@@ -236,19 +292,21 @@ def test_resolve_target_heads_validation_errors():
     When: Resolving target heads.
     Then: Raise appropriate ValueError or TypeError.
     '''
-    label_names = {'landcover': ['c1']}
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 1},
+        label_class_names={'landcover': ['c1']},
+    )
     with pytest.raises(ValueError, match='must contain a "reclass"'):
         semantics.resolve_target_heads(
-            label_names_map=label_names,
-            user_targets_cfg={
-                'landcover': {'invalid': 123}  # type: ignore[arg-type]
-            },
+            schema,
+            {'landcover': {'invalid': 123}},  # type: ignore[arg-type]
         )
 
     with pytest.raises(TypeError, match='Invalid target config type'):
         semantics.resolve_target_heads(
-            label_names_map=label_names,
-            user_targets_cfg={'landcover': 12345},  # type: ignore[arg-type]
+            schema,
+            {'landcover': 12345},  # type: ignore[arg-type]
         )
 
 
@@ -272,31 +330,33 @@ def test_derive_head_class_counts():
     When: Deriving head class counts in memory.
     Then: Calculate exact pixel counts for base, child, and group heads.
     '''
-    label_names = {'landcover': ['c1', 'c2', 'c3']}
     reclass_scheme = {
         'reclass': {'1': [1, 2], '2': [3]},
         'reclass_name': {'1': 'VEG', '2': 'WAT'},
     }
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 3},
+        label_class_names={'landcover': ['c1', 'c2', 'c3']},
+    )
     heads_ctx = semantics.resolve_target_heads(
-        label_names_map=label_names,
-        user_targets_cfg={
-            'landcover': reclass_scheme  # type: ignore[arg-type]
-        },
+        schema,
+        {'landcover': reclass_scheme},  # type: ignore[arg-type]
     )
 
     raw_counts = {'landcover': [50, 100, 200, 300]}
-    derived = semantics.derive_head_class_counts(raw_counts, heads_ctx)
+    derived = semantics.derive_head_class_counts(heads_ctx, raw_counts)
 
     # 1. base head
     assert derived['landcover'] == [50, 100, 200, 300]
     # 2. child slices
-    # VEG: classes 1 and 2 reindexed to 1, 2
-    assert derived['landcover_VEG'] == [0, 100, 200]
-    # WAT: class 3 reindexed to 1
-    assert derived['landcover_WAT'] == [0, 300]
+    # VEG: source classes 0 and 1 -> raw[0] = 50, raw[1] = 100
+    assert derived['landcover_VEG'] == [50, 100]
+    # WAT: source class 2 -> raw[2] = 200
+    assert derived['landcover_WAT'] == [200]
     # 3. grouping head
-    # group 1 = 100 + 200 = 300, group 2 = 300
-    assert derived['landcover_group'] == [0, 300, 300]
+    # group 0 = 50 + 100 = 150, group 1 = 200
+    assert derived['landcover_group'] == [150, 200]
 
 
 # ----- `resolve_focal_head` tests
@@ -306,20 +366,24 @@ def test_resolve_focal_head():
     When: Resolving the focal head name.
     Then: Correctly resolve head from head name, class name, or default.
     '''
-    label_names = {'landcover': ['c1', 'c2', 'c3']}
     reclass_scheme = {
         'reclass': {'1': [1, 2], '2': [3]},
         'reclass_name': {'1': 'VEG', '2': 'WAT'},
     }
+    schema = _make_dummy_schema(
+        label_bands={'landcover': 0},
+        label_num_cls={'landcover': 3},
+        label_class_names={'landcover': ['c1', 'c2', 'c3']},
+    )
     heads_ctx = semantics.resolve_target_heads(
-        label_names_map=label_names,
-        user_targets_cfg={
-            'landcover': reclass_scheme  # type: ignore[arg-type]
-        },
+        schema,
+        {'landcover': reclass_scheme},  # type: ignore[arg-type]
     )
 
     # default: prefers grouping head if reclassified
-    assert semantics.resolve_focal_head(heads_ctx, None) == 'landcover_group'
+    assert semantics.resolve_focal_head(heads_ctx, None) == (
+        'landcover_group'
+    )
 
     # direct head name match
     assert semantics.resolve_focal_head(
@@ -337,26 +401,3 @@ def test_resolve_focal_head():
     # unknown target error
     with pytest.raises(KeyError, match='Focal target "unknown" not found'):
         semantics.resolve_focal_head(heads_ctx, 'unknown')
-
-
-# ----- `resolve_target_reclass` compatibility tests
-def test_resolve_target_reclass_compat():
-    '''
-    Given: Label names and named label schemes.
-    When: Running resolve_target_reclass compatibility helper.
-    Then: Return mapping of layer name to resolved LabelScheme.
-    '''
-    schemes = {
-        'landcover': {
-            'binary': {
-                'reclass': {'1': [1, 2]},
-                'reclass_name': {'1': 'VEG'},
-            }
-        }
-    }
-    res = semantics.resolve_target_reclass(
-        {'landcover': ['c1', 'c2']},
-        {'landcover': 'binary'},
-        schemes,
-    )
-    assert res['landcover'] == schemes['landcover']['binary']

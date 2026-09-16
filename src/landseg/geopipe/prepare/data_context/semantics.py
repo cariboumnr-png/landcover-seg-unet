@@ -369,7 +369,7 @@ def _resolve_layer_scheme(
     available_schemes: typing.Mapping[str, geo_core.LabelScheme],
 ) -> geo_core.LabelScheme | None:
     '''Resolve and validate raw reclass scheme for one layer.'''
-    if cfg is None:
+    if cfg is None or cfg in ('raw', 'base', 'none'):
         return None
     if isinstance(cfg, str):
         _require_key(cfg, available_schemes, 'label schemes')

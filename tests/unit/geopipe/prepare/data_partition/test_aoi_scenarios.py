@@ -22,7 +22,7 @@
 # pylint: disable=duplicate-code
 
 '''
-Unit tests for data partition pipeline under all 3 spatial AOI scenarios.
+Unit tests for data partition pipeline under 3 spatial AOI scenarios.
 '''
 
 
@@ -68,10 +68,11 @@ def _create_aoi_tiff(
 def test_scenario_1_fixed_test_aoi_with_auto_train_val(tmp_path):
     '''
     Scenario 1: User provides test_aoi.
-    Given: A grid of 4 base blocks with block (0, 0) covered by test_aoi.
+    Given: A grid of 4 base blocks with block (0, 0) covered by
+        test_aoi.
     When: Partitioning with val_ratio=0.5 and test_ratio=0.0.
-    Then: Block (0, 0) is locked into test, and the remaining 3 blocks are
-          partitioned into train and val.
+    Then: Block (0, 0) is locked into test, and the remaining 3 blocks
+        are partitioned into train and val.
     '''
     t_test = rasterio.transform.from_origin(500000.0, 600000.0, 20.0, 20.0)
     test_aoi = str(tmp_path / 'test_aoi.tif')
@@ -118,7 +119,8 @@ def test_scenario_2_train_val_only_zero_test_blocks():
     Scenario 2: User provides test_ratio=0.0 and no test_aoi.
     Given: 4 valid data blocks.
     When: Partitioning for training/validation only.
-    Then: Test split is empty, and blocks are split between train and val.
+    Then: Test split is empty, and blocks are split between train and
+        val.
     '''
     blocks = {
         (0, 0): '/path/b0.npz',
@@ -155,9 +157,10 @@ def test_scenario_2_train_val_only_zero_test_blocks():
 
 def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
     '''
-    Scenario 3: User provides test_aoi, val_aoi, and train_aoi with overlap.
-    Given: Test and validation AOIs overlapping block (0, 0), and a train AOI
-           covering (256, 256).
+    Scenario 3: User provides test_aoi, val_aoi, and train_aoi with
+        overlap.
+    Given: Test and validation AOIs overlapping block (0, 0), and a
+        train AOI covering (256, 256).
     When: Partitioning with buffer_step=1.
     Then: Overlap resolves to test > val > train with logged warnings.
     '''
