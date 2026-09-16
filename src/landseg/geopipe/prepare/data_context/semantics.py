@@ -34,8 +34,11 @@ import typing
 # local imports
 import landseg.geopipe.core as geo_core
 
+# aliases
+field = dataclasses.field
 
-# ----- `FeatureSelection`
+
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class FeatureSelection:
     '''Selected feature band names and 0-based channel indices.'''
@@ -47,21 +50,6 @@ class FeatureSelection:
 
 
 @dataclasses.dataclass(frozen=True)
-class ResolvedTargetReclass:
-    '''Canonical zero-based reclassification mapping.'''
-    groups: dict[int, tuple[int, ...]]
-    names: dict[int, str]
-
-    def __iter__(self) -> typing.Iterator[tuple[int, tuple[int, ...], str]]:
-        for group_id, source_classes in self.groups.items():
-            yield group_id, source_classes, self.names.get(group_id, '')
-
-    def __getitem__(self, index: int) -> tuple[tuple[int, ...], str]:
-        return self.groups[index], self.names[index]
-
-
-# ----- `TargetHeadsContext`
-@dataclasses.dataclass(frozen=True)
 class TargetHeadsContext:
     '''
     Multi-head target hierarchy and reclassification specifications.
@@ -72,10 +60,64 @@ class TargetHeadsContext:
     num_classes: dict[str, int]
     class_names: dict[str, list[str]]
     ignore_classes: dict[str, list[int]]
-    resolved_reclass: dict[str, ResolvedTargetReclass | None]
+    resolved_reclass: dict[str, _ResolvedTargetReclass | None]
 
 
-# ----- `resolve_feature_channels`
+# ----- private dataclasses
+@dataclasses.dataclass(frozen=True)
+class _ResolvedTargetReclass:
+    '''Canonical zero-based reclassification mapping.'''
+    groups: dict[int, tuple[int, ...]]
+    names: dict[int, str]
+
+    @classmethod
+    def from_scheme(cls, scheme: geo_core.LabelScheme) -> _ResolvedTargetReclass:
+        '''Build canonical 0-based reclassification from user scheme.'''
+        reclass = scheme['reclass']
+        names = scheme.get('reclass_name', {})
+        return cls(
+            groups={
+                int(k) - 1: tuple(v - 1 for v in vv)
+                for k, vv in reclass.items()
+            },
+            names={int(k) - 1: v for k, v in names.items()},
+        )
+
+    def __iter__(self) -> typing.Iterator[tuple[int, tuple[int, ...], str]]:
+        for group_id, source_classes in self.groups.items():
+            yield group_id, source_classes, self.names.get(group_id, '')
+
+    def __getitem__(self, index: int) -> tuple[tuple[int, ...], str]:
+        return self.groups[index], self.names[index]
+
+
+@dataclasses.dataclass
+class _TargetTopology:
+    '''Internal mutable accumulator for multi-head target topology.'''
+    head_names: list[str] = field(default_factory=list)
+    head_parent: dict[str, str | None] = field(default_factory=dict)
+    head_parent_cls: dict[str, int | None] = field(default_factory=dict)
+    num_classes: dict[str, int] = field(default_factory=dict)
+    class_names: dict[str, list[str]] = field(default_factory=dict)
+    ignore_classes: dict[str, list[int]] = field(default_factory=dict)
+
+    def to_context(
+        self,
+        resolved_reclass: dict[str, _ResolvedTargetReclass | None],
+    ) -> TargetHeadsContext:
+        '''Convert accumulated topology into frozen TargetHeadsContext.'''
+        return TargetHeadsContext(
+            head_names=self.head_names,
+            head_parent=self.head_parent,
+            head_parent_cls=self.head_parent_cls,
+            num_classes=self.num_classes,
+            class_names=self.class_names,
+            ignore_classes=self.ignore_classes,
+            resolved_reclass=resolved_reclass,
+        )
+
+
+# ----- public functions
 def resolve_feature_channels(
     data_schema: geo_core.DataSchema,
     user_features_cfg: typing.Mapping[str, str] | list[str] | None,
@@ -143,7 +185,6 @@ def resolve_feature_channels(
     )
 
 
-# ----- `resolve_target_heads`
 def resolve_target_heads(
     data_schema: geo_core.DataSchema,
     user_targets_cfg: typing.Mapping[str, str | geo_core.LabelScheme] | None,
@@ -155,142 +196,98 @@ def resolve_target_heads(
     grouping layers according to user configuration and label schemes.
 
     Args:
-        label_names_map: Mapping of label layer name to class names
-            or sequence of label layer names.
+        data_schema: Ingested dataset schema container.
         user_targets_cfg: User target configuration per label layer.
-        label_schemes: Dataset manifest label schemes metadata.
-        label_ignore_cls: Optional mapping of layer name to ignore class
-            IDs.
 
     Returns:
         A `TargetHeadsContext` detailing full multi-head topology.
     '''
-    # normalize user label reclass schemes
-    user_targets_cfg = dict(user_targets_cfg or {})
-
-    # fetach from data schema
+    user_cfg = dict(user_targets_cfg or {})
     label_name_map = data_schema['io_conventions']['label_band_map']
     label_schemes = data_schema['dataset']['label_schemes']
-
     labels_info = data_schema['labels']
-    # from labels_info
-    ignore_classes = labels_info['label_ignore_cls']
 
-    # init
-    resolved_reclass: dict[str, ResolvedTargetReclass | None] = {}
-    head_names: list[str] = []
-    head_parent: dict[str, str | None] = {}
-    head_parent_cls: dict[str, int | None] = {}
-    num_classes: dict[str, int] = {}
-    class_names: dict[str, list[str]] = {}
+    resolved_reclass: dict[str, _ResolvedTargetReclass | None] = {}
+    topo = _TargetTopology()
 
-    for name in label_name_map.keys(): # 0-based
+    for name in label_name_map.keys():
+        # 1. record base head
+        topo.head_names.append(name)
+        topo.head_parent[name] = None
+        topo.head_parent_cls[name] = None
+        topo.num_classes[name] = labels_info['label_num_cls'][name]
+        topo.class_names[name] = list(labels_info['label_class_names'][name])
+        base_ignore = labels_info['label_ignore_cls'][name]
+        topo.ignore_classes[name] = list(base_ignore)
 
-        # record base head info
-        head_names.append(name)
-        head_parent[name] = None
-        head_parent_cls[name] = None
-        num_classes[name] = labels_info['label_num_cls'][name]
-        ignore_classes[name] = labels_info['label_ignore_cls'][name]
-        class_names[name] = labels_info['label_class_names'][name]
-        resolved_reclass[name] = None
+        # 2. resolve scheme
+        layer_schemes = label_schemes.get(name, {})
+        scheme = _resolve_layer_scheme(name, user_cfg.get(name), layer_schemes)
+        if not scheme:
+            resolved_reclass[name] = None
+            continue
 
-        # resolve reclassification scheme for this layer
-        reclass_scheme = user_targets_cfg.get(name)
-
-        if reclass_scheme is None:
-            pass
-
-        elif isinstance(reclass_scheme, str):
-            _require_key(reclass_scheme, label_schemes[name], 'label schemes')
-            reclass_scheme = label_schemes[name][reclass_scheme]
-
-        elif isinstance(reclass_scheme, dict):
-            if (
-                'reclass' not in reclass_scheme
-                or not isinstance(reclass_scheme['reclass'], dict)
-            ):
-                raise ValueError(
-                    f'Target reclassification dict for "{name}" '
-                    'must contain a "reclass" mapping'
-                )
-
-        else:
-            raise TypeError(
-                f'Invalid target config type for "{name}": '
-                f'expected str or dict, got {type(reclass_scheme)}'
-            )
-
-        if not reclass_scheme:
-            continue # no reclassification for this head
-
-        reclass = reclass_scheme['reclass']
-        reclass_name = reclass_scheme.get('reclass_name', {})
-
-        # resolve to 0-based
-        resolved_reclass[name] = ResolvedTargetReclass(
-            groups={
-                int(k) - 1: tuple(v - 1 for v in vv)
-                for k, vv in reclass.items()
-            },
-            names={
-                int(k) - 1: v
-                for k, v in reclass_name.items()
-            }
+        # 3. canonical reclass & multi-head topology
+        resolved_reclass[name] = _ResolvedTargetReclass.from_scheme(scheme)
+        primary_ignore = base_ignore[0] if base_ignore else 255
+        _add_reclass_heads(
+            name,
+            scheme,
+            topo.class_names[name],
+            primary_ignore,
+            topo,
         )
 
-        # proceed to reclassification process
-        base_classes = labels_info['label_class_names'][name]
-        base_ignore = labels_info['label_ignore_cls'][name]
-        primary_ignore = base_ignore[0] if base_ignore else 255
+    return topo.to_context(resolved_reclass)
 
-        group_head_name = f'{name}_group'
 
-        # add grouped head (parent)
-        head_names.append(group_head_name)
-        head_parent[group_head_name] = None
-        head_parent_cls[group_head_name] = None
-        num_classes[group_head_name] = len(reclass)
-        ignore_classes[group_head_name] = [primary_ignore]
-        class_names[group_head_name] = [reclass_name.get(str(g), f'group_{g}') for g in reclass]
+def resolve_focal_head(
+    target_heads: TargetHeadsContext,
+    focal_target: str | None = None,
+) -> str:
+    '''
+    Resolve active focal target head for partitioning.
 
-        # add sub-group heads (child)
-        for group_id, child_classes in reclass.items():
-            grp_name = reclass_name.get(str(group_id))
-            if grp_name:
-                child_head_name = f'{name}_{grp_name}'
-            else:
-                child_head_name = f'{name}_sub{group_id}'
+    Matches direct head names, child slice or grouping class names,
+    or falls back to the default grouping or primary head.
 
-            head_names.append(child_head_name)
-            head_parent[child_head_name] = group_head_name
-            head_parent_cls[child_head_name] = int(group_id)
-            num_classes[child_head_name] = len(child_classes)
+    Args:
+        target_heads: Resolved multi-head hierarchy context.
+        focal_target: Optional requested focal head or class name.
 
-            # resolve class names for child slice
-            child_cnames: list[str] = []
-            for cls_id in child_classes:
-                if 1 <= cls_id <= len(base_classes):
-                    child_cnames.append(base_classes[cls_id - 1])
-                elif 0 <= cls_id < len(base_classes):
-                    child_cnames.append(base_classes[cls_id])
-                else:
-                    child_cnames.append(f'class_{cls_id}')
-            class_names[child_head_name] = child_cnames
-            ignore_classes[child_head_name] = [primary_ignore]
+    Returns:
+        The resolved focal head name string.
+    '''
+    if not target_heads.head_names:
+        raise ValueError('No target heads available in context')
 
-    return TargetHeadsContext(
-        head_names=head_names,
-        head_parent=head_parent,
-        head_parent_cls=head_parent_cls,
-        num_classes=num_classes,
-        class_names=class_names,
-        ignore_classes=ignore_classes,
-        resolved_reclass=resolved_reclass,
+    if focal_target is None:
+        # prefer grouping head if reclassified, else primary base head
+        for h in target_heads.head_names:
+            if h.endswith('_group'):
+                return h
+        return target_heads.head_names[0]
+
+    # 1. exact match with head name
+    if focal_target in target_heads.head_names:
+        return focal_target
+
+    # 2. match against class names across heads
+    for head_name, cnames in target_heads.class_names.items():
+        if focal_target in cnames:
+            return head_name
+
+    # 3. match against child slice group prefix/suffix
+    for head_name in target_heads.head_names:
+        if head_name.endswith(f'_{focal_target}'):
+            return head_name
+
+    raise KeyError(
+        f'Focal target "{focal_target}" not found in available target '
+        f'heads {list(target_heads.head_names)} or class names'
     )
 
 
-# ----- `derive_head_class_counts`
 def derive_head_class_counts(
     target_heads: TargetHeadsContext,
     raw_class_counts: typing.Mapping[str, typing.Sequence[int]],
@@ -347,55 +344,76 @@ def derive_head_class_counts(
     return derived
 
 
-# ----- `resolve_focal_head`
-def resolve_focal_head(
-    target_heads: TargetHeadsContext,
-    focal_target: str | None = None,
-) -> str:
-    '''
-    Resolve active focal target head for partitioning.
-
-    Matches direct head names, child slice or grouping class names,
-    or falls back to the default grouping or primary head.
-
-    Args:
-        target_heads: Resolved multi-head hierarchy context.
-        focal_target: Optional requested focal head or class name.
-
-    Returns:
-        The resolved focal head name string.
-    '''
-    if not target_heads.head_names:
-        raise ValueError('No target heads available in context')
-
-    if focal_target is None:
-        # prefer grouping head if reclassified, else primary base head
-        for h in target_heads.head_names:
-            if h.endswith('_group'):
-                return h
-        return target_heads.head_names[0]
-
-    # 1. exact match with head name
-    if focal_target in target_heads.head_names:
-        return focal_target
-
-    # 2. match against class names across heads
-    for head_name, cnames in target_heads.class_names.items():
-        if focal_target in cnames:
-            return head_name
-
-    # 3. match against child slice group prefix/suffix
-    for head_name in target_heads.head_names:
-        if head_name.endswith(f'_{focal_target}'):
-            return head_name
-
-    raise KeyError(
-        f'Focal target "{focal_target}" not found in available target '
-        f'heads {list(target_heads.head_names)} or class names'
+# ----- private helpers
+def _resolve_layer_scheme(
+    name: str,
+    cfg: str | geo_core.LabelScheme | None,
+    available_schemes: typing.Mapping[str, geo_core.LabelScheme],
+) -> geo_core.LabelScheme | None:
+    '''Resolve and validate raw reclassification scheme for one layer.'''
+    if cfg is None:
+        return None
+    if isinstance(cfg, str):
+        _require_key(cfg, available_schemes, 'label schemes')
+        return available_schemes[cfg]
+    if isinstance(cfg, dict):
+        if (
+            'reclass' not in cfg
+            or not isinstance(cfg['reclass'], dict)
+        ):
+            raise ValueError(
+                f'Target reclassification dict for "{name}" '
+                'must contain a "reclass" mapping'
+            )
+        return cfg
+    raise TypeError(
+        f'Invalid target config type for "{name}": '
+        f'expected str or dict, got {type(cfg)}'
     )
 
 
-# ----- `_require_key`
+def _add_reclass_heads(
+    name: str,
+    scheme: geo_core.LabelScheme,
+    base_classes: list[str],
+    primary_ignore: int,
+    topo: _TargetTopology,
+) -> None:
+    '''Append group and child slice heads to topology accumulator.'''
+    reclass = scheme['reclass']
+    reclass_name = scheme.get('reclass_name', {})
+
+    # 1. group head (parent)
+    group_head = f'{name}_group'
+    topo.head_names.append(group_head)
+    topo.head_parent[group_head] = None
+    topo.head_parent_cls[group_head] = None
+    topo.num_classes[group_head] = len(reclass)
+    topo.ignore_classes[group_head] = [primary_ignore]
+    topo.class_names[group_head] = [
+        reclass_name.get(str(g), f'group_{g}') for g in reclass
+    ]
+
+    # 2. child slice heads (sub-groups)
+    for group_id, child_classes in reclass.items():
+        grp_name = reclass_name.get(str(group_id))
+        child_head = (
+            f'{name}_{grp_name}' if grp_name else f'{name}_sub{group_id}'
+        )
+
+        topo.head_names.append(child_head)
+        topo.head_parent[child_head] = group_head
+        topo.head_parent_cls[child_head] = int(group_id)
+        topo.num_classes[child_head] = len(child_classes)
+        topo.ignore_classes[child_head] = [primary_ignore]
+        topo.class_names[child_head] = [
+            base_classes[c - 1]
+            if 1 <= c <= len(base_classes)
+            else f'class_{c}'
+            for c in child_classes
+        ]
+
+
 def _require_key(
     key: str,
     mapping: typing.Mapping,
