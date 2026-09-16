@@ -28,7 +28,7 @@ Emits a dataset-wide JSON schema from materialized blocks, split
 partitions, image statistics, and label statistics.
 
 Public APIs:
-    - build_schema: generate and write the dataset preparation schema JSON.
+    - build_schema: generate and persist dataset preparation schema.
 '''
 
 # standard imports
@@ -40,6 +40,7 @@ import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.core.prepared_dateset_types as geo_types
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.common as common
 
 
@@ -47,7 +48,7 @@ import landseg.geopipe.prepare.common as common
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
+SchemaCtrl = artifacts.Controller[geo_core.PreparedSchema]
 load = artifacts.Controller.load_json_or_fail
 
 
@@ -68,6 +69,7 @@ class _PipelinePaths(typing.Protocol):
 # ----- public functions
 def build_schema(
     paths: _PipelinePaths,
+    context: prepare.DatasetContext,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: common.PreparationLogger,
@@ -76,12 +78,15 @@ def build_schema(
     Generate and persist dataset preparation schema JSON.
 
     Combines artifact hashes, train/val/test split manifests, per-band
-    image statistics, and label class statistics into a single
-    verified transform schema JSON artifact.
+    image statistics, label class statistics, and target head
+    reclassification hierarchy into a single verified transform
+    schema JSON artifact.
 
     Args:
         paths:
             transform paths container.
+        context:
+            dataset preparation context with target heads topology.
         policy:
             lifecycle policy guiding rebuild behavior.
         logger:
@@ -123,9 +128,23 @@ def build_schema(
         ctrl = ImageStatsCtrl.load_json_or_fail(paths.image_stats)
         image_stats = ctrl.fetch()
 
+        # target heads reclass hierarchy
+        heads_schema: geo_core.TargetHeadsSchema = {
+            'head_names': list(context.targets.head_names),
+            'head_parent': dict(context.targets.head_parent),
+            'head_parent_cls': dict(context.targets.head_parent_cls),
+            'num_classes': dict(context.targets.num_classes),
+            'class_names': {
+                k: list(v) for k, v in context.targets.class_names.items()
+            },
+            'ignore_classes': {
+                k: list(v) for k, v in context.targets.ignore_classes.items()
+            },
+        }
+
         # populate schema dict
         schema = {
-            'schema_version': geo_types.TRANSFORM_SCHEMA_ID,
+            'schema_version': geo_types.PREPARED_SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,
@@ -136,6 +155,7 @@ def build_schema(
             'image_stats': image_stats,
             'image_array_key': 'image', # current convention
             'label_array_key': 'label', # current convention
+            'heads': heads_schema,
         }
         schema_ctrl.persist(schema)
         logger.log('INFO', '[CHECKPOINT] Created dataset transform schema')

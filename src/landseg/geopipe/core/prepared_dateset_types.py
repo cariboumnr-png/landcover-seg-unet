@@ -30,7 +30,8 @@ global transformation metadata are serialized to JSON.
 Public APIs:
     - `BlocksPartition`: TypedDict mapping block IDs across splits.
     - `ImageBandStats`: TypedDict for image band statistics.
-    - `TransformSchema`: TypedDict for dataset-wide transformation schema.
+    - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
+    - `PreparedSchema`: TypedDict for dataset preparation schema.
     - `PartitionSummary`: TypedDict for split and hydration summary.
 '''
 
@@ -38,7 +39,7 @@ Public APIs:
 from __future__ import annotations
 import typing
 
-TRANSFORM_SCHEMA_ID = 'transform_schema/v1'
+PREPARED_SCHEMA_ID = 'transform_schema/v1'
 
 
 # ----- public types
@@ -79,7 +80,34 @@ class ImageBandStats(typing.TypedDict):
     std: float
 
 
-class TransformSchema(typing.TypedDict):
+class TargetHeadsSchema(typing.TypedDict):
+    '''
+    Resolved multi-head target hierarchy and reclassification specs.
+
+    Fields:
+
+    - **head_names**:
+        Ordered list of target head names.
+    - **head_parent**:
+        Mapping of child head names to parent group head names.
+    - **head_parent_cls**:
+        Mapping of child head names to parent class indices.
+    - **num_classes**:
+        Mapping of head names to class counts.
+    - **class_names**:
+        Mapping of head names to list of class label names.
+    - **ignore_classes**:
+        Mapping of head names to list of ignored class indices.
+    '''
+    head_names: list[str]
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
+    num_classes: dict[str, int]
+    class_names: dict[str, list[str]]
+    ignore_classes: dict[str, list[int]]
+
+
+class PreparedSchema(typing.TypedDict):
     '''
     Dataset-wide transformation schema.
 
@@ -111,6 +139,9 @@ class TransformSchema(typing.TypedDict):
         Key used to access image arrays in stored artifacts.
     - **label_array_key**:
         Key used to access label arrays in stored artifacts.
+    - **heads**:
+        Target heads reclassification hierarchy and class
+        specifications.
     '''
     schema_version: str
     creation_time: str
@@ -123,6 +154,7 @@ class TransformSchema(typing.TypedDict):
     image_stats: dict[str, ImageBandStats]
     image_array_key: str
     label_array_key: str
+    heads: typing.NotRequired[TargetHeadsSchema]
 
 
 class PartitionSummary(typing.TypedDict):

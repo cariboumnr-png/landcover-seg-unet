@@ -123,15 +123,16 @@ def prepare(config: configs.RootConfig):
         logger.log('INFO', f'[COMPLETE] Block normalization (D_{d:.2f}s)')
 
         # build schema
-        logger.log('INFO', '[START] Transform schema building')
+        logger.log('INFO', '[START] Prepared schema building')
         prepare_data.build_schema(
             paths,
+            dataset_context,
             policy=policy,
-            logger=logger
+            logger=logger,
         )
         assert logger.summary['schema']
         d = logger.summary['schema']['duration_sec']
-        logger.log('INFO', f'[COMPLETE] Transform schema building (D_{d:.2f}s)')
+        logger.log('INFO', f'[COMPLETE] Prepared schema building (D_{d:.2f}s)')
 
         # write config JSON sidecar upon successful execution
         artifacts.Controller[dict](paths.config).persist(config.as_dict)

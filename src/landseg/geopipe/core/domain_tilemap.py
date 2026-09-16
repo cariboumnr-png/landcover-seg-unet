@@ -194,7 +194,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
 
     # ----- alternative constructor
     @classmethod
-    def from_json_payload(cls, payload: DomainPayload) -> DomainTileMap:
+    def from_payload(cls, payload: DomainPayload) -> DomainTileMap:
         '''
         Reconstruct a DomainTileMap from a JSON payload.
 

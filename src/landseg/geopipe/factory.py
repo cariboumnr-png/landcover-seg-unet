@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Construct runtime data specifications from ingestion and preparation schemas.
+Construct runtime data specs from ingestion and preparation schemas.
 
 This module bridges persisted dataset artifacts and the training stack
 by assembling a `DataSpecs` object consumed by models, trainers, and
@@ -75,7 +75,7 @@ def build_dataspec(
     '''
     # artifact fpaths
     data_schema_fpath = artifact_paths.data_ingestion.data_blocks.dev.schema
-    transform_schema_fpath = artifact_paths.data_preparation.schema
+    prepared_schema_fpath = artifact_paths.data_preparation.schema
 
     # load artifacts
     # domains
@@ -93,24 +93,24 @@ def build_dataspec(
     data_ctrl = artifacts.Controller[geo_core.DataSchema].load_json_or_fail
     data_schema = data_ctrl(data_schema_fpath).fetch()
 
-    # transform schema
-    transform_ctrl = (
-        artifacts.Controller[geo_core.TransformSchema].load_json_or_fail
+    # prepared schema
+    prepared_ctrl = (
+        artifacts.Controller[geo_core.PreparedSchema].load_json_or_fail
     )
-    transform_schema = transform_ctrl(transform_schema_fpath).fetch()
+    prepared_schema = prepared_ctrl(prepared_schema_fpath).fetch()
 
     # return specs
     return core.DataSpecs(
         name=data_schema['dataset']['name'],
         mode=mode,
-        meta=_get_meta(data_schema, transform_schema),
+        meta=_get_meta(data_schema, prepared_schema),
         heads=_get_heads(
             data_schema,
-            transform_schema,
+            prepared_schema,
             knowledge_paths=artifact_paths.knowledge
         ),
-        splits=_get_split(transform_schema),
-        domains=_get_domain(transform_schema, ids_domain, vec_domain)
+        splits=_get_split(prepared_schema),
+        domains=_get_domain(prepared_schema, ids_domain, vec_domain)
     )
 
 
@@ -128,73 +128,76 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
     )
     payload = ctrl.load()
     assert payload # typing assertion
-    return geo_core.DomainTileMap.from_json_payload(payload)
+    return geo_core.DomainTileMap.from_payload(payload)
 
 
 def _get_meta(
     data_schema: geo_core.DataSchema,
-    transform_schema: geo_core.TransformSchema
+    prepared_schema: geo_core.PreparedSchema,
 ) -> core.Meta:
     '''Populate core.Meta dataclass from schema dictionaries.'''
-    # expected tensor sizes
-    # per-pixel byte size
-    img_b = numpy.dtype(
-        data_schema['io_conventions']['dtypes']['image']
-    ).itemsize
-    lbl_b = numpy.dtype(
-        data_schema['io_conventions']['dtypes']['label']
-    ).itemsize
-    # total pixels per tensor
+    dtypes = data_schema['io_conventions']['dtypes']
+    img_b = numpy.dtype(dtypes['image']).itemsize
+    lbl_b = numpy.dtype(dtypes['label']).itemsize
     img_px = math.prod(data_schema['tensor_shapes']['image']['shape'])
     lbl_px = math.prod(data_schema['tensor_shapes']['label']['shape'])
 
-    # get the patch grid of the test blocks if provided
-    test_blocks = transform_schema.get('test_blocks', None)
-    col, row = 0, 0
-    if len(test_blocks) > 0:
-        # get block names sorted by col then row
-        sorted_blknames = sorted(test_blocks.keys(), key=geo_utils.name_xy)
-        # get xy origin
-        xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
-        # track max col and row number (0-based)
-        img_w = data_schema['tensor_shapes']['image']['W']
-        img_h = data_schema['tensor_shapes']['image']['H']
-        for blkname in sorted_blknames:
-            x, y = geo_utils.name_xy(blkname)
-            col = max(col, (x - xmin) / img_w)
-            row = max(row, (y - ymin) / img_h)
-        col, row = int(col + 1), int(row + 1)
-        # check if test blocks form a continuous array without gaps
-        if col * row != len(sorted_blknames):
-            col, row = 0, 0 # empty grid for downstream
+    test_grid = __calc_test_grid(
+        prepared_schema.get('test_blocks'),
+        data_schema['tensor_shapes']['image']['W'],
+        data_schema['tensor_shapes']['image']['H'],
+    )
 
-    # return a meta dataclass
     return core.Meta(
-        test_blks_grid=(col, row),
+        test_blks_grid=test_grid,
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
-        label_color_map=data_schema['labels']['label_color_map'],
+        label_color_map=data_schema['labels']['label_class_color_map'],
         image_specs=core.Meta.Image(
             num_channels=data_schema['tensor_shapes']['image']['C'],
             height_width=data_schema['tensor_shapes']['image']['H'],
-            array_key=transform_schema['image_array_key'],
+            array_key=prepared_schema['image_array_key'],
             band_map=data_schema['io_conventions']['image_band_map'],
         ),
         label_specs=core.Meta.Label(
-            array_key=transform_schema['label_array_key'],
-            ignore_index=data_schema['io_conventions']['ignore_index']
-        )
+            array_key=prepared_schema['label_array_key'],
+            ignore_index=data_schema['io_conventions']['ignore_index'],
+        ),
     )
+
+
+def __calc_test_grid(
+    test_blocks: dict[str, str] | None,
+    img_w: int,
+    img_h: int,
+) -> tuple[int, int]:
+    '''Calculate continuous patch grid dimensions for test blocks.'''
+    if not test_blocks:
+        return 0, 0
+    sorted_blknames = sorted(test_blocks.keys(), key=geo_utils.name_xy)
+    xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
+    col, row = 0.0, 0.0
+    for blkname in sorted_blknames:
+        x, y = geo_utils.name_xy(blkname)
+        col = max(col, (x - xmin) / img_w)
+        row = max(row, (y - ymin) / img_h)
+    col_int, row_int = int(col + 1), int(row + 1)
+    if col_int * row_int != len(sorted_blknames):
+        return 0, 0
+    return col_int, row_int
 
 
 def _get_heads(
     data_schema: geo_core.DataSchema,
-    transform_schema: geo_core.TransformSchema,
+    prepared_schema: geo_core.PreparedSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:
     '''Populate core.Heads dataclass from schema dictionary.'''
-    raw_counts: dict[str, list[int]] = transform_schema['label_stats']
+    raw_counts: dict[str, list[int]] = prepared_schema['label_stats']
     counts = {k: v for k, v in raw_counts.items() if k != 'original'}
-    taxonomy = data_schema['labels'].get('label_taxonomy', {})
+    taxonomy: dict[str, dict[str, typing.Any]] = {
+        k: dict(v)
+        for k, v in data_schema['labels'].get('label_taxonomy', {}).items()
+    }
     sim_matrices: dict[str, torch.Tensor] = {}
     kp = knowledge_paths or artifacts.KnowledgePaths()
     for hname, tax_dict in taxonomy.items():
@@ -205,11 +208,23 @@ def _get_heads(
                 knowledge_root=kp.root,
             )
 
+    head_parent: dict[str, str | None]
+    head_parent_cls: dict[str, int | None]
+    if 'heads' in prepared_schema:
+        heads_schema = prepared_schema['heads']
+        parent_map = heads_schema['head_parent']
+        parent_cls_map = heads_schema['head_parent_cls']
+        head_parent = {k: parent_map.get(k) for k in counts}
+        head_parent_cls = {k: parent_cls_map.get(k) for k in counts}
+    else:
+        head_parent = {k: None for k in counts}
+        head_parent_cls = {k: None for k in counts}
+
     return core.Heads(
         class_counts=counts,
         logits_adjust={k: __la_from_count(v) for k, v in counts.items()},
-        head_parent=data_schema['labels']['label_parent'],
-        head_parent_cls=data_schema['labels']['label_parent_cls'],
+        head_parent=head_parent,
+        head_parent_cls=head_parent_cls,
         taxonomy=taxonomy,
         similarity_matrices=sim_matrices,
     )
@@ -227,25 +242,25 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(transform_schema: geo_core.TransformSchema) -> core.Splits:
+def _get_split(prepared_schema: geo_core.PreparedSchema) -> core.Splits:
     '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
-        train=transform_schema['train_blocks'],
-        val=transform_schema['val_blocks'],
-        test=transform_schema['test_blocks']
+        train=prepared_schema['train_blocks'],
+        val=prepared_schema['val_blocks'],
+        test=prepared_schema['test_blocks']
     )
 
 
 def _get_domain(
-    transform_schema: geo_core.TransformSchema,
+    prepared_schema: geo_core.PreparedSchema,
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:
     '''Populate core.Domains dataclass from schema dictionary.'''
     # get file paths
-    train_blocks = transform_schema['train_blocks']
-    val_blocks = transform_schema['val_blocks']
-    test_blocks = transform_schema['test_blocks']
+    train_blocks = prepared_schema['train_blocks']
+    val_blocks = prepared_schema['val_blocks']
+    test_blocks = prepared_schema['test_blocks']
 
     # format domains
     train_domain = __parse_domain(train_blocks, ids_domain, vec_domain)

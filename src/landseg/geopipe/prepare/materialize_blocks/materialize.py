@@ -142,7 +142,7 @@ def _materialize_one_block(
     data = block.data
 
     # image channel selection
-    ch_idx = context.features.indices
+    ch_idx = list(context.features.indices)
     img_arr = _normalize_image(data.image[ch_idx], data.valid_mask, img_stats)
 
     # label layers reclassification

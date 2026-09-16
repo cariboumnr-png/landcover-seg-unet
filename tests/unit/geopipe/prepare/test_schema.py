@@ -88,8 +88,33 @@ def test_build_schema(mocker):
     mock_paths.label_stats = 'label_stats.json'
     mock_paths.image_stats = 'image_stats.json'
 
+    # mock context
+    mock_context = mocker.Mock()
+    mock_context.targets.head_names = ['head1', 'head1_sub']
+    mock_context.targets.head_parent = {
+        'head1': None,
+        'head1_sub': 'head1',
+    }
+    mock_context.targets.head_parent_cls = {
+        'head1': None,
+        'head1_sub': 1,
+    }
+    mock_context.targets.num_classes = {
+        'head1': 2,
+        'head1_sub': 1,
+    }
+    mock_context.targets.class_names = {
+        'head1': ['cls0', 'cls1'],
+        'head1_sub': ['sub0'],
+    }
+    mock_context.targets.ignore_classes = {
+        'head1': [255],
+        'head1_sub': [255],
+    }
+
     schema.build_schema(
         mock_paths,
+        mock_context,
         policy=mocker.Mock(),
         logger=mock_logger
     )
@@ -99,4 +124,17 @@ def test_build_schema(mocker):
     persisted_schema = mock_schema_ctrl.persist.call_args[0][0]
     assert persisted_schema['schema_version'] is not None
     assert persisted_schema['checksums']['block_source'] == 'mock-hash-value'
+    assert persisted_schema['heads']['head_names'] == ['head1', 'head1_sub']
+    assert persisted_schema['heads']['head_parent'] == {
+        'head1': None,
+        'head1_sub': 'head1',
+    }
+    assert persisted_schema['heads']['head_parent_cls'] == {
+        'head1': None,
+        'head1_sub': 1,
+    }
+    assert persisted_schema['heads']['num_classes'] == {
+        'head1': 2,
+        'head1_sub': 1,
+    }
     assert mock_logger.set_schema_report.called

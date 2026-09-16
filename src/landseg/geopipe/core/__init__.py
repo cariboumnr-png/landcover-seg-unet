@@ -80,7 +80,8 @@ __all__ = [
     'LabelScheme',
     'LabelSchemes',
     'TaxonomySpecs',
-    'TransformSchema',
+    'PreparedSchema',
+    'TargetHeadsSchema',
     'PartitionSummary',
 ]
 
@@ -115,7 +116,8 @@ if typing.TYPE_CHECKING:
     from .prepared_dateset_types import (
         BlocksPartition,
         ImageBandStats,
-        TransformSchema,
+        PreparedSchema,
+        TargetHeadsSchema,
         PartitionSummary
     )
 
@@ -171,7 +173,8 @@ def __getattr__(name: str):
     if name in {
         'BlocksPartition',
         'ImageBandStats',
-        'TransformSchema',
+        'PreparedSchema',
+        'TargetHeadsSchema',
         'PartitionSummary'
     }:
         obj = importlib.import_module('.prepared_dateset_types', __package__)
