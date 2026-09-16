@@ -170,7 +170,7 @@ def _enrich_view_w_class_counts(
     return dataclasses.replace(
         catalog_view,
         focal_head=focal_head,
-        raw_counts=updated_raw_counts,
+        raw_class_counts=updated_raw_counts,
         valid_class_counts=valid_counts,
         base_class_counts=base_counts,
     )

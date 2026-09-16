@@ -29,21 +29,23 @@ maintains split-indexed file mappings for downstream schema generation.
 
 # standard imports
 import os
+import typing
 # third-party imports
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common.alias as alias
+import landseg.geopipe.prepare.data_context as data_context
 import landseg.utils as utils
 
 
 # ----- `normalize_blocks` implementation
-def normalize_blocks(
+def materialize_blocks(
     input_blocks: set[str],
     stats: dict[str, geo_core.ImageBandStats],
+    context: data_context.DatasetContext,
     output_dir: str,
     *,
-    channel_indices: list[int] | None = None,
     rebuild: bool = False,
 ) -> tuple[dict[str, str], int]:
     '''
@@ -85,8 +87,8 @@ def normalize_blocks(
     os.makedirs(output_dir, exist_ok=True)
     jobs = [
         (
-            _normalize_one_block,
-            (b, stats, output_dir, channel_indices),
+            _materialize_one_block,
+            (b, stats, output_dir, context),
             {}
         )
         for b in work
@@ -105,30 +107,56 @@ def normalize_blocks(
 
 
 # ----- private helpers
-def _normalize_one_block(
+def _purge(
+    filenames_to_keep: list[str],
+    target_dir: str
+) -> int:
+    '''
+    Remove files in the target directory that are not expected to exist.
+
+    Returns the number of removed files.
+    '''
+    if not os.path.exists(target_dir) or not os.listdir(target_dir):
+        return 0
+
+    removed = 0
+    for name in os.listdir(target_dir):
+        path = os.path.join(target_dir, name)
+        if os.path.isfile(path) and name not in filenames_to_keep:
+            os.remove(path)
+            removed += 1
+    return removed
+
+
+def _materialize_one_block(
     block_fpath: str,
-    global_stats: dict[str, geo_core.ImageBandStats],
+    img_stats: dict[str, geo_core.ImageBandStats],
     target_dpath: str,
-    channel_indices: list[int] | None = None,
+    context: data_context.DatasetContext,
 ):
     '''Normalize a single data block and write it to disk.'''
     # read block
     block = geo_core.DataBlock.load(block_fpath)
     data = block.data
 
-    raw_image = data.image
-    if channel_indices is not None:
-        raw_image = raw_image[channel_indices]
+    # image channel selection
+    ch_idx = context.features.indices
+    img_arr = _normalize_image(data.image[ch_idx], data.valid_mask, img_stats)
 
-    # prep dict of arrays to write
-    to_write = {
-        'image': _normalize_image(raw_image, data.valid_mask, global_stats),
-        'label': data.label
+    # label layers reclassfication
+    head_names = context.targets.head_names
+    reclass = {
+        k: v.groups
+        for k, v in context.targets.resolved_reclass.items()
+        if v is not None
     }
+    ignore_idx = block.manifest['label_ignore_index']
+    lbl_arr = _reclassify_labels(data.label, head_names, reclass, ignore_idx)
 
-    # use the same file name
+    # write blocks to files
     filename = os.path.basename(block_fpath)
     save_fpath = os.path.join(target_dpath, filename)
+    to_write = {'image': img_arr, 'label': lbl_arr}
     numpy.savez_compressed(save_fpath, **to_write)
 
 
@@ -163,22 +191,64 @@ def _normalize_image(
     return image_normalized
 
 
-def _purge(
-    filenames_to_keep: list[str],
-    target_dir: str
-) -> int:
+def _reclassify_labels(
+    raw_labels: numpy.ndarray | typing.Sequence[numpy.ndarray],
+    label_layer_names: typing.Sequence[str],
+    target_reclass: typing.Mapping[str, dict[int, tuple[int, ...]] | None],
+    ignore_index: int,
+) -> numpy.ndarray:
     '''
-    Remove files in the target directory that are not expected to exist.
+    Build multi-head label stack applying active target reclasses.
 
-    Returns the number of removed files.
+    Args:
+        raw_labels: 3D array of shape [L, H, W] or list of 2D arrays.
+        label_layer_names: Names corresponding to each base label layer.
+        target_reclass: Mapping of label layer name to reclass config.
+        ignore_index: Integer index for masked pixels (e.g. 255).
+
+    Returns:
+        A 3D numpy array of shape [L, H, W] with the transformed stack.
     '''
-    if not os.path.exists(target_dir) or not os.listdir(target_dir):
-        return 0
+    if isinstance(raw_labels, numpy.ndarray):
+        if raw_labels.ndim == 3:
+            label_list = [raw_labels[i] for i in range(raw_labels.shape[0])]
+        elif raw_labels.ndim == 2:
+            label_list = [raw_labels]
+        else:
+            raise ValueError(
+                f'Expected 2D or 3D label array, got shape {raw_labels.shape}'
+            )
+    else:
+        label_list = list(raw_labels)
 
-    removed = 0
-    for name in os.listdir(target_dir):
-        path = os.path.join(target_dir, name)
-        if os.path.isfile(path) and name not in filenames_to_keep:
-            os.remove(path)
-            removed += 1
-    return removed
+    stack: list[numpy.ndarray] = []
+
+    for i, arr in enumerate(label_list):
+        name = (
+            label_layer_names[i]
+            if i < len(label_layer_names)
+            else f'label_{i}'
+        )
+        reclass_cfg = target_reclass.get(name)
+        if not reclass_cfg:
+            stack.append(arr)
+            continue
+
+        # 1. Base layer
+        stack.append(arr)
+
+        # 2. Child slices
+        group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+        for group_id, classes in reclass_cfg.items():
+            mask = numpy.isin(arr, classes)
+            group_layer[mask] = int(group_id)
+
+            child_arr = numpy.where(mask, arr, ignore_index)
+            for k, cls_id in enumerate(classes, 1):
+                child_arr[child_arr == cls_id] = int(k)
+            stack.append(child_arr)
+
+        # 3. Grouping layer
+        stack.append(group_layer)
+
+    return numpy.stack(stack, axis=0)

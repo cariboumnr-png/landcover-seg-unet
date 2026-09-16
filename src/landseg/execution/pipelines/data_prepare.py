@@ -67,12 +67,13 @@ def prepare(config: configs.RootConfig):
             else artifacts.LifecyclePolicy.BUILD_IF_MISSING
         )
 
-
-        # parse catalog from data ingestion stage
-        parsed_catalog = prepare_data.data_blocks_adapter(
+        # build dataset context
+        dataset_context = prepare_data.build_dataset_context(
             artifact_paths.data_ingestion.data_blocks.catalog,
             artifact_paths.data_ingestion.data_blocks.schema,
-            config=config.data.preparation.catalog
+            config=config.data.preparation.catalog,
+            user_features=config.data.preparation.features,
+            user_targets=config.data.preparation.targets
         )
 
         # datablocks partition
@@ -94,13 +95,11 @@ def prepare(config: configs.RootConfig):
             val_aoi=partition.val_aoi,
             test_aoi=partition.test_aoi,
             aoi_min_overlap=partition.aoi_min_overlap,
-            canvas_crs=parsed_catalog.canvas_crs,
-            canvas_transform=parsed_catalog.canvas_transform,
+            canvas_crs=dataset_context.crs,
+            canvas_transform=dataset_context.transform,
         )
-
-
         prepare_data.run_datablocks_partition(
-            parsed_catalog,
+            dataset_context,
             paths,
             partition_config,
             policy=policy,
@@ -111,32 +110,11 @@ def prepare(config: configs.RootConfig):
         d = logger.summary['data_partition']['duration_sec']
         logger.log('INFO', f'[COMPLETE] Dataset partitioning splits (D_{d:.2f}s)')
 
-        # normalize
+        # materiazlie
         logger.log('INFO', '[START] Block normalization')
-        data_schema = artifacts.Controller[dict].load_json_or_fail(
-            artifact_paths.data_ingestion.data_blocks.schema
-        ).fetch()
-        image_band_map = data_schema.get('io_conventions', {}).get(
-            'image_band_map', {}
-        )
-        label_names = data_schema.get('labels', {}).get('label_names', {})
-        raster_schemes = data_schema.get('dataset', {}).get('schemes', {})
-
-        _, selected_indices = prepare_data.resolve_feature_channels(
-            image_band_map,
-            config.data.preparation.features,
-            raster_schemes=raster_schemes
-        )
-        target_reclass = prepare_data.resolve_target_reclass(
-            label_names,
-            config.data.preparation.targets,
-            raster_schemes=raster_schemes
-        )
-
-        prepare_data.run_normalize_blocks(
+        prepare_data.run_materialize_blocks(
             paths,
-            channel_indices=selected_indices,
-            target_reclass=target_reclass,
+            dataset_context,
             policy=policy,
             logger=logger
         )

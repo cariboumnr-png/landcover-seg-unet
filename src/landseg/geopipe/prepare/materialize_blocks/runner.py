@@ -36,7 +36,8 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
-import landseg.geopipe.prepare.materialize_blocks.normalize as normalize
+import landseg.geopipe.prepare.data_context as data_context
+import landseg.geopipe.prepare.materialize_blocks.materialize as materialize
 import landseg.geopipe.prepare.materialize_blocks.stats as stats
 
 # --------------------------------private types--------------------------------
@@ -46,6 +47,8 @@ class _PipelinePaths(typing.Protocol):
     def splits_source_blocks(self) -> str: ...
     @property
     def image_stats(self) -> str: ...
+    @property
+    def label_stats(self) -> str: ...
     @property
     def splits_transformed_blocks(self) -> str: ...
     @property
@@ -57,14 +60,15 @@ class _PipelinePaths(typing.Protocol):
 
 # typing aliases
 PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
 
 # ----- `run_normalize_blocks` execution
-def run_normalize_blocks(
+def run_materialize_blocks(
     paths: _PipelinePaths,
+    context: data_context.DatasetContext,
     *,
-    channel_indices: list[int] | None = None,
     policy: artifacts.LifecyclePolicy,
     logger: common.PreparationLogger
 ):
@@ -95,35 +99,44 @@ def run_normalize_blocks(
     val = set(src['val'].values())
     test = set(src['test'].values())
 
+    # label stats on training blocks - parse from context
+    ctrl = LabelStatsCtrl(paths.label_stats, policy)
+    lbl_counts = stats.count_label(
+        context.catalog.raw_class_counts,
+        list(src['train'].keys())
+    )
+    ctrl.persist(lbl_counts)
+
     # aggregate stats on training blocks
     ctrl = ImageStatsCtrl(paths.image_stats, policy)
-    aggregated_stats = ctrl.fetch()
-    if policy != artifacts.LifecyclePolicy.REBUILD and aggregated_stats:
+    agg_stats = ctrl.fetch()
+    if policy != artifacts.LifecyclePolicy.REBUILD and agg_stats:
         logger.log('INFO', '[CHECKPOINT] Loaded image stats from training split')
     else:
-        aggregated_stats = stats.aggregate_image_stats(
-            train, channel_indices=channel_indices
+        agg_stats = stats.aggregate_image_stats(
+            set(src['train'].values()),
+            list(context.features.indices)
         )
-        ctrl.persist(aggregated_stats)
+        ctrl.persist(agg_stats)
         logger.log('INFO', '[CHECKPOINT] Created image stats from training split')
 
     # load or build normalized blocks for each split
     ctrl = PartitionCtrl(paths.splits_transformed_blocks, policy)
-    transform = ctrl.fetch()
-    loaded = transform is not None
+    prepared = ctrl.fetch()
+    loaded = prepared is not None
 
     purged_total = 0
-    if policy != artifacts.LifecyclePolicy.REBUILD and transform:
+    if policy != artifacts.LifecyclePolicy.REBUILD and prepared:
         logger.log('INFO', '[CHECKPOINT] Loaded normalized dataset blocks')
     else:
-        transform, purged_total = _normalize(
+        prepared, purged_total = _materialize(
             (train, val, test),
-            aggregated_stats,
+            agg_stats,
+            context,
             paths,
-            channel_indices=channel_indices,
             logger=logger,
         )
-        ctrl.persist(transform)
+        ctrl.persist(prepared)
         logger.log('INFO', '[CHECKPOINT] Created normalized dataset blocks')
 
     # compile report
@@ -139,50 +152,50 @@ def run_normalize_blocks(
 
 
 # ----- `_normalize` helper
-def _normalize(
+def _materialize(
     splits: tuple[set[str], set[str], set[str]],
     aggregated_stats: dict[str, geo_core.ImageBandStats],
+    context: data_context.DatasetContext,
     paths: _PipelinePaths,
     *,
-    channel_indices: list[int] | None = None,
     logger: common.PreparationLogger,
-):
+) -> tuple[dict[str, dict[str, str]], int]:
     '''Normalize each split.'''
     train_split, val_split, test_split = splits
 
     purged_total = 0
-    train_norm, purged = normalize.normalize_blocks(
+    train_norm, purged = materialize.materialize_blocks(
         train_split,
         aggregated_stats,
+        context,
         paths.train_blocks,
-        channel_indices=channel_indices,
     )
     if purged:
         purged_total += purged
         logger.log('DEBUG', f'{purged} stale training block files removed')
-    val_norm, purged = normalize.normalize_blocks(
+    val_norm, purged = materialize.materialize_blocks(
         val_split,
         aggregated_stats,
+        context,
         paths.val_blocks,
-        channel_indices=channel_indices,
     )
     if purged:
         purged_total += purged
         logger.log('DEBUG', f'{purged} stale validation block files removed')
-    test_norm, purged = normalize.normalize_blocks(
+    test_norm, purged = materialize.materialize_blocks(
         test_split,
         aggregated_stats,
+        context,
         paths.test_blocks,
-        channel_indices=channel_indices,
     )
     if purged:
         purged_total += purged
         logger.log('DEBUG', f'{purged} stale testing block files removed')
 
-    transform = {
+    prepared = {
         'train': train_norm,
         'val': val_norm,
         'test': test_norm
     }
 
-    return transform, purged_total
+    return prepared, purged_total

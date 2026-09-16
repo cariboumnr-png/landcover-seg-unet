@@ -46,19 +46,33 @@ class FeatureSelection:
         return iter([list(self.names), list(self.indices)])
 
 
+@dataclasses.dataclass(frozen=True)
+class ResolvedTargetReclass:
+    '''Canonical zero-based reclassification mapping.'''
+    groups: dict[int, tuple[int, ...]]
+    names: dict[int, str]
+
+    def __iter__(self) -> typing.Iterator[tuple[int, tuple[int, ...], str]]:
+        for group_id, source_classes in self.groups.items():
+            yield group_id, source_classes, self.names.get(group_id, '')
+
+    def __getitem__(self, index: int) -> tuple[tuple[int, ...], str]:
+        return self.groups[index], self.names[index]
+
+
 # ----- `TargetHeadsContext`
 @dataclasses.dataclass(frozen=True)
 class TargetHeadsContext:
     '''
     Multi-head target hierarchy and reclassification specifications.
     '''
-    target_reclass: dict[str, geo_core.LabelScheme | None]
-    head_names: tuple[str, ...]
+    head_names: list[str]
     head_parent: dict[str, str | None]
     head_parent_cls: dict[str, int | None]
     num_classes: dict[str, int]
     class_names: dict[str, list[str]]
     ignore_classes: dict[str, list[int]]
+    resolved_reclass: dict[str, ResolvedTargetReclass | None]
 
 
 # ----- `resolve_feature_channels`
@@ -163,14 +177,14 @@ def resolve_target_heads(
     ignore_classes = labels_info['label_ignore_cls']
 
     # init
-    resolved_reclass: dict[str, geo_core.LabelScheme | None] = {}
+    resolved_reclass: dict[str, ResolvedTargetReclass | None] = {}
     head_names: list[str] = []
     head_parent: dict[str, str | None] = {}
     head_parent_cls: dict[str, int | None] = {}
     num_classes: dict[str, int] = {}
     class_names: dict[str, list[str]] = {}
 
-    for name in label_name_map:
+    for name in label_name_map.keys(): # 0-based
 
         # record base head info
         head_names.append(name)
@@ -179,6 +193,7 @@ def resolve_target_heads(
         num_classes[name] = labels_info['label_num_cls'][name]
         ignore_classes[name] = labels_info['label_ignore_cls'][name]
         class_names[name] = labels_info['label_class_names'][name]
+        resolved_reclass[name] = None
 
         # resolve reclassification scheme for this layer
         reclass_scheme = user_targets_cfg.get(name)
@@ -206,17 +221,29 @@ def resolve_target_heads(
                 f'expected str or dict, got {type(reclass_scheme)}'
             )
 
-        resolved_reclass[name] = reclass_scheme
         if not reclass_scheme:
             continue # no reclassification for this head
+
+        reclass = reclass_scheme['reclass']
+        reclass_name = reclass_scheme.get('reclass_name', {})
+
+        # resolve to 0-based
+        resolved_reclass[name] = ResolvedTargetReclass(
+            groups={
+                int(k) - 1: tuple(v - 1 for v in vv)
+                for k, vv in reclass.items()
+            },
+            names={
+                int(k) - 1: v
+                for k, v in reclass_name.items()
+            }
+        )
 
         # proceed to reclassification process
         base_classes = labels_info['label_class_names'][name]
         base_ignore = labels_info['label_ignore_cls'][name]
         primary_ignore = base_ignore[0] if base_ignore else 255
 
-        reclass = reclass_scheme['reclass']
-        reclass_name = reclass_scheme.get('reclass_name', {})
         group_head_name = f'{name}_group'
 
         # add grouped head (parent)
@@ -253,13 +280,13 @@ def resolve_target_heads(
             ignore_classes[child_head_name] = [primary_ignore]
 
     return TargetHeadsContext(
-        target_reclass=resolved_reclass,
-        head_names=tuple(head_names),
+        head_names=head_names,
         head_parent=head_parent,
         head_parent_cls=head_parent_cls,
         num_classes=num_classes,
         class_names=class_names,
         ignore_classes=ignore_classes,
+        resolved_reclass=resolved_reclass,
     )
 
 
@@ -283,44 +310,43 @@ def derive_head_class_counts(
         Mapping of head name to derived per-class pixel counts list.
     '''
     derived: dict[str, list[int]] = {}
+    print(target_heads)
+    print(raw_class_counts)
 
     for base_name in target_heads.head_names:
         if base_name in raw_class_counts:
             raw = list(raw_class_counts[base_name])
             derived[base_name] = raw
-
-            reclass_cfg = target_heads.target_reclass.get(base_name)
-            if not reclass_cfg or not reclass_cfg.get('reclass'):
+            reclass = target_heads.resolved_reclass.get(base_name)
+            if reclass is None:
                 continue
 
-            reclass = reclass_cfg['reclass']
-            reclass_name = reclass_cfg.get('reclass_name') or {}
             group_head_name = f'{base_name}_group'
 
             # 1. child slices
-            for group_id, child_classes in reclass.items():
-                grp_name = reclass_name.get(str(group_id))
+            for group_id, child_classes, grp_name in reclass:
                 child_head = (
                     f'{base_name}_{grp_name}'
                     if grp_name
                     else f'{base_name}_sub{group_id}'
                 )
-                child_counts = [0] * (len(child_classes) + 1)
-                for k, cls_id in enumerate(child_classes, 1):
+                child_counts = [0] * len(child_classes)
+                for k, cls_id in enumerate(child_classes):
                     if 0 <= cls_id < len(raw):
                         child_counts[k] = raw[cls_id]
                 derived[child_head] = child_counts
 
             # 2. grouping head
-            max_gid = max(int(g) for g in reclass.keys())
-            group_counts = [0] * (max_gid + 1)
-            for group_id, child_classes in reclass.items():
+            max_gid = max(reclass.groups.keys())    # keys are 0-based
+            group_counts = [0] * (max_gid + 1)      # so need to + 1
+            for group_id, child_classes in reclass.groups.items():
                 gid = int(group_id)
                 group_counts[gid] = sum(
                     raw[c] for c in child_classes if 0 <= c < len(raw)
                 )
             derived[group_head_name] = group_counts
 
+    print(derived)
     return derived
 
 

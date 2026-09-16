@@ -30,17 +30,17 @@ import typing
 __all__ = [
     # classes
     # functions
-    'run_normalize_blocks',
+    'run_materialize_blocks',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import run_normalize_blocks
+    from .runner import run_materialize_blocks
 
 def __getattr__(name: str):
 
-    if name in {'run_normalize_blocks'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+    if name in {'run_materialize_blocks'}:
+        return getattr(importlib.import_module('.runner', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

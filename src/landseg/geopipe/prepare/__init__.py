@@ -40,7 +40,7 @@ __all__ = [
     'build_dataset_context',
     'build_schema',
     'run_datablocks_partition',
-    'run_normalize_blocks',
+    'run_materialize_blocks',
     # types
 ]
 
@@ -54,7 +54,7 @@ if typing.TYPE_CHECKING:
         build_dataset_context,
     )
     from .data_partition import PartitionParameters, run_datablocks_partition
-    from .materialize_blocks import run_normalize_blocks
+    from .materialize_blocks import run_materialize_blocks
     from .schema import build_schema
 
 
@@ -77,7 +77,7 @@ def __getattr__(name: str):
             importlib.import_module('.data_partition', __package__), name
         )
 
-    if name in {'run_normalize_blocks'}:
+    if name in {'run_materialize_blocks'}:
         return getattr(
             importlib.import_module('.materialize_blocks', __package__), name
         )

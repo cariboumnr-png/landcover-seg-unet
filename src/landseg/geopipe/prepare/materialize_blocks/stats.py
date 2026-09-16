@@ -31,8 +31,39 @@ Public APIs:
 
 # standard imports
 import math
+import numpy
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.utils as geo_utils
+
+
+def count_label(
+    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]],
+    selected_block_id: list[str]
+) -> dict[str, list[int]]:
+    '''Aggregate label class counts across a list of block files.'''
+    # parse selected block id
+    parsed_id: set[tuple[int, int]] = set()
+    for id_str in selected_block_id:
+        try:
+            coord = geo_utils.name_xy(id_str)
+            parsed_id.add(coord)
+        except (IndexError, ValueError) as e:
+            raise ValueError(f'Invalid block coord string: {id_str}') from e
+
+    # iterate current training blocks to get label class counts
+    lbl_stats: dict[str, list[int]] = {}
+    for c, blk_counts in raw_class_counts.items():
+        if c not in parsed_id:
+            continue
+        for head, cls_counts in blk_counts.items():
+            cls_count = numpy.asarray(cls_counts)
+            if head in lbl_stats:
+                lbl_stats[head] += cls_count
+            else:
+                lbl_stats[head] = list(cls_count)
+            lbl_stats[head] = [int(x) for x in lbl_stats[head]]
+    return lbl_stats
 
 
 def aggregate_image_stats(
