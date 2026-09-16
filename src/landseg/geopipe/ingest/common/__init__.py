@@ -25,7 +25,6 @@ Top-level namespace for `landseg.geopipe.ingest.common`.
 Exposes common logging, report schemas, and aliases for data ingestion.
 
 Public APIs:
-    - `WorldGridReport`: TypedDict for world grid execution report.
     - `DomainStats`: TypedDict for domain layer re-indexing statistics.
     - `DomainMapReport`: TypedDict for domain map execution report.
     - `BlockStats`: TypedDict for data block mapping and build stats.
@@ -40,7 +39,6 @@ import importlib
 import typing
 
 __all__ = [
-    'WorldGridReport',
     'DomainStats',
     'DomainMapReport',
     'BlockStats',
@@ -53,7 +51,6 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .schema import (
-        WorldGridReport,
         DomainStats,
         DomainMapReport,
         BlockStats,
@@ -66,7 +63,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'WorldGridReport',
         'DomainStats',
         'DomainMapReport',
         'BlockStats',

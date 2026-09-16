@@ -26,7 +26,6 @@ This module provides schemas for serializing execution reports, domain
 statistics, block generation metrics, and catalog update summaries.
 
 Public APIs:
-    - `WorldGridReport`: TypedDict for world grid execution report.
     - `DomainStats`: TypedDict for domain layer re-indexing statistics.
     - `DomainMapReport`: TypedDict for domain map execution report.
     - `BlockStats`: TypedDict for data block mapping and build stats.
@@ -41,16 +40,24 @@ import typing
 
 
 # ----- public types
-class WorldGridReport(typing.TypedDict):
-    '''Execution report for world grid preparation.'''
-    grid_id: str
-    status: typing.Literal['loaded', 'created_and_loaded']
-    grid_filepath: str
-    crs: str
-    pixel_size: tuple[float, float]
-    tile_size: tuple[int, int]
-    tile_overlap: tuple[int, int]
+class IngestReportSchema(typing.TypedDict):
+    '''Root report mapping the entire data ingestion pipeline run.'''
+    run_id: str
+    timestamp: str
+    status: typing.Literal['SUCCESS', 'FAILED']
+    domain_maps: list[DomainMapReport]
+    data_blocks: DataBlocksReport | None
+
+
+class DomainMapReport(typing.TypedDict):
+    '''Execution report for domain map preparation.'''
+    name: str
+    status: typing.Literal['loaded', 'created']
+    input_filepath: str
+    domain_filepath: str
+    tiles_filepath: str
     duration_sec: float
+    stats: DomainStats | None
 
 
 class DomainStats(typing.TypedDict):
@@ -63,15 +70,13 @@ class DomainStats(typing.TypedDict):
     explained_variance: float
 
 
-class DomainMapReport(typing.TypedDict):
-    '''Execution report for domain map preparation.'''
-    name: str
-    status: typing.Literal['loaded', 'created']
-    input_filepath: str
-    domain_filepath: str
-    tiles_filepath: str
+class DataBlocksReport(typing.TypedDict):
+    '''Execution report for data block partitioning (dev or test holdout).'''
+    image_filepath: str
+    label_filepath: str | None
     duration_sec: float
-    stats: DomainStats | None
+    stats: BlockStats | None
+    manifest: ManifestStats | None
 
 
 class BlockStats(typing.TypedDict):
@@ -90,22 +95,3 @@ class ManifestStats(typing.TypedDict):
     cataloged_blocks_count: int
     catalog_updated: bool
     schema_updated: bool
-
-
-class DataBlocksReport(typing.TypedDict):
-    '''Execution report for data block partitioning (dev or test holdout).'''
-    image_filepath: str
-    label_filepath: str | None
-    duration_sec: float
-    stats: BlockStats | None
-    manifest: ManifestStats | None
-
-
-class IngestReportSchema(typing.TypedDict):
-    '''Root report mapping the entire data ingestion pipeline run.'''
-    run_id: str
-    timestamp: str
-    status: typing.Literal['SUCCESS', 'FAILED']
-    world_grid: WorldGridReport | None
-    domain_maps: list[DomainMapReport]
-    data_blocks: DataBlocksReport | None

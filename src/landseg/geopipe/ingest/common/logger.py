@@ -41,7 +41,6 @@ import landseg.utils as utils
 
 if typing.TYPE_CHECKING:
     from .schema import (
-        WorldGridReport,
         DomainMapReport,
         DataBlocksReport,
         IngestReportSchema,
@@ -72,15 +71,9 @@ class IngestionLogger(utils.Logger):
             'run_id': run_id,
             'timestamp': t,
             'status': 'SUCCESS',
-            'world_grid': None,
             'domain_maps': [],
             'data_blocks': None
         }
-
-    def set_world_grid_report(self, report: WorldGridReport) -> None:
-        '''Record the world grid preparation report to summary.'''
-        if self.summary is not None:
-            self.summary['world_grid'] = report
 
     def add_domain_report(self, report: DomainMapReport) -> None:
         '''Append a domain layer map report to summary.'''
