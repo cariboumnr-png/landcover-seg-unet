@@ -20,9 +20,19 @@
 # =========================================================================== #
 
 '''
-Multi-raster channel composition and nodata mask unification operations.
+VRT raster metadata and band description utilities.
+
+This module provides helper functions to attach band descriptions and
+arbitrary key-value metadata tags to GDAL Virtual Raster (VRT) files.
+
+Public APIs:
+    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
+    - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
 '''
 
+# standard imports
+from __future__ import annotations
+import typing
 # third-party imports
 import rasterio
 
@@ -30,9 +40,17 @@ import rasterio
 # ----- public functions
 def add_band_description_to_vrt(
     vrt_fpath: str,
-    band_mapping: dict[int, str]
-):
-    '''Simple helper to add band description to a `.vrt` raster file.'''
+    band_mapping: dict[int, str],
+) -> None:
+    '''
+    Add band description labels to a VRT raster file.
+
+    Args:
+        vrt_fpath:
+            File path to the VRT dataset.
+        band_mapping:
+            Mapping from 1-based band index to band description string.
+    '''
     with rasterio.open(vrt_fpath, 'r+') as vrt:
         if len(band_mapping) != vrt.count:
             raise ValueError(
@@ -43,8 +61,19 @@ def add_band_description_to_vrt(
             vrt.set_band_description(int(band), name)
 
 
-def add_tag_to_vrt(vrt_fpath: str, **kwargs):
-    '''Simple helper to add metadata to a `.vrt` raster file.'''
+def add_tag_to_vrt(
+    vrt_fpath: str,
+    **kwargs: typing.Any,
+) -> None:
+    '''
+    Add metadata tags to a VRT raster file.
+
+    Args:
+        vrt_fpath:
+            File path to the VRT dataset.
+        **kwargs:
+            Key-value pairs to store as metadata tags.
+    '''
     tags = {k: v for k, v in kwargs.items() if v is not None}
     if not tags:
         return

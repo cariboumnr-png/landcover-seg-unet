@@ -28,6 +28,9 @@ Consumes a canonical blocks catalog and produces experiment-specific
 dataset splits (train/val/test) based on stratified sampling, spatial
 buffering, and class-balance heuristics. Outputs split manifests and
 label statistics for downstream normalization and schema generation.
+
+Public APIs:
+    - run_datablocks_partition: partition blocks into train/val/test.
 '''
 
 # standard imports
@@ -41,21 +44,21 @@ import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.data_partition.split as split
 
-# --------------------------------private types--------------------------------
+
+# ----- typing aliases
+PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+SplitsSummaryCtrl = artifacts.Controller[geo_core.PartitionSummary]
+
+
+# ----- private types
 class _PipelinePaths(typing.Protocol):
-    '''Typed pipeline-specific paths container.'''
     @property
     def splits_source_blocks(self) -> str: ...
     @property
     def splits_summary(self) -> str: ...
 
 
-# typing aliases
-PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
-SplitsSummaryCtrl = artifacts.Controller[geo_core.PartitionSummary]
-
-
-# ----- `run_datablocks_partition` execution
+# ----- public functions
 def run_datablocks_partition(
     context: data_context.DatasetContext,
     paths: _PipelinePaths,
@@ -73,17 +76,20 @@ def run_datablocks_partition(
     normalization and schema generation.
 
     Args:
-        context: DatasetContext with loaded catalog and resolved
-            semantics.
-        paths: Output paths container.
-        partition_config: Parameters dict guiding split and hydration
-            behavior.
-        policy: Artifact lifecycle policy.
-        logger: Logger for progress and diagnostic output.
+        context:
+            DatasetContext with loaded catalog and resolved semantics.
+        paths:
+            pipeline artifact output paths container.
+        partition_config:
+            parameters dict guiding split and hydration behavior.
+        policy:
+            artifact lifecycle policy guiding rebuild behavior.
+        logger:
+            logger for progress and diagnostic output.
     '''
     start_time = time.perf_counter()
 
-    # ensure canvas CRS and transform default from context if unconfigured
+    # ensure canvas CRS and transform default from context
     if partition_config.canvas_crs == 'EPSG:3161' and context.crs:
         partition_config.canvas_crs = context.crs
     if partition_config.canvas_transform is None and context.transform:
@@ -134,13 +140,13 @@ def run_datablocks_partition(
     logger.set_data_partition_report(report)
 
 
-# ----- `_report` helper
+# ----- private helpers
 def _build_splits_summary(
     partition_results: split.PartitionResults,
     *,
     focal_head: str,
 ) -> geo_core.PartitionSummary:
-    '''Summarize class count & ratio changes.'''
+    '''Summarize class count and distribution changes across splits.'''
     splits = partition_results.raw_splits
     start_count = list(splits.global_class_count)
     distb = splits.class_distributions

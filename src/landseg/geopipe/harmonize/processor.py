@@ -21,9 +21,18 @@
 
 '''
 Data harmonization processor for geospatial raster sources.
+
+This module processes compiled dataset manifest entries, warping rasters
+onto the canonical world grid, attaching band mappings and categorical
+metadata, and producing composite stacked VRT outputs.
+
+Public APIs:
+    - `ProcessedRasters`: Container for processed raster paths.
+    - `harmonize_sources`: Harmonize all compiled raster sources onto grid.
 '''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
 import os
 import typing
@@ -33,7 +42,7 @@ import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.rasters as rasters
 
 
-# ----- public dataclass
+# ----- public dataclasses
 @dataclasses.dataclass
 class ProcessedRasters:
     '''Container for processed raster paths dictionaries.'''
@@ -51,7 +60,29 @@ def harmonize_sources(
     categorical_resampling: str,
     continuous_resampling: str,
 ) -> typing.Generator[str, None, ProcessedRasters]:
-    '''Harmonize all compiled raster sources onto the canonical grid.'''
+    '''
+    Harmonize all compiled raster sources onto the canonical grid.
+
+    Args:
+        compiled_sources:
+            Mapping of source paths to compiled ManifestEntry objects.
+        output_dir:
+            Directory path where harmonized VRT files are saved.
+        world_grid:
+            Canonical world grid layout used for spatial alignment.
+        categorical_resampling:
+            Resampling algorithm name for categorical rasters.
+        continuous_resampling:
+            Resampling algorithm name for continuous rasters.
+
+    Yields:
+        str:
+            Status messages during harmonization.
+
+    Returns:
+        ProcessedRasters:
+            Container of provenance, harmonized, and finalized paths.
+    '''
     features: list[str] = []
     labels: list[str] = []
     processed = ProcessedRasters()
@@ -62,7 +93,9 @@ def harmonize_sources(
 
         is_cat = mfst['category'] in {'domains', 'domain', 'labels', 'label'}
         tagged_name = f'{mfst["category"]}_{mfst["name"]}'
-        resampling = categorical_resampling if is_cat else continuous_resampling
+        resampling = (
+            categorical_resampling if is_cat else continuous_resampling
+        )
         out_vrt = os.path.join(output_dir, f'{tagged_name}.vrt')
 
         yield (
@@ -71,11 +104,11 @@ def harmonize_sources(
         )
 
         warped = rasters.warp_to_grid(
-                input_path=path,
-                output_path=out_vrt,
-                world_grid=world_grid,
-                is_categorical=is_cat,
-                resampling_method=resampling,
+            input_path=path,
+            output_path=out_vrt,
+            world_grid=world_grid,
+            is_categorical=is_cat,
+            resampling_method=resampling,
         )
         # band mapping is now required
         rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
@@ -102,8 +135,9 @@ def harmonize_sources(
     return processed
 
 
-# ----- private functions
+# ----- private helpers
 def _tag_domain_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
+    '''Attach domain raster metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')
     if not cat_specs:
         return
@@ -116,6 +150,7 @@ def _tag_domain_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
 
 
 def _tag_feature_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
+    '''Attach feature schemes metadata tags to VRT file.'''
     schemes = mfst.get('schemes')
     if schemes:
         rasters.add_tag_to_vrt(
@@ -125,6 +160,7 @@ def _tag_feature_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
 
 
 def _tag_label_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
+    '''Attach categorical label metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')
     if not cat_specs:
         raise ValueError('Missing categorical specs for label raster')

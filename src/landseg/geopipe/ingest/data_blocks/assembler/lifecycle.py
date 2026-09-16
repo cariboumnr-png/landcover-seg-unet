@@ -28,12 +28,15 @@ integrity on disk (cleaning up corrupted files), and schedules
 parallel block-generation jobs via the project's ParallelExecutor.
 
 Public APIs:
-    - BlockBuilderConfig: Config parameters for block builder setup.
-    - BlockBuilderResult: Dataclass result wrapping builder execution outputs.
-    - build_blocks: Validates and creates data blocks in parallel.
+    - `BlockBuildingInput`: Dataclass of I/O paths for block construction.
+    - `BlockBuildingContext`: Dataclass of mapped read windows.
+    - `BlockBuildingConfig`: Dataclass for block building configurations.
+    - `BlockBuildingOutput`: Dataclass of block building results and stats.
+    - `build_blocks`: Validate on-disk blocks and create missing blocks.
 '''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
 import os
 # local imports
@@ -44,6 +47,8 @@ import landseg.geopipe.ingest.data_blocks.assembler as assembler
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
+
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class BlockBuildingInput:
     '''I/O paths used during block construction.'''
@@ -66,7 +71,7 @@ class BlockBuildingContext:
 
 @dataclasses.dataclass(frozen=True)
 class BlockBuildingConfig:
-    '''Container for block building configurations'''
+    '''Container for block building configurations.'''
     ignore_index: int               # global ignore label index
     dem_pad_px: int                 # image DEM channel padding in pixels
     block_size: tuple[int, int]     # block size in row, col
@@ -84,24 +89,30 @@ class BlockBuildingOutput:
     label_color_map: dict[str, list[int]] | None
 
 
+# ----- public functions
 def build_blocks(
     inputs: BlockBuildingInput,
     context: BlockBuildingContext,
     config: BlockBuildingConfig,
     *,
-    policy: artifacts.LifecyclePolicy
+    policy: artifacts.LifecyclePolicy,
 ) -> BlockBuildingOutput:
     '''
     Validate on-disk blocks, clear corrupt ones, and build missing.
 
     Args:
         inputs:
+            I/O paths container for input rasters and output directory.
         context:
-        config: The block builder configuration container.
+            Mapped read windows for image and label rasters.
+        config:
+            Block building configuration container.
+        policy:
+            Lifecycle policy determining rebuild or build-if-missing.
 
     Returns:
-        BlockBuilderResult: Struct holding created coords and
-            execution stats.
+        BlockBuildingOutput:
+            Execution output containing created coordinates and stats.
     '''
     blks_dir = inputs.output_root
     os.makedirs(blks_dir, exist_ok=True)
@@ -144,10 +155,7 @@ def build_blocks(
     )
 
 
-# --------------------------------------------------------------------------- #
-# Private Helper Functions                                                    #
-# --------------------------------------------------------------------------- #
-
+# ----- private helpers
 def _prepare_block_windows(
     inputs: BlockBuildingInput,
     context: BlockBuildingContext,

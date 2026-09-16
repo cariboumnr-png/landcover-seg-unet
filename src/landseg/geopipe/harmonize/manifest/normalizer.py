@@ -22,20 +22,24 @@
 '''
 Manifest entry normalization and validation utilities.
 
-Converts user-provided manifest dictionaries into canonical
+This module converts user-provided manifest dictionaries into canonical
 `ManifestEntry` objects and validates category-specific metadata,
 band mappings, categorical specifications, schemes, and taxonomy
 references.
+
+Public APIs:
+    - `ManifestEntryNormalizer`: Normalize and validate a manifest entry.
 '''
 
 # standard imports
 from __future__ import annotations
-import typing
 import pathlib
+import typing
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.taxonomy as taxonomy
+
 
 # ----- public classes
 class ManifestEntryNormalizer:
@@ -220,6 +224,7 @@ class ManifestEntryNormalizer:
 
 # ----- private helpers
 def _require_dict(d: typing.Any) -> dict:
+    '''Validate that the input is a non-empty dictionary.'''
     if not isinstance(d, dict):
         raise TypeError(f'Input {d} must be a dict, got type {type(d)}')
     if len(d) == 0:
@@ -228,6 +233,7 @@ def _require_dict(d: typing.Any) -> dict:
 
 
 def _require_string(s: typing.Any) -> str:
+    '''Validate that the input is a non-empty string.'''
     if not isinstance(s, str):
         raise TypeError(f'Input {s} must be a string, got type {type(s)}')
     if len(s) == 0:
@@ -236,6 +242,7 @@ def _require_string(s: typing.Any) -> str:
 
 
 def _require_path(p: typing.Any) -> str:
+    '''Validate and convert input to a valid path string.'''
     try:
         pp = pathlib.Path(p)
         return str(pp)
@@ -244,6 +251,7 @@ def _require_path(p: typing.Any) -> str:
 
 
 def _require_int_w_min(n: typing.Any, min_value: int) -> int:
+    '''Validate that input is integer greater than or equal to min_value.'''
     try:
         n = int(n)
     except (ValueError, TypeError) as e:
@@ -256,6 +264,7 @@ def _require_int_w_min(n: typing.Any, min_value: int) -> int:
 
 
 def _require_int_list(l: typing.Any, nint: int | None = None) -> list[int]:
+    '''Validate that input is a list of integers with optional length.'''
     if not isinstance(l, list):
         raise TypeError(f'Input {l} must be a list, got type {type(l)}')
     if not all(isinstance(x, int) for x in l):
@@ -266,6 +275,7 @@ def _require_int_list(l: typing.Any, nint: int | None = None) -> list[int]:
 
 
 def _require_dict_w_str_values(d: typing.Any) -> dict[str, str]:
+    '''Validate that input dictionary has only string values.'''
     _require_dict(d)
     if not all(isinstance(s, str) for s in d.values()):
         raise TypeError(f'Not all values in input dict are a string from {d}')

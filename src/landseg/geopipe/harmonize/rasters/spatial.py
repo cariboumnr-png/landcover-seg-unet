@@ -21,8 +21,16 @@
 
 '''
 Spatial grid specification and raster warping operations.
+
+This module provides functions to reproject, resample, and snap input
+rasters to a canonical world grid layout as GDAL Virtual Rasters (VRT).
+
+Public APIs:
+    - `warp_to_grid`: Reproject and snap input raster to grid as a VRT.
 '''
 
+# standard imports
+from __future__ import annotations
 import os
 # third-party imports
 import rasterio
@@ -32,6 +40,8 @@ import rasterio.vrt
 # local imports
 import landseg.geopipe.core as geo_core
 
+
+# ----- public functions
 def warp_to_grid(
     *,
     input_path: str,
@@ -56,7 +66,8 @@ def warp_to_grid(
             Optional string override ('nearest', 'bilinear', 'cubic').
 
     Returns:
-        Absolute path to the output harmonized Virtual Raster file.
+        str:
+            Absolute path to output harmonized Virtual Raster file.
     '''
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 

@@ -20,20 +20,14 @@
 # =========================================================================== #
 
 '''
-Raster-to-grid mapping utilities.
+Raster-to-grid mapping utilities with lifecycle persistence.
 
 This module provides logic for mapping geospatial raster datasets onto
 a predefined grid layout and persisting the resulting window mappings
-for reuse.
+as artifacts to avoid redundant recomputations.
 
-It supports:
-- Computation of raster window alignment over a spatial grid
-- Optional handling of paired image/label rasters
-- Serialization of mappings into a canonical cached format
-- Loading cached mappings to avoid recomputation
-
-The module is designed to ensure deterministic, reusable raster tiling
-across dataset builds and schema generation pipelines.
+Public APIs:
+    - map_rasters_to_grid: Maps rasters onto grid with caching.
 '''
 
 # local imports
@@ -42,10 +36,12 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
 
-# typing aliases
+
+# ----- typing aliases
 MappingCtrl = artifacts.Controller[dict]
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def map_rasters_to_grid(
     world_grid: geo_core.GridLayout,
     image_path: str,
@@ -57,38 +53,27 @@ def map_rasters_to_grid(
     '''
     Map raster images and label raster onto a predefined grid layout.
 
-    This function is responsible for ensuring that raster tiling over a
-    given world grid is computed once and then persisted for reuse. If a
-    cached mapping artifact exists at the provided path, it is loaded and
-    deserialized. Otherwise, raster-to-grid alignment is computed using
-    `mapper.map_rasters`, and the resulting window layout is serialized
-    and stored via the configured lifecycle policy.
-
-    The mapping associates each grid cell with a raster window (col/row
-    offsets and spatial extent), separately for image and optional label
-    rasters.
+    Ensures that raster tiling over a given world grid is computed once
+    and persisted for reuse. If a cached mapping artifact exists at the
+    provided path, it is loaded. Otherwise, raster-to-grid alignment is
+    computed and serialized via the configured lifecycle policy.
 
     Args:
         world_grid:
             Target grid layout describing spatial tiling structure.
         image_path:
-            File path to the source image raster.
+            File path to source image raster.
         label_path:
-            Optional file path to a label raster aligned with the image.
-            May be None for unlabeled datasets.
+            Optional file path to label raster aligned with image.
         mapped_windows_path:
-            Path to the cached serialized mapping artifact.
+            Path to cached serialized mapping artifact.
         policy:
             Lifecycle policy controlling cache persistence behavior.
-        logger:
-            Logger used for tracing and cache status reporting.
 
     Returns:
-        A `MappedRasterWindows` object describing the mapping between
-        grid cells and raster windows for both image and label (if
-        present).
+        mapper.MappedRasterWindows:
+            Container describing mapped grid cells and raster windows.
     '''
-
     # artifacts controller
     ctrl = MappingCtrl(mapped_windows_path, policy)
 
@@ -114,9 +99,10 @@ def map_rasters_to_grid(
     )
     return mapped_windows
 
+
+# ----- private helpers
 def _canonicalize(mapped_windows: alias.RasterWindowDict) -> list[list[int]]:
     '''Create a canonical serialization for mapped windows.'''
-
     canon: list[list[int]] = []
     for k, w in sorted(mapped_windows.items()):
         canon.append(
@@ -124,12 +110,13 @@ def _canonicalize(mapped_windows: alias.RasterWindowDict) -> list[list[int]]:
         )
     return canon
 
-def _parse(payload: list[list[int]]) -> alias.RasterWindowDict:
-    '''Parse window dict from payload.'''
 
+def _parse(payload: list[list[int]]) -> alias.RasterWindowDict:
+    '''Parse window dictionary from serialized payload.'''
     parsed: alias.RasterWindowDict = {}
     for c in payload:
         x, y, col_off, row_off, w, h = c
         window = alias.RasterWindow(col_off, row_off, w, h) # type: ignore
         parsed[(x, y)] = window
     return parsed
+

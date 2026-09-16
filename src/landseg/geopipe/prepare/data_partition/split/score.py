@@ -20,16 +20,14 @@
 # =========================================================================== #
 
 '''
-Validation dataset scoring utilities that rank blocks by their label-
-distribution similarity to a target. Computes target distributions from
-global counts and scores blocks with a weighted L1 metric and reward
-terms.
+Validation dataset scoring utilities for candidate data blocks.
+
+Ranks blocks by their label-distribution similarity to a target,
+computing target distributions from global counts and scoring blocks
+with log-lift or weighted L1 metrics on reward classes.
 
 Public APIs:
-    - BlockScore: Dataclass representing a scored block and its metadata.
-    - ScoreParams: Dataclass holding scoring hyperparameters.
-    - score_blocks: Compute and persist per-block scores based on label
-      distributions.
+    - score_blocks: score and rank blocks based on label distributions.
 '''
 
 # standard imports
@@ -43,7 +41,7 @@ import landseg.utils as utils
 EPS = 1e-6  # safety
 
 
-# ----- `score_blocks` implementation
+# ----- public functions
 def score_blocks(
     global_class_count: list[int],
     input_blocks: dict[tuple[int, int], list[int]],
@@ -51,17 +49,29 @@ def score_blocks(
     reward: tuple[int, ...],    # class indices to reward (0-based)
     alpha: float,               # exponent for transforming block counts
     beta: float,                # reward weight for classes during L1
-    **kwargs
+    **kwargs,
 ) -> dict[tuple[int, int], list[int]]:
     '''
-    Score input blocks based on label class distributions.
+    Score and rank input blocks based on label class distributions.
 
     Args:
-        global_cls_count: Global per-class counts by head used to derive
-            the target distribution.
-        input_blocks: Mapping from block names to file paths to score.
-        params: Scoring parameters (head/alpha/beta/eps/reward classes).
-        mode: Scoring mode. Default to 'log_lift'.
+        global_class_count:
+            global per-class counts used to derive target distribution.
+        input_blocks:
+            mapping of block coordinates to class counts to score.
+        reward:
+            0-based class indices to prioritize with reward terms.
+        alpha:
+            exponent for smoothing or sharpening block counts.
+        beta:
+            reward weight factor for classes during L1 distance scoring.
+        **kwargs:
+            optional scoring mode override (e.g. 'log_lift').
+
+    Returns:
+        dict[tuple[int, int], list[int]]:
+            mapping of block coordinates to counts, sorted by score
+            in descending order.
     '''
     # target inverse probability (p) from global class distribution
     p = _count_to_prob_w_temp(global_class_count, alpha=1.0)
@@ -127,7 +137,7 @@ def _count_to_prob_w_temp(
     *,
     alpha: float,
 ) -> numpy.ndarray:
-    '''Counts to a smoothed prob. distrib. with temperature scaling.'''
+    '''Convert class counts to smoothed probabilities with alpha.'''
     # safe count to probability distribution
     arr = numpy.asarray(cls_counts)
     total = arr.sum()
@@ -155,11 +165,12 @@ def _log_lift_on_reward(
     # no-ops if q is all zeros
     if sum(q) == 0:
         return None
-    return sum(q[i] * math.log((q[i] + EPS) / (p[i] + EPS)) for i in reward_cls)
+    return sum(
+        q[i] * math.log((q[i] + EPS) / (p[i] + EPS)) for i in reward_cls
+    )
 
 
 # ----- legacy helpers
-# now legacy
 def _weighted_l1_w_reward(
     p: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
     q: numpy.ndarray[tuple[int], numpy.dtype[numpy.float64]],
@@ -173,6 +184,8 @@ def _weighted_l1_w_reward(
     assert numpy.isclose(q.sum(), 1), q.sum()
     # p as target q as test
     # use log weight and bonus for reward classes > target classes
-    w_l1 = sum(abs(a - b) * (1 + abs(math.log(a + EPS))) for a, b in zip(p, q))
+    w_l1 = sum(
+        abs(a - b) * (1 + abs(math.log(a + EPS))) for a, b in zip(p, q)
+    )
     bonus = sum(max(0, q[i] - p[i]) for i in reward_cls) * beta
     return float(w_l1 - bonus)

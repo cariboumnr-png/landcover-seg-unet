@@ -20,7 +20,18 @@
 # =========================================================================== #
 
 '''
-Type aliases for `geopipe.prepare` for static type checking.
+Type aliases for dataset preparation workflows.
+
+Exposes array and coordinate type aliases used across the geopipe.prepare
+pipeline modules for static type checking.
+
+Public APIs:
+    - IntArray: generic numpy integer array alias.
+    - Int64Array: int64 numpy array alias.
+    - Float32Array: float32 numpy array alias.
+    - Float64Array: float64 numpy array alias.
+    - MaskArray: boolean mask numpy array alias.
+    - CoordsList: list of integer coordinate tuples.
 '''
 
 # standard imports
@@ -28,7 +39,8 @@ import typing
 # third-party imports
 import numpy.typing
 
-# numpy types
+
+# ----- typing aliases
 IntArray: typing.TypeAlias = numpy.typing.NDArray[numpy.integer]
 '''A generic `numpy` integer array.'''
 

@@ -23,11 +23,14 @@
 Utilities for maintaining dataset-level catalog and schema files.
 
 This module defines helper routines for creating and updating
-``schema.json`` for block-structured geospatial datasets. It derives
+`schema.json` for block-structured geospatial datasets. It derives
 dataset-wide properties by inspecting stored block artifacts, records
 provenance links to source imagery and labels, tracks grid alignment
 history, and standardizes I/O conventions required for reproducible data
 preparation and downstream model consumption.
+
+Public APIs:
+    - build_schema: Creates or updates dataset-level data schema.
 '''
 
 # standard imports
@@ -37,7 +40,8 @@ import landseg._constants as c
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_schema(
     sample_block_fpath: str,
     *,
@@ -49,28 +53,31 @@ def build_schema(
     '''
     Create or update the dataset-level `schema.json`.
 
-    Manages global dataset schema describing data sources, spatial grids,
-    tensor conventions, and label semantics. When existing schema is
-    provided, it updates timestamps and appends new grid or source
+    Manages global dataset schema describing data sources, spatial
+    grids, tensor conventions, and label semantics. When existing schema
+    is provided, it updates timestamps and appends new grid or source
     references while preserving all previously recorded structure. When
-    no schema exists, it inspects a representative sample block to infer
-    tensor shapes, data types, and label configuration, and constructs a
-    complete schema specification from scratch.
+    no schema exists, it inspects a representative sample block to
+    infer tensor shapes, data types, and label configuration.
 
     Args:
-        sample_block_fpath: File path to a representative block artifact
-            used to infer dataset-wide shapes, dtypes, and label settings
-            when initializing schema.
-        original: Existing `DataSchema` object if present, otherwise `None`.
-        sources: Tuple containing paths to source image and optional label.
-        mapped_grid_id: Identifier of the spatial grid to which blocks
-            are aligned.
+        sample_block_fpath:
+            File path to a representative block artifact used to infer
+            dataset-wide shapes, dtypes, and label settings.
+        original:
+            Existing `DataSchema` object if present, otherwise `None`.
+        sources:
+            Tuple containing paths to source image and optional label.
+        mapped_grid_id:
+            Identifier of spatial grid to which blocks are aligned.
+        label_color_map:
+            Mapping of class name to RGB color values, or `None`.
 
     Returns:
-        A fully populated `BlocksMetadata` object reflecting updated or
-        newly created dataset schema.
+        geo_core.DataSchema:
+            Populated data schema reflecting updated or newly created
+            dataset schema.
     '''
-
     # current time
     t = datetime.datetime.now().strftime(c.TF_ISO8601)
 

@@ -26,12 +26,12 @@ Canonical data-block construction pipeline.
 
 Maps input rasters onto a pre-built world grid, materializes immutable
 raw data blocks, and maintains the associated catalog and dataset
-metadata. This pipeline does **not** perform dataset splitting or
-normalization; it produces experiment-agnostic artifacts intended for
-reuse across downstream workflows.
+metadata. This pipeline produces experiment-agnostic artifacts intended
+for reuse across downstream workflows.
 
-Public API:
-    - build_blocks: Build raw data blocks and update catalog/metadata.
+Public APIs:
+    - BlockBuildingParameters: Config container for block pipeline.
+    - run_blocks_building: Runs the canonical data block pipeline.
 '''
 
 # standard imports
@@ -46,18 +46,20 @@ import landseg.geopipe.ingest.data_blocks.assembler as assembler
 import landseg.geopipe.ingest.data_blocks.manifest as manifest
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
 
-# --------------------------------private types--------------------------------
+
+# ----- private types
 class _PipelinePaths(typing.Protocol):
     '''Typed pipeline-specific paths container.'''
     @property
-    def blocks(self) -> str:...
+    def blocks(self) -> str: ...
     @property
-    def catalog(self) -> str:...
+    def catalog(self) -> str: ...
     @property
-    def schema(self) -> str:...
-    def mapped_window(self, gid: str) -> str:...
+    def schema(self) -> str: ...
+    def mapped_window(self, gid: str) -> str: ...
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class BlockBuildingParameters:
     '''Config container for the canonical block-building pipeline.'''
@@ -69,7 +71,7 @@ class BlockBuildingParameters:
     add_topo: list[str] | None = None
 
 
-# -------------------------------Public Function-------------------------------
+# ----- public functions
 def run_blocks_building(
     world_grid: geo_core.GridLayout,
     artfact_paths: _PipelinePaths,
@@ -81,17 +83,23 @@ def run_blocks_building(
     '''
     Build canonical data blocks from rasters aligned to a world grid.
 
-    This function is the public entrypoint for constructing immutable
-    `.npz` block artifacts and their associated `catalog.json` and
-    `metadata.json`. Blocks are built directly from raster windows
-    without normalization or dataset splitting.
+    Materializes immutable `.npz` block artifacts and maintains
+    associated `catalog.json` and `schema.json` manifests. Blocks are
+    built directly from raster windows without normalization or
+    dataset splitting.
 
     Args:
-        world_grid: World grid definition used to locate raster windows.
-        config: Configuration for block building inputs and parameters.
-        logger: Logger instance used for progress and status reporting.
+        world_grid:
+            World grid definition used to locate raster windows.
+        artfact_paths:
+            Container holding paths for blocks, catalog, and schema.
+        config:
+            Configuration for block building inputs and parameters.
+        policy:
+            Lifecycle policy governing artifact update behavior.
+        logger:
+            Logger instance used for structured telemetry reporting.
     '''
-
     start_time = time.perf_counter()
 
     # map rasters to the provided world grid

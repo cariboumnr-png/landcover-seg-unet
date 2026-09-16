@@ -21,6 +21,18 @@
 
 '''
 Top-level namespace for `landseg.geopipe.ingest.common`.
+
+Exposes common logging, report schemas, and aliases for data ingestion.
+
+Public APIs:
+    - `WorldGridReport`: TypedDict for world grid execution report.
+    - `DomainStats`: TypedDict for domain layer re-indexing statistics.
+    - `DomainMapReport`: TypedDict for domain map execution report.
+    - `BlockStats`: TypedDict for data block mapping and build stats.
+    - `ManifestStats`: TypedDict for catalog/schema update details.
+    - `DataBlocksReport`: TypedDict for data block execution report.
+    - `IngestReportSchema`: TypedDict for root data ingestion report.
+    - `IngestionLogger`: Logger tracking ingest execution and report JSON.
 '''
 
 from __future__ import annotations
@@ -50,6 +62,7 @@ if typing.TYPE_CHECKING:
         IngestReportSchema,
     )
     from .logger import IngestionLogger
+
 
 def __getattr__(name: str):
     if name in {

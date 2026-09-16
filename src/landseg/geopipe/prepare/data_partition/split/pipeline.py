@@ -21,6 +21,15 @@
 
 '''
 Core partitioning pipeline for data blocks.
+
+Coordinates stratified sampling, AOI spatial filtering, buffer safety
+checks, and candidate block hydration to produce train, validation,
+and testing splits without data leakage.
+
+Public APIs:
+    - PartitionParameters: configuration for data block partitioning.
+    - PartitionResults: container for partitioned splits and hydration.
+    - create_blocks_partition: split blocks safely without leakage.
 '''
 
 # standard imports
@@ -35,7 +44,7 @@ import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_partition.split as split
 
 
-# ----- `PartitionParameters` configuration
+# ----- public dataclasses
 @dataclasses.dataclass
 class PartitionParameters:
     '''Configuration for the dataset partitioning pipeline.'''
@@ -55,16 +64,15 @@ class PartitionParameters:
     canvas_transform: rasterio.transform.Affine | None = None
 
 
-# ----- `PartitionResults` container
 @dataclasses.dataclass(frozen=True)
 class PartitionResults:
-    '''Container for partition results.'''
+    '''Container for partitioned splits and hydration results.'''
     partition_fpaths: geo_core.BlocksPartition
     raw_splits: split.SplitsResult
     hydration: split.HydrationResults
 
 
-# ----- `create_blocks_partition` implementation
+# ----- public functions
 def create_blocks_partition(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
@@ -74,7 +82,32 @@ def create_blocks_partition(
     ext_test_blks: list[str] | None = None,
     logger: common.PreparationLogger | None = None,
 ) -> PartitionResults:
-    '''Split blocks with spatial safety, AOI selection, and class balance.'''
+    '''
+    Split blocks with spatial safety, AOI selection, and class balance.
+
+    Performs stratified partitioning or AOI filtering, computes buffer
+    zones to eliminate spatial leakage, and optionally hydrates the
+    training set with oversampled candidate blocks.
+
+    Args:
+        base_class_counts:
+            mapping of base block coordinates to focal head counts.
+        valid_class_counts:
+            mapping of all valid block coordinates to focal head counts.
+        valid_blocks:
+            mapping of valid block coordinates to artifact file paths.
+        config:
+            partitioning parameters and buffer configuration.
+        ext_test_blks:
+            optional external holdout test block file paths.
+        logger:
+            optional logger for progress and diagnostic messages.
+
+    Returns:
+        PartitionResults:
+            split block paths, raw split coordinates, and hydration
+            diagnostics.
+    '''
     has_aoi = bool(config.train_aoi or config.val_aoi or config.test_aoi)
 
     if has_aoi:
@@ -142,7 +175,7 @@ def create_blocks_partition(
     )
 
 
-# ----- internal helpers
+# ----- private helpers
 def _split_by_aoi(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_blocks: dict[tuple[int, int], str],
@@ -151,7 +184,7 @@ def _split_by_aoi(
     ext_test_blks: list[str] | None,
     logger: common.PreparationLogger | None,
 ) -> split.SplitsResult:
-    '''Resolve AOI partitions and automatically split remaining blocks.'''
+    '''Resolve AOI partitions and split remaining blocks.'''
     transform = config.canvas_transform or rasterio.transform.Affine.identity()
     block_size = (config.block_spec[0], config.block_spec[1])
 
@@ -172,10 +205,14 @@ def _split_by_aoi(
     train_coords = [c for c in aoi_res.train if c in base_class_counts]
     unassigned = [c for c in aoi_res.unassigned if c in base_class_counts]
 
-    # auto-split unassigned blocks if ratio requested and not explicitly set
+    # auto-split unassigned blocks if ratio requested
     if unassigned:
         unassigned_counts = {c: base_class_counts[c] for c in unassigned}
-        auto_test_ratio = 0.0 if (config.test_aoi or ext_test_blks) else config.val_test_ratios[1]
+        auto_test_ratio = (
+            0.0
+            if (config.test_aoi or ext_test_blks)
+            else config.val_test_ratios[1]
+        )
         auto_val_ratio = 0.0 if config.val_aoi else config.val_test_ratios[0]
 
         if auto_val_ratio > 0.0 or auto_test_ratio > 0.0:
@@ -205,12 +242,16 @@ def _split_by_aoi(
             excluded = len(train_coords) - len(safe_train)
             logger.log(
                 'WARNING',
-                f'Pruned {excluded} training block(s) bordering val/test buffer zone.'
+                f'Pruned {excluded} training block(s) bordering buffer zone.'
             )
         train_coords = safe_train
 
     # aggregate class counts
-    n_classes = len(next(iter(base_class_counts.values()))) if base_class_counts else 0
+    n_classes = (
+        len(next(iter(base_class_counts.values())))
+        if base_class_counts
+        else 0
+    )
     train_cls = [0] * n_classes
     val_cls = [0] * n_classes
     test_cls = [0] * n_classes
@@ -247,12 +288,11 @@ def _finalize_partition(
     splits: split.SplitsResult,
     additional_train: list[tuple[int, int]],
     *,
-    ext_test_blks: list[str] | None
+    ext_test_blks: list[str] | None,
 ) -> geo_core.BlocksPartition:
     '''Finalize the partition process with leakage sanity checks.'''
-
     def _index_fpath(fpaths: list[str]) -> dict[str, str]:
-        '''Index block file paths by block name no file extension.'''
+        '''Index block file paths by block name without extension.'''
         indexed: dict[str, str] = {}
         for fpath in fpaths:
             filename = os.path.basename(fpath)
@@ -260,9 +300,16 @@ def _finalize_partition(
             indexed[name] = fpath # name is the same as core.xy_name()
         return indexed
 
-    train = [valid_blocks[c] for c in splits.train + additional_train if c in valid_blocks]
+    train = [
+        valid_blocks[c]
+        for c in splits.train + additional_train
+        if c in valid_blocks
+    ]
     val = [valid_blocks[c] for c in splits.val if c in valid_blocks]
-    test = [valid_blocks[c] for c in splits.test if c in valid_blocks] + (ext_test_blks or [])
+    test = (
+        [valid_blocks[c] for c in splits.test if c in valid_blocks]
+        + (ext_test_blks or [])
+    )
 
     # leakage sanity checks
     leak = set(train) & set(val)

@@ -20,10 +20,17 @@
 # =========================================================================== #
 
 '''
-Context manager utility for rasterio.open(...).
+Context manager utility for opening raster datasets.
+
+This module provides utilities to open multiple rasterio datasets safely
+within a managed exit stack context.
+
+Public APIs:
+    - `open_rasters`: Context manager yielding opened raster readers.
 '''
 
 # standard imports
+from __future__ import annotations
 import contextlib
 import os
 import typing
@@ -31,18 +38,23 @@ import typing
 import rasterio
 import rasterio.io
 
+
+# ----- public functions
 @contextlib.contextmanager
 def open_rasters(
-        *rasters: str | None
-    ) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
+    *rasters: str | None,
+) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
     '''
-    Open multiple rasters safely and yield a tuple of `DatasetReader`.
+    Open multiple rasters safely and yield a tuple of dataset readers.
 
-    Accepts any number of filepaths (or None). Existing paths are opened
-    via rasterio, None values are preserved, and all files are closed
-    automatically on exit.
+    Args:
+        *rasters:
+            Variable number of raster file paths or None values.
+
+    Yields:
+        tuple[rasterio.io.DatasetReader | None, ...]:
+            Tuple of opened dataset readers or None.
     '''
-
     with contextlib.ExitStack() as stack:
         opened_rasters: list[rasterio.io.DatasetReader | None] = []
 

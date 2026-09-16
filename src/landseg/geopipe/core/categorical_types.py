@@ -20,7 +20,17 @@
 # =========================================================================== #
 
 '''
-Harmonization pipeline types.
+Categorical raster and taxonomy specification types.
+
+This module defines typing contracts and structures for categorical
+rasters, including category count, ignore classes, color maps, taxonomies,
+and label reclassification schemes.
+
+Public APIs:
+    - `CategoricalSpecs`: TypedDict for categorical raster specs.
+    - `TaxonomySpecs`: TypedDict for domain taxonomy specification.
+    - `LabelScheme`: TypedDict for named reclassification scheme.
+    - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
 '''
 
 # standard imports
@@ -28,6 +38,7 @@ from __future__ import annotations
 import typing
 
 
+# ----- public types
 class CategoricalSpecs(typing.TypedDict):
     '''Typed dictionary for categorical raster specifications.'''
     # required

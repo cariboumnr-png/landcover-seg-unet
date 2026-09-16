@@ -21,9 +21,20 @@
 
 # pylint: disable=missing-function-docstring
 
-'''World grid artifacts lifecycle management.'''
+'''
+World grid artifacts lifecycle management.
+
+This module provides functions to prepare, load, and persist world grid
+layouts with verification and lifecycle policy handling.
+
+Public APIs:
+    - `prepare_world_grid`: Build or load a persisted world grid artifact.
+    - `load_grid_from_config`: Load a world grid artifact from configuration.
+    - `load_grid_from_fpath`: Load a world grid layout directly from file.
+'''
 
 # standard imports
+from __future__ import annotations
 import os
 import typing
 # local imports
@@ -31,15 +42,16 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid as grid
 
-# typing aliases
+
+# ----- typing aliases
 D = list[list[int]]
 M = geo_core.GridMeta
 CTRL = artifacts.PayloadController[D, M]
 
-# default policy
 POLICY = artifacts.LifecyclePolicy.BUILD_IF_MISSING
 
 
+# ----- private types
 class _WorldGridPrepConfig(typing.Protocol):
     '''Config shape to prepare world grid artifacts.'''
     @property
@@ -50,18 +62,27 @@ class _WorldGridPrepConfig(typing.Protocol):
     def output_dpath(self) -> str: ...
 
 
+# ----- public functions
 def prepare_world_grid(
     config: _WorldGridPrepConfig | None = None,
     *,
     load_only: bool = False,
-    override_grid_fpath: str | None = None
+    override_grid_fpath: str | None = None,
 ) -> tuple[bool, str, geo_core.GridLayout]:
     '''
-    Build or load a persisted world grid.
+    Build or load a persisted world grid artifact.
 
-    If a grid with the configured ID exists on disk, it is loaded with
-    verification. Otherwise, a new grid is constructed from the extent
-    configuration and grid profile, saved to disk, and returned.
+    Args:
+        config:
+            Configuration object defining grid parameters and paths.
+        load_only:
+            Whether to strictly load existing grid and fail if missing.
+        override_grid_fpath:
+            Optional explicit file path to the grid artifact.
+
+    Returns:
+        tuple[bool, str, geo_core.GridLayout]:
+            Tuple of (is_loaded, grid file path, GridLayout instance).
     '''
     if override_grid_fpath:
         grid_fpath = override_grid_fpath
@@ -98,9 +119,19 @@ def prepare_world_grid(
 
 
 def load_grid_from_config(
-    config: _WorldGridPrepConfig
+    config: _WorldGridPrepConfig,
 ) -> tuple[str, geo_core.GridLayout]:
-    '''Simple wrapper to naively load grid based on input config.'''
+    '''
+    Load an existing world grid artifact based on input configuration.
+
+    Args:
+        config:
+            Configuration object defining grid parameters and paths.
+
+    Returns:
+        tuple[str, geo_core.GridLayout]:
+            Tuple of (grid file path, GridLayout instance).
+    '''
     try:
         _, fp, world_grid = prepare_world_grid(config, load_only=True)
         return fp, world_grid
@@ -108,10 +139,18 @@ def load_grid_from_config(
         raise e # re-raise
 
 
-def load_grid_from_fpath(
-    fpath: str
-) -> geo_core.GridLayout:
-    '''Simple wrapper to naively load grid based on input fpath.'''
+def load_grid_from_fpath(fpath: str) -> geo_core.GridLayout:
+    '''
+    Load a world grid layout directly from a file path.
+
+    Args:
+        fpath:
+            File path to the serialized grid JSON artifact.
+
+    Returns:
+        geo_core.GridLayout:
+            Restored GridLayout instance.
+    '''
     try:
         _, _, world_grid = prepare_world_grid(override_grid_fpath=fpath)
         return world_grid
@@ -119,8 +158,9 @@ def load_grid_from_fpath(
         raise e # re-raise
 
 
-def _get_grid_fpath(config: _WorldGridPrepConfig):
-    '''Returns canonical file path of a world grid artifact.'''
+# ----- private helpers
+def _get_grid_fpath(config: _WorldGridPrepConfig) -> str:
+    '''Return canonical file path of a world grid artifact.'''
     p = config.params
     gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)
     return os.path.join(config.output_dpath, f'{gid}.json')

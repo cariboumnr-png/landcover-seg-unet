@@ -22,20 +22,23 @@
 '''
 I/O helper utilities for block creation, padding, and integrity.
 
-This module provides focused functions to interface with the file
-system and read windowed NumPy arrays from source geospatial rasters
-(e.g. TIFFs) using `rasterio`. It abstracts away multi-band
-extraction, coordinate-offset math, reflection padding for DEM
+This module provides functions to interface with the filesystem and
+read windowed NumPy arrays from source geospatial rasters using rasterio.
+It handles multi-band extraction, reflection padding for DEM
 neighborhoods, and compressed block load integrity verification.
 
 Public APIs:
-    - RasterReadInput: Dataclass specs parameter for reading rasters.
-    - RasterReadOutput: Dataclass container for read raster arrays.
-    - check_npz_integrity: Verifies a saved .npz file is readable.
-    - read_block_raster_data: Reads image/label and DEM bands.
+    - `RasterReadInput`: Dataclass specs parameter for reading rasters.
+    - `RasterReadOutput`: Dataclass container for read raster arrays.
+    - `read_band_map`: Return band-description to index mapping.
+    - `read_label_specs`: Return per-band categorical label specs.
+    - `read_schemes`: Return schemes dictionary embedded in a raster.
+    - `check_npz_integrity`: Verify whether a .npz block file is valid.
+    - `read_block_raster_data`: Read image/label and DEM bands.
 '''
 
 # standard imports
+from __future__ import annotations
 import ast
 import dataclasses
 import json
@@ -52,6 +55,7 @@ import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.utils as geo_utils
 
 
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class RasterReadInput:
     '''Specifications of parameters needed to read raster windows.'''
@@ -74,8 +78,19 @@ class RasterReadOutput:
     label_nodata: int | None
 
 
+# ----- public functions
 def read_band_map(fpath: str) -> dict[str, int]:
-    '''Return lower-case band-description -> zero-based index, or {}.'''
+    '''
+    Return lower-case band-description to zero-based index mapping.
+
+    Args:
+        fpath:
+            File path to the raster dataset.
+
+    Returns:
+        dict[str, int]:
+            Mapping from lowercase band description to zero-based index.
+    '''
     try:
         with rasterio.open(fpath) as src:
             descriptions = src.descriptions
@@ -101,8 +116,20 @@ def read_band_map(fpath: str) -> dict[str, int]:
     return {name: index for index, name in enumerate(names)}
 
 
-def read_label_specs(fpath: str | None) -> dict[str, geo_core.CategoricalSpecs]:
-    '''Return per-band label specifications embedded in a raster.'''
+def read_label_specs(
+    fpath: str | None,
+) -> dict[str, geo_core.CategoricalSpecs]:
+    '''
+    Return per-band label specifications embedded in a raster.
+
+    Args:
+        fpath:
+            File path to raster dataset or None.
+
+    Returns:
+        dict[str, geo_core.CategoricalSpecs]:
+            Mapping from band name to categorical specifications.
+    '''
     if fpath is None:
         return {}
 
@@ -141,7 +168,17 @@ def read_label_specs(fpath: str | None) -> dict[str, geo_core.CategoricalSpecs]:
 
 
 def read_schemes(fpath: str | None) -> dict[str, typing.Any]:
-    '''Return schemes dictionary embedded in a raster, or {}.'''
+    '''
+    Return schemes dictionary embedded in a raster.
+
+    Args:
+        fpath:
+            File path to raster dataset or None.
+
+    Returns:
+        dict[str, typing.Any]:
+            Extracted schemes dictionary.
+    '''
     if fpath is None:
         return {}
 
@@ -180,15 +217,17 @@ def check_npz_integrity(
     fpath: str,
 ) -> dict[tuple[int, int], bool]:
     '''
-    Verify whether a `.npz` block file can be successfully loaded.
+    Verify whether a .npz block file can be successfully loaded.
 
     Args:
-        coord: The grid coordinates being validated.
-        fpath: Path to the target `.npz` file.
+        coord:
+            Grid coordinates being validated as (x, y).
+        fpath:
+            Path to the target .npz file.
 
     Returns:
-        dict: A mapping {coord: is_valid} where is_valid is True
-            if the file was loaded successfully; False otherwise.
+        dict[tuple[int, int], bool]:
+            Mapping from coordinate to boolean validity flag.
     '''
     ok = False
     try:
@@ -204,10 +243,12 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
     Read arrays and metadata from raster datasets for a given window.
 
     Args:
-        inputs: RasterReadInput specs.
+        inputs:
+            RasterReadInput specifications defining window and paths.
 
     Returns:
-        RasterReadOutput: Containing read arrays and nodata values.
+        RasterReadOutput:
+            Container holding read arrays, padded DEM, and nodata values.
     '''
     with geo_utils.open_rasters(
         inputs.image_fpath, inputs.label_fpath
@@ -285,7 +326,9 @@ def _read_w_pad(
     se_x = min(window.col_off + window.width + pad, img.width)
     se_y = min(window.row_off + window.height + pad, img.height)
     try:
-        _window = alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+        _window = alias.RasterWindow(
+            nw_x, nw_y, se_x - nw_x, se_y - nw_y
+        ) # type: ignore
     except ValueError as e:
         raise ValueError(
             f'Error reading DEM with pad ({pad}), padded raster window: '

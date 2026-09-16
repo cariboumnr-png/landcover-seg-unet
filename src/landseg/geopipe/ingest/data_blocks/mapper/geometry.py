@@ -25,8 +25,11 @@ Validate and summarize raster geometry for image/label datasets.
 This module ingests one or two rasters and validates core geometric
 properties required for co-registration workflows. It checks that the
 coordinate reference systems (CRS) match, verifies pixel sizes, and
-computes the overlapping bounding box (intersection). A typed summary
-(`GeometrySummary`) is returned for downstream processing.
+computes the overlapping bounding box (intersection).
+
+Public APIs:
+    - GeometrySummary: TypedDict summarizing raster geometry metadata.
+    - validate_geometry: Ingests rasters and validates alignment.
 '''
 
 # standard imports
@@ -39,7 +42,8 @@ import rasterio.coords
 import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.utils as geo_utils
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class GeometrySummary(typing.TypedDict):
     '''Typed dictionary to summarize the validated raster geometry.'''
     crs: str
@@ -51,7 +55,8 @@ class GeometrySummary(typing.TypedDict):
     image_transform: rasterio.Affine
     label_transform: rasterio.Affine | None
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def validate_geometry(
     image_fpath: str,
     label_fpath: str | None,
@@ -59,30 +64,27 @@ def validate_geometry(
     '''
     Ingest raster inputs and validate their alignment.
 
-    When both image and label raster are provided, alignment between CRS
-    and pixel size are validated before intersected extent computation
-    and the return of a `GeometryMeta` dictionary. Otherwise if only
-    image is provided (e.g., as inference data), the return will simply
-    be composed from the image's transform.
+    When both image and label rasters are provided, alignment between
+    CRS and pixel size is validated before intersected extent
+    computation. When only an image is provided, the summary is
+    composed from the image transform and bounds.
 
     Args:
-        image_fpath: Path to the image raster.
-        label_fpath: Optional label raster path. If provided must be
-            co-registered with the image raster.
-        logger: Handles the logging for this module.
+        image_fpath:
+            File path to source image raster.
+        label_fpath:
+            Optional file path to source label raster. If provided,
+            must be co-registered with the image raster.
 
     Returns:
-        GeometryMeta: A typed dictionary containing validation results.
+        GeometrySummary:
+            Typed dictionary containing validated geometry metadata.
 
     Raises:
-        ValueError: when one of the following is encounter
-            - Image and label rasters have difference CRS.
-            - Image and label rasters have difference pixel size.
-            - Image and label rasters do not have overlapping extent.
-
-    Note: in final summary pixel size y is converted to positives.
+        ValueError:
+            If image is missing, CRSs disagree, pixel sizes differ,
+            or rasters do not share overlapping spatial extent.
     '''
-
     # init a meta dict
     summary = {}
 
@@ -111,19 +113,13 @@ def validate_geometry(
     # return a summary
     return typing.cast(GeometrySummary, summary)
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _check_raster_proj(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
 ) -> str:
-    '''
-    Check if the input rasters have the same CRS.
-
-    Raises:
-        ValueError: If CRSs disagree when both image and label rasters
-            are provided.
-    '''
-
+    '''Check if the input rasters have matching coordinate systems.'''
     # if both image and label provided
     if lbl is not None:
         # get projection names, raster.crs might return differently
@@ -145,18 +141,12 @@ def _check_raster_proj(
         crs_1 = img.crs
     return crs_1
 
+
 def _check_raster_pixels(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
 ) -> tuple[float, float]:
-    '''
-    Check if the input rasters have the same squared pixels.
-
-    Raises:
-        ValueError: If the pixel sizes are different when both image and
-            label rasters are provided.
-    '''
-
+    '''Check if the input rasters have matching pixel sizes.'''
     # if both image and label provided
     if lbl is not None:
         # get the transform (Affine matrix) from the metadata
@@ -182,24 +172,12 @@ def _check_raster_pixels(
     # assign value and log out
     return x1, y1
 
+
 def _compute_overlap_extent(
     img: alias.RasterReader,
     lbl: alias.RasterReader | None,
 ) -> dict[str, typing.Any]:
-    '''
-    Get the overlapping extent of the input rasters.
-
-    The extent is defined by:
-    * max of the left bounds.
-    * max of the bottom bounds.
-    * min of the right bounds.
-    * min of the top bounds.
-
-    Raises:
-        ValueError: If no overlapping extent can be computed when both
-            image and label rasters are provided..
-    '''
-
+    '''Compute overlapping spatial extent between input rasters.'''
     # if both image and label provided
     if lbl is not None:
         # get the bounding boxes
@@ -233,12 +211,13 @@ def _compute_overlap_extent(
         'inter_bbox': img.bounds
     }
 
-def _is_close(p1: tuple[float, float], p2: tuple[float, float]) -> bool:
-    '''Close with a small tolerance (1e-9).'''
 
+def _is_close(p1: tuple[float, float], p2: tuple[float, float]) -> bool:
+    '''Check if two coordinate pairs are close within tolerance.'''
     px1, py1 = p1
     px2, py2 = p2
     return (
         math.isclose(px1, px2, rel_tol=1e-9, abs_tol=1e-9) and
         math.isclose(py1, py2, rel_tol=1e-9, abs_tol=1e-9)
     )
+

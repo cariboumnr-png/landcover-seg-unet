@@ -21,8 +21,16 @@
 
 '''
 Top-level namespace for `landseg.geopipe.prepare.data_partition`.
+
+Exposes partition configuration parameters and dataset split runner
+via lazy resolution.
+
+Public APIs:
+    - PartitionParameters: configuration parameters for partitioning.
+    - run_datablocks_partition: partition blocks into train/val/test.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing

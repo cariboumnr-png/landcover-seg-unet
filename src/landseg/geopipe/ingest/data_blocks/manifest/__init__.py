@@ -22,8 +22,14 @@
 '''
 Top-level namespace for `landseg.geopipe.ingest.data_blocks.manifest`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes catalog, schema, and manifest lifecycle tools for block-level
+geospatial dataset management via lazy module resolution.
+
+Public APIs:
+    - ManifestUpdateContext: Dataclass context for manifest update.
+    - build_catalog: Builds or updates a dataset-level catalog.
+    - build_schema: Creates or updates dataset-level data schema.
+    - update_manifest: Updates dataset catalog and schema artifacts.
 '''
 
 from __future__ import annotations
@@ -46,15 +52,22 @@ if typing.TYPE_CHECKING:
     from .lifecycle import ManifestUpdateContext, update_manifest
     from .schema import build_schema
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {'build_catalog'}:
-        return getattr(importlib.import_module('.catalog', __package__), name)
+        return getattr(
+            importlib.import_module('.catalog', __package__), name
+        )
 
     if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
+        return getattr(
+            importlib.import_module('.lifecycle', __package__), name
+        )
 
     if name in {'build_schema'}:
-        return getattr(importlib.import_module('.schema', __package__), name)
+        return getattr(
+            importlib.import_module('.schema', __package__), name
+        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+

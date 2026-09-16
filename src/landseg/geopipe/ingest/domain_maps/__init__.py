@@ -22,8 +22,14 @@
 '''
 Top-level namespace for `landseg.geopipe.ingest.domain_maps`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes domain raster mapping, PCA reduction, and domain tile map lifecycle
+APIs via lazy resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `DomainBuildingParameters`: Container for domain building parameters.
+    - `build_domain`: Build DomainTileMap with majority stats and PCA features.
+    - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
+    - `prepare_domain_maps`: Build or load domain tile maps for rasters.
 '''
 
 from __future__ import annotations
@@ -46,15 +52,19 @@ if typing.TYPE_CHECKING:
     from .lifecycle import DomainBuildingParameters, prepare_domain_maps
     from .mapper import map_domain_to_grid
 
+
 def __getattr__(name: str):
 
     if name in {'build_domain'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+        mod = importlib.import_module('.builder', __package__)
+        return getattr(mod, name)
 
     if name in {'map_domain_to_grid'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
+        mod = importlib.import_module('.mapper', __package__)
+        return getattr(mod, name)
 
     if name in {'DomainBuildingParameters', 'prepare_domain_maps'}:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
+        mod = importlib.import_module('.lifecycle', __package__)
+        return getattr(mod, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

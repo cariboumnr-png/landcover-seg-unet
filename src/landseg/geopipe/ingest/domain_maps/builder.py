@@ -20,37 +20,18 @@
 # =========================================================================== #
 
 '''
-Tools for preparing domain knowledge mapped onto a world grid.
+Domain tile map construction and PCA feature reduction utilities.
 
-This module provides the public API for constructing per-domain
-DomainTileMap objects. It coordinates the following operations:
+This module constructs per-domain `DomainTileMap` objects by reading grid
+windows from categorical rasters, computing class majorities, deriving
+normalized frequency vectors, and performing PCA dimensionality reduction.
 
-    - Align the provided world grid to each domain raster using the
-        grid's pixel-offset calculation.
-    - Load an existing DomainTileMap artifact if present, validating its
-        schema and integrity.
-    - Otherwise, build a new DomainTileMap by reading all grid windows
-        from the categorical raster, filtering tiles by valid-pixel
-        fraction, computing majority statistics, deriving normalized
-        frequency vectors, and projecting them onto PCA components to
-        reach a target explained variance.
-    - Persist each new DomainTileMap as a JSON payload and a metadata
-        sidecar including schema_id, context, hash, and grid association.
-
-Configuration is supplied via a structured dictionary containing:
-    - 'dirpath': directory with domain rasters.
-    - 'files': list of domain raster entries ('name', 'index_base').
-    - 'valid_threshold': minimum fraction of valid pixels for tile
-        acceptance.
-    - 'target_variance': PCA target cumulative explained variance.
-    - 'output_dirpath': where DomainTileMap artifacts are written.
-
-The output is a mapping from domain base names (filename without suffix)
-to DomainTileMap instances, suitable for downstream model conditioning or
-task-level feature assembly.
+Public APIs:
+    - `build_domain`: Build DomainTileMap with majority stats and PCA features.
 '''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
 # third-party imports
 import numpy
@@ -58,7 +39,8 @@ import numpy
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.common.alias as alias
 
-# ------------------------------private dataclass------------------------------
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _BuildingContext:
     '''Context container for domain tile map dictionary building.'''
@@ -69,7 +51,8 @@ class _BuildingContext:
     explained_variance: float
     valid_coords: list[tuple[int, int]]
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_domain(
     grid_id: str,
     mapped_tiles: alias.RasterTileDict,
@@ -77,8 +60,23 @@ def build_domain(
     valid_threshold: float,
     target_variance: float,
 ) -> geo_core.DomainTileMap:
-    '''doc'''
+    '''
+    Build a domain tile map from mapped tiles with PCA features.
 
+    Args:
+        grid_id:
+            Identifier of the world grid associated with the tiles.
+        mapped_tiles:
+            Dictionary mapping tile coordinates to raster tile arrays.
+        valid_threshold:
+            Minimum fraction of valid pixels required to retain tile.
+        target_variance:
+            Target cumulative explained variance for PCA reduction.
+
+    Returns:
+        geo_core.DomainTileMap:
+            Constructed domain tile map with computed statistics and PCA.
+    '''
     # get domain tiles dict
     context, domain_dict = _get_domain_dict(
         mapped_tiles,
@@ -101,26 +99,15 @@ def build_domain(
     })
     return domain_map
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _get_domain_dict(
     raster_tiles: alias.RasterTileDict,
     *,
     valid_threshold: float,
     target_variance: float,
 ) -> tuple[_BuildingContext, dict[tuple[int, int], geo_core.DomainTile]]:
-    '''
-    Compute per-tile statistics and PCA features, and fill the map.
-
-    Steps:
-    1) Initialize a DomainTile template for each tile.
-    2) Select valid tiles using 'valid_threshold'.
-    3) For valid tiles, compute 'majority' and 'major_freq' and
-        update 'major_freq_min' and 'major_freq_mean' in the context.
-    4) Build normalized frequency vectors for valid tiles, run
-        PCA to reach 'target_variance', and store 'pca_feature' per
-        valid tile.
-    '''
-
+    '''Compute per-tile statistics and PCA features to populate domain map.'''
     # prep
     domain_dict: dict[tuple[int, int], geo_core.DomainTile] = {}
     context = _BuildingContext(
@@ -178,21 +165,23 @@ def _get_domain_dict(
     valid_set = set(context.valid_coords)
     return context, {c: v for c, v in domain_dict.items() if c in valid_set}
 
+
 def _is_valid(
     arr: numpy.ndarray,
-    threshold: float
+    threshold: float,
 ) -> bool:
+    '''Check if fraction of valid pixels in array meets threshold.'''
     valid = arr != -1
     if valid.size == 0:
         return False
     return float(valid.mean()) >= float(threshold) # valid px% >= threshold
 
+
 def _norm_freq(
     arr: numpy.ndarray,
     index_range: tuple[int, int],
 ) -> numpy.ndarray:
-    '''Get a normalized class frequency vector from the array.'''
-
+    '''Compute normalized class frequency vector from array.'''
     # get frequencies of valid elements
     valid = arr[arr != -1]
     values, counts = numpy.unique(valid, return_counts=True)
@@ -202,33 +191,12 @@ def _norm_freq(
     i, j = index_range
     return numpy.array([freq_map.get(idx, 0.0) for idx in range(i, j + 1)])
 
+
 def _pca_transform(
     freqs: dict[tuple[int, int], numpy.ndarray],
-    target_var: float
+    target_var: float,
 ) -> tuple[dict[tuple[int, int], numpy.ndarray], float, int]:
-    '''
-    Project tile class-frequency vectors onto PCA axes to reach variance.
-
-    Args:
-        freqs: Mapping from tile coordinates (e.g., (x, y)) to 1-D class-
-            frequency vectors of length K (non-negative; sum to 1).
-        target_var: Target cumulative explained variance in (0, 1].
-
-    Returns:
-        tuple:
-        - Dict mapping the same tile coordinates to PCA vectors of length
-        k, where k is the smallest number of components whose cumulative
-        explained variance ≥ target_var. Each vector is dtype float32.
-        - The cumulative explained variance captured by the selected k
-        components, expressed in percent (e.g., 92.34).
-
-    Notes:
-    - PCA is fit once across all provided tiles, and the top-k components
-        are applied to each tile.
-    - If target_var is very small or the spectrum is dominated by PC1, k
-    may be 1.
-    '''
-
+    '''Project tile frequency vectors onto PCA components.'''
     # lock ordering in one pass
     items = list(freqs.items())
     keys = [k for k, _ in items]
@@ -252,11 +220,9 @@ def _pca_transform(
     mapped_z = dict(zip(keys, z))
     return mapped_z, float(evr_k.sum() * 100.0), k
 
+
 def _fit_pca(x: numpy.ndarray) -> tuple[numpy.ndarray, ...]:
-    '''
-    Fit PCA on rows of X (N x D) using SVD.
-    Returns mean (D,), components_full (D x D_or_N), evr_full (L,).
-    '''
+    '''Fit PCA on centered data matrix using singular value decomposition.'''
     assert x.ndim == 2, x.shape
     # center
     mean = x.mean(axis=0, keepdims=True)
@@ -269,32 +235,26 @@ def _fit_pca(x: numpy.ndarray) -> tuple[numpy.ndarray, ...]:
     evr = var / total_var
     return mean.squeeze(0), vt, evr
 
+
 def _k_from_target_evr(
     evr_full: numpy.ndarray,
-    target: float
+    target: float,
 ) -> int:
-    '''
-    Return the smallest k s.t. cumulative explained variance >= target.
-    target is in [0, 1], e.g., 0.95 for 95%.
-    '''
-
+    '''Determine minimum number of PCA components to reach target variance.'''
     if not 0.0 < target <= 1.0:
         raise ValueError('target must be in (0, 1].')
-    # if not numpy.all(numpy.isfinite(evr_full)):
-    #     print('DEBUG: evr_full has non-finite values:', evr_full)
     cum = numpy.cumsum(evr_full)
-    # print(f'target={target}, first_evr={evr_full[0]}, cum_last={cum[-1]}')
     k = int(numpy.searchsorted(cum, target, side='left') + 1)
     k = max(1, min(k, evr_full.shape[0]))
     return k
 
+
 def _transform(
     x: numpy.ndarray,
     mean: numpy.ndarray,
-    components: numpy.ndarray
+    components: numpy.ndarray,
 ) -> numpy.ndarray:
-    '''Project rows of X onto PCA components (k x D).'''
-
+    '''Project centered data matrix onto top-k PCA components.'''
     xc = x - mean
     z = xc @ components.T  # (N, k)
     z = numpy.asarray(z, dtype=numpy.float32) # ensure float32

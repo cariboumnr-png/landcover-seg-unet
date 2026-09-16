@@ -20,48 +20,44 @@
 # =========================================================================== #
 
 '''
-Type aliases for `geopipe.ingest` for raster I/O and grid windows.
+Type aliases for raster I/O, windows, and tiles in data ingestion.
+
+This module defines common type aliases for rasterio reader handles,
+window mappings, and array tile dictionaries.
+
+Public APIs:
+    - `RasterReader`: Type alias for rasterio DatasetReader.
+    - `RasterWindow`: Type alias for rasterio Window.
+    - `RasterWindowDict`: Type alias for coordinate to Window mapping.
+    - `RasterTile`: Type alias for coordinate and array tuple.
+    - `RasterTileDict`: Type alias for coordinate to array mapping.
+    - `RasterTransform`: Type alias for raster affine transform or None.
 '''
 
 # standard imports
+from __future__ import annotations
 import typing
 # third-party imports
 import numpy.typing
 import rasterio.io
 import rasterio.windows
 
-# rasterio types
+
+# ----- typing aliases
 RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-'''
-A mapping of pixel-origin coordinates `(x_px, y_px)` to
-`rasterio.windows.Window` objects from the world grid.
-'''
+'''Type alias for rasterio DatasetReader.'''
 
 RasterWindow: typing.TypeAlias = rasterio.windows.Window
-'''
-Array read from a raster window with its top-left corner at the given
-pixel-origin coordinates `(x_px, y_px)` in world-grid space.
-'''
+'''Type alias for rasterio Window.'''
 
 RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
-'''
-A collection of `rasterio.windows.Window` indexed by coordinates  (x, y
-in pixels) from the world grid.
-'''
+'''Mapping of pixel-origin coordinates (x, y) to raster windows.'''
 
 RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
-'''
-Array read from a raster window with its top-left corner at specified
-coordinates (x, y in pixels) from the world grid.
-'''
+'''Tuple of pixel coordinates (x, y) and tile array data.'''
 
 RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
-'''
-A mapping from pixel-origin coordinates `(x_px, y_px)` to NumPy arrays
-holding the tile data read from corresponding raster windows.
-'''
+'''Mapping of pixel coordinates (x, y) to tile array data.'''
 
 RasterTransform: typing.TypeAlias = rasterio.Affine | None
-'''
-Affine transform for a raster; `None` when a transform is unavailable.
-'''
+'''Affine transform for a raster or None when unavailable.'''

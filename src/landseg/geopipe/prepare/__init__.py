@@ -22,10 +22,21 @@
 '''
 Top-level namespace for `landseg.geopipe.prepare`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes public dataset context builders, partitioners, materializers,
+and schema generators via lazy resolution.
+
+Public APIs:
+    - DataBlocksView: in-memory manifest view for catalog blocks.
+    - DatasetContext: unified immutable dataset preparation context.
+    - PartitionParameters: configuration for data block partitioning.
+    - PreparationLogger: specialized logger for preparation runs.
+    - build_dataset_context: construct full dataset preparation context.
+    - build_schema: generate dataset preparation schema JSON.
+    - run_datablocks_partition: partition data blocks into train/val/test.
+    - run_materialize_blocks: orchestrate stats and block materialization.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing

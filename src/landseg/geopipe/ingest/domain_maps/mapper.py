@@ -24,9 +24,14 @@ Domain raster mapping utilities.
 
 Reads a categorical domain raster, aligns it to a pre-built world grid,
 and remaps label values into a compact, zero-based index space suitable
-for downstream domain-feature constructio
+for downstream domain-feature construction.
+
+Public APIs:
+    - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
 '''
 
+# standard imports
+from __future__ import annotations
 # third-party imports
 import numpy
 # local imports
@@ -35,7 +40,8 @@ import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def map_domain_to_grid(
     world_grid: geo_core.GridLayout,
     raster_path: str,
@@ -43,27 +49,17 @@ def map_domain_to_grid(
     '''
     Map a domain raster onto a world grid and re-index labels.
 
-    The raster is read window-by-window over all grid tiles after
-    aligning the grid to the raster via an integer pixel offset. All
-    unique, non-nodata label values are collected globally and remapped
-    to a contiguous index range starting at zero.
-
-    Behavior:
-    - Align the world grid to the raster using pixel-exact offsets.
-    - Discover all unique label values excluding nodata.
-    - Validate that the minimum label equals `index_base`.
-    - Remap valid labels to the range [0 .. K-1]; assign -1 to nodata.
-
     Args:
-        grid: World grid layout defining raster windows.
-        raster_path: Path to the categorical domain raster.
-        logger: Logger for progress reporting.
-        index_base: Expected minimum value of valid labels in the raster.
+        world_grid:
+            World grid layout defining raster windows.
+        raster_path:
+            File path to the categorical domain raster.
 
     Returns:
-        _DomainTilesPackage containing re-indexed tiles and grid metadata.
+        alias.RasterTileDict:
+            Dictionary mapping tile coordinates to re-indexed raster tile
+            arrays.
     '''
-
     # read domain raster and get arrays indexed to the grid tiles
     tiles, nodata, index_base = _read_raster(world_grid, raster_path)
 
@@ -80,13 +76,13 @@ def map_domain_to_grid(
 
     return _tiles
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _read_raster(
     grid: geo_core.GridLayout,
     fpath: str,
 ) -> tuple[alias.RasterTileDict, int, int]:
-    '''Read a raster over all grid windows.'''
-
+    '''Read a raster over all grid windows using parallel executor.'''
     # open domain raster
     with geo_utils.open_rasters(fpath) as (src,):
         assert src
@@ -104,11 +100,15 @@ def _read_raster(
         index_base = int(raw_index_base) if raw_index_base is not None else 1
 
     # read through all windows via multiprocessing
-    jobs = [(_read, (k, v, fpath, grid.tile_size), {})for k, v in grid.items()]
+    jobs = [
+        (_read, (k, v, fpath, grid.tile_size), {})
+        for k, v in grid.items()
+    ]
     results: list[alias.RasterTile]
     results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
     all_tiles = [(_, t) for (_, t) in results if t.size > 0] # filter empty arrays
     return dict(all_tiles), nodata, index_base
+
 
 def _read(
     raster_window_id: tuple[int, int],
@@ -117,7 +117,6 @@ def _read(
     expected_h_w: tuple[int, int]
 ) -> alias.RasterTile:
     '''Read a single raster window and return its first band.'''
-
     # if arr is not of expected H, W return an empty array
     if (raster_window.height, raster_window.width) != tuple(expected_h_w):
         return raster_window_id, numpy.array([])
@@ -129,13 +128,13 @@ def _read(
         arr = arr.astype(numpy.int16, copy=False) # avoids OOM
         return raster_window_id, arr
 
+
 def _get_index_mapping(
     tiles: alias.RasterTileDict,
     nodata: int,
     index_base: int
 ) -> numpy.ndarray:
     '''Compute a global, sorted label remapping excluding nodata.'''
-
     # iteration on all tiles to gather unique values (exclude nodata)
     unique_values = set()
     for arr in tiles.values():
@@ -154,13 +153,13 @@ def _get_index_mapping(
     mapping = numpy.array(sorted(unique_values), dtype=numpy.int64)
     return mapping
 
+
 def _re_index(
     tiles: alias.RasterTileDict,
     nodata: int,
     mapping: numpy.ndarray
 ) -> alias.RasterTileDict:
     '''Apply a global index remapping to all raster tiles in-place.'''
-
     for arr in tiles.values():
         mask_valid = arr != nodata
         # skip if a grid tile does not contain any data

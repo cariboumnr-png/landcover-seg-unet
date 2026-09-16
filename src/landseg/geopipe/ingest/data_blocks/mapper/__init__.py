@@ -22,8 +22,15 @@
 '''
 Top-level namespace for `landseg.geopipe.ingest.data_blocks.mapper`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes raster-to-grid mapping, geometry validation, and window caching
+utilities via lazy module resolution.
+
+Public APIs:
+    - GeometrySummary: TypedDict of raster geometry metadata.
+    - MappedRasterWindows: Dataclass container for read windows.
+    - map_rasters: Maps input rasters to grid and builds windows.
+    - map_rasters_to_grid: Maps rasters onto grid with caching.
+    - validate_geometry: Ingests rasters and validates alignment.
 '''
 
 from __future__ import annotations
@@ -47,15 +54,22 @@ if typing.TYPE_CHECKING:
     from .lifecycle import map_rasters_to_grid
     from .mapper import MappedRasterWindows, map_rasters
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {'GeometrySummary', 'validate_geometry'}:
-        return getattr(importlib.import_module('.geometry', __package__), name)
+        return getattr(
+            importlib.import_module('.geometry', __package__), name
+        )
 
     if name in {'map_rasters_to_grid'}:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
+        return getattr(
+            importlib.import_module('.lifecycle', __package__), name
+        )
 
     if name in {'MappedRasterWindows', 'map_rasters'}:
-        return getattr(importlib.import_module('.mapper', __package__), name)
+        return getattr(
+            importlib.import_module('.mapper', __package__), name
+        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+

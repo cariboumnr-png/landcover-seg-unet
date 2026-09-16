@@ -22,13 +22,13 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Schema builders for dataset artifacts. Emits a dataset-wide JSON schema
-from cached blocks and grid metadata, and can derive a minimal schema
-from a single block (overfit mode).
+Schema builders for prepared dataset artifacts.
+
+Emits a dataset-wide JSON schema from materialized blocks, split
+partitions, image statistics, and label statistics.
 
 Public APIs:
-    - build_schema_full: Generate and write the dataset schema JSON.
-    - build_schema_one_block: Build a minimal schema from one block.
+    - build_schema: generate and write the dataset preparation schema JSON.
 '''
 
 # standard imports
@@ -42,9 +42,17 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.core.prepared_dateset_types as geo_types
 import landseg.geopipe.prepare.common as common
 
-# --------------------------------private types--------------------------------
+
+# ----- typing aliases
+PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
+SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
+load = artifacts.Controller.load_json_or_fail
+
+
+# ----- private types
 class _PipelinePaths(typing.Protocol):
-    '''Typed pipeline-specific paths container.'''
     @property
     def schema(self) -> str: ...
     @property
@@ -56,36 +64,28 @@ class _PipelinePaths(typing.Protocol):
     @property
     def image_stats(self) -> str: ...
 
-# typing aliases
-PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
-ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
-LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[geo_core.TransformSchema]
-load = artifacts.Controller.load_json_or_fail
 
-
-# ----- `build_schema` execution
+# ----- public functions
 def build_schema(
     paths: _PipelinePaths,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.PreparationLogger
+    logger: common.PreparationLogger,
 ) -> None:
     '''
-    Generate and persist the dataset schema JSON from data and grid.
+    Generate and persist dataset preparation schema JSON.
+
+    Combines artifact hashes, train/val/test split manifests, per-band
+    image statistics, and label class statistics into a single
+    verified transform schema JSON artifact.
 
     Args:
-        paths: Transform paths container.
-        policy: Lifecycle policy guiding rebuild behavior.
-        logger: Logger for progress and diagnostic output.
-
-    Raises:
-        FileNotFoundError: If hash records for referenced artifacts are
-            missing when resolving paths and checksums.
-        ValueError: If artifacts hash value mismatch with the record.
-
-    Note: this function does not return a schema dict, but write one as
-    JSON to disk.
+        paths:
+            transform paths container.
+        policy:
+            lifecycle policy guiding rebuild behavior.
+        logger:
+            logger for progress and diagnostic output.
     '''
     start_time = time.perf_counter()
 

@@ -21,6 +21,15 @@
 
 '''
 Top-level namespace for `landseg.geopipe.harmonize.rasters`.
+
+Exposes raster warping, stacking, masking, and metadata manipulation APIs.
+
+Public APIs:
+    - `warp_to_grid`: Reproject and snap input raster to grid as a VRT.
+    - `stack_rasters`: Stack feature and label rasters into composite VRTs.
+    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
+    - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
 '''
 
 # standard imports
@@ -56,6 +65,7 @@ if typing.TYPE_CHECKING:
     from .stack import(
         stack_rasters,
     )
+
 
 def __getattr__(name: str):
 

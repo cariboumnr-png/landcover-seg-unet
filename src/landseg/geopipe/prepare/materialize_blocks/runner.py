@@ -27,6 +27,10 @@ Image normalization and block materialization pipeline.
 Consumes raw block split manifests, aggregates image statistics from
 training blocks only, normalizes all splits using these statistics, and
 writes normalized block artifacts along with updated split mappings.
+
+Public APIs:
+    - run_materialize_blocks: orchestrate stats aggregation and block
+      materialization.
 '''
 
 # standard imports
@@ -40,9 +44,15 @@ import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.materialize_blocks.materialize as materialize
 import landseg.geopipe.prepare.materialize_blocks.stats as stats
 
-# --------------------------------private types--------------------------------
+
+# ----- typing aliases
+PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
+ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+
+
+# ----- private types
 class _PipelinePaths(typing.Protocol):
-    '''Typed pipeline-specific paths container.'''
     @property
     def splits_source_blocks(self) -> str: ...
     @property
@@ -58,35 +68,31 @@ class _PipelinePaths(typing.Protocol):
     @property
     def test_blocks(self) -> str: ...
 
-# typing aliases
-PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
-LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 
-
-# ----- `run_normalize_blocks` execution
+# ----- public functions
 def run_materialize_blocks(
     paths: _PipelinePaths,
     context: data_context.DatasetContext,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.PreparationLogger
-):
+    logger: common.PreparationLogger,
+) -> None:
     '''
     Build normalized data blocks from raw block splits.
 
-    Loads the raw `block_source.json`, computes per-band image statistics
-    using training blocks only, and applies normalization consistently to
-    train, validation, and test splits. Normalized blocks are written to
-    split-specific directories and registered in `block_splits.json`.
+    Loads raw block split manifests, computes per-band image statistics
+    using training blocks only, aggregates label class counts, and
+    materializes normalized blocks for all splits.
 
     Args:
-        paths: Transform paths container.
-        channel_indices: Optional list of 0-based channel indices to
-            select for the normalized blocks.
-        target_reclass: Deprecated/unused target reclass parameter.
-        policy: Lifecycle policy guiding rebuild behavior.
-        logger: Logger for progress and diagnostic output.
+        paths:
+            pipeline artifact and directory paths container.
+        context:
+            dataset context containing features and target hierarchy.
+        policy:
+            lifecycle policy guiding rebuild behavior.
+        logger:
+            logger for progress and diagnostic output.
     '''
     start_time = time.perf_counter()
 
@@ -111,14 +117,18 @@ def run_materialize_blocks(
     ctrl = ImageStatsCtrl(paths.image_stats, policy)
     agg_stats = ctrl.fetch()
     if policy != artifacts.LifecyclePolicy.REBUILD and agg_stats:
-        logger.log('INFO', '[CHECKPOINT] Loaded image stats from training split')
+        logger.log(
+            'INFO', '[CHECKPOINT] Loaded image stats from training split'
+        )
     else:
         agg_stats = stats.aggregate_image_stats(
             set(src['train'].values()),
             list(context.features.indices)
         )
         ctrl.persist(agg_stats)
-        logger.log('INFO', '[CHECKPOINT] Created image stats from training split')
+        logger.log(
+            'INFO', '[CHECKPOINT] Created image stats from training split'
+        )
 
     # load or build normalized blocks for each split
     ctrl = PartitionCtrl(paths.splits_transformed_blocks, policy)
@@ -151,7 +161,7 @@ def run_materialize_blocks(
     logger.set_normalization_report(report)
 
 
-# ----- `_normalize` helper
+# ----- private helpers
 def _materialize(
     splits: tuple[set[str], set[str], set[str]],
     aggregated_stats: dict[str, geo_core.ImageBandStats],
@@ -160,7 +170,7 @@ def _materialize(
     *,
     logger: common.PreparationLogger,
 ) -> tuple[dict[str, dict[str, str]], int]:
-    '''Normalize each split.'''
+    '''Materialize and normalize train, validation, and test splits.'''
     train_split, val_split, test_split = splits
 
     purged_total = 0

@@ -19,7 +19,16 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Domains artifacts lifecycle management.'''
+'''
+Domain map artifacts lifecycle management.
+
+This module provides functions to prepare, build, and persist domain tile
+map artifacts and mapped raster tiles using configurable lifecycle policies.
+
+Public APIs:
+    - `DomainBuildingParameters`: Container for domain building parameters.
+    - `prepare_domain_maps`: Build or load domain tile maps for rasters.
+'''
 
 # standard imports
 from __future__ import annotations
@@ -34,13 +43,15 @@ import landseg.geopipe.ingest.common as common
 import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.ingest.domain_maps as domain_maps
 
-# typing aliases
+
+# ----- typing aliases
 D = dict[str, geo_core.DomainTile]
 M = geo_core.DomainMeta
 DomainCtrl = artifacts.PayloadController[D, M]
 MappingCtrl = artifacts.Controller[alias.RasterTileDict]
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class DomainBuildingParameters:
     '''Container for domain mapping configurations.'''
@@ -50,7 +61,8 @@ class DomainBuildingParameters:
     valid_threshold: float
     target_variance: float
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def prepare_domain_maps(
     world_grid: geo_core.GridLayout,
     domain_configs: list[DomainBuildingParameters],
@@ -59,36 +71,18 @@ def prepare_domain_maps(
     logger: common.IngestionLogger,
 ) -> None:
     '''
-    Prepare and persist domain tile maps for categorical raster(s).
-
-    This function is the public entry point for domain preparation. It
-    aligns the provided world grid to each configured domain raster,
-    builds a `DomainTileMap` if no artifact exists yet, persists it, and
-    returns a dictionary keyed by domain name (filename without suffix).
+    Prepare and persist domain tile maps for categorical rasters.
 
     Args:
-        world_grid: A grid.GridLayout instance describing the tiling to
-            use. The domain rasters must share its CRS and pixel size;
-            pixel origin alignment is handled internally.
-        config: Domain configuration dict. Expected keys
-            - 'dirpath': directory containing domain rasters.
-            - 'files': list of {'name': str, 'index_base': int}.
-            - 'valid_threshold': float in [0, 1], min valid-pixel frac.
-            - 'target_variance': float in (0, 1], PCA target EVR.
-            - 'output_dirpath': directory for persisted artifacts.
+        world_grid:
+            Canonical world grid layout used for spatial alignment.
+        domain_configs:
+            List of domain building parameter configurations.
+        policy:
+            Lifecycle policy determining build vs load behavior.
         logger:
-            Logger used for structured progress messages.
-
-    Returns:
-        dict: A mapping from domain base name to the prepared
-            `DomainTileMap`.
-
-    Notes:
-    - Existing domain artifacts are loaded and returned without rebuild.
-    - New artifacts are saved as JSON payload plus JSON metadata with a
-    schema id and integrity hash for compatibility checks.
+            Logger used for recording structured progress reports.
     '''
-
     # read provided domain rasters
     for config in domain_configs:
         start_time = time.perf_counter()
@@ -145,15 +139,15 @@ def prepare_domain_maps(
         }
         logger.add_domain_report(report)
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _prep_mapping(
     grid: geo_core.GridLayout,
     config: DomainBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
 ) -> alias.RasterTileDict:
-    '''doc'''
-
+    '''Fetch existing mapped tiles artifact or map raster onto grid.'''
     # check mapped tiles before building
     ctrl = MappingCtrl(config.tiles_fpath, policy)
     try:

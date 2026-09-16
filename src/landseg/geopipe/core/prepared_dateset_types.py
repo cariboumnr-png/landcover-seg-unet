@@ -27,36 +27,32 @@ and final artifacts produced during dataset preparation. These
 schemas standardize how dataset partitions, statistical summaries, and
 global transformation metadata are serialized to JSON.
 
-They ensure consistency, traceability, and validation of outputs across
-the transformation pipeline.
+Public APIs:
+    - `BlocksPartition`: TypedDict mapping block IDs across splits.
+    - `ImageBandStats`: TypedDict for image band statistics.
+    - `TransformSchema`: TypedDict for dataset-wide transformation schema.
+    - `PartitionSummary`: TypedDict for split and hydration summary.
 '''
 
-from __future__ import annotations
 # standard imports
+from __future__ import annotations
 import typing
 
 TRANSFORM_SCHEMA_ID = 'transform_schema/v1'
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class BlocksPartition(typing.TypedDict):
     '''
     Dataset partition mapping for block files.
 
     This structure defines how block artifacts are split across
     training, validation, and test sets.
-
-    Fields:
-
-    - **train**:
-        Mapping of block identifiers to file paths for training data.
-    - **val**:
-        Mapping of block identifiers to file paths for validation data.
-    - **test**:
-        Mapping of block identifiers to file paths for test data.
     '''
     train: dict[str, str]
     val: dict[str, str]
     test: dict[str, str]
+
 
 class ImageBandStats(typing.TypedDict):
     '''
@@ -81,6 +77,7 @@ class ImageBandStats(typing.TypedDict):
     current_mean: float
     accum_m2: float
     std: float
+
 
 class TransformSchema(typing.TypedDict):
     '''
@@ -139,6 +136,7 @@ class PartitionSummary(typing.TypedDict):
     hydration: _HydrationStats
 
 
+# ----- private types
 class _SplitsStats(typing.TypedDict):
     '''Splits section.'''
     training: _PartitionStats

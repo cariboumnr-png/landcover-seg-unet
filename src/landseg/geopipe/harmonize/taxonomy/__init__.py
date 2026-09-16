@@ -20,7 +20,13 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.harmonize.rasters`.
+Top-level namespace for `landseg.geopipe.harmonize.taxonomy`.
+
+Exposes taxonomy profile discovery and validation functions.
+
+Public APIs:
+    - `get_available_profiles`: Return registered taxonomy profile names.
+    - `validate_specs`: Validate taxonomy specs against knowledge base.
 '''
 
 # standard imports

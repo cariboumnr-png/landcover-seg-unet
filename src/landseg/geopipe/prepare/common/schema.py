@@ -20,12 +20,24 @@
 # =========================================================================== #
 
 '''
-TypedDict definitions for data preparation/transform execution summaries.
+TypedDict report schemas for dataset preparation pipelines.
+
+Defines schemas for data partitioning, block normalization, and schema
+generation execution summaries collected by PreparationLogger.
+
+Public APIs:
+    - DataPartitionReport: report for dataset splitting and hydration.
+    - NormalizationReport: report for block materialization and stats.
+    - SchemaReport: report for dataset schema generation.
+    - PreparationReportSchema: root summary schema for prepare pipeline.
 '''
 
+# standard imports
 from __future__ import annotations
 import typing
 
+
+# ----- public types
 class DataPartitionReport(typing.TypedDict):
     '''Execution report for dataset splitting and hydration.'''
     status: typing.Literal['loaded', 'created']

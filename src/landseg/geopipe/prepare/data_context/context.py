@@ -25,6 +25,10 @@ Dataset context orchestration utilities.
 Provides a unified builder coordinating catalog reading, feature
 channel selection, and target head hierarchy resolution into a single
 self-contained dataset preparation context.
+
+Public APIs:
+    - DatasetContext: unified immutable dataset preparation context.
+    - build_dataset_context: construct full preparation context.
 '''
 
 # standard imports
@@ -40,17 +44,14 @@ import landseg.geopipe.prepare.data_context.catalog as catalog
 import landseg.geopipe.prepare.data_context.semantics as semantics
 
 
-# typing aliases
+# ----- typing aliases
 DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 
-# ----- `DatasetContext`
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class DatasetContext:
-    '''
-    Unified dataset preparation context for partitioning and
-    normalization.
-    '''
+    '''Unified dataset context for partitioning and statistics.'''
     catalog: catalog.DataBlocksView
     features: semantics.FeatureSelection
     targets: semantics.TargetHeadsContext
@@ -91,7 +92,7 @@ class DatasetContext:
         return self.catalog.transform
 
 
-# ----- `build_dataset_context`
+# ----- public functions
 def build_dataset_context(
     catalog_fpath: str,
     schema_fpath: str,
@@ -108,23 +109,32 @@ def build_dataset_context(
     without reading block files or raster data from disk.
 
     Args:
-        catalog_fpath: Path to canonical blocks catalog JSON.
-        schema_fpath: Path to dataset schema JSON.
-        catalog_config: Valid-pixel filtering and test configuration.
-        user_features_cfg: Optional user feature band configuration.
-        user_targets_cfg: Optional user target reclass configuration.
+        catalog_fpath:
+            path to canonical blocks catalog JSON.
+        schema_fpath:
+            path to dataset schema JSON.
+        config:
+            valid-pixel filtering and test configuration.
+        user_features:
+            optional user feature band configuration.
+        user_targets:
+            optional user target reclass configuration.
 
     Returns:
-        A `DatasetContext` combining catalog, features, and targets.
+        DatasetContext:
+            unified preparation context combining catalog, features,
+            and targets.
     '''
     # load ingested data schema
-    schema= DataSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    schema = DataSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
 
     # initial catalog view
     view = catalog.read_catalog(catalog_fpath, schema, config)
 
     # resolve feature channels
-    feature_selection = semantics.resolve_feature_channels(schema, user_features)
+    feature_selection = semantics.resolve_feature_channels(
+        schema, user_features
+    )
 
     # resolve target heads
     targets = semantics.resolve_target_heads(schema, user_targets)
@@ -133,7 +143,9 @@ def build_dataset_context(
     focal_head = semantics.resolve_focal_head(targets, config.focal_target)
 
     # enriched catalog view with class counts
-    enriched_view = _enrich_view_w_class_counts(view, schema, targets, focal_head)
+    enriched_view = _enrich_view_w_class_counts(
+        view, schema, targets, focal_head
+    )
 
     context = DatasetContext(
         catalog=enriched_view,

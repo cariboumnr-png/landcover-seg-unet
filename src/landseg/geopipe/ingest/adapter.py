@@ -20,7 +20,15 @@
 # =========================================================================== #
 
 '''
-Adapter for harmonization -> ingestion.
+Adapter bridging harmonization outputs into the ingestion pipeline.
+
+Parses finalized raster paths and world grid definitions from the
+harmonization report, providing typed inputs to subsequent domain mapping
+and block construction stages.
+
+Public APIs:
+    - HarmonizedRasters: Dataclass container for harmonized outputs.
+    - read_harmonization_report: Reads report to extract rasters.
 '''
 
 # standard imports
@@ -29,10 +37,12 @@ import dataclasses
 import landseg.artifacts as artifacts
 import landseg.geopipe.harmonize as harmonize
 
-# aliases
+
+# ----- typing aliases
 ReportController = artifacts.Controller[harmonize.HarmonizationReportSchema]
 
 
+# ----- public dataclasses
 @dataclasses.dataclass
 class HarmonizedRasters:
     '''Container for harmonized rasters read from the report.'''
@@ -48,11 +58,28 @@ class HarmonizedRasters:
         return self.features is not None and self.labels is not None
 
 
+# ----- public functions
 def read_harmonization_report(
     harmonization_paths: artifacts.HarmonizationPaths,
     harmonization_run_id: int | str | None
 ) -> HarmonizedRasters:
-    '''Read Harmonization report to get finalized rasters.'''
+    '''
+    Read harmonization report to extract finalized rasters.
+
+    Locates the targeted harmonization run folder, fetches the
+    corresponding report artifact, and parses out world grid, domain,
+    feature, and label raster references.
+
+    Args:
+        harmonization_paths:
+            File path manager for harmonization artifacts.
+        harmonization_run_id:
+            Target run identifier, or None to use the latest run.
+
+    Returns:
+        HarmonizedRasters:
+            Parsed container holding paths to finalized rasters.
+    '''
     # locate targeted/latest harmonization run folder
     harmonization_paths.get_run_folder(harmonization_run_id)
 

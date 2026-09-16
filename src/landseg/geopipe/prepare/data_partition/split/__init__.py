@@ -21,8 +21,26 @@
 
 '''
 Top-level namespace for `landseg.geopipe.prepare.data_partition.split`.
+
+Exposes data partitioning algorithms, AOI solvers, spatial filtering,
+and hydration utilities via lazy resolution.
+
+Public APIs:
+    - AoiSplitsResult: container for AOI-partitioned block coordinates.
+    - PartitionParameters: configuration for data block partitioning.
+    - PartitionResults: container for partitioned splits and hydration.
+    - SplitsResult: container for split coordinates and class stats.
+    - HydrationResults: container for hydrated block coordinates.
+    - create_blocks_partition: split blocks with spatial safety.
+    - filter_safe_tiles: filter candidate tiles to prevent overlap.
+    - hydrate_train_split: greedily hydrate training split.
+    - intersect_aoi_raster: find candidate blocks intersecting an AOI.
+    - resolve_aoi_partitions: resolve splits with priority logic.
+    - score_blocks: score and rank candidate blocks.
+    - stratified_splitter: stratified splitter for train/val/test.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing

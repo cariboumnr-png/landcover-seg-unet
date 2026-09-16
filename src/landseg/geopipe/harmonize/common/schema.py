@@ -21,6 +21,14 @@
 
 '''
 TypedDict definitions for data harmonization execution summaries/reports.
+
+This module provides schemas for serializing execution reports, source
+provenance, and grid metadata for data harmonization runs.
+
+Public APIs:
+    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
+    - `WorldGridReport`: TypedDict for world grid summary report.
+    - `HarmonizationReportSchema`: TypedDict for overall pipeline run report.
 '''
 
 # standard imports
@@ -28,7 +36,7 @@ from __future__ import annotations
 import typing
 
 
-# ----- report schema definitions
+# ----- public types
 class ProvenanceRecord(typing.TypedDict):
     '''Provenance record for a raw source raster file.'''
     path: str

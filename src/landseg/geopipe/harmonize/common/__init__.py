@@ -21,6 +21,14 @@
 
 '''
 Top-level namespace for `landseg.geopipe.harmonize.common`.
+
+Exposes common logging and reporting utilities for data harmonization.
+
+Public APIs:
+    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
+    - `WorldGridReport`: TypedDict for world grid summary report.
+    - `HarmonizationReportSchema`: TypedDict for overall pipeline report.
+    - `HarmonizationLogger`: Logger tracking ETL progress and report JSON.
 '''
 
 # standard imports

@@ -20,12 +20,17 @@
 # =========================================================================== #
 
 '''
-Geographic Area of Interest (AOI) raster selection and conflict resolution.
+Geographic Area of Interest (AOI) selection and conflict resolution.
 
-This module provides spatial intersection routines to select candidate
-data blocks from external AOI GeoTIFF rasters with coordinate reference
-system (CRS) reprojection, and resolves multi-split overlap conflicts
-under a strict priority order (test > val > train).
+Provides spatial intersection routines to select candidate data blocks
+from external AOI GeoTIFF rasters with coordinate reference system (CRS)
+reprojection, resolving multi-split overlap conflicts under a strict
+priority order (test > val > train).
+
+Public APIs:
+    - AoiSplitsResult: container for AOI-partitioned block coordinates.
+    - intersect_aoi_raster: find candidate blocks intersecting an AOI.
+    - resolve_aoi_partitions: resolve splits with priority logic.
 '''
 
 # standard imports
@@ -39,7 +44,7 @@ import rasterio.warp
 import landseg.geopipe.prepare.common as common
 
 
-# ----- `AoiSplitsResult` container
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class AoiSplitsResult:
     '''Container for AOI-partitioned block coordinate sets.'''
@@ -49,7 +54,147 @@ class AoiSplitsResult:
     unassigned: list[tuple[int, int]]
 
 
-# ----- internal helpers
+# ----- public functions
+def intersect_aoi_raster(
+    aoi_path: str,
+    candidate_blocks: list[tuple[int, int]],
+    *,
+    block_size: tuple[int, int],
+    canvas_crs: str,
+    canvas_transform: rasterio.transform.Affine,
+    min_overlap: float = 0.5,
+) -> list[tuple[int, int]]:
+    '''
+    Find candidate block coordinates intersecting an AOI raster.
+
+    Args:
+        aoi_path:
+            file path to the AOI GeoTIFF raster.
+        candidate_blocks:
+            list of candidate top-left (row, col) pixel coordinates.
+        block_size:
+            block spatial dimensions (size_row, size_col).
+        canvas_crs:
+            coordinate reference system of canonical grid canvas.
+        canvas_transform:
+            affine transform of canonical grid canvas.
+        min_overlap:
+            minimum overlap ratio required to select a block.
+
+    Returns:
+        list[tuple[int, int]]:
+            block coordinates matching the AOI footprint.
+    '''
+    aoi_bounds = _load_aoi_bounds(aoi_path, canvas_crs)
+
+    matched: list[tuple[int, int]] = []
+    for rc in candidate_blocks:
+        if _check_overlap(
+            rc, block_size, canvas_transform, aoi_bounds, min_overlap
+        ):
+            matched.append(rc)
+
+    return matched
+
+
+def resolve_aoi_partitions(
+    candidate_blocks: list[tuple[int, int]],
+    *,
+    train_aoi: str | None = None,
+    val_aoi: str | None = None,
+    test_aoi: str | None = None,
+    block_size: tuple[int, int],
+    canvas_crs: str,
+    canvas_transform: rasterio.transform.Affine,
+    min_overlap: float = 0.5,
+    logger: common.PreparationLogger | None = None,
+) -> AoiSplitsResult:
+    '''
+    Resolve split partitions from AOI rasters with priority resolution.
+
+    Priority for resolving multi-AOI conflicts: test > val > train.
+    Emits warning messages when overlapping claims are resolved.
+
+    Args:
+        candidate_blocks:
+            all valid candidate top-left (row, col) block tuples.
+        train_aoi:
+            optional file path to training AOI GeoTIFF.
+        val_aoi:
+            optional file path to validation AOI GeoTIFF.
+        test_aoi:
+            optional file path to test AOI GeoTIFF.
+        block_size:
+            block spatial dimensions (size_row, size_col).
+        canvas_crs:
+            coordinate reference system of canvas.
+        canvas_transform:
+            affine transform of canvas.
+        min_overlap:
+            minimum overlap ratio required for selection.
+        logger:
+            optional logger for emitting conflict warnings.
+
+    Returns:
+        AoiSplitsResult:
+            resolved test, val, train, and unassigned block coordinates.
+    '''
+    test_raw = (
+        intersect_aoi_raster(
+            test_aoi,
+            candidate_blocks,
+            block_size=block_size,
+            canvas_crs=canvas_crs,
+            canvas_transform=canvas_transform,
+            min_overlap=min_overlap,
+        )
+        if test_aoi
+        else []
+    )
+
+    val_raw = (
+        intersect_aoi_raster(
+            val_aoi,
+            candidate_blocks,
+            block_size=block_size,
+            canvas_crs=canvas_crs,
+            canvas_transform=canvas_transform,
+            min_overlap=min_overlap,
+        )
+        if val_aoi
+        else []
+    )
+
+    train_raw = (
+        intersect_aoi_raster(
+            train_aoi,
+            candidate_blocks,
+            block_size=block_size,
+            canvas_crs=canvas_crs,
+            canvas_transform=canvas_transform,
+            min_overlap=min_overlap,
+        )
+        if train_aoi
+        else []
+    )
+
+    assigned_test = set(test_raw)
+    assigned_val, assigned_train = _resolve_conflicts(
+        val_raw, train_raw, assigned_test, logger
+    )
+
+    all_assigned = assigned_test | assigned_val | assigned_train
+    unassigned = [b for b in candidate_blocks if b not in all_assigned]
+
+    return AoiSplitsResult(
+        test=list(assigned_test),
+        val=list(assigned_val),
+        train=list(assigned_train),
+        unassigned=unassigned,
+    )
+
+
+# ----- private helpers
 def _load_aoi_bounds(
     aoi_path: str,
     canvas_crs: str,
@@ -144,127 +289,3 @@ def _resolve_conflicts(
             assigned_train.add(b)
 
     return assigned_val, assigned_train
-
-
-# ----- `intersect_aoi_raster` function
-def intersect_aoi_raster(
-    aoi_path: str,
-    candidate_blocks: list[tuple[int, int]],
-    *,
-    block_size: tuple[int, int],
-    canvas_crs: str,
-    canvas_transform: rasterio.transform.Affine,
-    min_overlap: float = 0.5,
-) -> list[tuple[int, int]]:
-    '''
-    Find candidate block coordinates intersecting an AOI raster.
-
-    Args:
-        aoi_path: File path to the AOI GeoTIFF.
-        candidate_blocks: List of candidate top-left (row, col) pixels.
-        block_size: Block spatial dimensions (size_row, size_col).
-        canvas_crs: Coordinate reference system of canonical grid canvas.
-        canvas_transform: Affine transform of canonical grid canvas.
-        min_overlap: Minimum overlap ratio to select block (0.0 to 1.0).
-
-    Returns:
-        List of block coordinates matching the AOI footprint.
-    '''
-    aoi_bounds = _load_aoi_bounds(aoi_path, canvas_crs)
-
-    matched: list[tuple[int, int]] = []
-    for rc in candidate_blocks:
-        if _check_overlap(
-            rc, block_size, canvas_transform, aoi_bounds, min_overlap
-        ):
-            matched.append(rc)
-
-    return matched
-
-
-# ----- `resolve_aoi_partitions` function
-def resolve_aoi_partitions(
-    candidate_blocks: list[tuple[int, int]],
-    *,
-    train_aoi: str | None = None,
-    val_aoi: str | None = None,
-    test_aoi: str | None = None,
-    block_size: tuple[int, int],
-    canvas_crs: str,
-    canvas_transform: rasterio.transform.Affine,
-    min_overlap: float = 0.5,
-    logger: common.PreparationLogger | None = None,
-) -> AoiSplitsResult:
-    '''
-    Resolve split partitions from AOI rasters with priority resolution.
-
-    Priority order for resolving multi-AOI conflicts: test > val > train.
-    Emits warning messages when overlapping claims are resolved.
-
-    Args:
-        candidate_blocks: All valid candidate top-left (row, col) tuples.
-        train_aoi: Optional file path to training AOI GeoTIFF.
-        val_aoi: Optional file path to validation AOI GeoTIFF.
-        test_aoi: Optional file path to test AOI GeoTIFF.
-        block_size: Block spatial dimensions (size_row, size_col).
-        canvas_crs: Coordinate reference system of canvas.
-        canvas_transform: Affine transform of canvas.
-        min_overlap: Minimum overlap ratio for selection.
-        logger: Optional logger for emitting conflict warnings.
-
-    Returns:
-        AoiSplitsResult with resolved test, val, train, and unassigned.
-    '''
-    test_raw = (
-        intersect_aoi_raster(
-            test_aoi,
-            candidate_blocks,
-            block_size=block_size,
-            canvas_crs=canvas_crs,
-            canvas_transform=canvas_transform,
-            min_overlap=min_overlap,
-        )
-        if test_aoi
-        else []
-    )
-
-    val_raw = (
-        intersect_aoi_raster(
-            val_aoi,
-            candidate_blocks,
-            block_size=block_size,
-            canvas_crs=canvas_crs,
-            canvas_transform=canvas_transform,
-            min_overlap=min_overlap,
-        )
-        if val_aoi
-        else []
-    )
-
-    train_raw = (
-        intersect_aoi_raster(
-            train_aoi,
-            candidate_blocks,
-            block_size=block_size,
-            canvas_crs=canvas_crs,
-            canvas_transform=canvas_transform,
-            min_overlap=min_overlap,
-        )
-        if train_aoi
-        else []
-    )
-
-    assigned_test = set(test_raw)
-    assigned_val, assigned_train = _resolve_conflicts(
-        val_raw, train_raw, assigned_test, logger
-    )
-
-    all_assigned = assigned_test | assigned_val | assigned_train
-    unassigned = [b for b in candidate_blocks if b not in all_assigned]
-
-    return AoiSplitsResult(
-        test=list(assigned_test),
-        val=list(assigned_val),
-        train=list(assigned_train),
-        unassigned=unassigned,
-    )

@@ -20,9 +20,17 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.prepare.normal_blocks`.
+Top-level namespace for `landseg.geopipe.prepare.materialize_blocks`.
+
+Exposes block materialization and image normalization pipeline runners
+via lazy resolution.
+
+Public APIs:
+    - run_materialize_blocks: orchestrate stats aggregation and block
+      materialization.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -37,6 +45,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .runner import run_materialize_blocks
+
 
 def __getattr__(name: str):
 

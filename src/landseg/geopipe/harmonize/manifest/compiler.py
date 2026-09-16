@@ -20,16 +20,26 @@
 # =========================================================================== #
 
 '''
-Data harmonization pipeline command implementation.
+Dataset manifest compilation and aggregation utilities.
+
+This module loads root dataset manifest JSON files, validates linked
+manifest entries, and compiles them into a path-indexed mapping of
+normalized `ManifestEntry` objects.
+
+Public APIs:
+    - `DatasetManifestError`: Error raised during manifest compilation.
+    - `compile_dataset_manifest`: Read and validate dataset manifest JSON.
 '''
 
 # standard imports
+from __future__ import annotations
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.harmonize.manifest as manifest
 
 
+# ----- typing aliases
 ManifestController = artifacts.Controller[list[dict[str, typing.Any]]]
 ManifestEntryController = artifacts.Controller[manifest.ManifestEntry]
 
@@ -37,13 +47,24 @@ ManifestEntryController = artifacts.Controller[manifest.ManifestEntry]
 # ----- public classes
 class DatasetManifestError(Exception):
     '''Base class for errors when compiling dataset manifest JSON.'''
+
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
 
 
 # ----- public functions
 def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
-    '''Read and validate dataset manifest JSON.'''
+    '''
+    Read, validate, and compile dataset manifest from JSON.
+
+    Args:
+        fp:
+            File path to root dataset manifest JSON.
+
+    Returns:
+        dict[str, manifest.ManifestEntry]:
+            Mapping of raster file paths to normalized manifest entries.
+    '''
     # load JSON via artifact controller
     ctrl = ManifestController.load_json_or_fail(fp)
     ctrl.hash(overwrite=False) # hash once

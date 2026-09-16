@@ -20,28 +20,44 @@
 # =========================================================================== #
 
 '''
-Image statistics aggregation utilities for cached data blocks. Computes
-global per-band means and standard deviations using Welford's online
-algorithm and validates per-block stats when needed.
+Image and label statistics aggregation utilities for data blocks.
+
+Computes global per-band means and standard deviations using Welford's
+online algorithm and aggregates per-head label class counts across
+selected block subsets.
 
 Public APIs:
-    - get_image_stats: Aggregate global image statistics across blocks,
-      validating and (if needed) repairing per-block stats before use.
+    - aggregate_image_stats: aggregate global per-band image statistics.
+    - count_label: aggregate label class counts across block subsets.
 '''
 
 # standard imports
 import math
+# third-party imports
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
 
+# ----- public functions
 def count_label(
     raw_class_counts: dict[tuple[int, int], dict[str, list[int]]],
-    selected_block_id: list[str]
+    selected_block_id: list[str],
 ) -> dict[str, list[int]]:
-    '''Aggregate label class counts across a list of block files.'''
+    '''
+    Aggregate label class counts across a list of block files.
+
+    Args:
+        raw_class_counts:
+            mapping of block coordinate to per-head class count lists.
+        selected_block_id:
+            list of block filename strings to aggregate.
+
+    Returns:
+        dict[str, list[int]]:
+            aggregated per-head class pixel counts.
+    '''
     # parse selected block id
     parsed_id: set[tuple[int, int]] = set()
     for id_str in selected_block_id:
@@ -74,13 +90,15 @@ def aggregate_image_stats(
     Aggregate per-band image statistics across the input blocks.
 
     Args:
-        input_blocks: List of file paths to block artifacts to scan.
-        channel_indices: Optional list of 0-based channel indices to
-            select for aggregation.
+        input_blocks:
+            set of file paths to block artifacts to scan.
+        channel_indices:
+            optional list of 0-based channel indices to select for
+            aggregation.
 
     Returns:
-        A mapping of band keys to statistics, including total_count,
-        current_mean, accum_m2, and std.
+        dict[str, ImageBandStats]:
+            mapping of band keys to aggregated count, mean, and std.
     '''
     if not input_blocks:
         raise ValueError(

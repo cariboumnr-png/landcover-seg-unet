@@ -21,6 +21,18 @@
 
 '''
 Top-level namespace for `landseg.geopipe.harmonize.manifest`.
+
+Exposes dataset manifest schemas, compilers, and normalizers.
+
+Public APIs:
+    - `compile_dataset_manifest`: Read and validate dataset manifest JSON.
+    - `DatasetManifestError`: Error raised during manifest compilation.
+    - `AllowedCategory`: Type alias for valid raster categories.
+    - `FeatureSchemes`: Type alias for feature band scheme mappings.
+    - `LabelScheme`: Re-exported TypedDict for label reclassification scheme.
+    - `LabelSchemes`: Re-exported alias for label reclassification schemes.
+    - `ManifestEntry`: TypedDict defining per-raster configuration shape.
+    - `ManifestEntryNormalizer`: Normalize and validate a manifest entry.
 '''
 
 # standard imports
@@ -85,11 +97,9 @@ def __getattr__(name: str):
         'LabelScheme',
         'LabelSchemes',
         'ManifestEntry',
-        'Resolver'
     }:
         return getattr(
             importlib.import_module('.schema', __package__), name
         )
-
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

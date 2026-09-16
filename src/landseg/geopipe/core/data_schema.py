@@ -21,14 +21,12 @@
 '''
 Dataset-level metadata schema for block catalogs.
 
-This module defines structured TypedDict schemas used to describe
-dataset-wide metadata for a catalog of spatial data blocks. It captures
-information about dataset identity, data sources, I/O conventions, tensor
-shapes, and label specifications.
+Defines structured TypedDict schemas used to describe dataset-wide
+metadata for a catalog of spatial data blocks, capturing identity,
+data sources, I/O conventions, tensor shapes, and label specs.
 
-These schemas provide a consistent contract for generating, validating,
-and consuming `metadata.json` files, ensuring interoperability and
-reproducibility across the data pipeline.
+Public APIs:
+    - DataSchema: top-level metadata structure for a block catalog.
 '''
 
 # standard imports
@@ -39,7 +37,8 @@ import landseg.geopipe.core as geo_core
 
 SCHEMA_ID = 'data_schema/v1.1'
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class DataSchema(typing.TypedDict):
     '''
     Top-level metadata structure for a block catalog.
@@ -49,17 +48,12 @@ class DataSchema(typing.TypedDict):
     tensor layouts, and labeling configuration.
 
     Fields:
+        dataset: dataset identity and provenance information.
+        io_conventions: serialization format, tensor ordering, dtypes.
+        tensor_shapes: explicit tensor shape specifications.
+        labels: label schema, hierarchy, and ignore rules.
 
-    - **dataset**:
-        Dataset identity and provenance information.
-    - **io_conventions**:
-        Serialization format, tensor ordering, and dtype rules.
-    - **tensor_shapes**:
-        Explicit tensor shape specifications for image and label data.
-    - **labels**:
-        Label schema, hierarchy, and ignore rules.
-
-    **Schema**: `SCHEMA_ID` = `'blocks_catalog_payload/v1'`
+    Schema: SCHEMA_ID = 'blocks_catalog_payload/v1'
     '''
 
     schema_id: str
@@ -68,8 +62,8 @@ class DataSchema(typing.TypedDict):
     tensor_shapes: _TensorShapes
     labels: _LabelsInfo
 
-# --------------------------------private  type--------------------------------
-# ----- dataset
+
+# ----- private types
 class _DatasetInfo(typing.TypedDict):
     '''Dataset identity and provenance information.'''
     name: str
@@ -80,10 +74,12 @@ class _DatasetInfo(typing.TypedDict):
     image_schemes: dict[str, dict[str, list[str]]]
     label_schemes: dict[str, geo_core.LabelSchemes]
 
+
 class _DataSource(typing.TypedDict):
     '''Input data source paths for images and labels.'''
     image_paths: list[str]
     label_paths: list[str]
+
 
 # ----- io_conventions
 class _IOConventions(typing.TypedDict):
@@ -95,21 +91,25 @@ class _IOConventions(typing.TypedDict):
     label_band_map: dict[str, int]
     ignore_index: int
 
+
 class _IOShapes(typing.TypedDict):
     '''Logical dimension ordering for image and label tensors.'''
     image_order: str  # e.g., 'C,H,W'
     label_order: str  # e.g., 'L,H,W'
+
 
 class _IODtypes(typing.TypedDict):
     '''Data types used for serialized image and label arrays.'''
     image: str
     label: str
 
+
 # ----- tensor_shapes
 class _TensorShapes(typing.TypedDict):
     '''Container for image and label tensor shape specifications.'''
     image: _ImageTensorSpec
     label: _LabelTensorSpec
+
 
 class _ImageTensorSpec(typing.TypedDict):
     '''Shape and dimension metadata for image tensors.'''
@@ -119,6 +119,7 @@ class _ImageTensorSpec(typing.TypedDict):
     H: int
     W: int
 
+
 class _LabelTensorSpec(typing.TypedDict):
     '''Shape and dimension metadata for label tensors.'''
     order: str
@@ -126,6 +127,7 @@ class _LabelTensorSpec(typing.TypedDict):
     L: int
     H: int
     W: int
+
 
 # ----- labels
 class _LabelsInfo(typing.TypedDict):

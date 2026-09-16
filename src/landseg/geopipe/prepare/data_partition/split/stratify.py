@@ -1,4 +1,3 @@
-# src/landseg/geopipe/transform/data_partition/split/stratify.py
 # =========================================================================== #
 #           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
@@ -21,17 +20,14 @@
 # =========================================================================== #
 
 '''
-Utilities for stratified selection of validation/test blocks.
+Utilities for stratified selection of validation and test blocks.
 
-This module provides:
-    - A validation-first and optional test split selection strategy,
-    - Block-atomic splits to reduce spatial leakage,
-    - Deterministic ordering by block mass for stable split generation,
-    - Optional inverse-frequency weighting to emphasize rare classes,
-    - SplitResult, which exposes counts, distributions, and report text.
+Selects blocks to match global class proportions using greedy deviation
+scoring, preserving block atomicity to prevent spatial leakage.
 
-The main entry point is `stratified_splitter` (returns `SplitsResult`).
-The caller decides whether to log, print, or persist the report string.
+Public APIs:
+    - SplitsResult: container for split coordinates and class stats.
+    - stratified_splitter: stratified splitter for train/val/test.
 '''
 
 # standard imports
@@ -43,7 +39,7 @@ import numpy
 import landseg.geopipe.prepare.common.alias as alias
 
 
-# ----- `SplitsResult` container
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class SplitsResult:
     '''Container for split coordinates and derived class statistics.'''
@@ -80,7 +76,7 @@ class SplitsResult:
         }
 
 
-# ----- `stratified_splitter` implementation
+# ----- public functions
 def stratified_splitter(
     base_counts: dict[tuple[int, int], list[int]],
     *,
@@ -91,23 +87,23 @@ def stratified_splitter(
     '''
     Stratified three-way splitter to generate train/val/test splits.
 
-    Pick validation and optionally test blocks to match global class
+    Picks validation and optionally test blocks to match global class
     proportions. Remaining blocks are assigned to training.
 
     Args:
         base_counts:
-            Per-block integer class counts indexed by coordinates.
+            per-block integer class counts indexed by coordinates.
         val_ratio:
-            Target fraction of blocks in validation.
+            target fraction of blocks in validation.
         test_ratio:
-            Target fraction of blocks in test. Use 0.0 to skip.
+            target fraction of blocks in test (use 0.0 to skip).
         weight_mode:
-            Weighting strategy for deviation scoring. `'inverse'`
-            upweights rare classes using `1 / max(global_count_k, 1)`.
+            weighting strategy for deviation scoring ('none' or
+            'inverse').
 
     Returns:
-        SplitResult containing split coordinates, class counts,
-        distributions, and a formatted report string.
+        SplitsResult:
+            split coordinates, class counts, and distributions.
     '''
     # base class counts dict to array
     counts = numpy.array(list(base_counts.values())) # [n_blocks, n_classes]
@@ -144,7 +140,7 @@ def stratified_splitter(
     # sanity checks on leakage before return
     leak = train_idx & val_idx
     if leak:
-        raise ValueError (f'Data leaked between [train] and [val]! {leak}')
+        raise ValueError(f'Data leaked between [train] and [val]! {leak}')
 
     leak = train_idx & test_idx
     if leak:
@@ -201,7 +197,7 @@ def _get_budgets(
     val_ratio: float,
     test_ratio: float,
 ) -> tuple[int, int]:
-    '''Compute integer budgets for validation and test by block count.'''
+    '''Compute integer budgets for validation and test splits.'''
     val_budget = int(round(val_ratio * n))
     val_budget = max(0, min(val_budget, n))
 

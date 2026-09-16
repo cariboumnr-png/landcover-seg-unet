@@ -22,11 +22,15 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Catalog adapter utilities.
+Catalog adapter utilities for dataset preparation.
 
-Provides helpers to load and filter a canonical blocks catalog and
-schema to extract class counts and file paths needed for downstream
-sampling and analysis.
+Provides helpers to load and filter canonical blocks catalogs and schemas,
+extracting class counts and spatial coordinates needed for downstream
+sampling, partitioning, and analysis.
+
+Public APIs:
+    - DataBlocksView: high-level view of data blocks for partitioning.
+    - read_catalog: load and adapt canonical blocks into a structured view.
 '''
 
 # standard imports
@@ -40,11 +44,13 @@ import rasterio.transform
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 
-# typing aliases
+
+# ----- typing aliases
 field = dataclasses.field
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 
 
+# ----- private types
 class _CatalogViewConfig(typing.Protocol):
     '''Typed configuration container for catalog views.'''
     @property
@@ -57,6 +63,7 @@ class _CatalogViewConfig(typing.Protocol):
     def non_overlapping_test_grid(self) -> bool: ...
 
 
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class DataBlocksView:
     '''High-level view of data blocks for partitioning.'''
@@ -64,34 +71,42 @@ class DataBlocksView:
     external_test_blocks: list[str] | None
     crs: str
     transform: rasterio.transform.Affine
-    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]] = field(default_factory=dict)
-    valid_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
-    base_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
+    raw_class_counts: dict[
+        tuple[int, int], dict[str, list[int]]
+    ] = field(default_factory=dict)
+    valid_class_counts: dict[tuple[int, int], list[int]] = field(
+        default_factory=dict
+    )
+    base_class_counts: dict[tuple[int, int], list[int]] = field(
+        default_factory=dict
+    )
     focal_head: str = ''
 
 
-# ----- `read_catalog`
+# ----- public functions
 def read_catalog(
     catalog_fpath: str,
     data_schema: geo_core.DataSchema,
     config: _CatalogViewConfig,
 ) -> DataBlocksView:
     '''
-    Load and adapt canonical blocks into a structured view for
-    partitioning.
+    Load and adapt canonical blocks into a structured view.
 
     Filters blocks based on a minimum valid-pixel threshold, derives
     class counts, and optionally incorporates external holdout test
     blocks.
 
     Args:
-        catalog_fpath: Path to canonical blocks catalog JSON.
-        data_schema: Ingested dataset schema instance.
-        config: Catalog view configuration.
+        catalog_fpath:
+            path to canonical blocks catalog JSON.
+        data_schema:
+            ingested dataset schema instance.
+        config:
+            catalog view configuration.
 
     Returns:
-        A `DataBlocksView` containing filtered metadata for
-        partitioning.
+        DataBlocksView:
+            filtered metadata and block mappings for partitioning.
     '''
     # retrieve image paths and shape from schema
     image_paths = data_schema['dataset']['data_source']['image_paths']
@@ -172,7 +187,6 @@ def _filter_blocks(
     valid_px_thresholds: dict[str, float],
 ) -> dict[tuple[int, int], geo_core.CatalogEntry]:
     '''Parse catalog JSON into filtered class counts and file paths.'''
-
     def _is_valid_block(
         valid_thresholds: dict[str, float],
         valid_ratios: dict[str, float]

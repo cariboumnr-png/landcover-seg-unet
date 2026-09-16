@@ -22,8 +22,19 @@
 '''
 Top-level namespace for `landseg.geopipe.ingest`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Coordinates the ingestion of harmonized geospatial rasters into
+tiled domain maps and canonical data blocks, providing logging,
+harmonization adapters, and pipeline execution tools via lazy module
+resolution.
+
+Public APIs:
+    - BlockBuildingParameters: Config for block pipeline.
+    - DomainBuildingParameters: Config for domain mapping.
+    - HarmonizedRasters: Container for harmonized raster paths.
+    - IngestionLogger: Structured logger for ingestion stages.
+    - prepare_domain_maps: Generates domain tilemaps from rasters.
+    - read_harmonization_report: Extracts rasters from report.
+    - run_blocks_building: Runs canonical data block pipeline.
 '''
 
 from __future__ import annotations
@@ -52,12 +63,15 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-
     if name in {'HarmonizedRasters', 'read_harmonization_report'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
+        return getattr(
+            importlib.import_module('.adapter', __package__), name
+        )
 
     if name in {'IngestionLogger'}:
-        return getattr(importlib.import_module('.common', __package__), name)
+        return getattr(
+            importlib.import_module('.common', __package__), name
+        )
 
     if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(

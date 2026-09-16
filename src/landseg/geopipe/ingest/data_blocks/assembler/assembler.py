@@ -30,11 +30,12 @@ test-block extraction with in-place normalization and criteria
 checking.
 
 Public APIs:
-    - build_single_block: Constructs a block from input rasters.
-    - build_test_block: Finds, normalizes, and saves a test block.
+    - `build_single_block`: Construct a DataBlock from input rasters.
+    - `build_test_block`: Build, normalize, and persist test block.
 '''
 
 # standard imports
+from __future__ import annotations
 import os
 import random
 # third-party imports
@@ -44,6 +45,7 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 
 
+# ----- public functions
 def build_single_block(
     name: str,
     inputs: assembler.RasterReadInput,
@@ -61,20 +63,18 @@ def build_single_block(
             Unique identifier for the block.
         inputs:
             Raster inputs and metadata required to construct the block.
-        save_fpath:
-            Optional output path. If provided, the constructed block is
-            serialized to this location.
         ignore_index:
             Label value assigned to ignored pixels in the output block.
         add_spectral:
-            Optional list of spectral indices to compute and append as
-            image bands.
+            Optional list of spectral indices to compute and append.
         add_topo:
-            Whether to compute and append topographic features derived
-            from the DEM.
+            Optional list of topographic features to compute from DEM.
+        save_fpath:
+            Optional output path where the block will be saved.
 
     Returns:
-        DataBlock: A populated and validated block instance.
+        geo_core.DataBlock:
+            A populated and validated block instance.
     '''
     read_outputs = assembler.read_block_raster_data(inputs)
 
@@ -131,8 +131,8 @@ def build_test_block(
             block to be accepted.
 
     Returns:
-        str | None: Path to the saved test block if one is found;
-            otherwise, ``None``.
+        str | None:
+            Path to the saved test block if found, otherwise None.
     '''
     shuffled_inputs = list(inputs.items())
     random.Random(42).shuffle(shuffled_inputs)

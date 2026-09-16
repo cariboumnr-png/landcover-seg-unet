@@ -20,10 +20,17 @@
 # =========================================================================== #
 
 '''
-Multi-raster channel composition and nodata mask unification operations.
+Multi-raster channel composition and stacking operations.
+
+This module provides functionality to combine multiple feature and label
+rasters into unified multi-band GDAL Virtual Raster (VRT) composites.
+
+Public APIs:
+    - `stack_rasters`: Stack feature and label rasters into composite VRTs.
 '''
 
 # standard imports
+from __future__ import annotations
 import ast
 import os
 import typing
@@ -39,8 +46,26 @@ def stack_rasters(
     labels_fapths: list[str],
     output_dir: str,
 ) -> typing.Generator[str, None, dict[str, str]]:
-    '''Stack feature and label rasters if applicable.'''
+    '''
+    Stack feature and label rasters into composite VRT files.
 
+    Args:
+        features_fapths:
+            List of file paths for feature rasters.
+        labels_fapths:
+            List of file paths for label rasters.
+        output_dir:
+            Directory path where stacked VRT files will be saved.
+
+    Yields:
+        str:
+            Status messages during stacking process.
+
+    Returns:
+        dict[str, str]:
+            Mapping of raster role ('features', 'labels') to stacked
+            VRT file path.
+    '''
     def _out_path(tag: str) -> str:
         return os.path.join(output_dir, f'harmonized_{tag}_STACKED.vrt')
 
@@ -80,20 +105,7 @@ def _composite_vrt(
     output_path: str,
     raster_type: typing.Literal['feature', 'label']
 ) -> str:
-    '''
-    Stack multiple rasters into one composite VRT.
-
-    Here input rasters are assumed to have identical CRS, transform etc.
-
-    Args:
-        source_paths:
-            Ordered list of input raster file paths.
-        output_path:
-            Destination path for the composite Virtual Raster (.vrt).
-
-    Returns:
-        Absolute path to the created composite Virtual Raster file.
-    '''
+    '''Stack multiple rasters into one composite VRT.'''
     if not source_paths:
         raise ValueError('source_paths list cannot be empty.')
 
@@ -182,10 +194,10 @@ def _build_stacked_vrt_xml(
     )
 
 
-# ----- private helpers
 def _get_reference_grid(
     source_path: str,
 ) -> tuple[int, int, rasterio.crs.CRS, rasterio.Affine]:
+    '''Extract dimensions, CRS, and transform from reference raster.'''
     with rasterio.open(source_path) as src:
         return (src.width, src.height, src.crs, src.transform)
 
@@ -197,6 +209,7 @@ def _validate_source(
     height: int,
     crs: rasterio.crs.CRS,
 ) -> None:
+    '''Validate that source raster matches reference dimensions and CRS.'''
     if src.width != width or src.height != height:
         raise ValueError(
             f'Source raster has different dimensions: {path} '
@@ -213,6 +226,7 @@ def _create_vrt_root(
     crs: rasterio.crs.CRS,
     transform: rasterio.Affine,
 ) -> xml.etree.ElementTree.Element:
+    '''Create root XML element for VRT dataset with CRS and GeoTransform.'''
     transform_txt = (
         f'{transform.c}, {transform.a}, {transform.b}, '
         f'{transform.f}, {transform.d}, {transform.e}'
@@ -230,6 +244,7 @@ def _create_vrt_root(
 
 
 def _gdal_dtype_name(dtype) -> str:
+    '''Map rasterio/numpy data type name to canonical GDAL data type name.'''
     gdal_dtype_map = {
         'uint8': 'Byte',
         'int8': 'Int8',
@@ -250,6 +265,7 @@ def _add_band_description(
     description: str | None,
     output_band: int,
 ) -> None:
+    '''Attach band description XML node to VRT band node.'''
     if description and description.strip():
         name = description.strip()
     else:
@@ -263,6 +279,7 @@ def _add_band_metadata(
     src: rasterio.DatasetReader,
     raster_type: typing.Literal['feature', 'label'],
 ) -> None:
+    '''Attach band tags XML metadata node to VRT band node.'''
     if raster_type == 'feature':
         return
 
@@ -285,13 +302,14 @@ def _add_nodata(
     *,
     band_node: xml.etree.ElementTree.Element,
     src: rasterio.DatasetReader,
-    src_band: int
-):
+    src_band: int,
+) -> None:
+    '''Attach NoDataValue XML element to VRT band node if defined.'''
     nodata_val = (
-    src.nodatavals[src_band - 1]
-    if src.nodatavals
-    and src.nodatavals[src_band - 1] is not None
-    else src.nodata
+        src.nodatavals[src_band - 1]
+        if src.nodatavals
+        and src.nodatavals[src_band - 1] is not None
+        else src.nodata
     )
 
     if nodata_val is not None:
@@ -305,6 +323,7 @@ def _merge_feature_schemes(
     merged: dict[str, typing.Any],
     schemes_as_str: str | None,
 ) -> None:
+    '''Merge feature schemes dictionary into the target schemes map.'''
     if schemes_as_str is None:
         return
 
@@ -366,6 +385,7 @@ def _add_source(
     source_band: int,
     dtype: str,
 ) -> None:
+    '''Attach SimpleSource XML node for source band to VRT band node.'''
     source_node = xml.etree.ElementTree.SubElement(
         band_node,
         'SimpleSource',

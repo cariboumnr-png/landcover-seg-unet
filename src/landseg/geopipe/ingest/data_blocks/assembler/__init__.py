@@ -30,14 +30,17 @@ windows.
 
 Public APIs:
     - BlockBuildingInput: I/O path options for lifecycle pipeline.
-    - BlockBuildingContext: Mapped read windows for pipeline execution.
-    - BlockBuildingConfig: Container for block building configurations.
-    - BlockBuildingOutput: Dataclass result wrapping builder execution outputs.
-    - RasterReadInput: Dataclass specs parameter for reading rasters.
-    - RasterReadOutput: Dataclass container for read raster arrays.
+    - BlockBuildingContext: Read windows for pipeline execution.
+    - BlockBuildingConfig: Container for building configurations.
+    - BlockBuildingOutput: Result wrapping builder execution outputs.
+    - RasterReadInput: Specs parameter for reading raster inputs.
+    - RasterReadOutput: Container holding read raster numpy arrays.
     - build_single_block: Constructs a block from windowed rasters.
     - build_test_block: Finds, normalizes, and saves a test block.
     - build_blocks: Parallelized multiblock checking and assembly.
+    - read_band_map: Reads and validates raster band mapping dict.
+    - read_label_specs: Reads and formats label specification dict.
+    - read_schemes: Reads and maps categorical scheme definitions.
     - read_block_raster_data: Reads image/label and DEM bands.
     - check_npz_integrity: Verifies a saved .npz file is readable.
 '''

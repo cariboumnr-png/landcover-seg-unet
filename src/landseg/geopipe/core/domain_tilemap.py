@@ -22,27 +22,15 @@
 '''
 Domain-tile mapping for categorical rasters to a world-grid layout.
 
-This module provides data structures and utilities for transforming a
-categorical raster into a stable, grid-aligned representation of per-
-tile domain features. It standardizes how spatial label distributions
-are summarized, filtered, and encoded for downstream modeling.
+Standardizes how spatial label distributions are summarized, filtered,
+and encoded into per-tile domain features and low-dimensional PCA vectors
+for downstream modeling.
 
-Core functionality includes:
-- Alignment of a world grid to raster space using integer pixel offsets
-  (assuming shared CRS and resolution).
-- Extraction and validation of per-tile label arrays.
-- Global label discovery and remapping to a compact index space.
-- Tile filtering based on valid pixel ratios.
-- Computation of majority class statistics per tile.
-- Construction of normalized class-frequency vectors.
-- Dimensionality reduction via PCA to produce compact feature vectors.
-
-The resulting `DomainTileMap` provides a reproducible mapping from grid
-coordinates to domain descriptors, enabling consistent conditioning,
-feature engineering, and cross-dataset alignment.
-
-Persistence is supported via JSON payloads with schema versioning and
-integrity checks.
+Public APIs:
+    - DomainPayload: serializable artifact schema for DomainTileMap.
+    - DomainMeta: metadata describing a DomainTileMap artifact.
+    - DomainTile: per-tile domain features and descriptors.
+    - DomainTileMap: mapping from grid tile coordinates to domain features.
 '''
 
 # standard imports
@@ -50,7 +38,8 @@ from __future__ import annotations
 import collections.abc
 import typing
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class DomainPayload(typing.TypedDict):
     '''
     Serializable artifact for `DomainTileMap`.
@@ -84,6 +73,7 @@ class DomainPayload(typing.TypedDict):
     artifact_meta: DomainMeta
     data: dict[str, DomainTile]
 
+
 class DomainMeta(typing.TypedDict):
     '''Lightweight metadata describing a `DomainTileMap` artifact.'''
     world_grid_ids: list[str]
@@ -94,6 +84,7 @@ class DomainMeta(typing.TypedDict):
     major_freq_min: float
     pca_axes_n: int
     explained_variance: float
+
 
 class DomainTile(typing.TypedDict):
     '''
@@ -120,7 +111,8 @@ class DomainTile(typing.TypedDict):
     major_freq: float | None
     pca_feature: list[float] | None
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     '''
     Mapping from world-grid tile coordinates to per-tile domain features.
@@ -148,17 +140,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     SCHEMA_ID: str = 'domain_tile_map_payload/v1'
 
     def __init__(self) -> None:
-        '''
-        Initialize an empty `DomainTileMap`.
-
-        The instance is created with default metadata and an empty
-        internal mapping. Population is expected to occur via external
-        construction logic or helper class methods such as
-        `from_json_payload()` or `from_dict()`.
-
-        Notes: This constructor does not perform any raster processing.
-        '''
-
+        '''Initialize an empty DomainTileMap with default metadata.'''
         # init attrs
         self.meta: DomainMeta = {
             'world_grid_ids': [],
@@ -214,20 +196,18 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
     @classmethod
     def from_json_payload(cls, payload: DomainPayload) -> DomainTileMap:
         '''
-        Reconstruct a `DomainTileMap` from a JSON payload.
+        Reconstruct a DomainTileMap from a JSON payload.
 
         Args:
             payload:
-                Dictionary containing serialized metadata and tile data.
+                dictionary containing serialized metadata and tile data.
 
         Returns:
-            A populated `DomainTileMap` instance.
-
-        Notes: Tile coordinate keys are converted from "x,y" strings back
-        into (x, y) integer tuples.
+            DomainTileMap:
+                populated DomainTileMap instance.
         '''
-
-        def _xy_tuple(inputs: str) -> tuple[int, int]: # e.g., '1,2' -> (1, 2)
+        def _xy_tuple(inputs: str) -> tuple[int, int]:
+            '''Parse coordinate tuple from coordinate string.'''
             output = tuple(int(x.strip()) for x in inputs.split(','))
             assert len(output) == 2
             return output
@@ -241,22 +221,20 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         return obj
 
     @classmethod
-    def from_dict(cls, tiles: dict[tuple[int, int], DomainTile]) -> DomainTileMap:
+    def from_dict(
+        cls, tiles: dict[tuple[int, int], DomainTile]
+    ) -> DomainTileMap:
         '''
-        Construct a `DomainTileMap` from an in-memory dictionary.
+        Construct a DomainTileMap from an in-memory dictionary.
 
         Args:
             tiles:
-                Dictionary mapping (x, y) coordinate tuples to
-                `DomainTile` entries.
+                dictionary mapping coordinate tuples to DomainTile entries.
 
         Returns:
-            A `DomainTileMap` instance containing the provided data.
-
-        Notes: Metadata is initialized with default values and should be
-        updated separately if needed.
+            DomainTileMap:
+                DomainTileMap instance containing the provided tiles.
         '''
-
         # create empty DomainTile instance
         self = cls() # don't skip __init__() - need an empty meta dict
         # populate self._data
@@ -269,17 +247,10 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         '''
         Convert the mapping to a JSON-serializable payload.
 
-        This includes both global metadata and per-tile descriptors,
-        with tile coordinates encoded as strings.
-
         Returns:
-            A `DomainPayload` dictionary suitable for JSON serialization.
-
-        Raises:
-            AssertionError:
-                If required metadata fields are not properly populated.
+            DomainPayload:
+                payload dictionary suitable for JSON serialization.
         '''
-
         # sanity checks and return payload
         assert self.meta['major_freq_mean'] > 0.0
         assert self.meta['major_freq_min'] < 1.0

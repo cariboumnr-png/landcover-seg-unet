@@ -20,7 +20,17 @@
 # =========================================================================== #
 
 '''
-Data harmonization pipeline command implementation.
+Manifest schemas and type definitions for data harmonization.
+
+This module defines structures and type aliases used to validate and
+represent dataset raster entries and their category/scheme mappings.
+
+Public APIs:
+    - `AllowedCategory`: Type alias for valid raster categories.
+    - `FeatureSchemes`: Type alias for feature band scheme mappings.
+    - `LabelScheme`: Re-exported TypedDict for label reclassification scheme.
+    - `LabelSchemes`: Re-exported alias for label reclassification schemes.
+    - `ManifestEntry`: TypedDict defining per-raster configuration shape.
 '''
 
 # standard imports
@@ -28,6 +38,22 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
+
+
+# ----- typing aliases
+AllowedCategory: typing.TypeAlias = typing.Literal[
+    'domains',
+    'domain',
+    'features',
+    'feature',
+    'labels',
+    'label',
+]
+
+LabelScheme: typing.TypeAlias = geo_core.LabelScheme
+LabelSchemes: typing.TypeAlias = geo_core.LabelSchemes
+FeatureSchemes: typing.TypeAlias = dict[str, list[str]]
+
 
 # ----- public types
 class ManifestEntry(typing.TypedDict):
@@ -38,18 +64,3 @@ class ManifestEntry(typing.TypedDict):
     category: AllowedCategory
     categorical_specs: geo_core.CategoricalSpecs | None
     schemes: LabelSchemes | FeatureSchemes | None
-
-
-AllowedCategory = typing.Literal[
-    'domains',
-    'domain',
-    'features',
-    'feature',
-    'labels',
-    'label',
-]
-
-
-LabelScheme = geo_core.LabelScheme
-LabelSchemes = geo_core.LabelSchemes
-FeatureSchemes = dict[str, list[str]]

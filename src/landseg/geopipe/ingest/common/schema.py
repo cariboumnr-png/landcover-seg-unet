@@ -20,12 +20,27 @@
 # =========================================================================== #
 
 '''
-TypedDict definitions for data ingestion execution summaries/reports.
+TypedDict definitions for data ingestion execution summaries and reports.
+
+This module provides schemas for serializing execution reports, domain
+statistics, block generation metrics, and catalog update summaries.
+
+Public APIs:
+    - `WorldGridReport`: TypedDict for world grid execution report.
+    - `DomainStats`: TypedDict for domain layer re-indexing statistics.
+    - `DomainMapReport`: TypedDict for domain map execution report.
+    - `BlockStats`: TypedDict for data block mapping and build stats.
+    - `ManifestStats`: TypedDict for catalog/schema update details.
+    - `DataBlocksReport`: TypedDict for data block execution report.
+    - `IngestReportSchema`: TypedDict for root data ingestion report.
 '''
 
+# standard imports
 from __future__ import annotations
 import typing
 
+
+# ----- public types
 class WorldGridReport(typing.TypedDict):
     '''Execution report for world grid preparation.'''
     grid_id: str
@@ -37,6 +52,7 @@ class WorldGridReport(typing.TypedDict):
     tile_overlap: tuple[int, int]
     duration_sec: float
 
+
 class DomainStats(typing.TypedDict):
     '''Re-indexing and mapping statistics for a domain layer.'''
     max_index: int
@@ -45,6 +61,7 @@ class DomainStats(typing.TypedDict):
     major_freq_min: float
     pca_axes_n: int
     explained_variance: float
+
 
 class DomainMapReport(typing.TypedDict):
     '''Execution report for domain map preparation.'''
@@ -56,6 +73,7 @@ class DomainMapReport(typing.TypedDict):
     duration_sec: float
     stats: DomainStats | None
 
+
 class BlockStats(typing.TypedDict):
     '''Statistics for raster window mapping and data block builds.'''
     shared_raster_windows: int
@@ -65,12 +83,14 @@ class BlockStats(typing.TypedDict):
     damaged_blocks_removed: int
     blocks_created: int
 
+
 class ManifestStats(typing.TypedDict):
     '''Data blocks catalog and schema update details.'''
     catalog_status: str
     cataloged_blocks_count: int
     catalog_updated: bool
     schema_updated: bool
+
 
 class DataBlocksReport(typing.TypedDict):
     '''Execution report for data block partitioning (dev or test holdout).'''
@@ -79,6 +99,7 @@ class DataBlocksReport(typing.TypedDict):
     duration_sec: float
     stats: BlockStats | None
     manifest: ManifestStats | None
+
 
 class IngestReportSchema(typing.TypedDict):
     '''Root report mapping the entire data ingestion pipeline run.'''

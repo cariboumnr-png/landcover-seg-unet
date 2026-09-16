@@ -18,11 +18,17 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
+
+
 '''
 Top-level namespace for `landseg.geopipe.ingest.data_blocks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Coordinates data block construction, window mapping, and manifest
+management through lazy module resolution.
+
+Public APIs:
+    - BlockBuildingParameters: Config container for block pipeline.
+    - run_blocks_building: Runs canonical data block pipeline.
 '''
 
 from __future__ import annotations
@@ -41,9 +47,12 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .pipeline import BlockBuildingParameters, run_blocks_building
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+        return getattr(
+            importlib.import_module('.pipeline', __package__), name
+        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+

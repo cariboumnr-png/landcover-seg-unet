@@ -22,10 +22,17 @@
 '''
 Top-level namespace for `landseg.geopipe.prepare.common`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes reporting schemas and specialized logger via lazy resolution.
+
+Public APIs:
+    - DataPartitionReport: report for dataset splitting and hydration.
+    - NormalizationReport: report for block materialization and stats.
+    - SchemaReport: report for dataset schema generation.
+    - PreparationReportSchema: root summary schema for prepare pipeline.
+    - PreparationLogger: logger collecting preparation execution reports.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing

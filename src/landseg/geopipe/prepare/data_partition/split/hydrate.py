@@ -20,15 +20,16 @@
 # =========================================================================== #
 
 '''
-Hydrating training blocks (greedy) to rebalance class counts.
+Greedy training block hydration for class rebalancing.
 
-The main routine incrementally accepts score-sorted blocks that improve
-progress toward target class ratios using diminishing-returns reward, and
-stops early when all targets are met or recent additions skew too heavily
-toward non-target classes.
+Incrementally accepts score-sorted candidate blocks that improve
+progress toward target class ratios using diminishing-returns reward,
+and stops early when all targets are met or additions skew toward
+non-target classes.
 
-Includes helpers for priority computation, reward checking, and skew
-detection.
+Public APIs:
+    - HydrationResults: container for hydrated blocks and counts.
+    - hydrate_train_split: hydrate training split toward targets.
 '''
 
 # standard imports
@@ -42,58 +43,49 @@ field = dataclasses.field
 EPS = 1e-6          # safety
 LOOKBACK = 20       # rolling window size for skew tracking
 
-# ----- `HydrationResults` container
+
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class HydrationResults:
-    '''Container for hydration results.'''
+    '''Container for hydrated block coordinates and class counts.'''
     hydrated_train_blocks: list[tuple[int, int]] = field(default_factory=list)
     hydrated_class_count: list[int] = field(default_factory=list)
     info: str = 'no hydration requested' # for downstream logging
 
 
-# ----- `hydrate_train_split` implementation
+# ----- public functions
 def hydrate_train_split(
     current_class_count: list[int],
     candidates: dict[tuple[int, int], list[int]],
     *,
     target_ratios: dict[int, float],
-    max_skew_rate: float
+    max_skew_rate: float,
 ) -> HydrationResults:
     '''
-    Greedily select candidate blocks to move class counts toward targets.
+    Select candidate blocks to move class counts toward targets.
 
-    The function scans candidates in their incoming (score-sorted) order
-    and accepts blocks that yield positive diminishing-returns reward:
-    reward = sum_k priority_k * block_k / (current_k + eps)
-    where priority_k is the normalized shortfall for class k.
-
-    Early stop:
-    * All targeted classes meet their target totals.
-    * Recent additions skew toward non-targets beyond `skew_tol`.
-
-    Module constants:
-    * EPS: numerical stability in diminishing returns.
-    * LOOKBACK: length of rolling window for skew detection.
+    Scans candidates in score-sorted order and accepts blocks that yield
+    positive diminishing-returns reward, stopping when targets are met
+    or recent additions skew excessively toward non-target classes.
 
     Args:
-        current_class_count: Current per-class counts (length defines
-            number of classes).
-        candidates: Sequence of (name, per-class counts) aligned to
-            class indices.
-        target_ratios: Multipliers per class index. Classes with
-            ratio > 1 are treated as targets to grow; classes with
-            ratio ≤ 1 are treated as non-targets.
-        max_skew_rate: Max recent non-target/target gain ratio before
-            stopping. e.g., `max_skew_rate=5.0` means stop if non-targets
-            grow 5x faster recently in the past `LOOKBACK` blocks.
+        current_class_count:
+            current per-class pixel counts across the training split.
+        candidates:
+            mapping of candidate block coordinates to class counts.
+        target_ratios:
+            target multipliers per class index (ratio > 1.0 to grow).
+        max_skew_rate:
+            maximum allowed ratio of non-target to target gain.
 
     Returns:
-        (selected_names, updated_counts, stop_reason).
+        HydrationResults:
+            selected blocks, updated class counts, and termination info.
     '''
     # sanity check
     assert all(len(c) == len(current_class_count) for c in candidates.values())
 
-    # target total for each class is initial * ratio (default ratio = 1.0)
+    # target total for each class is initial * ratio (default = 1.0)
     targets = [
         current_class_count[i] * target_ratios.get(i, 1.0)
         for i in range(len(current_class_count))
@@ -151,12 +143,13 @@ def hydrate_train_split(
     )
 
 
+# ----- private helpers
 def _priorities(
     target_ratios: list[float],
     current_counts: list[int],
-    eps: float
+    eps: float,
 ) -> list[float]:
-    '''Compute normalized shortfall priorities (range 0..1).'''
+    '''Compute normalized shortfall priorities in range [0, 1].'''
     p: list[float] = []
     number_class = len(target_ratios)
     for i in range(number_class):
@@ -165,8 +158,12 @@ def _priorities(
     return p
 
 
-def _no_reward(priorities, blk_count, current_count) -> bool:
-    '''Return True when the block yields no reward toward targets.'''
+def _no_reward(
+    priorities: list[float],
+    blk_count: list[int],
+    current_count: list[int],
+) -> bool:
+    '''Return True when block yields no reward toward targets.'''
     reward = 0.0
     k = len(priorities)
     assert k == len(blk_count) == len(current_count) # sanity
@@ -192,7 +189,7 @@ def _skew_stop(
     roll_tgt = sum(t for t, _ in recent) + target_gain
     roll_non = sum(n for _, n in recent) + non_target_gain
 
-    # if recent additions would skew back toward non-targets, stop search
+    # if additions would skew back toward non-targets, stop search
     if roll_tgt == 0 and roll_non > 0:
         stop_reason = (
             'skew stop: recent additions add non-targets but yield no '

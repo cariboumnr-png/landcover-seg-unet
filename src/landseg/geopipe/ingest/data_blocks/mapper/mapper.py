@@ -20,12 +20,15 @@
 # =========================================================================== #
 
 '''
-Raster-to-grid mapping utilities that generate indexed read windows for
-images and labels, and persist them as artifacts for training/inference.
+Raster-to-grid mapping utilities for windowed raster reading.
+
+This module maps input raster datasets onto a standardized world grid
+layout, generating windowed read boundaries for image and label bands
+used during block construction and model training workflows.
 
 Public APIs:
-    - map_rasters: Map input rasters onto the world grid and serialize
-      window indices for fit/test datasets.'
+    - MappedRasterWindows: Dataclass container for read windows.
+    - map_rasters: Maps input rasters to grid and builds windows.
 '''
 
 # standard imports
@@ -36,34 +39,48 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class MappedRasterWindows:
-    '''Container for output raster read windows and meta.'''
+    '''Container for output raster read windows and metadata.'''
     grid_id: str                    # world grid identifier
     tile_shape: tuple[int, int]     # expected window shape (W*H) in px
     image: alias.RasterWindowDict   # indexed read windows
     label: alias.RasterWindowDict   # indexed read windows (can be empty)
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def map_rasters(
     world_grid: geo_core.GridLayout,
     image_fpath: str,
     label_fpath: str | None,
 ) -> MappedRasterWindows:
     '''
-    Map input rasters to the world grid and serialize read windows.
+    Map input rasters to the world grid and build read windows.
+
+    Aligns input image and optional label rasters with a target world
+    grid, checks CRS compatibility, identifies grid cells overlapping
+    the intersected raster extent, and computes corresponding raster
+    read windows.
 
     Args:
-        world_grid: Target grid layout definition.
-        config: I/O config with input paths and output artifact targets.
-        logger: Logger for progress and diagnostics.
-        remap: If True, force recompute mappings.
+        world_grid:
+            Target spatial grid layout definition.
+        image_fpath:
+            File path to source image raster.
+        label_fpath:
+            Optional file path to source label raster, or `None`.
+
+    Returns:
+        MappedRasterWindows:
+            Container storing mapped image and label window
+            dictionaries and grid metadata.
 
     Raises:
-        ValueError: If the rasters' CRS does not match the world grid CRS.
+        ValueError:
+            If raster CRS does not match the target world grid CRS.
     '''
-
     # get geometry summary
     geom = mapper.validate_geometry(image_fpath, label_fpath)
 
@@ -84,13 +101,13 @@ def map_rasters(
         tile_shape=world_grid.tile_size
     )
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _crop(
     world_grid: geo_core.GridLayout,
     geom_summary: mapper.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
-
     # prep return list
     inside: list[tuple[int, int]] = []
     # get world origin
@@ -113,13 +130,13 @@ def _crop(
             inside.append((x, y))
     return inside
 
+
 def _get_windows(
     world_grid: geo_core.GridLayout,
     transform: alias.RasterTransform,
     inside_idx: list[tuple[int, int]]
 ) -> alias.RasterWindowDict:
-    '''Return window dict for tiles inside the target area .'''
-
+    '''Return window dict for tiles inside the target area.'''
     # get raster reading windows - empty when transform is None
     windows: alias.RasterWindowDict = {}
     if transform is not None:
@@ -132,3 +149,4 @@ def _get_windows(
                 windows[idx] = window
     # return
     return windows
+

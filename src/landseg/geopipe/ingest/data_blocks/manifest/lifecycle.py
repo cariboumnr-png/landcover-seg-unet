@@ -27,6 +27,10 @@ dataset manifest artifacts, including `catalog.json` and `schema.json`.
 It coordinates policy-driven rebuilds, detects newly created or modified
 data blocks, and ensures consistency between on-disk block artifacts and
 their recorded schema throughout data preparation and update workflows.
+
+Public APIs:
+    - ManifestUpdateContext: Dataclass context for manifest update.
+    - update_manifest: Updates dataset catalog and schema artifacts.
 '''
 
 # standard imports
@@ -39,11 +43,13 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.manifest as manifest
 import landseg.geopipe.utils as geo_utils
 
-# typing aliases
+
+# ----- typing aliases
 CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
 SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class ManifestUpdateContext:
     '''Context describing a manifest update operation.'''
@@ -54,7 +60,8 @@ class ManifestUpdateContext:
     blocks_dir: str                 # where data blocks are
     label_color_map: dict[str, list[int]] | None
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def update_manifest(
     context: ManifestUpdateContext,
     catalog_fpath: str,
@@ -65,14 +72,25 @@ def update_manifest(
     '''
     Update dataset manifest artifacts according to lifecycle policy.
 
-    This function manages coordinated updates to the dataset-level
-    `catalog.json` and `schema.json` files. It determines the current
-    state of cataloged block artifacts relative to blocks present on
-    disk, applies the specified lifecycle policy to decide whether to
-    rebuild or append entries, and writes updated JSON artifacts with
-    integrity hashes.
-    '''
+    Manages coordinated updates to dataset-level `catalog.json` and
+    `schema.json` files. It evaluates the state of cataloged blocks
+    relative to blocks on disk, applies the specified lifecycle policy
+    to rebuild or append entries, and writes updated JSON artifacts.
 
+    Args:
+        context:
+            Manifest update configuration and execution context.
+        catalog_fpath:
+            File path to target catalog JSON artifact.
+        schema_fpath:
+            File path to target schema JSON artifact.
+        policy:
+            Lifecycle policy governing artifact update behavior.
+
+    Returns:
+        dict[str, typing.Any]:
+            Status mapping containing update results and metrics.
+    '''
     # ----- catalog
     ctrl = CatalogDictCtrl(catalog_fpath, policy)
     try:
@@ -126,6 +144,8 @@ def update_manifest(
         'schema_updated': True
     }
 
+
+# ----- private helpers
 def _catalog_status(
     data_dict: dict[str, geo_core.CatalogEntry] | None,
     context: ManifestUpdateContext,
@@ -133,7 +153,6 @@ def _catalog_status(
     policy: artifacts.LifecyclePolicy,
 ) -> tuple[geo_core.DataCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
-
     # instantiate a catalog class from dict
     if data_dict:
         catalog = geo_core.DataCatalog.from_dict(data_dict)
@@ -176,7 +195,9 @@ def _catalog_status(
         case _:
             raise NotImplementedError(f'Unsupported policy: {policy}')
 
+
 def _sample(d: str) -> str:
+    '''Find a representative sample .npz file in the directory.'''
     for f in os.listdir(d):
         if f.endswith('npz'):
             return f'{d}/{f}'

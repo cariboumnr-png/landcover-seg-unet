@@ -21,6 +21,22 @@
 
 '''
 Top-level namespace for `landseg.geopipe.harmonize`.
+
+Exposes raster harmonization, manifest compilation, taxonomy resolution,
+and logging APIs via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `HarmonizationLogger`: Logger tracking ETL progress and report JSON.
+    - `ProcessedRasters`: Container for processed raster paths.
+    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `compile_dataset_manifest`: Read and validate dataset manifest JSON.
+    - `harmonize_sources`: Harmonize all compiled raster sources onto grid.
+    - `get_available_profiles`: Return registered taxonomy profile names.
+    - `validate_specs`: Validate taxonomy specs against knowledge base.
+    - `HarmonizationReportSchema`: TypedDict for overall pipeline report.
+    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
+    - `WorldGridReport`: TypedDict for world grid summary report.
 '''
 
 # standard imports

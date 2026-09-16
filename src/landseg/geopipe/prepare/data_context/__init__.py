@@ -24,6 +24,18 @@ Top-level namespace for `landseg.geopipe.prepare.data_context`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - DataBlocksView: in-memory manifest view for catalog blocks.
+    - DatasetContext: unified immutable dataset preparation context.
+    - FeatureSelection: selected band names and channel indices.
+    - TargetHeadsContext: resolved multi-head target hierarchy.
+    - build_dataset_context: construct full preparation context.
+    - derive_head_class_counts: derive counts across all target heads.
+    - read_catalog: load dataset catalog into DataBlocksView.
+    - resolve_feature_channels: resolve active input feature channels.
+    - resolve_focal_head: resolve focal target head for partitioning.
+    - resolve_target_heads: resolve multi-head hierarchy and reclass.
 '''
 
 # standard imports

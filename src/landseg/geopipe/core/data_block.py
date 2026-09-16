@@ -22,34 +22,15 @@
 '''
 DataBlock: compile per-block arrays and manifest for geospatial ML.
 
-This module defines a lightweight container and builder for a single
-raster *block* (window), designed for geospatial machine learning
-pipelines. It operates purely on in-memory NumPy arrays and enriches
-them with derived features and structured manifest, without performing
-any raster I/O.
+Defines a lightweight container and builder for a single raster block
+window in geospatial machine learning pipelines, enriching arrays with
+derived features and structured manifests without performing raster I/O.
 
-Key capabilities:
-- Ingest per-window arrays: multi-band image (C, H, W), optional label
-  ((1, H, W) → (H, W)), and a padded DEM for neighborhood-based
-  topographic analysis.
-- Compute derived spectral indices (e.g., NDVI, NDMI, NBR) and
-  topographic metrics (slope, aspect components, TPI).
-- Generate per-block statistics, including class distributions, Shannon
-  entropy, valid pixel ratios, and per-band summary statistics (count,
-  mean, M2) suitable for streaming aggregation.
-- Serialize and deserialize complete blocks as compressed `.npz`
-  artifacts for efficient storage and reproducibility.
-
-Assumptions:
-- Input arrays are pre-aligned, windowed, and padded upstream.
-- Image arrays follow (C, H, W); labels are (1, H, W) or None.
-- DEM padding is sufficient for neighborhood operations.
-- Build configuration provides feature engineering options, while the
-  persisted manifest records the dataset schema, provenance, and
-  per-block statistics.
-
-This module serves as a canonical representation of block-level data,
-ensuring consistency and reproducibility across downstream workflows.
+Public APIs:
+    - DataBlockManifest: typed dictionary defining block manifest metadata.
+    - DataBlockInputs: container for raw arrays to construct a DataBlock.
+    - DataBlockConfig: build-time configuration for feature engineering.
+    - DataBlock: container for raster block arrays and manifest metadata.
 '''
 
 # standard imports
@@ -67,7 +48,7 @@ import landseg.geopipe.core as geo_core
 field = dataclasses.field
 
 
-# ---------------------------------Public Type---------------------------------
+# ----- public types
 class DataBlockManifest(typing.TypedDict):
     '''
     Typed dictionary defining the persisted manifest for a data block.
@@ -88,8 +69,8 @@ class DataBlockManifest(typing.TypedDict):
     label_ignore_index: int # ignore_idx to convert to globally
     label_ignore_cls: dict[str, list[int]] # head name: list of ignores
     label_num_cls: dict[str, int]
-    label_cls_names: dict[str, list[str]] # head name: class names as a list
-    label_cls_clr_map: dict[str, dict[str, list[int]]] # head name: {class name: RGB color}
+    label_cls_names: dict[str, list[str]] # head name: list of class names
+    label_cls_clr_map: dict[str, dict[str, list[int]]] # {head: {class: RGB}}
     label_taxonomy: dict[str, geo_core.TaxonomySpecs]
 
     # derived stats
@@ -99,7 +80,7 @@ class DataBlockManifest(typing.TypedDict):
     label_entropy: dict[str, float]
 
 
-# ------------------------------Public  Dataclass------------------------------
+# ----- public dataclasses
 @dataclasses.dataclass
 class DataBlockInputs:
     '''Container for source materials needed to build a `DataBlock`.'''
@@ -172,10 +153,11 @@ class DataBlockConfig:
             if 'dem' not in band_map:
                 raise ValueError('DEM band missing for topographical features')
 
-# ------------------------------private dataclass------------------------------
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _BlockArrays:
-    '''Simple dataclass for block-wise image/label data.'''
+    '''Internal dataclass for block-wise image and label arrays.'''
     label: numpy.ndarray = dataclasses.field(init=False)
     image: numpy.ndarray = dataclasses.field(init=False)
     valid_mask: numpy.ndarray = dataclasses.field(init=False)
@@ -188,7 +170,7 @@ class _BlockArrays:
                 raise ValueError(f'{name} has not been populated yet')
 
 
-# --------------------------------Public  Class--------------------------------
+# ----- public classes
 class DataBlock:
     '''
     Container for per-block raster data and its associated manifest.
@@ -214,17 +196,7 @@ class DataBlock:
     '''
 
     def __init__(self):
-        '''
-        Initialize an empty `DataBlock` instance.
-
-        The instance is created with placeholder data structures and a
-        default manifest. It can be populated using either `build()`
-        (from arrays) or `load()` (from disk).
-
-        Args:
-            add_spectral
-            add_topo
-        '''
+        '''Initialize an empty DataBlock instance with defaults.'''
         # init shared state/variables for construction
         self.data = _BlockArrays()
         self.padded_dem = numpy.array([1])
@@ -257,32 +229,24 @@ class DataBlock:
     def build(
         cls,
         inputs: DataBlockInputs,
-        config: DataBlockConfig
+        config: DataBlockConfig,
     ) -> 'DataBlock':
         '''
-        Construct a DataBlock from source arrays and build configuration.
+        Construct a DataBlock from source arrays and build config.
 
-        This method initializes a block, assigns input arrays, and
-        executes the full feature engineering pipeline, including:
-            - Spectral index computation
-            - Topographic metric derivation
-            - Label stack construction (if labels are provided)
-            - Valid mask generation
-            - Per-band statistical summaries
+        Executes the feature engineering pipeline, including spectral
+        index computation, topographic metrics, label canonicalization,
+        valid mask generation, and per-band statistical summaries.
 
         Args:
             inputs:
-                Source arrays and dataset schema required to construct
-                the block.
+                source arrays and metadata required to build the block.
             config:
-                Build configuration controlling feature engineering and
-                data encoding.
+                build configuration controlling feature engineering.
 
         Returns:
-            DataBlock: A fully populated block instance.
-
-        Notes: The method mutates internal state and returns the instance
-        to support chaining.
+            DataBlock:
+                a fully populated block instance.
         '''
         self = cls()
 
@@ -341,21 +305,19 @@ class DataBlock:
     @classmethod
     def load(cls, fpath: str) -> 'DataBlock':
         '''
-        Load a `DataBlock` from a serialized `.npz` file.
+        Load a DataBlock from a serialized .npz file.
 
-        This method reconstructs both the data arrays and manifest from
+        Reconstructs both the data arrays and manifest metadata from
         a previously saved block artifact.
 
         Args:
             fpath:
-                Path to the `.npz` file containing serialized data.
+                path to the .npz file containing serialized data.
 
         Returns:
             DataBlock:
-                A populated block instance with restored state.
-
-        Notes:
-            Unknown fields in the archive are ignored during loading.
+                populated block instance with restored arrays and
+                manifest.
         '''
         self = cls()
         # load npz file
@@ -372,21 +334,16 @@ class DataBlock:
         self.manifest = json.loads(loaded['manifest_json'].item())
         return self # return self to allow chained calls
 
-    # ----- public method
     def save(self, fpath: str) -> None:
         '''
-        Save the `DataBlock` to a compressed `.npz` file.
+        Save the DataBlock to a compressed .npz file.
 
-        The method serializes all internal arrays along with manifest
-        (stored as a compact JSON string) into a single artifact.
+        Serializes all internal arrays and manifest dictionary as a
+        compressed numpy archive artifact.
 
         Args:
             fpath:
-                Output file path. Must end with `.npz`. Existing files
-                **will** be overwritten.
-
-        Notes:
-            Metadata is serialized using JSON to ensure portability.
+                output file path ending with .npz.
         '''
         assert fpath.endswith('.npz') # sanity check
 
@@ -570,7 +527,9 @@ class DataBlock:
 
             # attach class names, color map and taxonomy if provided
             if 'class_name' in spec and spec['class_name']:
-                self.manifest['label_cls_names'][name] = list(spec['class_name'].values())
+                self.manifest['label_cls_names'][name] = list(
+                    spec['class_name'].values()
+                )
             if 'color_map' in spec and spec['color_map']:
                 self.manifest['label_cls_clr_map'][name] = spec['color_map']
             if 'taxonomy' in spec and spec['taxonomy']:
@@ -594,7 +553,8 @@ class DataBlock:
 
         return invalid
 
-# --------------------------------private class--------------------------------
+
+# ----- private classes
 class _Calc:
     '''Calculator namespace.'''
 

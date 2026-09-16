@@ -20,11 +20,14 @@
 # =========================================================================== #
 
 '''
-Block normalization utilities.
+Block materialization and normalization utilities.
 
 Applies global image normalization to raw data blocks using statistics
-computed from training data. Produces normalized block artifacts and
-maintains split-indexed file mappings for downstream schema generation.
+computed from training data. Produces normalized block artifacts with
+reclassified multi-head label stacks and maintains file mappings.
+
+Public APIs:
+    - materialize_blocks: normalize blocks and write artifacts to disk.
 '''
 
 # standard imports
@@ -39,7 +42,7 @@ import landseg.geopipe.prepare.data_context as data_context
 import landseg.utils as utils
 
 
-# ----- `normalize_blocks` implementation
+# ----- public functions
 def materialize_blocks(
     input_blocks: set[str],
     stats: dict[str, geo_core.ImageBandStats],
@@ -51,23 +54,26 @@ def materialize_blocks(
     '''
     Normalize a collection of raw data blocks using global image stats.
 
-    Computes which blocks need to be processed, removes stale artifacts
-    in target directory, applies per-band normalization using provided
-    statistics, and writes normalized blocks to disk.
+    Computes which blocks need processing, purges stale artifacts from
+    target directory, applies per-band normalization, builds multi-head
+    label stacks, and saves compressed numpy archives.
 
     Args:
-        input_blocks: Set of file paths to raw block artifacts.
-        stats: Per-band global image statistics derived from training
-            data.
-        output_dir: Directory where normalized block files are written.
-        channel_indices: Optional list of 0-based channel indices to
-            select for the normalized blocks.
-        rebuild: If True, reprocess all input blocks regardless of
-            existence.
+        input_blocks:
+            set of file paths to raw block artifacts.
+        stats:
+            per-band global image statistics from training data.
+        context:
+            dataset context containing features and target hierarchy.
+        output_dir:
+            directory where normalized block files are written.
+        rebuild:
+            if True, reprocesses all blocks regardless of existence.
 
     Returns:
-        Dictionary mapping block names (without extension) to normalized
-        block file paths.
+        tuple[dict[str, str], int]:
+            mapping of block names to file paths, and count of purged
+            files.
     '''
     names: list[str] = []
     work: list[str] = []
@@ -109,13 +115,9 @@ def materialize_blocks(
 # ----- private helpers
 def _purge(
     filenames_to_keep: list[str],
-    target_dir: str
+    target_dir: str,
 ) -> int:
-    '''
-    Remove files in the target directory that are not expected to exist.
-
-    Returns the number of removed files.
-    '''
+    '''Remove files in target directory not present in expected list.'''
     if not os.path.exists(target_dir) or not os.listdir(target_dir):
         return 0
 
@@ -151,8 +153,10 @@ def _materialize_one_block(
         if v is not None
     }
     ignore_idx = block.manifest['label_ignore_index']
-    lbl_arr = _reclassify_labels(data.label, base_head_names, reclass, ignore_idx)
-    
+    lbl_arr = _reclassify_labels(
+        data.label, base_head_names, reclass, ignore_idx
+    )
+
     # write blocks to files
     filename = os.path.basename(block_fpath)
     save_fpath = os.path.join(target_dpath, filename)
@@ -197,18 +201,7 @@ def _reclassify_labels(
     target_reclass: typing.Mapping[str, dict[int, tuple[int, ...]] | None],
     ignore_index: int,
 ) -> numpy.ndarray:
-    '''
-    Build multi-head label stack applying active target reclasses.
-
-    Args:
-        raw_labels: 3D array of shape [L, H, W] or list of 2D arrays.
-        label_layer_names: Names corresponding to each base label layer.
-        target_reclass: Mapping of label layer name to reclass config.
-        ignore_index: Integer index for masked pixels (e.g. 255).
-
-    Returns:
-        A 3D numpy array of shape [L, H, W] with the transformed stack.
-    '''
+    '''Build multi-head label stack applying active target reclasses.'''
     if isinstance(raw_labels, numpy.ndarray):
         if raw_labels.ndim == 3:
             label_list = [raw_labels[i] for i in range(raw_labels.shape[0])]

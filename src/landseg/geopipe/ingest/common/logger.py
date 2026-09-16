@@ -20,7 +20,14 @@
 # =========================================================================== #
 
 '''
-Subclass wrapper of Logger to handle structured execution summaries.
+Logging utilities for data ingestion pipeline execution.
+
+This module provides a specialized `Logger` subclass that tracks data
+ingestion progress, records sub-stage reports, and writes a structured
+JSON summary report on exit.
+
+Public APIs:
+    - `IngestionLogger`: Logger tracking ingest execution and report JSON.
 '''
 
 # standard imports
@@ -40,6 +47,8 @@ if typing.TYPE_CHECKING:
         IngestReportSchema,
     )
 
+
+# ----- public classes
 class IngestionLogger(utils.Logger):
     '''
     A specialized Logger wrapper that collects execution metrics and

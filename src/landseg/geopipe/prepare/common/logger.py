@@ -20,11 +20,18 @@
 # =========================================================================== #
 
 '''
-Subclass wrapper of Logger to handle structured data-prepare summaries.
+Structured execution logging for dataset preparation workflows.
+
+Provides a specialized Logger wrapper that collects execution metrics
+from partitioning, normalization, and schema generation stages,
+persisting a structured JSON run report upon closure.
+
+Public APIs:
+    - PreparationLogger: logger collecting preparation execution reports.
 '''
 
-from __future__ import annotations
 # standard imports
+from __future__ import annotations
 import datetime
 import typing
 # local imports
@@ -42,14 +49,17 @@ if typing.TYPE_CHECKING:
     )
 
 
+# ----- public classes
 class PreparationLogger(utils.Logger):
     '''
-    A specialized Logger wrapper that collects execution metrics and
-    persists a structured JSON run report at shutdown.
+    Specialized logger that records structured preparation reports.
+
+    Collects partition, normalization, and schema stage metrics and
+    persists a summary JSON artifact upon closure.
     '''
 
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
-        '''Initialize the TransformLogger instance.'''
+        '''Initialize the PreparationLogger instance.'''
         super().__init__(*args, **kwargs)
         self.summary: PreparationReportSchema | None = None
 

@@ -20,8 +20,14 @@
 # =========================================================================== #
 
 '''
-Subclass wrapper of `Logger` to handle structured ETL harmonization
-execution summaries.
+Logging utilities for raster harmonization pipeline execution.
+
+This module provides a specialized `Logger` subclass that tracks
+harmonization ETL execution progress and serializes structured JSON run
+summaries upon completion.
+
+Public APIs:
+    - `HarmonizationLogger`: Logger tracking ETL progress and report JSON.
 '''
 
 # standard imports
@@ -38,7 +44,7 @@ if typing.TYPE_CHECKING:
     from .schema import HarmonizationReportSchema, WorldGridReport
 
 
-# ----- `HarmonizationLogger` definition
+# ----- public classes
 class HarmonizationLogger(utils.Logger):
     '''
     A specialized `Logger` wrapper that logs raster harmonization

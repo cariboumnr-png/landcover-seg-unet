@@ -22,8 +22,15 @@
 '''
 Top-level namespace for `landseg.geopipe.grid`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes world grid construction and lifecycle management APIs via lazy
+resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `GridParameters`: Protocol defining grid generation configuration.
+    - `build_grid`: Construct a GridLayout from config or reference raster.
+    - `prepare_world_grid`: Build or load a persisted world grid artifact.
+    - `load_grid_from_config`: Load a world grid artifact from configuration.
+    - `load_grid_from_fpath`: Load a world grid layout directly from file.
 '''
 
 # standard imports
@@ -38,7 +45,7 @@ __all__ = [
     'build_grid',
     'prepare_world_grid',
     'load_grid_from_config',
-    'load_grid_from_fpath'
+    'load_grid_from_fpath',
 ]
 
 # for static check
@@ -54,13 +61,15 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
 
     if name in {'GridParameters', 'build_grid'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+        mod = importlib.import_module('.builder', __package__)
+        return getattr(mod, name)
 
     if name in {
         'prepare_world_grid',
         'load_grid_from_config',
-        'load_grid_from_fpath'
+        'load_grid_from_fpath',
     }:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
+        mod = importlib.import_module('.lifecycle', __package__)
+        return getattr(mod, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

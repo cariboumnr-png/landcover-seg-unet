@@ -20,11 +20,14 @@
 # =========================================================================== #
 
 '''
-Load dataset catalog metadata from the ingestion stage and the finalized
-schema from the preparation stage to construct runtime data specifications.
+Construct runtime data specifications from ingestion and preparation schemas.
 
 This module bridges persisted dataset artifacts and the training stack
-by assembling a `DataSpecs` object consumed by models and trainers.
+by assembling a `DataSpecs` object consumed by models, trainers, and
+evaluation routines.
+
+Public APIs:
+    - build_dataspec: Assembles runtime DataSpecs from artifacts.
 '''
 
 # standard imports
@@ -40,6 +43,8 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 
+
+# ----- public functions
 def build_dataspec(
     artifact_paths: artifacts.ArtifactPaths,
     *,
@@ -48,27 +53,26 @@ def build_dataspec(
     vec_domain_name: str | None = None
 ) -> core.DataSpecs:
     '''
-    Build a `DataSpecs` object from catalog metadata and preparation schema.
+    Build runtime data specification from dataset artifacts and schemas.
 
-    Loads:
-    - Dataset-level catalog metadata from the ingestion stage
-    - Optional categorical and vectorized domain tile maps
-    - The finalized preparation schema that defines splits, heads, and
-    artifacts
-
-    These components are combined into a unified `DataSpecs` instance
-    used by loaders, losses, metrics, and model runners.
+    Assembles a `DataSpecs` object by loading dataset schema from
+    ingestion, preparation schema defining splits and heads, and
+    optional categorical or vectorized domain tilemaps.
 
     Args:
-        catalog_meta_fpath: Path to dataset-level catalog metadata JSON.
-        ids_domain_fpath: Optional path to categorical domain map JSON.
-        vec_domain_fpath: Optional path to vector domain map JSON.
-        transform_schema_fpath: Path to the preparation schema JSON.
+        artifact_paths:
+            Hierarchical path manager for repository artifacts.
+        mode:
+            Execution mode governing dataset partition selection.
+        ids_domain_name:
+            Optional name of categorical domain tilemap artifact.
+        vec_domain_name:
+            Optional name of continuous/vector domain artifact.
 
     Returns:
-        DataSpecs instance describing dataset structure and artifacts.
+        core.DataSpecs:
+            Configured runtime specifications for dataset consumption.
     '''
-
     # artifact fpaths
     data_schema_fpath = artifact_paths.data_ingestion.data_blocks.dev.schema
     transform_schema_fpath = artifact_paths.data_preparation.schema
@@ -90,7 +94,9 @@ def build_dataspec(
     data_schema = data_ctrl(data_schema_fpath).fetch()
 
     # transform schema
-    transform_ctrl = artifacts.Controller[geo_core.TransformSchema].load_json_or_fail
+    transform_ctrl = (
+        artifacts.Controller[geo_core.TransformSchema].load_json_or_fail
+    )
     transform_schema = transform_ctrl(transform_schema_fpath).fetch()
 
     # return specs
@@ -107,10 +113,10 @@ def build_dataspec(
         domains=_get_domain(transform_schema, ids_domain, vec_domain)
     )
 
-# ------------------------------private  function------------------------------
-def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
-    '''doc'''
 
+# ----- private helpers
+def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
+    '''Load a DomainTileMap from the specified JSON path.'''
     # load payload and meta json
     D = dict[str, geo_core.DomainTile]
     M = geo_core.DomainMeta
@@ -124,16 +130,20 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
     assert payload # typing assertion
     return geo_core.DomainTileMap.from_json_payload(payload)
 
+
 def _get_meta(
     data_schema: geo_core.DataSchema,
     transform_schema: geo_core.TransformSchema
 ) -> core.Meta:
-    '''Populate `_Meta` dataclass from schema dictionary.'''
-
+    '''Populate core.Meta dataclass from schema dictionaries.'''
     # expected tensor sizes
     # per-pixel byte size
-    img_b = numpy.dtype(data_schema['io_conventions']['dtypes']['image']).itemsize
-    lbl_b = numpy.dtype(data_schema['io_conventions']['dtypes']['label']).itemsize
+    img_b = numpy.dtype(
+        data_schema['io_conventions']['dtypes']['image']
+    ).itemsize
+    lbl_b = numpy.dtype(
+        data_schema['io_conventions']['dtypes']['label']
+    ).itemsize
     # total pixels per tensor
     img_px = math.prod(data_schema['tensor_shapes']['image']['shape'])
     lbl_px = math.prod(data_schema['tensor_shapes']['label']['shape'])
@@ -147,15 +157,14 @@ def _get_meta(
         # get xy origin
         xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
         # track max col and row number (0-based)
+        img_w = data_schema['tensor_shapes']['image']['W']
+        img_h = data_schema['tensor_shapes']['image']['H']
         for blkname in sorted_blknames:
             x, y = geo_utils.name_xy(blkname)
-            col = max(col, (x - xmin) / data_schema['tensor_shapes']['image']['W'])
-            row = max(row, (y - ymin) / data_schema['tensor_shapes']['image']['H'])
+            col = max(col, (x - xmin) / img_w)
+            row = max(row, (y - ymin) / img_h)
         col, row = int(col + 1), int(row + 1)
-        # Simple checker if test blocks form a continuous array, e.g., no gaps.
-        # This typically is the case if the test blocks are extracted from external
-        # image/label. Here we consider only to produce the preview image if this
-        # condition is true
+        # check if test blocks form a continuous array without gaps
         if col * row != len(sorted_blknames):
             col, row = 0, 0 # empty grid for downstream
 
@@ -171,18 +180,18 @@ def _get_meta(
             band_map=data_schema['io_conventions']['image_band_map'],
         ),
         label_specs=core.Meta.Label(
-           array_key=transform_schema['label_array_key'],
+            array_key=transform_schema['label_array_key'],
             ignore_index=data_schema['io_conventions']['ignore_index']
         )
     )
+
 
 def _get_heads(
     data_schema: geo_core.DataSchema,
     transform_schema: geo_core.TransformSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:
-    '''Populate `_Heads` dataclass from schema dictionary.'''
-
+    '''Populate core.Heads dataclass from schema dictionary.'''
     raw_counts: dict[str, list[int]] = transform_schema['label_stats']
     counts = {k: v for k, v in raw_counts.items() if k != 'original'}
     taxonomy = data_schema['labels'].get('label_taxonomy', {})
@@ -205,34 +214,38 @@ def _get_heads(
         similarity_matrices=sim_matrices,
     )
 
-def __la_from_count(ct: list[int], t: float=1.0, e: float=1e-6) -> list[float]:
-    '''Long-Tailed Recognition via Logit Adjustment Menon et al 2021.'''
 
+def __la_from_count(
+    ct: list[int],
+    t: float = 1.0,
+    e: float = 1e-6,
+) -> list[float]:
+    '''Long-tailed recognition via logit adjustment (Menon et al 2021).'''
     if sum(ct) == 0:
         return [0] * len(ct)
     frequencies = [c / sum(ct) for c in ct]
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
-def _get_split(transform_schema: geo_core.TransformSchema) -> core.Splits:
-    '''Populate `_Split` dataclass from schema dictionary.'''
 
+def _get_split(transform_schema: geo_core.TransformSchema) -> core.Splits:
+    '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
         train=transform_schema['train_blocks'],
         val=transform_schema['val_blocks'],
         test=transform_schema['test_blocks']
     )
 
+
 def _get_domain(
     transform_schema: geo_core.TransformSchema,
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:
-    '''Populate `_Domain` dataclass from schema dictionary.'''
-
+    '''Populate core.Domains dataclass from schema dictionary.'''
     # get file paths
-    train_blocks=transform_schema['train_blocks']
-    val_blocks=transform_schema['val_blocks']
-    test_blocks=transform_schema['test_blocks']
+    train_blocks = transform_schema['train_blocks']
+    val_blocks = transform_schema['val_blocks']
+    test_blocks = transform_schema['test_blocks']
 
     # format domains
     train_domain = __parse_domain(train_blocks, ids_domain, vec_domain)
@@ -247,13 +260,13 @@ def _get_domain(
         vec_dim=vec_domain.n_pca_ax if vec_domain else 0
     )
 
+
 def __parse_domain(
     input_blocks: dict[str, str],
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains.Dom:
     '''Parse blocks into discrete and vector domain mappings.'''
-
     # early exit
     if not input_blocks:
         return {'ids_domain': None, 'vec_domain': None}

@@ -22,12 +22,14 @@
 '''
 Utilities for maintaining dataset catalogs and block-level metadata.
 
-This module supports creation and incremental updates of block-structured
-dataset catalogs (``catalog.json``) by inspecting block artifact files and
-their embedded metadata. It records provenance links to source imagery and
-labels, computes file-level integrity hashes, and standardizes spatial and
-statistical descriptors required for downstream data management and
-reproducibility in data preparation workflows.
+This module supports creation and incremental updates of
+block-structured dataset catalogs (`catalog.json`) by inspecting block
+artifact files and their embedded metadata. It records provenance links
+to source imagery and labels, computes file-level integrity hashes, and
+standardizes spatial and statistical descriptors.
+
+Public APIs:
+    - build_catalog: Builds or updates a dataset-level catalog.
 '''
 
 # standard imports
@@ -37,7 +39,8 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_catalog(
     input_block_fpaths: list[str],
     *,
@@ -46,35 +49,34 @@ def build_catalog(
     source_image: str,
     source_label: str | None,
 ) -> geo_core.DataCatalog:
-
     '''
     Build a new dataset catalog or update an existing one.
 
-    This function constructs a :class:`BlocksCatalog` from a collection
-    of block files. For each provided block artifact (``*.npz``), it
-    loads the embedded metadata, extracts spatial indices, computes hash
-    checksums, and records provenance back to the source image and
-    optional label data. When an existing catalog is supplied, new or
-    updated block entries overwrite prior records with the same block
-    name while preserving all other entries.
+    Constructs a `DataCatalog` from a collection of block files.
+    For each provided block artifact (`*.npz`), it loads embedded
+    metadata, extracts spatial indices, computes hash checksums, and
+    records provenance back to the source image and optional label.
 
     Args:
-        input_block_fpaths: A list of file paths to block artifacts to
-            be cataloged.
-        original_catalog: An existing :class:`BlocksCatalog`. May be
-            empty if creating a new catalog from scratch.
-        mapped_grid_id: Identifier of the aligned spatial grid used to
-            generate the blocks.
-        source_image: File path or identifier of the source image from
-            which the blocks were generated.
-        source_label: File path or identifier of the source label data,
-            if applicable. May be ``None`` for unlabeled datasets.
+        input_block_fpaths:
+            List of file paths to block artifacts to be cataloged.
+        original_catalog:
+            Existing `DataCatalog`. May be empty if creating a new
+            catalog from scratch.
+        mapped_grid_id:
+            Identifier of aligned spatial grid used to generate the
+            blocks.
+        source_image:
+            File path or identifier of source image raster.
+        source_label:
+            File path or identifier of source label raster, or `None`
+            for unlabeled datasets.
 
     Returns:
-        `BlocksCatalog` containing merged catalog entries for all provided
-        blocks and any pre-existing catalog records.
+        geo_core.DataCatalog:
+            Catalog containing merged catalog entries for all provided
+            blocks and any pre-existing catalog records.
     '''
-
     # return dict
     new_entries: dict[str, geo_core.CatalogEntry] = {}
 
