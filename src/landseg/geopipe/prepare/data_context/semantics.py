@@ -310,8 +310,6 @@ def derive_head_class_counts(
         Mapping of head name to derived per-class pixel counts list.
     '''
     derived: dict[str, list[int]] = {}
-    print(target_heads)
-    print(raw_class_counts)
 
     for base_name in target_heads.head_names:
         if base_name in raw_class_counts:
@@ -346,7 +344,6 @@ def derive_head_class_counts(
                 )
             derived[group_head_name] = group_counts
 
-    print(derived)
     return derived
 
 

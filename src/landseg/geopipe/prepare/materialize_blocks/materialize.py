@@ -143,16 +143,16 @@ def _materialize_one_block(
     ch_idx = context.features.indices
     img_arr = _normalize_image(data.image[ch_idx], data.valid_mask, img_stats)
 
-    # label layers reclassfication
-    head_names = context.targets.head_names
+    # label layers reclassification
+    base_head_names = list(context.targets.resolved_reclass.keys())
     reclass = {
         k: v.groups
         for k, v in context.targets.resolved_reclass.items()
         if v is not None
     }
     ignore_idx = block.manifest['label_ignore_index']
-    lbl_arr = _reclassify_labels(data.label, head_names, reclass, ignore_idx)
-
+    lbl_arr = _reclassify_labels(data.label, base_head_names, reclass, ignore_idx)
+    
     # write blocks to files
     filename = os.path.basename(block_fpath)
     save_fpath = os.path.join(target_dpath, filename)
@@ -234,21 +234,22 @@ def _reclassify_labels(
             stack.append(arr)
             continue
 
-        # 1. Base layer
+        # 1. base layer
         stack.append(arr)
 
-        # 2. Child slices
+        # 2. grouping layer (parent)
         group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
         for group_id, classes in reclass_cfg.items():
-            mask = numpy.isin(arr, classes)
+            source_pixels = [c + 1 for c in classes]
+            mask = numpy.isin(arr, source_pixels)
             group_layer[mask] = int(group_id)
-
-            child_arr = numpy.where(mask, arr, ignore_index)
-            for k, cls_id in enumerate(classes, 1):
-                child_arr[child_arr == cls_id] = int(k)
-            stack.append(child_arr)
-
-        # 3. Grouping layer
         stack.append(group_layer)
+
+        # 3. child slices (sub-groups)
+        for group_id, classes in reclass_cfg.items():
+            child_arr = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+            for k, cls_id in enumerate(classes):
+                child_arr[arr == (cls_id + 1)] = int(k)
+            stack.append(child_arr)
 
     return numpy.stack(stack, axis=0)

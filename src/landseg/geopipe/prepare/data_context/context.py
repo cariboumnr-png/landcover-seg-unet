@@ -164,7 +164,7 @@ def _enrich_view_w_class_counts(
         if focal_head in head_counts:
             counts = head_counts[focal_head]
             valid_counts[coord] = counts
-            if coord[0] % row_size == 0 and coord[1] % col_size == 0:
+            if coord[0] % col_size == 0 and coord[1] % row_size == 0:
                 base_counts[coord] = counts
 
     return dataclasses.replace(
