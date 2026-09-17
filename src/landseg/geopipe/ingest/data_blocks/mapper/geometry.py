@@ -39,7 +39,7 @@ import typing
 import rasterio
 import rasterio.coords
 # local imports
-import landseg.geopipe.alias as geo_alias
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
 
@@ -94,8 +94,8 @@ def validate_geometry(
         if _img is None:
             raise ValueError('A valid image raster is required')
         # assign raster handlers
-        img: geo_alias.RasterReader = _img
-        lbl: geo_alias.RasterReader | None = _lbl
+        img: geo_core.RasterReader = _img
+        lbl: geo_core.RasterReader | None = _lbl
         # get transforms
         summary['image_transform'] = img.transform
         if lbl is not None:
@@ -116,8 +116,8 @@ def validate_geometry(
 
 # ----- private helpers
 def _check_raster_proj(
-    img: geo_alias.RasterReader,
-    lbl: geo_alias.RasterReader | None,
+    img: geo_core.RasterReader,
+    lbl: geo_core.RasterReader | None,
 ) -> str:
     '''Check if the input rasters have matching coordinate systems.'''
     # if both image and label provided
@@ -143,8 +143,8 @@ def _check_raster_proj(
 
 
 def _check_raster_pixels(
-    img: geo_alias.RasterReader,
-    lbl: geo_alias.RasterReader | None,
+    img: geo_core.RasterReader,
+    lbl: geo_core.RasterReader | None,
 ) -> tuple[float, float]:
     '''Check if the input rasters have matching pixel sizes.'''
     # if both image and label provided
@@ -174,8 +174,8 @@ def _check_raster_pixels(
 
 
 def _compute_overlap_extent(
-    img: geo_alias.RasterReader,
-    lbl: geo_alias.RasterReader | None,
+    img: geo_core.RasterReader,
+    lbl: geo_core.RasterReader | None,
 ) -> dict[str, typing.Any]:
     '''Compute overlapping spatial extent between input rasters.'''
     # if both image and label provided

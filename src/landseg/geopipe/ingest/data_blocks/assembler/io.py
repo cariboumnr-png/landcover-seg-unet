@@ -50,7 +50,6 @@ import numpy
 import rasterio
 import rasterio.errors
 # local imports
-import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
@@ -60,11 +59,11 @@ import landseg.geopipe.utils as geo_utils
 class RasterReadInput:
     '''Specifications of parameters needed to read raster windows.'''
     image_fpath: str
-    image_window: geo_alias.RasterWindow
+    image_window: geo_core.RasterWindow
     image_band_map: dict[str, int]
     image_dem_pad_px: int
     label_fpath: str | None
-    label_window: geo_alias.RasterWindow | None
+    label_window: geo_core.RasterWindow | None
     label_specs: dict[str, geo_core.CategoricalSpec] | None
 
 
@@ -314,8 +313,8 @@ def _parse_vrt_tag(value: str) -> object:
 
 
 def _read_w_pad(
-    img: geo_alias.RasterReader,
-    window: geo_alias.RasterWindow,
+    img: geo_core.RasterReader,
+    window: geo_core.RasterWindow,
     dem_band: int,
     pad: int
 ) -> numpy.ndarray:
@@ -326,7 +325,7 @@ def _read_w_pad(
     se_x = min(window.col_off + window.width + pad, img.width)
     se_y = min(window.row_off + window.height + pad, img.height)
     try:
-        _window = geo_alias.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
+        _window = geo_core.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
     except ValueError as e:
         raise ValueError(
             f'Error reading DEM with pad ({pad}), padded raster window: '

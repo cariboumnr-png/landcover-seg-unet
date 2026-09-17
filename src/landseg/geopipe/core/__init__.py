@@ -69,6 +69,9 @@ __all__ = [
     'GridPayload',
     'GridMeta',
     'LabelScheme',
+    'RasterReader',
+    'RasterWindow',
+    'RasterWindowDict',
     'TaxonomySpec',
 ]
 
@@ -96,6 +99,9 @@ if typing.TYPE_CHECKING:
         DomainTileMap,
     )
     from .grid_layout import (
+        RasterReader,
+        RasterWindow,
+        RasterWindowDict,
         GridSpec,
         GridPayload,
         GridMeta,
@@ -113,6 +119,9 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
+        'RasterReader',
+        'RasterWindow',
+        'RasterWindowDict',
         'GridSpec',
         'GridPayload',
         'GridMeta',

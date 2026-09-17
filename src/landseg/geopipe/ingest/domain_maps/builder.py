@@ -37,7 +37,7 @@ import dataclasses
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.domain_maps.alias as alias
+import landseg.geopipe.ingest.domain_maps.mapper as mapper
 
 
 # ----- private dataclasses
@@ -55,7 +55,7 @@ class _BuildingContext:
 # ----- public functions
 def build_domain(
     grid_id: str,
-    mapped_tiles: alias.RasterTileDict,
+    mapped_tiles: mapper.RasterTileDict,
     *,
     valid_threshold: float,
     target_variance: float,
@@ -102,7 +102,7 @@ def build_domain(
 
 # ----- private helpers
 def _get_domain_dict(
-    raster_tiles: alias.RasterTileDict,
+    raster_tiles: mapper.RasterTileDict,
     *,
     valid_threshold: float,
     target_variance: float,

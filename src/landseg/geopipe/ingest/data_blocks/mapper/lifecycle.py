@@ -32,7 +32,6 @@ Public APIs:
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
 
@@ -101,7 +100,7 @@ def map_rasters_to_grid(
 
 
 # ----- private helpers
-def _canonicalize(mapped_windows: geo_alias.RasterWindowDict) -> list[list[int]]:
+def _canonicalize(mapped_windows: geo_core.RasterWindowDict) -> list[list[int]]:
     '''Create a canonical serialization for mapped windows.'''
     canon: list[list[int]] = []
     for k, w in sorted(mapped_windows.items()):
@@ -111,11 +110,11 @@ def _canonicalize(mapped_windows: geo_alias.RasterWindowDict) -> list[list[int]]
     return canon
 
 
-def _parse(payload: list[list[int]]) -> geo_alias.RasterWindowDict:
+def _parse(payload: list[list[int]]) -> geo_core.RasterWindowDict:
     '''Parse window dictionary from serialized payload.'''
-    parsed: geo_alias.RasterWindowDict = {}
+    parsed: geo_core.RasterWindowDict = {}
     for c in payload:
         x, y, col_off, row_off, w, h = c
-        window = geo_alias.RasterWindow(col_off, row_off, w, h) # type: ignore
+        window = geo_core.RasterWindow(col_off, row_off, w, h) # type: ignore
         parsed[(x, y)] = window
     return parsed

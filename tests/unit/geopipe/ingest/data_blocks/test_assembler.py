@@ -30,7 +30,6 @@ import pytest
 import rasterio
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 import landseg.geopipe.utils as geo_utils
@@ -134,7 +133,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
         filename='label.tif', width=16, height=16, bands=1
     ))
 
-    window = geo_alias.RasterWindow(4, 4, 8, 8)  # type: ignore
+    window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
 
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
@@ -185,7 +184,7 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         filename='label2.tif', width=16, height=16, bands=1
     ))
 
-    window = geo_alias.RasterWindow(4, 4, 8, 8)  # type: ignore
+    window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
@@ -244,10 +243,10 @@ def test_build_blocks_orchestrator(
     )
 
     image_windows = {
-        (0, 0): geo_alias.RasterWindow(0, 0, 8, 8),  # type: ignore
-        (0, 8): geo_alias.RasterWindow(8, 0, 8, 8),  # type: ignore
-        (8, 0): geo_alias.RasterWindow(0, 8, 8, 8),  # type: ignore
-        (8, 8): geo_alias.RasterWindow(8, 8, 8, 8),  # type: ignore
+        (0, 0): geo_core.RasterWindow(0, 0, 8, 8),  # type: ignore
+        (0, 8): geo_core.RasterWindow(8, 0, 8, 8),  # type: ignore
+        (8, 0): geo_core.RasterWindow(0, 8, 8, 8),  # type: ignore
+        (8, 8): geo_core.RasterWindow(8, 8, 8, 8),  # type: ignore
     }
 
     label_windows = dict(image_windows)
@@ -317,7 +316,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
         arr[0, 8:16, :] = 2
         src.write(arr)
 
-    window = geo_alias.RasterWindow(0, 0, 16, 16)  # type: ignore
+    window = geo_core.RasterWindow(0, 0, 16, 16)  # type: ignore
 
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {

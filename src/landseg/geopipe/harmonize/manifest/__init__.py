@@ -48,7 +48,6 @@ __all__ = [
     # typing
     'AllowedCategory',
     'FeatureSchemes',
-    'LabelScheme',
     'LabelSchemes',
     'ManifestEntry',
     'ManifestEntryNormalizer',
@@ -68,7 +67,6 @@ if typing.TYPE_CHECKING:
     from .schema import (
         AllowedCategory,
         FeatureSchemes,
-        LabelScheme,
         LabelSchemes,
         ManifestEntry,
     )

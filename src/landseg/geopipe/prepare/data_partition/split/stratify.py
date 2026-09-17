@@ -35,24 +35,31 @@ import dataclasses
 import typing
 # third-party imports
 import numpy
-# local imports
-import landseg.geopipe.alias as geo_alias
+import numpy.typing
+
+
+# ----- typing aliases
+IntArray: typing.TypeAlias = numpy.typing.NDArray[numpy.integer]
+Int64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.int64]
+Float32Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float32]
+Float64Array: typing.TypeAlias = numpy.typing.NDArray[numpy.float64]
+MaskArray: typing.TypeAlias = numpy.typing.NDArray[numpy.bool]
 
 
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class SplitsResult:
     '''Container for split coordinates and derived class statistics.'''
-    train: geo_alias.CoordsList
-    val: geo_alias.CoordsList
-    test: geo_alias.CoordsList
+    train: list[tuple[int, int]]
+    val: list[tuple[int, int]]
+    test: list[tuple[int, int]]
     global_class_count: tuple[int, ...]
     train_class_count: tuple[int, ...]
     val_class_count: tuple[int, ...]
     test_class_count: tuple[int, ...]
 
     @property
-    def class_counts(self) -> geo_alias.ClassCounts:
+    def class_counts(self) -> dict[str, list[int]]:
         '''Return per-split class counts.'''
         return {
             'global': list(self.global_class_count),
@@ -78,7 +85,7 @@ class SplitsResult:
 
 # ----- public functions
 def stratified_splitter(
-    base_counts: geo_alias.CoordClassCounts,
+    base_counts: dict[tuple[int, int], list[int]],
     *,
     val_ratio: float = 0.15,
     test_ratio: float = 0.0,
@@ -106,18 +113,18 @@ def stratified_splitter(
             split coordinates, class counts, and distributions.
     '''
     # base class counts dict to array
-    counts: geo_alias.Int64Array = numpy.array(
+    counts: Int64Array = numpy.array(
         list(base_counts.values()), dtype=numpy.int64
     )
-    coords: geo_alias.CoordsList = list(base_counts.keys())
-    global_counts: geo_alias.Int64Array = counts.sum(axis=0).astype(numpy.int64)
+    coords: list[tuple[int, int]] = list(base_counts.keys())
+    global_counts: Int64Array = counts.sum(axis=0).astype(numpy.int64)
     n_blocks = counts.shape[0]
 
     _validate_inputs(counts, val_ratio, test_ratio)
 
     val_budget, test_budget = _get_budgets(n_blocks, val_ratio, test_ratio)
 
-    weights: geo_alias.Float64Array = _get_weights(global_counts, weight_mode)
+    weights: Float64Array = _get_weights(global_counts, weight_mode)
 
     # deterministic order: larger total-count blocks first.
     all_sorted = numpy.argsort(counts.sum(axis=1))[::-1].tolist()
@@ -156,7 +163,7 @@ def stratified_splitter(
 
 # ----- private helpers
 def _validate_inputs(
-    counts: geo_alias.IntArray,
+    counts: IntArray,
     val_ratio: float,
     test_ratio: float,
 ) -> None:
@@ -203,9 +210,9 @@ def _get_budgets(
 
 
 def _get_weights(
-    global_counts: geo_alias.Int64Array,
+    global_counts: Int64Array,
     mode: typing.Literal['none', 'inverse'],
-) -> geo_alias.Float64Array:
+) -> Float64Array:
     '''Build per-class weights for deviation scoring.'''
     safe_counts = numpy.maximum(global_counts.astype(numpy.float64), 1.0)
 
@@ -219,18 +226,18 @@ def _get_weights(
 
 
 def _pick_subset(
-    counts: geo_alias.Int64Array,
+    counts: Int64Array,
     candidates: list[int],
     budget: int,
-    target: geo_alias.Float64Array,
-    weights: geo_alias.Float64Array,
+    target: Float64Array,
+    weights: Float64Array,
 ) -> set[int]:
     '''Greedily select blocks that minimize weighted L1 to target.'''
     if budget <= 0 or not candidates:
         return set()
 
     selected: list[int] = []
-    current: geo_alias.Float64Array = numpy.zeros(
+    current: Float64Array = numpy.zeros(
         counts.shape[1], dtype=numpy.float64
     )
     remaining = candidates[:]
@@ -258,7 +265,7 @@ def _pick_subset(
 
 
 def _sum_class_counts(
-    counts: geo_alias.Int64Array,
+    counts: Int64Array,
     indices: typing.Iterable[int],
 ) -> tuple[int, ...]:
     '''Sum class counts for selected block indices.'''

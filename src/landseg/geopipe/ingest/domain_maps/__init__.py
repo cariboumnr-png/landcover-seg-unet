@@ -40,28 +40,16 @@ __all__ = [
     # classes
     'DomainBuildingParameters',
     # functions
-    'build_domain',
-    'map_domain_to_grid',
     'prepare_domain_maps',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_domain
     from .lifecycle import DomainBuildingParameters, prepare_domain_maps
-    from .mapper import map_domain_to_grid
 
 
 def __getattr__(name: str):
-
-    if name in {'build_domain'}:
-        mod = importlib.import_module('.builder', __package__)
-        return getattr(mod, name)
-
-    if name in {'map_domain_to_grid'}:
-        mod = importlib.import_module('.mapper', __package__)
-        return getattr(mod, name)
 
     if name in {'DomainBuildingParameters', 'prepare_domain_maps'}:
         mod = importlib.import_module('.lifecycle', __package__)

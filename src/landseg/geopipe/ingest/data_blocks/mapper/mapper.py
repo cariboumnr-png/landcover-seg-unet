@@ -34,8 +34,9 @@ Public APIs:
 # standard imports
 import copy
 import dataclasses
+# third-party imports
+import rasterio
 # local imports
-import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
 
@@ -44,10 +45,10 @@ import landseg.geopipe.ingest.data_blocks.mapper as mapper
 @dataclasses.dataclass
 class MappedRasterWindows:
     '''Container for output raster read windows and metadata.'''
-    grid_id: str                    # world grid identifier
-    tile_shape: geo_alias.Coord2d       # expected window shape (W*H) in px
-    image: geo_alias.RasterWindowDict   # indexed read windows
-    label: geo_alias.RasterWindowDict   # indexed read windows (can be empty)
+    grid_id: str                        # world grid identifier
+    tile_shape: tuple[int, int]         # expected window shape (W*H) in px
+    image: geo_core.RasterWindowDict   # indexed read windows
+    label: geo_core.RasterWindowDict   # indexed read windows (can be empty)
 
 
 # ----- public functions
@@ -133,12 +134,12 @@ def _crop(
 
 def _get_windows(
     world_grid: geo_core.GridLayout,
-    transform: geo_alias.RasterTransform,
+    transform: rasterio.Affine | None,
     inside_idx: list[tuple[int, int]]
-) -> geo_alias.RasterWindowDict:
+) -> geo_core.RasterWindowDict:
     '''Return window dict for tiles inside the target area.'''
     # get raster reading windows - empty when transform is None
-    windows: geo_alias.RasterWindowDict = {}
+    windows: geo_core.RasterWindowDict = {}
     if transform is not None:
         # set grid offset for label
         _grid = copy.deepcopy(world_grid)

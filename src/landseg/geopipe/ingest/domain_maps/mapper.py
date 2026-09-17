@@ -30,21 +30,27 @@ Public APIs:
     - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
 '''
 
+# standard imports
+import typing
 # third-party imports
 import numpy
+import numpy.typing
 # local imports
-import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.domain_maps.alias as alias
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
+
+
+# ----- typing aliases
+RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
+'''Mapping of pixel coordinates (x, y) to tile array data.'''
 
 
 # ----- public functions
 def map_domain_to_grid(
     world_grid: geo_core.GridLayout,
     raster_path: str,
-) -> alias.RasterTileDict:
+) -> RasterTileDict:
     '''
     Map a domain raster onto a world grid and re-index labels.
 
@@ -55,7 +61,7 @@ def map_domain_to_grid(
             File path to the categorical domain raster.
 
     Returns:
-        alias.RasterTileDict:
+        RasterTileDict:
             Dictionary mapping tile coordinates to re-indexed raster tile
             arrays.
     '''
@@ -80,7 +86,7 @@ def map_domain_to_grid(
 def _read_raster(
     grid: geo_core.GridLayout,
     fpath: str,
-) -> tuple[alias.RasterTileDict, int, int]:
+) -> tuple[RasterTileDict, int, int]:
     '''Read a raster over all grid windows using parallel executor.'''
     # open domain raster
     with geo_utils.open_rasters(fpath) as (src,):
@@ -103,7 +109,7 @@ def _read_raster(
         (_read, (k, v, fpath, grid.tile_size), {})
         for k, v in grid.items()
     ]
-    results: list[alias.RasterTile]
+    results: list[tuple[tuple[int, int], numpy.typing.NDArray]]
     results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
     all_tiles = [(_, t) for (_, t) in results if t.size > 0] # filter empty arrays
     return dict(all_tiles), nodata, index_base
@@ -111,10 +117,10 @@ def _read_raster(
 
 def _read(
     raster_window_id: tuple[int, int],
-    raster_window: geo_alias.RasterWindow,
+    raster_window: geo_core.RasterWindow,
     raster_fpath: str,
     expected_h_w: tuple[int, int],
-) -> alias.RasterTile:
+) -> tuple[tuple[int, int], numpy.typing.NDArray]:
     '''Read a single raster window and return its first band.'''
     # if arr is not of expected H, W return an empty array
     if (raster_window.height, raster_window.width) != tuple(expected_h_w):
@@ -129,7 +135,7 @@ def _read(
 
 
 def _get_index_mapping(
-    tiles: alias.RasterTileDict,
+    tiles: RasterTileDict,
     nodata: int,
     index_base: int
 ) -> numpy.ndarray:
@@ -154,10 +160,10 @@ def _get_index_mapping(
 
 
 def _re_index(
-    tiles: alias.RasterTileDict,
+    tiles: RasterTileDict,
     nodata: int,
     mapping: numpy.ndarray
-) -> alias.RasterTileDict:
+) -> RasterTileDict:
     '''Apply a global index remapping to all raster tiles in-place.'''
     for arr in tiles.values():
         mask_valid = arr != nodata

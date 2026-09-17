@@ -40,13 +40,13 @@ import time
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.common as common
-import landseg.geopipe.ingest.domain_maps as domain_maps
-import landseg.geopipe.ingest.domain_maps.alias as alias
+import landseg.geopipe.ingest.domain_maps.builder as builder
+import landseg.geopipe.ingest.domain_maps.mapper as mapper
 
 
 # ----- typing aliases
 DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
-MappingCtrl = artifacts.Controller[alias.RasterTileDict]
+MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 
 
 # ----- public dataclasses
@@ -106,7 +106,7 @@ def prepare_domain_maps(
             # check mapped tiles before building
             mapped = _prep_mapping(grid, config, policy=policy)
             # build domain map
-            payload = domain_maps.build_domain(
+            payload = builder.build_domain(
                 grid.gid,
                 mapped,
                 valid_threshold=config.valid_threshold,
@@ -144,7 +144,7 @@ def _prep_mapping(
     config: DomainBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-) -> alias.RasterTileDict:
+) -> mapper.RasterTileDict:
     '''Fetch existing mapped tiles artifact or map raster onto grid.'''
     # check mapped tiles before building
     ctrl = MappingCtrl(config.tiles_fpath, policy)
@@ -155,7 +155,7 @@ def _prep_mapping(
     # create a new mapping if not valid
     if not mapped:
         try:
-            mapped = domain_maps.map_domain_to_grid(grid, config.input_fpath)
+            mapped = mapper.map_domain_to_grid(grid, config.input_fpath)
             ctrl.persist(mapped)
         except ValueError as e:
             raise ValueError(
