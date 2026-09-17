@@ -50,8 +50,10 @@ AllowedCategory: typing.TypeAlias = typing.Literal[
     'label',
 ]
 
-LabelScheme: typing.TypeAlias = geo_core.LabelScheme
-LabelSchemes: typing.TypeAlias = geo_core.LabelSchemes
+
+LabelSchemes: typing.TypeAlias = dict[str, geo_core.LabelScheme]
+
+
 FeatureSchemes: typing.TypeAlias = dict[str, list[str]]
 
 

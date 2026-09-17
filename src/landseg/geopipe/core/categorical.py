@@ -61,6 +61,3 @@ class LabelScheme(typing.TypedDict):
     '''Named reclassification scheme for label raster.'''
     reclass: dict[str, list[int]]
     reclass_name: dict[str, str]
-
-
-LabelSchemes = dict[str, LabelScheme]

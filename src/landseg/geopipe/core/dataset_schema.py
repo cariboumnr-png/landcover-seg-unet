@@ -32,8 +32,9 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import typing
-# local imports
-import landseg.geopipe.core as geo_core
+# typing imports
+if typing.TYPE_CHECKING:
+    import landseg.geopipe.core as geo_core
 
 
 SCHEMA_ID = 'data_schema/v1.1'
@@ -73,7 +74,7 @@ class _DatasetInfo(typing.TypedDict):
     mapped_grids: list[str]
     data_source: _DataSource
     image_schemes: dict[str, dict[str, list[str]]]
-    label_schemes: dict[str, geo_core.LabelSchemes]
+    label_schemes: dict[str, dict[str, geo_core.LabelScheme]]
 
 
 class _DataSource(typing.TypedDict):

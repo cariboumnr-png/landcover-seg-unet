@@ -38,8 +38,9 @@ import json
 import typing
 # third-party imports
 import numpy
-# local imports
-import landseg.geopipe.core as geo_core
+# typing imports
+if typing.TYPE_CHECKING:
+    import landseg.geopipe.core as geo_core
 
 
 # ----- public types

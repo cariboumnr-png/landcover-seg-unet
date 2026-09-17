@@ -69,7 +69,6 @@ __all__ = [
     'GridPayload',
     'GridMeta',
     'LabelScheme',
-    'LabelSchemes',
     'TaxonomySpec',
 ]
 
@@ -78,7 +77,6 @@ if typing.TYPE_CHECKING:
     from .categorical import (
         CategoricalSpec,
         LabelScheme,
-        LabelSchemes,
         TaxonomySpec,
     )
     from .data_block import (
@@ -109,7 +107,6 @@ def __getattr__(name: str):
     if name in {
         'CategoricalSpec',
         'LabelScheme',
-        'LabelSchemes',
         'TaxonomySpec',
     }:
         obj = importlib.import_module('.categorical', __package__)

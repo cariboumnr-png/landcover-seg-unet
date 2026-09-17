@@ -62,7 +62,7 @@ def test_taxonomy_spec_and_label_scheme():
         'reclass': {'1': [1, 2]},
         'reclass_name': {'1': 'vegetation'},
     }
-    schemes: geo_core.LabelSchemes = {'binary': scheme}
+    schemes: dict[str, geo_core.LabelScheme] = {'binary': scheme}
 
     assert cat_spec['taxonomy']['profile'] == 'ontario_landcover'
     assert 'binary' in schemes
