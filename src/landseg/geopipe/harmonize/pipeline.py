@@ -19,32 +19,37 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
-Data harmonization processor for geospatial raster sources.
-
-This module processes compiled dataset manifest entries, warping rasters
-onto the canonical world grid, attaching band mappings and categorical
-metadata, and producing composite stacked VRT outputs.
-
-Public APIs:
-    - `ProcessedRasters`: Container for processed raster paths.
-    - `harmonize_sources`: Harmonize all compiled raster sources onto grid.
+Data harmonization pipeline command implementation.
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import os
 import typing
 # local imports
+import landseg.artifacts.paths as paths
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.harmonize.common as common
 import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.rasters as rasters
 
 
-# ----- public dataclasses
+# ----- private types
+class _HarmonizationPipelineConfig(typing.Protocol):
+    @property
+    def dataset_manifest(self) -> str: ...
+    @property
+    def resampling_continuous(self) -> str: ...
+    @property
+    def resampling_categorical(self) -> str: ...
+
+
+# ----- private dataclasses
 @dataclasses.dataclass
-class ProcessedRasters:
+class _ProcessedRasters:
     '''Container for processed raster paths dictionaries.'''
     provenance: dict[str, str] = dataclasses.field(default_factory=dict)
     harmonized: dict[str, str] = dataclasses.field(default_factory=dict)
@@ -52,40 +57,65 @@ class ProcessedRasters:
 
 
 # ----- public functions
-def harmonize_sources(
+def data_harmonization_pipeline(
+    artifacts_paths: paths.HarmonizationPaths,
+    config: _HarmonizationPipelineConfig,
+    world_grid: geo_core.GridLayout,
+    *,
+    logger: common.HarmonizationLogger
+) -> None:
+    '''Run data harmonization pipeline.'''
+    compiled = manifest.compile_dataset_manifest(config.dataset_manifest)
+
+    proc = _harmonize_sources(
+        compiled,
+        artifacts_paths.effective_root,
+        world_grid,
+        categorical_resampling=config.resampling_categorical,
+        continuous_resampling=config.resampling_continuous,
+    )
+
+    processed: _ProcessedRasters
+    while True:
+        try:
+            log_message = next(proc)
+            logger.log('INFO', log_message)
+        except StopIteration as s:
+            processed = s.value
+            break
+
+    # log processed file paths
+    for name, path in processed.provenance.items():
+        logger.add_source_provenance(name, path)
+
+    for name, path in processed.harmonized.items():
+        logger.add_harmonized_source(name, path)
+
+    for name, path in processed.finalized.items():
+        logger.add_finalized_raster(name, path)
+
+    # generate valid feature pixel mask if feature raster is provided
+    feature_raster = processed.finalized.get('features')
+    if feature_raster:
+        mask_path = artifacts_paths.valid_mask_raster
+        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
+        rasters.unify_nodata_mask(feature_raster, mask_path)
+        logger.set_valid_mask_raster(mask_path)
+
+
+# ----- private functions
+def _harmonize_sources(
     compiled_sources: dict[str, manifest.ManifestEntry],
     output_dir: str,
     world_grid: geo_core.GridLayout,
     *,
     categorical_resampling: str,
     continuous_resampling: str,
-) -> typing.Generator[str, None, ProcessedRasters]:
-    '''
-    Harmonize all compiled raster sources onto the canonical grid.
-
-    Args:
-        compiled_sources:
-            Mapping of source paths to compiled ManifestEntry objects.
-        output_dir:
-            Directory path where harmonized VRT files are saved.
-        world_grid:
-            Canonical world grid layout used for spatial alignment.
-        categorical_resampling:
-            Resampling algorithm name for categorical rasters.
-        continuous_resampling:
-            Resampling algorithm name for continuous rasters.
-
-    Yields:
-        str:
-            Status messages during harmonization.
-
-    Returns:
-        ProcessedRasters:
-            Container of provenance, harmonized, and finalized paths.
-    '''
+) -> typing.Generator[str, None, _ProcessedRasters]:
+    '''Harmonize all compiled raster sources onto the canonical grid.'''
     features: list[str] = []
     labels: list[str] = []
-    processed = ProcessedRasters()
+    processed = _ProcessedRasters()
 
     for path, mfst in compiled_sources.items():
         if not mfst:
@@ -135,7 +165,6 @@ def harmonize_sources(
     return processed
 
 
-# ----- private helpers
 def _tag_domain_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
     '''Attach domain raster metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')

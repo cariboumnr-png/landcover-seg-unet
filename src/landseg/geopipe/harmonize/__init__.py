@@ -28,15 +28,8 @@ circular-free.
 
 Public APIs:
     - `HarmonizationLogger`: Logger tracking ETL progress and report JSON.
-    - `ProcessedRasters`: Container for processed raster paths.
-    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
-    - `compile_dataset_manifest`: Read and validate dataset manifest JSON.
-    - `harmonize_sources`: Harmonize all compiled raster sources onto grid.
-    - `get_available_profiles`: Return registered taxonomy profile names.
-    - `validate_specs`: Validate taxonomy specs against knowledge base.
-    - `HarmonizationReportSchema`: TypedDict for overall pipeline report.
-    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
     - `WorldGridReport`: TypedDict for world grid summary report.
+    - `data_harmonization_pipeline`: pipeline runner.
 '''
 
 # standard imports
@@ -47,16 +40,10 @@ import typing
 __all__ = [
     # classes
     'HarmonizationLogger',
-    'ProcessedRasters',
     # functions
-    'unify_nodata_mask',
-    'compile_dataset_manifest',
-    'harmonize_sources',
-    'get_available_profiles',
-    'validate_specs',
+    'data_harmonization_pipeline',
     # typing
     'HarmonizationReportSchema',
-    'ProvenanceRecord',
     'WorldGridReport',
 ]
 
@@ -65,27 +52,10 @@ if typing.TYPE_CHECKING:
     from .common import (
         HarmonizationLogger,
         HarmonizationReportSchema,
-        ProvenanceRecord,
         WorldGridReport,
     )
 
-    from .manifest import(
-        compile_dataset_manifest,
-    )
-
-    from .processor import (
-        ProcessedRasters,
-        harmonize_sources,
-    )
-
-    from .rasters import (
-        unify_nodata_mask,
-    )
-
-    from .taxonomy import(
-        get_available_profiles,
-        validate_specs,
-    )
+    from .pipeline import data_harmonization_pipeline
 
 
 def __getattr__(name: str):
@@ -93,7 +63,6 @@ def __getattr__(name: str):
     if name in {
         'HarmonizationLogger',
         'HarmonizationReportSchema',
-        'ProvenanceRecord',
         'WorldGridReport',
     }:
         return getattr(
@@ -101,33 +70,10 @@ def __getattr__(name: str):
         )
 
     if name in {
-        'compile_dataset_manifest',
+        'data_harmonization_pipeline',
     }:
         return getattr(
-            importlib.import_module('.manifest', __package__), name
-        )
-
-    if name in {
-        'unify_nodata_mask',
-    }:
-        return getattr(
-            importlib.import_module('.rasters', __package__), name
-        )
-
-    if name in {
-        'ProcessedRasters',
-        'harmonize_sources',
-    }:
-        return getattr(
-            importlib.import_module('.processor', __package__), name
-        )
-
-    if name in {
-        'get_available_profiles',
-        'validate_specs',
-    }:
-        return getattr(
-            importlib.import_module('.taxonomy', __package__), name
+            importlib.import_module('.pipeline', __package__), name
         )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

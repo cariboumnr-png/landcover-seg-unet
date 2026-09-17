@@ -58,62 +58,29 @@ def exec_harmonize_data(config: configs.RootConfig) -> None:
 
         # load world grid - will raise if grid not present (run prior pipeline)
         logger.log('INFO', '[START] Loading world grid from configuration')
-        grid_fpath, world_grid = grid.load_grid_from_config(config.data.world_grid)
-        gid = world_grid.gid
+        grid_fp, world_grid = grid.load_grid_from_config(config.data.world_grid)
         grid_report: harmonize.WorldGridReport = {
-            'grid_fpath': grid_fpath,
-            'grid_id': gid,
+            'grid_fpath': grid_fp,
+            'grid_id': world_grid.gid,
             'crs': world_grid.crs,
             'pixel_size': world_grid.pixel_size,
             'tile_size': world_grid.tile_size,
             'tile_overlap': world_grid.tile_overlap,
         }
         logger.set_world_grid_report(grid_report)
-        logger.log('INFO', f'[COMPLETE] World grid loaded: {gid}')
+        logger.log('INFO', f'[COMPLETE] World grid loaded: {world_grid.gid}')
 
-        logger.log('INFO', f'[START] Harmonizing data onto grid: {gid}')
-        cfg = config.data.harmonization
-        compiled = harmonize.compile_dataset_manifest(cfg.dataset_manifest)
-        gen = harmonize.harmonize_sources(
-            compiled,
-            paths.effective_root,
+        logger.log('INFO', f'[START] Harmonizing data onto grid: {world_grid.gid}')
+        harmonize.data_harmonization_pipeline(
+            paths,
+            config.data.harmonization,
             world_grid,
-            categorical_resampling=cfg.resampling_categorical,
-            continuous_resampling=cfg.resampling_continuous,
+            logger=logger
         )
-
-        processed: harmonize.ProcessedRasters
-        while True:
-            try:
-                log_message = next(gen)
-                logger.log('INFO', log_message)
-            except StopIteration as s:
-                processed = s.value
-                break
-
-        # log processed file paths
-        for name, path in processed.provenance.items():
-            logger.add_source_provenance(name, path)
-
-        for name, path in processed.harmonized.items():
-            logger.add_harmonized_source(name, path)
-
-        for name, path in processed.finalized.items():
-            logger.add_finalized_raster(name, path)
-
-        # generate valid feature pixel mask if feature raster is provided
-        feature_raster = processed.finalized.get('features')
-        if feature_raster:
-            mask_path = paths.valid_mask_raster
-            logger.log('INFO', f'Generating valid mask raster: {mask_path}')
-            harmonize.unify_nodata_mask(feature_raster, mask_path)
-            logger.set_valid_mask_raster(mask_path)
-
+        logger.log('INFO', '[COMPLETE] Harmonization finished')
 
         # persist the whole config dict
         artifacts.Controller[dict](paths.config).persist(config.as_dict)
-
-        logger.log('INFO', '[COMPLETE] Harmonization finished')
 
     except Exception as err:
         logger.set_summary_status('FAILED')
