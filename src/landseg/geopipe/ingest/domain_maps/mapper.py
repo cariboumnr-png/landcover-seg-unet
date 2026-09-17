@@ -30,13 +30,12 @@ Public APIs:
     - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
 '''
 
-# standard imports
-from __future__ import annotations
 # third-party imports
 import numpy
 # local imports
+import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.common.alias as alias
+import landseg.geopipe.ingest.domain_maps.alias as alias
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
@@ -112,9 +111,9 @@ def _read_raster(
 
 def _read(
     raster_window_id: tuple[int, int],
-    raster_window: alias.RasterWindow,
+    raster_window: geo_alias.RasterWindow,
     raster_fpath: str,
-    expected_h_w: tuple[int, int]
+    expected_h_w: tuple[int, int],
 ) -> alias.RasterTile:
     '''Read a single raster window and return its first band.'''
     # if arr is not of expected H, W return an empty array

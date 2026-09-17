@@ -41,8 +41,8 @@ import dataclasses
 import os
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
@@ -65,8 +65,8 @@ class BlockBuildingInput:
 @dataclasses.dataclass(frozen=True)
 class BlockBuildingContext:
     '''Mapped read windows for the pipeline execution.'''
-    image: alias.RasterWindowDict
-    label: alias.RasterWindowDict
+    image: geo_alias.RasterWindowDict
+    label: geo_alias.RasterWindowDict
 
 
 @dataclasses.dataclass(frozen=True)

@@ -36,14 +36,15 @@ import os
 import typing
 # third-party imports
 import rasterio
-import rasterio.io
+# local imports
+import landseg.geopipe.alias as geo_alias
 
 
 # ----- public functions
 @contextlib.contextmanager
 def open_rasters(
     *rasters: str | None,
-) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
+) -> typing.Iterator[tuple[geo_alias.RasterReader | None, ...]]:
     '''
     Open multiple rasters safely and yield a tuple of dataset readers.
 
@@ -52,11 +53,11 @@ def open_rasters(
             Variable number of raster file paths or None values.
 
     Yields:
-        tuple[rasterio.io.DatasetReader | None, ...]:
+        tuple[alias.RasterReader | None, ...]:
             Tuple of opened dataset readers or None.
     '''
     with contextlib.ExitStack() as stack:
-        opened_rasters: list[rasterio.io.DatasetReader | None] = []
+        opened_rasters: list[geo_alias.RasterReader | None] = []
 
         for raster in rasters:
             if isinstance(raster, str):

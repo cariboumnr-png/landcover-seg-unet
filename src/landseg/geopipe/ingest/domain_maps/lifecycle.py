@@ -40,8 +40,8 @@ import time
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.common as common
-import landseg.geopipe.ingest.common.alias as alias
 import landseg.geopipe.ingest.domain_maps as domain_maps
+import landseg.geopipe.ingest.domain_maps.alias as alias
 
 
 # ----- typing aliases

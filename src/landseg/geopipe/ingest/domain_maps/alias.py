@@ -20,18 +20,14 @@
 # =========================================================================== #
 
 '''
-Type aliases for raster I/O, windows, and tiles in data ingestion.
+Type aliases for domain tile map ingestion and processing.
 
-This module defines common type aliases for rasterio reader handles,
-window mappings, and array tile dictionaries.
+This module provides localized typing aliases for spatial raster tiles
+and indexed tile mappings used within domain map ingestion.
 
 Public APIs:
-    - `RasterReader`: Type alias for rasterio DatasetReader.
-    - `RasterWindow`: Type alias for rasterio Window.
-    - `RasterWindowDict`: Type alias for coordinate to Window mapping.
-    - `RasterTile`: Type alias for coordinate and array tuple.
-    - `RasterTileDict`: Type alias for coordinate to array mapping.
-    - `RasterTransform`: Type alias for raster affine transform or None.
+    - `RasterTile`: Tuple of 2D integer coordinates and tile array data.
+    - `RasterTileDict`: Mapping of 2D coordinates to tile array data.
 '''
 
 # standard imports
@@ -39,25 +35,11 @@ from __future__ import annotations
 import typing
 # third-party imports
 import numpy.typing
-import rasterio.io
-import rasterio.windows
 
 
 # ----- typing aliases
-RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-'''Type alias for rasterio DatasetReader.'''
-
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
-'''Type alias for rasterio Window.'''
-
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
-'''Mapping of pixel-origin coordinates (x, y) to raster windows.'''
-
 RasterTile: typing.TypeAlias = tuple[tuple[int, int], numpy.typing.NDArray]
 '''Tuple of pixel coordinates (x, y) and tile array data.'''
 
 RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
 '''Mapping of pixel coordinates (x, y) to tile array data.'''
-
-RasterTransform: typing.TypeAlias = rasterio.Affine | None
-'''Affine transform for a raster or None when unavailable.'''

@@ -45,14 +45,8 @@ import typing
 # third-party imports
 import rasterio
 import rasterio.crs
-import rasterio.io
-import rasterio.windows
-
-
-# ----- typing aliases
-RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
+# local imports
+import landseg.geopipe.alias as geo_alias
 
 
 # ----- public types
@@ -99,7 +93,7 @@ class GridSpec:
 
 
 # ----- public classes
-class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
+class GridLayout(collections.abc.Mapping[geo_alias.Coord2d, geo_alias.RasterWindow]):
     '''
     Raster-agnostic grid layout represented as tile windows.
 
@@ -126,13 +120,13 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         # ingest spec and init attributes
         self._spec = spec
         self._extent: tuple[int, int] = (0, 0) # (rows, cols)
-        self._data: RasterWindowDict = {}
+        self._data: geo_alias.RasterWindowDict = {}
         self._offset_px: tuple[int, int] = (0, 0)  # (dc_px, dr_px)
         # generate grid - self._data to be populated
         self._generate()
 
     # ----- container protocol
-    def __getitem__(self, idx: tuple[int, int]) -> RasterWindow:
+    def __getitem__(self, idx: geo_alias.Coord2d) -> geo_alias.RasterWindow:
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
             or not all(isinstance(v, int) for v in idx)):
@@ -144,9 +138,9 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         # get components for raster window
         xoff, yoff = base.col_off - dx, base.row_off - dy
         width, height = base.width, base.height
-        return RasterWindow(xoff, yoff, width, height) # type: ignore
+        return geo_alias.RasterWindow(xoff, yoff, width, height) # type: ignore
 
-    def __iter__(self) -> collections.abc.Iterator[tuple[int, int]]:
+    def __iter__(self) -> collections.abc.Iterator[geo_alias.Coord2d]:
         return iter(self._data)
 
     def __len__(self) -> int:
@@ -235,10 +229,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 A `GridLayout` instance with restored state.
         '''
         # parse data from payload
-        parsed: RasterWindowDict = {}
+        parsed: geo_alias.RasterWindowDict = {}
         for c in payload['data']:
             x, y, col_off, row_off, w, h = c
-            window = RasterWindow(col_off, row_off, w, h) # type: ignore
+            window = geo_alias.RasterWindow(col_off, row_off, w, h) # type: ignore
             parsed[(x, y)] = window
 
         # create empty GridLayout instance
@@ -266,7 +260,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         return obj
 
     # ----- public method
-    def offset_from(self, src: RasterReader | rasterio.Affine) -> None:
+    def offset_from(self, src: geo_alias.RasterReader | rasterio.Affine) -> None:
         '''
         Compute pixel offset to align the grid with a raster.
 
@@ -276,7 +270,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 the raster's spatial reference.
         '''
         # if a raster reader handler is provided:
-        if isinstance(src, RasterReader):
+        if isinstance(src, geo_alias.RasterReader):
             # check target raster CRS
             grid_crs = rasterio.crs.CRS.from_user_input(self.crs)
             inpt_crs = rasterio.crs.CRS.from_user_input(src.crs)
@@ -362,6 +356,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 th = min(spec.tile_size[0], row_px - y) # at the last row
                 tw = min(spec.tile_size[1], col_px - x) # at the last col
                 # set up the window and update the result dict
-                window = RasterWindow(x, y, tw, th) # type: ignore
+                window = geo_alias.RasterWindow(x, y, tw, th) # type: ignore
                 self._data[(x, y)] = window
         self._extent = row_px, col_px

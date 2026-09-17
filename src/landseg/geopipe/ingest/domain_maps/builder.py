@@ -37,7 +37,7 @@ import dataclasses
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.common.alias as alias
+import landseg.geopipe.ingest.domain_maps.alias as alias
 
 
 # ----- private dataclasses

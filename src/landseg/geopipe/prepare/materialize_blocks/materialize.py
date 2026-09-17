@@ -36,9 +36,9 @@ import typing
 # third-party imports
 import numpy
 # local imports
+import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
-import landseg.geopipe.prepare.common.alias as alias
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.utils as utils
 
@@ -166,10 +166,10 @@ def _materialize_one_block(
 
 
 def _normalize_image(
-    raw_image_arr: alias.Float32Array,
-    valid_mask: alias.MaskArray,
+    raw_image_arr: geo_alias.Float32Array,
+    valid_mask: geo_alias.MaskArray,
     global_stats: dict[str, common.ImageBandStats],
-) -> alias.Float32Array:
+) -> geo_alias.Float32Array:
     '''Apply per-band normalization using global stats.'''
     # assertion
     assert raw_image_arr.ndim == 3
