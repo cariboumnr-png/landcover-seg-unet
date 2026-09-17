@@ -36,12 +36,13 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.harmonize.manifest as manifest
+import landseg.geopipe.harmonize.manifest.normalizer as normalizer
+import landseg.geopipe.harmonize.manifest.schema as schema
 
 
 # ----- typing aliases
 ManifestCtrl = artifacts.Controller[list[dict[str, typing.Any]]]
-ManifestEntryCtrl = artifacts.Controller[manifest.ManifestEntry]
+ManifestEntryCtrl = artifacts.Controller[schema.ManifestEntry]
 
 
 # ----- public classes
@@ -53,7 +54,7 @@ class DatasetManifestError(Exception):
 
 
 # ----- public functions
-def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
+def compile_dataset_manifest(fp: str) -> dict[str, schema.ManifestEntry]:
     '''
     Read, validate, and compile dataset manifest from JSON.
 
@@ -62,7 +63,7 @@ def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
             File path to root dataset manifest JSON.
 
     Returns:
-        dict[str, manifest.ManifestEntry]:
+        dict[str, schema.ManifestEntry]:
             Mapping of raster file paths to normalized manifest entries.
     '''
     # load JSON via artifact controller
@@ -77,7 +78,7 @@ def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
             f'got: {type(mfst)}'
         )
 
-    compiled: list[manifest.ManifestEntry] = []
+    compiled: list[schema.ManifestEntry] = []
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
@@ -88,7 +89,7 @@ def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 
         try:
-            norm = manifest.ManifestEntryNormalizer(entry).normalized_entry
+            norm = normalizer.ManifestEntryNormalizer(entry).normalized_entry
             compiled.append(norm)
         except(TypeError, ValueError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e

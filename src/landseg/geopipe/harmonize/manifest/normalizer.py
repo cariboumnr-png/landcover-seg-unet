@@ -37,7 +37,7 @@ import pathlib
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.harmonize.manifest as manifest
+import landseg.geopipe.harmonize.manifest.schema as schema
 import landseg.geopipe.harmonize.taxonomy as taxonomy
 
 
@@ -64,7 +64,7 @@ class ManifestEntryNormalizer:
         self.schemes = self.entry.get('schemes')
 
     @property
-    def normalized_entry(self) -> manifest.ManifestEntry:
+    def normalized_entry(self) -> schema.ManifestEntry:
         '''
         Return the normalized manifest entry.
 
@@ -97,7 +97,7 @@ class ManifestEntryNormalizer:
             else:
                 schemes = None
 
-        normalized: manifest.ManifestEntry = {
+        normalized: schema.ManifestEntry = {
             'name': name,
             'path': path,
             'band_mapping': band_mapping,
@@ -122,13 +122,13 @@ class ManifestEntryNormalizer:
 
         return normalized
 
-    def _normalize_category(self) -> manifest.AllowedCategory:
+    def _normalize_category(self) -> schema.AllowedCategory:
         cat = _require_string(self.category)
-        allowed = typing.get_args(manifest.AllowedCategory)
+        allowed = typing.get_args(schema.AllowedCategory)
         if cat not in allowed:
             raise ValueError(f'Invalid category: {cat}, must be in {allowed}')
 
-        return typing.cast(manifest.AllowedCategory, cat)
+        return typing.cast(schema.AllowedCategory, cat)
 
     def _normalize_categorical_specs(self) -> geo_core.CategoricalSpec:
         specs = _require_dict(self.cat_specs)
@@ -169,7 +169,7 @@ class ManifestEntryNormalizer:
     def _normalize_feature_schemes(
         self,
         band_mapping: dict[int, str]
-    ) -> manifest.FeatureSchemes:
+    ) -> schema.FeatureSchemes:
         schemes = _require_dict(self.schemes)
 
         valid_bands = set(band_mapping.values())
@@ -190,7 +190,7 @@ class ManifestEntryNormalizer:
     def _normalize_label_schemes(
         self,
         cat_specs: geo_core.CategoricalSpec
-    ) -> manifest.LabelSchemes:
+    ) -> schema.LabelSchemes:
         schemes = _require_dict(self.schemes)
 
         index_base = cat_specs['index_base']

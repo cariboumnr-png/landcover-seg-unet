@@ -22,7 +22,7 @@
 '''Unit tests for tile coordinate filtering logic (filter.py).'''
 
 # local imports
-import landseg.geopipe.prepare.data_partition.split.filter as filter_mod
+import landseg.geopipe.prepare.data_partition.operations.filter as filter_mod
 
 
 # ----- `filter_safe_tiles` tests

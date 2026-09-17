@@ -39,10 +39,14 @@ Public APIs:
 from __future__ import annotations
 import dataclasses
 import os
+import random
+# third-party imports
+import numpy
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
+import landseg.geopipe.ingest.data_blocks.assembler.builder as builder
+import landseg.geopipe.ingest.data_blocks.assembler.io as io
 import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
@@ -89,6 +93,90 @@ class BlockBuildingOutput:
 
 
 # ----- public functions
+def build_test_block(
+    save_dpath: str,
+    inputs: dict[str, io.RasterReadInput],
+    *,
+    target_head: str,
+    valid_px_per: float,
+    need_all_classes: bool,
+) -> str | None:
+    '''
+    Build, normalize, and persist a single valid block for testing.
+
+    Iterates over the available block inputs in a deterministic shuffled
+    order to find the first block meeting the validity and label-coverage
+    criteria. The selected block is normalized using its own image mean
+    and standard deviation before being saved.
+
+    Args:
+        save_dpath:
+            Directory where the test block will be written.
+        inputs:
+            Mapping from block name to raster inputs.
+        target_head:
+            Label head used when checking class coverage.
+        valid_px_per:
+            Minimum required proportion of valid image pixels.
+        need_all_classes:
+            Whether every class in the target head must be present for a
+            block to be accepted.
+
+    Returns:
+        str | None:
+            Path to the saved test block if found, otherwise None.
+    '''
+    shuffled_inputs = list(inputs.items())
+    random.Random(42).shuffle(shuffled_inputs)
+
+    selected_name = None
+    selected_candidate = None
+
+    for name, candidate_input in shuffled_inputs:
+        print('Searching for a valid block...', end='\r', flush=True)
+
+        try:
+            candidate = _build_single_block(name, candidate_input)
+            manifest = candidate.manifest
+
+            # check valid pixel ratios based on image band
+            valid_ratio = manifest['valid_ratios'].get('image', 0.0)
+
+            # check if all classes are present
+            has_all_classes = True
+            if target_head in manifest['label_count']:
+                has_all_classes = all(manifest['label_count'][target_head])
+            else:
+                has_all_classes = False
+
+            if (
+                valid_ratio >= valid_px_per and
+                (has_all_classes or not need_all_classes)
+            ):
+                selected_name = name
+                selected_candidate = candidate
+                break
+
+        except ValueError:
+            continue
+
+    if selected_candidate is None:
+        return None
+
+    candidate = selected_candidate
+    name = selected_name
+
+    # In-place image normalization for debugging block
+    mean = numpy.mean(candidate.data.image)
+    std = numpy.std(candidate.data.image)
+    candidate.data.image = (candidate.data.image - mean) / (std or 1.0)
+
+    os.makedirs(save_dpath, exist_ok=True)
+    fpath = os.path.join(save_dpath, f'test_{name}.npz')
+    candidate.save(fpath)
+    return fpath
+
+
 def build_blocks(
     inputs: BlockBuildingInput,
     context: BlockBuildingContext,
@@ -201,7 +289,7 @@ def _structural_validation(
             }
 
             jobs = [
-                (assembler.check_npz_integrity, (c, fp), {})
+                (io.check_npz_integrity, (c, fp), {})
                 for c, fp in blks_to_check.items()
             ]
 
@@ -236,7 +324,7 @@ def _create_missing_blocks(
     for c in coords_todo:
         # positionals
         name = geo_utils.xy_name(c)
-        block_inputs = assembler.RasterReadInput(
+        block_inputs = io.RasterReadInput(
             image_fpath=inputs.image_fpath,
             image_window=windows.image[c],
             image_band_map=config.image_band_map,
@@ -254,8 +342,63 @@ def _create_missing_blocks(
         }
 
         # add job
-        job = (assembler.build_single_block, (name, block_inputs), kwargs,)
+        job = (_build_single_block, (name, block_inputs), kwargs,)
         creation_jobs.append(job)
 
     if creation_jobs:
         utils.ParallelExecutor().run(creation_jobs, desc=' - Creating blocks')
+
+
+def _build_single_block(
+    name: str,
+    inputs: io.RasterReadInput,
+    *,
+    ignore_index: int = 255,
+    add_spectral: list[str] | None = None,
+    add_topo: list[str] | None = None,
+    save_fpath: str | None = None,
+) -> geo_core.DataBlock:
+    '''
+    Create a DataBlock from input rasters for the window context.
+
+    Args:
+        name:
+            Unique identifier for the block.
+        inputs:
+            Raster inputs and metadata required to construct the block.
+        ignore_index:
+            Label value assigned to ignored pixels in the output block.
+        add_spectral:
+            Optional list of spectral indices to compute and append.
+        add_topo:
+            Optional list of topographic features to compute from DEM.
+        save_fpath:
+            Optional output path where the block will be saved.
+
+    Returns:
+        geo_core.DataBlock:
+            A populated and validated block instance.
+    '''
+    read_outputs = io.read_block_raster_data(inputs)
+
+    datablock_inputs = builder.DataBlockInputs(
+        block_name=name,
+        image_array=read_outputs.image_array,
+        image_padded_dem=read_outputs.image_padded_dem,
+        label_array=read_outputs.label_array,
+    )
+    datablock_config = builder.DataBlockConfig(
+        image_band_map=inputs.image_band_map,
+        image_dem_pad_px=inputs.image_dem_pad_px,
+        image_nodata=read_outputs.image_nodata,
+        label_nodata=read_outputs.label_nodata,
+        label_specs=inputs.label_specs,
+        label_ignore_index=ignore_index,
+        add_spectral=add_spectral,
+        add_topo=add_topo
+    )
+    block = builder.build_data_block(datablock_inputs, datablock_config)
+
+    if save_fpath:
+        block.save(save_fpath)
+    return block

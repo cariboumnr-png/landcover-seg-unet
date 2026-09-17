@@ -40,34 +40,27 @@ import typing
 
 __all__ = [
     # classes
-    'GridParameters',
     # functions
-    'build_grid',
-    'prepare_world_grid',
     'load_grid_from_config',
     'load_grid_from_fpath',
+    'prepare_world_grid',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import GridParameters, build_grid
     from .lifecycle import (
-        prepare_world_grid,
         load_grid_from_config,
         load_grid_from_fpath,
+        prepare_world_grid,
     )
 
 
 def __getattr__(name: str):
 
-    if name in {'GridParameters', 'build_grid'}:
-        mod = importlib.import_module('.builder', __package__)
-        return getattr(mod, name)
-
     if name in {
-        'prepare_world_grid',
         'load_grid_from_config',
         'load_grid_from_fpath',
+        'prepare_world_grid',
     }:
         mod = importlib.import_module('.lifecycle', __package__)
         return getattr(mod, name)

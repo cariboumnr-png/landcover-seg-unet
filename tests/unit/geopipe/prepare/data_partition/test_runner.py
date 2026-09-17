@@ -30,7 +30,7 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.data_partition.runner as runner
-import landseg.geopipe.prepare.data_partition.split as split
+import landseg.geopipe.prepare.data_partition.operations as operations
 
 
 # ----- test helper classes
@@ -81,7 +81,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         targets=targets,
     )
 
-    partition_config = split.PartitionParameters(
+    partition_config = operations.PartitionParameters(
         val_test_ratios=(0.0, 0.0),
         buffer_step=1,
         reward_ratios={},

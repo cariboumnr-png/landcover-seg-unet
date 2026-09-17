@@ -22,7 +22,7 @@
 '''Unit tests for training split hydration logic (hydrate.py).'''
 
 # local imports
-import landseg.geopipe.prepare.data_partition.split.hydrate as hydrate
+import landseg.geopipe.prepare.data_partition.operations.hydrate as hydrate
 
 
 # ----- `hydrate_train_split` tests

@@ -41,7 +41,7 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
-import landseg.geopipe.prepare.data_partition.split as split
+import landseg.geopipe.prepare.data_partition.orchestration as orchestration
 
 
 # ----- typing aliases
@@ -61,7 +61,7 @@ class _PipelinePaths(typing.Protocol):
 def run_datablocks_partition(
     context: data_context.DatasetContext,
     paths: _PipelinePaths,
-    partition_config: split.PartitionParameters,
+    partition_config: orchestration.PartitionParameters,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: common.PreparationLogger,
@@ -106,7 +106,7 @@ def run_datablocks_partition(
     ):
 
         # blocks fpaths
-        partition_results = split.create_blocks_partition(
+        partition_results = orchestration.create_blocks_partition(
             context.base_class_counts,
             context.valid_class_counts,
             context.valid_blocks,
@@ -141,7 +141,7 @@ def run_datablocks_partition(
 
 # ----- private helpers
 def _build_splits_summary(
-    partition_results: split.PartitionResults,
+    partition_results: orchestration.PartitionResults,
     *,
     focal_head: str,
 ) -> common.PartitionSummary:

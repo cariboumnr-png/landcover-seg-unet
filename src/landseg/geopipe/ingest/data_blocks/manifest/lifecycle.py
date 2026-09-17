@@ -40,7 +40,8 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.manifest as manifest
+import landseg.geopipe.ingest.data_blocks.manifest.catalog as catalog
+import landseg.geopipe.ingest.data_blocks.manifest.schema as schema
 import landseg.geopipe.utils as geo_utils
 
 
@@ -108,17 +109,17 @@ def update_manifest(
 
     # update catalog if needed
     if to_update:
-        catalog = manifest.build_catalog(
+        _catalog = catalog.build_catalog(
             to_update,
             original_catalog=current,
             mapped_grid_id=context.mapped_grid_id,
             source_image=context.source_image,
             source_label=context.source_label,
         )
-        catalog_json = catalog.to_json_payload()
+        catalog_json = _catalog.to_json_payload()
         ctrl.persist(catalog_json)
     else:
-        catalog = current
+        _catalog = current
 
     # ----- schema
     ctrl = SchemaCtrl(schema_fpath, policy)
@@ -128,7 +129,7 @@ def update_manifest(
         raise artifacts.ArtifactError from exc
 
     sample_block = _sample(context.blocks_dir)
-    schema_dict = manifest.build_schema(
+    schema_dict = schema.build_schema(
         sample_block,
         original=schema_dict,
         mapped_grid_id=context.mapped_grid_id,
@@ -140,7 +141,7 @@ def update_manifest(
     return {
         'catalog_status': catalog_status,
         'catalog_updated': to_update,
-        'cataloged_blocks_count': len(catalog),
+        'cataloged_blocks_count': len(_catalog),
         'schema_updated': True
     }
 
@@ -155,9 +156,9 @@ def _catalog_status(
     '''Assess catalog status and determine required updates.'''
     # instantiate a catalog class from dict
     if data_dict:
-        catalog = geo_core.DatasetCatalog.from_dict(data_dict)
+        _catalog = geo_core.DatasetCatalog.from_dict(data_dict)
     else:
-        catalog = geo_core.DatasetCatalog() # empty catalog
+        _catalog = geo_core.DatasetCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
     blocks_dir = context.blocks_dir
@@ -169,7 +170,7 @@ def _catalog_status(
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in context.updated_coords]
 
     # determine status
-    cataloged = [os.path.basename(c['file_path']) for c in catalog.values()]
+    cataloged = [os.path.basename(c['file_path']) for c in _catalog.values()]
     catalog_status = {
         (True, False): 2,   # catalog present, no new blocks
         (True, True): 3,    # catalog present, has new blocks
@@ -181,7 +182,7 @@ def _catalog_status(
     match policy:
         # policy: build if missing
         case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-            return catalog, {
+            return _catalog, {
                 1: [f'{blocks_dir}/{f}' for f in current],
                 2: [],
                 3: [f'{blocks_dir}/{f}' for f in updated],
@@ -190,7 +191,7 @@ def _catalog_status(
             }[catalog_status]
         # policy: force rebuild all
         case artifacts.LifecyclePolicy.REBUILD:
-            return catalog, [f'{blocks_dir}/{f}' for f in current]
+            return _catalog, [f'{blocks_dir}/{f}' for f in current]
         # unsupported policy
         case _:
             raise NotImplementedError(f'Unsupported policy: {policy}')

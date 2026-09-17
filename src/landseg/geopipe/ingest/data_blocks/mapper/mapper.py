@@ -38,7 +38,7 @@ import dataclasses
 import rasterio
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.mapper as mapper
+import landseg.geopipe.ingest.data_blocks.mapper.geometry as geometry
 
 
 # ----- public dataclasses
@@ -83,7 +83,7 @@ def map_rasters(
             If raster CRS does not match the target world grid CRS.
     '''
     # get geometry summary
-    geom = mapper.validate_geometry(image_fpath, label_fpath)
+    geom = geometry.validate_geometry(image_fpath, label_fpath)
 
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
@@ -106,7 +106,7 @@ def map_rasters(
 # ----- private helpers
 def _crop(
     world_grid: geo_core.GridLayout,
-    geom_summary: mapper.GeometrySummary,
+    geom_summary: geometry.GeometrySummary,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
     # prep return list

@@ -36,7 +36,6 @@ import typing
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.alias as geo_alias
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
@@ -161,15 +160,15 @@ def _materialize_one_block(
     # write blocks to files
     filename = os.path.basename(block_fpath)
     save_fpath = os.path.join(target_dpath, filename)
-    to_write = {'image': img_arr, 'label': lbl_arr}
-    numpy.savez_compressed(save_fpath, **to_write)
+    # key names: image, label
+    numpy.savez_compressed(save_fpath, image=img_arr, label=lbl_arr)
 
 
 def _normalize_image(
-    raw_image_arr: geo_alias.Float32Array,
-    valid_mask: geo_alias.MaskArray,
+    raw_image_arr: numpy.ndarray,
+    valid_mask: numpy.ndarray,
     global_stats: dict[str, common.ImageBandStats],
-) -> geo_alias.Float32Array:
+) -> numpy.ndarray:
     '''Apply per-band normalization using global stats.'''
     # assertion
     assert raw_image_arr.ndim == 3

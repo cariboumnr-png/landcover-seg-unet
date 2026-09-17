@@ -46,28 +46,17 @@ __all__ = [
     # classes
     'DatasetManifestError',
     # typing
-    'AllowedCategory',
-    'FeatureSchemes',
-    'LabelSchemes',
     'ManifestEntry',
-    'ManifestEntryNormalizer',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .compiler import(
+    from .compiler import (
         compile_dataset_manifest,
         DatasetManifestError,
     )
 
-    from .normalizer import(
-        ManifestEntryNormalizer,
-    )
-
     from .schema import (
-        AllowedCategory,
-        FeatureSchemes,
-        LabelSchemes,
         ManifestEntry,
     )
 
@@ -82,18 +71,8 @@ def __getattr__(name: str):
             importlib.import_module('.compiler', __package__), name
         )
 
-    if name in {
-        'ManifestEntryNormalizer'
-    }:
-        return getattr(
-            importlib.import_module('.normalizer', __package__), name
-        )
 
     if name in {
-        'AllowedCategory',
-        'FeatureSchemes',
-        'LabelScheme',
-        'LabelSchemes',
         'ManifestEntry',
     }:
         return getattr(

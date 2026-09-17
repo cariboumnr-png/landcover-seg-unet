@@ -47,7 +47,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .runner import run_datablocks_partition
-    from .split import PartitionParameters
+    from .orchestration import PartitionParameters
 
 
 def __getattr__(name: str):
@@ -56,6 +56,6 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.runner', __package__), name)
 
     if name in {'PartitionParameters'}:
-        return getattr(importlib.import_module('.split', __package__), name)
+        return getattr(importlib.import_module('.orchestration', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

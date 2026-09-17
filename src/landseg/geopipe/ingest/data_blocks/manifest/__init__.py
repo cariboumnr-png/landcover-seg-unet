@@ -40,34 +40,20 @@ __all__ = [
     # classes
     'ManifestUpdateContext',
     # functions
-    'build_catalog',
-    'build_schema',
     'update_manifest',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .catalog import build_catalog
     from .lifecycle import ManifestUpdateContext, update_manifest
-    from .schema import build_schema
 
 
 def __getattr__(name: str):
-    if name in {'build_catalog'}:
-        return getattr(
-            importlib.import_module('.catalog', __package__), name
-        )
 
     if name in {'ManifestUpdateContext', 'update_manifest'}:
         return getattr(
             importlib.import_module('.lifecycle', __package__), name
         )
 
-    if name in {'build_schema'}:
-        return getattr(
-            importlib.import_module('.schema', __package__), name
-        )
-
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
-

@@ -59,19 +59,12 @@ __all__ = [
     'BlockBuildingConfig',
     'BlockBuildingOutput',
     'RasterReadInput',
-    'RasterReadOutput',
-    'DataBlockInputs',
-    'DataBlockConfig',
     # functions
-    'build_data_block',
-    'build_single_block',
-    'build_test_block',
     'build_blocks',
+    'build_test_block',
     'read_band_map',
     'read_label_specs',
     'read_schemes',
-    'read_block_raster_data',
-    'check_npz_integrity',
 ]
 
 if typing.TYPE_CHECKING:
@@ -81,24 +74,15 @@ if typing.TYPE_CHECKING:
         BlockBuildingConfig,
         BlockBuildingOutput,
         build_blocks,
-    )
-    from .assembler import (
-        build_single_block,
         build_test_block,
     )
-    from .builder import (
-        DataBlockInputs,
-        DataBlockConfig,
-        build_data_block,
-    )
+
+
     from .io import (
         RasterReadInput,
-        RasterReadOutput,
         read_band_map,
         read_label_specs,
         read_schemes,
-        check_npz_integrity,
-        read_block_raster_data,
     )
 
 
@@ -109,36 +93,17 @@ def __getattr__(name: str):
         'BlockBuildingConfig',
         'BlockBuildingOutput',
         'build_blocks',
+        'build_test_block',
     }:
         return getattr(
             importlib.import_module('.lifecycle', __package__), name
         )
 
     if name in {
-        'build_single_block',
-        'build_test_block',
-    }:
-        return getattr(
-            importlib.import_module('.assembler', __package__), name
-        )
-
-    if name in {
-        'DataBlockInputs',
-        'DataBlockConfig',
-        'build_data_block',
-    }:
-        return getattr(
-            importlib.import_module('.builder', __package__), name
-        )
-
-    if name in {
         'RasterReadInput',
-        'RasterReadOutput',
         'read_band_map',
         'read_label_specs',
         'read_schemes',
-        'check_npz_integrity',
-        'read_block_raster_data',
     }:
         return getattr(
             importlib.import_module('.io', __package__), name

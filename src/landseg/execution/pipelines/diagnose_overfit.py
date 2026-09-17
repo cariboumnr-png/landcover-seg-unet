@@ -179,7 +179,7 @@ def _prepare_dataspecs(
             head_parent_cls={
                 k: None for k in block.manifest['label_band_map']
             },
-            taxonomy=tax,
+            taxonomy=tax, # type: ignore
             similarity_matrices=sim_matrices,
         ),
         splits=core.Splits(
@@ -216,18 +216,19 @@ def _create_block(
 
     # construct world grid layout
     logger.log('INFO', 'Preparing world grid')
-    grid_cfg = config.data.world_grid
-    world_grid = grid.build_grid(grid_cfg.mode, grid_cfg.params)
+    _, _, world_grid = grid.prepare_world_grid(config.data.world_grid)
 
     # map raster windows onto world grid
     logger.log('INFO', 'Mapping image unto the world grid')
     datablocks_cfg = config.data.ingestion.datablocks
     assert harmonized.features
     assert harmonized.labels
-    mapped = mapper.map_rasters(
+    mapped = mapper.map_rasters_to_grid(
         world_grid,
         harmonized.features,
         harmonized.labels,
+        artifact_paths.data_ingestion.data_blocks.mapped_window(world_grid.gid),
+        policy=artifacts.LifecyclePolicy.REBUILD
     )
 
     # retrieve band map and label specs from VRT

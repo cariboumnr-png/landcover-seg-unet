@@ -27,7 +27,7 @@
 import numpy
 import pytest
 # local imports
-import landseg.geopipe.prepare.data_partition.split.score as score
+import landseg.geopipe.prepare.data_partition.operations.score as score
 
 
 # ----- `score_blocks` tests

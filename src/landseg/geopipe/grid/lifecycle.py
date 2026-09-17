@@ -40,7 +40,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.grid as grid
+import landseg.geopipe.grid.builder as builder
 
 
 # ----- typing aliases
@@ -53,7 +53,7 @@ class _WorldGridPrepConfig(typing.Protocol):
     @property
     def mode(self) -> str: ...
     @property
-    def params(self) -> grid.GridParameters: ...
+    def params(self) -> builder.GridParameters: ...
     @property
     def output_dpath(self) -> str: ...
 
@@ -106,7 +106,7 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        _grid = grid.build_grid(config.mode, config.params)
+        _grid = builder.build_grid(config.mode, config.params)
         payload = _grid.to_payload()
         ctrl.save(payload)
         is_loaded = False

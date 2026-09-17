@@ -40,7 +40,7 @@ import rasterio
 import rasterio.transform
 # local imports
 import landseg.geopipe.prepare.common as common
-import landseg.geopipe.prepare.data_partition.split as split
+import landseg.geopipe.prepare.data_partition.operations as operations
 
 
 # ----- public dataclasses
@@ -67,8 +67,8 @@ class PartitionParameters:
 class PartitionResults:
     '''Container for partitioned splits and hydration results.'''
     partition_fpaths: common.BlocksPartition
-    raw_splits: split.SplitsResult
-    hydration: split.HydrationResults
+    raw_splits: operations.SplitsResult
+    hydration: operations.HydrationResults
 
 
 # ----- public functions
@@ -118,7 +118,7 @@ def create_blocks_partition(
             logger=logger,
         )
     else:
-        raw_splits = split.stratified_splitter(
+        raw_splits = operations.stratified_splitter(
             base_class_counts,
             val_ratio=config.val_test_ratios[0],
             test_ratio=(0.0 if ext_test_blks else config.val_test_ratios[1]),
@@ -128,7 +128,7 @@ def create_blocks_partition(
     # hydration process (optional)
     if bool(config.reward_ratios):
         # filter candidate blocks for hydration
-        safe_candidates = split.filter_safe_tiles(
+        safe_candidates = operations.filter_safe_tiles(
             list(valid_class_counts.keys()),
             raw_splits.val + raw_splits.test,
             block_size=config.block_spec[0],
@@ -141,7 +141,7 @@ def create_blocks_partition(
             k: v for k, v in valid_class_counts.items()
             if k in safe_candidates
         }
-        ranked_candidates = split.score_blocks(
+        ranked_candidates = operations.score_blocks(
             list(raw_splits.global_class_count),
             blocks_to_score,
             reward=tuple(config.reward_ratios.keys()),
@@ -150,14 +150,14 @@ def create_blocks_partition(
         )
 
         # hydrate using the safe candidates
-        hydration_results = split.hydrate_train_split(
+        hydration_results = operations.hydrate_train_split(
             list(raw_splits.train_class_count),
             ranked_candidates,
             target_ratios=config.reward_ratios,
             max_skew_rate=config.max_skew_rate
         )
     else:
-        hydration_results = split.HydrationResults()
+        hydration_results = operations.HydrationResults()
 
     # ----- final blocks partitions
     blocks_partition = _finalize_partition(
@@ -182,12 +182,12 @@ def _split_by_aoi(
     *,
     ext_test_blks: list[str] | None,
     logger: common.PreparationLogger | None,
-) -> split.SplitsResult:
+) -> operations.SplitsResult:
     '''Resolve AOI partitions and split remaining blocks.'''
     transform = config.canvas_transform or rasterio.transform.Affine.identity()
     block_size = (config.block_spec[0], config.block_spec[1])
 
-    aoi_res = split.resolve_aoi_partitions(
+    aoi_res = operations.resolve_aoi_partitions(
         list(valid_blocks.keys()),
         train_aoi=config.train_aoi,
         val_aoi=config.val_aoi,
@@ -215,7 +215,7 @@ def _split_by_aoi(
         auto_val_ratio = 0.0 if config.val_aoi else config.val_test_ratios[0]
 
         if auto_val_ratio > 0.0 or auto_test_ratio > 0.0:
-            auto_splits = split.stratified_splitter(
+            auto_splits = operations.stratified_splitter(
                 unassigned_counts,
                 val_ratio=auto_val_ratio,
                 test_ratio=auto_test_ratio,
@@ -230,7 +230,7 @@ def _split_by_aoi(
 
     # enforce spatial buffer on training blocks against val and test
     if config.buffer_step > 0 and (val_coords or test_coords):
-        safe_train = split.filter_safe_tiles(
+        safe_train = operations.filter_safe_tiles(
             train_coords,
             val_coords + test_coords,
             block_size=config.block_spec[0],
@@ -271,7 +271,7 @@ def _split_by_aoi(
             test_cls[idx] += count
             global_cls[idx] += count
 
-    return split.SplitsResult(
+    return operations.SplitsResult(
         train=train_coords,
         val=val_coords,
         test=test_coords,
@@ -284,7 +284,7 @@ def _split_by_aoi(
 
 def _finalize_partition(
     valid_blocks: dict[tuple[int, int], str],
-    splits: split.SplitsResult,
+    splits: operations.SplitsResult,
     additional_train: list[tuple[int, int]],
     *,
     ext_test_blks: list[str] | None,

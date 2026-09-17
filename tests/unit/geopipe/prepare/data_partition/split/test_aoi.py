@@ -31,7 +31,7 @@ import numpy
 import rasterio
 import rasterio.transform
 # local imports
-import landseg.geopipe.prepare.data_partition.split.aoi as split_aoi
+import landseg.geopipe.prepare.data_partition.operations.aoi as split_aoi
 
 
 # ----- test helper

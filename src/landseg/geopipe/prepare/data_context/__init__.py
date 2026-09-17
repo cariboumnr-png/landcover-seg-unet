@@ -45,53 +45,20 @@ import typing
 
 __all__ = [
     # classes
-    'DataBlocksView',
     'DatasetContext',
-    'FeatureSelection',
-    'TargetHeadsContext',
     # functions
     'build_dataset_context',
-    'derive_head_class_counts',
-    'read_catalog',
-    'resolve_feature_channels',
-    'resolve_focal_head',
-    'resolve_target_heads',
     # types
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .catalog import DataBlocksView, read_catalog
     from .context import DatasetContext, build_dataset_context
-    from .semantics import (
-        FeatureSelection,
-        TargetHeadsContext,
-        derive_head_class_counts,
-        resolve_feature_channels,
-        resolve_focal_head,
-        resolve_target_heads,
-    )
-
 
 def __getattr__(name: str):
 
-    if name in {'DataBlocksView', 'read_catalog'}:
-        return getattr(importlib.import_module('.catalog', __package__), name)
-
     if name in {'DatasetContext', 'build_dataset_context'}:
         return getattr(importlib.import_module('.context', __package__), name)
-
-    if name in {
-        'FeatureSelection',
-        'TargetHeadsContext',
-        'derive_head_class_counts',
-        'resolve_feature_channels',
-        'resolve_focal_head',
-        'resolve_target_heads',
-    }:
-        return getattr(
-            importlib.import_module('.semantics', __package__), name
-        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
