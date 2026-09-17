@@ -40,8 +40,8 @@ import landseg.geopipe.harmonize.manifest as manifest
 
 
 # ----- typing aliases
-ManifestController = artifacts.Controller[list[dict[str, typing.Any]]]
-ManifestEntryController = artifacts.Controller[manifest.ManifestEntry]
+ManifestCtrl = artifacts.Controller[list[dict[str, typing.Any]]]
+ManifestEntryCtrl = artifacts.Controller[manifest.ManifestEntry]
 
 
 # ----- public classes
@@ -66,7 +66,7 @@ def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
             Mapping of raster file paths to normalized manifest entries.
     '''
     # load JSON via artifact controller
-    ctrl = ManifestController.load_json_or_fail(fp)
+    ctrl = ManifestCtrl.load_json_or_fail(fp)
     ctrl.hash(overwrite=False) # hash once
     mfst = ctrl.fetch()
 
@@ -81,7 +81,7 @@ def compile_dataset_manifest(fp: str) -> dict[str, manifest.ManifestEntry]:
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = ManifestEntryController.load_json_or_fail(mfst_entry_path)
+            _ctrl = ManifestEntryCtrl.load_json_or_fail(mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
             entry = _ctrl.fetch()
         except (TypeError, ValueError) as e:

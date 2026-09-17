@@ -42,7 +42,8 @@ import typing
 # local imports
 import landseg.geopipe.core as geo_core
 
-# aliases
+
+# ----- typing aliases
 field = dataclasses.field
 
 

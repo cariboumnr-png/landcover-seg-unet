@@ -45,9 +45,7 @@ import landseg.geopipe.ingest.domain_maps.alias as alias
 
 
 # ----- typing aliases
-D = dict[str, geo_core.DomainTile]
-M = geo_core.DomainMeta
-DomainCtrl = artifacts.PayloadController[D, M]
+DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
 MappingCtrl = artifacts.Controller[alias.RasterTileDict]
 
 

@@ -45,9 +45,7 @@ import landseg.geopipe.utils as geo_utils
 
 
 # ----- typing aliases
-CatalogDictCtrl = (
-    artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]]
-)
+CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
 SchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 
 

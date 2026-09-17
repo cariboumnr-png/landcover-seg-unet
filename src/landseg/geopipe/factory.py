@@ -45,11 +45,9 @@ import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 
 # ----- typing aliases
-D = dict[str, geo_core.DomainTile]
-M = geo_core.DomainMeta
-DomainController = artifacts.PayloadController[D, M]
-DatasetSchemaController = artifacts.Controller[geo_core.DatasetSchema]
-PreparedSchemaController = artifacts.Controller[prepare.PreparedSchema]
+DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
+DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
+PreparedSchemaCtrl = artifacts.Controller[prepare.PreparedSchema]
 
 
 # ----- public functions
@@ -98,11 +96,11 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_ctrl = DatasetSchemaController.load_json_or_fail
+    data_ctrl = DatasetSchemaCtrl.load_json_or_fail
     data_schema = data_ctrl(data_schema_fpath).fetch()
 
     # prepared schema
-    prepared_ctrl = PreparedSchemaController.load_json_or_fail
+    prepared_ctrl = PreparedSchemaCtrl.load_json_or_fail
     prepared_schema = prepared_ctrl(prepared_schema_fpath).fetch()
 
     # return specs
@@ -123,7 +121,7 @@ def build_dataspec(
 # ----- private helpers
 def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
     '''Load a DomainTileMap from the specified JSON path.'''
-    ctrl = DomainController(
+    ctrl = DomainCtrl(
         fp,
         schema_id=geo_core.DomainTileMap.SCHEMA_ID,
         policy=artifacts.LifecyclePolicy.LOAD_OR_FAIL

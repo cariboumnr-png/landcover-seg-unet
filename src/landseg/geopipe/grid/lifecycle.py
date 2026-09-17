@@ -44,11 +44,7 @@ import landseg.geopipe.grid as grid
 
 
 # ----- typing aliases
-D = list[list[int]]
-M = geo_core.GridMeta
-CTRL = artifacts.PayloadController[D, M]
-
-POLICY = artifacts.LifecyclePolicy.BUILD_IF_MISSING
+PayloadCtrl = artifacts.PayloadController[list[list[int]], geo_core.GridMeta]
 
 
 # ----- private types
@@ -91,10 +87,10 @@ def prepare_world_grid(
             raise ValueError('No config for grid generation is found')
         grid_fpath = _get_grid_fpath(config)
 
-    ctrl = CTRL(
+    ctrl = PayloadCtrl(
         grid_fpath,
         schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=POLICY
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
     payload = ctrl.load()

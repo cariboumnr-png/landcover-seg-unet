@@ -47,7 +47,6 @@ PartitionCtrl = artifacts.Controller[common.BlocksPartition]
 ImageStatsCtrl = artifacts.Controller[dict[str, common.ImageBandStats]]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
 SchemaCtrl = artifacts.Controller[common.PreparedSchema]
-load = artifacts.Controller.load_json_or_fail
 
 
 # ----- private types
@@ -107,6 +106,7 @@ def build_schema(
         }
 
         # checksum the artifacts
+        load = artifacts.Controller.load_json_or_fail
         checksums = {
             'block_source': load(paths.splits_source_blocks).sha256,
             'block_transform': load(paths.splits_transformed_blocks).sha256,

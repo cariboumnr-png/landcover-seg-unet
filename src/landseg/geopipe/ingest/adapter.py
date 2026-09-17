@@ -39,7 +39,7 @@ import landseg.geopipe.harmonize as harmonize
 
 
 # ----- typing aliases
-ReportController = artifacts.Controller[harmonize.HarmonizationReportSchema]
+ReportCtrl = artifacts.Controller[harmonize.HarmonizationReportSchema]
 
 
 # ----- public dataclasses
@@ -85,7 +85,7 @@ def read_harmonization_report(
 
     # read report into a typed dict
     report_path = harmonization_paths.report
-    report = ReportController.load_json_or_fail(report_path).fetch()
+    report = ReportCtrl.load_json_or_fail(report_path).fetch()
 
     finals = report['finalized_rasters']
     assert finals

@@ -47,9 +47,7 @@ import landseg.geopipe.core as geo_core
 
 # ----- typing aliases
 field = dataclasses.field
-CatalogDictCtrl = (
-    artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]]
-)
+CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
 
 
 # ----- private types
@@ -73,15 +71,9 @@ class DataBlocksView:
     external_test_blocks: list[str] | None
     crs: str
     transform: rasterio.transform.Affine
-    raw_class_counts: dict[
-        tuple[int, int], dict[str, list[int]]
-    ] = field(default_factory=dict)
-    valid_class_counts: dict[tuple[int, int], list[int]] = field(
-        default_factory=dict
-    )
-    base_class_counts: dict[tuple[int, int], list[int]] = field(
-        default_factory=dict
-    )
+    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]] = field(default_factory=dict)
+    valid_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
+    base_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
     focal_head: str = ''
 
 
