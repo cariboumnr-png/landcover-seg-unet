@@ -39,7 +39,6 @@ import os
 import rasterio
 import rasterio.transform
 # local imports
-import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_partition.split as split
 
@@ -67,7 +66,7 @@ class PartitionParameters:
 @dataclasses.dataclass(frozen=True)
 class PartitionResults:
     '''Container for partitioned splits and hydration results.'''
-    partition_fpaths: geo_core.BlocksPartition
+    partition_fpaths: common.BlocksPartition
     raw_splits: split.SplitsResult
     hydration: split.HydrationResults
 
@@ -289,7 +288,7 @@ def _finalize_partition(
     additional_train: list[tuple[int, int]],
     *,
     ext_test_blks: list[str] | None,
-) -> geo_core.BlocksPartition:
+) -> common.BlocksPartition:
     '''Finalize the partition process with leakage sanity checks.'''
     def _index_fpath(fpaths: list[str]) -> dict[str, str]:
         '''Index block file paths by block name without extension.'''

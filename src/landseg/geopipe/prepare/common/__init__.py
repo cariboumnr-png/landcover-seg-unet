@@ -22,7 +22,8 @@
 '''
 Top-level namespace for `landseg.geopipe.prepare.common`.
 
-Exposes reporting schemas and specialized logger via lazy resolution.
+Exposes reporting schemas, artifact schemas, and specialized logger via
+lazy resolution.
 
 Public APIs:
     - DataPartitionReport: report for dataset splitting and hydration.
@@ -30,6 +31,12 @@ Public APIs:
     - SchemaReport: report for dataset schema generation.
     - PreparationReportSchema: root summary schema for prepare pipeline.
     - PreparationLogger: logger collecting preparation execution reports.
+    - BlocksPartition: TypedDict mapping block IDs across splits.
+    - ImageBandStats: TypedDict for image band statistics.
+    - TargetHeadsSchema: TypedDict for target heads hierarchy.
+    - PreparedSchema: TypedDict for dataset preparation schema.
+    - PartitionSummary: TypedDict for split and hydration summary.
+    - PREPARED_SCHEMA_ID: constant string for prepared schema ID.
 '''
 
 # standard imports
@@ -38,23 +45,39 @@ import importlib
 import typing
 
 __all__ = [
+    # reports
     'DataPartitionReport',
     'NormalizationReport',
     'SchemaReport',
     'PreparationReportSchema',
     'PreparationLogger',
+    # artifacts
+    'BlocksPartition',
+    'ImageBandStats',
+    'TargetHeadsSchema',
+    'PreparedSchema',
+    'PartitionSummary',
+    'PREPARED_SCHEMA_ID',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .artifacts import (
+        BlocksPartition,
+        ImageBandStats,
+        TargetHeadsSchema,
+        PreparedSchema,
+        PartitionSummary,
+        PREPARED_SCHEMA_ID,
+    )
+    from .logger import PreparationLogger
     from .schema import (
         DataPartitionReport,
         NormalizationReport,
         SchemaReport,
         PreparationReportSchema,
     )
-    from .logger import PreparationLogger
 
 
 def __getattr__(name: str):
@@ -68,5 +91,15 @@ def __getattr__(name: str):
 
     if name in {'PreparationLogger'}:
         return getattr(importlib.import_module('.logger', __package__), name)
+
+    if name in {
+        'BlocksPartition',
+        'ImageBandStats',
+        'TargetHeadsSchema',
+        'PreparedSchema',
+        'PartitionSummary',
+        'PREPARED_SCHEMA_ID',
+    }:
+        return getattr(importlib.import_module('.artifacts', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

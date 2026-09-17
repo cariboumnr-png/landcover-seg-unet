@@ -37,6 +37,7 @@ import typing
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.common.alias as alias
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.utils as utils
@@ -45,7 +46,7 @@ import landseg.utils as utils
 # ----- public functions
 def materialize_blocks(
     input_blocks: set[str],
-    stats: dict[str, geo_core.ImageBandStats],
+    stats: dict[str, common.ImageBandStats],
     context: data_context.DatasetContext,
     output_dir: str,
     *,
@@ -132,7 +133,7 @@ def _purge(
 
 def _materialize_one_block(
     block_fpath: str,
-    img_stats: dict[str, geo_core.ImageBandStats],
+    img_stats: dict[str, common.ImageBandStats],
     target_dpath: str,
     context: data_context.DatasetContext,
 ):
@@ -167,7 +168,7 @@ def _materialize_one_block(
 def _normalize_image(
     raw_image_arr: alias.Float32Array,
     valid_mask: alias.MaskArray,
-    global_stats: dict[str, geo_core.ImageBandStats],
+    global_stats: dict[str, common.ImageBandStats],
 ) -> alias.Float32Array:
     '''Apply per-band normalization using global stats.'''
     # assertion

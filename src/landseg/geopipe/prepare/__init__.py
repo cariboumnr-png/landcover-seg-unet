@@ -23,13 +23,14 @@
 Top-level namespace for `landseg.geopipe.prepare`.
 
 Exposes public dataset context builders, partitioners, materializers,
-and schema generators via lazy resolution.
+preparation schema, and schema generators via lazy resolution.
 
 Public APIs:
     - DataBlocksView: in-memory manifest view for catalog blocks.
     - DatasetContext: unified immutable dataset preparation context.
     - PartitionParameters: configuration for data block partitioning.
     - PreparationLogger: specialized logger for preparation runs.
+    - PreparedSchema: TypedDict for dataset preparation schema.
     - build_dataset_context: construct full dataset preparation context.
     - build_schema: generate dataset preparation schema JSON.
     - run_datablocks_partition: partition data blocks into train/val/test.
@@ -53,12 +54,13 @@ __all__ = [
     'run_datablocks_partition',
     'run_materialize_blocks',
     # types
+    'PreparedSchema',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import PreparationLogger
+    from .common import PreparationLogger, PreparedSchema
     from .data_context import (
         DataBlocksView,
         DatasetContext,
@@ -80,7 +82,7 @@ def __getattr__(name: str):
             importlib.import_module('.data_context', __package__), name
         )
 
-    if name in {'PreparationLogger'}:
+    if name in {'PreparationLogger', 'PreparedSchema'}:
         return getattr(importlib.import_module('.common', __package__), name)
 
     if name in {'PartitionParameters', 'run_datablocks_partition'}:

@@ -33,6 +33,7 @@ Public APIs:
     - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
     - `PreparedSchema`: TypedDict for dataset preparation schema.
     - `PartitionSummary`: TypedDict for split and hydration summary.
+    - `PREPARED_SCHEMA_ID`: constant string for prepared schema ID.
 '''
 
 # standard imports

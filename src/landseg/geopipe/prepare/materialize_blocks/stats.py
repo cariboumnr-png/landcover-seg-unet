@@ -33,10 +33,9 @@ Public APIs:
 
 # standard imports
 import math
-# third-party imports
-import numpy
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.prepare.common as common
 import landseg.geopipe.utils as geo_utils
 
 
@@ -73,19 +72,19 @@ def count_label(
         if c not in parsed_id:
             continue
         for head, cls_counts in blk_counts.items():
-            cls_count = numpy.asarray(cls_counts)
             if head in lbl_stats:
-                lbl_stats[head] += cls_count
+                lbl_stats[head] = [
+                    a + b for a, b in zip(lbl_stats[head], cls_counts)
+                ]
             else:
-                lbl_stats[head] = list(cls_count)
-            lbl_stats[head] = [int(x) for x in lbl_stats[head]]
+                lbl_stats[head] = [int(x) for x in cls_counts]
     return lbl_stats
 
 
 def aggregate_image_stats(
     input_blocks: set[str],
     channel_indices: list[int] | None = None,
-) -> dict[str, geo_core.ImageBandStats]:
+) -> dict[str, common.ImageBandStats]:
     '''
     Aggregate per-band image statistics across the input blocks.
 
@@ -114,7 +113,7 @@ def aggregate_image_stats(
     )
 
     # define a return dict
-    stats_dict: dict[str, geo_core.ImageBandStats] = {
+    stats_dict: dict[str, common.ImageBandStats] = {
         f'band_{_}': {
             'total_count': 0,
             'current_mean': 0.0,
@@ -154,8 +153,8 @@ def aggregate_image_stats(
 # ----- private helpers
 def _welfords_online(
     input_stats: dict[str, int | float],
-    current_results: geo_core.ImageBandStats
-) -> geo_core.ImageBandStats:
+    current_results: common.ImageBandStats
+) -> common.ImageBandStats:
     '''Combine per-block stats using Welford's online algorithm.'''
     # block stats from stats dict
     # NOTE: see key and value type conventions at geopipe.core.block

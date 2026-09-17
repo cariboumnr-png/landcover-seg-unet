@@ -38,7 +38,6 @@ import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.materialize_blocks.materialize as materialize
@@ -46,9 +45,9 @@ import landseg.geopipe.prepare.materialize_blocks.stats as stats
 
 
 # ----- typing aliases
-PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
+PartitionCtrl = artifacts.Controller[common.BlocksPartition]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+ImageStatsCtrl = artifacts.Controller[dict[str, common.ImageBandStats]]
 
 
 # ----- private types
@@ -164,7 +163,7 @@ def run_materialize_blocks(
 # ----- private helpers
 def _materialize(
     splits: tuple[set[str], set[str], set[str]],
-    aggregated_stats: dict[str, geo_core.ImageBandStats],
+    aggregated_stats: dict[str, common.ImageBandStats],
     context: data_context.DatasetContext,
     paths: _PipelinePaths,
     *,

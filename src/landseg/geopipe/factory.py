@@ -40,8 +40,16 @@ import torch
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
+
+# ----- typing aliases
+D = dict[str, geo_core.DomainTile]
+M = geo_core.DomainMeta
+DomainController = artifacts.PayloadController[D, M]
+DataSchemaController = artifacts.Controller[geo_core.DataSchema]
+PreparedSchemaController = artifacts.Controller[prepare.PreparedSchema]
 
 
 # ----- public functions
@@ -90,13 +98,11 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_ctrl = artifacts.Controller[geo_core.DataSchema].load_json_or_fail
+    data_ctrl = DataSchemaController.load_json_or_fail
     data_schema = data_ctrl(data_schema_fpath).fetch()
 
     # prepared schema
-    prepared_ctrl = (
-        artifacts.Controller[geo_core.PreparedSchema].load_json_or_fail
-    )
+    prepared_ctrl = PreparedSchemaController.load_json_or_fail
     prepared_schema = prepared_ctrl(prepared_schema_fpath).fetch()
 
     # return specs
@@ -117,11 +123,7 @@ def build_dataspec(
 # ----- private helpers
 def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
     '''Load a DomainTileMap from the specified JSON path.'''
-    # load payload and meta json
-    D = dict[str, geo_core.DomainTile]
-    M = geo_core.DomainMeta
-    DomainCtrl = artifacts.PayloadController[D, M]
-    ctrl = DomainCtrl(
+    ctrl = DomainController(
         fp,
         schema_id=geo_core.DomainTileMap.SCHEMA_ID,
         policy=artifacts.LifecyclePolicy.LOAD_OR_FAIL
@@ -133,7 +135,7 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
 
 def _get_meta(
     data_schema: geo_core.DataSchema,
-    prepared_schema: geo_core.PreparedSchema,
+    prepared_schema: prepare.PreparedSchema,
 ) -> core.Meta:
     '''Populate core.Meta dataclass from schema dictionaries.'''
     dtypes = data_schema['io_conventions']['dtypes']
@@ -188,7 +190,7 @@ def __calc_test_grid(
 
 def _get_heads(
     data_schema: geo_core.DataSchema,
-    prepared_schema: geo_core.PreparedSchema,
+    prepared_schema: prepare.PreparedSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:
     '''Populate core.Heads dataclass from schema dictionary.'''
@@ -242,7 +244,7 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(prepared_schema: geo_core.PreparedSchema) -> core.Splits:
+def _get_split(prepared_schema: prepare.PreparedSchema) -> core.Splits:
     '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
         train=prepared_schema['train_blocks'],
@@ -252,7 +254,7 @@ def _get_split(prepared_schema: geo_core.PreparedSchema) -> core.Splits:
 
 
 def _get_domain(
-    prepared_schema: geo_core.PreparedSchema,
+    prepared_schema: prepare.PreparedSchema,
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:

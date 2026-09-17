@@ -36,19 +36,15 @@ Public APIs:
     - `DataBlockManifest`: TypedDict for block serialization manifest.
     - `DataCatalog`: TypedDict for dataset-wide catalog indexing.
     - `DataSchema`: TypedDict for channel/band and label taxonomy.
-    - `BlocksPartition`: TypedDict mapping block IDs across splits.
     - `CatalogEntry`: TypedDict for an individual block entry.
     - `DomainMeta`: TypedDict for domain tile map metadata.
     - `DomainPayload`: TypedDict for serialized domain tile map.
     - `DomainTile`: TypedDict for individual domain tile coordinates.
     - `GridPayload`: TypedDict for serialized grid payload.
     - `GridMeta`: TypedDict for grid metadata.
-    - `ImageBandStats`: TypedDict for image band statistics.
     - `LabelScheme`: TypedDict for named reclassification scheme.
     - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
     - `TaxonomySpecs`: TypedDict for domain taxonomy specification.
-    - `TransformSchema`: TypedDict for dataset-wide transform schema.
-    - `PartitionSummary`: TypedDict for split and hydration summary.
 '''
 
 from __future__ import annotations
@@ -69,20 +65,15 @@ __all__ = [
     'DataBlockManifest',
     'DataCatalog',
     'DataSchema',
-    'BlocksPartition',
     'CatalogEntry',
     'DomainMeta',
     'DomainPayload',
     'DomainTile',
     'GridPayload',
     'GridMeta',
-    'ImageBandStats',
     'LabelScheme',
     'LabelSchemes',
     'TaxonomySpecs',
-    'PreparedSchema',
-    'TargetHeadsSchema',
-    'PartitionSummary',
 ]
 
 # for static check
@@ -112,13 +103,6 @@ if typing.TYPE_CHECKING:
         GridPayload,
         GridMeta,
         GridLayout
-    )
-    from .prepared_dateset_types import (
-        BlocksPartition,
-        ImageBandStats,
-        PreparedSchema,
-        TargetHeadsSchema,
-        PartitionSummary
     )
 
 
@@ -168,16 +152,6 @@ def __getattr__(name: str):
         'DomainTileMap'
     }:
         obj = importlib.import_module('.domain_tilemap', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'BlocksPartition',
-        'ImageBandStats',
-        'PreparedSchema',
-        'TargetHeadsSchema',
-        'PartitionSummary'
-    }:
-        obj = importlib.import_module('.prepared_dateset_types', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

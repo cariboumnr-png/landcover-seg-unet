@@ -39,15 +39,14 @@ import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.data_partition.split as split
 
 
 # ----- typing aliases
-PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
-SplitsSummaryCtrl = artifacts.Controller[geo_core.PartitionSummary]
+PartitionCtrl = artifacts.Controller[common.BlocksPartition]
+SplitsSummaryCtrl = artifacts.Controller[common.PartitionSummary]
 
 
 # ----- private types
@@ -145,7 +144,7 @@ def _build_splits_summary(
     partition_results: split.PartitionResults,
     *,
     focal_head: str,
-) -> geo_core.PartitionSummary:
+) -> common.PartitionSummary:
     '''Summarize class count and distribution changes across splits.'''
     splits = partition_results.raw_splits
     start_count = list(splits.global_class_count)

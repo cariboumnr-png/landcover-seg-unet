@@ -38,17 +38,15 @@ import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
-import landseg.geopipe.core as geo_core
-import landseg.geopipe.core.prepared_dateset_types as geo_types
 import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.common as common
 
 
 # ----- typing aliases
-PartitionCtrl = artifacts.Controller[geo_core.BlocksPartition]
-ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+PartitionCtrl = artifacts.Controller[common.BlocksPartition]
+ImageStatsCtrl = artifacts.Controller[dict[str, common.ImageBandStats]]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[geo_core.PreparedSchema]
+SchemaCtrl = artifacts.Controller[common.PreparedSchema]
 load = artifacts.Controller.load_json_or_fail
 
 
@@ -129,7 +127,7 @@ def build_schema(
         image_stats = ctrl.fetch()
 
         # target heads reclass hierarchy
-        heads_schema: geo_core.TargetHeadsSchema = {
+        heads_schema: common.TargetHeadsSchema = {
             'head_names': list(context.targets.head_names),
             'head_parent': dict(context.targets.head_parent),
             'head_parent_cls': dict(context.targets.head_parent_cls),
@@ -144,7 +142,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_version': geo_types.PREPARED_SCHEMA_ID,
+            'schema_version': common.PREPARED_SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,
