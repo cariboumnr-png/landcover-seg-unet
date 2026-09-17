@@ -37,6 +37,18 @@ import typing
 
 
 # ----- public types
+class HarmonizationReportSchema(typing.TypedDict):
+    '''Root report mapping the entire data harmonization pipeline run.'''
+    run_id: str
+    timestamp: str
+    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    provenance: dict[str, ProvenanceRecord]
+    harmonized_sources: dict[str, str]
+    finalized_rasters: dict[str, str]
+    valid_mask_raster: str
+    world_grid: WorldGridReport | None
+
+    
 class ProvenanceRecord(typing.TypedDict):
     '''Provenance record for a raw source raster file.'''
     path: str
@@ -52,15 +64,3 @@ class WorldGridReport(typing.TypedDict):
     pixel_size: tuple[float, float]
     tile_size: tuple[int, int]
     tile_overlap: tuple[int, int]
-
-
-class HarmonizationReportSchema(typing.TypedDict):
-    '''Root report mapping the entire data harmonization pipeline run.'''
-    run_id: str
-    timestamp: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
-    provenance: dict[str, ProvenanceRecord]
-    harmonized_sources: dict[str, str]
-    finalized_rasters: dict[str, str]
-    valid_mask_raster: str
-    world_grid: WorldGridReport | None

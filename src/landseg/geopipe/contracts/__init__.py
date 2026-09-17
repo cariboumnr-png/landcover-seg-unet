@@ -21,47 +21,4 @@
 
 '''
 Top-level namespace for `landseg.geopipe.harmonize.common`.
-
-Exposes common logging and reporting utilities for data harmonization.
-
-Public APIs:
-    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
-    - `WorldGridReport`: TypedDict for world grid summary report.
-    - `HarmonizationReportSchema`: TypedDict for overall pipeline report.
-    - `HarmonizationLogger`: Logger tracking ETL progress and report JSON.
 '''
-
-# standard imports
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    'ProvenanceRecord',
-    'WorldGridReport',
-    'HarmonizationReportSchema',
-    'HarmonizationLogger',
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .schema import (
-        ProvenanceRecord,
-        WorldGridReport,
-        HarmonizationReportSchema,
-    )
-    from .logger import HarmonizationLogger
-
-
-def __getattr__(name: str):
-    if name in {
-        'ProvenanceRecord',
-        'WorldGridReport',
-        'HarmonizationReportSchema',
-    }:
-        return getattr(importlib.import_module('.schema', __package__), name)
-
-    if name in {'HarmonizationLogger'}:
-        return getattr(importlib.import_module('.logger', __package__), name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

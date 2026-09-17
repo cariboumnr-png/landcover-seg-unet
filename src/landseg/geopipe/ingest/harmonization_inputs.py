@@ -35,11 +35,11 @@ Public APIs:
 import dataclasses
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.harmonize as harmonize
+import landseg.geopipe.contracts.harmonization as contracts
 
 
 # ----- typing aliases
-ReportCtrl = artifacts.Controller[harmonize.HarmonizationReportSchema]
+ReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
 
 
 # ----- public dataclasses

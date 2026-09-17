@@ -32,7 +32,7 @@ import typing
 # local imports
 import landseg.artifacts.paths as paths
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.harmonize.common as common
+import landseg.geopipe.harmonize as harmonize
 import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.rasters as rasters
 
@@ -62,7 +62,7 @@ def data_harmonization_pipeline(
     config: _HarmonizationPipelineConfig,
     world_grid: geo_core.GridLayout,
     *,
-    logger: common.HarmonizationLogger
+    logger: harmonize.HarmonizationLogger
 ) -> None:
     '''Run data harmonization pipeline.'''
     compiled = manifest.compile_dataset_manifest(config.dataset_manifest)

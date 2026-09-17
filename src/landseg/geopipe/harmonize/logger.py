@@ -38,10 +38,8 @@ import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.harmonization as contracts
 import landseg.utils as utils
-
-if typing.TYPE_CHECKING:
-    from .schema import HarmonizationReportSchema, WorldGridReport
 
 
 # ----- public classes
@@ -54,7 +52,7 @@ class HarmonizationLogger(utils.Logger):
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
         '''Initialize the HarmonizationLogger instance.'''
         super().__init__(*args, **kwargs)
-        self.summary: HarmonizationReportSchema | None = None
+        self.summary: contracts.HarmonizationReportSchema | None = None
 
     def init_summary(
         self,
@@ -79,11 +77,12 @@ class HarmonizationLogger(utils.Logger):
         '''Record source file size and modification timestamp provenance.'''
         if self.summary is not None and os.path.exists(source_path):
             stat = os.stat(source_path)
-            self.summary['provenance'][name] = {
+            provenance: contracts.ProvenanceRecord = {
                 'path': os.path.abspath(source_path),
                 'size_bytes': stat.st_size,
                 'mtime': stat.st_mtime
             }
+            self.summary['provenance'][name] = provenance
 
     def add_harmonized_source(self, name: str, path: str) -> None:
         '''Record a harmonized raster layer output path.'''
@@ -100,7 +99,7 @@ class HarmonizationLogger(utils.Logger):
         if self.summary is not None:
             self.summary['valid_mask_raster'] = os.path.abspath(path)
 
-    def set_world_grid_report(self, report: WorldGridReport) -> None:
+    def set_world_grid_report(self, report: contracts.WorldGridReport) -> None:
         '''Record world grid preparation report.'''
         if self.summary is not None:
             self.summary['world_grid'] = report

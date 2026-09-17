@@ -43,18 +43,11 @@ __all__ = [
     # functions
     'data_harmonization_pipeline',
     # typing
-    'HarmonizationReportSchema',
-    'WorldGridReport',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import (
-        HarmonizationLogger,
-        HarmonizationReportSchema,
-        WorldGridReport,
-    )
-
+    from .logger import HarmonizationLogger
     from .pipeline import data_harmonization_pipeline
 
 

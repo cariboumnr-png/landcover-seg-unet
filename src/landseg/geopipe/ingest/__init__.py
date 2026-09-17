@@ -56,7 +56,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .adapter import HarmonizedRasters, read_harmonization_report
+    from .harmonization_inputs import HarmonizedRasters, read_harmonization_report
     from .common import IngestionLogger
     from .data_blocks import BlockBuildingParameters, run_blocks_building
     from .domain_maps import DomainBuildingParameters, prepare_domain_maps
@@ -65,7 +65,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {'HarmonizedRasters', 'read_harmonization_report'}:
         return getattr(
-            importlib.import_module('.adapter', __package__), name
+            importlib.import_module('.harmonization_inputs', __package__), name
         )
 
     if name in {'IngestionLogger'}:
