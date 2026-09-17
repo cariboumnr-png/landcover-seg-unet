@@ -19,17 +19,16 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for DataBlock, DataBlockInputs, and DataBlockConfig.'''
+'''Unit tests for DataBlockInputs, DataBlockConfig, and build_data_block.'''
 
 # standard imports
 import dataclasses
-import os
-import tempfile
 # third-party imports
 import numpy
 import pytest
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.data_blocks.assembler as assembler
 
 
 # ----- aliases
@@ -49,8 +48,8 @@ BASE_LABELSPECS: dict[str, geo_core.CategoricalSpecs] = {
 }
 
 
-# ----- `DataBlock`
-def test_datablock_build_image_only_no_added_features():
+# ----- `build_data_block` tests
+def test_build_data_block_image_only_no_added_features():
     '''
     Given: An image-only input block.
     When: Building a DataBlock without any added features.
@@ -58,14 +57,14 @@ def test_datablock_build_image_only_no_added_features():
     '''
     cfg = _make_config()
     inputs = _make_inputs()
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert block.data.image is not None
     assert block.data.valid_mask is not None
     assert block.manifest['has_label'] is False
 
 
-def test_datablock_build_image_only_add_spectral():
+def test_build_data_block_image_only_add_spectral():
     '''
     Given: An image-only input block.
     When: Building a DataBlock requesting ndvi spectral index.
@@ -73,12 +72,12 @@ def test_datablock_build_image_only_add_spectral():
     '''
     cfg = _make_config(add_spectral=['ndvi'])
     inputs = _make_inputs()
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert block.data.image.shape[0] == 8
 
 
-def test_datablock_build_image_only_add_topo():
+def test_build_data_block_image_only_add_topo():
     '''
     Given: An image input block with padded DEM elevation data.
     When: Building a DataBlock requesting topographic indices.
@@ -89,12 +88,12 @@ def test_datablock_build_image_only_add_topo():
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         image_padded_dem=numpy.ones((272, 272), dtype=numpy.float32),
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert block.data.image.shape[0] == 11
 
 
-def test_datablock_build_with_label_no_added_features():
+def test_build_data_block_with_label_no_added_features():
     '''
     Given: Input block containing both image and label arrays.
     When: Building a DataBlock.
@@ -106,13 +105,13 @@ def test_datablock_build_with_label_no_added_features():
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         label_array=BASE_LABEL_ARRAY,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert block.manifest['has_label'] is True
     assert block.data.label is not None
 
 
-def test_datablock_build_full():
+def test_build_data_block_full():
     '''
     Given: Input block with padded DEM, label, and spectral config.
     When: Building a DataBlock.
@@ -121,14 +120,14 @@ def test_datablock_build_full():
     cfg = _make_config(
         add_topo=['slope', 'aspect', 'tpi'],
         add_spectral=['ndvi'],
-        label_specs=BASE_LABELSPECS
+        label_specs=BASE_LABELSPECS,
     )
     inputs = _make_inputs(
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         image_padded_dem=numpy.ones((272, 272), dtype=numpy.float32),
         label_array=BASE_LABEL_ARRAY,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert block.data.image is not None
     assert block.data.valid_mask is not None
@@ -138,7 +137,7 @@ def test_datablock_build_full():
 
 
 @pytest.mark.parametrize('invalid', [-999.9, numpy.nan])
-def test_datablock_image_stats_handles_invalids(invalid):
+def test_build_data_block_image_stats_handles_invalids(invalid):
     '''
     Given: An image containing invalid values.
     When: Building a DataBlock.
@@ -151,7 +150,7 @@ def test_datablock_image_stats_handles_invalids(invalid):
     img.flat[invalid_idx] = invalid
     inputs = _make_inputs(image_array=img)
 
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     stats = block.manifest['image_stats']
     assert len(stats) == 7
@@ -170,7 +169,7 @@ def test_datablock_image_stats_handles_invalids(invalid):
     assert total_count == img.size - 999
 
 
-def test_datablock_label_canonicalize_base_layer():
+def test_build_data_block_label_canonicalize_base_layer():
     '''
     Given: Label inputs without reclassification mappings.
     When: Building a DataBlock.
@@ -180,7 +179,7 @@ def test_datablock_label_canonicalize_base_layer():
     inputs = _make_inputs(
         label_array=BASE_LABEL_ARRAY,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert len(block.data.label) == 1
     assert block.manifest['label_num_cls'] == {'base': 4}
@@ -190,7 +189,7 @@ def test_datablock_label_canonicalize_base_layer():
     }
 
 
-def test_datablock_label_canonicalize_zero_based_index():
+def test_build_data_block_label_canonicalize_zero_based_index():
     '''
     Given: 0-based label array (0, 1, 2, 3) and index_base=0 specs.
     When: Building a DataBlock.
@@ -203,7 +202,7 @@ def test_datablock_label_canonicalize_zero_based_index():
     zero_based_specs: dict[str, geo_core.CategoricalSpecs] = {
         'base': {
             'num_cls': 4,
-            'ignore_cls': [3], # class 3 is ignore
+            'ignore_cls': [3],
             'index_base': 0,
             'class_name': {'0': 'WAT', '1': 'FOR', '2': 'WET', '3': 'UCL'},
         }
@@ -212,9 +211,8 @@ def test_datablock_label_canonicalize_zero_based_index():
     inputs = _make_inputs(
         label_array=zero_based_array,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
-    # stack has shifted array (0 -> 1, 1 -> 2, 2 -> 3, ignore 3 -> 255)
     stack_base = block.data.label[0]
     assert set(numpy.unique(stack_base)) == {1, 2, 3, 255}
     assert block.manifest['label_num_cls'] == {'base': 4}
@@ -222,12 +220,10 @@ def test_datablock_label_canonicalize_zero_based_index():
     assert block.manifest['label_cls_names'] == {
         'base': ['WAT', 'FOR', 'WET', 'UCL']
     }
-    # label counts for classes 1, 2, 3 (each has 16384 pixels)
     assert block.manifest['label_count']['base'] == [16384, 16384, 16384, 0]
 
 
-
-def test_datablock_label_stats_valid_ratio():
+def test_build_data_block_label_stats_valid_ratio():
     '''
     Given: A label array with ignore categories.
     When: Building a DataBlock.
@@ -237,13 +233,13 @@ def test_datablock_label_stats_valid_ratio():
     inputs = _make_inputs(
         label_array=BASE_LABEL_ARRAY,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     valid = float(numpy.mean(BASE_LABEL_ARRAY != 4))
     assert block.manifest['valid_ratios'].get('base') == pytest.approx(valid)
 
 
-def test_datablock_label_stats_class_count_entropy():
+def test_build_data_block_label_stats_class_count_entropy():
     '''
     Given: A label array.
     When: Building a DataBlock.
@@ -253,7 +249,7 @@ def test_datablock_label_stats_class_count_entropy():
     inputs = _make_inputs(
         label_array=BASE_LABEL_ARRAY,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
 
     assert block.manifest['label_count'] == {
         'base': [16384, 16384, 16384, 0]
@@ -263,28 +259,7 @@ def test_datablock_label_stats_class_count_entropy():
     }
 
 
-def test_datablock_save_and_load():
-    '''
-    Given: A built DataBlock.
-    When: Saved and loaded back from disk as an npz payload.
-    Then: The original arrays and metadata are perfectly preserved.
-    '''
-    cfg = _make_config()
-    inputs = _make_inputs()
-    block = geo_core.DataBlock.build(inputs, cfg)
-    data = block.data
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fpath = os.path.join(tmpdir, 'test_block.npz')
-        block.save(fpath)
-
-        loaded = geo_core.DataBlock.load(fpath)
-        numpy.testing.assert_array_equal(data.image, loaded.data.image)
-        numpy.testing.assert_array_equal(data.valid_mask, loaded.data.valid_mask)
-        assert block.manifest['block_name'] == loaded.manifest['block_name']
-
-
-# ----- `DataBlockInputs`
+# ----- `DataBlockInputs` tests
 def test_inputs_post_init_invalid_image_shape():
     '''
     Given: An image array of wrong dimensionality.
@@ -301,10 +276,10 @@ def test_inputs_post_init_label_specs_missing():
     When: Building a DataBlock with labels but no config specs.
     Then: Raise a ValueError.
     '''
-    cfg = _make_config() # no label_specs
+    cfg = _make_config()
     inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     with pytest.raises(ValueError, match='"label_specs" not provided'):
-        geo_core.DataBlock.build(inputs, cfg)
+        assembler.build_data_block(inputs, cfg)
 
 
 def test_inputs_post_init_invalid_label_shape():
@@ -314,9 +289,7 @@ def test_inputs_post_init_invalid_label_shape():
     Then: Raise a ValueError.
     '''
     with pytest.raises(ValueError, match='Label array is not of shape'):
-        _make_inputs(
-            label_array=numpy.ones((256, 256)),
-        )
+        _make_inputs(label_array=numpy.ones((256, 256)))
 
 
 def test_inputs_post_init_shape_mismatch():
@@ -343,8 +316,7 @@ def test_inputs_property_pad_dem_raise_when_not_provided():
         _ = inputs.pad_dem
 
 
-
-# ----- `DataBlockConfig`
+# ----- `DataBlockConfig` tests
 def test_config_post_init_invalid_spectral_indices():
     '''
     Given: An invalid index name.
@@ -381,7 +353,7 @@ def test_config_post_init_missing_required_bands(indice, required):
 
 # ----- helpers
 def _make_inputs(**overrides):
-    base = geo_core.DataBlockInputs(
+    base = assembler.DataBlockInputs(
         block_name='test_block',
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         image_padded_dem=None,
@@ -391,7 +363,7 @@ def _make_inputs(**overrides):
 
 
 def _make_config(**overrides):
-    base = geo_core.DataBlockConfig(
+    base = assembler.DataBlockConfig(
         image_band_map={
             'red': 0,
             'green': 1,
@@ -399,7 +371,7 @@ def _make_config(**overrides):
             'nir': 3,
             'swir1': 4,
             'swir2': 5,
-            'dem': 6
+            'dem': 6,
         },
         image_nodata=numpy.nan,
         image_dem_pad_px=8,
@@ -407,7 +379,7 @@ def _make_config(**overrides):
         label_nodata=0,
         label_specs=None,
         add_spectral=None,
-        add_topo=None
+        add_topo=None,
     )
     return dataclasses.replace(base, **overrides)
 

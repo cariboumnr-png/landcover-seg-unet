@@ -20,16 +20,14 @@
 # =========================================================================== #
 
 '''
-DataBlock: compile per-block arrays and manifest for geospatial ML.
+Container and serialization interface for geospatial data blocks.
 
-Defines a lightweight container and builder for a single raster block
-window in geospatial machine learning pipelines, enriching arrays with
-derived features and structured manifests without performing raster I/O.
+Defines the core storage container and compressed `.npz` archive serialization
+contracts for windowed raster arrays and structured manifest metadata.
 
 Public APIs:
     - DataBlockManifest: typed dictionary defining block manifest metadata.
-    - DataBlockInputs: container for raw arrays to construct a DataBlock.
-    - DataBlockConfig: build-time configuration for feature engineering.
+    - DataBlockArrays: container for block-wise image and label arrays.
     - DataBlock: container for raster block arrays and manifest metadata.
 '''
 
@@ -37,15 +35,11 @@ Public APIs:
 from __future__ import annotations
 import dataclasses
 import json
-import math
 import typing
-# third party imports
+# third-party imports
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
-
-# aliases
-field = dataclasses.field
 
 
 # ----- public types
@@ -82,92 +76,24 @@ class DataBlockManifest(typing.TypedDict):
 
 # ----- public dataclasses
 @dataclasses.dataclass
-class DataBlockInputs:
-    '''Container for source materials needed to build a `DataBlock`.'''
-    block_name: str
-    image_array: numpy.ndarray
-    image_padded_dem: numpy.ndarray | None
-    label_array: numpy.ndarray | None
+class DataBlockArrays:
+    '''Container for block-wise image, label, and valid mask arrays.'''
+    image: numpy.ndarray
+    label: numpy.ndarray
+    valid_mask: numpy.ndarray
 
-    def __post_init__(self):
-        if self.image_array.ndim != 3:
+    def validate(self) -> None:
+        '''Validate presence and shape consistency of arrays.'''
+        if self.image.ndim != 3:
             raise ValueError('Image array is not of shape [C, H, W]')
-
-        if self.label_array is not None:
-            if self.label_array.ndim != 3:
-                raise ValueError('Label array is not of shape [C, H, W]')
-            if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
-                raise ValueError('Image and label arrays have different H / W')
-
-    @property
-    def has_label(self) -> bool:
-        '''Return `True` if label array is provided.'''
-        return self.label_array is not None
-
-    @property
-    def pad_dem(self) -> numpy.ndarray:
-        '''Return padded DEM array if provided.'''
-        if self.image_padded_dem is None:
-            raise ValueError('Cannot access padded DEM as it is not provided')
-        return self.image_padded_dem
-
-
-@dataclasses.dataclass(frozen=True)
-class DataBlockConfig:
-    '''Build-time config for feature engineering and data encoding.'''
-    image_nodata: float
-    image_band_map: dict[str, int]
-    image_dem_pad_px: int
-
-    label_nodata: int | None = None
-    label_specs: dict[str, geo_core.CategoricalSpecs] | None = None
-    label_ignore_index: int = 255
-
-    add_spectral: list[str] | None = None
-    add_topo: list[str] | None = None
-
-    def __post_init__(self):
-        band_map = [b.lower() for b in self.image_band_map]
-
-        if self.add_spectral:
-            spectral = [s.lower() for s in self.add_spectral]
-            invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
-            if invalid:
-                raise ValueError(f'Invalid spectral indices: {invalid}')
-
-            if 'red' not in band_map:
-                raise ValueError('Unable to add spectrals: red band missing')
-            if 'ndvi' in spectral and not 'nir' in band_map:
-                raise ValueError('NDVI calculation: NIR band missing')
-            if 'ndmi' in spectral and not 'swir1' in band_map:
-                raise ValueError('NDMI calculation: SWIR1 band missing')
-            if 'nbr' in spectral and not 'swir2' in band_map:
-                raise ValueError('NBR calculation: SWIR2 band missing')
-
-        if self.add_topo:
-            topo  = [t.lower() for t in self.add_topo]
-            invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
-            if invalid:
-                raise ValueError(f'Invalid topo features: {invalid}')
-
-            if 'dem' not in band_map:
-                raise ValueError('DEM band missing for topographical features')
-
-
-# ----- private dataclasses
-@dataclasses.dataclass
-class _BlockArrays:
-    '''Internal dataclass for block-wise image and label arrays.'''
-    label: numpy.ndarray = dataclasses.field(init=False)
-    image: numpy.ndarray = dataclasses.field(init=False)
-    valid_mask: numpy.ndarray = dataclasses.field(init=False)
-
-    def validate(self):
-        '''Validate if all attributes have been populated.'''
-        required = ('image', 'valid_mask')
-        for name in required:
-            if not hasattr(self, name):
-                raise ValueError(f'{name} has not been populated yet')
+        if self.valid_mask.ndim != 2:
+            raise ValueError('Valid mask array is not of shape [H, W]')
+        if self.image.shape[-2:] != self.valid_mask.shape:
+            raise ValueError(
+                'Image and valid mask arrays have mismatched H / W'
+            )
+        if self.label.ndim != 3 and self.label.shape != (1,):
+            raise ValueError('Label array is not of shape [C, H, W] or dummy')
 
 
 # ----- public classes
@@ -175,132 +101,35 @@ class DataBlock:
     '''
     Container for per-block raster data and its associated manifest.
 
-    A `DataBlock` encapsulates a single raster window along with its
-    associated manifest and derived features. It augments raw input
-    arrays with spectral indices, topographic metrics, label
-    hierarchies, and statistical summaries.
-
-    The class is designed to be I/O-agnostic during construction,
-    operating entirely on NumPy arrays provided by upstream processes.
-    It supports efficient serialization to and from compressed `.npz`
-    artifacts.
+    Encapsulates a single raster window along with its associated
+    manifest and serialized arrays. Supports loading from and persisting to
+    compressed `.npz` artifacts.
 
     Typical workflow:
-        - Use `build()` to construct a block from arrays and manifest
-        - Use `save()` to persist the block
-        - Use `load()` to restore a previously saved block
-
-    Notes:
-        The class implements a staged internal pipeline where image,
-        label, and block-level features are computed sequentially.
+        - Use `load()` to restore a previously saved block from disk
+        - Access `.data.image`, `.data.label`, and `.data.valid_mask`
+        - Access `.manifest` for block provenance and channel statistics
+        - Use `save()` to persist the block to disk
     '''
 
-    def __init__(self):
-        '''Initialize an empty DataBlock instance with defaults.'''
-        # init shared state/variables for construction
-        self.data = _BlockArrays()
-        self.padded_dem = numpy.array([1])
-        self.manifest: DataBlockManifest = {
-            # provenance
-            'block_name': '',
-            'has_label': False,
-            # dataset description
-            'image_band_map': {},
-            'image_nodata': numpy.nan,
-            'label_band_map': {},
-            'label_nodata': 0,
-            'label_ignore_index': 255,
-            'label_ignore_cls': {},
-            'label_num_cls': {},
-            'label_cls_names': {},
-            'label_cls_clr_map': {},
-            'label_taxonomy': {},
-            # derived stats
-            'valid_ratios': {},
-            'image_stats': {},
-            'label_count': {},
-            'label_entropy': {},
-        }
-        # labels speces
-        self.lbl_specs: dict[str, geo_core.CategoricalSpecs] = {}
-
-    # ----- alternative constructor
-    @classmethod
-    def build(
-        cls,
-        inputs: DataBlockInputs,
-        config: DataBlockConfig,
-    ) -> 'DataBlock':
-        '''
-        Construct a DataBlock from source arrays and build config.
-
-        Executes the feature engineering pipeline, including spectral
-        index computation, topographic metrics, label canonicalization,
-        valid mask generation, and per-band statistical summaries.
-
-        Args:
-            inputs:
-                source arrays and metadata required to build the block.
-            config:
-                build configuration controlling feature engineering.
-
-        Returns:
-            DataBlock:
-                a fully populated block instance.
-        '''
-        self = cls()
-
-        # update manifest dict
-        self.manifest.update({
-            'block_name': inputs.block_name,
-            'image_nodata': config.image_nodata,
-            'image_band_map': dict(config.image_band_map), # shallow copy
-        })
-
-        # image dtype conversion and processing
-        # float32 as remote sensing default
-        self.data.image = inputs.image_array.astype(numpy.float32)
-
-        if config.add_spectral:
-            self._image_add_spectral(
-                [item.lower() for item in config.add_spectral or []]
+    def __init__(
+        self,
+        data: DataBlockArrays | None = None,
+        manifest: DataBlockManifest | None = None,
+    ):
+        '''Initialize a DataBlock with arrays and manifest metadata.'''
+        if data is None:
+            self.data = DataBlockArrays(
+                image=numpy.array([], dtype=numpy.float32),
+                label=numpy.array([1]),
+                valid_mask=numpy.array([], dtype=bool),
             )
-
-        if config.add_topo:
-            self.padded_dem = inputs.pad_dem.astype(numpy.float32)
-            self._image_add_topography(
-                [item.lower() for item in config.add_topo or []],
-                config.image_dem_pad_px
-            )
-
-        self._image_get_valid_mask()
-        self._image_get_stats()
-
-        # if label array is provided:
-        if inputs.has_label:
-
-            if not config.label_specs:
-                raise ValueError('"label_specs" not provided')
-
-            self.manifest.update({
-                'label_nodata': config.label_nodata or -1,
-                'label_ignore_index': config.label_ignore_index,
-            })
-
-            # currently support labels range [0, 256)
-            assert inputs.label_array is not None
-            self.data.label = inputs.label_array.astype(numpy.uint8)
-            self.lbl_specs = dict(config.label_specs)
-            self._label_canonicalize()
-            self.manifest['has_label'] = True
-
         else:
-            self.data.label = numpy.array([1]) # dummy placeholders
-            self.manifest['has_label'] = False
+            self.data = data
 
-        # sanity check self.data and return self to allow chained calls
-        self.data.validate()
-        return self
+        self.manifest = (
+            manifest if manifest is not None else self.empty_manifest()
+        )
 
     @classmethod
     def load(cls, fpath: str) -> 'DataBlock':
@@ -319,20 +148,14 @@ class DataBlock:
                 populated block instance with restored arrays and
                 manifest.
         '''
-        self = cls()
-        # load npz file
         loaded = numpy.load(fpath)
-        # populate self.data
-        for key in loaded:
-            if key == 'manifest_json':
-                continue
-            try:
-                setattr(self.data, key, loaded[key])
-            except AttributeError:
-                continue
-
-        self.manifest = json.loads(loaded['manifest_json'].item())
-        return self # return self to allow chained calls
+        manifest = json.loads(loaded['manifest_json'].item())
+        arrays = DataBlockArrays(
+            image=loaded['image'],
+            label=loaded['label'],
+            valid_mask=loaded['valid_mask'],
+        )
+        return cls(data=arrays, manifest=manifest)
 
     def save(self, fpath: str) -> None:
         '''
@@ -345,313 +168,36 @@ class DataBlock:
             fpath:
                 output file path ending with .npz.
         '''
-        assert fpath.endswith('.npz') # sanity check
+        if not fpath.endswith('.npz'):
+            raise ValueError(f'Output path must end with .npz: {fpath}')
 
-        # convert self.data dataclass to dict
-        to_save = vars(self.data).copy()
-        # add meta dict (json dumps to compact plain text)
-        manifest = json.dumps(self.manifest, separators=(',', ':'))
-        to_save.update({'manifest_json': manifest})
-        # save file - allow pickle to write dict
-        numpy.savez_compressed(fpath, **to_save)
-
-    # ----- private method
-    def _image_add_spectral(self, indices: list[str]) -> None:
-        '''Add spectral indices if related bands are available.'''
-        band_idx = self.manifest['image_band_map']
-        nodata = self.manifest['image_nodata']
-
-        red = _Calc.mask(self.data.image[band_idx['red']], nodata)
-
-        # add spectral indices on demand
-        spectrals: list[numpy.ndarray] = []
-        next_idx = self.data.image.shape[0]
-        if 'ndvi' in indices:
-            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
-            spectrals.append(_Calc.ndvi(nir, red, nodata))
-            band_idx['ndvi'] = next_idx
-            next_idx += 1
-
-        if 'ndmi' in indices:
-            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
-            swir1 = _Calc.mask(self.data.image[band_idx['swir1']], nodata)
-            spectrals.append(_Calc.ndmi(nir, swir1, nodata))
-            band_idx['ndmi'] = next_idx
-            next_idx += 1
-
-        if 'nbr' in indices:
-            nir = _Calc.mask(self.data.image[band_idx['nir']], nodata)
-            swir2 = _Calc.mask(self.data.image[band_idx['swir2']], nodata)
-            spectrals.append(_Calc.nbr(nir, swir2, nodata))
-            band_idx['nbr'] = next_idx
-            next_idx += 1
-
-        # add to image array
-        if spectrals:
-            added = numpy.stack(spectrals).astype(numpy.float32)
-            self.data.image = numpy.append(self.data.image, added, axis=0)
-
-    def _image_add_topography(self, features: list[str], pad: int) -> None:
-        '''Add topographical metrics to the image array.'''
-        _arrs = {
-            'slope': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
-            'cos_a': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
-            'sin_a': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
-            'tpi': numpy.zeros_like(self.data.image[0], dtype=numpy.float32),
-
-        } # use first array as dim reference
-
-        band_idx = self.manifest['image_band_map']
-        nodata = self.manifest['image_nodata']
-
-        # sanity check on image/padded image shape
-        max_h, max_w = self.padded_dem.shape
-        if not self.data.image[0].shape == (max_h - 2 * pad, max_w - 2 * pad):
-            raise ValueError(
-                f'Mismatch in image dimensions: {self.data.image[0].shape} vs'
-                f'({max_h - 2 * pad}, {max_w - 2 * pad}), padding: {pad}'
-            )
-
-        # iterate through pixels from the original block in padded dem
-        topos: list[numpy.ndarray] =  []
-        next_idx = self.data.image.shape[0]
-        for y in range(pad, max_h - pad):
-            for x in range(pad, max_w - pad):
-
-                if 'slope' in features:
-                    # slope and aspect - pad neighbors, radius=1
-                    pxs = _Calc.get_px_group(self.padded_dem, x, y, 1)
-                    assert pxs.shape == (3, 3) # 3x3 window
-                    (
-                        _arrs['slope'][y - pad, x - pad],
-                        _arrs['cos_a'][y - pad, x - pad],
-                        _arrs['sin_a'][y - pad, x - pad]
-                    ) = _Calc.slope_n_aspect(pxs, nodata)
-
-                if 'tpi' in features:
-                    # tpi - radius=pad-1 (default pad=8, radius=7)
-                    pxs =  _Calc.get_px_group(self.padded_dem, x, y, pad - 1)
-                    assert pxs.shape == (2* pad - 1, 2* pad - 1) # 15x15 window
-                    _arrs['tpi'][y - pad, x - pad] = _Calc.tpi(pxs, nodata)
-
-        # add to image array
-        if 'slope' in features:
-            topos.extend([_arrs['slope'], _arrs['cos_a'], _arrs['sin_a']])
-            band_idx['slope'] = next_idx
-            band_idx['cos_a'] = next_idx + 1
-            band_idx['sin_a'] = next_idx + 2
-            next_idx += 3
-
-        if 'tpi' in features:
-            topos.append(_arrs['tpi'])
-            band_idx['tpi'] = next_idx
-            next_idx +=1
-
-        if topos:
-            added = numpy.stack(topos, axis=0)
-            self.data.image = numpy.append(self.data.image, added, axis=0)
-
-    def _image_get_valid_mask(self):
-        '''Get a valid mask for the whole block.'''
-        # for image data: True where all image bands are valid
-        nodata = self.manifest['image_nodata']
-        invalid_img = self._get_image_invalid_mask(self.data.image, nodata)
-        valid_img = ~numpy.any(invalid_img, axis=0)
-
-        self.manifest['valid_ratios'].update({
-            'image': float((numpy.sum(valid_img) / valid_img.size)),
-        })
-        self.data.valid_mask = valid_img
-
-    def _image_get_stats(self):
-        '''Per block stats for later aggregation using Welford's.'''
-        # image_nodata
-        nodata = self.manifest['image_nodata']
-        # iterate through image channels
-        for i, band in enumerate(self.data.image):
-            # get where pixel is invalid and inverse to get valid pixels
-            mask = self._get_image_invalid_mask(band, nodata)
-            valid = band[~mask]
-
-            num = valid.size
-            if num == 0:
-                mean = mean_sq = 0.0 # safe neutral values
-            else:
-                # nan-safe ops in case stray NaNs remain
-                mean = numpy.nanmean(valid)
-                diff = valid - mean
-                mean_sq = numpy.nansum(diff * diff)
-                # final guard against numerical weirdness
-                if not numpy.isfinite(mean):
-                    mean = 0.0
-                if not numpy.isfinite(mean_sq):
-                    mean_sq = 0.0
-
-            # give to self.image_stats
-            self.manifest['image_stats'][f'band_{i}'] = {
-                'count': int(num), 'mean': float(mean), 'm2': float(mean_sq)
-            }
-
-    def _label_canonicalize(self) -> None:
-        '''Normalize the label stack based on label specs.'''
-        stack: list[numpy.ndarray] = []
-        nodata = self.manifest['label_nodata']
-        ignore_index = self.manifest['label_ignore_index']
-
-        # iterate sorted bands sorted by index
-        for i, (name, spec) in enumerate(self.lbl_specs.items(), 1):
-            self.manifest['label_band_map'][name] = i - 1
-            arr = self.data.label[i - 1]
-
-            # append base layer from original Class IDs with masking)
-            self.manifest['label_ignore_cls'][name] = list(spec['ignore_cls'])
-            to_ignore = list(spec['ignore_cls']) + [nodata, ignore_index]
-            mask = ~numpy.isin(arr, to_ignore)
-            shifted_arr = arr + (1 - spec['index_base'])
-            normalized = numpy.where(mask, shifted_arr, ignore_index)
-
-            # calculate valid pixel ratios
-            valid = normalized != ignore_index
-            ratio = float(valid.sum() / (valid.size)) if valid.size > 0 else 0.0
-            self.manifest['valid_ratios'][name] = ratio
-
-            # count unique values for the current head (classes 1..N)
-            n_cls = spec['num_cls']
-            self.manifest['label_num_cls'][name] = n_cls
-            valids = normalized[valid].astype(numpy.int64)
-            counts = numpy.bincount(valids, minlength=n_cls + 1)[1:n_cls + 1]
-            self.manifest['label_count'][name] = [int(c) for c in counts]
-
-            # entropy
-            self.manifest['label_entropy'][name] = float(_Calc.entropy(counts))
-
-            # attach class names, color map and taxonomy if provided
-            if 'class_name' in spec and spec['class_name']:
-                self.manifest['label_cls_names'][name] = list(
-                    spec['class_name'].values()
-                )
-            if 'color_map' in spec and spec['color_map']:
-                self.manifest['label_cls_clr_map'][name] = spec['color_map']
-            if 'taxonomy' in spec and spec['taxonomy']:
-                self.manifest['label_taxonomy'][name] = spec['taxonomy']
-
-            stack.append(normalized)
-
-        self.data.label = numpy.stack(stack, axis=0)
+        manifest_str = json.dumps(self.manifest, separators=(',', ':'))
+        numpy.savez_compressed(
+            fpath,
+            image=self.data.image,
+            label=self.data.label,
+            valid_mask=self.data.valid_mask,
+            manifest_json=manifest_str,
+        )
 
     @staticmethod
-    def _get_image_invalid_mask(
-        image: numpy.ndarray,
-        nodata: float | None
-    ):
-        '''Return True where image values are invalid.'''
-        invalid = numpy.isnan(image)
-
-        if nodata is not None:
-            if not (isinstance(nodata, float) and numpy.isnan(nodata)):
-                invalid |= numpy.isclose(image, nodata)
-
-        return invalid
-
-
-# ----- private classes
-class _Calc:
-    '''Calculator namespace.'''
-
-    @staticmethod
-    def mask(band, nodata):
-        '''Returns a masked array where band == nodata.'''
-        band = band.astype(numpy.float64)
-        if nodata is None: # if nodata is None, no values are masked.
-            return numpy.ma.array(band, mask=False)
-        return numpy.ma.masked_where(numpy.isclose(band, nodata), band)
-
-    @staticmethod
-    def entropy(counts):
-        '''Returns Shannon entropy.'''
-        ent = 0.0
-        ss = sum(counts)
-        for c in counts:
-            if c > 0:
-                p = c / ss
-                ent -= p * math.log2(p)
-        return ent
-
-    @staticmethod
-    def ndvi(nir, red, nodata):
-        '''Returns Normalized Difference Vegetation Index.'''
-        out = (nir - red) / (nir + red)
-        return out.filled(nodata)
-
-    @staticmethod
-    def ndmi(nir, swir1, nodata):
-        '''Returns Normalized Difference Moisture Index.'''
-        out = (nir - swir1) / (nir + swir1)
-        return out.filled(nodata)
-
-    @staticmethod
-    def nbr(nir, swir2, nodata):
-        '''Returns Normalized Burn Ratio.'''
-        out = (nir - swir2) / (nir + swir2)
-        return out.filled(nodata)
-
-    # topographical metrics related
-    @staticmethod
-    def get_px_group(arr, x, y, rr):
-        '''Get neighbouring pixels as an array'''
-        return arr[slice(y - rr, y + rr + 1), slice(x - rr, x + rr + 1)]
-
-    @staticmethod
-    def slope_n_aspect(arr, nodata):
-        '''Returns slope and aspect (in radians) from DEM.'''
-        # all 9 cells need to have a valid value (Horn's)
-        invalid = numpy.isnan(arr).any() or numpy.isinf(arr).any()
-        if nodata is not None:
-            invalid = invalid or numpy.any(numpy.isclose(arr, nodata))
-        if invalid:
-            return nodata, nodata, nodata
-        # calculation
-        dz_dx = (
-            (arr[0, 2] + 2 * arr[1, 2] + arr[2, 2]) -
-            (arr[0, 0] + 2 * arr[1, 0] + arr[2, 0])
-        ) / 8.0
-        dz_dy = (
-            (arr[2, 0] + 2 * arr[2, 1] + arr[2, 2]) -
-            (arr[0, 0] + 2 * arr[0, 1] + arr[0, 2])
-        ) / 8.0
-        # calculate slope
-        slope = numpy.sqrt(dz_dx ** 2 + dz_dy ** 2)
-        # deterministically handle cos/sin when slope == 0
-        if slope == 0.0:
-            return 0.0, 1.0, 0.0
-        # calculate aspect angle in radians
-        aspect_rad = numpy.arctan2(dz_dy, -dz_dx)
-        if aspect_rad < 0:
-            aspect_rad += 2 * numpy.pi  # normalize to [0, 2π]
-        # compute cosine and sine of aspect
-        cos_aspect = numpy.cos(aspect_rad)
-        sin_aspect = numpy.sin(aspect_rad)
-        return slope, cos_aspect, sin_aspect
-
-    @staticmethod
-    def tpi(arr, nodata):
-        '''Returns Topographical Position Index (TPI) from a DEM.'''
-        # topographical position index
-        h, w = arr.shape
-        c_row, c_col = h // 2, w // 2
-        centre = arr[c_row, c_col]
-        # invalid centre pixel
-        if numpy.isnan(centre) or numpy.isinf(centre):
-            return nodata
-        if nodata is not None and numpy.isclose(centre, nodata):
-            return nodata
-        # build mask
-        invalid_mask = numpy.isnan(arr) | numpy.isinf(arr)
-        if nodata is not None:
-            invalid_mask |= numpy.isclose(arr, nodata)
-        masked = numpy.ma.masked_where(invalid_mask, arr)
-        # all is nodata except centre
-        if masked.count() == 1:
-            return nodata
-        # valid arr
-        return centre - (masked.sum() - centre) / (masked.count() - 1)
+    def empty_manifest(block_name: str = '') -> DataBlockManifest:
+        '''Generate a default empty manifest dictionary.'''
+        return {
+            'block_name': block_name,
+            'has_label': False,
+            'image_band_map': {},
+            'image_nodata': numpy.nan,
+            'label_band_map': {},
+            'label_nodata': 0,
+            'label_ignore_index': 255,
+            'label_ignore_cls': {},
+            'label_num_cls': {},
+            'label_cls_names': {},
+            'label_cls_clr_map': {},
+            'label_taxonomy': {},
+            'valid_ratios': {},
+            'image_stats': {},
+            'label_count': {},
+            'label_entropy': {},
+        }

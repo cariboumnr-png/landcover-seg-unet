@@ -27,8 +27,7 @@ keep import order simple and circular-free.
 
 Public APIs:
     - `DataBlock`: Storage and interface for tiled geospatial blocks.
-    - `DataBlockInputs`: Named container for block input arrays.
-    - `DataBlockConfig`: Configuration for block layout and storage.
+    - `DataBlockArrays`: Container for block-wise image and label arrays.
     - `DomainTileMap`: Mapping of valid spatial domain tiles.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
@@ -54,8 +53,7 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
-    'DataBlockInputs',
-    'DataBlockConfig',
+    'DataBlockArrays',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
@@ -86,8 +84,7 @@ if typing.TYPE_CHECKING:
     )
     from .data_block import (
         DataBlock,
-        DataBlockConfig,
-        DataBlockInputs,
+        DataBlockArrays,
         DataBlockManifest,
     )
     from .data_catalog import DataCatalog, CatalogEntry
@@ -127,8 +124,7 @@ def __getattr__(name: str):
 
     if name in {
         'DataBlock',
-        'DataBlockConfig',
-        'DataBlockInputs',
+        'DataBlockArrays',
         'DataBlockManifest',
     }:
         obj = importlib.import_module('.data_block', __package__)

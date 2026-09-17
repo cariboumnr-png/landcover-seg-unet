@@ -83,7 +83,7 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     )
     with rasterio.open(lbl, 'r+') as dataset:
         dataset.set_band_description(1, 'land_cover')
-        dataset.update_tags(1, num_cls=2, ignore_cls='[255]')
+        dataset.update_tags(1, num_cls=2, ignore_cls='[255]', index_base=1)
 
     # prepare world grid from the reference raster
     grid_config = _Params(

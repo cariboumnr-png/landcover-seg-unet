@@ -78,13 +78,13 @@ def build_single_block(
     '''
     read_outputs = assembler.read_block_raster_data(inputs)
 
-    datablock_inputs = geo_core.DataBlockInputs(
+    datablock_inputs = assembler.DataBlockInputs(
         block_name=name,
         image_array=read_outputs.image_array,
         image_padded_dem=read_outputs.image_padded_dem,
         label_array=read_outputs.label_array,
     )
-    datablock_config = geo_core.DataBlockConfig(
+    datablock_config = assembler.DataBlockConfig(
         image_band_map=inputs.image_band_map,
         image_dem_pad_px=inputs.image_dem_pad_px,
         image_nodata=read_outputs.image_nodata,
@@ -94,7 +94,7 @@ def build_single_block(
         add_spectral=add_spectral,
         add_topo=add_topo
     )
-    block = geo_core.DataBlock.build(datablock_inputs, datablock_config)
+    block = assembler.build_data_block(datablock_inputs, datablock_config)
 
     if save_fpath:
         block.save(save_fpath)

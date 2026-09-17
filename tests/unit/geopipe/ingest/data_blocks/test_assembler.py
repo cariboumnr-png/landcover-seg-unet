@@ -73,7 +73,7 @@ def test_check_npz_integrity_success(tmp_path):
     '''
     fpath = tmp_path / 'test.npz'
     img = numpy.ones((5, 8, 8), dtype=numpy.float32)
-    cfg = geo_core.DataBlockConfig(
+    cfg = assembler.DataBlockConfig(
         image_band_map={
             'red': 0,
             'green': 1,
@@ -85,13 +85,13 @@ def test_check_npz_integrity_success(tmp_path):
         image_dem_pad_px=8,
         label_ignore_index=255
     )
-    inputs = geo_core.DataBlockInputs(
+    inputs = assembler.DataBlockInputs(
         block_name='test_block',
         image_array=img,
         image_padded_dem=None,
         label_array=None,
     )
-    block = geo_core.DataBlock.build(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg)
     block.save(str(fpath))
     res = assembler.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): True}

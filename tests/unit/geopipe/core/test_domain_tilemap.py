@@ -21,12 +21,12 @@
 
 # pylint: disable=protected-access
 
-'''Unit tests for domain mapping module (ingest_domain_map.py).'''
+'''Unit tests for domain mapping module (domain_tilemap.py).'''
 
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.core.ingest_domain_map as domain_map
+import landseg.geopipe.core.domain_tilemap as domain_map
 
 
 # ----- `DomainTileMap` tests
@@ -114,7 +114,7 @@ def test_domain_tile_map_serialization_roundtrip():
     assert payload['data']['0,0']['majority'] == 1
 
     # restore
-    restored = domain_map.DomainTileMap.from_json_payload(payload)
+    restored = domain_map.DomainTileMap.from_payload(payload)
 
     assert len(restored) == 1
     assert (0, 0) in restored

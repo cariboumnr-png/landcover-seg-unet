@@ -35,6 +35,9 @@ Public APIs:
     - BlockBuildingOutput: Result wrapping builder execution outputs.
     - RasterReadInput: Specs parameter for reading raster inputs.
     - RasterReadOutput: Container holding read raster numpy arrays.
+    - DataBlockInputs: container for raw arrays to construct a DataBlock.
+    - DataBlockConfig: build-time configuration for feature engineering.
+    - build_data_block: construct a DataBlock with derived features.
     - build_single_block: Constructs a block from windowed rasters.
     - build_test_block: Finds, normalizes, and saves a test block.
     - build_blocks: Parallelized multiblock checking and assembly.
@@ -57,7 +60,10 @@ __all__ = [
     'BlockBuildingOutput',
     'RasterReadInput',
     'RasterReadOutput',
+    'DataBlockInputs',
+    'DataBlockConfig',
     # functions
+    'build_data_block',
     'build_single_block',
     'build_test_block',
     'build_blocks',
@@ -79,6 +85,11 @@ if typing.TYPE_CHECKING:
     from .assembler import (
         build_single_block,
         build_test_block,
+    )
+    from .builder import (
+        DataBlockInputs,
+        DataBlockConfig,
+        build_data_block,
     )
     from .io import (
         RasterReadInput,
@@ -109,6 +120,15 @@ def __getattr__(name: str):
     }:
         return getattr(
             importlib.import_module('.assembler', __package__), name
+        )
+
+    if name in {
+        'DataBlockInputs',
+        'DataBlockConfig',
+        'build_data_block',
+    }:
+        return getattr(
+            importlib.import_module('.builder', __package__), name
         )
 
     if name in {

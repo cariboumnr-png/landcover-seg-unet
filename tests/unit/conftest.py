@@ -31,6 +31,7 @@ import pytest
 # local imports
 import landseg.core as core
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.data_blocks.assembler as assembler
 
 
 @pytest.fixture
@@ -53,7 +54,7 @@ def dataspecs(tmp_path):
                 'class_name': {'1': 'c0', '2': 'c1', '3': 'c2'},
             },
         }
-        cfg = geo_core.DataBlockConfig(
+        cfg = assembler.DataBlockConfig(
             image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
             image_nodata=numpy.nan,
             image_dem_pad_px=0,
@@ -61,13 +62,13 @@ def dataspecs(tmp_path):
             label_specs=label_specs,
         )
         for name in ('train_block', 'val_block', 'test_block'):
-            inputs = geo_core.DataBlockInputs(
+            inputs = assembler.DataBlockInputs(
                 block_name=name,
                 image_array=img,
                 image_padded_dem=None,
                 label_array=lbl,
             )
-            block = geo_core.DataBlock.build(inputs, cfg)
+            block = assembler.build_data_block(inputs, cfg)
             block.save(f'{tmp_path}/{name}.npz')
 
     return core.DataSpecs(
