@@ -73,7 +73,7 @@ def validate_specs(
     species_mapping: dict[str, str],
     num_cls: int,
     knowledge_root: str = './knowledge',
-) -> geo_core.TaxonomySpecs:
+) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
 
@@ -88,7 +88,7 @@ def validate_specs(
             Root directory of the knowledge base.
 
     Returns:
-        geo_core.TaxonomySpecs:
+        geo_core.TaxonomySpec:
             Resolved taxonomy specification dictionary.
     '''
     if len(species_mapping) != num_cls:
@@ -116,7 +116,7 @@ def validate_specs(
 
         canonical_indices[class_idx] = entry['index']
 
-    _specs: geo_core.TaxonomySpecs = {
+    _specs: geo_core.TaxonomySpec = {
         'profile': profile,
         'canonical_indices': canonical_indices
     }

@@ -40,7 +40,7 @@ def dataspecs(tmp_path):
     if not os.path.exists(f'{tmp_path}/train_block.npz'):
         img = numpy.random.rand(4, 256, 256).astype(numpy.float32)
         lbl = numpy.random.randint(1, 3, size=(2, 256, 256)).astype(numpy.int64)
-        label_specs: dict[str, geo_core.CategoricalSpecs] = {
+        label_specs: dict[str, geo_core.CategoricalSpec] = {
             'head_1': {
                 'num_cls': 2,
                 'ignore_cls': [255],

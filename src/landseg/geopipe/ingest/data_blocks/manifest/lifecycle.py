@@ -45,8 +45,10 @@ import landseg.geopipe.utils as geo_utils
 
 
 # ----- typing aliases
-CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
-SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
+CatalogDictCtrl = (
+    artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]]
+)
+SchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 
 
 # ----- public dataclasses
@@ -147,17 +149,17 @@ def update_manifest(
 
 # ----- private helpers
 def _catalog_status(
-    data_dict: dict[str, geo_core.CatalogEntry] | None,
+    data_dict: dict[str, geo_core.DatasetBlockMeta] | None,
     context: ManifestUpdateContext,
     *,
     policy: artifacts.LifecyclePolicy,
-) -> tuple[geo_core.DataCatalog, list[str]]:
+) -> tuple[geo_core.DatasetCatalog, list[str]]:
     '''Assess catalog status and determine required updates.'''
     # instantiate a catalog class from dict
     if data_dict:
-        catalog = geo_core.DataCatalog.from_dict(data_dict)
+        catalog = geo_core.DatasetCatalog.from_dict(data_dict)
     else:
-        catalog = geo_core.DataCatalog() # empty catalog
+        catalog = geo_core.DatasetCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
     blocks_dir = context.blocks_dir

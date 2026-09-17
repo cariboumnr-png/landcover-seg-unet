@@ -27,10 +27,11 @@ and encoded into per-tile domain features and low-dimensional PCA vectors
 for downstream modeling.
 
 Public APIs:
-    - DomainPayload: serializable artifact schema for DomainTileMap.
-    - DomainMeta: metadata describing a DomainTileMap artifact.
-    - DomainTile: per-tile domain features and descriptors.
-    - DomainTileMap: mapping from grid tile coordinates to domain features.
+    - `DomainPayload`: Serializable artifact schema for `DomainTileMap`.
+    - `DomainMeta`: Metadata describing a `DomainTileMap` artifact.
+    - `DomainTile`: Per-tile domain features and descriptors.
+    - `DomainTileMap`: Mapping from grid tile coordinates to domain
+      features.
 '''
 
 # standard imports

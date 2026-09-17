@@ -45,7 +45,7 @@ import landseg.geopipe.prepare.data_context.semantics as semantics
 
 
 # ----- typing aliases
-DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
+DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 
 
 # ----- public dataclasses
@@ -126,7 +126,7 @@ def build_dataset_context(
             and targets.
     '''
     # load ingested data schema
-    schema = DataSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    schema = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
 
     # initial catalog view
     view = catalog.read_catalog(catalog_fpath, schema, config)
@@ -158,7 +158,7 @@ def build_dataset_context(
 # ----- private helpers
 def _enrich_view_w_class_counts(
     catalog_view: catalog.DataBlocksView,
-    data_schema: geo_core.DataSchema,
+    data_schema: geo_core.DatasetSchema,
     targets: semantics.TargetHeadsContext,
     focal_head: str,
 ) -> catalog.DataBlocksView:

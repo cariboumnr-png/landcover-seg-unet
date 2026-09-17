@@ -65,8 +65,7 @@ class DataBlockManifest(typing.TypedDict):
     label_num_cls: dict[str, int]
     label_cls_names: dict[str, list[str]] # head name: list of class names
     label_cls_clr_map: dict[str, dict[str, list[int]]] # {head: {class: RGB}}
-    label_taxonomy: dict[str, geo_core.TaxonomySpecs]
-
+    label_taxonomy: dict[str, geo_core.TaxonomySpec]
     # derived stats
     valid_ratios: dict[str, float]
     image_stats: dict[str, dict[str, int | float]]

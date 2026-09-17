@@ -130,14 +130,14 @@ class ManifestEntryNormalizer:
 
         return typing.cast(manifest.AllowedCategory, cat)
 
-    def _normalize_categorical_specs(self) -> geo_core.CategoricalSpecs:
+    def _normalize_categorical_specs(self) -> geo_core.CategoricalSpec:
         specs = _require_dict(self.cat_specs)
 
         # init w mandatory fields
         index_base = _require_int_w_min(specs.get('index_base'), 0)
         num_cls = _require_int_w_min(specs.get('num_cls'), 1)
         ignore_cls = _require_int_list(specs.get('ignore_cls'))
-        _specs: geo_core.CategoricalSpecs = {
+        _specs: geo_core.CategoricalSpec = {
             'index_base': index_base,
             'num_cls': num_cls,
             'ignore_cls': ignore_cls
@@ -189,7 +189,7 @@ class ManifestEntryNormalizer:
 
     def _normalize_label_schemes(
         self,
-        cat_specs: manifest.CategoricalSpecs
+        cat_specs: geo_core.CategoricalSpec
     ) -> manifest.LabelSchemes:
         schemes = _require_dict(self.schemes)
 

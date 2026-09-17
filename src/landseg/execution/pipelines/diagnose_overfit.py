@@ -283,7 +283,7 @@ def _create_block(
 # ----- target head resolution helper
 def _resolve_target_head(
     config: configs.RootConfig,
-    label_specs: dict[str, geo_core.CategoricalSpecs],
+    label_specs: dict[str, geo_core.CategoricalSpec],
 ) -> str:
     '''Resolve the target head for test block filtering.'''
     if not label_specs:

@@ -65,7 +65,7 @@ class RasterReadInput:
     image_dem_pad_px: int
     label_fpath: str | None
     label_window: alias.RasterWindow | None
-    label_specs: dict[str, geo_core.CategoricalSpecs] | None
+    label_specs: dict[str, geo_core.CategoricalSpec] | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -118,7 +118,7 @@ def read_band_map(fpath: str) -> dict[str, int]:
 
 def read_label_specs(
     fpath: str | None,
-) -> dict[str, geo_core.CategoricalSpecs]:
+) -> dict[str, geo_core.CategoricalSpec]:
     '''
     Return per-band label specifications embedded in a raster.
 
@@ -127,7 +127,7 @@ def read_label_specs(
             File path to raster dataset or None.
 
     Returns:
-        dict[str, geo_core.CategoricalSpecs]:
+        dict[str, geo_core.CategoricalSpec]:
             Mapping from band name to categorical specifications.
     '''
     if fpath is None:

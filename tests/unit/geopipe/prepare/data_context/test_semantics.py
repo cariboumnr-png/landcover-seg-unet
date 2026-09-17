@@ -40,8 +40,8 @@ def _make_dummy_schema(
     label_schemes: (
         dict[str, dict[str, geo_core.LabelScheme]] | None
     ) = None,
-) -> geo_core.DataSchema:
-    '''Construct mock DataSchema dictionary for testing.'''
+) -> geo_core.DatasetSchema:
+    '''Construct mock DatasetSchema dictionary for testing.'''
     img_map = image_bands or {'blue': 0, 'green': 1, 'red': 2}
     lbl_map = label_bands or {'landcover': 0}
     num_cls = label_num_cls or {'landcover': 3}

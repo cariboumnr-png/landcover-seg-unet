@@ -34,7 +34,6 @@ import landseg.geopipe.grid as grid
 import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.processor as processor
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
-import landseg.geopipe.prepare.resolver as resolver
 
 
 @dataclasses.dataclass
@@ -265,18 +264,3 @@ def test_harmonize_sources_schemes_and_label_specs(
     assert feat_schemes['s2']['rgb'] == ['blue', 'green', 'red']
     assert 'landcover' in lbl_schemes
     assert 'binary' in lbl_schemes['landcover']
-
-    # verify resolver consumes these schemes directly
-    resolved = resolver.resolve_feature_channels(
-        {'blue': 0, 'green': 1, 'red': 2},
-        {'s2': 'rgb'},
-        {**feat_schemes, **lbl_schemes},
-    )
-    assert resolved == (['blue', 'green', 'red'], [0, 1, 2])
-
-    target_res = resolver.resolve_target_reclass(
-        {'landcover': ['forest', 'water']},
-        {'landcover': 'binary'},
-        {**feat_schemes, **lbl_schemes},
-    )
-    assert target_res['landcover'] == lbl_schemes['landcover']['binary']

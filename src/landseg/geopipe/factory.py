@@ -48,7 +48,7 @@ import landseg.knowledge as knowledge
 D = dict[str, geo_core.DomainTile]
 M = geo_core.DomainMeta
 DomainController = artifacts.PayloadController[D, M]
-DataSchemaController = artifacts.Controller[geo_core.DataSchema]
+DatasetSchemaController = artifacts.Controller[geo_core.DatasetSchema]
 PreparedSchemaController = artifacts.Controller[prepare.PreparedSchema]
 
 
@@ -98,7 +98,7 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_ctrl = DataSchemaController.load_json_or_fail
+    data_ctrl = DatasetSchemaController.load_json_or_fail
     data_schema = data_ctrl(data_schema_fpath).fetch()
 
     # prepared schema
@@ -134,7 +134,7 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
 
 
 def _get_meta(
-    data_schema: geo_core.DataSchema,
+    data_schema: geo_core.DatasetSchema,
     prepared_schema: prepare.PreparedSchema,
 ) -> core.Meta:
     '''Populate core.Meta dataclass from schema dictionaries.'''
@@ -189,7 +189,7 @@ def __calc_test_grid(
 
 
 def _get_heads(
-    data_schema: geo_core.DataSchema,
+    data_schema: geo_core.DatasetSchema,
     prepared_schema: prepare.PreparedSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:

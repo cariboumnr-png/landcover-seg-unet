@@ -47,7 +47,9 @@ import landseg.geopipe.core as geo_core
 
 # ----- typing aliases
 field = dataclasses.field
-CatalogDictCtrl = artifacts.Controller[dict[str, geo_core.CatalogEntry]]
+CatalogDictCtrl = (
+    artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]]
+)
 
 
 # ----- private types
@@ -86,7 +88,7 @@ class DataBlocksView:
 # ----- public functions
 def read_catalog(
     catalog_fpath: str,
-    data_schema: geo_core.DataSchema,
+    dataset_schema: geo_core.DatasetSchema,
     config: _CatalogViewConfig,
 ) -> DataBlocksView:
     '''
@@ -99,7 +101,7 @@ def read_catalog(
     Args:
         catalog_fpath:
             path to canonical blocks catalog JSON.
-        data_schema:
+        dataset_schema:
             ingested dataset schema instance.
         config:
             catalog view configuration.
@@ -109,8 +111,8 @@ def read_catalog(
             filtered metadata and block mappings for partitioning.
     '''
     # retrieve image paths and shape from schema
-    image_paths = data_schema['dataset']['data_source']['image_paths']
-    image_shape = data_schema['tensor_shapes']['image']
+    image_paths = dataset_schema['dataset']['data_source']['image_paths']
+    image_shape = dataset_schema['tensor_shapes']['image']
 
     # resolve canvas crs and transform from image source
     try:
@@ -185,7 +187,7 @@ def read_catalog(
 def _filter_blocks(
     fpath: str,
     valid_px_thresholds: dict[str, float],
-) -> dict[tuple[int, int], geo_core.CatalogEntry]:
+) -> dict[tuple[int, int], geo_core.DatasetBlockMeta]:
     '''Parse catalog JSON into filtered class counts and file paths.'''
     def _is_valid_block(
         valid_thresholds: dict[str, float],
@@ -198,7 +200,7 @@ def _filter_blocks(
         return True
 
     catalog_dict = CatalogDictCtrl.load_json_or_fail(fpath).fetch()
-    catalog = geo_core.DataCatalog.from_dict(catalog_dict)
+    catalog = geo_core.DatasetCatalog.from_dict(catalog_dict)
 
     valid_catalog = {
         k: v for k, v in catalog.items()

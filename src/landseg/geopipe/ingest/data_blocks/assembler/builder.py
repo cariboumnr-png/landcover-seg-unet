@@ -82,7 +82,7 @@ class DataBlockConfig:
     image_band_map: dict[str, int]
     image_dem_pad_px: int
     label_nodata: int | None = None
-    label_specs: dict[str, geo_core.CategoricalSpecs] | None = None
+    label_specs: dict[str, geo_core.CategoricalSpec] | None = None
     label_ignore_index: int = 255
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
@@ -360,7 +360,7 @@ def _image_get_stats(
 
 def _canonicalize_single_head(
     arr: numpy.ndarray,
-    spec: geo_core.CategoricalSpecs,
+    spec: geo_core.CategoricalSpec,
     name: str,
     manifest: geo_core.DataBlockManifest,
 ) -> numpy.ndarray:
@@ -399,7 +399,7 @@ def _canonicalize_single_head(
 
 def _label_canonicalize(
     raw_label: numpy.ndarray,
-    lbl_specs: dict[str, geo_core.CategoricalSpecs],
+    lbl_specs: dict[str, geo_core.CategoricalSpec],
     manifest: geo_core.DataBlockManifest,
 ) -> numpy.ndarray:
     '''Normalize the label stack based on label specs.'''

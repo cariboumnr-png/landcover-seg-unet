@@ -93,7 +93,7 @@ def test_build_dataset_context(monkeypatch: pytest.MonkeyPatch):
             return dummy_schema
 
     monkeypatch.setattr(
-        context.DataSchemaCtrl,
+        context.DatasetSchemaCtrl,
         'load_json_or_fail',
         lambda fpath: _MockSchemaCtrl(),
     )
@@ -180,7 +180,7 @@ def test_build_dataset_context_explicit_focal_target(
             return dummy_schema
 
     monkeypatch.setattr(
-        context.DataSchemaCtrl,
+        context.DatasetSchemaCtrl,
         'load_json_or_fail',
         lambda fpath: _MockSchemaCtrl(),
     )

@@ -27,15 +27,15 @@ keep import order simple and circular-free.
 
 Public APIs:
     - `DataBlock`: Storage and interface for tiled geospatial blocks.
-    - `DataBlockArrays`: Container for block-wise image and label arrays.
+    - `DataBlockArrays`: Container for block-wise image and labels.
+    - `DatasetCatalog`: Mapping container for block metadata.
     - `DomainTileMap`: Mapping of valid spatial domain tiles.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
-    - `CategoricalSpecs`: TypedDict for categorical raster specs.
+    - `CategoricalSpec`: TypedDict for categorical raster specs.
     - `DataBlockManifest`: TypedDict for block serialization manifest.
-    - `DataCatalog`: TypedDict for dataset-wide catalog indexing.
-    - `DataSchema`: TypedDict for channel/band and label taxonomy.
-    - `CatalogEntry`: TypedDict for an individual block entry.
+    - `DatasetBlockMeta`: TypedDict for individual block entry.
+    - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
     - `DomainMeta`: TypedDict for domain tile map metadata.
     - `DomainPayload`: TypedDict for serialized domain tile map.
     - `DomainTile`: TypedDict for individual domain tile coordinates.
@@ -43,7 +43,7 @@ Public APIs:
     - `GridMeta`: TypedDict for grid metadata.
     - `LabelScheme`: TypedDict for named reclassification scheme.
     - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
-    - `TaxonomySpecs`: TypedDict for domain taxonomy specification.
+    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
 '''
 
 from __future__ import annotations
@@ -54,16 +54,15 @@ __all__ = [
     # classes
     'DataBlock',
     'DataBlockArrays',
+    'DatasetCatalog',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
-    # functions
     # typing
-    'CategoricalSpecs',
+    'CategoricalSpec',
     'DataBlockManifest',
-    'DataCatalog',
-    'DataSchema',
-    'CatalogEntry',
+    'DatasetBlockMeta',
+    'DatasetSchema',
     'DomainMeta',
     'DomainPayload',
     'DomainTile',
@@ -71,53 +70,56 @@ __all__ = [
     'GridMeta',
     'LabelScheme',
     'LabelSchemes',
-    'TaxonomySpecs',
+    'TaxonomySpec',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .categorical_types import (
-        CategoricalSpecs,
+    from .categorical import (
+        CategoricalSpec,
         LabelScheme,
         LabelSchemes,
-        TaxonomySpecs,
+        TaxonomySpec,
     )
     from .data_block import (
         DataBlock,
         DataBlockArrays,
         DataBlockManifest,
     )
-    from .data_catalog import DataCatalog, CatalogEntry
-    from .data_schema import DataSchema
-    from .domain_tilemap import (
+    from .dataset_catalog import (
+        DatasetCatalog,
+        DatasetBlockMeta,
+    )
+    from .dataset_schema import DatasetSchema
+    from .domain_tile_map import (
         DomainPayload,
         DomainMeta,
         DomainTile,
-        DomainTileMap
+        DomainTileMap,
     )
     from .grid_layout import (
         GridSpec,
         GridPayload,
         GridMeta,
-        GridLayout
+        GridLayout,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'CategoricalSpecs',
+        'CategoricalSpec',
         'LabelScheme',
         'LabelSchemes',
-        'TaxonomySpecs',
+        'TaxonomySpec',
     }:
-        obj = importlib.import_module('.categorical_types', __package__)
+        obj = importlib.import_module('.categorical', __package__)
         return getattr(obj, name)
 
     if name in {
         'GridSpec',
         'GridPayload',
         'GridMeta',
-        'GridLayout'
+        'GridLayout',
     }:
         obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)
@@ -131,23 +133,26 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'DataCatalog',
-        'CatalogEntry'
+        'DatasetCatalog',
+        'DatasetBlockMeta',
     }:
-        obj = importlib.import_module('.data_catalog', __package__)
+        obj = importlib.import_module('.dataset_catalog', __package__)
         return getattr(obj, name)
 
-    if name in {'DataSchema'}:
-        obj = importlib.import_module('.data_schema', __package__)
-        return getattr(obj, name)
+    if name in {
+        'dataset_schema',
+        'DatasetSchema'
+    }:
+        obj = importlib.import_module('.dataset_schema', __package__)
+        return obj if name == 'dataset_schema' else getattr(obj, name)
 
     if name in {
         'DomainPayload',
         'DomainMeta',
         'DomainTile',
-        'DomainTileMap'
+        'DomainTileMap',
     }:
-        obj = importlib.import_module('.domain_tilemap', __package__)
+        obj = importlib.import_module('.domain_tile_map', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

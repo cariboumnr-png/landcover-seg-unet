@@ -136,7 +136,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
 
     window = alias.RasterWindow(4, 4, 8, 8)  # type: ignore
 
-    label_specs: dict[str, geo_core.CategoricalSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],
@@ -186,7 +186,7 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     ))
 
     window = alias.RasterWindow(4, 4, 8, 8)  # type: ignore
-    label_specs: dict[str, geo_core.CategoricalSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],
@@ -256,7 +256,7 @@ def test_build_blocks_orchestrator(
         label=label_windows
     )
 
-    label_specs: dict[str, geo_core.CategoricalSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],
@@ -319,7 +319,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
 
     window = alias.RasterWindow(0, 0, 16, 16)  # type: ignore
 
-    label_specs: dict[str, geo_core.CategoricalSpecs] = {
+    label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
             'ignore_cls': [255],

@@ -21,12 +21,12 @@
 
 # pylint: disable=protected-access
 
-'''Unit tests for domain mapping module (domain_tilemap.py).'''
+'''Unit tests for domain mapping module (domain_tile_map.py).'''
 
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.core.domain_tilemap as domain_map
+import landseg.geopipe.core.domain_tile_map as domain_map
 
 
 # ----- `DomainTileMap` tests

@@ -19,48 +19,51 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Manifest schemas and type definitions for data harmonization.
+'''Unit tests for categorical raster specification types.'''
 
-This module defines structures and type aliases used to validate and
-represent dataset raster entries and their category/scheme mappings.
-
-Public APIs:
-    - `AllowedCategory`: Type alias for valid raster categories.
-    - `FeatureSchemes`: Type alias for feature band scheme mappings.
-    - `LabelScheme`: Re-exported TypedDict for label reclassification scheme.
-    - `LabelSchemes`: Re-exported alias for label reclassification schemes.
-    - `ManifestEntry`: TypedDict defining per-raster configuration shape.
-'''
-
-# standard imports
-from __future__ import annotations
-import typing
 # local imports
 import landseg.geopipe.core as geo_core
 
 
-# ----- typing aliases
-AllowedCategory: typing.TypeAlias = typing.Literal[
-    'domains',
-    'domain',
-    'features',
-    'feature',
-    'labels',
-    'label',
-]
+# ----- `CategoricalSpec` tests
+def test_categorical_spec_structure():
+    '''
+    Given: Mandatory categorical spec attributes.
+    When: Instantiating a CategoricalSpec dictionary.
+    Then: All fields conform to specification contracts.
+    '''
+    spec: geo_core.CategoricalSpec = {
+        'index_base': 1,
+        'num_cls': 3,
+        'ignore_cls': [255],
+    }
+    assert spec['index_base'] == 1
+    assert spec['num_cls'] == 3
+    assert spec['ignore_cls'] == [255]
 
-LabelScheme: typing.TypeAlias = geo_core.LabelScheme
-LabelSchemes: typing.TypeAlias = geo_core.LabelSchemes
-FeatureSchemes: typing.TypeAlias = dict[str, list[str]]
 
+def test_taxonomy_spec_and_label_scheme():
+    '''
+    Given: A TaxonomySpec and LabelScheme dictionary.
+    When: Instantiating nested structures.
+    Then: Successfully populates profile, indices, and reclass mappings.
+    '''
+    tax_spec: geo_core.TaxonomySpec = {
+        'profile': 'ontario_landcover',
+        'canonical_indices': {'1': 10, '2': 20},
+    }
+    cat_spec: geo_core.CategoricalSpec = {
+        'index_base': 1,
+        'num_cls': 2,
+        'ignore_cls': [],
+        'taxonomy': tax_spec,
+    }
+    scheme: geo_core.LabelScheme = {
+        'reclass': {'1': [1, 2]},
+        'reclass_name': {'1': 'vegetation'},
+    }
+    schemes: geo_core.LabelSchemes = {'binary': scheme}
 
-# ----- public types
-class ManifestEntry(typing.TypedDict):
-    '''Expected shape of dataset config (per raster).'''
-    name: str
-    path: str
-    band_mapping: dict[int, str]
-    category: AllowedCategory
-    categorical_specs: geo_core.CategoricalSpec | None
-    schemes: LabelSchemes | FeatureSchemes | None
+    assert cat_spec['taxonomy']['profile'] == 'ontario_landcover'
+    assert 'binary' in schemes
+    assert schemes['binary']['reclass_name']['1'] == 'vegetation'

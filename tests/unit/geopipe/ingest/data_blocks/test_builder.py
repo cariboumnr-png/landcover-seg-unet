@@ -38,7 +38,7 @@ rng = numpy.random.default_rng(42)
 # ----- constants
 BASE_LABEL_ARRAY = numpy.repeat([1, 2, 3, 4], 16384).reshape((1, 256, 256))
 
-BASE_LABELSPECS: dict[str, geo_core.CategoricalSpecs] = {
+BASE_LABELSPECS: dict[str, geo_core.CategoricalSpec] = {
     'base': {
         'num_cls': 4,
         'ignore_cls': [4],
@@ -199,7 +199,7 @@ def test_build_data_block_label_canonicalize_zero_based_index():
     zero_based_array = numpy.repeat([0, 1, 2, 3], 16384).reshape(
         (1, 256, 256)
     )
-    zero_based_specs: dict[str, geo_core.CategoricalSpecs] = {
+    zero_based_specs: dict[str, geo_core.CategoricalSpec] = {
         'base': {
             'num_cls': 4,
             'ignore_cls': [3],
