@@ -24,19 +24,20 @@ Top-level namespace for `landseg.geopipe.ingest`.
 
 Coordinates the ingestion of harmonized geospatial rasters into
 tiled domain maps and canonical data blocks, providing logging,
-harmonization adapters, and pipeline execution tools via lazy module
+context resolution, and pipeline execution tools via lazy module
 resolution.
 
 Public APIs:
-    - BlockBuildingParameters: Config for block pipeline.
-    - DomainBuildingParameters: Config for domain mapping.
-    - HarmonizedRasters: Container for harmonized raster paths.
-    - IngestionLogger: Structured logger for ingestion stages.
-    - prepare_domain_maps: Generates domain tilemaps from rasters.
-    - read_harmonization_report: Extracts rasters from report.
-    - run_blocks_building: Runs canonical data block pipeline.
+    - `BlockBuildingParameters`: Config for block pipeline.
+    - `DomainBuildingParameters`: Config for domain mapping.
+    - `IngestionContext`: Container holding resolved grid and rasters.
+    - `IngestionLogger`: Structured logger for ingestion stages.
+    - `build_ingestion_context`: Load ingestion context from report.
+    - `prepare_domain_maps`: Generates domain tilemaps from rasters.
+    - `run_blocks_building`: Runs canonical data block pipeline.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -45,10 +46,10 @@ __all__ = [
     # classes
     'BlockBuildingParameters',
     'DomainBuildingParameters',
+    'IngestionContext',
     'IngestionLogger',
-    'HarmonizedRasters',
     # functions
-    'read_harmonization_report',
+    'build_ingestion_context',
     'prepare_domain_maps',
     'run_blocks_building',
     # types
@@ -56,21 +57,30 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .harmonization_inputs import HarmonizedRasters, read_harmonization_report
-    from .common import IngestionLogger
-    from .data_blocks import BlockBuildingParameters, run_blocks_building
-    from .domain_maps import DomainBuildingParameters, prepare_domain_maps
+    from .context import (
+        IngestionContext,
+        build_ingestion_context,
+    )
+    from .data_blocks import (
+        BlockBuildingParameters,
+        run_blocks_building,
+    )
+    from .domain_maps import (
+        DomainBuildingParameters,
+        prepare_domain_maps,
+    )
+    from .logger import IngestionLogger
 
 
 def __getattr__(name: str):
-    if name in {'HarmonizedRasters', 'read_harmonization_report'}:
+    if name in {'IngestionContext', 'build_ingestion_context'}:
         return getattr(
-            importlib.import_module('.harmonization_inputs', __package__), name
+            importlib.import_module('.context', __package__), name
         )
 
     if name in {'IngestionLogger'}:
         return getattr(
-            importlib.import_module('.common', __package__), name
+            importlib.import_module('.logger', __package__), name
         )
 
     if name in {'BlockBuildingParameters', 'run_blocks_building'}:

@@ -30,8 +30,8 @@ import numpy
 import rasterio
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.grid as grid
-import landseg.geopipe.ingest.common as common
+import landseg.geopipe.grid.builder as grid_builder
+import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.data_blocks as data_blocks
 
 
@@ -55,7 +55,7 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
         and schema.
     '''
     report_file = str(tmp_path / 'ingest_report.json')
-    logger = common.IngestionLogger(
+    logger = ingest.IngestionLogger(
         name='test_ingest_canonical',
         log_file=report_file,
         enable_file_log=False
@@ -92,7 +92,7 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
         tile_size=(256, 256),
         tile_stride=(128, 128)
     )
-    world_grid = grid.build_grid('ref', grid_config)
+    world_grid = grid_builder.build_grid('ref', grid_config)
 
     # initialize pipeline path containers in temp output directory
     paths = artifacts.IngestionPaths(str(tmp_path))

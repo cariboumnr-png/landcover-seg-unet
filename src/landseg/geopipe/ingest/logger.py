@@ -27,7 +27,7 @@ ingestion progress, records sub-stage reports, and writes a structured
 JSON summary report on exit.
 
 Public APIs:
-    - `IngestionLogger`: Logger tracking ingest execution and report JSON.
+    - `IngestionLogger`: Logger tracking ingest progress and reports.
 '''
 
 # standard imports
@@ -37,14 +37,8 @@ import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.ingestion as contracts
 import landseg.utils as utils
-
-if typing.TYPE_CHECKING:
-    from .schema import (
-        DomainMapReport,
-        DataBlocksReport,
-        IngestReportSchema,
-    )
 
 
 # ----- public classes
@@ -57,7 +51,7 @@ class IngestionLogger(utils.Logger):
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
         '''Initialize the IngestionLogger instance.'''
         super().__init__(*args, **kwargs)
-        self.summary: IngestReportSchema | None = None
+        self.summary: contracts.IngestReportSchema | None = None
 
     def init_summary(
         self,
@@ -75,14 +69,14 @@ class IngestionLogger(utils.Logger):
             'data_blocks': None
         }
 
-    def add_domain_report(self, report: DomainMapReport) -> None:
+    def add_domain_report(self, report: contracts.DomainMapReport) -> None:
         '''Append a domain layer map report to summary.'''
         if self.summary is not None:
             self.summary['domain_maps'].append(report)
 
     def set_data_blocks_report(
         self,
-        report: DataBlocksReport
+        report: contracts.DataBlocksReport
     ) -> None:
         '''Record the data blocks report to summary.'''
         if self.summary is not None:

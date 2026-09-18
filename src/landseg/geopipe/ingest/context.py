@@ -20,22 +20,24 @@
 # =========================================================================== #
 
 '''
-Adapter bridging harmonization outputs into the ingestion pipeline.
+Execution context resolution for data ingestion.
 
-Parses finalized raster paths and world grid definitions from the
-harmonization report, providing typed inputs to subsequent domain mapping
-and block construction stages.
+Provides containers and loaders to resolve the canonical spatial grid
+and harmonized raster inputs for the ingestion pipeline from upstream
+harmonization artifacts.
 
 Public APIs:
-    - HarmonizedRasters: Dataclass container for harmonized outputs.
-    - read_harmonization_report: Reads report to extract rasters.
+    - `IngestionContext`: Container holding resolved grid and rasters.
+    - `build_ingestion_context`: Load ingestion context from report.
 '''
 
 # standard imports
+from __future__ import annotations
 import dataclasses
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.harmonization as contracts
+import landseg.geopipe.core as geo_core
 
 
 # ----- typing aliases
@@ -43,9 +45,10 @@ ReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class HarmonizedRasters:
-    '''Container for harmonized rasters read from the report.'''
+@dataclasses.dataclass(frozen=True)
+class IngestionContext:
+    '''Execution context holding resolved world grid and rasters.'''
+    grid: geo_core.GridLayout
     grid_fpath: str
     domains: dict[str, str] | None
     features: str | None
@@ -59,16 +62,16 @@ class HarmonizedRasters:
 
 
 # ----- public functions
-def read_harmonization_report(
+def build_ingestion_context(
     harmonization_paths: artifacts.HarmonizationPaths,
-    harmonization_run_id: int | str | None
-) -> HarmonizedRasters:
+    harmonization_run_id: int | str | None = None
+) -> IngestionContext:
     '''
-    Read harmonization report to extract finalized rasters.
+    Build data ingestion context from upstream harmonization artifacts.
 
-    Locates the targeted harmonization run folder, fetches the
-    corresponding report artifact, and parses out world grid, domain,
-    feature, and label raster references.
+    Locates the targeted harmonization run folder, parses out the grid
+    and raster artifact references from the report, and loads the
+    canonical GridLayout layout.
 
     Args:
         harmonization_paths:
@@ -77,8 +80,8 @@ def read_harmonization_report(
             Target run identifier, or None to use the latest run.
 
     Returns:
-        HarmonizedRasters:
-            Parsed container holding paths to finalized rasters.
+        IngestionContext:
+            Loaded execution context with world grid and input rasters.
     '''
     # locate targeted/latest harmonization run folder
     harmonization_paths.get_run_folder(harmonization_run_id)
@@ -90,20 +93,26 @@ def read_harmonization_report(
     finals = report['finalized_rasters']
     assert finals
 
-    world_grid = report.get('world_grid')
-    assert world_grid
+    grid_fpath = report.get('grid_fpath')
+    if not grid_fpath and 'world_grid' in report:
+        grid_fpath = report['world_grid'].get('grid_fpath')
+    assert grid_fpath
+
+    # load canonical world grid using core loader
+    world_grid = geo_core.load_grid_from_fpath(grid_fpath)
 
     # see if domains are present
     domains: dict[str, str] = {}
     for key, value in finals.items():
-        if 'domain' in key: # search by tag
+        if 'domain' in key:
             domains.update({key: value})
 
     features = finals.get('features')
     labels = finals.get('labels')
 
-    return HarmonizedRasters(
-        grid_fpath=world_grid['grid_fpath'],
+    return IngestionContext(
+        grid=world_grid,
+        grid_fpath=grid_fpath,
         domains=domains,
         features=features,
         labels=labels,

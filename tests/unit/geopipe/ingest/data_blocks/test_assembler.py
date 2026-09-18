@@ -32,6 +32,9 @@ import rasterio
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
+import landseg.geopipe.ingest.data_blocks.assembler.builder as builder
+import landseg.geopipe.ingest.data_blocks.assembler.io as io
+import landseg.geopipe.ingest.data_blocks.assembler.lifecycle as lifecycle
 import landseg.geopipe.utils as geo_utils
 
 
@@ -72,7 +75,7 @@ def test_check_npz_integrity_success(tmp_path):
     '''
     fpath = tmp_path / 'test.npz'
     img = numpy.ones((5, 8, 8), dtype=numpy.float32)
-    cfg = assembler.DataBlockConfig(
+    cfg = builder.DataBlockConfig(
         image_band_map={
             'red': 0,
             'green': 1,
@@ -84,15 +87,15 @@ def test_check_npz_integrity_success(tmp_path):
         image_dem_pad_px=8,
         label_ignore_index=255
     )
-    inputs = assembler.DataBlockInputs(
+    inputs = builder.DataBlockInputs(
         block_name='test_block',
         image_array=img,
         image_padded_dem=None,
         label_array=None,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = builder.build_data_block(inputs, cfg)
     block.save(str(fpath))
-    res = assembler.check_npz_integrity((0, 0), str(fpath))
+    res = io.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): True}
 
 
@@ -102,7 +105,7 @@ def test_check_npz_integrity_missing():
     When: Running check_npz_integrity.
     Then: Return a dictionary flagging the file as invalid.
     '''
-    res = assembler.check_npz_integrity((0, 0), 'non_existent_file.npz')
+    res = io.check_npz_integrity((0, 0), 'non_existent_file.npz')
     assert res == {(0, 0): False}
 
 
@@ -115,7 +118,7 @@ def test_check_npz_integrity_corrupted(tmp_path):
     fpath = tmp_path / 'corrupt.npz'
     with open(fpath, 'w', encoding='UTF-8') as f:
         f.write('not a zip file')
-    res = assembler.check_npz_integrity((0, 0), str(fpath))
+    res = io.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): False}
 
 
@@ -159,7 +162,8 @@ def test_build_single_block_success(dummy_geotiff_factory):
         label_specs=label_specs
     )
 
-    block = assembler.build_single_block(
+    # pylint: disable=protected-access
+    block = lifecycle._build_single_block(
         name='block_4_4',
         inputs=inputs,
         ignore_index=255,
@@ -209,7 +213,8 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         label_specs=label_specs
     )
 
-    block = assembler.build_single_block(
+    # pylint: disable=protected-access
+    block = lifecycle._build_single_block(
         name='block_4_4_def',
         inputs=inputs,
         ignore_index=255

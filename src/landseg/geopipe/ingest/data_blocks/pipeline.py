@@ -40,8 +40,9 @@ import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.common as common
+import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 import landseg.geopipe.ingest.data_blocks.manifest as manifest
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
@@ -78,7 +79,7 @@ def run_blocks_building(
     config: BlockBuildingParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.IngestionLogger,
+    logger: ingest.IngestionLogger,
 ) -> None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
@@ -153,7 +154,7 @@ def run_blocks_building(
     # update structured log if IngestionLogger wrapper is used
     duration = time.perf_counter() - start_time
     stats = result.stats
-    report: common.DataBlocksReport = {
+    report: contracts.DataBlocksReport = {
         'image_filepath': config.image_fpath,
         'label_filepath': config.label_fpath,
         'duration_sec': duration,

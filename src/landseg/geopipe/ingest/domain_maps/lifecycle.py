@@ -22,11 +22,12 @@
 '''
 Domain map artifacts lifecycle management.
 
-This module provides functions to prepare, build, and persist domain tile
-map artifacts and mapped raster tiles using configurable lifecycle policies.
+This module provides functions to prepare, build, and persist domain
+tile map artifacts and mapped raster tiles using configurable
+lifecycle policies.
 
 Public APIs:
-    - `DomainBuildingParameters`: Container for domain building parameters.
+    - `DomainBuildingParameters`: Config for domain building.
     - `prepare_domain_maps`: Build or load domain tile maps for rasters.
 '''
 
@@ -38,14 +39,17 @@ import os
 import time
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.common as common
+import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.domain_maps.builder as builder
 import landseg.geopipe.ingest.domain_maps.mapper as mapper
 
 
 # ----- typing aliases
-DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
+DomainCtrl = artifacts.PayloadController[
+    dict[str, geo_core.DomainTile], geo_core.DomainMeta
+]
 MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 
 
@@ -66,7 +70,7 @@ def prepare_domain_maps(
     domain_configs: list[DomainBuildingParameters],
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.IngestionLogger,
+    logger: ingest.IngestionLogger,
 ) -> None:
     '''
     Prepare and persist domain tile maps for categorical rasters.
@@ -119,7 +123,7 @@ def prepare_domain_maps(
 
         # update structured log
         meta = payload['artifact_meta']
-        report: common.DomainMapReport = {
+        report: contracts.DomainMapReport = {
             'name': name,
             'status': 'loaded' if loaded else 'created',
             'input_filepath': config.input_fpath,
