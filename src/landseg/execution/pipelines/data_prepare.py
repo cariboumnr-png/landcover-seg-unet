@@ -78,7 +78,7 @@ def prepare(config: configs.RootConfig):
 
         # datablocks partition
         logger.log('INFO', '[START] Dataset partitioning splits')
-        # data transform config aliases
+        # data preparation config aliases
         partition = config.data.preparation.partition
         scoring = config.data.preparation.scoring
         hydration = config.data.preparation.hydration

@@ -22,7 +22,7 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Canonical filesystem paths for data preparation (transform) artifacts.
+Canonical filesystem paths for data preparation artifacts.
 '''
 
 # standard imports
@@ -33,7 +33,7 @@ import os
 # ----- `PreparationPaths` definition
 @dataclasses.dataclass
 class PreparationPaths:
-    '''Paths for transformed datasets and split artifacts.'''
+    '''Paths for prepared datasets and split artifacts.'''
     root: str
 
     @property
@@ -75,8 +75,8 @@ class PreparationPaths:
         return os.path.join(self.root, 'image_stats.json')
 
     @property
-    def splits_transformed_blocks(self) -> str:
-        return os.path.join(self.root, 'block_splits_transformed.json')
+    def splits_prepared_blocks(self) -> str:
+        return os.path.join(self.root, 'block_splits_prepared.json')
 
     @property
     def schema(self) -> str:

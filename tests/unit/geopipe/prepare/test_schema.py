@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for transform schema builder logic (schema.py).'''
+'''Unit tests for prepared schema builder logic (schema.py).'''
 
 # local imports
 import landseg.geopipe.prepare.schema as schema
@@ -28,7 +28,7 @@ import landseg.geopipe.prepare.schema as schema
 # ----- `build_schema` tests
 def test_build_schema(mocker):
     '''
-    Given: Mocked controller values for transformed blocks, stats,
+    Given: Mocked controller values for prepared blocks, stats,
         and paths.
     When: Running build_schema.
     Then: Correctly construct the dataset schema, compile checksums,
@@ -47,9 +47,9 @@ def test_build_schema(mocker):
         mock_ctrl = mocker.Mock()
         mock_ctrl.sha256 = 'mock-hash-value'
         if (
-            'splits_transformed_blocks' in filepath or
+            'splits_prepared_blocks' in filepath or
             'block_splits' in filepath or
-            'transformed' in filepath
+            'prepared' in filepath
         ):
             mock_ctrl.fetch.return_value = {
                 'train': {'block_0': 'path/to/block_0.npz'},
@@ -80,7 +80,7 @@ def test_build_schema(mocker):
     mock_paths = mocker.Mock()
     mock_paths.schema = 'schema.json'
     mock_paths.splits_source_blocks = 'block_source.json'
-    mock_paths.splits_transformed_blocks = 'block_splits.json'
+    mock_paths.splits_prepared_blocks = 'block_splits.json'
     mock_paths.label_stats = 'label_stats.json'
     mock_paths.image_stats = 'image_stats.json'
 
@@ -120,6 +120,9 @@ def test_build_schema(mocker):
     persisted_schema = mock_schema_ctrl.persist.call_args[0][0]
     assert persisted_schema['schema_version'] is not None
     assert persisted_schema['checksums']['block_source'] == 'mock-hash-value'
+    assert (
+        persisted_schema['checksums']['block_prepared'] == 'mock-hash-value'
+    )
     assert persisted_schema['heads']['head_names'] == ['head1', 'head1_sub']
     assert persisted_schema['heads']['head_parent'] == {
         'head1': None,

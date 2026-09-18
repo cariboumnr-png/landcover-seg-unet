@@ -84,7 +84,7 @@ def test_target_heads_schema_contract():
 
 def test_prepared_schema_contract():
     '''
-    Given: Complete dataset transformation metadata and metrics.
+    Given: Complete dataset preparation metadata and metrics.
     When: Instantiating a `PreparedSchema` TypedDict.
     Then: Conforms to schema ID and includes nested statistics.
     '''

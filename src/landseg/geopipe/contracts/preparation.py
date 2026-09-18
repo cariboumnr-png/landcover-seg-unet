@@ -23,7 +23,7 @@
 TypedDict definitions for dataset preparation reports and artifacts.
 
 Defines schemas for data partitioning, block normalization, and schema
-generation execution summaries and persisted transform artifacts.
+generation execution summaries and persisted preparation artifacts.
 
 Public APIs:
     - `BlocksPartition`: TypedDict mapping block IDs across splits.
@@ -42,7 +42,7 @@ Public APIs:
 from __future__ import annotations
 import typing
 
-PREPARED_SCHEMA_ID = 'transform_schema/v1'
+PREPARED_SCHEMA_ID = 'prepared_schema/v1'
 
 
 # ----- public types
@@ -129,7 +129,7 @@ class TargetHeadsSchema(typing.TypedDict):
 
 class PreparedSchema(typing.TypedDict):
     '''
-    Dataset-wide transformation schema.
+    Dataset-wide preparation schema.
 
     Captures metadata and statistics generated during preparation,
     including splits, checksums, label counts, and image stats.

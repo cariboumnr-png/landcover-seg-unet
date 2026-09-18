@@ -60,7 +60,7 @@ class _PipelinePaths(typing.Protocol):
     @property
     def label_stats(self) -> str: ...
     @property
-    def splits_transformed_blocks(self) -> str: ...
+    def splits_prepared_blocks(self) -> str: ...
     @property
     def train_blocks(self) -> str: ...
     @property
@@ -131,7 +131,7 @@ def run_materialize_blocks(
         )
 
     # load or build normalized blocks for each split
-    ctrl = PartitionCtrl(paths.splits_transformed_blocks, policy)
+    ctrl = PartitionCtrl(paths.splits_prepared_blocks, policy)
     prepared = ctrl.fetch()
     loaded = prepared is not None
 

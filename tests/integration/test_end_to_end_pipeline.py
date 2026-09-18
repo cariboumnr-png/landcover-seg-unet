@@ -138,7 +138,7 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
         os.path.join(p_root, 'block_splits_source.json')
     )
     assert os.path.exists(
-        os.path.join(p_root, 'block_splits_transformed.json')
+        os.path.join(p_root, 'block_splits_prepared.json')
     )
     assert os.path.exists(os.path.join(p_root, 'image_stats.json'))
     assert os.path.exists(os.path.join(p_root, 'schema.json'))

@@ -56,7 +56,7 @@ class _PipelinePaths(typing.Protocol):
     @property
     def splits_source_blocks(self) -> str: ...
     @property
-    def splits_transformed_blocks(self) -> str: ...
+    def splits_prepared_blocks(self) -> str: ...
     @property
     def label_stats(self) -> str: ...
     @property
@@ -76,12 +76,12 @@ def build_schema(
 
     Combines artifact hashes, train/val/test split manifests, per-band
     image statistics, label class statistics, and target head
-    reclassification hierarchy into a single verified transform
+    reclassification hierarchy into a single verified preparation
     schema JSON artifact.
 
     Args:
         paths:
-            transform paths container.
+            preparation paths container.
         context:
             dataset preparation context with target heads topology.
         policy:
@@ -100,7 +100,7 @@ def build_schema(
         # artifacts file paths
         collected_artifacts = {
             'block_source': paths.splits_source_blocks,
-            'block_transform': paths.splits_transformed_blocks,
+            'block_prepared': paths.splits_prepared_blocks,
             'label_stats': paths.label_stats,
             'image_stats': paths.image_stats
         }
@@ -109,13 +109,13 @@ def build_schema(
         load = artifacts.Controller.load_json_or_fail
         checksums = {
             'block_source': load(paths.splits_source_blocks).sha256,
-            'block_transform': load(paths.splits_transformed_blocks).sha256,
+            'block_prepared': load(paths.splits_prepared_blocks).sha256,
             'label_stats': load(paths.label_stats).sha256,
             'image_stats': load(paths.image_stats).sha256
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl.load_json_or_fail(paths.splits_transformed_blocks)
+        ctrl = PartitionCtrl.load_json_or_fail(paths.splits_prepared_blocks)
         block_splits = ctrl.fetch()
 
         # read label stats
@@ -156,9 +156,9 @@ def build_schema(
             'heads': heads_schema,
         }
         schema_ctrl.persist(schema)
-        logger.log('INFO', '[CHECKPOINT] Created dataset transform schema')
+        logger.log('INFO', '[CHECKPOINT] Created dataset prepared schema')
     else:
-        logger.log('INFO', '[CHECKPOINT] Loaded dataset transform schema')
+        logger.log('INFO', '[CHECKPOINT] Loaded dataset prepared schema')
 
     # compile report
     duration = time.perf_counter() - start_time
