@@ -20,14 +20,14 @@
 # =========================================================================== #
 
 '''
-TypedDict definitions for data harmonization execution summaries.
+TypedDict definitions for world grid execution summaries and contracts.
 
-This module provides schemas for serializing execution reports, source
-provenance, and raster metadata for data harmonization runs.
+This module provides schemas for serializing world grid metadata and
+pipeline run reports.
 
 Public APIs:
-    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
-    - `HarmonizationReportSchema`: TypedDict for pipeline run report.
+    - `WorldGridReport`: TypedDict for world grid summary report.
+    - `GridReportSchema`: TypedDict for overall grid pipeline report.
 '''
 
 # standard imports
@@ -36,21 +36,20 @@ import typing
 
 
 # ----- public types
-class HarmonizationReportSchema(typing.TypedDict):
-    '''Root report mapping the entire data harmonization pipeline run.'''
+class WorldGridReport(typing.TypedDict):
+    '''Summary report for a generated world grid layout.'''
+    grid_fpath: str
+    grid_id: str
+    crs: str
+    pixel_size: tuple[float, float]
+    tile_size: tuple[int, int]
+    tile_overlap: tuple[int, int]
+
+
+class GridReportSchema(typing.TypedDict):
+    '''Execution report for the world grid pipeline run.'''
     run_id: str
     timestamp: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
-    provenance: dict[str, ProvenanceRecord]
-    harmonized_sources: dict[str, str]
-    finalized_rasters: dict[str, str]
-    valid_mask_raster: str
-    grid_id: str
-    grid_fpath: str
-
-
-class ProvenanceRecord(typing.TypedDict):
-    '''Provenance record for a raw source raster file.'''
-    path: str
-    size_bytes: int
-    mtime: float
+    status: typing.Literal['SUCCESS', 'FAILED']
+    grid: WorldGridReport
+    total_tiles: int

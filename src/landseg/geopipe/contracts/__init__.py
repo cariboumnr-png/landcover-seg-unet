@@ -20,5 +20,139 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.harmonize.common`.
+Top-level namespace for `landseg.geopipe.contracts`.
+
+Public APIs:
+    - `GridReportSchema`: Execution report for world grid pipeline.
+    - `WorldGridReport`: Summary report for world grid layout.
+    - `HarmonizationReportSchema`: Report schema for harmonization.
+    - `ProvenanceRecord`: Provenance record for raw source raster.
+    - `BlockStats`: Data block build statistics.
+    - `DataBlocksReport`: Execution report for data block partitioning.
+    - `DomainMapReport`: Execution report for domain map preparation.
+    - `DomainStats`: Re-indexing statistics for a domain layer.
+    - `IngestReportSchema`: Root report for data ingestion pipeline.
+    - `ManifestStats`: Catalog and schema update details.
+    - `BlocksPartition`: TypedDict mapping block IDs across splits.
+    - `DataPartitionReport`: Report for dataset splitting.
+    - `ImageBandStats`: TypedDict for image band statistics.
+    - `NormalizationReport`: Report for block materialization.
+    - `PartitionSummary`: Summary of raw splits and hydration.
+    - `PREPARED_SCHEMA_ID`: Constant string for prepared schema ID.
+    - `PreparationReportSchema`: Root summary schema for prepare runs.
+    - `PreparedSchema`: TypedDict for dataset preparation schema.
+    - `SchemaReport`: Report for dataset schema generation.
+    - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
 '''
+
+# standard imports
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # constants
+    'PREPARED_SCHEMA_ID',
+    # schemas
+    'BlockStats',
+    'BlocksPartition',
+    'DataBlocksReport',
+    'DataPartitionReport',
+    'DomainMapReport',
+    'DomainStats',
+    'GridReportSchema',
+    'HarmonizationReportSchema',
+    'ImageBandStats',
+    'IngestReportSchema',
+    'ManifestStats',
+    'NormalizationReport',
+    'PartitionSummary',
+    'PreparationReportSchema',
+    'PreparedSchema',
+    'ProvenanceRecord',
+    'SchemaReport',
+    'TargetHeadsSchema',
+    'WorldGridReport',
+    # functions
+    # typing
+]
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .grid import (
+        GridReportSchema,
+        WorldGridReport,
+    )
+    from .harmonization import (
+        HarmonizationReportSchema,
+        ProvenanceRecord,
+    )
+    from .ingestion import (
+        BlockStats,
+        DataBlocksReport,
+        DomainMapReport,
+        DomainStats,
+        IngestReportSchema,
+        ManifestStats,
+    )
+    from .preparation import (
+        BlocksPartition,
+        DataPartitionReport,
+        ImageBandStats,
+        NormalizationReport,
+        PartitionSummary,
+        PREPARED_SCHEMA_ID,
+        PreparationReportSchema,
+        PreparedSchema,
+        SchemaReport,
+        TargetHeadsSchema,
+    )
+
+
+def __getattr__(name: str):
+
+    if name in {
+        'GridReportSchema',
+        'WorldGridReport',
+    }:
+        return getattr(
+            importlib.import_module('.grid', __package__), name
+        )
+
+    if name in {
+        'HarmonizationReportSchema',
+        'ProvenanceRecord',
+    }:
+        return getattr(
+            importlib.import_module('.harmonization', __package__), name
+        )
+
+    if name in {
+        'BlockStats',
+        'DataBlocksReport',
+        'DomainMapReport',
+        'DomainStats',
+        'IngestReportSchema',
+        'ManifestStats',
+    }:
+        return getattr(
+            importlib.import_module('.ingestion', __package__), name
+        )
+
+    if name in {
+        'BlocksPartition',
+        'DataPartitionReport',
+        'ImageBandStats',
+        'NormalizationReport',
+        'PartitionSummary',
+        'PREPARED_SCHEMA_ID',
+        'PreparationReportSchema',
+        'PreparedSchema',
+        'SchemaReport',
+        'TargetHeadsSchema',
+    }:
+        return getattr(
+            importlib.import_module('.preparation', __package__), name
+        )
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
