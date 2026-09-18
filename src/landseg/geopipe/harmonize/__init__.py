@@ -27,10 +27,8 @@ and logging APIs via lazy resolution to keep import order simple and
 circular-free.
 
 Public APIs:
-    - `HarmonizationContext`: Container holding resolved world grid.
     - `HarmonizationLogger`: Logger tracking ETL progress and summary.
-    - `build_harmonization_context`: Load grid context from report.
-    - `data_harmonization_pipeline`: pipeline runner.
+    - `run_data_harmonization`: pipeline runner.
 '''
 
 # standard imports
@@ -40,30 +38,19 @@ import typing
 
 __all__ = [
     # classes
-    'HarmonizationContext',
     'HarmonizationLogger',
     # functions
-    'build_harmonization_context',
-    'data_harmonization_pipeline',
+    'run_data_harmonization',
     # typing
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .context import HarmonizationContext, build_harmonization_context
     from .logger import HarmonizationLogger
-    from .pipeline import data_harmonization_pipeline
+    from .pipeline import run_data_harmonization
 
 
 def __getattr__(name: str):
-
-    if name in {
-        'HarmonizationContext',
-        'build_harmonization_context',
-    }:
-        return getattr(
-            importlib.import_module('.context', __package__), name
-        )
 
     if name in {
         'HarmonizationLogger',
@@ -73,7 +60,7 @@ def __getattr__(name: str):
         )
 
     if name in {
-        'data_harmonization_pipeline',
+        'run_data_harmonization',
     }:
         return getattr(
             importlib.import_module('.pipeline', __package__), name

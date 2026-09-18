@@ -26,15 +26,8 @@ Exposes public dataset context builders, partitioners, materializers,
 preparation schema, and schema generators via lazy resolution.
 
 Public APIs:
-    - `DataBlocksView`: In-memory manifest view for catalog blocks.
-    - `DatasetContext`: Unified immutable dataset preparation context.
-    - `PartitionParameters`: Configuration for data block partitioning.
     - `PreparationLogger`: Specialized logger for preparation runs.
-    - `PreparedSchema`: TypedDict for dataset preparation schema.
-    - `build_dataset_context`: Construct full dataset context.
-    - `build_schema`: Generate dataset preparation schema JSON.
-    - `run_datablocks_partition`: Partition data blocks into splits.
-    - `run_materialize_blocks`: Orchestrate stats and materialization.
+    - `run_data_preparation`: pipeline runner.
 '''
 
 # standard imports
@@ -44,70 +37,30 @@ import typing
 
 __all__ = [
     # classes
-    'DataBlocksView',
-    'DatasetContext',
-    'PartitionParameters',
     'PreparationLogger',
     # functions
-    'build_dataset_context',
-    'build_schema',
-    'run_datablocks_partition',
-    'run_materialize_blocks',
+    'run_data_preparation',
     # types
-    'PreparedSchema',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ..contracts import PreparedSchema
-    from .data_context import (
-        DataBlocksView,
-        DatasetContext,
-        build_dataset_context,
-    )
-    from .data_partition import (
-        PartitionParameters,
-        run_datablocks_partition,
-    )
     from .logger import PreparationLogger
-    from .materialize_blocks import run_materialize_blocks
-    from .schema import build_schema
+    from .pipeline import run_data_preparation
 
 
 def __getattr__(name: str):
-
-    if name in {
-        'DataBlocksView',
-        'DatasetContext',
-        'build_dataset_context',
-    }:
-        return getattr(
-            importlib.import_module('.data_context', __package__), name
-        )
 
     if name in {'PreparationLogger'}:
         return getattr(
             importlib.import_module('.logger', __package__), name
         )
 
-    if name in {'PreparedSchema'}:
+    if name in {'run_data_preparation'}:
         return getattr(
-            importlib.import_module('landseg.geopipe.contracts', __package__),
+            importlib.import_module('pipeline', __package__),
             name,
         )
-
-    if name in {'PartitionParameters', 'run_datablocks_partition'}:
-        return getattr(
-            importlib.import_module('.data_partition', __package__), name
-        )
-
-    if name in {'run_materialize_blocks'}:
-        return getattr(
-            importlib.import_module('.materialize_blocks', __package__), name
-        )
-
-    if name in {'build_schema'}:
-        return getattr(importlib.import_module('.schema', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

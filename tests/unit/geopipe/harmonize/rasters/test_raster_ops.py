@@ -26,7 +26,7 @@ import numpy
 import pytest
 import rasterio
 # local imports
-import landseg.geopipe.harmonize.rasters as rasters
+import landseg.geopipe.harmonize.rasters as harmonize_rasters
 
 
 # ----- test cases
@@ -52,7 +52,7 @@ def test_stack_rasters(dummy_geotiff_factory, tmp_path):
     )
 
     feature_paths = [str(opt_path), str(dem_path)]
-    gen = rasters.stack_rasters(feature_paths, [], str(tmp_path))
+    gen = harmonize_rasters.stack_rasters(feature_paths, [], str(tmp_path))
     res = {}
     try:
         while True:
@@ -85,7 +85,7 @@ def test_unify_nodata_mask(dummy_geotiff_factory, tmp_path):
     )
 
     out_mask = str(tmp_path / 'valid_mask.vrt')
-    rasters.unify_nodata_mask(str(comp_path), out_mask)
+    harmonize_rasters.unify_nodata_mask(str(comp_path), out_mask)
 
     with rasterio.open(out_mask) as dst:
         assert dst.count == 1
@@ -109,7 +109,7 @@ def test_unify_nodata_mask_gtiff_output(dummy_geotiff_factory, tmp_path):
     )
 
     out_mask = str(tmp_path / 'valid_mask.tif')
-    rasters.unify_nodata_mask(str(comp_path), out_mask)
+    harmonize_rasters.unify_nodata_mask(str(comp_path), out_mask)
 
     with rasterio.open(out_mask) as dst:
         assert dst.count == 1

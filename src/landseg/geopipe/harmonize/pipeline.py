@@ -32,9 +32,10 @@ import typing
 # local imports
 import landseg.artifacts.paths as paths
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.harmonize as harmonize
-import landseg.geopipe.harmonize.manifest as manifest
-import landseg.geopipe.harmonize.rasters as rasters
+import landseg.geopipe.harmonize.context as harmonize_context
+import landseg.geopipe.harmonize.logger as harmonize_logger
+import landseg.geopipe.harmonize.manifest as harmonize_manifest
+import landseg.geopipe.harmonize.rasters as harmonize_rasters
 
 
 # ----- private types
@@ -57,24 +58,35 @@ class _ProcessedRasters:
 
 
 # ----- public functions
-def data_harmonization_pipeline(
+def run_data_harmonization(
+    world_grid_output_dpath: str,
     artifacts_paths: paths.HarmonizationPaths,
     config: _HarmonizationPipelineConfig,
-    world_grid: geo_core.GridLayout,
     *,
-    logger: harmonize.HarmonizationLogger
+    logger: harmonize_logger.HarmonizationLogger
 ) -> None:
     '''Run data harmonization pipeline.'''
-    compiled = manifest.compile_dataset_manifest(config.dataset_manifest)
 
+    # load canonical world grid from upstream grid pipeline report
+    logger.log('INFO', '[START] Loading world grid from grid report')
+    context = harmonize_context.build_harmonization_context(world_grid_output_dpath)
+    logger.set_grid_reference(context.grid_id, context.grid_fpath)
+    logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
+
+    # compile dataset manifest JOSN
+    compiled = harmonize_manifest.compile_dataset_manifest(config.dataset_manifest)
+
+    # set up generator - each source to harmonize
     proc = _harmonize_sources(
         compiled,
         artifacts_paths.effective_root,
-        world_grid,
+        context.grid,
         categorical_resampling=config.resampling_categorical,
         continuous_resampling=config.resampling_continuous,
     )
 
+    # run generator
+    logger.log('INFO', f'[START] Harmonizing data onto grid: {context.grid_id}')
     processed: _ProcessedRasters
     while True:
         try:
@@ -99,13 +111,13 @@ def data_harmonization_pipeline(
     if feature_raster:
         mask_path = artifacts_paths.valid_mask_raster
         logger.log('INFO', f'Generating valid mask raster: {mask_path}')
-        rasters.unify_nodata_mask(feature_raster, mask_path)
+        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
         logger.set_valid_mask_raster(mask_path)
 
 
 # ----- private functions
 def _harmonize_sources(
-    compiled_sources: dict[str, manifest.ManifestEntry],
+    compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
     output_dir: str,
     world_grid: geo_core.GridLayout,
     *,
@@ -133,7 +145,7 @@ def _harmonize_sources(
             f'(resampling: {resampling})'
         )
 
-        warped = rasters.warp_to_grid(
+        warped = harmonize_rasters.warp_to_grid(
             input_path=path,
             output_path=out_vrt,
             world_grid=world_grid,
@@ -141,7 +153,7 @@ def _harmonize_sources(
             resampling_method=resampling,
         )
         # band mapping is now required
-        rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
+        harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
 
         processed.provenance[tagged_name] = os.path.abspath(path)
         processed.harmonized[tagged_name] = warped
@@ -160,42 +172,42 @@ def _harmonize_sources(
                 labels.append(warped)
 
     processed.finalized.update(
-        **(yield from rasters.stack_rasters(features, labels, output_dir))
+        **(yield from harmonize_rasters.stack_rasters(features, labels, output_dir))
     )
     return processed
 
 
-def _tag_domain_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
+def _tag_domain_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
     '''Attach domain raster metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')
     if not cat_specs:
         return
 
     if 'index_base' in cat_specs:
-        rasters.add_tag_to_vrt(
+        harmonize_rasters.add_tag_to_vrt(
             warped,
             index_base=cat_specs['index_base'],
         )
 
 
-def _tag_feature_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
+def _tag_feature_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
     '''Attach feature schemes metadata tags to VRT file.'''
     schemes = mfst.get('schemes')
     if schemes:
-        rasters.add_tag_to_vrt(
+        harmonize_rasters.add_tag_to_vrt(
             warped,
             schemes={mfst['name']: schemes},
         )
 
 
-def _tag_label_metadata(warped: str, mfst: manifest.ManifestEntry) -> None:
+def _tag_label_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
     '''Attach categorical label metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')
     if not cat_specs:
         raise ValueError('Missing categorical specs for label raster')
 
     schemes = mfst.get('schemes')
-    rasters.add_tag_to_vrt(
+    harmonize_rasters.add_tag_to_vrt(
         warped,
         index_base=cat_specs['index_base'],
         num_cls=cat_specs['num_cls'],

@@ -31,16 +31,9 @@ import landseg.geopipe.harmonize as harmonize
 
 # ----- public functions
 def exec_harmonize_data(config: configs.RootConfig) -> None:
-    '''
-    Execute the data-harmonize pipeline.
-
-    Args:
-        config:
-            Resolved root configuration object.
-    '''
-    root_paths = artifacts.ArtifactPaths.from_config(config)
-
-    paths = root_paths.data_harmonization
+    '''Execute the data-harmonize pipeline.'''
+    artifact_paths = artifacts.ArtifactPaths.from_config(config)
+    paths = artifact_paths.data_harmonization
     paths.init()
 
     logger = harmonize.HarmonizationLogger(
@@ -53,21 +46,11 @@ def exec_harmonize_data(config: configs.RootConfig) -> None:
     try:
         logger.log_sep()
 
-        # load canonical world grid from upstream grid pipeline report
-        logger.log('INFO', '[START] Loading world grid from grid report')
-        context = harmonize.build_harmonization_context(
-            config.data.world_grid.output_dpath
-        )
-        logger.set_grid_reference(context.grid_id, context.grid_fpath)
-        logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
-
-        logger.log(
-            'INFO', f'[START] Harmonizing data onto grid: {context.grid_id}'
-        )
-        harmonize.data_harmonization_pipeline(
+        # run pipeline
+        harmonize.run_data_harmonization(
+            config.data.world_grid.output_dpath,
             paths,
             config.data.harmonization,
-            context.grid,
             logger=logger
         )
         logger.log('INFO', '[COMPLETE] Harmonization finished')
@@ -75,9 +58,9 @@ def exec_harmonize_data(config: configs.RootConfig) -> None:
         # persist the whole config dict
         artifacts.Controller[dict](paths.config).persist(config.as_dict)
 
-    except Exception as err:
+    except Exception as e:
         logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Data harmonization failed: {err}')
+        logger.log('ERROR', f'Data harmonization failed: {e}')
         raise
 
     finally:

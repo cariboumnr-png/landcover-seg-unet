@@ -31,7 +31,7 @@ import typing
 import rasterio
 # local imports
 import landseg.geopipe.grid.builder as grid_builder
-import landseg.geopipe.harmonize.manifest as manifest
+import landseg.geopipe.harmonize.manifest as harmonize_manifest
 import landseg.geopipe.harmonize.pipeline as pipeline
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 
@@ -72,7 +72,7 @@ def test_harmonize_sources_features_and_labels(
     grid_params = _GridParams(ref_fpath=str(ref_path))
     world_grid = grid_builder.build_grid('ref', grid_params)
 
-    compiled: dict[str, manifest.ManifestEntry] = {
+    compiled: dict[str, harmonize_manifest.ManifestEntry] = {
         str(s2_path): {
             'name': 's2',
             'path': str(s2_path),
@@ -150,7 +150,7 @@ def test_harmonize_sources_domains(tmp_path, dummy_geotiff_factory):
     grid_params = _GridParams(ref_fpath=str(ref_path))
     world_grid = grid_builder.build_grid('ref', grid_params)
 
-    compiled: dict[str, manifest.ManifestEntry] = {
+    compiled: dict[str, harmonize_manifest.ManifestEntry] = {
         str(dom_path): {
             'name': 'ecodistrict',
             'path': str(dom_path),
@@ -206,7 +206,7 @@ def test_harmonize_sources_schemes_and_label_specs(
         ))),
     )
 
-    compiled: dict[str, manifest.ManifestEntry] = {
+    compiled: dict[str, harmonize_manifest.ManifestEntry] = {
         s2_path: {
             'name': 's2',
             'path': s2_path,
