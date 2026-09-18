@@ -38,7 +38,6 @@ import landseg.geopipe.prepare.data_context as prepare_context
 import landseg.geopipe.prepare.data_partition as prepare_partition
 import landseg.geopipe.prepare.logger as prepare_logger
 import landseg.geopipe.prepare.materialize_blocks as prepare_materialize
-import landseg.geopipe.prepare.schema as prepare_schema
 
 
 # ----- private types
@@ -184,15 +183,3 @@ def run_data_preparation(
     assert logger.summary['normalization']
     d = logger.summary['normalization']['duration_sec']
     logger.log('INFO', f'[COMPLETE] Block normalization (D_{d:.2f}s)')
-
-    # build schema
-    logger.log('INFO', '[START] Prepared schema building')
-    prepare_schema.build_schema(
-        artifact_paths.data_preparation,
-        dataset_context,
-        policy=policy,
-        logger=logger,
-    )
-    assert logger.summary['schema']
-    d = logger.summary['schema']['duration_sec']
-    logger.log('INFO', f'[COMPLETE] Prepared schema building (D_{d:.2f}s)')

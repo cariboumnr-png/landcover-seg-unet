@@ -22,7 +22,7 @@
 '''Unit tests for prepared schema builder logic (schema.py).'''
 
 # local imports
-import landseg.geopipe.prepare.schema as schema
+import landseg.geopipe.prepare.materialize_blocks.schema as schema
 
 
 # ----- `build_schema` tests

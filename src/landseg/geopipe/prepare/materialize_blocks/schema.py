@@ -39,7 +39,8 @@ import typing
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
-import landseg.geopipe.prepare as prepare
+import landseg.geopipe.prepare.logger as prepare_logger
+import landseg.geopipe.prepare.data_context as prepare_context
 
 
 # ----- typing aliases
@@ -66,10 +67,10 @@ class _PipelinePaths(typing.Protocol):
 # ----- public functions
 def build_schema(
     paths: _PipelinePaths,
-    context: prepare.DatasetContext,
+    context: prepare_context.DatasetContext,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: prepare.PreparationLogger,
+    logger: prepare_logger.PreparationLogger,
 ) -> None:
     '''
     Generate and persist dataset preparation schema JSON.

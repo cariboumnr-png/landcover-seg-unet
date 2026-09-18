@@ -39,6 +39,7 @@ import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
+import landseg.geopipe.contracts.preparation as prepare_contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare as prepare
 import landseg.geopipe.utils as geo_utils
@@ -47,7 +48,7 @@ import landseg.knowledge as knowledge
 # ----- typing aliases
 DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
 DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
-PreparedSchemaCtrl = artifacts.Controller[prepare.PreparedSchema]
+PreparedSchemaCtrl = artifacts.Controller[prepare_contracts.PreparedSchema]
 
 
 # ----- public functions

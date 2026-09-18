@@ -42,6 +42,7 @@ import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.materialize_blocks.materialize as materialize
+import landseg.geopipe.prepare.materialize_blocks.schema as schema
 import landseg.geopipe.prepare.materialize_blocks.stats as stats
 
 
@@ -67,6 +68,8 @@ class _PipelinePaths(typing.Protocol):
     def val_blocks(self) -> str: ...
     @property
     def test_blocks(self) -> str: ...
+    @property
+    def schema(self) -> str: ...
 
 
 # ----- public functions
@@ -148,6 +151,15 @@ def run_materialize_blocks(
         )
         ctrl.persist(prepared)
         logger.log('INFO', '[CHECKPOINT] Created normalized dataset blocks')
+
+    # build schema
+    logger.log('INFO', '[START] Prepared schema building')
+    schema.build_schema(
+        paths,
+        context,
+        policy=policy,
+        logger=logger,
+    )
 
     # compile report
     duration = time.perf_counter() - start_time
