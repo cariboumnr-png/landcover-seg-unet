@@ -34,6 +34,9 @@ Public APIs:
     - `GridMeta`: TypedDict for grid metadata.
     - `GridSpec`: Dataclass specifying world grid parameters.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
+    - `get_grid_report_fpath`: Canonical path to grid report artifact.
+    - `load_grid_from_fpath`: Load world grid layout directly from file.
+    - `read_grid_report`: Read grid report JSON and extract summary.
 '''
 
 # standard imports
@@ -41,12 +44,16 @@ from __future__ import annotations
 import collections.abc
 import dataclasses
 import math
+import os
 import typing
 # third-party imports
 import rasterio
-import rasterio.io
 import rasterio.crs
+import rasterio.io
 import rasterio.windows
+# local imports
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.grid as grid_contracts
 
 
 # ----- typing aliases
@@ -71,7 +78,7 @@ class GridPayload(typing.TypedDict):
         artifact_meta:
             Lightweight metadata required to reconstruct grid layout.
         data:
-            Serialized list of tile coordinates and raster window offsets.
+            Serialized tile coordinates and raster window offsets.
     '''
     schema_id: str
     artifact_meta: GridMeta
@@ -125,7 +132,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
 
         Args:
             spec:
-                Configuration object defining CRS, resolution, tile size,
+                Configuration object defining CRS, resolution, tile size
                 stride, and grid extent.
         '''
         # ingest spec and init attributes
@@ -270,6 +277,29 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         # return class object
         return obj
 
+    @classmethod
+    def from_fpath(cls, fpath: str) -> GridLayout:
+        '''
+        Load a world grid layout directly from a serialized JSON file.
+
+        Args:
+            fpath:
+                File path to the serialized grid JSON artifact.
+
+        Returns:
+            GridLayout:
+                Restored GridLayout instance.
+        '''
+        ctrl = artifacts.PayloadController[list[list[int]], GridMeta](
+            fpath,
+            schema_id=cls.SCHEMA_ID,
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        )
+        payload = ctrl.load()
+        if not payload:
+            raise ValueError(f'Loading grid failed: {fpath}')
+        return cls.from_payload(payload)
+
     # ----- public method
     def offset_from(self, src: RasterReader | rasterio.Affine) -> None:
         '''
@@ -370,3 +400,53 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 window = RasterWindow(x, y, tw, th) # type: ignore
                 self._data[(x, y)] = window
         self._extent = row_px, col_px
+
+
+# ----- public functions
+def load_grid_from_fpath(fpath: str) -> GridLayout:
+    '''
+    Load a world grid layout directly from a file path.
+
+    Args:
+        fpath:
+            File path to the serialized grid JSON artifact.
+
+    Returns:
+        GridLayout:
+            Restored GridLayout instance.
+    '''
+    return GridLayout.from_fpath(fpath)
+
+
+def get_grid_report_fpath(output_dpath: str) -> str:
+    '''
+    Return canonical file path of the world grid report artifact.
+
+    Args:
+        output_dpath:
+            Output directory containing world grid artifacts.
+
+    Returns:
+        str:
+            Full path to the grid_report.json artifact.
+    '''
+    return os.path.join(output_dpath, 'grid_report.json')
+
+
+def read_grid_report(report_fpath: str) -> grid_contracts.WorldGridReport:
+    '''
+    Read a grid execution report and extract world grid summary.
+
+    Args:
+        report_fpath:
+            File path to the grid report JSON artifact.
+
+    Returns:
+        grid_contracts.WorldGridReport:
+            World grid summary report extracted from the artifact.
+    '''
+    ctrl = artifacts.Controller[
+        grid_contracts.GridReportSchema
+    ].load_json_or_fail(report_fpath)
+    report = ctrl.fetch()
+    return report['grid']

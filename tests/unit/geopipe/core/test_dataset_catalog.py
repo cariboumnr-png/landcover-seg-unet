@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for DatasetCatalog and DatasetCatalogEntry.'''
+'''Unit tests for DatasetCatalog and DatasetBlockMeta.'''
 
 # standard imports
 import json
@@ -31,8 +31,8 @@ import landseg.geopipe.core as geo_core
 
 # ----- fixtures
 @pytest.fixture(name='sample_entry')
-def sample_entry_fixture() -> geo_core.DatasetCatalogEntry:
-    '''Provide a sample DatasetCatalogEntry dictionary.'''
+def sample_entry_fixture() -> geo_core.DatasetBlockMeta:
+    '''Provide a sample DatasetBlockMeta dictionary.'''
     return {
         'block_name': 'row_000020_col_000010',
         'file_path': '/path/to/block.npz',

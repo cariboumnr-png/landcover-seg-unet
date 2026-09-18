@@ -23,10 +23,15 @@
 
 '''Unit tests for world-grid tiling utility (grid_layout.py).'''
 
+# standard imports
+import json
+import os
 # third-party imports
 import pytest
 import rasterio.windows
 # local imports
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core.grid_layout as grid_layout
 
 
@@ -166,3 +171,70 @@ def test_gridlayout_serialization_roundtrip():
     assert restored.extent == layout.extent
     assert len(restored) == len(layout)
     assert restored[(0, 0)] == layout[(0, 0)]
+
+
+# ----- grid persistence and report helpers tests
+def test_gridlayout_from_fpath(tmp_path):
+    '''
+    Given: A persisted GridLayout artifact on disk.
+    When: Loaded via `GridLayout.from_fpath` and `load_grid_from_fpath`.
+    Then: Both return reconstructed GridLayout instances matching.
+    '''
+    spec = grid_layout.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(256, 256),
+        tile_stride=(128, 128),
+        grid_extent=(3840.0, 3840.0),
+    )
+    layout = grid_layout.GridLayout(spec)
+    grid_fp = str(tmp_path / 'grid.json')
+    ctrl = artifacts.PayloadController[
+        list[list[int]], grid_layout.GridMeta
+    ](
+        grid_fp,
+        schema_id=grid_layout.GridLayout.SCHEMA_ID,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+    )
+    ctrl.save(layout.to_payload())
+
+    from_cls = grid_layout.GridLayout.from_fpath(grid_fp)
+    assert from_cls.gid == layout.gid
+    assert len(from_cls) == len(layout)
+
+    from_func = grid_layout.load_grid_from_fpath(grid_fp)
+    assert from_func.gid == layout.gid
+
+
+def test_grid_report_helpers(tmp_path):
+    '''
+    Given: An output directory and a serialized grid report JSON.
+    When: `get_grid_report_fpath` and `read_grid_report` are called.
+    Then: Resolve report path and extract WorldGridReport payload.
+    '''
+    expected_fp = os.path.join(str(tmp_path), 'grid_report.json')
+    assert grid_layout.get_grid_report_fpath(str(tmp_path)) == expected_fp
+
+    grid_report: contracts.WorldGridReport = {
+        'grid_fpath': '/path/to/grid.json',
+        'grid_id': 'ontario_grid',
+        'crs': 'EPSG:3161',
+        'pixel_size': (10.0, 10.0),
+        'tile_size': (512, 512),
+        'tile_overlap': (64, 64),
+    }
+    report_data: contracts.GridReportSchema = {
+        'run_id': 'world-grid',
+        'timestamp': '2026-09-18T00:00:00',
+        'status': 'SUCCESS',
+        'grid': grid_report,
+        'total_tiles': 42,
+    }
+    artifacts.Controller[contracts.GridReportSchema](
+        expected_fp
+    ).persist(report_data)
+
+    loaded = grid_layout.read_grid_report(expected_fp)
+    assert loaded['grid_id'] == 'ontario_grid'
+    assert loaded['grid_fpath'] == '/path/to/grid.json'

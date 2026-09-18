@@ -38,9 +38,20 @@ Public APIs:
     - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
     - `DomainMeta`: TypedDict for domain tile map metadata.
     - `DomainPayload`: TypedDict for serialized domain tile map.
-    - `DomainTile`: TypedDict for individual domain tile coordinates.
     - `GridPayload`: TypedDict for serialized grid payload.
     - `GridMeta`: TypedDict for grid metadata.
+    - `GridSpec`: Dataclass specifying world grid parameters.
+    - `GridLayout`: Raster-agnostic grid layout of tile windows.
+    - `get_grid_report_fpath`: Canonical path to grid report artifact.
+    - `load_grid_from_fpath`: Load world grid layout directly from file.
+    - `read_grid_report`: Read grid report JSON and extract summary.
+    - `CategoricalSpec`: TypedDict for categorical raster specs.
+    - `DataBlockManifest`: TypedDict for block serialization manifest.
+    - `DatasetBlockMeta`: TypedDict for individual block entry.
+    - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
+    - `DomainMeta`: TypedDict for domain tile map metadata.
+    - `DomainPayload`: TypedDict for serialized domain tile map.
+    - `DomainTile`: TypedDict for individual domain tile coordinates.
     - `LabelScheme`: TypedDict for named reclassification scheme.
     - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
     - `TaxonomySpec`: TypedDict for domain taxonomy specification.
@@ -58,6 +69,10 @@ __all__ = [
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
+    # functions
+    'get_grid_report_fpath',
+    'load_grid_from_fpath',
+    'read_grid_report',
     # typing
     'CategoricalSpec',
     'DataBlockManifest',
@@ -106,6 +121,9 @@ if typing.TYPE_CHECKING:
         GridPayload,
         GridMeta,
         GridLayout,
+        get_grid_report_fpath,
+        load_grid_from_fpath,
+        read_grid_report,
     )
 
 
@@ -126,6 +144,9 @@ def __getattr__(name: str):
         'GridPayload',
         'GridMeta',
         'GridLayout',
+        'get_grid_report_fpath',
+        'load_grid_from_fpath',
+        'read_grid_report',
     }:
         obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)
