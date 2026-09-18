@@ -144,18 +144,12 @@ def test_ingestion_paths():
     '''
     Given: An ingestion root directory string.
     When: Accessing `IngestionPaths` properties and sub-container helpers.
-    Then: Return expected report, config, grid, and domain map filepaths.
+    Then: Return expected report, config, and domain map filepaths.
     '''
     f = os.path.join('/tmp', 'exp', 'ingested_data')
     f_paths = paths_mod.IngestionPaths(root=f)
     assert f_paths.report == os.path.join(f, 'ingest_report.json')
     assert f_paths.config == os.path.join(f, 'config.json')
-
-    # world grids fpath formatting
-    grid_path = f_paths.grids.fpath((256, 256, 0, 0))
-    expected_gid = 'grid_row_256_0_col_256_0.json'
-    g_dir = os.path.join(f, 'world_grids')
-    assert grid_path == os.path.join(g_dir, expected_gid)
 
     # domain maps fpaths
     d_dir = os.path.join(f, 'domain_knowledge')
@@ -206,8 +200,8 @@ def test_preparation_paths():
     assert t_paths.splits_summary == os.path.join(t, 'block_splits_summary.json')
     assert t_paths.label_stats == os.path.join(t, 'label_stats.json')
     assert t_paths.image_stats == os.path.join(t, 'image_stats.json')
-    assert t_paths.splits_transformed_blocks == os.path.join(
-        t, 'block_splits_transformed.json'
+    assert t_paths.splits_prepared_blocks == os.path.join(
+        t, 'block_splits_prepared.json'
     )
     assert t_paths.schema == os.path.join(t, 'schema.json')
 

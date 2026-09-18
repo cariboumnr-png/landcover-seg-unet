@@ -80,7 +80,7 @@ def build_dataspec(
             Configured runtime specifications for dataset consumption.
     '''
     # artifact fpaths
-    data_schema_fpath = artifact_paths.data_ingestion.data_blocks.dev.schema
+    data_schema_fpath = artifact_paths.data_ingestion.data_blocks.schema
     prepared_schema_fpath = artifact_paths.data_preparation.schema
 
     # load artifacts

@@ -38,10 +38,6 @@ class IngestionPaths:
     root: str
 
     @property
-    def grids(self):
-        return _WorldGrids(os.path.join(self.root, 'world_grids'))
-
-    @property
     def domains(self):
         return _DomainMaps(os.path.join(self.root, 'domain_knowledge'))
 
@@ -59,18 +55,6 @@ class IngestionPaths:
 
 
 # ----- private helper path containers
-@dataclasses.dataclass
-class _WorldGrids:
-    '''Paths for spatial grid tile artifacts.'''
-    root: str
-
-    def fpath(self, tile_specs: tuple[int, int, int, int]) -> str:
-        '''Return canonical grid artifact file path.'''
-        srow, scol, orow, ocol = tile_specs
-        gid = f'grid_row_{srow}_{orow}_col_{scol}_{ocol}'
-        return os.path.join(self.root, f'{gid}.json')
-
-
 @dataclasses.dataclass
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''
@@ -108,11 +92,3 @@ class _DataBlocks:
 
     def mapped_window(self, gid: str) -> str:
         return os.path.join(self.windows, f'windows_{gid}.json')
-
-    @property
-    def dev(self) -> '_DataBlocks':
-        return self
-
-    @property
-    def test(self) -> '_DataBlocks':
-        return self

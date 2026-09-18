@@ -194,7 +194,7 @@ def test_build_dataspec(mocker):
     )
 
     mock_paths = mocker.Mock()
-    mock_paths.data_ingestion.data_blocks.dev.schema = 'dev.schema.json'
+    mock_paths.data_ingestion.data_blocks.schema = 'dev.schema.json'
     mock_paths.data_preparation.schema = 'prep.schema.json'
     mock_paths.knowledge = None
 
