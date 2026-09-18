@@ -33,7 +33,7 @@ import numpy
 import rasterio
 import rasterio.transform
 # local imports
-import landseg.geopipe.prepare.data_partition.operations as operations
+import landseg.geopipe.prepare.data_partition.orchestration as orchestration
 
 
 # ----- test helper
@@ -91,7 +91,7 @@ def test_scenario_1_fixed_test_aoi_with_auto_train_val(tmp_path):
         (256, 256): [25, 35],
     }
 
-    config = operations.PartitionParameters(
+    config = orchestration.PartitionParameters(
         val_test_ratios=(0.5, 0.0),
         buffer_step=0,
         reward_ratios={},
@@ -104,7 +104,7 @@ def test_scenario_1_fixed_test_aoi_with_auto_train_val(tmp_path):
         canvas_transform=t_test,
     )
 
-    results = operations.create_blocks_partition(
+    results = orchestration.create_blocks_partition(
         base_counts, base_counts, blocks, config
     )
 
@@ -135,7 +135,7 @@ def test_scenario_2_train_val_only_zero_test_blocks():
         (256, 256): [10, 10],
     }
 
-    config = operations.PartitionParameters(
+    config = orchestration.PartitionParameters(
         val_test_ratios=(0.25, 0.0),
         buffer_step=0,
         reward_ratios={},
@@ -146,7 +146,7 @@ def test_scenario_2_train_val_only_zero_test_blocks():
         test_aoi=None,
     )
 
-    results = operations.create_blocks_partition(
+    results = orchestration.create_blocks_partition(
         base_counts, base_counts, blocks, config
     )
 
@@ -188,7 +188,7 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
 
     mock_logger = mocker.MagicMock()
 
-    config = operations.PartitionParameters(
+    config = orchestration.PartitionParameters(
         val_test_ratios=(0.0, 0.0),
         buffer_step=0,
         reward_ratios={},
@@ -203,7 +203,7 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
         canvas_transform=t_test,
     )
 
-    results = operations.create_blocks_partition(
+    results = orchestration.create_blocks_partition(
         base_counts,
         base_counts,
         blocks,

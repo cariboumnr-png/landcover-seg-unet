@@ -27,10 +27,12 @@ import dataclasses
 import rasterio.transform
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.prepare.common as common
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.data_context as data_context
+import landseg.geopipe.prepare.data_context.catalog as catalog
+import landseg.geopipe.prepare.data_context.semantics as semantics
+import landseg.geopipe.prepare.data_partition.orchestration as orchestration
 import landseg.geopipe.prepare.data_partition.runner as runner
-import landseg.geopipe.prepare.data_partition.operations as operations
 
 
 # ----- test helper classes
@@ -56,7 +58,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         label_stats=str(tmp_path / 'label_stats.json'),
     )
 
-    catalog_view = data_context.DataBlocksView(
+    catalog_view = catalog.DataBlocksView(
         valid_blocks={(0, 0): 'path/to/block_0.npz'},
         external_test_blocks=None,
         crs='EPSG:3161',
@@ -65,8 +67,8 @@ def test_run_datablocks_partition(tmp_path, mocker):
         base_class_counts={(0, 0): [0, 100]},
         focal_head='landcover_group',
     )
-    features = data_context.FeatureSelection(names=('blue',), indices=(0,))
-    targets = data_context.TargetHeadsContext(
+    features = semantics.FeatureSelection(names=('blue',), indices=(0,))
+    targets = semantics.TargetHeadsContext(
         head_names=['landcover_group'],
         head_parent={'landcover_group': None},
         head_parent_cls={'landcover_group': None},
@@ -81,7 +83,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         targets=targets,
     )
 
-    partition_config = operations.PartitionParameters(
+    partition_config = orchestration.PartitionParameters(
         val_test_ratios=(0.0, 0.0),
         buffer_step=1,
         reward_ratios={},
@@ -91,7 +93,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         block_spec=(256, 256, 128, 128),
     )
 
-    logger = common.PreparationLogger(
+    logger = prepare.PreparationLogger(
         name='test_prep',
         log_file=str(tmp_path / 'report.txt'),
         enable_file_log=False,

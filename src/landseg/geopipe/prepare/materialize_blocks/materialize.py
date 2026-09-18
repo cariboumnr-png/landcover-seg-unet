@@ -36,8 +36,8 @@ import typing
 # third-party imports
 import numpy
 # local imports
+import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.common as common
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.utils as utils
 
@@ -45,7 +45,7 @@ import landseg.utils as utils
 # ----- public functions
 def materialize_blocks(
     input_blocks: set[str],
-    stats: dict[str, common.ImageBandStats],
+    stats: dict[str, contracts.ImageBandStats],
     context: data_context.DatasetContext,
     output_dir: str,
     *,
@@ -107,7 +107,8 @@ def materialize_blocks(
     for fpath in os.listdir(output_dir):
         if fpath.endswith('.npz'):
             name, _ = os.path.splitext(os.path.basename(fpath))
-            fp = os.path.abspath(f'{output_dir}/{fpath}') # use absolute fpath
+            # use absolute fpath
+            fp = os.path.abspath(f'{output_dir}/{fpath}')
             indexed_files[name] = fp
     return indexed_files, purged
 
@@ -132,7 +133,7 @@ def _purge(
 
 def _materialize_one_block(
     block_fpath: str,
-    img_stats: dict[str, common.ImageBandStats],
+    img_stats: dict[str, contracts.ImageBandStats],
     target_dpath: str,
     context: data_context.DatasetContext,
 ):
@@ -167,7 +168,7 @@ def _materialize_one_block(
 def _normalize_image(
     raw_image_arr: numpy.ndarray,
     valid_mask: numpy.ndarray,
-    global_stats: dict[str, common.ImageBandStats],
+    global_stats: dict[str, contracts.ImageBandStats],
 ) -> numpy.ndarray:
     '''Apply per-band normalization using global stats.'''
     # assertion

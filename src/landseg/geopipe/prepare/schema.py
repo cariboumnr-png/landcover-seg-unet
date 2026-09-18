@@ -38,15 +38,15 @@ import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare as prepare
-import landseg.geopipe.prepare.common as common
 
 
 # ----- typing aliases
-PartitionCtrl = artifacts.Controller[common.BlocksPartition]
-ImageStatsCtrl = artifacts.Controller[dict[str, common.ImageBandStats]]
+PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
+ImageStatsCtrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[common.PreparedSchema]
+SchemaCtrl = artifacts.Controller[contracts.PreparedSchema]
 
 
 # ----- private types
@@ -69,7 +69,7 @@ def build_schema(
     context: prepare.DatasetContext,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.PreparationLogger,
+    logger: prepare.PreparationLogger,
 ) -> None:
     '''
     Generate and persist dataset preparation schema JSON.
@@ -127,7 +127,7 @@ def build_schema(
         image_stats = ctrl.fetch()
 
         # target heads reclass hierarchy
-        heads_schema: common.TargetHeadsSchema = {
+        heads_schema: contracts.TargetHeadsSchema = {
             'head_names': list(context.targets.head_names),
             'head_parent': dict(context.targets.head_parent),
             'head_parent_cls': dict(context.targets.head_parent_cls),
@@ -142,7 +142,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_version': common.PREPARED_SCHEMA_ID,
+            'schema_version': contracts.PREPARED_SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,
@@ -163,7 +163,7 @@ def build_schema(
     # compile report
     duration = time.perf_counter() - start_time
 
-    report: common.SchemaReport = {
+    report: contracts.SchemaReport = {
         'status': 'loaded' if loaded else 'created',
         'duration_sec': duration,
         'schema_filepath': paths.schema,

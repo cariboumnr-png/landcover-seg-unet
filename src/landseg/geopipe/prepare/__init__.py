@@ -26,15 +26,15 @@ Exposes public dataset context builders, partitioners, materializers,
 preparation schema, and schema generators via lazy resolution.
 
 Public APIs:
-    - DataBlocksView: in-memory manifest view for catalog blocks.
-    - DatasetContext: unified immutable dataset preparation context.
-    - PartitionParameters: configuration for data block partitioning.
-    - PreparationLogger: specialized logger for preparation runs.
-    - PreparedSchema: TypedDict for dataset preparation schema.
-    - build_dataset_context: construct full dataset preparation context.
-    - build_schema: generate dataset preparation schema JSON.
-    - run_datablocks_partition: partition data blocks into train/val/test.
-    - run_materialize_blocks: orchestrate stats and block materialization.
+    - `DataBlocksView`: In-memory manifest view for catalog blocks.
+    - `DatasetContext`: Unified immutable dataset preparation context.
+    - `PartitionParameters`: Configuration for data block partitioning.
+    - `PreparationLogger`: Specialized logger for preparation runs.
+    - `PreparedSchema`: TypedDict for dataset preparation schema.
+    - `build_dataset_context`: Construct full dataset context.
+    - `build_schema`: Generate dataset preparation schema JSON.
+    - `run_datablocks_partition`: Partition data blocks into splits.
+    - `run_materialize_blocks`: Orchestrate stats and materialization.
 '''
 
 # standard imports
@@ -60,13 +60,17 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import PreparationLogger, PreparedSchema
+    from ..contracts import PreparedSchema
     from .data_context import (
         DataBlocksView,
         DatasetContext,
         build_dataset_context,
     )
-    from .data_partition import PartitionParameters, run_datablocks_partition
+    from .data_partition import (
+        PartitionParameters,
+        run_datablocks_partition,
+    )
+    from .logger import PreparationLogger
     from .materialize_blocks import run_materialize_blocks
     from .schema import build_schema
 
@@ -82,8 +86,16 @@ def __getattr__(name: str):
             importlib.import_module('.data_context', __package__), name
         )
 
-    if name in {'PreparationLogger', 'PreparedSchema'}:
-        return getattr(importlib.import_module('.common', __package__), name)
+    if name in {'PreparationLogger'}:
+        return getattr(
+            importlib.import_module('.logger', __package__), name
+        )
+
+    if name in {'PreparedSchema'}:
+        return getattr(
+            importlib.import_module('landseg.geopipe.contracts', __package__),
+            name,
+        )
 
     if name in {'PartitionParameters', 'run_datablocks_partition'}:
         return getattr(

@@ -27,7 +27,7 @@ import os
 import numpy
 import pytest
 # local imports
-import landseg.geopipe.prepare.common as common
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.materialize_blocks.materialize as mat
 
@@ -46,7 +46,7 @@ def test_normalize_image_math():
     # pixel (1, 1) is invalid
     mask = numpy.array([[True, True], [True, False]], dtype=bool)
 
-    stats: common.ImageBandStats = {
+    stats: contracts.ImageBandStats = {
         'total_count': 100,
         'current_mean': 20.0,
         'accum_m2': 100.0,

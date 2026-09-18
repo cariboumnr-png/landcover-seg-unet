@@ -41,7 +41,7 @@ import rasterio
 import rasterio.transform
 import rasterio.warp
 # local imports
-import landseg.geopipe.prepare.common as common
+import landseg.geopipe.prepare as prepare
 
 
 # ----- public dataclasses
@@ -107,7 +107,7 @@ def resolve_aoi_partitions(
     canvas_crs: str,
     canvas_transform: rasterio.transform.Affine,
     min_overlap: float = 0.5,
-    logger: common.PreparationLogger | None = None,
+    logger: prepare.PreparationLogger | None = None,
 ) -> AoiSplitsResult:
     '''
     Resolve split partitions from AOI rasters with priority resolution.
@@ -253,7 +253,7 @@ def _resolve_conflicts(
     val_raw: list[tuple[int, int]],
     train_raw: list[tuple[int, int]],
     assigned_test: set[tuple[int, int]],
-    logger: common.PreparationLogger | None,
+    logger: prepare.PreparationLogger | None,
 ) -> tuple[set[tuple[int, int]], set[tuple[int, int]]]:
     '''Resolve overlap conflicts using priority: test > val > train.'''
     assigned_val: set[tuple[int, int]] = set()

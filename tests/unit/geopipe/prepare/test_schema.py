@@ -69,10 +69,6 @@ def test_build_schema(mocker):
         return mock_ctrl
 
     mocker.patch(
-        'landseg.geopipe.prepare.schema.load',
-        side_effect=mock_load
-    )
-    mocker.patch(
         'landseg.artifacts.Controller.load_json_or_fail',
         side_effect=mock_load
     )

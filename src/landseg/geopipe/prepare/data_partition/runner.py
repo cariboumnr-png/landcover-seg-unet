@@ -39,14 +39,15 @@ import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.prepare.common as common
+import landseg.geopipe.contracts.preparation as contracts
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.data_partition.orchestration as orchestration
 
 
 # ----- typing aliases
-PartitionCtrl = artifacts.Controller[common.BlocksPartition]
-SplitsSummaryCtrl = artifacts.Controller[common.PartitionSummary]
+PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
+SplitsSummaryCtrl = artifacts.Controller[contracts.PartitionSummary]
 
 
 # ----- private types
@@ -64,7 +65,7 @@ def run_datablocks_partition(
     partition_config: orchestration.PartitionParameters,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.PreparationLogger,
+    logger: prepare.PreparationLogger,
 ) -> None:
     '''
     Partition canonical data blocks into train/val/test splits.
@@ -132,7 +133,7 @@ def run_datablocks_partition(
         logger.log('INFO', '[CHECKPOINT] Loaded dataset partition splits')
 
     duration = time.perf_counter() - start_time
-    report: common.DataPartitionReport = {
+    report: contracts.DataPartitionReport = {
         'status': status,
         'duration_sec': duration
     }
@@ -144,7 +145,7 @@ def _build_splits_summary(
     partition_results: orchestration.PartitionResults,
     *,
     focal_head: str,
-) -> common.PartitionSummary:
+) -> contracts.PartitionSummary:
     '''Summarize class count and distribution changes across splits.'''
     splits = partition_results.raw_splits
     start_count = list(splits.global_class_count)

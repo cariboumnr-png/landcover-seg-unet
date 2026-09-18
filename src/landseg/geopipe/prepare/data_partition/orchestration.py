@@ -39,7 +39,8 @@ import os
 import rasterio
 import rasterio.transform
 # local imports
-import landseg.geopipe.prepare.common as common
+import landseg.geopipe.contracts.preparation as contracts
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.data_partition.operations as operations
 
 
@@ -47,14 +48,18 @@ import landseg.geopipe.prepare.data_partition.operations as operations
 @dataclasses.dataclass
 class PartitionParameters:
     '''Configuration for the dataset partitioning pipeline.'''
-    val_test_ratios: tuple[float, float]# val split, test split
+    # val split, test split
+    val_test_ratios: tuple[float, float]
     buffer_step: int
-    reward_ratios: dict[int, float]     # 0-based
-    scoring_alpha: float                # exponent for transforming block counts
-    scoring_beta: float                 # reward weight for classes during L1
+    # 0-based
+    reward_ratios: dict[int, float]
+    # exponent for transforming block counts
+    scoring_alpha: float
+    # reward weight for classes during L1
+    scoring_beta: float
     max_skew_rate: float
-    block_spec: tuple[int, int, int, int]
     # row_size, col_size, row_stride, col_stride
+    block_spec: tuple[int, int, int, int]
     train_aoi: str | None = None
     val_aoi: str | None = None
     test_aoi: str | None = None
@@ -66,7 +71,7 @@ class PartitionParameters:
 @dataclasses.dataclass(frozen=True)
 class PartitionResults:
     '''Container for partitioned splits and hydration results.'''
-    partition_fpaths: common.BlocksPartition
+    partition_fpaths: contracts.BlocksPartition
     raw_splits: operations.SplitsResult
     hydration: operations.HydrationResults
 
@@ -79,7 +84,7 @@ def create_blocks_partition(
     config: PartitionParameters,
     *,
     ext_test_blks: list[str] | None = None,
-    logger: common.PreparationLogger | None = None,
+    logger: prepare.PreparationLogger | None = None,
 ) -> PartitionResults:
     '''
     Split blocks with spatial safety, AOI selection, and class balance.
@@ -181,7 +186,7 @@ def _split_by_aoi(
     config: PartitionParameters,
     *,
     ext_test_blks: list[str] | None,
-    logger: common.PreparationLogger | None,
+    logger: prepare.PreparationLogger | None,
 ) -> operations.SplitsResult:
     '''Resolve AOI partitions and split remaining blocks.'''
     transform = config.canvas_transform or rasterio.transform.Affine.identity()
@@ -288,7 +293,7 @@ def _finalize_partition(
     additional_train: list[tuple[int, int]],
     *,
     ext_test_blks: list[str] | None,
-) -> common.BlocksPartition:
+) -> contracts.BlocksPartition:
     '''Finalize the partition process with leakage sanity checks.'''
     def _index_fpath(fpaths: list[str]) -> dict[str, str]:
         '''Index block file paths by block name without extension.'''

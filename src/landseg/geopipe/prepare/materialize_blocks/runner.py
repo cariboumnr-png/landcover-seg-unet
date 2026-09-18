@@ -38,16 +38,17 @@ import time
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.prepare.common as common
+import landseg.geopipe.contracts.preparation as contracts
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.data_context as data_context
 import landseg.geopipe.prepare.materialize_blocks.materialize as materialize
 import landseg.geopipe.prepare.materialize_blocks.stats as stats
 
 
 # ----- typing aliases
-PartitionCtrl = artifacts.Controller[common.BlocksPartition]
+PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-ImageStatsCtrl = artifacts.Controller[dict[str, common.ImageBandStats]]
+ImageStatsCtrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
 
 
 # ----- private types
@@ -74,7 +75,7 @@ def run_materialize_blocks(
     context: data_context.DatasetContext,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: common.PreparationLogger,
+    logger: prepare.PreparationLogger,
 ) -> None:
     '''
     Build normalized data blocks from raw block splits.
@@ -150,7 +151,7 @@ def run_materialize_blocks(
 
     # compile report
     duration = time.perf_counter() - start_time
-    report: common.NormalizationReport = {
+    report: contracts.NormalizationReport = {
         'status': 'loaded' if loaded else 'created',
         'duration_sec': duration,
         'unwanted_blocks_removed': purged_total,
@@ -163,11 +164,11 @@ def run_materialize_blocks(
 # ----- private helpers
 def _materialize(
     splits: tuple[set[str], set[str], set[str]],
-    aggregated_stats: dict[str, common.ImageBandStats],
+    aggregated_stats: dict[str, contracts.ImageBandStats],
     context: data_context.DatasetContext,
     paths: _PipelinePaths,
     *,
-    logger: common.PreparationLogger,
+    logger: prepare.PreparationLogger,
 ) -> tuple[dict[str, dict[str, str]], int]:
     '''Materialize and normalize train, validation, and test splits.'''
     train_split, val_split, test_split = splits

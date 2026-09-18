@@ -27,7 +27,7 @@ from partitioning, normalization, and schema generation stages,
 persisting a structured JSON run report upon closure.
 
 Public APIs:
-    - PreparationLogger: logger collecting preparation execution reports.
+    - `PreparationLogger`: Logger collecting prepare execution reports.
 '''
 
 # standard imports
@@ -37,16 +37,8 @@ import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.preparation as contracts
 import landseg.utils as utils
-
-
-if typing.TYPE_CHECKING:
-    from .schema import (
-        DataPartitionReport,
-        NormalizationReport,
-        SchemaReport,
-        PreparationReportSchema,
-    )
 
 
 # ----- public classes
@@ -61,7 +53,7 @@ class PreparationLogger(utils.Logger):
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
         '''Initialize the PreparationLogger instance.'''
         super().__init__(*args, **kwargs)
-        self.summary: PreparationReportSchema | None = None
+        self.summary: contracts.PreparationReportSchema | None = None
 
     def init_summary(
         self,
@@ -80,17 +72,26 @@ class PreparationLogger(utils.Logger):
             'schema': None
         }
 
-    def set_data_partition_report(self, report: DataPartitionReport) -> None:
+    def set_data_partition_report(
+        self,
+        report: contracts.DataPartitionReport
+    ) -> None:
         '''Record the data partition report to summary.'''
         if self.summary is not None:
             self.summary['data_partition'] = report
 
-    def set_normalization_report(self, report: NormalizationReport) -> None:
+    def set_normalization_report(
+        self,
+        report: contracts.NormalizationReport
+    ) -> None:
         '''Record the normalization report to summary.'''
         if self.summary is not None:
             self.summary['normalization'] = report
 
-    def set_schema_report(self, report: SchemaReport) -> None:
+    def set_schema_report(
+        self,
+        report: contracts.SchemaReport
+    ) -> None:
         '''Record the schema generation report to summary.'''
         if self.summary is not None:
             self.summary['schema'] = report
