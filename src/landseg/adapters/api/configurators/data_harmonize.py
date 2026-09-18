@@ -76,3 +76,14 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         '''Set output directory path for harmonized artifacts.'''
         self._cfg.data.harmonization.output_dpath = output_dpath
         return self
+
+    def set_grid_reference(self, output_dpath: str) -> typing.Self:
+        '''
+        Set directory path containing upstream world grid artifacts.
+
+        Args:
+            output_dpath:
+                Directory containing the canonical world grid report.
+        '''
+        self._cfg.data.world_grid.output_dpath = output_dpath
+        return self
