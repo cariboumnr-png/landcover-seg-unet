@@ -26,11 +26,11 @@ Exposes world grid construction and lifecycle management APIs via lazy
 resolution to keep import order simple and circular-free.
 
 Public APIs:
-    - `GridParameters`: Protocol defining grid generation configuration.
-    - `build_grid`: Construct a GridLayout from config or reference raster.
-    - `prepare_world_grid`: Build or load a persisted world grid artifact.
-    - `load_grid_from_config`: Load a world grid artifact from configuration.
-    - `load_grid_from_fpath`: Load a world grid layout directly from file.
+    - `GridLogger`: Logger tracking world grid execution and report JSON.
+    - `GridParameters`: Protocol defining grid generation config.
+    - `build_grid`: Construct GridLayout from config or reference raster.
+    - `get_grid_report_fpath`: Return canonical grid report file path.
+    - `prepare_world_grid`: Build or load persisted world grid artifact.
 '''
 
 # standard imports
@@ -40,29 +40,36 @@ import typing
 
 __all__ = [
     # classes
+    'GridLogger',
     # functions
-    'load_grid_from_config',
-    'load_grid_from_fpath',
+    'get_grid_report_fpath',
     'prepare_world_grid',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
     from .lifecycle import (
-        load_grid_from_config,
-        load_grid_from_fpath,
+        get_grid_report_fpath,
         prepare_world_grid,
+    )
+    from .logger import (
+        GridLogger,
     )
 
 
 def __getattr__(name: str):
 
     if name in {
-        'load_grid_from_config',
-        'load_grid_from_fpath',
+        'get_grid_report_fpath',
         'prepare_world_grid',
     }:
         mod = importlib.import_module('.lifecycle', __package__)
+        return getattr(mod, name)
+
+    if name in {
+        'GridLogger',
+    }:
+        mod = importlib.import_module('.logger', __package__)
         return getattr(mod, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -1,5 +1,5 @@
 # =========================================================================== #
-#            Copyright © His Majesty the King in right of Ontario,            #
+#           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -20,63 +20,57 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.harmonize`.
+Execution context resolution for raster harmonization.
 
-Exposes raster harmonization, manifest compilation, taxonomy resolution,
-and logging APIs via lazy resolution to keep import order simple and
-circular-free.
+Provides containers and loaders to resolve the canonical spatial grid
+reference for data harmonization from upstream pipeline artifacts.
 
 Public APIs:
     - `HarmonizationContext`: Container holding resolved world grid.
-    - `HarmonizationLogger`: Logger tracking ETL progress and summary.
     - `build_harmonization_context`: Load grid context from report.
-    - `data_harmonization_pipeline`: pipeline runner.
 '''
 
 # standard imports
 from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    # classes
-    'HarmonizationContext',
-    'HarmonizationLogger',
-    # functions
-    'build_harmonization_context',
-    'data_harmonization_pipeline',
-    # typing
-]
-
-# for static check
-if typing.TYPE_CHECKING:
-    from .context import HarmonizationContext, build_harmonization_context
-    from .logger import HarmonizationLogger
-    from .pipeline import data_harmonization_pipeline
+import dataclasses
+import os
+# local imports
+import landseg.geopipe.core as geo_core
 
 
-def __getattr__(name: str):
+# ----- public dataclasses
+@dataclasses.dataclass(frozen=True)
+class HarmonizationContext:
+    '''Resolved world grid reference container for harmonization.'''
+    grid: geo_core.GridLayout
+    grid_id: str
+    grid_fpath: str
 
-    if name in {
-        'HarmonizationContext',
-        'build_harmonization_context',
-    }:
-        return getattr(
-            importlib.import_module('.context', __package__), name
-        )
 
-    if name in {
-        'HarmonizationLogger',
-    }:
-        return getattr(
-            importlib.import_module('.logger', __package__), name
-        )
+# ----- public functions
+def build_harmonization_context(
+    grid_source: str,
+) -> HarmonizationContext:
+    '''
+    Load world grid reference context from an upstream grid report.
 
-    if name in {
-        'data_harmonization_pipeline',
-    }:
-        return getattr(
-            importlib.import_module('.pipeline', __package__), name
-        )
+    Args:
+        grid_source:
+            File path to grid report JSON or directory containing it.
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    Returns:
+        HarmonizationContext:
+            Execution context containing the restored GridLayout and
+            grid reference metadata.
+    '''
+    if os.path.isdir(grid_source):
+        report_fpath = geo_core.get_grid_report_fpath(grid_source)
+    else:
+        report_fpath = grid_source
+    grid_report = geo_core.read_grid_report(report_fpath)
+    world_grid = geo_core.load_grid_from_fpath(grid_report['grid_fpath'])
+    return HarmonizationContext(
+        grid=world_grid,
+        grid_id=grid_report['grid_id'],
+        grid_fpath=grid_report['grid_fpath'],
+    )

@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=no-member
+# pylint: disable=no-member,protected-access
 
-'''Unit tests for data harmonization processor (processor.py).'''
+'''Unit tests for data harmonization pipeline (pipeline.py).'''
 
 # standard imports
 import dataclasses
@@ -30,9 +30,9 @@ import typing
 # third-party imports
 import rasterio
 # local imports
-import landseg.geopipe.grid as grid
+import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.harmonize.manifest as manifest
-import landseg.geopipe.harmonize.processor as processor
+import landseg.geopipe.harmonize.pipeline as pipeline
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 
 
@@ -70,7 +70,7 @@ def test_harmonize_sources_features_and_labels(
     )
 
     grid_params = _GridParams(ref_fpath=str(ref_path))
-    world_grid = grid.build_grid('ref', grid_params)
+    world_grid = grid_builder.build_grid('ref', grid_params)
 
     compiled: dict[str, manifest.ManifestEntry] = {
         str(s2_path): {
@@ -106,7 +106,7 @@ def test_harmonize_sources_features_and_labels(
     out_dir = str(tmp_path / 'harmonized')
     os.makedirs(out_dir, exist_ok=True)
 
-    gen = processor.harmonize_sources(
+    gen = pipeline._harmonize_sources(
         compiled,
         out_dir,
         world_grid,
@@ -121,7 +121,7 @@ def test_harmonize_sources_features_and_labels(
     except StopIteration as s:
         res = s.value
 
-    assert isinstance(res, processor.ProcessedRasters)
+    assert isinstance(res, pipeline._ProcessedRasters)
     assert 'features' in res.finalized
     assert 'labels' in res.finalized
     assert res.finalized['features'].endswith(
@@ -148,7 +148,7 @@ def test_harmonize_sources_domains(tmp_path, dummy_geotiff_factory):
     )
 
     grid_params = _GridParams(ref_fpath=str(ref_path))
-    world_grid = grid.build_grid('ref', grid_params)
+    world_grid = grid_builder.build_grid('ref', grid_params)
 
     compiled: dict[str, manifest.ManifestEntry] = {
         str(dom_path): {
@@ -164,7 +164,7 @@ def test_harmonize_sources_domains(tmp_path, dummy_geotiff_factory):
     out_dir = str(tmp_path / 'harmonized')
     os.makedirs(out_dir, exist_ok=True)
 
-    gen = processor.harmonize_sources(
+    gen = pipeline._harmonize_sources(
         compiled,
         out_dir,
         world_grid,
@@ -179,7 +179,7 @@ def test_harmonize_sources_domains(tmp_path, dummy_geotiff_factory):
     except StopIteration as s:
         res = s.value
 
-    assert isinstance(res, processor.ProcessedRasters)
+    assert isinstance(res, pipeline._ProcessedRasters)
     assert 'domains_ecodistrict' in res.finalized
     assert os.path.exists(res.finalized['domains_ecodistrict'])
 
@@ -199,7 +199,7 @@ def test_harmonize_sources_schemes_and_label_specs(
     lbl_path = str(dummy_geotiff_factory(
         filename='lbl.tif', width=16, height=16, bands=1
     ))
-    world_grid = grid.build_grid(
+    world_grid = grid_builder.build_grid(
         'ref',
         _GridParams(ref_fpath=str(dummy_geotiff_factory(
             filename='ref.tif', width=16, height=16, bands=1
@@ -236,7 +236,7 @@ def test_harmonize_sources_schemes_and_label_specs(
     }
 
     os.makedirs(str(tmp_path / 'harmonized'), exist_ok=True)
-    gen = processor.harmonize_sources(
+    gen = pipeline._harmonize_sources(
         compiled,
         str(tmp_path / 'harmonized'),
         world_grid,

@@ -147,7 +147,7 @@ def test_data_ingest_pipeline_with_spectral_and_topo(
     cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
     cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested_data')
     cfg_schema.data.ingestion.rebuild = True
-    cfg_schema.data.ingestion.datablocks.add_topo = True
+    cfg_schema.data.ingestion.datablocks.add_topo = ['slope']
     cfg_schema.data.ingestion.datablocks.add_spectral = ['ndvi']
 
     config = typing.cast(

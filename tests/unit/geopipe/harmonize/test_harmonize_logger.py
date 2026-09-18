@@ -28,7 +28,8 @@ persistence.
 import json
 import os
 # local imports
-import landseg.geopipe.harmonize.common as common
+import landseg.geopipe.contracts as contracts
+import landseg.geopipe.harmonize as harmonize
 
 
 # ----- test cases
@@ -42,7 +43,7 @@ def test_harmonization_logger_summary_lifecycle(tmp_path):
     os.makedirs(out_dpath, exist_ok=True)
     report_file = os.path.join(out_dpath, 'harmonize_report.json')
 
-    logger = common.HarmonizationLogger(
+    logger = harmonize.HarmonizationLogger(
         name='test_harmonize',
         log_file=report_file,
         enable_file_log=False
@@ -85,7 +86,7 @@ def test_harmonization_logger_add_provenance(tmp_path):
     sample_file.write_bytes(b'dummy_content_bytes')
 
     report_file = os.path.join(out_dpath, 'harmonize_report.json')
-    logger = common.HarmonizationLogger(
+    logger = harmonize.HarmonizationLogger(
         name='test_provenance',
         log_file=report_file,
         enable_file_log=False
@@ -104,6 +105,29 @@ def test_harmonization_logger_add_provenance(tmp_path):
     assert prov['path'] == os.path.abspath(str(sample_file))
 
 
+def test_harmonization_logger_set_grid_reference(tmp_path):
+    '''
+    Given: An initialized HarmonizationLogger.
+    When: Setting grid reference with grid ID and file path.
+    Then: Preserves grid reference in report summary and persists it.
+    '''
+    report_file = os.path.join(str(tmp_path), 'harmonize_report.json')
+    logger = harmonize.HarmonizationLogger(
+        name='test_grid_ref',
+        log_file=report_file,
+        enable_file_log=False,
+    )
+    logger.init_summary(run_id='run_0001')
+    logger.set_grid_reference('grid_row_256_col_256', '/path/to/grid.json')
+    logger.close()
+
+    with open(report_file, 'r', encoding='utf-8') as f:
+        report = json.load(f)
+
+    assert report['grid_id'] == 'grid_row_256_col_256'
+    assert report['grid_fpath'] == os.path.abspath('/path/to/grid.json')
+
+
 def test_harmonization_logger_schema_types():
     '''
     Given: Instantiated typed dict schemas `ProvenanceRecord` and
@@ -111,12 +135,12 @@ def test_harmonization_logger_schema_types():
     When: Populating valid fields according to report schema.
     Then: Successfully create structured schema instances.
     '''
-    prov: common.ProvenanceRecord = {
+    prov: contracts.ProvenanceRecord = {
         'path': '/path/to/raster.tif',
         'size_bytes': 1024,
         'mtime': 123456.78,
     }
-    summary: common.HarmonizationReportSchema = {
+    summary: contracts.HarmonizationReportSchema = {
         'run_id': 'run_0001',
         'timestamp': '2026-01-01T00:00:00Z',
         'status': 'SUCCESS',
@@ -124,7 +148,10 @@ def test_harmonization_logger_schema_types():
         'harmonized_sources': {'sentinel2': '/path/to/s2.tif'},
         'finalized_rasters': {'stacked': '/path/to/stacked.tif'},
         'valid_mask_raster': '/path/to/mask.tif',
-        'world_grid': None,
+        'grid_id': 'grid_row_256_col_256',
+        'grid_fpath': '/path/to/grid.json',
     }
     assert summary['status'] == 'SUCCESS'
     assert summary['provenance']['sentinel2']['size_bytes'] == 1024
+    assert summary['grid_id'] == 'grid_row_256_col_256'
+    assert summary['grid_fpath'] == '/path/to/grid.json'

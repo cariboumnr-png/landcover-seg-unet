@@ -27,7 +27,7 @@ harmonization ETL execution progress and serializes structured JSON run
 summaries upon completion.
 
 Public APIs:
-    - `HarmonizationLogger`: Logger tracking ETL progress and report JSON.
+    - `HarmonizationLogger`: Logger tracking ETL progress and summary.
 '''
 
 # standard imports
@@ -70,7 +70,8 @@ class HarmonizationLogger(utils.Logger):
             'harmonized_sources': {},
             'finalized_rasters': {},
             'valid_mask_raster': '',
-            'world_grid': None
+            'grid_id': '',
+            'grid_fpath': '',
         }
 
     def add_source_provenance(self, name: str, source_path: str) -> None:
@@ -99,10 +100,11 @@ class HarmonizationLogger(utils.Logger):
         if self.summary is not None:
             self.summary['valid_mask_raster'] = os.path.abspath(path)
 
-    def set_world_grid_report(self, report: contracts.WorldGridReport) -> None:
-        '''Record world grid preparation report.'''
+    def set_grid_reference(self, grid_id: str, grid_fpath: str) -> None:
+        '''Record world grid identifier and artifact file path.'''
         if self.summary is not None:
-            self.summary['world_grid'] = report
+            self.summary['grid_id'] = grid_id
+            self.summary['grid_fpath'] = os.path.abspath(grid_fpath)
 
     def set_summary_status(
         self,

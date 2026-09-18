@@ -26,7 +26,7 @@ import pathlib
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.harmonize.manifest as manifest
+from landseg.geopipe.harmonize.manifest.normalizer import ManifestEntryNormalizer
 
 
 # ----- `ManifestEntryNormalizer` features tests
@@ -42,7 +42,7 @@ def test_normalize_features_entry_basic():
         'band_mapping': {1: 'blue', 2: 'green', 3: 'red'},
         'category': 'features',
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['name'] == 's2_sample'
     assert entry['path'] == str(pathlib.Path(raw_entry['path']))
@@ -68,7 +68,7 @@ def test_normalize_features_entry_with_schemes():
             'rgb_nir': ['blue', 'green', 'red', 'nir'],
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['schemes'] == raw_entry['schemes']
 
@@ -88,7 +88,7 @@ def test_normalize_features_entry_invalid_scheme_band():
             'rgb_swir': ['blue', 'green', 'swir1'],
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='not in band_mapping'):
         _ = normalizer.normalized_entry
 
@@ -106,7 +106,7 @@ def test_normalize_features_entry_empty_scheme():
         'category': 'features',
         'schemes': {'empty': []},
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='non-empty list'):
         _ = normalizer.normalized_entry
 
@@ -135,7 +135,7 @@ def test_normalize_labels_entry_basic():
             },
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     cat_specs = entry['categorical_specs']
     assert cat_specs is not None
@@ -172,7 +172,7 @@ def test_normalize_labels_entry_with_schemes():
             },
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['schemes'] == raw_entry['schemes']
 
@@ -200,7 +200,7 @@ def test_normalize_labels_entry_scheme_class_out_of_range():
             },
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='outside valid class range'):
         _ = normalizer.normalized_entry
 
@@ -228,7 +228,7 @@ def test_normalize_labels_entry_scheme_reclass_name_mismatch():
             },
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='does not exist in reclass'):
         _ = normalizer.normalized_entry
 
@@ -251,7 +251,7 @@ def test_normalize_domains_entry():
             'ignore_cls': [],
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['category'] == 'domains'
     cat_specs = entry['categorical_specs']
@@ -277,7 +277,7 @@ def test_normalize_domains_entry_with_schemes_raises():
         },
         'schemes': {'dummy': ['eco']},
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='should not define "schemes"'):
         _ = normalizer.normalized_entry
 
@@ -294,7 +294,7 @@ def test_normalize_band_mapping_string_keys():
         'band_mapping': {'1': 'blue', '2': 'green'},
         'category': 'features',
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['band_mapping'] == {1: 'blue', 2: 'green'}
 
@@ -321,7 +321,7 @@ def test_normalize_categorical_specs_with_taxonomy():
             },
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     entry = normalizer.normalized_entry
     cat_specs = entry['categorical_specs']
     assert cat_specs is not None
@@ -354,7 +354,7 @@ def test_normalize_categorical_specs_taxonomy_missing_class_name():
             },
         },
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='Class names not provided'):
         _ = normalizer.normalized_entry
 
@@ -372,7 +372,7 @@ def test_normalize_invalid_category():
         'band_mapping': {1: 'band1'},
         'category': 'unsupported_cat',
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='Invalid category'):
         _ = normalizer.normalized_entry
 
@@ -389,7 +389,7 @@ def test_normalize_band_mapping_non_contiguous():
         'band_mapping': {1: 'blue', 3: 'red'},
         'category': 'features',
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     with pytest.raises(ValueError, match='contiguous integers from 1'):
         _ = normalizer.normalized_entry
 
@@ -413,7 +413,7 @@ def test_normalize_categorical_specs_invalid_bounds():
         },
     }
     with pytest.raises(ValueError, match='< min value 0'):
-        _ = manifest.ManifestEntryNormalizer(raw_entry_neg).normalized_entry
+        _ = ManifestEntryNormalizer(raw_entry_neg).normalized_entry
 
     # 0 num_cls
     raw_entry_zero = {
@@ -428,7 +428,7 @@ def test_normalize_categorical_specs_invalid_bounds():
         },
     }
     with pytest.raises(ValueError, match='< min value 1'):
-        _ = manifest.ManifestEntryNormalizer(raw_entry_zero).normalized_entry
+        _ = ManifestEntryNormalizer(raw_entry_zero).normalized_entry
 
 
 def test_normalize_input_types():
@@ -438,10 +438,10 @@ def test_normalize_input_types():
     Then: Raise appropriate TypeError or ValueError.
     '''
     with pytest.raises(TypeError, match='must be a dict'):
-        manifest.ManifestEntryNormalizer('not_a_dict')
+        ManifestEntryNormalizer('not_a_dict')
 
     with pytest.raises(ValueError, match='Input dict is empty'):
-        manifest.ManifestEntryNormalizer({})
+        ManifestEntryNormalizer({})
 
 
 def test_normalizer_validate_method():
@@ -456,5 +456,5 @@ def test_normalizer_validate_method():
         'band_mapping': {1: 'red'},
         'category': 'features',
     }
-    normalizer = manifest.ManifestEntryNormalizer(raw_entry)
+    normalizer = ManifestEntryNormalizer(raw_entry)
     normalizer.validate()

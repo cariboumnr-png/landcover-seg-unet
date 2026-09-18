@@ -26,7 +26,6 @@ Data harmonization pipeline command implementation.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.geopipe.grid as grid
 import landseg.geopipe.harmonize as harmonize
 
 
@@ -36,10 +35,8 @@ def exec_harmonize_data(config: configs.RootConfig) -> None:
     Execute the data-harmonize pipeline.
 
     Args:
-        config: Resolved root configuration object.
-
-    Returns:
-        Summary report dictionary of the data harmonization execution.
+        config:
+            Resolved root configuration object.
     '''
     root_paths = artifacts.ArtifactPaths.from_config(config)
 
@@ -56,25 +53,21 @@ def exec_harmonize_data(config: configs.RootConfig) -> None:
     try:
         logger.log_sep()
 
-        # load world grid - will raise if grid not present (run prior pipeline)
-        logger.log('INFO', '[START] Loading world grid from configuration')
-        grid_fp, world_grid = grid.load_grid_from_config(config.data.world_grid)
-        grid_report: harmonize.WorldGridReport = {
-            'grid_fpath': grid_fp,
-            'grid_id': world_grid.gid,
-            'crs': world_grid.crs,
-            'pixel_size': world_grid.pixel_size,
-            'tile_size': world_grid.tile_size,
-            'tile_overlap': world_grid.tile_overlap,
-        }
-        logger.set_world_grid_report(grid_report)
-        logger.log('INFO', f'[COMPLETE] World grid loaded: {world_grid.gid}')
+        # load canonical world grid from upstream grid pipeline report
+        logger.log('INFO', '[START] Loading world grid from grid report')
+        context = harmonize.build_harmonization_context(
+            config.data.world_grid.output_dpath
+        )
+        logger.set_grid_reference(context.grid_id, context.grid_fpath)
+        logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
 
-        logger.log('INFO', f'[START] Harmonizing data onto grid: {world_grid.gid}')
+        logger.log(
+            'INFO', f'[START] Harmonizing data onto grid: {context.grid_id}'
+        )
         harmonize.data_harmonization_pipeline(
             paths,
             config.data.harmonization,
-            world_grid,
+            context.grid,
             logger=logger
         )
         logger.log('INFO', '[COMPLETE] Harmonization finished')

@@ -28,9 +28,8 @@ This module provides functions to prepare, load, and persist world grid
 layouts with verification and lifecycle policy handling.
 
 Public APIs:
-    - `prepare_world_grid`: Build or load a persisted world grid artifact.
-    - `load_grid_from_config`: Load a world grid artifact from configuration.
-    - `load_grid_from_fpath`: Load a world grid layout directly from file.
+    - `get_grid_report_fpath`: Return canonical grid report file path.
+    - `prepare_world_grid`: Build or load a persisted grid artifact.
 '''
 
 # standard imports
@@ -114,44 +113,19 @@ def prepare_world_grid(
     return is_loaded, grid_fpath, _grid
 
 
-def load_grid_from_config(
-    config: _WorldGridPrepConfig,
-) -> tuple[str, geo_core.GridLayout]:
+def get_grid_report_fpath(output_dpath: str) -> str:
     '''
-    Load an existing world grid artifact based on input configuration.
+    Return canonical file path of the world grid report artifact.
 
     Args:
-        config:
-            Configuration object defining grid parameters and paths.
+        output_dpath:
+            Output directory containing world grid artifacts.
 
     Returns:
-        tuple[str, geo_core.GridLayout]:
-            Tuple of (grid file path, GridLayout instance).
+        str:
+            Full path to the grid_report.json artifact.
     '''
-    try:
-        _, fp, world_grid = prepare_world_grid(config, load_only=True)
-        return fp, world_grid
-    except ValueError as e:
-        raise e # re-raise
-
-
-def load_grid_from_fpath(fpath: str) -> geo_core.GridLayout:
-    '''
-    Load a world grid layout directly from a file path.
-
-    Args:
-        fpath:
-            File path to the serialized grid JSON artifact.
-
-    Returns:
-        geo_core.GridLayout:
-            Restored GridLayout instance.
-    '''
-    try:
-        _, _, world_grid = prepare_world_grid(override_grid_fpath=fpath)
-        return world_grid
-    except ValueError as e:
-        raise e # re-raise
+    return geo_core.get_grid_report_fpath(output_dpath)
 
 
 # ----- private helpers

@@ -37,7 +37,6 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.grid as grid
 import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.data_blocks.assembler as assembler
 import landseg.geopipe.ingest.data_blocks.mapper as mapper
@@ -172,7 +171,7 @@ def _prepare_dataspecs(
         ),
         heads=core.Heads(
             class_counts=cc,  # neutral
-            logits_adjust={k: [1.0] * len(v) for k, v in cc.items()}, # neutral
+            logits_adjust={k: [1.0] * len(v) for k, v in cc.items()},
             head_parent={
                 k: None for k in block.manifest['label_band_map']
             },
@@ -205,29 +204,30 @@ def _create_block(
 ) -> str:
     '''Build one valid block for the overfit test.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    harmonized = ingest.read_harmonization_report(
+    context = ingest.build_ingestion_context(
         artifact_paths.data_harmonization,
         config.data.ingestion.harmonization_run,
     )
-    if not harmonized.has_data:
+    if not context.has_data:
         raise ValueError(
             'Harmonized feature/label rasters not found in report'
         )
 
-    # construct world grid layout
-    logger.log('INFO', 'Preparing world grid')
-    _, _, world_grid = grid.prepare_world_grid(config.data.world_grid)
+    # world grid from ingestion context
+    world_grid = context.grid
 
     # map raster windows onto world grid
     logger.log('INFO', 'Mapping image unto the world grid')
     datablocks_cfg = config.data.ingestion.datablocks
-    assert harmonized.features
-    assert harmonized.labels
+    assert context.features
+    assert context.labels
     mapped = mapper.map_rasters_to_grid(
         world_grid,
-        harmonized.features,
-        harmonized.labels,
-        artifact_paths.data_ingestion.data_blocks.mapped_window(world_grid.gid),
+        context.features,
+        context.labels,
+        artifact_paths.data_ingestion.data_blocks.mapped_window(
+            world_grid.gid
+        ),
         policy=artifacts.LifecyclePolicy.REBUILD
     )
 
