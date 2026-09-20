@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -37,21 +38,38 @@ __all__ = [
     'MultiBlockDataset',
     # functions
     'build_dataloaders',
-    # types
-    'DataLoaderConfig'
+    # typing
+    'DataLoaderConfig',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dataset import BlockDatasetContext, MultiBlockDataset
-    from .loader import DataLoaderConfig, DataLoaders, build_dataloaders
+    from .dataset import (
+        BlockDatasetContext,
+        MultiBlockDataset,
+    )
+    from .loader import (
+        DataLoaderConfig,
+        DataLoaders,
+        build_dataloaders,
+    )
+
 
 def __getattr__(name: str):
+    if name in {
+        'BlockDatasetContext',
+        'MultiBlockDataset',
+    }:
+        obj = importlib.import_module('.dataset', __package__)
+        return getattr(obj, name)
 
-    if name in {'BlockDatasetContext', 'MultiBlockDataset'}:
-        return getattr(importlib.import_module('.dataset', __package__), name)
-
-    if name in {'DataLoaderConfig', 'DataLoaders', 'build_dataloaders'}:
-        return getattr(importlib.import_module('.loader', __package__), name)
+    if name in {
+        'DataLoaderConfig',
+        'DataLoaders',
+        'build_dataloaders',
+    }:
+        obj = importlib.import_module('.loader', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

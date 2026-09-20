@@ -33,27 +33,27 @@ Public APIs:
     - validate_geometry: Ingests rasters and validates alignment.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
     'map_rasters_to_grid',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .lifecycle import map_rasters_to_grid
+    from .lifecycle import (
+        map_rasters_to_grid,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {'map_rasters_to_grid'}:
-        return getattr(
-            importlib.import_module('.lifecycle', __package__), name
-        )
+        obj = importlib.import_module('.lifecycle', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

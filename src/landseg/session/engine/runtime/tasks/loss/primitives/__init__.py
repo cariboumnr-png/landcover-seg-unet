@@ -20,57 +20,74 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.loss.primitives`.
+Top-level namespace for
+`landseg.session.engine.runtime.tasks.loss.primitives`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'PrimitiveLoss',
     'DiceLoss',
     'EcologicalSimilarityLoss',
     'FocalLoss',
+    'PrimitiveLoss',
     'SpectralSmoothnessLoss',
     'TotalVariationLoss',
-    # functions
-    # types
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import PrimitiveLoss
-    from .dice import DiceLoss
-    from .ecological import EcologicalSimilarityLoss
-    from .focal import FocalLoss
-    from .spectral import SpectralSmoothnessLoss
-    from .tv import TotalVariationLoss
+    from .base import (
+        PrimitiveLoss,
+    )
+    from .dice import (
+        DiceLoss,
+    )
+    from .ecological import (
+        EcologicalSimilarityLoss,
+    )
+    from .focal import (
+        FocalLoss,
+    )
+    from .spectral import (
+        SpectralSmoothnessLoss,
+    )
+    from .tv import (
+        TotalVariationLoss,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {'PrimitiveLoss'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'DiceLoss'}:
-        return getattr(importlib.import_module('.dice', __package__), name)
+        obj = importlib.import_module('.dice', __package__)
+        return getattr(obj, name)
 
     if name in {'EcologicalSimilarityLoss'}:
-        return getattr(
-            importlib.import_module('.ecological', __package__), name
-        )
+        obj = importlib.import_module('.ecological', __package__)
+        return getattr(obj, name)
 
     if name in {'FocalLoss'}:
-        return getattr(importlib.import_module('.focal', __package__), name)
+        obj = importlib.import_module('.focal', __package__)
+        return getattr(obj, name)
 
     if name in {'SpectralSmoothnessLoss'}:
-        return getattr(importlib.import_module('.spectral', __package__), name)
+        obj = importlib.import_module('.spectral', __package__)
+        return getattr(obj, name)
 
     if name in {'TotalVariationLoss'}:
-        return getattr(importlib.import_module('.tv', __package__), name)
+        obj = importlib.import_module('.tv', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

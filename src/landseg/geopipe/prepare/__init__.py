@@ -40,27 +40,26 @@ __all__ = [
     'PreparationLogger',
     # functions
     'run_data_preparation',
-    # types
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .logger import PreparationLogger
-    from .pipeline import run_data_preparation
+    from .logger import (
+        PreparationLogger,
+    )
+    from .pipeline import (
+        run_data_preparation,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {'PreparationLogger'}:
-        return getattr(
-            importlib.import_module('.logger', __package__), name
-        )
+        obj = importlib.import_module('.logger', __package__)
+        return getattr(obj, name)
 
     if name in {'run_data_preparation'}:
-        return getattr(
-            importlib.import_module('.pipeline', __package__),
-            name,
-        )
+        obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

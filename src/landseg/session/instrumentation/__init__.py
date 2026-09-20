@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,15 +36,23 @@ __all__ = [
     'CallbackDispatcher',
     # functions
     'build_dispatcher',
-    # types
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .callbacks import CallbackDispatcher, build_dispatcher
+    from .callbacks import (
+        CallbackDispatcher,
+        build_dispatcher,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'CallbackDispatcher', 'build_dispatcher'}:
-        return getattr(importlib.import_module('.callbacks', __package__), name)
+    if name in {
+        'CallbackDispatcher',
+        'build_dispatcher',
+    }:
+        obj = importlib.import_module('.callbacks', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

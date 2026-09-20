@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,31 +36,48 @@ __all__ = [
     'EngineRuntime',
     # functions
     'build_engine_runtime',
-    # types
+    # typing
     'BatchExecConfigShape',
     'OptimConfigShape',
-    'TaskConfigShape'
+    'TaskConfigShape',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import EngineRuntime, build_engine_runtime
-    from .executor import BatchExecConfigShape
-    from .optim import OptimConfigShape
-    from .tasks import TaskConfigShape
+    from .builder import (
+        EngineRuntime,
+        build_engine_runtime,
+    )
+    from .executor import (
+        BatchExecConfigShape,
+    )
+    from .optim import (
+        OptimConfigShape,
+    )
+    from .tasks import (
+        TaskConfigShape,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'EngineRuntime','build_engine_runtime'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in {
+        'EngineRuntime',
+        'build_engine_runtime',
+    }:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
     if name in {'BatchExecConfigShape'}:
-        return getattr(importlib.import_module('.executor', __package__), name)
+        obj = importlib.import_module('.executor', __package__)
+        return getattr(obj, name)
 
     if name in {'OptimConfigShape'}:
-        return getattr(importlib.import_module('.optim', __package__), name)
+        obj = importlib.import_module('.optim', __package__)
+        return getattr(obj, name)
 
     if name in {'TaskConfigShape'}:
-        return getattr(importlib.import_module('.tasks', __package__), name)
+        obj = importlib.import_module('.tasks', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

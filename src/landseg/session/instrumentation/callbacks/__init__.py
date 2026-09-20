@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -37,28 +38,40 @@ __all__ = [
     'LoggingCallback',
     # functions
     'build_dispatcher',
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import BaseCallback
-    from .builder import build_dispatcher
-    from .dispatcher import CallbackDispatcher
-    from .logging import LoggingCallback
+    from .base import (
+        BaseCallback,
+    )
+    from .builder import (
+        build_dispatcher,
+    )
+    from .dispatcher import (
+        CallbackDispatcher,
+    )
+    from .logging import (
+        LoggingCallback,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'BaseCallback'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'build_dispatcher'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
     if name in {'CallbackDispatcher'}:
-        return getattr(importlib.import_module('.dispatcher', __package__), name)
+        obj = importlib.import_module('.dispatcher', __package__)
+        return getattr(obj, name)
 
     if name in {'LoggingCallback'}:
-        return getattr(importlib.import_module('.logging', __package__), name)
+        obj = importlib.import_module('.logging', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

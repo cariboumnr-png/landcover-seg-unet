@@ -31,33 +31,40 @@ Public APIs:
     - `xy_name`: Convert (x, y) coordinate tuple to block name string.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
     'name_xy',
     'open_rasters',
     'xy_name',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .coords_str import name_xy, xy_name
-    from .raster_context import open_rasters
+    from .coords_str import (
+        name_xy,
+        xy_name,
+    )
+    from .raster_context import (
+        open_rasters,
+    )
 
 
 def __getattr__(name: str):
-
-    if name in {'name_xy', 'xy_name'}:
-        mod = importlib.import_module('.coords_str', __package__)
-        return getattr(mod, name)
+    if name in {
+        'name_xy',
+        'xy_name',
+    }:
+        obj = importlib.import_module('.coords_str', __package__)
+        return getattr(obj, name)
 
     if name in {'open_rasters'}:
-        mod = importlib.import_module('.raster_context', __package__)
-        return getattr(mod, name)
+        obj = importlib.import_module('.raster_context', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

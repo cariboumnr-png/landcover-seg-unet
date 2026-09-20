@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 '''
 Top-level namespace for `landseg.session.instrumentation.dashboards`.
 
@@ -27,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,26 +35,34 @@ __all__ = [
     # classes
     'BaseTracker',
     'MLFlowTracker',
-    'TensorBoardTracker'
-    # functions
-    # types
+    'TensorBoardTracker',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import BaseTracker
-    from .ml_flow import MLFlowTracker
-    from .tensor_board import TensorBoardTracker
+    from .base import (
+        BaseTracker,
+    )
+    from .ml_flow import (
+        MLFlowTracker,
+    )
+    from .tensor_board import (
+        TensorBoardTracker,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'BaseTracker'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'MLFlowTracker'}:
-        return getattr(importlib.import_module('.ml_flow', __package__), name)
+        obj = importlib.import_module('.ml_flow', __package__)
+        return getattr(obj, name)
 
     if name in {'TensorBoardTracker'}:
-        return getattr(importlib.import_module('.tensor_board', __package__), name)
+        obj = importlib.import_module('.tensor_board', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

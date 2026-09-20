@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 '''
 Top-level namespace for `landseg.geopipe.ingest.blocks`.
 
@@ -31,6 +30,7 @@ Public APIs:
     - run_blocks_building: Runs canonical data block pipeline.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -40,18 +40,23 @@ __all__ = [
     'BlockBuildingParameters',
     # functions
     'run_blocks_building',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .pipeline import BlockBuildingParameters, run_blocks_building
+    from .pipeline import (
+        BlockBuildingParameters,
+        run_blocks_building,
+    )
 
 
 def __getattr__(name: str):
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
-        return getattr(
-            importlib.import_module('.pipeline', __package__), name
-        )
+    if name in {
+        'BlockBuildingParameters',
+        'run_blocks_building',
+    }:
+        obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

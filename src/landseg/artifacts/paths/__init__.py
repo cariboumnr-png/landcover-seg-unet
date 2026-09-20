@@ -31,6 +31,7 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
     'ArtifactPaths',
     'HarmonizationPaths',
     'IngestionPaths',
@@ -39,34 +40,52 @@ __all__ = [
     'SessionPaths',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_harmonization import HarmonizationPaths
-    from .data_ingestion import IngestionPaths
-    from .data_preparation import PreparationPaths
-    from .knowledge import KnowledgePaths
-    from .root import ArtifactPaths
-    from .session import SessionPaths
+    from .data_harmonization import (
+        HarmonizationPaths,
+    )
+    from .data_ingestion import (
+        IngestionPaths,
+    )
+    from .data_preparation import (
+        PreparationPaths,
+    )
+    from .knowledge import (
+        KnowledgePaths,
+    )
+    from .root import (
+        ArtifactPaths,
+    )
+    from .session import (
+        SessionPaths,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {'HarmonizationPaths'}:
-        return getattr(importlib.import_module('.data_harmonization', __package__), name)
+        obj = importlib.import_module('.data_harmonization', __package__)
+        return getattr(obj, name)
 
     if name in {'IngestionPaths'}:
-        return getattr(importlib.import_module('.data_ingestion', __package__), name)
-
-    if name in {'KnowledgePaths'}:
-        return getattr(importlib.import_module('.knowledge', __package__), name)
+        obj = importlib.import_module('.data_ingestion', __package__)
+        return getattr(obj, name)
 
     if name in {'PreparationPaths'}:
-        return getattr(importlib.import_module('.data_preparation', __package__), name)
+        obj = importlib.import_module('.data_preparation', __package__)
+        return getattr(obj, name)
 
-    if name in {'SessionPaths'}:
-        return getattr(importlib.import_module('.session', __package__), name)
+    if name in {'KnowledgePaths'}:
+        obj = importlib.import_module('.knowledge', __package__)
+        return getattr(obj, name)
 
     if name in {'ArtifactPaths'}:
-        return getattr(importlib.import_module('.root', __package__), name)
+        obj = importlib.import_module('.root', __package__)
+        return getattr(obj, name)
+
+    if name in {'SessionPaths'}:
+        obj = importlib.import_module('.session', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

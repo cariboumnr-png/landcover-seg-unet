@@ -26,24 +26,27 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
-    # functions
-    # types
+    # typing
     'execute_pipeline',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import execute_pipeline
+    from .executor import (
+        execute_pipeline,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'execute_pipeline'}:
-        return getattr(importlib.import_module('.executor', __package__), name)
+        obj = importlib.import_module('.executor', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

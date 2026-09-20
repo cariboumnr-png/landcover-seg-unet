@@ -48,6 +48,7 @@ Public APIs:
     - check_npz_integrity: Verifies a saved .npz file is readable.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -70,19 +71,13 @@ __all__ = [
     'read_schemes',
 ]
 
+
+# for static check
 if typing.TYPE_CHECKING:
     from .builder import (
-        build_data_block,
         DataBlockConfig,
         DataBlockInputs,
-    )
-    from .lifecycle import (
-        BlockBuildingInput,
-        BlockBuildingContext,
-        BlockBuildingConfig,
-        BlockBuildingOutput,
-        build_blocks,
-        build_test_block,
+        build_data_block,
     )
     from .io import (
         RasterReadInput,
@@ -90,29 +85,24 @@ if typing.TYPE_CHECKING:
         read_label_specs,
         read_schemes,
     )
+    from .lifecycle import (
+        BlockBuildingConfig,
+        BlockBuildingContext,
+        BlockBuildingInput,
+        BlockBuildingOutput,
+        build_blocks,
+        build_test_block,
+    )
 
 
 def __getattr__(name: str):
     if name in {
-        'build_data_block',
         'DataBlockConfig',
         'DataBlockInputs',
+        'build_data_block',
     }:
-        return getattr(
-            importlib.import_module('.builder', __package__), name
-        )
-
-    if name in {
-        'BlockBuildingInput',
-        'BlockBuildingContext',
-        'BlockBuildingConfig',
-        'BlockBuildingOutput',
-        'build_blocks',
-        'build_test_block',
-    }:
-        return getattr(
-            importlib.import_module('.lifecycle', __package__), name
-        )
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
     if name in {
         'RasterReadInput',
@@ -120,8 +110,18 @@ def __getattr__(name: str):
         'read_label_specs',
         'read_schemes',
     }:
-        return getattr(
-            importlib.import_module('.io', __package__), name
-        )
+        obj = importlib.import_module('.io', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'BlockBuildingConfig',
+        'BlockBuildingContext',
+        'BlockBuildingInput',
+        'BlockBuildingOutput',
+        'build_blocks',
+        'build_test_block',
+    }:
+        obj = importlib.import_module('.lifecycle', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

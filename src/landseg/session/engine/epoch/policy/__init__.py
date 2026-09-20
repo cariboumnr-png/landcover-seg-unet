@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,25 +36,33 @@ __all__ = [
     'EngineBase',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
-    # functions
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import EngineBase
-    from .evaluator import MultiHeadEvaluator
-    from .trainer import MultiHeadTrainer
+    from .base import (
+        EngineBase,
+    )
+    from .evaluator import (
+        MultiHeadEvaluator,
+    )
+    from .trainer import (
+        MultiHeadTrainer,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'EngineBase'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'MultiHeadEvaluator'}:
-        return getattr(importlib.import_module('.evaluator', __package__), name)
+        obj = importlib.import_module('.evaluator', __package__)
+        return getattr(obj, name)
 
     if name in {'MultiHeadTrainer'}:
-        return getattr(importlib.import_module('.trainer', __package__), name)
+        obj = importlib.import_module('.trainer', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

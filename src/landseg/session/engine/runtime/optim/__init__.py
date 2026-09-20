@@ -26,29 +26,42 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
+
 __all__ = [
     # classes
     'Optimization',
     # functions
     'build_optimization',
-    # types
-    'OptimConfigShape'
+    # typing
+    'OptimConfigShape',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import OptimConfigShape, build_optimization
-    from .optimization import Optimization
+    from .builder import (
+        OptimConfigShape,
+        build_optimization,
+    )
+    from .optimization import (
+        Optimization,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'OptimConfigShape', 'build_optimization'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in {
+        'OptimConfigShape',
+        'build_optimization',
+    }:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
     if name in {'Optimization'}:
-        return getattr(importlib.import_module('.optimization', __package__), name)
+        obj = importlib.import_module('.optimization', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -22,10 +22,27 @@
 '''
 Top-level namespace for `landseg.artifacts`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes selected public symbols via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `ArtifactError`: Base artifact operational error.
+    - `ArtifactPaths`: Generic artifact paths resolver.
+    - `CheckpointMeta`: Metadata TypedDict for model checkpoints.
+    - `Controller`: Base artifact controller.
+    - `HarmonizationPaths`: Harmonization artifact directory paths.
+    - `IngestionPaths`: Ingestion artifact directory paths.
+    - `KnowledgePaths`: Knowledge artifact directory paths.
+    - `LifecyclePolicy`: Artifact lifecycle retention policy.
+    - `PayloadController`: Base JSON/dict payload controller.
+    - `PayloadDict`: TypedDict mapping keys to JSON-serializable payloads.
+    - `PreparationPaths`: Preparation artifact directory paths.
+    - `SessionPaths`: Session artifact directory paths.
+    - `load_checkpoint`: Restore model and optimizer checkpoint.
+    - `save_checkpoint`: Persist model and optimizer checkpoint.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -47,13 +64,21 @@ __all__ = [
     'save_checkpoint',
     # typing
     'CheckpointMeta',
-    'PayloadDict'
+    'PayloadDict',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .checkpoint import CheckpointMeta, load_checkpoint, save_checkpoint
-    from .controller import ArtifactError, Controller
+    from .checkpoint import (
+        CheckpointMeta,
+        load_checkpoint,
+        save_checkpoint,
+    )
+    from .controller import (
+        ArtifactError,
+        Controller,
+    )
     from .paths import (
         ArtifactPaths,
         HarmonizationPaths,
@@ -62,16 +87,30 @@ if typing.TYPE_CHECKING:
         PreparationPaths,
         SessionPaths,
     )
-    from .payload_io import PayloadController, PayloadDict
-    from .policy import LifecyclePolicy
+    from .payload_io import (
+        PayloadController,
+        PayloadDict,
+    )
+    from .policy import (
+        LifecyclePolicy,
+    )
+
 
 def __getattr__(name: str):
+    if name in {
+        'CheckpointMeta',
+        'load_checkpoint',
+        'save_checkpoint',
+    }:
+        obj = importlib.import_module('.checkpoint', __package__)
+        return getattr(obj, name)
 
-    if name in {'CheckpointMeta', 'load_checkpoint', 'save_checkpoint'}:
-        return getattr(importlib.import_module('.checkpoint', __package__), name)
-
-    if name in {'ArtifactError', 'Controller'}:
-        return getattr(importlib.import_module('.controller', __package__), name)
+    if name in {
+        'ArtifactError',
+        'Controller',
+    }:
+        obj = importlib.import_module('.controller', __package__)
+        return getattr(obj, name)
 
     if name in {
         'ArtifactPaths',
@@ -81,12 +120,18 @@ def __getattr__(name: str):
         'PreparationPaths',
         'SessionPaths',
     }:
-        return getattr(importlib.import_module('.paths', __package__), name)
+        obj = importlib.import_module('.paths', __package__)
+        return getattr(obj, name)
 
-    if name in {'PayloadController', 'PayloadDict'}:
-        return getattr(importlib.import_module('.payload_io', __package__), name)
+    if name in {
+        'PayloadController',
+        'PayloadDict',
+    }:
+        obj = importlib.import_module('.payload_io', __package__)
+        return getattr(obj, name)
 
     if name in {'LifecyclePolicy'}:
-        return getattr(importlib.import_module('.policy', __package__), name)
+        obj = importlib.import_module('.policy', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

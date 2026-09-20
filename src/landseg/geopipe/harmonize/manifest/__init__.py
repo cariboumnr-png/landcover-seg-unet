@@ -41,42 +41,36 @@ import importlib
 import typing
 
 __all__ = [
-    # functions
-    'compile_dataset_manifest',
     # classes
     'DatasetManifestError',
+    # functions
+    'compile_dataset_manifest',
     # typing
     'ManifestEntry',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
     from .compiler import (
-        compile_dataset_manifest,
         DatasetManifestError,
+        compile_dataset_manifest,
     )
-
     from .schema import (
         ManifestEntry,
     )
 
 
 def __getattr__(name: str):
-
     if name in {
-        'compile_dataset_manifest',
         'DatasetManifestError',
+        'compile_dataset_manifest',
     }:
-        return getattr(
-            importlib.import_module('.compiler', __package__), name
-        )
+        obj = importlib.import_module('.compiler', __package__)
+        return getattr(obj, name)
 
-
-    if name in {
-        'ManifestEntry',
-    }:
-        return getattr(
-            importlib.import_module('.schema', __package__), name
-        )
+    if name in {'ManifestEntry'}:
+        obj = importlib.import_module('.schema', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

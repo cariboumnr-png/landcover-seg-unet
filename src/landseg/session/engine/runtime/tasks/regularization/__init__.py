@@ -20,12 +20,14 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.loss.regularizers`.
+Top-level namespace for
+`landseg.session.engine.runtime.tasks.loss.regularizers`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -33,17 +35,25 @@ import typing
 __all__ = [
     # classes
     'ConsistencyRegularizer',
-    # functions
-    # types
-    'ConsistencyRegConfigShape'
+    # typing
+    'ConsistencyRegConfigShape',
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .consistency import ConsistencyRegularizer, ConsistencyRegConfigShape
+    from .consistency import (
+        ConsistencyRegConfigShape,
+        ConsistencyRegularizer,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'ConsistencyRegularizer', 'ConsistencyRegConfigShape'}:
-        return getattr(importlib.import_module('.consistency', __package__), name)
+    if name in {
+        'ConsistencyRegConfigShape',
+        'ConsistencyRegularizer',
+    }:
+        obj = importlib.import_module('.consistency', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

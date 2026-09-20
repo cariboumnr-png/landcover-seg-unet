@@ -32,16 +32,6 @@ Public APIs:
     - `DomainTileMap`: Mapping of valid spatial domain tiles.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
-    - `CategoricalSpec`: TypedDict for categorical raster specs.
-    - `DataBlockManifest`: TypedDict for block serialization manifest.
-    - `DatasetBlockMeta`: TypedDict for individual block entry.
-    - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
-    - `DomainMeta`: TypedDict for domain tile map metadata.
-    - `DomainPayload`: TypedDict for serialized domain tile map.
-    - `GridPayload`: TypedDict for serialized grid payload.
-    - `GridMeta`: TypedDict for grid metadata.
-    - `GridSpec`: Dataclass specifying world grid parameters.
-    - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `get_grid_report_fpath`: Canonical path to grid report artifact.
     - `load_grid_from_fpath`: Load world grid layout directly from file.
     - `read_grid_report`: Read grid report JSON and extract summary.
@@ -52,11 +42,16 @@ Public APIs:
     - `DomainMeta`: TypedDict for domain tile map metadata.
     - `DomainPayload`: TypedDict for serialized domain tile map.
     - `DomainTile`: TypedDict for individual domain tile coordinates.
+    - `GridMeta`: TypedDict for grid metadata.
+    - `GridPayload`: TypedDict for serialized grid payload.
     - `LabelScheme`: TypedDict for named reclassification scheme.
-    - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
+    - `RasterReader`: Type alias for raster reader protocol.
+    - `RasterWindow`: Type alias for raster window definition.
+    - `RasterWindowDict`: TypedDict for raster window serialized dict.
     - `TaxonomySpec`: TypedDict for domain taxonomy specification.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -81,14 +76,15 @@ __all__ = [
     'DomainMeta',
     'DomainPayload',
     'DomainTile',
-    'GridPayload',
     'GridMeta',
+    'GridPayload',
     'LabelScheme',
     'RasterReader',
     'RasterWindow',
     'RasterWindowDict',
     'TaxonomySpec',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
@@ -103,24 +99,26 @@ if typing.TYPE_CHECKING:
         DataBlockManifest,
     )
     from .dataset_catalog import (
-        DatasetCatalog,
         DatasetBlockMeta,
+        DatasetCatalog,
     )
-    from .dataset_schema import DatasetSchema
+    from .dataset_schema import (
+        DatasetSchema,
+    )
     from .domain_tile_map import (
-        DomainPayload,
         DomainMeta,
+        DomainPayload,
         DomainTile,
         DomainTileMap,
     )
     from .grid_layout import (
+        GridLayout,
+        GridMeta,
+        GridPayload,
+        GridSpec,
         RasterReader,
         RasterWindow,
         RasterWindowDict,
-        GridSpec,
-        GridPayload,
-        GridMeta,
-        GridLayout,
         get_grid_report_fpath,
         load_grid_from_fpath,
         read_grid_report,
@@ -137,21 +135,6 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'RasterReader',
-        'RasterWindow',
-        'RasterWindowDict',
-        'GridSpec',
-        'GridPayload',
-        'GridMeta',
-        'GridLayout',
-        'get_grid_report_fpath',
-        'load_grid_from_fpath',
-        'read_grid_report',
-    }:
-        obj = importlib.import_module('.grid_layout', __package__)
-        return getattr(obj, name)
-
-    if name in {
         'DataBlock',
         'DataBlockArrays',
         'DataBlockManifest',
@@ -160,26 +143,41 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'DatasetCatalog',
         'DatasetBlockMeta',
+        'DatasetCatalog',
     }:
         obj = importlib.import_module('.dataset_catalog', __package__)
         return getattr(obj, name)
 
     if name in {
+        'DatasetSchema',
         'dataset_schema',
-        'DatasetSchema'
     }:
         obj = importlib.import_module('.dataset_schema', __package__)
         return obj if name == 'dataset_schema' else getattr(obj, name)
 
     if name in {
-        'DomainPayload',
         'DomainMeta',
+        'DomainPayload',
         'DomainTile',
         'DomainTileMap',
     }:
         obj = importlib.import_module('.domain_tile_map', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'GridLayout',
+        'GridMeta',
+        'GridPayload',
+        'GridSpec',
+        'RasterReader',
+        'RasterWindow',
+        'RasterWindowDict',
+        'get_grid_report_fpath',
+        'load_grid_from_fpath',
+        'read_grid_report',
+    }:
+        obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

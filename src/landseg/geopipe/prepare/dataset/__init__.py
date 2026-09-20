@@ -42,18 +42,25 @@ __all__ = [
     'DatasetViewParameters',
     # functions
     'build_dataset_view',
-    # types
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .view import DatasetView, DatasetViewParameters, build_dataset_view
+    from .view import (
+        DatasetView,
+        DatasetViewParameters,
+        build_dataset_view,
+    )
 
 
 def __getattr__(name: str):
-
-    if name in {'DatasetView', 'DatasetViewParameters', 'build_dataset_view'}:
-        return getattr(importlib.import_module('.view', __package__), name)
+    if name in {
+        'DatasetView',
+        'DatasetViewParameters',
+        'build_dataset_view',
+    }:
+        obj = importlib.import_module('.view', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

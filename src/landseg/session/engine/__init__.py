@@ -26,37 +26,58 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'EpochEngineContext',
     'EpochEngine',
+    'EpochEngineContext',
     # functions
     'build_epoch_engine',
-    # types
+    # typing
     'BatchExecConfigShape',
-    'TaskConfigShape',
     'OptimConfigShape',
+    'TaskConfigShape',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import EpochEngineContext, build_epoch_engine
-    from .epoch import EpochEngine
-    from .runtime import BatchExecConfigShape, TaskConfigShape, OptimConfigShape
+    from .builder import (
+        EpochEngineContext,
+        build_epoch_engine,
+    )
+    from .epoch import (
+        EpochEngine,
+    )
+    from .runtime import (
+        BatchExecConfigShape,
+        OptimConfigShape,
+        TaskConfigShape,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'EpochEngineContext', 'build_epoch_engine'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in {
+        'EpochEngineContext',
+        'build_epoch_engine',
+    }:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
     if name in {'EpochEngine'}:
-        return getattr(importlib.import_module('.epoch', __package__), name)
+        obj = importlib.import_module('.epoch', __package__)
+        return getattr(obj, name)
 
-    if name in {'BatchExecConfigShape', 'TaskConfigShape', 'OptimConfigShape'}:
-        return getattr(importlib.import_module('.runtime', __package__), name)
+    if name in {
+        'BatchExecConfigShape',
+        'OptimConfigShape',
+        'TaskConfigShape',
+    }:
+        obj = importlib.import_module('.runtime', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

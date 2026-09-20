@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -34,21 +35,26 @@ __all__ = [
     # classes
     'ConcatAdapter',
     'FilmConditioner',
-    # functions
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .concat import ConcatAdapter
-    from .film import FilmConditioner
+    from .concat import (
+        ConcatAdapter,
+    )
+    from .film import (
+        FilmConditioner,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'ConcatAdapter'}:
-        return getattr(importlib.import_module('.concat', __package__), name)
+        obj = importlib.import_module('.concat', __package__)
+        return getattr(obj, name)
 
     if name in {'FilmConditioner'}:
-        return getattr(importlib.import_module('.film', __package__), name)
+        obj = importlib.import_module('.film', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -33,43 +34,71 @@ import typing
 __all__ = [
     # classes
     'BaseBottleneck',
-    'HybridBottleneck',
-    'TransformerBottleneck',
     'DoubleConv',
     'Downsample',
-    'Upsample',
-    'UNetEncoders',
+    'HybridBottleneck',
+    'TransformerBottleneck',
     'UNetBottleneck',
-    # functions
-    # types
+    'UNetEncoders',
+    'Upsample',
+    # typing
     'BottleneckConfig',
     'ConvolutionParameters',
-    'TransformerParameters'
+    'TransformerParameters',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .conv_blocks import DoubleConv, Downsample, Upsample
-    from .configs import BottleneckConfig, ConvolutionParameters, TransformerParameters
-    from .encoders import UNetEncoders
     from .bottlenecks import (
         BaseBottleneck,
         HybridBottleneck,
         TransformerBottleneck,
-        UNetBottleneck
+        UNetBottleneck,
     )
+    from .configs import (
+        BottleneckConfig,
+        ConvolutionParameters,
+        TransformerParameters,
+    )
+    from .conv_blocks import (
+        DoubleConv,
+        Downsample,
+        Upsample,
+    )
+    from .encoders import (
+        UNetEncoders,
+    )
+
+
 def __getattr__(name: str):
+    if name in {
+        'BaseBottleneck',
+        'HybridBottleneck',
+        'TransformerBottleneck',
+        'UNetBottleneck',
+    }:
+        obj = importlib.import_module('.bottlenecks', __package__)
+        return getattr(obj, name)
 
-    if name in {'BottleneckConfig', 'ConvolutionParameters', 'TransformerParameters'}:
-        return getattr(importlib.import_module('.configs', __package__), name)
+    if name in {
+        'BottleneckConfig',
+        'ConvolutionParameters',
+        'TransformerParameters',
+    }:
+        obj = importlib.import_module('.configs', __package__)
+        return getattr(obj, name)
 
-    if name in {'DoubleConv', 'Downsample', 'Upsample'}:
-        return getattr(importlib.import_module('.conv_blocks', __package__), name)
-
-    if name in {'HybridBottleneck', 'TransformerBottleneck', 'BaseBottleneck', 'UNetBottleneck'}:
-        return getattr(importlib.import_module('.bottlenecks', __package__), name)
+    if name in {
+        'DoubleConv',
+        'Downsample',
+        'Upsample',
+    }:
+        obj = importlib.import_module('.conv_blocks', __package__)
+        return getattr(obj, name)
 
     if name in {'UNetEncoders'}:
-        return getattr(importlib.import_module('.encoders', __package__), name)
+        obj = importlib.import_module('.encoders', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -34,21 +35,26 @@ __all__ = [
     # classes
     'Logger',
     'ParallelExecutor',
-    # functions
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .logger import Logger
-    from .multip import ParallelExecutor
+    from .logger import (
+        Logger,
+    )
+    from .multip import (
+        ParallelExecutor,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'Logger'}:
-        return getattr(importlib.import_module('.logger', __package__), name)
+        obj = importlib.import_module('.logger', __package__)
+        return getattr(obj, name)
 
     if name in {'ParallelExecutor'}:
-        return getattr(importlib.import_module('.multip', __package__), name)
+        obj = importlib.import_module('.multip', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

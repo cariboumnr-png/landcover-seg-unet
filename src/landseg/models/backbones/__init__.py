@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,21 +36,32 @@ __all__ = [
     'Backbone',
     # functions
     'build_unet_backbone',
-    # types
-    'UNetBackboneConfig'
+    # typing
+    'UNetBackboneConfig',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import Backbone
-    from .factory import UNetBackboneConfig, build_unet_backbone
+    from .base import (
+        Backbone,
+    )
+    from .factory import (
+        UNetBackboneConfig,
+        build_unet_backbone,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'Backbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
-    if name in {'UNetBackboneConfig', 'build_unet_backbone'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+    if name in {
+        'UNetBackboneConfig',
+        'build_unet_backbone',
+    }:
+        obj = importlib.import_module('.factory', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

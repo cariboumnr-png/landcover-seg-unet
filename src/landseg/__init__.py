@@ -22,29 +22,40 @@
 '''
 Top-level namespace for `landseg`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes selected public symbols via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `DEVICE`: Canonical torch device selector.
+    - `TF_ISO8601`: Canonical timestamp format specification.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
-    # functions
-    # types
+    # constants
     'DEVICE',
-    'TF_ISO8601'
+    'TF_ISO8601',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._constants import DEVICE, TF_ISO8601
+    from ._constants import (
+        DEVICE,
+        TF_ISO8601,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'DEVICE', 'TF_ISO8601'}:
-        return getattr(importlib.import_module('._constants', __package__), name)
+    if name in {
+        'DEVICE',
+        'TF_ISO8601',
+    }:
+        obj = importlib.import_module('._constants', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

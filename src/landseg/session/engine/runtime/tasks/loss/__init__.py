@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -37,20 +38,34 @@ __all__ = [
     'HeadLosses',
     # functions
     'build_headlosses',
-    # types
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import HeadLosses, build_headlosses
-    from .composite import CompositeLoss, CompositeLossConfig
+    from .builder import (
+        HeadLosses,
+        build_headlosses,
+    )
+    from .composite import (
+        CompositeLoss,
+        CompositeLossConfig,
+    )
 
 
 def __getattr__(name: str):
+    if name in {
+        'HeadLosses',
+        'build_headlosses',
+    }:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
-    if name in {'HeadLosses', 'build_headlosses'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
-
-    if name in {'CompositeLoss', 'CompositeLossConfig'}:
-        return getattr(importlib.import_module('.composite', __package__), name)
+    if name in {
+        'CompositeLoss',
+        'CompositeLossConfig',
+    }:
+        obj = importlib.import_module('.composite', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

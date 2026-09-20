@@ -48,8 +48,8 @@ import typing
 __all__ = [
     # classes
     'AoiSplitsResult',
-    'SplitsResult',
     'HydrationResults',
+    'SplitsResult',
     # functions
     'filter_safe_tiles',
     'hydrate_train_split',
@@ -67,31 +67,51 @@ if typing.TYPE_CHECKING:
         intersect_aoi_raster,
         resolve_aoi_partitions,
     )
-    from .filter import filter_safe_tiles
-    from .hydrate import HydrationResults, hydrate_train_split
-    from .score import score_blocks
-    from .stratify import SplitsResult, stratified_splitter
+    from .filter import (
+        filter_safe_tiles,
+    )
+    from .hydrate import (
+        HydrationResults,
+        hydrate_train_split,
+    )
+    from .score import (
+        score_blocks,
+    )
+    from .stratify import (
+        SplitsResult,
+        stratified_splitter,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {
         'AoiSplitsResult',
         'intersect_aoi_raster',
         'resolve_aoi_partitions',
     }:
-        return getattr(importlib.import_module('.aoi', __package__), name)
+        obj = importlib.import_module('.aoi', __package__)
+        return getattr(obj, name)
 
     if name in {'filter_safe_tiles'}:
-        return getattr(importlib.import_module('.filter', __package__), name)
+        obj = importlib.import_module('.filter', __package__)
+        return getattr(obj, name)
 
-    if name in {'HydrationResults', 'hydrate_train_split'}:
-        return getattr(importlib.import_module('.hydrate', __package__), name)
+    if name in {
+        'HydrationResults',
+        'hydrate_train_split',
+    }:
+        obj = importlib.import_module('.hydrate', __package__)
+        return getattr(obj, name)
 
     if name in {'score_blocks'}:
-        return getattr(importlib.import_module('.score', __package__), name)
+        obj = importlib.import_module('.score', __package__)
+        return getattr(obj, name)
 
-    if name in {'SplitsResult', 'stratified_splitter'}:
-        return getattr(importlib.import_module('.stratify', __package__), name)
+    if name in {
+        'SplitsResult',
+        'stratified_splitter',
+    }:
+        obj = importlib.import_module('.stratify', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

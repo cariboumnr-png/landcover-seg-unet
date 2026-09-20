@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -42,21 +43,45 @@ __all__ = [
     'multihead_objective',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import BatchEngine, BatchExecConfigShape, BatchExecContext
-    from .objective import TrainingObjectives, multihead_objective
-    from .state import EngineState, initialize_state
+    from .executor import (
+        BatchEngine,
+        BatchExecConfigShape,
+        BatchExecContext,
+    )
+    from .objective import (
+        TrainingObjectives,
+        multihead_objective,
+    )
+    from .state import (
+        EngineState,
+        initialize_state,
+    )
+
 
 def __getattr__(name: str):
+    if name in {
+        'BatchEngine',
+        'BatchExecConfigShape',
+        'BatchExecContext',
+    }:
+        obj = importlib.import_module('.executor', __package__)
+        return getattr(obj, name)
 
-    if name in {'BatchEngine', 'BatchExecConfigShape', 'BatchExecContext'}:
-        return getattr(importlib.import_module('.executor', __package__), name)
+    if name in {
+        'TrainingObjectives',
+        'multihead_objective',
+    }:
+        obj = importlib.import_module('.objective', __package__)
+        return getattr(obj, name)
 
-    if name in {'TrainingObjectives', 'multihead_objective'}:
-        return getattr(importlib.import_module('.objective', __package__), name)
-
-    if name in {'EngineState', 'initialize_state'}:
-        return getattr(importlib.import_module('.state', __package__), name)
+    if name in {
+        'EngineState',
+        'initialize_state',
+    }:
+        obj = importlib.import_module('.state', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

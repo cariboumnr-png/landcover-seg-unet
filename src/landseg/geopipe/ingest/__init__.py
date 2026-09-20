@@ -41,25 +41,27 @@ __all__ = [
     # classes
     'IngestionLogger',
     # functions
-    'run_data_ingestion'
-    # types
+    'run_data_ingestion',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .logger import IngestionLogger
-    from .pipeline import run_data_ingestion
+    from .logger import (
+        IngestionLogger,
+    )
+    from .pipeline import (
+        run_data_ingestion,
+    )
 
 
 def __getattr__(name: str):
     if name in {'IngestionLogger'}:
-        return getattr(
-            importlib.import_module('.logger', __package__), name
-        )
+        obj = importlib.import_module('.logger', __package__)
+        return getattr(obj, name)
 
     if name in {'run_data_ingestion'}:
-        return getattr(
-            importlib.import_module('.pipeline', __package__), name
-        )
+        obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

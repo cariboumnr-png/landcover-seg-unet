@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -36,16 +37,25 @@ __all__ = [
     'HeadSpecs',
     # functions
     'build_headspecs',
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .specs import HeadSpec, HeadSpecs, build_headspecs
+    from .specs import (
+        HeadSpec,
+        HeadSpecs,
+        build_headspecs,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'HeadSpec', 'HeadSpecs', 'build_headspecs'}:
-        return getattr(importlib.import_module('.specs', __package__), name)
+    if name in {
+        'HeadSpec',
+        'HeadSpecs',
+        'build_headspecs',
+    }:
+        obj = importlib.import_module('.specs', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

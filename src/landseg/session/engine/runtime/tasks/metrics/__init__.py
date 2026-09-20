@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -37,20 +38,32 @@ __all__ = [
     'MTLMetricsAggregator',
     # functions
     'build_headmetrics',
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .diagnostics import MTLMetricsAggregator
-    from .segmentation import ConfusionMatrix, HeadMetrics, build_headmetrics
+    from .diagnostics import (
+        MTLMetricsAggregator,
+    )
+    from .segmentation import (
+        ConfusionMatrix,
+        HeadMetrics,
+        build_headmetrics,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'MTLMetricsAggregator'}:
-        return getattr(importlib.import_module('.diagnostics', __package__), name)
+        obj = importlib.import_module('.diagnostics', __package__)
+        return getattr(obj, name)
 
-    if name in {'ConfusionMatrix', 'HeadMetrics', 'build_headmetrics'}:
-        return getattr(importlib.import_module('.segmentation', __package__), name)
+    if name in {
+        'ConfusionMatrix',
+        'HeadMetrics',
+        'build_headmetrics',
+    }:
+        obj = importlib.import_module('.segmentation', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -26,26 +26,27 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
     'generate_embeddings_and_matrix',
     'resolve_profile_metadata',
     'resolve_similarity_matrix',
-    # types
-    'SpeciesEntry',
+    # typing
     'SpeciesEmbeddingsMetadata',
+    'SpeciesEntry',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
     from .embeddings import (
-        SpeciesEntry,
         SpeciesEmbeddingsMetadata,
+        SpeciesEntry,
         generate_embeddings_and_matrix,
     )
     from .resolver import (
@@ -53,23 +54,21 @@ if typing.TYPE_CHECKING:
         resolve_similarity_matrix,
     )
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {
-        'generate_embeddings_and_matrix',
-        'SpeciesEntry',
         'SpeciesEmbeddingsMetadata',
+        'SpeciesEntry',
+        'generate_embeddings_and_matrix',
     }:
-        return getattr(
-            importlib.import_module('.embeddings', __package__), name
-        )
+        obj = importlib.import_module('.embeddings', __package__)
+        return getattr(obj, name)
 
     if name in {
         'resolve_profile_metadata',
         'resolve_similarity_matrix',
     }:
-        return getattr(
-            importlib.import_module('.resolver', __package__), name
-        )
+        obj = importlib.import_module('.resolver', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

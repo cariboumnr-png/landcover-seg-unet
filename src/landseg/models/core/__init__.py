@@ -26,47 +26,74 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
+    'ConcatAdapter',
     'DomainContextRouter',
-    'DomainTargetPayload',
     'DomainProjectionConfig',
     'DomainTargetConfig',
+    'DomainTargetPayload',
+    'FilmConditioner',
     'HeadManager',
     'NumericSafety',
-    'ConcatAdapter',
-    'FilmConditioner',
-    # functions
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .conditioner import ConcatAdapter, FilmConditioner
-    from .config import DomainProjectionConfig, DomainTargetConfig
-    from .domains import DomainContextRouter, DomainTargetPayload
-    from .heads import HeadManager
-    from .safety import NumericSafety
+    from .conditioner import (
+        ConcatAdapter,
+        FilmConditioner,
+    )
+    from .config import (
+        DomainProjectionConfig,
+        DomainTargetConfig,
+    )
+    from .domains import (
+        DomainContextRouter,
+        DomainTargetPayload,
+    )
+    from .heads import (
+        HeadManager,
+    )
+    from .safety import (
+        NumericSafety,
+    )
+
 
 def __getattr__(name: str):
+    if name in {
+        'ConcatAdapter',
+        'FilmConditioner',
+    }:
+        obj = importlib.import_module('.conditioner', __package__)
+        return getattr(obj, name)
 
-    if name in {'ConcatAdapter', 'FilmConditioner'}:
-        return getattr(importlib.import_module('.conditioner', __package__), name)
+    if name in {
+        'DomainProjectionConfig',
+        'DomainTargetConfig',
+    }:
+        obj = importlib.import_module('.config', __package__)
+        return getattr(obj, name)
 
-    if name in {'DomainProjectionConfig', 'DomainTargetConfig'}:
-        return getattr(importlib.import_module('.config', __package__), name)
-
-    if name in {'DomainContextRouter', 'DomainTargetPayload'}:
-        return getattr(importlib.import_module('.domains', __package__), name)
+    if name in {
+        'DomainContextRouter',
+        'DomainTargetPayload',
+    }:
+        obj = importlib.import_module('.domains', __package__)
+        return getattr(obj, name)
 
     if name in {'HeadManager'}:
-        return getattr(importlib.import_module('.heads', __package__), name)
+        obj = importlib.import_module('.heads', __package__)
+        return getattr(obj, name)
 
     if name in {'NumericSafety'}:
-        return getattr(importlib.import_module('.safety', __package__), name)
+        obj = importlib.import_module('.safety', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

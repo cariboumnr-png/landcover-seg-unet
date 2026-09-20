@@ -19,6 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+
 # pylint: disable=too-many-return-statements
 
 '''
@@ -28,74 +29,107 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
-    'get',
+    'analyze',
     'default_action',
     'evaluate',
-    'exec_world_grid',
     'exec_harmonize_data',
     'exec_ingest_data',
     'exec_prepare_data',
+    'exec_world_grid',
+    'get',
     'overfit',
     'sweep',
     'train',
-    'analyze'
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._registry import get
-    from .default import default_action
-    from .world_grid import exec_world_grid
-    from .data_harmonize import exec_harmonize_data
-    from .data_ingest import exec_ingest_data
-    from .data_prepare import exec_prepare_data
-    from .diagnose_overfit import overfit
-    from .model_evaluate import evaluate
-    from .model_train import train
-    from .study_sweep import sweep
-    from .study_analysis import analyze
+    from ._registry import (
+        get,
+    )
+    from .data_harmonize import (
+        exec_harmonize_data,
+    )
+    from .data_ingest import (
+        exec_ingest_data,
+    )
+    from .data_prepare import (
+        exec_prepare_data,
+    )
+    from .default import (
+        default_action,
+    )
+    from .diagnose_overfit import (
+        overfit,
+    )
+    from .model_evaluate import (
+        evaluate,
+    )
+    from .model_train import (
+        train,
+    )
+    from .study_analysis import (
+        analyze,
+    )
+    from .study_sweep import (
+        sweep,
+    )
+    from .world_grid import (
+        exec_world_grid,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'get'}:
-        return getattr(importlib.import_module('._registry', __package__), name)
-
-    if name in {'default_action'}:
-        return getattr(importlib.import_module('.default', __package__), name)
-
-    if name in {'exec_world_grid'}:
-        return getattr(importlib.import_module('.world_grid', __package__), name)
+        obj = importlib.import_module('._registry', __package__)
+        return getattr(obj, name)
 
     if name in {'exec_harmonize_data'}:
-        return getattr(importlib.import_module('.data_harmonize', __package__), name)
-
-    if name in {'overfit'}:
-        return getattr(importlib.import_module('.diagnose_overfit', __package__), name)
+        obj = importlib.import_module('.data_harmonize', __package__)
+        return getattr(obj, name)
 
     if name in {'exec_ingest_data'}:
-        return getattr(importlib.import_module('.data_ingest', __package__), name)
+        obj = importlib.import_module('.data_ingest', __package__)
+        return getattr(obj, name)
 
     if name in {'exec_prepare_data'}:
-        return getattr(importlib.import_module('.data_prepare', __package__), name)
+        obj = importlib.import_module('.data_prepare', __package__)
+        return getattr(obj, name)
+
+    if name in {'default_action'}:
+        obj = importlib.import_module('.default', __package__)
+        return getattr(obj, name)
+
+    if name in {'overfit'}:
+        obj = importlib.import_module('.diagnose_overfit', __package__)
+        return getattr(obj, name)
 
     if name in {'evaluate'}:
-        return getattr(importlib.import_module('.model_evaluate', __package__), name)
+        obj = importlib.import_module('.model_evaluate', __package__)
+        return getattr(obj, name)
 
     if name in {'train'}:
-        return getattr(importlib.import_module('.model_train', __package__), name)
-
-    if name in {'sweep'}:
-        return getattr(importlib.import_module('.study_sweep', __package__), name)
+        obj = importlib.import_module('.model_train', __package__)
+        return getattr(obj, name)
 
     if name in {'analyze'}:
-        return getattr(importlib.import_module('.study_analysis', __package__), name)
+        obj = importlib.import_module('.study_analysis', __package__)
+        return getattr(obj, name)
+
+    if name in {'sweep'}:
+        obj = importlib.import_module('.study_sweep', __package__)
+        return getattr(obj, name)
+
+    if name in {'exec_world_grid'}:
+        obj = importlib.import_module('.world_grid', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

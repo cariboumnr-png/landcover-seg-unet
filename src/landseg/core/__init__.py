@@ -26,57 +26,75 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
+    'AccumulatedMetrics',
     'DataSpecs',
-    'Meta',
-    'Heads',
-    'Splits',
     'Domains',
-    'SessionStepSummary',
+    'Heads',
+    'InferStepResults',
+    'Meta',
     'SessionStepResults',
+    'SessionStepSummary',
+    'Splits',
     'TrainStepResults',
     'ValStepResults',
-    'InferStepResults',
-    'AccumulatedMetrics',
-    # functions
     # typing
     'MultiheadModelLike',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .data_specs import DataSpecs, Meta, Heads, Splits, Domains
-    from .model_protocol import MultiheadModelLike
+    from .data_specs import (
+        DataSpecs,
+        Domains,
+        Heads,
+        Meta,
+        Splits,
+    )
+    from .model_protocol import (
+        MultiheadModelLike,
+    )
     from .session_results import (
-        SessionStepSummary,
+        AccumulatedMetrics,
+        InferStepResults,
         SessionStepResults,
+        SessionStepSummary,
         TrainStepResults,
         ValStepResults,
-        InferStepResults,
-        AccumulatedMetrics
     )
 
-def __getattr__(name: str):
 
-    if name in {'DataSpecs', 'Meta', 'Heads', 'Splits', 'Domains'}:
-        return getattr(importlib.import_module('.data_specs', __package__), name)
+def __getattr__(name: str):
+    if name in {
+        'DataSpecs',
+        'Domains',
+        'Heads',
+        'Meta',
+        'Splits',
+    }:
+        obj = importlib.import_module('.data_specs', __package__)
+        return getattr(obj, name)
 
     if name in {'MultiheadModelLike'}:
-        return getattr(importlib.import_module('.model_protocol', __package__), name)
+        obj = importlib.import_module('.model_protocol', __package__)
+        return getattr(obj, name)
 
     if name in {
-        'SessionStepSummary',
+        'AccumulatedMetrics',
+        'InferStepResults',
         'SessionStepResults',
+        'SessionStepSummary',
         'TrainStepResults',
         'ValStepResults',
-        'InferStepResults',
-        'AccumulatedMetrics'
     }:
-        return getattr(importlib.import_module('.session_results', __package__), name)
+        obj = importlib.import_module('.session_results', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

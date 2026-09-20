@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,20 +36,30 @@ __all__ = [
     'EpochPolicy',
     'PhasePolicy',
     'TrackingConfig',
-    # functions
-    # types
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .epoch import EpochPolicy
-    from .phase import PhasePolicy, TrackingConfig
+    from .epoch import (
+        EpochPolicy,
+    )
+    from .phase import (
+        PhasePolicy,
+        TrackingConfig,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'EpochPolicy'}:
-        return getattr(importlib.import_module('.epoch', __package__), name)
+        obj = importlib.import_module('.epoch', __package__)
+        return getattr(obj, name)
 
-    if name in {'PhasePolicy', 'TrackingConfig'}:
-        return getattr(importlib.import_module('.phase', __package__), name)
+    if name in {
+        'PhasePolicy',
+        'TrackingConfig',
+    }:
+        obj = importlib.import_module('.phase', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

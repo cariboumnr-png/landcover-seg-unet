@@ -26,28 +26,35 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
     'colorize',
     'report_iou',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .renderer import colorize
-    from .report import report_iou
+    from .renderer import (
+        colorize,
+    )
+    from .report import (
+        report_iou,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'colorize'}:
-        return getattr(importlib.import_module('.renderer', __package__), name)
+        obj = importlib.import_module('.renderer', __package__)
+        return getattr(obj, name)
 
     if name in {'report_iou'}:
-        return getattr(importlib.import_module('.report', __package__), name)
+        obj = importlib.import_module('.report', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -26,44 +26,59 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'UNetBackbone',
     'UNet',
+    'UNetBackbone',
+    'UNetBodyConfig',
     'UNetPP',
     'UNetPPP',
-    'UNetBodyConfig'
-    # functions
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import UNetBackbone
-    from .configs import UNetBodyConfig
-    from .unet import UNet
-    from .unetpp import UNetPP
-    from .unetppp import UNetPPP
+    from .base import (
+        UNetBackbone,
+    )
+    from .configs import (
+        UNetBodyConfig,
+    )
+    from .unet import (
+        UNet,
+    )
+    from .unetpp import (
+        UNetPP,
+    )
+    from .unetppp import (
+        UNetPPP,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'UNetBackbone'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'UNetBodyConfig'}:
-        return getattr(importlib.import_module('.configs', __package__), name)
+        obj = importlib.import_module('.configs', __package__)
+        return getattr(obj, name)
 
     if name in {'UNet'}:
-        return getattr(importlib.import_module('.unet', __package__), name)
+        obj = importlib.import_module('.unet', __package__)
+        return getattr(obj, name)
 
     if name in {'UNetPP'}:
-        return getattr(importlib.import_module('.unetpp', __package__), name)
+        obj = importlib.import_module('.unetpp', __package__)
+        return getattr(obj, name)
 
     if name in {'UNetPPP'}:
-        return getattr(importlib.import_module('.unetppp', __package__), name)
+        obj = importlib.import_module('.unetppp', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

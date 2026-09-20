@@ -36,20 +36,21 @@ import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
     'run_materialize_blocks',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .runner import run_materialize_blocks
+    from .runner import (
+        run_materialize_blocks,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {'run_materialize_blocks'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+        obj = importlib.import_module('.runner', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

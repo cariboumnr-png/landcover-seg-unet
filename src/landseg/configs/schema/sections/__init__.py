@@ -19,6 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+
 # pylint: disable=too-many-return-statements
 
 '''
@@ -28,6 +29,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -36,36 +38,50 @@ __all__ = [
     # classes
     'DataConfig',
     'ModelsConfig',
+    'PipelineConfig',
     'SessionConfig',
     'StudyConfig',
-    'PipelineConfig',
-    # functions
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data import DataConfig
-    from .models import ModelsConfig
-    from .session import SessionConfig
-    from .study import StudyConfig
-    from .pipeline import PipelineConfig
+    from .data import (
+        DataConfig,
+    )
+    from .models import (
+        ModelsConfig,
+    )
+    from .pipeline import (
+        PipelineConfig,
+    )
+    from .session import (
+        SessionConfig,
+    )
+    from .study import (
+        StudyConfig,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'DataConfig'}:
-        return getattr(importlib.import_module('.data', __package__), name)
+        obj = importlib.import_module('.data', __package__)
+        return getattr(obj, name)
 
     if name in {'ModelsConfig'}:
-        return getattr(importlib.import_module('.models', __package__), name)
-
-    if name in {'SessionConfig'}:
-        return getattr(importlib.import_module('.session', __package__), name)
-
-    if name in {'StudyConfig'}:
-        return getattr(importlib.import_module('.study', __package__), name)
+        obj = importlib.import_module('.models', __package__)
+        return getattr(obj, name)
 
     if name in {'PipelineConfig'}:
-        return getattr(importlib.import_module('.pipeline', __package__), name)
+        obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
+
+    if name in {'SessionConfig'}:
+        obj = importlib.import_module('.session', __package__)
+        return getattr(obj, name)
+
+    if name in {'StudyConfig'}:
+        obj = importlib.import_module('.study', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

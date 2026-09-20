@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -38,23 +39,39 @@ __all__ = [
     'TrackingConfig',
     # functions
     'build_runner',
-    # types
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import build_runner
-    from .policy import TrackingConfig
-    from .runner import  BaseRunnerConfig, ContinuousRunner, CurriculumRunner
+    from .builder import (
+        build_runner,
+    )
+    from .policy import (
+        TrackingConfig,
+    )
+    from .runner import (
+        BaseRunnerConfig,
+        ContinuousRunner,
+        CurriculumRunner,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'build_runner'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
 
     if name in {'TrackingConfig'}:
-        return getattr(importlib.import_module('.policy', __package__), name)
+        obj = importlib.import_module('.policy', __package__)
+        return getattr(obj, name)
 
-    if name in {'ContinuousRunner', 'CurriculumRunner', 'BaseRunnerConfig'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
+    if name in {
+        'BaseRunnerConfig',
+        'ContinuousRunner',
+        'CurriculumRunner',
+    }:
+        obj = importlib.import_module('.runner', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

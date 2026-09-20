@@ -25,48 +25,54 @@ Top-level namespace for `landseg.adapters.api`.
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
+
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'WorldGridConfigurator',
     'DataHarmonizationConfigurator',
     'DataIngestionConfigurator',
     'DataPreparationConfigurator',
-    'TrainingSessionConfigurator',
     'StudySweepConfigurator',
+    'TrainingSessionConfigurator',
+    'WorldGridConfigurator',
     # functions
-    'run'
-    # types
+    'run',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .api import run
+    from .api import (
+        run,
+    )
     from .configurators import (
-        WorldGridConfigurator,
         DataHarmonizationConfigurator,
         DataIngestionConfigurator,
         DataPreparationConfigurator,
+        StudySweepConfigurator,
         TrainingSessionConfigurator,
-        StudySweepConfigurator
+        WorldGridConfigurator,
     )
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {'run'}:
-        return getattr(importlib.import_module('.api', __package__), name)
+        obj = importlib.import_module('.api', __package__)
+        return getattr(obj, name)
 
     if name in {
-        'WorldGridConfigurator',
         'DataHarmonizationConfigurator',
         'DataIngestionConfigurator',
         'DataPreparationConfigurator',
+        'StudySweepConfigurator',
         'TrainingSessionConfigurator',
-        'StudySweepConfigurator'
+        'WorldGridConfigurator',
     }:
-        return getattr(importlib.import_module('.configurators', __package__), name)
+        obj = importlib.import_module('.configurators', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

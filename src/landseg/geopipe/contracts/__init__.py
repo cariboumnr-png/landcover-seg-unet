@@ -51,9 +51,7 @@ import importlib
 import typing
 
 __all__ = [
-    # constants
-    'PREPARED_SCHEMA_ID',
-    # schemas
+    # typing
     'BlockStats',
     'BlocksPartition',
     'DataBlocksReport',
@@ -73,9 +71,10 @@ __all__ = [
     'SchemaReport',
     'TargetHeadsSchema',
     'WorldGridReport',
-    # functions
-    # typing
+    # constants
+    'PREPARED_SCHEMA_ID',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
@@ -100,8 +99,8 @@ if typing.TYPE_CHECKING:
         DataPartitionReport,
         ImageBandStats,
         NormalizationReport,
-        PartitionSummary,
         PREPARED_SCHEMA_ID,
+        PartitionSummary,
         PreparationReportSchema,
         PreparedSchema,
         SchemaReport,
@@ -110,22 +109,19 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-
     if name in {
         'GridReportSchema',
         'WorldGridReport',
     }:
-        return getattr(
-            importlib.import_module('.grid', __package__), name
-        )
+        obj = importlib.import_module('.grid', __package__)
+        return getattr(obj, name)
 
     if name in {
         'HarmonizationReportSchema',
         'ProvenanceRecord',
     }:
-        return getattr(
-            importlib.import_module('.harmonization', __package__), name
-        )
+        obj = importlib.import_module('.harmonization', __package__)
+        return getattr(obj, name)
 
     if name in {
         'BlockStats',
@@ -135,24 +131,22 @@ def __getattr__(name: str):
         'IngestReportSchema',
         'ManifestStats',
     }:
-        return getattr(
-            importlib.import_module('.ingestion', __package__), name
-        )
+        obj = importlib.import_module('.ingestion', __package__)
+        return getattr(obj, name)
 
     if name in {
         'BlocksPartition',
         'DataPartitionReport',
         'ImageBandStats',
         'NormalizationReport',
-        'PartitionSummary',
         'PREPARED_SCHEMA_ID',
+        'PartitionSummary',
         'PreparationReportSchema',
         'PreparedSchema',
         'SchemaReport',
         'TargetHeadsSchema',
     }:
-        return getattr(
-            importlib.import_module('.preparation', __package__), name
-        )
+        obj = importlib.import_module('.preparation', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

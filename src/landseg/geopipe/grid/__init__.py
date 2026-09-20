@@ -46,6 +46,7 @@ __all__ = [
     'prepare_world_grid',
 ]
 
+
 # for static check
 if typing.TYPE_CHECKING:
     from .lifecycle import (
@@ -58,18 +59,15 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-
     if name in {
         'get_grid_report_fpath',
         'prepare_world_grid',
     }:
-        mod = importlib.import_module('.lifecycle', __package__)
-        return getattr(mod, name)
+        obj = importlib.import_module('.lifecycle', __package__)
+        return getattr(obj, name)
 
-    if name in {
-        'GridLogger',
-    }:
-        mod = importlib.import_module('.logger', __package__)
-        return getattr(mod, name)
+    if name in {'GridLogger'}:
+        obj = importlib.import_module('.logger', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

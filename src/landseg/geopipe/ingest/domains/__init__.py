@@ -33,6 +33,7 @@ Public APIs:
     - `prepare_domain_maps`: build or load domain tile maps.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -42,18 +43,23 @@ __all__ = [
     'DomainBuildingParameters',
     # functions
     'prepare_domain_maps',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .lifecycle import DomainBuildingParameters, prepare_domain_maps
+    from .lifecycle import (
+        DomainBuildingParameters,
+        prepare_domain_maps,
+    )
 
 
 def __getattr__(name: str):
-
-    if name in {'DomainBuildingParameters', 'prepare_domain_maps'}:
-        mod = importlib.import_module('.lifecycle', __package__)
-        return getattr(mod, name)
+    if name in {
+        'DomainBuildingParameters',
+        'prepare_domain_maps',
+    }:
+        obj = importlib.import_module('.lifecycle', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

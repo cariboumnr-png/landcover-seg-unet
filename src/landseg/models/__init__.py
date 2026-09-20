@@ -24,27 +24,32 @@ Top-level namespace for `landseg.models`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `build_multihead_unet`: Construct multihead UNet model architecture.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
-    'build_multihead_unet'
-    # types
+    'build_multihead_unet',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_multihead_unet
+    from .factory import (
+        build_multihead_unet,
+    )
 
 
 def __getattr__(name: str):
-
     if name in {'build_multihead_unet'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+        obj = importlib.import_module('.factory', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

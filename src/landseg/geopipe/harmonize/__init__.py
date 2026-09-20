@@ -41,29 +41,26 @@ __all__ = [
     'HarmonizationLogger',
     # functions
     'run_data_harmonization',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .logger import HarmonizationLogger
-    from .pipeline import run_data_harmonization
+    from .logger import (
+        HarmonizationLogger,
+    )
+    from .pipeline import (
+        run_data_harmonization,
+    )
 
 
 def __getattr__(name: str):
+    if name in {'HarmonizationLogger'}:
+        obj = importlib.import_module('.logger', __package__)
+        return getattr(obj, name)
 
-    if name in {
-        'HarmonizationLogger',
-    }:
-        return getattr(
-            importlib.import_module('.logger', __package__), name
-        )
-
-    if name in {
-        'run_data_harmonization',
-    }:
-        return getattr(
-            importlib.import_module('.pipeline', __package__), name
-        )
+    if name in {'run_data_harmonization'}:
+        obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

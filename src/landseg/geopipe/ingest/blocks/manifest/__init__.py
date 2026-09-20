@@ -32,6 +32,7 @@ Public APIs:
     - update_manifest: Updates dataset catalog and schema artifacts.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -41,19 +42,23 @@ __all__ = [
     'ManifestUpdateContext',
     # functions
     'update_manifest',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .lifecycle import ManifestUpdateContext, update_manifest
+    from .lifecycle import (
+        ManifestUpdateContext,
+        update_manifest,
+    )
 
 
 def __getattr__(name: str):
-
-    if name in {'ManifestUpdateContext', 'update_manifest'}:
-        return getattr(
-            importlib.import_module('.lifecycle', __package__), name
-        )
+    if name in {
+        'ManifestUpdateContext',
+        'update_manifest',
+    }:
+        obj = importlib.import_module('.lifecycle', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

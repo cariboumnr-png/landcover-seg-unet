@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -36,9 +37,9 @@ __all__ = [
     'TIFFPaths',
     # functions
     'create_dummy_geotiff',
-    'generate_dummy_data'
-    # types
+    'generate_dummy_data',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
@@ -46,17 +47,18 @@ if typing.TYPE_CHECKING:
         TIFFConfig,
         TIFFPaths,
         create_dummy_geotiff,
-        generate_dummy_data
+        generate_dummy_data,
     )
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {
         'TIFFConfig',
         'TIFFPaths',
         'create_dummy_geotiff',
-        'generate_dummy_data'
+        'generate_dummy_data',
     }:
-        return getattr(importlib.import_module('.dummy_data', __package__), name)
+        obj = importlib.import_module('.dummy_data', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

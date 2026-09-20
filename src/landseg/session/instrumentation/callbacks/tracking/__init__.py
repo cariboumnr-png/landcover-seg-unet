@@ -20,12 +20,14 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.instrumentation.callbacks.tracking`.
+Top-level namespace for
+`landseg.session.instrumentation.callbacks.tracking`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -35,25 +37,33 @@ __all__ = [
     'InferTrackingCallback',
     'TrainTrackingCallback',
     'ValTrackingCallback',
-    # functions
-    # types
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .inference import InferTrackingCallback
-    from .training import TrainTrackingCallback
-    from .validation import ValTrackingCallback
+    from .inference import (
+        InferTrackingCallback,
+    )
+    from .training import (
+        TrainTrackingCallback,
+    )
+    from .validation import (
+        ValTrackingCallback,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'InferTrackingCallback'}:
-        return getattr(importlib.import_module('.inference', __package__), name)
+        obj = importlib.import_module('.inference', __package__)
+        return getattr(obj, name)
 
     if name in {'TrainTrackingCallback'}:
-        return getattr(importlib.import_module('.training', __package__), name)
+        obj = importlib.import_module('.training', __package__)
+        return getattr(obj, name)
 
     if name in {'ValTrackingCallback'}:
-        return getattr(importlib.import_module('.validation', __package__), name)
+        obj = importlib.import_module('.validation', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -40,23 +40,26 @@ __all__ = [
     'PartitionParameters',
     # functions
     'run_datablocks_partition',
-    # typing
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .runner import run_datablocks_partition
-    from .orchestration import PartitionParameters
+    from .orchestration import (
+        PartitionParameters,
+    )
+    from .runner import (
+        run_datablocks_partition,
+    )
 
 
 def __getattr__(name: str):
+    if name in {'PartitionParameters'}:
+        obj = importlib.import_module('.orchestration', __package__)
+        return getattr(obj, name)
 
     if name in {'run_datablocks_partition'}:
-        return getattr(importlib.import_module('.runner', __package__), name)
-
-    if name in {'PartitionParameters'}:
-        mod = importlib.import_module('.orchestration', __package__)
-        return getattr(mod, name)
+        obj = importlib.import_module('.runner', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

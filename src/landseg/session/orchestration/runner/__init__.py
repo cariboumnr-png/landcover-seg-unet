@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -36,24 +37,37 @@ __all__ = [
     'BaseRunnerConfig',
     'ContinuousRunner',
     'CurriculumRunner',
-    # functions
-    # types
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import BaseRunner, BaseRunnerConfig
-    from .continuous import ContinuousRunner
-    from .curriculum import CurriculumRunner
+    from .base import (
+        BaseRunner,
+        BaseRunnerConfig,
+    )
+    from .continuous import (
+        ContinuousRunner,
+    )
+    from .curriculum import (
+        CurriculumRunner,
+    )
+
 
 def __getattr__(name: str):
-
-    if name in {'BaseRunner', 'BaseRunnerConfig'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+    if name in {
+        'BaseRunner',
+        'BaseRunnerConfig',
+    }:
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'ContinuousRunner'}:
-        return getattr(importlib.import_module('.continuous', __package__), name)
+        obj = importlib.import_module('.continuous', __package__)
+        return getattr(obj, name)
 
     if name in {'CurriculumRunner'}:
-        return getattr(importlib.import_module('.curriculum', __package__), name)
+        obj = importlib.import_module('.curriculum', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

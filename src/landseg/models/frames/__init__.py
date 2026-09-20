@@ -26,6 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
@@ -33,22 +34,27 @@ import typing
 __all__ = [
     # classes
     'MultiHeadBaseModel',
-    'MultiHeadUNet'
-    # functions
-    # types
+    'MultiHeadUNet',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import MultiHeadBaseModel
-    from .unet import MultiHeadUNet
+    from .base import (
+        MultiHeadBaseModel,
+    )
+    from .unet import (
+        MultiHeadUNet,
+    )
+
 
 def __getattr__(name: str):
-
     if name in {'MultiHeadBaseModel'}:
-        return getattr(importlib.import_module('.base', __package__), name)
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'MultiHeadUNet'}:
-        return getattr(importlib.import_module('.unet', __package__), name)
+        obj = importlib.import_module('.unet', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -38,62 +38,50 @@ import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
-    'warp_to_grid',
-    'stack_rasters',
-    'unify_nodata_mask',
     'add_band_description_to_vrt',
     'add_tag_to_vrt',
+    'stack_rasters',
+    'unify_nodata_mask',
+    'warp_to_grid',
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .spatial import (
-        warp_to_grid,
+    from .mask import (
+        unify_nodata_mask,
     )
-
     from .metadata import (
         add_band_description_to_vrt,
         add_tag_to_vrt,
     )
-
-    from .mask import (
-        unify_nodata_mask,
+    from .spatial import (
+        warp_to_grid,
     )
-
-    from .stack import(
+    from .stack import (
         stack_rasters,
     )
 
 
 def __getattr__(name: str):
-
-    if name in {
-        'warp_to_grid',
-    }:
-        return getattr(importlib.import_module('.spatial', __package__), name)
+    if name in {'unify_nodata_mask'}:
+        obj = importlib.import_module('.mask', __package__)
+        return getattr(obj, name)
 
     if name in {
         'add_band_description_to_vrt',
         'add_tag_to_vrt',
     }:
-        return getattr(
-            importlib.import_module('.metadata', __package__), name
-        )
+        obj = importlib.import_module('.metadata', __package__)
+        return getattr(obj, name)
 
-    if name in {
-        'unify_nodata_mask',
-    }:
-        return getattr(
-            importlib.import_module('.mask', __package__), name
-        )
+    if name in {'warp_to_grid'}:
+        obj = importlib.import_module('.spatial', __package__)
+        return getattr(obj, name)
 
-    if name in {
-        'stack_rasters',
-    }:
-        return getattr(
-            importlib.import_module('.stack', __package__), name
-        )
+    if name in {'stack_rasters'}:
+        obj = importlib.import_module('.stack', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

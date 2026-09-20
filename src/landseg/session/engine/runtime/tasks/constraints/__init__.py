@@ -20,32 +20,43 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.constraints`.
+Top-level namespace for
+`landseg.session.engine.runtime.tasks.constraints`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'MTLConstraint',
     'CompiledConstraint',
+    'MTLConstraint',
     # functions
-    'compile_constraints'
-    # types
+    'compile_constraints',
 ]
+
+
 # for static check
 if typing.TYPE_CHECKING:
-    from .constraints import MTLConstraint, CompiledConstraint, compile_constraints
+    from .constraints import (
+        CompiledConstraint,
+        MTLConstraint,
+        compile_constraints,
+    )
 
 
 def __getattr__(name: str):
-
-    if name in {'MTLConstraint', 'CompiledConstraint', 'compile_constraints'}:
-        return getattr(importlib.import_module('.constraints', __package__), name)
+    if name in {
+        'CompiledConstraint',
+        'MTLConstraint',
+        'compile_constraints',
+    }:
+        obj = importlib.import_module('.constraints', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

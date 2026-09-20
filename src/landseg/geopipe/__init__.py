@@ -27,29 +27,30 @@ data block construction, and runtime dataset specification creation
 through structured pipelines and lazy module resolution.
 
 Public APIs:
-    - build_dataspec: Assembles runtime DataSpecs from artifacts.
+    - `build_dataspec`: Assembles runtime DataSpecs from artifacts.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
-    # classes
     # functions
     'build_dataspec',
-    # typing
 ]
+
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import build_dataspec
+    from .factory import (
+        build_dataspec,
+    )
 
 
 def __getattr__(name: str):
     if name in {'build_dataspec'}:
-        return getattr(
-            importlib.import_module('.factory', __package__), name
-        )
+        obj = importlib.import_module('.factory', __package__)
+        return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
