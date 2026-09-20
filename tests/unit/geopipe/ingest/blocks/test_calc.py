@@ -28,7 +28,7 @@ import numpy
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.ingest.data_blocks.assembler.builder as data_block
+import landseg.geopipe.ingest.blocks.assembler.builder as data_block
 
 # aliases
 rng = numpy.random.default_rng()

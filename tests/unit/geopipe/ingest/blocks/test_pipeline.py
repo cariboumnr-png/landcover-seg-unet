@@ -32,7 +32,7 @@ import rasterio
 import landseg.artifacts as artifacts
 import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.ingest as ingest
-import landseg.geopipe.ingest.data_blocks as data_blocks
+import landseg.geopipe.ingest.blocks as blocks
 
 
 @dataclasses.dataclass
@@ -98,7 +98,7 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     paths = artifacts.IngestionPaths(str(tmp_path))
 
     # set pipeline configurations
-    config = data_blocks.BlockBuildingParameters(
+    config = blocks.BlockBuildingParameters(
         image_fpath=str(img),
         label_fpath=str(lbl),
         dem_pad=8,
@@ -106,7 +106,7 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     )
 
     # run the pipeline
-    data_blocks.run_blocks_building(
+    blocks.run_blocks_building(
         world_grid,
         paths.data_blocks,
         config,
@@ -142,7 +142,7 @@ def test_pipeline_block_building_parameters_features():
     When: Instantiating `BlockBuildingParameters`.
     Then: Hold configured add_topo and add_spectral values.
     '''
-    params = data_blocks.BlockBuildingParameters(
+    params = blocks.BlockBuildingParameters(
         image_fpath='img.tif',
         label_fpath='lbl.tif',
         dem_pad=8,

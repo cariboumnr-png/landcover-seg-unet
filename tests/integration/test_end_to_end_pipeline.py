@@ -130,7 +130,7 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     assert len(catalog) > 0
 
     # ----- stage 4: prepare
-    pipelines.prepare(config)
+    pipelines.exec_prepare_data(config)
 
     p_root = config.data.preparation.output_dpath
     assert os.path.exists(os.path.join(p_root, 'prep_report.json'))

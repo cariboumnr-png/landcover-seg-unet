@@ -25,7 +25,7 @@
 import pytest
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.data_context.semantics as semantics
+import landseg.geopipe.prepare.dataset.semantics as semantics
 
 
 # ----- test helpers

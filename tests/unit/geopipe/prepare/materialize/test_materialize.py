@@ -28,8 +28,8 @@ import numpy
 import pytest
 # local imports
 import landseg.geopipe.contracts as contracts
-import landseg.geopipe.prepare.data_context as data_context
-import landseg.geopipe.prepare.materialize_blocks.materialize as mat
+import landseg.geopipe.prepare.dataset as dataset
+import landseg.geopipe.prepare.materialize.materialize as mat
 
 
 # ----- `_normalize_image` tests
@@ -199,7 +199,7 @@ def test_materialize_blocks_orchestration(tmp_path, mocker):
 
     os.makedirs(out_dir, exist_ok=True)
 
-    mock_ctx = mocker.Mock(spec=data_context.DatasetContext)
+    mock_ctx = mocker.Mock(spec=dataset.DatasetView)
 
     indexed, purged = mat.materialize_blocks(
         input_blocks=input_blocks,

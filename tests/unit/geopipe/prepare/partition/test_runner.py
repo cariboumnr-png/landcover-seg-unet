@@ -28,11 +28,11 @@ import rasterio.transform
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.prepare as prepare
-import landseg.geopipe.prepare.data_context as data_context
-import landseg.geopipe.prepare.data_context.catalog as catalog
-import landseg.geopipe.prepare.data_context.semantics as semantics
-import landseg.geopipe.prepare.data_partition.orchestration as orchestration
-import landseg.geopipe.prepare.data_partition.runner as runner
+import landseg.geopipe.prepare.dataset as dataset
+import landseg.geopipe.prepare.dataset.catalog as catalog
+import landseg.geopipe.prepare.dataset.semantics as semantics
+import landseg.geopipe.prepare.partition.orchestration as orchestration
+import landseg.geopipe.prepare.partition.runner as runner
 
 
 # ----- test helper classes
@@ -47,7 +47,7 @@ class _DummyPaths:
 # ----- `run_datablocks_partition` tests
 def test_run_datablocks_partition(tmp_path, mocker):
     '''
-    Given: A DatasetContext with in-memory class counts.
+    Given: A DatasetView with in-memory class counts.
     When: Running run_datablocks_partition.
     Then: Create splits, save summary with focal head, and persist
         paths.
@@ -77,7 +77,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         ignore_classes={'landcover_group': [255]},
         resolved_reclass={'landcover': None},
     )
-    ctx = data_context.DatasetContext(
+    ctx = dataset.DatasetView(
         catalog=catalog_view,
         features=features,
         targets=targets,

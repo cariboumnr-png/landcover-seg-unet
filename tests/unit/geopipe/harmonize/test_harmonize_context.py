@@ -29,7 +29,7 @@ import pytest
 # local imports
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
-import landseg.geopipe.harmonize as harmonize
+import landseg.geopipe.harmonize.context as harmonize_context
 
 
 # ----- private types
@@ -60,7 +60,7 @@ def test_harmonization_context_frozen(tmp_path):
     '''
     config = _WorldGridConfig(output_dpath=str(tmp_path))
     _, grid_fp, world_grid = grid.prepare_world_grid(config)
-    ctx = harmonize.HarmonizationContext(
+    ctx = harmonize_context.HarmonizationContext(
         grid=world_grid,
         grid_id=world_grid.gid,
         grid_fpath=grid_fp,
@@ -97,7 +97,7 @@ def test_build_harmonization_context_from_report_fpath(tmp_path):
     logger.set_grid_report(grid_report, total_tiles=len(world_grid))
     logger.close()
 
-    ctx = harmonize.build_harmonization_context(report_fp)
+    ctx = harmonize_context.build_harmonization_context(report_fp)
     assert ctx.grid_id == world_grid.gid
     assert ctx.grid_fpath == grid_fp
     assert ctx.grid.gid == world_grid.gid
@@ -130,7 +130,7 @@ def test_build_harmonization_context_from_directory(tmp_path):
     logger.set_grid_report(grid_report, total_tiles=len(world_grid))
     logger.close()
 
-    ctx = harmonize.build_harmonization_context(str(tmp_path))
+    ctx = harmonize_context.build_harmonization_context(str(tmp_path))
     assert ctx.grid_id == world_grid.gid
     assert ctx.grid_fpath == grid_fp
     assert ctx.grid.gid == world_grid.gid

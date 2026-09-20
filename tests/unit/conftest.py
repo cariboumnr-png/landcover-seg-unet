@@ -31,7 +31,7 @@ import pytest
 # local imports
 import landseg.core as core
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.assembler as assembler
 
 
 @pytest.fixture

@@ -27,7 +27,7 @@
 import numpy
 import pytest
 # local imports
-import landseg.geopipe.ingest.domain_maps.builder as domain_builder
+import landseg.geopipe.ingest.domains.builder as domain_builder
 
 
 # ----- `build_domain` tests

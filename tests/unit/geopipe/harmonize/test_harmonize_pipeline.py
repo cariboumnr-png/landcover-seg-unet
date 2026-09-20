@@ -33,7 +33,7 @@ import rasterio
 import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.harmonize.manifest as harmonize_manifest
 import landseg.geopipe.harmonize.pipeline as pipeline
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.assembler as assembler
 
 
 @dataclasses.dataclass

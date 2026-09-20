@@ -31,10 +31,10 @@ import rasterio
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
-import landseg.geopipe.ingest.data_blocks.assembler.builder as builder
-import landseg.geopipe.ingest.data_blocks.assembler.io as io
-import landseg.geopipe.ingest.data_blocks.assembler.lifecycle as lifecycle
+import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.assembler.builder as builder
+import landseg.geopipe.ingest.blocks.assembler.io as io
+import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
 import landseg.geopipe.utils as geo_utils
 
 

@@ -33,7 +33,7 @@ import numpy
 import rasterio
 import rasterio.transform
 # local imports
-import landseg.geopipe.prepare.data_partition.orchestration as orchestration
+import landseg.geopipe.prepare.partition.orchestration as orchestration
 
 
 # ----- test helper

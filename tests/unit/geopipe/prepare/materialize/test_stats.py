@@ -26,7 +26,7 @@ import numpy
 import pytest
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.materialize_blocks.stats as mat_stats
+import landseg.geopipe.prepare.materialize.stats as mat_stats
 
 
 # ----- `count_label` tests

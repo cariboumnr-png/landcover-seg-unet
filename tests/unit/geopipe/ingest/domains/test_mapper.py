@@ -28,7 +28,7 @@ import rasterio
 import rasterio.transform
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.domain_maps.mapper as domain_mapper
+import landseg.geopipe.ingest.domains.mapper as domain_mapper
 
 
 # ----- `map_domain_to_grid` tests

@@ -38,8 +38,8 @@ import landseg.configs as configs
 import landseg.core as core
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest as ingest
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
-import landseg.geopipe.ingest.data_blocks.mapper as mapper
+import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.mapper as mapper
 import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 import landseg.models as models
@@ -233,23 +233,22 @@ def _create_block(
 
     # retrieve band map and label specs from VRT
     logger.log('INFO', 'Building a single data block')
-    image_band_map = assembler.read_band_map(harmonized.features)
-    label_specs = assembler.read_label_specs(harmonized.labels)
+    image_band_map = assembler.read_band_map(context.features)
+    label_specs = assembler.read_label_specs(context.labels)
 
     # construct `RasterReadInput` mapping for mapped windows
     inputs_map = {
         geo_utils.xy_name(coord): assembler.RasterReadInput(
-            image_fpath=harmonized.features,
+            image_fpath=context.features,
             image_window=mapped.image[coord],
             image_band_map=image_band_map,
             image_dem_pad_px=datablocks_cfg.image_dem_pad,
-            label_fpath=harmonized.labels,
+            label_fpath=context.labels,
             label_window=mapped.label[coord] if mapped.label else None,
             label_specs=label_specs,
         )
         for coord in mapped.image
     }
-
 
     # resolve target head for filtering
     target_head = _resolve_target_head(config, label_specs)

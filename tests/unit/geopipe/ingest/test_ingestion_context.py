@@ -31,7 +31,7 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest as ingest
+import landseg.geopipe.ingest.context as ingest_context
 
 
 # ----- private helpers
@@ -66,7 +66,7 @@ def test_ingestion_context_properties(tmp_path):
     '''
     grid_fp = str(tmp_path / 'grid.json')
     layout = _create_dummy_grid(grid_fp)
-    ctx = ingest.IngestionContext(
+    ctx = ingest_context.IngestionContext(
         grid=layout,
         grid_fpath=grid_fp,
         domains={'landcover': '/data/lc.tif'},
@@ -116,7 +116,9 @@ def test_build_ingestion_context_success(tmp_path):
     ).persist(report_content)
 
     harm_paths = artifacts.HarmonizationPaths(harm_dpath)
-    ctx = ingest.build_ingestion_context(harm_paths, harmonization_run_id=1)
+    ctx = ingest_context.build_ingestion_context(
+        harm_paths, harmonization_run_id=1
+    )
 
     assert ctx.grid.gid == layout.gid
     assert ctx.grid_fpath == grid_fp
