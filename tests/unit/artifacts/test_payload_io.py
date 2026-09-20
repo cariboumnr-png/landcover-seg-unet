@@ -27,6 +27,7 @@ Unit tests for `landseg.artifacts.payload_io`.
 
 # standard imports
 import os
+import typing
 # third-party imports
 import pytest
 # local imports
@@ -51,7 +52,7 @@ def test_payload_controller_save_and_load(tmp_path):
         policy=policy_mod.LifecyclePolicy.BUILD_IF_MISSING,
     )
 
-    payload_in: payload_mod._PayloadDict[dict, dict] = {
+    payload_in: payload_mod.PayloadDict[dict, dict] = {
         'schema_id': 'v1_catalog',
         'artifact_meta': {'created_by': 'unit_test', 'version': 1},
         'data': {'items': [10, 20, 30]},
@@ -132,3 +133,69 @@ def test_payload_controller_save_validation(tmp_path):
 
     with pytest.raises(ValueError, match='Missing payload keys'):
         ctrl.save({'schema_id': 'schema_v1', 'data': {}})  # type: ignore
+
+
+def test_payload_controller_load_or_fail_success(tmp_path):
+    '''
+    Given: Stored payload files on disk.
+    When: `load()` is invoked via `load_or_fail` or `load_json_or_fail`.
+    Then: Return the loaded `PayloadDict` successfully.
+    '''
+    data_path = str(tmp_path / 'item.json')
+    ctrl = payload_mod.PayloadController[dict, dict](
+        data_fpath=data_path,
+        schema_id='v1_item',
+        policy=policy_mod.LifecyclePolicy.BUILD_IF_MISSING,
+    )
+    ctrl.save({
+        'schema_id': 'v1_item',
+        'artifact_meta': {'name': 'test'},
+        'data': {'count': 42},
+    })
+
+    # test `load_or_fail` factory
+    ctrl_fail = payload_mod.PayloadController[dict, dict].load_or_fail(
+        data_path,
+        schema_id='v1_item',
+    )
+    assert isinstance(ctrl_fail, payload_mod.LoadOrFailPayloadController)
+    loaded = ctrl_fail.load()
+    assert loaded['schema_id'] == 'v1_item'
+    assert loaded['data'] == {'count': 42}
+
+    # test `load_json_or_fail` factory
+    ctrl_json_fail = (
+        payload_mod.PayloadController[dict, dict].load_json_or_fail(
+            data_path,
+            schema_id='v1_item',
+        )
+    )
+    assert isinstance(
+        ctrl_json_fail, payload_mod.LoadOrFailPayloadController
+    )
+    assert ctrl_json_fail.load() == loaded
+
+
+def test_payload_controller_load_or_fail_missing(tmp_path):
+    '''
+    Given: Non-existent payload files.
+    When: `load()` is invoked on a `LoadOrFailPayloadController`.
+    Then: Raise `ArtifactError` signaling missing artifact files.
+    '''
+    data_path = str(tmp_path / 'missing.json')
+    ctrl = payload_mod.LoadOrFailPayloadController[dict, dict](
+        data_path,
+        schema_id='v1_item',
+    )
+    with pytest.raises(ctrl_mod.ArtifactError, match='Error loading'):
+        ctrl.load()
+
+
+def test_payload_controller_overload_signatures():
+    '''
+    Given: The `PayloadController.load` method.
+    When: Introspecting registered typing overloads.
+    Then: Register overloads for specialized and general return types.
+    '''
+    overloads = typing.get_overloads(payload_mod.PayloadController.load)
+    assert len(overloads) == 2

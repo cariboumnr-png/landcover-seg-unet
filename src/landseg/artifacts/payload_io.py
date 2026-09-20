@@ -34,24 +34,27 @@ The controller enforces:
 - coordinated loading/saving of both files
 - consistent error handling through the artifacts subsystem
 
-A payload is represented as a dictionary with three fields:
-    - `schema_id`: identifier for compatibility validation
-    - `artifact_meta`: arbitrary metadata associated with the payload
-    - `data`: the primary serialized content
+Public APIs:
+    - `PayloadDict`: strongly-typed split-file payload dictionary.
+    - `PayloadController`: coordinator for split JSON payload I/O.
+    - `LoadOrFailPayloadController`: specialized payload controller.
 '''
 
 # standard imports
+from __future__ import annotations
 import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
 
-# TypeVars
+
+# ----- typing aliases
 D = typing.TypeVar('D') # 'data' payload, e.g., x.json
 M = typing.TypeVar('M') # 'meta' payload, e.g., x_meta.json
 
-# -----------------------------private type-----------------------------
-class _PayloadDict(typing.TypedDict, typing.Generic[D, M]):
+
+# ----- public types
+class PayloadDict(typing.TypedDict, typing.Generic[D, M]):
     '''
     Strongly-typed representation of a split-file payload.
 
@@ -76,7 +79,8 @@ class _PayloadDict(typing.TypedDict, typing.Generic[D, M]):
     artifact_meta: M
     data: D
 
-# -----------------------------Public Class-----------------------------
+
+# ----- public classes
 class PayloadController(typing.Generic[D, M]):
     '''
     Coordinates persistence and retrieval of a split JSON payload.
@@ -100,7 +104,7 @@ class PayloadController(typing.Generic[D, M]):
         data_fpath: str,
         *,
         schema_id: str,
-        policy: artifacts.LifecyclePolicy
+        policy: artifacts.LifecyclePolicy,
     ):
         '''
         Initialize a controller for a split-file payload.
@@ -117,7 +121,6 @@ class PayloadController(typing.Generic[D, M]):
                 Lifecycle policy governing how artifacts are read and
                 written (e.g., overwrite rules, caching, etc.).
         '''
-
         # init attrs
         self.schema_id = schema_id
         self.policy = policy
@@ -131,7 +134,35 @@ class PayloadController(typing.Generic[D, M]):
         self.data_ctrl = artifacts.Controller(self.data_path, policy)
         self.meta_ctrl = artifacts.Controller(self.meta_path, policy)
 
-    def load(self) -> _PayloadDict[D, M] | None:
+    # ----- alternative constructors
+    @classmethod
+    def load_json_or_fail(
+        cls,
+        data_fpath: str,
+        *,
+        schema_id: str,
+    ) -> LoadOrFailPayloadController[D, M]:
+        '''Factory for a JSON payload controller that loads or fails.'''
+        return LoadOrFailPayloadController(data_fpath, schema_id=schema_id)
+
+    @classmethod
+    def load_or_fail(
+        cls,
+        data_fpath: str,
+        *,
+        schema_id: str,
+    ) -> LoadOrFailPayloadController[D, M]:
+        '''Factory for a payload controller that loads or fails.'''
+        return LoadOrFailPayloadController(data_fpath, schema_id=schema_id)
+
+    # ----- public method
+    @typing.overload
+    def load(self: LoadOrFailPayloadController[D, M]) -> PayloadDict[D, M]:...
+
+    @typing.overload
+    def load(self) -> PayloadDict[D, M] | None:...
+
+    def load(self) -> PayloadDict[D, M] | None:
         '''
         Load and validate the split-file payload from disk.
 
@@ -141,7 +172,7 @@ class PayloadController(typing.Generic[D, M]):
         - Merges both into a single structured payload on success
 
         Returns:
-            A `_PayloadDict` containing `schema_id`, `artifact_meta`,
+            A `PayloadDict` containing `schema_id`, `artifact_meta`,
             and `data` if both files are successfully loaded and valid.
 
             or `None` if either the data or metadata artifact is
@@ -153,7 +184,6 @@ class PayloadController(typing.Generic[D, M]):
                 If the stored `schema_id` does not match the expected
                 schema for this controller
         '''
-
         # fetch
         try:
             data = self.data_ctrl.fetch()
@@ -170,6 +200,8 @@ class PayloadController(typing.Generic[D, M]):
 
         # loading status
         if meta is None or data is None:
+            if self.policy == artifacts.LifecyclePolicy.LOAD_OR_FAIL:
+                raise artifacts.ArtifactError('Required artifact is missing')
             return None
 
         # schema guard
@@ -179,14 +211,14 @@ class PayloadController(typing.Generic[D, M]):
             raise artifacts.ArtifactError(_)
 
         # otherwise return class object via class method
-        payload: _PayloadDict[D, M] = {
+        payload: PayloadDict[D, M] = {
             'schema_id': self.schema_id,
             'artifact_meta': meta.get('artifact_meta'),
             'data': data
         }
         return payload
 
-    def save(self, payload: _PayloadDict[D, M]) -> None:
+    def save(self, payload: PayloadDict[D, M]) -> None:
         '''
         Persist a split-file payload to disk.
 
@@ -214,21 +246,30 @@ class PayloadController(typing.Generic[D, M]):
             ValueError:
                 If required keys are missing from the payload.
         '''
-
         # basic validation
         if not isinstance(payload, dict):
-            raise TypeError("payload must be a dict")
+            raise TypeError('payload must be a dict')
 
         required = {'schema_id', 'artifact_meta', 'data'}
         missing = required - payload.keys()
         if missing:
-            raise ValueError(f"Missing payload keys: {missing}")
+            raise ValueError(f'Missing payload keys: {missing}')
 
         # get data and meta
         data = payload['data']
-        meta = {k: payload[k] for k in ['schema_id','artifact_meta']}
+        meta = {k: payload[k] for k in ['schema_id', 'artifact_meta']}
 
         # write domain tiles dict and write to JSON
         self.data_ctrl.persist(data)
         # write meta dict and write to json
         self.meta_ctrl.persist(meta)
+
+
+class LoadOrFailPayloadController(PayloadController[D, M]):
+    '''"Load or fail" specialized PayloadController subclass.'''
+    def __init__(self, data_fpath: str, *, schema_id: str):
+        super().__init__(
+            data_fpath,
+            schema_id=schema_id,
+            policy=artifacts.LifecyclePolicy.LOAD_OR_FAIL,
+        )

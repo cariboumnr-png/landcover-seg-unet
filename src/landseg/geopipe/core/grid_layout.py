@@ -290,14 +290,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
             GridLayout:
                 Restored GridLayout instance.
         '''
-        ctrl = artifacts.PayloadController[list[list[int]], GridMeta](
-            fpath,
-            schema_id=cls.SCHEMA_ID,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
-        )
+        ctrl = artifacts.PayloadController[
+            list[list[int]], GridMeta
+        ].load_or_fail(fpath, schema_id=cls.SCHEMA_ID)
         payload = ctrl.load()
-        if not payload:
-            raise ValueError(f'Loading grid failed: {fpath}')
         return cls.from_payload(payload)
 
     # ----- public method

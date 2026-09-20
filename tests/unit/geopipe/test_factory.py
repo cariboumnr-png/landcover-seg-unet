@@ -19,12 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=protected-access
+
 '''Unit tests for geopipe runtime DataSpecs builder (factory.py).'''
 
 # standard imports
 import typing
-# third-party imports
-import pytest
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.factory as factory
@@ -210,3 +210,28 @@ def test_build_dataspec(mocker):
         'head_base': None,
         'head_child': 1,
     }
+
+
+# ----- `_load_domain` tests
+def test_load_domain(mocker):
+    '''
+    Given: Mocked `PayloadController.load_or_fail` returning valid payload.
+    When: `_load_domain` is called.
+    Then: Return reconstructed `DomainTileMap` instance.
+    '''
+    mock_payload = {
+        'schema_id': geo_core.DomainTileMap.SCHEMA_ID,
+        'artifact_meta': {},
+        'data': {},
+    }
+    mocker.patch(
+        'landseg.artifacts.PayloadController.load_or_fail',
+        return_value=mocker.Mock(load=mocker.Mock(return_value=mock_payload)),
+    )
+    mocker.patch.object(
+        geo_core.DomainTileMap,
+        'from_payload',
+        return_value=mocker.Mock(spec=geo_core.DomainTileMap),
+    )
+    result = factory._load_domain('dummy_path.json')
+    assert result is not None

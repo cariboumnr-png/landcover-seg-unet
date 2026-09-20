@@ -40,13 +40,14 @@ __all__ = [
     'KnowledgePaths',
     'LifecyclePolicy',
     'PayloadController',
-    'SessionPaths',
     'PreparationPaths',
+    'SessionPaths',
     # functions
     'load_checkpoint',
     'save_checkpoint',
     # typing
-    'CheckpointMeta'
+    'CheckpointMeta',
+    'PayloadDict'
 ]
 
 # for static check
@@ -61,7 +62,7 @@ if typing.TYPE_CHECKING:
         PreparationPaths,
         SessionPaths,
     )
-    from .payload_io import PayloadController
+    from .payload_io import PayloadController, PayloadDict
     from .policy import LifecyclePolicy
 
 def __getattr__(name: str):
@@ -82,7 +83,7 @@ def __getattr__(name: str):
     }:
         return getattr(importlib.import_module('.paths', __package__), name)
 
-    if name in {'PayloadController'}:
+    if name in {'PayloadController', 'PayloadDict'}:
         return getattr(importlib.import_module('.payload_io', __package__), name)
 
     if name in {'LifecyclePolicy'}:

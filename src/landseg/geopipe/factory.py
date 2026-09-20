@@ -119,15 +119,13 @@ def build_dataspec(
 
 
 # ----- private helpers
-def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
+def _load_domain(fp: str) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
-    ctrl = DomainCtrl(
+    ctrl = DomainCtrl.load_or_fail(
         fp,
         schema_id=geo_core.DomainTileMap.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.LOAD_OR_FAIL
     )
     payload = ctrl.load()
-    assert payload # typing assertion
     return geo_core.DomainTileMap.from_payload(payload)
 
 
