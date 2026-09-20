@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.prepare.data_partition`.
+Top-level namespace for `landseg.geopipe.prepare.partition`.
 
 Exposes partition configuration parameters and dataset split runner
 via lazy resolution.
@@ -56,6 +56,7 @@ def __getattr__(name: str):
         return getattr(importlib.import_module('.runner', __package__), name)
 
     if name in {'PartitionParameters'}:
-        return getattr(importlib.import_module('.orchestration', __package__), name)
+        mod = importlib.import_module('.orchestration', __package__)
+        return getattr(mod, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

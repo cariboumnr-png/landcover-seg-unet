@@ -1,7 +1,7 @@
 # ADR-0057: Dynamic Dataset Semantics, In-Memory Data Context, and Decoupled Preparation Pipeline
 
-**Status:** Accepted — Implemented  
-**Date:** 2026-09-02 (Updated: 2026-09-18)
+**Status:** Accepted — Implemented
+**Date:** 2026-09-02 (Updated: 2026-09-20)
 
 ---
 
@@ -135,61 +135,86 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
    `image_band_map` at block assembly time, allowing them to be selected
    by name during data preparation.
 
-### 2.5. Unified In-Memory Data Context (`geopipe.prepare.data_context`)
-- **Module Architecture**:
-   Replaced legacy `resolver.py` and `adapter.py` with
-   `landseg.geopipe.prepare.data_context`:
-   - `context.py`: Defines the unified `DatasetContext` container coordinating
-     feature selections, target head topologies, catalog views, CRS, transforms,
-     and in-memory class distribution mappings.
-   - `catalog.py`: Handles catalog view filtering and thresholding.
-   - `semantics.py`: Implements metadata resolution and in-memory class derivation:
-     - `resolve_feature_channels()`: Resolves active band names and 0-based channel
-       indices against `image_band_map` using `image_schemes` or explicit band lists.
-     - `resolve_target_heads()`: Resolves multi-head target hierarchies into
-       canonical `TargetHeadsContext` (and `TargetHeadsSchema` in `geo_core`).
-       Head ordering is structured as `[base_head, group_head, *child_slices]`.
-     - `resolve_focal_head()`: Deterministically identifies the focal target head
-       for spatial partitioning, supporting direct head names, class names, or
-       defaulting to grouping/base heads.
-     - `derive_head_class_counts()`: Computes exact per-class pixel counts for
-       all target heads in memory directly from catalog raw base class counts.
+### 2.5. Upstream Context & In-Memory Dataset View (`geopipe.prepare`)
+- **Decoupled Architecture**:
+   Cleanly separated passive upstream environment discovery from active
+   experiment dataset compilation:
+   - `prepare.context`: Defines `PreparationContext` and `build_preparation_context()`,
+     mirroring `HarmonizationContext` and `IngestionContext`. Resolves upstream
+     ingested schema and catalog paths and extracts canvas spatial metadata
+     (CRS, transform) with zero business logic or user parameters.
+   - `prepare.dataset`: Compiles the active in-memory experiment dataset representation:
+     - `view.py`: Defines the immutable `DatasetView` container and
+       `DatasetViewParameters` dataclass, coordinating catalog views,
+       feature channel selections, target head topologies, and derived
+       class counts. `build_dataset_view(catalog_fpath, schema, parameters, ...)`
+       coordinates compilation with zero upward module imports.
+     - `catalog.py`: Handles catalog view coordinate indexing and valid-pixel
+       filtering without preliminary focal count guessing.
+     - `semantics.py`: Implements metadata resolution and in-memory class derivation:
+       - `resolve_feature_channels()`: Resolves active band names and 0-based channel
+         indices against `image_band_map` using `image_schemes` or explicit band lists.
+       - `resolve_target_heads()`: Resolves multi-head target hierarchies into
+         canonical `TargetHeadsContext` (and `TargetHeadsSchema` in `geo_core`).
+         Head ordering is structured as `[base_head, group_head, *child_slices]`.
+       - `resolve_focal_head()`: Deterministically identifies the focal target head
+         for spatial partitioning, supporting direct head names, class names, or
+         defaulting to grouping/base heads.
+       - `derive_head_class_counts()`: Computes exact per-class pixel counts for
+         all target heads in memory directly from catalog raw base class counts.
 - **Decoupled Pre-Partition Distribution**:
-   By deriving head class counts purely in memory during context assembly, spatial
-   partitioning (`data_partition`) executes with complete multi-head class
+   By deriving head class counts purely in memory during dataset view compilation,
+   spatial partitioning (`partition`) executes with complete multi-head class
    distribution knowledge without reading or materializing tensor blocks on disk.
 
-### 2.6. Decoupled Spatial Partitioning (`geopipe.prepare.data_partition`)
+### 2.6. Decoupled Spatial Partitioning (`geopipe.prepare.partition`)
 - **Metadata-Driven Splitting**:
-   Partitioning consumes `DatasetContext` and derived class distributions purely
+   Partitioning consumes `DatasetView` and derived class distributions purely
    in memory. It does not touch raw block arrays or write materialized tensors.
 - **Spatial AOI Integration**:
    Integrates spatial AOI raster intersection (`test_aoi`, `val_aoi`, `train_aoi`),
    priority conflict resolution (`test > val > train`), and safety buffering.
 - **Submodule Reorganization**:
-   Modularized partition logic into `geopipe.prepare.data_partition.operations`
+   Modularized partition logic into `geopipe.prepare.partition.operations`
    (`aoi.py`, `filter.py`, `hydrate.py`, `score.py`, `stratify.py`), coordinated
    by `orchestration.py` and invoked via `runner.py`.
 
-### 2.7. Deferred Post-Partition Materialization (`geopipe.prepare.materialize_blocks`)
+### 2.7. Deferred Post-Partition Materialization (`geopipe.prepare.materialize`)
 - **Renamed and Decoupled from `normal_blocks`**:
-   Modularized tensor processing into `geopipe.prepare.materialize_blocks`:
+   Modularized tensor processing into `geopipe.prepare.materialize`:
    - `materialize.py`: Implements `materialize_blocks()`, `_normalize_image()`,
      `_reclassify_labels()`, and `_purge()`.
    - `stats.py`: Houses `aggregate_image_stats()` (Welford's online algorithm)
      and `count_label()` (per-split label frequency aggregation).
    - `runner.py`: Coordinates the end-to-end materialization workflow.
+   - `schema.py`: Compiles the finalized `PreparedSchema` artifact.
 - **Pipeline Execution Sequence**:
-   1. `data_context`: Assembles `DatasetContext` and computes derived head
-      class distributions in memory.
-   2. `data_partition`: Splits blocks into train, validation, and test sets
+   1. `prepare.context`: Resolves upstream ingestion catalog, schema, and canvas.
+   2. `prepare.dataset`: Compiles in-memory `DatasetView` and derived head counts.
+   3. `prepare.partition`: Splits blocks into train, validation, and test sets
       using derived class distributions and spatial AOI constraints.
-   3. `materialize_blocks`: Aggregates global image statistics solely across
+   4. `prepare.materialize`: Aggregates global image statistics solely across
       the training partition, applies per-band z-score normalization to selected
       channels, constructs multi-head label stacks via `_reclassify_labels()`,
       and writes compressed `.npz` artifacts.
 
-### 2.8. Dual Public Interfaces (CLI & Programmatic API)
+### 2.8. Streamlined Submodule Naming Across `geopipe`
+- **Single-Word Domain Packages**:
+   Streamlined all submodule names across `geopipe` into punchy, consistent
+   single-word domain packages, eliminating redundant `data_` prefixes and
+   verb-noun compounds:
+   - `harmonize`: `manifest`, `rasters`, `taxonomy`
+   - `ingest`: `blocks` (was `data_blocks`), `domains` (was `domain_maps`)
+   - `prepare`: `dataset` (was `data_context`), `partition` (was
+     `data_partition`), `materialize` (was `materialize_blocks`)
+- **Parallel Module Triad**:
+   Every pipeline stage (`harmonize`, `ingest`, `prepare`) now provides the
+   identical root file triad:
+   - `context.py`: Passive upstream context builder.
+   - `logger.py`: Stage structured logger.
+   - `pipeline.py`: High-level stage pipeline runner.
+
+### 2.9. Dual Public Interfaces (CLI & Programmatic API)
 - **CLI Configuration (`configs/user.yaml` & Hydra)**:
    Exposed `features` and `targets` sections under `data-prepare:`, mapped
    into `data.preparation` via `landseg.adapters.cli.translate`.
@@ -197,7 +222,7 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
    Added fluent `set_features()` and `set_targets()` methods for notebook and
    script environments (`notebooks/01_data_preparation.ipynb`).
 
-### 2.9. Project-Wide Formatting, Style, and Documentation Standards
+### 2.10. Project-Wide Formatting, Style, and Documentation Standards
 - **Standardized Python Scans**:
    Unified Crown copyright preservation, import groupings without blank lines,
    section delimiters (`# ----- `[Symbol]` [lowercase description]`), Google-style
@@ -205,28 +230,24 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
    limits ($\le 80$ chars code, $\le 72$ chars docstrings/comments) across
    all modules.
 
-### 2.10. Package-Wide Typing Standardization & Common Alias Retirement
-- **Foundational Root Aliases (`geopipe.alias`)**:
-   Created a dependency-free, root-level `landseg.geopipe.alias` module
-   (`alias.py`) providing unified typing primitives across the geospatial
-   pipeline:
-   - 2D coordinate primitives: `Coord2d`, `CoordsList`, `CoordsSet`.
-   - Raster I/O handles and mappings: `RasterReader`, `RasterWindow`,
-     `RasterWindowDict`, `RasterTransform`.
-   - Typed NumPy arrays: `IntArray`, `Int64Array`, `Float32Array`,
-     `Float64Array`, `MaskArray`.
-   - Class frequency mappings: `ClassCounts`, `CoordClassCounts`.
-- **Retirement of Submodule Common Aliases**:
-   Completely retired and deleted legacy `prepare/common/alias.py` and
-   `ingest/common/alias.py`, replacing duplicate or conflicting aliases
-   across assembler, mapper, materialize, and partition modules with direct
-   imports of `landseg.geopipe.alias as alias`.
-- **Localized Domain Map Tile Aliases (`geopipe.ingest.domain_maps.alias`)**:
-   Isolated `RasterTile` and `RasterTileDict` into a dedicated, dependency-free
-   typing module `domain_maps.alias` defined from raw Python and NumPy types,
-   enforcing strict submodule boundary isolation.
+### 2.11. Package-Wide Typing Standardization & Common Alias Retirement
+- **Retirement of Standalone Alias Files**:
+   Completely removed and retired standalone `alias.py` files across `geopipe`
+   (`geopipe/alias.py`, `prepare/common/alias.py`, `ingest/common/alias.py`, and
+   `ingest/domains/alias.py`).
+- **Co-Located Runtime Types (`geopipe.core.grid_layout`)**:
+   Relocated `RasterReader`, `RasterWindow`, and `RasterWindowDict` directly into
+   `geopipe.core.grid_layout`, co-locating them with the rasterio operations
+   and grid layout structures that produce and consume them.
+- **Localized Submodule Aliases**:
+   - `geopipe.ingest.domains.mapper`: Houses `RasterTileDict` locally, enforcing
+     clean boundaries without cross-module alias leakage.
+   - `geopipe.prepare.partition.operations.stratify`: Houses NumPy array typing
+     primitives locally where stratification arithmetic is performed.
+   - `geopipe.utils.raster_context`: Kept purely primitive using standard
+     `rasterio` types directly.
 
-### 2.11. Central Contracts Architecture (`geopipe.contracts`) & `common` Retirement
+### 2.12. Central Contracts Architecture (`geopipe.contracts`) & `common` Retirement
 - **Centralized Contracts Module**:
    Established a top-level `landseg.geopipe.contracts` package acting as the
    single source of truth for all pipeline summary schemas and data transfer
@@ -253,7 +274,7 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
    Each logger provides consistent run tracking, elapsed duration timing,
    sub-stage report collection, and canonical summary JSON persistence.
 
-### 2.12. Inter-Pipeline Decoupling, Context Loaders, and Core Layout Deserialization
+### 2.13. Inter-Pipeline Decoupling, Context Loaders, and Core Layout Deserialization
 - **Pure Contract Decoupling**:
    Decoupled `contracts.harmonization.HarmonizationReportSchema` from
    `WorldGridReport` by storing primitive reference strings (`grid_id: str`,
@@ -268,6 +289,9 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
    - `geopipe.ingest.context`: Houses `IngestionContext` and
      `build_ingestion_context()`, replacing legacy `harmonization_inputs.py`
      and `adapter.py`.
+   - `geopipe.prepare.context`: Houses `PreparationContext` and
+     `build_preparation_context()`, resolving ingested catalog, schema, and canvas
+     metadata.
 - **Core Grid Deserialization & Report Primitives (`geopipe.core`)**:
    Promoted reusable world grid loading and inspection functions into
    `geopipe.core.grid_layout`:
@@ -283,7 +307,7 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
      (`load_grid_from_config`, `load_grid_from_fpath`, `read_grid_report`) from
      `geopipe.grid.lifecycle` and `geopipe.grid.__init__`.
 
-### 2.13. Strict Submodule Import Scope and Lazy Resolution
+### 2.14. Strict Submodule Import Scope and Lazy Resolution
 - **Minimal API Surface**:
    Standardized `__all__`, `typing.TYPE_CHECKING`, and dynamic `__getattr__`
    lazy module resolution across all packages (`core`, `grid`, `harmonize`,
@@ -309,8 +333,10 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
 - **Immutability of Ingested Blocks**: Ingested `.npz` blocks remain pure,
   canonical representations of underlying geospatial layers.
 - **Clean Architectural Separation**: Cohesive boundaries between context
-  assembly (`data_context`), spatial partitioning (`data_partition`), and
-  tensor materialization (`materialize_blocks`).
+  resolution (`geopipe.prepare.context`), dataset view compilation
+  (`geopipe.prepare.dataset`), spatial partitioning
+  (`geopipe.prepare.partition`), and tensor materialization
+  (`geopipe.prepare.materialize`).
 - **Contract-Governed Pipeline Reports**: Standardized `geopipe.contracts`
   schemas enforce consistent, typed output summaries across all pipeline
   stages.
@@ -354,28 +380,34 @@ a centralized **Contracts Architecture**, and pure **Inter-Pipeline Decoupling**
 4. **Canonical DataBlocks & Ingestion Feature Engineering**: Preserved raw base
    labels in `DataBlock`, established 0-based `label_band_map`, and added
    `add_topo` and `add_spectral` feature engineering at ingestion time.
-5. **Unified Data Context & In-Memory Semantics**: Created `data_context`
-   submodule (`semantics.py`, `context.py`, `catalog.py`) with `DatasetContext`,
-   canonical `TargetHeadsContext`, and in-memory multi-head count derivation.
-6. **Decoupled Partitioning and Materialization**: Replaced `normal_blocks` with
-   `materialize_blocks`, computing training image stats and multi-head label
-   stacks only after spatial partitioning completes.
+5. **Decoupled Preparation Context & Dataset View**: Introduced
+   `geopipe.prepare.context.PreparationContext` for passive upstream environment
+   resolution, and `geopipe.prepare.dataset.DatasetView` (`view.py`, `catalog.py`,
+   `semantics.py`) with canonical `TargetHeadsContext` and in-memory multi-head
+   count derivation.
+6. **Decoupled Partitioning and Materialization**: Modularized into
+   `geopipe.prepare.partition` and `geopipe.prepare.materialize`, computing
+   training image stats and multi-head label stacks only after spatial
+   partitioning completes.
 7. **Quality Assurance & Standards**: Unified docstrings, Given / When / Then
    test specifications, line lengths, and added comprehensive unit test suites
    across `geopipe.prepare` (100% passing).
-8. **Typing Architecture & Submodule Alias Retirement**: Established a
-   central, dependency-free `landseg.geopipe.alias` module for shared primitive
-   typing aliases, retired legacy `prepare/common/alias.py` and
-   `ingest/common/alias.py`, localized domain map tile aliases in
-   `domain_maps.alias`, and refined split stratification typing.
+8. **Typing Architecture & Standalone Alias Retirement**: Retired standalone
+   `alias.py` files across `geopipe`, co-locating raster types in
+   `geopipe.core.grid_layout`, localizing `RasterTileDict` in `domains.mapper`,
+   and isolating NumPy array aliases in `stratify.py`.
 9. **Contracts Module & Common Decommissioning**: Created `landseg.geopipe.contracts`
    as the central report schema authority (`contracts.grid`, `contracts.harmonization`,
    `contracts.ingestion`, `contracts.preparation`), decommissioned all `common/`
    directories, and established dedicated package loggers (`GridLogger`,
    `HarmonizeLogger`, `IngestLogger`, `PreparationLogger`).
 10. **Pipeline Decoupling & Context Loaders**: Decoupled `HarmonizationReport`
-    to primitive grid references, introduced `HarmonizationContext` and
-    `IngestionContext` (retiring `harmonization_inputs.py`), promoted
-    `GridLayout.from_fpath`, `load_grid_from_fpath`, `get_grid_report_fpath`, and
-    `read_grid_report` to `geopipe.core`, and completely decoupled downstream
+    to primitive grid references, introduced `HarmonizationContext`,
+    `IngestionContext`, and `PreparationContext` (retiring `harmonization_inputs.py`),
+    promoted `GridLayout.from_fpath`, `load_grid_from_fpath`, `get_grid_report_fpath`,
+    and `read_grid_report` to `geopipe.core`, and completely decoupled downstream
     execution pipelines from `geopipe.grid`.
+11. **Streamlined Submodule Naming Across Geopipe**: Aligned all subpackages across
+    `geopipe` to concise 1-word domain packages (`ingest`: `blocks`, `domains`;
+    `prepare`: `dataset`, `partition`, `materialize`), standardizing the root file triad
+    (`context.py`, `logger.py`, `pipeline.py`) across all three pipeline stages.

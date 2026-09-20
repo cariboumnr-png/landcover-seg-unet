@@ -1,6 +1,6 @@
 ## Structure actuelle du projet
 
-Derniere mise a jour: 2026-07-17
+Dernière mise à jour: 2026-09-20
 
 Ce document resume l'organisation actuelle du depot et la responsabilite
 principale de chaque zone. Il privilegie les frontieres utiles pour ajouter ou
@@ -108,22 +108,31 @@ src/landseg/
 |       `-- study_analysis.py     Analyse des resultats d'etude
 |
 |-- geopipe/
-|   |-- core/                     Contrats de données d'harmonisation, d'ingestion et de préparation
-|   |-- grid/                     Construction et cycle de vie des grilles monde
-|   |-- harmonize/                Reprojection, empilement et masques de validité
-|   |-- ingest/                   Cartes de domaine et blocs de données
-|   |   |-- common/               Loggers et alias d'ingestion
-|   |   |-- data_blocks/          Manifestes, mapping et pipeline de blocs
-|   |   `-- domain_maps/          Construction et cycle de vie des cartes de domaine
-|   |-- prepare/                  Partitionnement, normalisation et schéma
-|   |   |-- common/               Loggers et alias de préparation
-|   |   |-- data_partition/       Split, filter, hydrate et scoring
-|   |   |-- normal_blocks/        Statistiques et pipeline de normalisation
-|   |   |-- adapter.py            Adaptateur de catalogue de blocs de donnees
-|   |   |-- resolver.py           Résolveur de canaux de caractéristiques et de cibles
-|   |   `-- schema.py             Compilateur de schema de préparation
+|   |-- contracts/                Schémas centraux de rapports et de transfert
+|   |-- core/                     Abstractions clés, catalogues et grille monde
+|   |-- grid/                     Construction, cycle de vie et logger de grille
+|   |-- harmonize/                Reprojection, empilement et masques
+|   |   |-- manifest/             Schéma de manifeste, normaliseur, compilateur
+|   |   |-- rasters/              Empilement, masquage et helpers spatiaux
+|   |   |-- taxonomy/             Profilage taxonomique et mapping d'indices
+|   |   |-- context.py            Constructeur de contexte amont d'harmonisation
+|   |   |-- logger.py             Logger structuré d'étape d'harmonisation
+|   |   `-- pipeline.py           Exécuteur d'étape d'harmonisation
+|   |-- ingest/                   Cartes de domaine et blocs canoniques
+|   |   |-- blocks/               Assemblage de blocs, manifestes et mapping
+|   |   |-- domains/              Mapping de raster domaine, PCA et cycle de vie
+|   |   |-- context.py            Constructeur de contexte amont d'ingestion
+|   |   |-- logger.py             Logger structuré d'étape d'ingestion
+|   |   `-- pipeline.py           Exécuteur d'étape d'ingestion
+|   |-- prepare/                  Vue en mémoire, partitionnement et écriture
+|   |   |-- dataset/              Vue de jeu de données en mémoire et sémantique
+|   |   |-- partition/            Intégration AOI spatiale, split et scoring
+|   |   |-- materialize/          Stats Welford, piles de cibles et écriture
+|   |   |-- context.py            Constructeur de contexte amont de préparation
+|   |   |-- logger.py             Logger structuré d'étape de préparation
+|   |   `-- pipeline.py           Exécuteur d'étape de préparation
 |   |-- factory.py                Factory des DataSpecs
-|   `-- utils/                    Contexte raster et helpers de coordonnees
+|   `-- utils/                    Contexte raster et helpers de coordonnées
 |
 |-- models/
 |   |-- backbones/
@@ -185,3 +194,6 @@ src/landseg/
 - `session/` est la couche runtime principale: l'orchestration choisit phases et
   runners, les policies d'epoch definissent train/eval, et les taches runtime
   calculent tetes, pertes, metriques, contraintes et regularisation.
+- `geopipe/` est organisé en trois étapes (`harmonize`, `ingest`, `prepare`),
+  offrant des triades symétriques (`context.py`, `logger.py`, `pipeline.py`),
+  régies par les contrats centraux dans `contracts/`.

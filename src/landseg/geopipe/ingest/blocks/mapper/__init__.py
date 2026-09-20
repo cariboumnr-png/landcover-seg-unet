@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.ingest.data_blocks.mapper`.
+Top-level namespace for `landseg.geopipe.ingest.blocks.mapper`.
 
 Exposes raster-to-grid mapping, geometry validation, and window caching
 utilities via lazy module resolution.

@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.prepare.data_partition.split`.
+Top-level namespace for `landseg.geopipe.prepare.partition.operations`.
 
 Exposes data partitioning algorithms, AOI solvers, spatial filtering,
 and hydration utilities via lazy resolution.

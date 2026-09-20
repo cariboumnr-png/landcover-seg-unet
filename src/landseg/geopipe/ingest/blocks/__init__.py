@@ -21,7 +21,7 @@
 
 
 '''
-Top-level namespace for `landseg.geopipe.ingest.data_blocks`.
+Top-level namespace for `landseg.geopipe.ingest.blocks`.
 
 Coordinates data block construction, window mapping, and manifest
 management through lazy module resolution.

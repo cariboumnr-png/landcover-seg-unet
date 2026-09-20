@@ -20,16 +20,17 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.ingest.domain_maps`.
+Top-level namespace for `landseg.geopipe.ingest.domains`.
 
-Exposes domain raster mapping, PCA reduction, and domain tile map lifecycle
-APIs via lazy resolution to keep import order simple and circular-free.
+Exposes domain raster mapping, PCA reduction, and domain tile map
+lifecycle APIs via lazy resolution to keep import order simple and
+circular-free.
 
 Public APIs:
-    - `DomainBuildingParameters`: Container for domain building parameters.
-    - `build_domain`: Build DomainTileMap with majority stats and PCA features.
-    - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
-    - `prepare_domain_maps`: Build or load domain tile maps for rasters.
+    - `DomainBuildingParameters`: container for domain parameters.
+    - `build_domain`: build DomainTileMap with PCA features.
+    - `map_domain_to_grid`: map domain raster onto grid.
+    - `prepare_domain_maps`: build or load domain tile maps.
 '''
 
 from __future__ import annotations

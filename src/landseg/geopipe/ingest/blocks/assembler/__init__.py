@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `geopipe.ingest.data_blocks.assembler`.
+Top-level namespace for `landseg.geopipe.ingest.blocks.assembler`.
 
 This submodule coordinates the preparation, construction, and
 structural validation of individual `.npz` block files. It decouples
@@ -35,7 +35,7 @@ Public APIs:
     - BlockBuildingOutput: Result wrapping builder execution outputs.
     - RasterReadInput: Specs parameter for reading raster inputs.
     - RasterReadOutput: Container holding read raster numpy arrays.
-    - DataBlockInputs: container for raw arrays to construct a DataBlock.
+    - DataBlockInputs: raw arrays container for DataBlock construction.
     - DataBlockConfig: build-time configuration for feature engineering.
     - build_data_block: construct a DataBlock with derived features.
     - build_single_block: Constructs a block from windowed rasters.

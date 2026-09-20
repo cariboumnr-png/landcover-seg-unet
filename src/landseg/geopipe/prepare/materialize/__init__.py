@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.prepare.materialize_blocks`.
+Top-level namespace for `landseg.geopipe.prepare.materialize`.
 
 Exposes block materialization and image normalization pipeline runners
 via lazy resolution.

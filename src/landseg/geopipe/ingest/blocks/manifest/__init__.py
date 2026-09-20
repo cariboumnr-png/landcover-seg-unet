@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.ingest.data_blocks.manifest`.
+Top-level namespace for `landseg.geopipe.ingest.blocks.manifest`.
 
 Exposes catalog, schema, and manifest lifecycle tools for block-level
 geospatial dataset management via lazy module resolution.
