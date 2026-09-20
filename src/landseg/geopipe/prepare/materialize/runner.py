@@ -40,10 +40,10 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare as prepare
-import landseg.geopipe.prepare.data_context as data_context
-import landseg.geopipe.prepare.materialize_blocks.materialize as materialize
-import landseg.geopipe.prepare.materialize_blocks.schema as schema
-import landseg.geopipe.prepare.materialize_blocks.stats as stats
+import landseg.geopipe.prepare.dataset as dataset
+import landseg.geopipe.prepare.materialize.materialize as materialize
+import landseg.geopipe.prepare.materialize.schema as schema
+import landseg.geopipe.prepare.materialize.stats as stats
 
 
 # ----- typing aliases
@@ -75,7 +75,7 @@ class _PipelinePaths(typing.Protocol):
 # ----- public functions
 def run_materialize_blocks(
     paths: _PipelinePaths,
-    context: data_context.DatasetContext,
+    context: dataset.DatasetView,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare.PreparationLogger,
@@ -91,7 +91,7 @@ def run_materialize_blocks(
         paths:
             pipeline artifact and directory paths container.
         context:
-            dataset context containing features and target hierarchy.
+            dataset view containing features and target hierarchy.
         policy:
             lifecycle policy guiding rebuild behavior.
         logger:
@@ -177,7 +177,7 @@ def run_materialize_blocks(
 def _materialize(
     splits: tuple[set[str], set[str], set[str]],
     aggregated_stats: dict[str, contracts.ImageBandStats],
-    context: data_context.DatasetContext,
+    context: dataset.DatasetView,
     paths: _PipelinePaths,
     *,
     logger: prepare.PreparationLogger,

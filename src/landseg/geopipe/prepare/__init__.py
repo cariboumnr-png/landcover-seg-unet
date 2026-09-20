@@ -59,7 +59,7 @@ def __getattr__(name: str):
 
     if name in {'run_data_preparation'}:
         return getattr(
-            importlib.import_module('pipeline', __package__),
+            importlib.import_module('.pipeline', __package__),
             name,
         )
 

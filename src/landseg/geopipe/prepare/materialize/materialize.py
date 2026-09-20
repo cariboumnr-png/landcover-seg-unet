@@ -38,7 +38,7 @@ import numpy
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.data_context as data_context
+import landseg.geopipe.prepare.dataset as dataset
 import landseg.utils as utils
 
 
@@ -46,7 +46,7 @@ import landseg.utils as utils
 def materialize_blocks(
     input_blocks: set[str],
     stats: dict[str, contracts.ImageBandStats],
-    context: data_context.DatasetContext,
+    context: dataset.DatasetView,
     output_dir: str,
     *,
     rebuild: bool = False,
@@ -135,7 +135,7 @@ def _materialize_one_block(
     block_fpath: str,
     img_stats: dict[str, contracts.ImageBandStats],
     target_dpath: str,
-    context: data_context.DatasetContext,
+    context: dataset.DatasetView,
 ):
     '''Normalize a single data block and write it to disk.'''
     # read block

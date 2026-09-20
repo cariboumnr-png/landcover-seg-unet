@@ -41,8 +41,8 @@ __all__ = [
     'exec_world_grid',
     'exec_harmonize_data',
     'exec_ingest_data',
+    'exec_prepare_data',
     'overfit',
-    'prepare',
     'sweep',
     'train',
     'analyze'
@@ -56,7 +56,7 @@ if typing.TYPE_CHECKING:
     from .world_grid import exec_world_grid
     from .data_harmonize import exec_harmonize_data
     from .data_ingest import exec_ingest_data
-    from .data_prepare import prepare
+    from .data_prepare import exec_prepare_data
     from .diagnose_overfit import overfit
     from .model_evaluate import evaluate
     from .model_train import train
@@ -83,7 +83,7 @@ def __getattr__(name: str):
     if name in {'exec_ingest_data'}:
         return getattr(importlib.import_module('.data_ingest', __package__), name)
 
-    if name in {'prepare'}:
+    if name in {'exec_prepare_data'}:
         return getattr(importlib.import_module('.data_prepare', __package__), name)
 
     if name in {'evaluate'}:

@@ -41,8 +41,8 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare as prepare
-import landseg.geopipe.prepare.data_context as data_context
-import landseg.geopipe.prepare.data_partition.orchestration as orchestration
+import landseg.geopipe.prepare.dataset as dataset
+import landseg.geopipe.prepare.partition.orchestration as orchestration
 
 
 # ----- typing aliases
@@ -60,7 +60,7 @@ class _PipelinePaths(typing.Protocol):
 
 # ----- public functions
 def run_datablocks_partition(
-    context: data_context.DatasetContext,
+    context: dataset.DatasetView,
     paths: _PipelinePaths,
     partition_config: orchestration.PartitionParameters,
     *,
@@ -70,14 +70,14 @@ def run_datablocks_partition(
     '''
     Partition canonical data blocks into train/val/test splits.
 
-    Consumes the dataset preparation context, performs stratified
+    Consumes the dataset preparation view, performs stratified
     splitting followed by spatially safe hydration of training blocks,
     and writes split manifests and label statistics for downstream
     normalization and schema generation.
 
     Args:
         context:
-            DatasetContext with loaded catalog and resolved semantics.
+            DatasetView with loaded catalog and resolved semantics.
         paths:
             pipeline artifact output paths container.
         partition_config:

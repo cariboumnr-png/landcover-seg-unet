@@ -29,7 +29,7 @@ statistics, normalizes all splits, and emits the final dataset schema.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.geopipe.prepare as prepare
+import landseg.geopipe.prepare as geopipe_prepare
 
 
 def exec_prepare_data(config: configs.RootConfig):
@@ -37,7 +37,7 @@ def exec_prepare_data(config: configs.RootConfig):
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
     paths = artifact_paths.data_preparation
 
-    logger = prepare.PreparationLogger(
+    logger = geopipe_prepare.PreparationLogger(
         name='data-prep',
         log_file=paths.report,
         enable_file_log=False
@@ -55,7 +55,7 @@ def exec_prepare_data(config: configs.RootConfig):
         )
 
         # run pipeline
-        prepare.run_data_preparation(
+        geopipe_prepare.run_data_preparation(
             artifact_paths,
             config.data.preparation,
             config.data.world_grid.tile_specs_tuple,

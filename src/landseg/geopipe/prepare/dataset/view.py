@@ -20,15 +20,16 @@
 # =========================================================================== #
 
 '''
-Dataset context orchestration utilities.
+Dataset view orchestration utilities for preparation.
 
 Provides a unified builder coordinating catalog reading, feature
 channel selection, and target head hierarchy resolution into a single
-self-contained dataset preparation context.
+self-contained in-memory dataset view.
 
 Public APIs:
-    - DatasetContext: unified immutable dataset preparation context.
-    - build_dataset_context: construct full preparation context.
+    - `DatasetView`: unified immutable dataset preparation view.
+    - `DatasetViewParameters`: configuration parameters for dataset view.
+    - `build_dataset_view`: construct full preparation view.
 '''
 
 # standard imports
@@ -38,20 +39,26 @@ import typing
 # third-party imports
 import rasterio.transform
 # local imports
-import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.data_context.catalog as catalog
-import landseg.geopipe.prepare.data_context.semantics as semantics
-
-
-# ----- typing aliases
-DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
+import landseg.geopipe.prepare.dataset.catalog as catalog
+import landseg.geopipe.prepare.dataset.semantics as semantics
 
 
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
-class DatasetContext:
-    '''Unified dataset context for partitioning and statistics.'''
+class DatasetViewParameters:
+    '''Configuration parameters for dataset view compilation.'''
+    valid_pxs: dict[str, float] = dataclasses.field(default_factory=dict)
+    focal_target: str | None = None
+    test_catalog: str | None = None
+    non_overlapping_test_grid: bool = True
+    features: typing.Mapping[str, str] | list[str] | None = None
+    targets: typing.Mapping[str, str | geo_core.LabelScheme] | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class DatasetView:
+    '''Unified dataset view for partitioning and statistics.'''
     catalog: catalog.DataBlocksView
     features: semantics.FeatureSelection
     targets: semantics.TargetHeadsContext
@@ -93,66 +100,75 @@ class DatasetContext:
 
 
 # ----- public functions
-def build_dataset_context(
+def build_dataset_view(
     catalog_fpath: str,
-    schema_fpath: str,
-    config: catalog._CatalogViewConfig,
-    user_features: typing.Mapping[str, str] | list[str] | None = None,
-    user_targets: typing.Mapping[str, str | geo_core.LabelScheme] | None = None,
-) -> DatasetContext:
+    schema: geo_core.DatasetSchema,
+    parameters: DatasetViewParameters | None = None,
+    *,
+    canvas_crs: str | None = None,
+    canvas_transform: rasterio.transform.Affine | None = None,
+) -> DatasetView:
     '''
-    Build complete dataset context from catalog, schema, and config.
+    Build complete dataset view from catalog, schema, and parameters.
 
     Orchestrates catalog parsing, feature channel resolution, and
-    multi-head target hierarchy construction into a unified container.
+    multi-head target hierarchy construction into a unified view.
     Derives per-class pixel counts for all target heads in memory
     without reading block files or raster data from disk.
 
     Args:
         catalog_fpath:
             path to canonical blocks catalog JSON.
-        schema_fpath:
-            path to dataset schema JSON.
-        config:
-            valid-pixel filtering and test configuration.
-        user_features:
-            optional user feature band configuration.
-        user_targets:
-            optional user target reclass configuration.
+        schema:
+            ingested dataset schema dictionary.
+        parameters:
+            optional configuration parameters for filtering, features,
+            and targets.
+        canvas_crs:
+            optional pre-resolved CRS string of the dataset canvas.
+        canvas_transform:
+            optional pre-resolved Affine transform of the canvas.
 
     Returns:
-        DatasetContext:
-            unified preparation context combining catalog, features,
+        DatasetView:
+            unified preparation view combining catalog, features,
             and targets.
     '''
-    # load ingested data schema
-    schema = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    params = parameters or DatasetViewParameters()
 
     # initial catalog view
-    view = catalog.read_catalog(catalog_fpath, schema, config)
+    view = catalog.read_catalog(
+        catalog_fpath,
+        schema,
+        valid_pxs=params.valid_pxs,
+        focal_target=params.focal_target,
+        test_catalog=params.test_catalog,
+        non_overlapping_test_grid=params.non_overlapping_test_grid,
+        canvas_crs=canvas_crs,
+        canvas_transform=canvas_transform,
+    )
 
     # resolve feature channels
     feature_selection = semantics.resolve_feature_channels(
-        schema, user_features
+        schema, params.features
     )
 
     # resolve target heads
-    targets = semantics.resolve_target_heads(schema, user_targets)
+    targets = semantics.resolve_target_heads(schema, params.targets)
 
     # resolve focal head from target heads and config
-    focal_head = semantics.resolve_focal_head(targets, config.focal_target)
+    focal_head = semantics.resolve_focal_head(targets, params.focal_target)
 
     # enriched catalog view with class counts
     enriched_view = _enrich_view_w_class_counts(
         view, schema, targets, focal_head
     )
 
-    context = DatasetContext(
+    return DatasetView(
         catalog=enriched_view,
         features=feature_selection,
         targets=targets,
     )
-    return context
 
 
 # ----- private helpers

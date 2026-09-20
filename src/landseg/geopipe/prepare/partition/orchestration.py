@@ -41,7 +41,7 @@ import rasterio.transform
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare as prepare
-import landseg.geopipe.prepare.data_partition.operations as operations
+import landseg.geopipe.prepare.partition.operations as operations
 
 
 # ----- public dataclasses

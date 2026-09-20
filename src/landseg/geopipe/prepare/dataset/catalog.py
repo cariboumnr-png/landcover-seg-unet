@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Catalog adapter utilities for dataset preparation.
 
@@ -50,19 +48,6 @@ field = dataclasses.field
 CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
 
 
-# ----- private types
-class _CatalogViewConfig(typing.Protocol):
-    '''Typed configuration container for catalog views.'''
-    @property
-    def valid_pxs(self) -> dict[str, float]: ...
-    @property
-    def focal_target(self) -> str | None: ...
-    @property
-    def test_catalog(self) -> str | None: ...
-    @property
-    def non_overlapping_test_grid(self) -> bool: ...
-
-
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class DataBlocksView:
@@ -81,7 +66,13 @@ class DataBlocksView:
 def read_catalog(
     catalog_fpath: str,
     dataset_schema: geo_core.DatasetSchema,
-    config: _CatalogViewConfig,
+    *,
+    valid_pxs: typing.Mapping[str, float] | None = None,
+    focal_target: str | None = None,
+    test_catalog: str | None = None,
+    non_overlapping_test_grid: bool = True,
+    canvas_crs: str | None = None,
+    canvas_transform: rasterio.transform.Affine | None = None,
 ) -> DataBlocksView:
     '''
     Load and adapt canonical blocks into a structured view.
@@ -95,8 +86,18 @@ def read_catalog(
             path to canonical blocks catalog JSON.
         dataset_schema:
             ingested dataset schema instance.
-        config:
-            catalog view configuration.
+        valid_pxs:
+            optional mapping of target head to valid pixel threshold.
+        focal_target:
+            optional target head name for partition stratification.
+        test_catalog:
+            optional path to external holdout test catalog JSON.
+        non_overlapping_test_grid:
+            whether to restrict external test blocks to non-overlapping.
+        canvas_crs:
+            optional pre-resolved CRS string of the dataset canvas.
+        canvas_transform:
+            optional pre-resolved Affine transform of the canvas.
 
     Returns:
         DataBlocksView:
@@ -106,18 +107,22 @@ def read_catalog(
     image_paths = dataset_schema['dataset']['data_source']['image_paths']
     image_shape = dataset_schema['tensor_shapes']['image']
 
-    # resolve canvas crs and transform from image source
-    try:
-        with rasterio.open(image_paths[0]) as src:
-            if src.crs is None:
-                raise ValueError(f'Raster has no CRS: {image_paths[0]}')
-            canvas_crs = src.crs.to_string()
-            canvas_transform = src.transform
-    except rasterio.errors.RasterioError as e:
-        raise ValueError(f'Error reading image: {image_paths[0]}') from e
+    # resolve canvas crs and transform from image source if not provided
+    if canvas_crs is None or canvas_transform is None:
+        try:
+            with rasterio.open(image_paths[0]) as src:
+                if src.crs is None:
+                    raise ValueError(f'Raster has no CRS: {image_paths[0]}')
+                canvas_crs = src.crs.to_string()
+                canvas_transform = src.transform
+        except rasterio.errors.RasterioError as e:
+            raise ValueError(f'Error reading image: {image_paths[0]}') from e
+
+    assert canvas_crs is not None
+    assert canvas_transform is not None
 
     # valid blocks filtered by pixel thresholds
-    valid_blocks = _filter_blocks(catalog_fpath, config.valid_pxs)
+    valid_blocks = _filter_blocks(catalog_fpath, valid_pxs)
 
     # blocks on base grid (no stride/overlap)
     row_size, col_size = image_shape['H'], image_shape['W']
@@ -127,9 +132,9 @@ def read_catalog(
     ]
 
     # parse external test data catalog if provided
-    if config.test_catalog is not None:
-        test_blocks = _filter_blocks(config.test_catalog, config.valid_pxs)
-        if config.non_overlapping_test_grid:
+    if test_catalog is not None:
+        test_blocks = _filter_blocks(test_catalog, valid_pxs)
+        if non_overlapping_test_grid:
             test_blocks = list(
                 v['file_path'] for k, v in test_blocks.items()
                 if k in base_coords
@@ -145,7 +150,7 @@ def read_catalog(
     raw_counts = {k: v['class_count'] for k, v in valid_blocks.items()}
 
     # preliminary focal head derivation from config or catalog entry
-    focal_head = getattr(config, 'focal_target', None) or ''
+    focal_head = focal_target or ''
     if not focal_head and valid_blocks: # fallback to 1st available head
         first_entry = next(iter(valid_blocks.values()))
         if 'class_count' in first_entry and first_entry['class_count']:
@@ -178,11 +183,13 @@ def read_catalog(
 # ----- private helpers
 def _filter_blocks(
     fpath: str,
-    valid_px_thresholds: dict[str, float],
+    valid_px_thresholds: typing.Mapping[str, float] | None = None,
 ) -> dict[tuple[int, int], geo_core.DatasetBlockMeta]:
     '''Parse catalog JSON into filtered class counts and file paths.'''
+    thresholds = valid_px_thresholds or {}
+
     def _is_valid_block(
-        valid_thresholds: dict[str, float],
+        valid_thresholds: typing.Mapping[str, float],
         valid_ratios: dict[str, float]
     ) -> bool:
         for k, v in valid_ratios.items():
@@ -196,6 +203,6 @@ def _filter_blocks(
 
     valid_catalog = {
         k: v for k, v in catalog.items()
-        if _is_valid_block(valid_px_thresholds, v['valid_px_ratios'])
+        if _is_valid_block(thresholds, v['valid_px_ratios'])
     }
     return valid_catalog

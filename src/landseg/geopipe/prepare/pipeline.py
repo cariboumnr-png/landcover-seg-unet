@@ -34,10 +34,11 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
-import landseg.geopipe.prepare.data_context as prepare_context
-import landseg.geopipe.prepare.data_partition as prepare_partition
+import landseg.geopipe.prepare.context as prepare_context
+import landseg.geopipe.prepare.dataset as prepare_dataset
 import landseg.geopipe.prepare.logger as prepare_logger
-import landseg.geopipe.prepare.materialize_blocks as prepare_materialize
+import landseg.geopipe.prepare.materialize as prepare_materialize
+import landseg.geopipe.prepare.partition as prepare_partition
 
 
 # ----- private types
@@ -129,13 +130,27 @@ def run_data_preparation(
     logger: prepare_logger.PreparationLogger,
 ) -> None:
     '''Run the preparation pipeline for an experiment.'''
-    # build dataset context
-    dataset_context = prepare_context.build_dataset_context(
+    # resolve preparation context
+    prep_context = prepare_context.build_preparation_context(
         artifact_paths.data_ingestion.data_blocks.catalog,
         artifact_paths.data_ingestion.data_blocks.schema,
-        config=config.catalog,
-        user_features=config.features,
-        user_targets=config.targets
+    )
+
+    # build dataset view
+    dataset_params = prepare_dataset.DatasetViewParameters(
+        valid_pxs=config.catalog.valid_pxs,
+        focal_target=config.catalog.focal_target,
+        test_catalog=config.catalog.test_catalog,
+        non_overlapping_test_grid=config.catalog.non_overlapping_test_grid,
+        features=config.features,
+        targets=config.targets,
+    )
+    dataset_view = prepare_dataset.build_dataset_view(
+        prep_context.catalog_fpath,
+        prep_context.schema,
+        parameters=dataset_params,
+        canvas_crs=prep_context.canvas_crs,
+        canvas_transform=prep_context.canvas_transform,
     )
 
     # datablocks partition
@@ -157,11 +172,11 @@ def run_data_preparation(
         val_aoi=partition.val_aoi,
         test_aoi=partition.test_aoi,
         aoi_min_overlap=partition.aoi_min_overlap,
-        canvas_crs=dataset_context.crs,
-        canvas_transform=dataset_context.transform,
+        canvas_crs=dataset_view.crs,
+        canvas_transform=dataset_view.transform,
     )
     prepare_partition.run_datablocks_partition(
-        dataset_context,
+        dataset_view,
         artifact_paths.data_preparation,
         partition_config,
         policy=policy,
@@ -172,11 +187,11 @@ def run_data_preparation(
     d = logger.summary['data_partition']['duration_sec']
     logger.log('INFO', f'[COMPLETE] Dataset partitioning splits (D_{d:.2f}s)')
 
-    # materiazlie
+    # materialize
     logger.log('INFO', '[START] Block normalization')
     prepare_materialize.run_materialize_blocks(
         artifact_paths.data_preparation,
-        dataset_context,
+        dataset_view,
         policy=policy,
         logger=logger
     )

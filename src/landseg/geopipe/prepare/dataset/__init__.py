@@ -20,22 +20,15 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.prepare.data_context`.
+Top-level namespace for `landseg.geopipe.prepare.dataset`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes in-memory dataset view containers and builders via lazy resolution
+to keep import order simple and circular-free.
 
 Public APIs:
-    - DataBlocksView: in-memory manifest view for catalog blocks.
-    - DatasetContext: unified immutable dataset preparation context.
-    - FeatureSelection: selected band names and channel indices.
-    - TargetHeadsContext: resolved multi-head target hierarchy.
-    - build_dataset_context: construct full preparation context.
-    - derive_head_class_counts: derive counts across all target heads.
-    - read_catalog: load dataset catalog into DataBlocksView.
-    - resolve_feature_channels: resolve active input feature channels.
-    - resolve_focal_head: resolve focal target head for partitioning.
-    - resolve_target_heads: resolve multi-head hierarchy and reclass.
+    - `DatasetView`: unified immutable dataset preparation view.
+    - `DatasetViewParameters`: configuration parameters for dataset view.
+    - `build_dataset_view`: construct full preparation view.
 '''
 
 # standard imports
@@ -45,20 +38,22 @@ import typing
 
 __all__ = [
     # classes
-    'DatasetContext',
+    'DatasetView',
+    'DatasetViewParameters',
     # functions
-    'build_dataset_context',
+    'build_dataset_view',
     # types
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .context import DatasetContext, build_dataset_context
+    from .view import DatasetView, DatasetViewParameters, build_dataset_view
+
 
 def __getattr__(name: str):
 
-    if name in {'DatasetContext', 'build_dataset_context'}:
-        return getattr(importlib.import_module('.context', __package__), name)
+    if name in {'DatasetView', 'DatasetViewParameters', 'build_dataset_view'}:
+        return getattr(importlib.import_module('.view', __package__), name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

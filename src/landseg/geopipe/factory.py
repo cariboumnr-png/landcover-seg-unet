@@ -41,7 +41,6 @@ import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.geopipe.contracts.preparation as prepare_contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare as prepare
 import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 
@@ -134,7 +133,7 @@ def _load_domain(fp: str) -> geo_core.DomainTileMap | None:
 
 def _get_meta(
     data_schema: geo_core.DatasetSchema,
-    prepared_schema: prepare.PreparedSchema,
+    prepared_schema: prepare_contracts.PreparedSchema,
 ) -> core.Meta:
     '''Populate core.Meta dataclass from schema dictionaries.'''
     dtypes = data_schema['io_conventions']['dtypes']
@@ -189,7 +188,7 @@ def __calc_test_grid(
 
 def _get_heads(
     data_schema: geo_core.DatasetSchema,
-    prepared_schema: prepare.PreparedSchema,
+    prepared_schema: prepare_contracts.PreparedSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:
     '''Populate core.Heads dataclass from schema dictionary.'''
@@ -243,7 +242,9 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(prepared_schema: prepare.PreparedSchema) -> core.Splits:
+def _get_split(
+    prepared_schema: prepare_contracts.PreparedSchema,
+) -> core.Splits:
     '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
         train=prepared_schema['train_blocks'],
@@ -253,7 +254,7 @@ def _get_split(prepared_schema: prepare.PreparedSchema) -> core.Splits:
 
 
 def _get_domain(
-    prepared_schema: prepare.PreparedSchema,
+    prepared_schema: prepare_contracts.PreparedSchema,
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:

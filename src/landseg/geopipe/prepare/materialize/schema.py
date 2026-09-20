@@ -40,7 +40,7 @@ import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare.logger as prepare_logger
-import landseg.geopipe.prepare.data_context as prepare_context
+import landseg.geopipe.prepare.dataset as prepare_dataset
 
 
 # ----- typing aliases
@@ -67,7 +67,7 @@ class _PipelinePaths(typing.Protocol):
 # ----- public functions
 def build_schema(
     paths: _PipelinePaths,
-    context: prepare_context.DatasetContext,
+    context: prepare_dataset.DatasetView,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare_logger.PreparationLogger,
@@ -84,7 +84,7 @@ def build_schema(
         paths:
             preparation paths container.
         context:
-            dataset preparation context with target heads topology.
+            dataset preparation view with target heads topology.
         policy:
             lifecycle policy guiding rebuild behavior.
         logger:
