@@ -38,7 +38,7 @@ import dataclasses
 import rasterio
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.mapper.geometry as geometry
+import landseg.geopipe.ingest.blocks.mapper.geometry as geometry
 
 
 # ----- public dataclasses

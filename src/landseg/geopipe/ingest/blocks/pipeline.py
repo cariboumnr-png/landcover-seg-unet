@@ -43,9 +43,9 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest as ingest
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
-import landseg.geopipe.ingest.data_blocks.manifest as manifest
-import landseg.geopipe.ingest.data_blocks.mapper as mapper
+import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.manifest as manifest
+import landseg.geopipe.ingest.blocks.mapper as mapper
 
 
 # ----- private types

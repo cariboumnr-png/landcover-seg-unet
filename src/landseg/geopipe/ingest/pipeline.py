@@ -35,8 +35,8 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
 import landseg.geopipe.ingest.context as ingest_context
-import landseg.geopipe.ingest.data_blocks as ingest_data_blocks
-import landseg.geopipe.ingest.domain_maps as ingest_domain_maps
+import landseg.geopipe.ingest.blocks as ingest_blocks
+import landseg.geopipe.ingest.domains as ingest_domains
 import landseg.geopipe.ingest.logger as ingest_logger
 
 
@@ -107,7 +107,7 @@ def run_data_ingestion(
         logger.log('INFO', '[START] Domain maps preparation')
         domain_paths = artifact_paths.data_ingestion.domains
         domain_configs = [
-            ingest_domain_maps.DomainBuildingParameters(
+            ingest_domains.DomainBuildingParameters(
                 input_fpath=path,
                 domain_fpath=domain_paths.domain_map_fpath(name),
                 tiles_fpath=domain_paths.mapped_tiles_fpath(name, gid),
@@ -115,7 +115,7 @@ def run_data_ingestion(
                 target_variance=config.domains.target_variance,
             ) for name, path in context.domains.items()
         ]
-        ingest_domain_maps.prepare_domain_maps(
+        ingest_domains.prepare_domain_maps(
             world_grid,
             domain_configs,
             policy=policy,
@@ -133,7 +133,7 @@ def run_data_ingestion(
     else:
         logger.log('INFO', '[START] Canonical data blocks building')
         assert context.features
-        data_blocks_config = ingest_data_blocks.BlockBuildingParameters(
+        data_blocks_config = ingest_blocks.BlockBuildingParameters(
             image_fpath=context.features,
             label_fpath=context.labels,
             dem_pad=config.datablocks.image_dem_pad,
@@ -141,7 +141,7 @@ def run_data_ingestion(
             add_spectral=config.datablocks.add_spectral,
             add_topo=config.datablocks.add_topo,
         )
-        ingest_data_blocks.run_blocks_building(
+        ingest_blocks.run_blocks_building(
             world_grid,
             artifact_paths.data_ingestion.data_blocks,
             data_blocks_config,

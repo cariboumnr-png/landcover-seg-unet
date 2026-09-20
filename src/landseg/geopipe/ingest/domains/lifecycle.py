@@ -42,8 +42,8 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest as ingest
-import landseg.geopipe.ingest.domain_maps.builder as builder
-import landseg.geopipe.ingest.domain_maps.mapper as mapper
+import landseg.geopipe.ingest.domains.builder as builder
+import landseg.geopipe.ingest.domains.mapper as mapper
 
 
 # ----- typing aliases

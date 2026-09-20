@@ -38,7 +38,7 @@ import datetime
 # local imports
 import landseg._constants as c
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.assembler as assembler
 
 
 # ----- public functions

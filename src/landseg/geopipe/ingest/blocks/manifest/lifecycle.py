@@ -40,8 +40,8 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.manifest.catalog as catalog
-import landseg.geopipe.ingest.data_blocks.manifest.schema as schema
+import landseg.geopipe.ingest.blocks.manifest.catalog as catalog
+import landseg.geopipe.ingest.blocks.manifest.schema as schema
 import landseg.geopipe.utils as geo_utils
 
 

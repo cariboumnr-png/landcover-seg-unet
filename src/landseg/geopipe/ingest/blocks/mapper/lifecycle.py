@@ -33,7 +33,7 @@ Public APIs:
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.data_blocks.mapper.mapper as mapper
+import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
 
 
 # ----- typing aliases
