@@ -1,0 +1,184 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Domain raster mapping utilities.
+
+Reads a categorical domain raster, aligns it to a pre-built world grid,
+and remaps label values into a compact, zero-based index space suitable
+for downstream domain-feature construction.
+
+Public APIs:
+    - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
+'''
+
+# standard imports
+import typing
+# third-party imports
+import numpy
+import numpy.typing
+# local imports
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.utils as geo_utils
+import landseg.utils as utils
+
+
+# ----- typing aliases
+RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
+'''Mapping of pixel coordinates (x, y) to tile array data.'''
+
+
+# ----- public functions
+def map_domain_to_grid(
+    world_grid: geo_core.GridLayout,
+    raster_path: str,
+) -> RasterTileDict:
+    '''
+    Map a domain raster onto a world grid and re-index labels.
+
+    Args:
+        world_grid:
+            World grid layout defining raster windows.
+        raster_path:
+            File path to the categorical domain raster.
+
+    Returns:
+        RasterTileDict:
+            Dictionary mapping tile coordinates to re-indexed raster tile
+            arrays.
+    '''
+    # read domain raster and get arrays indexed to the grid tiles
+    tiles, nodata, index_base = _read_raster(world_grid, raster_path)
+
+    # global mapping: raw i..K  ->  0..K-1 ----
+    idx_map = _get_index_mapping(tiles, nodata, index_base)
+
+    # Map each block: valid raw -> index in [0..K-1], nodata -> -1
+    _tiles = _re_index(tiles, nodata, idx_map)
+
+    # encode the max index (k-1) to the return dict for later quick access
+    shape = world_grid.tile_size
+    max_idx = idx_map.size - 1
+    _tiles[(-999, -999)] = numpy.full(shape, max_idx, dtype=numpy.int16)
+
+    return _tiles
+
+
+# ----- private helpers
+def _read_raster(
+    grid: geo_core.GridLayout,
+    fpath: str,
+) -> tuple[RasterTileDict, int, int]:
+    '''Read a raster over all grid windows using parallel executor.'''
+    # open domain raster
+    with geo_utils.open_rasters(fpath) as (src,):
+        assert src
+        grid.offset_from(src)
+
+        dtype = numpy.dtype(src.dtypes[0])
+        assert numpy.issubdtype(dtype, numpy.integer) # sanity check: int only
+
+        nodata = src.nodata
+        if nodata is None:
+            nodata = -1 # default value
+        assert abs(nodata - round(nodata)) < 1e-9 # sanity check: nodata is int
+
+        raw_index_base = src.tags().get('index_base', 1)
+        index_base = int(raw_index_base) if raw_index_base is not None else 1
+
+    # read through all windows via multiprocessing
+    jobs = [
+        (_read, (k, v, fpath, grid.tile_size), {})
+        for k, v in grid.items()
+    ]
+    results: list[tuple[tuple[int, int], numpy.typing.NDArray]]
+    results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
+    all_tiles = [(_, t) for (_, t) in results if t.size > 0] # filter empty arrays
+    return dict(all_tiles), nodata, index_base
+
+
+def _read(
+    raster_window_id: tuple[int, int],
+    raster_window: geo_core.RasterWindow,
+    raster_fpath: str,
+    expected_h_w: tuple[int, int],
+) -> tuple[tuple[int, int], numpy.typing.NDArray]:
+    '''Read a single raster window and return its first band.'''
+    # if arr is not of expected H, W return an empty array
+    if (raster_window.height, raster_window.width) != tuple(expected_h_w):
+        return raster_window_id, numpy.array([])
+
+    # read raster at window and return
+    with geo_utils.open_rasters(raster_fpath) as (src,):
+        assert src, f'Invalid domain raster source: {raster_fpath}'
+        arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
+        arr = arr.astype(numpy.int16, copy=False) # avoids OOM
+        return raster_window_id, arr
+
+
+def _get_index_mapping(
+    tiles: RasterTileDict,
+    nodata: int,
+    index_base: int
+) -> numpy.ndarray:
+    '''Compute a global, sorted label remapping excluding nodata.'''
+    # iteration on all tiles to gather unique values (exclude nodata)
+    unique_values = set()
+    for arr in tiles.values():
+        unique_values.update(numpy.unique(arr))
+    if nodata in unique_values:
+        unique_values.remove(nodata) # remove nodata if present
+    # safety check against empty input raster
+    if not unique_values:
+        raise ValueError("No valid domain values found.")
+    # make sure minimal aligns with index base
+    if min(unique_values) != index_base:
+        raise ValueError(
+            f'Min value {min(unique_values)} != base {index_base}'
+        )
+    # global mapping: raw i..K  ->  0..K-1 ----
+    mapping = numpy.array(sorted(unique_values), dtype=numpy.int64)
+    return mapping
+
+
+def _re_index(
+    tiles: RasterTileDict,
+    nodata: int,
+    mapping: numpy.ndarray
+) -> RasterTileDict:
+    '''Apply a global index remapping to all raster tiles in-place.'''
+    for arr in tiles.values():
+        mask_valid = arr != nodata
+        # skip if a grid tile does not contain any data
+        if not numpy.any(mask_valid):
+            arr[...] = -1 # ensure to -1
+            continue
+        # get indices of insertion
+        idx = numpy.searchsorted(mapping, arr[mask_valid])
+        # safety checks
+        if not numpy.all(mapping[idx] == arr[mask_valid]):
+            raise ValueError('Encountered value not present in remap domain')
+        if numpy.any(idx >= mapping.size):
+            raise ValueError('Encountered value outside remap domain')
+        # assgin values to array
+        arr[mask_valid] = idx
+        arr[~mask_valid] = -1
+    return tiles

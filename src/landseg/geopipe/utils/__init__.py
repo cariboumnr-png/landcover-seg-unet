@@ -22,8 +22,13 @@
 '''
 Top-level namespace for `landseg.geopipe.utils`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes utility functions via lazy resolution to keep imports simple
+and circular-free.
+
+Public APIs:
+    - `name_xy`: Convert block name string to (x, y) coordinate tuple.
+    - `open_rasters`: Context manager yielding opened raster readers.
+    - `xy_name`: Convert (x, y) coordinate tuple to block name string.
 '''
 
 from __future__ import annotations
@@ -48,9 +53,11 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
 
     if name in {'name_xy', 'xy_name'}:
-        return getattr(importlib.import_module('.coords_str', __package__), name)
+        mod = importlib.import_module('.coords_str', __package__)
+        return getattr(mod, name)
 
     if name in {'open_rasters'}:
-        return getattr(importlib.import_module('.raster_context', __package__), name)
+        mod = importlib.import_module('.raster_context', __package__)
+        return getattr(mod, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

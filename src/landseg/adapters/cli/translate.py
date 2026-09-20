@@ -124,6 +124,8 @@ def _translate_data_ingest(
         'harmonization_run': ['data.ingestion.harmonization_run'],
         'rebuild': ['data.ingestion.rebuild'],
         'output_dpath': ['data.ingestion.output_dpath'],
+        'add_topo': ['data.ingestion.datablocks.add_topo'],
+        'add_spectral': ['data.ingestion.datablocks.add_spectral'],
     }
     _apply_mapping(ingestion, translated, mapping)
 
@@ -134,6 +136,8 @@ def _translate_data_prepare(
 ) -> None:
     '''Map data-prepare settings to preparation fields.'''
     mapping = {
+        'features': ['data.preparation.features'],
+        'targets': ['data.preparation.targets'],
         'val_ratio': ['data.preparation.partition.val_ratio'],
         'test_ratio': ['data.preparation.partition.test_ratio'],
         'buffer_step': ['data.preparation.partition.buffer_step'],

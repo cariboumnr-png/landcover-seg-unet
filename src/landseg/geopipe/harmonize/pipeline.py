@@ -19,8 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
-Data harmonization pipeline.
+Data harmonization pipeline command implementation.
 '''
 
 # standard imports
@@ -28,124 +30,190 @@ import dataclasses
 import os
 import typing
 # local imports
+import landseg.artifacts.paths as paths
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.harmonize.rasters as rasters
-import landseg.geopipe.harmonize.manifest as manifest
+import landseg.geopipe.harmonize.context as harmonize_context
+import landseg.geopipe.harmonize.logger as harmonize_logger
+import landseg.geopipe.harmonize.manifest as harmonize_manifest
+import landseg.geopipe.harmonize.rasters as harmonize_rasters
 
 
+# ----- private types
+class _HarmonizationPipelineConfig(typing.Protocol):
+    @property
+    def dataset_manifest(self) -> str: ...
+    @property
+    def resampling_continuous(self) -> str: ...
+    @property
+    def resampling_categorical(self) -> str: ...
+
+
+# ----- private dataclasses
 @dataclasses.dataclass
-class ProcessedRasters:
+class _ProcessedRasters:
     '''Container for processed raster paths dictionaries.'''
     provenance: dict[str, str] = dataclasses.field(default_factory=dict)
     harmonized: dict[str, str] = dataclasses.field(default_factory=dict)
     finalized: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
-@dataclasses.dataclass
-class _AlignedRasters:
-    '''Container for aligned rasters (`.vrt` file paths) by category.'''
-    domains: dict[str, str] = dataclasses.field(default_factory=dict)
-    features: dict[str, str] = dataclasses.field(default_factory=dict)
-    labels: dict[str, str] = dataclasses.field(default_factory=dict)
+# ----- public functions
+def run_data_harmonization(
+    world_grid_output_dpath: str,
+    artifacts_paths: paths.HarmonizationPaths,
+    config: _HarmonizationPipelineConfig,
+    *,
+    logger: harmonize_logger.HarmonizationLogger
+) -> None:
+    '''Run data harmonization pipeline.'''
 
-    def add_raster(
-        self,
-        category: str,
-        name: str,
-        filepath: str,
-    ) -> None:
-        '''Add raster by category.'''
-        match category:
-            case 'domains' | 'domain':
-                self.domains.update({name: filepath})
-            case 'features' | 'feature':
-                self.features.update({name: filepath})
-            case 'labels' | 'label':
-                self.labels.update({name: filepath})
-            case _:
-                raise ValueError(f'Unknown raster category: {category}')
+    # load canonical world grid from upstream grid pipeline report
+    logger.log('INFO', '[START] Loading world grid from grid report')
+    context = harmonize_context.build_harmonization_context(world_grid_output_dpath)
+    logger.set_grid_reference(context.grid_id, context.grid_fpath)
+    logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
+
+    # compile dataset manifest JOSN
+    compiled = harmonize_manifest.compile_dataset_manifest(config.dataset_manifest)
+
+    # set up generator - each source to harmonize
+    proc = _harmonize_sources(
+        compiled,
+        artifacts_paths.effective_root,
+        context.grid,
+        categorical_resampling=config.resampling_categorical,
+        continuous_resampling=config.resampling_continuous,
+    )
+
+    # run generator
+    logger.log('INFO', f'[START] Harmonizing data onto grid: {context.grid_id}')
+    processed: _ProcessedRasters
+    while True:
+        try:
+            log_message = next(proc)
+            logger.log('INFO', log_message)
+        except StopIteration as s:
+            processed = s.value
+            break
+
+    # log processed file paths
+    for name, path in processed.provenance.items():
+        logger.add_source_provenance(name, path)
+
+    for name, path in processed.harmonized.items():
+        logger.add_harmonized_source(name, path)
+
+    for name, path in processed.finalized.items():
+        logger.add_finalized_raster(name, path)
+
+    # generate valid feature pixel mask if feature raster is provided
+    feature_raster = processed.finalized.get('features')
+    if feature_raster:
+        mask_path = artifacts_paths.valid_mask_raster
+        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
+        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
+        logger.set_valid_mask_raster(mask_path)
 
 
-# note: input label rasters must be single banded
-def process_source(
-    compiled_sources: dict[str, manifest.DatasetConfigItem],
+# ----- private functions
+def _harmonize_sources(
+    compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
     output_dir: str,
     world_grid: geo_core.GridLayout,
     *,
     categorical_resampling: str,
     continuous_resampling: str,
-) -> typing.Generator[str, None, ProcessedRasters]:
-    '''Process one data source.'''
-    aligned = _AlignedRasters()
-    processed = ProcessedRasters()
+) -> typing.Generator[str, None, _ProcessedRasters]:
+    '''Harmonize all compiled raster sources onto the canonical grid.'''
+    features: list[str] = []
+    labels: list[str] = []
+    processed = _ProcessedRasters()
 
-    # iterate through raster source
-    for path, cfg in compiled_sources.items():
-        path = os.path.abspath(path) # guard
-        if not cfg:
+    for path, mfst in compiled_sources.items():
+        if not mfst:
             raise ValueError(f'No configuration found for raster {path}')
 
-        name = cfg['name']
-        category = cfg['category']
-        tagged_name = f'{category}_{name}'
-        is_categorical = category in ['domains', 'domain', 'labels', 'label']
+        is_cat = mfst['category'] in {'domains', 'domain', 'labels', 'label'}
+        tagged_name = f'{mfst["category"]}_{mfst["name"]}'
         resampling = (
-            categorical_resampling
-            if is_categorical
-            else continuous_resampling
+            categorical_resampling if is_cat else continuous_resampling
         )
-
-        processed.provenance.update({tagged_name: path})
-        out_path = os.path.join(output_dir, f'{tagged_name}.vrt')
+        out_vrt = os.path.join(output_dir, f'{tagged_name}.vrt')
 
         yield (
-            f'Harmonizing {category} layer [{name}] -> {out_path} '
+            f'Harmonizing raster {path} -> {out_vrt} '
             f'(resampling: {resampling})'
         )
 
-        warped = rasters.warp_to_grid(
+        warped = harmonize_rasters.warp_to_grid(
             input_path=path,
-            output_path=out_path,
+            output_path=out_vrt,
             world_grid=world_grid,
-            is_categorical=is_categorical,
+            is_categorical=is_cat,
             resampling_method=resampling,
         )
+        # band mapping is now required
+        harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
 
-        if category in ['domains', 'domain']:
-            processed.harmonized.update({tagged_name: warped})
-            processed.finalized.update({tagged_name: warped})
-            continue # fast tracking domain rasters
+        processed.provenance[tagged_name] = os.path.abspath(path)
+        processed.harmonized[tagged_name] = warped
 
-        if cfg['band_mapping']:
-            rasters.add_band_description_to_vrt(warped, cfg['band_mapping'])
+        match mfst['category']:
+            case 'domains' | 'domain':
+                _tag_domain_metadata(warped, mfst)
+                processed.finalized[tagged_name] = warped
 
-        if cfg['label_specs']:
-            rasters.add_tag_to_vrt(
-                warped,
-                num_cls=cfg['label_specs']['num_cls'],
-                ignore_cls=cfg['label_specs']['ignore_cls'],
-                class_name=cfg['label_specs'].get('class_name', {}),
-                reclass=cfg['label_specs'].get('reclass', {}),
-                reclass_name=cfg['label_specs'].get('reclass_name', {}),
-                color_map=cfg['label_specs'].get('color_map', {}),
-                taxonomy=cfg['label_specs'].get('taxonomy', {}),
-            )
+            case 'features' | 'feature':
+                _tag_feature_metadata(warped, mfst)
+                features.append(warped)
 
-        aligned.add_raster(category, tagged_name, out_path)
-        processed.harmonized.update({tagged_name: warped})
+            case 'labels' | 'label':
+                _tag_label_metadata(warped, mfst)
+                labels.append(warped)
 
-    stacked: dict[str, str] = {}
-    gen = rasters.stack_rasters(
-        list(aligned.features.values()),
-        list(aligned.labels.values()),
-        output_dir
+    processed.finalized.update(
+        **(yield from harmonize_rasters.stack_rasters(features, labels, output_dir))
     )
-    while True:
-        try:
-            yield next(gen)
-        except StopIteration as s:
-            stacked = s.value
-            break
-
-    processed.finalized.update(**stacked)
     return processed
+
+
+def _tag_domain_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
+    '''Attach domain raster metadata tags to VRT file.'''
+    cat_specs = mfst.get('categorical_specs')
+    if not cat_specs:
+        return
+
+    if 'index_base' in cat_specs:
+        harmonize_rasters.add_tag_to_vrt(
+            warped,
+            index_base=cat_specs['index_base'],
+        )
+
+
+def _tag_feature_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
+    '''Attach feature schemes metadata tags to VRT file.'''
+    schemes = mfst.get('schemes')
+    if schemes:
+        harmonize_rasters.add_tag_to_vrt(
+            warped,
+            schemes={mfst['name']: schemes},
+        )
+
+
+def _tag_label_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
+    '''Attach categorical label metadata tags to VRT file.'''
+    cat_specs = mfst.get('categorical_specs')
+    if not cat_specs:
+        raise ValueError('Missing categorical specs for label raster')
+
+    schemes = mfst.get('schemes')
+    harmonize_rasters.add_tag_to_vrt(
+        warped,
+        index_base=cat_specs['index_base'],
+        num_cls=cat_specs['num_cls'],
+        ignore_cls=cat_specs['ignore_cls'],
+        class_name=cat_specs.get('class_name', {}),
+        color_map=cat_specs.get('color_map', {}),
+        taxonomy=cat_specs.get('taxonomy', {}),
+        schemes={mfst['name']: schemes} if schemes else {},
+    )

@@ -22,20 +22,19 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Tools for preparing and loading world grid layouts.
+Tools for preparing and building world grid layouts.
 
-This module provides the public entry point to build or load a persisted
-`GridLayout` from configuration. If the requested grid already exists on
-disk, it is loaded; otherwise, the grid specification is derived from the
-extent configuration and the grid is created, saved, and returned.
+This module provides functions to construct a `GridLayout` either by
+deriving geometry from a reference raster or through manual extent
+parameters.
 
-Supported extent modes:
-- 'ref'   : derive geometry from a reference raster (bounds, pixel size)
-- 'aoi'   : derive from explicit origin, pixel size, and grid extent
-- 'tiles' : derive from explicit origin, pixel size, and grid shape
+Public APIs:
+    - `GridParameters`: Protocol defining grid generation configuration.
+    - `build_grid`: Construct a GridLayout from config or raster reference.
 '''
 
 # standard imports
+from __future__ import annotations
 import os
 import typing
 # local imports
@@ -43,7 +42,7 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
 
-# ------------------------------Public Protocol-------------------------------
+# ----- public types
 class GridParameters(typing.Protocol):
     '''Container for grid generation configuration.'''
     @property
@@ -61,17 +60,25 @@ class GridParameters(typing.Protocol):
     @property
     def extent_in_crs_units(self) -> tuple[float, float] | None: ...
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_grid(
     mode: typing.Literal['ref', 'manual'] | str,
-    config: GridParameters
+    config: GridParameters,
 ) -> geo_core.GridLayout:
     '''
-    Build or load a persisted world grid.
+    Build a world grid layout from reference raster or manual parameters.
 
-    If a grid with the configured ID exists on disk, it is loaded.
-    Otherwise, a new grid is constructed from the extent configuration
-    and grid profile, saved to disk, and returned.
+    Args:
+        mode:
+            Grid derivation mode ('ref' for reference raster or 'manual'
+            for explicit spatial parameters).
+        config:
+            Configuration object implementing GridParameters protocol.
+
+    Returns:
+        geo_core.GridLayout:
+            Constructed world grid layout instance.
     '''
     # derive from reference raster
     if mode == 'ref':

@@ -19,16 +19,16 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for transform schema builder logic (schema.py).'''
+'''Unit tests for prepared schema builder logic (schema.py).'''
 
 # local imports
-import landseg.geopipe.prepare.schema as schema
+import landseg.geopipe.prepare.materialize.schema as schema
 
 
 # ----- `build_schema` tests
 def test_build_schema(mocker):
     '''
-    Given: Mocked controller values for transformed blocks, stats,
+    Given: Mocked controller values for prepared blocks, stats,
         and paths.
     When: Running build_schema.
     Then: Correctly construct the dataset schema, compile checksums,
@@ -38,7 +38,7 @@ def test_build_schema(mocker):
     mock_schema_ctrl = mocker.Mock()
     mock_schema_ctrl.fetch.return_value = None # force schema creation
     mocker.patch(
-        'landseg.geopipe.prepare.schema.SchemaCtrl',
+        'landseg.geopipe.prepare.materialize.schema.SchemaCtrl',
         return_value=mock_schema_ctrl
     )
 
@@ -47,9 +47,9 @@ def test_build_schema(mocker):
         mock_ctrl = mocker.Mock()
         mock_ctrl.sha256 = 'mock-hash-value'
         if (
-            'splits_transformed_blocks' in filepath or
+            'splits_prepared_blocks' in filepath or
             'block_splits' in filepath or
-            'transformed' in filepath
+            'prepared' in filepath
         ):
             mock_ctrl.fetch.return_value = {
                 'train': {'block_0': 'path/to/block_0.npz'},
@@ -69,10 +69,6 @@ def test_build_schema(mocker):
         return mock_ctrl
 
     mocker.patch(
-        'landseg.geopipe.prepare.schema.load',
-        side_effect=mock_load
-    )
-    mocker.patch(
         'landseg.artifacts.Controller.load_json_or_fail',
         side_effect=mock_load
     )
@@ -84,12 +80,37 @@ def test_build_schema(mocker):
     mock_paths = mocker.Mock()
     mock_paths.schema = 'schema.json'
     mock_paths.splits_source_blocks = 'block_source.json'
-    mock_paths.splits_transformed_blocks = 'block_splits.json'
+    mock_paths.splits_prepared_blocks = 'block_splits.json'
     mock_paths.label_stats = 'label_stats.json'
     mock_paths.image_stats = 'image_stats.json'
 
+    # mock context
+    mock_context = mocker.Mock()
+    mock_context.targets.head_names = ['head1', 'head1_sub']
+    mock_context.targets.head_parent = {
+        'head1': None,
+        'head1_sub': 'head1',
+    }
+    mock_context.targets.head_parent_cls = {
+        'head1': None,
+        'head1_sub': 1,
+    }
+    mock_context.targets.num_classes = {
+        'head1': 2,
+        'head1_sub': 1,
+    }
+    mock_context.targets.class_names = {
+        'head1': ['cls0', 'cls1'],
+        'head1_sub': ['sub0'],
+    }
+    mock_context.targets.ignore_classes = {
+        'head1': [255],
+        'head1_sub': [255],
+    }
+
     schema.build_schema(
         mock_paths,
+        mock_context,
         policy=mocker.Mock(),
         logger=mock_logger
     )
@@ -99,4 +120,20 @@ def test_build_schema(mocker):
     persisted_schema = mock_schema_ctrl.persist.call_args[0][0]
     assert persisted_schema['schema_version'] is not None
     assert persisted_schema['checksums']['block_source'] == 'mock-hash-value'
+    assert (
+        persisted_schema['checksums']['block_prepared'] == 'mock-hash-value'
+    )
+    assert persisted_schema['heads']['head_names'] == ['head1', 'head1_sub']
+    assert persisted_schema['heads']['head_parent'] == {
+        'head1': None,
+        'head1_sub': 'head1',
+    }
+    assert persisted_schema['heads']['head_parent_cls'] == {
+        'head1': None,
+        'head1_sub': 1,
+    }
+    assert persisted_schema['heads']['num_classes'] == {
+        'head1': 2,
+        'head1_sub': 1,
+    }
     assert mock_logger.set_schema_report.called

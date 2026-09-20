@@ -1,0 +1,169 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Domain map artifacts lifecycle management.
+
+This module provides functions to prepare, build, and persist domain
+tile map artifacts and mapped raster tiles using configurable
+lifecycle policies.
+
+Public APIs:
+    - `DomainBuildingParameters`: Config for domain building.
+    - `prepare_domain_maps`: Build or load domain tile maps for rasters.
+'''
+
+# standard imports
+from __future__ import annotations
+import copy
+import dataclasses
+import os
+import time
+# local imports
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest as ingest
+import landseg.geopipe.ingest.domains.builder as builder
+import landseg.geopipe.ingest.domains.mapper as mapper
+
+
+# ----- typing aliases
+DomainCtrl = artifacts.PayloadController[
+    dict[str, geo_core.DomainTile], geo_core.DomainMeta
+]
+MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
+
+
+# ----- public dataclasses
+@dataclasses.dataclass
+class DomainBuildingParameters:
+    '''Container for domain mapping configurations.'''
+    input_fpath: str
+    domain_fpath: str
+    tiles_fpath: str
+    valid_threshold: float
+    target_variance: float
+
+
+# ----- public functions
+def prepare_domain_maps(
+    world_grid: geo_core.GridLayout,
+    domain_configs: list[DomainBuildingParameters],
+    *,
+    policy: artifacts.LifecyclePolicy,
+    logger: ingest.IngestionLogger,
+) -> None:
+    '''
+    Prepare and persist domain tile maps for categorical rasters.
+
+    Args:
+        world_grid:
+            Canonical world grid layout used for spatial alignment.
+        domain_configs:
+            List of domain building parameter configurations.
+        policy:
+            Lifecycle policy determining build vs load behavior.
+        logger:
+            Logger used for recording structured progress reports.
+    '''
+    # read provided domain rasters
+    for config in domain_configs:
+        start_time = time.perf_counter()
+
+        # copy the world grid instance
+        grid = copy.deepcopy(world_grid)
+        name, _ = os.path.splitext(os.path.basename(config.input_fpath))
+
+        # check domain artifacts
+        ctrl = DomainCtrl(
+            config.domain_fpath,
+            schema_id=geo_core.DomainTileMap.SCHEMA_ID,
+            policy=policy
+        )
+        payload = ctrl.load() # empty = domain absent
+
+        # load or create domain layer
+        loaded = False
+        if payload:
+            loaded = True
+            logger.log('INFO', f'[CHECKPOINT] Loaded domain layer [{name}]')
+        else:
+            # check mapped tiles before building
+            mapped = _prep_mapping(grid, config, policy=policy)
+            # build domain map
+            payload = builder.build_domain(
+                grid.gid,
+                mapped,
+                valid_threshold=config.valid_threshold,
+                target_variance=config.target_variance,
+            ).to_json_payload()
+            ctrl.save(payload)
+            logger.log('INFO', f'[CHECKPOINT] Created domain layer [{name}]')
+
+        duration = time.perf_counter() - start_time
+
+        # update structured log
+        meta = payload['artifact_meta']
+        report: contracts.DomainMapReport = {
+            'name': name,
+            'status': 'loaded' if loaded else 'created',
+            'input_filepath': config.input_fpath,
+            'domain_filepath': config.domain_fpath,
+            'tiles_filepath': config.tiles_fpath,
+            'duration_sec': duration,
+            'stats': {
+                'max_index': int(meta['max_index']),
+                'valid_coords_count': len(payload['data']),
+                'major_freq_mean': float(meta['major_freq_mean']),
+                'major_freq_min': float(meta['major_freq_min']),
+                'pca_axes_n': int(meta['pca_axes_n']),
+                'explained_variance': float(meta['explained_variance']),
+            }
+        }
+        logger.add_domain_report(report)
+
+
+# ----- private helpers
+def _prep_mapping(
+    grid: geo_core.GridLayout,
+    config: DomainBuildingParameters,
+    *,
+    policy: artifacts.LifecyclePolicy,
+) -> mapper.RasterTileDict:
+    '''Fetch existing mapped tiles artifact or map raster onto grid.'''
+    # check mapped tiles before building
+    ctrl = MappingCtrl(config.tiles_fpath, policy)
+    try:
+        mapped = ctrl.fetch()
+    except artifacts.ArtifactError as exc:
+        raise artifacts.ArtifactError from exc
+    # create a new mapping if not valid
+    if not mapped:
+        try:
+            mapped = mapper.map_domain_to_grid(grid, config.input_fpath)
+            ctrl.persist(mapped)
+        except ValueError as e:
+            raise ValueError(
+                f'Error mapping domain to grid for file: {config.input_fpath}'
+            ) from e
+
+    return mapped

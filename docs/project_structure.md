@@ -1,6 +1,6 @@
 ## Current Project Structure
 
-Last updated: 2026-07-17
+Last updated: 2026-09-20
 
 This document summarizes the repository's current package layout and the main
 responsibility of each area. It favors the working boundaries that matter when
@@ -108,19 +108,29 @@ src/landseg/
 |       `-- study_analysis.py     Study result analysis pipeline
 |
 |-- geopipe/
-|   |-- core/                     Harmonization, ingestion, and preparation data contracts
-|   |-- grid/                     World grid construction and lifecycle
+|   |-- contracts/                Central pipeline summary and report schemas
+|   |-- core/                     Core abstractions, catalogs, and grid layout
+|   |-- grid/                     World grid construction, lifecycle, and logger
 |   |-- harmonize/                Warping, stacking, and valid mask operations
-|   |-- ingest/                   Domain maps and data blocks construction
-|   |   |-- common/               Ingestion loggers and aliases
-|   |   |-- data_blocks/          Data block manifests, mapping, and pipeline
-|   |   `-- domain_maps/          Domain map construction and lifecycle
-|   |-- prepare/                  Splitting, normalization, and schema compilation
-|   |   |-- common/               Preparation loggers and aliases
-|   |   |-- data_partition/       Split, filter, hydrate, and scoring pipeline
-|   |   |-- normal_blocks/        Normalization stats and normalization pipeline
-|   |   |-- adapter.py            Catalog data blocks adapter
-|   |   `-- schema.py             Preparation schema compiler
+|   |   |-- manifest/             Manifest schema, normalizer, and compiler
+|   |   |-- rasters/              Raster stacking, masking, and spatial helpers
+|   |   |-- taxonomy/             Taxonomy profiling and index mapping
+|   |   |-- context.py            Harmonization upstream context builder
+|   |   |-- logger.py             Harmonization stage structured logger
+|   |   `-- pipeline.py           Harmonization stage runner
+|   |-- ingest/                   Canonical data blocks and domain maps
+|   |   |-- blocks/               Block assembly, manifests, mapping, pipeline
+|   |   |-- domains/              Domain raster mapping, PCA, and lifecycle
+|   |   |-- context.py            Ingestion upstream context builder
+|   |   |-- logger.py             Ingestion stage structured logger
+|   |   `-- pipeline.py           Ingestion stage runner
+|   |-- prepare/                  In-memory view, partitioning, materialization
+|   |   |-- dataset/              In-memory dataset view, catalog, semantics
+|   |   |-- partition/            Spatial AOI integration, splitting, scoring
+|   |   |-- materialize/          Welford image stats, label stacks, saving
+|   |   |-- context.py            Preparation upstream context builder
+|   |   |-- logger.py             Preparation stage structured logger
+|   |   `-- pipeline.py           Preparation stage runner
 |   |-- factory.py                DataSpecs factory
 |   `-- utils/                    Raster context and coordinate string helpers
 |
@@ -184,3 +194,5 @@ src/landseg/
 - `session/` is the main runtime layer: orchestration chooses phases/runners,
   epoch policies define train/eval behavior, and runtime tasks compute heads,
   losses, metrics, constraints, and regularization.
+- `geopipe/` stages (`harmonize`, `ingest`, `prepare`) provide symmetric triads
+  (`context.py`, `logger.py`, `pipeline.py`) governed by central `contracts/`.

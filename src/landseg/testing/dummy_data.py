@@ -224,7 +224,12 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
         'band_mapping': {
             1: "mock_geology"
         },
-        'label_specs': None,
+        'categorical_specs': {
+            'index_base': 1,
+            'num_cls': 4,
+            'ignore_cls': [255],
+        },
+        'schemes': None,
     })
 
     print(f'Creating domain knowledge [mock_soil]: {paths.domain_2}')
@@ -249,7 +254,12 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
         'band_mapping': {
             1: "mock_soil"
         },
-        'label_specs': None,
+        'categorical_specs': {
+            'index_base': 1,
+            'num_cls': 9,
+            'ignore_cls': [255],
+        },
+        'schemes': None,
     })
 
     # ----- create feature and label rasters
@@ -296,7 +306,15 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
             9: 'swir1',
             10: 'swir2',
         },
-        'label_specs': None,
+        'categorical_specs': None,
+        'schemes': {
+            'rgb': ['blue', 'green', 'red'],
+            'rgb_nir': ['blue', 'green', 'red', 'nir'],
+            'surface': [
+                'blue', 'green', 'red', 'red_edge1', 'red_edge2',
+                'red_edge3', 'nir', 'narrow_nir', 'swir1', 'swir2'
+            ],
+        },
     })
 
     print(f'Creating raw feature [DEM]: {paths.dem}')
@@ -319,7 +337,8 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
         'band_mapping': {
             1: 'dem',
         },
-        'label_specs': None,
+        'categorical_specs': None,
+        'schemes': None,
     })
 
     print(f'Creating raw label [Landcover]: {paths.landcover}')
@@ -342,7 +361,8 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
         'band_mapping': {
             1: 'landcover'
         },
-        'label_specs': {
+        'categorical_specs': {
+            'index_base': 1,
             'num_cls': 2,
             'ignore_cls': [255],
             'class_name': {
@@ -352,6 +372,12 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
             'color_map': {
                 '1': [34, 139, 34],
                 '2': [218, 165, 32],
+            },
+        },
+        'schemes': {
+            'binary': {
+                'reclass': {'1': [1, 2]},
+                'reclass_name': {'1': 'forest'},
             },
         },
     })
@@ -376,13 +402,11 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
         'band_mapping': {
             1: 'leadspc'
         },
-        'label_specs': {
+        'categorical_specs': {
+            'index_base': 1,
             'num_cls': 2,
             'ignore_cls': [255],
-            'taxonomy': {
-                'profile': 'ontario_tree_species_grouped_profiles',
-            },
-            'class_name': { # names here need to match corresponding profile
+            'class_name': {
                 '1': 'SB_BLACK_SPRUCE',
                 '2': 'PJ_JACK_PINE',
             },
@@ -390,7 +414,11 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
                 '1': [0, 100, 0],
                 '2': [107, 142, 35],
             },
+            'taxonomy': {
+                'profile': 'ontario_tree_species_grouped_profiles',
+            },
         },
+        'schemes': None,
     })
 
     _write_jsons(data_configs, paths.manifest)
@@ -405,7 +433,12 @@ def _get_transform(x: float, y: float, res: float) -> rasterio.transform.Affine:
 
 
 def _write_jsons(src: list[dict[str, typing.Any]], manifest: str) -> None:
-    '''Write per file config JSON and manifest JSON.'''
+    '''Write per file sidecar JSON and manifest JSON.'''
+    # clear existing hash record if regenerating
+    hash_fpath = os.path.join(os.path.dirname(manifest), '_hash.json')
+    if os.path.exists(hash_fpath):
+        os.remove(hash_fpath)
+
     manifest_list: list[dict[str, typing.Any]] = []
     for cfg in src:
         json_fpath = cfg['path'].replace('tif', 'json')
@@ -414,7 +447,7 @@ def _write_jsons(src: list[dict[str, typing.Any]], manifest: str) -> None:
         manifest_list.append({
             'name': cfg['name'],
             'path': cfg['path'],
-            'config': json_fpath,
+            'manifest': json_fpath,
         })
     with open(manifest, 'w', encoding='utf-8') as f:
         json.dump(manifest_list, f, indent=4)

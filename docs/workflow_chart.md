@@ -1,6 +1,6 @@
 ## Current workflow
 
-Last updated : 2026-05-12
+Last updated: 2026-09-20
 
 ```
 [grid/builder]                           (1 World Grid – pure construction)
@@ -11,29 +11,29 @@ Last updated : 2026-05-12
 +--> [grid/lifecycle]
 |        (grid artifact persistence & validation)
 |
-+--> [ingest/domain_maps/mapper]        (2 Domain → Grid alignment, optional)
++--> [ingest/domains/mapper]            (2 Domain → Grid alignment, optional)
 |        |
-|        +--> [ingest/domain_maps/builder]
+|        +--> [ingest/domains/builder]
 |        |        (pure domain feature computation)
 |        |
 |        +--> [artifacts/controller]
 |        |        (resolve/build/reuse domain artifact)
 |        |
-|        +--> [ingest/domain_maps/lifecycle]
+|        +--> [ingest/domains/lifecycle]
 |                 (domain artifact persistence & validation)
 |
-+--> [ingest/data_blocks/mapper]        (3 Imagery/Labels → Grid window mapping)
++--> [ingest/blocks/mapper]             (3 Imagery/Labels → Grid window mapping)
 |        |
-|        +--> [ingest/data_blocks/builder]
+|        +--> [ingest/blocks/assembler]
 |        |        (pure block construction)
 |        |
 |        +--> [artifacts/controller]
 |        |        (resolve/build/reuse block artifacts)
 |        |
-|        +--> [ingest/data_blocks/manifest]
+|        +--> [ingest/blocks/manifest]
 |                 (catalog, schema registration, and indexing)
 |
-+--> [geopipe/specification/factory]        (4 Build DataSpecs from prepared artifacts)
++--> [geopipe/factory]                  (4 Build DataSpecs from prepared artifacts)
 |
 +--> [models/factory]                       (5 Model construction & wiring)
 |
@@ -63,7 +63,7 @@ Last updated : 2026-05-12
     |        +--> resolve required artifacts via [artifacts/controller]
     |        |        (grid, domain, blocks, manifests, schema)
     |        |
-    |        +--> [geopipe/specification/factory]
+    |        +--> [geopipe/factory]
     |        |        (build DataSpecs from resolved artifacts)
     |        |
     |        +--> [models/factory]
@@ -81,7 +81,7 @@ Last updated : 2026-05-12
     |        +--> resolve required artifacts via [artifacts/controller]
     |        |        (dataset artifacts, manifests, model source)
     |        |
-    |        +--> [geopipe/specification/factory]
+    |        +--> [geopipe/factory]
     |        |        (build evaluation DataSpecs)
     |        |
     |        +--> [models/factory]

@@ -1,0 +1,404 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Orchestrator for building groups of blocks in parallel.
+
+This module coordinates multi-block construction pipelines. It
+intersects image and label raster windows, validates block file
+integrity on disk (cleaning up corrupted files), and schedules
+parallel block-generation jobs via the project's ParallelExecutor.
+
+Public APIs:
+    - `BlockBuildingInput`: Dataclass of I/O paths for block construction.
+    - `BlockBuildingContext`: Dataclass of mapped read windows.
+    - `BlockBuildingConfig`: Dataclass for block building configurations.
+    - `BlockBuildingOutput`: Dataclass of block building results and stats.
+    - `build_blocks`: Validate on-disk blocks and create missing blocks.
+'''
+
+# standard imports
+from __future__ import annotations
+import dataclasses
+import os
+import random
+# third-party imports
+import numpy
+# local imports
+import landseg.artifacts as artifacts
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.blocks.assembler.builder as builder
+import landseg.geopipe.ingest.blocks.assembler.io as io
+import landseg.geopipe.utils as geo_utils
+import landseg.utils as utils
+
+
+# ----- public dataclasses
+@dataclasses.dataclass(frozen=True)
+class BlockBuildingInput:
+    '''I/O paths used during block construction.'''
+    output_root: str            # path to output artifacts
+    image_fpath: str            # path to input image data (.tiff)
+    label_fpath: str | None     # path to input label data (.tiff)
+
+    @property
+    def has_label(self) -> bool:
+        '''Return `True` is label raster is provided.'''
+        return bool(self.label_fpath) and os.path.exists(self.label_fpath)
+
+
+@dataclasses.dataclass(frozen=True)
+class BlockBuildingContext:
+    '''Mapped read windows for the pipeline execution.'''
+    image: geo_core.RasterWindowDict
+    label: geo_core.RasterWindowDict
+
+
+@dataclasses.dataclass(frozen=True)
+class BlockBuildingConfig:
+    '''Container for block building configurations.'''
+    ignore_index: int               # global ignore label index
+    dem_pad_px: int                 # image DEM channel padding in pixels
+    block_size: tuple[int, int]     # block size in row, col
+    image_band_map: dict[str, int]
+    label_specs: dict[str, geo_core.CategoricalSpec]
+    add_spectral: list[str] | None = None
+    add_topo: list[str] | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class BlockBuildingOutput:
+    '''Results and statistics from a multi-block building execution.'''
+    coords_created: list[tuple[int, int]]
+    stats: dict[str, int]
+    label_color_map: dict[str, list[int]] | None
+
+
+# ----- public functions
+def build_test_block(
+    save_dpath: str,
+    inputs: dict[str, io.RasterReadInput],
+    *,
+    target_head: str,
+    valid_px_per: float,
+    need_all_classes: bool,
+) -> str | None:
+    '''
+    Build, normalize, and persist a single valid block for testing.
+
+    Iterates over the available block inputs in a deterministic shuffled
+    order to find the first block meeting the validity and label-coverage
+    criteria. The selected block is normalized using its own image mean
+    and standard deviation before being saved.
+
+    Args:
+        save_dpath:
+            Directory where the test block will be written.
+        inputs:
+            Mapping from block name to raster inputs.
+        target_head:
+            Label head used when checking class coverage.
+        valid_px_per:
+            Minimum required proportion of valid image pixels.
+        need_all_classes:
+            Whether every class in the target head must be present for a
+            block to be accepted.
+
+    Returns:
+        str | None:
+            Path to the saved test block if found, otherwise None.
+    '''
+    shuffled_inputs = list(inputs.items())
+    random.Random(42).shuffle(shuffled_inputs)
+
+    selected_name = None
+    selected_candidate = None
+
+    for name, candidate_input in shuffled_inputs:
+        print('Searching for a valid block...', end='\r', flush=True)
+
+        try:
+            candidate = _build_single_block(name, candidate_input)
+            manifest = candidate.manifest
+
+            # check valid pixel ratios based on image band
+            valid_ratio = manifest['valid_ratios'].get('image', 0.0)
+
+            # check if all classes are present
+            has_all_classes = True
+            if target_head in manifest['label_count']:
+                has_all_classes = all(manifest['label_count'][target_head])
+            else:
+                has_all_classes = False
+
+            if (
+                valid_ratio >= valid_px_per and
+                (has_all_classes or not need_all_classes)
+            ):
+                selected_name = name
+                selected_candidate = candidate
+                break
+
+        except ValueError:
+            continue
+
+    if selected_candidate is None:
+        return None
+
+    candidate = selected_candidate
+    name = selected_name
+
+    # In-place image normalization for debugging block
+    mean = numpy.mean(candidate.data.image)
+    std = numpy.std(candidate.data.image)
+    candidate.data.image = (candidate.data.image - mean) / (std or 1.0)
+
+    os.makedirs(save_dpath, exist_ok=True)
+    fpath = os.path.join(save_dpath, f'test_{name}.npz')
+    candidate.save(fpath)
+    return fpath
+
+
+def build_blocks(
+    inputs: BlockBuildingInput,
+    context: BlockBuildingContext,
+    config: BlockBuildingConfig,
+    *,
+    policy: artifacts.LifecyclePolicy,
+) -> BlockBuildingOutput:
+    '''
+    Validate on-disk blocks, clear corrupt ones, and build missing.
+
+    Args:
+        inputs:
+            I/O paths container for input rasters and output directory.
+        context:
+            Mapped read windows for image and label rasters.
+        config:
+            Block building configuration container.
+        policy:
+            Lifecycle policy determining rebuild or build-if-missing.
+
+    Returns:
+        BlockBuildingOutput:
+            Execution output containing created coordinates and stats.
+    '''
+    blks_dir = inputs.output_root
+    os.makedirs(blks_dir, exist_ok=True)
+
+    # prepare raster read windows
+    valid_coords, shared_count, expected_shape_count = _prepare_block_windows(
+        inputs, context, config
+    )
+
+    # inspect existing blocks
+    coords_todo, removed_count, on_disk_before = _structural_validation(
+        blks_dir, valid_coords, policy=policy
+    )
+
+    # create blocks if missing
+    _create_missing_blocks(inputs, coords_todo, context, config)
+
+    # simple runtime stats
+    stats = {
+        'shared_raster_windows': shared_count,
+        'expected_shape_windows': expected_shape_count,
+        'blocks_on_disk_before': on_disk_before,
+        'blocks_to_process': len(coords_todo),
+        'damaged_blocks_removed': removed_count,
+        'blocks_created': len(coords_todo)
+    }
+
+    # extract label color map from specs if present
+    label_color_map: dict[str, list[int]] | None = None
+    if config.label_specs:
+        for spec in config.label_specs.values():
+            if 'color_map' in spec and spec['color_map']:
+                label_color_map = spec['color_map']
+                break
+
+    return BlockBuildingOutput(
+        coords_created=coords_todo,
+        stats=stats,
+        label_color_map=label_color_map
+    )
+
+
+# ----- private helpers
+def _prepare_block_windows(
+    inputs: BlockBuildingInput,
+    context: BlockBuildingContext,
+    config: BlockBuildingConfig
+) -> tuple[set[tuple[int, int]], int, int]:
+    '''Find coordinates matching block size and compute window counts.'''
+    if inputs.has_label:
+        common_coords = set(context.image.keys()) & set(context.label.keys())
+    else:
+        common_coords = set(context.image.keys())
+
+    shared_count = len(common_coords)
+
+    valid_coords = set(common_coords)
+    for coord in common_coords:
+        iw = context.image[coord]
+        lw = context.label[coord] if inputs.has_label else None
+        if (iw.height, iw.width) != config.block_size or (
+            lw is not None and (lw.height, lw.width) != config.block_size
+        ):
+            valid_coords.remove(coord)
+
+    expected_shape_count = len(valid_coords)
+    return valid_coords, shared_count, expected_shape_count
+
+
+def _structural_validation(
+    blks_dir: str,
+    valid_coords: set[tuple[int, int]],
+    *,
+    policy: artifacts.LifecyclePolicy
+) -> tuple[list[tuple[int, int]], int, int]:
+    '''Verify existing block file integrity; remove damaged ones.'''
+    removed_count = 0
+    on_disk_before = 0
+    match policy:
+        case artifacts.LifecyclePolicy.REBUILD:
+            coords_todo = list(valid_coords) # force build all
+
+        case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
+            blks_to_check = {
+                c: os.path.join(blks_dir, f'{geo_utils.xy_name(c)}.npz')
+                for c in valid_coords
+            }
+
+            jobs = [
+                (io.check_npz_integrity, (c, fp), {})
+                for c, fp in blks_to_check.items()
+            ]
+
+            rsts = utils.ParallelExecutor().run(jobs, ' - Checking datablocks')
+            parsed = {k: v for r in rsts for k, v in r.items()}
+
+            coords_todo = []
+            for c, valid in parsed.items():
+                if not valid:
+                    coords_todo.append(c)
+                    try:
+                        os.remove(blks_to_check[c])
+                        removed_count += 1
+                    except FileNotFoundError:
+                        pass
+                else:
+                    on_disk_before += 1
+
+        case _: raise ValueError(f'Unsupported policy: {policy}')
+
+    return coords_todo, removed_count, on_disk_before
+
+
+def _create_missing_blocks(
+    inputs: BlockBuildingInput,
+    coords_todo: list[tuple[int, int]],
+    windows: BlockBuildingContext,
+    config: BlockBuildingConfig
+) -> None:
+    '''Build all missing coordinates in parallel.'''
+    creation_jobs = []
+    for c in coords_todo:
+        # positionals
+        name = geo_utils.xy_name(c)
+        block_inputs = io.RasterReadInput(
+            image_fpath=inputs.image_fpath,
+            image_window=windows.image[c],
+            image_band_map=config.image_band_map,
+            image_dem_pad_px=config.dem_pad_px,
+            label_fpath=inputs.label_fpath,
+            label_window=windows.label[c] if inputs.has_label else None,
+            label_specs=config.label_specs
+        )
+        # keyword args
+        kwargs = {
+            'ignore_index': config.ignore_index,
+            'add_spectral': config.add_spectral,
+            'add_topo': config.add_topo,
+            'save_fpath': os.path.join(inputs.output_root, f'{name}.npz'),
+        }
+
+        # add job
+        job = (_build_single_block, (name, block_inputs), kwargs,)
+        creation_jobs.append(job)
+
+    if creation_jobs:
+        utils.ParallelExecutor().run(creation_jobs, desc=' - Creating blocks')
+
+
+def _build_single_block(
+    name: str,
+    inputs: io.RasterReadInput,
+    *,
+    ignore_index: int = 255,
+    add_spectral: list[str] | None = None,
+    add_topo: list[str] | None = None,
+    save_fpath: str | None = None,
+) -> geo_core.DataBlock:
+    '''
+    Create a DataBlock from input rasters for the window context.
+
+    Args:
+        name:
+            Unique identifier for the block.
+        inputs:
+            Raster inputs and metadata required to construct the block.
+        ignore_index:
+            Label value assigned to ignored pixels in the output block.
+        add_spectral:
+            Optional list of spectral indices to compute and append.
+        add_topo:
+            Optional list of topographic features to compute from DEM.
+        save_fpath:
+            Optional output path where the block will be saved.
+
+    Returns:
+        geo_core.DataBlock:
+            A populated and validated block instance.
+    '''
+    read_outputs = io.read_block_raster_data(inputs)
+
+    datablock_inputs = builder.DataBlockInputs(
+        block_name=name,
+        image_array=read_outputs.image_array,
+        image_padded_dem=read_outputs.image_padded_dem,
+        label_array=read_outputs.label_array,
+    )
+    datablock_config = builder.DataBlockConfig(
+        image_band_map=inputs.image_band_map,
+        image_dem_pad_px=inputs.image_dem_pad_px,
+        image_nodata=read_outputs.image_nodata,
+        label_nodata=read_outputs.label_nodata,
+        label_specs=inputs.label_specs,
+        label_ignore_index=ignore_index,
+        add_spectral=add_spectral,
+        add_topo=add_topo
+    )
+    block = builder.build_data_block(datablock_inputs, datablock_config)
+
+    if save_fpath:
+        block.save(save_fpath)
+    return block

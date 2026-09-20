@@ -37,10 +37,9 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.grid as grid
 import landseg.geopipe.ingest as ingest
-import landseg.geopipe.ingest.data_blocks.assembler as assembler
-import landseg.geopipe.ingest.data_blocks.mapper as mapper
+import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.mapper as mapper
 import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 import landseg.models as models
@@ -166,16 +165,20 @@ def _prepare_dataspecs(
                 band_map=block.manifest['image_band_map'],
             ),
             label_specs=core.Meta.Label(
-                array_key='label_stack',
-                ignore_index=block.manifest['ignore_index'],
+                array_key='label',
+                ignore_index=block.manifest['label_ignore_index'],
             ),
         ),
         heads=core.Heads(
             class_counts=cc,  # neutral
-            logits_adjust={k: [1.0] * len(v) for k, v in cc.items()}, # neutral
-            head_parent=block.manifest['label_parent'],
-            head_parent_cls=block.manifest['label_parent_cls'],
-            taxonomy=tax,
+            logits_adjust={k: [1.0] * len(v) for k, v in cc.items()},
+            head_parent={
+                k: None for k in block.manifest['label_band_map']
+            },
+            head_parent_cls={
+                k: None for k in block.manifest['label_band_map']
+            },
+            taxonomy=tax, # type: ignore
             similarity_matrices=sim_matrices,
         ),
         splits=core.Splits(
@@ -201,50 +204,51 @@ def _create_block(
 ) -> str:
     '''Build one valid block for the overfit test.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    harmonized = ingest.read_harmonization_report(
+    context = ingest.build_ingestion_context(
         artifact_paths.data_harmonization,
         config.data.ingestion.harmonization_run,
     )
-    if not harmonized.has_data:
+    if not context.has_data:
         raise ValueError(
             'Harmonized feature/label rasters not found in report'
         )
 
-    # construct world grid layout
-    logger.log('INFO', 'Preparing world grid')
-    grid_cfg = config.data.world_grid
-    world_grid = grid.build_grid(grid_cfg.mode, grid_cfg.params)
+    # world grid from ingestion context
+    world_grid = context.grid
 
     # map raster windows onto world grid
     logger.log('INFO', 'Mapping image unto the world grid')
     datablocks_cfg = config.data.ingestion.datablocks
-    assert harmonized.features
-    assert harmonized.labels
-    mapped = mapper.map_rasters(
+    assert context.features
+    assert context.labels
+    mapped = mapper.map_rasters_to_grid(
         world_grid,
-        harmonized.features,
-        harmonized.labels,
+        context.features,
+        context.labels,
+        artifact_paths.data_ingestion.data_blocks.mapped_window(
+            world_grid.gid
+        ),
+        policy=artifacts.LifecyclePolicy.REBUILD
     )
 
     # retrieve band map and label specs from VRT
     logger.log('INFO', 'Building a single data block')
-    image_band_map = assembler.read_band_map(harmonized.features)
-    label_specs = assembler.read_label_specs(harmonized.labels)
+    image_band_map = assembler.read_band_map(context.features)
+    label_specs = assembler.read_label_specs(context.labels)
 
     # construct `RasterReadInput` mapping for mapped windows
     inputs_map = {
         geo_utils.xy_name(coord): assembler.RasterReadInput(
-            image_fpath=harmonized.features,
+            image_fpath=context.features,
             image_window=mapped.image[coord],
             image_band_map=image_band_map,
             image_dem_pad_px=datablocks_cfg.image_dem_pad,
-            label_fpath=harmonized.labels,
+            label_fpath=context.labels,
             label_window=mapped.label[coord] if mapped.label else None,
             label_specs=label_specs,
         )
         for coord in mapped.image
     }
-
 
     # resolve target head for filtering
     target_head = _resolve_target_head(config, label_specs)
@@ -279,7 +283,7 @@ def _create_block(
 # ----- target head resolution helper
 def _resolve_target_head(
     config: configs.RootConfig,
-    label_specs: dict[str, geo_core.LabelSpecs],
+    label_specs: dict[str, geo_core.CategoricalSpec],
 ) -> str:
     '''Resolve the target head for test block filtering.'''
     if not label_specs:

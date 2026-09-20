@@ -38,7 +38,7 @@ import landseg.geopipe.core as geo_core
 DictControl = artifacts.Controller[dict[str, typing.Any]]
 
 
-# -------------------------------Public Function------------------------------
+# ----- public functions
 def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
     # upstream detection checks
@@ -49,7 +49,7 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     return command(root_config)
 
 
-# -------------------------------private functions------------------------------
+# ----- private helpers
 def _validate_upstream_pipelines(config: configs.RootConfig) -> None:
     '''Verify if upstream pipelines have completed successfully.'''
     # get running pipeline
@@ -61,16 +61,19 @@ def _validate_upstream_pipelines(config: configs.RootConfig) -> None:
 
     # check world-grid status if running data-harmonize
     if pipeline == 'data-harmonize':
+        report_fp = geo_core.get_grid_report_fpath(
+            config.data.world_grid.output_dpath
+        )
         p = config.data.world_grid.params
         gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)
         grid_fpath = os.path.join(
             config.data.world_grid.output_dpath, f'{gid}.json'
         )
-        if not os.path.exists(grid_fpath):
+        if not os.path.exists(report_fp) and not os.path.exists(grid_fpath):
             raise artifacts.ArtifactError(
                 'Upstream pipeline "world-grid" has not been executed yet. '
-                f'Missing world grid artifact at canonical path: '
-                f'{grid_fpath}'
+                f'Missing world grid report or artifact at canonical path: '
+                f'{report_fp}'
             )
         return
 
@@ -171,7 +174,7 @@ def _validate_upstream_pipelines(config: configs.RootConfig) -> None:
             if report_prep.get('status') != 'SUCCESS':
                 return # existing preparation not successful, proceed
 
-            # evaluate differences between running and recorad prep config
+            # evaluate differences against recorded prep config
             ctrl = DictControl.load_json_or_fail(paths_prepare.config)
             try:
                 saved_config = ctrl.fetch()
@@ -180,11 +183,14 @@ def _validate_upstream_pipelines(config: configs.RootConfig) -> None:
                 raise
 
             current_config = dataclasses.asdict(config.data.preparation)
-            if saved_config['data']['preparation'] == current_config:
+            if (
+                saved_config['data']['preparation'] == current_config
+                and not config.data.preparation.rebuild
+            ):
 
                 print('\n' + '=' * 80)
                 print(
-                    f'[WARNING] Preparing data using the same configuration'
+                    f'[WARNING] Preparing data using the same configuration '
                     f'as recorded in: {paths_prepare.config}\n'
                     f'[NOTE] Current preparation "rebuild" flag is set to '
                     f'[{config.data.preparation.rebuild}]\n'

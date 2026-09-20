@@ -21,9 +21,16 @@
 
 '''
 Multi-raster channel composition and nodata mask unification operations.
+
+This module provides utilities to generate a unified valid-pixel boolean
+mask across all bands of a raster.
+
+Public APIs:
+    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
 '''
 
 # standard imports
+from __future__ import annotations
 import os
 # third-party imports
 import numpy
@@ -35,7 +42,7 @@ import rasterio.vrt
 # ----- public functions
 def unify_nodata_mask(
     input_path: str,
-    output_mask_path: str
+    output_mask_path: str,
 ) -> str:
     '''
     Create a 1-band boolean valid pixel mask across bands.
@@ -49,7 +56,8 @@ def unify_nodata_mask(
             Destination path for the valid-pixel mask raster.
 
     Returns:
-        Absolute path to the created mask raster.
+        str:
+            Absolute path to the created mask raster.
     '''
     out_dir = os.path.dirname(os.path.abspath(output_mask_path))
     os.makedirs(out_dir, exist_ok=True)

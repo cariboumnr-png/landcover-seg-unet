@@ -22,52 +22,45 @@
 '''
 Top-level namespace for `landseg.geopipe.prepare`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes public dataset context builders, partitioners, materializers,
+preparation schema, and schema generators via lazy resolution.
+
+Public APIs:
+    - `PreparationLogger`: Specialized logger for preparation runs.
+    - `run_data_preparation`: pipeline runner.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'DataBlocksView',
-    'PartitionParameters',
     'PreparationLogger',
     # functions
-    'build_schema',
-    'data_blocks_adapter',
-    'run_datablocks_partition',
-    'run_normalize_blocks',
+    'run_data_preparation',
     # types
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .adapter import DataBlocksView, data_blocks_adapter
-    from .common import PreparationLogger
-    from .data_partition import PartitionParameters, run_datablocks_partition
-    from .normal_blocks import run_normalize_blocks
-    from .schema import build_schema
+    from .logger import PreparationLogger
+    from .pipeline import run_data_preparation
 
 
 def __getattr__(name: str):
 
-    if name in {'DataBlocksView', 'data_blocks_adapter'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
-
     if name in {'PreparationLogger'}:
-        return getattr(importlib.import_module('.common', __package__), name)
+        return getattr(
+            importlib.import_module('.logger', __package__), name
+        )
 
-    if name in {'PartitionParameters', 'run_datablocks_partition'}:
-        return getattr(importlib.import_module('.data_partition', __package__), name)
-
-    if name in {'run_normalize_blocks'}:
-        return getattr(importlib.import_module('.normal_blocks', __package__), name)
-
-    if name in {'build_schema'}:
-        return getattr(importlib.import_module('.schema', __package__), name)
+    if name in {'run_data_preparation'}:
+        return getattr(
+            importlib.import_module('.pipeline', __package__),
+            name,
+        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

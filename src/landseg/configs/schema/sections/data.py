@@ -29,6 +29,7 @@ Data config schema
 # standard imports
 import dataclasses
 import re
+import typing
 # local imports
 import landseg.configs.schema.utils as utils
 
@@ -116,6 +117,7 @@ class _HarmonizationCfg:
     def validate(self) -> None:
         pass
 
+
 # ----- data ingestion
 @dataclasses.dataclass
 class _Domains:
@@ -130,9 +132,43 @@ class _Domains:
 class _DataBlocks:
     ignore_index: int = 255
     image_dem_pad: int = 8
+    add_topo: list[str] | None = None
+    add_spectral: list[str] | None = None
 
     def validate(self) -> None:
-        pass
+        if self.add_topo is not None:
+            if not isinstance(self.add_topo, (list, tuple)):
+                raise TypeError(
+                    f'add_topo must be a list, '
+                    f'got {type(self.add_topo)}'
+                )
+            for item in self.add_topo:
+                if not isinstance(item, str):
+                    raise TypeError(
+                        f'Topo feature must be a string, got {type(item)}'
+                    )
+                if item.lower() not in ('slope', 'tpi'):
+                    raise ValueError(
+                        f'Invalid spectral index "{item}". '
+                        'Supported featires are: slope, tpi.'
+                    )
+
+        if self.add_spectral is not None:
+            if not isinstance(self.add_spectral, (list, tuple)):
+                raise TypeError(
+                    f'add_spectral must be a list, '
+                    f'got {type(self.add_spectral)}'
+                )
+            for item in self.add_spectral:
+                if not isinstance(item, str):
+                    raise TypeError(
+                        f'Spectral index must be a string, got {type(item)}'
+                    )
+                if item.lower() not in ('ndvi', 'ndmi', 'nbr'):
+                    raise ValueError(
+                        f'Invalid spectral index "{item}". '
+                        'Supported indices are: ndvi, ndmi, nbr.'
+                    )
 
 
 @dataclasses.dataclass
@@ -164,7 +200,6 @@ class _IngestionCfg:
                 )
 
 
-
 # ----- data preparation
 @dataclasses.dataclass
 class _CatalogView:
@@ -177,6 +212,7 @@ class _CatalogView:
     def validate(self):
         for k, v in self.valid_pxs.items():
             utils.must_within(v, f'{k} valid threshold', 0, 1)
+
 
 @dataclasses.dataclass
 class _Partition:
@@ -204,6 +240,7 @@ class _Scoring:
         utils.must_within(self.alpha, 'scoring alpha', 0)
         utils.must_within(self.beta, 'scoring beta', 0)
 
+
 @dataclasses.dataclass
 class _Hydration:
     max_skew_rate: float = 10.0
@@ -211,8 +248,11 @@ class _Hydration:
     def validate(self):
         utils.must_within(self.max_skew_rate, 'hydration skew ratio', 0)
 
+
 @dataclasses.dataclass
 class _PreparationCfg:
+    features: dict[str, typing.Any] = field(default_factory=dict)
+    targets: dict[str, typing.Any] = field(default_factory=dict)
     catalog: _CatalogView = field(default_factory=_CatalogView)
     partition: _Partition = field(default_factory=_Partition)
     scoring: _Scoring = field(default_factory=_Scoring)
@@ -225,6 +265,26 @@ class _PreparationCfg:
         self.partition.validate()
         self.scoring.validate()
         self.hydration.validate()
+
+        for k, v in self.features.items():
+            if not isinstance(k, str) or not (
+                isinstance(v, str)
+                or (
+                    isinstance(v, list)
+                    and all(isinstance(item, str) for item in v)
+                )
+            ):
+                raise ValueError(
+                    f'Invalid features config for "{k}": '
+                    f'expected string scheme name or list of band strings'
+                )
+
+        for k, v in self.targets.items():
+            if not isinstance(k, str) or not isinstance(v, (str, dict)):
+                raise ValueError(
+                    f'Invalid targets config for "{k}": '
+                    f'expected string or dict'
+                )
 
 
 # ----- data specs

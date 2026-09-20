@@ -1,0 +1,172 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Utilities for maintaining dataset-level catalog and schema files.
+
+This module defines helper routines for creating and updating
+`schema.json` for block-structured geospatial datasets. It derives
+dataset-wide properties by inspecting stored block artifacts, records
+provenance links to source imagery and labels, tracks grid alignment
+history, and standardizes I/O conventions required for reproducible data
+preparation and downstream model consumption.
+
+Public APIs:
+    - build_schema: Creates or updates dataset-level data schema.
+'''
+
+# standard imports
+import datetime
+# local imports
+import landseg._constants as c
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.blocks.assembler as assembler
+
+
+# ----- public functions
+def build_schema(
+    sample_block_fpath: str,
+    *,
+    original: geo_core.DatasetSchema | None,
+    sources: tuple[str, str | None],
+    mapped_grid_id: str,
+    label_color_map: dict[str, list[int]] | None
+) -> geo_core.DatasetSchema:
+    '''
+    Create or update the dataset-level `schema.json`.
+
+    Manages global dataset schema describing data sources, spatial
+    grids, tensor conventions, and label semantics. When existing schema
+    is provided, it updates timestamps and appends new grid or source
+    references while preserving all previously recorded structure. When
+    no schema exists, it inspects a representative sample block to
+    infer tensor shapes, data types, and label configuration.
+
+    Args:
+        sample_block_fpath:
+            File path to a representative block artifact used to infer
+            dataset-wide shapes, dtypes, and label settings.
+        original:
+            Existing `DatasetSchema` object if present, otherwise `None`.
+        sources:
+            Tuple containing paths to source image and optional label.
+        mapped_grid_id:
+            Identifier of spatial grid to which blocks are aligned.
+        label_color_map:
+            Mapping of class name to RGB color values, or `None`.
+
+    Returns:
+        geo_core.DatasetSchema:
+            Populated data schema reflecting updated or newly created
+            dataset schema.
+    '''
+    # current time
+    t = datetime.datetime.now().strftime(c.TF_ISO8601)
+
+    # parse sources
+    source_image, source_label = sources
+
+    # parse schemes from sources
+    image_schemes = assembler.read_schemes(source_image)
+    label_schemes = assembler.read_schemes(source_label) if source_label else {}
+
+    # update route # NOTE need to review this route
+    if original:
+        # aliases
+        grids = original['dataset']['mapped_grids']
+        images = original['dataset']['data_source']['image_paths']
+        labels = original['dataset']['data_source']['label_paths']
+        # update
+        original['dataset']['last_updated'] = t
+        if not mapped_grid_id in grids:
+            grids.append(mapped_grid_id)
+        if not source_image in images:
+            images.append(source_image)
+        if source_label and not source_label in labels:
+            labels.append(source_label)
+        original['dataset'].setdefault('image_schemes', {})
+        original['dataset']['image_schemes'].update(image_schemes)
+        original['dataset'].setdefault('label_schemes', {})
+        original['dataset']['label_schemes'].update(label_schemes)
+        return original
+
+    # read from the sample block
+    sample_blk = geo_core.DataBlock.load(sample_block_fpath)
+    image_shape = sample_blk.data.image.shape
+    label_shape = sample_blk.data.label.shape
+
+    # create route
+    new: geo_core.DatasetSchema = {
+        'schema_id': geo_core.dataset_schema.SCHEMA_ID,
+        'dataset': {
+            'name': '', # TBD
+            'last_updated': t,
+            'dataprep_commit': 'dev', # to be fixed once branch stable
+            'mapped_grids': [mapped_grid_id],
+            'data_source': {
+                'image_paths': [source_image],
+                'label_paths': [source_label] if source_label else [],
+            },
+            'image_schemes': image_schemes,
+            'label_schemes': label_schemes,
+        },
+
+        'io_conventions': {
+            'block_format': 'npz',
+            'shapes': {
+                'image_order': 'C,H,W',
+                'label_order': 'L,H,W'
+            },
+            'dtypes': {
+                'image': 'float32',
+                'label': 'uint8',
+            },
+            'image_band_map': sample_blk.manifest['image_band_map'],
+            'label_band_map': sample_blk.manifest['label_band_map'],
+            'ignore_index': sample_blk.manifest['label_ignore_index']
+        },
+
+        'tensor_shapes': {
+            'image': {
+                'order': 'C,H,W',
+                'shape': [*sample_blk.data.image.shape],
+                'C': image_shape[0],
+                'H': image_shape[1],
+                'W': image_shape[2]
+            },
+            'label': {
+                'order': 'L,H,W',
+                'shape': [*sample_blk.data.label.shape],
+                'L': label_shape[0],
+                'H': label_shape[1],
+                'W': label_shape[2]
+            }
+        },
+
+        'labels': {
+            'label_num_cls': sample_blk.manifest['label_num_cls'],
+            'label_ignore_cls': sample_blk.manifest['label_ignore_cls'],
+            'label_class_names': sample_blk.manifest['label_cls_names'],
+            'label_class_color_map': label_color_map,
+            'label_taxonomy': sample_blk.manifest.get('label_taxonomy', {}),
+        },
+    }
+    return new

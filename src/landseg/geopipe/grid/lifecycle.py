@@ -21,47 +21,63 @@
 
 # pylint: disable=missing-function-docstring
 
-'''World grid artifacts lifecycle management.'''
+'''
+World grid artifacts lifecycle management.
+
+This module provides functions to prepare, load, and persist world grid
+layouts with verification and lifecycle policy handling.
+
+Public APIs:
+    - `get_grid_report_fpath`: Return canonical grid report file path.
+    - `prepare_world_grid`: Build or load a persisted grid artifact.
+'''
 
 # standard imports
+from __future__ import annotations
 import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.grid as grid
-
-# typing aliases
-D = list[list[int]]
-M = geo_core.GridMeta
-CTRL = artifacts.PayloadController[D, M]
-
-# default policy
-POLICY = artifacts.LifecyclePolicy.BUILD_IF_MISSING
+import landseg.geopipe.grid.builder as builder
 
 
+# ----- typing aliases
+PayloadCtrl = artifacts.PayloadController[list[list[int]], geo_core.GridMeta]
+
+
+# ----- private types
 class _WorldGridPrepConfig(typing.Protocol):
     '''Config shape to prepare world grid artifacts.'''
     @property
     def mode(self) -> str: ...
     @property
-    def params(self) -> grid.GridParameters: ...
+    def params(self) -> builder.GridParameters: ...
     @property
     def output_dpath(self) -> str: ...
 
 
+# ----- public functions
 def prepare_world_grid(
     config: _WorldGridPrepConfig | None = None,
     *,
     load_only: bool = False,
-    override_grid_fpath: str | None = None
+    override_grid_fpath: str | None = None,
 ) -> tuple[bool, str, geo_core.GridLayout]:
     '''
-    Build or load a persisted world grid.
+    Build or load a persisted world grid artifact.
 
-    If a grid with the configured ID exists on disk, it is loaded with
-    verification. Otherwise, a new grid is constructed from the extent
-    configuration and grid profile, saved to disk, and returned.
+    Args:
+        config:
+            Configuration object defining grid parameters and paths.
+        load_only:
+            Whether to strictly load existing grid and fail if missing.
+        override_grid_fpath:
+            Optional explicit file path to the grid artifact.
+
+    Returns:
+        tuple[bool, str, geo_core.GridLayout]:
+            Tuple of (is_loaded, grid file path, GridLayout instance).
     '''
     if override_grid_fpath:
         grid_fpath = override_grid_fpath
@@ -70,10 +86,10 @@ def prepare_world_grid(
             raise ValueError('No config for grid generation is found')
         grid_fpath = _get_grid_fpath(config)
 
-    ctrl = CTRL(
+    ctrl = PayloadCtrl(
         grid_fpath,
         schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=POLICY
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
 
     payload = ctrl.load()
@@ -89,7 +105,7 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        _grid = grid.build_grid(config.mode, config.params)
+        _grid = builder.build_grid(config.mode, config.params)
         payload = _grid.to_payload()
         ctrl.save(payload)
         is_loaded = False
@@ -97,30 +113,24 @@ def prepare_world_grid(
     return is_loaded, grid_fpath, _grid
 
 
-def load_grid_from_config(
-    config: _WorldGridPrepConfig
-) -> tuple[str, geo_core.GridLayout]:
-    '''Simple wrapper to naively load grid based on input config.'''
-    try:
-        _, fp, world_grid = prepare_world_grid(config, load_only=True)
-        return fp, world_grid
-    except ValueError as e:
-        raise e # re-raise
+def get_grid_report_fpath(output_dpath: str) -> str:
+    '''
+    Return canonical file path of the world grid report artifact.
+
+    Args:
+        output_dpath:
+            Output directory containing world grid artifacts.
+
+    Returns:
+        str:
+            Full path to the grid_report.json artifact.
+    '''
+    return geo_core.get_grid_report_fpath(output_dpath)
 
 
-def load_grid_from_fpath(
-    fpath: str
-) -> geo_core.GridLayout:
-    '''Simple wrapper to naively load grid based on input fpath.'''
-    try:
-        _, _, world_grid = prepare_world_grid(override_grid_fpath=fpath)
-        return world_grid
-    except ValueError as e:
-        raise e # re-raise
-
-
-def _get_grid_fpath(config: _WorldGridPrepConfig):
-    '''Returns canonical file path of a world grid artifact.'''
+# ----- private helpers
+def _get_grid_fpath(config: _WorldGridPrepConfig) -> str:
+    '''Return canonical file path of a world grid artifact.'''
     p = config.params
     gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)
     return os.path.join(config.output_dpath, f'{gid}.json')

@@ -21,6 +21,14 @@
 
 '''
 Top-level namespace for `landseg.geopipe.harmonize`.
+
+Exposes raster harmonization, manifest compilation, taxonomy resolution,
+and logging APIs via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `HarmonizationLogger`: Logger tracking ETL progress and summary.
+    - `run_data_harmonization`: pipeline runner.
 '''
 
 # standard imports
@@ -31,87 +39,31 @@ import typing
 __all__ = [
     # classes
     'HarmonizationLogger',
-    'ProcessedRasters',
     # functions
-    'unify_nodata_mask',
-    'compile_dataset_manifest',
-    'process_source',
-    'get_available_profiles',
-    'validate_taxonomy_specs',
+    'run_data_harmonization',
     # typing
-    'HarmonizationReportSchema',
-    'ProvenanceRecord',
-    'WorldGridReport',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import (
-        HarmonizationLogger,
-        HarmonizationReportSchema,
-        ProvenanceRecord,
-        WorldGridReport,
-    )
-
-    from .manifest import(
-        compile_dataset_manifest,
-    )
-
-    from .pipeline import (
-        ProcessedRasters,
-        process_source,
-    )
-
-    from .rasters import (
-        unify_nodata_mask,
-    )
-
-    from .taxonomy import(
-        get_available_profiles,
-        validate_taxonomy_specs,
-    )
+    from .logger import HarmonizationLogger
+    from .pipeline import run_data_harmonization
 
 
 def __getattr__(name: str):
 
     if name in {
         'HarmonizationLogger',
-        'HarmonizationReportSchema',
-        'ProvenanceRecord',
-        'WorldGridReport',
     }:
         return getattr(
-            importlib.import_module('.common', __package__), name
+            importlib.import_module('.logger', __package__), name
         )
 
     if name in {
-        'compile_dataset_manifest',
-    }:
-        return getattr(
-            importlib.import_module('.manifest', __package__), name
-        )
-
-    if name in {
-        'unify_nodata_mask',
-    }:
-        return getattr(
-            importlib.import_module('.rasters', __package__), name
-        )
-
-    if name in {
-        'ProcessedRasters',
-        'process_source',
+        'run_data_harmonization',
     }:
         return getattr(
             importlib.import_module('.pipeline', __package__), name
-        )
-
-    if name in {
-        'get_available_profiles',
-        'validate_taxonomy_specs',
-    }:
-        return getattr(
-            importlib.import_module('.taxonomy', __package__), name
         )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

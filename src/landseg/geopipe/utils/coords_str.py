@@ -20,21 +20,49 @@
 # =========================================================================== #
 
 '''
-Utility helper functions.
+Coordinate and block name string conversion utilities.
+
+This module provides helper functions to convert between integer
+coordinate tuples (x, y) and canonical block filename identifiers.
+
+Public APIs:
+    - `xy_name`: convert (x, y) coords to canonical block name.
+    - `name_xy`: convert canonical block name to (x, y) coords.
 '''
 
-# coords <-> name helpers
-def xy_name(coords: tuple[int, int]) -> str:
-    '''Convert (x, y) to a canonical block name string.'''
+# standard imports
+from __future__ import annotations
 
-    # e.g., (12, 34) -> row_000034_col_000012
+
+# ----- public functions
+def xy_name(coords: tuple[int, int]) -> str:
+    '''
+    Convert (x, y) coordinates to a canonical block name string.
+
+    Args:
+        coords:
+            Tuple of integer pixel coordinates (x, y).
+
+    Returns:
+        str:
+            Canonical block name formatted as 'row_YYYYYY_col_XXXXXX'.
+    '''
     x, y = coords
     return f'row_{y:06d}_col_{x:06d}'
 
-def name_xy(name: str) -> tuple[int, int]:
-    '''Convert a canonical block name back to (x, y).'''
 
-    # e.g.,  row_000034_col_000012 -> (12, 34)
+def name_xy(name: str) -> tuple[int, int]:
+    '''
+    Convert a canonical block name back to (x, y) coordinates.
+
+    Args:
+        name:
+            Canonical block name formatted as 'row_YYYYYY_col_XXXXXX'.
+
+    Returns:
+        tuple[int, int]:
+            Tuple of integer pixel coordinates (x, y).
+    '''
     split = name.split('_')
     y_str, x_str = split[1], split[3]
     return int(x_str), int(y_str)

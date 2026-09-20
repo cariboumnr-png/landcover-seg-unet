@@ -29,29 +29,16 @@ statistics, normalizes all splits, and emits the final dataset schema.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.geopipe.prepare as prepare_data
+import landseg.geopipe.prepare as geopipe_prepare
 
 
-def prepare(config: configs.RootConfig):
-    '''
-    Run the preparation pipeline for an experiment.
-
-    Steps:
-    1) Parse current data blocks catalog and schema by config.
-    2) Split the blocks into train/val(/test) with configured hydration.
-    3) Normalize all blocks using image stats from the train split.
-    4) Build schame for downstream consumption.
-
-    Args:
-        config: RootConfig with preparation settings.
-    '''
-    # artifact paths
+def exec_prepare_data(config: configs.RootConfig):
+    '''Run the preparation pipeline for an experiment.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
     paths = artifact_paths.data_preparation
 
-    # init a PreparationLogger
-    logger = prepare_data.PreparationLogger(
-        name='prep',
+    logger = geopipe_prepare.PreparationLogger(
+        name='data-prep',
         log_file=paths.report,
         enable_file_log=False
     )
@@ -67,73 +54,16 @@ def prepare(config: configs.RootConfig):
             else artifacts.LifecyclePolicy.BUILD_IF_MISSING
         )
 
-
-        # parse catalog from data ingestion stage
-        parsed_catalog = prepare_data.data_blocks_adapter(
-            artifact_paths.data_ingestion.data_blocks.catalog,
-            artifact_paths.data_ingestion.data_blocks.schema,
-            config=config.data.preparation.catalog
-        )
-
-        # datablocks partition
-        logger.log('INFO', '[START] Dataset partitioning splits')
-        # data transform config aliases
-        partition = config.data.preparation.partition
-        scoring = config.data.preparation.scoring
-        hydration = config.data.preparation.hydration
-        # partition config
-        partition_config = prepare_data.PartitionParameters(
-            val_test_ratios=(partition.val_ratio, partition.test_ratio),
-            buffer_step=partition.buffer_step,
-            reward_ratios=scoring.reward,
-            scoring_alpha=scoring.alpha,
-            scoring_beta=scoring.beta,
-            max_skew_rate=hydration.max_skew_rate,
-            block_spec=config.data.world_grid.tile_specs_tuple,
-            train_aoi=partition.train_aoi,
-            val_aoi=partition.val_aoi,
-            test_aoi=partition.test_aoi,
-            aoi_min_overlap=partition.aoi_min_overlap,
-            canvas_crs=parsed_catalog.canvas_crs,
-            canvas_transform=parsed_catalog.canvas_transform,
-        )
-
-
-        prepare_data.run_datablocks_partition(
-            parsed_catalog,
-            paths,
-            partition_config,
+        # run pipeline
+        geopipe_prepare.run_data_preparation(
+            artifact_paths,
+            config.data.preparation,
+            config.data.world_grid.tile_specs_tuple,
             policy=policy,
             logger=logger,
         )
-        assert logger.summary
-        assert logger.summary['data_partition']
-        d = logger.summary['data_partition']['duration_sec']
-        logger.log('INFO', f'[COMPLETE] Dataset partitioning splits (D_{d:.2f}s)')
 
-        # normalize
-        logger.log('INFO', '[START] Block normalization')
-        prepare_data.run_normalize_blocks(
-            paths,
-            policy=policy,
-            logger=logger
-        )
-        assert logger.summary['normalization']
-        d = logger.summary['normalization']['duration_sec']
-        logger.log('INFO', f'[COMPLETE] Block normalization (D_{d:.2f}s)')
-
-        # build schema
-        logger.log('INFO', '[START] Transform schema building')
-        prepare_data.build_schema(
-            paths,
-            policy=policy,
-            logger=logger
-        )
-        assert logger.summary['schema']
-        d = logger.summary['schema']['duration_sec']
-        logger.log('INFO', f'[COMPLETE] Transform schema building (D_{d:.2f}s)')
-
-        # write config JSON sidecar upon successful execution
+        # persist the whole config dict
         artifacts.Controller[dict](paths.config).persist(config.as_dict)
 
     except Exception as e:

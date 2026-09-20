@@ -22,8 +22,12 @@
 '''
 Top-level namespace for `landseg.geopipe`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Coordinates raw geospatial raster harmonization, domain tile mapping,
+data block construction, and runtime dataset specification creation
+through structured pipelines and lazy module resolution.
+
+Public APIs:
+    - build_dataspec: Assembles runtime DataSpecs from artifacts.
 '''
 
 from __future__ import annotations
@@ -41,9 +45,11 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .factory import build_dataspec
 
-def __getattr__(name: str):
 
+def __getattr__(name: str):
     if name in {'build_dataspec'}:
-        return getattr(importlib.import_module('.factory', __package__), name)
+        return getattr(
+            importlib.import_module('.factory', __package__), name
+        )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

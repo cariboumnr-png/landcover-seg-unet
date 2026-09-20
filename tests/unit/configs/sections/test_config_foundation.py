@@ -149,6 +149,32 @@ def test_datablocks_and_data_validation():
     df.validate()
 
 
+def test_datablocks_add_features_validation():
+    '''
+    Given: `_DataBlocks` instances with valid/invalid topo & spectral.
+    When: `_DataBlocks.validate()` runs.
+    Then: Accept valid settings or raise TypeError / ValueError.
+    '''
+    # valid configurations
+    valid = data._DataBlocks(add_topo=True, add_spectral=['ndvi', 'NBR'])
+    valid.validate()
+
+    # invalid topo type
+    with pytest.raises(TypeError, match='add_topo must be a bool'):
+        data._DataBlocks(add_topo='invalid').validate()
+
+    # invalid spectral type
+    with pytest.raises(TypeError, match='add_spectral must be a list'):
+        data._DataBlocks(add_spectral='ndvi').validate()
+
+    with pytest.raises(TypeError, match='Spectral index must be a string'):
+        data._DataBlocks(add_spectral=[123]).validate()
+
+    # invalid spectral index name
+    with pytest.raises(ValueError, match='Invalid spectral index'):
+        data._DataBlocks(add_spectral=['unknown']).validate()
+
+
 # ----- `_HarmonizationCfg` tests
 def test_harmonization_cfg_validation():
     '''

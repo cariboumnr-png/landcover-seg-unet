@@ -57,6 +57,38 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         self._cfg.data.preparation.scoring.reward = reward_classes
         return self
 
+    def set_features(
+        self,
+        features: dict[str, str | list[str]] | None
+    ) -> typing.Self:
+        '''
+        Set feature channel selection schemes or inline band lists.
+
+        Example:
+            configurator.set_features({
+                'sentinel2': 'rgb_nir',
+                'dem': 'all',
+            })
+        '''
+        self._cfg.data.preparation.features = features or {}
+        return self
+
+    def set_targets(
+        self,
+        targets: dict[str, str | dict[str, typing.Any]] | None
+    ) -> typing.Self:
+        '''
+        Set target reclassification schemes or inline mappings.
+
+        Example:
+            configurator.set_targets({
+                'landcover': 'binary',
+                'leadspc': 'raw',
+            })
+        '''
+        self._cfg.data.preparation.targets = targets or {}
+        return self
+
     def set_rebuild(self, rebuild: bool) -> typing.Self:
         '''Set whether to force rebuild preparation artifacts.'''
         self._cfg.data.preparation.rebuild = rebuild

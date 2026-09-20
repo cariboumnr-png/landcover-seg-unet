@@ -22,51 +22,44 @@
 '''
 Top-level namespace for `landseg.geopipe.ingest`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Coordinates the ingestion of harmonized geospatial rasters into
+tiled domain maps and canonical data blocks, providing logging,
+context resolution, and pipeline execution tools via lazy module
+resolution.
+
+Public APIs:
+    - `IngestionLogger`: Structured logger for ingestion stages.
+    - `run_data_ingestion`: pipeline runner.
 '''
 
+# standard imports
 from __future__ import annotations
 import importlib
 import typing
 
 __all__ = [
     # classes
-    'BlockBuildingParameters',
-    'DomainBuildingParameters',
     'IngestionLogger',
-    'HarmonizedRasters',
     # functions
-    'read_harmonization_report',
-    'prepare_domain_maps',
-    'run_blocks_building',
+    'run_data_ingestion'
     # types
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .adapter import HarmonizedRasters, read_harmonization_report
-    from .common import IngestionLogger
-    from .data_blocks import BlockBuildingParameters, run_blocks_building
-    from .domain_maps import DomainBuildingParameters, prepare_domain_maps
+    from .logger import IngestionLogger
+    from .pipeline import run_data_ingestion
 
 
 def __getattr__(name: str):
-
-    if name in {'HarmonizedRasters', 'read_harmonization_report'}:
-        return getattr(importlib.import_module('.adapter', __package__), name)
-
     if name in {'IngestionLogger'}:
-        return getattr(importlib.import_module('.common', __package__), name)
-
-    if name in {'BlockBuildingParameters', 'run_blocks_building'}:
         return getattr(
-            importlib.import_module('.data_blocks', __package__), name
+            importlib.import_module('.logger', __package__), name
         )
 
-    if name in {'DomainBuildingParameters', 'prepare_domain_maps'}:
+    if name in {'run_data_ingestion'}:
         return getattr(
-            importlib.import_module('.domain_maps', __package__), name
+            importlib.import_module('.pipeline', __package__), name
         )
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

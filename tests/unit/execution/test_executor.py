@@ -52,7 +52,7 @@ def test_validate_upstream_pipelines_entrypoints():
 
 def test_validate_upstream_pipelines_missing_world_grid(tmp_path):
     '''
-    Given: A data-harmonize pipeline run when no world grid artifact exists.
+    Given: Harmonization run when no world grid artifact exists.
     When: Validating upstream pipelines.
     Then: Raise an ArtifactError about missing world-grid.
     '''
@@ -70,7 +70,7 @@ def test_validate_upstream_pipelines_missing_world_grid(tmp_path):
 
 def test_validate_upstream_pipelines_world_grid_success(tmp_path):
     '''
-    Given: A data-harmonize pipeline run when world grid artifact exists.
+    Given: Harmonization run when world grid artifact exists.
     When: Validating upstream pipelines.
     Then: Pass silently.
     '''
@@ -87,6 +87,24 @@ def test_validate_upstream_pipelines_world_grid_success(tmp_path):
     )
     grid_fp = tmp_path / f'{gid}.json'
     grid_fp.write_text('{}')
+
+    # should not raise
+    executor._validate_upstream_pipelines(config)
+
+
+def test_validate_upstream_pipelines_world_grid_report_success(tmp_path):
+    '''
+    Given: A data-harmonize pipeline run when grid_report.json exists.
+    When: Validating upstream pipelines.
+    Then: Pass silently.
+    '''
+    config = configs.RootConfig(
+        pipeline=secs.PipelineConfig(name='data-harmonize')
+    )
+    config.data.world_grid.output_dpath = str(tmp_path)
+    config.session.orchestration.curriculum.single.phases[0].num_epochs = 1
+    report_fp = tmp_path / 'grid_report.json'
+    report_fp.write_text('{"grid_fpath": "some_path", "grid_id": "test"}')
 
     # should not raise
     executor._validate_upstream_pipelines(config)

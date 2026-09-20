@@ -4,10 +4,20 @@
 # This file provides inputs for the sequential experiment pipelines:
 #
 #   0. world-grid: Builds and persists the canonical spatial world grid.
-#   1. data-harmonize: Harmonizes raw inputs (S2, DEM, Labels) into canonical VRTs.
+#   1. data-harmonize: Harmonizes raw inputs into canonical VRTs.
 #   2. data-ingest: Ingests datasets, grid references, & domains.
-#   3. data-prepare: Handles block splits & class balancing.
+#   3. data-prepare: Handles block splits, schemes, & class balancing.
 #   4. model-train: Configures model structure & session params.
+#
+# NOTE ON SAMPLE / DUMMY DATA:
+# If no user data is provided, synthetic test data can be generated via:
+#
+#   python -c "import landseg.testing as t; t.generate_dummy_data()"
+#   or
+#   python ./scripts/generate_dummy_data.py
+#
+# The default file paths, AOI rasters, and scheme names (e.g. 'rgb_nir',
+# 'binary') in this YAML directly match these generated dummy data files.
 # =============================================================================
 
 # Root directory for experiment outputs, logs, and checkpoints
@@ -47,9 +57,57 @@ data-ingest:
   # Force rebuild even if ingested blocks exist
   rebuild: true
 
+  # ---------------------------------------------------------------------------
+  # Feature Engineering for Ingested Data Blocks (Optional)
+  # ---------------------------------------------------------------------------
+  # Compute and append derived topographic layers
+  # Suppored: [slope, tpi]
+  # Required bands: DEM
+  # Set null/[] to disable
+  add_topo: [slope, tpi]
+
+  # Derived spectral indices to compute and append to data blocks.
+  # Supported: [ndvi, ndmi, nbr]
+  # Required bands: red, nir, swir1/swir2
+  # Set null/[] to disable
+  add_spectral: [ndvi, ndmi, nbr]
+
 
 data-prepare:
   output_dpath: ./experiment/artifacts/prepared_data
+  # ---------------------------------------------------------------------------
+  # Feature Channels & Target Schemes (Optional)
+  # ---------------------------------------------------------------------------
+  # Select input feature channels by dataset name (null uses all bands).
+  # Accepts named schemes defined in sidecars, inline lists of bands,
+  # or engineered pseudo-datasets ('topo', 'spectral'):
+  #   features:
+  #     sentinel2: rgb_nir          # Named scheme from sidecar
+  #     dem: all                    # Use all bands from DEM
+  #     topo: all                   # Include engineered topo layers
+  #     spectral: all               # Include engineered spectral bands
+  #     # Or specific derived bands:
+  #     # topo: [slope, tpi]
+  #     # spectral: [ndvi, ndmi]
+  #     # Or inline arbitrary band list:
+  #     # sentinel2: [blue, green, red, nir]
+  features: {}
+  # {} selects all bands
+
+  # Select target reclassification by label name (null uses base classes).
+  # Accepts named schemes defined in sidecars or inline reclass dict:
+  #   targets:
+  #     landcover: binary           # Named scheme from sidecar
+  #     leadspc: raw                # Use canonical base classes
+  #     # Or inline:
+  #     # landcover:
+  #     #   reclass:
+  #     #     "1": [1, 2]
+  #     #   reclass_name:
+  #     #     "1": "forest"
+  targets: {}
+  # {} uses canonical base classes
+
   # ---------------------------------------------------------------------------
   # Geographic AOI Block Selection (Optional)
   # ---------------------------------------------------------------------------

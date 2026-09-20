@@ -49,3 +49,23 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         '''Set targeted harmonization run index, folder name, or path.'''
         self._cfg.data.ingestion.harmonization_run = target_run
         return self
+
+    def set_feature_engineering(
+        self,
+        add_topo: list[str] | None = None,
+        add_spectral: list[str] | None = None,
+    ) -> typing.Self:
+        '''
+        Configure automated topographic and spectral features.
+
+        Args:
+            add_topo:
+                List of topographic features to calculate (e.g.,
+                `['slope', 'tpi']`).
+            add_spectral:
+                List of spectral indices to calculate (e.g.,
+                `['ndvi', 'ndmi', 'nbr']`).
+        '''
+        self._cfg.data.ingestion.datablocks.add_topo = add_topo
+        self._cfg.data.ingestion.datablocks.add_spectral = add_spectral
+        return self

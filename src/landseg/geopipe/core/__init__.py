@@ -22,8 +22,39 @@
 '''
 Top-level namespace for `landseg.geopipe.core`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected core abstractions and contracts via lazy resolution to
+keep import order simple and circular-free.
+
+Public APIs:
+    - `DataBlock`: Storage and interface for tiled geospatial blocks.
+    - `DataBlockArrays`: Container for block-wise image and labels.
+    - `DatasetCatalog`: Mapping container for block metadata.
+    - `DomainTileMap`: Mapping of valid spatial domain tiles.
+    - `GridLayout`: Raster-agnostic grid layout of tile windows.
+    - `GridSpec`: Specification for constructing a world grid.
+    - `CategoricalSpec`: TypedDict for categorical raster specs.
+    - `DataBlockManifest`: TypedDict for block serialization manifest.
+    - `DatasetBlockMeta`: TypedDict for individual block entry.
+    - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
+    - `DomainMeta`: TypedDict for domain tile map metadata.
+    - `DomainPayload`: TypedDict for serialized domain tile map.
+    - `GridPayload`: TypedDict for serialized grid payload.
+    - `GridMeta`: TypedDict for grid metadata.
+    - `GridSpec`: Dataclass specifying world grid parameters.
+    - `GridLayout`: Raster-agnostic grid layout of tile windows.
+    - `get_grid_report_fpath`: Canonical path to grid report artifact.
+    - `load_grid_from_fpath`: Load world grid layout directly from file.
+    - `read_grid_report`: Read grid report JSON and extract summary.
+    - `CategoricalSpec`: TypedDict for categorical raster specs.
+    - `DataBlockManifest`: TypedDict for block serialization manifest.
+    - `DatasetBlockMeta`: TypedDict for individual block entry.
+    - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
+    - `DomainMeta`: TypedDict for domain tile map metadata.
+    - `DomainPayload`: TypedDict for serialized domain tile map.
+    - `DomainTile`: TypedDict for individual domain tile coordinates.
+    - `LabelScheme`: TypedDict for named reclassification scheme.
+    - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
+    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
 '''
 
 from __future__ import annotations
@@ -33,117 +64,122 @@ import typing
 __all__ = [
     # classes
     'DataBlock',
-    'DataBlockInputs',
-    'DataBlockConfig',
+    'DataBlockArrays',
+    'DatasetCatalog',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
     # functions
+    'get_grid_report_fpath',
+    'load_grid_from_fpath',
+    'read_grid_report',
     # typing
+    'CategoricalSpec',
     'DataBlockManifest',
-    'DataCatalog',
-    'DataSchema',
-    'BlocksPartition',
-    'CatalogEntry',
+    'DatasetBlockMeta',
+    'DatasetSchema',
     'DomainMeta',
     'DomainPayload',
     'DomainTile',
     'GridPayload',
     'GridMeta',
-    'ImageBandStats',
-    'LabelSpecs',
-    'TaxonomySpecs',
-    'TransformSchema',
-    'PartitionSummary',
+    'LabelScheme',
+    'RasterReader',
+    'RasterWindow',
+    'RasterWindowDict',
+    'TaxonomySpec',
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .harmonize_data_taxonomy import (
-        TaxonomySpecs
+    from .categorical import (
+        CategoricalSpec,
+        LabelScheme,
+        TaxonomySpec,
     )
-    from .ingest_data_block import (
+    from .data_block import (
         DataBlock,
-        DataBlockConfig,
-        DataBlockInputs,
+        DataBlockArrays,
         DataBlockManifest,
-        LabelSpecs,
     )
-    from .ingest_data_catalog import DataCatalog, CatalogEntry
-    from .ingest_data_schema import DataSchema
-    from .ingest_domain_map import (
+    from .dataset_catalog import (
+        DatasetCatalog,
+        DatasetBlockMeta,
+    )
+    from .dataset_schema import DatasetSchema
+    from .domain_tile_map import (
         DomainPayload,
         DomainMeta,
         DomainTile,
-        DomainTileMap
+        DomainTileMap,
     )
     from .grid_layout import (
+        RasterReader,
+        RasterWindow,
+        RasterWindowDict,
         GridSpec,
         GridPayload,
         GridMeta,
-        GridLayout
-    )
-    from .prepare_blocks_types import (
-        BlocksPartition,
-        ImageBandStats,
-        TransformSchema,
-        PartitionSummary
+        GridLayout,
+        get_grid_report_fpath,
+        load_grid_from_fpath,
+        read_grid_report,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'TaxonomySpecs',
+        'CategoricalSpec',
+        'LabelScheme',
+        'TaxonomySpec',
     }:
-        obj = importlib.import_module('.harmonize_data_taxonomy', __package__)
+        obj = importlib.import_module('.categorical', __package__)
         return getattr(obj, name)
 
     if name in {
+        'RasterReader',
+        'RasterWindow',
+        'RasterWindowDict',
         'GridSpec',
         'GridPayload',
         'GridMeta',
-        'GridLayout'
+        'GridLayout',
+        'get_grid_report_fpath',
+        'load_grid_from_fpath',
+        'read_grid_report',
     }:
         obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)
 
     if name in {
         'DataBlock',
-        'DataBlockConfig',
-        'DataBlockInputs',
+        'DataBlockArrays',
         'DataBlockManifest',
-        'LabelSpecs',
     }:
-        obj = importlib.import_module('.ingest_data_block', __package__)
+        obj = importlib.import_module('.data_block', __package__)
         return getattr(obj, name)
 
     if name in {
-        'DataCatalog',
-        'CatalogEntry'
+        'DatasetCatalog',
+        'DatasetBlockMeta',
     }:
-        obj = importlib.import_module('.ingest_data_catalog', __package__)
+        obj = importlib.import_module('.dataset_catalog', __package__)
         return getattr(obj, name)
 
-    if name in {'DataSchema'}:
-        obj = importlib.import_module('.ingest_data_schema', __package__)
-        return getattr(obj, name)
+    if name in {
+        'dataset_schema',
+        'DatasetSchema'
+    }:
+        obj = importlib.import_module('.dataset_schema', __package__)
+        return obj if name == 'dataset_schema' else getattr(obj, name)
 
     if name in {
         'DomainPayload',
         'DomainMeta',
         'DomainTile',
-        'DomainTileMap'
+        'DomainTileMap',
     }:
-        obj = importlib.import_module('.ingest_domain_map', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'BlocksPartition',
-        'ImageBandStats',
-        'TransformSchema',
-        'PartitionSummary'
-    }:
-        obj = importlib.import_module('.prepare_blocks_types', __package__)
+        obj = importlib.import_module('.domain_tile_map', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -80,31 +80,34 @@ def test_resolve_taxonomy_metadata_not_found(tmp_path):
         )
 
 
-# ----- `validate_taxonomy_specs` tests
-def test_validate_taxonomy_specs_species_mapping():
+# ----- `validate_specs` tests
+def test_validate_specs_species_mapping():
     '''
     Given: A valid taxonomy spec with explicit species_mapping.
-    When: `validate_taxonomy_specs` is called.
-    Then: Return canonical matrix indices.
+    When: `validate_specs` is called.
+    Then: Return canonical taxonomy specs with matrix indices.
     '''
     species_mapping = {
         '1': 'SB_BLACK_SPRUCE',
         '2': 'PJ_JACK_PINE',
     }
-    indices = taxonomy.validate_taxonomy_specs(
+    specs = taxonomy.validate_specs(
         'ontario_tree_species_grouped_profiles',
         species_mapping,
         num_cls=2,
         knowledge_root='knowledge',
     )
-    assert indices['1'] == 0
-    assert indices['2'] == 3
+    assert specs['profile'] == 'ontario_tree_species_grouped_profiles'
+    canonical_indices = specs.get('canonical_indices')
+    assert canonical_indices is not None
+    assert canonical_indices['1'] == 0
+    assert canonical_indices['2'] == 3
 
 
-def test_validate_taxonomy_specs_unknown_code():
+def test_validate_specs_unknown_code():
     '''
     Given: A species code with an unknown code.
-    When: `validate_taxonomy_specs` is called.
+    When: `validate_specs` is called.
     Then: Raise ValueError.
     '''
     species_mapping = {
@@ -112,7 +115,7 @@ def test_validate_taxonomy_specs_unknown_code():
         '2': 'PJ_JACK_PINE',
     }
     with pytest.raises(ValueError, match='Unknown taxonomy class code "SBB"'):
-        taxonomy.validate_taxonomy_specs(
+        taxonomy.validate_specs(
             'ontario_tree_species_grouped_profiles',
             species_mapping,
             num_cls=2,
@@ -120,17 +123,17 @@ def test_validate_taxonomy_specs_unknown_code():
         )
 
 
-def test_validate_taxonomy_specs_count_mismatch():
+def test_validate_specs_count_mismatch():
     '''
     Given: Species mapping length that does not match num_cls.
-    When: `validate_taxonomy_specs` is called.
+    When: `validate_specs` is called.
     Then: Raise ValueError with count mismatch explanation.
     '''
     species_mapping = {
         '1': 'SB_BLACK_SPRUCE',
     }
     with pytest.raises(ValueError, match='Taxonomy declares 1 classes'):
-        taxonomy.validate_taxonomy_specs(
+        taxonomy.validate_specs(
             'ontario_tree_species_grouped_profiles',
             species_mapping,
             num_cls=2,

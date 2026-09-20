@@ -1,3 +1,9 @@
+# feature channels selection by raster name ({} selects all bands)
+features: {}
+
+# target reclassification by raster name ({} uses canonical base classes)
+targets: {}
+
 # catalog datablocks view settings
 catalog:
   valid_pxs:

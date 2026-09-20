@@ -19,12 +19,12 @@ et de résultats (`results/`) correspondants.
 > [!TIP]
 > **Découplage et Isolement des Pipelines** :
 > - **`data-harmonize` (ETL)** : Lit les fichiers GeoTIFF non harmonisés depuis `input/raw/`
-et produit des rasters virtuels réprojetés dans `artifacts/harmonized/`.
-> - **Pipelines en aval (`data-ingest`, `data-prepare`, `model-train`)** : Consomment l
-es GeoTIFF pré-alignés issus de `input/data/` ou les sorties VRT harmonisées de `artifacts/harmonized/`.
+> et produit des rasters virtuels réprojetés dans `artifacts/harmonized_data/`.
+> - **Pipelines en aval (`data-ingest`, `data-prepare`, `model-train`)** : Consomment
+> les GeoTIFF pré-alignés issus de `input/data/` ou les sorties VRT harmonisées de `artifacts/harmonized_data/`.
 > - **Isolement** : L'exécution de `data-harmonize` n'écrase **ni** n'interfère
-avec `input/data/`, ce qui permet d'exécuter et de tester chaque pipeline de manière
-indépendante sans couplage séquentiel strict.
+> avec `input/data/`, ce qui permet d'exécuter et de tester chaque pipeline de manière
+> indépendante sans couplage séquentiel strict.
 
 ```text
 <exp_root>/                                      # Par défaut : ./experiment/
@@ -52,42 +52,39 @@ indépendante sans couplage séquentiel strict.
 │
 ├── artifacts/                                   # Généré par l'exécution des pipelines
 │   │
-│   ├── harmonized/                              # Produit par le pipeline 'data-harmonize'
+│   ├── world_grids/                             # Produit par le pipeline 'world-grid'
+│   │   ├── grid_row_<srow>_<orow>_col_<scol>_<ocol>.json *
+│   │   └── grid_report.json                     # Rapport de synthèse d'exécution du quadrillage mondial
+│   │
+│   ├── harmonized_data/                         # Produit par le pipeline 'data-harmonize'
 │   │   └── run_0001/                            # Répertoire d'exécution ETL sérialisé
 │   │       ├── harmonized_<name>.vrt            # Raster virtuel source unique réprojeté
-│   │       ├── harmonized_image_composite.vrt   # Raster virtuel composite multicanal empilé
+│   │       ├── harmonized_features_STACKED.vrt  # Raster virtuel composite de caractéristiques empilé
+│   │       ├── harmonized_labels_STACKED.vrt    # Raster virtuel composite d'étiquettes empilé
 │   │       ├── valid_pixel_mask.vrt             # Raster virtuel de masque de pixels valides booléen à 1 bande
-│   │       └── etl_report.json                  # Rapport de synthèse d'exécution ETL
+│   │       ├── harmonize_report.json            # Rapport de synthèse d'exécution de l'harmonisation
+│   │       └── config.json                      # Enregistrement de configuration de l'harmonisation
 │   │
 │   ├── ingested_data/                           # Produit par le pipeline 'data-ingest'
-│   │   ├── world_grids/
-│   │   │   └── grid_row_<srow>_<orow>_col_<scol>_<ocol>.json *
-│   │   ├── domain_knowledge/
+│   │   ├── domain_knowledge/                    # Rasters et tuiles de connaissances du domaine catégoriel / vectoriel
 │   │   │   ├── <domain_name>.json *
 │   │   │   └── <domain_name>_tiles_<gid>.npz
-│   │   ├── data_blocks/
-│   │   │   ├── model_dev/
-│   │   │   │   ├── blocks/
-│   │   │   │   ├── windows/
-│   │   │   │   │   └── windows_<gid>.json
-│   │   │   │   ├── catalog.json
-│   │   │   │   └── schema.json
-│   │   │   └── test_holdout/
-│   │   │       ├── blocks/
-│   │   │       ├── windows/
-│   │   │       │   └── windows_<gid>.json
-│   │   │       ├── catalog.json
-│   │   │       └── schema.json
+│   │   ├── data_blocks/                         # Blocs de données canoniques unifiés (avant découpage)
+│   │   │   ├── blocks/                          # Tableaux de blocs bruts extraits non normalisés
+│   │   │   ├── windows/                         # Manifestes d'index des fenêtres spatiales alignées sur la grille
+│   │   │   │   └── windows_<gid>.json *
+│   │   │   ├── catalog.json                     # Catalogue unifié des blocs de données
+│   │   │   └── schema.json                      # Schéma structurel des blocs de données
 │   │   ├── ingest_report.json                   # Rapport de synthèse d'exécution de l'ingestion
 │   │   └── config.json                          # Enregistrement de configuration d'ingestion
 │   │
 │   └── prepared_data/                           # Produit par le pipeline 'data-prepare'
-│       ├── train_blocks/                        # Bloc de tableaux d'entraînement transformés
-│       ├── val_blocks/                          # Bloc de tableaux de validation transformés
-│       ├── test_blocks/                         # Bloc de tableaux de test transformés
+│       ├── train_blocks/                        # Bloc de tableaux d'entraînement préparés
+│       ├── val_blocks/                          # Bloc de tableaux de validation préparés
+│       ├── test_blocks/                         # Bloc de tableaux de test préparés
 │       ├── block_splits_source.json
 │       ├── block_splits_summary.json
-│       ├── block_splits_transformed.json
+│       ├── block_splits_prepared.json
 │       ├── label_stats.json
 │       ├── image_stats.json
 │       ├── schema.json
@@ -108,5 +105,5 @@ indépendante sans couplage séquentiel strict.
         ├── summary.json                         # JSON de métriques globales de la session
         └── step_results.json                    # JSON de suivi des pertes et métriques par étape
 
-* Remarque : Les fichiers `_meta.json` associés sont générés aux côtés des artefacts JSON de grille et de domaine.
+* Remarque : Les fichiers `_meta.json` associés sont générés aux côtés des artefacts JSON de grille, de domaine et de fenêtre.
 ```

@@ -1,6 +1,6 @@
 ## Workflow actuel
 
-Dernière mise à jour : 2026-05-12
+Dernière mise à jour : 2026-09-20
 
 ```
 [grid/builder]                           (1 Grille globale – construction pure)
@@ -11,29 +11,29 @@ Dernière mise à jour : 2026-05-12
 +--> [grid/lifecycle]
 |        (persistance et validation de l’artefact grille)
 |
-+--> [ingest/domain_maps/mapper]        (2 Domaine → alignement sur grille, optionnel)
++--> [ingest/domains/mapper]            (2 Domaine → alignement sur grille, optionnel)
 |        |
-|        +--> [ingest/domain_maps/builder]
+|        +--> [ingest/domains/builder]
 |        |        (calcul pur des features de domaine)
 |        |
 |        +--> [artifacts/controller]
 |        |        (résolution / build / réutilisation artefact domaine)
 |        |
-|        +--> [ingest/domain_maps/lifecycle]
+|        +--> [ingest/domains/lifecycle]
 |                 (persistance et validation des artefacts domaine)
 |
-+--> [ingest/data_blocks/mapper]        (3 Imagerie / labels → fenêtres de grille)
++--> [ingest/blocks/mapper]             (3 Imagerie / labels → fenêtres de grille)
 |        |
-|        +--> [ingest/data_blocks/builder]
+|        +--> [ingest/blocks/assembler]
 |        |        (construction pure des blocs)
 |        |
 |        +--> [artifacts/controller]
 |        |        (résolution / build / réutilisation des blocs)
 |        |
-|        +--> [ingest/data_blocks/manifest]
+|        +--> [ingest/blocks/manifest]
 |                 (catalogue, enregistrement schéma et indexation)
 |
-+--> [geopipe/specification/factory]        (4 Construction des DataSpecs à partir des artefacts)
++--> [geopipe/factory]                  (4 Construction des DataSpecs à partir des artefacts)
 |
 +--> [models/factory]                       (5 Construction et assemblage du modèle)
 |
@@ -63,7 +63,7 @@ Dernière mise à jour : 2026-05-12
     |        +--> résolution des artefacts via [artifacts/controller]
     |        |        (grille, domaine, blocs, manifests, schéma)
     |        |
-    |        +--> [geopipe/specification/factory]
+    |        +--> [geopipe/factory]
     |        |        (construction des DataSpecs)
     |        |
     |        +--> [models/factory]
@@ -81,7 +81,7 @@ Dernière mise à jour : 2026-05-12
     |        +--> résolution des artefacts via [artifacts/controller]
     |        |        (données, manifests, source modèle)
     |        |
-    |        +--> [geopipe/specification/factory]
+    |        +--> [geopipe/factory]
     |        |        (construction DataSpecs d’évaluation)
     |        |
     |        +--> [models/factory]

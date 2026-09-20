@@ -102,34 +102,34 @@ This outputs a canonical grid artifact under:
 
 The data harmonization pipeline (`data-harmonize`) reads a central
 `manifest.json` file. Each raw raster referenced in the manifest is
-accompanied by an individual metadata configuration JSON file.
+accompanied by an individual raster manifest JSON file (sidecar).
 
 ### Root Dataset Manifest (`manifest.json`)
 
-The manifest is an array of objects mapping each raw raster to its metadata
-configuration:
+The manifest is an array of objects mapping each raw raster to its raster
+manifest:
 
 ```json
 [
   {
     "name": "sentinel2",
     "path": "./experiment/input/raw_data/sample_dev_sentinel2.tif",
-    "config": "./experiment/input/raw_data/sample_dev_sentinel2.json"
+    "manifest": "./experiment/input/raw_data/sample_dev_sentinel2.json"
   },
   {
     "name": "dem",
     "path": "./experiment/input/raw_data/sample_dev_dem.tif",
-    "config": "./experiment/input/raw_data/sample_dev_dem.json"
+    "manifest": "./experiment/input/raw_data/sample_dev_dem.json"
   },
   {
     "name": "landcover",
     "path": "./experiment/input/raw_data/sample_dev_landcover.tif",
-    "config": "./experiment/input/raw_data/sample_dev_landcover.json"
+    "manifest": "./experiment/input/raw_data/sample_dev_landcover.json"
   },
   {
     "name": "domain_1",
     "path": "./experiment/input/raw_data/sample_domain_1.tif",
-    "config": "./experiment/input/raw_data/sample_domain_1.json"
+    "manifest": "./experiment/input/raw_data/sample_domain_1.json"
   }
 ]
 ```
@@ -139,7 +139,8 @@ configuration:
 ### Feature Rasters (Optical / DEM)
 
 Feature rasters represent continuous inputs (satellite bands, elevation,
-radar). Their JSON config defines 1-based band mappings:
+radar). Their JSON config defines 1-based band mappings and optional named
+feature schemes:
 
 **Example: Multi-Band Optical (`sample_dev_sentinel2.json`)**
 ```json
@@ -159,7 +160,12 @@ radar). Their JSON config defines 1-based band mappings:
     "9": "swir1",
     "10": "swir2"
   },
-  "label_specs": null
+  "categorical_specs": null,
+  "schemes": {
+    "rgb": ["blue", "green", "red"],
+    "rgb_nir": ["blue", "green", "red", "nir"],
+    "surface": ["blue", "green", "red", "nir", "swir1", "swir2"]
+  }
 }
 ```
 
@@ -172,7 +178,8 @@ radar). Their JSON config defines 1-based band mappings:
   "band_mapping": {
     "1": "dem"
   },
-  "label_specs": null
+  "categorical_specs": null,
+  "schemes": null
 }
 ```
 
@@ -190,30 +197,41 @@ leading tree species).
   "name": "landcover",
   "path": "./experiment/input/raw_data/sample_dev_landcover.tif",
   "category": "labels",
-  "band_mapping": null,
-  "label_specs": {
-    "num_cls": 2,
+  "band_mapping": {
+    "1": "landcover"
+  },
+  "categorical_specs": {
+    "index_base": 1,
+    "num_cls": 3,
     "ignore_cls": [255],
     "class_name": {
       "1": "coniferous",
-      "2": "deciduous"
+      "2": "deciduous",
+      "3": "water"
     },
     "color_map": {
       "1": [34, 139, 34],
-      "2": [218, 165, 32]
-    },
-    "reclass": {
-      "1": [1],
-      "2": [2]
-    },
-    "reclass_name": {
-      "1": "Forest"
+      "2": [218, 165, 32],
+      "3": [0, 0, 255]
+    }
+  },
+  "schemes": {
+    "binary": {
+      "reclass": {
+        "1": [1, 2],
+        "2": [3]
+      },
+      "reclass_name": {
+        "1": "forest",
+        "2": "water"
+      }
     }
   }
 }
 ```
 
-#### `label_specs` Schema Fields
+#### `categorical_specs` Schema Fields
+- **`index_base`** (*required, `int`*): Base index of raw raster classes (typically `0` or `1`).
 - **`num_cls`** (*required, `int`*): Total number of active prediction classes
   (excluding ignore indices).
 - **`ignore_cls`** (*required, `list[int]`*): List of raw pixel values treated
@@ -224,10 +242,16 @@ leading tree species).
   stringified class ID to RGB color triples `[R, G, B]` (values 0–255). This
   color map is carried through ingestion into the dataset schema and used by
   session tracking callbacks for rendering visual prediction overlays.
-- **`reclass`** (*optional, `dict[str, list[int]]`*): Optional parent-child
-  hierarchical class grouping mapping parent class IDs to child raw class IDs.
-- **`reclass_name`** (*optional, `dict[str, str]`*): Human-readable names for
-  parent reclassified groups.
+- **`taxonomy`** (*optional, `dict[str, str]`*): Optional mapping linking
+  local class names to standard ecological taxonomy keys.
+
+#### `schemes` Schema Fields
+- **Features**: A dictionary mapping scheme names (e.g. `"rgb"`, `"rgb_nir"`)
+  to lists of band names. All band names must match `band_mapping.values()`.
+- **Labels**: A dictionary mapping scheme names (e.g. `"binary"`, `"coarse"`)
+  to reclassification dictionaries containing `reclass` (parent-to-child ID
+  groupings) and `reclass_name` (human-readable parent group labels).
+- **Domains**: Must be `null` (or empty).
 
 ---
 
@@ -243,9 +267,58 @@ stratification.
   "name": "domain_1",
   "path": "./experiment/input/raw_data/sample_domain_1.tif",
   "category": "domains",
-  "band_mapping": null,
-  "label_specs": null
+  "band_mapping": {
+    "1": "domain_1"
+  },
+  "categorical_specs": {
+    "index_base": 1,
+    "num_cls": 4,
+    "ignore_cls": [255],
+    "class_name": {
+      "1": "EcoDistrict_1",
+      "2": "EcoDistrict_2",
+      "3": "EcoDistrict_3",
+      "4": "EcoDistrict_4"
+    }
+  },
+  "schemes": null
 }
+```
+
+---
+
+### Preparation Stage Configuration (`configs/user.yaml`)
+
+During `data-prepare`, users can select specific feature channels and target
+reclassification hierarchies:
+
+```yaml
+data-prepare:
+  output_dpath: ./experiment/artifacts/prepared_data
+
+  # 1. Feature selection by dataset name (null uses all bands)
+  features:
+    sentinel2: rgb_nir          # Reference named scheme from sidecar
+    dem: all                    # Use all bands from DEM
+    # Or inline:
+    # sentinel2: [blue, green, red, nir]
+
+  # 2. Target reclassification by label name (null uses canonical base classes)
+  targets:
+    landcover: binary           # Reference named scheme from sidecar
+    leadspc: raw                # Use raw/base classes
+    # Or inline:
+    # landcover:
+    #   reclass:
+    #     "1": [1, 2]
+    #   reclass_name:
+    #     "1": "forest"
+
+  # 3. Spatial AOI and split ratios
+  val_ratio: 0.20
+  test_ratio: 0.00
+  buffer_step: 0
+  rebuild: true
 ```
 
 ---

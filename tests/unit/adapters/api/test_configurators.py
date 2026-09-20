@@ -79,12 +79,15 @@ def test_data_harmonization_configurator(tmp_path):
         categorical='nearest'
     ).set_output_dpath(
         output_dpath=str(tmp_path / 'harmonized')
+    ).set_grid_reference(
+        output_dpath=str(tmp_path / 'world_grids')
     )
 
     root = cfg_builder.running_root_config
     assert root.pipeline.name == 'data-harmonize'
     assert root.data.world_grid.params.tile_size == (512, 512)
     assert root.data.world_grid.params.tile_stride == (64, 64)
+    assert root.data.world_grid.output_dpath == str(tmp_path / 'world_grids')
     assert root.data.harmonization.dataset_manifest == str(manifest_json)
     assert root.data.harmonization.resampling_continuous == 'bilinear'
     assert root.data.harmonization.resampling_categorical == 'nearest'
@@ -96,7 +99,8 @@ def test_data_ingestion_configurator(tmp_path):
     '''
     Given: Parameters for data ingestion pipeline.
     When: Chaining methods on `DataIngestionConfigurator`.
-    Then: Correctly populate ingestion rebuild and harmonization run fields.
+    Then: Correctly populate rebuild, harmonization run, and
+        feature engineering.
     '''
     cfg_builder = configurators.DataIngestionConfigurator(
         experiment_root=str(tmp_path),
@@ -105,12 +109,17 @@ def test_data_ingestion_configurator(tmp_path):
         rebuild=True
     ).set_harmonization_run(
         target_run=1
+    ).set_feature_engineering(
+        add_topo=['slope', 'tpi'],
+        add_spectral=['ndvi', 'ndmi'],
     )
 
     root = cfg_builder.running_root_config
     assert root.pipeline.name == 'data-ingest'
     assert root.data.ingestion.rebuild is True
     assert root.data.ingestion.harmonization_run == 1
+    assert root.data.ingestion.datablocks.add_topo == ['slope', 'tpi']
+    assert root.data.ingestion.datablocks.add_spectral == ['ndvi', 'ndmi']
 
 
 
@@ -119,12 +128,16 @@ def test_data_preparation_configurator(tmp_path):
     '''
     Given: Parameters for data preparation pipeline.
     When: Chaining methods on `DataPreparationConfigurator`.
-    Then: Correctly populate partition and oversampling settings.
+    Then: Correctly populate partition and scheme settings.
     '''
     cfg_builder = configurators.DataPreparationConfigurator(
         experiment_root=str(tmp_path),
     )
-    cfg_builder.set_partition(
+    cfg_builder.set_features(
+        features={'sentinel2': 'rgb_nir'}
+    ).set_targets(
+        targets={'landcover': 'binary'}
+    ).set_partition(
         validation_blocks_ratio=0.15,
         test_holdout_blocks_ratio=0.05
     ).set_oversampling(
@@ -136,6 +149,8 @@ def test_data_preparation_configurator(tmp_path):
 
     root = cfg_builder.running_root_config
     assert root.pipeline.name == 'data-prepare'
+    assert root.data.preparation.features == {'sentinel2': 'rgb_nir'}
+    assert root.data.preparation.targets == {'landcover': 'binary'}
     assert root.data.preparation.partition.val_ratio == 0.15
     assert root.data.preparation.partition.test_ratio == 0.05
     assert root.data.preparation.catalog.focal_target == 'class_head'

@@ -20,9 +20,19 @@
 # =========================================================================== #
 
 '''
-Multi-raster channel composition and nodata mask unification operations.
+VRT raster metadata and band description utilities.
+
+This module provides helper functions to attach band descriptions and
+arbitrary key-value metadata tags to GDAL Virtual Raster (VRT) files.
+
+Public APIs:
+    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
+    - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
 '''
 
+# standard imports
+from __future__ import annotations
+import typing
 # third-party imports
 import rasterio
 
@@ -30,9 +40,17 @@ import rasterio
 # ----- public functions
 def add_band_description_to_vrt(
     vrt_fpath: str,
-    band_mapping: dict[int, str]
-):
-    '''Simple helper to add band description to a `.vrt` raster file.'''
+    band_mapping: dict[int, str],
+) -> None:
+    '''
+    Add band description labels to a VRT raster file.
+
+    Args:
+        vrt_fpath:
+            File path to the VRT dataset.
+        band_mapping:
+            Mapping from 1-based band index to band description string.
+    '''
     with rasterio.open(vrt_fpath, 'r+') as vrt:
         if len(band_mapping) != vrt.count:
             raise ValueError(
@@ -43,33 +61,21 @@ def add_band_description_to_vrt(
             vrt.set_band_description(int(band), name)
 
 
-def add_tag_to_vrt(vrt_fpath: str, **kwargs):
-    '''Simple helper to add metadata to a `.vrt` raster file.'''
+def add_tag_to_vrt(
+    vrt_fpath: str,
+    **kwargs: typing.Any,
+) -> None:
+    '''
+    Add metadata tags to a VRT raster file.
+
+    Args:
+        vrt_fpath:
+            File path to the VRT dataset.
+        **kwargs:
+            Key-value pairs to store as metadata tags.
+    '''
+    tags = {k: v for k, v in kwargs.items() if v is not None}
+    if not tags:
+        return
     with rasterio.open(vrt_fpath, 'r+') as vrt:
-        vrt.update_tags(**kwargs)
-
-
-# def validate_domain_raster_index(
-#     input_path: str,
-#     min_allowed: int = 1
-# ) -> None:
-#     '''
-#     Validate that a domain raster contains 1-based indices.
-
-#     Args:
-#         input_path: Path to the input domain raster file.
-#         min_allowed: Minimum allowed index value (default: 1).
-
-#     Raises:
-#         ValueError: If valid pixel values contain any values < min_allowed.
-#     '''
-#     with rasterio.open(input_path) as src:
-#         data = src.read(1)
-#         nodata = src.nodata
-#         valid_data = data[data != nodata] if nodata is not None else data
-#         if valid_data.size > 0 and int(valid_data.min()) < min_allowed:
-#             raise ValueError(
-#                 f'Domain raster [{input_path}] contains index values '
-#                 f'< {min_allowed} (minimum found: {valid_data.min()}). '
-#                 'Categorical domain rasters must use 1-based indexing.'
-#             )
+        vrt.update_tags(**tags)

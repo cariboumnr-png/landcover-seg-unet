@@ -22,8 +22,15 @@
 '''
 Top-level namespace for `landseg.geopipe.grid`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes world grid construction and lifecycle management APIs via lazy
+resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `GridLogger`: Logger tracking world grid execution and report JSON.
+    - `GridParameters`: Protocol defining grid generation config.
+    - `build_grid`: Construct GridLayout from config or reference raster.
+    - `get_grid_report_fpath`: Return canonical grid report file path.
+    - `prepare_world_grid`: Build or load persisted world grid artifact.
 '''
 
 # standard imports
@@ -33,34 +40,36 @@ import typing
 
 __all__ = [
     # classes
-    'GridParameters',
+    'GridLogger',
     # functions
-    'build_grid',
+    'get_grid_report_fpath',
     'prepare_world_grid',
-    'load_grid_from_config',
-    'load_grid_from_fpath'
 ]
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import GridParameters, build_grid
     from .lifecycle import (
+        get_grid_report_fpath,
         prepare_world_grid,
-        load_grid_from_config,
-        load_grid_from_fpath,
+    )
+    from .logger import (
+        GridLogger,
     )
 
 
 def __getattr__(name: str):
 
-    if name in {'GridParameters', 'build_grid'}:
-        return getattr(importlib.import_module('.builder', __package__), name)
+    if name in {
+        'get_grid_report_fpath',
+        'prepare_world_grid',
+    }:
+        mod = importlib.import_module('.lifecycle', __package__)
+        return getattr(mod, name)
 
     if name in {
-        'prepare_world_grid',
-        'load_grid_from_config',
-        'load_grid_from_fpath'
+        'GridLogger',
     }:
-        return getattr(importlib.import_module('.lifecycle', __package__), name)
+        mod = importlib.import_module('.logger', __package__)
+        return getattr(mod, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

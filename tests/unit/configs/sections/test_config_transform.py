@@ -47,6 +47,24 @@ def test_preparation_defaults_and_validation():
     assert dt.hydration.max_skew_rate == 10.0
 
 
+def test_preparation_features_validation():
+    '''
+    Given: `_PreparationCfg` with valid and invalid features types.
+    When: `_PreparationCfg.validate()` runs.
+    Then: Accept string, list, or boolean values, or raise ValueError.
+    '''
+    # valid features configurations
+    valid = data._PreparationCfg(
+        features={'sentinel2': 'rgb_nir', 'topo': True, 'spectral': ['ndvi']}
+    )
+    valid.validate()
+
+    # invalid value type
+    invalid = data._PreparationCfg(features={'topo': 123})
+    with pytest.raises(ValueError, match='Invalid features config'):
+        invalid.validate()
+
+
 def test_catalog_view_validation():
     '''
     Given: `_CatalogView` with valid and out-of-range thresholds.

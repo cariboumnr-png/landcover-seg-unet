@@ -20,21 +20,27 @@
 # =========================================================================== #
 
 '''
-Taxonomy resolver and gatekeeper validation for ecological domain metadata.
+Taxonomy resolver and validation for ecological domain metadata.
 
-Validates user-declared species taxonomy profiles and code mappings against
-canonical knowledge base profiles in `./knowledge`. Resolves raster target
+This module validates user-declared species taxonomy profiles and code
+mappings against canonical knowledge base profiles and resolves target
 integer classes to deterministic embedding matrix indices.
+
+Public APIs:
+    - `get_available_profiles`: Return registered taxonomy profile names.
+    - `validate_specs`: Validate taxonomy specs against knowledge base.
 '''
 
 # standard imports
+from __future__ import annotations
 import json
 import os
 # local imports
+import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
 
-# -------------------------------Public Function-------------------------------
+# ----- public functions
 def get_available_profiles(
     knowledge_root: str = 'knowledge',
 ) -> list[str]:
@@ -42,10 +48,12 @@ def get_available_profiles(
     Return list of registered taxonomy profile names in knowledge base.
 
     Args:
-        knowledge_root: Root directory of the knowledge base.
+        knowledge_root:
+            Root directory of the knowledge base.
 
     Returns:
-        List of profile directory names containing `species_metadata.json`.
+        list[str]:
+            List of profile directory names containing species metadata.
     '''
     emb_dir = os.path.join(knowledge_root, 'embeddings')
     if not os.path.isdir(emb_dir):
@@ -60,28 +68,28 @@ def get_available_profiles(
     return sorted(profiles)
 
 
-def validate_taxonomy_specs(
+def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
     num_cls: int,
     knowledge_root: str = './knowledge',
-) -> dict[str, int]:
+) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
 
     Args:
-        profile: Canonical taxonomy profile name.
-        species_mapping: Mapping of integer class string IDs to species
-            codes.
-        num_cls: Number of active classes for the label layer (1..N).
-        knowledge_root: Root directory of the knowledge base.
+        profile:
+            Canonical taxonomy profile name.
+        species_mapping:
+            Mapping of class index strings to species codes.
+        num_cls:
+            Number of active classes for the label layer (1..N).
+        knowledge_root:
+            Root directory of the knowledge base.
 
     Returns:
-        Mapping of class string index to canonical metadata embedding
-        index.
-
-    Raises:
-        ValueError: On missing profile, invalid mapping, or unknown codes.
+        geo_core.TaxonomySpec:
+            Resolved taxonomy specification dictionary.
     '''
     if len(species_mapping) != num_cls:
         raise ValueError(
@@ -108,26 +116,19 @@ def validate_taxonomy_specs(
 
         canonical_indices[class_idx] = entry['index']
 
-    return canonical_indices
+    _specs: geo_core.TaxonomySpec = {
+        'profile': profile,
+        'canonical_indices': canonical_indices
+    }
+    return _specs
 
 
+# ----- private helpers
 def _resolve_taxonomy_metadata(
     profile: str,
     root: str = 'knowledge',
 ) -> dict[str, knowledge.SpeciesEntry]:
-    '''
-    Load canonical metadata JSON for the given taxonomy profile.
-
-    Args:
-        profile: Profile name or direct directory path.
-        root: Root directory of the knowledge base.
-
-    Returns:
-        Code lookup dictionary mapping species codes to entry metadata.
-
-    Raises:
-        ValueError: If the profile metadata cannot be found.
-    '''
+    '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
         os.path.join(root, 'embeddings', profile, 'species_metadata.json'),
         os.path.join(profile, 'species_metadata.json'),

@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=c-extension-no-member
+
 '''
 World-grid tiling utilities.
 
@@ -28,22 +29,14 @@ partition spatial data into stable, pixel-aligned tiles. It provides
 structures and utilities for generating, indexing, and serializing grid
 layouts independent of any specific raster dataset.
 
-Key principles:
-- The grid is immutable once defined and serves as a canonical spatial
-  reference.
-- Tile indices are stable across datasets and expressed in pixel-space
-  coordinates relative to the grid origin.
-- No raster reprojection, resampling, or alignment is performed here;
-  all inputs must already be aligned upstream.
-
-Typical usage:
-- Define a `GridSpec` describing CRS, resolution, tile size, and extent.
-- Construct a `GridLayout` to generate tile windows.
-- Align the grid to a raster using `offset_from()` for consistent window
-  extraction.
-
-This module ensures reproducible tiling and indexing across datasets,
-enabling consistent training, inference, and data integration workflows.
+Public APIs:
+    - `GridPayload`: TypedDict for serialized grid payload.
+    - `GridMeta`: TypedDict for grid metadata.
+    - `GridSpec`: Dataclass specifying world grid parameters.
+    - `GridLayout`: Raster-agnostic grid layout of tile windows.
+    - `get_grid_report_fpath`: Canonical path to grid report artifact.
+    - `load_grid_from_fpath`: Load world grid layout directly from file.
+    - `read_grid_report`: Read grid report JSON and extract summary.
 '''
 
 # standard imports
@@ -51,38 +44,58 @@ from __future__ import annotations
 import collections.abc
 import dataclasses
 import math
+import os
 import typing
 # third-party imports
 import rasterio
 import rasterio.crs
 import rasterio.io
 import rasterio.windows
+# local imports
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.grid as grid_contracts
 
-# aliases
+
+# ----- typing aliases
 RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
+'''Dataset reader handle for opened raster files.'''
 
-# ------------------------------Public  Dataclass------------------------------
+RasterWindow: typing.TypeAlias = rasterio.windows.Window
+'''Pixel window offset and slice for raster reads and writes.'''
+
+RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
+'''Mapping of pixel-origin coordinates to raster windows.'''
+
+
+# ----- public types
+class GridPayload(typing.TypedDict):
+    '''
+    Serializable artifact for `GridLayout`.
+
+    Fields:
+        schema_id:
+            Versioned identifier describing the serialization contract.
+        artifact_meta:
+            Lightweight metadata required to reconstruct grid layout.
+        data:
+            Serialized tile coordinates and raster window offsets.
+    '''
+    schema_id: str
+    artifact_meta: GridMeta
+    data: list[list[int]]
+
+
+class GridMeta(typing.TypedDict):
+    '''Lightweight metadata describing a `GridLayout` artifact.'''
+    gid: str
+    spec: dict[str, typing.Any]
+    extent: tuple[int, int]
+
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class GridSpec:
-    '''
-    Specification for constructing a world grid.
-
-    This dataclass defines the spatial reference, resolution, and tiling
-    configuration used to generate a `GridLayout`.
-
-    Conventions:
-        - CRS coordinates use (x, y).
-        - Pixel space uses (row, col).
-        - Pixel sizes are positive magnitudes.
-        - Tile sizes and overlaps are expressed in (rows, cols).
-
-    Notes:
-        Either `grid_extent` (for `'bbox'` mode) or `grid_shape`
-        (for `'tiles'` mode) must be provided depending on how the grid
-        is constructed.
-    '''
+    '''Specification for constructing a world grid.'''
     crs: str                                      # a projected CRS
     origin: tuple[float, float]                   # x, y in CRS units
     pixel_size: tuple[float, float]               # xsize, ysize in CRS units
@@ -91,48 +104,13 @@ class GridSpec:
     grid_extent: tuple[float, float]              # H_y, W_x in in CRS units
 
     def __post_init__(self):
+        '''Validate tile stride is smaller than tile size.'''
         ts, to = self.tile_size, self.tile_stride
         if not (to[0] < ts[0] and to[1] < ts[1]):
             raise ValueError('Overlap must be smaller than block size.')
 
-# ---------------------------------Public Type---------------------------------
-class GridPayload(typing.TypedDict):
-    '''
-    Serializable artifact for `GridLayout`.
 
-    This follows the standard artifact contract:
-
-    {
-        "schema_id": str,
-        "artifact_meta": `_GridMeta`,
-        "data": `RasterWindowDict`
-    }
-
-    The grid layout is stored as a deterministic spatial index of raster
-    windows. Metadata is separated from the raw window mapping to allow
-    lightweight inspection without loading full spatial data.
-
-    Fields:
-
-    - **schema_id**:
-        Versioned identifier describing the serialization contract.
-    - **artifact_meta**:
-        Lightweight descriptive metadata required to interpret and
-        reconstruct the grid layout.
-    - **data**:
-        Mapping of tile coordinates to raster windows.
-    '''
-    schema_id: str
-    artifact_meta: GridMeta
-    data: list[list[int]]
-
-class GridMeta(typing.TypedDict):
-    '''Lightweight metadata describing a `GridLayout` artifact.'''
-    gid: str
-    spec: dict[str, typing.Any]
-    extent: tuple[int, int]
-
-# --------------------------------Public  Class--------------------------------
+# ----- public classes
 class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
     '''
     Raster-agnostic grid layout represented as tile windows.
@@ -140,16 +118,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
     A `GridLayout` defines a fixed tiling scheme over a projected CRS,
     producing a mapping from pixel-origin coordinates `(x_px, y_px)` to
     rasterio window objects.
-
-    Key features:
-        - Stable indexing independent of any specific raster
-        - Support for overlapping or non-overlapping tiles
-        - Two construction modes: fixed bounding box or fixed tile count
-        - Runtime alignment to rasters via pixel offsets
-
-    The mapping behaves like a read-only dictionary where keys are
-    pixel-origin coordinates and values are `rasterio.windows.Window`
-    objects.
 
     Schema:
         SCHEMA_ID = 'grid_layout_payload/v1'
@@ -163,16 +131,9 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         Initialize a `GridLayout` from a specification.
 
         Args:
-            mode:
-                Grid construction mode:
-                - `'bbox'`: derive tiles from a spatial extent
-                - `'tiles'`: derive extent from a fixed tile grid
-
             spec:
-                Configuration object defining CRS, resolution, tile size,
-                overlap, and either extent or grid shape.
-
-        Notes: The grid is generated immediately upon initialization.
+                Configuration object defining CRS, resolution, tile size
+                stride, and grid extent.
         '''
         # ingest spec and init attributes
         self._spec = spec
@@ -216,9 +177,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
     # ----- property
     @property
     def gid(self) -> str:
-        '''
-        Return a canonical identifier for the grid configuration.
-        '''
+        '''Return a canonical identifier for the grid configuration.'''
         return self.generate_gid(self._spec.tile_size, self._spec.tile_stride)
 
     @property
@@ -284,10 +243,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 Dictionary containing grid configuration and windows.
 
         Returns:
-            A `GridLayout` instance with restored state.
-
-        Notes: Runtime attributes such as offsets are reset and must be
-        recomputed if needed.
+            GridLayout:
+                A `GridLayout` instance with restored state.
         '''
         # parse data from payload
         parsed: RasterWindowDict = {}
@@ -320,21 +277,38 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         # return class object
         return obj
 
+    @classmethod
+    def from_fpath(cls, fpath: str) -> GridLayout:
+        '''
+        Load a world grid layout directly from a serialized JSON file.
+
+        Args:
+            fpath:
+                File path to the serialized grid JSON artifact.
+
+        Returns:
+            GridLayout:
+                Restored GridLayout instance.
+        '''
+        ctrl = artifacts.PayloadController[list[list[int]], GridMeta](
+            fpath,
+            schema_id=cls.SCHEMA_ID,
+            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+        )
+        payload = ctrl.load()
+        if not payload:
+            raise ValueError(f'Loading grid failed: {fpath}')
+        return cls.from_payload(payload)
+
     # ----- public method
     def offset_from(self, src: RasterReader | rasterio.Affine) -> None:
         '''
         Compute pixel offset to align the grid with a raster.
 
-        This method adjusts the grid so that its tile windows correctly
-        map onto a raster with matching CRS and resolution.
-
         Args:
             src:
                 A raster dataset reader or affine transform describing
                 the raster's spatial reference.
-
-        Notes: The raster must already be aligned in CRS and pixel size.
-        Only integer pixel offsets are supported.
         '''
         # if a raster reader handler is provided:
         if isinstance(src, RasterReader):
@@ -364,8 +338,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         Convert the grid layout into a serializable payload.
 
         Returns:
-            A `GridLayoutPayload` containing all necessary information
-            to reconstruct the layout.
+            GridPayload:
+                Payload containing grid metadata and window definitions.
         '''
         # get canonical serialization of the data (JSON compatible)
         canon: list[list[int]] = []
@@ -392,9 +366,15 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         '''
         Return a canonical identifier for the grid configuration.
 
-        Example:
-            A grid with tile size of (H256, W256) and stride of (H128,
-            W128) will have a gid as `'grid_row_256_128_col_256_128'`.
+        Args:
+            tile_size:
+                Tile dimensions in pixels as (rows, cols).
+            tile_stride:
+                Tile stride in pixels as (rows, cols).
+
+        Returns:
+            str:
+                Canonical grid identifier string.
         '''
         row_size, col_size = tile_size
         row_stride, col_stride = tile_stride
@@ -402,11 +382,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
 
     # ----- private method
     def _generate(self) -> None:
-        '''
-        Derive spatial extent from inputs and divide it into a grid.
-
-        Intended to work with a projected CRS with meter unit.
-        '''
+        '''Derive spatial extent from inputs and divide it into a grid.'''
         spec = self._spec
         # get extent dimensions (in crs units)
         assert spec.grid_extent is not None
@@ -424,3 +400,53 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 window = RasterWindow(x, y, tw, th) # type: ignore
                 self._data[(x, y)] = window
         self._extent = row_px, col_px
+
+
+# ----- public functions
+def load_grid_from_fpath(fpath: str) -> GridLayout:
+    '''
+    Load a world grid layout directly from a file path.
+
+    Args:
+        fpath:
+            File path to the serialized grid JSON artifact.
+
+    Returns:
+        GridLayout:
+            Restored GridLayout instance.
+    '''
+    return GridLayout.from_fpath(fpath)
+
+
+def get_grid_report_fpath(output_dpath: str) -> str:
+    '''
+    Return canonical file path of the world grid report artifact.
+
+    Args:
+        output_dpath:
+            Output directory containing world grid artifacts.
+
+    Returns:
+        str:
+            Full path to the grid_report.json artifact.
+    '''
+    return os.path.join(output_dpath, 'grid_report.json')
+
+
+def read_grid_report(report_fpath: str) -> grid_contracts.WorldGridReport:
+    '''
+    Read a grid execution report and extract world grid summary.
+
+    Args:
+        report_fpath:
+            File path to the grid report JSON artifact.
+
+    Returns:
+        grid_contracts.WorldGridReport:
+            World grid summary report extracted from the artifact.
+    '''
+    ctrl = artifacts.Controller[
+        grid_contracts.GridReportSchema
+    ].load_json_or_fail(report_fpath)
+    report = ctrl.fetch()
+    return report['grid']

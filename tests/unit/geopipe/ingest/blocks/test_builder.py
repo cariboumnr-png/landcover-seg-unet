@@ -1,0 +1,390 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''Unit tests for DataBlockInputs, DataBlockConfig, and build_data_block.'''
+
+# standard imports
+import dataclasses
+# third-party imports
+import numpy
+import pytest
+# local imports
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.blocks.assembler as assembler
+
+
+# ----- aliases
+rng = numpy.random.default_rng(42)
+
+
+# ----- constants
+BASE_LABEL_ARRAY = numpy.repeat([1, 2, 3, 4], 16384).reshape((1, 256, 256))
+
+BASE_LABELSPECS: dict[str, geo_core.CategoricalSpec] = {
+    'base': {
+        'num_cls': 4,
+        'ignore_cls': [4],
+        'class_name': {'1': 'WAT', '2': 'FOR', '3': 'WET', '4': 'UCL'},
+        'index_base': 1,
+    }
+}
+
+
+# ----- `build_data_block` tests
+def test_build_data_block_image_only_no_added_features():
+    '''
+    Given: An image-only input block.
+    When: Building a DataBlock without any added features.
+    Then: Return a block containing valid image arrays and no label.
+    '''
+    cfg = _make_config()
+    inputs = _make_inputs()
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert block.data.image is not None
+    assert block.data.valid_mask is not None
+    assert block.manifest['has_label'] is False
+
+
+def test_build_data_block_image_only_add_spectral():
+    '''
+    Given: An image-only input block.
+    When: Building a DataBlock requesting ndvi spectral index.
+    Then: Append ndvi as an extra band in the image data.
+    '''
+    cfg = _make_config(add_spectral=['ndvi'])
+    inputs = _make_inputs()
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert block.data.image.shape[0] == 8
+
+
+def test_build_data_block_image_only_add_topo():
+    '''
+    Given: An image input block with padded DEM elevation data.
+    When: Building a DataBlock requesting topographic indices.
+    Then: Append slope, aspect cos, aspect sin, and tpi bands.
+    '''
+    cfg = _make_config(add_topo=['slope', 'aspect', 'tpi'])
+    inputs = _make_inputs(
+        image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
+        image_padded_dem=numpy.ones((272, 272), dtype=numpy.float32),
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert block.data.image.shape[0] == 11
+
+
+def test_build_data_block_with_label_no_added_features():
+    '''
+    Given: Input block containing both image and label arrays.
+    When: Building a DataBlock.
+    Then: Return a block containing the parsed multi-channel label
+        stack.
+    '''
+    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    inputs = _make_inputs(
+        image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
+        label_array=BASE_LABEL_ARRAY,
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert block.manifest['has_label'] is True
+    assert block.data.label is not None
+
+
+def test_build_data_block_full():
+    '''
+    Given: Input block with padded DEM, label, and spectral config.
+    When: Building a DataBlock.
+    Then: Generate image indices, DEM features, and label stacks.
+    '''
+    cfg = _make_config(
+        add_topo=['slope', 'aspect', 'tpi'],
+        add_spectral=['ndvi'],
+        label_specs=BASE_LABELSPECS,
+    )
+    inputs = _make_inputs(
+        image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
+        image_padded_dem=numpy.ones((272, 272), dtype=numpy.float32),
+        label_array=BASE_LABEL_ARRAY,
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert block.data.image is not None
+    assert block.data.valid_mask is not None
+    assert block.data.image.shape[0] == 12
+    assert block.manifest['has_label'] is True
+    assert block.data.label is not None
+
+
+@pytest.mark.parametrize('invalid', [-999.9, numpy.nan])
+def test_build_data_block_image_stats_handles_invalids(invalid):
+    '''
+    Given: An image containing invalid values.
+    When: Building a DataBlock.
+    Then: Ignore the invalid values during band mean/std calculations.
+    '''
+    cfg = _make_config(image_nodata=invalid)
+
+    img = numpy.ones((7, 256, 256), dtype=numpy.float32)
+    invalid_idx = rng.choice(img.size, 999, replace=False)
+    img.flat[invalid_idx] = invalid
+    inputs = _make_inputs(image_array=img)
+
+    block = assembler.build_data_block(inputs, cfg)
+
+    stats = block.manifest['image_stats']
+    assert len(stats) == 7
+
+    total_count = 0
+    for band_idx, band in enumerate(img):
+        expected_count = numpy.count_nonzero(~_is_invalid(band, invalid))
+        stat = stats[f'band_{band_idx}']
+
+        assert stat['count'] == expected_count
+        assert stat['mean'] == pytest.approx(1.0)
+        assert stat['m2'] == pytest.approx(0.0)
+
+        total_count += stat['count']
+
+    assert total_count == img.size - 999
+
+
+def test_build_data_block_label_canonicalize_base_layer():
+    '''
+    Given: Label inputs without reclassification mappings.
+    When: Building a DataBlock.
+    Then: Compile the single base label channel in the stack.
+    '''
+    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    inputs = _make_inputs(
+        label_array=BASE_LABEL_ARRAY,
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert len(block.data.label) == 1
+    assert block.manifest['label_num_cls'] == {'base': 4}
+    assert block.manifest['label_ignore_cls'] == {'base': [4]}
+    assert block.manifest['label_cls_names'] == {
+        'base': ['WAT', 'FOR', 'WET', 'UCL']
+    }
+
+
+def test_build_data_block_label_canonicalize_zero_based_index():
+    '''
+    Given: 0-based label array (0, 1, 2, 3) and index_base=0 specs.
+    When: Building a DataBlock.
+    Then: Shift base layer to canonical 1-based indexing (1, 2, 3, 4)
+        and map names correctly.
+    '''
+    zero_based_array = numpy.repeat([0, 1, 2, 3], 16384).reshape(
+        (1, 256, 256)
+    )
+    zero_based_specs: dict[str, geo_core.CategoricalSpec] = {
+        'base': {
+            'num_cls': 4,
+            'ignore_cls': [3],
+            'index_base': 0,
+            'class_name': {'0': 'WAT', '1': 'FOR', '2': 'WET', '3': 'UCL'},
+        }
+    }
+    cfg = _make_config(label_specs=zero_based_specs)
+    inputs = _make_inputs(
+        label_array=zero_based_array,
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    stack_base = block.data.label[0]
+    assert set(numpy.unique(stack_base)) == {1, 2, 3, 255}
+    assert block.manifest['label_num_cls'] == {'base': 4}
+    assert block.manifest['label_ignore_cls'] == {'base': [3]}
+    assert block.manifest['label_cls_names'] == {
+        'base': ['WAT', 'FOR', 'WET', 'UCL']
+    }
+    assert block.manifest['label_count']['base'] == [16384, 16384, 16384, 0]
+
+
+def test_build_data_block_label_stats_valid_ratio():
+    '''
+    Given: A label array with ignore categories.
+    When: Building a DataBlock.
+    Then: Calculate the valid pixel ratio correctly.
+    '''
+    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    inputs = _make_inputs(
+        label_array=BASE_LABEL_ARRAY,
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    valid = float(numpy.mean(BASE_LABEL_ARRAY != 4))
+    assert block.manifest['valid_ratios'].get('base') == pytest.approx(valid)
+
+
+def test_build_data_block_label_stats_class_count_entropy():
+    '''
+    Given: A label array.
+    When: Building a DataBlock.
+    Then: Calculate absolute class counts and Shannon entropy.
+    '''
+    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    inputs = _make_inputs(
+        label_array=BASE_LABEL_ARRAY,
+    )
+    block = assembler.build_data_block(inputs, cfg)
+
+    assert block.manifest['label_count'] == {
+        'base': [16384, 16384, 16384, 0]
+    }
+    assert block.manifest['label_entropy'] == {
+        'base': pytest.approx(- numpy.log2(1 / 3))
+    }
+
+
+# ----- `DataBlockInputs` tests
+def test_inputs_post_init_invalid_image_shape():
+    '''
+    Given: An image array of wrong dimensionality.
+    When: Instantiating DataBlockInputs.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match='Image array is not of shape'):
+        _make_inputs(image_array=numpy.ones((256, 256), dtype=numpy.float32))
+
+
+def test_inputs_post_init_label_specs_missing():
+    '''
+    Given: A label array but no label specs in DataBlockConfig.
+    When: Building a DataBlock with labels but no config specs.
+    Then: Raise a ValueError.
+    '''
+    cfg = _make_config()
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
+    with pytest.raises(ValueError, match='"label_specs" not provided'):
+        assembler.build_data_block(inputs, cfg)
+
+
+def test_inputs_post_init_invalid_label_shape():
+    '''
+    Given: A label array of wrong dimensionality.
+    When: Instantiating DataBlockInputs.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match='Label array is not of shape'):
+        _make_inputs(label_array=numpy.ones((256, 256)))
+
+
+def test_inputs_post_init_shape_mismatch():
+    '''
+    Given: An image and a label array with differing heights/widths.
+    When: Instantiating DataBlockInputs.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match='arrays have different H / W'):
+        _make_inputs(
+            image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
+            label_array=numpy.ones((1, 128, 128), dtype=numpy.uint8),
+        )
+
+
+def test_inputs_property_pad_dem_raise_when_not_provided():
+    '''
+    Given: A DataBlockInputs instance with no padded DEM array.
+    When: Accessing the pad_dem property.
+    Then: Raise a ValueError.
+    '''
+    inputs = _make_inputs(image_padded_dem=None)
+    with pytest.raises(ValueError, match='Cannot access padded DEM'):
+        _ = inputs.pad_dem
+
+
+# ----- `DataBlockConfig` tests
+def test_config_post_init_invalid_spectral_indices():
+    '''
+    Given: An invalid index name.
+    When: Instantiating DataBlockConfig.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match='Invalid spectral indices'):
+        _make_config(add_spectral=['foo'])
+
+
+def test_config_post_init_missing_red_for_any_spectral():
+    '''
+    Given: A config requesting ndvi but lacking red band mappings.
+    When: Instantiating DataBlockConfig.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match='red band missing'):
+        _make_config(image_band_map={'foo': 0}, add_spectral=['ndvi'])
+
+
+@pytest.mark.parametrize(
+    'indice, required',
+    [('ndvi', 'NIR'), ('ndmi', 'SWIR1'), ('nbr', 'SWIR2')]
+)
+def test_config_post_init_missing_required_bands(indice, required):
+    '''
+    Given: A config requesting a spectral index without required bands.
+    When: Instantiating DataBlockConfig.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match=f'{required} band missing'):
+        _make_config(image_band_map={'red': 0}, add_spectral=[indice])
+
+
+# ----- helpers
+def _make_inputs(**overrides):
+    base = assembler.DataBlockInputs(
+        block_name='test_block',
+        image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
+        image_padded_dem=None,
+        label_array=None,
+    )
+    return dataclasses.replace(base, **overrides)
+
+
+def _make_config(**overrides):
+    base = assembler.DataBlockConfig(
+        image_band_map={
+            'red': 0,
+            'green': 1,
+            'blue': 2,
+            'nir': 3,
+            'swir1': 4,
+            'swir2': 5,
+            'dem': 6,
+        },
+        image_nodata=numpy.nan,
+        image_dem_pad_px=8,
+        label_ignore_index=255,
+        label_nodata=0,
+        label_specs=None,
+        add_spectral=None,
+        add_topo=None,
+    )
+    return dataclasses.replace(base, **overrides)
+
+
+def _is_invalid(arr, nodata):
+    if isinstance(nodata, float) and numpy.isnan(nodata):
+        return numpy.isnan(arr)
+    return numpy.isclose(arr, nodata)

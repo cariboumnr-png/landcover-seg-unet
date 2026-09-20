@@ -90,22 +90,30 @@ def test_translate_user_config_data_ingest():
         'data-ingest': {
             'harmonization_run': 1,
             'output_dpath': '/path/exp/artifacts/foundation',
+            'add_topo': True,
+            'add_spectral': ['ndvi', 'ndmi'],
         },
     })
     result = translate_mod.translate_user_config(user_cfg)
 
     assert result.data.ingestion.harmonization_run == 1
-    assert result.data.ingestion.output_dpath == '/path/exp/artifacts/foundation'
+    assert result.data.ingestion.output_dpath == (
+        '/path/exp/artifacts/foundation'
+    )
+    assert result.data.ingestion.datablocks.add_topo is True
+    assert result.data.ingestion.datablocks.add_spectral == ['ndvi', 'ndmi']
 
 
 def test_translate_user_config_data_prepare():
     '''
     Given: A user configuration `DictConfig` with `data-prepare` settings.
     When: `translate_user_config` is called.
-    Then: Map fields to `transform` partition, catalog, scoring, and output_dpath.
+    Then: Map fields to partition, catalog, scoring, features, and targets.
     '''
     user_cfg = omegaconf.OmegaConf.create({
         'data-prepare': {
+            'features': {'sentinel2': 'rgb_nir'},
+            'targets': {'landcover': 'binary'},
             'val_ratio': 0.2,
             'test_ratio': 0.1,
             'target_head': 'cover',
@@ -115,11 +123,15 @@ def test_translate_user_config_data_prepare():
     })
     result = translate_mod.translate_user_config(user_cfg)
 
+    assert result.data.preparation.features.sentinel2 == 'rgb_nir'
+    assert result.data.preparation.targets.landcover == 'binary'
     assert result.data.preparation.partition.val_ratio == 0.2
     assert result.data.preparation.partition.test_ratio == 0.1
     assert result.data.preparation.catalog.focal_target == 'cover'
     assert result.data.preparation.rebuild is True
-    assert result.data.preparation.output_dpath == '/path/exp/artifacts/transform'
+    assert result.data.preparation.output_dpath == (
+        '/path/exp/artifacts/transform'
+    )
 
 
 def test_translate_user_config_model_train():

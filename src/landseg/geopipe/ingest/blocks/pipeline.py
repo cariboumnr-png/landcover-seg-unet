@@ -1,0 +1,176 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+# pylint: disable=missing-function-docstring
+
+'''
+Canonical data-block construction pipeline.
+
+Maps input rasters onto a pre-built world grid, materializes immutable
+raw data blocks, and maintains the associated catalog and dataset
+metadata. This pipeline produces experiment-agnostic artifacts intended
+for reuse across downstream workflows.
+
+Public APIs:
+    - BlockBuildingParameters: Config container for block pipeline.
+    - run_blocks_building: Runs the canonical data block pipeline.
+'''
+
+# standard imports
+import dataclasses
+import time
+import typing
+# local imports
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest as ingest
+import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.manifest as manifest
+import landseg.geopipe.ingest.blocks.mapper as mapper
+
+
+# ----- private types
+class _PipelinePaths(typing.Protocol):
+    '''Typed pipeline-specific paths container.'''
+    @property
+    def blocks(self) -> str: ...
+    @property
+    def catalog(self) -> str: ...
+    @property
+    def schema(self) -> str: ...
+    def mapped_window(self, gid: str) -> str: ...
+
+
+# ----- public dataclasses
+@dataclasses.dataclass
+class BlockBuildingParameters:
+    '''Config container for the canonical block-building pipeline.'''
+    image_fpath: str
+    label_fpath: str | None
+    dem_pad: int
+    ignore_index: int
+    add_spectral: list[str] | None = None
+    add_topo: list[str] | None = None
+
+
+# ----- public functions
+def run_blocks_building(
+    world_grid: geo_core.GridLayout,
+    artfact_paths: _PipelinePaths,
+    config: BlockBuildingParameters,
+    *,
+    policy: artifacts.LifecyclePolicy,
+    logger: ingest.IngestionLogger,
+) -> None:
+    '''
+    Build canonical data blocks from rasters aligned to a world grid.
+
+    Materializes immutable `.npz` block artifacts and maintains
+    associated `catalog.json` and `schema.json` manifests. Blocks are
+    built directly from raster windows without normalization or
+    dataset splitting.
+
+    Args:
+        world_grid:
+            World grid definition used to locate raster windows.
+        artfact_paths:
+            Container holding paths for blocks, catalog, and schema.
+        config:
+            Configuration for block building inputs and parameters.
+        policy:
+            Lifecycle policy governing artifact update behavior.
+        logger:
+            Logger instance used for structured telemetry reporting.
+    '''
+    start_time = time.perf_counter()
+
+    # map rasters to the provided world grid
+    ras_windows = mapper.map_rasters_to_grid(
+        world_grid,
+        config.image_fpath,
+        config.label_fpath,
+        artfact_paths.mapped_window(world_grid.gid),
+        policy=policy,
+    )
+
+    # build data blocks
+    result = assembler.build_blocks(
+        assembler.BlockBuildingInput(
+            output_root=artfact_paths.blocks,
+            image_fpath=config.image_fpath,
+            label_fpath=config.label_fpath,
+        ),
+        assembler.BlockBuildingContext(
+            image=ras_windows.image,
+            label=ras_windows.label,
+        ),
+        assembler.BlockBuildingConfig(
+            ignore_index=config.ignore_index,
+            dem_pad_px=config.dem_pad,
+            block_size=ras_windows.tile_shape,
+            image_band_map=assembler.read_band_map(config.image_fpath),
+            label_specs=assembler.read_label_specs(config.label_fpath),
+            add_spectral=config.add_spectral,
+            add_topo=config.add_topo,
+        ),
+        policy=policy,
+    )
+
+    # create/update catalog and metadata JSON
+    updated = manifest.ManifestUpdateContext(
+        updated_coords=result.coords_created,
+        source_image=config.image_fpath,
+        source_label=config.label_fpath,
+        mapped_grid_id=world_grid.gid,
+        blocks_dir=artfact_paths.blocks,
+        label_color_map=result.label_color_map
+    )
+    manifest_report = manifest.update_manifest(
+        updated,
+        artfact_paths.catalog,
+        artfact_paths.schema,
+        policy=policy,
+    )
+
+    # update structured log if IngestionLogger wrapper is used
+    duration = time.perf_counter() - start_time
+    stats = result.stats
+    report: contracts.DataBlocksReport = {
+        'image_filepath': config.image_fpath,
+        'label_filepath': config.label_fpath,
+        'duration_sec': duration,
+        'stats': {
+            'shared_raster_windows': int(stats['shared_raster_windows']),
+            'expected_shape_windows': int(stats['expected_shape_windows']),
+            'blocks_on_disk_before': int(stats['blocks_on_disk_before']),
+            'blocks_to_process': int(stats['blocks_to_process']),
+            'damaged_blocks_removed': int(stats['damaged_blocks_removed']),
+            'blocks_created': int(stats['blocks_created']),
+        },
+        'manifest': {
+            'catalog_status': manifest_report['catalog_status'],
+            'catalog_updated': manifest_report['catalog_updated'],
+            'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
+            'schema_updated': manifest_report['schema_updated'],
+        }
+    }
+    logger.set_data_blocks_report(report)
