@@ -26,10 +26,8 @@ Exposes catalog, schema, and manifest lifecycle tools for block-level
 geospatial dataset management via lazy module resolution.
 
 Public APIs:
-    - ManifestUpdateContext: Dataclass context for manifest update.
-    - build_catalog: Builds or updates a dataset-level catalog.
-    - build_schema: Creates or updates dataset-level data schema.
-    - update_manifest: Updates dataset catalog and schema artifacts.
+    - `ManifestUpdateContext`: Dataclass context for manifest update.
+    - `update_manifest`: Updates dataset catalog and schema artifacts.
 '''
 
 # standard imports

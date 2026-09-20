@@ -26,9 +26,7 @@ Exposes world grid construction and lifecycle management APIs via lazy
 resolution to keep import order simple and circular-free.
 
 Public APIs:
-    - `GridLogger`: Logger tracking world grid execution and report JSON.
-    - `GridParameters`: Protocol defining grid generation config.
-    - `build_grid`: Construct GridLayout from config or reference raster.
+    - `GridLogger`: Logger tracking world grid execution and report.
     - `get_grid_report_fpath`: Return canonical grid report file path.
     - `prepare_world_grid`: Build or load persisted world grid artifact.
 '''

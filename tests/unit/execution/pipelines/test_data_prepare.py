@@ -90,7 +90,7 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     pipelines.exec_ingest_data(config)
 
     # 3) run the preparation pipeline
-    pipelines.prepare(config)
+    pipelines.exec_prepare_data(config)
 
     # verify the generated preparation outputs
     out_dpath = config.data.preparation.output_dpath

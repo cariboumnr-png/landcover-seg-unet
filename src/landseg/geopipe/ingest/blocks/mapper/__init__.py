@@ -26,11 +26,7 @@ Exposes raster-to-grid mapping, geometry validation, and window caching
 utilities via lazy module resolution.
 
 Public APIs:
-    - GeometrySummary: TypedDict of raster geometry metadata.
-    - MappedRasterWindows: Dataclass container for read windows.
-    - map_rasters: Maps input rasters to grid and builds windows.
-    - map_rasters_to_grid: Maps rasters onto grid with caching.
-    - validate_geometry: Ingests rasters and validates alignment.
+    - `map_rasters_to_grid`: Maps rasters onto grid with caching.
 '''
 
 # standard imports

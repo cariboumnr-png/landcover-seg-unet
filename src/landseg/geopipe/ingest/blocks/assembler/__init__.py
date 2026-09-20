@@ -29,23 +29,19 @@ coordinates the parallelized assembly of blocks over mapped raster
 windows.
 
 Public APIs:
-    - BlockBuildingInput: I/O path options for lifecycle pipeline.
-    - BlockBuildingContext: Read windows for pipeline execution.
-    - BlockBuildingConfig: Container for building configurations.
-    - BlockBuildingOutput: Result wrapping builder execution outputs.
-    - RasterReadInput: Specs parameter for reading raster inputs.
-    - RasterReadOutput: Container holding read raster numpy arrays.
-    - DataBlockInputs: raw arrays container for DataBlock construction.
-    - DataBlockConfig: build-time configuration for feature engineering.
-    - build_data_block: construct a DataBlock with derived features.
-    - build_single_block: Constructs a block from windowed rasters.
-    - build_test_block: Finds, normalizes, and saves a test block.
-    - build_blocks: Parallelized multiblock checking and assembly.
-    - read_band_map: Reads and validates raster band mapping dict.
-    - read_label_specs: Reads and formats label specification dict.
-    - read_schemes: Reads and maps categorical scheme definitions.
-    - read_block_raster_data: Reads image/label and DEM bands.
-    - check_npz_integrity: Verifies a saved .npz file is readable.
+    - `BlockBuildingConfig`: Container for building configurations.
+    - `BlockBuildingContext`: Read windows for pipeline execution.
+    - `BlockBuildingInput`: I/O path options for lifecycle pipeline.
+    - `BlockBuildingOutput`: Result wrapping builder execution outputs.
+    - `DataBlockConfig`: Configuration for feature engineering.
+    - `DataBlockInputs`: Container for raw array data block inputs.
+    - `RasterReadInput`: Specs parameter for reading raster inputs.
+    - `build_blocks`: Parallelized multiblock checking and assembly.
+    - `build_data_block`: Construct a DataBlock with derived features.
+    - `build_test_block`: Finds, normalizes, and saves a test block.
+    - `read_band_map`: Reads and validates raster band mapping dict.
+    - `read_label_specs`: Reads and formats label specification dict.
+    - `read_schemes`: Reads and maps categorical scheme definitions.
 '''
 
 # standard imports

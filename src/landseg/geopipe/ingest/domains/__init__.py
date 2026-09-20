@@ -28,8 +28,6 @@ circular-free.
 
 Public APIs:
     - `DomainBuildingParameters`: container for domain parameters.
-    - `build_domain`: build DomainTileMap with PCA features.
-    - `map_domain_to_grid`: map domain raster onto grid.
     - `prepare_domain_maps`: build or load domain tile maps.
 '''
 

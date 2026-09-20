@@ -151,10 +151,9 @@ def __getattr__(name: str):
 
     if name in {
         'DatasetSchema',
-        'dataset_schema',
     }:
         obj = importlib.import_module('.dataset_schema', __package__)
-        return obj if name == 'dataset_schema' else getattr(obj, name)
+        return getattr(obj, name)
 
     if name in {
         'DomainMeta',

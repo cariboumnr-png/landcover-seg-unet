@@ -60,7 +60,7 @@ PIPELINES: dict[PipelineName, PipelineFn] = {
     'world-grid': pipelines.exec_world_grid,
     'data-harmonize': pipelines.exec_harmonize_data,
     'data-ingest': pipelines.exec_ingest_data,
-    'data-prepare': pipelines.prepare,
+    'data-prepare': pipelines.exec_prepare_data,
     'diagnose-overfit': pipelines.overfit,
     'model-evaluate': pipelines.evaluate,
     'model-train': pipelines.train,
