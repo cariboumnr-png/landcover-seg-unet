@@ -23,7 +23,9 @@
 # pylint: disable=protected-access
 # pylint: disable=redefined-outer-name
 
-'''Fixtures for testing `landseg.session.engine.runtime.executor` module.'''
+'''
+Fixtures for testing `landseg.session.engine.runtime.executor` module.
+'''
 
 # standard imports
 import dataclasses
@@ -32,7 +34,7 @@ import pytest
 # local imports
 import landseg.configs.schema.sections.session as session_schema
 import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
-import landseg.session.engine.runtime.tasks.metrics.segmentation.builder as metrics_builder
+import landseg.session.engine.runtime.tasks.metrics as metrics
 import landseg.session.engine.runtime.tasks.heads.specs as headspecs
 
 # aliases
@@ -57,7 +59,7 @@ def mock_hlosses(mock_hspecs):
 
 @pytest.fixture
 def mock_hmetrics(mock_hspecs):
-    return metrics_builder.build_headmetrics(
+    return metrics.build_headmetrics(
         mock_hspecs,
         ignore_index=255
     )

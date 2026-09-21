@@ -19,15 +19,16 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Aggregator for multi-task learning (MTL) metrics across multiple heads.
+Diagnostic metrics for multi-head and multi-task learning models.
 
 Provides horizontal evaluation of model performance across independent
 and hierarchical tasks, including Global Exact Match (GEM) and
 logical constraint violation detection.
+
+Public APIs:
+    - `MTLMetricsAggregator`: Cross-head aggregator for GEM and
+      constraint violation metrics.
 '''
 
 # standard imports
@@ -38,21 +39,24 @@ import torch
 # local imports
 import landseg.session.engine.runtime.tasks.constraints as constraints
 
-# ------------------------------private dataclass------------------------------
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _Tally:
     '''Internal counter for horizontal metrics.'''
+
     hits: int = 0
     samples: int = 0
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class MTLMetricsAggregator:
     '''
     Aggregator for multi-task learning metrics across multiple heads.
 
     Calculates:
-    1. Global Exact Match (GEM): Per-pixel accuracy across all active heads.
-    2. Constraint Violations: Logical inconsistencies between predicted classes.
+    1. Global Exact Match (GEM): Per-pixel accuracy across all heads.
+    2. Constraint Violations: Inconsistencies between predicted classes.
     '''
 
     def __init__(
@@ -65,11 +69,12 @@ class MTLMetricsAggregator:
         Initialize the aggregator.
 
         Args:
-            cons: Optional list of logical constraints to evaluate.
-            ignore_index: Index to ignore in ground truth for GEM and
-                validity masks.
+            cons:
+                optional list of logical constraints to evaluate.
+            ignore_index:
+                index to ignore in ground truth for GEM and validity
+                masks.
         '''
-
         self.ignore_index = ignore_index
         self.constraints = cons or []
 
@@ -92,21 +97,18 @@ class MTLMetricsAggregator:
         Update global metrics with predictions and targets for a batch.
 
         Args:
-            preds_1b: Predicted class IDs (1-based) per head.
-            targets_1b: Ground truth labels (1-based) per head.
+            preds_1b:
+                predicted class IDs (1-based) per head.
+            targets_1b:
+                ground truth labels (1-based) per head.
         '''
-
-        # get common heads and early exit if inputs are not valid
         if not preds_1b or not targets_1b:
             return
         common_heads = [h for h in targets_1b if h in preds_1b]
         if not common_heads:
             return
 
-        # compute global exact match
         self._get_gem(preds_1b, targets_1b, common_heads)
-
-        # constraint violations
         self._check_violations(preds_1b, targets_1b)
 
     def compute(self) -> dict[str, float]:
@@ -133,20 +135,15 @@ class MTLMetricsAggregator:
         targets_1b: dict[str, torch.Tensor],
         common_heads: list[str]
     ):
-        '''Check GEM logic'''
-
-        # init bool masks
-        first_head = common_heads[0] # use the first head for inference
+        '''Check GEM logic.'''
+        first_head = common_heads[0]
         joint_valid = torch.ones_like(targets_1b[first_head], dtype=torch.bool)
         joint_match = torch.ones_like(targets_1b[first_head], dtype=torch.bool)
-        # GEM logic: Correct only if correct in ALL heads;
-        # Valid only if NOT ignored in ANY head.
         for head in common_heads:
             t, p = targets_1b[head], preds_1b[head]
             joint_valid &= (t != self.ignore_index)
             joint_match &= (p == t)
 
-        # tally
         self.gem_hits += int((joint_match & joint_valid).sum().item())
         self.gem_samples += int(joint_valid.sum().item())
 
@@ -155,29 +152,24 @@ class MTLMetricsAggregator:
         preds_1b: dict[str, torch.Tensor],
         targets_1b: dict[str, torch.Tensor],
     ):
-        '''Check violations'''
-
+        '''Check violations.'''
         for c in self.constraints:
             if c.source_head not in preds_1b or c.target_head not in preds_1b:
-                continue # skip if irrelavant
+                continue
 
             p_src, p_tgt = preds_1b[c.source_head], preds_1b[c.target_head]
             t_src, t_tgt = targets_1b[c.source_head], targets_1b[c.target_head]
 
-            # skip pixels with the ignored value
             valid_mask = (
                 (t_src != self.ignore_index) &
                 (t_tgt != self.ignore_index)
             )
-            # create tensor of forbidden values (devide alignment)
             forbidden_tensor = torch.tensor(c.forbidden, device=p_tgt.device)
-            # violations
             violation_mask = (
-                (p_src == c.trigger_val) & # triggered
-                torch.isin(p_tgt, forbidden_tensor) # and forbidden
+                (p_src == c.trigger_val) &
+                torch.isin(p_tgt, forbidden_tensor)
             )
 
-            # tally
             tally = self.violations[c.name]
             tally.hits += int((violation_mask & valid_mask).sum().item())
             tally.samples += int(valid_mask.sum().item())

@@ -21,14 +21,14 @@
 
 # pylint: disable=protected-access
 
-'''Unit tests for confusion matrix module (confusion_matrix.py).'''
+'''Unit tests for segmentation metrics module (segmentation.py).'''
 
 # third-party imports
 import pytest
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.tasks.metrics.segmentation.confusion_matrix as cm_module
+import landseg.session.engine.runtime.tasks.metrics.segmentation as seg_module
 
 
 def test_confusion_matrix_init():
@@ -38,7 +38,7 @@ def test_confusion_matrix_init():
     When: Instantiating CM module.
     Then: Correctly set attributes and initialize a zero matrix [C, C].
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=3,
         ignore_index=255,
         parent_class_1b=1,
@@ -61,7 +61,7 @@ def test_confusion_matrix_update_basic():
     Then: Increment confusion matrix entries according to (true, pred)
         pairs.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -99,7 +99,7 @@ def test_confusion_matrix_update_ignore_index():
     When: Calling `update`.
     Then: Skip ignored pixels from updating confusion matrix.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -127,7 +127,7 @@ def test_confusion_matrix_update_parent_gating():
     When: Calling `update`.
     Then: Only count pixels matching the required parent class.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=2,
@@ -142,12 +142,10 @@ def test_confusion_matrix_update_parent_gating():
         dtype=torch.float32
     )
     targets = torch.tensor([[[1, 1]]], dtype=torch.long)
-    # parent raw labels: pixel 0 has parent 1, pixel 1 has parent 2
     parent_raw = torch.tensor([[[1, 2]]], dtype=torch.long)
 
     cm.update(preds, targets, parent_raw_1b=parent_raw)
 
-    # only pixel 1 matches parent_class_1b=2
     assert cm.cm.sum().item() == 1
     assert cm.cm[0, 0].item() == 1
 
@@ -158,7 +156,7 @@ def test_confusion_matrix_update_all_ignored():
     When: Calling `update`.
     Then: Return early without modifying confusion matrix.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -179,7 +177,7 @@ def test_confusion_matrix_compute():
     When: Calling `compute`.
     Then: Return a locked `AccumulatedMetrics` object with IoUs.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -212,14 +210,13 @@ def test_confusion_matrix_compute_exclude_classes():
     Then: Calculate active class IoUs (`ac_ious`) excluding specified
         classes.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=3,
         ignore_index=255,
         parent_class_1b=None,
         exclude_class_1b=(3,)
     )
 
-    # set up perfect matches for class 1 and 2
     cm.cm[0, 0] = 5
     cm.cm[1, 1] = 5
     cm.cm[2, 2] = 5
@@ -238,7 +235,7 @@ def test_confusion_matrix_compute_exclude_classes_out_of_range():
     When: Calling `compute`.
     Then: Raise `IndexError`.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -255,7 +252,7 @@ def test_confusion_matrix_compute_invalid_shape():
     When: Calling `compute`.
     Then: Raise `ValueError`.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -273,7 +270,7 @@ def test_confusion_matrix_reset():
     When: Calling `reset`.
     Then: Zero out confusion matrix tensor.
     '''
-    cm = cm_module.ConfusionMatrix(
+    cm = seg_module.ConfusionMatrix(
         num_classes=2,
         ignore_index=255,
         parent_class_1b=None,
@@ -284,3 +281,24 @@ def test_confusion_matrix_reset():
     cm.reset('cpu')
 
     assert cm.cm.sum().item() == 0
+
+
+def test_build_headmetrics(mock_hspecs):
+    '''
+    Given: `HeadSpecs` describing prediction heads and an ignore index.
+    When: Calling `build_headmetrics`.
+    Then: Return a `HeadMetrics` container mapping head names to
+        configured `ConfusionMatrix` objects.
+    '''
+    hmetrics = seg_module.build_headmetrics(mock_hspecs, ignore_index=255)
+
+    assert isinstance(hmetrics, seg_module.HeadMetrics)
+    assert len(hmetrics) == 2
+    assert isinstance(
+        hmetrics.as_dict()['head_1'], seg_module.ConfusionMatrix
+    )
+    assert isinstance(
+        hmetrics.as_dict()['head_2'], seg_module.ConfusionMatrix
+    )
+    assert isinstance(hmetrics['head_1'], seg_module.ConfusionMatrix)
+    assert isinstance(hmetrics['head_2'], seg_module.ConfusionMatrix)

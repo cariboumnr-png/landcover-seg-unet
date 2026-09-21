@@ -161,9 +161,15 @@ establishing canonical subsystem entry points.
 - `runtime/tasks/loss/primitives/*.py`:
   - Will import `PrimitiveLoss` directly from
     `landseg.session.engine.runtime.tasks.loss.primitives.base`.
-- `runtime/tasks/metrics/segmentation/builder.py`:
-  - Will replace `import ...segmentation as seg` with
-    `import landseg.session.engine.runtime.tasks.metrics.segmentation.confusion_matrix as cm`.
+- `runtime/tasks/metrics/`:
+  - Will flatten nested `diagnostics/` and `segmentation/` subdirectories into
+    two cohesive sibling modules:
+    - `diagnostics.py`: houses `MTLMetricsAggregator` (GEM and constraint
+      violation metrics).
+    - `segmentation.py`: consolidates `ConfusionMatrix`, `HeadMetrics`, and
+      `build_headmetrics`.
+  - `metrics/__init__.py` will lazily delegate directly to `.diagnostics` and
+    `.segmentation`, eliminating two package directory nesting levels.
 - `runtime/tasks/heads/specs.py`:
   - Will remove redundant self-import `import ...heads as heads` and reference
     `HeadSpec` locally.

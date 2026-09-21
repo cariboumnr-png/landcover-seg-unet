@@ -19,12 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for MTL metrics aggregator module (mtl_aggregator.py).'''
+'''Unit tests for diagnostic metrics module (diagnostics.py).'''
 
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.metrics.diagnostics.mtl_aggregator as aggregator_module
+import landseg.session.engine.runtime.tasks.metrics.diagnostics as diag_module
+
 
 def test_mtl_aggregator_init(mock_constraint):
     '''
@@ -39,7 +40,7 @@ def test_mtl_aggregator_init(mock_constraint):
         target_head='head_b',
         forbidden=[2]
     )
-    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
+    agg = diag_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     assert agg.ignore_index == 255
     assert len(agg.constraints) == 1
@@ -56,7 +57,7 @@ def test_mtl_aggregator_update_empty_or_disjoint():
     When: Calling `update`.
     Then: Perform early exit without updating counters.
     '''
-    agg = aggregator_module.MTLMetricsAggregator([], ignore_index=255)
+    agg = diag_module.MTLMetricsAggregator([], ignore_index=255)
 
     # empty dicts
     agg.update({}, {})
@@ -75,11 +76,11 @@ def test_mtl_aggregator_gem_calculation():
     When: Calling `update`.
     Then: Correctly calculate global exact match hits and valid samples.
     '''
-    agg = aggregator_module.MTLMetricsAggregator([], ignore_index=255)
+    agg = diag_module.MTLMetricsAggregator([], ignore_index=255)
 
     # 1x2 spatial predictions and targets for 2 heads
     # pixel (0,0): match in both heads (1 == 1, 2 == 2) -> GEM hit
-    # pixel (0,1): match in head_a (1 == 1) but mismatch in head_b (2 != 1) -> not GEM hit
+    # pixel (0,1): mismatch in head_b (2 != 1) -> not a GEM hit
     preds = {
         'head_a': torch.tensor([[1, 1]]),
         'head_b': torch.tensor([[2, 2]])
@@ -120,11 +121,11 @@ def test_mtl_aggregator_constraint_violations(mock_constraint):
         target_head='head_b',
         forbidden=[2, 3]
     )
-    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
+    agg = diag_module.MTLMetricsAggregator([cons], ignore_index=255)
 
-    # pixel (0,0): source=1 (triggered), target=2 (forbidden) -> violation!
-    # pixel (0,1): source=1 (triggered), target=1 (allowed) -> no violation
-    # pixel (0,2): source=2 (not triggered), target=2 (forbidden) -> no violation
+    # pixel (0,0): source=1, target=2 (forbidden) -> violation
+    # pixel (0,1): source=1, target=1 (allowed) -> no violation
+    # pixel (0,2): source=2 (untriggered), target=2 -> no violation
     preds = {
         'head_a': torch.tensor([[1, 1, 2]]),
         'head_b': torch.tensor([[2, 1, 2]])
@@ -153,7 +154,7 @@ def test_mtl_aggregator_compute_and_reset(mock_constraint):
         target_head='head_b',
         forbidden=[2]
     )
-    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
+    agg = diag_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     preds = {
         'head_a': torch.tensor([[1, 1]]),
@@ -194,7 +195,7 @@ def test_mtl_aggregator_constraint_skipped_missing_head(mock_constraint):
         target_head='head_c',  # head_c not in preds_1b
         forbidden=[2]
     )
-    agg = aggregator_module.MTLMetricsAggregator([cons], ignore_index=255)
+    agg = diag_module.MTLMetricsAggregator([cons], ignore_index=255)
 
     preds = {
         'head_a': torch.tensor([[1, 1]]),

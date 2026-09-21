@@ -20,22 +20,26 @@
 # =========================================================================== #
 
 '''
-Confusion matrix and IoU metrics for segmentation evaluation.
+Segmentation metrics and evaluation containers for prediction heads.
 
-Provides incremental confusion matrix updates and derived metrics,
-including per-class IoU and mean IoU, with support for ignore-index
-handling, hierarchical gating, and class exclusion.
+Provides incremental confusion matrix computation and derived IoU
+metrics, alongside typed containers for multi-head validation.
 
-These components are used during validation and inference to
-accumulate and summarize prediction performance.
+Public APIs:
+    - `ConfusionMatrix`: Incremental confusion matrix with IoU metrics.
+    - `HeadMetrics`: Typed container mapping head names to confusion
+      matrices.
+    - `build_headmetrics`: Factory building per-head confusion matrices.
 '''
 
 # third-party imports
 import torch
 # local imports
 import landseg.core as core
+import landseg.session.engine.runtime.tasks.heads as heads
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class ConfusionMatrix:
     '''
     Incremental confusion matrix with IoU metric computation.
@@ -56,19 +60,15 @@ class ConfusionMatrix:
         Initialize confusion matrix state and configuration.
 
         Args:
-            config:
-                Configuration specifying number of classes, ignore index,
-                optional parent-class gating, and class exclusions for
-                metric reporting.
-
-        Notes:
-            - Internal matrix is initialized to zeros and updated\
-              incrementally during execution.
-            - Metrics are stored in an accumulated container and\
-              finalized after computation.
+            num_classes:
+                total number of classes for the prediction head.
+            ignore_index:
+                index to ignore in ground truth labels.
+            parent_class_1b:
+                optional parent class label (1-based) for gating.
+            exclude_class_1b:
+                optional tuple of class labels (1-based) to exclude.
         '''
-
-        # assign attributes
         self.n_cls = num_classes
         self.ignore_index = ignore_index
         self.parent_class_1b = parent_class_1b
@@ -85,23 +85,20 @@ class ConfusionMatrix:
         targets: torch.Tensor,
         **kwargs
     ) -> None:
-
         '''
         Update confusion matrix with a new batch.
 
         Args:
-            preds: Model outputs of shape [B, C, H, W].
-            targets: Child labels of shape [B, H, W], 1-based with
-                ignore index.
-            parent_raw_1b (kwarg): Optional parent labels (1-based). If
-                provided and `parent_class_1b` is set, only those pixels
-                are counted.
+            preds:
+                model outputs of shape [B, C, H, W].
+            targets:
+                child labels of shape [B, H, W] (1-based).
+            parent_raw_1b (kwarg):
+                optional parent labels (1-based) for hierarchical
+                gating.
         '''
-
-        # get valid pixels (mask off ignored)
         valid = targets != self.ignore_index
 
-        # optional hierarchical gating using raw parent labels (1-based)
         parent_raw_1b = kwargs.get('parent_raw_1b')
         if parent_raw_1b is not None and self.parent_class_1b is not None:
             assert isinstance(parent_raw_1b, torch.Tensor)
@@ -109,76 +106,111 @@ class ConfusionMatrix:
         if valid.sum() == 0:
             return
 
-        # get prediction for the batch
-        preds_0b = torch.argmax(preds, dim=1) # [B, H, W] - along S (slice)
+        preds_0b = torch.argmax(preds, dim=1)
+        t0 = targets[valid].to(torch.int64) - 1
+        p = preds_0b[valid].to(torch.int64)
 
-        # shift child target to 0-based for bincount indexing
-        t0 = targets[valid].to(torch.int64) - 1 # because target_1b is 1..C
-        p = preds_0b[valid].to(torch.int64) # preds should already be 0..C-1
-
-        # safety: drop any accidental negatives, in case ignore slipped through
-        # and clamp to the expected class range.
         t0 = t0.clamp(min=0, max=self.n_cls - 1)
         p = p.clamp(min=0, max=self.n_cls - 1)
 
-        # flatten pair (true, pred) to unique index: t0 * C + p
         k = t0 * self.n_cls + p
         binc = torch.bincount(k, minlength=self.n_cls * self.n_cls)
-
-        # accumulate in place
         self.cm += binc.view(self.n_cls, self.n_cls)
 
     def compute(self) -> core.AccumulatedMetrics:
-        '''Compute IoUs and return a `core.AccumulatedMetrics` container.'''
-
-        # init metrics data class
+        '''Compute IoUs and return an accumulated metrics container.'''
         metrics = core.AccumulatedMetrics()
-        metrics.cmatrix = self.cm.tolist() # for serialization
+        metrics.cmatrix = self.cm.tolist()
 
-        # sanity
         if self.cm.ndim != 2 or self.cm.shape[0] != self.cm.shape[1]:
             raise ValueError('Confusion matrix must be a square 2D tensor')
 
-        # cm[i, j]: true class i predicted as j
-        tp = torch.diag(self.cm).float()     # true positive
-        fp = self.cm.sum(dim=0).float() - tp # false positive
-        fn = self.cm.sum(dim=1).float() - tp # false negative
-        # union per class as the denominator
+        tp = torch.diag(self.cm).float()
+        fp = self.cm.sum(dim=0).float() - tp
+        fn = self.cm.sum(dim=1).float() - tp
         dn = tp + fp + fn
 
-        # safe divide for iou
         eps = torch.finfo(tp.dtype).eps
         iou = torch.where(dn > 0, tp / dn.clamp_min(eps), torch.zeros_like(dn))
         iou_list = iou.tolist()
 
-        # parse from to-exclude classes if provided
-        excld = self.exclude_class_1b # 1-based
+        excld = self.exclude_class_1b
         if excld is not None and len(excld) > 0:
             if not all((1 <= idx <= self.n_cls) for idx in excld):
                 raise IndexError('Exclude classes out of index range')
-            activ = set(range(len(iou))) - set(x - 1 for x in excld) # 0-based
+            activ = set(range(len(iou))) - set(x - 1 for x in excld)
         else:
             activ = ()
 
-        # iterate IoUs (all class & active class)
         activ_sum = 0.0
         for idx in range(len(iou)):
             metrics.ious[f'{idx + 1}'] = iou_list[idx]
-            # if class is not excluded
             if idx in activ:
-                # 1-based class label
                 metrics.ac_ious[f'{idx + 1}'] = iou_list[idx]
                 activ_sum += iou_list[idx]
-        # mean IoUs
-        v = dn > 0 # mean IoU over classes with denom > 0
+
+        v = dn > 0
         metrics.mean = iou[v].mean().item() if v.any() else 0.0
         metrics.ac_mean = activ_sum / len(activ) if activ else 0.0
 
-        # lock metrics and return
         metrics.lock()
         return metrics
 
     def reset(self, device: str) -> None:
         '''Zero the confusion matrix and move to specified device.'''
-
         self.cm = self.cm.zero_().to(device)
+
+
+class HeadMetrics:
+    '''
+    Typed wrapper around a mapping of heads to `ConfusionMatrix` objects.
+
+    Provides key-based access to individual `ConfusionMatrix` instances
+    and a typed container for passing head specs through the engine.
+    '''
+
+    def __init__(self, hmetrics: dict[str, ConfusionMatrix]):
+        '''Initialize wrapper with head name mapping.'''
+        self._hmetrics = hmetrics
+
+    def __getitem__(self, key: str) -> ConfusionMatrix:
+        return self._hmetrics[key]
+
+    def __len__(self) -> int:
+        return len(self._hmetrics)
+
+    def as_dict(self) -> dict[str, ConfusionMatrix]:
+        '''Return a shallow copy of the mapping as `dict[str, CM]`.'''
+        return dict(self._hmetrics)
+
+
+# ----- public functions
+def build_headmetrics(
+    headspecs: heads.HeadSpecs,
+    *,
+    ignore_index: int
+) -> HeadMetrics:
+    '''
+    Construct `ConfusionMatrix` objects for each prediction head.
+
+    Args:
+        headspecs:
+            structure describing each head's class count and gating.
+        ignore_index:
+            label index to ignore during metric updates.
+
+    Returns:
+        HeadMetrics:
+            container mapping head names to initialized confusion
+            matrices.
+    '''
+    out: dict[str, ConfusionMatrix] = {}
+    for hname, hspec in headspecs.as_dict().items():
+        out[hname] = ConfusionMatrix(
+            num_classes=len(hspec.count),
+            ignore_index=ignore_index,
+            parent_class_1b=hspec.parent_cls,
+            exclude_class_1b=hspec.exclude_cls,
+        )
+
+    return HeadMetrics(out)
