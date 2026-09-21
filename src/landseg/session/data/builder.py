@@ -284,7 +284,9 @@ def _get_memeory_strategy(
     )
 
 
-def _collate_multi_block(batch: alias.DatasetBatch) -> alias.DatasetItem:
+def _collate_multi_block(
+    batch: typing.Sequence[alias.DatasetItem]
+) -> alias.DatasetItem:
     '''
     Customized collate function to properly stack a batch.
 

@@ -130,7 +130,7 @@ class _MultiBlockData:
     '''Small container for multiblock data.'''
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
-    dom: list[alias.TorchDict] | _CacheDict = dataclasses.field(init=False)
+    dom: list[dict[str, torch.Tensor]] | _CacheDict = dataclasses.field(init=False)
 
 
 class MultiBlockDataset(torch.utils.data.Dataset):
@@ -363,7 +363,7 @@ class _BlockDataset(torch.utils.data.Dataset):
 
         # process args
         self.config = config
-        self.domain: alias.TorchDict = {}
+        self.domain: dict[str, torch.Tensor] = {}
         self.augment_flip = augment_flip
 
         # load data directly from npz

@@ -39,13 +39,15 @@ serve as the single source of truth for runtime behavior and results.
 # standard imports
 from __future__ import annotations
 import dataclasses
+import typing
 # third-party imports
 import torch
 # local imports
 import landseg.session.alias as alias
 import landseg.session.engine.tasks as tasks
 
-# alias
+# typing aliases
+TensorGridPatches: typing.TypeAlias = dict[tuple[int, int], torch.Tensor]
 field = dataclasses.field
 
 # ----- progress tracking
@@ -114,12 +116,12 @@ class _BatchOutput:
 class _InferOutput:
     '''Epoch-level aggregation for continuous inference domains.'''
     # inputs: maps (col, row) -> patch tensor [C, H, W]
-    inputs: alias.TensorGridPatches = field(default_factory=dict)
+    inputs: TensorGridPatches = field(default_factory=dict)
     # targets and preds: maps head_name -> (col, row) -> patch tensor [H, W]
-    labels: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
-    preds: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    labels: dict[str, TensorGridPatches] = field(default_factory=dict)
+    preds: dict[str, TensorGridPatches] = field(default_factory=dict)
     # errors
-    errors: dict[str, alias.TensorGridPatches] = field(default_factory=dict)
+    errors: dict[str, TensorGridPatches] = field(default_factory=dict)
 
     def clear(self):
         '''Clear at the start of a new inference phase.'''

@@ -28,25 +28,9 @@ import torch
 
 # batch context
 Tensor: typing.TypeAlias = torch.Tensor
-
-TorchDict: typing.TypeAlias = dict[str, Tensor]
-'''
-A tyical string-indexed torch Tensor dictionary.
-'''
-
-DatasetItem: typing.TypeAlias = tuple[Tensor, Tensor, TorchDict]
+DatasetItem: typing.TypeAlias = tuple[Tensor, Tensor, dict[str, Tensor]]
 '''
 A tuple from one sample of the dataset: x (always present), y (can be
 a placeholder during inference, e.g., `torch.Tensor([1])`) and domain
 (always present but can be empty).
-'''
-
-DatasetBatch: typing.TypeAlias = typing.Sequence[DatasetItem]
-'''
-A collection of `DatasetItem` objects.
-'''
-
-TensorGridPatches: typing.TypeAlias = dict[tuple[int, int], torch.Tensor]
-'''
-Tensor patches on a grid indexed by (col, row).
 '''
