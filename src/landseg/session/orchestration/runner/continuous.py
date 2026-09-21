@@ -35,7 +35,7 @@ as a stream of TrainingStep records, one per completed epoch.
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.runner.base as base
@@ -69,7 +69,7 @@ class ContinuousRunner(base.BaseRunner):
     def __init__(
         self,
         *,
-        phase: common.PhaseLike,
+        phase: contracts.PhaseLike,
         **kwargs: typing.Any
     ):
         '''

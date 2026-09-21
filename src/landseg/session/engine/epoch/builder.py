@@ -35,7 +35,7 @@ Public APIs:
 # standard imports
 import typing
 # local imports
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.engine.epoch.policy.base as base
 import landseg.session.engine.epoch.policy.evaluator as evaluator_mod
 import landseg.session.engine.epoch.policy.trainer as trainer_mod
@@ -47,7 +47,7 @@ import landseg.session.engine.protocols as protocols
 def build_epoch_runner(
     engine_runtime: base.EngineRuntime,
     dataloaders: protocols.DataLoadersLike,
-    dispatcher: common.SessionObserverLike,
+    dispatcher: contracts.SessionObserverLike,
     schedule: protocols.ScheduleConfigShape | None = None,
     *,
     mode: runner_mod.Mode = 'train_eval',

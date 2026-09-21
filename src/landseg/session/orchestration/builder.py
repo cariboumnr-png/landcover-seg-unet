@@ -46,7 +46,7 @@ external contract regardless of internal training structure.
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.protocols as protocols
 import landseg.session.orchestration.runner as runner
 
@@ -54,8 +54,8 @@ import landseg.session.orchestration.runner as runner
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
     config: protocols.OrchestrationConfigShape,
-    training_phases: common.PhaseLike,
-    dispatcher: common.SessionObserverLike,
+    training_phases: contracts.PhaseLike,
+    dispatcher: contracts.SessionObserverLike,
     session_artifact_paths: artifacts.SessionPaths,
     *,
     runner_type: typing.Literal['continuous'],
@@ -65,8 +65,8 @@ def build_runner(
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
     config: protocols.OrchestrationConfigShape,
-    training_phases: typing.Sequence[common.PhaseLike],
-    dispatcher: common.SessionObserverLike,
+    training_phases: typing.Sequence[contracts.PhaseLike],
+    dispatcher: contracts.SessionObserverLike,
     session_artifact_paths: artifacts.SessionPaths,
     *,
     runner_type: typing.Literal['curriculum'],
@@ -76,8 +76,8 @@ def build_runner(
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
     config: protocols.OrchestrationConfigShape,
-    training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike],
-    dispatcher: common.SessionObserverLike,
+    training_phases: contracts.PhaseLike | typing.Sequence[contracts.PhaseLike],
+    dispatcher: contracts.SessionObserverLike,
     session_artifact_paths: artifacts.SessionPaths,
     *,
     runner_type: typing.Literal['continuous', 'curriculum'],
@@ -141,7 +141,7 @@ def build_runner(
 
     match runner_type:
         case 'continuous':
-            if not isinstance(training_phases, common.PhaseLike):
+            if not isinstance(training_phases, contracts.PhaseLike):
                 raise ValueError('Continuous training requires a single phase')
             return runner.ContinuousRunner(
                 epoch_runner=epoch_engine,
@@ -152,7 +152,7 @@ def build_runner(
         case 'curriculum':
             if not (
                 isinstance(training_phases, list) and
-                all(isinstance(p, common.PhaseLike) for p in training_phases)
+                all(isinstance(p, contracts.PhaseLike) for p in training_phases)
             ):
                 raise ValueError('Curriculum expects a sequence of phases')
             return runner.CurriculumRunner(

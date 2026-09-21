@@ -46,7 +46,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.protocols as protocols
 
@@ -109,7 +109,7 @@ class BaseRunner(abc.ABC):
         self,
         epoch_runner: protocols.EpochEngineLike,
         base_config: BaseRunnerConfig,
-        dispatcher: common.SessionObserverLike,
+        dispatcher: contracts.SessionObserverLike,
     ):
         '''
         Initialize the base runner.

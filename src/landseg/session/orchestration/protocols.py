@@ -32,10 +32,10 @@ from __future__ import annotations
 import typing
 # local imoprts
 import landseg.core as core
-import landseg.session.common as common
 
 if typing.TYPE_CHECKING:
     import torch.optim
+    import landseg.session.contracts as contracts
 
 # aliases
 Heads: typing.TypeAlias = list[str] | None
@@ -93,9 +93,9 @@ class OrchestrationConfigShape(typing.Protocol):
     @property
     def monitor(self) -> _Monitor: ...
     @property
-    def single_phase(self) -> common.PhaseLike: ...
+    def single_phase(self) -> contracts.PhaseLike: ...
     @property
-    def multi_phases(self) -> typing.Sequence[common.PhaseLike]: ...
+    def multi_phases(self) -> typing.Sequence[contracts.PhaseLike]: ...
 
 
 class _Schedule(typing.Protocol):

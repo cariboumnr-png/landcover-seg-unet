@@ -23,7 +23,7 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.instrumentation.callbacks.base as base
 import landseg.utils as utils
 
@@ -40,7 +40,7 @@ class LoggingCallback(base.BaseCallback):
         super().__init__(verbose=verbose)
         self.logger = logger
 
-    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
+    def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None:
         if self.logger:
             self.logger.log('INFO', f'[START] Phase {phase.name}')
             self.logger.log('INFO', f'- Max Epochs:\t{phase.num_epochs}')

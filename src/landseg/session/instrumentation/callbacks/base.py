@@ -39,11 +39,11 @@ expected interfaces.
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.instrumentation.dashboards as dashboards
 
 # --------------------------------Public  Class--------------------------------
-class BaseCallback(common.SessionObserverLike):
+class BaseCallback(contracts.SessionObserverLike):
     '''
     Base class for defining dashboarding callbacks.
 
@@ -73,7 +73,7 @@ class BaseCallback(common.SessionObserverLike):
         self._label_color_map = label_color_map
 
     # --- session phase begins
-    def on_session_phase_begin(self, phase: common.PhaseLike) -> None: ...
+    def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None: ...
     # --- session step begins
     def on_session_step_begin(self) -> None: ...
     # --- epoch begins

@@ -34,7 +34,7 @@ one per completed epoch.
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.runner.base as base
@@ -67,7 +67,7 @@ class CurriculumRunner(base.BaseRunner):
     def __init__(
         self,
         *,
-        training_phases: typing.Sequence[common.PhaseLike],
+        training_phases: typing.Sequence[contracts.PhaseLike],
         **kwargs: typing.Any
     ):
         '''

@@ -54,16 +54,14 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common.phases as phases
+import landseg.session.contracts.phases as phases
 
 # -----------------------------Engine components-----------------------------
 @typing.runtime_checkable
 class SessionObserverLike(typing.Protocol):
     '''Lifecycle callback interface for observing session events.'''
     # --- session phase begins
-    def on_session_phase_begin(
-        self, phase: phases.PhaseLike
-    ) -> None: ...
+    def on_session_phase_begin(self, phase: phases.PhaseLike) -> None: ...
     # --- session step begins
     def on_session_step_begin(self) -> None: ...
     # --- epoch begins

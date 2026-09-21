@@ -32,7 +32,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy.epoch as epoch_policy
 import landseg.session.orchestration.protocols as protocols
@@ -81,7 +81,7 @@ class PhasePolicy:
         self,
         *,
         epoch_runner: protocols.EpochEngineLike,
-        phase_config: common.PhaseLike,
+        phase_config: contracts.PhaseLike,
         track_config: TrackingConfig,
     ):
         '''

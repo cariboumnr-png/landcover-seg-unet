@@ -25,10 +25,10 @@ Callback dispatcher.
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.instrumentation.callbacks.base as base
 
-class CallbackDispatcher(common.SessionObserverLike):
+class CallbackDispatcher(contracts.SessionObserverLike):
     '''Broadcast engine events to all registered passive callbacks.'''
 
     def __init__(self, cbs: list[base.BaseCallback] | None = None):
@@ -50,7 +50,7 @@ class CallbackDispatcher(common.SessionObserverLike):
 
     # megaphone methods
     # --- session phase begins
-    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
+    def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None:
         for cb in self.callbacks:
             cb.on_session_phase_begin(phase)
 

@@ -34,15 +34,15 @@ all components required for epoch-wise training and evaluation.
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
 import landseg.session.engine.batch.engine as engine
 import landseg.session.engine.batch.state as state
+import landseg.session.engine.protocols as procotols
 
 
 # ----- public functions
 def build_batch_engine(
     dataspecs: core.DataSpecs,
-    dataloaders: common.DataLoadersLike,
+    dataloaders: procotols.DataLoadersLike,
     model: core.MultiheadModelLike,
     config: engine.BatchExecConfigShape,
     *,

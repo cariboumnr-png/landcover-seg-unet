@@ -38,6 +38,7 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
 import landseg.session.engine.optim as optim
@@ -69,7 +70,7 @@ class EpochEngineContext:
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
     schedule: protocols.ScheduleConfigShape
-    dispatcher: common.SessionObserverLike
+    dispatcher: contracts.SessionObserverLike
     device: str
     logger: common.SessionLogger | None = None
 

@@ -37,9 +37,10 @@ from __future__ import annotations
 import copy
 import dataclasses
 # local imports
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.engine.batch as batch
 import landseg.session.engine.optim as optim
+import landseg.session.engine.protocols as protocols
 import landseg.session.engine.tasks as tasks
 
 
@@ -75,8 +76,8 @@ class EngineBase:
     def __init__(
         self,
         engine_runtime: EngineRuntime,
-        dataloaders: common.DataLoadersLike,
-        dispatcher: common.SessionObserverLike,
+        dataloaders: protocols.DataLoadersLike,
+        dispatcher: contracts.SessionObserverLike,
         *,
         device: str,
     ):

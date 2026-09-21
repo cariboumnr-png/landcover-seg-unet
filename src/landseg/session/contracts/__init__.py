@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.common`.
+Top-level namespace for `landseg.session.contracts`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -32,20 +32,30 @@ import importlib
 import typing
 
 __all__ = [
-    # classes
-    'SessionLogger',
+    # typing
+    'PhaseLike',
+    'SessionObserverLike',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .logger import (
-        SessionLogger,
+    from .observer import (
+        SessionObserverLike,
     )
 
+    from .phases import (
+        PhaseLike,
+    )
+
+
 def __getattr__(name: str):
-    if name in {'SessionLogger'}:
-        obj = importlib.import_module('.logger', __package__)
+    if name in {'SessionObserverLike'}:
+        obj = importlib.import_module('.observer', __package__)
+        return getattr(obj, name)
+
+    if name in {'PhaseLike'}:
+        obj = importlib.import_module('.phases', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
