@@ -99,7 +99,7 @@ def build_overfit_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> engine.EpochEngine:
+) -> engine.EpochRunner:
     '''Build an epoch engine for overfit training with evaluation.'''
 
     # callback dispatcher
@@ -129,7 +129,7 @@ def build_evaluate_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> engine.EpochEngine:
+) -> engine.EpochRunner:
     '''Build an epoch engine for evaluation-only execution.'''
 
     # callback dispatcher

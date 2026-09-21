@@ -26,7 +26,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.executor.state as state_mod
+import landseg.session.engine.runtime.batch.state as state_mod
 
 
 # ----- `_Progress` dataclass tests

@@ -45,7 +45,7 @@ def test_build_overfit_session(
         context=_get_context(),
     )
 
-    assert isinstance(engine_session, epoch_mod.EpochEngine)
+    assert isinstance(engine_session, epoch_mod.EpochRunner)
     assert engine_session.mode == 'train_eval'
 
 
@@ -66,7 +66,7 @@ def test_build_evaluate_session(
         context=_get_context(),
     )
 
-    assert isinstance(engine_session, epoch_mod.EpochEngine)
+    assert isinstance(engine_session, epoch_mod.EpochRunner)
     assert engine_session.mode == 'eval_only'
 
 

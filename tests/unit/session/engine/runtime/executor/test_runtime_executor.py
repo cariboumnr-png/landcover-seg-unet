@@ -29,8 +29,8 @@ import dataclasses
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.executor.executor as executor
-import landseg.session.engine.runtime.executor.state as state_mod
+import landseg.session.engine.runtime.batch.engine as engine_mod
+import landseg.session.engine.runtime.batch.state as state_mod
 
 
 # ----- `BatchEngine` initialization and batch parsing tests
@@ -51,7 +51,7 @@ def test_batch_engine_init(mock_model, session_config):
         logit_adjust_alpha=0.8
     )
 
-    engine = executor.BatchEngine(
+    engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
         config=config,
@@ -80,7 +80,7 @@ def test_batch_engine_parse_batch_labeled(mock_model, session_config):
 
     state.batch_cxt.refresh(bidx=1, batch=(x, y, domain))
 
-    engine = executor.BatchEngine(
+    engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
@@ -112,7 +112,7 @@ def test_batch_engine_parse_batch_invalid_active_head_raises(mock_model, session
 
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = executor.BatchEngine(
+    engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
@@ -148,7 +148,7 @@ def test_run_train_batch(
     y = torch.ones(2, 1, 256, 256, dtype=torch.long)
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = executor.BatchEngine(
+    engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
@@ -186,7 +186,7 @@ def test_run_validate_batch(
     y = torch.ones(2, 1, 256, 256, dtype=torch.long)
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = executor.BatchEngine(
+    engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
@@ -222,7 +222,7 @@ def test_run_infer_batch_spatial_aggregation(
     y = torch.ones(1, 1, 256, 256, dtype=torch.long)
     state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
 
-    engine = executor.BatchEngine(
+    engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
         config=session_config.engine_exec,
@@ -239,7 +239,7 @@ def test_run_infer_batch_spatial_aggregation(
 
 # ----- private helpers
 def _get_context():
-    return executor.BatchExecContext(
+    return engine_mod.BatchExecContext(
         parent_map={},
         patch_per_blk=4,
         patch_per_dim=2,

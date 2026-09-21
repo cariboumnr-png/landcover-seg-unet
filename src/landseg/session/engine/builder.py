@@ -40,7 +40,7 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.data as data
 import landseg.session.engine.epoch as epoch
-import landseg.session.engine.runtime.executor as executor
+import landseg.session.engine.runtime.batch as batch
 import landseg.session.engine.runtime.optim as optim
 import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.runtime as runtime
@@ -58,7 +58,7 @@ class _EpochEngineConfigShape(typing.Protocol):
     @property
     def data_loader(self) -> data.DataLoaderConfig: ...
     @property
-    def engine_exec(self) -> executor.BatchExecConfigShape: ...
+    def engine_exec(self) -> batch.BatchExecConfigShape: ...
     @property
     def engine_optim(self) -> optim.OptimConfigShape: ...
     @property
@@ -83,7 +83,7 @@ def build_epoch_engine(
     config: _EpochEngineConfigShape,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
     eval_dataset: typing.Literal['val', 'test'] = 'val'
-) -> epoch.EpochEngine:
+) -> epoch.EpochRunner:
     '''
     Construct an epoch engine with training and/or evaluation policies.
 
@@ -156,8 +156,8 @@ def build_epoch_engine(
     # return engine with matched mode
     match mode:
         case 'train_eval':
-            return epoch.EpochEngine(mode, trainer, evaluator)
+            return epoch.EpochRunner(mode, trainer, evaluator)
         case 'train_only':
-            return epoch.EpochEngine(mode, trainer, None)
+            return epoch.EpochRunner(mode, trainer, None)
         case 'eval_only':
-            return epoch.EpochEngine(mode, None, evaluator)
+            return epoch.EpochRunner(mode, None, evaluator)

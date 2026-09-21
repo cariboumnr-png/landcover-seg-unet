@@ -297,7 +297,7 @@ def _resolve_target_head(
 
 # ----- overfit epoch training loop helper
 def _run_overfit_loop(
-    runner: engine.EpochEngine,
+    runner: engine.EpochRunner,
     config: configs.RootConfig,
     logger: session.SessionLogger,
 ) -> dict[str, typing.Any]:

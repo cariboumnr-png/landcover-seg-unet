@@ -29,7 +29,7 @@ import dataclasses
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.executor.objective as obj_mod
+import landseg.session.engine.runtime.batch.objective as obj_mod
 
 
 # ----- `_shift_1_to_0` helper tests

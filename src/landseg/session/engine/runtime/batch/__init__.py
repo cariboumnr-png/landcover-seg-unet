@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.executor`.
+Top-level namespace for `landseg.session.engine.runtime.batch`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -43,7 +43,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .executor import (
+    from .engine import (
         BatchEngine,
         BatchExecConfigShape,
         BatchExecContext,
@@ -59,7 +59,7 @@ def __getattr__(name: str):
         'BatchExecConfigShape',
         'BatchExecContext',
     }:
-        obj = importlib.import_module('.executor', __package__)
+        obj = importlib.import_module('.engine', __package__)
         return getattr(obj, name)
 
     if name in {'initialize_state'}:

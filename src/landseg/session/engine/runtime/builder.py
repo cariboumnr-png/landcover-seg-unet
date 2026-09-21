@@ -33,7 +33,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.executor as executor
+import landseg.session.engine.runtime.batch as batch
 import landseg.session.engine.runtime.optim as optim
 import landseg.session.engine.runtime.tasks as tasks
 import landseg.session.engine.protocols as protocols
@@ -43,7 +43,7 @@ import landseg.session.engine.protocols as protocols
 class _EngineRuntimeConfigShape(typing.Protocol):
     '''Structural typing interface for engine building.'''
     @property
-    def engine_exec(self) -> executor.BatchExecConfigShape: ...
+    def engine_exec(self) -> batch.BatchExecConfigShape: ...
     @property
     def engine_optim(self) -> optim.OptimConfigShape: ...
     @property
@@ -53,7 +53,7 @@ class _EngineRuntimeConfigShape(typing.Protocol):
 @dataclasses.dataclass
 class EngineRuntime:
     '''Engine core components bundle.'''
-    engine: executor.BatchEngine
+    engine: batch.BatchEngine
     engine_optim: optim.Optimization
     engine_tasks: tasks.EngineTasks
 
@@ -113,7 +113,7 @@ def build_engine_runtime(
     preview_ctx = meta.preview_context
 
     # initialize engine state
-    engine_state = executor.initialize_state(
+    engine_state = batch.initialize_state(
         all_heads=list(dataspecs.heads.class_counts.keys()),
         batch_size=meta.batch_size,
         use_amp=exec_config.use_amp,
@@ -121,14 +121,14 @@ def build_engine_runtime(
     )
 
     # batch engine
-    exec_context = executor.BatchExecContext(
+    exec_context = batch.BatchExecContext(
         parent_map=dataspecs.heads.head_parent,
         patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
         patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
         block_columns=preview_ctx.block_columns if preview_ctx else None,
         device=device
     )
-    batch_engine = executor.BatchEngine(
+    batch_engine = batch.BatchEngine(
         model,
         engine_state,
         exec_config,

@@ -30,7 +30,7 @@
 import pytest
 # local imports
 import landseg.core as core
-import landseg.session.engine.epoch.executor as exec_mod
+import landseg.session.engine.epoch.runner as exec_mod
 
 
 # ----- `EpochEngine` initialization and total_train_batch tests
@@ -40,7 +40,7 @@ def test_epoch_engine_init(mock_trainer, mock_evaluator):
     When: Instantiating `EpochEngine` in train_eval mode.
     Then: Store mode, trainer, evaluator and `training_sample_size`.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='train_eval',
         trainer=mock_trainer,
         evaluator=mock_evaluator
@@ -58,7 +58,7 @@ def test_epoch_engine_train_size_no_trainer(mock_evaluator):
     When: Reading `training_sample_size`.
     Then: Return 0.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='eval_only',
         trainer=None,
         evaluator=mock_evaluator
@@ -74,7 +74,7 @@ def test_epoch_engine_run_epoch_train_eval(mock_trainer, mock_evaluator):
     When: Calling `run_epoch(epoch=1)`.
     Then: Execute policies, returning `SessionStepResults`.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='train_eval',
         trainer=mock_trainer,
         evaluator=mock_evaluator
@@ -102,7 +102,7 @@ def test_epoch_engine_run_epoch_train_only(mock_trainer):
     When: Calling `run_epoch(epoch=1)`.
     Then: Execute training policy and return training `SessionStepResults`.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='train_only',
         trainer=mock_trainer,
         evaluator=None
@@ -123,7 +123,7 @@ def test_epoch_engine_run_epoch_eval_only(mock_evaluator):
     When: Calling `run_epoch(epoch=1)`.
     Then: Execute validation policy and return validation step results.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='eval_only',
         trainer=None,
         evaluator=mock_evaluator
@@ -145,7 +145,7 @@ def test_epoch_engine_missing_trainer_raises(mock_evaluator):
     When: Calling `run_epoch`.
     Then: Raise `ValueError` matching 'Missing trainer'.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='train_eval',
         trainer=None,  # type: ignore
         evaluator=mock_evaluator
@@ -162,7 +162,7 @@ def test_epoch_engine_head_state_forwarding(mock_trainer, mock_evaluator):
     When: Calling `set_head_state` and `reset_head_state`.
     Then: Forward configuration to both sub-controllers.
     '''
-    epoch_engine = exec_mod.EpochEngine(
+    epoch_engine = exec_mod.EpochRunner(
         mode='train_eval',
         trainer=mock_trainer,
         evaluator=mock_evaluator

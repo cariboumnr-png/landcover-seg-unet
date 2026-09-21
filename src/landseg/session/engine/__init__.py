@@ -33,7 +33,7 @@ import typing
 
 __all__ = [
     # classes
-    'EpochEngine',
+    'EpochRunner',
     'EpochEngineContext',
     # functions
     'build_epoch_engine',
@@ -51,9 +51,9 @@ if typing.TYPE_CHECKING:
         build_epoch_engine,
     )
     from .epoch import (
-        EpochEngine,
+        EpochRunner,
     )
-    from .runtime.executor import (
+    from .runtime.batch import (
         BatchExecConfigShape,
     )
     from .runtime.optim import (
@@ -72,12 +72,12 @@ def __getattr__(name: str):
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
-    if name in {'EpochEngine'}:
+    if name in {'EpochRunner'}:
         obj = importlib.import_module('.epoch', __package__)
         return getattr(obj, name)
 
     if name in {'BatchExecConfigShape'}:
-        obj = importlib.import_module('.runtime.executor', __package__)
+        obj = importlib.import_module('.runtime.batch', __package__)
         return getattr(obj, name)
 
     if name in {'OptimConfigShape'}:

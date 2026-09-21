@@ -24,7 +24,7 @@
 # pylint: disable=redefined-outer-name
 
 '''
-Fixtures for testing `landseg.session.engine.runtime.executor` module.
+Fixtures for testing `landseg.session.engine.runtime.batch` module.
 '''
 
 # standard imports
