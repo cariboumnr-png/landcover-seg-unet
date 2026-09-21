@@ -27,7 +27,7 @@
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.regularization.consistency as consistency
+import landseg.session.engine.tasks.regularization.consistency as consistency
 
 
 def test_regularizer_init_invalid_reduction(session_config):

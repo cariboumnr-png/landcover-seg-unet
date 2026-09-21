@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.dice as dice_loss
+import landseg.session.engine.tasks.loss.primitives.dice as dice_loss
 
 
 def test_dice_loss_forward():

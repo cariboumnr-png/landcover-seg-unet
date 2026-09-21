@@ -25,7 +25,7 @@
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.spectral as spectral
+import landseg.session.engine.tasks.loss.primitives.spectral as spectral
 
 
 def test_spectral_loss_invalid_neighbour():

@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.composite as composite
+import landseg.session.engine.tasks.loss.composite as composite
 
 
 def test_composite_loss_init_no_losses(session_config):

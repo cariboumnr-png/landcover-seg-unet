@@ -25,7 +25,7 @@
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.focal as focal_loss
+import landseg.session.engine.tasks.loss.primitives.focal as focal_loss
 
 
 def test_focal_loss_forward():

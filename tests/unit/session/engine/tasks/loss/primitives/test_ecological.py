@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.ecological as eco_loss
+import landseg.session.engine.tasks.loss.primitives.ecological as eco_loss
 
 
 # ----- `EcologicalSimilarityLoss` initialization

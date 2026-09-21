@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.metrics.diagnostics as diag_module
+import landseg.session.engine.tasks.metrics.diagnostics as diag_module
 
 
 def test_mtl_aggregator_init(mock_constraint):

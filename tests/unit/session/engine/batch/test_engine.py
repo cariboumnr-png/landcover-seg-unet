@@ -29,8 +29,8 @@ import dataclasses
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.batch.engine as engine_mod
-import landseg.session.engine.runtime.batch.state as state_mod
+import landseg.session.engine.batch.engine as engine_mod
+import landseg.session.engine.batch.state as state_mod
 
 
 # ----- `BatchEngine` initialization and batch parsing tests

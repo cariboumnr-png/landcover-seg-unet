@@ -22,11 +22,11 @@
 '''Unit tests for engine tasks factory (tasks/factory.py).'''
 
 # local imports
-import landseg.session.engine.runtime.tasks.factory as task_factory
-import landseg.session.engine.runtime.tasks.heads as heads
-import landseg.session.engine.runtime.tasks.loss as loss
-import landseg.session.engine.runtime.tasks.metrics as metrics
-import landseg.session.engine.runtime.tasks.regularization as regularization
+import landseg.session.engine.tasks.factory as task_factory
+import landseg.session.engine.tasks.heads as heads
+import landseg.session.engine.tasks.loss as loss
+import landseg.session.engine.tasks.metrics as metrics
+import landseg.session.engine.tasks.regularization as regularization
 
 
 def test_build_engine_tasks_success(dataspecs, session_config):

@@ -24,7 +24,7 @@
 # third-party imports
 import pytest
 # local imports
-import landseg.session.engine.runtime.tasks.constraints.multihead as multihead
+import landseg.session.engine.tasks.constraints.multihead as multihead
 
 
 def test_compile_mtl_constraints_valid(dataspecs, mock_constraint):

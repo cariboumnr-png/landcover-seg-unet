@@ -29,7 +29,7 @@ import dataclasses
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.optim as optim
+import landseg.session.engine.optim as optim
 
 
 # ----- `Optimization` runtime wrapper tests

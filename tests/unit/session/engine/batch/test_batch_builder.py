@@ -2,7 +2,7 @@
 #           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      (c) King's Printer for Ontario, 2026.                  #
+#                      © King's Printer for Ontario, 2026.                    #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -19,59 +19,34 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for engine runtime builder (session/engine/runtime/builder.py).'''
+# pylint: disable=missing-function-docstring
 
-# third-party imports
-import pytest
+'''Unit tests for batch engine builder (session/engine/batch/builder.py).'''
+
 # local imports
-import landseg.session.engine.runtime.builder as builder_mod
+import landseg.session.engine.batch as batch_mod
 
 
-# ----- `build_engine_runtime` tests
-def test_build_engine_runtime_patch_size_divisibility_error(
-    session_config,
+# ----- `build_batch_engine` tests
+def test_build_batch_engine_success(
     dataspecs,
+    mock_dataloaders,
     mock_model,
-    mock_dataloaders
+    session_config,
 ):
     '''
-    Given: Dataloader patch_size (15) indivisible by spatial_divisor (16).
-    When: Calling `build_engine_runtime`.
-    Then: Raise `ValueError` matching patch dimension divisibility.
+    Given: Valid dataspecs, dataloaders, model, and engine_exec config.
+    When: Calling `build_batch_engine`.
+    Then: Return instantiated `BatchEngine`.
     '''
-    mock_dataloaders.meta.patch_size = 15
-    mock_model.spatial_divisor = 16
-
-    with pytest.raises(ValueError, match='Invalid patch dimension'):
-        builder_mod.build_engine_runtime(
-            dataspecs=dataspecs,
-            dataloaders=mock_dataloaders,
-            model=mock_model,
-            config=session_config,
-            device='cpu'
-        )
-
-
-def test_build_engine_runtime_success(
-    session_config,
-    dataspecs,
-    mock_model,
-    mock_dataloaders
-):
-    '''
-    Given: Compatible dataloaders, model, dataspecs, and session_config.
-    When: Calling `build_engine_runtime`.
-    Then: Return populated `EngineRuntime` with engine and tasks.
-    '''
-    runtime = builder_mod.build_engine_runtime(
+    batch_engine = batch_mod.build_batch_engine(
         dataspecs=dataspecs,
         dataloaders=mock_dataloaders,
         model=mock_model,
-        config=session_config,
-        device='cpu'
+        config=session_config.engine_exec,
+        device='cpu',
     )
 
-    assert isinstance(runtime, builder_mod.EngineRuntime)
-    assert runtime.engine is not None
-    assert runtime.engine_optim is not None
-    assert runtime.engine_tasks is not None
+    assert isinstance(batch_engine, batch_mod.BatchEngine)
+    assert batch_engine.model is mock_model
+    assert batch_engine.state is not None

@@ -28,7 +28,7 @@ import pytest
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.tasks.metrics.segmentation as seg_module
+import landseg.session.engine.tasks.metrics.segmentation as seg_module
 
 
 def test_confusion_matrix_init():

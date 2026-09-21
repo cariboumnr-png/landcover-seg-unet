@@ -20,67 +20,71 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
-# pylint: disable=redefined-outer-name
 
-'''
-Fixtures for testing `landseg.session.engine.batch` module.
-'''
+'''Unit tests for session engine builder (session/engine/builder.py).'''
 
-# standard imports
-import dataclasses
 # third-party imports
 import pytest
 # local imports
-import landseg.configs.schema.sections.session as session_schema
-import landseg.session.engine.tasks.loss.builder as loss_builder
-import landseg.session.engine.tasks.metrics as metrics
-import landseg.session.engine.tasks.heads as headspecs
-
-# aliases
-field = dataclasses.field
+import landseg.session.engine as engine_mod
+import landseg.session.engine.epoch as epoch_mod
 
 
-@pytest.fixture
-def mock_hspecs(dataspecs):
-    # see dataspecs fixture @unit/conftest.py
-    return headspecs.build_headspecs(dataspecs, alpha_fn='inverse')
+# ----- `build_engine` tests
+def test_build_engine_patch_size_divisibility_error(
+    session_config,
+    dataspecs,
+    mock_model,
+    mock_dispatcher,
+):
+    '''
+    Given: Dataloader patch_size (128) indivisible by spatial_divisor (18).
+    When: Calling `build_engine`.
+    Then: Raise `ValueError` matching patch dimension divisibility.
+    '''
+    mock_model.spatial_divisor = 18
+    session_config.data_loader.patch_size = 128
 
-
-@pytest.fixture
-def mock_hlosses(mock_hspecs):
-    return loss_builder.build_headlosses(
-        mock_hspecs,
-        config=session_schema._LossTypesConfig(),
-        ignore_index=255,
-        spectral_band_indices=None
+    context = engine_mod.EpochEngineContext(
+        dataspecs=dataspecs,
+        model=mock_model,
+        dispatcher=mock_dispatcher,
+        device='cpu',
     )
 
+    with pytest.raises(ValueError, match='Invalid patch dimension'):
+        engine_mod.build_engine(
+            context=context,
+            config=session_config,
+            mode='train_eval',
+        )
 
-@pytest.fixture
-def mock_hmetrics(mock_hspecs):
-    return metrics.build_headmetrics(
-        mock_hspecs,
-        ignore_index=255
+
+def test_build_engine_success(
+    session_config,
+    dataspecs,
+    mock_model,
+    mock_dispatcher,
+):
+    '''
+    Given: Compatible configs, model, dataspecs, and context.
+    When: Calling `build_engine`.
+    Then: Return populated `EpochRunner`.
+    '''
+    context = engine_mod.EpochEngineContext(
+        dataspecs=dataspecs,
+        model=mock_model,
+        dispatcher=mock_dispatcher,
+        device='cpu',
     )
 
-
-@pytest.fixture
-def mock_constraint():
-    def _create(
-        name: str = 'rule_1',
-        source_head: str = 'head_1',
-        trigger_val: int = 1,
-        target_head: str = 'head_2',
-        forbidden: list[int] | None = None
-    ):
-        if forbidden is None:
-            forbidden = [2]
-        return session_schema._MTLConstraints(
-            name=name,
-            source_head=source_head,
-            trigger_val=trigger_val,
-            target_head=target_head,
-            forbidden=forbidden
+    runner = engine_mod.build_engine(
+        context=context,
+        config=session_config,
+        mode='train_eval',
     )
-    return _create
+
+    assert isinstance(runner, epoch_mod.EpochRunner)
+    assert runner.mode == 'train_eval'
+    assert runner.trainer is not None
+    assert runner.evaluator is not None

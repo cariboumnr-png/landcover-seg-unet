@@ -27,7 +27,7 @@
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.heads as head_specs
+import landseg.session.engine.tasks.heads as head_specs
 
 
 def test_headspecs_build_raise_invalid_alpha_fn(dataspecs):

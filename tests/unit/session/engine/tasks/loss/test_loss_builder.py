@@ -25,9 +25,9 @@
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.builder as builder
-import landseg.session.engine.runtime.tasks.loss.composite as composite
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.tasks.loss.builder as builder
+import landseg.session.engine.tasks.loss.composite as composite
+import landseg.session.engine.tasks.loss.primitives as primitives
 
 
 def test_build_headlosses(mock_hspecs, session_config):

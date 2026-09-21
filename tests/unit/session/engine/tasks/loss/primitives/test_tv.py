@@ -24,7 +24,7 @@
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.tv as tv_loss
+import landseg.session.engine.tasks.loss.primitives.tv as tv_loss
 
 
 def test_tv_loss_forward():

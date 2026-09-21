@@ -27,7 +27,7 @@
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.base as base
+import landseg.session.engine.tasks.loss.primitives.base as base
 
 
 def test_compose_pixel_weights_default():

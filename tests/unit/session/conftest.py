@@ -32,9 +32,12 @@ import torch
 import landseg.artifacts as artifacts
 import landseg.configs.schema.sections.session as session_schema
 import landseg.session.data.loader as data_loader
+import landseg.session.engine.batch as batch_mod
+import landseg.session.engine.epoch as epoch_mod
 import landseg.session.engine.epoch.policy.evaluator as eval_mod
 import landseg.session.engine.epoch.policy.trainer as trainer_mod
-import landseg.session.engine.runtime.builder as runtime_builder
+import landseg.session.engine.optim as optim_mod
+import landseg.session.engine.tasks as tasks_mod
 import landseg.session.instrumentation.callbacks as callbacks_mod
 
 
@@ -60,12 +63,25 @@ def mock_dataloaders(dataspecs, session_config):
 
 @pytest.fixture
 def mock_runtime(dataspecs, mock_dataloaders, mock_model, session_config):
-    return runtime_builder.build_engine_runtime(
+    batch_engine = batch_mod.build_batch_engine(
         dataspecs=dataspecs,
         dataloaders=mock_dataloaders,
         model=mock_model,
-        config=session_config,
-        device='cpu'
+        config=session_config.engine_exec,
+        device='cpu',
+    )
+    optimization = optim_mod.build_optimization(
+        model=mock_model,
+        config=session_config.engine_optim,
+    )
+    engine_tasks = tasks_mod.build_engine_tasks(
+        dataspecs,
+        session_config.engine_tasks,
+    )
+    return epoch_mod.EngineRuntime(
+        engine=batch_engine,
+        engine_optim=optimization,
+        engine_tasks=engine_tasks,
     )
 
 
