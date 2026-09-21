@@ -43,7 +43,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .loader import (
+    from .builder import (
         DataLoaderConfig,
         DataLoaders,
         build_dataloaders,
@@ -56,7 +56,7 @@ def __getattr__(name: str):
         'DataLoaders',
         'build_dataloaders',
     }:
-        obj = importlib.import_module('.loader', __package__)
+        obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

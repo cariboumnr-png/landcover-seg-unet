@@ -31,7 +31,7 @@ import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs.schema.sections.session as session_schema
-import landseg.session.data.loader as data_loader
+import landseg.session.data.builder as data_loader
 import landseg.session.engine.batch as batch_mod
 import landseg.session.engine.epoch as epoch_mod
 import landseg.session.engine.epoch.policy.evaluator as eval_mod

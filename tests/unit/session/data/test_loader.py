@@ -26,7 +26,7 @@
 import pytest
 import torch
 # local imports
-import landseg.session.data.loader as loader
+import landseg.session.data.builder as builder
 
 
 # ----- `_collate_multi_block` tests
@@ -48,7 +48,7 @@ def test_collate_multi_block_labeled():
     )
 
     batch = [sample1, sample2]
-    xs, ys, doms = loader._collate_multi_block(batch)
+    xs, ys, doms = builder._collate_multi_block(batch)
 
     assert xs.shape == (2, 4, 128, 128)
     assert ys.shape == (2, 128, 128)
@@ -73,7 +73,7 @@ def test_collate_multi_block_unlabeled():
     )
 
     batch = [sample1, sample2]
-    xs, ys, doms = loader._collate_multi_block(batch)
+    xs, ys, doms = builder._collate_multi_block(batch)
 
     assert xs.shape == (2, 4, 128, 128)
     assert ys.numel() == 0
@@ -98,7 +98,7 @@ def test_collate_multi_block_inconsistent_y_shape():
     )
 
     with pytest.raises(ValueError, match='inconsistent y shapes'):
-        _ = loader._collate_multi_block([sample1, sample2])
+        _ = builder._collate_multi_block([sample1, sample2])
 
 
 def test_collate_multi_block_mixed_labeled_unlabeled():
@@ -119,7 +119,7 @@ def test_collate_multi_block_mixed_labeled_unlabeled():
     )
 
     with pytest.raises(ValueError, match='mixed labeled/unlabeled batch'):
-        _ = loader._collate_multi_block([sample1, sample2])
+        _ = builder._collate_multi_block([sample1, sample2])
 
 
 # ----- `_get_memory_stratege` tests
@@ -130,7 +130,7 @@ def test_get_memory_stratege_no_ops(dataspecs):
     Then: Return memory flags configured for full preloading.
     '''
     dataspecs.meta.blk_bytes = 0
-    flags = loader._get_memeory_strategy(dataspecs)
+    flags = builder._get_memeory_strategy(dataspecs)
 
     assert flags.preload_train is True
     assert flags.cache_train == 0
@@ -146,7 +146,7 @@ def test_get_memory_stratege_high_memory(dataspecs):
     '''
     dataspecs.meta.blk_bytes = 100_000_000 # 100MB per block
     # available RAM: 10GB
-    flags = loader._get_memeory_strategy(dataspecs, available_bytes=10_000_000_000)
+    flags = builder._get_memeory_strategy(dataspecs, available_bytes=10_000_000_000)
 
     assert flags.preload_val is True
     assert flags.preload_train is True
@@ -161,7 +161,7 @@ def test_get_memory_stratege_low_memory(dataspecs):
     dataspecs.meta.blk_bytes = 100_000_000 # 100MB per block
     dataspecs.splits.val = {f'b{i}': f'path{i}' for i in range(7)} # 700MB val bytes
     # available RAM: 1GB (val_bytes 700MB > 0.6 * 1GB)
-    flags = loader._get_memeory_strategy(dataspecs, available_bytes=1_000_000_000)
+    flags = builder._get_memeory_strategy(dataspecs, available_bytes=1_000_000_000)
 
     assert flags.preload_val is False
     assert flags.preload_train is False
@@ -176,7 +176,7 @@ def test_generate_preview_context_valid():
     When: `_generate_preview_context` is called.
     Then: Correctly return `_PreviewContext` dataclass instance.
     '''
-    ctx = loader._generate_preview_context(patch_per_blk=4, test_blks_grid=(2, 3))
+    ctx = builder._generate_preview_context(patch_per_blk=4, test_blks_grid=(2, 3))
 
     assert ctx.patch_per_blk == 4
     assert ctx.patch_per_dim == 2
@@ -191,7 +191,7 @@ def test_generate_preview_context_non_square():
     Then: Raise `AssertionError`.
     '''
     with pytest.raises(AssertionError, match='patch_per_blk must be square'):
-        _ = loader._generate_preview_context(patch_per_blk=5, test_blks_grid=(2, 2))
+        _ = builder._generate_preview_context(patch_per_blk=5, test_blks_grid=(2, 2))
 
 
 
@@ -204,7 +204,7 @@ def test_build_dataloaders_default_mode(dataspecs, session_config):
     dataspecs.mode = 'default'
 
     cfg = session_config.data_loader
-    loaders = loader.build_dataloaders(dataspecs, cfg)
+    loaders = builder.build_dataloaders(dataspecs, cfg)
 
     assert loaders.train is not None
     assert loaders.val is not None
@@ -227,7 +227,7 @@ def test_build_dataloaders_default_mode_no_test(dataspecs, session_config):
     dataspecs.splits.test.clear()
 
     cfg = session_config.data_loader
-    loaders = loader.build_dataloaders(dataspecs, cfg)
+    loaders = builder.build_dataloaders(dataspecs, cfg)
 
     assert loaders.train is not None
     assert loaders.val is not None
@@ -247,7 +247,7 @@ def test_build_dataloaders_val_only_mode(dataspecs, session_config):
     dataspecs.splits.test.clear()
 
     cfg = session_config.data_loader
-    loaders = loader.build_dataloaders(dataspecs, cfg)
+    loaders = builder.build_dataloaders(dataspecs, cfg)
 
     assert loaders.train is None
     assert loaders.val is not None
@@ -267,7 +267,7 @@ def test_build_dataloaders_test_only_mode(dataspecs, session_config):
     dataspecs.splits.val.clear()
 
     cfg = session_config.data_loader
-    loaders = loader.build_dataloaders(dataspecs, cfg)
+    loaders = builder.build_dataloaders(dataspecs, cfg)
 
     assert loaders.train is None
     assert loaders.val is None
