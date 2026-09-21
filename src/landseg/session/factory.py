@@ -56,8 +56,8 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.data as data
 import landseg.session.engine as engine
-import landseg.session.instrumentation as instrument
-import landseg.session.orchestration as orchestration
+import landseg.session.instrumentation as instrumentation
+import landseg.session.orchestration as orchestration_mod
 
 # ---------------------------------Public Type---------------------------------
 class SessionConfigShape(typing.Protocol):
@@ -80,7 +80,7 @@ class SessionConfigShape(typing.Protocol):
     @property
     def engine_tasks(self) -> engine.TaskConfigShape: ...
     @property
-    def orchestration(self) -> orchestration.OrchestrationConfigShape: ...
+    def orchestration(self) -> orchestration_mod.OrchestrationConfigShape: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -102,7 +102,7 @@ def build_overfit_session(
     '''Build an epoch engine for overfit training with evaluation.'''
 
     # callback dispatcher
-    dispatcher = instrument.build_dispatcher(
+    dispatcher = instrumentation.build_dispatcher(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
@@ -140,7 +140,7 @@ def build_evaluate_session(
     '''Build an epoch engine for evaluation-only execution.'''
 
     # callback dispatcher
-    dispatcher = instrument.build_dispatcher(
+    dispatcher = instrumentation.build_dispatcher(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
@@ -174,10 +174,10 @@ def build_continous_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> orchestration.ContinuousRunner:
+) -> orchestration_mod.ContinuousRunner:
     '''Build a continuous training runner orchestrator.'''
     assert context.session_paths, 'Session paths manager not provided'
-    dispatcher = instrument.build_dispatcher(
+    dispatcher = instrumentation.build_dispatcher(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
@@ -207,10 +207,9 @@ def build_continous_training_session(
         eval_dataset=context.eval_dataset,
     )
 
-    return orchestration.build_runner(
+    return orchestration_mod.build_runner(
         epoch_engine,
         config.orchestration,
-        config.orchestration.single_phase,
         dispatcher,
         context.session_paths,
         runner_type='continuous',
@@ -223,10 +222,10 @@ def build_curriculum_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> orchestration.CurriculumRunner:
+) -> orchestration_mod.CurriculumRunner:
     '''Build a multiphase training runner orchestrator.'''
     assert context.session_paths, 'Session paths manager not provided'
-    dispatcher = instrument.build_dispatcher(
+    dispatcher = instrumentation.build_dispatcher(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
@@ -256,10 +255,9 @@ def build_curriculum_training_session(
         eval_dataset=context.eval_dataset,
     )
 
-    return orchestration.build_runner(
+    return orchestration_mod.build_runner(
         epoch_engine,
         config.orchestration,
-        config.orchestration.multi_phases,
         dispatcher,
         context.session_paths,
         runner_type='curriculum',

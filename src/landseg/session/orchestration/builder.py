@@ -54,7 +54,6 @@ import landseg.session.orchestration.runner as runner
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
     config: protocols.OrchestrationConfigShape,
-    training_phases: contracts.PhaseLike,
     dispatcher: contracts.SessionObserverLike,
     session_artifact_paths: artifacts.SessionPaths,
     *,
@@ -65,7 +64,6 @@ def build_runner(
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
     config: protocols.OrchestrationConfigShape,
-    training_phases: typing.Sequence[contracts.PhaseLike],
     dispatcher: contracts.SessionObserverLike,
     session_artifact_paths: artifacts.SessionPaths,
     *,
@@ -76,7 +74,6 @@ def build_runner(
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
     config: protocols.OrchestrationConfigShape,
-    training_phases: contracts.PhaseLike | typing.Sequence[contracts.PhaseLike],
     dispatcher: contracts.SessionObserverLike,
     session_artifact_paths: artifacts.SessionPaths,
     *,
@@ -141,6 +138,7 @@ def build_runner(
 
     match runner_type:
         case 'continuous':
+            training_phases = config.single_phase
             if not isinstance(training_phases, contracts.PhaseLike):
                 raise ValueError('Continuous training requires a single phase')
             return runner.ContinuousRunner(
@@ -150,6 +148,7 @@ def build_runner(
                 phase=training_phases,
             )
         case 'curriculum':
+            training_phases = config.multi_phases
             if not (
                 isinstance(training_phases, list) and
                 all(isinstance(p, contracts.PhaseLike) for p in training_phases)
