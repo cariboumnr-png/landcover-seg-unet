@@ -45,38 +45,42 @@ external contract regardless of internal training structure.
 # standard imports
 import typing
 # local imports
+import landseg.artifacts as artifacts
 import landseg.session.common as common
 import landseg.session.orchestration.protocols as protocols
 import landseg.session.orchestration.runner as runner
 
 @typing.overload
 def build_runner(
-    *,
     epoch_engine: protocols.EpochEngineLike,
-    base_config: runner.BaseRunnerConfig,
-    runner_type: typing.Literal['continuous'],
+    config: protocols.OrchestrationConfigShape,
     training_phases: common.PhaseLike,
     dispatcher: common.SessionObserverLike,
+    session_artifact_paths: artifacts.SessionPaths,
+    *,
+    runner_type: typing.Literal['continuous'],
 ) -> runner.ContinuousRunner: ...
 
 @typing.overload
 def build_runner(
-    *,
     epoch_engine: protocols.EpochEngineLike,
-    base_config: runner.BaseRunnerConfig,
-    runner_type: typing.Literal['curriculum'],
+    config: protocols.OrchestrationConfigShape,
     training_phases: typing.Sequence[common.PhaseLike],
     dispatcher: common.SessionObserverLike,
+    session_artifact_paths: artifacts.SessionPaths,
+    *,
+    runner_type: typing.Literal['curriculum'],
 ) -> runner.CurriculumRunner: ...
 
 
 def build_runner(
-    *,
     epoch_engine: protocols.EpochEngineLike,
-    base_config: runner.BaseRunnerConfig,
-    runner_type: typing.Literal['continuous', 'curriculum'],
+    config: protocols.OrchestrationConfigShape,
     training_phases: common.PhaseLike | typing.Sequence[common.PhaseLike],
     dispatcher: common.SessionObserverLike,
+    session_artifact_paths: artifacts.SessionPaths,
+    *,
+    runner_type: typing.Literal['continuous', 'curriculum'],
 ) -> runner.ContinuousRunner | runner.CurriculumRunner:
     '''
     Construct a concrete orchestration runner for epoch-based training.
@@ -125,6 +129,15 @@ def build_runner(
         ValueError: If ``training_phases`` does not match the
             expected type for the selected ``runner_type``.
     '''
+    base_config = runner.BaseRunnerConfig(
+        artifacts_paths=session_artifact_paths,
+        metric_name=config.monitor.metric_name,
+        track_heads=config.monitor.track_heads,
+        track_mode=config.monitor.track_mode,
+        enable_early_stop=config.monitor.allow_early_stop,
+        patience_epochs=config.monitor.patience,
+        delta=config.monitor.min_delta,
+    )
 
     match runner_type:
         case 'continuous':

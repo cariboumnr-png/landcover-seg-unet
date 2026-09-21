@@ -40,27 +40,17 @@ import landseg.session.engine.epoch.policy.base as base
 import landseg.session.engine.epoch.policy.evaluator as evaluator_mod
 import landseg.session.engine.epoch.policy.trainer as trainer_mod
 import landseg.session.engine.epoch.runner as runner_mod
-
-
-# ----- public types
-class ScheduleConfigShape(typing.Protocol):
-    '''Configuration interface for epoch execution frequencies.'''
-    @property
-    def update_loss_every_n_batch(self) -> int: ...
-    @property
-    def val_every_n_epoch(self) -> int: ...
-    @property
-    def infer_every_n_epoch(self) -> int: ...
+import landseg.session.engine.protocols as protocols
 
 
 # ----- public functions
 def build_epoch_runner(
     engine_runtime: base.EngineRuntime,
-    dataloaders: common.DataLoadersLike,
+    dataloaders: protocols.DataLoadersLike,
     dispatcher: common.SessionObserverLike,
+    schedule: protocols.ScheduleConfigShape | None = None,
     *,
     mode: runner_mod.Mode = 'train_eval',
-    schedule: ScheduleConfigShape | None = None,
     device: str | None = None,
     eval_dataset: typing.Literal['val', 'test'] = 'val',
 ) -> runner_mod.EpochRunner:

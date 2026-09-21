@@ -58,7 +58,6 @@ import landseg.session.data as data
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
-import landseg.session.orchestration.runner as runner
 
 # ---------------------------------Public Type---------------------------------
 class SessionConfigShape(typing.Protocol):
@@ -81,7 +80,7 @@ class SessionConfigShape(typing.Protocol):
     @property
     def engine_tasks(self) -> engine.TaskConfigShape: ...
     @property
-    def orchestration(self) -> common.OrchestrationConfigShape: ...
+    def orchestration(self) -> orchestration.OrchestrationConfigShape: ...
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -117,6 +116,7 @@ def build_overfit_session(
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
+        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
@@ -154,6 +154,7 @@ def build_evaluate_session(
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
+        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
@@ -173,10 +174,8 @@ def build_continous_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> runner.ContinuousRunner:
+) -> orchestration.ContinuousRunner:
     '''Build a continuous training runner orchestrator.'''
-
-    # callback dispatcher
     assert context.session_paths, 'Session paths manager not provided'
     dispatcher = instrument.build_dispatcher(
         trackers=['tb'],
@@ -185,21 +184,21 @@ def build_continous_training_session(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
-    # dataloaders
+
     dataloaders = data.build_dataloaders(
         dataspecs,
         config.data_loader,
         logger=logger
     )
-    # epoch engine context
+
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
+        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
     )
-    # epoch engine
     epoch_engine = engine.build_engine(
         dataloaders,
         engine_context,
@@ -208,24 +207,13 @@ def build_continous_training_session(
         eval_dataset=context.eval_dataset,
     )
 
-    # base orchestrator config
-    base_config = orchestration.BaseRunnerConfig(
-        artifacts_paths=context.session_paths,
-        metric_name=config.orchestration.monitor.metric_name,
-        track_heads=config.orchestration.monitor.track_heads,
-        track_mode=config.orchestration.monitor.track_mode,
-        enable_early_stop=config.orchestration.monitor.allow_early_stop,
-        patience_epochs=config.orchestration.monitor.patience,
-        delta=config.orchestration.monitor.min_delta,
-    )
-
-    # return the orchestrator
     return orchestration.build_runner(
-        epoch_engine=epoch_engine,
-        base_config=base_config,
+        epoch_engine,
+        config.orchestration,
+        config.orchestration.single_phase,
+        dispatcher,
+        context.session_paths,
         runner_type='continuous',
-        training_phases=config.orchestration.single_phase,
-        dispatcher=dispatcher
     )
 
 def build_curriculum_training_session(
@@ -235,10 +223,8 @@ def build_curriculum_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> runner.CurriculumRunner:
+) -> orchestration.CurriculumRunner:
     '''Build a multiphase training runner orchestrator.'''
-
-    # callback dispatcher
     assert context.session_paths, 'Session paths manager not provided'
     dispatcher = instrument.build_dispatcher(
         trackers=['tb'],
@@ -247,21 +233,21 @@ def build_curriculum_training_session(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
-    # dataloaders
+
     dataloaders = data.build_dataloaders(
         dataspecs,
         config.data_loader,
         logger=logger
     )
-    # epoch engine context
+
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
+        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
     )
-    # epoch engine
     epoch_engine = engine.build_engine(
         dataloaders,
         engine_context,
@@ -269,22 +255,12 @@ def build_curriculum_training_session(
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )
-    # base orchestrator config
-    base_config = orchestration.BaseRunnerConfig(
-        artifacts_paths=context.session_paths,
-        metric_name=config.orchestration.monitor.metric_name,
-        track_heads=config.orchestration.monitor.track_heads,
-        track_mode=config.orchestration.monitor.track_mode,
-        enable_early_stop=config.orchestration.monitor.allow_early_stop,
-        patience_epochs=config.orchestration.monitor.patience,
-        delta=config.orchestration.monitor.min_delta,
-    )
 
-    # return the orchestrator
     return orchestration.build_runner(
-        epoch_engine=epoch_engine,
-        base_config=base_config,
+        epoch_engine,
+        config.orchestration,
+        config.orchestration.multi_phases,
+        dispatcher,
+        context.session_paths,
         runner_type='curriculum',
-        training_phases=config.orchestration.multi_phases,
-        dispatcher=dispatcher
     )

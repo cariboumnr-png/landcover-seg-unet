@@ -19,12 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 
 '''
-Runtime objects for epoch runner.
+Protocols defining shapes of external objects for `engine` module
 '''
 
 # standard imports
@@ -37,6 +36,7 @@ if typing.TYPE_CHECKING:
 
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
+    '''doc'''
     @property
     def train(self) -> 'torch.utils.data.DataLoader | None':...
     @property
@@ -66,3 +66,13 @@ class _PreviewContext(typing.Protocol):
     patch_per_dim: int
     block_columns: int
     patch_grid_shape: tuple[int, int]
+
+
+class ScheduleConfigShape(typing.Protocol):
+    '''Configuration interface for epoch execution frequencies.'''
+    @property
+    def update_loss_every_n_batch(self) -> int: ...
+    @property
+    def val_every_n_epoch(self) -> int: ...
+    @property
+    def infer_every_n_epoch(self) -> int: ...

@@ -41,6 +41,7 @@ import landseg.session.common as common
 import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
 import landseg.session.engine.optim as optim
+import landseg.session.engine.protocols as protocols
 import landseg.session.engine.tasks as tasks
 
 
@@ -59,8 +60,6 @@ class _EpochEngineConfigShape(typing.Protocol):
     def engine_optim(self) -> optim.OptimConfigShape: ...
     @property
     def engine_tasks(self) -> tasks.TaskConfigShape: ...
-    @property
-    def orchestration(self) -> common.OrchestrationConfigShape: ...
 
 
 # ----- public dataclasses
@@ -69,6 +68,7 @@ class EpochEngineContext:
     '''Runtime context required for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
+    schedule: protocols.ScheduleConfigShape
     dispatcher: common.SessionObserverLike
     device: str
     logger: common.SessionLogger | None = None
@@ -76,7 +76,7 @@ class EpochEngineContext:
 
 # ----- public functions
 def build_engine(
-    dataloaders: common.DataLoadersLike,
+    dataloaders: protocols.DataLoadersLike,
     context: EpochEngineContext,
     config: _EpochEngineConfigShape,
     *,
@@ -130,7 +130,7 @@ def build_engine(
         dataloaders,
         context.dispatcher,
         mode=mode,
-        schedule=config.orchestration.schedule,
+        schedule=context.schedule,
         device=context.device,
         eval_dataset=eval_dataset,
     )

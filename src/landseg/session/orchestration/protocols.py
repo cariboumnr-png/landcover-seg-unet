@@ -32,6 +32,7 @@ from __future__ import annotations
 import typing
 # local imoprts
 import landseg.core as core
+import landseg.session.common as common
 
 if typing.TYPE_CHECKING:
     import torch.optim
@@ -83,3 +84,41 @@ class _OptimizationLike(typing.Protocol):
         sched_factory: typing.Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
         sched_args: dict[str, typing.Any] | None = None
     ) -> None: ...
+
+
+class OrchestrationConfigShape(typing.Protocol):
+    '''Unified access interface for all orchestration config sections.'''
+    @property
+    def schedule(self) -> _Schedule: ...
+    @property
+    def monitor(self) -> _Monitor: ...
+    @property
+    def single_phase(self) -> common.PhaseLike: ...
+    @property
+    def multi_phases(self) -> typing.Sequence[common.PhaseLike]: ...
+
+
+class _Schedule(typing.Protocol):
+    @property
+    def val_every_n_epoch(self) -> int: ...
+    @property
+    def infer_every_n_epoch(self) -> int: ...
+    @property
+    def ckpt_every_n_epoch(self) -> int: ... # current not in use
+    @property
+    def update_loss_every_n_batch(self) -> int: ...
+
+
+class _Monitor(typing.Protocol):
+    @property
+    def metric_name(self) -> str: ...
+    @property
+    def track_heads(self) -> dict[str, float] | None: ...
+    @property
+    def track_mode(self) -> str: ...
+    @property
+    def allow_early_stop(self) -> bool: ...
+    @property
+    def patience(self) -> int | None: ...
+    @property
+    def min_delta(self) -> float | None: ...
