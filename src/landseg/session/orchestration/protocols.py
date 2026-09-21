@@ -89,24 +89,11 @@ class _OptimizationLike(typing.Protocol):
 class OrchestrationConfigShape(typing.Protocol):
     '''Unified access interface for all orchestration config sections.'''
     @property
-    def schedule(self) -> _Schedule: ...
-    @property
     def monitor(self) -> _Monitor: ...
     @property
     def single_phase(self) -> contracts.PhaseLike: ...
     @property
     def multi_phases(self) -> typing.Sequence[contracts.PhaseLike]: ...
-
-
-class _Schedule(typing.Protocol):
-    @property
-    def val_every_n_epoch(self) -> int: ...
-    @property
-    def infer_every_n_epoch(self) -> int: ...
-    @property
-    def ckpt_every_n_epoch(self) -> int: ... # current not in use
-    @property
-    def update_loss_every_n_batch(self) -> int: ...
 
 
 class _Monitor(typing.Protocol):

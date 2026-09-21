@@ -4,6 +4,7 @@ defaults:
   - data_loader: default
   - engine_exec: default
   - engine_optim: default
+  - engine_schedule: default
   - engine_tasks: default
   - orchestration: default
 

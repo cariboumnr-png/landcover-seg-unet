@@ -74,6 +74,20 @@ class _OptimConfig:
             if 'T_max' not in self.sched_args:
                 raise ValueError('missing T_max for CosAnneal')
 
+# ----- engine schedule
+@dataclasses.dataclass
+class _ScheduleConfig:
+    val_every_n_epoch: int = 1
+    infer_every_n_epoch: int = 1
+    ckpt_every_n_epoch: int = 5
+    update_loss_every_n_batch: int = 50
+
+    def validate(self):
+        utils.must_within(self.val_every_n_epoch, 'validation frequency', 1)
+        utils.must_within(self.infer_every_n_epoch, 'inference frequency', 1)
+        utils.must_within(self.ckpt_every_n_epoch, 'Saving frequency', 1)
+        utils.must_within(self.update_loss_every_n_batch, 'loss update frequency', 1)
+
 # ----- engine tasks
 @dataclasses.dataclass
 class _FocalLossConfig:
@@ -148,20 +162,6 @@ class _TasksConfig:
 
 # ----- orchestration
 @dataclasses.dataclass
-class _Schedule:
-    val_every_n_epoch: int = 1
-    infer_every_n_epoch: int = 1
-    ckpt_every_n_epoch: int = 5
-    update_loss_every_n_batch: int = 50
-    resume_from_last: bool = False
-
-    def validate(self):
-        utils.must_within(self.val_every_n_epoch, 'validation frequency', 1)
-        utils.must_within(self.infer_every_n_epoch, 'inference frequency', 1)
-        utils.must_within(self.ckpt_every_n_epoch, 'Saving frequency', 1)
-        utils.must_within(self.update_loss_every_n_batch, 'loss update frequency', 1)
-
-@dataclasses.dataclass
 class _Monitor:
     metric_name: str = 'iou'
     track_heads: dict[str, float] | None = None
@@ -217,9 +217,9 @@ class _Curriculum:
 
 @dataclasses.dataclass
 class _OrchestrationConfig:
-    schedule: _Schedule = field(default_factory=_Schedule)
     monitor: _Monitor = field(default_factory=_Monitor)
     curriculum: _Curriculum = field(default_factory=_Curriculum)
+    resume_from_last: bool = False
 
     @property
     def single_phase(self) -> _Phase:
@@ -237,7 +237,6 @@ class _OrchestrationConfig:
             case _: raise ValueError(f'Invalid multi-phases schema: {schema}')
 
     def validate(self):
-        self.schedule.validate()
         self.monitor.validate()
         if self.curriculum.schema == 'single':
             self.single_phase.validate()
@@ -251,6 +250,7 @@ class SessionConfig:
     data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
     engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
     engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
+    engine_schedule: _ScheduleConfig = field(default_factory=_ScheduleConfig)
     engine_tasks: _TasksConfig = field(default_factory=_TasksConfig)
     orchestration: _OrchestrationConfig = field(default_factory=_OrchestrationConfig)
     mode: str = 'continuous'
@@ -284,5 +284,6 @@ class SessionConfig:
         self.data_loader.validate()
         self.engine_exec.validate()
         self.engine_optim.validate()
+        self.engine_schedule.validate()
         self.engine_tasks.validate()
         self.orchestration.validate()

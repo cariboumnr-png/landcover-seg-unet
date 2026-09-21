@@ -61,6 +61,8 @@ class _EpochEngineConfigShape(typing.Protocol):
     def engine_optim(self) -> optim.OptimConfigShape: ...
     @property
     def engine_tasks(self) -> tasks.TaskConfigShape: ...
+    @property
+    def engine_schedule(self) -> epoch.ScheduleConfigShape: ...
 
 
 # ----- public dataclasses
@@ -69,7 +71,6 @@ class EpochEngineContext:
     '''Runtime context required for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
-    schedule: protocols.ScheduleConfigShape
     dispatcher: contracts.SessionObserverLike
     device: str
     logger: common.SessionLogger | None = None
@@ -131,7 +132,7 @@ def build_engine(
         dataloaders,
         context.dispatcher,
         mode=mode,
-        schedule=context.schedule,
+        schedule=config.engine_schedule,
         device=context.device,
         eval_dataset=eval_dataset,
     )

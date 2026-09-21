@@ -43,12 +43,22 @@ import landseg.session.engine.epoch.runner as runner_mod
 import landseg.session.engine.protocols as protocols
 
 
+class ScheduleConfigShape(typing.Protocol):
+    '''Configuration interface for epoch execution frequencies.'''
+    @property
+    def update_loss_every_n_batch(self) -> int: ...
+    @property
+    def val_every_n_epoch(self) -> int: ...
+    @property
+    def infer_every_n_epoch(self) -> int: ...
+
+
 # ----- public functions
 def build_epoch_runner(
     engine_runtime: base.EngineRuntime,
     dataloaders: protocols.DataLoadersLike,
     dispatcher: contracts.SessionObserverLike,
-    schedule: protocols.ScheduleConfigShape | None = None,
+    schedule: ScheduleConfigShape | None = None,
     *,
     mode: runner_mod.Mode = 'train_eval',
     device: str | None = None,

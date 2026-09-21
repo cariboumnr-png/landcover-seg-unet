@@ -1,10 +1,3 @@
-schedule:
-  val_every_n_epoch: 1
-  infer_every_n_epoch: 1
-  ckpt_every_n_epoch: 5
-  update_loss_every_n_batch: 50
-  resume_from_last: False
-
 monitor:
   metric_name: iou
   track_heads: {}
@@ -62,3 +55,5 @@ curriculum:
         lr_scale: 1.0
         active_heads: null
         frozen_heads: null
+
+resume_from_last: False

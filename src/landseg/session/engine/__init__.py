@@ -40,6 +40,7 @@ __all__ = [
     # typing
     'BatchExecConfigShape',
     'OptimConfigShape',
+    'ScheduleConfigShape',
     'TaskConfigShape',
 ]
 
@@ -52,6 +53,7 @@ if typing.TYPE_CHECKING:
     )
     from .epoch import (
         EpochRunner,
+        ScheduleConfigShape,
     )
     from .batch import (
         BatchExecConfigShape,
@@ -72,7 +74,10 @@ def __getattr__(name: str):
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
-    if name in {'EpochRunner'}:
+    if name in {
+        'EpochRunner',
+        'ScheduleConfigShape',
+    }:
         obj = importlib.import_module('.epoch', __package__)
         return getattr(obj, name)
 

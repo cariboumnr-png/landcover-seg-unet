@@ -80,6 +80,8 @@ class SessionConfigShape(typing.Protocol):
     @property
     def engine_tasks(self) -> engine.TaskConfigShape: ...
     @property
+    def engine_schedule(self) -> engine.ScheduleConfigShape: ...
+    @property
     def orchestration(self) -> orchestration_mod.OrchestrationConfigShape: ...
 
 # ------------------------------Public  Dataclass------------------------------
@@ -116,7 +118,6 @@ def build_overfit_session(
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
@@ -154,7 +155,6 @@ def build_evaluate_session(
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
@@ -194,7 +194,6 @@ def build_continous_training_session(
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
@@ -242,7 +241,6 @@ def build_curriculum_training_session(
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
         model=model,
-        schedule=config.orchestration.schedule,
         dispatcher=dispatcher,
         device=context.device,
         logger=logger,
