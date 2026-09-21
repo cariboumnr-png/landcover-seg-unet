@@ -37,16 +37,24 @@ __all__ = [
     'EpochRunner',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
+    # functions
+    'build_epoch_runner',
+    # typing
+    'ScheduleConfigShape',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .builder import (
+        ScheduleConfigShape,
+        build_epoch_runner,
+    )
     from .runner import (
         EpochRunner,
     )
     from .policy.base import (
-        EngineRuntime
+        EngineRuntime,
     )
     from .policy import (
         MultiHeadEvaluator,
@@ -55,12 +63,19 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'ScheduleConfigShape',
+        'build_epoch_runner',
+    }:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
+
     if name in {'EpochRunner'}:
         obj = importlib.import_module('.runner', __package__)
         return getattr(obj, name)
 
     if name in {'EngineRuntime'}:
-        obj = importlib.import_module('.runtime', __package__)
+        obj = importlib.import_module('.policy.base', __package__)
         return getattr(obj, name)
 
     if name in {

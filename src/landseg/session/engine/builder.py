@@ -46,7 +46,7 @@ import landseg.session.engine.tasks as tasks
 import landseg.session.instrumentation as instrument
 
 
-# ----- pricate types
+# ----- private types
 class _EpochEngineConfigShape(typing.Protocol):
     '''
     Configuration interface for constructing the epoch engine.
@@ -79,7 +79,7 @@ class EpochEngineContext:
 
 
 # ----- public functions
-def build_epoch_runner(
+def build_engine(
     *,
     context: EpochEngineContext,
     config: _EpochEngineConfigShape,
@@ -87,32 +87,11 @@ def build_epoch_runner(
     eval_dataset: typing.Literal['val', 'test'] = 'val'
 ) -> epoch.EpochRunner:
     '''
-    Construct an epoch engine with training and/or evaluation policies.
+    Construct the full execution engine for training and/or evaluation.
 
-    Assembles all required components, including dataloaders, execution
-    runtime, trainer, and evaluator, and returns an ``EpochEngine``
-    configured for the specified mode.
-
-    Args:
-        context: Runtime context containing dataset specs, model,
-            dispatcher, device, and logger.
-        config: Configuration providing data loading, execution,
-            optimization, task, and orchestration settings.
-        mode: Execution mode determining which policies are active:
-            - `'train_eval'`: both training and evaluation
-            - `'train_only'`: training only
-            - `'eval_only'`: evaluation only
-        eval_dataset:
-            Dataset split used for evaluation (`'val'` or `'test'`).
-
-    Returns:
-        epoch.EpochEngine:
-            Fully constructed epoch engine with appropriate policies.
-
-    Notes:
-        - Trainer and evaluator share the same execution runtime.
-        - Scheduling behavior is controlled via orchestration config.
-        - Components are assembled once and reused across epochs.
+    Assembles dataloaders, batch execution engine, optimization wrapper,
+    and task components into an execution runtime, then constructs the
+    epoch runner configured for the specified mode.
     '''
 
     # data loader
@@ -129,7 +108,6 @@ def build_epoch_runner(
             f'Invalid patch dimension: patch size ({p}) is not divisible '
             f'by spatial divisor ({s})'
         )
-
 
     # build engine runtime
     batch_engine = batch.build_batch_engine(
@@ -156,35 +134,12 @@ def build_epoch_runner(
         engine_tasks=engine_tasks,
     )
 
-    # trainer
-    trainer = epoch.MultiHeadTrainer(
-        # base engine
-        engine_runtime=engine_runtime,
-        dataloaders=dataloaders,
-        dispatcher=context.dispatcher,
+    return epoch.build_epoch_runner(
+        engine_runtime,
+        dataloaders,
+        context.dispatcher,
+        mode=mode,
+        schedule=config.orchestration.schedule,
         device=context.device,
-        # trainer-specific
-        update_every=config.orchestration.schedule.update_loss_every_n_batch,
+        eval_dataset=eval_dataset,
     )
-
-    # evaluator
-    evaluator = epoch.MultiHeadEvaluator(
-        # base engine
-        engine_runtime=engine_runtime,
-        dataloaders=dataloaders,
-        dispatcher=context.dispatcher,
-        device=context.device,
-        # evaluator-specific
-        val_every=config.orchestration.schedule.val_every_n_epoch,
-        infer_every=config.orchestration.schedule.infer_every_n_epoch,
-        dataset=eval_dataset,
-    )
-
-    # return engine with matched mode
-    match mode:
-        case 'train_eval':
-            return epoch.EpochRunner(mode, trainer, evaluator)
-        case 'train_only':
-            return epoch.EpochRunner(mode, trainer, None)
-        case 'eval_only':
-            return epoch.EpochRunner(mode, None, evaluator)
