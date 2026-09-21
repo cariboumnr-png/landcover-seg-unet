@@ -2,7 +2,7 @@
 #           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      (c) King's Printer for Ontario, 2026.                  #
+#                      © King's Printer for Ontario, 2026.                    #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
 '''
@@ -39,6 +38,12 @@ once and evaluates configured cross-head constraints, such as:
 The regularizer uses softmax probabilities rather than hard argmax
 predictions, so invalid states can be discouraged during backpropagation
 before they become discrete violation metrics.
+
+Public APIs:
+    - `ConsistencyRegConfigShape`: protocol for regularizer
+      configuration.
+    - `ConsistencyRegularizer`: differentiable regularizer for
+      multi-task constraints.
 '''
 
 # standard imports
@@ -51,26 +56,30 @@ import torch.nn.functional
 # local imports
 import landseg.session.engine.runtime.tasks.constraints as constraints
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class ConsistencyRegConfigShape(typing.Protocol):
+    '''Configuration shape for consistency regularization.'''
     @property
     def consistency_lambda(self) -> float: ...
     @property
     def consistency_reduction(self) -> str: ...
 
-# ------------------------------private dataclass------------------------------
+
+# ----- private dataclasses
 @dataclasses.dataclass(frozen=True)
 class _ConstraintValue:
-    '''Computed penalty and weighting terms for one active constraint.'''
+    '''Computed penalty and weighting terms for a constraint.'''
     name: str
     mean: torch.Tensor              # mean invalid probability
     invalid_sum: torch.Tensor
     valid_count: torch.Tensor
 
-# --------------------------------Public Class---------------------------------
+
+# ----- public classes
 class ConsistencyRegularizer(torch.nn.Module):
     '''
-    Differentiable regularizer for invalid multi-head class combinations.
+    Differentiable regularizer for invalid multi-head combinations.
 
     For each configured constraint, this module computes:
 
@@ -86,13 +95,13 @@ class ConsistencyRegularizer(torch.nn.Module):
         head name.
 
     Targets are used only for validity masking. They do not define the
-    predicted invalid state; the invalid-state probability comes entirely
-    from the model's softmax outputs.
+    predicted invalid state; the invalid-state probability comes
+    entirely from the model's softmax outputs.
     '''
 
     def __init__(
         self,
-        mtl_constraints: list[constraints.CompiledConstraint] | None,
+        mtl_constraints: list[constraints.CompiledMTLConstraint] | None,
         configs: ConsistencyRegConfigShape,
         *,
         ignore_index: int,
@@ -105,9 +114,9 @@ class ConsistencyRegularizer(torch.nn.Module):
                 Pairwise constraints using 1-based class IDs. Empty or
                 None constraints make the regularizer return zero.
             ignore_index:
-                Ground-truth label value to exclude from regularization.
-                A pixel is valid for a constraint only when both involved
-                heads are non-ignored at that pixel.
+                Ground-truth label value to exclude from
+                regularization. A pixel is valid for a constraint only
+                when both involved heads are non-ignored at that pixel.
             reduction:
                 Reduction mode:
                     - 'mean': mean invalid probability over all valid
@@ -119,8 +128,8 @@ class ConsistencyRegularizer(torch.nn.Module):
 
         Raises:
             ValueError: If reduction is unsupported, if constraint names
-                are duplicated, or if a constraint contains invalid class
-                IDs.
+                are duplicated, or if a constraint contains invalid
+                class IDs.
         '''
 
         super().__init__()
@@ -157,7 +166,7 @@ class ConsistencyRegularizer(torch.nn.Module):
                 Mapping from head name to logits of shape [B, C, H, W].
             targets_1b:
                 Mapping from head name to 1-based labels of shape
-                [B, H, W]. Labels are used for ignore-index masking only.
+                [B, H, W]. Labels are used for ignore-index masking.
 
         Returns:
             A tensor whose shape depends on the reduction:
@@ -172,7 +181,7 @@ class ConsistencyRegularizer(torch.nn.Module):
 
         # get reference tensor for device/dtype
         ref = next(iter(logits.values()), None)
-        # exit if not valid tensors found from logits (e.g., no active heads)
+        # exit if no valid tensors from logits (e.g. no active heads)
         if ref is None:
             return (
                 torch.empty(0) if self.reduction == 'none'
@@ -189,7 +198,8 @@ class ConsistencyRegularizer(torch.nn.Module):
             )
 
         if self.reduction == 'none':
-            return torch.stack([value.mean for value in values]) * self.reg_lambda
+            means = torch.stack([value.mean for value in values])
+            return means * self.reg_lambda
 
         invalids = torch.stack([value.invalid_sum for value in values]).sum()
         if self.reduction == 'sum':
@@ -212,8 +222,9 @@ class ConsistencyRegularizer(torch.nn.Module):
         and skips inactive constraints.
 
         Args:
-            logits: Mapping from head name to logits [B,C,H,W].
-            targets_1b: Mapping from head name to 1-based labels [B,H,W].
+            logits: Mapping from head name to logits [B, C, H, W].
+            targets_1b:
+                Mapping from head name to 1-based labels [B, H, W].
 
         Returns:
             Dictionary mapping constraint names to scalar tensors.
@@ -245,9 +256,9 @@ class ConsistencyRegularizer(torch.nn.Module):
         return values
 
 
-# ----- internal helpers
+# ----- private helpers
 def _constraint_value(
-    constraint: constraints.CompiledConstraint,
+    constraint: constraints.CompiledMTLConstraint,
     logits: dict[str, torch.Tensor],
     targets_1b: dict[str, torch.Tensor],
     *,
@@ -260,7 +271,7 @@ def _constraint_value(
     target_logits = logits.get(constraint.target_head)
     source_labels = targets_1b.get(constraint.source_head)
     target_labels = targets_1b.get(constraint.target_head)
-    # early exit if not all tensors present in batch (e.g., inactive head)
+    # early exit if not all tensors present in batch (inactive head)
     if (
         source_logits is None
         or target_logits is None
@@ -310,7 +321,7 @@ def _constraint_value(
 
 def _validate_shapes(
     *,
-    constraint: constraints.CompiledConstraint,
+    constraint: constraints.CompiledMTLConstraint,
     source_logits: torch.Tensor,
     target_logits: torch.Tensor,
     source_labels: torch.Tensor,
@@ -319,7 +330,7 @@ def _validate_shapes(
     '''Validate tensor ranks, spatial alignment, class indices.'''
     cons = f'Constraint {constraint.name}'
 
-    # ensure both source and target tensors of the corrent shape/size/spatial
+    # ensure source and target tensors match expected shape and size
     _validate_head_pair(f'{cons} source', source_logits, source_labels)
     _validate_head_pair(f'{cons} target', target_logits, target_labels)
 

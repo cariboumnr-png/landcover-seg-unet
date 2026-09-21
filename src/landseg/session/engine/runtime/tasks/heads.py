@@ -28,6 +28,12 @@ schemes, hierarchical relationships, and optional class exclusions.
 
 This module translates dataset metadata into structured runtime head
 specifications used during loss computation and evaluation.
+
+Public APIs:
+    - `HeadSpec`: configuration dataclass for a single training head.
+    - `HeadSpecs`: container wrapper around mapping of head specs.
+    - `build_headspecs`: construct per-head specifications from
+      metadata.
 '''
 
 # standard imports
@@ -38,7 +44,8 @@ import torch
 # local imports
 import landseg.core as core
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class HeadSpec:
     '''Configuration for a single training head.'''
@@ -51,7 +58,8 @@ class HeadSpec:
     weight: float = 1.0 # default weight for loss scaling across heads
     similarity_matrix: torch.Tensor | None = None
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class HeadSpecs:
     '''
     Typed wrapper around a mapping of heads to `HeadSpec` objects.
@@ -78,7 +86,8 @@ class HeadSpecs:
         '''Return a shallow copy of the mapping as `dict[str, Spec]`.'''
         return dict(self._specs)
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_headspecs(
     data: core.DataSpecs,
     *,
@@ -176,10 +185,12 @@ def build_headspecs(
 
     return HeadSpecs(headspecs_dict)
 
+
+# ----- private helpers
 def _count_to_inv_weights(count: list[int]) -> list[float]:
     '''Convert count to inversed weights normalized to sum of 1.'''
 
-    inv = [1 / c  if c != 0 else 0.0 for c in count]
+    inv = [1 / c if c != 0 else 0.0 for c in count]
     inv_sum = sum(inv)
     assert inv_sum != 0
     return [float(x / inv_sum) for x in inv]

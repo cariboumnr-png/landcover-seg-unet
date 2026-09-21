@@ -34,29 +34,29 @@ import typing
 
 __all__ = [
     # classes
-    'CompiledConstraint',
+    'CompiledMTLConstraint',
     'MTLConstraint',
     # functions
-    'compile_constraints',
+    'compile_mtl_constraints',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .constraints import (
-        CompiledConstraint,
+    from .multihead import (
+        CompiledMTLConstraint,
         MTLConstraint,
-        compile_constraints,
+        compile_mtl_constraints,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'CompiledConstraint',
+        'CompiledMTLConstraint',
         'MTLConstraint',
-        'compile_constraints',
+        'compile_mtl_constraints',
     }:
-        obj = importlib.import_module('.constraints', __package__)
+        obj = importlib.import_module('.multihead', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

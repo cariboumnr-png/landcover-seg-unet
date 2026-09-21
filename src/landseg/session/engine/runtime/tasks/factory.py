@@ -30,6 +30,12 @@ configuration.
 
 This module serves as the entry point for assembling all per-head
 training and evaluation artifacts used by the execution engine.
+
+Public APIs:
+    - `TaskConfigShape`: protocol for task configuration options.
+    - `EngineTasks`: container for session-level task components.
+    - `build_engine_tasks`: construct per-head specifications,
+      losses, and metrics.
 '''
 
 # standard imports
@@ -43,7 +49,8 @@ import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
 import landseg.session.engine.runtime.tasks.regularization as regularization
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class TaskConfigShape(typing.Protocol):
     '''Configuration interface for constructing per-head tasks.'''
     @property
@@ -61,7 +68,8 @@ class TaskConfigShape(typing.Protocol):
     @property
     def mtl_reg_configs(self) -> regularization.ConsistencyRegConfigShape: ...
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class EngineTasks:
     '''Container for session-level task components.'''
@@ -71,11 +79,12 @@ class EngineTasks:
     multihead_regularization: regularization.ConsistencyRegularizer
     multihead_metrics: metrics.MTLMetricsAggregator
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_engine_tasks(
     data_specs: core.DataSpecs,
     config: TaskConfigShape,
- ) -> EngineTasks:
+) -> EngineTasks:
     '''
     Construct per-head specifications, losses, and metrics.
 
@@ -91,13 +100,13 @@ def build_engine_tasks(
 
     Returns:
         EngineTasks:
-            Container with initialized head specifications, loss modules,
-            and metrics.
+            Container with initialized head specifications, loss
+            modules, and metrics.
 
     Notes:
         - Head specifications are derived from dataset metadata.
         - Loss modules are composed based on configured loss types.
-        - Metric modules are initialized per head with ignore-index\
+        - Metric modules are initialized per head with ignore-index
           handling and optional exclusions.
     '''
 
@@ -126,7 +135,10 @@ def build_engine_tasks(
 
     # mutli-head regularization (logical consistencies)
     # compiled constraints - 0-based indices
-    cons = constraints.compile_constraints(config.mtl_constraints, data_specs)
+    cons = constraints.compile_mtl_constraints(
+        config.mtl_constraints,
+        data_specs
+    )
     mtl_regularization = regularization.ConsistencyRegularizer(
         cons,
         config.mtl_reg_configs,

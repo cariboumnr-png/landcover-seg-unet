@@ -2,7 +2,7 @@
 #           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      (c) King's Printer for Ontario, 2026.                  #
+#                      © King's Printer for Ontario, 2026.                    #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
 '''
@@ -47,7 +46,14 @@ The compiled constraints can be consumed directly by consistency
 metrics and differentiable regularizers that index class-probability
 tensors.
 
-`compile_constraints` returns `None` when no constraints are configured.
+`compile_mtl_constraints` returns `None` when no constraints are
+configured.
+
+Public APIs:
+    - `MTLConstraint`: protocol defining multi-task constraint
+      configuration.
+    - `CompiledMTLConstraint`: tensor-ready compiled constraint.
+    - `compile_mtl_constraints`: validate and compile constraints.
 '''
 
 # standard imports
@@ -57,8 +63,9 @@ import typing
 import landseg.core as core
 
 
-# ----- input constraint config container shape
+# ----- public types
 class MTLConstraint(typing.Protocol):
+    '''Protocol defining multi-task constraint configuration.'''
     @property
     def name(self) -> str: ...
     @property
@@ -71,9 +78,9 @@ class MTLConstraint(typing.Protocol):
     def forbidden(self) -> list[int]: ...   # 1-based
 
 
-# ----- complied constraint container
+# ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
-class CompiledConstraint:
+class CompiledMTLConstraint:
     '''
     Tensor-ready view of a consistency constraint.
 
@@ -88,11 +95,11 @@ class CompiledConstraint:
     forbidden: tuple[int, ...]      # 0-based indices
 
 
-# ----- public API
-def compile_constraints(
+# ----- public functions
+def compile_mtl_constraints(
     mtl_constraints: typing.Sequence[MTLConstraint] | None,
     data_specs: core.DataSpecs
-) -> list[CompiledConstraint] | None:
+) -> list[CompiledMTLConstraint] | None:
     '''Validate constraints against data specifications.'''
     # early exit if list is empty or none provided
     if not bool(mtl_constraints):
@@ -110,11 +117,11 @@ def compile_constraints(
     }
 
     # validate all constraints and return
-    compiled: list[CompiledConstraint] = []
+    compiled: list[CompiledMTLConstraint] = []
     for c in mtl_constraints:
         _validate_constraint(c, heads_idx)
         compiled.append(
-            CompiledConstraint(
+            CompiledMTLConstraint(
                 name=c.name,
                 source_head=c.source_head,
                 trigger_val=c.trigger_val - 1,
@@ -125,7 +132,7 @@ def compile_constraints(
     return compiled
 
 
-# ----- internal helpers
+# ----- private helpers
 def _validate_constraint(
     constraint: MTLConstraint,
     heads_idx: dict[str, list[int]]

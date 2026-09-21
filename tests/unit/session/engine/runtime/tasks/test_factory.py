@@ -19,68 +19,54 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
-# pylint: disable=redefined-outer-name
+'''Unit tests for engine tasks factory (tasks/factory.py).'''
 
-'''
-Fixtures for testing `landseg.session.engine.runtime.executor` module.
-'''
-
-# standard imports
-import dataclasses
-# third-party imports
-import pytest
 # local imports
-import landseg.configs.schema.sections.session as session_schema
-import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
+import landseg.session.engine.runtime.tasks.factory as task_factory
+import landseg.session.engine.runtime.tasks.heads as heads
+import landseg.session.engine.runtime.tasks.loss as loss
 import landseg.session.engine.runtime.tasks.metrics as metrics
-import landseg.session.engine.runtime.tasks.heads as headspecs
-
-# aliases
-field = dataclasses.field
+import landseg.session.engine.runtime.tasks.regularization as regularization
 
 
-@pytest.fixture
-def mock_hspecs(dataspecs):
-    # see dataspecs fixture @unit/conftest.py
-    return headspecs.build_headspecs(dataspecs, alpha_fn='inverse')
+def test_build_engine_tasks_success(dataspecs, session_config):
+    '''
+    Given: Valid `DataSpecs` and `TasksConfig`.
+    When: Calling `build_engine_tasks`.
+    Then: Return populated `EngineTasks` containing all components.
+    '''
+    tasks = task_factory.build_engine_tasks(
+        dataspecs,
+        session_config.engine_tasks
+    )
 
-
-@pytest.fixture
-def mock_hlosses(mock_hspecs):
-    return loss_builder.build_headlosses(
-        mock_hspecs,
-        config=session_schema._LossTypesConfig(),
-        ignore_index=255,
-        spectral_band_indices=None
+    assert isinstance(tasks, task_factory.EngineTasks)
+    assert isinstance(tasks.headspecs, heads.HeadSpecs)
+    assert isinstance(tasks.headlosses, loss.HeadLosses)
+    assert isinstance(tasks.headmetrics, metrics.HeadMetrics)
+    assert isinstance(
+        tasks.multihead_regularization,
+        regularization.ConsistencyRegularizer
+    )
+    assert isinstance(
+        tasks.multihead_metrics,
+        metrics.MTLMetricsAggregator
     )
 
 
-@pytest.fixture
-def mock_hmetrics(mock_hspecs):
-    return metrics.build_headmetrics(
-        mock_hspecs,
-        ignore_index=255
+def test_build_engine_tasks_with_constraints(
+    dataspecs, session_config, mock_constraint
+):
+    '''
+    Given: Task config populated with multi-task constraints.
+    When: Calling `build_engine_tasks`.
+    Then: Constraints are compiled and wired into regularization.
+    '''
+    session_config.engine_tasks.mtl_constraints = [mock_constraint()]
+    tasks = task_factory.build_engine_tasks(
+        dataspecs,
+        session_config.engine_tasks
     )
 
-
-@pytest.fixture
-def mock_constraint():
-    def _create(
-        name: str = 'rule_1',
-        source_head: str = 'head_1',
-        trigger_val: int = 1,
-        target_head: str = 'head_2',
-        forbidden: list[int] | None = None
-    ):
-        if forbidden is None:
-            forbidden = [2]
-        return session_schema._MTLConstraints(
-            name=name,
-            source_head=source_head,
-            trigger_val=trigger_val,
-            target_head=target_head,
-            forbidden=forbidden
-    )
-    return _create
+    assert tasks.multihead_regularization.constraints is not None
+    assert len(tasks.multihead_regularization.constraints) == 1

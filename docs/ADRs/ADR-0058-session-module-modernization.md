@@ -170,9 +170,14 @@ establishing canonical subsystem entry points.
       `build_headmetrics`.
   - `metrics/__init__.py` will lazily delegate directly to `.diagnostics` and
     `.segmentation`, eliminating two package directory nesting levels.
-- `runtime/tasks/heads/specs.py`:
-  - Will remove redundant self-import `import ...heads as heads` and reference
-    `HeadSpec` locally.
+- `runtime/tasks/heads`:
+  - Will flatten `heads/specs.py` and `heads/__init__.py` into a single flat
+    module `runtime/tasks/heads.py`, exporting `HeadSpec`, `HeadSpecs`, and
+    `build_headspecs`.
+- `runtime/tasks/constraints`:
+  - Will rename `constraints.py` to `multihead.py` and update exported names
+    to `CompiledMTLConstraint` and `compile_mtl_constraints` for explicit
+    domain clarity.
 - `runtime/optim/builder.py`:
   - Will replace `import ...optim as optim` with
     `import landseg.session.engine.runtime.optim.optimization as optimization`.

@@ -21,13 +21,13 @@
 
 # pylint: disable=protected-access
 
-'''Unit tests for head specs module (specs.py).'''
+'''Unit tests for head specs module (heads.py).'''
 
 # third-party imports
 import pytest
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.heads.specs as head_specs
+import landseg.session.engine.runtime.tasks.heads as head_specs
 
 
 def test_headspecs_build_raise_invalid_alpha_fn(dataspecs):
@@ -87,7 +87,8 @@ def test_headspecs_build_with_head_weights(dataspecs):
     '''
     Given: `DataSpecs` fixture and custom `head_weights`.
     When: `build_headspecs()` is called.
-    Then: Specified head weights are set on corresponding `HeadSpec` instances.
+    Then: Specified head weights are set on corresponding `HeadSpec`
+        instances.
     '''
     specs = head_specs.build_headspecs(
         dataspecs,
@@ -105,7 +106,8 @@ def test_headspecs_build_with_similarity_matrices(dataspecs):
     '''
     Given: `DataSpecs` fixture with similarity matrix attached to heads.
     When: `build_headspecs()` is called.
-    Then: Similarity matrix tensor is attached to the corresponding `HeadSpec`.
+    Then: Similarity matrix tensor is attached to the corresponding
+        `HeadSpec`.
     '''
     dataspecs.heads.similarity_matrices = {
         'head_1': torch.eye(2, dtype=torch.float32)

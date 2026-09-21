@@ -53,7 +53,7 @@ if typing.TYPE_CHECKING:
         TaskConfigShape,
         build_engine_tasks,
     )
-    from .heads.specs import (
+    from .heads import (
         HeadSpec,
     )
     from .loss.composite import (
@@ -78,7 +78,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {'HeadSpec'}:
-        obj = importlib.import_module('.heads.specs', __package__)
+        obj = importlib.import_module('.heads', __package__)
         return getattr(obj, name)
 
     if name in {'CompositeLoss'}:
