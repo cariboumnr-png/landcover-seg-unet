@@ -33,7 +33,6 @@ import typing
 
 __all__ = [
     # classes
-    'BaseRunner',
     'BaseRunnerConfig',
     'ContinuousRunner',
     'CurriculumRunner',
@@ -43,7 +42,6 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import (
-        BaseRunner,
         BaseRunnerConfig,
     )
     from .continuous import (
@@ -55,10 +53,7 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {
-        'BaseRunner',
-        'BaseRunnerConfig',
-    }:
+    if name in {'BaseRunnerConfig'}:
         obj = importlib.import_module('.base', __package__)
         return getattr(obj, name)
 

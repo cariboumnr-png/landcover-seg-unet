@@ -20,7 +20,8 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.mtl`.
+Top-level namespace for
+`landseg.session.engine.runtime.tasks.metrics.diagnostics`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.

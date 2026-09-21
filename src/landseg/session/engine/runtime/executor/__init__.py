@@ -36,11 +36,8 @@ __all__ = [
     'BatchEngine',
     'BatchExecConfigShape',
     'BatchExecContext',
-    'EngineState',
-    'TrainingObjectives',
     # functions
     'initialize_state',
-    'multihead_objective',
 ]
 
 
@@ -51,12 +48,7 @@ if typing.TYPE_CHECKING:
         BatchExecConfigShape,
         BatchExecContext,
     )
-    from .objective import (
-        TrainingObjectives,
-        multihead_objective,
-    )
     from .state import (
-        EngineState,
         initialize_state,
     )
 
@@ -70,17 +62,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.executor', __package__)
         return getattr(obj, name)
 
-    if name in {
-        'TrainingObjectives',
-        'multihead_objective',
-    }:
-        obj = importlib.import_module('.objective', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'EngineState',
-        'initialize_state',
-    }:
+    if name in {'initialize_state'}:
         obj = importlib.import_module('.state', __package__)
         return getattr(obj, name)
 

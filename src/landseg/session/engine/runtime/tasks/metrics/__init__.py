@@ -43,27 +43,36 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .diagnostics import (
+    from .diagnostics.mtl_aggregator import (
         MTLMetricsAggregator,
     )
-    from .segmentation import (
-        ConfusionMatrix,
+    from .segmentation.builder import (
         HeadMetrics,
         build_headmetrics,
+    )
+    from .segmentation.confusion_matrix import (
+        ConfusionMatrix,
     )
 
 
 def __getattr__(name: str):
     if name in {'MTLMetricsAggregator'}:
-        obj = importlib.import_module('.diagnostics', __package__)
+        obj = importlib.import_module(
+            '.diagnostics.mtl_aggregator', __package__
+        )
+        return getattr(obj, name)
+
+    if name in {'ConfusionMatrix'}:
+        obj = importlib.import_module(
+            '.segmentation.confusion_matrix', __package__
+        )
         return getattr(obj, name)
 
     if name in {
-        'ConfusionMatrix',
         'HeadMetrics',
         'build_headmetrics',
     }:
-        obj = importlib.import_module('.segmentation', __package__)
+        obj = importlib.import_module('.segmentation.builder', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

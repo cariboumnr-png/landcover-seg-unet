@@ -36,10 +36,6 @@ __all__ = [
     'EngineRuntime',
     # functions
     'build_engine_runtime',
-    # typing
-    'BatchExecConfigShape',
-    'OptimConfigShape',
-    'TaskConfigShape',
 ]
 
 
@@ -49,15 +45,6 @@ if typing.TYPE_CHECKING:
         EngineRuntime,
         build_engine_runtime,
     )
-    from .executor import (
-        BatchExecConfigShape,
-    )
-    from .optim import (
-        OptimConfigShape,
-    )
-    from .tasks import (
-        TaskConfigShape,
-    )
 
 
 def __getattr__(name: str):
@@ -66,18 +53,6 @@ def __getattr__(name: str):
         'build_engine_runtime',
     }:
         obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {'BatchExecConfigShape'}:
-        obj = importlib.import_module('.executor', __package__)
-        return getattr(obj, name)
-
-    if name in {'OptimConfigShape'}:
-        obj = importlib.import_module('.optim', __package__)
-        return getattr(obj, name)
-
-    if name in {'TaskConfigShape'}:
-        obj = importlib.import_module('.tasks', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

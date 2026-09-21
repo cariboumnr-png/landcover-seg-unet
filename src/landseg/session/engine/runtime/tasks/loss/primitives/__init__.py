@@ -37,7 +37,6 @@ __all__ = [
     'DiceLoss',
     'EcologicalSimilarityLoss',
     'FocalLoss',
-    'PrimitiveLoss',
     'SpectralSmoothnessLoss',
     'TotalVariationLoss',
 ]
@@ -45,9 +44,6 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        PrimitiveLoss,
-    )
     from .dice import (
         DiceLoss,
     )
@@ -66,9 +62,6 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'PrimitiveLoss'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
 
     if name in {'DiceLoss'}:
         obj = importlib.import_module('.dice', __package__)

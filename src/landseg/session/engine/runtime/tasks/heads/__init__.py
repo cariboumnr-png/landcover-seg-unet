@@ -33,7 +33,6 @@ import typing
 
 __all__ = [
     # classes
-    'HeadSpec',
     'HeadSpecs',
     # functions
     'build_headspecs',
@@ -43,7 +42,6 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .specs import (
-        HeadSpec,
         HeadSpecs,
         build_headspecs,
     )
@@ -51,7 +49,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'HeadSpec',
         'HeadSpecs',
         'build_headspecs',
     }:

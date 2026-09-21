@@ -33,9 +33,8 @@ Used by the trainer to compute IoU-based metrics for each prediction head.
 
 # local imports
 import landseg.session.engine.runtime.tasks.heads as heads
-from landseg.session.engine.runtime.tasks.metrics.segmentation import (
-    confusion_matrix as cm,
-)
+import landseg.session.engine.runtime.tasks.metrics.segmentation.\
+    confusion_matrix as cm
 
 class HeadMetrics:
     '''

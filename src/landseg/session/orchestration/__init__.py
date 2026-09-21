@@ -34,7 +34,6 @@ import typing
 __all__ = [
     # classes
     'BaseRunnerConfig',
-    'TrackingConfig',
     # functions
     'build_runner',
 ]
@@ -45,9 +44,6 @@ if typing.TYPE_CHECKING:
     from .builder import (
         build_runner,
     )
-    from .policy import (
-        TrackingConfig,
-    )
     from .runner import (
         BaseRunnerConfig,
     )
@@ -56,10 +52,6 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {'build_runner'}:
         obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {'TrackingConfig'}:
-        obj = importlib.import_module('.policy', __package__)
         return getattr(obj, name)
 
     if name in {'BaseRunnerConfig'}:
