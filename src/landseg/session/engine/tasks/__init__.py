@@ -48,7 +48,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import (
+    from .builder import (
         EngineTasks,
         TaskConfigShape,
         build_engine_tasks,
@@ -74,7 +74,7 @@ def __getattr__(name: str):
         'TaskConfigShape',
         'build_engine_tasks',
     }:
-        obj = importlib.import_module('.factory', __package__)
+        obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
     if name in {'HeadSpec'}:

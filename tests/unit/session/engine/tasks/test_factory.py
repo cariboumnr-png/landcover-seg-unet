@@ -22,7 +22,7 @@
 '''Unit tests for engine tasks factory (tasks/factory.py).'''
 
 # local imports
-import landseg.session.engine.tasks.factory as task_factory
+import landseg.session.engine.tasks.builder as task_factory
 import landseg.session.engine.tasks.heads as heads
 import landseg.session.engine.tasks.loss as loss
 import landseg.session.engine.tasks.metrics as metrics

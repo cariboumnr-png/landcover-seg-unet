@@ -38,12 +38,10 @@ import typing
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.data as data
 import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
 import landseg.session.engine.optim as optim
 import landseg.session.engine.tasks as tasks
-import landseg.session.instrumentation as instrument
 
 
 # ----- private types
@@ -55,8 +53,6 @@ class _EpochEngineConfigShape(typing.Protocol):
     loaders, execution runtime, optimization, task components, and
     orchestration scheduling behavior.
     '''
-    @property
-    def data_loader(self) -> data.DataLoaderConfig: ...
     @property
     def engine_exec(self) -> batch.BatchExecConfigShape: ...
     @property
@@ -73,16 +69,17 @@ class EpochEngineContext:
     '''Runtime context required for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
-    dispatcher: instrument.CallbackDispatcher
+    dispatcher: common.SessionObserverLike
     device: str
     logger: common.SessionLogger | None = None
 
 
 # ----- public functions
 def build_engine(
-    *,
+    dataloaders: common.DataLoadersLike,
     context: EpochEngineContext,
     config: _EpochEngineConfigShape,
+    *,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
     eval_dataset: typing.Literal['val', 'test'] = 'val'
 ) -> epoch.EpochRunner:
@@ -94,13 +91,7 @@ def build_engine(
     epoch runner configured for the specified mode.
     '''
 
-    # data loader
-    dataloaders = data.build_dataloaders(
-        context.dataspecs,
-        config.data_loader,
-        logger=context.logger
-    )
-    # spatial division compability
+    # data loader spatial division compability
     p = dataloaders.meta.patch_size
     s = context.model.spatial_divisor
     if not p % s == 0:

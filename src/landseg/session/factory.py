@@ -107,6 +107,12 @@ def build_overfit_session(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
+    # dataloaders
+    dataloaders = data.build_dataloaders(
+        dataspecs,
+        config.data_loader,
+        logger=logger
+    )
     # context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -116,8 +122,9 @@ def build_overfit_session(
         logger=logger,
     )
     return engine.build_engine(
-        context=engine_context,
-        config=config,
+        dataloaders,
+        engine_context,
+        config,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )
@@ -137,6 +144,12 @@ def build_evaluate_session(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
+    # dataloaders
+    dataloaders = data.build_dataloaders(
+        dataspecs,
+        config.data_loader,
+        logger=logger
+    )
     # context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -146,8 +159,9 @@ def build_evaluate_session(
         logger=logger,
     )
     return engine.build_engine(
-        context=engine_context,
-        config=config,
+        dataloaders,
+        engine_context,
+        config,
         mode='eval_only',
         eval_dataset=context.eval_dataset,
     )
@@ -171,6 +185,12 @@ def build_continous_training_session(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
+    # dataloaders
+    dataloaders = data.build_dataloaders(
+        dataspecs,
+        config.data_loader,
+        logger=logger
+    )
     # epoch engine context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -181,8 +201,9 @@ def build_continous_training_session(
     )
     # epoch engine
     epoch_engine = engine.build_engine(
-        context=engine_context,
-        config=config,
+        dataloaders,
+        engine_context,
+        config,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )
@@ -226,6 +247,12 @@ def build_curriculum_training_session(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
+    # dataloaders
+    dataloaders = data.build_dataloaders(
+        dataspecs,
+        config.data_loader,
+        logger=logger
+    )
     # epoch engine context
     engine_context = engine.EpochEngineContext(
         dataspecs=dataspecs,
@@ -236,8 +263,9 @@ def build_curriculum_training_session(
     )
     # epoch engine
     epoch_engine = engine.build_engine(
-        context=engine_context,
-        config=config,
+        dataloaders,
+        engine_context,
+        config,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )
