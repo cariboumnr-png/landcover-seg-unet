@@ -38,8 +38,8 @@ objects.
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.heads as heads
-import landseg.session.engine.runtime.tasks.loss.composite as composite
+import landseg.session.engine.tasks.heads as heads
+import landseg.session.engine.tasks.loss.composite as composite
 
 # --------------------------------Public  Class--------------------------------
 class HeadLosses:

@@ -37,7 +37,7 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.optim.optimization as optimization
+import landseg.session.engine.optim.optimization as optimization
 
 # ---------------------------------Public Type---------------------------------
 class OptimConfigShape(typing.Protocol):

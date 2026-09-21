@@ -34,7 +34,7 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives.base as base
+import landseg.session.engine.tasks.loss.primitives.base as base
 
 # --------------------------------Public  Class--------------------------------
 class DiceLoss(base.PrimitiveLoss):

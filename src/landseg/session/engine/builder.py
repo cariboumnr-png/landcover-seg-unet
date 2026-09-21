@@ -39,14 +39,14 @@ import typing
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.data as data
+import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
-import landseg.session.engine.runtime.batch as batch
-import landseg.session.engine.runtime.optim as optim
-import landseg.session.engine.runtime.tasks as tasks
-import landseg.session.engine.runtime as runtime
+import landseg.session.engine.optim as optim
+import landseg.session.engine.tasks as tasks
 import landseg.session.instrumentation as instrument
 
-# --------------------------------priavte  type--------------------------------
+
+# ----- pricate types
 class _EpochEngineConfigShape(typing.Protocol):
     '''
     Configuration interface for constructing the epoch engine.
@@ -66,7 +66,8 @@ class _EpochEngineConfigShape(typing.Protocol):
     @property
     def orchestration(self) -> common.OrchestrationConfigShape: ...
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class EpochEngineContext:
     '''Runtime context required for building the epoch engine.'''
@@ -76,7 +77,8 @@ class EpochEngineContext:
     device: str
     logger: common.SessionLogger | None = None
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_epoch_engine(
     *,
     context: EpochEngineContext,
@@ -120,8 +122,8 @@ def build_epoch_engine(
         logger=context.logger
     )
 
-    # engine runtime
-    engine_runtime = runtime.build_engine_runtime(
+    # engine runtime wrapper
+    engine_runtime = _build_engine_runtime(
         dataspecs=context.dataspecs,
         dataloaders=data_loaders,
         model=context.model,
@@ -161,3 +163,64 @@ def build_epoch_engine(
             return epoch.EpochRunner(mode, trainer, None)
         case 'eval_only':
             return epoch.EpochRunner(mode, None, evaluator)
+
+
+# ----- private helpers
+def _build_engine_runtime(
+    *,
+    dataspecs: core.DataSpecs,
+    dataloaders: epoch.DataLoadersLike,
+    model: core.MultiheadModelLike,
+    config: _EpochEngineConfigShape,
+    device: str
+) -> epoch.EngineRuntime:
+    '''
+    Construct the full engine runtime from model, data specifications,
+    dataloaders, and configuration objects.
+    '''
+
+    # spatial division compability
+    p = dataloaders.meta.patch_size
+    s = model.spatial_divisor
+    if not p % s == 0:
+        raise ValueError(
+            f'Invalid patch dimension: patch size ({p}) is not divisible '
+            f'by spatial divisor ({s})'
+        )
+
+    # initialize engine state
+    state = batch.initialize_state(
+        all_heads=list(dataspecs.heads.class_counts.keys()),
+        batch_size=dataloaders.meta.batch_size,
+        use_amp=config.engine_exec.use_amp,
+        device=device
+    )
+
+    # batch engine
+    preview_ctx = dataloaders.meta.preview_context
+    exec_context = batch.BatchExecContext(
+        parent_map=dataspecs.heads.head_parent,
+        patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
+        patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
+        block_columns=preview_ctx.block_columns if preview_ctx else None,
+        device=device
+    )
+    batch_engine = batch.BatchEngine(
+        model=model,
+        engine_state=state,
+        config=config.engine_exec,
+        context=exec_context,
+    )
+
+    # optimization
+    optimization = optim.build_optimization(model, config.engine_optim)
+
+    # tasks
+    engine_tasks = tasks.build_engine_tasks(dataspecs, config.engine_tasks)
+
+    # engine core bundle
+    return epoch.EngineRuntime(
+        engine=batch_engine,
+        engine_optim=optimization,
+        engine_tasks=engine_tasks,
+    )

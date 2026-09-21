@@ -54,7 +54,7 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.constraints as constraints
+import landseg.session.engine.tasks.constraints as constraints
 
 
 # ----- public types

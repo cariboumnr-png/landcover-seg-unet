@@ -19,6 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+
 '''
 Shared engine policy base class.
 
@@ -29,11 +33,12 @@ execution mechanics to a shared execution core.
 '''
 
 # standard imports
+from __future__ import annotations
 import copy
 # local imports
 import landseg.session.common as common
-import landseg.session.engine.runtime as runtime
-import landseg.session.engine.protocols as protocols
+import landseg.session.engine.epoch.runtime as runtime
+
 
 class EngineBase:
     '''
@@ -58,7 +63,7 @@ class EngineBase:
     def __init__(
         self,
         engine_runtime: runtime.EngineRuntime,
-        dataloaders: protocols.DataLoadersLike,
+        dataloaders: runtime.DataLoadersLike,
         dispatcher: common.SessionObserverLike,
         *,
         device: str,

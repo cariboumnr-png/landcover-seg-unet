@@ -36,7 +36,7 @@ Public APIs:
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.tasks.heads as heads
+import landseg.session.engine.tasks.heads as heads
 
 
 # ----- public classes

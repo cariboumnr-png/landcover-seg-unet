@@ -37,7 +37,7 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks.constraints as constraints
+import landseg.session.engine.tasks.constraints as constraints
 
 
 # ----- private dataclasses

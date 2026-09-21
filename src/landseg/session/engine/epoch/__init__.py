@@ -33,6 +33,8 @@ import typing
 
 __all__ = [
     # classes
+    'DataLoadersLike',
+    'EngineRuntime',
     'EpochRunner',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
@@ -44,6 +46,10 @@ if typing.TYPE_CHECKING:
     from .runner import (
         EpochRunner,
     )
+    from .runtime import (
+        DataLoadersLike,
+        EngineRuntime
+    )
     from .policy import (
         MultiHeadEvaluator,
         MultiHeadTrainer,
@@ -53,6 +59,12 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {'EpochRunner'}:
         obj = importlib.import_module('.runner', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'DataLoadersLike', 'EngineRuntime'
+    }:
+        obj = importlib.import_module('.runtime', __package__)
         return getattr(obj, name)
 
     if name in {

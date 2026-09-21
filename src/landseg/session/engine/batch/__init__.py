@@ -36,6 +36,7 @@ __all__ = [
     'BatchEngine',
     'BatchExecConfigShape',
     'BatchExecContext',
+    'EngineState',
     # functions
     'initialize_state',
 ]
@@ -49,6 +50,7 @@ if typing.TYPE_CHECKING:
         BatchExecContext,
     )
     from .state import (
+        EngineState,
         initialize_state,
     )
 

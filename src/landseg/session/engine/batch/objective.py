@@ -32,7 +32,7 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
-import landseg.session.engine.runtime.tasks as tasks
+import landseg.session.engine.tasks as tasks
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass

@@ -58,8 +58,8 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.batch.objective as objective
-import landseg.session.engine.runtime.batch.state as state
+import landseg.session.engine.batch.objective as objective
+import landseg.session.engine.batch.state as state
 
 class BatchExecConfigShape(typing.Protocol):
     '''Interface for batch execution precision and logit adjustment.'''

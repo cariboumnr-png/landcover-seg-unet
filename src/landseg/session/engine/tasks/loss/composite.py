@@ -44,7 +44,7 @@ import typing
 import torch
 import torch.nn
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.tasks.loss.primitives as primitives
 
 # ------------------------------Public  Dataclass------------------------------
 class CompositeLossConfig(typing.Protocol):

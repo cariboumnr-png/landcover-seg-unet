@@ -43,7 +43,7 @@ import dataclasses
 import torch
 # local imports
 import landseg.session.common.alias as alias
-import landseg.session.engine.runtime.tasks as tasks
+import landseg.session.engine.tasks as tasks
 
 # alias
 field = dataclasses.field

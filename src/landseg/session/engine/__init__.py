@@ -53,13 +53,13 @@ if typing.TYPE_CHECKING:
     from .epoch import (
         EpochRunner,
     )
-    from .runtime.batch import (
+    from .batch import (
         BatchExecConfigShape,
     )
-    from .runtime.optim import (
+    from .optim import (
         OptimConfigShape,
     )
-    from .runtime.tasks import (
+    from .tasks import (
         TaskConfigShape,
     )
 
@@ -77,15 +77,15 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {'BatchExecConfigShape'}:
-        obj = importlib.import_module('.runtime.batch', __package__)
+        obj = importlib.import_module('.batch', __package__)
         return getattr(obj, name)
 
     if name in {'OptimConfigShape'}:
-        obj = importlib.import_module('.runtime.optim', __package__)
+        obj = importlib.import_module('.optim', __package__)
         return getattr(obj, name)
 
     if name in {'TaskConfigShape'}:
-        obj = importlib.import_module('.runtime.tasks', __package__)
+        obj = importlib.import_module('.tasks', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
