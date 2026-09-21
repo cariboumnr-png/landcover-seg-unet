@@ -37,7 +37,6 @@ import numpy
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.tasks.heads as heads
 
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
@@ -66,16 +65,16 @@ class HeadSpecs:
     mapping directly, use method: `as_dict()`.
     '''
 
-    def __init__(self, specs: dict[str, heads.HeadSpec]):
+    def __init__(self, specs: dict[str, HeadSpec]):
         self._specs = specs
 
-    def __getitem__(self, key: str) -> heads.HeadSpec:
+    def __getitem__(self, key: str) -> HeadSpec:
         return self._specs[key]
 
     def __len__(self) -> int:
         return len(self._specs)
 
-    def as_dict(self) -> dict[str, heads.HeadSpec]:
+    def as_dict(self) -> dict[str, HeadSpec]:
         '''Return a shallow copy of the mapping as `dict[str, Spec]`.'''
         return dict(self._specs)
 
@@ -148,7 +147,7 @@ def build_headspecs(
                 f'allowed: "effective_n", "inverse"; '
             )
 
-    headspecs_dict: dict[str, heads.HeadSpec] = {}
+    headspecs_dict: dict[str, HeadSpec] = {}
     # iterate heads in data and create headspec for each
     for name, counts in data.heads.class_counts.items():
         exclude = (
@@ -163,7 +162,7 @@ def build_headspecs(
             data.heads.similarity_matrices.get(name)
             if data.heads.similarity_matrices else None
         )
-        headspec = heads.HeadSpec(
+        headspec = HeadSpec(
             name=name,
             count=counts,
             loss_alpha=alpha_fn_registry[alpha_fn](list(counts), **fn_kwargs),

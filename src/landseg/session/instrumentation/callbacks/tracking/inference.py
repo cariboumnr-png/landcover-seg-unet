@@ -23,10 +23,10 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
 import landseg.session.instrumentation.formatters as formatters
 
-class InferTrackingCallback(callbacks.BaseCallback):
+class InferTrackingCallback(base.BaseCallback):
     '''Image callback.'''
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:

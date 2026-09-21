@@ -37,7 +37,7 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.optim as optim
+import landseg.session.engine.runtime.optim.optimization as optimization
 
 # ---------------------------------Public Type---------------------------------
 class OptimConfigShape(typing.Protocol):
@@ -76,7 +76,7 @@ _SCHEDULERS: dict[str, SchedulerFactory] = {
 def build_optimization(
     model: core.MultiheadModelLike,
     config: OptimConfigShape
-) -> optim.Optimization:
+) -> optimization.Optimization:
     '''
     Build an optimization wrapper from model and configuration.
 
@@ -114,7 +114,7 @@ def build_optimization(
 
     # exit if scheduler class in not configured
     if config.sched_cls is None:
-        return optim.Optimization(
+        return optimization.Optimization(
             optimizer=optimizer,
             grad_clip_norm=config.grad_clip_norm
         )
@@ -126,7 +126,7 @@ def build_optimization(
     scheduler = sched_factory(optimizer, **config.sched_args)
 
     # return
-    return optim.Optimization(
+    return optimization.Optimization(
         optimizer,
         scheduler,
         grad_clip_norm=config.grad_clip_norm,

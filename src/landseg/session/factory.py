@@ -58,6 +58,7 @@ import landseg.session.data as data
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrument
 import landseg.session.orchestration as orchestration
+import landseg.session.orchestration.runner as runner
 
 # ---------------------------------Public Type---------------------------------
 class SessionConfigShape(typing.Protocol):
@@ -158,7 +159,7 @@ def build_continous_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> orchestration.ContinuousRunner:
+) -> runner.ContinuousRunner:
     '''Build a continuous training runner orchestrator.'''
 
     # callback dispatcher
@@ -213,7 +214,7 @@ def build_curriculum_training_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: common.SessionLogger | None = None
-) -> orchestration.CurriculumRunner:
+) -> runner.CurriculumRunner:
     '''Build a multiphase training runner orchestrator.'''
 
     # callback dispatcher

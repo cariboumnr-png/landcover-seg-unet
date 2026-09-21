@@ -24,7 +24,7 @@
 # local imports
 import landseg.session.engine.epoch as epoch_mod
 import landseg.session.factory as factory_mod
-import landseg.session.orchestration as orchestration_mod
+import landseg.session.orchestration.runner as runner_mod
 
 
 # ----- `session/factory.py` builder entry point tests
@@ -88,7 +88,7 @@ def test_build_continuous_training_session(
         context=_get_context(session_paths=mock_session_paths),
     )
 
-    assert isinstance(runner, orchestration_mod.ContinuousRunner)
+    assert isinstance(runner, runner_mod.ContinuousRunner)
 
 
 def test_build_curriculum_training_session(
@@ -110,7 +110,7 @@ def test_build_curriculum_training_session(
         context=_get_context(session_paths=mock_session_paths),
     )
 
-    assert isinstance(runner, orchestration_mod.CurriculumRunner)
+    assert isinstance(runner, runner_mod.CurriculumRunner)
 
 
 # ----- internal helpers

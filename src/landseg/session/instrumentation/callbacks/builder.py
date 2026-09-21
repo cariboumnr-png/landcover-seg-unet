@@ -33,7 +33,9 @@ instrumentation.
 # standard imports
 import typing
 # local imports
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
+import landseg.session.instrumentation.callbacks.dispatcher as dispatcher
+import landseg.session.instrumentation.callbacks.logging as logging
 import landseg.session.instrumentation.callbacks.tracking as tracking
 import landseg.session.instrumentation.dashboards as dashboards
 import landseg.utils as utils
@@ -45,7 +47,7 @@ def build_dispatcher(
     label_color_map: dict[str, list[int]] | None = None,
     logger: utils.Logger | None = None,
     verbose: bool = True
-) -> callbacks.CallbackDispatcher:
+) -> dispatcher.CallbackDispatcher:
     '''
     Construct a callback dispatcher with logging and tracking support.
 
@@ -88,12 +90,12 @@ def build_dispatcher(
             _trackers.append(dashboards.MLFlowTracker(uri, artifact_path))
 
     # callbacks list
-    callbacks_list: list[callbacks.BaseCallback] = [
-        callbacks.LoggingCallback(logger=logger, verbose=verbose),
+    callbacks_list: list[base.BaseCallback] = [
+        logging.LoggingCallback(logger=logger, verbose=verbose),
         tracking.TrainTrackingCallback(_trackers),
         tracking.ValTrackingCallback(_trackers),
         tracking.InferTrackingCallback(_trackers,label_color_map=label_color_map)
     ]
 
     # return dispatcher
-    return callbacks.CallbackDispatcher(callbacks_list)
+    return dispatcher.CallbackDispatcher(callbacks_list)

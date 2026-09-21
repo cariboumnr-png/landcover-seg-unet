@@ -49,7 +49,7 @@ import torch.utils.data
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.common.alias as alias
-import landseg.session.data as data
+import landseg.session.data.dataset as dataset
 
 
 # ----- `DataLoaderConfig` protocol
@@ -190,7 +190,7 @@ def _load(
     if not datablocks:
         return None
 
-    dataset_config = data.BlockDatasetContext(
+    dataset_config = dataset.BlockDatasetContext(
         block_src=datablocks,
         block_size=data_specs.meta.image_specs.height_width,
         patch_size=config.patch_size,
@@ -202,7 +202,7 @@ def _load(
 
     mem_strategy = _get_memeory_strategy(data_specs)
 
-    dataset = data.MultiBlockDataset(
+    dataset_obj = dataset.MultiBlockDataset(
         dataset_config,
         augment_flip=bool(mode == 'train'),
         preload=getattr(mem_strategy, f'preload_{mode}', False),
@@ -210,7 +210,7 @@ def _load(
     )
 
     dataloader = torch.utils.data.DataLoader(
-        dataset=dataset,
+        dataset=dataset_obj,
         batch_size=config.batch_size,
         shuffle=(mode == 'train'),
         collate_fn=_collate_multi_block
@@ -219,15 +219,15 @@ def _load(
     if logger is not None:
         logger.set_inputs({
             mode: {
-                'loaded': dataset.n_preloaded,
-                'cached': dataset.n_cached
+                'loaded': dataset_obj.n_preloaded,
+                'cached': dataset_obj.n_cached
             }
         })
         logger.log(
             'INFO',
             f'Blocks type\t[{mode}]: '
-            f'Loaded {dataset.n_preloaded} blocks | '
-            f'Cached {dataset.n_cached} blocks'
+            f'Loaded {dataset_obj.n_preloaded} blocks | '
+            f'Cached {dataset_obj.n_cached} blocks'
         )
 
     return dataloader

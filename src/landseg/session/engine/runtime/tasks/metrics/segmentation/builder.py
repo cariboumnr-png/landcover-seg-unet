@@ -33,7 +33,9 @@ Used by the trainer to compute IoU-based metrics for each prediction head.
 
 # local imports
 import landseg.session.engine.runtime.tasks.heads as heads
-import landseg.session.engine.runtime.tasks.metrics.segmentation as seg
+from landseg.session.engine.runtime.tasks.metrics.segmentation import (
+    confusion_matrix as cm,
+)
 
 class HeadMetrics:
     '''
@@ -48,16 +50,16 @@ class HeadMetrics:
     mapping directly, use method: `as_dict()`.
     '''
 
-    def __init__(self, hmetrics: dict[str, seg.ConfusionMatrix]):
+    def __init__(self, hmetrics: dict[str, cm.ConfusionMatrix]):
         self._hmetrics = hmetrics
 
-    def __getitem__(self, key: str) -> seg.ConfusionMatrix:
+    def __getitem__(self, key: str) -> cm.ConfusionMatrix:
         return self._hmetrics[key]
 
     def __len__(self) -> int:
         return len(self._hmetrics)
 
-    def as_dict(self) -> dict[str, seg.ConfusionMatrix]:
+    def as_dict(self) -> dict[str, cm.ConfusionMatrix]:
         '''Return a shallow copy of the mapping as `dict[str, CM]`.'''
         return dict(self._hmetrics)
 
@@ -79,10 +81,10 @@ def build_headmetrics(
         ConfusionMatrix instances.
     '''
 
-    out: dict[str, seg.ConfusionMatrix] = {}
+    out: dict[str, cm.ConfusionMatrix] = {}
     for hname, hspec in headspecs.as_dict().items():
 
-        out[hname] = seg.ConfusionMatrix(
+        out[hname] = cm.ConfusionMatrix(
             num_classes=len(hspec.count),
             ignore_index=ignore_index,
             parent_class_1b=hspec.parent_cls,

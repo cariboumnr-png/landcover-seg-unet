@@ -32,11 +32,11 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.runtime.tasks.loss.primitives.base as base
 
 
 # --------------------------------Public  Class--------------------------------
-class EcologicalSimilarityLoss(primitives.PrimitiveLoss):
+class EcologicalSimilarityLoss(base.PrimitiveLoss):
     '''
     Ecological similarity regularization loss primitive.
 

@@ -23,9 +23,9 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
 
-class TrainTrackingCallback(callbacks.BaseCallback):
+class TrainTrackingCallback(base.BaseCallback):
     '''Scallar tracking callback'''
 
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults):

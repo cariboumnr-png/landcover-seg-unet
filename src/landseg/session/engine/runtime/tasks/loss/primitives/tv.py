@@ -33,9 +33,9 @@ composition components in the execution pipeline.
 import torch
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.runtime.tasks.loss.primitives.base as base
 
-class TotalVariationLoss(primitives.PrimitiveLoss):
+class TotalVariationLoss(base.PrimitiveLoss):
     '''
     Total Variation (TV) loss for spatial smoothness.
 

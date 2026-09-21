@@ -53,9 +53,9 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.epoch.policy as policy
+import landseg.session.engine.epoch.policy.base as base
 
-class MultiHeadEvaluator(policy.EngineBase):
+class MultiHeadEvaluator(base.EngineBase):
     '''
     Evaluation and inference policy controller.
 

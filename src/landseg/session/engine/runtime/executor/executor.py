@@ -58,7 +58,8 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.runtime.executor as executor
+import landseg.session.engine.runtime.executor.objective as objective
+import landseg.session.engine.runtime.executor.state as state
 
 class BatchExecConfigShape(typing.Protocol):
     '''Interface for batch execution precision and logit adjustment.'''
@@ -110,7 +111,7 @@ class BatchEngine:
     def __init__(
         self,
         model: core.MultiheadModelLike,
-        engine_state: executor.EngineState,
+        engine_state: state.EngineState,
         config: BatchExecConfigShape,
         context: BatchExecContext,
     ):
@@ -382,13 +383,13 @@ class BatchEngine:
         assert self.state.batch_cxt.y_dict is not None
         assert self.state.heads.active_hspecs is not None
         assert self.state.heads.active_hloss is not None
-        objectives = executor.TrainingObjectives(
+        objectives = objective.TrainingObjectives(
             headspecs=self.state.heads.active_hspecs,
             headlosses=self.state.heads.active_hloss,
             mtl_regularization=self.state.heads.multihead_regularization,
         )
         # call loss function
-        objective_results = executor.multihead_objective(
+        objective_results = objective.multihead_objective(
             multihead_preds=self.state.batch_out.preds,
             multihead_targets=self.state.batch_cxt.y_dict,
             features=self.state.batch_cxt.x, # image array as the features

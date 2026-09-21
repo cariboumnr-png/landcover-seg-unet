@@ -26,23 +26,23 @@ Callback dispatcher.
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
 
 class CallbackDispatcher(common.SessionObserverLike):
     '''Broadcast engine events to all registered passive callbacks.'''
 
-    def __init__(self, cbs: list[callbacks.BaseCallback] | None = None):
+    def __init__(self, cbs: list[base.BaseCallback] | None = None):
         '''Initialize the dispatcher'''
 
         self.callbacks = cbs or []
 
-    def register(self, callback: callbacks.BaseCallback):
+    def register(self, callback: base.BaseCallback):
         '''Attach a new callback dynamically.'''
 
         if not callback in self.callbacks:
             self.callbacks.append(callback)
 
-    def deregister(self, callback: callbacks.BaseCallback):
+    def deregister(self, callback: base.BaseCallback):
         '''Remove a callback.'''
 
         if callback in self.callbacks:

@@ -35,7 +35,6 @@ __all__ = [
     # classes
     'BaseCallback',
     'CallbackDispatcher',
-    'LoggingCallback',
     # functions
     'build_dispatcher',
 ]
@@ -52,10 +51,6 @@ if typing.TYPE_CHECKING:
     from .dispatcher import (
         CallbackDispatcher,
     )
-    from .logging import (
-        LoggingCallback,
-    )
-
 
 def __getattr__(name: str):
     if name in {'BaseCallback'}:
@@ -68,10 +63,6 @@ def __getattr__(name: str):
 
     if name in {'CallbackDispatcher'}:
         obj = importlib.import_module('.dispatcher', __package__)
-        return getattr(obj, name)
-
-    if name in {'LoggingCallback'}:
-        obj = importlib.import_module('.logging', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

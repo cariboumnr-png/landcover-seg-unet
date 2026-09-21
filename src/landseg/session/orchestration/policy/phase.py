@@ -34,7 +34,7 @@ import typing
 import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.events as events
-import landseg.session.orchestration.policy as policy
+import landseg.session.orchestration.policy.epoch as epoch_policy
 import landseg.session.orchestration.protocols as protocols
 
 @dataclasses.dataclass
@@ -152,7 +152,7 @@ class PhasePolicy:
         for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
 
             # delegate to epoch policy
-            epoch_results = yield from policy.EpochPolicy(
+            epoch_results = yield from epoch_policy.EpochPolicy(
                 epoch_runner=self.runner,
                 phase_name=self.config.name,
                 epoch_index=epoch,
@@ -200,7 +200,7 @@ class PhasePolicy:
 
         epochs: list[core.SessionStepResults] = []
         for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
-            epoch_metrics = policy.EpochPolicy(
+            epoch_metrics = epoch_policy.EpochPolicy(
                 epoch_runner=self.runner,
                 phase_name=self.config.name,
                 epoch_index=epoch,

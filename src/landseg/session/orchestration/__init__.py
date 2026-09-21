@@ -34,8 +34,6 @@ import typing
 __all__ = [
     # classes
     'BaseRunnerConfig',
-    'ContinuousRunner',
-    'CurriculumRunner',
     'TrackingConfig',
     # functions
     'build_runner',
@@ -52,8 +50,6 @@ if typing.TYPE_CHECKING:
     )
     from .runner import (
         BaseRunnerConfig,
-        ContinuousRunner,
-        CurriculumRunner,
     )
 
 
@@ -66,11 +62,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.policy', __package__)
         return getattr(obj, name)
 
-    if name in {
-        'BaseRunnerConfig',
-        'ContinuousRunner',
-        'CurriculumRunner',
-    }:
+    if name in {'BaseRunnerConfig'}:
         obj = importlib.import_module('.runner', __package__)
         return getattr(obj, name)
 

@@ -52,9 +52,9 @@ In short:
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.epoch.policy as policy
+import landseg.session.engine.epoch.policy.base as base
 
-class MultiHeadTrainer(policy.EngineBase):
+class MultiHeadTrainer(base.EngineBase):
     '''
     Training and evaluation policy controller.
 

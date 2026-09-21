@@ -38,10 +38,10 @@ import landseg.core as core
 import landseg.session.common as common
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy as policy
-import landseg.session.orchestration.runner as runner
+import landseg.session.orchestration.runner.base as base
 
 # --------------------------------Public  Class--------------------------------
-class ContinuousRunner(runner.BaseRunner):
+class ContinuousRunner(base.BaseRunner):
     '''
     Continuous (single-phase) training runner.
 

@@ -34,10 +34,10 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.runtime.tasks.loss.primitives.base as base
 
 # --------------------------------Public  Class--------------------------------
-class FocalLoss(primitives.PrimitiveLoss):
+class FocalLoss(base.PrimitiveLoss):
     '''
     Multi-class focal loss supporting per-pixel weights and ignore_index.
 

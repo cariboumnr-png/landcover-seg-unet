@@ -34,9 +34,9 @@ composition components in the execution pipeline.
 import torch
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.runtime.tasks.loss.primitives.base as base
 
-class SpectralSmoothnessLoss(primitives.PrimitiveLoss):
+class SpectralSmoothnessLoss(base.PrimitiveLoss):
     '''
     Pairwise spectral smoothness regularizer.
 

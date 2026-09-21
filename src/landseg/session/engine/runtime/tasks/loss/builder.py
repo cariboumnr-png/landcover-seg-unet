@@ -39,7 +39,7 @@ objects.
 import torch
 # local imports
 import landseg.session.engine.runtime.tasks.heads as heads
-import landseg.session.engine.runtime.tasks.loss as loss
+import landseg.session.engine.runtime.tasks.loss.composite as composite
 
 # --------------------------------Public  Class--------------------------------
 class HeadLosses:
@@ -55,16 +55,16 @@ class HeadLosses:
     mapping directly, use method: `as_dict()`.
     '''
 
-    def __init__(self, hloss: dict[str, loss.CompositeLoss]):
+    def __init__(self, hloss: dict[str, composite.CompositeLoss]):
         self._hloss = hloss
 
-    def __getitem__(self, key: str) -> loss.CompositeLoss:
+    def __getitem__(self, key: str) -> composite.CompositeLoss:
         return self._hloss[key]
 
     def __len__(self) -> int:
         return len(self._hloss)
 
-    def as_dict(self) -> dict[str, loss.CompositeLoss]:
+    def as_dict(self) -> dict[str, composite.CompositeLoss]:
         '''Return a shallow copy of the mapping as `dict[str, Loss]`.'''
         return dict(self._hloss)
 
@@ -72,7 +72,7 @@ class HeadLosses:
 def build_headlosses(
     headspecs: heads.HeadSpecs,
     *,
-    config: loss.CompositeLossConfig,
+    config: composite.CompositeLossConfig,
     ignore_index: int,
     spectral_band_indices: list[int] | None = None,
     ecological_similarity_matrix: torch.Tensor | None = None
@@ -97,14 +97,14 @@ def build_headlosses(
         A `HeadLosses` container, providing typed access to the concrete
         `CompositeLoss` objects keyed by head name.
     '''
-    loss_dict: dict[str, loss.CompositeLoss] = {}
+    loss_dict: dict[str, composite.CompositeLoss] = {}
     for name, headspec in headspecs.as_dict().items():
         sim_mat = (
             ecological_similarity_matrix
             if ecological_similarity_matrix is not None
             else headspec.similarity_matrix
         )
-        loss_cls = loss.CompositeLoss(
+        loss_cls = composite.CompositeLoss(
             config,
             ignore_index=ignore_index,
             focal_alpha=headspec.loss_alpha,

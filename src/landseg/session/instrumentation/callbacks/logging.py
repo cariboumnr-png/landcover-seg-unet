@@ -24,10 +24,10 @@
 # local imports
 import landseg.core as core
 import landseg.session.common as common
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
 import landseg.utils as utils
 
-class LoggingCallback(callbacks.BaseCallback):
+class LoggingCallback(base.BaseCallback):
     '''Logging callback'''
 
     def __init__(

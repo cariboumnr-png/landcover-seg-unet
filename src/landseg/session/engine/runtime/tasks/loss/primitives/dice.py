@@ -34,10 +34,10 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
-import landseg.session.engine.runtime.tasks.loss.primitives as primitives
+import landseg.session.engine.runtime.tasks.loss.primitives.base as base
 
 # --------------------------------Public  Class--------------------------------
-class DiceLoss(primitives.PrimitiveLoss):
+class DiceLoss(base.PrimitiveLoss):
     '''
     Multi-class soft Dice loss with ignore-index and optional masks.
 
