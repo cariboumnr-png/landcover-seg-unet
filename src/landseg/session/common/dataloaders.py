@@ -29,12 +29,7 @@ Runtime objects for epoch runner.
 
 # standard imports
 from __future__ import annotations
-import dataclasses
 import typing
-# local imports
-import landseg.session.engine.batch as batch
-import landseg.session.engine.optim as optim
-import landseg.session.engine.tasks as tasks
 
 if typing.TYPE_CHECKING:
     import torch
@@ -71,12 +66,3 @@ class _PreviewContext(typing.Protocol):
     patch_per_dim: int
     block_columns: int
     patch_grid_shape: tuple[int, int]
-
-
-# ----- public dataclasses
-@dataclasses.dataclass
-class EngineRuntime:
-    '''Engine core components bundle.'''
-    engine: batch.BatchEngine
-    engine_optim: optim.Optimization
-    engine_tasks: tasks.EngineTasks

@@ -35,9 +35,21 @@ execution mechanics to a shared execution core.
 # standard imports
 from __future__ import annotations
 import copy
+import dataclasses
 # local imports
 import landseg.session.common as common
-import landseg.session.engine.epoch.runtime as runtime
+import landseg.session.engine.batch as batch
+import landseg.session.engine.optim as optim
+import landseg.session.engine.tasks as tasks
+
+
+# ----- public dataclasses
+@dataclasses.dataclass
+class EngineRuntime:
+    '''Engine runtime components container.'''
+    engine: batch.BatchEngine
+    engine_optim: optim.Optimization
+    engine_tasks: tasks.EngineTasks
 
 
 class EngineBase:
@@ -62,8 +74,8 @@ class EngineBase:
 
     def __init__(
         self,
-        engine_runtime: runtime.EngineRuntime,
-        dataloaders: runtime.DataLoadersLike,
+        engine_runtime: EngineRuntime,
+        dataloaders: common.DataLoadersLike,
         dispatcher: common.SessionObserverLike,
         *,
         device: str,

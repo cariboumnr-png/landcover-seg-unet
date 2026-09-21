@@ -33,7 +33,6 @@ import typing
 
 __all__ = [
     # classes
-    'DataLoadersLike',
     'EngineRuntime',
     'EpochRunner',
     'MultiHeadEvaluator',
@@ -46,8 +45,7 @@ if typing.TYPE_CHECKING:
     from .runner import (
         EpochRunner,
     )
-    from .runtime import (
-        DataLoadersLike,
+    from .policy.base import (
         EngineRuntime
     )
     from .policy import (
@@ -61,9 +59,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.runner', __package__)
         return getattr(obj, name)
 
-    if name in {
-        'DataLoadersLike', 'EngineRuntime'
-    }:
+    if name in {'EngineRuntime'}:
         obj = importlib.import_module('.runtime', __package__)
         return getattr(obj, name)
 

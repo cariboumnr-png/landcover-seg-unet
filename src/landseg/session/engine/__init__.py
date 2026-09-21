@@ -36,7 +36,7 @@ __all__ = [
     'EpochRunner',
     'EpochEngineContext',
     # functions
-    'build_epoch_engine',
+    'build_epoch_runner',
     # typing
     'BatchExecConfigShape',
     'OptimConfigShape',
@@ -48,7 +48,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .builder import (
         EpochEngineContext,
-        build_epoch_engine,
+        build_epoch_runner,
     )
     from .epoch import (
         EpochRunner,
@@ -67,7 +67,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {
         'EpochEngineContext',
-        'build_epoch_engine',
+        'build_epoch_runner',
     }:
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)

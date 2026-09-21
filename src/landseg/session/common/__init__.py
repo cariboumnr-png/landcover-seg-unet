@@ -35,6 +35,7 @@ __all__ = [
     # classes
     'SessionLogger',
     # typing
+    'DataLoadersLike',
     'OrchestrationConfigShape',
     'PhaseLike',
     'SessionObserverLike',
@@ -43,6 +44,9 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .dataloaders import(
+        DataLoadersLike,
+    )
     from .events import (
         SessionObserverLike,
     )
@@ -56,6 +60,10 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {'DataLoadersLike'}:
+        obj = importlib.import_module('.dataloaders', __package__)
+        return getattr(obj, name)
+
     if name in {'SessionObserverLike'}:
         obj = importlib.import_module('.events', __package__)
         return getattr(obj, name)

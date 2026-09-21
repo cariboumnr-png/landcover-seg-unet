@@ -35,37 +35,32 @@ __all__ = [
     # classes
     'BatchEngine',
     'BatchExecConfigShape',
-    'BatchExecContext',
-    'EngineState',
     # functions
-    'initialize_state',
+    'build_batch_engine',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .builder import (
+        build_batch_engine,
+    )
     from .engine import (
         BatchEngine,
         BatchExecConfigShape,
-        BatchExecContext,
-    )
-    from .state import (
-        EngineState,
-        initialize_state,
     )
 
 
 def __getattr__(name: str):
+    if name in {'build_batch_engine'}:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
+
     if name in {
         'BatchEngine',
         'BatchExecConfigShape',
-        'BatchExecContext',
     }:
         obj = importlib.import_module('.engine', __package__)
-        return getattr(obj, name)
-
-    if name in {'initialize_state'}:
-        obj = importlib.import_module('.state', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -79,7 +79,7 @@ class EpochEngineContext:
 
 
 # ----- public functions
-def build_epoch_engine(
+def build_epoch_runner(
     *,
     context: EpochEngineContext,
     config: _EpochEngineConfigShape,
@@ -116,26 +116,51 @@ def build_epoch_engine(
     '''
 
     # data loader
-    data_loaders = data.build_dataloaders(
+    dataloaders = data.build_dataloaders(
         context.dataspecs,
         config.data_loader,
         logger=context.logger
     )
+    # spatial division compability
+    p = dataloaders.meta.patch_size
+    s = context.model.spatial_divisor
+    if not p % s == 0:
+        raise ValueError(
+            f'Invalid patch dimension: patch size ({p}) is not divisible '
+            f'by spatial divisor ({s})'
+        )
 
-    # engine runtime wrapper
-    engine_runtime = _build_engine_runtime(
-        dataspecs=context.dataspecs,
-        dataloaders=data_loaders,
-        model=context.model,
-        config=config,
+
+    # build engine runtime
+    batch_engine = batch.build_batch_engine(
+        context.dataspecs,
+        dataloaders,
+        context.model,
+        config.engine_exec,
         device=context.device
+    )
+
+    optimization = optim.build_optimization(
+        context.model,
+        config.engine_optim
+    )
+
+    engine_tasks = tasks.build_engine_tasks(
+        context.dataspecs,
+        config.engine_tasks
+    )
+
+    engine_runtime = epoch.EngineRuntime(
+        engine=batch_engine,
+        engine_optim=optimization,
+        engine_tasks=engine_tasks,
     )
 
     # trainer
     trainer = epoch.MultiHeadTrainer(
         # base engine
         engine_runtime=engine_runtime,
-        dataloaders=data_loaders,
+        dataloaders=dataloaders,
         dispatcher=context.dispatcher,
         device=context.device,
         # trainer-specific
@@ -146,7 +171,7 @@ def build_epoch_engine(
     evaluator = epoch.MultiHeadEvaluator(
         # base engine
         engine_runtime=engine_runtime,
-        dataloaders=data_loaders,
+        dataloaders=dataloaders,
         dispatcher=context.dispatcher,
         device=context.device,
         # evaluator-specific
@@ -163,64 +188,3 @@ def build_epoch_engine(
             return epoch.EpochRunner(mode, trainer, None)
         case 'eval_only':
             return epoch.EpochRunner(mode, None, evaluator)
-
-
-# ----- private helpers
-def _build_engine_runtime(
-    *,
-    dataspecs: core.DataSpecs,
-    dataloaders: epoch.DataLoadersLike,
-    model: core.MultiheadModelLike,
-    config: _EpochEngineConfigShape,
-    device: str
-) -> epoch.EngineRuntime:
-    '''
-    Construct the full engine runtime from model, data specifications,
-    dataloaders, and configuration objects.
-    '''
-
-    # spatial division compability
-    p = dataloaders.meta.patch_size
-    s = model.spatial_divisor
-    if not p % s == 0:
-        raise ValueError(
-            f'Invalid patch dimension: patch size ({p}) is not divisible '
-            f'by spatial divisor ({s})'
-        )
-
-    # initialize engine state
-    state = batch.initialize_state(
-        all_heads=list(dataspecs.heads.class_counts.keys()),
-        batch_size=dataloaders.meta.batch_size,
-        use_amp=config.engine_exec.use_amp,
-        device=device
-    )
-
-    # batch engine
-    preview_ctx = dataloaders.meta.preview_context
-    exec_context = batch.BatchExecContext(
-        parent_map=dataspecs.heads.head_parent,
-        patch_per_blk=preview_ctx.patch_per_blk if preview_ctx else None,
-        patch_per_dim=preview_ctx.patch_per_dim if preview_ctx else None,
-        block_columns=preview_ctx.block_columns if preview_ctx else None,
-        device=device
-    )
-    batch_engine = batch.BatchEngine(
-        model=model,
-        engine_state=state,
-        config=config.engine_exec,
-        context=exec_context,
-    )
-
-    # optimization
-    optimization = optim.build_optimization(model, config.engine_optim)
-
-    # tasks
-    engine_tasks = tasks.build_engine_tasks(dataspecs, config.engine_tasks)
-
-    # engine core bundle
-    return epoch.EngineRuntime(
-        engine=batch_engine,
-        engine_optim=optimization,
-        engine_tasks=engine_tasks,
-    )

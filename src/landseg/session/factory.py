@@ -115,7 +115,7 @@ def build_overfit_session(
         device=context.device,
         logger=logger,
     )
-    return engine.build_epoch_engine(
+    return engine.build_epoch_runner(
         context=engine_context,
         config=config,
         mode='train_eval',
@@ -145,7 +145,7 @@ def build_evaluate_session(
         device=context.device,
         logger=logger,
     )
-    return engine.build_epoch_engine(
+    return engine.build_epoch_runner(
         context=engine_context,
         config=config,
         mode='eval_only',
@@ -180,7 +180,7 @@ def build_continous_training_session(
         logger=logger,
     )
     # epoch engine
-    epoch_engine = engine.build_epoch_engine(
+    epoch_engine = engine.build_epoch_runner(
         context=engine_context,
         config=config,
         mode='train_eval',
@@ -235,7 +235,7 @@ def build_curriculum_training_session(
         logger=logger,
     )
     # epoch engine
-    epoch_engine = engine.build_epoch_engine(
+    epoch_engine = engine.build_epoch_runner(
         context=engine_context,
         config=config,
         mode='train_eval',
