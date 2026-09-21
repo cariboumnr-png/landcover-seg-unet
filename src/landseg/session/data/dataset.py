@@ -72,7 +72,7 @@ import torch
 import torch.utils.data
 import torchvision.transforms.functional
 # local imports
-import landseg.session.common.alias as alias
+import landseg.session.alias as alias
 
 
 @dataclasses.dataclass

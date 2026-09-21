@@ -47,8 +47,8 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.core as core
-import landseg.session.common as common
-import landseg.session.common.alias as alias
+import landseg.session.logger as session_logger
+import landseg.session.alias as alias
 import landseg.session.data.dataset as dataset
 
 
@@ -108,7 +108,7 @@ def build_dataloaders(
     data_specs: core.DataSpecs,
     config: DataLoaderConfig,
     *,
-    logger: common.SessionLogger | None = None,
+    logger: session_logger.SessionLogger | None = None,
 ) -> DataLoaders:
     '''
     Construct train/val/test dataloaders and metadata from dataset specs.
@@ -173,7 +173,7 @@ def _load(
     data_specs: core.DataSpecs,
     config: DataLoaderConfig,
     *,
-    logger: common.SessionLogger | None = None,
+    logger: session_logger.SessionLogger | None = None,
 ) -> torch.utils.data.DataLoader | None:
     '''Get a specific dataloader by mode.'''
     match mode:

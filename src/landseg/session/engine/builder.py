@@ -37,7 +37,7 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.logger as session_logger
 import landseg.session.contracts as contracts
 import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
@@ -73,7 +73,7 @@ class EpochEngineContext:
     model: core.MultiheadModelLike
     dispatcher: contracts.SessionObserverLike
     device: str
-    logger: common.SessionLogger | None = None
+    logger: session_logger.SessionLogger | None = None
 
 
 # ----- public functions

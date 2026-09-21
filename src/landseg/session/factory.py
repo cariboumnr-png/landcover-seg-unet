@@ -53,7 +53,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.logger as session_logger
 import landseg.session.data as data
 import landseg.session.engine as engine
 import landseg.session.instrumentation as instrumentation
@@ -99,7 +99,7 @@ def build_overfit_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: common.SessionLogger | None = None
+    logger: session_logger.SessionLogger | None = None
 ) -> engine.EpochRunner:
     '''Build an epoch engine for overfit training with evaluation.'''
 
@@ -136,7 +136,7 @@ def build_evaluate_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: common.SessionLogger | None = None
+    logger: session_logger.SessionLogger | None = None
 ) -> engine.EpochRunner:
     '''Build an epoch engine for evaluation-only execution.'''
 
@@ -173,7 +173,7 @@ def build_continous_training_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: common.SessionLogger | None = None
+    logger: session_logger.SessionLogger | None = None
 ) -> orchestration_mod.ContinuousRunner:
     '''Build a continuous training runner orchestrator.'''
     assert context.session_paths, 'Session paths manager not provided'
@@ -220,7 +220,7 @@ def build_curriculum_training_session(
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: common.SessionLogger | None = None
+    logger: session_logger.SessionLogger | None = None
 ) -> orchestration_mod.CurriculumRunner:
     '''Build a multiphase training runner orchestrator.'''
     assert context.session_paths, 'Session paths manager not provided'
