@@ -45,22 +45,22 @@ import landseg.session.engine.protocols as protocols
 import landseg.session.engine.tasks as tasks
 
 
-# ----- private types
-class _EpochEngineConfigShape(typing.Protocol):
+# ----- public types
+class EngineConfigShape(typing.Protocol):
     '''Interface for constructing epoch engine runtime components.'''
     @property
     def engine_exec(self) -> batch.BatchExecConfigShape: ...
     @property
     def engine_optim(self) -> optim.OptimConfigShape: ...
     @property
-    def engine_tasks(self) -> tasks.TaskConfigShape: ...
-    @property
     def engine_schedule(self) -> epoch.ScheduleConfigShape: ...
+    @property
+    def engine_tasks(self) -> tasks.TaskConfigShape: ...
 
 
 # ----- public dataclasses
 @dataclasses.dataclass
-class EpochEngineContext:
+class EngineContext:
     '''Runtime context required for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
@@ -71,8 +71,8 @@ class EpochEngineContext:
 # ----- public functions
 def build_engine(
     dataloaders: protocols.DataLoadersLike,
-    context: EpochEngineContext,
-    config: _EpochEngineConfigShape,
+    context: EngineContext,
+    config: EngineConfigShape,
     *,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
     eval_dataset: typing.Literal['val', 'test'] = 'val'

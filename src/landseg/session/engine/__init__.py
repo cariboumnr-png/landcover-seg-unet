@@ -33,42 +33,30 @@ import typing
 
 __all__ = [
     # classes
+    'EngineConfigShape',
+    'EngineContext',
     'EpochRunner',
-    'EpochEngineContext',
     # functions
     'build_engine',
-    # typing
-    'BatchExecConfigShape',
-    'OptimConfigShape',
-    'ScheduleConfigShape',
-    'TaskConfigShape',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import (
-        EpochEngineContext,
+        EngineConfigShape,
+        EngineContext,
         build_engine,
     )
     from .epoch import (
         EpochRunner,
-        ScheduleConfigShape,
-    )
-    from .batch import (
-        BatchExecConfigShape,
-    )
-    from .optim import (
-        OptimConfigShape,
-    )
-    from .tasks import (
-        TaskConfigShape,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'EpochEngineContext',
+        'EngineConfigShape',
+        'EngineContext',
         'build_engine',
     }:
         obj = importlib.import_module('.builder', __package__)
@@ -76,21 +64,8 @@ def __getattr__(name: str):
 
     if name in {
         'EpochRunner',
-        'ScheduleConfigShape',
     }:
         obj = importlib.import_module('.epoch', __package__)
-        return getattr(obj, name)
-
-    if name in {'BatchExecConfigShape'}:
-        obj = importlib.import_module('.batch', __package__)
-        return getattr(obj, name)
-
-    if name in {'OptimConfigShape'}:
-        obj = importlib.import_module('.optim', __package__)
-        return getattr(obj, name)
-
-    if name in {'TaskConfigShape'}:
-        obj = importlib.import_module('.tasks', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

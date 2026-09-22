@@ -203,6 +203,6 @@ def test_training_session_configurator(tmp_path):
     assert root.models.model_body_registry['unet'].base_ch == 64
     assert root.session.engine_optim.opt_cls == 'AdamW'
     assert root.session.engine_optim.lr == 1e-3
-    assert root.session.data_loader.batch_size == 16
-    assert root.session.data_loader.patch_size == 256
+    assert root.session.dataloader.batch_size == 16
+    assert root.session.dataloader.patch_size == 256
     assert root.data.specification.domain_ids_name == 'sample_domain_1'

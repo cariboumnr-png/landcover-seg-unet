@@ -46,7 +46,7 @@ def test_build_engine_patch_size_divisibility_error(
     mock_model.spatial_divisor = 18
     session_config.data_loader.patch_size = 128
 
-    context = engine_mod.EpochEngineContext(
+    context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=mock_model,
         dispatcher=mock_dispatcher,
@@ -74,7 +74,7 @@ def test_build_engine_success(
     When: Calling `build_engine`.
     Then: Return populated `EpochRunner`.
     '''
-    context = engine_mod.EpochEngineContext(
+    context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=mock_model,
         dispatcher=mock_dispatcher,

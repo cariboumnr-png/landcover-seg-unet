@@ -78,59 +78,59 @@ class RootConfig:
     # hyperparameter setters (for sweeping)
     # ----- data geometry
     def set_data_patch_size(self, patch_size: int) -> None:
-        self.session.data_loader.patch_size = patch_size
+        self.session.dataloader.patch_size = patch_size
 
     def set_data_batch_size(self, batch_size: int) -> None:
-        self.session.data_loader.batch_size = batch_size
+        self.session.dataloader.batch_size = batch_size
 
     # ----- runtime optimization
     def set_optimizer_lr(self, lr: float) -> None:
-        self.session.engine_optim.lr = lr
+        self.session.engine.engine_optim.lr = lr
 
     def set_optimizer_weight_decay(self, weight_decay: float) -> None:
-        self.session.engine_optim.weight_decay = weight_decay
+        self.session.engine.engine_optim.weight_decay = weight_decay
 
     def set_optimizer_type(self, opt_cls: str) -> None:
-        self.session.engine_optim.opt_cls = opt_cls
+        self.session.engine.engine_optim.opt_cls = opt_cls
 
     def set_optimizer_scheduler_type(self, sched_cls: str | None) -> None:
-        self.session.engine_optim.sched_cls = sched_cls
+        self.session.engine.engine_optim.sched_cls = sched_cls
 
     def set_optimizer_scheduler_args(self, sched_args: dict[str, typing.Any]) -> None:
-        self.session.engine_optim.sched_args = sched_args
+        self.session.engine.engine_optim.sched_args = sched_args
 
     def set_optimizer_grad_clip_norm(self, grad_clip_norm: float | None) -> None:
-        self.session.engine_optim.grad_clip_norm = grad_clip_norm
+        self.session.engine.engine_optim.grad_clip_norm = grad_clip_norm
 
     def set_runtime_use_amp(self, use_amp: bool) -> None:
-        self.session.engine_exec.use_amp = use_amp
+        self.session.engine.engine_exec.use_amp = use_amp
 
     def set_runtime_logit_adjust_alpha(self, alpha: float) -> None:
-        self.session.engine_exec.logit_adjust_alpha = alpha
+        self.session.engine.engine_exec.logit_adjust_alpha = alpha
 
     # ----- objective (loss + regularization)
     def set_objective_focal_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.focal.weight = weight
+        self.session.engine.engine_tasks.loss_configs.focal.weight = weight
 
     def set_objective_dice_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.dice.weight = weight
+        self.session.engine.engine_tasks.loss_configs.dice.weight = weight
 
     def set_objective_spectral_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.spectral.weight = weight
+        self.session.engine.engine_tasks.loss_configs.spectral.weight = weight
 
     def set_objective_tv_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.tv.weight = weight
+        self.session.engine.engine_tasks.loss_configs.tv.weight = weight
 
     def set_objective_ecological_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.ecological.weight = weight
+        self.session.engine.engine_tasks.loss_configs.ecological.weight = weight
 
     # ----- multitask
     def set_mtl_consistency_lambda(self, value: float) -> None:
-        reg_config = self.session.engine_tasks.mtl_reg_configs
+        reg_config = self.session.engine.engine_tasks.mtl_reg_configs
         reg_config.consistency_lambda = value
 
     def set_mtl_consistency_reduction(self, reduction: str) -> None:
-        reg_config = self.session.engine_tasks.mtl_reg_configs
+        reg_config = self.session.engine.engine_tasks.mtl_reg_configs
         reg_config.consistency_reduction = reduction
 
     # ----- architecture

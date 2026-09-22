@@ -91,7 +91,7 @@ def evaluate(config: configs.RootConfig):
 
         # setup the model
         model = models.build_multihead_unet(
-            patch_size=config.session.data_loader.patch_size,
+            patch_size=config.session.dataloader.patch_size,
             dataspecs=dataspecs,
             unet_backbone_config=config.models.unet_backbone_config,
             conditioning_config=config.models.conditioning_config,

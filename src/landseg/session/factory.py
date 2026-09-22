@@ -55,7 +55,7 @@ import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.logger as session_logger
 import landseg.session.data as data
-import landseg.session.engine as engine
+import landseg.session.engine as engine_mod
 import landseg.session.instrumentation as instrumentation
 import landseg.session.orchestration as orchestration_mod
 
@@ -64,15 +64,9 @@ import landseg.session.orchestration as orchestration_mod
 class SessionConfigShape(typing.Protocol):
     '''Interface for session construction configuration.'''
     @property
-    def data_loader(self) -> data.DataLoaderConfig: ...
+    def dataloader(self) -> data.DataLoaderConfig: ...
     @property
-    def engine_exec(self) -> engine.BatchExecConfigShape: ...
-    @property
-    def engine_optim(self) -> engine.OptimConfigShape: ...
-    @property
-    def engine_tasks(self) -> engine.TaskConfigShape: ...
-    @property
-    def engine_schedule(self) -> engine.ScheduleConfigShape: ...
+    def engine(self) -> engine_mod.EngineConfigShape: ...
     @property
     def orchestration(self) -> orchestration_mod.OrchestrationConfigShape: ...
 
@@ -94,7 +88,7 @@ def build_overfit_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: session_logger.SessionLogger | None = None
-) -> engine.EpochRunner:
+) -> engine_mod.EpochRunner:
     '''Build an epoch engine for overfit training with evaluation.'''
     # callback dispatcher
     dispatcher = instrumentation.build_dispatcher(
@@ -104,20 +98,20 @@ def build_overfit_session(
     # dataloaders
     dataloaders = data.build_dataloaders(
         dataspecs,
-        config.data_loader,
+        config.dataloader,
         logger=logger
     )
     # context
-    engine_context = engine.EpochEngineContext(
+    engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
         dispatcher=dispatcher,
         device=context.device,
     )
-    return engine.build_engine(
+    return engine_mod.build_engine(
         dataloaders,
         engine_context,
-        config,
+        config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )
@@ -130,7 +124,7 @@ def build_evaluate_session(
     config: SessionConfigShape,
     context: SessionBuildContext,
     logger: session_logger.SessionLogger | None = None
-) -> engine.EpochRunner:
+) -> engine_mod.EpochRunner:
     '''Build an epoch engine for evaluation-only execution.'''
     # callback dispatcher
     dispatcher = instrumentation.build_dispatcher(
@@ -140,20 +134,20 @@ def build_evaluate_session(
     # dataloaders
     dataloaders = data.build_dataloaders(
         dataspecs,
-        config.data_loader,
+        config.dataloader,
         logger=logger
     )
     # context
-    engine_context = engine.EpochEngineContext(
+    engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
         dispatcher=dispatcher,
         device=context.device,
     )
-    return engine.build_engine(
+    return engine_mod.build_engine(
         dataloaders,
         engine_context,
-        config,
+        config.engine,
         mode='eval_only',
         eval_dataset=context.eval_dataset,
     )
@@ -179,20 +173,20 @@ def build_continous_training_session(
 
     dataloaders = data.build_dataloaders(
         dataspecs,
-        config.data_loader,
+        config.dataloader,
         logger=logger
     )
 
-    engine_context = engine.EpochEngineContext(
+    engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
         dispatcher=dispatcher,
         device=context.device,
     )
-    epoch_engine = engine.build_engine(
+    epoch_engine = engine_mod.build_engine(
         dataloaders,
         engine_context,
-        config,
+        config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )
@@ -226,20 +220,20 @@ def build_curriculum_training_session(
 
     dataloaders = data.build_dataloaders(
         dataspecs,
-        config.data_loader,
+        config.dataloader,
         logger=logger
     )
 
-    engine_context = engine.EpochEngineContext(
+    engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
         dispatcher=dispatcher,
         device=context.device,
     )
-    epoch_engine = engine.build_engine(
+    epoch_engine = engine_mod.build_engine(
         dataloaders,
         engine_context,
-        config,
+        config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
     )

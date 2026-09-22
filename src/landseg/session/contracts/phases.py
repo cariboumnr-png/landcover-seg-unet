@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
 
 '''
 Internal orchestration runtime configuration protocols.

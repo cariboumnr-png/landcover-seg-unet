@@ -101,7 +101,7 @@ def train(config: configs.RootConfig) -> None:
         logger.log('INFO', '[START] Model assembly')
         start_t = time.perf_counter()
         model = models.build_multihead_unet(
-            patch_size=config.session.data_loader.patch_size,
+            patch_size=config.session.dataloader.patch_size,
             dataspecs=dataspecs,
             unet_backbone_config=config.models.unet_backbone_config,
             conditioning_config=config.models.conditioning_config,
@@ -266,7 +266,7 @@ def _log_inputs(
             'heads': list(dataspecs.heads.class_counts.keys())
         },
         'data': {
-            'patch_size': config.session.data_loader.patch_size
+            'patch_size': config.session.dataloader.patch_size
         },
         'dataspecs': dataspecs.to_dict()
     })

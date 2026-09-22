@@ -43,8 +43,8 @@ def test_session_config_defaults_and_validation():
     session.validate()
 
     assert session.mode == 'continuous'
-    assert session.data_loader.patch_size == 128
-    assert session.data_loader.batch_size == 16
+    assert session.dataloader.patch_size == 128
+    assert session.dataloader.batch_size == 16
     assert session.engine_optim.lr == 1e-4
 
 

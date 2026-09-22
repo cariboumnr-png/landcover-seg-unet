@@ -69,7 +69,7 @@ def overfit(config: configs.RootConfig) -> None:
         logger.log_sep()
         logger.set_inputs({
             'exp_root': config.execution.exp_root,
-            'patch_size': config.session.data_loader.patch_size,
+            'patch_size': config.session.dataloader.patch_size,
             'lr': config.session.engine_optim.lr,
             'max_epoch': c.OVERFIT_MAX_EPOCH,
         })
@@ -77,7 +77,7 @@ def overfit(config: configs.RootConfig) -> None:
         dataspecs = _prepare_dataspecs(root, config, logger)
 
         model = models.build_multihead_unet(
-            patch_size=config.session.data_loader.patch_size,
+            patch_size=config.session.dataloader.patch_size,
             dataspecs=dataspecs,
             unet_backbone_config=config.models.unet_backbone_config,
             conditioning_config=config.models.conditioning_config,

@@ -1,11 +1,7 @@
-# Main entry to the config tree
 defaults:
   - _self_
-  - data_loader: default
-  - engine_exec: default
-  - engine_optim: default
-  - engine_schedule: default
-  - engine_tasks: default
+  - dataloader: default
+  - engine: default
   - orchestration: default
 
 mode: continuous # continuous | curriculum

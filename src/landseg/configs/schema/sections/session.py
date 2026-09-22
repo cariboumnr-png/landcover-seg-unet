@@ -35,6 +35,7 @@ import landseg.configs.schema.utils as utils
 # alias
 field = dataclasses.field
 
+
 # -------------------------------SESSION CONFIGS-------------------------------
 # ----- data loader
 @dataclasses.dataclass
@@ -46,7 +47,9 @@ class _DataLoaderConfig:
         utils.must_within(self.patch_size, 'data patch size', 0)
         utils.must_within(self.batch_size, 'data batch size', 0)
 
-# ----- engione executor
+
+# ----- core engine
+# executor
 @dataclasses.dataclass
 class _EngineExecConfig:
     use_amp: bool = True
@@ -55,7 +58,8 @@ class _EngineExecConfig:
     def validate(self):
         utils.must_within(self.logit_adjust_alpha, 'logit adjust alpha', 0)
 
-# ----- engine optim
+
+# optimization
 @dataclasses.dataclass
 class _OptimConfig:
     opt_cls: str = 'AdamW'
@@ -74,7 +78,8 @@ class _OptimConfig:
             if 'T_max' not in self.sched_args:
                 raise ValueError('missing T_max for CosAnneal')
 
-# ----- engine schedule
+
+# schedule
 @dataclasses.dataclass
 class _ScheduleConfig:
     val_every_n_epoch: int = 1
@@ -88,17 +93,20 @@ class _ScheduleConfig:
         utils.must_within(self.ckpt_every_n_epoch, 'Saving frequency', 1)
         utils.must_within(self.update_loss_every_n_batch, 'loss update frequency', 1)
 
-# ----- engine tasks
+
+# tasks
 @dataclasses.dataclass
 class _FocalLossConfig:
     weight: float = 0.5
     gamma: float = 2.0
     reduction: str = 'mean'
 
+
 @dataclasses.dataclass
 class _DiceLossConfig:
     weight: float = 0.5
     smooth: float = 1.0
+
 
 @dataclasses.dataclass
 class _SpectralLossConfig:
@@ -106,14 +114,17 @@ class _SpectralLossConfig:
     alpha: float = 1.0
     neighbour: int = 4
 
+
 @dataclasses.dataclass
 class _TVLossConfig:
     weight: float = 1e-4
+
 
 @dataclasses.dataclass
 class _EcologicalLossConfig:
     weight: float = 0.0
     profile: str | None = 'ontario_tree_species_grouped_profiles'
+
 
 @dataclasses.dataclass
 class _LossTypesConfig:
@@ -123,6 +134,7 @@ class _LossTypesConfig:
     tv: _TVLossConfig = field(default_factory=_TVLossConfig)
     ecological: _EcologicalLossConfig = field(default_factory=_EcologicalLossConfig)
 
+
 @dataclasses.dataclass
 class _MTLConstraints:
     name: str = ''
@@ -131,10 +143,12 @@ class _MTLConstraints:
     target_head: str = ''
     forbidden: list[int] = field(default_factory=list)
 
+
 @dataclasses.dataclass
 class _MTLRegularization:
     consistency_lambda: float = 0.05
     consistency_reduction: str = 'mean'
+
 
 @dataclasses.dataclass
 class _TasksConfig:
@@ -160,6 +174,21 @@ class _TasksConfig:
         utils.must_within(self.loss_configs.tv.weight, 'tv loss weight', 0)
         utils.must_within(self.loss_configs.ecological.weight, 'ecological loss weight', 0)
 
+
+@dataclasses.dataclass
+class _EngineConfig:
+    engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
+    engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
+    engine_schedule: _ScheduleConfig = field(default_factory=_ScheduleConfig)
+    engine_tasks: _TasksConfig = field(default_factory=_TasksConfig)
+
+    def validate(self):
+        self.engine_exec.validate()
+        self.engine_optim.validate()
+        self.engine_schedule.validate()
+        self.engine_tasks.validate()
+
+
 # ----- orchestration
 @dataclasses.dataclass
 class _Monitor:
@@ -173,6 +202,7 @@ class _Monitor:
     def validate(self):
         utils.must_within(self.patience, 'patience epoch', 0)
         utils.must_within(self.min_delta, 'patience delta', 0)
+
 
 @dataclasses.dataclass
 class _Phase:
@@ -198,15 +228,18 @@ class _SinglePhase:
     name: str = 'single'
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
+
 @dataclasses.dataclass
 class _BaselinePhases:
     name: str = 'baseline'
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
 
+
 @dataclasses.dataclass
 class _CustomPhases:
     name: str = 'custom'
     phases: list[_Phase] = field(default_factory=lambda: [_Phase()])
+
 
 @dataclasses.dataclass
 class _Curriculum:
@@ -214,6 +247,7 @@ class _Curriculum:
     single: _SinglePhase = field(default_factory=_SinglePhase)
     baseline: _BaselinePhases = field(default_factory=_BaselinePhases)
     custom: _CustomPhases = field(default_factory=_CustomPhases)
+
 
 @dataclasses.dataclass
 class _OrchestrationConfig:
@@ -244,14 +278,12 @@ class _OrchestrationConfig:
             for phase in self.multi_phases:
                 phase.validate()
 
+
 # session composite
 @dataclasses.dataclass
 class SessionConfig:
-    data_loader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
-    engine_exec: _EngineExecConfig = field(default_factory=_EngineExecConfig)
-    engine_optim: _OptimConfig = field(default_factory=_OptimConfig)
-    engine_schedule: _ScheduleConfig = field(default_factory=_ScheduleConfig)
-    engine_tasks: _TasksConfig = field(default_factory=_TasksConfig)
+    dataloader: _DataLoaderConfig = field(default_factory=_DataLoaderConfig)
+    engine: _EngineConfig = field(default_factory=_EngineConfig)
     orchestration: _OrchestrationConfig = field(default_factory=_OrchestrationConfig)
     mode: str = 'continuous'
     output_dpath: str = '${execution.exp_root}/results/'
@@ -281,9 +313,6 @@ class SessionConfig:
                 f'must be "continuous" or "curriculum"'
             )
         # sections validation
-        self.data_loader.validate()
-        self.engine_exec.validate()
-        self.engine_optim.validate()
-        self.engine_schedule.validate()
-        self.engine_tasks.validate()
+        self.dataloader.validate()
+        self.engine.validate()
         self.orchestration.validate()
