@@ -1,6 +1,6 @@
 ## Structure actuelle du projet
 
-Dernière mise à jour: 2026-09-20
+Dernière mise à jour: 2026-09-22
 
 Ce document resume l'organisation actuelle du depot et la responsabilite
 principale de chaque zone. Il privilegie les frontieres utiles pour ajouter ou
@@ -81,7 +81,7 @@ src/landseg/
 |   |   |-- data/                 Defaults d'harmonisation, d'ingestion et de préparation
 |   |   |-- models/               Defaults des architectures modeles
 |   |   |-- pipeline/             Configs harmonize, ingest, prepare, train, eval et study
-|   |   |-- session/              Configs runtime, loader, optimiseur, taches, orchestration
+|   |   |-- session/              Configs dataloader, moteur, taches et orchestration
 |   |   `-- study/                Defaults d'etude et de sweep
 |   `-- schema/
 |       |-- root.py               Schema structure racine
@@ -149,17 +149,16 @@ src/landseg/
 |   `-- factory.py                Construction modele de haut niveau
 |
 |-- session/
-|   |-- common/                   Alias, evenements et types d'orchestration partages
-|   |-- data/                     Adaptateurs Dataset et DataLoader
+|   |-- contracts/                Protocoles partages de donnees, observateur et phases
+|   |-- data/                     Dataset, collation, memoire et construction des dataloaders
 |   |-- engine/
-|   |   |-- builder.py            Construction du moteur
-|   |   |-- epoch/                Executor d'epoch et policies train/eval
-|   |   `-- runtime/
-|   |       |-- builder.py        Construction du runtime
-|   |       |-- executor/         Etat batch, objectif et executor runtime
-|   |       |-- optim/            Construction optimiseur et logique d'optimisation
-|   |       `-- tasks/            Tetes, contraintes, pertes, metriques, regularisation
+|   |   |-- builder.py            Composition du moteur et construction de l'epoch runner
+|   |   |-- batch/                Etat par batch, objectifs et execution
+|   |   |-- epoch/                Epoch runner, builder et policies train/evaluation
+|   |   |-- optim/                Construction de l'optimiseur et du scheduler
+|   |   `-- tasks/                Tetes, contraintes, pertes, metriques et regularisation
 |   |-- instrumentation/
+|   |   |-- builder.py            Construction du dispatcher de callbacks
 |   |   |-- callbacks/            Dispatch callbacks, logging et hooks de tracking
 |   |   |-- dashboards/           Adaptateurs TensorBoard et MLflow
 |   |   `-- formatters/           Rendu et formatage de rapports
@@ -168,7 +167,7 @@ src/landseg/
 |   |   |-- policy/               Policies d'epoch et de phase
 |   |   `-- runner/               Runners continuous et curriculum
 |   |-- factory.py                Factory de session
-|   `-- metadata.py               Metadonnees de session
+|   `-- logger.py                 Logging propre a la session
 |
 |-- study/
 |   |-- analysis/                 Helpers d'analyse de trials/resultats
@@ -190,10 +189,18 @@ src/landseg/
 - `geopipe/` possede la preparation geospatiale jusqu'aux `DataSpecs`; le
   chargement des donnees pour l'entrainement commence dans `session/data/`.
 - `models/` possede uniquement la construction des reseaux. Les objectifs,
-  metriques, optimiseurs et taches runtime vivent dans `session/engine/runtime/`.
-- `session/` est la couche runtime principale: l'orchestration choisit phases et
-  runners, les policies d'epoch definissent train/eval, et les taches runtime
-  calculent tetes, pertes, metriques, contraintes et regularisation.
+  metriques, optimiseurs et taches vivent dans `session/engine/`.
+- `session/` est la couche runtime principale. `factory.py` selectionne un
+  session runner; `data/` construit les dataloaders, `engine/` compose
+  l'execution par batch et par epoch, et `orchestration/` choisit
+  l'entrainement continu ou par curriculum.
+- `session/contracts/` fournit les protocoles partages de donnees,
+  d'observateur et de phase; les exports paresseux des packages sont reserves
+  aux consommateurs publics, et non aux dependances internes entre modules.
+- La configuration Hydra de session suit ces frontieres: `dataloader` et le
+  groupe `engine` imbrique (execution, optimisation, planification et taches)
+  sont distincts des parametres de monitoring, curriculum et reprise de
+  `orchestration`.
 - `geopipe/` est organisé en trois étapes (`harmonize`, `ingest`, `prepare`),
   offrant des triades symétriques (`context.py`, `logger.py`, `pipeline.py`),
   régies par les contrats centraux dans `contracts/`.
