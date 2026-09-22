@@ -116,12 +116,20 @@ def train(config: configs.RootConfig) -> None:
         logger.log_sep()
 
         # build the session runner
-        runner = _build_session_runner(
-            config,
-            dataspecs,
-            model,
-            ss_paths,
-            logger
+        runner = session.build_session_runner(
+            dataspecs=dataspecs,
+            model=model,
+            config=config.session,
+            context=session.SessionBuildContext(
+                device=c.DEVICE,
+                session_paths=ss_paths,
+                eval_dataset='val',
+                logger=logger
+            ),
+            session_type=typing.cast(
+                typing.Literal['continuous', 'curriculum'],
+                config.session.mode
+            ) # guaruanteed by root config validation,
         )
 
         # run session execution
@@ -164,43 +172,6 @@ def _get_device_name() -> str:
             return torch.cuda.get_device_name(0)
         return 'cuda (unavailable)'
     return c.DEVICE
-
-
-def _build_session_runner(
-    config: configs.RootConfig,
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    ss_paths: artifacts.SessionPaths,
-    logger: session.SessionLogger
-) -> typing.Any:
-    '''Build the session runner based on mode.'''
-    match config.session.mode:
-        case 'continuous':
-            session_context = session.SessionBuildContext(
-                device=c.DEVICE,
-                session_paths=ss_paths,
-            )
-            return session.factory.build_continous_training_session(
-                dataspecs=dataspecs,
-                model=model,
-                config=config.session,
-                context=session_context,
-                logger=logger
-            )
-        case 'curriculum':
-            session_context = session.SessionBuildContext(
-                device=c.DEVICE,
-                session_paths=ss_paths,
-            )
-            return session.factory.build_curriculum_training_session(
-                dataspecs=dataspecs,
-                model=model,
-                config=config.session,
-                context=session_context,
-                logger=logger
-            )
-        case _:
-            raise ValueError(f'Invalid training mode: {config.session.mode}')
 
 
 def _log_dataspecs_summary(

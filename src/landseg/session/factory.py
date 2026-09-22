@@ -60,6 +60,15 @@ import landseg.session.instrumentation as instrumentation
 import landseg.session.orchestration as orchestration_mod
 
 
+# ----- typing alises
+SessionType = typing.Literal[
+    'overfit',
+    'evaluate',
+    'continuous',
+    'curriculum',
+]
+
+
 # ----- public types
 class SessionConfigShape(typing.Protocol):
     '''Interface for session construction configuration.'''
@@ -76,167 +85,91 @@ class SessionConfigShape(typing.Protocol):
 class SessionBuildContext:
     '''Context for session construction.'''
     device: str
+    session_paths: artifacts.SessionPaths
     eval_dataset: typing.Literal['val', 'test'] = 'val'
-    session_paths: artifacts.SessionPaths | None = None
+    logger: session_logger.SessionLogger | None = None
 
 
 # ----- public functions
-def build_overfit_session(
+@typing.overload
+def build_session_runner(
     *,
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: session_logger.SessionLogger | None = None
-) -> engine_mod.EpochRunner:
-    '''Build an epoch engine for overfit training with evaluation.'''
-    dispatcher = instrumentation.build_dispatcher(
-        logger=logger,
-        verbose=(getattr(logger, 'console_lvl', None) is not None)
-    )
-
-    dataloaders = data.build_dataloaders(
-        dataspecs,
-        config.dataloader,
-        logger=logger
-    )
-
-    engine_context = engine_mod.EngineContext(
-        dataspecs=dataspecs,
-        model=model,
-        dataloaders=dataloaders,
-        dispatcher=dispatcher,
-    )
-    epoch_engine = engine_mod.build_engine(
-        engine_context,
-        config.engine,
-        mode='train_eval',
-        eval_dataset=context.eval_dataset,
-        device=context.device,
-    )
-
-    return epoch_engine
+    session_type: typing.Literal['overfit', 'evaluate'],
+) -> engine_mod.EpochRunner: ...
 
 
-def build_evaluate_session(
+@typing.overload
+def build_session_runner(
     *,
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: session_logger.SessionLogger | None = None
-) -> engine_mod.EpochRunner:
-    '''Build an epoch engine for evaluation-only execution.'''
-    dispatcher = instrumentation.build_dispatcher(
-        logger=logger,
-        verbose=(getattr(logger, 'console_lvl', None) is not None)
-    )
+    session_type: typing.Literal['continuous'],
+) -> orchestration_mod.ContinuousRunner: ...
 
-    dataloaders = data.build_dataloaders(
-        dataspecs,
-        config.dataloader,
-        logger=logger
-    )
 
-    engine_context = engine_mod.EngineContext(
-        dataspecs=dataspecs,
-        model=model,
-        dataloaders=dataloaders,
-        dispatcher=dispatcher,
-    )
-    epoch_engine = engine_mod.build_engine(
-        engine_context,
-        config.engine,
-        mode='eval_only',
-        eval_dataset=context.eval_dataset,
-        device=context.device,
-    )
-
-    return epoch_engine
-
-def build_continous_training_session(
+@typing.overload
+def build_session_runner(
     *,
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: SessionConfigShape,
     context: SessionBuildContext,
-    logger: session_logger.SessionLogger | None = None
-) -> orchestration_mod.ContinuousRunner:
-    '''Build a continuous training runner orchestrator.'''
-    assert context.session_paths, 'Session paths manager not provided'
+    session_type: typing.Literal['curriculum'],
+) -> orchestration_mod.CurriculumRunner: ...
+
+
+def build_session_runner(
+    *,
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    config: SessionConfigShape,
+    context: SessionBuildContext,
+    session_type: SessionType,
+) -> (
+    engine_mod.EpochRunner |
+    orchestration_mod.ContinuousRunner |
+    orchestration_mod.CurriculumRunner
+):
+    '''Build a configured session variant.'''
+    logger = context.logger
+
+    if session_type in ['overfit', 'evaluate']:
+        dispatcher = instrumentation.build_dispatcher(logger=logger)
+        return engine_mod.build_engine(
+            _get_engine_context(dataspecs, model, dispatcher, config, logger),
+            config.engine,
+            mode='eval_only' if session_type == 'evaluate' else 'train_eval',
+            eval_dataset=context.eval_dataset,
+            device=context.device,
+        )
+
     dispatcher = instrumentation.build_dispatcher(
         trackers=['tb'],
         uri=context.session_paths.logs,
         label_color_map=dataspecs.meta.label_color_map,
         logger=logger,
-        verbose=(getattr(logger, 'console_lvl', None) is not None)
-    )
-
-    dataloaders = data.build_dataloaders(
-        dataspecs,
-        config.dataloader,
-        logger=logger
-    )
-
-    engine_context = engine_mod.EngineContext(
-        dataspecs=dataspecs,
-        model=model,
-        dataloaders=dataloaders,
-        dispatcher=dispatcher,
     )
     epoch_engine = engine_mod.build_engine(
-        engine_context,
+        _get_engine_context(dataspecs, model, dispatcher, config, logger),
         config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
         device=context.device,
     )
 
-    return orchestration_mod.build_runner(
+    if session_type == 'continuous':
+        return orchestration_mod.build_runner(
         epoch_engine,
         config.orchestration,
         dispatcher,
         context.session_paths,
         runner_type='continuous',
-    )
-
-
-def build_curriculum_training_session(
-    *,
-    dataspecs: core.DataSpecs,
-    model: core.MultiheadModelLike,
-    config: SessionConfigShape,
-    context: SessionBuildContext,
-    logger: session_logger.SessionLogger | None = None
-) -> orchestration_mod.CurriculumRunner:
-    '''Build a multiphase training runner orchestrator.'''
-    assert context.session_paths, 'Session paths manager not provided'
-    dispatcher = instrumentation.build_dispatcher(
-        trackers=['tb'],
-        uri=context.session_paths.logs,
-        label_color_map=dataspecs.meta.label_color_map,
-        logger=logger,
-        verbose=(getattr(logger, 'console_lvl', None) is not None)
-    )
-
-    dataloaders = data.build_dataloaders(
-        dataspecs,
-        config.dataloader,
-        logger=logger
-    )
-
-    engine_context = engine_mod.EngineContext(
-        dataspecs=dataspecs,
-        model=model,
-        dataloaders=dataloaders,
-        dispatcher=dispatcher,
-    )
-    epoch_engine = engine_mod.build_engine(
-        engine_context,
-        config.engine,
-        mode='train_eval',
-        eval_dataset=context.eval_dataset,
-        device=context.device,
     )
 
     return orchestration_mod.build_runner(
@@ -245,4 +178,26 @@ def build_curriculum_training_session(
         dispatcher,
         context.session_paths,
         runner_type='curriculum',
+    )
+
+
+# ----- private helpers
+def _get_engine_context(
+    dataspecs: core.DataSpecs,
+    model: core.MultiheadModelLike,
+    dispatcher: instrumentation.CallbackDispatcher,
+    config: SessionConfigShape,
+    logger: session_logger.SessionLogger | None = None
+) -> engine_mod.EngineContext:
+    '''Simple helper to return `EngineContext`.'''
+    dataloaders = data.build_dataloaders(
+        dataspecs,
+        config.dataloader,
+        logger=logger
+    )
+    return engine_mod.EngineContext(
+        dataspecs=dataspecs,
+        model=model,
+        dataloaders=dataloaders,
+        dispatcher=dispatcher,
     )

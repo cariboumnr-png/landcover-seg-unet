@@ -35,6 +35,8 @@ __all__ = [
     # classes
     'SessionBuildContext',
     'SessionLogger',
+    # functions
+    'build_session_runner',
     # typing
     'SessionConfigShape',
 ]
@@ -48,6 +50,7 @@ if typing.TYPE_CHECKING:
     from .factory import (
         SessionBuildContext,
         SessionConfigShape,
+        build_session_runner
     )
 
 
@@ -59,6 +62,7 @@ def __getattr__(name: str):
     if name in {
         'SessionBuildContext',
         'SessionConfigShape',
+        'build_session_runner',
     }:
         obj = importlib.import_module('.factory', __package__)
         return getattr(obj, name)

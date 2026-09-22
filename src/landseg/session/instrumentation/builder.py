@@ -48,7 +48,6 @@ def build_dispatcher(
     artifact_path: str | None = None,
     label_color_map: dict[str, list[int]] | None = None,
     logger: utils.Logger | None = None,
-    verbose: bool = True
 ) -> dispatcher.CallbackDispatcher:
     '''
     Construct a callback dispatcher with logging and tracking support.
@@ -91,6 +90,7 @@ def build_dispatcher(
             _trackers.append(dashboards.MLFlowTracker(uri, artifact_path))
 
     # callbacks list
+    verbose=getattr(logger, 'console_lvl', None) is not None
     callbacks_list: list[base.BaseCallback] = [
         logging.LoggingCallback(logger=logger, verbose=verbose),
         tracking.TrainTrackingCallback(_trackers),

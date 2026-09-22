@@ -109,16 +109,17 @@ def evaluate(config: configs.RootConfig):
         )
 
         # build session runner
-        session_context = session.SessionBuildContext(
-            device=c.DEVICE,
-            session_paths=session_paths,
-        )
-        runner = session.factory.build_evaluate_session(
+        runner = session.build_session_runner(
             dataspecs=dataspecs,
             model=model,
             config=config.session,
-            context=session_context,
-            logger=logger
+            context=session.SessionBuildContext(
+                device=c.DEVICE,
+                session_paths=session_paths,
+                eval_dataset='val',
+                logger=logger
+            ),
+            session_type='evaluate'
         )
 
         # evaluate
