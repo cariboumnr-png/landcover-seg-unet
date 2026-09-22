@@ -19,12 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 
 '''
-Protocols for Epoch-level engine components.
+Protocols defining shapes of external objects for `engine` module
 '''
 
 # standard imports
@@ -34,9 +33,11 @@ import typing
 if typing.TYPE_CHECKING:
     import torch
 
-# ---------------------------------dataloaders---------------------------------
+
+# ----- public types
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
+    '''Interface for dataset loader splits and execution metadata.'''
     @property
     def train(self) -> 'torch.utils.data.DataLoader | None':...
     @property
@@ -46,7 +47,10 @@ class DataLoadersLike(typing.Protocol):
     @property
     def meta(self) -> _DataLoadersMeta: ...
 
+
+# ----- private types
 class _DataLoadersMeta(typing.Protocol):
+    '''Interface for dimensions and patch counts of data loaders.'''
     @property
     def batch_size(self) -> int: ...
     @property
@@ -54,15 +58,26 @@ class _DataLoadersMeta(typing.Protocol):
     @property
     def patch_count(self) -> _PatchCount: ...
     @property
-    def preview_context(self) -> '_PreviewContext | None': ...
+    def preview_context(self) -> _PreviewContext | None: ...
 
-class _PatchCount(typing.TypedDict):
-    train: int
-    val: int
-    test: int
+
+class _PatchCount(typing.Protocol):
+    '''Interface for train/val/test patch counts.'''
+    @property
+    def train(self) -> int: ...
+    @property
+    def val(self) -> int: ...
+    @property
+    def test(self) -> int: ...
+
 
 class _PreviewContext(typing.Protocol):
-    patch_per_blk: int
-    patch_per_dim: int
-    block_columns: int
-    patch_grid_shape: tuple[int, int]
+    '''Interface for block layout and patch grid dimensions.'''
+    @property
+    def patch_per_blk(self) -> int: ...
+    @property
+    def patch_per_dim(self) -> int: ...
+    @property
+    def block_columns(self) -> int: ...
+    @property
+    def patch_grid_shape(self) -> tuple[int, int]: ...

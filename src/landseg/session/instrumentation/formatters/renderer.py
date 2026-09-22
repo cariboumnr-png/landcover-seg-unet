@@ -25,14 +25,14 @@
 import numpy
 import torch
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def colorize(
     canvas: torch.Tensor,
     *,
     palette: torch.Tensor | numpy.ndarray | dict[str, list[int]] | None = None
 ) -> torch.Tensor:
     '''Map class indices [H, W] -> RGB tensor [3, H, W].'''
-
     # palette handling
     if not bool(palette): # None | empty array, dict, tensor
         max_cls = int(canvas.max().item()) if canvas.numel() > 0 else 0
@@ -70,6 +70,8 @@ def colorize(
 
     return rgb.contiguous()
 
+
+# ----- private helpers
 def _default_palette(
     num_classes: int,
     *,
@@ -77,7 +79,6 @@ def _default_palette(
     device: torch.device | None = None
 ) -> torch.Tensor:
     '''Generate deterministic RGB palette [N, 3] uint8 tensor.'''
-
     num_classes = max(1, int(num_classes))
 
     rng = numpy.random.default_rng(seed)
@@ -100,6 +101,7 @@ def _default_palette(
         device=device
     )
 
+
 def _palette_from_dict(
     color_map: dict[str, list[int]],
     default_color: tuple[int, int, int] = (0, 0, 0),
@@ -107,7 +109,6 @@ def _palette_from_dict(
     device: torch.device | None = None
 ) -> torch.Tensor:
     '''Convert class->RGB dict into palette tensor [N, 3].'''
-
     if not color_map:
         raise ValueError('color_map cannot be empty')
 

@@ -23,11 +23,13 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.common as common
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.contracts as contracts
+import landseg.session.instrumentation.callbacks.base as base
 import landseg.utils as utils
 
-class LoggingCallback(callbacks.BaseCallback):
+
+# ----- public classes
+class LoggingCallback(base.BaseCallback):
     '''Logging callback'''
 
     def __init__(
@@ -40,7 +42,7 @@ class LoggingCallback(callbacks.BaseCallback):
         super().__init__(verbose=verbose)
         self.logger = logger
 
-    def on_session_phase_begin(self, phase: common.PhaseLike) -> None:
+    def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None:
         if self.logger:
             self.logger.log('INFO', f'[START] Phase {phase.name}')
             self.logger.log('INFO', f'- Max Epochs:\t{phase.num_epochs}')
@@ -65,7 +67,8 @@ class LoggingCallback(callbacks.BaseCallback):
                 for r, v in results.regularization.items()
             ])
             text_list.append(f'LR: {results.current_lr:.4e}')
-            self.logger.log('DEBUG', f'batch_{bidx:04d} | ' + '|'.join(text_list))
+            msg = f'batch_{bidx:04d} | ' + '|'.join(text_list)
+            self.logger.log('DEBUG', msg)
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         metrics = results.raw_metrics

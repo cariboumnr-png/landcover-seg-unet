@@ -27,13 +27,13 @@
 import pytest
 # local imports
 import landseg.core as core
-import landseg.session.instrumentation.callbacks as cb_mod
-import landseg.session.instrumentation.callbacks.builder as builder_mod
+import landseg.session.instrumentation.builder as builder_mod
+import landseg.session.instrumentation.callbacks.base as cb_base
 import landseg.session.instrumentation.callbacks.dispatcher as disp_mod
 
 
 # ----- mock callback helper
-class MockCallback(cb_mod.BaseCallback):
+class MockCallback(cb_base.BaseCallback):
     '''Mock callback tracking event invocations.'''
     def __init__(self):
         super().__init__()
@@ -105,7 +105,7 @@ def test_build_dispatcher_default():
     When: Building dispatcher.
     Then: Dispatcher is created with logging and tracking callbacks.
     '''
-    dispatcher = builder_mod.build_dispatcher(verbose=False)
+    dispatcher = builder_mod.build_dispatcher()
 
     assert isinstance(dispatcher, disp_mod.CallbackDispatcher)
     assert len(dispatcher.callbacks) == 4

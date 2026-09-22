@@ -69,24 +69,24 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
     '''Build a continuous training session runner.'''
     # init run io folder tree
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.session
-    paths.init(trace_to_last=False)
+    session_paths = artifact_paths.session
+    session_paths.init(trace_to_last=False)
 
     # save running config per session
-    config_ctrl = artifacts.Controller[dict](paths.config) # no policy
+    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
     config_ctrl.persist(config.as_dict)
 
     # init a SessionLogger
     logger = session.SessionLogger(
         name='session',
-        log_file=paths.summary,
+        log_file=session_paths.summary,
         console_lvl=None,
         enable_file_log=False
     )
 
     def run_wrapper():
         logger.init_summary(
-            run_id=paths.run_id,
+            run_id=session_paths.run_id,
             pipeline=config.pipeline.name,
         )
         logger.set_inputs(config.as_dict)
@@ -104,7 +104,7 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
 
             # setup the model
             model = models.build_multihead_unet(
-                patch_size=config.session.data_loader.patch_size,
+                patch_size=config.session.dataloader.patch_size,
                 dataspecs=dataspecs,
                 unet_backbone_config=config.models.unet_backbone_config,
                 conditioning_config=config.models.conditioning_config,
@@ -113,16 +113,17 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
             )
 
             # build session runner
-            session_context = session.SessionBuildContext(
-                device=c.DEVICE,
-                session_paths=paths,
-            )
-            runner = session.factory.build_continous_training_session(
+            runner = session.build_session_runner(
                 dataspecs=dataspecs,
                 model=model,
                 config=config.session,
-                context=session_context,
-                logger=logger
+                context=session.SessionBuildContext(
+                    device=c.DEVICE,
+                    session_paths=session_paths,
+                    eval_dataset='val',
+                    logger=logger
+                ),
+                session_type='continuous'
             )
 
             yield from runner.run()
@@ -139,4 +140,4 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
             logger.log_sep()
             logger.close() # summary dict will be persisted
 
-    return paths.step_results, run_wrapper
+    return session_paths.step_results, run_wrapper

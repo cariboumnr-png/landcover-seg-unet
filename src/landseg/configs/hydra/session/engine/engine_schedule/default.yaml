@@ -1,0 +1,4 @@
+val_every_n_epoch: 1
+infer_every_n_epoch: 1
+ckpt_every_n_epoch: 5
+update_loss_every_n_batch: 50

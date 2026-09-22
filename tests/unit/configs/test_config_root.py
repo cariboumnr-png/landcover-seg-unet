@@ -68,10 +68,10 @@ def test_root_config_hyperparameter_setters():
     root = root_mod.RootConfig()
 
     root.set_data_patch_size(256)
-    assert root.session.data_loader.patch_size == 256
+    assert root.session.dataloader.patch_size == 256
 
     root.set_data_batch_size(32)
-    assert root.session.data_loader.batch_size == 32
+    assert root.session.dataloader.batch_size == 32
 
     root.set_optimizer_lr(5e-4)
     assert root.session.engine_optim.lr == 5e-4

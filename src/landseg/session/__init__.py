@@ -35,6 +35,8 @@ __all__ = [
     # classes
     'SessionBuildContext',
     'SessionLogger',
+    # functions
+    'build_session_runner',
     # typing
     'SessionConfigShape',
 ]
@@ -42,23 +44,25 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import (
+    from .logger import (
         SessionLogger,
     )
     from .factory import (
         SessionBuildContext,
         SessionConfigShape,
+        build_session_runner
     )
 
 
 def __getattr__(name: str):
     if name in {'SessionLogger'}:
-        obj = importlib.import_module('.common', __package__)
+        obj = importlib.import_module('.logger', __package__)
         return getattr(obj, name)
 
     if name in {
         'SessionBuildContext',
         'SessionConfigShape',
+        'build_session_runner',
     }:
         obj = importlib.import_module('.factory', __package__)
         return getattr(obj, name)

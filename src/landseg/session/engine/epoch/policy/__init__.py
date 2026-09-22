@@ -33,7 +33,7 @@ import typing
 
 __all__ = [
     # classes
-    'EngineBase',
+    'EngineRuntime',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
 ]
@@ -42,7 +42,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import (
-        EngineBase,
+        EngineRuntime
     )
     from .evaluator import (
         MultiHeadEvaluator,
@@ -53,7 +53,7 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'EngineBase'}:
+    if name in {'EngineRuntime'}:
         obj = importlib.import_module('.base', __package__)
         return getattr(obj, name)
 

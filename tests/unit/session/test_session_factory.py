@@ -24,53 +24,55 @@
 # local imports
 import landseg.session.engine.epoch as epoch_mod
 import landseg.session.factory as factory_mod
-import landseg.session.orchestration as orchestration_mod
+import landseg.session.orchestration.runner as runner_mod
 
 
 # ----- `session/factory.py` builder entry point tests
-def test_build_overfit_session(
+def test_build_session_runner_overfit(
     session_config,
     dataspecs,
     mock_model,
 ):
     '''
     Given: Data specs, mock model, session config, and logger.
-    When: Calling `build_overfit_session`.
+    When: Calling `build_session_runner` for overfit.
     Then: Return `EpochEngine` configured in 'train_eval' mode.
     '''
-    engine_session = factory_mod.build_overfit_session(
+    engine_session = factory_mod.build_session_runner(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
         context=_get_context(),
+        session_type='overfit',
     )
 
-    assert isinstance(engine_session, epoch_mod.EpochEngine)
+    assert isinstance(engine_session, epoch_mod.EpochRunner)
     assert engine_session.mode == 'train_eval'
 
 
-def test_build_evaluate_session(
+def test_build_session_runner_evaluate(
     session_config,
     dataspecs,
     mock_model,
 ):
     '''
     Given: Data specs, mock model, session config, and logger.
-    When: Calling `build_evaluate_session`.
+    When: Calling `build_session_runner` for evaluation.
     Then: Return `EpochEngine` configured in 'eval_only' mode.
     '''
-    engine_session = factory_mod.build_evaluate_session(
+    engine_session = factory_mod.build_session_runner(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
         context=_get_context(),
+        session_type='evaluate',
     )
 
-    assert isinstance(engine_session, epoch_mod.EpochEngine)
+    assert isinstance(engine_session, epoch_mod.EpochRunner)
     assert engine_session.mode == 'eval_only'
 
 
-def test_build_continuous_training_session(
+def test_build_session_runner_continuous(
     session_config,
     dataspecs,
     mock_model,
@@ -78,20 +80,21 @@ def test_build_continuous_training_session(
 ):
     '''
     Given: Valid session context with results paths manager.
-    When: Calling `build_continous_training_session`.
+    When: Calling `build_session_runner` for continuous training.
     Then: Return `ContinuousRunner` orchestrator.
     '''
-    runner = factory_mod.build_continous_training_session(
+    runner = factory_mod.build_session_runner(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
         context=_get_context(session_paths=mock_session_paths),
+        session_type='continuous',
     )
 
-    assert isinstance(runner, orchestration_mod.ContinuousRunner)
+    assert isinstance(runner, runner_mod.ContinuousRunner)
 
 
-def test_build_curriculum_training_session(
+def test_build_session_runner_curriculum(
     session_config,
     dataspecs,
     mock_model,
@@ -99,18 +102,19 @@ def test_build_curriculum_training_session(
 ):
     '''
     Given: Valid session context with results paths manager.
-    When: Calling `build_curriculum_training_session`.
+    When: Calling `build_session_runner` for curriculum training.
     Then: Return `CurriculumRunner` orchestrator.
     '''
     session_config.orchestration.curriculum.schema = 'baseline'
-    runner = factory_mod.build_curriculum_training_session(
+    runner = factory_mod.build_session_runner(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
         context=_get_context(session_paths=mock_session_paths),
+        session_type='curriculum',
     )
 
-    assert isinstance(runner, orchestration_mod.CurriculumRunner)
+    assert isinstance(runner, runner_mod.CurriculumRunner)
 
 
 # ----- internal helpers

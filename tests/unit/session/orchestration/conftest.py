@@ -28,14 +28,14 @@
 # third-party imports
 import pytest
 # local imports
-import landseg.session.engine.epoch.executor as epoch_executor
+import landseg.session.engine.epoch.runner as epoch_executor
 import landseg.session.orchestration.runner as runner_mod
 
 
 # ----- pytest fixtures
 @pytest.fixture
 def mock_epoch_engine(mock_trainer, mock_evaluator):
-    return epoch_executor.EpochEngine(
+    return epoch_executor.EpochRunner(
         mode='train_eval',
         trainer=mock_trainer,
         evaluator=mock_evaluator

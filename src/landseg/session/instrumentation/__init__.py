@@ -41,16 +41,23 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .callbacks import (
-        CallbackDispatcher,
+    from .builder import (
         build_dispatcher,
     )
 
+    from .callbacks import (
+        CallbackDispatcher,
+    )
 
 def __getattr__(name: str):
     if name in {
-        'CallbackDispatcher',
         'build_dispatcher',
+    }:
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'CallbackDispatcher',
     }:
         obj = importlib.import_module('.callbacks', __package__)
         return getattr(obj, name)

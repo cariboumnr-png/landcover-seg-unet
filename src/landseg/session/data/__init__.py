@@ -33,9 +33,7 @@ import typing
 
 __all__ = [
     # classes
-    'BlockDatasetContext',
     'DataLoaders',
-    'MultiBlockDataset',
     # functions
     'build_dataloaders',
     # typing
@@ -45,11 +43,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dataset import (
-        BlockDatasetContext,
-        MultiBlockDataset,
-    )
-    from .loader import (
+    from .builder import (
         DataLoaderConfig,
         DataLoaders,
         build_dataloaders,
@@ -58,18 +52,11 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'BlockDatasetContext',
-        'MultiBlockDataset',
-    }:
-        obj = importlib.import_module('.dataset', __package__)
-        return getattr(obj, name)
-
-    if name in {
         'DataLoaderConfig',
         'DataLoaders',
         'build_dataloaders',
     }:
-        obj = importlib.import_module('.loader', __package__)
+        obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

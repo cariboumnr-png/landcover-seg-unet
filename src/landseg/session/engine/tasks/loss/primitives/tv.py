@@ -1,0 +1,113 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Total variation loss for segmentation tasks.
+
+Encourages spatial smoothness by penalizing differences between
+neighboring pixel predictions.
+
+This module defines a single loss primitive used by higher-level loss
+composition components in the execution pipeline.
+'''
+
+# third-party imports
+import torch
+import torch.nn.functional
+# local imports
+import landseg.session.engine.tasks.loss.primitives.base as base
+
+
+# ----- public classes
+class TotalVariationLoss(base.PrimitiveLoss):
+    '''
+    Total Variation (TV) loss for spatial smoothness.
+
+    Encourages neighboring pixels to have similar class probabilities.
+    Operates on softmax-normalized logits.
+
+    Notes:
+    - Independent of input features (not spectral-aware).
+    - Uses targets only for optional masking / ignore handling.
+    '''
+
+    def __init__(self, ignore_index: int | None = None):
+        super().__init__()
+        self.ignore_index = ignore_index
+
+    def forward(
+        self,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        *,
+        masks: dict[float, torch.Tensor] | None,
+        features: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        '''
+        Compute TV loss over spatial dimensions.
+
+        Args:
+            logits: (B, C, H, W)
+            targets: (B, H, W)
+            masks: optional weighting masks
+            features: unused
+
+        Returns:
+            Scalar TV loss
+        '''
+        self._validate_inputs(logits, targets, features)
+
+        # convert to probabilities
+        probs = torch.nn.functional.softmax(logits, dim=1)
+
+        # compute spatial differences
+        dh = torch.abs(probs[:, :, 1:, :] - probs[:, :, :-1, :])  # vertical
+        dw = torch.abs(probs[:, :, :, 1:] - probs[:, :, :, :-1])  # horizontal
+
+        # build pixel weights (B, H, W)
+        ws = self._compose_pixel_weights(
+            masks=masks,
+            targets=targets,
+            ignore_index=self.ignore_index,
+            device=logits.device,
+            dtype=logits.dtype
+        )
+
+        # match shapes for dh and dw
+        ws_h = ws[:, 1:, :]   # aligns with dh
+        ws_w = ws[:, :, 1:]   # aligns with dw
+
+        # expand weights to channel dimension
+        ws_h = ws_h.unsqueeze(1)  # (B, 1, H-1, W)
+        ws_w = ws_w.unsqueeze(1)  # (B, 1, H, W-1)
+
+        # apply weights
+        dh = dh * ws_h
+        dw = dw * ws_w
+
+        # normalize by number of valid pixels
+        denom = ws_h.sum() + ws_w.sum()
+        if denom > 0:
+            loss = (dh.sum() + dw.sum()) / denom
+        else:
+            loss = torch.tensor(0.0, device=logits.device, dtype=logits.dtype)
+
+        return loss

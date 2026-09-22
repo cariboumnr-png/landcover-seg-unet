@@ -35,13 +35,14 @@ as a stream of TrainingStep records, one per completed epoch.
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy as policy
-import landseg.session.orchestration.runner as runner
+import landseg.session.orchestration.runner.base as base
 
-# --------------------------------Public  Class--------------------------------
-class ContinuousRunner(runner.BaseRunner):
+
+# ----- public classes
+class ContinuousRunner(base.BaseRunner):
     '''
     Continuous (single-phase) training runner.
 
@@ -69,7 +70,7 @@ class ContinuousRunner(runner.BaseRunner):
     def __init__(
         self,
         *,
-        phase: common.PhaseLike,
+        phase: contracts.PhaseLike,
         **kwargs: typing.Any
     ):
         '''
@@ -85,7 +86,6 @@ class ContinuousRunner(runner.BaseRunner):
             **kwargs: Forwarded to `BaseRunner` initialization (epoch
                 runner, logger, and configuration).
         '''
-
         super().__init__(**kwargs)
         # parse arguments
         self.phase = phase # single phase
@@ -116,7 +116,6 @@ class ContinuousRunner(runner.BaseRunner):
                 - Exactly one terminal TrainingStep with
                 `is_run_end == True` upon termination.
         '''
-
         # dispatch at phase begininng
         self.dispatcher.on_session_phase_begin(self.phase)
 
@@ -127,7 +126,7 @@ class ContinuousRunner(runner.BaseRunner):
             track_config=self.tracking,
         ).run()
 
-        # manually advance the generator to capture both yields and returns
+        # advance generator manually to capture yields and returns
         while True:
 
             try:
@@ -170,7 +169,9 @@ class ContinuousRunner(runner.BaseRunner):
                         reason = 'Max epoch reached'
                         self._is_phase_end = True
                         yield self._get_step(reason=reason)
-                        self.dispatcher.on_session_phase_end(self.phase.name, reason)
+                        self.dispatcher.on_session_phase_end(
+                            self.phase.name, reason
+                        )
                         return
 
                 case events.StopRun(reason=reason):
@@ -178,7 +179,9 @@ class ContinuousRunner(runner.BaseRunner):
                     # yield and exit on stop signal
                     self._is_phase_end = True
                     yield self._get_step(reason=reason)
-                    self.dispatcher.on_session_phase_end(self.phase.name, reason)
+                    self.dispatcher.on_session_phase_end(
+                        self.phase.name, reason
+                    )
                     return
 
                 case events.CheckpointRequest(tag=tag):
@@ -186,7 +189,6 @@ class ContinuousRunner(runner.BaseRunner):
 
     def _get_step(self, reason: str | None = None) -> core.SessionStepSummary:
         '''Helper to generate a step dataclass from self trackers.'''
-
         # poplulate step results container
         step = core.SessionStepSummary(
             # id/loc

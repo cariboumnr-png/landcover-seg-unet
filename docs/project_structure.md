@@ -1,6 +1,6 @@
 ## Current Project Structure
 
-Last updated: 2026-09-20
+Last updated: 2026-09-22
 
 This document summarizes the repository's current package layout and the main
 responsibility of each area. It favors the working boundaries that matter when
@@ -81,7 +81,7 @@ src/landseg/
 |   |   |-- data/                 Harmonization, ingestion, and preparation defaults
 |   |   |-- models/               Model architecture defaults
 |   |   |-- pipeline/             data-harmonize, data-ingest, data-prepare, train, eval, study configs
-|   |   |-- session/              Runtime, loader, optimizer, task, and orchestration configs
+|   |   |-- session/              Dataloader, engine, task, and orchestration configs
 |   |   `-- study/                Study/sweep defaults
 |   `-- schema/
 |       |-- root.py               Root structured config schema
@@ -149,17 +149,16 @@ src/landseg/
 |   `-- factory.py                Top-level model construction
 |
 |-- session/
-|   |-- common/                   Shared aliases, events, and orchestration types
-|   |-- data/                     Dataset and dataloader adapters
+|   |-- contracts/                Shared data, observer, and phase protocols
+|   |-- data/                     Dataset, collation, memory, and dataloader construction
 |   |-- engine/
-|   |   |-- builder.py            Engine construction
-|   |   |-- epoch/                Epoch executor and trainer/evaluator policies
-|   |   `-- runtime/
-|   |       |-- builder.py        Runtime construction
-|   |       |-- executor/         Batch runtime state, objective, and executor
-|   |       |-- optim/            Optimizer construction and optimization logic
-|   |       `-- tasks/            Heads, constraints, losses, metrics, regularization
+|   |   |-- builder.py            Engine composition and epoch-runner construction
+|   |   |-- batch/                Per-batch state, objectives, and execution
+|   |   |-- epoch/                Epoch runner, builder, and train/evaluation policies
+|   |   |-- optim/                Optimizer and scheduler construction
+|   |   `-- tasks/                Heads, constraints, losses, metrics, and regularization
 |   |-- instrumentation/
+|   |   |-- builder.py            Callback dispatcher construction
 |   |   |-- callbacks/            Callback dispatch, logging, and tracking hooks
 |   |   |-- dashboards/           TensorBoard and MLflow dashboard adapters
 |   |   `-- formatters/           Report rendering and formatting
@@ -168,7 +167,7 @@ src/landseg/
 |   |   |-- policy/               Epoch and phase policies
 |   |   `-- runner/               Continuous and curriculum runners
 |   |-- factory.py                Session factory
-|   `-- metadata.py               Session metadata
+|   `-- logger.py                 Session-scoped logging
 |
 |-- study/
 |   |-- analysis/                 Trial/result analysis helpers
@@ -190,9 +189,15 @@ src/landseg/
 - `geopipe/` owns geospatial data preparation up to `DataSpecs`; model training
   data loading begins under `session/data/`.
 - `models/` owns neural network construction only. Training objectives, metrics,
-  optimizer setup, and runtime task wiring live under `session/engine/runtime/`.
-- `session/` is the main runtime layer: orchestration chooses phases/runners,
-  epoch policies define train/eval behavior, and runtime tasks compute heads,
-  losses, metrics, constraints, and regularization.
+  optimizer setup, and task wiring live under `session/engine/`.
+- `session/` is the main runtime layer. `factory.py` selects a session runner;
+  `data/` builds loaders, `engine/` composes batch and epoch execution, and
+  `orchestration/` selects continuous or curriculum training.
+- `session/contracts/` provides the shared data, observer, and phase protocols;
+  package-level lazy exports are reserved for public consumers rather than
+  internal sibling dependencies.
+- Session Hydra configuration mirrors these boundaries: `dataloader` and the
+  nested `engine` group (execution, optimization, schedule, and tasks) are
+  distinct from `orchestration` monitoring, curriculum, and resume settings.
 - `geopipe/` stages (`harmonize`, `ingest`, `prepare`) provide symmetric triads
   (`context.py`, `logger.py`, `pipeline.py`) governed by central `contracts/`.

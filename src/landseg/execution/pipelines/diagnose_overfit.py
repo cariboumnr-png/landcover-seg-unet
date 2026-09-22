@@ -45,7 +45,6 @@ import landseg.knowledge as knowledge
 import landseg.models as models
 import landseg.session as session
 import landseg.session.engine as engine
-import landseg.session.factory as session_factory
 
 
 # ----- overfit test pipeline
@@ -69,15 +68,15 @@ def overfit(config: configs.RootConfig) -> None:
         logger.log_sep()
         logger.set_inputs({
             'exp_root': config.execution.exp_root,
-            'patch_size': config.session.data_loader.patch_size,
-            'lr': config.session.engine_optim.lr,
+            'patch_size': config.session.dataloader.patch_size,
+            'lr': config.session.engine.engine_optim.lr,
             'max_epoch': c.OVERFIT_MAX_EPOCH,
         })
 
         dataspecs = _prepare_dataspecs(root, config, logger)
 
         model = models.build_multihead_unet(
-            patch_size=config.session.data_loader.patch_size,
+            patch_size=config.session.dataloader.patch_size,
             dataspecs=dataspecs,
             unet_backbone_config=config.models.unet_backbone_config,
             conditioning_config=config.models.conditioning_config,
@@ -85,14 +84,18 @@ def overfit(config: configs.RootConfig) -> None:
             clamp_range=config.models.numeric_safety.clamp_range,
         )
 
-        runner = session_factory.build_overfit_session(
+        runner = session.build_session_runner(
             dataspecs=dataspecs,
             model=model,
             config=config.session,
-            context=session.SessionBuildContext(device=c.DEVICE),
-            logger=logger,
+            context=session.SessionBuildContext(
+                device=c.DEVICE,
+                session_paths=artifacts.ArtifactPaths().session, # no ops
+                eval_dataset='val',
+                logger=logger
+            ),
+            session_type='overfit'
         )
-
         monitor_head = config.session.orchestration.monitor.track_heads
         active_heads = (
             list(monitor_head.keys())
@@ -297,13 +300,13 @@ def _resolve_target_head(
 
 # ----- overfit epoch training loop helper
 def _run_overfit_loop(
-    runner: engine.EpochEngine,
+    runner: engine.EpochRunner,
     config: configs.RootConfig,
     logger: session.SessionLogger,
 ) -> dict[str, typing.Any]:
     '''Execute epoch training loop until threshold or max epochs.'''
     max_epoch = c.OVERFIT_MAX_EPOCH
-    lr = config.session.engine_optim.lr
+    lr = config.session.engine.engine_optim.lr
     logger.log('INFO', 'Starting overfit test')
     logger.log('INFO', f'Maximum epoch: {max_epoch}')
     logger.log('INFO', f'Learning rate: {lr}')

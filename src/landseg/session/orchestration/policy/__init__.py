@@ -33,7 +33,6 @@ import typing
 
 __all__ = [
     # classes
-    'EpochPolicy',
     'PhasePolicy',
     'TrackingConfig',
 ]
@@ -41,9 +40,6 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .epoch import (
-        EpochPolicy,
-    )
     from .phase import (
         PhasePolicy,
         TrackingConfig,
@@ -51,9 +47,6 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'EpochPolicy'}:
-        obj = importlib.import_module('.epoch', __package__)
-        return getattr(obj, name)
 
     if name in {
         'PhasePolicy',

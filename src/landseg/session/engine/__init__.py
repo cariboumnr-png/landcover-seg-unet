@@ -33,51 +33,39 @@ import typing
 
 __all__ = [
     # classes
-    'EpochEngine',
-    'EpochEngineContext',
+    'EngineConfigShape',
+    'EngineContext',
+    'EpochRunner',
     # functions
-    'build_epoch_engine',
-    # typing
-    'BatchExecConfigShape',
-    'OptimConfigShape',
-    'TaskConfigShape',
+    'build_engine',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import (
-        EpochEngineContext,
-        build_epoch_engine,
+        EngineConfigShape,
+        EngineContext,
+        build_engine,
     )
     from .epoch import (
-        EpochEngine,
-    )
-    from .runtime import (
-        BatchExecConfigShape,
-        OptimConfigShape,
-        TaskConfigShape,
+        EpochRunner,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'EpochEngineContext',
-        'build_epoch_engine',
+        'EngineConfigShape',
+        'EngineContext',
+        'build_engine',
     }:
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
-    if name in {'EpochEngine'}:
-        obj = importlib.import_module('.epoch', __package__)
-        return getattr(obj, name)
-
     if name in {
-        'BatchExecConfigShape',
-        'OptimConfigShape',
-        'TaskConfigShape',
+        'EpochRunner',
     }:
-        obj = importlib.import_module('.runtime', __package__)
+        obj = importlib.import_module('.epoch', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

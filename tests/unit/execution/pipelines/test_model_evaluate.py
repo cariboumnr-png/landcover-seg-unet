@@ -113,8 +113,8 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
         eval_pipeline.artifacts, 'load_checkpoint', lambda *a, **kw: None
     )
     monkeypatch.setattr(
-        eval_pipeline.session.factory,
-        'build_evaluate_session',
+        eval_pipeline.session,
+        'build_session_runner',
         lambda *a, **kw: MockRunner(),
     )
 

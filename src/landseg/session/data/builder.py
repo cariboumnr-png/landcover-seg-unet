@@ -1,0 +1,294 @@
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+# pylint: disable=missing-function-docstring
+
+'''
+Utilities for constructing training/validation/test dataloaders.
+
+This module prepares:
+    - Block-based datasets backed by MultiBlockDataset,
+    - Mode-specific configurations for train/val/test/single-block use,
+    - Optional in-memory preload and caching decisions based on system
+      memory,
+    - A custom collate function supporting labeled and unlabeled splits,
+    - A small metadata bundle shipped with the dataloaders.
+
+The main entry point is `build_dataloaders`, returning a structured
+DataLoaders object containing train/val/test loaders and metadata.
+'''
+
+
+from __future__ import annotations
+# standard imports
+import dataclasses
+import typing
+# third-party imports
+import torch
+import torch.utils.data
+# local imports
+import landseg.core as core
+import landseg.session.data.collate as collate
+import landseg.session.data.dataset as dataset
+import landseg.session.data.memory as memory
+import landseg.session.logger as session_logger
+
+
+# ----- public types
+class DataLoaderConfig(typing.Protocol):
+    '''Interface for data loader batch and patch size configuration.'''
+    @property
+    def batch_size(self) -> int: ...
+    @property
+    def patch_size(self) -> int: ...
+
+
+# ----- public dataclasses
+@dataclasses.dataclass
+class DataLoaders:
+    '''Train/Val/Test dataloader container for the trainer.'''
+    train: torch.utils.data.DataLoader | None
+    val: torch.utils.data.DataLoader | None
+    test: torch.utils.data.DataLoader | None
+    meta: _DataLoadersMeta
+
+
+# ----- private dataclasses
+@dataclasses.dataclass
+class _DataLoadersMeta:
+    '''Metadata describing batch size, patch count, and preview context.'''
+    batch_size: int
+    patch_size: int
+    patch_count: _PatchCount
+    preview_context: _PreviewContext | None
+
+
+@dataclasses.dataclass
+class _PatchCount:
+    '''Train/val/test patch counts.'''
+    train: int
+    val: int
+    test: int
+
+
+@dataclasses.dataclass
+class _PreviewContext:
+    '''Dimensions and grid geometry for preview patch generation.'''
+    patch_per_blk: int
+    patch_per_dim: int
+    block_columns: int
+    patch_grid_shape: tuple[int, int]
+
+
+# ----- public functions
+def build_dataloaders(
+    data_specs: core.DataSpecs,
+    config: DataLoaderConfig,
+    *,
+    logger: session_logger.SessionLogger | None = None,
+) -> DataLoaders:
+    '''
+    Construct train/val/test dataloaders and metadata from specs.
+
+    Builds PyTorch-style dataloaders based on dataset metadata and user
+    configuration, while deriving execution-specific strategies such as
+    caching, preloading, and batching behavior.
+
+    Args:
+        data_specs:
+            dataset specification describing data layout, splits,
+            block structure, and global metadata.
+        config:
+            data loading configuration (e.g., batch and patch size).
+        logger:
+            optional logger used for reporting build progress.
+
+    Returns:
+        DataLoaders:
+            container with train/val/test dataloaders and metadata.
+
+    Notes:
+        - Loader reuse may occur (e.g., single-block datasets).
+        - Memory-aware strategies (e.g. caching/preloading) are inferred
+          at runtime.
+        - Returned loaders are aligned with dataset structure and
+          orchestration requirements.
+    '''
+    match data_specs.mode:
+
+        case 'default':
+            return DataLoaders(
+                train=_load('train', data_specs, config, logger=logger),
+                val=_load('val', data_specs, config, logger=logger),
+                test=_load('test', data_specs, config, logger=logger),
+                meta=_get_loaders_meta(data_specs, config)
+            )
+
+        case 'val_only':
+            return DataLoaders(
+                train=None,
+                val=_load('val', data_specs, config, logger=logger),
+                test=None,
+                meta=_get_loaders_meta(data_specs, config)
+            )
+
+        case 'test_only':
+            return DataLoaders(
+                train=None,
+                val=None,
+                test=_load('test', data_specs, config, logger=logger),
+                meta=_get_loaders_meta(data_specs, config)
+            )
+
+        case _: raise ValueError('Invalid build mode')
+
+
+# ----- private helpers
+def _load(
+    mode: typing.Literal['train', 'val', 'test'],
+    data_specs: core.DataSpecs,
+    config: DataLoaderConfig,
+    *,
+    logger: session_logger.SessionLogger | None = None,
+) -> torch.utils.data.DataLoader | None:
+    '''Get a specific dataloader by mode.'''
+    match mode:
+        case 'train':
+            datablocks = data_specs.splits.train
+            domains = data_specs.domains.train
+        case 'val':
+            datablocks = data_specs.splits.val
+            domains = data_specs.domains.val
+        case 'test':
+            datablocks = data_specs.splits.test
+            domains = data_specs.domains.test
+
+    if not datablocks:
+        return None
+
+    dataset_config = dataset.BlockDatasetContext(
+        block_src=datablocks,
+        block_size=data_specs.meta.image_specs.height_width,
+        patch_size=config.patch_size,
+        image_key=data_specs.meta.image_specs.array_key,
+        label_key=data_specs.meta.label_specs.array_key,
+        ids_domain=domains['ids_domain'],
+        vec_domain=domains['vec_domain']
+    )
+
+    mem_strategy = memory.get_memory_strategy(data_specs)
+
+    dataset_obj = dataset.MultiBlockDataset(
+        dataset_config,
+        augment_flip=bool(mode == 'train'),
+        preload=getattr(mem_strategy, f'preload_{mode}', False),
+        blk_cache_num=getattr(mem_strategy, f'cache_{mode}', 0)
+    )
+
+    dataloader = torch.utils.data.DataLoader(
+        dataset=dataset_obj,
+        batch_size=config.batch_size,
+        shuffle=(mode == 'train'),
+        collate_fn=collate.batch
+    ) # no drop last so ragged batch is allowed
+
+    if logger is not None:
+        logger.set_inputs({
+            mode: {
+                'loaded': dataset_obj.n_preloaded,
+                'cached': dataset_obj.n_cached
+            }
+        })
+        logger.log(
+            'INFO',
+            f'Blocks type\t[{mode}]: '
+            f'Loaded {dataset_obj.n_preloaded} blocks | '
+            f'Cached {dataset_obj.n_cached} blocks'
+        )
+
+    return dataloader
+
+
+def _get_loaders_meta(
+    data_specs: core.DataSpecs,
+    config: DataLoaderConfig
+) -> _DataLoadersMeta:
+    '''Parse `_DatalodersMeta`.'''
+    h_w = data_specs.meta.image_specs.height_width
+    if h_w % config.patch_size != 0:
+        raise ValueError(
+            f'Data block dimention H/W ({h_w}) not divisible '
+            f'by patch size ({config.patch_size})'
+        )
+    pb = int(h_w / config.patch_size) ** 2
+
+    match data_specs.mode:
+        case 'default':
+            n_train = len(data_specs.splits.train) * pb
+            n_val = len(data_specs.splits.val) * pb
+            n_test = len(data_specs.splits.test) * pb
+
+        case 'val_only':
+            n_train = 0
+            n_val = len(data_specs.splits.val) * pb
+            n_test = 0
+
+        case 'test_only':
+            n_train = 0
+            n_val = 0
+            n_test = len(data_specs.splits.test) * pb
+
+        case _: raise ValueError(f'Invalid `DataSpec` mode: {data_specs.mode}')
+
+    if len(data_specs.splits.test) > 0:
+        preview = _generate_preview_context(pb, data_specs.meta.test_blks_grid)
+    else:
+        preview = None
+
+    return _DataLoadersMeta(
+        batch_size=config.batch_size,
+        patch_size=config.patch_size,
+        patch_count=_PatchCount(train=n_train, val=n_val, test=n_test),
+        preview_context=preview
+    )
+
+
+def _generate_preview_context(
+    patch_per_blk: int,
+    test_blks_grid: tuple[int, int]
+) -> _PreviewContext:
+    '''Resolve patch-block layout for preview context.'''
+    # resolve patch-block layout
+    per_dim = int(patch_per_blk ** 0.5)
+    assert per_dim * per_dim == patch_per_blk, 'patch_per_blk must be square'
+
+    # resolve block col/row numbers
+    blk_col, blk_row = test_blks_grid
+
+    # resolve patch col/row numbers
+    pch_col, pch_row = (blk_col * per_dim, blk_row * per_dim)
+
+    return _PreviewContext(
+        patch_per_blk=patch_per_blk,
+        patch_per_dim=per_dim,
+        block_columns=blk_col,
+        patch_grid_shape=(pch_col, pch_row)
+    )

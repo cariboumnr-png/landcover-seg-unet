@@ -34,13 +34,14 @@ one per completed epoch.
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
+import landseg.session.contracts as contracts
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy as policy
-import landseg.session.orchestration.runner as runner
+import landseg.session.orchestration.runner.base as base
 
-# --------------------------------Public  Class--------------------------------
-class CurriculumRunner(runner.BaseRunner):
+
+# ----- public classes
+class CurriculumRunner(base.BaseRunner):
     '''
     Curriculum-based training runner.
 
@@ -67,21 +68,22 @@ class CurriculumRunner(runner.BaseRunner):
     def __init__(
         self,
         *,
-        training_phases: typing.Sequence[common.PhaseLike],
+        training_phases: typing.Sequence[contracts.PhaseLike],
         **kwargs: typing.Any
     ):
         '''
         Initialize a curriculum-based training runner.
 
         Args:
-            training_phases: Ordered sequence of Phase configurations
-                defining the curriculum. Phases are executed sequentially
-                and each phase runs to completion before the next begins.
-            **kwargs: Forwarded to BaseRunner initialization, including
-                the epoch execution engine, runner configuration, and
+            training_phases:
+                ordered sequence of Phase configurations defining the
+                curriculum. Phases are executed sequentially and each
+                phase runs to completion before the next begins.
+            **kwargs:
+                forwarded to BaseRunner initialization, including the
+                epoch execution engine, runner configuration, and
                 logger.
         '''
-
         super().__init__(**kwargs)
         # parse arguments
         self.phases = training_phases
@@ -104,7 +106,7 @@ class CurriculumRunner(runner.BaseRunner):
             - Consumes internal event streams emitted by phase policies.
             - Translates `EpochEnd` events into `TrainingStep` records.
             - Emits phase boundary information via step metadata.
-            - Handles checkpoint persistence and logging as side effects.
+            - Handles checkpointing and logging as side effects.
 
         Notes:
             - This runner does not support early stopping.
@@ -113,7 +115,6 @@ class CurriculumRunner(runner.BaseRunner):
             - External consumers control execution by consuming or
                 abandoning the step stream.
         '''
-
         # iterate through provided phases
         for i, phase in enumerate(self.phases):
 
@@ -129,7 +130,7 @@ class CurriculumRunner(runner.BaseRunner):
                 track_config=self.tracking,
             ).run()
 
-            # manually advance the generator to capture both yields and returns
+            # advance generator manually to capture yields and returns
             while True:
 
                 try:

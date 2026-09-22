@@ -37,127 +37,97 @@ import dataclasses
 import typing
 # local imports
 import landseg.core as core
-import landseg.session.common as common
-import landseg.session.data as data
+import landseg.session.contracts as contracts
+import landseg.session.engine.batch as batch
 import landseg.session.engine.epoch as epoch
-import landseg.session.engine.runtime.executor as executor
-import landseg.session.engine.runtime.optim as optim
-import landseg.session.engine.runtime.tasks as tasks
-import landseg.session.engine.runtime as runtime
-import landseg.session.instrumentation as instrument
+import landseg.session.engine.optim as optim
+import landseg.session.engine.protocols as protocols
+import landseg.session.engine.tasks as tasks
 
-# --------------------------------priavte  type--------------------------------
-class _EpochEngineConfigShape(typing.Protocol):
-    '''
-    Configuration interface for constructing the epoch engine.
 
-    Defines the required configuration sections used to build data
-    loaders, execution runtime, optimization, task components, and
-    orchestration scheduling behavior.
-    '''
+# ----- public types
+class EngineConfigShape(typing.Protocol):
+    '''Interface for constructing epoch engine runtime components.'''
     @property
-    def data_loader(self) -> data.DataLoaderConfig: ...
-    @property
-    def engine_exec(self) -> executor.BatchExecConfigShape: ...
+    def engine_exec(self) -> batch.BatchExecConfigShape: ...
     @property
     def engine_optim(self) -> optim.OptimConfigShape: ...
     @property
-    def engine_tasks(self) -> tasks.TaskConfigShape: ...
+    def engine_schedule(self) -> epoch.ScheduleConfigShape: ...
     @property
-    def orchestration(self) -> common.OrchestrationConfigShape: ...
+    def engine_tasks(self) -> tasks.TaskConfigShape: ...
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
-class EpochEngineContext:
-    '''Runtime context required for building the epoch engine.'''
+class EngineContext:
+    '''Externally required context for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
-    dispatcher: instrument.CallbackDispatcher
-    device: str
-    logger: common.SessionLogger | None = None
+    dataloaders: protocols.DataLoadersLike
+    dispatcher: contracts.SessionObserverLike
 
-# -------------------------------Public Function-------------------------------
-def build_epoch_engine(
+
+# ----- public functions
+def build_engine(
+    context: EngineContext,
+    config: EngineConfigShape,
     *,
-    context: EpochEngineContext,
-    config: _EpochEngineConfigShape,
+    device: str,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
-    eval_dataset: typing.Literal['val', 'test'] = 'val'
-) -> epoch.EpochEngine:
+    eval_dataset: typing.Literal['val', 'test'],
+) -> epoch.EpochRunner:
     '''
-    Construct an epoch engine with training and/or evaluation policies.
+    Construct the full execution engine for training and/or evaluation.
 
-    Assembles all required components, including dataloaders, execution
-    runtime, trainer, and evaluator, and returns an ``EpochEngine``
-    configured for the specified mode.
-
-    Args:
-        context: Runtime context containing dataset specs, model,
-            dispatcher, device, and logger.
-        config: Configuration providing data loading, execution,
-            optimization, task, and orchestration settings.
-        mode: Execution mode determining which policies are active:
-            - `'train_eval'`: both training and evaluation
-            - `'train_only'`: training only
-            - `'eval_only'`: evaluation only
-        eval_dataset:
-            Dataset split used for evaluation (`'val'` or `'test'`).
-
-    Returns:
-        epoch.EpochEngine:
-            Fully constructed epoch engine with appropriate policies.
-
-    Notes:
-        - Trainer and evaluator share the same execution runtime.
-        - Scheduling behavior is controlled via orchestration config.
-        - Components are assembled once and reused across epochs.
+    Assembles dataloaders, batch execution engine, optimization wrapper,
+    and task components into an execution runtime, then constructs the
+    epoch runner configured for the specified mode.
     '''
+    # data loader spatial division compability
+    p = context.dataloaders.meta.patch_size
+    s = context.model.spatial_divisor
+    if not p % s == 0:
+        raise ValueError(
+            f'Invalid patch dimension: patch size ({p}) is not divisible '
+            f'by spatial divisor ({s})'
+        )
 
-    # data loader
-    data_loaders = data.build_dataloaders(
+    # build engine runtime
+    batch_engine = batch.build_batch_engine(
         context.dataspecs,
-        config.data_loader,
-        logger=context.logger
+        context.dataloaders,
+        context.model,
+        config.engine_exec,
+        device=device
     )
 
-    # engine runtime
-    engine_runtime = runtime.build_engine_runtime(
-        dataspecs=context.dataspecs,
-        dataloaders=data_loaders,
-        model=context.model,
-        config=config,
-        device=context.device
+    optimization = optim.build_optimization(
+        context.model,
+        config.engine_optim
     )
 
-    # trainer
-    trainer = epoch.MultiHeadTrainer(
-        # base engine
-        engine_runtime=engine_runtime,
-        dataloaders=data_loaders,
-        dispatcher=context.dispatcher,
-        device=context.device,
-        # trainer-specific
-        update_every=config.orchestration.schedule.update_loss_every_n_batch,
+    engine_tasks = tasks.build_engine_tasks(
+        context.dataspecs,
+        config.engine_tasks
     )
 
-    # evaluator
-    evaluator = epoch.MultiHeadEvaluator(
-        # base engine
-        engine_runtime=engine_runtime,
-        dataloaders=data_loaders,
-        dispatcher=context.dispatcher,
-        device=context.device,
-        # evaluator-specific
-        val_every=config.orchestration.schedule.val_every_n_epoch,
-        infer_every=config.orchestration.schedule.infer_every_n_epoch,
-        dataset=eval_dataset,
+    engine_runtime = epoch.EngineRuntime(
+        engine=batch_engine,
+        engine_optim=optimization,
+        engine_tasks=engine_tasks,
     )
 
-    # return engine with matched mode
-    match mode:
-        case 'train_eval':
-            return epoch.EpochEngine(mode, trainer, evaluator)
-        case 'train_only':
-            return epoch.EpochEngine(mode, trainer, None)
-        case 'eval_only':
-            return epoch.EpochEngine(mode, None, evaluator)
+    epoch_runner_context = epoch.EpochRunnerContext(
+        runtime=engine_runtime,
+        dataloaders=context.dataloaders,
+        dispatcher=context.dispatcher
+    )
+
+    return epoch.build_epoch_runner(
+        epoch_runner_context,
+        config.engine_schedule,
+        mode=mode,
+        eval_dataset=eval_dataset,
+        device=device,
+    )

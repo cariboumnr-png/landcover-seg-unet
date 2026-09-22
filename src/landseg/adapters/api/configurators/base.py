@@ -76,8 +76,8 @@ class BaseConfigurator:
         patch_size: int
     ) -> typing.Self:
         '''Set data sizes.'''
-        self._cfg.session.data_loader.batch_size = batch_size
-        self._cfg.session.data_loader.patch_size = patch_size
+        self._cfg.session.dataloader.batch_size = batch_size
+        self._cfg.session.dataloader.patch_size = patch_size
         return self
 
     def set_domain_source(

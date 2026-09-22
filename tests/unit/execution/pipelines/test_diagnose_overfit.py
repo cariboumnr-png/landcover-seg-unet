@@ -88,7 +88,7 @@ def test_overfit_pipeline_with_existing_block(tmp_path, dataspecs, monkeypatch):
 
     # override session & models for fast overfit test
     schema.session.orchestration.monitor.track_heads = {'head_1': 1.0}
-    schema.session.data_loader.patch_size = 16
+    schema.session.dataloader.patch_size = 16
     schema.models.model_body_registry.unet.base_ch = 8
 
     cfg = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(schema))

@@ -52,7 +52,7 @@ def translate_user_config(raw: omegaconf.DictConfig) -> omegaconf.DictConfig:
         },
         'models': {},
         'session': {
-            'data_loader': {},
+            'dataloader': {},
             'orchestration': {
                 'curriculum': {
                     'single': {
@@ -169,9 +169,9 @@ def _translate_model_train(
         'model_body': ['models.model_body'],
         'bottleneck': ['models.bottleneck'],
         'conditioners': ['models.conditioners'],
-        'patch_size': ['session.data_loader.patch_size'],
-        'batch_size': ['session.data_loader.batch_size'],
-        'head_loss_weights': ['session.engine_tasks.head_weights'],
+        'patch_size': ['session.dataloader.patch_size'],
+        'batch_size': ['session.dataloader.batch_size'],
+        'head_loss_weights': ['session.engine.engine_tasks.head_weights'],
         'head_metrics_weights': ['session.orchestration.monitor.track_heads'],
         'output_dpath': ['session.output_dpath'],
     }

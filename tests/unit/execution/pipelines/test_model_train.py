@@ -38,78 +38,6 @@ import landseg.core as core
 import landseg.execution.pipelines.model_train as train_pipeline
 
 
-# ----- `_parse_verbosity` helper
-@pytest.mark.parametrize('verbosity, expected', [
-    ('full', 10),
-    ('select', 20),
-    ('silent', None),
-])
-def test_parse_verbosity_valid(verbosity: str, expected: int | None):
-    '''
-    Given: A valid verbosity string.
-    When: `_parse_verbosity` is called.
-    Then: Return the corresponding logging level integer or None.
-    '''
-    assert train_pipeline._parse_verbosity(verbosity) == expected
-
-
-def test_parse_verbosity_invalid_raises_value_error():
-    '''
-    Given: An invalid verbosity string.
-    When: `_parse_verbosity` is called.
-    Then: Raise a ValueError.
-    '''
-    with pytest.raises(ValueError, match='Invalid option'):
-        train_pipeline._parse_verbosity('invalid')
-
-
-# ----- `_get_device_name` helper
-def test_get_device_name_returns_string():
-    '''
-    Given: System execution device.
-    When: `_get_device_name` is called.
-    Then: Return a non-empty string representing device.
-    '''
-    device_name = train_pipeline._get_device_name()
-    assert isinstance(device_name, str)
-    assert len(device_name) > 0
-
-
-# ----- `_build_session_runner` helper
-def test_build_session_runner_invalid_mode_raises_value_error(
-    tmp_path, dataspecs
-):
-    '''
-    Given: A RootConfig with an invalid training session mode.
-    When: `_build_session_runner` is called.
-    Then: Raise a ValueError.
-    '''
-    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    schema.execution.exp_root = str(tmp_path)
-    schema.session.mode = 'invalid'
-
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(schema)
-    )
-
-    class DummyModel:
-        def parameters(self):
-            return []
-
-    mock_model = typing.cast(core.MultiheadModelLike, DummyModel())
-    paths = train_pipeline.artifacts.SessionPaths(str(tmp_path / 'results'))
-    paths.init()
-    logger = train_pipeline.session.SessionLogger(
-        'test', log_file=paths.summary
-    )
-
-    with pytest.raises(ValueError, match='Invalid training mode'):
-        train_pipeline._build_session_runner(
-            config, dataspecs, mock_model, paths, logger
-        )
-
-
 # ----- `train` pipeline test
 @pytest.mark.parametrize('mode', ['continuous', 'curriculum'])
 def test_train_pipeline_success(tmp_path, dataspecs, monkeypatch, mode: str):
@@ -149,13 +77,8 @@ def test_train_pipeline_success(tmp_path, dataspecs, monkeypatch, mode: str):
         lambda *a, **kw: mock_model,
     )
     monkeypatch.setattr(
-        train_pipeline.session.factory,
-        'build_continous_training_session',
-        lambda *a, **kw: DummyRunner(),
-    )
-    monkeypatch.setattr(
-        train_pipeline.session.factory,
-        'build_curriculum_training_session',
+        train_pipeline.session,
+        'build_session_runner',
         lambda *a, **kw: DummyRunner(),
     )
 

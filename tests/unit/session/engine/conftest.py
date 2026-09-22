@@ -2,7 +2,7 @@
 #           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      (c) King's Printer for Ontario, 2026.                  #
+#                      © King's Printer for Ontario, 2026.                    #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -23,7 +23,9 @@
 # pylint: disable=protected-access
 # pylint: disable=redefined-outer-name
 
-'''Fixtures for testing `landseg.session.engine.runtime.executor` module.'''
+'''
+Fixtures for testing `landseg.session.engine.batch` module.
+'''
 
 # standard imports
 import dataclasses
@@ -31,9 +33,9 @@ import dataclasses
 import pytest
 # local imports
 import landseg.configs.schema.sections.session as session_schema
-import landseg.session.engine.runtime.tasks.loss.builder as loss_builder
-import landseg.session.engine.runtime.tasks.metrics.segmentation.builder as metrics_builder
-import landseg.session.engine.runtime.tasks.heads.specs as headspecs
+import landseg.session.engine.tasks.loss.builder as loss_builder
+import landseg.session.engine.tasks.metrics as metrics
+import landseg.session.engine.tasks.heads as headspecs
 
 # aliases
 field = dataclasses.field
@@ -57,7 +59,7 @@ def mock_hlosses(mock_hspecs):
 
 @pytest.fixture
 def mock_hmetrics(mock_hspecs):
-    return metrics_builder.build_headmetrics(
+    return metrics.build_headmetrics(
         mock_hspecs,
         ignore_index=255
     )

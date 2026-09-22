@@ -71,14 +71,13 @@ def evaluate(config: configs.RootConfig):
         run_id=session_paths.run_id,
         pipeline=config.pipeline.name,
     )
-    logger.set_inputs({
-        'checkpoint': eval_config.checkpoint,
-        'split': split
-    })
-    assert logger.summary # typing
 
     try:
         logger.log_sep()
+        logger.set_inputs({
+            'checkpoint': eval_config.checkpoint,
+            'split': split
+        })
 
         # collect artifacts and build `DataSpecs`
         dataspecs = geopipe.build_dataspec(
@@ -91,7 +90,7 @@ def evaluate(config: configs.RootConfig):
 
         # setup the model
         model = models.build_multihead_unet(
-            patch_size=config.session.data_loader.patch_size,
+            patch_size=config.session.dataloader.patch_size,
             dataspecs=dataspecs,
             unet_backbone_config=config.models.unet_backbone_config,
             conditioning_config=config.models.conditioning_config,
@@ -109,16 +108,17 @@ def evaluate(config: configs.RootConfig):
         )
 
         # build session runner
-        session_context = session.SessionBuildContext(
-            device=c.DEVICE,
-            session_paths=session_paths,
-        )
-        runner = session.factory.build_evaluate_session(
+        runner = session.build_session_runner(
             dataspecs=dataspecs,
             model=model,
             config=config.session,
-            context=session_context,
-            logger=logger
+            context=session.SessionBuildContext(
+                device=c.DEVICE,
+                session_paths=session_paths,
+                eval_dataset='val',
+                logger=logger
+            ),
+            session_type='evaluate'
         )
 
         # evaluate

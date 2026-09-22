@@ -19,22 +19,40 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
+
 '''
 Shared engine policy base class.
 
 This module defines an abstract policy layer shared by concrete session
 engines (e.g., trainer and evaluator). It provides common orchestration,
-state interpretation, and callback wiring while delegating all batch-level
+state interpretation, and callback wiring while delegating batch-level
 execution mechanics to a shared execution core.
 '''
 
 # standard imports
+from __future__ import annotations
 import copy
+import dataclasses
 # local imports
-import landseg.session.common as common
-import landseg.session.engine.runtime as runtime
+import landseg.session.contracts as contracts
+import landseg.session.engine.batch as batch
+import landseg.session.engine.optim as optim
 import landseg.session.engine.protocols as protocols
+import landseg.session.engine.tasks as tasks
 
+
+# ----- public dataclasses
+@dataclasses.dataclass
+class EngineRuntime:
+    '''Engine runtime components container.'''
+    engine: batch.BatchEngine
+    engine_optim: optim.Optimization
+    engine_tasks: tasks.EngineTasks
+
+
+# ----- public classes
 class EngineBase:
     '''
     Base class for session engines defining policy on top of execution.
@@ -57,9 +75,9 @@ class EngineBase:
 
     def __init__(
         self,
-        engine_runtime: runtime.EngineRuntime,
+        engine_runtime: EngineRuntime,
         dataloaders: protocols.DataLoadersLike,
-        dispatcher: common.SessionObserverLike,
+        dispatcher: contracts.SessionObserverLike,
         *,
         device: str,
     ):
@@ -90,7 +108,6 @@ class EngineBase:
             - The engine assumes all components are preconfigured and
               focuses purely on orchestration logic.
         '''
-
         # execution core
         self.runtime = engine_runtime
         # data loader
@@ -167,7 +184,6 @@ class EngineBase:
                 Mapping of head name to class indices to exclude from
                 loss computation and validation metrics.
         '''
-
         # if no active heads provided, make all heads active
         if active_heads is None:
             active_heads = self.state.heads.all_heads
@@ -194,8 +210,9 @@ class EngineBase:
         }
         # if more than one head, assign MTL related modules
         if len(active_heads) > 1:
-            heads.multihead_metrics = self.runtime.engine_tasks.multihead_metrics
-            heads.multihead_regularization = self.runtime.engine_tasks.multihead_regularization
+            _tasks = self.runtime.engine_tasks
+            heads.multihead_metrics = _tasks.multihead_metrics
+            heads.multihead_regularization = _tasks.multihead_regularization
         # avoid stale modules
         else:
             heads.multihead_metrics = None
@@ -212,7 +229,6 @@ class EngineBase:
         This restores the model and runtime state to an unconfigured
         head state (no active or frozen heads, no per-head overrides).
         '''
-
         self.model.reset_heads()
         self.state.heads.active_heads = None
         self.state.heads.frozen_heads = None
@@ -223,7 +239,7 @@ class EngineBase:
         self.state.heads.multihead_regularization = None
 
     # ----- batch context/output reset
-    def _batch_reset(self, bidx: int, _batch: tuple) -> None:
+    def _batch_reset(self, bidx: int, _batch: contracts.DatasetItem) -> None:
         '''Refresh batch context and output from engine state.'''
         # refresh batch ctx
         self.state.batch_cxt.refresh(bidx, _batch)

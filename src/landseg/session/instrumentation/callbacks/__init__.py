@@ -33,45 +33,19 @@ import typing
 
 __all__ = [
     # classes
-    'BaseCallback',
     'CallbackDispatcher',
-    'LoggingCallback',
-    # functions
-    'build_dispatcher',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        BaseCallback,
-    )
-    from .builder import (
-        build_dispatcher,
-    )
     from .dispatcher import (
         CallbackDispatcher,
     )
-    from .logging import (
-        LoggingCallback,
-    )
-
 
 def __getattr__(name: str):
-    if name in {'BaseCallback'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'build_dispatcher'}:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
     if name in {'CallbackDispatcher'}:
         obj = importlib.import_module('.dispatcher', __package__)
-        return getattr(obj, name)
-
-    if name in {'LoggingCallback'}:
-        obj = importlib.import_module('.logging', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

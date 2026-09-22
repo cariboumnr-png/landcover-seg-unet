@@ -23,10 +23,12 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
 import landseg.session.instrumentation.formatters as formatters
 
-class InferTrackingCallback(callbacks.BaseCallback):
+
+# ----- public classes
+class InferTrackingCallback(base.BaseCallback):
     '''Image callback.'''
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
@@ -35,7 +37,7 @@ class InferTrackingCallback(callbacks.BaseCallback):
         if not infer_results:
             return
 
-        # all should have the same heads but here we will use heads in labels
+        # all share same heads; use heads present in labels
         head_tensors = {}
         head_metrics = {}
         for head in infer_results.infer_labels.keys():
@@ -52,7 +54,9 @@ class InferTrackingCallback(callbacks.BaseCallback):
                 infer_results.infer_errors[head],
                 palette={'1': [40, 40, 40], '0': [255, 140, 0]} # grey vs orange
             )
-            head_metrics[f'{head}_metrics'] = results.raw_metrics.inference_metrics
+            head_metrics[f'{head}_metrics'] = (
+                results.raw_metrics.inference_metrics
+            )
 
         # broadcast to trackers
         phase = results.phase_name
@@ -63,7 +67,9 @@ class InferTrackingCallback(callbacks.BaseCallback):
                 if v.dim() == 3:
                     tracker.log_image(f'Test_{phase}_{k}', v, step)
                 elif v.dim() == 2:
-                    tracker.log_image(f'Test_{phase}_{k}', v, step, dataformats='HW')
+                    tracker.log_image(
+                        f'Test_{phase}_{k}', v, step, dataformats='HW'
+                    )
             # log scalar
             for k, v in head_metrics.items():
                 tracker.log_scalar(f'Test_{phase}_{k}', v, step)

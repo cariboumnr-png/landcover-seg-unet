@@ -23,9 +23,11 @@
 
 # local imports
 import landseg.core as core
-import landseg.session.instrumentation.callbacks as callbacks
+import landseg.session.instrumentation.callbacks.base as base
 
-class ValTrackingCallback(callbacks.BaseCallback):
+
+# ----- public classes
+class ValTrackingCallback(base.BaseCallback):
     '''Scallar tracking callback'''
 
     def on_session_step_end(self, results: core.SessionStepSummary):

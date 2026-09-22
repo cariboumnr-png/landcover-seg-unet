@@ -52,9 +52,11 @@ In short:
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.epoch.policy as policy
+import landseg.session.engine.epoch.policy.base as base
 
-class MultiHeadTrainer(policy.EngineBase):
+
+# ----- public classes
+class MultiHeadTrainer(base.EngineBase):
     '''
     Training and evaluation policy controller.
 
@@ -102,7 +104,6 @@ class MultiHeadTrainer(policy.EngineBase):
             - Batch execution remains delegated to the runtime; this \
             class only controls result aggregation cadence.
         '''
-
         super().__init__(**kwargs)
         self.update_every = update_every
 
@@ -130,15 +131,14 @@ class MultiHeadTrainer(policy.EngineBase):
         accumulation) is performed by the batch execution engine and
         reflected in shared RuntimeState.
 
-        Lifecycle callback hooks are emitted as semantic markers to allow
+        Lifecycle callback hooks are emitted as semantic markers for
         observation and side effects, but do not invoke or control
         execution logic.
 
         Returns:
-            A dictionary of averaged epoch-level training metrics
-            (e.g., total and per-head losses).
+            core.TrainStepResults:
+                averaged epoch-level training metrics and head losses.
         '''
-
         # training phase begin
         self.dispatcher.on_train_policy_begin()
         # set model to train mode
@@ -195,7 +195,7 @@ class MultiHeadTrainer(policy.EngineBase):
                 self.optimization.step_optimizer()
             scale_after = self.state.optim.scaler.get_scale()
 
-            # scheduler step (if scheduler present AND scale did not decrease)
+            # scheduler step if scale did not decrease
             if scale_after >= scale_before:
                 self.optimization.step_scheduler()
 
@@ -216,7 +216,6 @@ class MultiHeadTrainer(policy.EngineBase):
     # ----- training phase
     def _clip_grad(self):
         '''Clip gradients by global norm when set.'''
-
         if self.optimization.grad_clip_norm is not None:
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(),
@@ -229,7 +228,6 @@ class MultiHeadTrainer(policy.EngineBase):
 
         Set `flush=True` to flush results at end of a training epoch.
         '''
-
         # always update current epoch and global step (batch)
         self.results.epoch_step = self.state.batch_cxt.bidx
         self.results.global_step = self.state.progress.global_step
@@ -238,14 +236,14 @@ class MultiHeadTrainer(policy.EngineBase):
         if flush or self.state.batch_cxt.bidx % self.update_every == 0:
             # flip flag
             self.results.metrics_updated = True
-            # --- current learning rate
+    # current learning rate
             self.results.current_lr = self.state.optim.lr
-            # --- total objective
+    # total objective
             self.results.total_objective = self._objective / n
-            # --- perhead loss
+    # perhead loss
             for head in self.state.heads.all_heads:
                 self.results.head_losses[head] = self._head_losses[head] / n
-            # --- multihead regularization
+    # multihead regularization
             self.results.regularization = dict(self._regularization) # shallow
         else:
             self.results.metrics_updated = False

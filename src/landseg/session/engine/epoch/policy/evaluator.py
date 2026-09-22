@@ -53,9 +53,11 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.epoch.policy as policy
+import landseg.session.engine.epoch.policy.base as base
 
-class MultiHeadEvaluator(policy.EngineBase):
+
+# ----- public classes
+class MultiHeadEvaluator(base.EngineBase):
     '''
     Evaluation and inference policy controller.
 
@@ -102,13 +104,12 @@ class MultiHeadEvaluator(policy.EngineBase):
                 dispatcher, and device configuration.
 
         Notes:
-            - Maintains separate containers for validation and inference\
-            results.
-            - Execution is conditionally triggered based on epoch\
+            - Maintains separate containers for validation and inference
+              results.
+            - Execution is conditionally triggered based on epoch
               scheduling intervals.
             - This class performs no gradient or optimization logic.
         '''
-
         super().__init__(**kwargs)
         self.dataset: typing.Literal['val', 'test'] = dataset
         self.val_every = val_every
@@ -118,7 +119,7 @@ class MultiHeadEvaluator(policy.EngineBase):
         self.val_results = core.ValStepResults()
         self.infer_results = core.InferStepResults()
 
-    # -------------------------------Public  Methods-------------------------------
+    # ----- public methods
     def validate(self, epoch: int) -> core.ValStepResults | None:
         '''
         Execute a full validation epoch and return finalized metrics.
@@ -132,16 +133,16 @@ class MultiHeadEvaluator(policy.EngineBase):
         - Updating best-metric tracking and patience state
 
         Batch-level metric accumulation (e.g., confusion matrices) is
-        performed by the batch execution engine during validation batches.
+        performed by the batch execution engine during validation.
         Epoch-level computation and interpretation are performed here.
 
         Lifecycle callback hooks are emitted as semantic markers for
         observation and side effects.
 
         Returns:
-            A mapping from head name to its finalized validation metrics.
+            core.ValStepResults | None:
+                finalized validation metrics, or None if skipped.
         '''
-
         # early exit if this epoch is not to be validated
         if not epoch % self.val_every == 0:
             return None
@@ -208,7 +209,6 @@ class MultiHeadEvaluator(policy.EngineBase):
         the batch execution engine. This method does not interpret or
         post-process inference results directly.
         '''
-
         # early exit if this epoch is not to be inferred
         if not epoch % self.infer_every == 0:
             return None
@@ -272,7 +272,6 @@ class MultiHeadEvaluator(policy.EngineBase):
         Returns:
             RGB tensor of shape [3, H_total, W_total] uint8.
         '''
-
         def stitch(placements: dict[tuple[int, int], torch.Tensor]):
             # stitch patches and return
             canvas = torch.full(

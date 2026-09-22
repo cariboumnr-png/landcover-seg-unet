@@ -33,12 +33,12 @@ import typing
 
 __all__ = [
     # classes
-    'BaseRunnerConfig',
     'ContinuousRunner',
     'CurriculumRunner',
-    'TrackingConfig',
     # functions
     'build_runner',
+    # typing
+    'OrchestrationConfigShape'
 ]
 
 
@@ -47,11 +47,10 @@ if typing.TYPE_CHECKING:
     from .builder import (
         build_runner,
     )
-    from .policy import (
-        TrackingConfig,
+    from .protocols import (
+        OrchestrationConfigShape,
     )
     from .runner import (
-        BaseRunnerConfig,
         ContinuousRunner,
         CurriculumRunner,
     )
@@ -62,12 +61,11 @@ def __getattr__(name: str):
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
-    if name in {'TrackingConfig'}:
-        obj = importlib.import_module('.policy', __package__)
+    if name in {'OrchestrationConfigShape'}:
+        obj = importlib.import_module('.protocols', __package__)
         return getattr(obj, name)
 
     if name in {
-        'BaseRunnerConfig',
         'ContinuousRunner',
         'CurriculumRunner',
     }:
