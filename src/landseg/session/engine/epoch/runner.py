@@ -109,7 +109,7 @@ class EpochRunner:
         '''Returns total number of training samples of the epoch.'''
         if not self.trainer:
             return 0
-        return self.trainer.dataloaders.meta.patch_count['train']
+        return self.trainer.dataloaders.meta.patch_count.train
 
     def run_epoch(self, epoch: int) -> core.SessionStepResults:
         '''
