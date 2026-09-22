@@ -58,19 +58,26 @@ class _DataLoadersMeta(typing.Protocol):
     @property
     def patch_count(self) -> _PatchCount: ...
     @property
-    def preview_context(self) -> '_PreviewContext | None': ...
+    def preview_context(self) -> _PreviewContext | None: ...
 
 
-class _PatchCount(typing.TypedDict):
-    '''Total patch counts partitioned by dataset split.'''
-    train: int
-    val: int
-    test: int
+class _PatchCount(typing.Protocol):
+    '''Interface for train/val/test patch counts.'''
+    @property
+    def train(self) -> int: ...
+    @property
+    def val(self) -> int: ...
+    @property
+    def test(self) -> int: ...
 
 
 class _PreviewContext(typing.Protocol):
     '''Interface for block layout and patch grid dimensions.'''
-    patch_per_blk: int
-    patch_per_dim: int
-    block_columns: int
-    patch_grid_shape: tuple[int, int]
+    @property
+    def patch_per_blk(self) -> int: ...
+    @property
+    def patch_per_dim(self) -> int: ...
+    @property
+    def block_columns(self) -> int: ...
+    @property
+    def patch_grid_shape(self) -> tuple[int, int]: ...

@@ -61,14 +61,6 @@ class DataLoaderConfig(typing.Protocol):
     def patch_size(self) -> int: ...
 
 
-# ----- private types
-class _PatchCount(typing.TypedDict):
-    '''Total patch counts partitioned by dataset split.'''
-    train: int
-    val: int
-    test: int
-
-
 # ----- public dataclasses
 @dataclasses.dataclass
 class DataLoaders:
@@ -87,6 +79,14 @@ class _DataLoadersMeta:
     patch_size: int
     patch_count: _PatchCount
     preview_context: _PreviewContext | None
+
+
+@dataclasses.dataclass
+class _PatchCount:
+    '''Train/val/test patch counts.'''
+    train: int
+    val: int
+    test: int
 
 
 @dataclasses.dataclass
@@ -378,7 +378,7 @@ def _get_loaders_meta(
     return _DataLoadersMeta(
         batch_size=config.batch_size,
         patch_size=config.patch_size,
-        patch_count={'train': n_train, 'val': n_val, 'test': n_test},
+        patch_count=_PatchCount(train=n_train, val=n_val, test=n_test),
         preview_context=preview
     )
 
