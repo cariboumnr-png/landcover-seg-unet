@@ -26,7 +26,17 @@ Namespace for project environmental constants.
 # third-party imports
 import torch
 
-# constants
+
+# ----- private helpers
+def _get_device_name() -> str:
+    if DEVICE.startswith('cuda'):
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_name(0)
+        return 'cuda (unavailable)'
+    return DEVICE
+
+# ----- constants
 DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE_NAME: str = _get_device_name()
 TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 OVERFIT_MAX_EPOCH: int = 1000

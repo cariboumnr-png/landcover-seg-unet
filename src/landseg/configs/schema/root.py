@@ -42,11 +42,35 @@ field = dataclasses.field
 @dataclasses.dataclass
 class _ExecutionContext:
     '''Mutable execution context.'''
-    verbosity: str = 'full' # 'full', 'logging_only', 'silent'
+    verbosity: str | int | None = 'full' # 'full', 'logging_only', 'silent', 10/20/None
     exp_root: str = './experiment' # root directory for this experiment run
     user_cfg: str | None = None # external user configs
     dev_cfg: str | None = None # developer-only override config
     cli_mode: bool = False # indicates whether the execution was initiated through the CLI resolver
+
+    @property
+    def console_level(self) -> int | None:
+        '''Parse verbosity option into console level.'''
+        if self.verbosity is None:
+            return None
+        if isinstance(self.verbosity, str):
+            match self.verbosity:
+                case 'full':
+                    return 10
+                case 'select':
+                    return 20
+                case 'silent':
+                    return None
+                case _:
+                    raise ValueError(f'Invalid option: {self.verbosity}')
+        match self.verbosity:
+            case 10:
+                return 10
+            case 20:
+                return 20
+            case _:
+                raise ValueError(f'Invalid option: {self.verbosity}')
+
 
 # --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass

@@ -79,6 +79,31 @@ class DataSpecs:
             str(self.domains)
         ])
 
+    @property
+    def summary(self) -> list[str]:
+        '''Return a list of summarizing strings for the instance.'''
+
+        def _h_str(items: list[str], max_items: int = 3) -> str:
+            if len(items) <= max_items:
+                return ', '.join(map(str, items))
+            remaining = len(items) - max_items
+            head = ', '.join(map(str, items[:max_items]))
+            return f'{head}, and {remaining} more heads... '
+
+        img_ch = self.meta.image_specs.num_channels
+        img_hw = self.meta.image_specs.height_width
+        n1 = len(self.splits.train)
+        n2 = len(self.splits.val)
+        n3 = len(self.splits.test or {})
+
+        return [
+            f'Dataset name:    {self.name} (mode: {self.mode})',
+            f'Image size:      {img_ch} channels | {img_hw}x{img_hw}',
+            f'Trainable heads: {_h_str(list(self.heads.class_counts.keys()))}',
+            f'Data splits:     {n1} train | {n2} val | {n3} test blocks',
+        ]
+
+
     def to_dict(self) -> dict[str, typing.Any]:
         '''Serialize the specifications into a lean, schematic dictionary.'''
         return {

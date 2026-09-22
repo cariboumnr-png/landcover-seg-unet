@@ -71,14 +71,13 @@ def evaluate(config: configs.RootConfig):
         run_id=session_paths.run_id,
         pipeline=config.pipeline.name,
     )
-    logger.set_inputs({
-        'checkpoint': eval_config.checkpoint,
-        'split': split
-    })
-    assert logger.summary # typing
 
     try:
         logger.log_sep()
+        logger.set_inputs({
+            'checkpoint': eval_config.checkpoint,
+            'split': split
+        })
 
         # collect artifacts and build `DataSpecs`
         dataspecs = geopipe.build_dataspec(

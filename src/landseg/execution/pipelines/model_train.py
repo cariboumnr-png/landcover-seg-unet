@@ -54,28 +54,24 @@ def train(config: configs.RootConfig) -> None:
     '''
     # init session results paths and create run io folder tree
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    ss_paths = artifact_paths.session
-    ss_paths.init(config.session.orchestration.resume_from_last)
+    session_paths = artifact_paths.session
+    session_paths.init(config.session.orchestration.resume_from_last)
 
     # persist running config as JSON
-    config_ctrl = artifacts.Controller[dict](ss_paths.config) # no policy
+    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
     config_ctrl.persist(config.as_dict)
-
-    # parse verbosity
-    console_level = _parse_verbosity(config.execution.verbosity)
 
     # init a SessionLogger
     logger = session.SessionLogger(
         name='session',
-        log_file=ss_paths.summary,
-        console_lvl=console_level,
+        log_file=session_paths.summary,
+        console_lvl=config.execution.console_level,
         enable_file_log=False
     )
     logger.init_summary(
-        run_id=ss_paths.run_id,
+        run_id=session_paths.run_id,
         pipeline=config.pipeline.name,
     )
-    assert logger.summary # typing
 
     try:
         logger.log_sep()
@@ -92,9 +88,8 @@ def train(config: configs.RootConfig) -> None:
         d_setup = time.perf_counter() - start_t
         logger.log('INFO', f'[COMPLETE] Data specs setup (D_{d_setup:.2f}s)')
 
-        # log a clean summary of dataspecs to console when verbose
-        _log_dataspecs_summary(logger, dataspecs, console_level)
-
+        for s in dataspecs.summary:
+            logger.log('INFO', s)
         logger.log_sep()
 
         # setup the model
@@ -111,8 +106,7 @@ def train(config: configs.RootConfig) -> None:
         d_model = time.perf_counter() - start_t
         logger.log('INFO', f'[COMPLETE] Model assembly (D_{d_model:.2f}s)')
 
-        _log_inputs(logger, config, model, dataspecs)
-
+        logger.set_inputs(_summarize_inputs(config, model, dataspecs))
         logger.log_sep()
 
         # build the session runner
@@ -122,7 +116,7 @@ def train(config: configs.RootConfig) -> None:
             config=config.session,
             context=session.SessionBuildContext(
                 device=c.DEVICE,
-                session_paths=ss_paths,
+                session_paths=session_paths,
                 eval_dataset='val',
                 logger=logger
             ),
@@ -139,7 +133,8 @@ def train(config: configs.RootConfig) -> None:
         d_exec = time.perf_counter() - start_t
         logger.log('INFO', f'[COMPLETE] Training session (D_{d_exec:.2f}s)')
 
-        _log_results(logger, final, d_setup, d_model, d_exec)
+        logger.set_summary_status('SUCCESS')
+        logger.set_results(_summarize_results(final, d_setup, d_model, d_exec))
 
     except Exception as e:
         logger.set_summary_status('FAILED')
@@ -152,82 +147,18 @@ def train(config: configs.RootConfig) -> None:
         logger.close() # summary JSON will be persisted
 
 
-def _parse_verbosity(verbosity: str) -> int | None:
-    '''Parse verbosity option into console level.'''
-    match verbosity:
-        case 'full':
-            return 10
-        case 'select':
-            return 20
-        case 'silent':
-            return None
-        case _:
-            raise ValueError(f'Invalid option: {verbosity}')
-
-
-def _get_device_name() -> str:
-    '''Retrieve execution device hardware name.'''
-    if c.DEVICE.startswith('cuda'):
-        if torch.cuda.is_available():
-            return torch.cuda.get_device_name(0)
-        return 'cuda (unavailable)'
-    return c.DEVICE
-
-
-def _log_dataspecs_summary(
-    logger: session.SessionLogger,
-    dataspecs: core.DataSpecs,
-    console_level: int | None
-) -> None:
-    '''Log a concise, human-readable summary of the dataset specifications.'''
-
-    def summarize_heads(items: list[str], max_items: int = 3) -> str:
-        if len(items) <= max_items:
-            return ', '.join(map(str, items))
-
-        remaining = len(items) - max_items
-        head = ', '.join(map(str, items[:max_items]))
-        return f'{head}, and {remaining} more heads... '
-
-    if console_level is not None:
-        img_ch = dataspecs.meta.image_specs.num_channels
-        img_hw = dataspecs.meta.image_specs.height_width
-        heads_str = summarize_heads(list(dataspecs.heads.class_counts.keys()))
-        train_n = len(dataspecs.splits.train)
-        val_n = len(dataspecs.splits.val)
-        test_n = len(dataspecs.splits.test or {})
-
-        logger.log(
-            'INFO',
-            f'Dataset name:    {dataspecs.name} (mode: {dataspecs.mode})'
-        )
-        logger.log(
-            'INFO',
-            f'Image size:      {img_ch} channels | {img_hw}x{img_hw}'
-        )
-        logger.log(
-            'INFO',
-            f'Trainable heads: {heads_str}'
-        )
-        logger.log(
-            'INFO',
-            f'Data splits:     {train_n} train | {val_n} val | '
-            f'{test_n} test blocks'
-        )
-
-
-def _log_inputs(
-    logger: session.SessionLogger,
+# ----- private helpers (no schema TEMPORARY)
+def _summarize_inputs(
     config: configs.RootConfig,
     model: torch.nn.Module,
     dataspecs: core.DataSpecs
-) -> None:
-    '''Log pipeline run environment and model metadata inputs.'''
+) -> dict[str, typing.Any]:
+    '''Summarize pipeline run environment and model metadata inputs.'''
     total_p = sum(p.numel() for p in model.parameters())
     trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.set_inputs({
+    return {
         'system': {
-            'device': _get_device_name(),
+            'device':c.DEVICE_NAME,
             'torch_version': torch.__version__
         },
         'model': {
@@ -240,26 +171,23 @@ def _log_inputs(
             'patch_size': config.session.dataloader.patch_size
         },
         'dataspecs': dataspecs.to_dict()
-    })
+    }
 
 
-def _log_results(
-    logger: session.SessionLogger,
+def _summarize_results(
     final: float,
     d_setup: float,
     d_model: float,
     d_exec: float,
-) -> None:
-    '''Calculate peak memory and log final results and metrics.'''
+) -> dict[str, typing.Any]:
+    '''Summarize peak memory and log final results and metrics.'''
     process = psutil.Process()
     peak_cpu_mb = float(process.memory_info().rss / (1024 * 1024))
     peak_gpu_mb = 0.0
     if torch.cuda.is_available():
         peak_gpu_mb = float(torch.cuda.max_memory_allocated() / (1024 * 1024))
 
-    assert logger.summary is not None
-    logger.set_summary_status('SUCCESS')
-    logger.set_results({
+    return {
         'best_value': final,
         'duration_sec': d_setup + d_model + d_exec,
         'durations': {
@@ -271,4 +199,4 @@ def _log_results(
             'peak_cpu_memory_mb': peak_cpu_mb,
             'peak_gpu_memory_mb': peak_gpu_mb
         }
-    })
+    }
