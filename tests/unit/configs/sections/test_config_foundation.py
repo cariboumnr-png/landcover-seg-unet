@@ -156,12 +156,23 @@ def test_datablocks_add_features_validation():
     Then: Accept valid settings or raise TypeError / ValueError.
     '''
     # valid configurations
-    valid = data._DataBlocks(add_topo=True, add_spectral=['ndvi', 'NBR'])
+    valid = data._DataBlocks(
+        add_topo=['slope', 'tpi'],
+        add_spectral=['ndvi', 'NBR']
+    )
     valid.validate()
 
     # invalid topo type
-    with pytest.raises(TypeError, match='add_topo must be a bool'):
+    with pytest.raises(TypeError, match='add_topo must be a list'):
         data._DataBlocks(add_topo='invalid').validate()
+
+    # invalid topo item type
+    with pytest.raises(TypeError, match='Topo feature must be a string'):
+        data._DataBlocks(add_topo=[123]).validate()
+
+    # invalid topo feature name
+    with pytest.raises(ValueError, match='Invalid spectral index'):
+        data._DataBlocks(add_topo=['unknown']).validate()
 
     # invalid spectral type
     with pytest.raises(TypeError, match='add_spectral must be a list'):

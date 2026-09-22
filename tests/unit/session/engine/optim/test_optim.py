@@ -219,7 +219,7 @@ def test_build_optimization_from_session_config(mock_model, session_config):
     '''
     opt_wrap = optim.build_optimization(
         mock_model,
-        session_config.engine_optim
+        session_config.engine.engine_optim
     )
 
     assert isinstance(opt_wrap.optimizer, torch.optim.AdamW)
@@ -233,7 +233,7 @@ def test_build_optimization_adamw_no_scheduler(mock_model, session_config):
     Then: Construct `Optimization` with AdamW and specified `grad_clip_norm`.
     '''
     config = dataclasses.replace(
-        session_config.engine_optim,
+        session_config.engine.engine_optim,
         opt_cls='AdamW',
         sched_cls=None,
         sched_args={},
@@ -253,7 +253,7 @@ def test_build_optimization_sgd_w_cosanneal_scheduler(mock_model, session_config
     Then: Construct `Optimization` with SGD and `CosineAnnealingLR`.
     '''
     config = dataclasses.replace(
-        session_config.engine_optim,
+        session_config.engine.engine_optim,
         opt_cls='SGD',
         lr=1e-2,
         weight_decay=0.0,
@@ -279,7 +279,7 @@ def test_build_optimization_onecycle_scheduler(mock_model, session_config):
     Then: Construct `Optimization` with `OneCycleLR`.
     '''
     config = dataclasses.replace(
-        session_config.engine_optim,
+        session_config.engine.engine_optim,
         opt_cls='AdamW',
         sched_cls='OneCycle',
         sched_args={'max_lr': 1e-2, 'total_steps': 100}
@@ -299,7 +299,7 @@ def test_build_optimization_unknown_optimizer_raises(mock_model, session_config)
     Then: Raise `ValueError`.
     '''
     config = dataclasses.replace(
-        session_config.engine_optim,
+        session_config.engine.engine_optim,
         opt_cls='InvalidOptimizer'
     )
 
@@ -314,7 +314,7 @@ def test_build_optimization_unknown_scheduler_raises(mock_model, session_config)
     Then: Raise `ValueError`.
     '''
     config = dataclasses.replace(
-        session_config.engine_optim,
+        session_config.engine.engine_optim,
         sched_cls='InvalidScheduler'
     )
 

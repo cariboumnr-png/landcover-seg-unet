@@ -33,7 +33,7 @@ def test_composite_loss_init_no_losses(session_config):
     When: Instantiating `CompositeLoss`.
     Then: Register no active losses and return 0.0 on forward.
     '''
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.focal.weight = 0.0
     cfg.dice.weight = 0.0
     cfg.spectral.weight = 0.0
@@ -61,7 +61,7 @@ def test_composite_loss_init_all_losses(session_config):
     Then: Register 4 primitive losses and compute weighted composite
         loss.
     '''
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.focal.weight = 0.5
     cfg.dice.weight = 0.3
     cfg.spectral.weight = 0.1
@@ -93,7 +93,7 @@ def test_composite_loss_forward_weighted_sum(session_config):
     When: Calling `forward`.
     Then: Total loss == weight_focal*loss_focal+weight_dice*loss_dice.
     '''
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.focal.weight = 0.6
     cfg.dice.weight = 0.4
     cfg.spectral.weight = 0.0
@@ -126,7 +126,7 @@ def test_composite_loss_passes_masks(session_config):
     When: Calling `forward`.
     Then: Forward masks to component loss modules.
     '''
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.focal.weight = 0.0
     cfg.dice.weight = 1.0
     cfg.spectral.weight = 0.0
@@ -156,7 +156,7 @@ def test_composite_loss_init_with_ecological(session_config):
     When: Instantiating `CompositeLoss`.
     Then: Register EcologicalSimilarityLoss primitive loss module.
     '''
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.focal.weight = 0.0
     cfg.dice.weight = 0.0
     cfg.spectral.weight = 0.0

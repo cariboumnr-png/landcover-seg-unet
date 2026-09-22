@@ -43,7 +43,7 @@ def test_build_batch_engine_success(
         dataspecs=dataspecs,
         dataloaders=mock_dataloaders,
         model=mock_model,
-        config=session_config.engine_exec,
+        config=session_config.engine.engine_exec,
         device='cpu',
     )
 

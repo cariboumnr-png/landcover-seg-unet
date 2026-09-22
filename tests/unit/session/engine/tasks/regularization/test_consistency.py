@@ -36,7 +36,7 @@ def test_regularizer_init_invalid_reduction(session_config):
     When: Class initiation.
     Then: Raise `ValueError`.
     '''
-    reg_cfg = session_config.engine_tasks.mtl_reg_configs # from default fixture
+    reg_cfg = session_config.engine.engine_tasks.mtl_reg_configs # from default fixture
     reg_cfg.consistency_reduction = 'invalid_reduction_method' # manual
 
     with pytest.raises(ValueError, match='Invalid reduction'):
@@ -49,7 +49,7 @@ def test_regularizer_duplicated_constrains(session_config, mock_constraint):
     When: Class initiation.
     Then: Raise `ValueError`.
     '''
-    reg_cfg = session_config.engine_tasks.mtl_reg_configs
+    reg_cfg = session_config.engine.engine_tasks.mtl_reg_configs
     cc = [mock_constraint(name='rule_1'), mock_constraint(name='rule_1')]
     # only detects name collision
 
@@ -76,7 +76,7 @@ def test_regularizer_forward_reductions(
     When: `ConsistencyRegularizer.forward()` is called with each reduction.
     Then: Return the correctly reduced and lambda-scaled penalty.
     '''
-    reg_cfg = session_config.engine_tasks.mtl_reg_configs
+    reg_cfg = session_config.engine.engine_tasks.mtl_reg_configs
     reg_cfg.consistency_lambda = 2.0
     reg_cfg.consistency_reduction = reduction
 
@@ -127,7 +127,7 @@ def test_regularizer_forward_empty_logits(
     When: `ConsistencyRegularizer.forward()` is called.
     Then: Return unscaled zero scalar or empty tensor for the reduction.
     '''
-    reg_cfg = session_config.engine_tasks.mtl_reg_configs
+    reg_cfg = session_config.engine.engine_tasks.mtl_reg_configs
     reg_cfg.consistency_lambda = 2.0
     reg_cfg.consistency_reduction = reduction
 
@@ -161,7 +161,7 @@ def test_regularizer_forward_no_constraints(
     When: `ConsistencyRegularizer.forward()` is called.
     Then: Return a device-aware zero scalar or empty tensor.
     '''
-    reg_cfg = session_config.engine_tasks.mtl_reg_configs
+    reg_cfg = session_config.engine.engine_tasks.mtl_reg_configs
     reg_cfg.consistency_reduction = reduction
 
     regularizer = consistency.ConsistencyRegularizer(
@@ -188,7 +188,7 @@ def test_regularizer_by_constraint(session_config, mock_constraint):
     When: `ConsistencyRegularizer.by_constraint()` is called.
     Then: Return unscaled mean penalties keyed by constraint name.
     '''
-    reg_cfg = session_config.engine_tasks.mtl_reg_configs
+    reg_cfg = session_config.engine.engine_tasks.mtl_reg_configs
     reg_cfg.consistency_lambda = 10.0
 
     constraints = [

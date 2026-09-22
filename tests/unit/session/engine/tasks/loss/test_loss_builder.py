@@ -40,7 +40,7 @@ def test_build_headlosses(mock_hspecs, session_config):
     '''
     hlosses = builder.build_headlosses(
         mock_hspecs,
-        config=session_config.engine_tasks.loss_configs,
+        config=session_config.engine.engine_tasks.loss_configs,
         ignore_index=255,
         spectral_band_indices=[0, 1]
     )
@@ -62,7 +62,7 @@ def test_build_headlosses_with_per_head_taxonomy(mock_hspecs, session_config):
     mock_hspecs['head_1'].similarity_matrix = torch.eye(2)
     mock_hspecs['head_2'].similarity_matrix = None
 
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.focal.weight = 0.5
     cfg.dice.weight = 0.5
     cfg.spectral.weight = 0.0
@@ -99,7 +99,7 @@ def test_build_headlosses_with_explicit_matrix_override(
     mock_hspecs['head_1'].similarity_matrix = None
     mock_hspecs['head_2'].similarity_matrix = None
 
-    cfg = session_config.engine_tasks.loss_configs
+    cfg = session_config.engine.engine_tasks.loss_configs
     cfg.ecological.weight = 0.2
 
     hlosses = builder.build_headlosses(

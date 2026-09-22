@@ -47,7 +47,7 @@ def test_batch_engine_init(mock_model, session_config):
         device='cpu'
     )
     config = dataclasses.replace(
-        session_config.engine_exec,
+        session_config.engine.engine_exec,
         logit_adjust_alpha=0.8
     )
 
@@ -83,7 +83,7 @@ def test_batch_engine_parse_batch_labeled(mock_model, session_config):
     engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
-        config=session_config.engine_exec,
+        config=session_config.engine.engine_exec,
         context=_get_context()
     )
     engine._parse_batch()
@@ -115,7 +115,7 @@ def test_batch_engine_parse_batch_invalid_active_head_raises(mock_model, session
     engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
-        config=session_config.engine_exec,
+        config=session_config.engine.engine_exec,
         context=_get_context()
     )
 
@@ -151,7 +151,7 @@ def test_run_train_batch(
     engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
-        config=session_config.engine_exec,
+        config=session_config.engine.engine_exec,
         context=_get_context()
     )
     engine.model.set_active_heads(['head_1'])
@@ -189,7 +189,7 @@ def test_run_validate_batch(
     engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
-        config=session_config.engine_exec,
+        config=session_config.engine.engine_exec,
         context=_get_context()
     )
     engine.model.set_active_heads(['head_1'])
@@ -225,7 +225,7 @@ def test_run_infer_batch_spatial_aggregation(
     engine = engine_mod.BatchEngine(
         model=mock_model,
         engine_state=state,
-        config=session_config.engine_exec,
+        config=session_config.engine.engine_exec,
         context=_get_context()
     )
     engine.model.set_active_heads(['head_1'])

@@ -38,10 +38,14 @@ def test_build_epoch_runner_train_eval(
     When: Calling `build_epoch_runner` in 'train_eval' mode.
     Then: Return `EpochRunner` with both trainer and evaluator populated.
     '''
+    context = epoch_mod.EpochRunnerContext(
+        runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+    )
     runner = epoch_mod.build_epoch_runner(
-        mock_runtime,
-        mock_dataloaders,
-        mock_dispatcher,
+        context,
+        _schedule(),
         mode='train_eval',
     )
 
@@ -61,10 +65,14 @@ def test_build_epoch_runner_train_only(
     When: Calling `build_epoch_runner` in 'train_only' mode.
     Then: Return `EpochRunner` with trainer populated and evaluator as None.
     '''
+    context = epoch_mod.EpochRunnerContext(
+        runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+    )
     runner = epoch_mod.build_epoch_runner(
-        mock_runtime,
-        mock_dataloaders,
-        mock_dispatcher,
+        context,
+        _schedule(),
         mode='train_only',
     )
 
@@ -84,10 +92,14 @@ def test_build_epoch_runner_eval_only(
     When: Calling `build_epoch_runner` in 'eval_only' mode.
     Then: Return `EpochRunner` with evaluator populated and trainer as None.
     '''
+    context = epoch_mod.EpochRunnerContext(
+        runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+    )
     runner = epoch_mod.build_epoch_runner(
-        mock_runtime,
-        mock_dataloaders,
-        mock_dispatcher,
+        context,
+        _schedule(),
         mode='eval_only',
     )
 
@@ -108,19 +120,31 @@ def test_build_epoch_runner_with_schedule(
     When: Calling `build_epoch_runner` with schedule.
     Then: Frequencies are bound to trainer and evaluator.
     '''
-    session_config.engine_schedule.update_loss_every_n_batch = 10
-    session_config.engine_schedule.val_every_n_epoch = 2
-    session_config.engine_schedule.infer_every_n_epoch = 3
+    schedule = session_config.engine.engine_schedule
+    schedule.update_loss_every_n_batch = 10
+    schedule.val_every_n_epoch = 2
+    schedule.infer_every_n_epoch = 3
 
+    context = epoch_mod.EpochRunnerContext(
+        runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+    )
     runner = epoch_mod.build_epoch_runner(
-        mock_runtime,
-        mock_dataloaders,
-        mock_dispatcher,
+        context,
+        schedule,
         mode='train_eval',
-        schedule=session_config.engine_schedule,
     )
 
     assert runner.trainer.update_every == 10
     assert runner.evaluator.val_every == 2
     assert runner.evaluator.infer_every == 3
 
+
+def _schedule():
+    class Schedule:
+        update_loss_every_n_batch = 1
+        val_every_n_epoch = 1
+        infer_every_n_epoch = 1
+
+    return Schedule()

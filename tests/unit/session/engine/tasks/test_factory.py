@@ -37,7 +37,7 @@ def test_build_engine_tasks_success(dataspecs, session_config):
     '''
     tasks = task_factory.build_engine_tasks(
         dataspecs,
-        session_config.engine_tasks
+        session_config.engine.engine_tasks
     )
 
     assert isinstance(tasks, task_factory.EngineTasks)
@@ -62,10 +62,10 @@ def test_build_engine_tasks_with_constraints(
     When: Calling `build_engine_tasks`.
     Then: Constraints are compiled and wired into regularization.
     '''
-    session_config.engine_tasks.mtl_constraints = [mock_constraint()]
+    session_config.engine.engine_tasks.mtl_constraints = [mock_constraint()]
     tasks = task_factory.build_engine_tasks(
         dataspecs,
-        session_config.engine_tasks
+        session_config.engine.engine_tasks
     )
 
     assert tasks.multihead_regularization.constraints is not None

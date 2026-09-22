@@ -105,7 +105,7 @@ def test_build_dispatcher_default():
     When: Building dispatcher.
     Then: Dispatcher is created with logging and tracking callbacks.
     '''
-    dispatcher = builder_mod.build_dispatcher(verbose=False)
+    dispatcher = builder_mod.build_dispatcher()
 
     assert isinstance(dispatcher, disp_mod.CallbackDispatcher)
     assert len(dispatcher.callbacks) == 4

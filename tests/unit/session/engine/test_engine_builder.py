@@ -44,21 +44,22 @@ def test_build_engine_patch_size_divisibility_error(
     Then: Raise `ValueError` matching patch dimension divisibility.
     '''
     mock_model.spatial_divisor = 18
-    session_config.data_loader.patch_size = 128
+    session_config.dataloader.patch_size = 128
 
     context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=mock_model,
+        dataloaders=mock_dataloaders,
         dispatcher=mock_dispatcher,
-        device='cpu',
     )
 
     with pytest.raises(ValueError, match='Invalid patch dimension'):
         engine_mod.build_engine(
-            mock_dataloaders,
             context,
-            session_config,
+            session_config.engine,
             mode='train_eval',
+            eval_dataset='val',
+            device='cpu',
         )
 
 
@@ -77,15 +78,16 @@ def test_build_engine_success(
     context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=mock_model,
+        dataloaders=mock_dataloaders,
         dispatcher=mock_dispatcher,
-        device='cpu',
     )
 
     runner = engine_mod.build_engine(
-        mock_dataloaders,
         context,
-        session_config,
+        session_config.engine,
         mode='train_eval',
+        eval_dataset='val',
+        device='cpu',
     )
 
     assert isinstance(runner, epoch_mod.EpochRunner)

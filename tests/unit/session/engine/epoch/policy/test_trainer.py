@@ -29,7 +29,7 @@
 import torch
 # local imports
 import landseg.core as core
-import landseg.session.engine.epoch.policy.trainer as trainer
+import landseg.session.engine.epoch.policy.trainer as trainer_mod
 
 
 # ----- `MultiHeadTrainer` initialization tests
@@ -39,7 +39,7 @@ def test_trainer_init(mock_runtime, mock_dataloaders, mock_dispatcher):
     When: Instantiating `MultiHeadTrainer`.
     Then: Results container and update interval are set.
     '''
-    trainer = trainer.MultiHeadTrainer(
+    trainer = trainer_mod.MultiHeadTrainer(
         update_every=2,
         engine_runtime=mock_runtime,
         dataloaders=mock_dataloaders,
@@ -66,7 +66,7 @@ def test_trainer_train_one_epoch(
     on_begin = mocker.spy(mock_dispatcher, 'on_train_policy_begin')
     on_end = mocker.spy(mock_dispatcher, 'on_train_policy_end')
     on_batch_end = mocker.spy(mock_dispatcher, 'on_train_batch_end')
-    trainer = trainer.MultiHeadTrainer(
+    trainer = trainer_mod.MultiHeadTrainer(
         update_every=1,
         engine_runtime=mock_runtime,
         dataloaders=mock_dataloaders,
@@ -92,7 +92,7 @@ def test_trainer_clip_grad(mock_runtime, mock_dataloaders, mock_dispatcher):
     When: Executing `_clip_grad()`.
     Then: Call `clip_grad_norm_` without errors.
     '''
-    trainer = trainer.MultiHeadTrainer(
+    trainer = trainer_mod.MultiHeadTrainer(
         update_every=1,
         engine_runtime=mock_runtime,
         dataloaders=mock_dataloaders,
@@ -117,7 +117,7 @@ def test_trainer_update_training_stats_interval(
     When: Updating stats on batch index 1 vs flush=True.
     Then: `metrics_updated` flag reflects logging interval.
     '''
-    trainer = trainer.MultiHeadTrainer(
+    trainer = trainer_mod.MultiHeadTrainer(
         update_every=2,
         engine_runtime=mock_runtime,
         dataloaders=mock_dataloaders,
