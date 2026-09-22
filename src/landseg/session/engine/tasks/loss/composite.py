@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 
@@ -49,6 +48,7 @@ import landseg.session.engine.tasks.loss.primitives as primitives
 
 # ----- public types
 class CompositeLossConfig(typing.Protocol):
+    '''Interface for composite loss component configuration.'''
     @property
     def focal(self) -> _FocalLoss: ...
     @property
@@ -63,6 +63,7 @@ class CompositeLossConfig(typing.Protocol):
 
 # ----- private types
 class _FocalLoss(typing.Protocol):
+    '''Interface for focal loss component configuration.'''
     @property
     def weight(self) -> float: ...
     @property
@@ -72,6 +73,7 @@ class _FocalLoss(typing.Protocol):
 
 
 class _DiceLoss(typing.Protocol):
+    '''Interface for dice loss component configuration.'''
     @property
     def weight(self) -> float: ...
     @property
@@ -79,6 +81,7 @@ class _DiceLoss(typing.Protocol):
 
 
 class _SpectralLoss(typing.Protocol):
+    '''Interface for spectral loss component configuration.'''
     @property
     def weight(self) -> float: ...
     @property
@@ -88,11 +91,13 @@ class _SpectralLoss(typing.Protocol):
 
 
 class _TotalVariationLoss(typing.Protocol):
+    '''Interface for total variation loss configuration.'''
     @property
     def weight(self) -> float: ...
 
 
 class _EcologicalLoss(typing.Protocol):
+    '''Interface for ecological loss configuration.'''
     @property
     def weight(self) -> float: ...
     @property

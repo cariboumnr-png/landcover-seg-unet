@@ -62,14 +62,7 @@ import landseg.session.orchestration as orchestration_mod
 
 # ----- public types
 class SessionConfigShape(typing.Protocol):
-    '''
-    Configuration interface for session construction.
-    Defines the required configuration sections used to assemble all
-    session components, including data loading, execution runtime,
-    optimization, task definitions, and orchestration behavior.
-    This configuration describes the static structure of a session and
-    is independent of runtime invocation details.
-    '''
+    '''Interface for session construction configuration.'''
     @property
     def data_loader(self) -> data.DataLoaderConfig: ...
     @property

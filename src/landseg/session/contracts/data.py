@@ -21,8 +21,10 @@
 
 '''
 Data contracts for batch processing and multi-head tensors.
+
 Defines core type aliases for data pipeline exchange objects between
 data loaders, batch engines, and task regularizers.
+
 Public APIs:
     - `DatasetItem`: sample or batch tuple (x, y, domain).
     - `TensorDict`: mapping of string names to PyTorch tensors.
@@ -37,6 +39,10 @@ import torch
 
 # ----- typing aliases
 TensorDict: typing.TypeAlias = dict[str, torch.Tensor]
+'''
+A dictionary mapping string identifier keys (such as head names or
+domain feature names) to `PyTorch` tensors.
+'''
 
 DatasetItem: typing.TypeAlias = tuple[torch.Tensor, torch.Tensor, TensorDict]
 '''

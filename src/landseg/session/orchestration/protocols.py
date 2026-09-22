@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
 
@@ -52,6 +51,7 @@ Heads: typing.TypeAlias = list[str] | None
 
 # ----- public types
 class EpochEngineLike(typing.Protocol):
+    '''Interface for epoch-level execution engine orchestration.'''
     @property
     def trainer(self) -> EngineBaseLike | None: ...
     @property
@@ -64,6 +64,7 @@ class EpochEngineLike(typing.Protocol):
 
 
 class EngineBaseLike(typing.Protocol):
+    '''Interface for sub-engine execution and state access.'''
     @property
     def model(self) -> core.MultiheadModelLike: ...
     @property
@@ -73,6 +74,7 @@ class EngineBaseLike(typing.Protocol):
 
 
 class OrchestrationConfigShape(typing.Protocol):
+    '''Interface for runner monitor and phase configuration.'''
     @property
     def monitor(self) -> _Monitor: ...
     @property
@@ -83,11 +85,13 @@ class OrchestrationConfigShape(typing.Protocol):
 
 # ----- private types
 class _EngineStateLike(typing.Protocol):
+    '''Interface for engine progress state container.'''
     @property
     def progress(self) -> _Progress: ...
 
 
 class _Progress(typing.Protocol):
+    '''Interface for epoch and step progression counters.'''
     @property
     def epoch(self) -> int: ...
     @property
@@ -95,6 +99,7 @@ class _Progress(typing.Protocol):
 
 
 class _OptimizationLike(typing.Protocol):
+    '''Interface for runtime optimizer and scheduler controls.'''
     @property
     def optimizer(self) -> 'torch.optim.Optimizer': ...
     @property
@@ -115,6 +120,7 @@ class _OptimizationLike(typing.Protocol):
 
 
 class _Monitor(typing.Protocol):
+    '''Interface for tracking metrics and early stopping controls.'''
     @property
     def metric_name(self) -> str: ...
     @property

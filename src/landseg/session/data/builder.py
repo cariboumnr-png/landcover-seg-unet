@@ -54,7 +54,7 @@ import landseg.session.logger as session_logger
 
 # ----- public types
 class DataLoaderConfig(typing.Protocol):
-    '''Shape of the the configs needed for building dataloaders.'''
+    '''Interface for data loader batch and patch size configuration.'''
     @property
     def batch_size(self) -> int: ...
     @property
@@ -63,6 +63,7 @@ class DataLoaderConfig(typing.Protocol):
 
 # ----- private types
 class _PatchCount(typing.TypedDict):
+    '''Total patch counts partitioned by dataset split.'''
     train: int
     val: int
     test: int
@@ -81,6 +82,7 @@ class DataLoaders:
 # ----- private dataclasses
 @dataclasses.dataclass
 class _DataLoadersMeta:
+    '''Metadata describing batch size, patch count, and preview context.'''
     batch_size: int
     patch_size: int
     patch_count: _PatchCount
@@ -89,6 +91,7 @@ class _DataLoadersMeta:
 
 @dataclasses.dataclass
 class _PreviewContext:
+    '''Dimensions and grid geometry for preview patch generation.'''
     patch_per_blk: int
     patch_per_dim: int
     block_columns: int
@@ -97,6 +100,7 @@ class _PreviewContext:
 
 @dataclasses.dataclass
 class _MemoryFlags:
+    '''Preload and caching configuration flags across data splits.'''
     preload_train: bool
     cache_train: int
     preload_val: bool

@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
 
 '''
 Session observer protocol definitions for the training engine.
@@ -63,6 +61,7 @@ import landseg.session.contracts.phases as phases
 # ----- public types
 @typing.runtime_checkable
 class SessionObserverLike(typing.Protocol):
+    '''Observer interface for session lifecycle and execution events.'''
     # session phase begins
     def on_session_phase_begin(self, phase: phases.PhaseLike) -> None: ...
     # session step begins

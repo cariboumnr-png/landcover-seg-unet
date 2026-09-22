@@ -47,12 +47,7 @@ import landseg.session.engine.tasks as tasks
 
 # ----- private types
 class _EpochEngineConfigShape(typing.Protocol):
-    '''
-    Configuration interface for constructing the epoch engine.
-    Defines the required configuration sections used to build data
-    loaders, execution runtime, optimization, task components, and
-    orchestration scheduling behavior.
-    '''
+    '''Interface for constructing epoch engine runtime components.'''
     @property
     def engine_exec(self) -> batch.BatchExecConfigShape: ...
     @property

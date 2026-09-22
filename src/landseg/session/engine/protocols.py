@@ -37,7 +37,7 @@ if typing.TYPE_CHECKING:
 # ----- public types
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
-    '''doc'''
+    '''Interface for dataset loader splits and execution metadata.'''
     @property
     def train(self) -> 'torch.utils.data.DataLoader | None':...
     @property
@@ -50,6 +50,7 @@ class DataLoadersLike(typing.Protocol):
 
 # ----- private types
 class _DataLoadersMeta(typing.Protocol):
+    '''Interface for dimensions and patch counts of data loaders.'''
     @property
     def batch_size(self) -> int: ...
     @property
@@ -61,12 +62,14 @@ class _DataLoadersMeta(typing.Protocol):
 
 
 class _PatchCount(typing.TypedDict):
+    '''Total patch counts partitioned by dataset split.'''
     train: int
     val: int
     test: int
 
 
 class _PreviewContext(typing.Protocol):
+    '''Interface for block layout and patch grid dimensions.'''
     patch_per_blk: int
     patch_per_dim: int
     block_columns: int

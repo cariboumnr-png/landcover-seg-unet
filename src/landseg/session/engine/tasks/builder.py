@@ -52,6 +52,7 @@ import landseg.session.engine.tasks.regularization as regularization
 
 # ----- public types
 class TaskConfigShape(typing.Protocol):
+    '''Interface for engine task component configuration.'''
     @property
     def alpha_fn(self) -> str: ...
     @property

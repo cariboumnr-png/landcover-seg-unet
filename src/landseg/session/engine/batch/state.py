@@ -56,6 +56,7 @@ field = dataclasses.field
 # ----- private dataclasses
 @dataclasses.dataclass
 class _Progress:
+    '''Progress tracking counters for current epoch and global step.'''
     epoch: int = 0
     global_step: int = 0
 
