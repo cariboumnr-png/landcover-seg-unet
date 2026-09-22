@@ -108,16 +108,16 @@ def test_build_epoch_runner_with_schedule(
     When: Calling `build_epoch_runner` with schedule.
     Then: Frequencies are bound to trainer and evaluator.
     '''
-    session_config.orchestration.schedule.update_loss_every_n_batch = 10
-    session_config.orchestration.schedule.val_every_n_epoch = 2
-    session_config.orchestration.schedule.infer_every_n_epoch = 3
+    session_config.engine_schedule.update_loss_every_n_batch = 10
+    session_config.engine_schedule.val_every_n_epoch = 2
+    session_config.engine_schedule.infer_every_n_epoch = 3
 
     runner = epoch_mod.build_epoch_runner(
         mock_runtime,
         mock_dataloaders,
         mock_dispatcher,
         mode='train_eval',
-        schedule=session_config.orchestration.schedule,
+        schedule=session_config.engine_schedule,
     )
 
     assert runner.trainer.update_every == 10

@@ -36,6 +36,7 @@ def test_build_engine_patch_size_divisibility_error(
     dataspecs,
     mock_model,
     mock_dispatcher,
+    mock_dataloaders,
 ):
     '''
     Given: Dataloader patch_size (128) indivisible by spatial_divisor (18).
@@ -54,8 +55,9 @@ def test_build_engine_patch_size_divisibility_error(
 
     with pytest.raises(ValueError, match='Invalid patch dimension'):
         engine_mod.build_engine(
-            context=context,
-            config=session_config,
+            mock_dataloaders,
+            context,
+            session_config,
             mode='train_eval',
         )
 
@@ -65,6 +67,7 @@ def test_build_engine_success(
     dataspecs,
     mock_model,
     mock_dispatcher,
+    mock_dataloaders,
 ):
     '''
     Given: Compatible configs, model, dataspecs, and context.
@@ -79,8 +82,9 @@ def test_build_engine_success(
     )
 
     runner = engine_mod.build_engine(
-        context=context,
-        config=session_config,
+        mock_dataloaders,
+        context,
+        session_config,
         mode='train_eval',
     )
 

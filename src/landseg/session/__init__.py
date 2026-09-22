@@ -42,7 +42,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .common import (
+    from .logger import (
         SessionLogger,
     )
     from .factory import (
@@ -53,7 +53,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {'SessionLogger'}:
-        obj = importlib.import_module('.common', __package__)
+        obj = importlib.import_module('.logger', __package__)
         return getattr(obj, name)
 
     if name in {

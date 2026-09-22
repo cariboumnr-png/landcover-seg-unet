@@ -120,7 +120,6 @@ def build_overfit_session(
         model=model,
         dispatcher=dispatcher,
         device=context.device,
-        logger=logger,
     )
     return engine.build_engine(
         dataloaders,
@@ -157,7 +156,6 @@ def build_evaluate_session(
         model=model,
         dispatcher=dispatcher,
         device=context.device,
-        logger=logger,
     )
     return engine.build_engine(
         dataloaders,
@@ -196,7 +194,6 @@ def build_continous_training_session(
         model=model,
         dispatcher=dispatcher,
         device=context.device,
-        logger=logger,
     )
     epoch_engine = engine.build_engine(
         dataloaders,
@@ -243,7 +240,6 @@ def build_curriculum_training_session(
         model=model,
         dispatcher=dispatcher,
         device=context.device,
-        logger=logger,
     )
     epoch_engine = engine.build_engine(
         dataloaders,
