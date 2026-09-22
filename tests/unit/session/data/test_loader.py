@@ -130,7 +130,7 @@ def test_get_memory_stratege_no_ops(dataspecs):
     Then: Return memory flags configured for full preloading.
     '''
     dataspecs.meta.blk_bytes = 0
-    flags = builder._get_memeory_strategy(dataspecs)
+    flags = builder._get_memory_strategy(dataspecs)
 
     assert flags.preload_train is True
     assert flags.cache_train == 0
@@ -146,7 +146,7 @@ def test_get_memory_stratege_high_memory(dataspecs):
     '''
     dataspecs.meta.blk_bytes = 100_000_000 # 100MB per block
     # available RAM: 10GB
-    flags = builder._get_memeory_strategy(dataspecs, available_bytes=10_000_000_000)
+    flags = builder._get_memory_strategy(dataspecs, available_bytes=10_000_000_000)
 
     assert flags.preload_val is True
     assert flags.preload_train is True
@@ -161,7 +161,7 @@ def test_get_memory_stratege_low_memory(dataspecs):
     dataspecs.meta.blk_bytes = 100_000_000 # 100MB per block
     dataspecs.splits.val = {f'b{i}': f'path{i}' for i in range(7)} # 700MB val bytes
     # available RAM: 1GB (val_bytes 700MB > 0.6 * 1GB)
-    flags = builder._get_memeory_strategy(dataspecs, available_bytes=1_000_000_000)
+    flags = builder._get_memory_strategy(dataspecs, available_bytes=1_000_000_000)
 
     assert flags.preload_val is False
     assert flags.preload_train is False

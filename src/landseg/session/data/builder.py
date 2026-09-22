@@ -42,13 +42,13 @@ from __future__ import annotations
 import dataclasses
 import typing
 # third-party imports
-import psutil
 import torch
 import torch.utils.data
 # local imports
 import landseg.core as core
-import landseg.session.contracts as contracts
+import landseg.session.data.collate as collate
 import landseg.session.data.dataset as dataset
+import landseg.session.data.memory as memory
 import landseg.session.logger as session_logger
 
 
@@ -96,17 +96,6 @@ class _PreviewContext:
     patch_per_dim: int
     block_columns: int
     patch_grid_shape: tuple[int, int]
-
-
-@dataclasses.dataclass
-class _MemoryFlags:
-    '''Preload and caching configuration flags across data splits.'''
-    preload_train: bool
-    cache_train: int
-    preload_val: bool
-    cache_val: int
-    preload_test: bool
-    cache_test: int
 
 
 # ----- public functions
@@ -172,7 +161,7 @@ def build_dataloaders(
         case _: raise ValueError('Invalid build mode')
 
 
-# ----- helper functions
+# ----- private helpers
 def _load(
     mode: typing.Literal['train', 'val', 'test'],
     data_specs: core.DataSpecs,
@@ -205,7 +194,7 @@ def _load(
         vec_domain=domains['vec_domain']
     )
 
-    mem_strategy = _get_memeory_strategy(data_specs)
+    mem_strategy = memory.get_memory_strategy(data_specs)
 
     dataset_obj = dataset.MultiBlockDataset(
         dataset_config,
@@ -218,7 +207,7 @@ def _load(
         dataset=dataset_obj,
         batch_size=config.batch_size,
         shuffle=(mode == 'train'),
-        collate_fn=_collate_multi_block
+        collate_fn=collate.batch
     ) # no drop last so ragged batch is allowed
 
     if logger is not None:
@@ -236,107 +225,6 @@ def _load(
         )
 
     return dataloader
-
-
-# ----- private helpers
-def _get_memeory_strategy(
-    data_specs: core.DataSpecs,
-    available_bytes: int | None = None
-) -> _MemoryFlags:
-    '''Infer dataset preload and caching strategy flags based on RAM.'''
-    fbytes = data_specs.meta.blk_bytes
-    if not fbytes: # can be set to 0 in `DataSpecs` to disable strategy
-        return _MemoryFlags(
-            preload_train=True,
-            cache_train=0,
-            preload_val=True,
-            cache_val=0,
-            preload_test=True,
-            cache_test=0
-        ) # all preload
-
-    # get dataset sizes
-    train_bytes = len(data_specs.splits.train or {}) * fbytes
-    val_bytes = len(data_specs.splits.val or {}) * fbytes
-
-    # decision on preload and cache size
-    mem = (
-        available_bytes
-        if available_bytes is not None
-        else psutil.virtual_memory().available
-    )
-    _val = _train = False
-    _val_n = train_n = 0
-
-    # first priority: preload validation blocks into memory
-    if val_bytes <= 0.6 * mem:
-        _val = True
-        # second priority: preload training blocks if possible
-        if train_bytes <= 0.6 * (mem - val_bytes):
-            _train = True
-            train_n = round(0.1 * (mem - val_bytes) / fbytes)
-    else:
-        _val_n = round(0.3 * mem / fbytes)
-        train_n = round(0.2 * mem / fbytes)
-
-    # return flags container
-    return _MemoryFlags(
-        preload_train=_train,
-        cache_train=train_n,
-        preload_val=_val,
-        cache_val=_val_n,
-        preload_test=True,
-        cache_test=0
-    )
-
-
-def _collate_multi_block(
-    batch: typing.Sequence[contracts.DatasetItem]
-) -> contracts.DatasetItem:
-    '''
-    Customized collate function to properly stack a batch.
-
-    Contract per split:
-      - Labeled: every y is [ps, ps] (long) -> stacked to [B, ps, ps]
-      - Unlabeled: every y is empty tensor -> stacked to [B, 0] (long)
-      - Domain: all items share the same keys; each stacks to [B, ...]
-    '''
-    # unpack batch items into separate lists
-    xs, ys, ds = zip(*batch)
-
-    # x is always stackable
-    xs_out = torch.stack(xs, dim=0) # x -> [B, C, H, W]
-
-    # determine if labeled or unlabeled batch from first item
-    y0 = ys[0]
-    labeled_batch = y0.numel() > 0
-
-    if labeled_batch:
-        # ensure all y match shape of first y
-        exp_shape = y0.shape
-        for i, y in enumerate(ys):
-            if y.shape != exp_shape:
-                raise ValueError(
-                    f'inconsistent y shapes in batch at index {i}: '
-                    f'expected {tuple(exp_shape)} but got {tuple(y.shape)}'
-                )
-        ys_out = torch.stack(ys, dim=0).long()
-    else:
-        # unlabeled/inference: all y must be empty tensors
-        for i, y in enumerate(ys):
-            if y.numel() != 0:
-                raise ValueError(
-                    f'mixed labeled/unlabeled batch: item {i} has non-empty y'
-                )
-        ys_out = torch.stack(ys, dim=0).long()
-
-    # domain assumes consistent keys across batch
-    dom_out = {} # -> dict[str, [B, V]] or dict[str, [B]]
-    first_dom = ds[0]
-    for key in first_dom.keys():
-        dom_out[key] = torch.stack([d[key] for d in ds], dim=0)
-
-    return xs_out, ys_out, dom_out
 
 
 def _get_loaders_meta(
