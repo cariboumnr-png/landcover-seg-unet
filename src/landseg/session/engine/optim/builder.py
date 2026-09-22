@@ -39,7 +39,8 @@ import torch
 import landseg.core as core
 import landseg.session.engine.optim.optimization as optimization
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class OptimConfigShape(typing.Protocol):
     '''Configuration interface for building optimizer and scheduler.'''
     @property
@@ -72,7 +73,8 @@ _SCHEDULERS: dict[str, SchedulerFactory] = {
     'OneCycle': torch.optim.lr_scheduler.OneCycleLR,
 }
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_optimization(
     model: core.MultiheadModelLike,
     config: OptimConfigShape
@@ -103,7 +105,6 @@ def build_optimization(
         - Scheduler construction uses a registry-backed factory.
         - Configuration is preserved to support future reconfiguration.
     '''
-
     # build the optimizer
     optimizer = _build_optimizer(
         model,
@@ -135,7 +136,8 @@ def build_optimization(
         sched_args=config.sched_args
     )
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _build_optimizer(
     model: core.MultiheadModelLike,
     *,
@@ -144,7 +146,6 @@ def _build_optimizer(
     weight_decay: float
 ) -> torch.optim.Optimizer:
     '''Instantiate an optimizer from the registry.'''
-
     optimizer_class = _OPTIMIZERS.get(optim_cls)
     if optimizer_class is None:
         raise ValueError(f'Unknown optimizer: {optim_cls}')

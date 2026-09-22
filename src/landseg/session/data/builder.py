@@ -52,7 +52,7 @@ import landseg.session.alias as alias
 import landseg.session.data.dataset as dataset
 
 
-# ----- `DataLoaderConfig` protocol
+# ----- public types
 class DataLoaderConfig(typing.Protocol):
     '''Shape of the the configs needed for building dataloaders.'''
     @property
@@ -61,7 +61,14 @@ class DataLoaderConfig(typing.Protocol):
     def patch_size(self) -> int: ...
 
 
-# ----- `DataLoaders` dataclasses
+# ----- private types
+class _PatchCount(typing.TypedDict):
+    train: int
+    val: int
+    test: int
+
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class DataLoaders:
     '''Train/Val/Test dataloader container for the trainer.'''
@@ -71,18 +78,13 @@ class DataLoaders:
     meta: _DataLoadersMeta
 
 
+# ----- private dataclasses
 @dataclasses.dataclass
 class _DataLoadersMeta:
     batch_size: int
     patch_size: int
     patch_count: _PatchCount
     preview_context: _PreviewContext | None
-
-
-class _PatchCount(typing.TypedDict):
-    train: int
-    val: int
-    test: int
 
 
 @dataclasses.dataclass
@@ -103,7 +105,7 @@ class _MemoryFlags:
     cache_test: int
 
 
-# ----- `build_dataloaders` function
+# ----- public functions
 def build_dataloaders(
     data_specs: core.DataSpecs,
     config: DataLoaderConfig,
@@ -111,29 +113,28 @@ def build_dataloaders(
     logger: session_logger.SessionLogger | None = None,
 ) -> DataLoaders:
     '''
-    Construct train/val/test dataloaders and metadata from dataset specs.
+    Construct train/val/test dataloaders and metadata from specs.
 
     Builds PyTorch-style dataloaders based on dataset metadata and user
     configuration, while deriving execution-specific strategies such as
     caching, preloading, and batching behavior.
 
     Args:
-        data_specs: Dataset specification describing data layout, splits,
+        data_specs:
+            dataset specification describing data layout, splits,
             block structure, and global metadata.
-        config: Data loading configuration (e.g., batch and patch size).
-        logger: Optional logger used for reporting build progress.
+        config:
+            data loading configuration (e.g., batch and patch size).
+        logger:
+            optional logger used for reporting build progress.
 
     Returns:
-        DataLoaders: Container with:
-            - train: Training dataloader (or None if unavailable)
-            - val: Validation dataloader (or None if unavailable)
-            - test: Test/inference dataloader (or None if unavailable)
-            - meta: Associated metadata (batch/patch settings and
-              optional preview context)
+        DataLoaders:
+            container with train/val/test dataloaders and metadata.
 
     Notes:
         - Loader reuse may occur (e.g., single-block datasets).
-        - Memory-aware strategies (e.g., caching/preloading) are inferred
+        - Memory-aware strategies (e.g. caching/preloading) are inferred
           at runtime.
         - Returned loaders are aligned with dataset structure and
           orchestration requirements.
@@ -233,6 +234,7 @@ def _load(
     return dataloader
 
 
+# ----- private helpers
 def _get_memeory_strategy(
     data_specs: core.DataSpecs,
     available_bytes: int | None = None
@@ -301,7 +303,7 @@ def _collate_multi_block(
     # x is always stackable
     xs_out = torch.stack(xs, dim=0) # x -> [B, C, H, W]
 
-    # determine if this is a labeled or unlabeled batch from the first item
+    # determine if labeled or unlabeled batch from first item
     y0 = ys[0]
     labeled_batch = y0.numel() > 0
 

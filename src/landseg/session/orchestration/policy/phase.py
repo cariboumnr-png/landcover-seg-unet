@@ -37,6 +37,8 @@ import landseg.session.orchestration.events as events
 import landseg.session.orchestration.policy.epoch as epoch_policy
 import landseg.session.orchestration.protocols as protocols
 
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class TrackingConfig:
     '''Configuration for metric tracking and early stopping.'''
@@ -47,12 +49,14 @@ class TrackingConfig:
     patience_epochs: int | None = 5
     delta: float | None = 0.0005
 
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _MetricsTracker:
     '''
     Internal state container for tracking metric progression.
 
-    This class maintains state across epochs for determining improvements,
+    This class tracks state across epochs to determine improvements,
     best values, and early stopping conditions.
     '''
     last_value: float = -float('inf')
@@ -62,6 +66,8 @@ class _MetricsTracker:
     patience_n: int = 0
     is_best_epoch: bool = False
 
+
+# ----- public classes
 class PhasePolicy:
     '''
     Orchestrates execution of a training phase across multiple epochs.
@@ -95,7 +101,6 @@ class PhasePolicy:
             track_config: Configuration for tracking metrics and early
                 stopping behavior.
         '''
-
         self.runner = epoch_runner
         self.config = phase_config
         self.track = track_config
@@ -130,7 +135,6 @@ class PhasePolicy:
         Returns:
             Best metric value observed during the phase.
         '''
-
         # set trainer head state per phase
         self.runner.set_head_state(
             self.config.active_heads,
@@ -184,7 +188,7 @@ class PhasePolicy:
         # phase ends
         yield events.PhaseEnd(self.config.name)
 
-        # Return the best value tracked during this phase
+        # return the best value tracked during this phase
         return self.tracker.best_value
 
     def execute(self) -> list[core.SessionStepResults]:
@@ -197,7 +201,6 @@ class PhasePolicy:
         Returns:
             List of metrics for each executed epoch.
         '''
-
         epochs: list[core.SessionStepResults] = []
         for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):
             epoch_metrics = epoch_policy.EpochPolicy(
@@ -215,7 +218,6 @@ class PhasePolicy:
         target_metrics: float
     ) -> tuple[float, int, bool]:
         '''Track best metrics and count patience epochs.'''
-
         # if validation is not done
         if target_metrics == -float('inf'):
             return (target_metrics, -1, False)

@@ -22,7 +22,7 @@
 '''
 Spectral smoothness loss for segmentation tasks.
 
-Encourages neighboring pixels with similar features to produce consistent
+Encourages neighboring pixels with similar features to be consistent
 predictions, promoting spatial coherence in outputs.
 
 This module defines a single loss primitive used by higher-level loss
@@ -36,11 +36,13 @@ import torch.nn.functional
 # local imports
 import landseg.session.engine.tasks.loss.primitives.base as base
 
+
+# ----- public classes
 class SpectralSmoothnessLoss(base.PrimitiveLoss):
     '''
     Pairwise spectral smoothness regularizer.
 
-    The loss penalizes prediction differences between neighboring pixels,
+    The loss penalizes prediction differences between neighbor pixels,
     weighted by feature similarity. Optional masks are converted into a
     per-pixel weight map and then applied pairwise.
 
@@ -54,7 +56,7 @@ class SpectralSmoothnessLoss(base.PrimitiveLoss):
 
     where:
         - f_i and f_j are the feature vectors at pixels i and j
-        - p_i and p_j are the softmax class-probability vectors at pixels
+        - p_i and p_j are the softmax probability vectors at pixels
             i and j
         - alpha controls how quickly the similarity weight decays with
         feature distance
@@ -64,7 +66,7 @@ class SpectralSmoothnessLoss(base.PrimitiveLoss):
 
         L_smooth = sum_ij [w_ij * s(i, j) * d(i, j)] / sum_ij [w_ij]
 
-    where w_ij is the pairwise mask/weight for the pixel pair and invalid
+    where w_ij is the pairwise mask/weight for pixel pair and invalid
     border pairs are excluded.
 
     Note:
@@ -179,7 +181,7 @@ class SpectralSmoothnessLoss(base.PrimitiveLoss):
         # stack valid masks: (1, N, 1, H, W)
         mask = torch.stack(valid_mask_list, dim=0).unsqueeze(0).unsqueeze(2)
 
-        # Shape:
+        # shape:
         #   features_center -> (B, 1, D, H, W)
         #   probs_center    -> (B, 1, C, H, W)
         #   weight_center   -> (B, 1, 1, H, W)
@@ -187,18 +189,17 @@ class SpectralSmoothnessLoss(base.PrimitiveLoss):
         probs_centre = probs.unsqueeze(1)
         weight_centre = weights.unsqueeze(1).unsqueeze(2)
 
-
-        # Pairwise feature distance and prediction distance.
+        # pairwise feature distance and prediction distance.
         dist_x = ((feat_centre - feat_shift) ** 2).sum(dim=2, keepdim=True)
         dist_p = ((probs_centre - prob_shift) ** 2).sum(dim=2, keepdim=True)
 
-        # Feature similarity weight.
+        # feature similarity weight.
         spectral_weight = torch.exp(-self.alpha * dist_x)
 
-        # Pairwise pixel weight:
-        # - respects ignore_index and upstream mask values,
-        # - zeroes a pair if either endpoint is invalid,
-        # - preserves your min-based down-weighting semantics.
+        # pairwise pixel weight:
+        # * respects ignore_index and upstream mask values,
+        # * zeroes a pair if either endpoint is invalid,
+        # * preserves your min-based down-weighting semantics.
         pair_weight = torch.minimum(weight_centre, weight_shift) * mask
         weighted_loss = spectral_weight * dist_p * pair_weight
 

@@ -46,7 +46,8 @@ import torch.nn
 # local imports
 import landseg.session.engine.tasks.loss.primitives as primitives
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public types
 class CompositeLossConfig(typing.Protocol):
     @property
     def focal(self) -> _FocalLoss: ...
@@ -59,6 +60,8 @@ class CompositeLossConfig(typing.Protocol):
     @property
     def ecological(self) -> _EcologicalLoss: ...
 
+
+# ----- private types
 class _FocalLoss(typing.Protocol):
     @property
     def weight(self) -> float: ...
@@ -67,11 +70,13 @@ class _FocalLoss(typing.Protocol):
     @property
     def reduction(self) -> str: ...
 
+
 class _DiceLoss(typing.Protocol):
     @property
     def weight(self) -> float: ...
     @property
     def smooth(self) -> float: ...
+
 
 class _SpectralLoss(typing.Protocol):
     @property
@@ -81,9 +86,11 @@ class _SpectralLoss(typing.Protocol):
     @property
     def neighbour(self) -> int: ...
 
+
 class _TotalVariationLoss(typing.Protocol):
     @property
     def weight(self) -> float: ...
+
 
 class _EcologicalLoss(typing.Protocol):
     @property
@@ -91,7 +98,8 @@ class _EcologicalLoss(typing.Protocol):
     @property
     def profile(self) -> str | None: ...
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class CompositeLoss(torch.nn.Module):
     '''
     Combine multiple loss components into a weighted composite loss.
@@ -145,14 +153,17 @@ class CompositeLoss(torch.nn.Module):
               component loss.
 
         Args:
-            config: Structure mapping loss-type names to parameter blocks.
-            ignore_index: Label index to ignore in all component losses.
-            focal_alpha: Optional per-class alpha weights for Focal Loss.
-            spectral_band_indices: Optional list of spectral band indices.
-            ecological_similarity_matrix: Optional pre-resolved N x N
-                species similarity matrix tensor for ecological loss.
+            config:
+                structure mapping loss-type names to parameter blocks.
+            ignore_index:
+                label index to ignore in all component losses.
+            focal_alpha:
+                optional per-class alpha weights for Focal Loss.
+            spectral_band_indices:
+                optional list of spectral band indices.
+            ecological_similarity_matrix:
+                optional pre-resolved species similarity matrix.
         '''
-
         super().__init__()
 
         # prep
@@ -160,7 +171,7 @@ class CompositeLoss(torch.nn.Module):
         self.losses = torch.nn.ModuleList()
         self.weights: list[float] = []
 
-        # iterate through support loss types and add loss of non-zero weight
+        # add enabled losses with non-zero weights
         # focal loss
         if config.focal.weight:
             loss_fn = primitives.FocalLoss(
@@ -230,7 +241,6 @@ class CompositeLoss(torch.nn.Module):
             components. NaN/Inf propagation is controlled by relying on
             each primitive loss implementation.
         '''
-
         # get mask
         masks = kwargs.get('masks', None)
         features = kwargs.get('features', None)

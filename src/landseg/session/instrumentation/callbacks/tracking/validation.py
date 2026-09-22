@@ -25,6 +25,8 @@
 import landseg.core as core
 import landseg.session.instrumentation.callbacks.base as base
 
+
+# ----- public classes
 class ValTrackingCallback(base.BaseCallback):
     '''Scallar tracking callback'''
 

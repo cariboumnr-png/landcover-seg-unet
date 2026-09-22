@@ -30,16 +30,19 @@ shared epoch execution engine, runner configuration, and training phase
 definition(s).
 
 The factory performs no orchestration logic itself; it does not execute
-epochs, manage policies, or emit training events. Instead, it centralizes
-runner instantiation in order to:
+epochs, manage policies, or emit training events. Instead, it
+centralizes runner instantiation in order to:
 
 - enforce consistent coupling between runner type and phase structure
 - provide precise return typing for downstream consumers
-- isolate runner selection logic from higher-level CLI / application code
+- isolate runner selection logic from higher-level application code
 
 All constructed runners expose training progress exclusively as a
 generator of epoch-level ``TrainingStep`` records, ensuring a uniform
 external contract regardless of internal training structure.
+
+Public APIs:
+    - `build_runner`: factory function constructing concrete runners.
 '''
 
 # standard imports
@@ -50,6 +53,8 @@ import landseg.session.contracts as contracts
 import landseg.session.orchestration.protocols as protocols
 import landseg.session.orchestration.runner as runner
 
+
+# ----- public functions
 @typing.overload
 def build_runner(
     epoch_engine: protocols.EpochEngineLike,
@@ -59,6 +64,7 @@ def build_runner(
     *,
     runner_type: typing.Literal['continuous'],
 ) -> runner.ContinuousRunner: ...
+
 
 @typing.overload
 def build_runner(
@@ -82,49 +88,48 @@ def build_runner(
     '''
     Construct a concrete orchestration runner for epoch-based training.
 
-    This factory selects and instantiates a concrete ``BaseRunner``
-    implementation based on ``runner_type``, wiring together a shared
-    epoch engine, runner configuration, and training phase definition(s).
+    This factory selects and instantiates a concrete `BaseRunner`
+    implementation based on `runner_type`, wiring together a shared
+    epoch engine, runner configuration, and training phase
+    definition(s).
 
     Supported runner types:
 
-    - ``'continuous'``:
-      Creates a :class:`runner.ContinuousRunner` that executes a single
-      training phase continuously. This mode is intended for simple,
-      non-curriculum workflows where one phase defines the entire
-      training lifecycle. Progress is exposed as a generator of
-      ``TrainingStep`` records, one per completed epoch.
+    - `'continuous'`:
+      Creates a `ContinuousRunner` that executes a single training phase
+      continuously. This mode is intended for simple workflows where one
+      phase defines the entire training lifecycle.
 
-    - ``'curriculum'``:
-      Creates a :class:`runner.CurriculumRunner` that executes a sequence
-      of training phases (a curriculum) over a shared epoch engine. Each
-      phase is run sequentially according to its associated policy, and
-      progress is similarly exposed as epoch-level ``TrainingStep``
-      records.
+    - `'curriculum'`:
+      Creates a `CurriculumRunner` that executes a sequence of training
+      phases (a curriculum) over a shared epoch engine. Each phase is
+      run sequentially according to its associated policy.
 
     Args:
-        epoch_runner: Epoch execution engine responsible for running
-            individual epochs. This engine is shared across all phases
-            and runners.
-        base_config: Configuration common to all runner implementations,
-            including artifact handling and output behavior.
-        runner_type: Selector for the runner implementation to construct.
-            Must be either ``'continuous'`` or ``'curriculum'``.
-        training_phases: Training phase definition(s) consumed by the
-            runner. For ``'continuous'``, this must be a single
-            ``PhaseLike`` instance. For ``'curriculum'``, this must be a
-            sequence of ``PhaseLike`` instances executed sequentially.
-        dispatcher: Callback dispatcher responsible for broadcasting
-            lifecycle events to registered observers
+        epoch_engine:
+            epoch execution engine responsible for running epochs.
+        config:
+            orchestration configuration containing monitor settings and
+            phase definitions.
+        dispatcher:
+            callback dispatcher broadcasting lifecycle events to
+            registered observers.
+        session_artifact_paths:
+            resolved session directory paths for saving checkpoints and
+            metrics.
+        runner_type:
+            selector for the runner implementation to construct
+            (`'continuous'` or `'curriculum'`).
 
     Returns:
-        ContinuousRunner or CurriculumRunner
-            A concrete runner instance exposing training progress as a
-            generator of epoch-level ``TrainingStep`` records.
+        runner.ContinuousRunner | runner.CurriculumRunner:
+            concrete runner instance exposing training progress as a
+            generator of step records.
 
     Raises:
-        ValueError: If ``training_phases`` does not match the
-            expected type for the selected ``runner_type``.
+        ValueError:
+            if phase configuration does not match the expected type
+            for the selected `runner_type`.
     '''
     base_config = runner.BaseRunnerConfig(
         artifacts_paths=session_artifact_paths,

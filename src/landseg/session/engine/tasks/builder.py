@@ -52,7 +52,6 @@ import landseg.session.engine.tasks.regularization as regularization
 
 # ----- public types
 class TaskConfigShape(typing.Protocol):
-    '''Configuration interface for constructing per-head tasks.'''
     @property
     def alpha_fn(self) -> str: ...
     @property
@@ -64,7 +63,9 @@ class TaskConfigShape(typing.Protocol):
     @property
     def loss_configs(self) -> loss.CompositeLossConfig: ...
     @property
-    def mtl_constraints(self) -> typing.Sequence[constraints.MTLConstraint] | None: ...
+    def mtl_constraints(
+        self,
+    ) -> typing.Sequence[constraints.MTLConstraint] | None: ...
     @property
     def mtl_reg_configs(self) -> regularization.ConsistencyRegConfigShape: ...
 
@@ -109,7 +110,6 @@ def build_engine_tasks(
         - Metric modules are initialized per head with ignore-index
           handling and optional exclusions.
     '''
-
     # per-head specs
     headspecs = heads.build_headspecs(
         data_specs,

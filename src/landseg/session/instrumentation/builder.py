@@ -40,6 +40,8 @@ import landseg.session.instrumentation.callbacks.tracking as tracking
 import landseg.session.instrumentation.dashboards as dashboards
 import landseg.utils as utils
 
+
+# ----- public functions
 def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
     uri: str | None = None,
@@ -78,7 +80,6 @@ def build_dispatcher(
         - All callbacks are registered in a fixed execution order:
           logging → tracking → preview.
     '''
-
     # trackers list
     _trackers: list[dashboards.BaseTracker] = []
     if trackers:
@@ -94,7 +95,9 @@ def build_dispatcher(
         logging.LoggingCallback(logger=logger, verbose=verbose),
         tracking.TrainTrackingCallback(_trackers),
         tracking.ValTrackingCallback(_trackers),
-        tracking.InferTrackingCallback(_trackers,label_color_map=label_color_map)
+        tracking.InferTrackingCallback(
+            _trackers, label_color_map=label_color_map
+        )
     ]
 
     # return dispatcher

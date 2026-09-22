@@ -23,11 +23,11 @@
 Orchestration runner base abstractions.
 
 This module defines the shared execution and coordination interface for
-training runners that expose training progress as a stream of epoch-level
-steps.
+training runners that expose training progress as a stream of
+epoch-level steps.
 
-Concrete runner implementations (e.g. continuous or curriculum-based) are
-responsible for:
+Concrete runner implementations (e.g. continuous or curriculum-based)
+are responsible for:
     - driving epoch execution through policies
     - translating internal orchestration events into public TrainingStep
       records
@@ -37,6 +37,10 @@ responsible for:
 This module deliberately contains no training-phase semantics and no
 resume logic; such behavior is defined by concrete subclasses and
 higher-level CLI orchestration.
+
+Public APIs:
+    - `BaseRunner`: abstract base class for orchestration runners.
+    - `BaseRunnerConfig`: configuration for runner monitors and paths.
 '''
 
 # standard imports
@@ -50,6 +54,8 @@ import landseg.session.contracts as contracts
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.protocols as protocols
 
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class BaseRunnerConfig:
     '''
@@ -74,7 +80,8 @@ class BaseRunnerConfig:
     patience_epochs: int | None = 5
     delta: float | None = 0.0005
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class BaseRunner(abc.ABC):
     '''
     Abstract base class for generator-based training runners.
@@ -87,16 +94,16 @@ class BaseRunner(abc.ABC):
         - Own the public generator interface for training execution
         - Arbitrates run termination and guarantees emission invariants
         - Translate internal execution results into immutable steps
-        - Provide common utilities for logging and checkpoint persistence
+        - Provide common utilities for logging and checkpoint saving
 
     Non-responsibilities:
         - Defining training phases or curricula
         - Managing resume / load behavior
         - Encapsulating training policy logic
 
-    Concrete implementations (e.g. continuous or curriculum runners) must
-    implement `run()` and `execute()`, defining how epochs and phases are
-    orchestrated while preserving the step-stream contract.
+    Concrete implementations (e.g. continuous or curriculum runners)
+    must implement `run()` and `execute()`, defining how epochs and
+    phases are orchestrated while preserving the step-stream contract.
 
     Termination semantics:
         - Runners are the sole authority for stopping execution
@@ -135,7 +142,6 @@ class BaseRunner(abc.ABC):
             dispatcher: Callback dispatcher responsible for broadcasting
                 lifecycle events to registered observers
         '''
-
         # parse arguments
         self.epoch_runner = epoch_runner
         self.config = base_config
@@ -188,16 +194,16 @@ class BaseRunner(abc.ABC):
 
     def execute(self) -> float:
         '''
-        Execute training in a blocking manner and return a scalar result.
+        Execute training synchronously and return a scalar result.
 
-        This is a convenience adapter that fully consumes the step stream
-        produced by run() and derives a terminal scalar value, typically
-        used by CLI workflows and legacy integrations.
+        This is a convenience adapter that fully consumes the step
+        stream produced by `run()` and derives a terminal scalar value,
+        typically used by CLI workflows and legacy integrations.
 
         Returns:
-            float: Final target metric achieved at run termination.
+            float:
+                final target metric achieved at run termination.
         '''
-
         # init a JSON artifact to store step results
         ctrl = artifacts.Controller[list[dict]](self.paths.step_results)
         steps: list[dict] = []
@@ -245,13 +251,11 @@ class BaseRunner(abc.ABC):
             - Minimal training metadata required for resumption
 
         Args:
-            phase_name: Name of the phase associated with the current
-                training state. This value is incorporated into the
-                checkpoint filename for disambiguation.
-            is_best: Whether the current training state should also be
-                recorded as the best-performing checkpoint for the phase.
+            phase_name:
+                name of phase associated with current training state.
+            is_best:
+                whether current state should also be recorded as best.
         '''
-
         # build checkpoint meta dict
         ckpt_meta: artifacts.CheckpointMeta = {
             'metric':self._current_metrics.target_metrics,

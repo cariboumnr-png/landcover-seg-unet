@@ -22,7 +22,7 @@
 '''
 Base classes for primitive loss components.
 
-Defines an abstract interface for loss modules operating on model logits,
+Defines an abstract interface for loss modules operating on logits,
 targets, and optional per-pixel or per-class masks. Concrete loss
 implementations should inherit from `PrimitiveLoss` and implement
 `forward()`.
@@ -34,7 +34,8 @@ import abc
 import torch
 import torch.nn
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
     '''
     Abstract base class for loss computation modules.
@@ -127,7 +128,7 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
         '''
         Construct a per-pixel weight map in the range [0, 1].
 
-        The resulting tensor assigns a weight to each pixel in `targets`,
+        The resulting tensor assigns weights to each pixel in `targets`,
         which can be used to scale loss contributions during training.
 
         Processing steps:
@@ -146,12 +147,12 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
             masks:
                 Mapping of scalar weights to boolean-compatible masks.
                 - Keys: Desired weight values (will clampe to [0, 1]).
-                - Values: Tensors with the same shape as `targets` (which
+                - Values: Tensors with same shape as `targets` (which
                     pixels the weight should apply to).
                 - If None, no mask-based weighting is applied.
 
             targets:
-                Tensor containing target labels. Defines the shape of the
+                Tensor containing target labels. Defines the shape of
                 output weight map.
 
             ignore_index:
@@ -173,7 +174,6 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
                 If mask keys are not numeric / mask tensors have
                 incompatible shapes.
         '''
-
         # init weight tensor aligned with the targets
         ws = torch.ones_like(targets, dtype=dtype, device=device)
 
@@ -183,7 +183,9 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
                 # sanity checks
                 assert isinstance(w, (float, int)), f'Invalid mask keys {w}'
                 assert isinstance(m, torch.Tensor), f'Invalid mask type: {m}'
-                assert m.shape == targets.shape, f'{m.shape} != {targets.shape}.'
+                assert m.shape == targets.shape, (
+                    f'{m.shape} != {targets.shape}.'
+                )
                 # ensure mask as bool (could be float initially)
                 m_bool = m.to(dtype=torch.bool)
                 # clamp to [0, 1] for down-weighting semantics

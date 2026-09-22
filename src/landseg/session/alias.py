@@ -26,8 +26,12 @@ import typing
 # third-party imports
 import torch
 
-# batch context
+
+# ----- typing aliases
 Tensor: typing.TypeAlias = torch.Tensor
+
+TensorDict: typing.TypeAlias = dict[str, Tensor]
+
 DatasetItem: typing.TypeAlias = tuple[Tensor, Tensor, dict[str, Tensor]]
 '''
 A tuple from one sample of the dataset: x (always present), y (can be

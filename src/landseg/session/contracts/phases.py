@@ -26,7 +26,7 @@
 '''
 Internal orchestration runtime configuration protocols.
 
-This module defines structured, type-safe protocol interfaces used by the
+This module defines structured, type-safe protocols used by the
 training orchestration layer to coordinate execution behavior across
 phases, scheduling, and monitoring.
 
@@ -44,7 +44,10 @@ for runtime configuration, enabling consistent access across the engine
 regardless of how user configs are originally defined or loaded.
 
 These protocols enable strong typing, implementation flexibility, and
-clear separation between configuration structure and orchestration logic.
+clear separation between config structure and orchestration logic.
+
+Public APIs:
+    - `PhaseLike`: protocol defining a single training phase.
 '''
 
 # standard imports
@@ -52,9 +55,9 @@ from __future__ import annotations
 import typing
 
 
+# ----- public types
 @typing.runtime_checkable
 class PhaseLike(typing.Protocol):
-    '''Immutable specification of a single training phase.'''
     @property
     def name(self) -> str: ...
     @property

@@ -35,11 +35,13 @@ import typing
 # third-party imports
 import torch
 
-# aliases
+
+# ----- typing aliases
 Optimizer = torch.optim.Optimizer
 LRScheduler = torch.optim.lr_scheduler.LRScheduler
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public classes
 class Optimization:
     '''
     Runtime wrapper for optimizer and optional scheduler.
@@ -76,7 +78,6 @@ class Optimization:
                 scheduler.
             sched_args: Arguments used to initialize the scheduler.
         '''
-
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.grad_clip_norm = grad_clip_norm
@@ -84,26 +85,21 @@ class Optimization:
         self._sched_factory = sched_factory
         self._sched_args = sched_args
 
-    # -------------------------- public APIs --------------------------
     @property
     def lrs(self) -> list[float]:
         '''Return current learning rates from all parameter groups.'''
-
         return [g['lr'] for g in self.optimizer.param_groups]
 
     def step_optimizer(self) -> None:
         '''Perform a single optimizer update step.'''
-
         self.optimizer.step()
 
     def zero_grad(self, set_to_none: bool = True) -> None:
         '''Reset gradients on all optimized parameters.'''
-
         self.optimizer.zero_grad(set_to_none=set_to_none)
 
     def step_scheduler(self) -> None:
         '''Advance the scheduler if configured.'''
-
         if self.scheduler is not None:
             self.scheduler.step()
 
@@ -128,22 +124,21 @@ class Optimization:
             sched_factory:
                 Factory callable to rebuild the scheduler.
             sched_args:
-                Scheduler initialization arguments (merged with existing).
+                Scheduler init arguments (merged with existing).
             disable_scheduler:
                 If True, removes the scheduler entirely.
 
         Notes:
             - Scheduler updates rebuild the scheduler instance using the
               stored optimizer and merged arguments.
-            - Partial updates reuse previously stored scheduler settings.
+            - Partial updates reuse stored scheduler settings.
         '''
-
-        # ---------------- lr update ----------------
+        # lr update
         if lr is not None:
             for group in self.optimizer.param_groups:
                 group['lr'] = lr
 
-        # ---------------- disable scheduler ----------------
+        # disable scheduler
         if disable_scheduler:
             self.scheduler = None
             self._sched_factory = None
@@ -151,7 +146,7 @@ class Optimization:
             self._sched_args = None
             return
 
-        # ---------------- no scheduler changes ----------------
+        # no scheduler changes
         if (
             sched_cls is None and
             sched_factory is None and
@@ -159,7 +154,7 @@ class Optimization:
         ):
             return
 
-        # ---------------- inherit existing config ----------------
+        # inherit existing config
         sched_cls = sched_cls or self._sched_cls
         sched_factory = sched_factory or self._sched_factory
 
@@ -172,7 +167,7 @@ class Optimization:
         if sched_args is not None:
             merged_args.update(sched_args)
 
-        # ---------------- rebuild scheduler ----------------
+        # rebuild scheduler
         self.scheduler = sched_factory(
             self.optimizer,
             **merged_args

@@ -24,24 +24,26 @@
 '''
 Event definitions for the training orchestration system.
 
-This module defines a small set of immutable event types that are emitted
-by the training runner and phase policies to describe *what has happened*
-during a training run. Events form a linear, observable stream that can
-be consumed by loggers, early-stopping policies, checkpoint managers, and
-higher-level controllers.
+This module defines a small set of immutable event types that are
+emitted by the training runner and phase policies to describe *what has
+happened* during a training run. Events form a linear, observable
+stream that can be consumed by loggers, early-stopping policies,
+checkpoint managers, and higher-level controllers.
 
 Design notes
 ------------
 
 - Events are modeled as plain, frozen dataclasses and inherit from a
-  common `Event` base class. The base class serves as a semantic marker,
-  establishing a clear architectural boundary: only `Event` instances are
-  allowed to cross from orchestration into observation and control layers.
+  common `Event` base class. The base class serves as a semantic
+  marker, establishing a clear architectural boundary: only `Event`
+  instances are allowed to cross from orchestration into observation
+  and control layers.
 
 - Individual event classes (e.g. `PhaseStart`, `EpochEnd`) define their
   payload explicitly as typed fields rather than relying on a generic
-  dictionary. This keeps event semantics self-describing, type-checkable,
-  and easy to evolve as phase behavior becomes more explicit and enforced.
+  dictionary. This keeps event semantics self-describing,
+  type-checkable, and easy to evolve as phase behavior becomes more
+  explicit and enforced.
 
 - Some event classes use small convenience initializers to derive common
   or generic representations (e.g. for logging or inspection) while
@@ -50,15 +52,26 @@ Design notes
   preserve clarity at emission sites without introducing mutation or
   hidden behavior.
 
-- Events are *facts*, not callbacks: they carry no executable logic, do
-  not mutate shared state, and are never modified after creation. Control
-  flow is expressed through distinct event types (e.g. `StopRun`) rather
-  than implicit flags embedded in payloads.
+- Events are *facts*, not callbacks: they carry no executable logic,
+  do not mutate shared state, and are never modified after creation.
+  Control flow is expressed through distinct event types (such as
+  `StopRun`) rather than implicit flags embedded in payloads.
 
 This module intentionally avoids encoding execution logic or policy
 decisions. It is expected to remain stable even as the training runner
-evolves toward a fully generator-based model and additional phase schemas
+evolves toward a generator model and additional phase schemas
 are introduced.
+
+Public APIs:
+    - `Event`: base class for all orchestration events.
+    - `PhaseStart`: event emitted at the start of a training phase.
+    - `PhaseEnd`: event emitted at the end of a training phase.
+    - `EpochStart`: event emitted at the start of an epoch.
+    - `EpochEnd`: event emitted at the end of an epoch.
+    - `OptimizationMetrics`: metrics from optimizer and scheduler.
+    - `LossBreakdown`: detailed per-head and composite loss breakdown.
+    - `MetricsReport`: snapshot of validation and test metrics.
+    - `StopRun`: command event requesting training termination.
 '''
 
 # standard imports
@@ -71,24 +84,22 @@ import landseg.core as core
 # alias
 field = dataclasses.field
 
-# -------------------------------------------------------------------------
-# Base event
-# -------------------------------------------------------------------------
+
+# ----- base events
 @dataclasses.dataclass(frozen=True)
 class Event:
     '''
     Base class for all orchestration events.
 
     Events are immutable facts emitted by orchestration or engine code.
-    They do not perform actions and do not trigger behavior by themselves.
+    They do not perform actions or trigger behavior by themselves.
     '''
 
     name: str
     payload: dict[str, typing.Any] | None = None
 
-# -------------------------------------------------------------------------
-# Phase-level events
-# -------------------------------------------------------------------------
+
+# ----- phase-level events
 @dataclasses.dataclass(frozen=True)
 class PhaseStart(Event):
     phase_name: str = ''
@@ -99,6 +110,7 @@ class PhaseStart(Event):
             payload={'phase_name': phase_name},
         )
         object.__setattr__(self, 'phase_name', phase_name)
+
 
 @dataclasses.dataclass(frozen=True)
 class PhaseEnd(Event):
@@ -111,9 +123,8 @@ class PhaseEnd(Event):
         )
         object.__setattr__(self, 'phase_name', phase_name)
 
-# -------------------------------------------------------------------------
-# Epoch-level events
-# -------------------------------------------------------------------------
+
+# ----- epoch-level events
 @dataclasses.dataclass(frozen=True)
 class EpochStart(Event):
     epoch_index: int = 1
@@ -129,6 +140,7 @@ class EpochStart(Event):
         )
         object.__setattr__(self, 'epoch_index', epoch_index)
         object.__setattr__(self, 'phase_name', phase_name)
+
 
 @dataclasses.dataclass(frozen=True)
 class EpochEnd(Event):
@@ -150,15 +162,16 @@ class EpochEnd(Event):
         object.__setattr__(self, 'epoch_index', epoch_index)
         object.__setattr__(self, 'phase_name', phase_name)
 
-# -------------------------------------------------------------------------
-# Report events
-# -------------------------------------------------------------------------
+
+# ----- report events
 @dataclasses.dataclass(frozen=True)
 class MetricsReport(Event):
     best_so_far: float = 0.0
     best_epoch: int = -1
     is_best_epoch: bool = False
-    raw_metrics: core.SessionStepResults = field(default_factory=core.SessionStepResults)
+    raw_metrics: core.SessionStepResults = field(
+        default_factory=core.SessionStepResults,
+    )
 
     def __init__(
         self,
@@ -181,9 +194,8 @@ class MetricsReport(Event):
         object.__setattr__(self, 'is_best_epoch', is_best_epoch)
         object.__setattr__(self, 'raw_metrics', raw_metrics)
 
-# -------------------------------------------------------------------------
-# Control events
-# -------------------------------------------------------------------------
+
+# ----- control events
 @dataclasses.dataclass(frozen=True)
 class StopRun(Event):
     reason: str = ''
@@ -194,6 +206,7 @@ class StopRun(Event):
             payload={'reason': reason},
         )
         object.__setattr__(self, 'reason', reason)
+
 
 @dataclasses.dataclass(frozen=True)
 class CheckpointRequest(Event):

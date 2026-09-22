@@ -22,7 +22,7 @@
 '''
 Focal loss implementation for segmentation tasks.
 
-Provides a multi-class focal loss with support for ignore-index handling,
+Provides a multi-class focal loss with ignore-index handling,
 class weighting, and optional per-pixel masking.
 
 This module defines a single loss primitive used by higher-level loss
@@ -36,13 +36,14 @@ import torch.nn.functional
 # local imports
 import landseg.session.engine.tasks.loss.primitives.base as base
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class FocalLoss(base.PrimitiveLoss):
     '''
-    Multi-class focal loss supporting per-pixel weights and ignore_index.
+    Multi-class focal loss with per-pixel weights and ignore_index.
 
     The loss operates on per-pixel logits, optionally reweights pixels
-    through a mask dictionary, and applies the standard focal formulation:
+    through a mask dict, and applies the standard focal formulation:
 
         FL = - a_t * (1 - p_t) ^ y * log(p_t)
 
@@ -62,13 +63,15 @@ class FocalLoss(base.PrimitiveLoss):
         Initialize a multi-class focal loss module.
 
         Args:
-            alpha: Optional list of per-class weights. If None, all classes
-                receive equal weight.
-            gamma: Focal exponent controlling down-weighting of easy
+            alpha:
+                optional per-class weights. If None, all classes equal.
+            gamma:
+                focal exponent controlling down-weighting of easy
                 samples.
-            reduction: One of {'mean', 'sum', 'none'}, applied after
-                masking.
-            ignore_index: Label to exclude entirely from loss compute.
+            reduction:
+                reduction method in {'mean', 'sum', 'none'}.
+            ignore_index:
+                label to exclude entirely from loss compute.
         '''
         super().__init__()
         self.alpha = alpha
@@ -111,7 +114,7 @@ class FocalLoss(base.PrimitiveLoss):
             dtype=logits.dtype
         )
         w = w.reshape(-1) # flatten to 1d
-        # validity: only compute for pixels with weight > 0 (e.g., valid labels)
+        # validity: only compute for pixels with weight > 0
         valid = w > 0
 
         # early exit if all pixel weights are 0

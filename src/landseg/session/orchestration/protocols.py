@@ -24,22 +24,33 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Protocol for the epoch-level engine for orchestration.
+Protocols for orchestration-level engine and configuration contracts.
+
+Defines typing protocol shapes required by runners and policies to
+interact with the underlying epoch engine and monitor configuration.
+
+Public APIs:
+    - `EpochEngineLike`: protocol for epoch-level engine interface.
+    - `EngineBaseLike`: protocol for sub-engine access.
+    - `OrchestrationConfigShape`: protocol for orchestration configs.
 '''
 
 # standard imports
 from __future__ import annotations
 import typing
-# local imoprts
+# local imports
 import landseg.core as core
 
 if typing.TYPE_CHECKING:
     import torch.optim
     import landseg.session.contracts as contracts
 
-# aliases
+
+# ----- typing aliases
 Heads: typing.TypeAlias = list[str] | None
 
+
+# ----- public types
 class EpochEngineLike(typing.Protocol):
     @property
     def trainer(self) -> EngineBaseLike | None: ...
@@ -51,6 +62,7 @@ class EpochEngineLike(typing.Protocol):
     def set_head_state(self, active_heads: Heads, frozen_heads: Heads) -> None: ...
     def reset_head_state(self) -> None: ...
 
+
 class EngineBaseLike(typing.Protocol):
     @property
     def model(self) -> core.MultiheadModelLike: ...
@@ -59,15 +71,28 @@ class EngineBaseLike(typing.Protocol):
     @property
     def optimization(self) -> _OptimizationLike: ...
 
+
+class OrchestrationConfigShape(typing.Protocol):
+    @property
+    def monitor(self) -> _Monitor: ...
+    @property
+    def single_phase(self) -> contracts.PhaseLike: ...
+    @property
+    def multi_phases(self) -> typing.Sequence[contracts.PhaseLike]: ...
+
+
+# ----- private types
 class _EngineStateLike(typing.Protocol):
     @property
     def progress(self) -> _Progress: ...
+
 
 class _Progress(typing.Protocol):
     @property
     def epoch(self) -> int: ...
     @property
     def global_step(self) -> int: ...
+
 
 class _OptimizationLike(typing.Protocol):
     @property
@@ -81,19 +106,12 @@ class _OptimizationLike(typing.Protocol):
         *,
         lr: float | None = None,
         sched_cls: str | None = None,
-        sched_factory: typing.Callable[..., torch.optim.lr_scheduler.LRScheduler] | None = None,
+        sched_factory: (
+            typing.Callable[..., torch.optim.lr_scheduler.LRScheduler]
+            | None
+        ) = None,
         sched_args: dict[str, typing.Any] | None = None
     ) -> None: ...
-
-
-class OrchestrationConfigShape(typing.Protocol):
-    '''Unified access interface for all orchestration config sections.'''
-    @property
-    def monitor(self) -> _Monitor: ...
-    @property
-    def single_phase(self) -> contracts.PhaseLike: ...
-    @property
-    def multi_phases(self) -> typing.Sequence[contracts.PhaseLike]: ...
 
 
 class _Monitor(typing.Protocol):

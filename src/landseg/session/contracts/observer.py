@@ -26,7 +26,7 @@
 '''
 Session observer protocol definitions for the training engine.
 
-This module defines the ``SessionObserverLike`` protocol, which specifies
+This module defines the `SessionObserverLike` protocol, which specifies
 the full set of lifecycle hooks (callbacks) that can be implemented to
 observe and respond to events during a training session.
 
@@ -47,6 +47,9 @@ session to receive notifications at each stage of execution.
 
 All methods are optional at runtime, but type-checking ensures interface
 compliance when explicitly implemented.
+
+Public APIs:
+    - `SessionObserverLike`: protocol for session event observers.
 '''
 
 # standard imports
@@ -56,37 +59,37 @@ import typing
 import landseg.core as core
 import landseg.session.contracts.phases as phases
 
-# -----------------------------Engine components-----------------------------
+
+# ----- public types
 @typing.runtime_checkable
 class SessionObserverLike(typing.Protocol):
-    '''Lifecycle callback interface for observing session events.'''
-    # --- session phase begins
+    # session phase begins
     def on_session_phase_begin(self, phase: phases.PhaseLike) -> None: ...
-    # --- session step begins
+    # session step begins
     def on_session_step_begin(self) -> None: ...
-    # --- epoch begins
+    # epoch begins
     def on_epoch_begin(self, epoch: int) -> None: ...
-    # --- policy begins
+    # policy begins
     def on_train_policy_begin(self) -> None: ...
     def on_val_policy_begin(self) -> None: ...
     def on_infer_policy_begin(self) -> None: ...
-    # --- batch begins
+    # batch begins
     def on_batch_begin(self, action: str, bidx: int) -> None: ...
-    # --- batch ends
+    # batch ends
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None: ...
     def on_val_batch_end(self) -> None: ...
     def on_infer_batch_end(self) -> None: ...
-    # --- policy ends
+    # policy ends
     def on_train_policy_end(self, results: core.TrainStepResults) -> None: ...
     def on_val_policy_end(self, results: core.ValStepResults) -> None: ...
     def on_infer_policy_end(self, results: core.InferStepResults) -> None: ...
-    # --- epoch ends
+    # epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
-    # --- session step ends
+    # session step ends
     def on_session_step_end(self, results: core.SessionStepSummary) -> None: ...
-    # --- session phase ends
+    # session phase ends
     def on_session_phase_end(self, phase: str, reason: str) -> None: ...
-    # --- session end
+    # session end
     def on_session_end(self) -> None: ...
-    # --- utilities
+    # utilities
     def on_checkpointing(self, fp: str) -> None: ...

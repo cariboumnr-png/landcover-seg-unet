@@ -41,7 +41,8 @@ import torch
 import landseg.session.engine.tasks.heads as heads
 import landseg.session.engine.tasks.loss.composite as composite
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class HeadLosses:
     '''
     Typed wrapper around a mapping of heads to `CompositeLoss` objects.
@@ -68,7 +69,8 @@ class HeadLosses:
         '''Return a shallow copy of the mapping as `dict[str, Loss]`.'''
         return dict(self._hloss)
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_headlosses(
     headspecs: heads.HeadSpecs,
     *,
@@ -82,20 +84,20 @@ def build_headlosses(
     instances.
 
     Args:
-        headspecs: A structure describing the model's prediction heads,
-            including each head's name, loss-specific parameters, and
-            pre-resolved ecological similarity matrix tensor.
-        config: Base loss configuration shared across heads. Each enabled
-            loss type must have its configuration block under a name
-            matching those used by `CompositeLoss.registry`.
-        ignore_index: Label index to exclude from all loss computations.
-        spectral_band_indices: Optional list of spectral band indices.
-        ecological_similarity_matrix: Optional explicit precomputed
-            similarity tensor override.
+        headspecs:
+            structure describing the model prediction heads.
+        config:
+            base loss configuration shared across heads.
+        ignore_index:
+            label index to exclude from all loss computations.
+        spectral_band_indices:
+            optional list of spectral band indices.
+        ecological_similarity_matrix:
+            optional explicit similarity tensor override.
 
     Returns:
-        A `HeadLosses` container, providing typed access to the concrete
-        `CompositeLoss` objects keyed by head name.
+        HeadLosses:
+            typed container of concrete CompositeLoss objects per head.
     '''
     loss_dict: dict[str, composite.CompositeLoss] = {}
     for name, headspec in headspecs.as_dict().items():

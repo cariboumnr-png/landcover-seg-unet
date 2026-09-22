@@ -29,7 +29,7 @@ execution from higher-level orchestration concerns.
 Design principles
 -----------------
 - Execution-only: no control flow, scheduling, or early stopping logic.
-- Orchestration-agnostic: does not encode phases, curricula, or policies.
+- Orchestration-agnostic: no phases, curricula, or policies.
 - Stable interface: intended as a thin, testable façade that can be
   composed by external orchestration layers (e.g., generator-based
   engines).
@@ -41,20 +41,23 @@ import typing
 import landseg.core as core
 import landseg.session.engine.epoch.policy as policy
 
+
+# ----- typing aliases
 Mode: typing.TypeAlias = typing.Literal['train_eval', 'train_only', 'eval_only']
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class EpochRunner:
     '''
     Execute exactly one training epoch with optional validation.
 
-    This class encapsulates all batch-level execution for a single epoch,
+    This class encapsulates batch-level execution for a single epoch,
     including training and optionally evaluation, and returns aggregated
-    metrics. It does not manage epoch iteration, stopping criteria, phase
+    metrics. It does not manage epoch loops, stopping criteria, phase
     transitions, or logging.
 
     Instances of this class are expected to be orchestrated by higher-
-    level control logic (e.g. phase policies or a generator-based runner).
+    level control logic (e.g. phase policies or a generator runner).
     '''
 
     @typing.overload
@@ -93,10 +96,9 @@ class EpochRunner:
         phase transitions.
 
         Intended usage:
-            Instantiated and invoked by higher-level orchestration logic,
+            Instantiated and invoked by higher-level orchestration,
             such as training policies or engine controllers.
         '''
-
         # parse arguments
         self.mode: Mode = mode
         self.trainer: policy.MultiHeadTrainer | None = trainer
@@ -109,20 +111,18 @@ class EpochRunner:
             return 0
         return self.trainer.dataloaders.meta.patch_count['train']
 
-
     def run_epoch(self, epoch: int) -> core.SessionStepResults:
         '''
         Run a single training epoch and return aggregated metrics.
 
         Args:
-            epoch: Current epoch index, forwarded to the trainer for
-            bookkeeping or logging purposes.
+            epoch:
+                current epoch index, forwarded to trainer.
 
         Returns:
-            `policy.EpochResults` instance containing training and/or
-            validation results depending on the configured execution mode.
+            core.SessionStepResults:
+                training, validation, and inference results.
         '''
-
         # run by mode
         match self.mode:
             case 'train_eval':
@@ -151,7 +151,6 @@ class EpochRunner:
         frozen_heads: list[str] | None = None,
     ) -> None:
         '''Set head state for trainer or evaluator when present.'''
-
         if self.trainer:
             self.trainer.set_head_state(active_heads, frozen_heads)
         if self.evaluator:
@@ -159,7 +158,6 @@ class EpochRunner:
 
     def reset_head_state(self) -> None:
         '''Reset head state for trainer or evaluator when present.'''
-
         if self.trainer:
             self.trainer.reset_head_state()
         if self.evaluator:

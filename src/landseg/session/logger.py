@@ -32,6 +32,7 @@ import landseg.artifacts as artifacts
 import landseg.utils as utils
 
 
+# ----- public types
 class SessionSummary(typing.TypedDict):
     '''Typed session summary dictionary.'''
     run_id: str
@@ -43,6 +44,7 @@ class SessionSummary(typing.TypedDict):
     results: typing.Mapping[str, object]  # liberal dicts for now
 
 
+# ----- public classes
 class SessionLogger(utils.Logger):
     '''
     A specialized `Logger` wrapper that collects logging during sessions

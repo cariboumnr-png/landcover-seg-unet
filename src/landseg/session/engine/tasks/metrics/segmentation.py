@@ -163,7 +163,7 @@ class ConfusionMatrix:
 
 class HeadMetrics:
     '''
-    Typed wrapper around a mapping of heads to `ConfusionMatrix` objects.
+    Typed wrapper mapping head names to `ConfusionMatrix` objects.
 
     Provides key-based access to individual `ConfusionMatrix` instances
     and a typed container for passing head specs through the engine.

@@ -61,6 +61,8 @@ import landseg.core as core
 import landseg.session.engine.batch.objective as objective
 import landseg.session.engine.batch.state as state
 
+
+# ----- public types
 class BatchExecConfigShape(typing.Protocol):
     '''Interface for batch execution precision and logit adjustment.'''
     @property
@@ -68,6 +70,8 @@ class BatchExecConfigShape(typing.Protocol):
     @property
     def logit_adjust_alpha(self) -> float: ...
 
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class BatchExecContext:
     '''Static auxiliary context for batch execution.'''
@@ -77,6 +81,8 @@ class BatchExecContext:
     block_columns: int | None
     device: str
 
+
+# ----- public classes
 class BatchEngine:
     '''
     Pure batch execution engine for session workflows.
@@ -120,21 +126,15 @@ class BatchEngine:
 
         Args:
             model:
-                Multi-head model used for forward execution.
-            state:
-                Shared RuntimeState instance used to store batch outputs,
-                metric accumulators, and inference results.
-            parent_map:
-                Mapping used to resolve hierarchical relationships during
-                loss and metric computation as `{head: parent_head}`.
-            use_amp:
-                Whether automatic mixed precision should be enabled for
-                training and validation execution.
-            device:
-                Device identifier (e.g. 'cpu', 'cuda', 'cuda:0') used for
-                all tensor placement and execution.
+                multi-head model used for forward execution.
+            engine_state:
+                shared state container storing batch outputs, metric
+                accumulators, and inference results.
+            config:
+                configuration specifying loss and metric engines.
+            context:
+                execution context containing parent map and device.
         '''
-
         # parse arguments
         self.model = model
         self.state = engine_state
@@ -146,7 +146,7 @@ class BatchEngine:
         # config model logit adjustment
         self.model.set_logit_adjust_alpha(config.logit_adjust_alpha)
 
-    # ----- Public Method
+    # ----- public methods
     def run_train_batch(self) -> None:
         '''
         Execute one training batch.
@@ -169,12 +169,11 @@ class BatchEngine:
         consumes values written into RuntimeState after this method
         completes.
         '''
-
-        # ----- batch start
+        # batch start
         # get new batch and parse into x, y_dict and domain
         self._parse_batch()
 
-        # ----- batch forward
+        # batch forward
         # get x and domain (optional)
         x = self.state.batch_cxt.x
         domain = self.state.batch_cxt.domain
@@ -184,7 +183,7 @@ class BatchEngine:
         # assign predictions to batch output
         self.state.batch_out.preds = dict(predictions)
 
-        # ----- batch compute loss
+        # batch compute loss
         # compute objective with autocast context
         with self._autocast_ctx():
             self._compute_objective()
@@ -198,7 +197,7 @@ class BatchEngine:
 
         - Parsing inputs and targets into runtime tensors
         - Running the forward pass under inference/context-only mode
-        - Updating per-head metric accumulators (e.g. confusion matrices)
+        - Updating per-head metric accumulators (e.g. confusion matrix)
 
         This method does NOT:
         - Finalize or compute epoch-level metrics
@@ -206,14 +205,13 @@ class BatchEngine:
         - Control validation loops or stopping criteria
 
         Epoch-level metric finalization and reporting are owned by the
-        Trainer or Evaluator after all validation batches have completed.
+        Trainer or Evaluator after all validation batches complete.
         '''
-
-        # ----- batch start
+        # batch start
         # get new batch and parse into x, y_dict and domain
         self._parse_batch()
 
-        # ----- batch forward
+        # batch forward
         # get x and domain (optional)
         x = self.state.batch_cxt.x
         domain = self.state.batch_cxt.domain
@@ -222,7 +220,7 @@ class BatchEngine:
             outputs = self.model(x, **domain)
         self.state.batch_out.preds = dict(outputs)
 
-        # ----- batch end
+        # batch end
         # update per-head confusion matrix and aggregate MTL metrics
         self._update_metrics()
 
@@ -245,12 +243,11 @@ class BatchEngine:
         All inference side effects and result consumption are owned by
         higher-level controllers (Evaluator, Runner, or callbacks).
         '''
-
-        # ----- batch start
+        # batch start
         # parse the batch (x, domain), y may be empty [B, 0]
         self._parse_batch()
 
-        # ----- batch forward
+        # batch forward
         # get x and (optional) domain
         x = self.state.batch_cxt.x
         domain = self.state.batch_cxt.domain
@@ -260,14 +257,12 @@ class BatchEngine:
         # store raw predictions to batch output
         self.state.batch_out.preds = dict(outputs)
 
-        # ----- batch end
+        # batch end
         # update per-head confusion matrix and aggregate MTL metrics
         self._update_metrics()
         # aggregate to epoch storage (CPU detach)
         self._aggregate_batch_predictions()
 
-    # ----- private method
-    # ----- batch extraction
     def _parse_batch(self) -> None:
         '''
         Extract input, targets, and domain tensors from current batch.
@@ -281,7 +276,6 @@ class BatchEngine:
 
         Populates `self.state.batch_cxt.x`, `.y_dict`, and `.domain`.
         '''
-
         # get device
         device = self.device
         # make sure the batch is properly populated and parse
@@ -296,15 +290,16 @@ class BatchEngine:
         # whether label is present (not a placeholder)
         has_label = y.numel() > 0
         if has_label:
-            assert isinstance(y, torch.Tensor) and y.ndim == 4 # shape [B, S, H, W]
-            # x and y should have the same batch size and h*w, slice might differ
+            # shape [B, S, H, W]
+            assert isinstance(y, torch.Tensor) and y.ndim == 4
+            # x and y have same batch size and h*w, slice might differ
             assert x.shape[0] == y.shape[0] and x.shape[-2:] == y.shape[-2:]
             y = y.to(device)
 
         # domain can be an empty dict or a dict[str, torch.Tensore]
         _domain = {}
         if domain:
-            # each domain can be a tensor with the same batch size or None
+            # each domain is a tensor with same batch size or None
             for k, v in domain.items():
                 if isinstance(v, torch.Tensor):
                     assert v.shape[0] == x.shape[0]
@@ -320,7 +315,7 @@ class BatchEngine:
             'vec_domain': _domain.get('vec')
         }
 
-        # heads: fall back to all available heads if activce heads not provided
+        # heads: fall back to all heads if active heads omitted
         if self.state.heads.active_heads is None:
             self.state.heads.active_heads = self.state.heads.all_heads
         # aliases
@@ -334,9 +329,12 @@ class BatchEngine:
         if m:
             raise KeyError(f'Active heads not found in all_heads: {m}')
 
-        # extract y slices for currently active heads (empty for inference)
-        # NOTE: assumes y is [B, S, H, W] and head index maps to axis=1
-        y_dict = {h: y[:, hmap[h], ...] for h in active_heads} if has_label else {}
+        # extract y slices for active heads (empty for inference)
+        # note: assumes y is [B, S, H, W] and head index maps to axis=1
+        y_dict = (
+            {h: y[:, hmap[h], ...] for h in active_heads}
+            if has_label else {}
+        )
 
         # assign to context
         self.state.batch_cxt.x = x
@@ -378,7 +376,6 @@ class BatchEngine:
         associated with these loss values are handled externally by the
         Trainer.
         '''
-
         # sanity
         assert self.state.batch_cxt.y_dict is not None
         assert self.state.heads.active_hspecs is not None
@@ -411,7 +408,6 @@ class BatchEngine:
         Final metric computation and reporting are owned by the Trainer
         or Evaluator at phase boundaries.
         '''
-
         # sanity
         # head metrics is set
         assert self.state.heads.active_hmetrics is not None
@@ -451,7 +447,6 @@ class BatchEngine:
         stores these tensors (offloaded to CPU) in the continuous
         inference state.
         '''
-
         # context
         ctx = self.context
         assert ctx.patch_per_blk and ctx.patch_per_dim and ctx.block_columns

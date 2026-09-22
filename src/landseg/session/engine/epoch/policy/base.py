@@ -28,7 +28,7 @@ Shared engine policy base class.
 
 This module defines an abstract policy layer shared by concrete session
 engines (e.g., trainer and evaluator). It provides common orchestration,
-state interpretation, and callback wiring while delegating all batch-level
+state interpretation, and callback wiring while delegating batch-level
 execution mechanics to a shared execution core.
 '''
 
@@ -53,6 +53,7 @@ class EngineRuntime:
     engine_tasks: tasks.EngineTasks
 
 
+# ----- public classes
 class EngineBase:
     '''
     Base class for session engines defining policy on top of execution.
@@ -108,7 +109,6 @@ class EngineBase:
             - The engine assumes all components are preconfigured and
               focuses purely on orchestration logic.
         '''
-
         # execution core
         self.runtime = engine_runtime
         # data loader
@@ -185,7 +185,6 @@ class EngineBase:
                 Mapping of head name to class indices to exclude from
                 loss computation and validation metrics.
         '''
-
         # if no active heads provided, make all heads active
         if active_heads is None:
             active_heads = self.state.heads.all_heads
@@ -212,8 +211,9 @@ class EngineBase:
         }
         # if more than one head, assign MTL related modules
         if len(active_heads) > 1:
-            heads.multihead_metrics = self.runtime.engine_tasks.multihead_metrics
-            heads.multihead_regularization = self.runtime.engine_tasks.multihead_regularization
+            _tasks = self.runtime.engine_tasks
+            heads.multihead_metrics = _tasks.multihead_metrics
+            heads.multihead_regularization = _tasks.multihead_regularization
         # avoid stale modules
         else:
             heads.multihead_metrics = None
@@ -230,7 +230,6 @@ class EngineBase:
         This restores the model and runtime state to an unconfigured
         head state (no active or frozen heads, no per-head overrides).
         '''
-
         self.model.reset_heads()
         self.state.heads.active_heads = None
         self.state.heads.frozen_heads = None

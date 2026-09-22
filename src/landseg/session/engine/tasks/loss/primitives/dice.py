@@ -36,12 +36,13 @@ import torch.nn.functional
 # local imports
 import landseg.session.engine.tasks.loss.primitives.base as base
 
-# --------------------------------Public  Class--------------------------------
+
+# ----- public classes
 class DiceLoss(base.PrimitiveLoss):
     '''
     Multi-class soft Dice loss with ignore-index and optional masks.
 
-    Computes per-class Dice scores from softmax probabilities and returns
+    Computes per-class Dice scores from probabilities and returns
     1 - mean(Dice). Supports weighted pixels through the mask mechanism.
     '''
 
@@ -55,12 +56,10 @@ class DiceLoss(base.PrimitiveLoss):
         Initialize the Dice loss module.
 
         Args:
-            smooth: Small constant added to the numerator and denominator
-                to stabilize division, especially when masks or classes
-                have zero foreground.
-            ignore_index: Label to exclude completely from Dice compute.
-                Pixels with this label receive zero weight and do not
-                contribute to intersection or union.
+            smooth:
+                small constant added to numerator and denominator.
+            ignore_index:
+                label to exclude completely from Dice compute.
         '''
         super().__init__()
         self.smooth = smooth

@@ -35,6 +35,8 @@ import landseg.core as core
 import landseg.session.orchestration.events as events
 import landseg.session.orchestration.protocols as protocols
 
+
+# ----- public classes
 class EpochPolicy:
     '''
     Orchestrates the execution of a single training epoch.
@@ -67,19 +69,20 @@ class EpochPolicy:
             active_heads: Subset of model heads to activate during this
                 epoch. Defaults to None.
         '''
-
         self.epoch = epoch_index
         self.phase = phase_name
         self.runner = epoch_runner
         self.active_heads = active_heads
 
-    def run(self) -> typing.Generator[events.Event, None, core.SessionStepResults]:
+    def run(
+        self,
+    ) -> typing.Generator[events.Event, None, core.SessionStepResults]:
         '''
         Runs the epoch with event emission.
 
         This method emits structured events before and after delegating
-        execution to the underlying training engine. It is designed to be
-        used in event-driven pipelines via ``yield from``.
+        execution to the underlying training engine. It is designed to
+        be used in event-driven pipelines via ``yield from``.
 
         Yields:
             Lifecycle events:
@@ -87,7 +90,8 @@ class EpochPolicy:
                 - ``EpochEnd`` after execution, including metrics
 
         Returns:
-            Metrics produced by the training engine for this epoch.
+            core.SessionStepResults:
+                metrics produced by the training engine for this epoch.
         '''
         # epoch starts
         yield events.EpochStart(self.epoch, self.phase)
@@ -110,6 +114,7 @@ class EpochPolicy:
         events.
 
         Returns:
-            engine.EpochMetrics: Metrics produced by the training engine.
+            core.SessionStepResults:
+                metrics produced by the training engine.
         '''
         return self.runner.run_epoch(self.epoch)

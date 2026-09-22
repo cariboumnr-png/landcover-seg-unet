@@ -43,6 +43,7 @@ import landseg.session.engine.epoch.runner as runner_mod
 import landseg.session.engine.protocols as protocols
 
 
+# ----- public types
 class ScheduleConfigShape(typing.Protocol):
     '''Configuration interface for epoch execution frequencies.'''
     @property

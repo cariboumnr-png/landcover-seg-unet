@@ -22,9 +22,9 @@
 '''
 Ecological similarity regularization loss for species segmentation.
 
-Provides a domain-aware regularizer that penalizes prediction probabilities
-proportional to the ecological dissimilarity between target and predicted
-species classes using a precomputed cosine similarity matrix.
+Provides a domain-aware regularizer that penalizes predictions
+proportional to the ecological dissimilarity between target and
+predicted species classes using a precomputed similarity matrix.
 '''
 
 # third-party imports
@@ -35,13 +35,13 @@ import torch.nn.functional
 import landseg.session.engine.tasks.loss.primitives.base as base
 
 
-# --------------------------------Public  Class--------------------------------
+# ----- public classes
 class EcologicalSimilarityLoss(base.PrimitiveLoss):
     '''
     Ecological similarity regularization loss primitive.
 
-    Penalizes predicted class probabilities based on a precomputed cosine
-    dissimilarity matrix (1 - S), where S is the N x N species similarity
+    Penalizes predicted class probabilities based on a cosine
+    dissimilarity matrix (1 - S), where S is the species similarity
     matrix.
     '''
 
@@ -58,10 +58,12 @@ class EcologicalSimilarityLoss(base.PrimitiveLoss):
         Initialize an ecological similarity regularization module.
 
         Args:
-            similarity_matrix: Precomputed N x N species cosine similarity
-                torch tensor.
-            ignore_index: Target label value to ignore in loss computation.
-            reduction: Reduction method ('mean', 'sum', 'none').
+            similarity_matrix:
+                precomputed N x N species cosine similarity tensor.
+            ignore_index:
+                target label value to ignore in loss computation.
+            reduction:
+                reduction method ('mean', 'sum', 'none').
         '''
         super().__init__()
         self.ignore_index = ignore_index

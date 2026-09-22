@@ -128,7 +128,6 @@ def build_headspecs(
         - Class indices in ``exclude_cls`` are assumed to be 1-based.
         - Head weights default to 1.0 if unspecified for a head.
     '''
-
     # currently supported alpha compute functions
     alpha_fn_registry = {
         'effective_n': _count_to_effective_num,
@@ -189,17 +188,16 @@ def build_headspecs(
 # ----- private helpers
 def _count_to_inv_weights(count: list[int]) -> list[float]:
     '''Convert count to inversed weights normalized to sum of 1.'''
-
     inv = [1 / c if c != 0 else 0.0 for c in count]
     inv_sum = sum(inv)
     assert inv_sum != 0
     return [float(x / inv_sum) for x in inv]
 
+
 def _count_to_effective_num(counts: list[int], *, b: float) -> list[float]:
     '''Convert count to EN weights Cui et al. 2019'''
-
     counts_arr = numpy.array(counts)
-    # NOTE: float dtype prevents truncation of weights < 1 to zero
+    # note: float dtype prevents truncation of weights < 1 to zero
     weights = numpy.zeros_like(counts_arr, dtype=float)
     # assign weight only to non-zero classes
     n_zeros = counts_arr > 0

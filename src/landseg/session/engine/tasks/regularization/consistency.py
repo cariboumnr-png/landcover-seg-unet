@@ -131,7 +131,6 @@ class ConsistencyRegularizer(torch.nn.Module):
                 are duplicated, or if a constraint contains invalid
                 class IDs.
         '''
-
         super().__init__()
 
         # sanity checks - reduction methods
@@ -178,7 +177,6 @@ class ConsistencyRegularizer(torch.nn.Module):
             zero scalar is returned for 'mean'/'sum' and an empty tensor
             is returned for 'none'.
         '''
-
         # get reference tensor for device/dtype
         ref = next(iter(logits.values()), None)
         # exit if no valid tensors from logits (e.g. no active heads)
@@ -229,7 +227,6 @@ class ConsistencyRegularizer(torch.nn.Module):
         Returns:
             Dictionary mapping constraint names to scalar tensors.
         '''
-
         return {
             value.name: value.mean
             for value in self._constraint_values(logits, targets_1b)
@@ -241,7 +238,6 @@ class ConsistencyRegularizer(torch.nn.Module):
         targets_1b: dict[str, torch.Tensor],
     ) -> list[_ConstraintValue]:
         '''Compute valid per-constraint penalties once.'''
-
         values: list[_ConstraintValue] = []
         # filters out missing heads or zero-valid-pixel constraints
         for constraint in self.constraints:
@@ -265,7 +261,6 @@ def _constraint_value(
     ignore_index: int
 ) -> _ConstraintValue | None:
     '''Compute the mean invalid probability for one constraint.'''
-
     # retrieve tensors
     source_logits = logits.get(constraint.source_head)
     target_logits = logits.get(constraint.target_head)

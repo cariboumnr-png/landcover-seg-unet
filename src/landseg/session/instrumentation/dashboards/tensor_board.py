@@ -34,7 +34,8 @@ import landseg.session.instrumentation.dashboards.base as base
 if typing.TYPE_CHECKING:
     import torch
 
-#
+
+# ----- public classes
 class TensorBoardTracker(base.BaseTracker):
     '''Tensorboard tracker class.'''
 

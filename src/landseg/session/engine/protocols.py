@@ -34,6 +34,7 @@ if typing.TYPE_CHECKING:
     import torch
 
 
+# ----- public types
 @typing.runtime_checkable
 class DataLoadersLike(typing.Protocol):
     '''doc'''
@@ -46,6 +47,8 @@ class DataLoadersLike(typing.Protocol):
     @property
     def meta(self) -> _DataLoadersMeta: ...
 
+
+# ----- private types
 class _DataLoadersMeta(typing.Protocol):
     @property
     def batch_size(self) -> int: ...
@@ -56,10 +59,12 @@ class _DataLoadersMeta(typing.Protocol):
     @property
     def preview_context(self) -> '_PreviewContext | None': ...
 
+
 class _PatchCount(typing.TypedDict):
     train: int
     val: int
     test: int
+
 
 class _PreviewContext(typing.Protocol):
     patch_per_blk: int

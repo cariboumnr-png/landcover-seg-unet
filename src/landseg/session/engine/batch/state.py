@@ -46,17 +46,20 @@ import torch
 import landseg.session.alias as alias
 import landseg.session.engine.tasks as tasks
 
-# typing aliases
+
+# ----- typing aliases
 TensorGridPatches: typing.TypeAlias = dict[tuple[int, int], torch.Tensor]
 field = dataclasses.field
 
-# ----- progress tracking
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _Progress:
     epoch: int = 0
     global_step: int = 0
 
-# ----- heads management
+
+# heads management
 @dataclasses.dataclass
 class _Heads:
     '''State for multihead selection, freezing, and active specs.'''
@@ -69,7 +72,8 @@ class _Heads:
     multihead_metrics: tasks.MTLMetricsAggregator | None = None
     multihead_regularization: tasks.ConsistencyRegularizer | None = None
 
-# ----- batch context
+
+# batch context
 @dataclasses.dataclass
 class _BatchContex:
     '''Per-batch input/context (indices, tensors, and domain info).'''
@@ -93,7 +97,8 @@ class _BatchContex:
         self.y_dict.clear()
         self.domain.clear()
 
-# ----- batch output
+
+# batch output
 @dataclasses.dataclass
 class _BatchOutput:
     '''Per-batch outputs: predictions and losses.'''
@@ -111,13 +116,14 @@ class _BatchOutput:
         self.head_losses.clear()                    # clear the old batch
         self.regularization.clear()                 # clear the old batch
 
-# ----- inference ouputs
+
+# inference ouputs
 @dataclasses.dataclass
 class _InferOutput:
     '''Epoch-level aggregation for continuous inference domains.'''
     # inputs: maps (col, row) -> patch tensor [C, H, W]
     inputs: TensorGridPatches = field(default_factory=dict)
-    # targets and preds: maps head_name -> (col, row) -> patch tensor [H, W]
+    # targets and preds: head_name -> (col, row) -> patch [H, W]
     labels: dict[str, TensorGridPatches] = field(default_factory=dict)
     preds: dict[str, TensorGridPatches] = field(default_factory=dict)
     # errors
@@ -130,7 +136,8 @@ class _InferOutput:
         self.preds.clear()
         self.errors.clear()
 
-# ----- optimization runtime status
+
+# optimization runtime status
 @dataclasses.dataclass
 class _OptimRuntime:
     '''Runtime optimizer state (AMP scaler and LR snapshot).'''
@@ -142,7 +149,8 @@ class _OptimRuntime:
         '''Return the primary Learning Rate value.'''
         return self.lrs[0] if self.lrs else None
 
-# ----- Runtime state (composite)
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class EngineState:
     '''Composite training state with sensible defaults.'''
@@ -153,7 +161,8 @@ class EngineState:
     batch_out: _BatchOutput = field(default_factory=_BatchOutput)
     infer_out: _InferOutput = field(default_factory=_InferOutput)
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def initialize_state(
     *,
     all_heads: list[str],
@@ -189,7 +198,6 @@ def initialize_state(
         - Head-specific active/frozen configurations are assigned later\
           during phase orchestration.
     '''
-
     # create an instance with default values
     runtime_state = EngineState(
         optim=_OptimRuntime(

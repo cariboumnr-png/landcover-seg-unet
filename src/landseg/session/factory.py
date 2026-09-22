@@ -59,15 +59,14 @@ import landseg.session.engine as engine
 import landseg.session.instrumentation as instrumentation
 import landseg.session.orchestration as orchestration_mod
 
-# ---------------------------------Public Type---------------------------------
+
+# ----- public types
 class SessionConfigShape(typing.Protocol):
     '''
     Configuration interface for session construction.
-
     Defines the required configuration sections used to assemble all
     session components, including data loading, execution runtime,
     optimization, task definitions, and orchestration behavior.
-
     This configuration describes the static structure of a session and
     is independent of runtime invocation details.
     '''
@@ -84,7 +83,8 @@ class SessionConfigShape(typing.Protocol):
     @property
     def orchestration(self) -> orchestration_mod.OrchestrationConfigShape: ...
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class SessionBuildContext:
     '''Context for session construction.'''
@@ -92,7 +92,8 @@ class SessionBuildContext:
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     session_paths: artifacts.SessionPaths | None = None
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def build_overfit_session(
     *,
     dataspecs: core.DataSpecs,
@@ -102,7 +103,6 @@ def build_overfit_session(
     logger: session_logger.SessionLogger | None = None
 ) -> engine.EpochRunner:
     '''Build an epoch engine for overfit training with evaluation.'''
-
     # callback dispatcher
     dispatcher = instrumentation.build_dispatcher(
         logger=logger,
@@ -129,6 +129,7 @@ def build_overfit_session(
         eval_dataset=context.eval_dataset,
     )
 
+
 def build_evaluate_session(
     *,
     dataspecs: core.DataSpecs,
@@ -138,7 +139,6 @@ def build_evaluate_session(
     logger: session_logger.SessionLogger | None = None
 ) -> engine.EpochRunner:
     '''Build an epoch engine for evaluation-only execution.'''
-
     # callback dispatcher
     dispatcher = instrumentation.build_dispatcher(
         logger=logger,
@@ -164,6 +164,7 @@ def build_evaluate_session(
         mode='eval_only',
         eval_dataset=context.eval_dataset,
     )
+
 
 def build_continous_training_session(
     *,
@@ -210,6 +211,7 @@ def build_continous_training_session(
         context.session_paths,
         runner_type='continuous',
     )
+
 
 def build_curriculum_training_session(
     *,

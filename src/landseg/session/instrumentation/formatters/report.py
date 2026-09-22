@@ -35,14 +35,15 @@ Confusion matrix convention:
 - Rows correspond to ground-truth (true) classes.
 - Columns correspond to predicted classes.
 
-Designed for lightweight evaluation pipelines where both machine-friendly
+Designed for evaluation pipelines where both machine-friendly
 numeric outputs and human-readable reports are required.
 '''
 
 # third-party imports
 import torch
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def report_iou(
     confusion_matrix: torch.Tensor | list[list[int]],
     *,
@@ -83,7 +84,6 @@ def report_iou(
     Returns:
         Markdown-formatted evaluation report.
     '''
-
     if isinstance(confusion_matrix, list):
         cm = torch.tensor(confusion_matrix)
     else:
@@ -98,14 +98,15 @@ def report_iou(
     )
     return cm_table + '\n\n' + iou_table
 
+
+# ----- private helpers
 def _format_cm_table(
     cm: torch.Tensor,
     class_names: list[str],
 ) -> str:
     '''Format confusion matrix as a Markdown table.'''
-
     # rows -> ground-truth
-    # Columns -> predicted
+    # columns -> predicted
     header = '| True \\ Pred | ' + ' | '.join(class_names) + ' |'
     sep = '|' + '|'.join(['---'] * (len(class_names) + 1)) + '|'
     rows = [header, sep]
@@ -117,6 +118,7 @@ def _format_cm_table(
         rows.append('| ' + ' | '.join(row) + ' |')
     return '\n'.join(rows)
 
+
 def _format_iou_table(
     cm: torch.Tensor,
     class_names: list[str],
@@ -125,7 +127,6 @@ def _format_iou_table(
     class_idx_base: int = 1,
 ) -> str:
     '''Compute per-class IoU and format as a Markdown table.'''
-
     # true positives, false positives, false negatives
     tp = torch.diag(cm)
     fp = cm.sum(dim=0) - tp

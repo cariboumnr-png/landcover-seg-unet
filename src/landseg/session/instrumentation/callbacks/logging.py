@@ -27,6 +27,8 @@ import landseg.session.contracts as contracts
 import landseg.session.instrumentation.callbacks.base as base
 import landseg.utils as utils
 
+
+# ----- public classes
 class LoggingCallback(base.BaseCallback):
     '''Logging callback'''
 
@@ -65,7 +67,8 @@ class LoggingCallback(base.BaseCallback):
                 for r, v in results.regularization.items()
             ])
             text_list.append(f'LR: {results.current_lr:.4e}')
-            self.logger.log('DEBUG', f'batch_{bidx:04d} | ' + '|'.join(text_list))
+            msg = f'batch_{bidx:04d} | ' + '|'.join(text_list)
+            self.logger.log('DEBUG', msg)
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         metrics = results.raw_metrics

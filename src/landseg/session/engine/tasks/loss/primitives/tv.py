@@ -35,6 +35,8 @@ import torch.nn.functional
 # local imports
 import landseg.session.engine.tasks.loss.primitives.base as base
 
+
+# ----- public classes
 class TotalVariationLoss(base.PrimitiveLoss):
     '''
     Total Variation (TV) loss for spatial smoothness.

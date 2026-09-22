@@ -49,7 +49,6 @@ import landseg.session.engine.tasks as tasks
 class _EpochEngineConfigShape(typing.Protocol):
     '''
     Configuration interface for constructing the epoch engine.
-
     Defines the required configuration sections used to build data
     loaders, execution runtime, optimization, task components, and
     orchestration scheduling behavior.
@@ -90,7 +89,6 @@ def build_engine(
     and task components into an execution runtime, then constructs the
     epoch runner configured for the specified mode.
     '''
-
     # data loader spatial division compability
     p = dataloaders.meta.patch_size
     s = context.model.spatial_divisor

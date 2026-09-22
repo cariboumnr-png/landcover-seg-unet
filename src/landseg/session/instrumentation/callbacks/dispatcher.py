@@ -28,52 +28,53 @@ import landseg.core as core
 import landseg.session.contracts as contracts
 import landseg.session.instrumentation.callbacks.base as base
 
+
+# ----- public classes
 class CallbackDispatcher(contracts.SessionObserverLike):
     '''Broadcast engine events to all registered passive callbacks.'''
 
     def __init__(self, cbs: list[base.BaseCallback] | None = None):
         '''Initialize the dispatcher'''
-
         self.callbacks = cbs or []
 
     def register(self, callback: base.BaseCallback):
         '''Attach a new callback dynamically.'''
-
         if not callback in self.callbacks:
             self.callbacks.append(callback)
 
     def deregister(self, callback: base.BaseCallback):
         '''Remove a callback.'''
-
         if callback in self.callbacks:
             self.callbacks.remove(callback)
 
     # megaphone methods
-    # --- session phase begins
+    # session phase begins
     def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None:
         for cb in self.callbacks:
             cb.on_session_phase_begin(phase)
 
-    # --- session step begins
+    # session step begins
     def on_session_step_begin(self) -> None: ...
 
-    # --- epoch begins
+    # epoch begins
     def on_epoch_begin(self, epoch: int) -> None: ...
 
-    # --- policy begins
+    # policy begins
     def on_train_policy_begin(self) -> None: ...
 
     def on_val_policy_begin(self) -> None: ...
 
     def on_infer_policy_begin(self) -> None: ...
 
-    # --- batch begins
+    # batch begins
     def on_batch_begin(self, action: str, bidx: int) -> None:
         for cb in self.callbacks:
             cb.on_batch_begin(action, bidx)
 
-    # --- batch ends
-    def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
+    # batch ends
+    def on_train_batch_end(
+        self, bidx: int, results: core.TrainStepResults
+    ) -> None:
         for cb in self.callbacks:
             cb.on_train_batch_end(bidx, results)
 
@@ -81,7 +82,7 @@ class CallbackDispatcher(contracts.SessionObserverLike):
 
     def on_infer_batch_end(self) -> None: ...
 
-    # --- policy ends
+    # policy ends
     def on_train_policy_end(self, results: core.TrainStepResults) -> None:
         for cb in self.callbacks:
             cb.on_train_policy_end(results)
@@ -94,25 +95,25 @@ class CallbackDispatcher(contracts.SessionObserverLike):
         for cb in self.callbacks:
             cb.on_infer_policy_end(results)
 
-    # --- epoch ends
+    # epoch ends
     def on_epoch_end(self, epoch: int) -> None: ...
 
-    # --- session step ends
+    # session step ends
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         for cb in self.callbacks:
             cb.on_session_step_end(results)
 
-    # --- session phase ends
+    # session phase ends
     def on_session_phase_end(self, phase: str, reason: str) -> None:
         for cb in self.callbacks:
             cb.on_session_phase_end(phase, reason)
 
-    # --- session end
+    # session end
     def on_session_end(self) -> None:
         for cb in self.callbacks:
             cb.on_session_end()
 
-    # --- utilities
+    # utilities
     def on_checkpointing(self, fp: str) -> None:
         for cb in self.callbacks:
             cb.on_checkpointing(fp)

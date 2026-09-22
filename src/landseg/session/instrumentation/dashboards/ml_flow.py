@@ -34,7 +34,8 @@ import landseg.session.instrumentation.dashboards.base as base
 if typing.TYPE_CHECKING:
     import torch
 
-#
+
+# ----- public classes
 class MLFlowTracker(base.BaseTracker):
     '''Minimal MLflow tracker for experiment logging.'''
 
@@ -65,7 +66,7 @@ class MLFlowTracker(base.BaseTracker):
         pass
 
     def flush(self): ...
-        # MLflow writes immediately; not required
+        # `mlflow` writes immediately; not required
 
     def close(self):
         mlflow.end_run()

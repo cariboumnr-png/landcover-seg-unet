@@ -34,7 +34,8 @@ import torch
 # local imports
 import landseg.session.engine.tasks as tasks
 
-# ------------------------------Public  Dataclass------------------------------
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class TrainingObjectives:
     '''Training objectives container.'''
@@ -42,7 +43,8 @@ class TrainingObjectives:
     headlosses: dict[str, tasks.CompositeLoss]
     mtl_regularization: tasks.ConsistencyRegularizer | None # optional
 
-# ------------------------------private dataclass------------------------------
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _ObjectiveResults:
     '''Internal container for objective results.'''
@@ -50,7 +52,8 @@ class _ObjectiveResults:
     per_head_loss: dict[str, float]
     regularization: dict[str, float]
 
-# -------------------------------Public Function-------------------------------
+
+# ----- public functions
 def multihead_objective(
     *,
     multihead_preds: dict[str, torch.Tensor],
@@ -62,7 +65,7 @@ def multihead_objective(
     Compute weighted multi-head loss with optional hierarchical masking.
 
     For each head:
-    - Align predictions and targets (convert targets to 0-based indexing)
+    - Align predictions and targets (convert targets to 0-based index)
     - Optionally derive masks from parent targets for hierarchical heads
     - Apply the configured composite loss (may use features)
     - Weight and accumulate into a total loss
@@ -88,7 +91,6 @@ def multihead_objective(
         - Ignore index is preserved during base shift (e.g., 0 -> 1).
         - Per-head losses are not weighted in the returned dictionary.
     '''
-
     # prep outputs
     device = next(iter(multihead_preds.values())).device
     output = _ObjectiveResults(
@@ -134,12 +136,13 @@ def multihead_objective(
         # detach and store in dict for outputs
         output.regularization['mtl_regularization'] = float(reg.item())
 
-    # NaN check before output
+    # `NaN` check before output
     if not torch.isfinite(output.total):
         raise RuntimeError('Contains NaN/Inf loss.')
     return output
 
-# ------------------------------private  function------------------------------
+
+# ----- private helpers
 def _prep_loss_compute(
     *,
     head_target: torch.Tensor,
@@ -154,7 +157,6 @@ def _prep_loss_compute(
     parent-child gating, then converts targets to 0-based labels while
     preserving ignore_index.
     '''
-
     # get mask while raw and parent tensor is still 1-based
     masks = _get_masks(
         raw=head_target,
@@ -166,6 +168,7 @@ def _prep_loss_compute(
     target_0 = _shift_1_to_0(head_target, head_loss.ignore_index)
     # return
     return target_0, masks
+
 
 def _get_masks(
     *,
@@ -182,7 +185,6 @@ def _get_masks(
         - A hard-zero mask (0.0) for pixels outside the parent class
           when parent gating is active.
     '''
-
     # masks
     masks: dict[float, torch.Tensor] = {}
     # mask for exclusion classes
@@ -197,6 +199,7 @@ def _get_masks(
     # return with default weight
     return masks if masks else None
 
+
 def _shift_1_to_0(
     target_1: torch.Tensor,
     ignore_idx: int
@@ -204,7 +207,6 @@ def _shift_1_to_0(
     '''
     Convert labels from 1..K to 0..K-1 while preserving ignore_index.
     '''
-
     t = target_1.clone()
     m = t != ignore_idx
     t[m] = t[m] - 1
