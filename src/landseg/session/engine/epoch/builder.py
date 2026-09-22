@@ -33,13 +33,12 @@ Public APIs:
 '''
 
 # standard imports
+import dataclasses
 import typing
 # local imports
 import landseg.session.contracts as contracts
-import landseg.session.engine.epoch.policy.base as base
-import landseg.session.engine.epoch.policy.evaluator as evaluator_mod
-import landseg.session.engine.epoch.policy.trainer as trainer_mod
-import landseg.session.engine.epoch.runner as runner_mod
+import landseg.session.engine.epoch.policy as policy
+import landseg.session.engine.epoch.runner as runner
 import landseg.session.engine.protocols as protocols
 
 
@@ -54,17 +53,24 @@ class ScheduleConfigShape(typing.Protocol):
     def infer_every_n_epoch(self) -> int: ...
 
 
+# ----- public dataclasses
+@dataclasses.dataclass
+class EpochRunnerContext:
+    '''Externally required context for building the epoch runner.'''
+    runtime: policy.EngineRuntime
+    dataloaders: protocols.DataLoadersLike
+    dispatcher: contracts.SessionObserverLike
+
+
 # ----- public functions
 def build_epoch_runner(
-    engine_runtime: base.EngineRuntime,
-    dataloaders: protocols.DataLoadersLike,
-    dispatcher: contracts.SessionObserverLike,
-    schedule: ScheduleConfigShape | None = None,
+    context: EpochRunnerContext,
+    schedule: ScheduleConfigShape,
     *,
-    mode: runner_mod.Mode = 'train_eval',
-    device: str | None = None,
+    mode: runner.Mode = 'train_eval',
     eval_dataset: typing.Literal['val', 'test'] = 'val',
-) -> runner_mod.EpochRunner:
+    device: str | None = None,
+) -> runner.EpochRunner:
     '''
     Construct an epoch runner with training and/or evaluation policies.
 
@@ -96,46 +102,39 @@ def build_epoch_runner(
             Configured epoch runner ready for epoch-wise execution.
     '''
     target_device = (
-        device if device is not None else engine_runtime.engine.device
+        device if device is not None else context.runtime.engine.device
     )
-    update_every = 1
-    val_every = 1
-    infer_every = 1
-    if schedule is not None:
-        update_every = getattr(schedule, 'update_loss_every_n_batch', 1)
-        val_every = getattr(schedule, 'val_every_n_epoch', 1)
-        infer_every = getattr(schedule, 'infer_every_n_epoch', 1)
 
-    trainer: trainer_mod.MultiHeadTrainer | None = None
-    evaluator: evaluator_mod.MultiHeadEvaluator | None = None
+    trainer: policy.MultiHeadTrainer | None = None
+    evaluator: policy.MultiHeadEvaluator | None = None
 
     if mode in {'train_eval', 'train_only'}:
-        trainer = trainer_mod.MultiHeadTrainer(
-            engine_runtime=engine_runtime,
-            dataloaders=dataloaders,
-            dispatcher=dispatcher,
+        trainer = policy.MultiHeadTrainer(
+            engine_runtime=context.runtime,
+            dataloaders=context.dataloaders,
+            dispatcher=context.dispatcher,
             device=target_device,
-            update_every=update_every,
+            update_every=schedule.update_loss_every_n_batch,
         )
 
     if mode in {'train_eval', 'eval_only'}:
-        evaluator = evaluator_mod.MultiHeadEvaluator(
-            engine_runtime=engine_runtime,
-            dataloaders=dataloaders,
-            dispatcher=dispatcher,
+        evaluator = policy.MultiHeadEvaluator(
+            engine_runtime=context.runtime,
+            dataloaders=context.dataloaders,
+            dispatcher=context.dispatcher,
             device=target_device,
-            val_every=val_every,
-            infer_every=infer_every,
+            val_every=schedule.val_every_n_epoch,
+            infer_every=schedule.infer_every_n_epoch,
             dataset=eval_dataset,
         )
 
     match mode:
         case 'train_eval':
             assert trainer is not None and evaluator is not None
-            return runner_mod.EpochRunner(mode, trainer, evaluator)
+            return runner.EpochRunner(mode, trainer, evaluator)
         case 'train_only':
             assert trainer is not None
-            return runner_mod.EpochRunner(mode, trainer, None)
+            return runner.EpochRunner(mode, trainer, None)
         case 'eval_only':
             assert evaluator is not None
-            return runner_mod.EpochRunner(mode, None, evaluator)
+            return runner.EpochRunner(mode, None, evaluator)

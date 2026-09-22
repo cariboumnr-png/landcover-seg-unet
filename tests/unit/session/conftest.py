@@ -35,7 +35,7 @@ import landseg.session.data.builder as data_loader
 import landseg.session.engine.batch as batch_mod
 import landseg.session.engine.epoch as epoch_mod
 import landseg.session.engine.epoch.policy.evaluator as eval_mod
-import landseg.session.engine.epoch.policy.trainer as trainer_mod
+import landseg.session.engine.epoch.policy.trainer as trainer
 import landseg.session.engine.optim as optim_mod
 import landseg.session.engine.tasks as tasks_mod
 import landseg.session.instrumentation.callbacks as callbacks_mod
@@ -105,7 +105,7 @@ def mock_evaluator(mock_runtime, mock_dataloaders, mock_dispatcher):
 
 @pytest.fixture
 def mock_trainer(mock_runtime, mock_dataloaders, mock_dispatcher):
-    return trainer_mod.MultiHeadTrainer(
+    return trainer.MultiHeadTrainer(
         update_every=1,
         engine_runtime=mock_runtime,
         dataloaders=mock_dataloaders,

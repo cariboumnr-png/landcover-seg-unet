@@ -35,6 +35,7 @@ __all__ = [
     # classes
     'EngineRuntime',
     'EpochRunner',
+    'EpochRunnerContext',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
     # functions
@@ -47,6 +48,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import (
+        EpochRunnerContext,
         ScheduleConfigShape,
         build_epoch_runner,
     )
@@ -64,6 +66,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
+        'EpochRunnerContext',
         'ScheduleConfigShape',
         'build_epoch_runner',
     }:

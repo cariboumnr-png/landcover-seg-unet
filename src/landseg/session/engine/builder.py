@@ -61,21 +61,21 @@ class EngineConfigShape(typing.Protocol):
 # ----- public dataclasses
 @dataclasses.dataclass
 class EngineContext:
-    '''Runtime context required for building the epoch engine.'''
+    '''Externally required context for building the epoch engine.'''
     dataspecs: core.DataSpecs
     model: core.MultiheadModelLike
+    dataloaders: protocols.DataLoadersLike
     dispatcher: contracts.SessionObserverLike
-    device: str
 
 
 # ----- public functions
 def build_engine(
-    dataloaders: protocols.DataLoadersLike,
     context: EngineContext,
     config: EngineConfigShape,
     *,
+    device: str,
     mode: typing.Literal['train_eval', 'train_only', 'eval_only'],
-    eval_dataset: typing.Literal['val', 'test'] = 'val'
+    eval_dataset: typing.Literal['val', 'test'],
 ) -> epoch.EpochRunner:
     '''
     Construct the full execution engine for training and/or evaluation.
@@ -85,7 +85,7 @@ def build_engine(
     epoch runner configured for the specified mode.
     '''
     # data loader spatial division compability
-    p = dataloaders.meta.patch_size
+    p = context.dataloaders.meta.patch_size
     s = context.model.spatial_divisor
     if not p % s == 0:
         raise ValueError(
@@ -96,10 +96,10 @@ def build_engine(
     # build engine runtime
     batch_engine = batch.build_batch_engine(
         context.dataspecs,
-        dataloaders,
+        context.dataloaders,
         context.model,
         config.engine_exec,
-        device=context.device
+        device=device
     )
 
     optimization = optim.build_optimization(
@@ -118,12 +118,16 @@ def build_engine(
         engine_tasks=engine_tasks,
     )
 
+    epoch_runner_context = epoch.EpochRunnerContext(
+        runtime=engine_runtime,
+        dataloaders=context.dataloaders,
+        dispatcher=context.dispatcher
+    )
+
     return epoch.build_epoch_runner(
-        engine_runtime,
-        dataloaders,
-        context.dispatcher,
+        epoch_runner_context,
+        config.engine_schedule,
         mode=mode,
-        schedule=config.engine_schedule,
-        device=context.device,
         eval_dataset=eval_dataset,
+        device=device,
     )

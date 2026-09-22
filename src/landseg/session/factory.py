@@ -90,31 +90,32 @@ def build_overfit_session(
     logger: session_logger.SessionLogger | None = None
 ) -> engine_mod.EpochRunner:
     '''Build an epoch engine for overfit training with evaluation.'''
-    # callback dispatcher
     dispatcher = instrumentation.build_dispatcher(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
-    # dataloaders
+
     dataloaders = data.build_dataloaders(
         dataspecs,
         config.dataloader,
         logger=logger
     )
-    # context
+
     engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
+        dataloaders=dataloaders,
         dispatcher=dispatcher,
-        device=context.device,
     )
-    return engine_mod.build_engine(
-        dataloaders,
+    epoch_engine = engine_mod.build_engine(
         engine_context,
         config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
+        device=context.device,
     )
+
+    return epoch_engine
 
 
 def build_evaluate_session(
@@ -126,32 +127,32 @@ def build_evaluate_session(
     logger: session_logger.SessionLogger | None = None
 ) -> engine_mod.EpochRunner:
     '''Build an epoch engine for evaluation-only execution.'''
-    # callback dispatcher
     dispatcher = instrumentation.build_dispatcher(
         logger=logger,
         verbose=(getattr(logger, 'console_lvl', None) is not None)
     )
-    # dataloaders
+
     dataloaders = data.build_dataloaders(
         dataspecs,
         config.dataloader,
         logger=logger
     )
-    # context
+
     engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
+        dataloaders=dataloaders,
         dispatcher=dispatcher,
-        device=context.device,
     )
-    return engine_mod.build_engine(
-        dataloaders,
+    epoch_engine = engine_mod.build_engine(
         engine_context,
         config.engine,
         mode='eval_only',
         eval_dataset=context.eval_dataset,
+        device=context.device,
     )
 
+    return epoch_engine
 
 def build_continous_training_session(
     *,
@@ -180,15 +181,15 @@ def build_continous_training_session(
     engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
+        dataloaders=dataloaders,
         dispatcher=dispatcher,
-        device=context.device,
     )
     epoch_engine = engine_mod.build_engine(
-        dataloaders,
         engine_context,
         config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
+        device=context.device,
     )
 
     return orchestration_mod.build_runner(
@@ -227,15 +228,15 @@ def build_curriculum_training_session(
     engine_context = engine_mod.EngineContext(
         dataspecs=dataspecs,
         model=model,
+        dataloaders=dataloaders,
         dispatcher=dispatcher,
-        device=context.device,
     )
     epoch_engine = engine_mod.build_engine(
-        dataloaders,
         engine_context,
         config.engine,
         mode='train_eval',
         eval_dataset=context.eval_dataset,
+        device=context.device,
     )
 
     return orchestration_mod.build_runner(
