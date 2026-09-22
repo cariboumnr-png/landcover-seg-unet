@@ -72,7 +72,7 @@ import torch
 import torch.utils.data
 import torchvision.transforms.functional
 # local imports
-import landseg.session.alias as alias
+import landseg.session.contracts as contracts
 
 
 # ----- public dataclasses
@@ -132,7 +132,7 @@ class _MultiBlockData:
     '''Small container for multiblock data.'''
     img: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
     lbl: numpy.ndarray | _CacheDict = dataclasses.field(init=False)
-    dom: list[alias.TensorDict] | _CacheDict = dataclasses.field(init=False)
+    dom: list[contracts.TensorDict] | _CacheDict = dataclasses.field(init=False)
 
 
 # ----- public classes
@@ -237,7 +237,7 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.ctx.block_src) * self.ctx.patch_per_blk
 
-    def __getitem__(self, idx: int) -> alias.DatasetItem:
+    def __getitem__(self, idx: int) -> contracts.DatasetItem:
         if self._preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
             if (
@@ -389,7 +389,7 @@ class _BlockDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return self.config.patch_per_blk
 
-    def __getitem__(self, idx: int) -> alias.DatasetItem:
+    def __getitem__(self, idx: int) -> contracts.DatasetItem:
         if not idx in range(self.config.patch_per_blk):
             raise IndexError(f'Invalid patch idx: {idx}') # sanity check
 

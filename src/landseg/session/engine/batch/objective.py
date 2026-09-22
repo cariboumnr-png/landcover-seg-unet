@@ -32,6 +32,7 @@ import dataclasses
 # third-party imports
 import torch
 # local imports
+import landseg.session.contracts as contracts
 import landseg.session.engine.tasks as tasks
 
 
@@ -56,8 +57,8 @@ class _ObjectiveResults:
 # ----- public functions
 def multihead_objective(
     *,
-    multihead_preds: dict[str, torch.Tensor],
-    multihead_targets: dict[str, torch.Tensor],
+    multihead_preds: contracts.TensorDict,
+    multihead_targets: contracts.TensorDict,
     features: torch.Tensor,
     objectives: TrainingObjectives,
 ) -> _ObjectiveResults:

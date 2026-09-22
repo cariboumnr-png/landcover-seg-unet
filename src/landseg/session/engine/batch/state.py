@@ -43,12 +43,13 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.session.alias as alias
+import landseg.session.contracts as contracts
 import landseg.session.engine.tasks as tasks
 
 
 # ----- typing aliases
 TensorGridPatches: typing.TypeAlias = dict[tuple[int, int], torch.Tensor]
+HeadGridPatches: typing.TypeAlias = dict[str, TensorGridPatches]
 field = dataclasses.field
 
 
@@ -80,12 +81,12 @@ class _BatchContex:
     bidx: int = 0
     pidx_start: int = 0
     batch_size: int = 0 #
-    batch: alias.DatasetItem | None = None
+    batch: contracts.DatasetItem | None = None
     x: torch.Tensor = torch.empty(0)
-    y_dict: dict[str, torch.Tensor] = field(default_factory=dict)
+    y_dict: contracts.TensorDict = field(default_factory=dict)
     domain: dict[str, torch.Tensor | None] = field(default_factory=dict)
 
-    def refresh(self, bidx: int, batch: tuple) -> None:
+    def refresh(self, bidx: int, batch: contracts.DatasetItem) -> None:
         '''Reset batch context for a new iteration.'''
         # take input from new batch
         self.bidx = bidx
@@ -103,7 +104,7 @@ class _BatchContex:
 class _BatchOutput:
     '''Per-batch outputs: predictions and losses.'''
     bidx: int = 0
-    preds: dict[str, torch.Tensor] = field(default_factory=dict)
+    preds: contracts.TensorDict = field(default_factory=dict)
     total_objective: torch.Tensor = torch.empty(0)
     head_losses: dict[str, float] = field(default_factory=dict)
     regularization: dict[str, float] = field(default_factory=dict)
@@ -124,10 +125,10 @@ class _InferOutput:
     # inputs: maps (col, row) -> patch tensor [C, H, W]
     inputs: TensorGridPatches = field(default_factory=dict)
     # targets and preds: head_name -> (col, row) -> patch [H, W]
-    labels: dict[str, TensorGridPatches] = field(default_factory=dict)
-    preds: dict[str, TensorGridPatches] = field(default_factory=dict)
+    labels: HeadGridPatches = field(default_factory=dict)
+    preds: HeadGridPatches = field(default_factory=dict)
     # errors
-    errors: dict[str, TensorGridPatches] = field(default_factory=dict)
+    errors: HeadGridPatches = field(default_factory=dict)
 
     def clear(self):
         '''Clear at the start of a new inference phase.'''

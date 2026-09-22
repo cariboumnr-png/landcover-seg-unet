@@ -37,6 +37,7 @@ import typing
 # third-party imports
 import torch
 # local imports
+import landseg.session.contracts as contracts
 import landseg.session.engine.tasks.constraints as constraints
 
 
@@ -90,8 +91,8 @@ class MTLMetricsAggregator:
     @torch.no_grad()
     def update(
         self,
-        preds_1b: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor]
+        preds_1b: contracts.TensorDict,
+        targets_1b: contracts.TensorDict
     ) -> None:
         '''
         Update global metrics with predictions and targets for a batch.
@@ -131,8 +132,8 @@ class MTLMetricsAggregator:
 
     def _get_gem(
         self,
-        preds_1b: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor],
+        preds_1b: contracts.TensorDict,
+        targets_1b: contracts.TensorDict,
         common_heads: list[str]
     ):
         '''Check GEM logic.'''
@@ -149,8 +150,8 @@ class MTLMetricsAggregator:
 
     def _check_violations(
         self,
-        preds_1b: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor],
+        preds_1b: contracts.TensorDict,
+        targets_1b: contracts.TensorDict,
     ):
         '''Check violations.'''
         for c in self.constraints:

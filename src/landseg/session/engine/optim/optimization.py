@@ -37,8 +37,8 @@ import torch
 
 
 # ----- typing aliases
-Optimizer = torch.optim.Optimizer
-LRScheduler = torch.optim.lr_scheduler.LRScheduler
+Optimizer: typing.TypeAlias = torch.optim.Optimizer
+LRScheduler: typing.TypeAlias = torch.optim.lr_scheduler.LRScheduler
 
 
 # ----- public classes
@@ -56,8 +56,8 @@ class Optimization:
 
     def __init__(
         self,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
+        optimizer: Optimizer,
+        scheduler: LRScheduler | None = None,
         *,
         grad_clip_norm: float | None = None,
         sched_cls: str | None = None,

@@ -240,7 +240,7 @@ class EngineBase:
         self.state.heads.multihead_regularization = None
 
     # ----- batch context/output reset
-    def _batch_reset(self, bidx: int, _batch: tuple) -> None:
+    def _batch_reset(self, bidx: int, _batch: contracts.DatasetItem) -> None:
         '''Refresh batch context and output from engine state.'''
         # refresh batch ctx
         self.state.batch_cxt.refresh(bidx, _batch)

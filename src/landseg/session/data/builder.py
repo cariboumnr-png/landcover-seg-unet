@@ -47,9 +47,9 @@ import torch
 import torch.utils.data
 # local imports
 import landseg.core as core
-import landseg.session.logger as session_logger
-import landseg.session.alias as alias
+import landseg.session.contracts as contracts
 import landseg.session.data.dataset as dataset
+import landseg.session.logger as session_logger
 
 
 # ----- public types
@@ -287,8 +287,8 @@ def _get_memeory_strategy(
 
 
 def _collate_multi_block(
-    batch: typing.Sequence[alias.DatasetItem]
-) -> alias.DatasetItem:
+    batch: typing.Sequence[contracts.DatasetItem]
+) -> contracts.DatasetItem:
     '''
     Customized collate function to properly stack a batch.
 

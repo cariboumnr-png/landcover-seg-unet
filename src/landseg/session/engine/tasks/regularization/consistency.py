@@ -54,6 +54,7 @@ import torch
 import torch.nn
 import torch.nn.functional
 # local imports
+import landseg.session.contracts as contracts
 import landseg.session.engine.tasks.constraints as constraints
 
 
@@ -154,8 +155,8 @@ class ConsistencyRegularizer(torch.nn.Module):
 
     def forward(
         self,
-        logits: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor],
+        logits: contracts.TensorDict,
+        targets_1b: contracts.TensorDict,
     ) -> torch.Tensor:
         '''
         Compute the consistency regularization value.
@@ -209,9 +210,9 @@ class ConsistencyRegularizer(torch.nn.Module):
 
     def by_constraint(
         self,
-        logits: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor],
-    ) -> dict[str, torch.Tensor]:
+        logits: contracts.TensorDict,
+        targets_1b: contracts.TensorDict,
+    ) -> contracts.TensorDict:
         '''
         Compute unreduced mean penalties keyed by constraint name.
 
@@ -234,8 +235,8 @@ class ConsistencyRegularizer(torch.nn.Module):
 
     def _constraint_values(
         self,
-        logits: dict[str, torch.Tensor],
-        targets_1b: dict[str, torch.Tensor],
+        logits: contracts.TensorDict,
+        targets_1b: contracts.TensorDict,
     ) -> list[_ConstraintValue]:
         '''Compute valid per-constraint penalties once.'''
         values: list[_ConstraintValue] = []
@@ -255,8 +256,8 @@ class ConsistencyRegularizer(torch.nn.Module):
 # ----- private helpers
 def _constraint_value(
     constraint: constraints.CompiledMTLConstraint,
-    logits: dict[str, torch.Tensor],
-    targets_1b: dict[str, torch.Tensor],
+    logits: contracts.TensorDict,
+    targets_1b: contracts.TensorDict,
     *,
     ignore_index: int
 ) -> _ConstraintValue | None:

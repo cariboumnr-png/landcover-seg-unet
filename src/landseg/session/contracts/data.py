@@ -19,20 +19,26 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Session module type aliases.'''
+'''
+Data contracts for batch processing and multi-head tensors.
+Defines core type aliases for data pipeline exchange objects between
+data loaders, batch engines, and task regularizers.
+Public APIs:
+    - `DatasetItem`: sample or batch tuple (x, y, domain).
+    - `TensorDict`: mapping of string names to PyTorch tensors.
+'''
 
 # standard imports
+from __future__ import annotations
 import typing
 # third-party imports
 import torch
 
 
 # ----- typing aliases
-Tensor: typing.TypeAlias = torch.Tensor
+TensorDict: typing.TypeAlias = dict[str, torch.Tensor]
 
-TensorDict: typing.TypeAlias = dict[str, Tensor]
-
-DatasetItem: typing.TypeAlias = tuple[Tensor, Tensor, dict[str, Tensor]]
+DatasetItem: typing.TypeAlias = tuple[torch.Tensor, torch.Tensor, TensorDict]
 '''
 A tuple from one sample of the dataset: x (always present), y (can be
 a placeholder during inference, e.g., `torch.Tensor([1])`) and domain

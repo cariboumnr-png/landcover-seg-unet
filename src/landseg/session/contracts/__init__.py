@@ -33,13 +33,20 @@ import typing
 
 __all__ = [
     # typing
+    'DatasetItem',
     'PhaseLike',
     'SessionObserverLike',
+    'TensorDict',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .data import(
+        TensorDict,
+        DatasetItem
+    )
+
     from .observer import (
         SessionObserverLike,
     )
@@ -50,6 +57,10 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {'DatasetItem', 'TensorDict'}:
+        obj = importlib.import_module('.data', __package__)
+        return getattr(obj, name)
+
     if name in {'SessionObserverLike'}:
         obj = importlib.import_module('.observer', __package__)
         return getattr(obj, name)
