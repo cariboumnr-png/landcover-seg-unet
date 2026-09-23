@@ -79,7 +79,7 @@ def run_data_harmonization(
     # set up generator - each source to harmonize
     proc = _harmonize_sources(
         compiled,
-        artifacts_paths.effective_root,
+        artifacts_paths.effective_run_folder,
         context.grid,
         categorical_resampling=config.resampling_categorical,
         continuous_resampling=config.resampling_continuous,

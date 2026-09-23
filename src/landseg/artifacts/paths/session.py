@@ -28,78 +28,60 @@ Canonical filesystem paths for session experiment training and evaluation result
 # standard imports
 import dataclasses
 import os
+# local imports
+import landseg.artifacts.paths.base as base
 
 
 # ----- `SessionPaths` definition
 @dataclasses.dataclass
-class SessionPaths:
+class SessionPaths(base.PipelineArtifactsPaths):
     '''Root entry of a training run.'''
-
-    root: str
-    run_id: str = ''
-    run_folder: str = ''
 
     @property
     def checkpoints(self) -> str:
-        return os.path.join(self.run_folder, 'checkpoints')
+        return os.path.join(self.effective_run_folder, 'checkpoints')
+
+    @property
+    def logs(self) -> str:
+        return os.path.join(self.effective_run_folder, 'logs')
+
+    @property
+    def plots(self) -> str:
+        return os.path.join(self.effective_run_folder, 'plots')
+
+    @property
+    def previews(self) -> str:
+        return os.path.join(self.effective_run_folder, 'previews')
 
     @property
     def phase_status(self) -> str:
         return os.path.join(self.checkpoints, 'status.json')
 
     @property
-    def logs(self) -> str:
-        return os.path.join(self.run_folder, 'logs')
-
-    @property
-    def plots(self) -> str:
-        return os.path.join(self.run_folder, 'plots')
-
-    @property
-    def previews(self) -> str:
-        return os.path.join(self.run_folder, 'previews')
-
-    @property
     def config(self) -> str:
-        return os.path.join(self.run_folder, 'config.json')
+        return os.path.join(self.effective_run_folder, 'config.json')
 
     @property
     def evaluation(self) -> str:
-        return os.path.join(self.run_folder, 'evaluation.json')
+        return os.path.join(self.effective_run_folder, 'evaluation.json')
 
     @property
     def summary(self) -> str:
-        return os.path.join(self.run_folder, 'summary.json')
+        return os.path.join(self.effective_run_folder, 'summary.json')
 
     @property
     def step_results(self) -> str:
-        return os.path.join(self.run_folder, 'step_results.json')
-
-    def init(self, trace_to_last: bool = False):
-        '''Initialize a results folder.'''
-
-        # starting id number
-        i = 1
-        # find the latest run number
-        while True:
-            self.run_id = f'run_{i:04d}'
-            self.run_folder = os.path.join(self.root, self.run_id)
-            if not os.path.exists(self.run_folder):
-                break
-            i += 1
-        # if trace to the last folder
-        if trace_to_last:
-            self.run_id = f'run_{i - 1:04d}'
-            self.run_folder = os.path.join(self.root, self.run_id)
-
-        # create all subfolders if not already exist
-        os.makedirs(self.checkpoints, exist_ok=True)
-        os.makedirs(self.logs, exist_ok=True)
-        os.makedirs(self.plots, exist_ok=True)
-        os.makedirs(self.previews, exist_ok=True)
+        return os.path.join(self.effective_run_folder, 'step_results.json')
 
     def best_checkpoint(self, name: str) -> str:
         return os.path.join(self.checkpoints, f'{name}_best.pt')
 
     def last_checkpoint(self, name: str) -> str:
         return os.path.join(self.checkpoints, f'{name}_last.pt')
+
+    def _init_pipeline_folders(self):
+        os.makedirs(self.effective_run_folder, exist_ok=True)
+        os.makedirs(self.checkpoints, exist_ok=True)
+        os.makedirs(self.logs, exist_ok=True)
+        os.makedirs(self.plots, exist_ok=True)
+        os.makedirs(self.previews, exist_ok=True)

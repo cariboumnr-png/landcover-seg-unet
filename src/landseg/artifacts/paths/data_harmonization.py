@@ -28,109 +28,26 @@ Canonical filesystem paths for data harmonization (ETL) artifacts.
 # standard imports
 import dataclasses
 import os
+# local imports
+import landseg.artifacts.paths.base as base
 
 
-# ----- `HarmonizationPaths` definition
+# ----- public dataclasses
 @dataclasses.dataclass
-class HarmonizationPaths:
+class HarmonizationPaths(base.PipelineArtifactsPaths):
     '''Paths for data harmonization ETL artifacts.'''
-    root: str
-    run_id: str = ''
-    run_folder: str = ''
-    _current_run_folder: str = ''
-
-    @property
-    def effective_root(self) -> str:
-        return (
-            self._current_run_folder
-            if self._current_run_folder
-            else (
-                self.run_folder
-                if self.run_folder
-                else self.root
-            )
-        ) # overwrite sequence: _current_run_folder > run_folder > root
 
     @property
     def valid_mask_raster(self) -> str:
-        return os.path.join(self.effective_root, 'valid_pixel_mask.vrt')
+        return os.path.join(self.effective_run_folder, 'valid_pixel_mask.vrt')
 
     @property
     def report(self) -> str:
-        return os.path.join(self.effective_root, 'harmonize_report.json')
+        return os.path.join(self.effective_run_folder, 'harmonize_report.json')
 
     @property
     def config(self) -> str:
-        return os.path.join(self.effective_root, 'config.json')
+        return os.path.join(self.effective_run_folder, 'config.json')
 
-
-    def init(self, trace_to_last: bool = False):
-        '''Initialize an ETL run folder tree.'''
-        if not self.run_id:
-            i = 1
-            while True:
-                candidate_id = f'run_{i:04d}'
-                candidate_folder = os.path.join(self.root, candidate_id)
-                if not os.path.exists(candidate_folder):
-                    break
-                i += 1
-            if trace_to_last and i > 1:
-                i -= 1
-                self.run_id = f'run_{i:04d}'
-            else:
-                self.run_id = f'run_{i:04d}'
-            self.run_folder = os.path.join(self.root, self.run_id)
-            self._current_run_folder = self.run_folder
-
-        os.makedirs(self.effective_root, exist_ok=True)
-
-    def get_run_folder(self, run_id: int | str | None = None) -> str:
-        '''
-        Return the path to a run folder.
-
-        Args:
-            run_id:
-                Integer run ID (e.g. 1 -> run_0001), string run folder
-                name/ID (e.g. "run_0001" or "1"), or directory path. If
-                None, returns the latest existing run folder.
-
-        Raises:
-            FileNotFoundError:
-                If the requested run does not exist or no run folders
-                exist.
-            TypeError:
-                If run_id is of an invalid type.
-        '''
-        if run_id is not None:
-            if isinstance(run_id, int):
-                folder = os.path.join(self.root, f'run_{run_id:04d}')
-            elif isinstance(run_id, str):
-                if run_id.isdigit():
-                    folder = os.path.join(self.root, f'run_{int(run_id):04d}')
-                elif os.path.isdir(run_id):
-                    folder = run_id
-                elif os.path.isdir(os.path.join(self.root, run_id)):
-                    folder = os.path.join(self.root, run_id)
-                else:
-                    raise FileNotFoundError(
-                        f'Run folder does not exist: {run_id}'
-                    )
-            else:
-                raise TypeError(f'Invalid run_id type: {type(run_id)}')
-
-            if not os.path.isdir(folder):
-                raise FileNotFoundError(f'Run folder does not exist: {folder}')
-            self._current_run_folder = folder
-            return folder
-
-        runs = sorted(
-            d for d in os.listdir(self.root)
-            if d.startswith('run_')
-            and os.path.isdir(os.path.join(self.root, d))
-        )
-
-        if not runs:
-            raise FileNotFoundError('No run folders found.')
-
-        self._current_run_folder = os.path.join(self.root, runs[-1])
-        return self._current_run_folder
+    def _init_pipeline_folders(self):
+        os.makedirs(self.effective_run_folder, exist_ok=True)

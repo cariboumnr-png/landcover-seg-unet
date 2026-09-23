@@ -28,13 +28,14 @@ Canonical filesystem paths for data preparation artifacts.
 # standard imports
 import dataclasses
 import os
+# local imports
+import landseg.artifacts.paths.base as base
 
 
-# ----- `PreparationPaths` definition
+# ----- public dataclasses
 @dataclasses.dataclass
-class PreparationPaths:
+class PreparationPaths(base.PipelineArtifactsPaths):
     '''Paths for prepared datasets and split artifacts.'''
-    root: str
 
     @property
     def report(self) -> str:
@@ -81,3 +82,8 @@ class PreparationPaths:
     @property
     def schema(self) -> str:
         return os.path.join(self.root, 'schema.json')
+
+    def _init_pipeline_folders(self):
+        os.makedirs(self.train_blocks, exist_ok=True)
+        os.makedirs(self.val_blocks, exist_ok=True)
+        os.makedirs(self.test_blocks, exist_ok=True)
