@@ -35,7 +35,7 @@ import landseg.geopipe.prepare as geopipe_prepare
 def exec_prepare_data(config: configs.RootConfig):
     '''Run the preparation pipeline for an experiment.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.data_preparation
+    paths = artifact_paths.data_preparation.init_pipeline_folders()
 
     logger = geopipe_prepare.PreparationLogger(
         name='data-prep',

@@ -68,7 +68,7 @@ def evaluate(config: configs.RootConfig):
         enable_file_log=False
     )
     logger.init_summary(
-        run_id=session_paths.run_id,
+        run_id=session_paths._run_id,
         pipeline=config.pipeline.name,
     )
 

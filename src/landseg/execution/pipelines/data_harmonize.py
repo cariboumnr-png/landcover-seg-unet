@@ -33,8 +33,7 @@ import landseg.geopipe.harmonize as harmonize
 def exec_harmonize_data(config: configs.RootConfig) -> None:
     '''Execute the data-harmonize pipeline.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.data_harmonization
-    paths.init()
+    paths = artifact_paths.data_harmonization.init_pipeline_folders()
 
     logger = harmonize.HarmonizationLogger(
         name='data-harmonize',

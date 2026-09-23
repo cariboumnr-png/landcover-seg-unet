@@ -54,8 +54,7 @@ def train(config: configs.RootConfig) -> None:
     '''
     # init session results paths and create run io folder tree
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    session_paths = artifact_paths.session
-    session_paths.init(config.session.orchestration.resume_from_last)
+    session_paths = artifact_paths.session.init_pipeline_folders()
 
     # persist running config as JSON
     config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy

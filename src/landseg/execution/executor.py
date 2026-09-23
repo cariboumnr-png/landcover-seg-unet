@@ -145,27 +145,12 @@ def _validate_upstream_pipelines(config: configs.RootConfig) -> None:
         except artifacts.ArtifactError:
             return # no ingestion has been run yet, proceed
 
-    # check data-ingest status if running data-prepare
     elif pipeline == 'data-prepare':
 
-        # fetch data-ingest report
-        try:
-            report = ctrl_ingest.fetch()
-        except artifacts.ArtifactError as e:
-            raise artifacts.ArtifactError(
-                'Upstream pipeline "data-ingest" has not been executed yet. '
-                f'Missing or invalid ingestion report at canonical path: '
-                f'{paths_ingest.report}'
-            ) from e
-
-        # check data-ingest report status
-        if report.get('status') != 'SUCCESS':
-            status_val = report.get('status')
-            raise artifacts.ArtifactError(
-                'Upstream pipeline "data-ingest" status is '
-                f'"{status_val}", not "SUCCESS". '
-                'Please re-run "data-ingest" successfully first.'
-            )
+        # ingestion reports are now telemetry, e.g., ./run_0001/report.json ...
+        # data-prepare pipeline no longer depends on a particular ingestion run
+        # instead it requires valid catalog.json and schema.json
+        # which is validated during `build_preparation_context()`
 
         # check existing data-prepare report
         try:

@@ -38,14 +38,14 @@ ConfigController = artifacts.Controller[dict]
 def exec_ingest_data(config: configs.RootConfig) -> None:
     '''Run the ingestion pipeline.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.data_ingestion
+    paths = artifact_paths.data_ingestion.init_pipeline_folders()
 
     logger = ingest.IngestionLogger(
         name='data-ingest',
         log_file=paths.report,
         enable_file_log=False
     )
-    logger.init_summary(run_id='ingest')
+    logger.init_summary(run_id=paths.run_id)
 
     try:
         logger.log_sep()
