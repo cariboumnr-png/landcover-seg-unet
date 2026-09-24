@@ -28,6 +28,8 @@ provenance, and raster metadata for data harmonization runs.
 Public APIs:
     - `ProvenanceRecord`: TypedDict for raw raster file provenance.
     - `HarmonizationReportSchema`: TypedDict for pipeline run report.
+    - `HarmonizationRunRecord`: TypedDict for harmonization run entry.
+    - `HarmonizationRunManifest`: Type alias for runs ledger mapping.
 '''
 
 # standard imports
@@ -36,8 +38,21 @@ import typing
 
 
 # ----- public types
+class HarmonizationRunRecord(typing.TypedDict):
+    '''Single harmonization run entry stored in runs manifest.'''
+    run_uid: str
+    run_id: str
+    run_folder: str
+    status: typing.Literal['SUCCESS', 'FAILED']
+    timestamp: str
+
+
+HarmonizationRunManifest = dict[str, HarmonizationRunRecord]
+
+
 class HarmonizationReportSchema(typing.TypedDict):
     '''Root report mapping the entire data harmonization pipeline run.'''
+    run_uid: str
     run_id: str
     timestamp: str
     status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']

@@ -77,7 +77,7 @@ def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
         os.path.join(out_dpath, 'data_blocks', 'blocks')
     )
     assert os.path.exists(
-        os.path.join(out_dpath, 'ingest_report.json')
+        os.path.join(out_dpath, 'run_0001', 'ingest_report.json')
     )
 
 

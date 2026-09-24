@@ -35,6 +35,7 @@ from __future__ import annotations
 import datetime
 import os
 import typing
+import uuid
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
@@ -58,11 +59,14 @@ class HarmonizationLogger(utils.Logger):
         self,
         *,
         run_id: str = '',
+        run_uid: str | None = None,
         timestamp: str | None = None
     ) -> None:
         '''Initialize the structured ETL run report summary.'''
+        uid = run_uid or uuid.uuid4().hex[:16]
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
+            'run_uid': uid,
             'run_id': run_id,
             'timestamp': t,
             'status': 'SUCCESS',
@@ -73,6 +77,13 @@ class HarmonizationLogger(utils.Logger):
             'grid_id': '',
             'grid_fpath': '',
         }
+
+    @property
+    def run_uid(self) -> str:
+        '''Return current run unique identifier.'''
+        if self.summary:
+            return self.summary.get('run_uid', '')
+        return ''
 
     def add_source_provenance(self, name: str, source_path: str) -> None:
         '''Record source file size and modification timestamp provenance.'''
@@ -113,6 +124,35 @@ class HarmonizationLogger(utils.Logger):
         '''Update the overall run summary status.'''
         if self.summary is not None:
             self.summary['status'] = status
+
+    def update_runs_manifest(
+        self,
+        manifest_fpath: str,
+        run_folder: str,
+    ) -> None:
+        '''Record or update current run in the harmonization runs manifest.'''
+        if self.summary is None:
+            return
+        uid = self.summary.get('run_uid', '')
+        if not uid:
+            return
+        status_val = self.summary.get('status', 'FAILED')
+        record: contracts.HarmonizationRunRecord = {
+            'run_uid': uid,
+            'run_id': self.summary.get('run_id', ''),
+            'run_folder': os.path.abspath(run_folder),
+            'status': 'SUCCESS' if status_val == 'SUCCESS' else 'FAILED',
+            'timestamp': self.summary.get('timestamp', ''),
+        }
+        ctrl = artifacts.Controller[dict](manifest_fpath)
+        try:
+            manifest_data = ctrl.fetch()
+            if not isinstance(manifest_data, dict):
+                manifest_data = {}
+        except Exception:
+            manifest_data = {}
+        manifest_data[uid] = record
+        ctrl.persist(manifest_data)
 
     def on_close(self) -> None:
         '''Persist the collected summary JSON report directly to log_file.'''

@@ -120,8 +120,8 @@ class PipelineArtifactsPaths:
 
     def init_pipeline_folders(self) -> typing.Self:
         '''Initialize folder tree specified by the pipeline.'''
-        self._init_pipeline_folder()
+        self._init_pipeline_folders()
         return self
 
-    def _init_pipeline_folder(self) -> None: ...
+    def _init_pipeline_folders(self) -> None: ...
         # leave for the subclass to implement

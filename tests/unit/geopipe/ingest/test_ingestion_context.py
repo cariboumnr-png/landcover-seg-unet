@@ -84,7 +84,7 @@ def test_ingestion_context_properties(tmp_path):
 
 def test_build_ingestion_context_success(tmp_path):
     '''
-    Given: Persisted world grid and mock harmonization run report.
+    Given: World grid, runs manifest, and harmonization report.
     When: `build_ingestion_context` is executed.
     Then: Successfully resolve IngestionContext with loaded GridLayout.
     '''
@@ -96,6 +96,7 @@ def test_build_ingestion_context_success(tmp_path):
     os.makedirs(run_dpath, exist_ok=True)
 
     report_content = {
+        'run_uid': 'uid_test_0001',
         'run_id': 'run_0001',
         'timestamp': '2026-09-18T00:00:00Z',
         'status': 'SUCCESS',
@@ -116,6 +117,18 @@ def test_build_ingestion_context_success(tmp_path):
     ).persist(report_content)
 
     harm_paths = artifacts.HarmonizationPaths(harm_dpath)
+    harm_paths.init_pipeline_folders()
+    manifest_rec: contracts.HarmonizationRunRecord = {
+        'run_uid': 'uid_test_0001',
+        'run_id': 'run_0001',
+        'run_folder': run_dpath,
+        'status': 'SUCCESS',
+        'timestamp': '2026-09-18T00:00:00Z',
+    }
+    artifacts.Controller[dict](harm_paths.runs_manifest).persist({
+        'uid_test_0001': manifest_rec
+    })
+
     ctx = ingest_context.build_ingestion_context(
         harm_paths, harmonization_run_id=1
     )
@@ -126,3 +139,89 @@ def test_build_ingestion_context_success(tmp_path):
     assert ctx.labels == '/final/labels.vrt'
     assert ctx.domains == {'domain_landcover': '/final/domain_lc.tif'}
     assert ctx.has_data is True
+    assert ctx.run_uid == 'uid_test_0001'
+    assert ctx.harmonization_run_id == 'run_0001'
+
+
+def test_discover_runs_missing_manifest_raises(tmp_path):
+    '''
+    Given: Harmonization root without a runs manifest.
+    When: `discover_successful_harmonization_runs` is invoked.
+    Then: Raise ArtifactError.
+    '''
+    harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'nonexistent'))
+    with pytest.raises(
+        artifacts.ArtifactError,
+        match='manifest does not exist'
+    ):
+        ingest_context.discover_successful_harmonization_runs(harm_paths)
+
+
+def test_discover_runs_no_successful_runs_raises(tmp_path):
+    '''
+    Given: Harmonization runs manifest containing only failed runs.
+    When: `discover_successful_harmonization_runs` is invoked.
+    Then: Raise ArtifactError indicating no successful runs.
+    '''
+    harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'harm'))
+    harm_paths.init_pipeline_folders()
+    manifest_rec: contracts.HarmonizationRunRecord = {
+        'run_uid': 'uid_fail_0001',
+        'run_id': 'run_0001',
+        'run_folder': '/fake/run_0001',
+        'status': 'FAILED',
+        'timestamp': '2026-09-18T00:00:00Z',
+    }
+    artifacts.Controller[dict](harm_paths.runs_manifest).persist({
+        'uid_fail_0001': manifest_rec
+    })
+
+    with pytest.raises(
+        artifacts.ArtifactError,
+        match='No successful harmonization runs found'
+    ):
+        ingest_context.discover_successful_harmonization_runs(harm_paths)
+
+
+def test_resolve_harmonization_run_by_uid_and_latest():
+    '''
+    Given: Successful runs manifest mapping.
+    When: Resolving by target UID, index, run_id, and None.
+    Then: Return matching records accordingly.
+    '''
+    runs = {
+        'uid_1': {
+            'run_uid': 'uid_1',
+            'run_id': 'run_0001',
+            'run_folder': '/data/run_0001',
+            'status': 'SUCCESS',
+            'timestamp': '2026-09-18T00:00:00Z',
+        },
+        'uid_2': {
+            'run_uid': 'uid_2',
+            'run_id': 'run_0002',
+            'run_folder': '/data/run_0002',
+            'status': 'SUCCESS',
+            'timestamp': '2026-09-19T00:00:00Z',
+        },
+    }
+
+    # latest when target is None
+    latest = ingest_context.resolve_harmonization_run(runs, None)
+    assert latest['run_uid'] == 'uid_2'
+
+    # target by UID
+    by_uid = ingest_context.resolve_harmonization_run(runs, 'uid_1')
+    assert by_uid['run_id'] == 'run_0001'
+
+    # target by int index
+    by_idx = ingest_context.resolve_harmonization_run(runs, 2)
+    assert by_idx['run_uid'] == 'uid_2'
+
+    # target by run_id string
+    by_name = ingest_context.resolve_harmonization_run(runs, 'run_0001')
+    assert by_name['run_uid'] == 'uid_1'
+
+    # target not found raises
+    with pytest.raises(artifacts.ArtifactError, match='not found'):
+        ingest_context.resolve_harmonization_run(runs, 'unknown_uid')
