@@ -38,16 +38,6 @@ import typing
 
 
 # ----- public types
-class HarmonizationRunRecord(typing.TypedDict):
-    '''Single harmonization run entry stored in runs manifest.'''
-    run_uid: str
-    run_id: str
-    run_folder: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
-    timestamp: str
-    fingerprint: str
-
-
 class HarmonizationReportSchema(typing.TypedDict):
     '''Root report mapping the entire data harmonization pipeline run.'''
     run_uid: str
@@ -68,3 +58,13 @@ class ProvenanceRecord(typing.TypedDict):
     path: str
     size_bytes: int
     mtime: float
+
+
+class HarmonizationRunRecord(typing.TypedDict):
+    '''Single harmonization run entry stored in runs manifest.'''
+    run_uid: str
+    run_id: str
+    run_folder: str
+    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    timestamp: str
+    fingerprint: str

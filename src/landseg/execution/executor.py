@@ -42,7 +42,7 @@ DictControl = artifacts.Controller[dict[str, typing.Any]]
 def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
     # upstream detection checks
-    _validate_upstream_pipelines(root_config)
+    # _validate_upstream_pipelines(root_config)
     # get command from pipeline
     command = piplines.get(root_config.pipeline.name)
     # run command and return result

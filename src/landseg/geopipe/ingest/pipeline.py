@@ -34,7 +34,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
-import landseg.geopipe.contracts.harmonization as harm_contracts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest.context as ingest_context
 import landseg.geopipe.ingest.blocks as ingest_blocks
 import landseg.geopipe.ingest.domains as ingest_domains
@@ -48,15 +48,6 @@ class _IngestionPipelineConfig(typing.Protocol):
 
     @property
     def datablocks(self) -> _DataBlocksConfig: ...
-
-    @property
-    def rebuild(self) -> bool: ...
-
-    @property
-    def harmonization_run(self) -> int | str | None: ...
-
-    @property
-    def output_dpath(self) -> str: ...
 
 
 class _DomainsConfig(typing.Protocol):
@@ -84,26 +75,19 @@ class _DataBlocksConfig(typing.Protocol):
 # ----- public functions
 def run_data_ingestion(
     artifact_paths: paths.ArtifactPaths,
+    harmonization_record: contracts.HarmonizationRunRecord,
     config: _IngestionPipelineConfig,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: ingest_logger.IngestionLogger,
-    harmonization_batch: (
-        harm_contracts.HarmonizationRunRecord | None
-    ) = None
 ) -> None:
     '''Run the ingestion pipeline.'''
     assert logger.summary
 
     # build ingestion context from harmonization
-    target = (
-        harmonization_batch
-        if harmonization_batch is not None
-        else config.harmonization_run
-    )
     context = ingest_context.build_ingestion_context(
         artifact_paths.data_harmonization,
-        target
+        harmonization_record,
     )
     logger.set_harmonization_reference(
         run_uid=context.run_uid,

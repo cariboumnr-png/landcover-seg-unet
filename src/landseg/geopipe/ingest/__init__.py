@@ -48,9 +48,6 @@ __all__ = [
     # functions
     'run_data_ingestion',
     'build_ingestion_context',
-    'discover_successful_harmonization_runs',
-    'discover_ingested_harmonization_uids',
-    'resolve_harmonization_run',
     'resolve_pending_ingestion_batches',
 ]
 
@@ -65,9 +62,6 @@ if typing.TYPE_CHECKING:
     )
     from .context import (
         build_ingestion_context,
-        discover_successful_harmonization_runs,
-        discover_ingested_harmonization_uids,
-        resolve_harmonization_run,
         resolve_pending_ingestion_batches,
     )
 
@@ -83,9 +77,6 @@ def __getattr__(name: str):
 
     if name in {
         'build_ingestion_context',
-        'discover_successful_harmonization_runs',
-        'discover_ingested_harmonization_uids',
-        'resolve_harmonization_run',
         'resolve_pending_ingestion_batches',
     }:
         obj = importlib.import_module('.context', __package__)

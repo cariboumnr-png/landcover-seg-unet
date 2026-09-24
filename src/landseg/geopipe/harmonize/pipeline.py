@@ -33,7 +33,7 @@ import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.contracts.harmonization as contracts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.context as harmonize_context
 import landseg.geopipe.harmonize.logger as harmonize_logger

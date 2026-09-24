@@ -60,6 +60,7 @@ __all__ = [
     'DomainStats',
     'GridReportSchema',
     'HarmonizationReportSchema',
+    'HarmonizationRunRecord',
     'ImageBandStats',
     'IngestReportSchema',
     'ManifestStats',
@@ -84,6 +85,7 @@ if typing.TYPE_CHECKING:
     )
     from .harmonization import (
         HarmonizationReportSchema,
+        HarmonizationRunRecord,
         ProvenanceRecord,
     )
     from .ingestion import (
@@ -118,6 +120,7 @@ def __getattr__(name: str):
 
     if name in {
         'HarmonizationReportSchema',
+        'HarmonizationRunRecord',
         'ProvenanceRecord',
     }:
         obj = importlib.import_module('.harmonization', __package__)
