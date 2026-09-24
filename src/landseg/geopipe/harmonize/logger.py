@@ -63,7 +63,7 @@ class HarmonizationLogger(utils.Logger):
         timestamp: str | None = None
     ) -> None:
         '''Initialize the structured ETL run report summary.'''
-        uid = run_uid or uuid.uuid4().hex[:16]
+        uid = run_uid or f'harmonize_{uuid.uuid4().hex[:16]}'
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
             'run_uid': uid,

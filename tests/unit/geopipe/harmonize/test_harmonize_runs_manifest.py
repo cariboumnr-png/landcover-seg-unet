@@ -61,7 +61,8 @@ def test_harmonization_logger_update_runs_manifest(tmp_path):
     )
     logger.init_summary(run_id=harm_paths.run_id)
     uid = logger.run_uid
-    assert len(uid) == 16
+    assert uid.startswith('harmonize_')
+    assert len(uid) == 26
 
     logger.update_runs_manifest(
         harm_paths.runs_manifest,

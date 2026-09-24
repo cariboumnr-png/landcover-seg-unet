@@ -30,6 +30,7 @@ Canonical filesystem paths for data ingestion artifacts.
 import dataclasses
 import os
 # local imports
+import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
 
 
@@ -37,6 +38,10 @@ import landseg.artifacts.paths.base as base
 @dataclasses.dataclass
 class IngestionPaths(base.PipelineArtifactsPaths):
     '''Paths for ingested datasets and knowledge artifacts.'''
+
+    @property
+    def runs_manifest(self) -> str:
+        return os.path.join(self.root, 'ingestion_runs.json')
 
     @property
     def data_blocks(self):
@@ -55,11 +60,14 @@ class IngestionPaths(base.PipelineArtifactsPaths):
         return os.path.join(self.effective_run_folder, 'config.json')
 
     def _init_pipeline_folders(self):
+        os.makedirs(self.root, exist_ok=True)
         os.makedirs(self.effective_run_folder, exist_ok=True)
         os.makedirs(self.data_blocks.root, exist_ok=True)
         os.makedirs(self.data_blocks.blocks, exist_ok=True)
         os.makedirs(self.data_blocks.windows, exist_ok=True)
         os.makedirs(self.domains.root, exist_ok=True)
+        if not os.path.exists(self.runs_manifest):
+            controller.Controller[dict](self.runs_manifest).persist({})
 
 
 # ----- private dataclasses

@@ -74,5 +74,9 @@ def exec_ingest_data(config: configs.RootConfig) -> None:
         raise e
 
     finally:
+        logger.update_runs_manifest(
+            paths.runs_manifest,
+            paths.effective_run_folder
+        )
         logger.log_sep()
         logger.close()

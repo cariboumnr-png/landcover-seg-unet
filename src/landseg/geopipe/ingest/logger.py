@@ -33,7 +33,9 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import datetime
+import os
 import typing
+import uuid
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
@@ -57,17 +59,42 @@ class IngestionLogger(utils.Logger):
         self,
         *,
         run_id: str = '',
+        run_uid: str | None = None,
+        harmonization_run_uid: str = '',
+        harmonization_run_id: str = '',
         timestamp: str | None = None
     ) -> None:
         '''Initialize the structured run report summary dictionary.'''
+        uid = run_uid or f'ingest_{uuid.uuid4().hex[:16]}'
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
+            'run_uid': uid,
             'run_id': run_id,
+            'harmonization_run_uid': harmonization_run_uid,
+            'harmonization_run_id': harmonization_run_id,
             'timestamp': t,
             'status': 'SUCCESS',
             'domain_maps': [],
-            'data_blocks': None
+            'data_blocks': None,
         }
+
+    @property
+    def run_uid(self) -> str:
+        '''Return current run unique identifier.'''
+        if self.summary:
+            return self.summary.get('run_uid', '')
+        return ''
+
+    def set_harmonization_reference(
+        self,
+        *,
+        run_uid: str,
+        run_id: str
+    ) -> None:
+        '''Set upstream harmonization run reference in summary.'''
+        if self.summary is not None:
+            self.summary['harmonization_run_uid'] = run_uid
+            self.summary['harmonization_run_id'] = run_id
 
     def add_domain_report(self, report: contracts.DomainMapReport) -> None:
         '''Append a domain layer map report to summary.'''
@@ -89,6 +116,41 @@ class IngestionLogger(utils.Logger):
         '''Update the overall run summary status.'''
         if self.summary is not None:
             self.summary['status'] = status
+
+    def update_runs_manifest(
+        self,
+        manifest_fpath: str,
+        run_folder: str,
+    ) -> None:
+        '''Record or update current run in the ingestion runs manifest.'''
+        if self.summary is None:
+            return
+        uid = self.summary.get('run_uid', '')
+        if not uid:
+            return
+        status_val = self.summary.get('status', 'FAILED')
+        record: contracts.IngestionRunRecord = {
+            'run_uid': uid,
+            'run_id': self.summary.get('run_id', ''),
+            'harmonization_run_uid': self.summary.get(
+                'harmonization_run_uid', ''
+            ),
+            'harmonization_run_id': self.summary.get(
+                'harmonization_run_id', ''
+            ),
+            'status': 'SUCCESS' if status_val == 'SUCCESS' else 'FAILED',
+            'timestamp': self.summary.get('timestamp', ''),
+            'run_folder': os.path.abspath(run_folder),
+        }
+        ctrl = artifacts.Controller[dict](manifest_fpath)
+        try:
+            manifest_data = ctrl.fetch()
+            if not isinstance(manifest_data, dict):
+                manifest_data = {}
+        except Exception:
+            manifest_data = {}
+        manifest_data[uid] = record
+        ctrl.persist(manifest_data)
 
     def on_close(self) -> None:
         '''Persist the collected summary JSON report.'''

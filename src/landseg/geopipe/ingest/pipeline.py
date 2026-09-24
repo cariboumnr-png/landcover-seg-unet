@@ -96,6 +96,10 @@ def run_data_ingestion(
         artifact_paths.data_harmonization,
         config.harmonization_run
     )
+    logger.set_harmonization_reference(
+        run_uid=context.run_uid,
+        run_id=context.harmonization_run_id,
+    )
 
     # ----- canonical world grid reference
     world_grid = context.grid

@@ -33,6 +33,8 @@ Public APIs:
     - `ManifestStats`: TypedDict for catalog/schema update details.
     - `DataBlocksReport`: TypedDict for data block execution report.
     - `IngestReportSchema`: TypedDict for root data ingestion report.
+    - `IngestionRunRecord`: TypedDict for ingestion run manifest entry.
+    - `IngestionRunManifest`: Type alias for runs ledger mapping.
 '''
 
 # standard imports
@@ -41,9 +43,26 @@ import typing
 
 
 # ----- public types
+class IngestionRunRecord(typing.TypedDict):
+    '''Single ingestion run entry stored in runs manifest.'''
+    run_uid: str
+    run_id: str
+    harmonization_run_uid: str
+    harmonization_run_id: str
+    status: typing.Literal['SUCCESS', 'FAILED']
+    timestamp: str
+    run_folder: str
+
+
+IngestionRunManifest = dict[str, IngestionRunRecord]
+
+
 class IngestReportSchema(typing.TypedDict):
     '''Root report mapping the entire data ingestion pipeline run.'''
+    run_uid: str
     run_id: str
+    harmonization_run_uid: str
+    harmonization_run_id: str
     timestamp: str
     status: typing.Literal['SUCCESS', 'FAILED']
     domain_maps: list[DomainMapReport]
