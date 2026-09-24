@@ -43,11 +43,9 @@ class HarmonizationRunRecord(typing.TypedDict):
     run_uid: str
     run_id: str
     run_folder: str
-    status: typing.Literal['SUCCESS', 'FAILED']
+    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
     timestamp: str
-
-
-HarmonizationRunManifest = dict[str, HarmonizationRunRecord]
+    fingerprint: str
 
 
 class HarmonizationReportSchema(typing.TypedDict):
@@ -55,6 +53,7 @@ class HarmonizationReportSchema(typing.TypedDict):
     run_uid: str
     run_id: str
     timestamp: str
+    fingerprint: str
     status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
     provenance: dict[str, ProvenanceRecord]
     harmonized_sources: dict[str, str]

@@ -27,15 +27,22 @@ Data harmonization pipeline command implementation.
 
 # standard imports
 import dataclasses
+import hashlib
+import json
 import os
 import typing
 # local imports
-import landseg.artifacts.paths as paths
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts.harmonization as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.context as harmonize_context
 import landseg.geopipe.harmonize.logger as harmonize_logger
 import landseg.geopipe.harmonize.manifest as harmonize_manifest
 import landseg.geopipe.harmonize.rasters as harmonize_rasters
+
+
+# ----- typing alises
+ManifestCtrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
 
 
 # ----- private types
@@ -59,8 +66,8 @@ class _ProcessedRasters:
 
 # ----- public functions
 def run_data_harmonization(
-    world_grid_output_dpath: str,
-    artifacts_paths: paths.HarmonizationPaths,
+    world_grid_dpath: str,
+    artifacts_paths: artifacts.HarmonizationPaths,
     config: _HarmonizationPipelineConfig,
     *,
     logger: harmonize_logger.HarmonizationLogger
@@ -69,12 +76,24 @@ def run_data_harmonization(
 
     # load canonical world grid from upstream grid pipeline report
     logger.log('INFO', '[START] Loading world grid from grid report')
-    context = harmonize_context.build_harmonization_context(world_grid_output_dpath)
+    context = harmonize_context.build_harmonization_context(world_grid_dpath)
     logger.set_grid_reference(context.grid_id, context.grid_fpath)
     logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
 
     # compile dataset manifest JOSN
     compiled = harmonize_manifest.compile_dataset_manifest(config.dataset_manifest)
+
+    # check runs collision
+    fgprt, collided = _check_collision(compiled, artifacts_paths, context, config)
+    logger.set_fingerprint(fgprt)
+    if collided is not None:
+        logger.set_summary_status('SKIPPED')
+        logger.log(
+            'INFO',
+            f'[NOTE] Run with the same input and configs already done '
+            f'(run uid: {collided}), skipped'
+        )
+        return
 
     # set up generator - each source to harmonize
     proc = _harmonize_sources(
@@ -115,7 +134,38 @@ def run_data_harmonization(
         logger.set_valid_mask_raster(mask_path)
 
 
-# ----- private functions
+# ----- private
+def _check_collision(
+    manifest: dict[str, harmonize_manifest.ManifestEntry],
+    artifacts_paths: artifacts.HarmonizationPaths,
+    context: harmonize_context.HarmonizationContext,
+    config: _HarmonizationPipelineConfig,
+) -> tuple[str, str | None]:
+    '''Check if current run is going to collide with existing runs.'''
+    grid_id_str = context.grid.identity_string
+    identity = {
+        'inputs': manifest,
+        'grid': {
+            'grid_fpath': context.grid_fpath,
+            'grid_identity': hashlib.sha256(grid_id_str.encode()).hexdigest(),
+        },
+        'config': {
+            'categorical_resampling': config.resampling_categorical,
+            'continuous_resampling': config.resampling_continuous,
+        }
+    }
+    canon = json.dumps(identity)
+    current_run_fingerprint = hashlib.sha256(canon.encode()).hexdigest()
+
+    run_mainifest = ManifestCtrl(artifacts_paths.runs_manifest).fetch() or {}
+
+    for rid, run in run_mainifest.items():
+        if current_run_fingerprint == run['fingerprint']:
+            return current_run_fingerprint, rid
+
+    return current_run_fingerprint, None
+
+
 def _harmonize_sources(
     compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
     output_dir: str,

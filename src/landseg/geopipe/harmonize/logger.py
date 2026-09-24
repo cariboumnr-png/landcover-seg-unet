@@ -43,6 +43,11 @@ import landseg.geopipe.contracts.harmonization as contracts
 import landseg.utils as utils
 
 
+# ----- typing alises
+ManifestCtrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
+SchemaCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
+
+
 # ----- public classes
 class HarmonizationLogger(utils.Logger):
     '''
@@ -69,6 +74,7 @@ class HarmonizationLogger(utils.Logger):
             'run_uid': uid,
             'run_id': run_id,
             'timestamp': t,
+            'fingerprint': '',
             'status': 'SUCCESS',
             'provenance': {},
             'harmonized_sources': {},
@@ -117,6 +123,11 @@ class HarmonizationLogger(utils.Logger):
             self.summary['grid_id'] = grid_id
             self.summary['grid_fpath'] = os.path.abspath(grid_fpath)
 
+    def set_fingerprint(self, fingerprint: str) -> None:
+        '''Record fingerprint of the inputs and configs of this run.'''
+        if self.summary is not None:
+            self.summary['fingerprint'] = fingerprint
+
     def set_summary_status(
         self,
         status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
@@ -130,32 +141,30 @@ class HarmonizationLogger(utils.Logger):
         manifest_fpath: str,
         run_folder: str,
     ) -> None:
-        '''Record or update current run in the harmonization runs manifest.'''
+        '''Record or update the harmonization runs manifest.'''
         if self.summary is None:
             return
         uid = self.summary.get('run_uid', '')
         if not uid:
             return
-        status_val = self.summary.get('status', 'FAILED')
         record: contracts.HarmonizationRunRecord = {
             'run_uid': uid,
             'run_id': self.summary.get('run_id', ''),
             'run_folder': os.path.abspath(run_folder),
-            'status': 'SUCCESS' if status_val == 'SUCCESS' else 'FAILED',
+            'status': self.summary.get('status', 'FAILED'),
             'timestamp': self.summary.get('timestamp', ''),
+            'fingerprint': self.summary.get('fingerprint', '')
         }
-        ctrl = artifacts.Controller[dict](manifest_fpath)
+        ctrl = ManifestCtrl(manifest_fpath)
         try:
-            manifest_data = ctrl.fetch()
-            if not isinstance(manifest_data, dict):
-                manifest_data = {}
-        except Exception:
-            manifest_data = {}
+            manifest_data = ctrl.fetch() or {} # manifest.json can be absent
+        except artifacts.ArtifactError as e:
+            raise ValueError('Error reading runs manifest.json') from e
         manifest_data[uid] = record
         ctrl.persist(manifest_data)
 
     def on_close(self) -> None:
         '''Persist the collected summary JSON report directly to log_file.'''
         if self.summary is not None and self.log_file:
-            ctrl = artifacts.Controller(self.log_file)
+            ctrl = SchemaCtrl(self.log_file)
             ctrl.persist(self.summary)

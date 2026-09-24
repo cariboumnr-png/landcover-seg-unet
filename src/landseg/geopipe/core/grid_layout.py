@@ -232,6 +232,18 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
             self._spec.origin[1],
         )
 
+    @property
+    def identity_string(self) -> str:
+        '''Return a canonical identity string of the object'''
+        return (
+            f'{self.crs}|'
+            f'{self.origin!r}|'
+            f'{self.pixel_size!r}|'
+            f'{self.tile_size!r}|'
+            f'{self.tile_overlap!r}|'
+            f'{self.extent!r}'
+        )
+
     # ----- alternative constructor
     @classmethod
     def from_payload(cls, payload: GridPayload) -> GridLayout:
