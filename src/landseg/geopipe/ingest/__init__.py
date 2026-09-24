@@ -29,7 +29,12 @@ resolution.
 
 Public APIs:
     - `IngestionLogger`: Structured logger for ingestion stages.
-    - `run_data_ingestion`: pipeline runner.
+    - `run_data_ingestion`: Pipeline runner.
+    - `build_ingestion_context`: Load ingestion context from report.
+    - `discover_successful_harmonization_runs`: Load successful runs.
+    - `discover_ingested_harmonization_uids`: Ingested harm UIDs.
+    - `resolve_harmonization_run`: Resolve target run record.
+    - `resolve_pending_ingestion_batches`: Determine batches to ingest.
 '''
 
 # standard imports
@@ -42,6 +47,11 @@ __all__ = [
     'IngestionLogger',
     # functions
     'run_data_ingestion',
+    'build_ingestion_context',
+    'discover_successful_harmonization_runs',
+    'discover_ingested_harmonization_uids',
+    'resolve_harmonization_run',
+    'resolve_pending_ingestion_batches',
 ]
 
 
@@ -53,6 +63,13 @@ if typing.TYPE_CHECKING:
     from .pipeline import (
         run_data_ingestion,
     )
+    from .context import (
+        build_ingestion_context,
+        discover_successful_harmonization_runs,
+        discover_ingested_harmonization_uids,
+        resolve_harmonization_run,
+        resolve_pending_ingestion_batches,
+    )
 
 
 def __getattr__(name: str):
@@ -62,6 +79,16 @@ def __getattr__(name: str):
 
     if name in {'run_data_ingestion'}:
         obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'build_ingestion_context',
+        'discover_successful_harmonization_runs',
+        'discover_ingested_harmonization_uids',
+        'resolve_harmonization_run',
+        'resolve_pending_ingestion_batches',
+    }:
+        obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

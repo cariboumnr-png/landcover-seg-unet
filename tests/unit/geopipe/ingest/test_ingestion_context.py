@@ -225,3 +225,134 @@ def test_resolve_harmonization_run_by_uid_and_latest():
     # target not found raises
     with pytest.raises(artifacts.ArtifactError, match='not found'):
         ingest_context.resolve_harmonization_run(runs, 'unknown_uid')
+
+
+def test_discover_ingested_harmonization_uids(tmp_path):
+    '''
+    Given: Ingestion runs manifest with SUCCESS and FAILED entries.
+    When: `discover_ingested_harmonization_uids` is invoked.
+    Then: Return only UIDs corresponding to SUCCESS runs.
+    '''
+    ingest_paths = artifacts.IngestionPaths(str(tmp_path / 'ingest'))
+    # when manifest does not exist
+    assert ingest_context.discover_ingested_harmonization_uids(
+        ingest_paths
+    ) == set()
+
+    ingest_paths.init_pipeline_folders()
+    manifest_data = {
+        'ing_1': {
+            'run_uid': 'ing_1',
+            'run_id': 'run_0001',
+            'harmonization_run_uid': 'harmonize_uid_1',
+            'harmonization_run_id': 'run_0001',
+            'status': 'SUCCESS',
+            'timestamp': '2026-09-24T00:00:00Z',
+            'run_folder': '/path/1',
+        },
+        'ing_2': {
+            'run_uid': 'ing_2',
+            'run_id': 'run_0002',
+            'harmonization_run_uid': 'harmonize_uid_2',
+            'harmonization_run_id': 'run_0002',
+            'status': 'FAILED',
+            'timestamp': '2026-09-24T01:00:00Z',
+            'run_folder': '/path/2',
+        },
+    }
+    artifacts.Controller[dict](ingest_paths.runs_manifest).persist(
+        manifest_data
+    )
+
+    uids = ingest_context.discover_ingested_harmonization_uids(
+        ingest_paths
+    )
+    assert uids == {'harmonize_uid_1'}
+
+
+def test_resolve_pending_ingestion_batches(tmp_path):
+    '''
+    Given: Harmonization manifest with 2 runs, and 1 already ingested.
+    When: `resolve_pending_ingestion_batches` is called under modes.
+    Then: Correctly plan batches for pending, latest, and targeted.
+    '''
+    harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'harm'))
+    harm_paths.init_pipeline_folders()
+    ingest_paths = artifacts.IngestionPaths(str(tmp_path / 'ingest'))
+    ingest_paths.init_pipeline_folders()
+
+    harm_manifest = {
+        'harm_1': {
+            'run_uid': 'harm_1',
+            'run_id': 'run_0001',
+            'run_folder': str(tmp_path / 'harm' / 'run_0001'),
+            'status': 'SUCCESS',
+            'timestamp': '2026-09-24T00:00:00Z',
+        },
+        'harm_2': {
+            'run_uid': 'harm_2',
+            'run_id': 'run_0002',
+            'run_folder': str(tmp_path / 'harm' / 'run_0002'),
+            'status': 'SUCCESS',
+            'timestamp': '2026-09-24T01:00:00Z',
+        },
+    }
+    artifacts.Controller[dict](harm_paths.runs_manifest).persist(
+        harm_manifest
+    )
+
+    # harm_1 has already been ingested
+    ingest_manifest = {
+        'ing_1': {
+            'run_uid': 'ing_1',
+            'run_id': 'run_0001',
+            'harmonization_run_uid': 'harm_1',
+            'harmonization_run_id': 'run_0001',
+            'status': 'SUCCESS',
+            'timestamp': '2026-09-24T00:00:00Z',
+            'run_folder': str(tmp_path / 'ingest' / 'run_0001'),
+        }
+    }
+    artifacts.Controller[dict](ingest_paths.runs_manifest).persist(
+        ingest_manifest
+    )
+
+    # pending / auto mode (target=None) -> only harm_2
+    pending = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths, ingest_paths, target=None
+    )
+    assert len(pending) == 1
+    assert pending[0]['run_uid'] == 'harm_2'
+
+    # pending mode with rebuild=True -> both runs
+    rebuild_all = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths, ingest_paths, target=None, rebuild=True
+    )
+    assert len(rebuild_all) == 2
+
+    # targeted already ingested without rebuild -> empty list
+    already_done = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths, ingest_paths, target='run_0001', rebuild=False
+    )
+    assert already_done == []
+
+    # targeted already ingested with rebuild -> [harm_1]
+    rebuild_target = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths, ingest_paths, target='run_0001', rebuild=True
+    )
+    assert len(rebuild_target) == 1
+    assert rebuild_target[0]['run_uid'] == 'harm_1'
+
+    # targeted uningested -> [harm_2]
+    target_new = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths, ingest_paths, target='run_0002'
+    )
+    assert len(target_new) == 1
+    assert target_new[0]['run_uid'] == 'harm_2'
+
+    # latest mode -> [harm_2]
+    latest = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths, ingest_paths, target='latest'
+    )
+    assert len(latest) == 1
+    assert latest[0]['run_uid'] == 'harm_2'
