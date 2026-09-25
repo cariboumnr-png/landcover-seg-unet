@@ -28,6 +28,7 @@ import typing
 # third-party imports
 import omegaconf
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 
@@ -78,3 +79,44 @@ def test_data_harmonize_pipeline_success(tmp_path, dummy_data_paths):
         grid_data = json.load(f)
     assert isinstance(grid_data, list)
     assert len(grid_data) > 0
+
+
+def test_data_harmonize_pipeline_collision_skip(tmp_path, dummy_data_paths):
+    '''
+    Given: An already completed harmonization run.
+    When: `exec_harmonize_data` is executed again with identical inputs.
+    Then: Second run is detected as collision and recorded as SKIPPED.
+    '''
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+
+    grid_cfg = cfg_schema.data.world_grid
+    grid_cfg.mode = 'ref'
+    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
+    grid_cfg.params.ref_fpath = dummy_data_paths.extent
+    grid_cfg.params.crs_string = 'EPSG:3161'
+    grid_cfg.params.tile_size = (256, 256)
+    grid_cfg.params.tile_stride = (128, 128)
+
+    harm_cfg = cfg_schema.data.harmonization
+    harm_cfg.dataset_manifest = dummy_data_paths.manifest
+    harm_cfg.output_dpath = str(tmp_path / 'harmonized')
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    pipelines.exec_world_grid(config)
+    pipelines.exec_harmonize_data(config)
+    pipelines.exec_harmonize_data(config)
+
+    manifest_fp = os.path.join(
+        str(tmp_path / 'harmonized'), 'harmonization_runs.json'
+    )
+    ctrl = artifacts.Controller[dict](manifest_fp)
+    runs = ctrl.fetch()
+    assert len(runs) == 2
+    uids = list(runs.keys())
+    assert runs[uids[0]]['status'] == 'SUCCESS'
+    assert runs[uids[1]]['status'] == 'SKIPPED'
+

@@ -68,6 +68,7 @@ def test_ingestion_logger_update_runs_manifest(tmp_path):
         run_uid='harmonize_1234567890abcdef',
         run_id='run_0001'
     )
+    logger.set_fingerprint('sha256_ingest_mock')
 
     logger.update_runs_manifest(
         ingest_paths.runs_manifest,
@@ -82,6 +83,7 @@ def test_ingestion_logger_update_runs_manifest(tmp_path):
     assert rec['run_id'] == 'run_0001'
     assert rec['harmonization_run_uid'] == 'harmonize_1234567890abcdef'
     assert rec['harmonization_run_id'] == 'run_0001'
+    assert rec['fingerprint'] == 'sha256_ingest_mock'
     assert rec['status'] == 'SUCCESS'
     assert os.path.basename(rec['run_folder']) == 'run_0001'
 

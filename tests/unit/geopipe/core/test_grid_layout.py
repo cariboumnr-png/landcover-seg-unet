@@ -173,6 +173,53 @@ def test_gridlayout_serialization_roundtrip():
     assert restored[(0, 0)] == layout[(0, 0)]
 
 
+def test_gridlayout_identity_properties():
+    '''
+    Given: Two GridLayouts with identical or differing parameters.
+    When: Evaluating affine_identity and block_identity properties.
+    Then: Invariant to extent/stride, sensitive to origin/crs/pixel/tile.
+    '''
+    spec1 = grid_layout.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(256, 256),
+        tile_stride=(128, 128),
+        grid_extent=(3840.0, 3840.0),
+    )
+    spec2 = grid_layout.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(256, 256),
+        tile_stride=(64, 64),
+        grid_extent=(5120.0, 5120.0),
+    )
+    spec3 = grid_layout.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(512, 512),
+        tile_stride=(128, 128),
+        grid_extent=(3840.0, 3840.0),
+    )
+    layout1 = grid_layout.GridLayout(spec1)
+    layout2 = grid_layout.GridLayout(spec2)
+    layout3 = grid_layout.GridLayout(spec3)
+
+    # affine_identity is invariant to extent, stride, and tile_size
+    assert layout1.affine_identity == layout2.affine_identity
+    assert layout1.affine_identity == layout3.affine_identity
+    assert layout1.affine_identity == 'EPSG:32617|(0.0, 1000.0)|(10.0, -10.0)'
+
+    # block_identity includes tile_size, but is invariant to stride/extent
+    assert layout1.block_identity == layout2.block_identity
+    assert layout1.block_identity != layout3.block_identity
+    assert layout1.block_identity == (
+        'EPSG:32617|(0.0, 1000.0)|(10.0, -10.0)|(256, 256)'
+    )
+
+
 # ----- grid persistence and report helpers tests
 def test_gridlayout_from_fpath(tmp_path):
     '''

@@ -112,18 +112,29 @@ def test_data_ingest_pipeline_targeted_harmonization_run(
     # run world-grid first, then harmonization twice to create run_0001 and run_0002
     pipelines.exec_world_grid(config)
     pipelines.exec_harmonize_data(config)
-    pipelines.exec_harmonize_data(config)
+
+    # run batch 2 with distinct resampling config to produce run_0002
+    cfg_schema.data.harmonization.resampling_continuous = 'nearest'
+    config_batch2 = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+    pipelines.exec_harmonize_data(config_batch2)
 
     h_root = str(tmp_path / 'harmonized')
     assert os.path.exists(os.path.join(h_root, 'run_0001'))
     assert os.path.exists(os.path.join(h_root, 'run_0002'))
 
-    # ingest targeting run_0001
+    # ingest targeting run_0001 (reverting config for ingestion)
     pipelines.exec_ingest_data(config)
     out_dpath = config.data.ingestion.output_dpath
     assert os.path.exists(
         os.path.join(out_dpath, 'data_blocks', 'catalog.json')
     )
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0001', 'ingest_report.json')
+    )
+    assert not os.path.exists(os.path.join(out_dpath, 'run_0002'))
 
 
 def test_data_ingest_pipeline_with_spectral_and_topo(
@@ -196,7 +207,14 @@ def test_data_ingest_pipeline_multi_batch_catchup_and_idempotence(
 
     pipelines.exec_world_grid(config)
     pipelines.exec_harmonize_data(config)
-    pipelines.exec_harmonize_data(config)
+
+    # run batch 2 with distinct resampling config to avoid run collision
+    cfg_schema.data.harmonization.resampling_continuous = 'nearest'
+    config_batch2 = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+    pipelines.exec_harmonize_data(config_batch2)
 
     # first ingestion: should ingest both run_0001 and run_0002
     pipelines.exec_ingest_data(config)
@@ -213,3 +231,4 @@ def test_data_ingest_pipeline_multi_batch_catchup_and_idempotence(
     # second ingestion: should detect 0 pending runs and cleanly no-op
     pipelines.exec_ingest_data(config)
     assert not os.path.exists(os.path.join(out_dpath, 'run_0003'))
+

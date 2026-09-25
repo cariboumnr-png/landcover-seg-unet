@@ -69,6 +69,7 @@ def test_ingestion_logger_summary_lifecycle(tmp_path):
         'manifest': None,
     }
     logger.set_data_blocks_report(data_blocks_report)
+    logger.set_fingerprint('sha256_report_mock')
     logger.set_summary_status('SUCCESS')
     logger.close()
 
@@ -78,6 +79,7 @@ def test_ingestion_logger_summary_lifecycle(tmp_path):
 
     assert saved_report['run_id'] == 'run_ingest_001'
     assert saved_report['status'] == 'SUCCESS'
+    assert saved_report['fingerprint'] == 'sha256_report_mock'
     assert len(saved_report['domain_maps']) == 1
     assert saved_report['domain_maps'][0]['name'] == 'wetlands'
     assert saved_report['data_blocks'] is not None

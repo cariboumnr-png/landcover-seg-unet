@@ -130,7 +130,7 @@ def test_build_ingestion_context_success(tmp_path):
     })
 
     ctx = ingest_context.build_ingestion_context(
-        harm_paths, harmonization_run_id=1
+        harm_paths, manifest_rec
     )
 
     assert ctx.grid.gid == layout.gid
@@ -146,7 +146,7 @@ def test_build_ingestion_context_success(tmp_path):
 def test_discover_runs_missing_manifest_raises(tmp_path):
     '''
     Given: Harmonization root without a runs manifest.
-    When: `discover_successful_harmonization_runs` is invoked.
+    When: `_resolve_harmonization_runs` is invoked.
     Then: Raise ArtifactError.
     '''
     harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'nonexistent'))
@@ -154,13 +154,13 @@ def test_discover_runs_missing_manifest_raises(tmp_path):
         artifacts.ArtifactError,
         match='manifest does not exist'
     ):
-        ingest_context.discover_successful_harmonization_runs(harm_paths)
+        ingest_context._resolve_harmonization_runs(harm_paths.runs_manifest)
 
 
 def test_discover_runs_no_successful_runs_raises(tmp_path):
     '''
     Given: Harmonization runs manifest containing only failed runs.
-    When: `discover_successful_harmonization_runs` is invoked.
+    When: `_resolve_harmonization_runs` is invoked.
     Then: Raise ArtifactError indicating no successful runs.
     '''
     harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'harm'))
@@ -180,7 +180,7 @@ def test_discover_runs_no_successful_runs_raises(tmp_path):
         artifacts.ArtifactError,
         match='No successful harmonization runs found'
     ):
-        ingest_context.discover_successful_harmonization_runs(harm_paths)
+        ingest_context._resolve_harmonization_runs(harm_paths.runs_manifest)
 
 
 def test_resolve_harmonization_run_by_uid_and_latest():
@@ -207,36 +207,38 @@ def test_resolve_harmonization_run_by_uid_and_latest():
     }
 
     # latest when target is None
-    latest = ingest_context.resolve_harmonization_run(runs, None)
+    latest = ingest_context._resolve_target_harmonization_run(runs, None)
     assert latest['run_uid'] == 'uid_2'
 
     # target by UID
-    by_uid = ingest_context.resolve_harmonization_run(runs, 'uid_1')
+    by_uid = ingest_context._resolve_target_harmonization_run(runs, 'uid_1')
     assert by_uid['run_id'] == 'run_0001'
 
     # target by int index
-    by_idx = ingest_context.resolve_harmonization_run(runs, 2)
+    by_idx = ingest_context._resolve_target_harmonization_run(runs, 2)
     assert by_idx['run_uid'] == 'uid_2'
 
     # target by run_id string
-    by_name = ingest_context.resolve_harmonization_run(runs, 'run_0001')
+    by_name = ingest_context._resolve_target_harmonization_run(
+        runs, 'run_0001'
+    )
     assert by_name['run_uid'] == 'uid_1'
 
     # target not found raises
     with pytest.raises(artifacts.ArtifactError, match='not found'):
-        ingest_context.resolve_harmonization_run(runs, 'unknown_uid')
+        ingest_context._resolve_target_harmonization_run(runs, 'unknown_uid')
 
 
 def test_discover_ingested_harmonization_uids(tmp_path):
     '''
     Given: Ingestion runs manifest with SUCCESS and FAILED entries.
-    When: `discover_ingested_harmonization_uids` is invoked.
+    When: `_resolve_ingestion_runs` is invoked.
     Then: Return only UIDs corresponding to SUCCESS runs.
     '''
     ingest_paths = artifacts.IngestionPaths(str(tmp_path / 'ingest'))
     # when manifest does not exist
-    assert ingest_context.discover_ingested_harmonization_uids(
-        ingest_paths
+    assert ingest_context._resolve_ingestion_runs(
+        ingest_paths.runs_manifest
     ) == set()
 
     ingest_paths.init_pipeline_folders()
@@ -264,8 +266,8 @@ def test_discover_ingested_harmonization_uids(tmp_path):
         manifest_data
     )
 
-    uids = ingest_context.discover_ingested_harmonization_uids(
-        ingest_paths
+    uids = ingest_context._resolve_ingestion_runs(
+        ingest_paths.runs_manifest
     )
     assert uids == {'harmonize_uid_1'}
 
@@ -319,40 +321,102 @@ def test_resolve_pending_ingestion_batches(tmp_path):
 
     # pending / auto mode (target=None) -> only harm_2
     pending = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths, ingest_paths, target=None
+        harm_paths.runs_manifest, ingest_paths.runs_manifest, target=None
     )
     assert len(pending) == 1
     assert pending[0]['run_uid'] == 'harm_2'
 
     # pending mode with rebuild=True -> both runs
     rebuild_all = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths, ingest_paths, target=None, rebuild=True
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+        target=None,
+        rebuild=True,
     )
     assert len(rebuild_all) == 2
 
     # targeted already ingested without rebuild -> empty list
     already_done = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths, ingest_paths, target='run_0001', rebuild=False
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+        target='run_0001',
+        rebuild=False,
     )
     assert already_done == []
 
     # targeted already ingested with rebuild -> [harm_1]
     rebuild_target = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths, ingest_paths, target='run_0001', rebuild=True
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+        target='run_0001',
+        rebuild=True,
     )
     assert len(rebuild_target) == 1
     assert rebuild_target[0]['run_uid'] == 'harm_1'
 
     # targeted uningested -> [harm_2]
     target_new = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths, ingest_paths, target='run_0002'
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+        target='run_0002',
     )
     assert len(target_new) == 1
     assert target_new[0]['run_uid'] == 'harm_2'
 
     # latest mode -> [harm_2]
     latest = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths, ingest_paths, target='latest'
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+        target='latest',
     )
     assert len(latest) == 1
     assert latest[0]['run_uid'] == 'harm_2'
+
+
+def test_verify_pool_grid_compatibility(tmp_path):
+    '''
+    Given: GridLayout and schema file path.
+    When: Verifying pool grid compatibility.
+    Then: Pass on matching identity and raise ArtifactError on mismatch.
+    '''
+    grid_fp = str(tmp_path / 'grid.json')
+    layout = _create_dummy_grid(grid_fp)
+    schema_fp = str(tmp_path / 'schema.json')
+
+    # when schema artifact does not exist -> no error
+    ingest_context.verify_pool_grid_compatibility(schema_fp, layout)
+
+    # when schema artifact exists with matching block_identity -> no error
+    schema_data = {
+        'schema_id': geo_core.dataset_schema.SCHEMA_ID,
+        'dataset': {
+            'name': 'test_pool',
+            'last_updated': '2026-09-24T00:00:00Z',
+            'dataprep_commit': 'dev',
+            'mapped_grids': [layout.gid],
+            'block_identity': layout.block_identity,
+            'data_source': {'image_paths': [], 'label_paths': []},
+            'image_schemes': {},
+            'label_schemes': {},
+        },
+    }
+    artifacts.Controller[dict](schema_fp).persist(schema_data)
+    ingest_context.verify_pool_grid_compatibility(schema_fp, layout)
+
+    # when schema has mismatched block_identity -> raises ArtifactError
+    mismatched_spec = geo_core.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(32, 32),
+        tile_stride=(16, 16),
+        grid_extent=(160.0, 160.0),
+    )
+    mismatched_layout = geo_core.GridLayout(mismatched_spec)
+    with pytest.raises(
+        artifacts.ArtifactError,
+        match='Grid compatibility mismatch',
+    ):
+        ingest_context.verify_pool_grid_compatibility(
+            schema_fp, mismatched_layout
+        )

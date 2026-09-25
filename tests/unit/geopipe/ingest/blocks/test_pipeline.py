@@ -128,6 +128,13 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     assert 'block_name' in first_block
     assert 'file_path' in first_block
 
+    # read and inspect schema
+    with open(db_paths.schema, 'r', encoding='UTF-8') as f:
+        schema_data = json.load(f)
+    assert schema_data['dataset']['block_identity'] == (
+        world_grid.block_identity
+    )
+
     # read and inspect report
     assert logger.summary is not None
     assert 'data_blocks' in logger.summary
