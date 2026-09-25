@@ -30,21 +30,15 @@ the immutable raw block catalogue for later experiments.
 
 # standard imports
 from __future__ import annotations
-import hashlib
-import json
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
 import landseg.geopipe.contracts as contracts
-import landseg.geopipe.ingest.context as ingest_context
 import landseg.geopipe.ingest.blocks as ingest_blocks
+import landseg.geopipe.ingest.context as ingest_context
 import landseg.geopipe.ingest.domains as ingest_domains
 import landseg.geopipe.ingest.logger as ingest_logger
-
-
-# ----- typing aliases
-ManifestCtrl = artifacts.Controller[dict[str, contracts.IngestionRunRecord]]
 
 
 # ----- private types
@@ -191,7 +185,7 @@ def _check_collision(
         'harmonization_run_uid': harmonization_record['run_uid'],
         'grid': {
             'grid_fpath': context.grid_fpath,
-            'grid_identity': hashlib.sha256(grid_id_str.encode()).hexdigest(),
+            'grid_identity': artifacts.compute_fingerprint(grid_id_str),
         },
         'inputs': {
             'features': context.features,
@@ -212,16 +206,8 @@ def _check_collision(
             },
         },
     }
-    canon = json.dumps(identity, sort_keys=True)
-    current_run_fingerprint = hashlib.sha256(canon.encode()).hexdigest()
-
-    runs_manifest = ManifestCtrl(ingestion_paths.runs_manifest).fetch() or {}
-
-    for rid, run in runs_manifest.items():
-        if (
-            current_run_fingerprint == run.get('fingerprint') and
-            run.get('status') == 'SUCCESS'
-        ):
-            return current_run_fingerprint, rid
-
-    return current_run_fingerprint, None
+    fingerprint = artifacts.compute_fingerprint(identity)
+    collided_uid = artifacts.check_run_collision(
+        fingerprint, ingestion_paths.runs_manifest
+    )
+    return fingerprint, collided_uid

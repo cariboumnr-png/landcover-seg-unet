@@ -27,22 +27,15 @@ Data harmonization pipeline command implementation.
 
 # standard imports
 import dataclasses
-import hashlib
-import json
 import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.context as harmonize_context
 import landseg.geopipe.harmonize.logger as harmonize_logger
 import landseg.geopipe.harmonize.manifest as harmonize_manifest
 import landseg.geopipe.harmonize.rasters as harmonize_rasters
-
-
-# ----- typing aliases
-ManifestCtrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
 
 
 # ----- private types
@@ -147,26 +140,18 @@ def _check_collision(
         'inputs': compiled_dataset_manifest,
         'grid': {
             'grid_fpath': context.grid_fpath,
-            'grid_identity': hashlib.sha256(grid_id_str.encode()).hexdigest(),
+            'grid_identity': artifacts.compute_fingerprint(grid_id_str),
         },
         'config': {
             'categorical_resampling': config.resampling_categorical,
             'continuous_resampling': config.resampling_continuous,
         }
     }
-    canon = json.dumps(identity, sort_keys=True)
-    current_run_fingerprint = hashlib.sha256(canon.encode()).hexdigest()
-
-    run_manifest = ManifestCtrl(artifacts_paths.runs_manifest).fetch() or {}
-
-    for rid, run in run_manifest.items():
-        if (
-            current_run_fingerprint == run.get('fingerprint') and
-            run.get('status') == 'SUCCESS'
-        ):
-            return current_run_fingerprint, rid
-
-    return current_run_fingerprint, None
+    fingerprint = artifacts.compute_fingerprint(identity)
+    collided_uid = artifacts.check_run_collision(
+        fingerprint, artifacts_paths.runs_manifest
+    )
+    return fingerprint, collided_uid
 
 
 def _harmonize_sources(
