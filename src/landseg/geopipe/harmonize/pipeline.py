@@ -50,7 +50,7 @@ class _ProcessedRasters:
 
 # ----- public functions
 def run_data_harmonization(
-    world_grid_dpath: str,
+    world_grid_source: str,
     artifacts_paths: artifacts.HarmonizationPaths,
     config: contracts.HarmonizationPipelineConfig,
     *,
@@ -58,30 +58,30 @@ def run_data_harmonization(
 ) -> None:
     '''Run data harmonization pipeline.'''
 
-    # load canonical world grid from upstream grid pipeline report
-    logger.log('INFO', '[START] Loading world grid from grid report')
-    context = harmonize_context.build_harmonization_context(world_grid_dpath)
+    # build harmonization context
+    logger.log('INFO', '[START] Building data harmonization context')
+    context = harmonize_context.build_harmonization_context(
+        world_grid_source,
+        artifacts_paths.runs_manifest,
+        config
+    )
     logger.set_grid_reference(context.grid_id, context.grid_fpath)
-    logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
+    logger.set_identity(context.current_run_identity)
 
-    # compile dataset manifest JOSN
-    compiled = harmonize_manifest.compile_dataset_manifest(config.dataset_manifest)
-
-    # check runs collision
-    fgprt, collided = _check_collision(compiled, artifacts_paths, context, config)
-    logger.set_fingerprint(fgprt)
-    if collided is not None:
+    # early exit
+    if context.collided_run_uid is not None:
         logger.set_summary_status('SKIPPED')
         logger.log(
             'INFO',
-            f'[NOTE] Run with the same input and configs already done '
-            f'(run uid: {collided}), skipped'
+            f'[COMPLETE] Harmonization run with the same inputs and configs '
+            f'already done (run uid: {context.collided_run_uid}), skipped'
         )
         return
+    logger.log('INFO', '[COMPLETE] Data harmonization context built')
 
     # set up generator - each source to harmonize
     proc = _harmonize_sources(
-        compiled,
+        context.compiled_dataset_manifest,
         artifacts_paths.effective_run_folder,
         context.grid,
         categorical_resampling=config.resampling_categorical,
@@ -89,7 +89,7 @@ def run_data_harmonization(
     )
 
     # run generator
-    logger.log('INFO', f'[START] Harmonizing data onto grid: {context.grid_id}')
+    logger.log('INFO', f'[START] Harmonizing data onto grid: {context.grid.affine_identity}')
     processed: _ProcessedRasters
     while True:
         try:
@@ -119,32 +119,6 @@ def run_data_harmonization(
 
 
 # ----- private helpers
-def _check_collision(
-    compiled_dataset_manifest: dict[str, harmonize_manifest.ManifestEntry],
-    artifacts_paths: artifacts.HarmonizationPaths,
-    context: harmonize_context.HarmonizationContext,
-    config: contracts.HarmonizationPipelineConfig,
-) -> tuple[str, str | None]:
-    '''Check if current run is going to collide with existing runs.'''
-    grid_id_str = context.grid.affine_identity
-    identity = {
-        'inputs': compiled_dataset_manifest,
-        'grid': {
-            'grid_fpath': context.grid_fpath,
-            'grid_identity': artifacts.compute_fingerprint(grid_id_str),
-        },
-        'config': {
-            'categorical_resampling': config.resampling_categorical,
-            'continuous_resampling': config.resampling_continuous,
-        }
-    }
-    fingerprint = artifacts.compute_fingerprint(identity)
-    collided_uid = artifacts.check_run_collision(
-        fingerprint, artifacts_paths.runs_manifest
-    )
-    return fingerprint, collided_uid
-
-
 def _harmonize_sources(
     compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
     output_dir: str,

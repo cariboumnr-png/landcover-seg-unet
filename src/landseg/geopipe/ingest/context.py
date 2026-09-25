@@ -44,6 +44,7 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.utils as geo_utils
 
 
 # ----- typing aliases
@@ -67,6 +68,8 @@ class IngestionContext:
     valid_mask_raster: str
     run_uid: str = ''
     harmonization_run_id: str = ''
+    current_run_identity: str = ''
+    collided_run_uid: str | None = None
 
     @property
     def has_data(self) -> bool:
@@ -142,53 +145,12 @@ def resolve_pending_ingestion_batches(
         return []
     return [target_rec]
 
-
-def verify_pool_grid_compatibility(
-    schema_fpath: str,
-    grid: geo_core.GridLayout,
-) -> None:
-    '''
-    Verify incoming world grid compatibility with existing block pool.
-
-    Args:
-        schema_fpath:
-            File path to existing dataset schema artifact.
-        grid:
-            Incoming GridLayout instance to validate.
-
-    Raises:
-        artifacts.ArtifactError:
-            If existing pool schema belongs to an incompatible spatial
-            block identity or grid ID.
-    '''
-    if not os.path.exists(schema_fpath):
-        return
-
-    try:
-        schema_dict = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
-    except artifacts.ArtifactError as exc:
-        raise artifacts.ArtifactError(
-            f'Failed to read dataset schema at {schema_fpath}: {exc}'
-        ) from exc
-
-    if not isinstance(schema_dict, dict):
-        return
-
-    dataset_info = schema_dict.get('dataset', {})
-    existing_block_id = dataset_info.get('block_identity')
-    if existing_block_id:
-        if existing_block_id != grid.block_identity:
-            raise artifacts.ArtifactError(
-                f'Grid compatibility mismatch: incoming batch grid '
-                f'[{grid.block_identity}] does not match existing block '
-                f'pool [{existing_block_id}].'
-            )
-        return
-
-
 def build_ingestion_context(
     harmonization_artifact_paths: artifacts.HarmonizationPaths,
     harmonization_record: contracts.HarmonizationRunRecord,
+    runs_manifest_fpath: str,
+    dataset_schema_fpath: str,
+    config: contracts.IngestionPipelineConfig,
 ) -> IngestionContext:
     '''
     Build data ingestion context from upstream harmonization artifacts.
@@ -207,21 +169,22 @@ def build_ingestion_context(
         IngestionContext:
             Loaded execution context with world grid and input rasters.
     '''
+    # parse targeted harmonization run
     harmonization_artifact_paths.get_run_folder(harmonization_record['run_id'])
-
     report_path = harmonization_artifact_paths.report
     report = HarmonizationReportCtrl.load_json_or_fail(report_path).fetch()
 
-    finals = report['finalized_rasters']
-    assert finals
-
+    # fetch world grid
     grid_fpath = report.get('grid_fpath')
     if not grid_fpath and 'world_grid' in report:
         grid_fpath = report['world_grid'].get('grid_fpath')
-    assert grid_fpath
-
     world_grid = geo_core.load_grid_from_fpath(grid_fpath)
 
+    # verify grid compatibility
+    _verify_pool_grid_compatibility(dataset_schema_fpath, world_grid)
+
+    # parse harmonized domain/feature/label sources
+    finals = report['finalized_rasters']
     domains: dict[str, str] = {}
     for key, value in finals.items():
         if 'domain' in key:
@@ -229,6 +192,36 @@ def build_ingestion_context(
 
     features = finals.get('features')
     labels = finals.get('labels')
+
+    # identify/collision check
+    grid_identity = geo_utils.compute_fingerprint(world_grid.block_identity)
+    identity = {
+        'harmonization_run_uid': harmonization_record['run_uid'],
+        'grid': {
+            'grid_fpath': grid_fpath,
+            'grid_identity': grid_identity,
+        },
+        'inputs': {
+            'features': features,
+            'labels': labels,
+            'domains': domains,
+            'valid_mask_raster': harmonization_artifact_paths.valid_mask_raster,
+        },
+        'config': {
+            'datablocks': {
+                'ignore_index': config.datablocks.ignore_index,
+                'image_dem_pad': config.datablocks.image_dem_pad,
+                'add_spectral': config.datablocks.add_spectral,
+                'add_topo': config.datablocks.add_topo,
+            },
+            'domains': {
+                'valid_threshold': config.domains.valid_threshold,
+                'target_variance': config.domains.target_variance,
+            },
+        },
+    }
+    fingerprint = geo_utils.compute_fingerprint(identity)
+    collided = geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
 
     return IngestionContext(
         grid=world_grid,
@@ -239,6 +232,8 @@ def build_ingestion_context(
         valid_mask_raster=harmonization_artifact_paths.valid_mask_raster,
         run_uid=harmonization_record['run_uid'],
         harmonization_run_id=harmonization_record['run_id'],
+        current_run_identity=fingerprint,
+        collided_run_uid=collided
     )
 
 
@@ -384,3 +379,46 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
         and rec.get('status') == 'SUCCESS'
         and rec.get('harmonization_run_uid')
     }
+
+
+def _verify_pool_grid_compatibility(
+    schema_fpath: str,
+    grid: geo_core.GridLayout,
+) -> None:
+    '''
+    Verify incoming world grid compatibility with existing block pool.
+
+    Args:
+        schema_fpath:
+            File path to existing dataset schema artifact.
+        grid:
+            Incoming GridLayout instance to validate.
+
+    Raises:
+        artifacts.ArtifactError:
+            If existing pool schema belongs to an incompatible spatial
+            block identity or grid ID.
+    '''
+    if not os.path.exists(schema_fpath):
+        return
+
+    try:
+        schema_dict = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    except artifacts.ArtifactError as exc:
+        raise artifacts.ArtifactError(
+            f'Failed to read dataset schema at {schema_fpath}: {exc}'
+        ) from exc
+
+    if not isinstance(schema_dict, dict):
+        return
+
+    dataset_info = schema_dict.get('dataset', {})
+    existing_block_id = dataset_info.get('block_identity')
+    if existing_block_id:
+        if existing_block_id != grid.block_identity:
+            raise artifacts.ArtifactError(
+                f'Grid compatibility mismatch: incoming batch grid '
+                f'[{grid.block_identity}] does not match existing block '
+                f'pool [{existing_block_id}].'
+            )
+        return

@@ -123,7 +123,7 @@ class HarmonizationLogger(utils.Logger):
             self.summary['grid_id'] = grid_id
             self.summary['grid_fpath'] = os.path.abspath(grid_fpath)
 
-    def set_fingerprint(self, fingerprint: str) -> None:
+    def set_identity(self, fingerprint: str) -> None:
         '''Record fingerprint of the inputs and configs of this run.'''
         if self.summary is not None:
             self.summary['fingerprint'] = fingerprint

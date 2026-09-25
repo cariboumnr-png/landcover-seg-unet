@@ -50,41 +50,31 @@ def run_data_ingestion(
     '''Run the ingestion pipeline.'''
     assert logger.summary
 
-    # build ingestion context from harmonization
+    # build ingestion context
+    logger.log('INFO', '[START] Building data ingestion context')
     context = ingest_context.build_ingestion_context(
         artifact_paths.data_harmonization,
         harmonization_record,
+        artifact_paths.data_ingestion.runs_manifest,
+        artifact_paths.data_ingestion.data_blocks.schema,
+        config
     )
     logger.set_harmonization_reference(
         run_uid=context.run_uid,
         run_id=context.harmonization_run_id,
     )
+    logger.set_identity(context.current_run_identity)
 
-    # ----- canonical world grid reference & pool validation
-    world_grid = context.grid
-    gid = world_grid.gid
-    logger.log('INFO', f'[COMPLETE] World grid loaded: {gid}')
-    ingest_context.verify_pool_grid_compatibility(
-        artifact_paths.data_ingestion.data_blocks.schema,
-        world_grid,
-    )
-
-    # check runs collision
-    fgprt, collided = _check_collision(
-        harmonization_record,
-        context,
-        artifact_paths.data_ingestion,
-        config,
-    )
-    logger.set_fingerprint(fgprt)
-    if collided is not None:
+    # early exit
+    if context.collided_run_uid is not None:
         logger.set_summary_status('SKIPPED')
         logger.log(
             'INFO',
-            f'[NOTE] Ingestion run with the same inputs and configs already '
-            f'done (run uid: {collided}), skipped'
+            f'[COMPLETE] Ingestion run with the same inputs and configs '
+            f'already done (run uid: {context.collided_run_uid}), skipped'
         )
         return
+    logger.log('INFO', '[COMPLETE] Data ingestion context built')
 
     # ----- materialize domain maps
     if context.domains:
@@ -94,13 +84,13 @@ def run_data_ingestion(
             ingest_domains.DomainBuildingParameters(
                 input_fpath=path,
                 domain_fpath=domain_paths.domain_map_fpath(name),
-                tiles_fpath=domain_paths.mapped_tiles_fpath(name, gid),
+                tiles_fpath=domain_paths.mapped_tiles_fpath(name, context.grid.gid),
                 valid_threshold=config.domains.valid_threshold,
                 target_variance=config.domains.target_variance,
             ) for name, path in context.domains.items()
         ]
         ingest_domains.prepare_domain_maps(
-            world_grid,
+           context.grid,
             domain_configs,
             policy=policy,
             logger=logger,
@@ -126,7 +116,7 @@ def run_data_ingestion(
             add_topo=config.datablocks.add_topo,
         )
         ingest_blocks.run_blocks_building(
-            world_grid,
+            context.grid,
             artifact_paths.data_ingestion.data_blocks,
             data_blocks_config,
             policy=policy,
@@ -136,44 +126,3 @@ def run_data_ingestion(
         assert logger.summary['data_blocks'] # typing
         d = logger.summary['data_blocks']['duration_sec']
         logger.log('INFO', f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)')
-
-
-# ----- private helpers
-def _check_collision(
-    harmonization_record: contracts.HarmonizationRunRecord,
-    context: ingest_context.IngestionContext,
-    ingestion_paths: paths.IngestionPaths,
-    config: contracts.IngestionPipelineConfig,
-) -> tuple[str, str | None]:
-    '''Check if current ingestion run collides with existing runs.'''
-    grid_id_str = context.grid.affine_identity
-    identity = {
-        'harmonization_run_uid': harmonization_record['run_uid'],
-        'grid': {
-            'grid_fpath': context.grid_fpath,
-            'grid_identity': artifacts.compute_fingerprint(grid_id_str),
-        },
-        'inputs': {
-            'features': context.features,
-            'labels': context.labels,
-            'domains': context.domains,
-            'valid_mask_raster': context.valid_mask_raster,
-        },
-        'config': {
-            'datablocks': {
-                'ignore_index': config.datablocks.ignore_index,
-                'image_dem_pad': config.datablocks.image_dem_pad,
-                'add_spectral': config.datablocks.add_spectral,
-                'add_topo': config.datablocks.add_topo,
-            },
-            'domains': {
-                'valid_threshold': config.domains.valid_threshold,
-                'target_variance': config.domains.target_variance,
-            },
-        },
-    }
-    fingerprint = artifacts.compute_fingerprint(identity)
-    collided_uid = artifacts.check_run_collision(
-        fingerprint, ingestion_paths.runs_manifest
-    )
-    return fingerprint, collided_uid

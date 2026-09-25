@@ -41,6 +41,10 @@ import typing
 import landseg.artifacts.controller as controller
 
 
+# ----- typing aliases
+ManifestCtrl = controller.Controller[dict[str, dict[str, typing.Any]]]
+
+
 # ----- public functions
 def compute_fingerprint(payload: typing.Any) -> str:
     '''
@@ -61,9 +65,9 @@ def compute_fingerprint(payload: typing.Any) -> str:
     return hashlib.sha256(canonical_repr.encode('utf-8')).hexdigest()
 
 
-def check_run_collision(
+def find_run_collision(
     fingerprint: str,
-    runs_manifest_fpath: str,
+    manifest_fpath: str,
     *,
     success_status: str = 'SUCCESS',
 ) -> str | None:
@@ -76,7 +80,7 @@ def check_run_collision(
     Args:
         fingerprint:
             Deterministic SHA-256 hash string of the run identity.
-        runs_manifest_fpath:
+        manifest_fpath:
             File path to the runs manifest JSON ledger.
         success_status:
             Expected status string representing an active completed run.
@@ -85,13 +89,10 @@ def check_run_collision(
         str | None:
             Colliding run identifier if found, otherwise None.
     '''
-    if not os.path.exists(runs_manifest_fpath):
+    if not os.path.exists(manifest_fpath):
         return None
 
-    ctrl = controller.Controller[dict[str, dict[str, typing.Any]]](
-        runs_manifest_fpath
-    )
-    manifest = ctrl.fetch() or {}
+    manifest = ManifestCtrl(manifest_fpath).fetch() or {}
 
     for run_uid, record in manifest.items():
         if (

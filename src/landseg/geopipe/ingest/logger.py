@@ -86,7 +86,7 @@ class IngestionLogger(utils.Logger):
             return self.summary.get('run_uid', '')
         return ''
 
-    def set_fingerprint(self, fingerprint: str) -> None:
+    def set_identity(self, fingerprint: str) -> None:
         '''Record fingerprint of the inputs and configs of this run.'''
         if self.summary is not None:
             self.summary['fingerprint'] = fingerprint

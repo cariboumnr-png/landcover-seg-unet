@@ -68,7 +68,7 @@ def test_ingestion_logger_update_runs_manifest(tmp_path):
         run_uid='harmonize_1234567890abcdef',
         run_id='run_0001'
     )
-    logger.set_fingerprint('sha256_ingest_mock')
+    logger.set_identity('sha256_ingest_mock')
 
     logger.update_runs_manifest(
         ingest_paths.runs_manifest,

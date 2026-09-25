@@ -38,8 +38,6 @@ Public APIs:
     - `PayloadDict`: TypedDict mapping keys to JSON-serializable payloads.
     - `PreparationPaths`: Preparation artifact directory paths.
     - `SessionPaths`: Session artifact directory paths.
-    - `check_run_collision`: Search runs manifest for matching run.
-    - `compute_fingerprint`: Deterministic SHA-256 hash of payload.
     - `load_checkpoint`: Restore model and optimizer checkpoint.
     - `save_checkpoint`: Persist model and optimizer checkpoint.
 '''
@@ -62,8 +60,6 @@ __all__ = [
     'PreparationPaths',
     'SessionPaths',
     # functions
-    'check_run_collision',
-    'compute_fingerprint',
     'load_checkpoint',
     'save_checkpoint',
     # typing
@@ -82,10 +78,6 @@ if typing.TYPE_CHECKING:
     from .controller import (
         ArtifactError,
         Controller,
-    )
-    from .ledger import (
-        check_run_collision,
-        compute_fingerprint,
     )
     from .paths import (
         ArtifactPaths,
@@ -118,13 +110,6 @@ def __getattr__(name: str):
         'Controller',
     }:
         obj = importlib.import_module('.controller', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'check_run_collision',
-        'compute_fingerprint',
-    }:
-        obj = importlib.import_module('.ledger', __package__)
         return getattr(obj, name)
 
     if name in {

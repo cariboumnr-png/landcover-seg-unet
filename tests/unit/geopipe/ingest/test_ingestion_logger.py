@@ -69,7 +69,7 @@ def test_ingestion_logger_summary_lifecycle(tmp_path):
         'manifest': None,
     }
     logger.set_data_blocks_report(data_blocks_report)
-    logger.set_fingerprint('sha256_report_mock')
+    logger.set_identity('sha256_report_mock')
     logger.set_summary_status('SUCCESS')
     logger.close()
 
