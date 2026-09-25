@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Data preparation (experiment-materialized) pipeline.
 
@@ -30,10 +28,10 @@ statistics, normalizes all splits, and emits the final dataset schema.
 
 # standard imports
 from __future__ import annotations
-import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.prepare.context as prepare_context
 import landseg.geopipe.prepare.dataset as prepare_dataset
 import landseg.geopipe.prepare.logger as prepare_logger
@@ -41,89 +39,10 @@ import landseg.geopipe.prepare.materialize as prepare_materialize
 import landseg.geopipe.prepare.partition as prepare_partition
 
 
-# ----- private types
-class _CatalogViewConfig(typing.Protocol):
-    @property
-    def valid_pxs(self) -> dict[str, float]: ...
-
-    @property
-    def focal_target(self) -> str | None: ...
-
-    @property
-    def test_catalog(self) -> str | None: ...
-
-    @property
-    def non_overlapping_test_grid(self) -> bool: ...
-
-
-class _PartitionConfig(typing.Protocol):
-    @property
-    def val_ratio(self) -> float: ...
-
-    @property
-    def test_ratio(self) -> float: ...
-
-    @property
-    def buffer_step(self) -> int: ...
-
-    @property
-    def train_aoi(self) -> str | None: ...
-
-    @property
-    def val_aoi(self) -> str | None: ...
-
-    @property
-    def test_aoi(self) -> str | None: ...
-
-    @property
-    def aoi_min_overlap(self) -> float: ...
-
-
-class _ScoringConfig(typing.Protocol):
-    @property
-    def reward(self) -> dict[int, float]: ...
-
-    @property
-    def alpha(self) -> float: ...
-
-    @property
-    def beta(self) -> float: ...
-
-
-class _HydrationConfig(typing.Protocol):
-    @property
-    def max_skew_rate(self) -> float: ...
-
-
-class _PreparationPipelineConfig(typing.Protocol):
-    @property
-    def features(self) -> dict[str, typing.Any]: ...
-
-    @property
-    def targets(self) -> dict[str, typing.Any]: ...
-
-    @property
-    def catalog(self) -> _CatalogViewConfig: ...
-
-    @property
-    def partition(self) -> _PartitionConfig: ...
-
-    @property
-    def scoring(self) -> _ScoringConfig: ...
-
-    @property
-    def hydration(self) -> _HydrationConfig: ...
-
-    @property
-    def rebuild(self) -> bool: ...
-
-    @property
-    def output_dpath(self) -> str: ...
-
-
+# ----- public functions
 def run_data_preparation(
     artifact_paths: paths.ArtifactPaths,
-    config: _PreparationPipelineConfig,
+    config: contracts.PreparationPipelineConfig,
     tile_specs_tuple: tuple[int, int, int, int], # need to canonalize
     *,
     policy: artifacts.LifecyclePolicy,

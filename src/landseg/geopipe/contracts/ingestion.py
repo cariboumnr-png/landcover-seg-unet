@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 TypedDict definitions for data ingestion execution summaries and
 reports.
@@ -32,6 +34,7 @@ Public APIs:
     - `BlockStats`: TypedDict for data block mapping and build stats.
     - `ManifestStats`: TypedDict for catalog/schema update details.
     - `DataBlocksReport`: TypedDict for data block execution report.
+    - `IngestionPipelineConfig`: Protocol for pipeline configs.
     - `IngestReportSchema`: TypedDict for root data ingestion report.
     - `IngestionRunRecord`: TypedDict for ingestion run manifest entry.
     - `IngestionRunManifest`: Type alias for runs ledger mapping.
@@ -43,6 +46,32 @@ import typing
 
 
 # ----- public types
+class IngestionPipelineConfig(typing.Protocol):
+    '''Shape of the Ingestion pipeline configurations.'''
+    @property
+    def domains(self) -> _DomainsConfig: ...
+    @property
+    def datablocks(self) -> _DataBlocksConfig: ...
+
+
+class _DomainsConfig(typing.Protocol):
+    @property
+    def valid_threshold(self) -> float: ...
+    @property
+    def target_variance(self) -> float: ...
+
+
+class _DataBlocksConfig(typing.Protocol):
+    @property
+    def ignore_index(self) -> int: ...
+    @property
+    def image_dem_pad(self) -> int: ...
+    @property
+    def add_topo(self) -> list[str] | None: ...
+    @property
+    def add_spectral(self) -> list[str] | None: ...
+
+
 class IngestionRunRecord(typing.TypedDict):
     '''Single ingestion run entry stored in runs manifest.'''
     run_uid: str

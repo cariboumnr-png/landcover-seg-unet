@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Data ingestion pipeline.
 
@@ -30,7 +28,6 @@ the immutable raw block catalogue for later experiments.
 
 # standard imports
 from __future__ import annotations
-import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
@@ -41,42 +38,11 @@ import landseg.geopipe.ingest.domains as ingest_domains
 import landseg.geopipe.ingest.logger as ingest_logger
 
 
-# ----- private types
-class _IngestionPipelineConfig(typing.Protocol):
-    @property
-    def domains(self) -> _DomainsConfig: ...
-
-    @property
-    def datablocks(self) -> _DataBlocksConfig: ...
-
-
-class _DomainsConfig(typing.Protocol):
-    @property
-    def valid_threshold(self) -> float: ...
-
-    @property
-    def target_variance(self) -> float: ...
-
-
-class _DataBlocksConfig(typing.Protocol):
-    @property
-    def ignore_index(self) -> int: ...
-
-    @property
-    def image_dem_pad(self) -> int: ...
-
-    @property
-    def add_topo(self) -> list[str] | None: ...
-
-    @property
-    def add_spectral(self) -> list[str] | None: ...
-
-
 # ----- public functions
 def run_data_ingestion(
     artifact_paths: paths.ArtifactPaths,
     harmonization_record: contracts.HarmonizationRunRecord,
-    config: _IngestionPipelineConfig,
+    config: contracts.IngestionPipelineConfig,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: ingest_logger.IngestionLogger,
@@ -177,7 +143,7 @@ def _check_collision(
     harmonization_record: contracts.HarmonizationRunRecord,
     context: ingest_context.IngestionContext,
     ingestion_paths: paths.IngestionPaths,
-    config: _IngestionPipelineConfig,
+    config: contracts.IngestionPipelineConfig,
 ) -> tuple[str, str | None]:
     '''Check if current ingestion run collides with existing runs.'''
     grid_id_str = context.grid.affine_identity

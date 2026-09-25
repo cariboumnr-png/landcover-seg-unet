@@ -59,19 +59,23 @@ __all__ = [
     'DomainMapReport',
     'DomainStats',
     'GridReportSchema',
+    'HarmonizationPipelineConfig',
     'HarmonizationReportSchema',
     'HarmonizationRunRecord',
     'ImageBandStats',
+    'IngestionPipelineConfig',
     'IngestReportSchema',
     'IngestionRunRecord',
     'ManifestStats',
     'NormalizationReport',
     'PartitionSummary',
+    'PreparationPipelineConfig',
     'PreparationReportSchema',
     'PreparedSchema',
     'ProvenanceRecord',
     'SchemaReport',
     'TargetHeadsSchema',
+    'WorldGridPrepConfig',
     'WorldGridReport',
     # constants
     'PREPARED_SCHEMA_ID',
@@ -82,9 +86,11 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .grid import (
         GridReportSchema,
+        WorldGridPrepConfig,
         WorldGridReport,
     )
     from .harmonization import (
+        HarmonizationPipelineConfig,
         HarmonizationReportSchema,
         HarmonizationRunRecord,
         ProvenanceRecord,
@@ -94,6 +100,7 @@ if typing.TYPE_CHECKING:
         DataBlocksReport,
         DomainMapReport,
         DomainStats,
+        IngestionPipelineConfig,
         IngestReportSchema,
         IngestionRunRecord,
         ManifestStats,
@@ -105,6 +112,7 @@ if typing.TYPE_CHECKING:
         NormalizationReport,
         PREPARED_SCHEMA_ID,
         PartitionSummary,
+        PreparationPipelineConfig,
         PreparationReportSchema,
         PreparedSchema,
         SchemaReport,
@@ -115,12 +123,14 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {
         'GridReportSchema',
+        'WorldGridPrepConfig',
         'WorldGridReport',
     }:
         obj = importlib.import_module('.grid', __package__)
         return getattr(obj, name)
 
     if name in {
+        'HarmonizationPipelineConfig',
         'HarmonizationReportSchema',
         'HarmonizationRunRecord',
         'ProvenanceRecord',
@@ -133,6 +143,7 @@ def __getattr__(name: str):
         'DataBlocksReport',
         'DomainMapReport',
         'DomainStats',
+        'IngestionPipelineConfig',
         'IngestReportSchema',
         'IngestionRunRecord',
         'ManifestStats',
@@ -147,6 +158,7 @@ def __getattr__(name: str):
         'NormalizationReport',
         'PREPARED_SCHEMA_ID',
         'PartitionSummary',
+        'PreparationPipelineConfig',
         'PreparationReportSchema',
         'PreparedSchema',
         'SchemaReport',

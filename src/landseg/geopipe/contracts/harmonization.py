@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 TypedDict definitions for data harmonization execution summaries.
 
@@ -27,6 +29,7 @@ provenance, and raster metadata for data harmonization runs.
 
 Public APIs:
     - `ProvenanceRecord`: TypedDict for raw raster file provenance.
+    - `HarmonizationPipelineConfig`: Protocol for pipeline configs.
     - `HarmonizationReportSchema`: TypedDict for pipeline run report.
     - `HarmonizationRunRecord`: TypedDict for harmonization run entry.
     - `HarmonizationRunManifest`: Type alias for runs ledger mapping.
@@ -38,6 +41,26 @@ import typing
 
 
 # ----- public types
+class HarmonizationPipelineConfig(typing.Protocol):
+    '''Shape of the harmonization pipeline configurations.'''
+    @property
+    def dataset_manifest(self) -> str: ...
+    @property
+    def resampling_continuous(self) -> str: ...
+    @property
+    def resampling_categorical(self) -> str: ...
+
+
+class HarmonizationRunRecord(typing.TypedDict):
+    '''Single harmonization run entry stored in runs manifest.'''
+    run_uid: str
+    run_id: str
+    run_folder: str
+    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    timestamp: str
+    fingerprint: str
+
+
 class HarmonizationReportSchema(typing.TypedDict):
     '''Root report mapping the entire data harmonization pipeline run.'''
     run_uid: str
@@ -58,13 +81,3 @@ class ProvenanceRecord(typing.TypedDict):
     path: str
     size_bytes: int
     mtime: float
-
-
-class HarmonizationRunRecord(typing.TypedDict):
-    '''Single harmonization run entry stored in runs manifest.'''
-    run_uid: str
-    run_id: str
-    run_folder: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
-    timestamp: str
-    fingerprint: str

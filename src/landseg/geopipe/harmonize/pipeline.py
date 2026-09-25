@@ -31,21 +31,12 @@ import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.context as harmonize_context
 import landseg.geopipe.harmonize.logger as harmonize_logger
 import landseg.geopipe.harmonize.manifest as harmonize_manifest
 import landseg.geopipe.harmonize.rasters as harmonize_rasters
-
-
-# ----- private types
-class _HarmonizationPipelineConfig(typing.Protocol):
-    @property
-    def dataset_manifest(self) -> str: ...
-    @property
-    def resampling_continuous(self) -> str: ...
-    @property
-    def resampling_categorical(self) -> str: ...
 
 
 # ----- private dataclasses
@@ -61,7 +52,7 @@ class _ProcessedRasters:
 def run_data_harmonization(
     world_grid_dpath: str,
     artifacts_paths: artifacts.HarmonizationPaths,
-    config: _HarmonizationPipelineConfig,
+    config: contracts.HarmonizationPipelineConfig,
     *,
     logger: harmonize_logger.HarmonizationLogger
 ) -> None:
@@ -132,7 +123,7 @@ def _check_collision(
     compiled_dataset_manifest: dict[str, harmonize_manifest.ManifestEntry],
     artifacts_paths: artifacts.HarmonizationPaths,
     context: harmonize_context.HarmonizationContext,
-    config: _HarmonizationPipelineConfig,
+    config: contracts.HarmonizationPipelineConfig,
 ) -> tuple[str, str | None]:
     '''Check if current run is going to collide with existing runs.'''
     grid_id_str = context.grid.affine_identity
