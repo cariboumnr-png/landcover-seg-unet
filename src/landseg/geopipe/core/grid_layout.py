@@ -233,16 +233,14 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         )
 
     @property
-    def identity_string(self) -> str:
-        '''Return a canonical identity string of the object'''
-        return (
-            f'{self.crs}|'
-            f'{self.origin!r}|'
-            f'{self.pixel_size!r}|'
-            f'{self.tile_size!r}|'
-            f'{self.tile_overlap!r}|'
-            f'{self.extent!r}'
-        )
+    def affine_identity(self) -> str:
+        '''Spatial coordinate frame for raster warping.'''
+        return f'{self.crs}|{self.origin!r}|{self.pixel_size!r}'
+
+    @property
+    def block_identity(self) -> str:
+        '''Block pool compatibility frame.'''
+        return f'{self.affine_identity}|{self.tile_size!r}'
 
     # ----- alternative constructor
     @classmethod

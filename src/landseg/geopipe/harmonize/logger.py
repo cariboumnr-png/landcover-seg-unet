@@ -43,7 +43,7 @@ import landseg.geopipe.contracts.harmonization as contracts
 import landseg.utils as utils
 
 
-# ----- typing alises
+# ----- typing aliases
 ManifestCtrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
 SchemaCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
 
