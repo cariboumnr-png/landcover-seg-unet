@@ -47,9 +47,12 @@ import landseg.geopipe.core as geo_core
 
 
 # ----- typing aliases
-ReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
-ManifestCtrl = artifacts.Controller[dict[str, typing.Any]]
 HarmonizationRecords = dict[str, contracts.HarmonizationRunRecord]
+HarmonizationReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
+HarmonizationManifestCtrl = artifacts.Controller[HarmonizationRecords]
+IngestionRecords = dict[str, contracts.IngestionRunRecord]
+IngestionManifestCtrl = artifacts.Controller[IngestionRecords]
+DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 
 
 # ----- public dataclasses
@@ -83,10 +86,10 @@ def resolve_pending_ingestion_batches(
     Determine harmonization batches to ingest against runs manifests.
 
     Args:
-        harmonization_paths:
-            File path manager for data harmonization artifacts.
-        ingestion_paths:
-            File path manager for data ingestion artifacts.
+        harmonization_run_manifest:
+            File path to harmonization runs manifest JSON.
+        ingestion_run_manifest:
+            File path to ingestion runs manifest JSON.
         target:
             Optional harmonization target: run UID, folder name, index,
             'latest', or 'all'/'pending'/None.
@@ -102,6 +105,18 @@ def resolve_pending_ingestion_batches(
             If harmonization manifest is missing or targeted run is not
             found.
     '''
+    # --------------------------------------------------------------
+    # decision matrix: batch ingestion resolution
+    #
+    # target          manifest state        action
+    # --------------  --------------------  ------------------------
+    # specific run    not ingested          ingest target batch
+    # specific run    ingested, rebuild=f   skip & exit (idempotent)
+    # specific run    ingested, rebuild=t   re-ingest target batch
+    # none (auto)     pending list non-empty auto-ingest in sequence
+    # none (auto)     pending list empty    pool up-to-date (no-op)
+    # 'all'/'pending' any                   catch-up pending batches
+    # --------------------------------------------------------------
     successful_runs = _resolve_harmonization_runs(harmonization_run_manifest)
     ingested_uids = _resolve_ingestion_runs(ingestion_run_manifest)
 
@@ -128,6 +143,49 @@ def resolve_pending_ingestion_batches(
     return [target_rec]
 
 
+def verify_pool_grid_compatibility(
+    schema_fpath: str,
+    grid: geo_core.GridLayout,
+) -> None:
+    '''
+    Verify incoming world grid compatibility with existing block pool.
+
+    Args:
+        schema_fpath:
+            File path to existing dataset schema artifact.
+        grid:
+            Incoming GridLayout instance to validate.
+
+    Raises:
+        artifacts.ArtifactError:
+            If existing pool schema belongs to an incompatible spatial
+            block identity or grid ID.
+    '''
+    if not os.path.exists(schema_fpath):
+        return
+
+    try:
+        schema_dict = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    except artifacts.ArtifactError as exc:
+        raise artifacts.ArtifactError(
+            f'Failed to read dataset schema at {schema_fpath}: {exc}'
+        ) from exc
+
+    if not isinstance(schema_dict, dict):
+        return
+
+    dataset_info = schema_dict.get('dataset', {})
+    existing_block_id = dataset_info.get('block_identity')
+    if existing_block_id:
+        if existing_block_id != grid.block_identity:
+            raise artifacts.ArtifactError(
+                f'Grid compatibility mismatch: incoming batch grid '
+                f'[{grid.block_identity}] does not match existing block '
+                f'pool [{existing_block_id}].'
+            )
+        return
+
+
 def build_ingestion_context(
     harmonization_artifact_paths: artifacts.HarmonizationPaths,
     harmonization_record: contracts.HarmonizationRunRecord,
@@ -140,10 +198,10 @@ def build_ingestion_context(
     and loads the canonical GridLayout.
 
     Args:
-        harmonization_paths:
+        harmonization_artifact_paths:
             File path manager for harmonization artifacts.
-        harmonization_run_id:
-            Target run identifier, record, or None to use latest run.
+        harmonization_record:
+            Resolved upstream harmonization run record.
 
     Returns:
         IngestionContext:
@@ -152,7 +210,7 @@ def build_ingestion_context(
     harmonization_artifact_paths.get_run_folder(harmonization_record['run_id'])
 
     report_path = harmonization_artifact_paths.report
-    report = ReportCtrl.load_json_or_fail(report_path).fetch()
+    report = HarmonizationReportCtrl.load_json_or_fail(report_path).fetch()
 
     finals = report['finalized_rasters']
     assert finals
@@ -183,19 +241,6 @@ def build_ingestion_context(
         harmonization_run_id=harmonization_record['run_id'],
     )
 
-    # --------------------------------------------------------------
-    # decision matrix: batch ingestion resolution
-    #
-    # target          manifest state        action
-    # --------------  --------------------  ------------------------
-    # specific run    not ingested          ingest target batch
-    # specific run    ingested, rebuild=f   skip & exit (idempotent)
-    # specific run    ingested, rebuild=t   re-ingest target batch
-    # none (auto)     pending list non-empty auto-ingest in sequence
-    # none (auto)     pending list empty    pool up-to-date (no-op)
-    # 'all'/'pending' any                   catch-up pending batches
-    # --------------------------------------------------------------
-
 
 # ----- private helpers
 def _resolve_harmonization_runs(manifest_fpath: str) -> HarmonizationRecords:
@@ -203,11 +248,12 @@ def _resolve_harmonization_runs(manifest_fpath: str) -> HarmonizationRecords:
     Load the harmonization runs manifest and return all successful runs.
 
     Args:
-        harmonization_paths:
-            File path manager for harmonization artifacts.
+        manifest_fpath:
+            File path to harmonization runs manifest JSON.
 
     Returns:
         dict[str, contracts.HarmonizationRunRecord]:
+            Mapping of run UID to successful run records.
             Mapping of run UID to successful run records.
 
     Raises:
@@ -222,7 +268,7 @@ def _resolve_harmonization_runs(manifest_fpath: str) -> HarmonizationRecords:
         )
 
     try:
-        manifest_data = ManifestCtrl.load_json_or_fail(
+        manifest_data = HarmonizationManifestCtrl.load_json_or_fail(
             manifest_fpath
         ).fetch()
     except artifacts.ArtifactError as exc:
@@ -310,8 +356,8 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
     Load ingestion runs manifest and return ingested harmonization UIDs.
 
     Args:
-        ingestion_paths:
-            File path manager for data ingestion artifacts.
+        manifest_fpath:
+            File path to ingestion runs manifest JSON.
 
     Returns:
         set[str]:
@@ -322,7 +368,7 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
         return set()
 
     try:
-        manifest_data = ManifestCtrl.load_json_or_fail(
+        manifest_data = IngestionManifestCtrl.load_json_or_fail(
             manifest_fpath
         ).fetch()
     except artifacts.ArtifactError:

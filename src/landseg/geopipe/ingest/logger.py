@@ -73,6 +73,7 @@ class IngestionLogger(utils.Logger):
             'harmonization_run_uid': harmonization_run_uid,
             'harmonization_run_id': harmonization_run_id,
             'timestamp': t,
+            'fingerprint': '',
             'status': 'SUCCESS',
             'domain_maps': [],
             'data_blocks': None,
@@ -84,6 +85,11 @@ class IngestionLogger(utils.Logger):
         if self.summary:
             return self.summary.get('run_uid', '')
         return ''
+
+    def set_fingerprint(self, fingerprint: str) -> None:
+        '''Record fingerprint of the inputs and configs of this run.'''
+        if self.summary is not None:
+            self.summary['fingerprint'] = fingerprint
 
     def set_harmonization_reference(
         self,
@@ -111,7 +117,7 @@ class IngestionLogger(utils.Logger):
 
     def set_summary_status(
         self,
-        status: typing.Literal['SUCCESS', 'FAILED']
+        status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
     ) -> None:
         '''Update the overall run summary status.'''
         if self.summary is not None:
@@ -128,7 +134,6 @@ class IngestionLogger(utils.Logger):
         uid = self.summary.get('run_uid', '')
         if not uid:
             return
-        status_val = self.summary.get('status', 'FAILED')
         record: contracts.IngestionRunRecord = {
             'run_uid': uid,
             'run_id': self.summary.get('run_id', ''),
@@ -138,17 +143,18 @@ class IngestionLogger(utils.Logger):
             'harmonization_run_id': self.summary.get(
                 'harmonization_run_id', ''
             ),
-            'status': 'SUCCESS' if status_val == 'SUCCESS' else 'FAILED',
+            'status': self.summary.get('status', 'FAILED'),
             'timestamp': self.summary.get('timestamp', ''),
+            'fingerprint': self.summary.get('fingerprint', ''),
             'run_folder': os.path.abspath(run_folder),
         }
         ctrl = artifacts.Controller[dict](manifest_fpath)
         try:
-            manifest_data = ctrl.fetch()
-            if not isinstance(manifest_data, dict):
-                manifest_data = {}
-        except Exception:
-            manifest_data = {}
+            manifest_data = ctrl.fetch() or {}
+        except artifacts.ArtifactError as exc:
+            raise ValueError(
+                f'Error reading runs manifest at {manifest_fpath}'
+            ) from exc
         manifest_data[uid] = record
         ctrl.persist(manifest_data)
 

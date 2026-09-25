@@ -63,6 +63,7 @@ __all__ = [
     'HarmonizationRunRecord',
     'ImageBandStats',
     'IngestReportSchema',
+    'IngestionRunRecord',
     'ManifestStats',
     'NormalizationReport',
     'PartitionSummary',
@@ -94,6 +95,7 @@ if typing.TYPE_CHECKING:
         DomainMapReport,
         DomainStats,
         IngestReportSchema,
+        IngestionRunRecord,
         ManifestStats,
     )
     from .preparation import (
@@ -132,6 +134,7 @@ def __getattr__(name: str):
         'DomainMapReport',
         'DomainStats',
         'IngestReportSchema',
+        'IngestionRunRecord',
         'ManifestStats',
     }:
         obj = importlib.import_module('.ingestion', __package__)

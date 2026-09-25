@@ -142,7 +142,8 @@ def run_blocks_building(
         source_label=config.label_fpath,
         mapped_grid_id=world_grid.gid,
         blocks_dir=artfact_paths.blocks,
-        label_color_map=result.label_color_map
+        label_color_map=result.label_color_map,
+        block_identity=world_grid.block_identity,
     )
     manifest_report = manifest.update_manifest(
         updated,

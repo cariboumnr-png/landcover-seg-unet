@@ -49,12 +49,10 @@ class IngestionRunRecord(typing.TypedDict):
     run_id: str
     harmonization_run_uid: str
     harmonization_run_id: str
-    status: typing.Literal['SUCCESS', 'FAILED']
+    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
     timestamp: str
+    fingerprint: str
     run_folder: str
-
-
-IngestionRunManifest = dict[str, IngestionRunRecord]
 
 
 class IngestReportSchema(typing.TypedDict):
@@ -64,7 +62,8 @@ class IngestReportSchema(typing.TypedDict):
     harmonization_run_uid: str
     harmonization_run_id: str
     timestamp: str
-    status: typing.Literal['SUCCESS', 'FAILED']
+    fingerprint: str
+    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
     domain_maps: list[DomainMapReport]
     data_blocks: DataBlocksReport | None
 

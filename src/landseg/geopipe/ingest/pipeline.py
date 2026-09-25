@@ -30,6 +30,8 @@ the immutable raw block catalogue for later experiments.
 
 # standard imports
 from __future__ import annotations
+import hashlib
+import json
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -39,6 +41,10 @@ import landseg.geopipe.ingest.context as ingest_context
 import landseg.geopipe.ingest.blocks as ingest_blocks
 import landseg.geopipe.ingest.domains as ingest_domains
 import landseg.geopipe.ingest.logger as ingest_logger
+
+
+# ----- typing aliases
+ManifestCtrl = artifacts.Controller[dict[str, contracts.IngestionRunRecord]]
 
 
 # ----- private types
@@ -94,10 +100,31 @@ def run_data_ingestion(
         run_id=context.harmonization_run_id,
     )
 
-    # ----- canonical world grid reference
+    # ----- canonical world grid reference & pool validation
     world_grid = context.grid
     gid = world_grid.gid
     logger.log('INFO', f'[COMPLETE] World grid loaded: {gid}')
+    ingest_context.verify_pool_grid_compatibility(
+        artifact_paths.data_ingestion.data_blocks.schema,
+        world_grid,
+    )
+
+    # check runs collision
+    fgprt, collided = _check_collision(
+        harmonization_record,
+        context,
+        artifact_paths.data_ingestion,
+        config,
+    )
+    logger.set_fingerprint(fgprt)
+    if collided is not None:
+        logger.set_summary_status('SKIPPED')
+        logger.log(
+            'INFO',
+            f'[NOTE] Ingestion run with the same inputs and configs already '
+            f'done (run uid: {collided}), skipped'
+        )
+        return
 
     # ----- materialize domain maps
     if context.domains:
@@ -149,3 +176,52 @@ def run_data_ingestion(
         assert logger.summary['data_blocks'] # typing
         d = logger.summary['data_blocks']['duration_sec']
         logger.log('INFO', f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)')
+
+
+# ----- private helpers
+def _check_collision(
+    harmonization_record: contracts.HarmonizationRunRecord,
+    context: ingest_context.IngestionContext,
+    ingestion_paths: paths.IngestionPaths,
+    config: _IngestionPipelineConfig,
+) -> tuple[str, str | None]:
+    '''Check if current ingestion run collides with existing runs.'''
+    grid_id_str = context.grid.affine_identity
+    identity = {
+        'harmonization_run_uid': harmonization_record['run_uid'],
+        'grid': {
+            'grid_fpath': context.grid_fpath,
+            'grid_identity': hashlib.sha256(grid_id_str.encode()).hexdigest(),
+        },
+        'inputs': {
+            'features': context.features,
+            'labels': context.labels,
+            'domains': context.domains,
+            'valid_mask_raster': context.valid_mask_raster,
+        },
+        'config': {
+            'datablocks': {
+                'ignore_index': config.datablocks.ignore_index,
+                'image_dem_pad': config.datablocks.image_dem_pad,
+                'add_spectral': config.datablocks.add_spectral,
+                'add_topo': config.datablocks.add_topo,
+            },
+            'domains': {
+                'valid_threshold': config.domains.valid_threshold,
+                'target_variance': config.domains.target_variance,
+            },
+        },
+    }
+    canon = json.dumps(identity, sort_keys=True)
+    current_run_fingerprint = hashlib.sha256(canon.encode()).hexdigest()
+
+    runs_manifest = ManifestCtrl(ingestion_paths.runs_manifest).fetch() or {}
+
+    for rid, run in runs_manifest.items():
+        if (
+            current_run_fingerprint == run.get('fingerprint') and
+            run.get('status') == 'SUCCESS'
+        ):
+            return current_run_fingerprint, rid
+
+    return current_run_fingerprint, None

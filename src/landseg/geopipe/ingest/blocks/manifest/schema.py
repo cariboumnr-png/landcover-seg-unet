@@ -48,6 +48,7 @@ def build_schema(
     original: geo_core.DatasetSchema | None,
     sources: tuple[str, str | None],
     mapped_grid_id: str,
+    block_identity: str = '',
     label_color_map: dict[str, list[int]] | None
 ) -> geo_core.DatasetSchema:
     '''
@@ -70,6 +71,8 @@ def build_schema(
             Tuple containing paths to source image and optional label.
         mapped_grid_id:
             Identifier of spatial grid to which blocks are aligned.
+        block_identity:
+            Canonical compatibility identity of the world grid.
         label_color_map:
             Mapping of class name to RGB color values, or `None`.
 
@@ -98,6 +101,8 @@ def build_schema(
         original['dataset']['last_updated'] = t
         if not mapped_grid_id in grids:
             grids.append(mapped_grid_id)
+        if block_identity and not original['dataset'].get('block_identity'):
+            original['dataset']['block_identity'] = block_identity
         if not source_image in images:
             images.append(source_image)
         if source_label and not source_label in labels:
@@ -121,6 +126,7 @@ def build_schema(
             'last_updated': t,
             'dataprep_commit': 'dev', # to be fixed once branch stable
             'mapped_grids': [mapped_grid_id],
+            'block_identity': block_identity,
             'data_source': {
                 'image_paths': [source_image],
                 'label_paths': [source_label] if source_label else [],

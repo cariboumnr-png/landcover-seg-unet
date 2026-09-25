@@ -60,6 +60,7 @@ class ManifestUpdateContext:
     mapped_grid_id: str             # id for the grid the blocks are mapped to
     blocks_dir: str                 # where data blocks are
     label_color_map: dict[str, list[int]] | None
+    block_identity: str = ''        # canonical compatibility identity
 
 
 # ----- public functions
@@ -133,6 +134,7 @@ def update_manifest(
         sample_block,
         original=schema_dict,
         mapped_grid_id=context.mapped_grid_id,
+        block_identity=context.block_identity,
         sources=(context.source_image, context.source_label),
         label_color_map=context.label_color_map
     )
