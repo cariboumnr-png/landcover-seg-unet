@@ -1,7 +1,7 @@
 # ADR-0059: Incremental Batch Ingestion and Block Collision Lifecycle
 
-**Status:** Proposed (Phase 1 Implemented)<br>
-**Date:** 2026-09-23 (Updated 2026-09-25)
+**Status:** Accepted (Phases 1 & 2 Implemented; Phases 3 & 4 Deferred)<br>
+**Date:** 2026-09-23 (Updated 2026-09-26)
 
 ---
 
@@ -44,10 +44,11 @@ While `data-harmonize` operates per batch run (`run_xxx`), `data-ingest` was ori
 
 We evolve `landseg.geopipe` to support **incremental batch ingestion into a unified canonical block pool** anchored to a **decoupled spatial frame**, with **first-class ingestion run ledgers**, **automatic batch catch-up**, and an **explicit collision policy**.
 
-Implementation is structured across three phases:
+Implementation is structured across four phases:
 - **Phase 1 (Implemented)**: Ingestion run ledger (`ingestion_runs.json`), run-level collision detection (`fingerprint`), automatic batch catch-up resolution, spatial identity decoupling (`affine_identity` vs `block_identity`), and pool grid compatibility verification.
-- **Phase 2 (Proposed / Next)**: Fine-grained intra-pool block collision policy (`CollisionPolicy: [skip, overwrite, error]`), mandatory persistence of run collision manifests (`collisions.json`) recording all overlapping coordinates, and cumulative catalog lineage.
+- **Phase 2 (Implemented)**: Fine-grained intra-pool block collision policy (`CollisionPolicy: [skip, overwrite, error]`), mandatory persistence of run collision manifests (`collisions.json`) recording all overlapping coordinates, and cumulative catalog lineage.
 - **Phase 3 (Proposed / Deferred)**: Inter-batch boundary seam stitching and nodata-filling for partial border blocks bisected by regional swath seams (deferred to future work; enabled by Phase 2's `collisions.json`).
+- **Phase 4 (Proposed / Deferred)**: Higher-level workflow orchestration (`landseg.execution.workflows`) decoupling multi-run and cross-pipeline workflows (e.g., `study-sweep`, end-to-end data intake, and pre-flight telemetry checks) from atomic execution pipelines.
 
 ### 2.1. Architectural Mental Model
 
@@ -158,21 +159,21 @@ Before ingesting any batch into an existing block pool:
    - Both `data-harmonize` and `data-ingest` compute a deterministic SHA-256 fingerprint of inputs, grid identity, and execution configs.
    - If an identical run exists with status `SUCCESS`, the execution is marked `SKIPPED`, avoiding redundant compute and duplicate ledger records.
 
-### 2.5. Proposed Phase 2: Intra-Pool Block Collision Policy
+### 2.5. Intra-Pool Block Collision Policy (Phase 2 Implemented)
 
 When incoming tiles from different batches intersect on grid coordinates `(row, col)` already present in the block pool:
 $$\mathcal{C}_{\text{candidate}} = \{(r, c) \in \text{Batch Windows}\}$$
 $$\mathcal{C}_{\text{existing}} = \{(r, c) \in \text{Valid Blocks in Pool}\}$$
 $$\mathcal{C}_{\text{collide}} = \mathcal{C}_{\text{candidate}} \cap \mathcal{C}_{\text{existing}}$$
 
-We will formalize an explicit `CollisionPolicy` enum in `landseg.geopipe.contracts.ingestion`:
+We formalized an explicit `CollisionPolicy` enum in `landseg.geopipe.contracts.ingestion`:
 - `SKIP` (`'skip'`, default): Preserve incumbent `.npz` file; do not re-slice. Retain incumbent block metadata in `catalog.json`. Ideal for non-destructive incremental pooling.
 - `OVERWRITE` (`'overwrite'`): Replace existing `.npz` block with newly sliced data. Update catalog with new raster hashes, timestamps, and lineage tags. Ideal for re-surveys and recalibrated rasters.
 - `ERROR` (`'error'`): Abort execution immediately before writing any blocks if $\mathcal{C}_{\text{collide}} \neq \emptyset$. Enforces strict disjoint geographic partitioning.
 
-### 2.6. Proposed Phase 2: Mandatory Run Collision Manifest (`collisions.json`)
+### 2.6. Mandatory Run Collision Manifest (`collisions.json`) (Phase 2 Implemented)
 
-Regardless of which `CollisionPolicy` is active (`skip`, `overwrite`, or `error`), every ingestion run will generate and persist a dedicated collision manifest at `ingested_data/run_XXXX/collisions.json`:
+Regardless of which `CollisionPolicy` is active (`skip`, `overwrite`, or `error`), every ingestion run generates and persists a dedicated collision manifest at `ingested_data/run_XXXX/collisions.json`:
 
 ```json
 {
@@ -197,13 +198,13 @@ This permanent audit artifact serves two critical roles:
 1. **Auditability & Anomaly Diagnosis**: Downstream training experiments encountering border anomalies or high loss along swath edges can cross-reference block coordinates directly against the collision ledger.
 2. **Staging Index for Future Stitching**: Provides an exact, pre-filtered index of overlapping tiles, eliminating the need to brute-force scan hundreds of thousands of pool tensors when performing mosaic reconciliation.
 
-High-level collision counters (`blocks_candidate`, `blocks_collided`, `blocks_skipped`, `blocks_overwritten`, `blocks_added`) will be reported in `ingest_report.json`.
+High-level collision counters (`blocks_candidate`, `blocks_collided`, `blocks_skipped`, `blocks_overwritten`, `blocks_added`) are reported in `ingest_report.json`.
 
-### 2.7. Proposed Phase 2: Catalog Lineage & Provenance Tracking
+### 2.7. Catalog Lineage & Provenance Tracking (Phase 2 Implemented)
 
-We will extend `DatasetBlockMeta` in `landseg.geopipe.core.dataset_catalog` and `manifest/catalog.py`:
-- Add `harmonize_run_id: str` (e.g. `'run_0002'`).
-- Add `ingest_run_id: str` (e.g. `'run_0001'`).
+We extended `DatasetBlockMeta` in `landseg.geopipe.core.dataset_catalog` and `manifest/catalog.py`:
+- Added `harmonize_run_id: str` (e.g. `'run_0002'`).
+- Added `ingest_run_id: str` (e.g. `'run_0001'`).
 - In `build_catalog`, when `collision_policy == OVERWRITE`, update the colliding entries with the new batch's SHA-256 and lineage tags. When `collision_policy == SKIP`, preserve incumbent entries.
 
 ### 2.8. Pipeline Orchestration & Upstream Verification (Phase 1 Implemented)
@@ -226,6 +227,34 @@ Resolving this boundary condition requires a dedicated **block stitching / mosai
 **Explicit Deferral Decision**:
 We explicitly propose to **defer block stitching to Phase 3**. Attempting to implement multi-band tensor blending, categorical label conflict resolution, and nodata-filling within the current branch would significantly inflate complexity and destabilize core pooling invariants. Because Phase 2 guarantees that all colliding coordinates are immutably cataloged in `collisions.json`, Phase 3 can be introduced later as a clean, decoupled post-processing consolidation utility without disrupting the canonical ingestion contract.
 
+### 2.10. Proposed Phase 4: Higher-Level Workflow Orchestration (`landseg.execution.workflows`)
+
+A structural insight emerging from Phase 1 and 2 implementation is the architectural tension between **atomic pipeline execution** and **higher-level multi-run orchestration**:
+- In `landseg.execution.pipelines`, atomic commands (`world-grid`, `data-harmonize`, `data-prepare`, `model-train`, `model-evaluate`) strictly maintain a $1$-to-$1$ relationship with their execution context: $1$ invocation $\rightarrow$ $1$ run folder, $1$ report, and $1$ manifest entry.
+- Conversely, operations such as `data-ingest` (which iterates over an unbounded queue of pending harmonization batches) and `study-sweep` (which orchestrates multiple hyperparameter search trials using Optuna) represent **higher-level workflows** that sit above atomic pipeline execution.
+
+To resolve this dichotomy without bloating atomic execution pipelines, Phase 4 will formalize a dedicated `landseg.execution.workflows` module:
+
+1. **Decoupled Workflow Hierarchy**:
+   - `landseg.execution.pipelines.*`: Remains strictly scoped to atomic, single-run execution units. `exec_ingest_data` will be simplified to execute an explicit, single-batch ingestion target.
+   - `landseg.execution.workflows.*`: Hosts multi-run iterators, composite multi-stage DAGs, and search orchestration.
+
+2. **Core Workflow Candidates**:
+   - `study_sweep.py`: Relocated from `pipelines/` into `workflows/` as a dedicated multi-session optimization workflow.
+   - `batch_ingest_workflow`: Orchestrates comprehensive data intake (e.g., upstream harmonization run discovery $\rightarrow$ sequential batch catch-up $\rightarrow$ pool verification).
+   - `end_to_end_intake_workflow`: Manages continuous ingestion by sequentially invoking `data-harmonize` on incoming raw source packages followed by incremental `data-ingest` into the block pool.
+
+3. **Pre-flight Telemetry & Context Validation**:
+   - `workflows/` will implement a unified pre-flight inspection engine.
+   - Before launching heavyweight GPU/CPU compute, the workflow layer can query each downstream and upstream pipeline's context in dry-run mode:
+     * Verifying grid and schema compatibility.
+     * Identifying pending vs. completed runs across all ledgers.
+     * Detecting un-harmonized raw inputs or invalid file paths.
+     * Emitting an executive status-quo dashboard summarizing pipeline readiness.
+
+**Explicit Deferral Decision**:
+Phase 2 implementation remains focused on finalizing intra-pool block collisions, `collisions.json`, and catalog lineage within the existing pipeline surface. Workflow decoupling and the creation of `landseg.execution.workflows` are formally deferred to Phase 4 on a dedicated branch.
+
 ---
 
 ## 3. Consequences
@@ -236,6 +265,7 @@ We explicitly propose to **defer block stitching to Phase 3**. Attempting to imp
 - **Unambiguous Conflict Resolution**: Teams can choose between non-destructive expansion (`skip`), data updating (`overwrite`), or strict segregation (`error`).
 - **Full Traceability & Provenance**: Every block in the canonical pool tracks the exact harmonization run and ingestion run that created or updated it.
 - **Zero Downstream Disruption**: `data-prepare` continues consuming the unified canonical pool (`data_blocks/catalog.json`, `data_blocks/blocks/`) with zero changes to dataset partitioning, scoring, or normalization.
+- **Clean Architectural Scaling**: Segregating atomic pipeline runners from multi-run workflows ensures that `execution.pipelines` remains simple and uniform, while complex workflows (sweeps, continuous intake, pre-flight checks) have a dedicated, testable home.
 
 ### Negative / Considerations
 - **Catalog Management Overhead**: Large accumulated catalogs with tens of thousands of tiles require efficient JSON serialization and atomic updates to avoid corruption during concurrent runs.
