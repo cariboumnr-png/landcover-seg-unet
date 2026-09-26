@@ -29,6 +29,10 @@ This module provides schemas for serializing execution reports, domain
 statistics, block generation metrics, and catalog update summaries.
 
 Public APIs:
+    - `CollisionPolicyType`: Literal type for collision policies.
+    - `CollisionRecord`: TypedDict for block collision entry.
+    - `RunCollisionManifest`: TypedDict for run-level collision report.
+    - `CollisionStats`: TypedDict for aggregate collision metrics.
     - `DomainStats`: TypedDict for domain layer re-indexing statistics.
     - `DomainMapReport`: TypedDict for domain map execution report.
     - `BlockStats`: TypedDict for data block mapping and build stats.
@@ -44,8 +48,10 @@ Public APIs:
 from __future__ import annotations
 import typing
 
-
 # ----- public types
+CollisionPolicyType = typing.Literal['skip', 'overwrite', 'error']
+
+
 class IngestionPipelineConfig(typing.Protocol):
     '''Shape of the Ingestion pipeline configurations.'''
     @property
@@ -70,6 +76,36 @@ class _DataBlocksConfig(typing.Protocol):
     def add_topo(self) -> list[str] | None: ...
     @property
     def add_spectral(self) -> list[str] | None: ...
+    @property
+    def collision_policy(self) -> CollisionPolicyType: ...
+
+
+class CollisionRecord(typing.TypedDict):
+    '''Record of an individual block spatial collision and action taken.'''
+    block_name: str
+    grid_coord: list[int]
+    incumbent_ingest_run: str | None
+    incumbent_harmonize_run: str | None
+    action_taken: typing.Literal['skipped', 'overwritten', 'error']
+
+
+class RunCollisionManifest(typing.TypedDict):
+    '''Run-level collision audit manifest persisted as collisions.json.'''
+    ingestion_run_id: str
+    ingestion_run_uid: str
+    harmonization_run_id: str
+    collision_policy: CollisionPolicyType
+    total_collided: int
+    collided_blocks: list[CollisionRecord]
+
+
+class CollisionStats(typing.TypedDict):
+    '''Aggregate metrics on intra-pool spatial block collisions.'''
+    blocks_candidate: int
+    blocks_collided: int
+    blocks_skipped: int
+    blocks_overwritten: int
+    blocks_added: int
 
 
 class IngestionRunRecord(typing.TypedDict):
@@ -127,6 +163,7 @@ class DataBlocksReport(typing.TypedDict):
     duration_sec: float
     stats: BlockStats | None
     manifest: ManifestStats | None
+    collisions: CollisionStats | None
 
 
 class BlockStats(typing.TypedDict):

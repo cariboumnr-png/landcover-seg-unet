@@ -69,3 +69,11 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         self._cfg.data.ingestion.datablocks.add_topo = add_topo
         self._cfg.data.ingestion.datablocks.add_spectral = add_spectral
         return self
+
+    def set_collision_policy(
+        self,
+        policy: typing.Literal['skip', 'overwrite', 'error'],
+    ) -> typing.Self:
+        '''Set collision policy for overlapping data blocks.'''
+        self._cfg.data.ingestion.datablocks.collision_policy = policy
+        return self

@@ -54,6 +54,9 @@ __all__ = [
     # typing
     'BlockStats',
     'BlocksPartition',
+    'CollisionPolicyType',
+    'CollisionRecord',
+    'CollisionStats',
     'DataBlocksReport',
     'DataPartitionReport',
     'DomainMapReport',
@@ -73,6 +76,7 @@ __all__ = [
     'PreparationReportSchema',
     'PreparedSchema',
     'ProvenanceRecord',
+    'RunCollisionManifest',
     'SchemaReport',
     'TargetHeadsSchema',
     'WorldGridPrepConfig',
@@ -97,6 +101,9 @@ if typing.TYPE_CHECKING:
     )
     from .ingestion import (
         BlockStats,
+        CollisionPolicyType,
+        CollisionRecord,
+        CollisionStats,
         DataBlocksReport,
         DomainMapReport,
         DomainStats,
@@ -104,6 +111,7 @@ if typing.TYPE_CHECKING:
         IngestReportSchema,
         IngestionRunRecord,
         ManifestStats,
+        RunCollisionManifest,
     )
     from .preparation import (
         BlocksPartition,
@@ -140,6 +148,9 @@ def __getattr__(name: str):
 
     if name in {
         'BlockStats',
+        'CollisionPolicyType',
+        'CollisionRecord',
+        'CollisionStats',
         'DataBlocksReport',
         'DomainMapReport',
         'DomainStats',
@@ -147,6 +158,7 @@ def __getattr__(name: str):
         'IngestReportSchema',
         'IngestionRunRecord',
         'ManifestStats',
+        'RunCollisionManifest',
     }:
         obj = importlib.import_module('.ingestion', __package__)
         return getattr(obj, name)

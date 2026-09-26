@@ -59,6 +59,10 @@ class IngestionPaths(base.PipelineArtifactsPaths):
     def config(self) -> str:
         return os.path.join(self.effective_run_folder, 'config.json')
 
+    @property
+    def collisions(self) -> str:
+        return os.path.join(self.effective_run_folder, 'collisions.json')
+
     def _init_pipeline_folders(self):
         os.makedirs(self.root, exist_ok=True)
         os.makedirs(self.effective_run_folder, exist_ok=True)
