@@ -114,6 +114,8 @@ def run_data_ingestion(
             ignore_index=config.datablocks.ignore_index,
             add_spectral=config.datablocks.add_spectral,
             add_topo=config.datablocks.add_topo,
+            harmonize_run_id=context.harmonization_run_id,
+            ingest_run_id=logger.run_id,
         )
         ingest_blocks.run_blocks_building(
             context.grid,

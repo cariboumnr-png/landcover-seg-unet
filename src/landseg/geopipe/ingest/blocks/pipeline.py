@@ -70,6 +70,8 @@ class BlockBuildingParameters:
     ignore_index: int
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
+    harmonize_run_id: str | None = None
+    ingest_run_id: str | None = None
 
 
 # ----- public functions
@@ -144,6 +146,8 @@ def run_blocks_building(
         blocks_dir=artfact_paths.blocks,
         label_color_map=result.label_color_map,
         block_identity=world_grid.block_identity,
+        harmonize_run_id=config.harmonize_run_id,
+        ingest_run_id=config.ingest_run_id,
     )
     manifest_report = manifest.update_manifest(
         updated,

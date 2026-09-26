@@ -86,6 +86,13 @@ class IngestionLogger(utils.Logger):
             return self.summary.get('run_uid', '')
         return ''
 
+    @property
+    def run_id(self) -> str:
+        '''Return current run identifier.'''
+        if self.summary:
+            return self.summary.get('run_id', '')
+        return ''
+
     def set_identity(self, fingerprint: str) -> None:
         '''Record fingerprint of the inputs and configs of this run.'''
         if self.summary is not None:

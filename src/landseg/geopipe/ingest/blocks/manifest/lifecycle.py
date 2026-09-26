@@ -61,6 +61,8 @@ class ManifestUpdateContext:
     blocks_dir: str                 # where data blocks are
     label_color_map: dict[str, list[int]] | None
     block_identity: str = ''        # canonical compatibility identity
+    harmonize_run_id: str | None = None
+    ingest_run_id: str | None = None
 
 
 # ----- public functions
@@ -116,6 +118,8 @@ def update_manifest(
             mapped_grid_id=context.mapped_grid_id,
             source_image=context.source_image,
             source_label=context.source_label,
+            harmonize_run_id=context.harmonize_run_id,
+            ingest_run_id=context.ingest_run_id,
         )
         catalog_json = _catalog.to_json_payload()
         ctrl.persist(catalog_json)
