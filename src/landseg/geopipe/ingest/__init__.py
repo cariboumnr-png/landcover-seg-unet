@@ -47,6 +47,7 @@ __all__ = [
     'run_data_ingestion',
     'build_ingestion_context',
     'resolve_pending_ingestion_batches',
+    'verify_pool_grid_compatibility',
 ]
 
 
@@ -61,6 +62,7 @@ if typing.TYPE_CHECKING:
     from .context import (
         build_ingestion_context,
         resolve_pending_ingestion_batches,
+        verify_pool_grid_compatibility,
     )
 
 
@@ -76,6 +78,7 @@ def __getattr__(name: str):
     if name in {
         'build_ingestion_context',
         'resolve_pending_ingestion_batches',
+        'verify_pool_grid_compatibility',
     }:
         obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)

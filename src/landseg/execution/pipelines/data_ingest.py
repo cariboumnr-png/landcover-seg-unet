@@ -110,7 +110,8 @@ def _exec_single_ingestion_batch(
         )
 
         ingest.run_data_ingestion(
-            artifact_paths,
+            artifact_paths.data_harmonization,
+            ingestion_paths,
             harmonization_record,
             config.data.ingestion,
             policy=policy,

@@ -79,7 +79,11 @@ def run_data_harmonization(
         return
     logger.log('INFO', '[COMPLETE] Data harmonization context built')
 
-    # set up generator - each source to harmonize
+    # set up generator and run for each source
+    logger.log(
+        'INFO',
+        f'[START] Harmonizing data onto grid: {context.grid.affine_identity}'
+    )
     proc = _harmonize_sources(
         context.compiled_dataset_manifest,
         artifacts_paths.effective_run_folder,
@@ -87,9 +91,6 @@ def run_data_harmonization(
         categorical_resampling=config.resampling_categorical,
         continuous_resampling=config.resampling_continuous,
     )
-
-    # run generator
-    logger.log('INFO', f'[START] Harmonizing data onto grid: {context.grid.affine_identity}')
     processed: _ProcessedRasters
     while True:
         try:
@@ -98,6 +99,14 @@ def run_data_harmonization(
         except StopIteration as s:
             processed = s.value
             break
+
+    # generate valid feature pixel mask if feature raster is provided
+    feature_raster = processed.finalized.get('features')
+    if feature_raster:
+        mask_path = artifacts_paths.valid_mask_raster
+        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
+        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
+        logger.set_valid_mask_raster(mask_path)
 
     # log processed file paths
     for name, path in processed.provenance.items():
@@ -108,14 +117,6 @@ def run_data_harmonization(
 
     for name, path in processed.finalized.items():
         logger.add_finalized_raster(name, path)
-
-    # generate valid feature pixel mask if feature raster is provided
-    feature_raster = processed.finalized.get('features')
-    if feature_raster:
-        mask_path = artifacts_paths.valid_mask_raster
-        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
-        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
-        logger.set_valid_mask_raster(mask_path)
 
 
 # ----- private helpers

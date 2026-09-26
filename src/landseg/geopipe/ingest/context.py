@@ -33,6 +33,7 @@ Public APIs:
     - `discover_ingested_harmonization_uids`: Ingested harm UIDs.
     - `resolve_harmonization_run`: Resolve target run record.
     - `resolve_pending_ingestion_batches`: Determine batches to ingest.
+    - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 
 # standard imports
@@ -49,7 +50,9 @@ import landseg.geopipe.utils as geo_utils
 
 # ----- typing aliases
 HarmonizationRecords = dict[str, contracts.HarmonizationRunRecord]
-HarmonizationReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
+HarmonizationReportCtrl = (
+    artifacts.Controller[contracts.HarmonizationReportSchema]
+)
 HarmonizationManifestCtrl = artifacts.Controller[HarmonizationRecords]
 IngestionRecords = dict[str, contracts.IngestionRunRecord]
 IngestionManifestCtrl = artifacts.Controller[IngestionRecords]
@@ -148,9 +151,9 @@ def resolve_pending_ingestion_batches(
 def build_ingestion_context(
     harmonization_artifact_paths: artifacts.HarmonizationPaths,
     harmonization_record: contracts.HarmonizationRunRecord,
-    runs_manifest_fpath: str,
-    dataset_schema_fpath: str,
-    config: contracts.IngestionPipelineConfig,
+    runs_manifest_fpath: str | None = None,
+    dataset_schema_fpath: str | None = None,
+    config: contracts.IngestionPipelineConfig | None = None,
 ) -> IngestionContext:
     '''
     Build data ingestion context from upstream harmonization artifacts.
@@ -164,6 +167,12 @@ def build_ingestion_context(
             File path manager for harmonization artifacts.
         harmonization_record:
             Resolved upstream harmonization run record.
+        runs_manifest_fpath:
+            Optional runs manifest file path to detect collision.
+        dataset_schema_fpath:
+            Optional dataset schema file path to check compatibility.
+        config:
+            Optional ingestion pipeline configuration.
 
     Returns:
         IngestionContext:
@@ -181,7 +190,8 @@ def build_ingestion_context(
     world_grid = geo_core.load_grid_from_fpath(grid_fpath)
 
     # verify grid compatibility
-    _verify_pool_grid_compatibility(dataset_schema_fpath, world_grid)
+    if dataset_schema_fpath is not None:
+        verify_pool_grid_compatibility(dataset_schema_fpath, world_grid)
 
     # parse harmonized domain/feature/label sources
     finals = report['finalized_rasters']
@@ -195,6 +205,22 @@ def build_ingestion_context(
 
     # identify/collision check
     grid_identity = geo_utils.compute_fingerprint(world_grid.block_identity)
+    config_dict = (
+        {
+            'datablocks': {
+                'ignore_index': config.datablocks.ignore_index,
+                'image_dem_pad': config.datablocks.image_dem_pad,
+                'add_spectral': config.datablocks.add_spectral,
+                'add_topo': config.datablocks.add_topo,
+            },
+            'domains': {
+                'valid_threshold': config.domains.valid_threshold,
+                'target_variance': config.domains.target_variance,
+            },
+        }
+        if config is not None
+        else {}
+    )
     identity = {
         'harmonization_run_uid': harmonization_record['run_uid'],
         'grid': {
@@ -207,21 +233,14 @@ def build_ingestion_context(
             'domains': domains,
             'valid_mask_raster': harmonization_artifact_paths.valid_mask_raster,
         },
-        'config': {
-            'datablocks': {
-                'ignore_index': config.datablocks.ignore_index,
-                'image_dem_pad': config.datablocks.image_dem_pad,
-                'add_spectral': config.datablocks.add_spectral,
-                'add_topo': config.datablocks.add_topo,
-            },
-            'domains': {
-                'valid_threshold': config.domains.valid_threshold,
-                'target_variance': config.domains.target_variance,
-            },
-        },
+        'config': config_dict,
     }
     fingerprint = geo_utils.compute_fingerprint(identity)
-    collided = geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
+    collided = (
+        geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
+        if runs_manifest_fpath is not None
+        else None
+    )
 
     return IngestionContext(
         grid=world_grid,
@@ -381,7 +400,7 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
     }
 
 
-def _verify_pool_grid_compatibility(
+def verify_pool_grid_compatibility(
     schema_fpath: str,
     grid: geo_core.GridLayout,
 ) -> None:
@@ -422,3 +441,6 @@ def _verify_pool_grid_compatibility(
                 f'pool [{existing_block_id}].'
             )
         return
+
+
+_verify_pool_grid_compatibility = verify_pool_grid_compatibility

@@ -131,7 +131,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
     first_key = next(iter(catalog_run1))
     assert catalog_run1[first_key]['harmonize_run_id'] == 'harm_0001'
     assert catalog_run1[first_key]['ingest_run_id'] == 'run_0001'
-    orig_hash = catalog_run1[first_key]['sha256']
+    orig_hash = catalog_run1[first_key]['sha_256']
 
     # run overlapping batch (run 2) with skip policy
     rep2_fpath = str(tmp_path / 'rep2.json')
@@ -165,7 +165,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         catalog_run2 = json.load(f)
     assert catalog_run2[first_key]['harmonize_run_id'] == 'harm_0001'
     assert catalog_run2[first_key]['ingest_run_id'] == 'run_0001'
-    assert catalog_run2[first_key]['sha256'] == orig_hash
+    assert catalog_run2[first_key]['sha_256'] == orig_hash
 
     # verify collisions manifest
     assert os.path.exists(col2_fpath)

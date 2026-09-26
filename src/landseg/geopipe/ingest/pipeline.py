@@ -40,7 +40,8 @@ import landseg.geopipe.ingest.logger as ingest_logger
 
 # ----- public functions
 def run_data_ingestion(
-    artifact_paths: paths.ArtifactPaths,
+    harmonization_paths: paths.HarmonizationPaths,
+    ingestion_paths: paths.IngestionPaths,
     harmonization_record: contracts.HarmonizationRunRecord,
     config: contracts.IngestionPipelineConfig,
     *,
@@ -53,10 +54,10 @@ def run_data_ingestion(
     # build ingestion context
     logger.log('INFO', '[START] Building data ingestion context')
     context = ingest_context.build_ingestion_context(
-        artifact_paths.data_harmonization,
+        harmonization_paths,
         harmonization_record,
-        artifact_paths.data_ingestion.runs_manifest,
-        artifact_paths.data_ingestion.data_blocks.schema,
+        ingestion_paths.runs_manifest,
+        ingestion_paths.data_blocks.schema,
         config
     )
     logger.set_harmonization_reference(
@@ -79,7 +80,7 @@ def run_data_ingestion(
     # ----- materialize domain maps
     if context.domains:
         logger.log('INFO', '[START] Domain maps preparation')
-        domain_paths = artifact_paths.data_ingestion.domains
+        domain_paths = ingestion_paths.domains
         domain_configs = [
             ingest_domains.DomainBuildingParameters(
                 input_fpath=path,
@@ -122,11 +123,11 @@ def run_data_ingestion(
         )
         ingest_blocks.run_blocks_building(
             context.grid,
-            artifact_paths.data_ingestion.data_blocks,
+            ingestion_paths.data_blocks,
             data_blocks_config,
             policy=policy,
             logger=logger,
-            collisions_fpath=artifact_paths.data_ingestion.collisions,
+            collisions_fpath=ingestion_paths.collisions,
         )
 
         assert logger.summary['data_blocks'] # typing
