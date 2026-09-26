@@ -67,16 +67,16 @@ def mock_runtime(dataspecs, mock_dataloaders, mock_model, session_config):
         dataspecs=dataspecs,
         dataloaders=mock_dataloaders,
         model=mock_model,
-        config=session_config.engine.engine_exec,
+        config=session_config.engine_exec,
         device='cpu',
     )
     optimization = optim_mod.build_optimization(
         model=mock_model,
-        config=session_config.engine.engine_optim,
+        config=session_config.engine_optim,
     )
     engine_tasks = tasks_mod.build_engine_tasks(
         dataspecs,
-        session_config.engine.engine_tasks,
+        session_config.engine_tasks,
     )
     return epoch_mod.EngineRuntime(
         engine=batch_engine,
