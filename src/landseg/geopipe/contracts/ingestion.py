@@ -90,7 +90,7 @@ class CollisionRecord(typing.TypedDict):
 
 
 class RunCollisionManifest(typing.TypedDict):
-    '''Run-level collision audit manifest persisted as collisions.json.'''
+    '''Run collision audit manifest persisted as collisions.json.'''
     ingestion_run_id: str
     ingestion_run_uid: str
     harmonization_run_id: str
@@ -163,7 +163,7 @@ class DataBlocksReport(typing.TypedDict):
     duration_sec: float
     stats: BlockStats | None
     manifest: ManifestStats | None
-    collisions: CollisionStats | None
+    collisions: typing.NotRequired[CollisionStats | None]
 
 
 class BlockStats(typing.TypedDict):

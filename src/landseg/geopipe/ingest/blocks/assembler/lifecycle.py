@@ -40,10 +40,12 @@ from __future__ import annotations
 import dataclasses
 import os
 import random
+import typing
 # third-party imports
 import numpy
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
@@ -82,6 +84,8 @@ class BlockBuildingConfig:
     label_specs: dict[str, geo_core.CategoricalSpec]
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
+    collision_policy: contracts.CollisionPolicyType = 'skip'
+    incumbent_catalog: geo_core.DatasetCatalog | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -90,6 +94,18 @@ class BlockBuildingOutput:
     coords_created: list[tuple[int, int]]
     stats: dict[str, int]
     label_color_map: dict[str, list[int]] | None
+    collision_stats: contracts.CollisionStats = dataclasses.field(
+        default_factory=lambda: {
+            'blocks_candidate': 0,
+            'blocks_collided': 0,
+            'blocks_skipped': 0,
+            'blocks_overwritten': 0,
+            'blocks_added': 0,
+        }
+    )
+    collided_blocks: list[contracts.CollisionRecord] = dataclasses.field(
+        default_factory=list
+    )
 
 
 # ----- public functions
@@ -210,8 +226,18 @@ def build_blocks(
     )
 
     # inspect existing blocks
-    coords_todo, removed_count, on_disk_before = _structural_validation(
-        blks_dir, valid_coords, policy=policy
+    (
+        coords_todo,
+        removed_count,
+        on_disk_before,
+        collided_records,
+        collision_stats,
+    ) = _structural_validation(
+        blks_dir,
+        valid_coords,
+        policy=policy,
+        collision_policy=config.collision_policy,
+        incumbent_catalog=config.incumbent_catalog,
     )
 
     # create blocks if missing
@@ -238,7 +264,9 @@ def build_blocks(
     return BlockBuildingOutput(
         coords_created=coords_todo,
         stats=stats,
-        label_color_map=label_color_map
+        label_color_map=label_color_map,
+        collision_stats=collision_stats,
+        collided_blocks=collided_records,
     )
 
 
@@ -273,44 +301,105 @@ def _structural_validation(
     blks_dir: str,
     valid_coords: set[tuple[int, int]],
     *,
-    policy: artifacts.LifecyclePolicy
-) -> tuple[list[tuple[int, int]], int, int]:
-    '''Verify existing block file integrity; remove damaged ones.'''
+    policy: artifacts.LifecyclePolicy,
+    collision_policy: contracts.CollisionPolicyType = 'skip',
+    incumbent_catalog: geo_core.DatasetCatalog | None = None,
+) -> tuple[
+    list[tuple[int, int]],
+    int,
+    int,
+    list[contracts.CollisionRecord],
+    contracts.CollisionStats,
+]:
+    '''Verify block file integrity and resolve intra-pool collisions.'''
+    blks_to_check = {
+        c: os.path.join(blks_dir, f'{geo_utils.xy_name(c)}.npz')
+        for c in valid_coords
+    }
+
+    jobs = [
+        (io.check_npz_integrity, (c, fp), {})
+        for c, fp in blks_to_check.items()
+    ]
+
+    rsts = utils.ParallelExecutor().run(jobs, ' - Checking datablocks')
+    parsed = {k: v for r in rsts for k, v in r.items()}
+
+    coords_todo: list[tuple[int, int]] = []
+    collided_coords: list[tuple[int, int]] = []
     removed_count = 0
     on_disk_before = 0
+
+    for c, valid in parsed.items():
+        if valid:
+            on_disk_before += 1
+            collided_coords.append(c)
+        else:
+            try:
+                os.remove(blks_to_check[c])
+                removed_count += 1
+            except FileNotFoundError:
+                pass
+            coords_todo.append(c)
+
+    # evaluate collisions against collision policy
+    if collided_coords and collision_policy == 'error':
+        sample = [geo_utils.xy_name(c) for c in collided_coords[:5]]
+        raise artifacts.ArtifactError(
+            f'Intra-pool block collision detected for '
+            f'{len(collided_coords)} blocks under collision policy '
+            f'"error": {sample}'
+        )
+
     match policy:
         case artifacts.LifecyclePolicy.REBUILD:
-            coords_todo = list(valid_coords) # force build all
+            action: typing.Literal['overwritten', 'skipped'] = 'overwritten'
+            coords_todo = list(valid_coords)
 
         case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
-            blks_to_check = {
-                c: os.path.join(blks_dir, f'{geo_utils.xy_name(c)}.npz')
-                for c in valid_coords
-            }
-
-            jobs = [
-                (io.check_npz_integrity, (c, fp), {})
-                for c, fp in blks_to_check.items()
-            ]
-
-            rsts = utils.ParallelExecutor().run(jobs, ' - Checking datablocks')
-            parsed = {k: v for r in rsts for k, v in r.items()}
-
-            coords_todo = []
-            for c, valid in parsed.items():
-                if not valid:
-                    coords_todo.append(c)
-                    try:
-                        os.remove(blks_to_check[c])
-                        removed_count += 1
-                    except FileNotFoundError:
-                        pass
-                else:
-                    on_disk_before += 1
+            if collision_policy == 'overwrite':
+                action = 'overwritten'
+                coords_todo.extend(collided_coords)
+            else:
+                action = 'skipped'
 
         case _: raise ValueError(f'Unsupported policy: {policy}')
 
-    return coords_todo, removed_count, on_disk_before
+    # build collision records
+    collided_records: list[contracts.CollisionRecord] = []
+    for c in sorted(collided_coords):
+        meta = incumbent_catalog.get(c) if incumbent_catalog else None
+        incumbent_ingest = meta.get('ingest_run_id') if meta else None
+        incumbent_harm = meta.get('harmonize_run_id') if meta else None
+        collided_records.append({
+            'block_name': geo_utils.xy_name(c),
+            'grid_coord': [c[1], c[0]],
+            'incumbent_ingest_run': incumbent_ingest,
+            'incumbent_harmonize_run': incumbent_harm,
+            'action_taken': action,
+        })
+
+    skipped_count = len([
+        r for r in collided_records if r['action_taken'] == 'skipped'
+    ])
+    overwritten_count = len([
+        r for r in collided_records if r['action_taken'] == 'overwritten'
+    ])
+    collision_stats: contracts.CollisionStats = {
+        'blocks_candidate': len(valid_coords),
+        'blocks_collided': len(collided_records),
+        'blocks_skipped': skipped_count,
+        'blocks_overwritten': overwritten_count,
+        'blocks_added': len(valid_coords) - len(collided_records),
+    }
+
+    return (
+        coords_todo,
+        removed_count,
+        on_disk_before,
+        collided_records,
+        collision_stats,
+    )
 
 
 def _create_missing_blocks(

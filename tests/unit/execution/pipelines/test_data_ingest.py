@@ -226,6 +226,9 @@ def test_data_ingest_pipeline_multi_batch_catchup_and_idempotence(
     assert os.path.exists(
         os.path.join(out_dpath, 'run_0002', 'ingest_report.json')
     )
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0002', 'collisions.json')
+    )
     assert not os.path.exists(os.path.join(out_dpath, 'run_0003'))
 
     # second ingestion: should detect 0 pending runs and cleanly no-op

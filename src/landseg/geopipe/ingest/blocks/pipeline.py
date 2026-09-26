@@ -72,6 +72,7 @@ class BlockBuildingParameters:
     add_topo: list[str] | None = None
     harmonize_run_id: str | None = None
     ingest_run_id: str | None = None
+    collision_policy: contracts.CollisionPolicyType = 'skip'
 
 
 # ----- public functions
@@ -82,6 +83,7 @@ def run_blocks_building(
     *,
     policy: artifacts.LifecyclePolicy,
     logger: ingest.IngestionLogger,
+    collisions_fpath: str | None = None,
 ) -> None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.
@@ -102,6 +104,8 @@ def run_blocks_building(
             Lifecycle policy governing artifact update behavior.
         logger:
             Logger instance used for structured telemetry reporting.
+        collisions_fpath:
+            Optional file path to persist the run collision manifest.
     '''
     start_time = time.perf_counter()
 
@@ -113,6 +117,15 @@ def run_blocks_building(
         artfact_paths.mapped_window(world_grid.gid),
         policy=policy,
     )
+
+    # inspect incumbent catalog if present
+    incumbent_catalog: geo_core.DatasetCatalog | None = None
+    try:
+        cat_dict = artifacts.Controller[dict](artfact_paths.catalog).fetch()
+        if cat_dict:
+            incumbent_catalog = geo_core.DatasetCatalog.from_dict(cat_dict)
+    except artifacts.ArtifactError:
+        pass
 
     # build data blocks
     result = assembler.build_blocks(
@@ -133,9 +146,25 @@ def run_blocks_building(
             label_specs=assembler.read_label_specs(config.label_fpath),
             add_spectral=config.add_spectral,
             add_topo=config.add_topo,
+            collision_policy=config.collision_policy,
+            incumbent_catalog=incumbent_catalog,
         ),
         policy=policy,
     )
+
+    # persist collision manifest if path provided
+    if collisions_fpath is not None:
+        collision_manifest: contracts.RunCollisionManifest = {
+            'ingestion_run_id': config.ingest_run_id or '',
+            'ingestion_run_uid': logger.run_uid,
+            'harmonization_run_id': config.harmonize_run_id or '',
+            'collision_policy': config.collision_policy,
+            'total_collided': len(result.collided_blocks),
+            'collided_blocks': result.collided_blocks,
+        }
+        artifacts.Controller[dict](collisions_fpath).persist(
+            collision_manifest
+        )
 
     # create/update catalog and metadata JSON
     updated = manifest.ManifestUpdateContext(
@@ -176,6 +205,18 @@ def run_blocks_building(
             'catalog_updated': manifest_report['catalog_updated'],
             'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
             'schema_updated': manifest_report['schema_updated'],
-        }
+        },
+        'collisions': result.collision_stats,
     }
     logger.set_data_blocks_report(report)
+
+    # log collision telemetry
+    c_stats = result.collision_stats
+    logger.log(
+        'INFO',
+        f'Intra-pool block collisions: {c_stats["blocks_collided"]} '
+        f'(policy: {config.collision_policy}, '
+        f'added: {c_stats["blocks_added"]}, '
+        f'skipped: {c_stats["blocks_skipped"]}, '
+        f'overwritten: {c_stats["blocks_overwritten"]})'
+    )

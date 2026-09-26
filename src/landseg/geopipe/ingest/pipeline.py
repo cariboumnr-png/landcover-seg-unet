@@ -84,7 +84,9 @@ def run_data_ingestion(
             ingest_domains.DomainBuildingParameters(
                 input_fpath=path,
                 domain_fpath=domain_paths.domain_map_fpath(name),
-                tiles_fpath=domain_paths.mapped_tiles_fpath(name, context.grid.gid),
+                tiles_fpath=domain_paths.mapped_tiles_fpath(
+                    name, context.grid.gid
+                ),
                 valid_threshold=config.domains.valid_threshold,
                 target_variance=config.domains.target_variance,
             ) for name, path in context.domains.items()
@@ -116,6 +118,7 @@ def run_data_ingestion(
             add_topo=config.datablocks.add_topo,
             harmonize_run_id=context.harmonization_run_id,
             ingest_run_id=logger.run_id,
+            collision_policy=config.datablocks.collision_policy,
         )
         ingest_blocks.run_blocks_building(
             context.grid,
@@ -123,8 +126,12 @@ def run_data_ingestion(
             data_blocks_config,
             policy=policy,
             logger=logger,
+            collisions_fpath=artifact_paths.data_ingestion.collisions,
         )
 
         assert logger.summary['data_blocks'] # typing
         d = logger.summary['data_blocks']['duration_sec']
-        logger.log('INFO', f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)')
+        logger.log(
+            'INFO',
+            f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)'
+        )
