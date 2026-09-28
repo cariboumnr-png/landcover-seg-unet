@@ -55,11 +55,10 @@ import landseg.utils as utils
 
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
-class BlockBuildingInput:
+class BlockBuildingInputs:
     '''I/O paths used during block construction.'''
-    output_root: str            # path to output artifacts
-    image_fpath: str            # path to input image data (.tiff)
-    label_fpath: str | None     # path to input label data (.tiff)
+    image_fpath: str
+    label_fpath: str | None
 
     @property
     def has_label(self) -> bool:
@@ -68,23 +67,24 @@ class BlockBuildingInput:
 
 
 @dataclasses.dataclass(frozen=True)
-class BlockBuildingContext:
-    '''Mapped read windows for the pipeline execution.'''
-    image: geo_core.RasterWindowDict
-    label: geo_core.RasterWindowDict
+class BlockBuildingConfig:
+    '''Container for block building configurations.'''
+    dem_pad_px: int
+    ignore_index: int
+    add_spectral: list[str] | None
+    add_topo: list[str] | None
+    artifacts_policy: artifacts.LifecyclePolicy
+    collision_policy: str | contracts.CollisionPolicyType
 
 
 @dataclasses.dataclass(frozen=True)
-class BlockBuildingConfig:
-    '''Container for block building configurations.'''
-    ignore_index: int               # global ignore label index
-    dem_pad_px: int                 # image DEM channel padding in pixels
+class BlockBuildingContext:
+    '''Runtime facts and state for the pipeline execution.'''
+    image: geo_core.RasterWindowDict
+    label: geo_core.RasterWindowDict
     block_size: tuple[int, int]     # block size in row, col
     image_band_map: dict[str, int]
     label_specs: dict[str, geo_core.CategoricalSpec]
-    add_spectral: list[str] | None = None
-    add_topo: list[str] | None = None
-    collision_policy: contracts.CollisionPolicyType = 'skip'
     incumbent_catalog: geo_core.DatasetCatalog | None = None
 
 
@@ -92,20 +92,39 @@ class BlockBuildingConfig:
 class BlockBuildingOutput:
     '''Results and statistics from a multi-block building execution.'''
     coords_created: list[tuple[int, int]]
-    stats: dict[str, int]
+    collided_blocks: list[contracts.CollisionRecord]
     label_color_map: dict[str, list[int]] | None
-    collision_stats: contracts.CollisionStats = dataclasses.field(
-        default_factory=lambda: {
-            'blocks_candidate': 0,
-            'blocks_collided': 0,
-            'blocks_skipped': 0,
-            'blocks_overwritten': 0,
-            'blocks_added': 0,
-        }
-    )
-    collided_blocks: list[contracts.CollisionRecord] = dataclasses.field(
-        default_factory=list
-    )
+    running_stats: contracts.BlocksBuildingStats
+
+
+# ----- private dataclasses
+@dataclasses.dataclass(frozen=True)
+class _StructuralValidationResults:
+    coords_todo: list[tuple[int, int]]
+    removed_count: int
+    on_disk_before: int
+    collided_records: list[contracts.CollisionRecord]
+
+    @property
+    def collided_n(self) -> int:
+        '''Return number of collided blocks.'''
+        return len(self.collided_records)
+
+    @property
+    def skipped_n(self) -> int:
+        '''Return number of skipped blocks.'''
+        return len([
+            r for r in self.collided_records
+            if r['action_taken'] == 'skipped'
+        ])
+
+    @property
+    def overwritten_n(self) -> int:
+        '''Return number of the overwritten blocks.'''
+        return len([
+            r for r in self.collided_records
+            if r['action_taken'] == 'overwritten'
+        ])
 
 
 # ----- public functions
@@ -152,7 +171,8 @@ def build_test_block(
         print('Searching for a valid block...', end='\r', flush=True)
 
         try:
-            candidate = _build_single_block(name, candidate_input)
+            config = builder.DataBlockConfig(candidate_input.image_dem_pad_px)
+            candidate = _build_single_block(name, candidate_input, config)
             manifest = candidate.manifest
 
             # check valid pixel ratios based on image band
@@ -194,11 +214,11 @@ def build_test_block(
 
 
 def build_blocks(
-    inputs: BlockBuildingInput,
-    context: BlockBuildingContext,
+    inputs: BlockBuildingInputs,
     config: BlockBuildingConfig,
+    context: BlockBuildingContext,
     *,
-    policy: artifacts.LifecyclePolicy,
+    output_dir: str,
 ) -> BlockBuildingOutput:
     '''
     Validate on-disk blocks, clear corrupt ones, and build missing.
@@ -217,126 +237,100 @@ def build_blocks(
         BlockBuildingOutput:
             Execution output containing created coordinates and stats.
     '''
-    blks_dir = inputs.output_root
-    os.makedirs(blks_dir, exist_ok=True)
-
     # prepare raster read windows
-    valid_coords, shared_count, expected_shape_count = _prepare_block_windows(
-        inputs, context, config
-    )
+    coords_to_check = _prep_block_windows(inputs, context, output_dir)
 
     # inspect existing blocks
-    (
-        coords_todo,
-        removed_count,
-        on_disk_before,
-        collided_records,
-        collision_stats,
-    ) = _structural_validation(
-        blks_dir,
-        valid_coords,
-        policy=policy,
+    validation_results = _structural_validation(
+        coords_to_check,
+        context.incumbent_catalog,
+        artifacts_policy=config.artifacts_policy,
         collision_policy=config.collision_policy,
-        incumbent_catalog=config.incumbent_catalog,
     )
 
     # create blocks if missing
-    _create_missing_blocks(inputs, coords_todo, context, config)
+    todo = validation_results.coords_todo
+    _create_missing_blocks(inputs, todo, config, context, output_dir)
 
-    # simple runtime stats
-    stats = {
-        'shared_raster_windows': shared_count,
-        'expected_shape_windows': expected_shape_count,
-        'blocks_on_disk_before': on_disk_before,
-        'blocks_to_process': len(coords_todo),
-        'damaged_blocks_removed': removed_count,
-        'blocks_created': len(coords_todo)
-    }
-
-    # extract label color map from specs if present
+    # extract label color map from specs if present and pass through
     label_color_map: dict[str, list[int]] | None = None
-    if config.label_specs:
-        for spec in config.label_specs.values():
+    if context.label_specs:
+        for spec in context.label_specs.values():
             if 'color_map' in spec and spec['color_map']:
                 label_color_map = spec['color_map']
                 break
 
+    running_stats: contracts.BlocksBuildingStats = {
+        'blocks_candidate': len(coords_to_check),
+        'blocks_on_disk_before': validation_results.on_disk_before,
+        'blocks_collided': validation_results.collided_n,
+        'blocks_skipped': validation_results.skipped_n,
+        'blocks_overwritten': validation_results.overwritten_n,
+        'blocks_added': len(coords_to_check) - validation_results.collided_n,
+        'damaged_blocks_removed': validation_results.removed_count
+    }
+
     return BlockBuildingOutput(
-        coords_created=coords_todo,
-        stats=stats,
+        coords_created=validation_results.coords_todo,
+        collided_blocks=validation_results.collided_records,
         label_color_map=label_color_map,
-        collision_stats=collision_stats,
-        collided_blocks=collided_records,
+        running_stats=running_stats,
     )
 
 
 # ----- private helpers
-def _prepare_block_windows(
-    inputs: BlockBuildingInput,
+def _prep_block_windows(
+    inputs: BlockBuildingInputs,
     context: BlockBuildingContext,
-    config: BlockBuildingConfig
-) -> tuple[set[tuple[int, int]], int, int]:
+    output_dir: str,
+) -> dict[tuple[int, int], str]:
     '''Find coordinates matching block size and compute window counts.'''
     if inputs.has_label:
         common_coords = set(context.image.keys()) & set(context.label.keys())
     else:
         common_coords = set(context.image.keys())
 
-    shared_count = len(common_coords)
-
-    valid_coords = set(common_coords)
+    valid_coords = set(common_coords) # copy
     for coord in common_coords:
         iw = context.image[coord]
         lw = context.label[coord] if inputs.has_label else None
-        if (iw.height, iw.width) != config.block_size or (
-            lw is not None and (lw.height, lw.width) != config.block_size
+        if (iw.height, iw.width) != context.block_size or (
+            lw is not None and (lw.height, lw.width) != context.block_size
         ):
             valid_coords.remove(coord)
 
-    expected_shape_count = len(valid_coords)
-    return valid_coords, shared_count, expected_shape_count
-
-
-def _structural_validation(
-    blks_dir: str,
-    valid_coords: set[tuple[int, int]],
-    *,
-    policy: artifacts.LifecyclePolicy,
-    collision_policy: contracts.CollisionPolicyType = 'skip',
-    incumbent_catalog: geo_core.DatasetCatalog | None = None,
-) -> tuple[
-    list[tuple[int, int]],
-    int,
-    int,
-    list[contracts.CollisionRecord],
-    contracts.CollisionStats,
-]:
-    '''Verify block file integrity and resolve intra-pool collisions.'''
-    blks_to_check = {
-        c: os.path.join(blks_dir, f'{geo_utils.xy_name(c)}.npz')
+    return {
+        c: os.path.join(output_dir, f'{geo_utils.xy_name(c)}.npz')
         for c in valid_coords
     }
 
-    jobs = [
-        (io.check_npz_integrity, (c, fp), {})
-        for c, fp in blks_to_check.items()
-    ]
 
-    rsts = utils.ParallelExecutor().run(jobs, ' - Checking datablocks')
-    parsed = {k: v for r in rsts for k, v in r.items()}
+def _structural_validation(
+    input_coords: dict[tuple[int, int], str],
+    incumbent_catalog: geo_core.DatasetCatalog | None = None,
+    *,
+    artifacts_policy: artifacts.LifecyclePolicy,
+    collision_policy: str | contracts.CollisionPolicyType = 'skip',
+) -> _StructuralValidationResults:
+    '''Verify block file integrity and resolve intra-pool collisions.'''
+    results: list[dict[tuple[int, int], bool]] = utils.ParallelExecutor().run(
+        [(io.check_npz_integrity, (c, p), {}) for c, p in input_coords.items()],
+        ' - Checking existing data blocks (.npz files)'
+    )
 
-    coords_todo: list[tuple[int, int]] = []
     collided_coords: list[tuple[int, int]] = []
+    coords_todo: list[tuple[int, int]] = []
     removed_count = 0
     on_disk_before = 0
 
-    for c, valid in parsed.items():
-        if valid:
+    for block_integity in results:
+        c, intact = next(iter(block_integity.items()))
+        if intact:
             on_disk_before += 1
             collided_coords.append(c)
         else:
             try:
-                os.remove(blks_to_check[c])
+                os.remove(input_coords[c])
                 removed_count += 1
             except FileNotFoundError:
                 pass
@@ -344,17 +338,16 @@ def _structural_validation(
 
     # evaluate collisions against collision policy
     if collided_coords and collision_policy == 'error':
-        sample = [geo_utils.xy_name(c) for c in collided_coords[:5]]
         raise artifacts.ArtifactError(
             f'Intra-pool block collision detected for '
             f'{len(collided_coords)} blocks under collision policy '
-            f'"error": {sample}'
+            f'"error": {[geo_utils.xy_name(c) for c in collided_coords[:5]]}'
         )
 
-    match policy:
+    match artifacts_policy:
         case artifacts.LifecyclePolicy.REBUILD:
             action: typing.Literal['overwritten', 'skipped'] = 'overwritten'
-            coords_todo = list(valid_coords)
+            coords_todo = list(input_coords)
 
         case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
             if collision_policy == 'overwrite':
@@ -363,75 +356,62 @@ def _structural_validation(
             else:
                 action = 'skipped'
 
-        case _: raise ValueError(f'Unsupported policy: {policy}')
+        case _: raise ValueError(f'Unsupported policy: {artifacts_policy}')
 
     # build collision records
-    collided_records: list[contracts.CollisionRecord] = []
+    collided: list[contracts.CollisionRecord] = []
     for c in sorted(collided_coords):
-        meta = incumbent_catalog.get(c) if incumbent_catalog else None
-        incumbent_ingest = meta.get('ingest_run_id') if meta else None
-        incumbent_harm = meta.get('harmonize_run_id') if meta else None
-        collided_records.append({
+        meta = incumbent_catalog.get(c, {}) if incumbent_catalog else {}
+        collided.append({
             'block_name': geo_utils.xy_name(c),
             'grid_coord': [c[1], c[0]],
-            'incumbent_ingest_run': incumbent_ingest,
-            'incumbent_harmonize_run': incumbent_harm,
+            'incumbent_ingest_run': meta.get('ingest_run_id'),
+            'incumbent_harmonize_run':  meta.get('harmonize_run_id'),
             'action_taken': action,
         })
 
-    skipped_count = len([
-        r for r in collided_records if r['action_taken'] == 'skipped'
-    ])
-    overwritten_count = len([
-        r for r in collided_records if r['action_taken'] == 'overwritten'
-    ])
-    collision_stats: contracts.CollisionStats = {
-        'blocks_candidate': len(valid_coords),
-        'blocks_collided': len(collided_records),
-        'blocks_skipped': skipped_count,
-        'blocks_overwritten': overwritten_count,
-        'blocks_added': len(valid_coords) - len(collided_records),
-    }
-
-    return (
+    return _StructuralValidationResults(
         coords_todo,
         removed_count,
         on_disk_before,
-        collided_records,
-        collision_stats,
+        collided,
     )
 
 
 def _create_missing_blocks(
-    inputs: BlockBuildingInput,
+    inputs: BlockBuildingInputs,
     coords_todo: list[tuple[int, int]],
-    windows: BlockBuildingContext,
-    config: BlockBuildingConfig
+    config: BlockBuildingConfig,
+    context: BlockBuildingContext,
+    output_dir: str
 ) -> None:
     '''Build all missing coordinates in parallel.'''
     creation_jobs = []
     for c in coords_todo:
-        # positionals
+
         name = geo_utils.xy_name(c)
         block_inputs = io.RasterReadInput(
             image_fpath=inputs.image_fpath,
-            image_window=windows.image[c],
-            image_band_map=config.image_band_map,
+            image_window=context.image[c],
+            image_band_map=context.image_band_map,
             image_dem_pad_px=config.dem_pad_px,
             label_fpath=inputs.label_fpath,
-            label_window=windows.label[c] if inputs.has_label else None,
-            label_specs=config.label_specs
+            label_window=context.label[c] if inputs.has_label else None,
+            label_specs=context.label_specs
         )
-        # keyword args
-        kwargs = {
-            'ignore_index': config.ignore_index,
-            'add_spectral': config.add_spectral,
-            'add_topo': config.add_topo,
-            'save_fpath': os.path.join(inputs.output_root, f'{name}.npz'),
-        }
 
-        # add job
-        job = (_build_single_block, (name, block_inputs), kwargs,)
+        build_config = builder.DataBlockConfig(
+            image_dem_pad_px=config.dem_pad_px,
+            label_ignore_index=config.ignore_index,
+            add_spectral=config.add_spectral,
+            add_topo=config.add_topo
+        )
+
+        job = (
+            _build_single_block,
+            (name, block_inputs, build_config),
+            {'save_fpath': os.path.join(output_dir, f'{name}.npz')}
+        )
         creation_jobs.append(job)
 
     if creation_jobs:
@@ -440,11 +420,9 @@ def _create_missing_blocks(
 
 def _build_single_block(
     name: str,
-    inputs: io.RasterReadInput,
+    raster_inputs: io.RasterReadInput,
+    db_config: builder.DataBlockConfig,
     *,
-    ignore_index: int = 255,
-    add_spectral: list[str] | None = None,
-    add_topo: list[str] | None = None,
     save_fpath: str | None = None,
 ) -> geo_core.DataBlock:
     '''
@@ -455,12 +433,8 @@ def _build_single_block(
             Unique identifier for the block.
         inputs:
             Raster inputs and metadata required to construct the block.
-        ignore_index:
-            Label value assigned to ignored pixels in the output block.
-        add_spectral:
-            Optional list of spectral indices to compute and append.
-        add_topo:
-            Optional list of topographic features to compute from DEM.
+        config:
+            Block building configurations.
         save_fpath:
             Optional output path where the block will be saved.
 
@@ -468,25 +442,23 @@ def _build_single_block(
         geo_core.DataBlock:
             A populated and validated block instance.
     '''
-    read_outputs = io.read_block_raster_data(inputs)
+    read_outputs = io.read_block_raster_data(raster_inputs)
 
-    datablock_inputs = builder.DataBlockInputs(
+    db_inputs = builder.DataBlockInputs(
         block_name=name,
         image_array=read_outputs.image_array,
         image_padded_dem=read_outputs.image_padded_dem,
         label_array=read_outputs.label_array,
     )
-    datablock_config = builder.DataBlockConfig(
-        image_band_map=inputs.image_band_map,
-        image_dem_pad_px=inputs.image_dem_pad_px,
+
+    db_context = builder.DataBlockContext(
+        image_band_map=raster_inputs.image_band_map,
         image_nodata=read_outputs.image_nodata,
+        label_specs=raster_inputs.label_specs,
         label_nodata=read_outputs.label_nodata,
-        label_specs=inputs.label_specs,
-        label_ignore_index=ignore_index,
-        add_spectral=add_spectral,
-        add_topo=add_topo
     )
-    block = builder.build_data_block(datablock_inputs, datablock_config)
+
+    block = builder.build_data_block(db_inputs, db_config, db_context)
 
     if save_fpath:
         block.save(save_fpath)

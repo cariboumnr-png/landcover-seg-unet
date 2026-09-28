@@ -53,9 +53,10 @@ __all__ = [
     # classes
     'BlockBuildingConfig',
     'BlockBuildingContext',
-    'BlockBuildingInput',
+    'BlockBuildingInputs',
     'BlockBuildingOutput',
     'DataBlockConfig',
+    'DataBlockContext',
     'DataBlockInputs',
     'RasterReadInput',
     # functions
@@ -72,6 +73,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .builder import (
         DataBlockConfig,
+        DataBlockContext,
         DataBlockInputs,
         build_data_block,
     )
@@ -84,7 +86,7 @@ if typing.TYPE_CHECKING:
     from .lifecycle import (
         BlockBuildingConfig,
         BlockBuildingContext,
-        BlockBuildingInput,
+        BlockBuildingInputs,
         BlockBuildingOutput,
         build_blocks,
         build_test_block,
@@ -94,6 +96,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {
         'DataBlockConfig',
+        'DataBlockContext',
         'DataBlockInputs',
         'build_data_block',
     }:
@@ -112,7 +115,7 @@ def __getattr__(name: str):
     if name in {
         'BlockBuildingConfig',
         'BlockBuildingContext',
-        'BlockBuildingInput',
+        'BlockBuildingInputs',
         'BlockBuildingOutput',
         'build_blocks',
         'build_test_block',

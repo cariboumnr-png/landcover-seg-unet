@@ -37,7 +37,9 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuildingParameters',
+    'BlockBuildingConfig',
+    'BlockBuildingInputs',
+    'BlockPipelineRuntimeContext',
     # functions
     'run_blocks_building',
 ]
@@ -45,15 +47,26 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .assembler import (
+        BlockBuildingConfig,
+        BlockBuildingInputs,
+    )
     from .pipeline import (
-        BlockBuildingParameters,
+        BlockPipelineRuntimeContext,
         run_blocks_building,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'BlockBuildingParameters',
+        'BlockBuildingConfig',
+        'BlockBuildingInputs',
+    }:
+        obj = importlib.import_module('.assembler', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'BlockPipelineRuntimeContext',
         'run_blocks_building',
     }:
         obj = importlib.import_module('.pipeline', __package__)

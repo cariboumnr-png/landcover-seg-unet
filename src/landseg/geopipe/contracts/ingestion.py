@@ -77,7 +77,7 @@ class _DataBlocksConfig(typing.Protocol):
     @property
     def add_spectral(self) -> list[str] | None: ...
     @property
-    def collision_policy(self) -> CollisionPolicyType: ...
+    def collision_policy(self) -> str | CollisionPolicyType: ...
 
 
 class CollisionRecord(typing.TypedDict):
@@ -99,13 +99,15 @@ class RunCollisionManifest(typing.TypedDict):
     collided_blocks: list[CollisionRecord]
 
 
-class CollisionStats(typing.TypedDict):
+class BlocksBuildingStats(typing.TypedDict):
     '''Aggregate metrics on intra-pool spatial block collisions.'''
     blocks_candidate: int
+    blocks_on_disk_before: int
     blocks_collided: int
     blocks_skipped: int
     blocks_overwritten: int
     blocks_added: int
+    damaged_blocks_removed: int
 
 
 class IngestionRunRecord(typing.TypedDict):
@@ -161,19 +163,8 @@ class DataBlocksReport(typing.TypedDict):
     image_filepath: str
     label_filepath: str | None
     duration_sec: float
-    stats: BlockStats | None
+    stats: BlocksBuildingStats | None
     manifest: ManifestStats | None
-    collisions: typing.NotRequired[CollisionStats | None]
-
-
-class BlockStats(typing.TypedDict):
-    '''Statistics for raster window mapping and data block builds.'''
-    shared_raster_windows: int
-    expected_shape_windows: int
-    blocks_on_disk_before: int
-    blocks_to_process: int
-    damaged_blocks_removed: int
-    blocks_created: int
 
 
 class ManifestStats(typing.TypedDict):

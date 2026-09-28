@@ -109,25 +109,34 @@ def run_data_ingestion(
         logger.log('INFO', 'Harmonized feature/label rasters not provided')
     else:
         logger.log('INFO', '[START] Canonical data blocks building')
+
         assert context.features
-        data_blocks_config = ingest_blocks.BlockBuildingParameters(
+
+        data_blocks_inputs = ingest_blocks.BlockBuildingInputs(
             image_fpath=context.features,
             label_fpath=context.labels,
-            dem_pad=config.datablocks.image_dem_pad,
+        )
+        data_blocks_config = ingest_blocks.BlockBuildingConfig(
+            dem_pad_px=config.datablocks.image_dem_pad,
             ignore_index=config.datablocks.ignore_index,
             add_spectral=config.datablocks.add_spectral,
             add_topo=config.datablocks.add_topo,
-            harmonize_run_id=context.harmonization_run_id,
-            ingest_run_id=logger.run_id,
+            artifacts_policy=policy,
             collision_policy=config.datablocks.collision_policy,
         )
+        data_blocks_context = ingest_blocks.BlockPipelineRuntimeContext(
+            world_grid=context.grid,
+            block_artifact_paths=ingestion_paths.data_blocks,
+            collisions_artifacts_fpath=ingestion_paths.collisions,
+            harmonize_run_id=context.harmonization_run_id,
+            ingest_run_id=logger.run_id,
+        )
+
         ingest_blocks.run_blocks_building(
-            context.grid,
-            ingestion_paths.data_blocks,
+            data_blocks_inputs,
             data_blocks_config,
-            policy=policy,
+            data_blocks_context,
             logger=logger,
-            collisions_fpath=ingestion_paths.collisions,
         )
 
         assert logger.summary['data_blocks'] # typing
