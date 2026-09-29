@@ -29,7 +29,10 @@ resolution.
 
 Public APIs:
     - `IngestionLogger`: Structured logger for ingestion stages.
-    - `run_data_ingestion`: pipeline runner.
+    - `run_data_ingestion`: Pipeline runner.
+    - `build_ingestion_context`: Load ingestion context from report.
+    - `resolve_pending_ingestion_batches`: Determine batches to ingest.
+    - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 
 # standard imports
@@ -42,6 +45,9 @@ __all__ = [
     'IngestionLogger',
     # functions
     'run_data_ingestion',
+    'build_ingestion_context',
+    'resolve_pending_ingestion_batches',
+    'verify_pool_grid_compatibility',
 ]
 
 
@@ -53,6 +59,11 @@ if typing.TYPE_CHECKING:
     from .pipeline import (
         run_data_ingestion,
     )
+    from .context import (
+        build_ingestion_context,
+        resolve_pending_ingestion_batches,
+        verify_pool_grid_compatibility,
+    )
 
 
 def __getattr__(name: str):
@@ -62,6 +73,14 @@ def __getattr__(name: str):
 
     if name in {'run_data_ingestion'}:
         obj = importlib.import_module('.pipeline', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'build_ingestion_context',
+        'resolve_pending_ingestion_batches',
+        'verify_pool_grid_compatibility',
+    }:
+        obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

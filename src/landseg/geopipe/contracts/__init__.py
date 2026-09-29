@@ -27,7 +27,7 @@ Public APIs:
     - `WorldGridReport`: Summary report for world grid layout.
     - `HarmonizationReportSchema`: Report schema for harmonization.
     - `ProvenanceRecord`: Provenance record for raw source raster.
-    - `BlockStats`: Data block build statistics.
+    - `BlockBuildingStats`: Data block build statistics.
     - `DataBlocksReport`: Execution report for data block partitioning.
     - `DomainMapReport`: Execution report for domain map preparation.
     - `DomainStats`: Re-indexing statistics for a domain layer.
@@ -52,24 +52,33 @@ import typing
 
 __all__ = [
     # typing
-    'BlockStats',
+    'BlocksBuildingStats',
     'BlocksPartition',
+    'CollisionPolicyType',
+    'CollisionRecord',
     'DataBlocksReport',
     'DataPartitionReport',
     'DomainMapReport',
     'DomainStats',
     'GridReportSchema',
+    'HarmonizationPipelineConfig',
     'HarmonizationReportSchema',
+    'HarmonizationRunRecord',
     'ImageBandStats',
+    'IngestionPipelineConfig',
     'IngestReportSchema',
+    'IngestionRunRecord',
     'ManifestStats',
     'NormalizationReport',
     'PartitionSummary',
+    'PreparationPipelineConfig',
     'PreparationReportSchema',
     'PreparedSchema',
     'ProvenanceRecord',
+    'RunCollisionManifest',
     'SchemaReport',
     'TargetHeadsSchema',
+    'WorldGridPrepConfig',
     'WorldGridReport',
     # constants
     'PREPARED_SCHEMA_ID',
@@ -80,19 +89,27 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .grid import (
         GridReportSchema,
+        WorldGridPrepConfig,
         WorldGridReport,
     )
     from .harmonization import (
+        HarmonizationPipelineConfig,
         HarmonizationReportSchema,
+        HarmonizationRunRecord,
         ProvenanceRecord,
     )
     from .ingestion import (
-        BlockStats,
+        BlocksBuildingStats,
+        CollisionPolicyType,
+        CollisionRecord,
         DataBlocksReport,
         DomainMapReport,
         DomainStats,
+        IngestionPipelineConfig,
         IngestReportSchema,
+        IngestionRunRecord,
         ManifestStats,
+        RunCollisionManifest,
     )
     from .preparation import (
         BlocksPartition,
@@ -101,6 +118,7 @@ if typing.TYPE_CHECKING:
         NormalizationReport,
         PREPARED_SCHEMA_ID,
         PartitionSummary,
+        PreparationPipelineConfig,
         PreparationReportSchema,
         PreparedSchema,
         SchemaReport,
@@ -111,25 +129,33 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {
         'GridReportSchema',
+        'WorldGridPrepConfig',
         'WorldGridReport',
     }:
         obj = importlib.import_module('.grid', __package__)
         return getattr(obj, name)
 
     if name in {
+        'HarmonizationPipelineConfig',
         'HarmonizationReportSchema',
+        'HarmonizationRunRecord',
         'ProvenanceRecord',
     }:
         obj = importlib.import_module('.harmonization', __package__)
         return getattr(obj, name)
 
     if name in {
-        'BlockStats',
+        'BlocksBuildingStats',
+        'CollisionPolicyType',
+        'CollisionRecord',
         'DataBlocksReport',
         'DomainMapReport',
         'DomainStats',
+        'IngestionPipelineConfig',
         'IngestReportSchema',
+        'IngestionRunRecord',
         'ManifestStats',
+        'RunCollisionManifest',
     }:
         obj = importlib.import_module('.ingestion', __package__)
         return getattr(obj, name)
@@ -141,6 +167,7 @@ def __getattr__(name: str):
         'NormalizationReport',
         'PREPARED_SCHEMA_ID',
         'PartitionSummary',
+        'PreparationPipelineConfig',
         'PreparationReportSchema',
         'PreparedSchema',
         'SchemaReport',

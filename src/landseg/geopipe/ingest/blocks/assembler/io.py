@@ -237,7 +237,9 @@ def check_npz_integrity(
     return {coord: ok}
 
 
-def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
+def read_block_raster_data(
+    inputs: RasterReadInput
+) -> RasterReadOutput:
     '''
     Read arrays and metadata from raster datasets for a given window.
 

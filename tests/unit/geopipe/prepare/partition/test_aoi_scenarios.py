@@ -91,17 +91,14 @@ def test_scenario_1_fixed_test_aoi_with_auto_train_val(tmp_path):
         (256, 256): [25, 35],
     }
 
-    config = orchestration.PartitionParameters(
+    config = orchestration.PartitionConfig(
         val_test_ratios=(0.5, 0.0),
-        buffer_step=0,
-        reward_ratios={},
-        scoring_alpha=1.0,
-        scoring_beta=0.0,
-        max_skew_rate=10.0,
         block_spec=(256, 256, 256, 256),
-        test_aoi=test_aoi,
-        canvas_crs='EPSG:3161',
-        canvas_transform=t_test,
+        aoi=orchestration.AOIConfig(
+            test_aoi=test_aoi,
+            canvas_crs='EPSG:3161',
+            canvas_transform=t_test,
+        ),
     )
 
     results = orchestration.create_blocks_partition(
@@ -135,15 +132,9 @@ def test_scenario_2_train_val_only_zero_test_blocks():
         (256, 256): [10, 10],
     }
 
-    config = orchestration.PartitionParameters(
+    config = orchestration.PartitionConfig(
         val_test_ratios=(0.25, 0.0),
-        buffer_step=0,
-        reward_ratios={},
-        scoring_alpha=1.0,
-        scoring_beta=0.0,
-        max_skew_rate=10.0,
         block_spec=(256, 256, 256, 256),
-        test_aoi=None,
     )
 
     results = orchestration.create_blocks_partition(
@@ -188,19 +179,16 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
 
     mock_logger = mocker.MagicMock()
 
-    config = orchestration.PartitionParameters(
+    config = orchestration.PartitionConfig(
         val_test_ratios=(0.0, 0.0),
-        buffer_step=0,
-        reward_ratios={},
-        scoring_alpha=1.0,
-        scoring_beta=0.0,
-        max_skew_rate=10.0,
         block_spec=(256, 256, 256, 256),
-        train_aoi=train_path,
-        val_aoi=val_path,
-        test_aoi=test_path,
-        canvas_crs='EPSG:3161',
-        canvas_transform=t_test,
+        aoi=orchestration.AOIConfig(
+            train_aoi=train_path,
+            val_aoi=val_path,
+            test_aoi=test_path,
+            canvas_crs='EPSG:3161',
+            canvas_transform=t_test,
+        ),
     )
 
     results = orchestration.create_blocks_partition(

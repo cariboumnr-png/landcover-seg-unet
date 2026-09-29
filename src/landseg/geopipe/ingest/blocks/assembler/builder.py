@@ -78,47 +78,26 @@ class DataBlockInputs:
 @dataclasses.dataclass(frozen=True)
 class DataBlockConfig:
     '''Build-time config for feature engineering and data encoding.'''
-    image_nodata: float
-    image_band_map: dict[str, int]
     image_dem_pad_px: int
-    label_nodata: int | None = None
-    label_specs: dict[str, geo_core.CategoricalSpec] | None = None
     label_ignore_index: int = 255
     add_spectral: list[str] | None = None
     add_topo: list[str] | None = None
 
-    def __post_init__(self):
-        band_map = [b.lower() for b in self.image_band_map]
 
-        if self.add_spectral:
-            spectral = [s.lower() for s in self.add_spectral]
-            invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
-            if invalid:
-                raise ValueError(f'Invalid spectral indices: {invalid}')
-
-            if 'red' not in band_map:
-                raise ValueError('Unable to add spectrals: red band missing')
-            if 'ndvi' in spectral and 'nir' not in band_map:
-                raise ValueError('NDVI calculation: NIR band missing')
-            if 'ndmi' in spectral and 'swir1' not in band_map:
-                raise ValueError('NDMI calculation: SWIR1 band missing')
-            if 'nbr' in spectral and 'swir2' not in band_map:
-                raise ValueError('NBR calculation: SWIR2 band missing')
-
-        if self.add_topo:
-            topo = [t.lower() for t in self.add_topo]
-            invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
-            if invalid:
-                raise ValueError(f'Invalid topo features: {invalid}')
-
-            if 'dem' not in band_map:
-                raise ValueError('DEM band missing for topographical features')
+@dataclasses.dataclass(frozen=True)
+class DataBlockContext:
+    '''Context for data blocks building.'''
+    image_band_map: dict[str, int]
+    image_nodata: float
+    label_specs: dict[str, geo_core.CategoricalSpec] | None = None
+    label_nodata: int | None = None
 
 
 # ----- public functions
 def build_data_block(
     inputs: DataBlockInputs,
     config: DataBlockConfig,
+    context: DataBlockContext,
 ) -> geo_core.DataBlock:
     '''
     Construct a DataBlock from source arrays and build config.
@@ -138,14 +117,28 @@ def build_data_block(
             a fully populated block instance.
     '''
     manifest = geo_core.DataBlock.empty_manifest(inputs.block_name)
-    manifest['image_band_map'] = dict(config.image_band_map)
-    manifest['image_nodata'] = config.image_nodata
+    manifest['image_band_map'] = dict(context.image_band_map)
+    manifest['image_nodata'] = context.image_nodata
     manifest['label_ignore_index'] = config.label_ignore_index
-    manifest['label_nodata'] = config.label_nodata or 0
+    manifest['label_nodata'] = context.label_nodata or 0
 
     image = inputs.image_array.astype(numpy.float32)
+    band_map = [b.lower() for b in context.image_band_map]
 
     if config.add_spectral:
+        spectral = [s.lower() for s in config.add_spectral]
+        invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
+        if invalid:
+            raise ValueError(f'Invalid spectral indices: {invalid}')
+
+        if 'red' not in band_map:
+            raise ValueError('Unable to add spectrals: red band missing')
+        if 'ndvi' in spectral and 'nir' not in band_map:
+            raise ValueError('NDVI calculation: NIR band missing')
+        if 'ndmi' in spectral and 'swir1' not in band_map:
+            raise ValueError('NDMI calculation: SWIR1 band missing')
+        if 'nbr' in spectral and 'swir2' not in band_map:
+            raise ValueError('NBR calculation: SWIR2 band missing')
         image = _image_add_spectral(
             image,
             manifest,
@@ -153,6 +146,13 @@ def build_data_block(
         )
 
     if config.add_topo:
+        topo = [t.lower() for t in config.add_topo]
+        invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
+        if invalid:
+            raise ValueError(f'Invalid topo features: {invalid}')
+
+        if 'dem' not in band_map:
+            raise ValueError('DEM band missing for topographical features')
         padded_dem = inputs.pad_dem.astype(numpy.float32)
         image = _image_add_topography(
             image,
@@ -171,15 +171,15 @@ def build_data_block(
     )
 
     if inputs.has_label:
-        if not config.label_specs:
+        if not context.label_specs:
             raise ValueError('"label_specs" not provided')
         manifest['has_label'] = True
-        manifest['label_nodata'] = config.label_nodata or -1
+        manifest['label_nodata'] = context.label_nodata or -1
         assert inputs.label_array is not None
         raw_label = inputs.label_array.astype(numpy.uint8)
         label_stack = _label_canonicalize(
             raw_label,
-            config.label_specs,
+            context.label_specs,
             manifest,
         )
     else:

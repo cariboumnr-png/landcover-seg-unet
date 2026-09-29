@@ -29,12 +29,11 @@ deriving geometry from a reference raster or through manual extent
 parameters.
 
 Public APIs:
-    - `GridParameters`: Protocol defining grid generation configuration.
     - `build_grid`: Construct a GridLayout from config or raster reference.
 '''
 
 # standard imports
-from __future__ import annotations
+import dataclasses
 import os
 import typing
 # local imports
@@ -42,29 +41,23 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 
 
-# ----- public types
-class GridParameters(typing.Protocol):
-    '''Container for grid generation configuration.'''
-    @property
-    def tile_size(self) -> tuple[int, int]: ...
-    @property
-    def tile_stride(self) -> tuple[int, int]: ...
-    @property
-    def ref_fpath(self) -> str | None: ...
-    @property
-    def crs_string(self) -> str | None: ...
-    @property
-    def origin(self) -> tuple[float, float] | None: ...
-    @property
-    def pixel_size(self) -> tuple[float, float] | None: ...
-    @property
-    def extent_in_crs_units(self) -> tuple[float, float] | None: ...
+# ----- Public dataclasses
+@dataclasses.dataclass
+class GridConfigs:
+    '''Grid building configurations'''
+    tile_size: tuple[int, int]
+    tile_stride: tuple[int, int]
+    ref_fpath: str | None
+    crs_string: str | None
+    origin: tuple[float, float] | None
+    pixel_size: tuple[float, float] | None
+    extent_in_crs_units: tuple[float, float] | None
 
 
 # ----- public functions
 def build_grid(
     mode: typing.Literal['ref', 'manual'] | str,
-    config: GridParameters,
+    config: GridConfigs,
 ) -> geo_core.GridLayout:
     '''
     Build a world grid layout from reference raster or manual parameters.
@@ -74,7 +67,7 @@ def build_grid(
             Grid derivation mode ('ref' for reference raster or 'manual'
             for explicit spatial parameters).
         config:
-            Configuration object implementing GridParameters protocol.
+            Grid building configurations.
 
     Returns:
         geo_core.GridLayout:

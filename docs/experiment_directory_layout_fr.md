@@ -57,6 +57,7 @@ et de résultats (`results/`) correspondants.
 │   │   └── grid_report.json                     # Rapport de synthèse d'exécution du quadrillage mondial
 │   │
 │   ├── harmonized_data/                         # Produit par le pipeline 'data-harmonize'
+│   │   ├── harmonization_runs.json              # Registre cumulatif d'harmonisation
 │   │   └── run_0001/                            # Répertoire d'exécution ETL sérialisé
 │   │       ├── harmonized_<name>.vrt            # Raster virtuel source unique réprojeté
 │   │       ├── harmonized_features_STACKED.vrt  # Raster virtuel composite de caractéristiques empilé
@@ -66,17 +67,20 @@ et de résultats (`results/`) correspondants.
 │   │       └── config.json                      # Enregistrement de configuration de l'harmonisation
 │   │
 │   ├── ingested_data/                           # Produit par le pipeline 'data-ingest'
-│   │   ├── domain_knowledge/                    # Rasters et tuiles de connaissances du domaine catégoriel / vectoriel
+│   │   ├── ingestion_runs.json                  # Registre cumulatif d'ingestion
+│   │   ├── run_0001/                            # Répertoire de lot sérialisé
+│   │   │   ├── ingest_report.json               # Rapport de synthèse d'ingestion
+│   │   │   ├── collisions.json                  # Registre des collisions entre lots
+│   │   │   └── config.json                      # Enregistrement de configuration
+│   │   ├── domain_knowledge/                    # Bassin de connaissances de domaine
 │   │   │   ├── <domain_name>.json *
 │   │   │   └── <domain_name>_tiles_<gid>.npz
-│   │   ├── data_blocks/                         # Blocs de données canoniques unifiés (avant découpage)
-│   │   │   ├── blocks/                          # Tableaux de blocs bruts extraits non normalisés
-│   │   │   ├── windows/                         # Manifestes d'index des fenêtres spatiales alignées sur la grille
-│   │   │   │   └── windows_<gid>.json *
-│   │   │   ├── catalog.json                     # Catalogue unifié des blocs de données
-│   │   │   └── schema.json                      # Schéma structurel des blocs de données
-│   │   ├── ingest_report.json                   # Rapport de synthèse d'exécution de l'ingestion
-│   │   └── config.json                          # Enregistrement de configuration d'ingestion
+│   │   └── data_blocks/                         # Bassin canonique de blocs de données
+│   │       ├── blocks/                          # Tableaux bruts non normalisés
+│   │       ├── windows/                         # Manifestes d'index des fenêtres spatiales
+│   │       │   └── windows_<gid>.json *
+│   │       ├── catalog.json                     # Catalogue cumulatif et traçabilité
+│   │       └── schema.json                      # Schéma structurel et block_identity
 │   │
 │   └── prepared_data/                           # Produit par le pipeline 'data-prepare'
 │       ├── train_blocks/                        # Bloc de tableaux d'entraînement préparés

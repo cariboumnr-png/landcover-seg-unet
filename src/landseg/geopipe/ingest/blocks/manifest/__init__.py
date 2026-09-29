@@ -26,7 +26,7 @@ Exposes catalog, schema, and manifest lifecycle tools for block-level
 geospatial dataset management via lazy module resolution.
 
 Public APIs:
-    - `ManifestUpdateContext`: Dataclass context for manifest update.
+    - `ManifestProvenance`: Lineage and grid identity metadata.
     - `update_manifest`: Updates dataset catalog and schema artifacts.
 '''
 
@@ -37,7 +37,7 @@ import typing
 
 __all__ = [
     # classes
-    'ManifestUpdateContext',
+    'ManifestProvenance',
     # functions
     'update_manifest',
 ]
@@ -46,17 +46,19 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .lifecycle import (
-        ManifestUpdateContext,
+        ManifestProvenance,
         update_manifest,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'ManifestUpdateContext',
+        'ManifestProvenance',
         'update_manifest',
     }:
         obj = importlib.import_module('.lifecycle', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
+

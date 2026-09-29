@@ -48,6 +48,8 @@ def build_catalog(
     mapped_grid_id: str,
     source_image: str,
     source_label: str | None,
+    harmonize_run_id: str | None = None,
+    ingest_run_id: str | None = None,
 ) -> geo_core.DatasetCatalog:
     '''
     Build a new dataset catalog or update an existing one.
@@ -71,6 +73,10 @@ def build_catalog(
         source_label:
             File path or identifier of source label raster, or `None`
             for unlabeled datasets.
+        harmonize_run_id:
+            Identifier of the upstream harmonization run.
+        ingest_run_id:
+            Identifier of the active data ingestion run.
 
     Returns:
         geo_core.DatasetCatalog:
@@ -106,6 +112,8 @@ def build_catalog(
             'source_image_sha_256': img_hash,
             'source_label': source_label,
             'source_label_sha_256': lbl_hash,
+            'harmonize_run_id': harmonize_run_id,
+            'ingest_run_id': ingest_run_id,
         }
         new_entries[meta['block_name']] = entry
 

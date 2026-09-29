@@ -293,6 +293,22 @@ class SessionConfig:
         if self.mode == 'curriculum':
             self.orchestration.monitor.allow_early_stop = False
 
+    @property
+    def engine_exec(self) -> _EngineExecConfig:
+        return self.engine.engine_exec
+
+    @property
+    def engine_optim(self) -> _OptimConfig:
+        return self.engine.engine_optim
+
+    @property
+    def engine_schedule(self) -> _ScheduleConfig:
+        return self.engine.engine_schedule
+
+    @property
+    def engine_tasks(self) -> _TasksConfig:
+        return self.engine.engine_tasks
+
     def validate(self):
         # mode specific requirements
         if self.mode == 'continuous':

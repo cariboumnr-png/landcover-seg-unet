@@ -29,32 +29,52 @@ Canonical filesystem paths for data ingestion artifacts.
 # standard imports
 import dataclasses
 import os
+# local imports
+import landseg.artifacts.controller as controller
+import landseg.artifacts.paths.base as base
 
 
-# ----- `IngestionPaths` definition
+# ----- public dataclasses
 @dataclasses.dataclass
-class IngestionPaths:
+class IngestionPaths(base.PipelineArtifactsPaths):
     '''Paths for ingested datasets and knowledge artifacts.'''
-    root: str
 
     @property
-    def domains(self):
-        return _DomainMaps(os.path.join(self.root, 'domain_knowledge'))
+    def runs_manifest(self) -> str:
+        return os.path.join(self.root, 'ingestion_runs.json')
 
     @property
     def data_blocks(self):
         return _DataBlocks(os.path.join(self.root, 'data_blocks'))
 
     @property
+    def domains(self):
+        return _DomainMaps(os.path.join(self.root, 'domain_knowledge'))
+
+    @property
     def report(self) -> str:
-        return os.path.join(self.root, 'ingest_report.json')
+        return os.path.join(self.effective_run_folder, 'ingest_report.json')
 
     @property
     def config(self) -> str:
-        return os.path.join(self.root, 'config.json')
+        return os.path.join(self.effective_run_folder, 'config.json')
+
+    @property
+    def collisions(self) -> str:
+        return os.path.join(self.effective_run_folder, 'collisions.json')
+
+    def _init_pipeline_folders(self):
+        os.makedirs(self.root, exist_ok=True)
+        os.makedirs(self.effective_run_folder, exist_ok=True)
+        os.makedirs(self.data_blocks.root, exist_ok=True)
+        os.makedirs(self.data_blocks.blocks, exist_ok=True)
+        os.makedirs(self.data_blocks.windows, exist_ok=True)
+        os.makedirs(self.domains.root, exist_ok=True)
+        if not os.path.exists(self.runs_manifest):
+            controller.Controller[dict](self.runs_manifest).persist({})
 
 
-# ----- private helper path containers
+# ----- private dataclasses
 @dataclasses.dataclass
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''

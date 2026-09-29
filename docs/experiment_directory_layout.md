@@ -54,6 +54,7 @@ pipeline artifacts, and session execution results under an experiment root direc
 │   │   └── grid_report.json                     # World grid execution summary report
 │   │
 │   ├── harmonized_data/                         # Produced by 'data-harmonize' pipeline
+│   │   ├── harmonization_runs.json              # Cumulative harmonization run ledger
 │   │   └── run_0001/                            # Serialized ETL run directory
 │   │       ├── harmonized_<name>.vrt            # Reprojected single-source Virtual Raster
 │   │       ├── harmonized_features_STACKED.vrt  # Canonical multi-channel stacked feature Virtual Raster
@@ -63,17 +64,20 @@ pipeline artifacts, and session execution results under an experiment root direc
 │   │       └── config.json                      # Harmonization configuration record
 │   │
 │   ├── ingested_data/                           # Produced by 'data-ingest' pipeline
-│   │   ├── domain_knowledge/                    # Categorical / vector domain rasters & tiles
+│   │   ├── ingestion_runs.json                  # Cumulative ingestion run ledger
+│   │   ├── run_0001/                            # Serialized batch run directory
+│   │   │   ├── ingest_report.json               # Ingestion execution summary report
+│   │   │   ├── collisions.json                  # Inter-batch spatial collision ledger
+│   │   │   └── config.json                      # Ingestion configuration record
+│   │   ├── domain_knowledge/                    # Canonical domain rasters & tiles pool
 │   │   │   ├── <domain_name>.json *
 │   │   │   └── <domain_name>_tiles_<gid>.npz
-│   │   ├── data_blocks/                         # Unified canonical dataset blocks (pre-split)
-│   │   │   ├── blocks/                          # Extracted unnormalized block arrays
-│   │   │   ├── windows/                         # Grid-aligned spatial window index manifests
-│   │   │   │   └── windows_<gid>.json *
-│   │   │   ├── catalog.json                     # Unified dataset block catalog
-│   │   │   └── schema.json                      # Dataset block structural schema
-│   │   ├── ingest_report.json                   # Ingestion execution summary report
-│   │   └── config.json                          # Ingestion configuration record
+│   │   └── data_blocks/                         # Canonical dataset blocks pool (pre-split)
+│   │       ├── blocks/                          # Extracted unnormalized block arrays
+│   │       ├── windows/                         # Grid-aligned spatial window index manifests
+│   │       │   └── windows_<gid>.json *
+│   │       ├── catalog.json                     # Cumulative dataset block catalog & lineage
+│   │       └── schema.json                      # Dataset block structural schema & block_identity
 │   │
 │   └── prepared_data/                           # Produced by 'data-prepare' pipeline
 │       ├── train_blocks/                        # Prepared training array blocks

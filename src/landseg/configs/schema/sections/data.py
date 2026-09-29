@@ -134,6 +134,7 @@ class _DataBlocks:
     image_dem_pad: int = 8
     add_topo: list[str] | None = None
     add_spectral: list[str] | None = None
+    collision_policy: str = 'skip'
 
     def validate(self) -> None:
         if self.add_topo is not None:
@@ -149,8 +150,8 @@ class _DataBlocks:
                     )
                 if item.lower() not in ('slope', 'tpi'):
                     raise ValueError(
-                        f'Invalid spectral index "{item}". '
-                        'Supported featires are: slope, tpi.'
+                        f'Invalid topo feature "{item}". '
+                        'Supported features are: slope, tpi.'
                     )
 
         if self.add_spectral is not None:
@@ -169,6 +170,17 @@ class _DataBlocks:
                         f'Invalid spectral index "{item}". '
                         'Supported indices are: ndvi, ndmi, nbr.'
                     )
+
+        if not isinstance(self.collision_policy, str):
+            raise TypeError(
+                f'collision_policy must be a str, '
+                f'got {type(self.collision_policy)}'
+            )
+        if self.collision_policy.lower() not in ('skip', 'overwrite', 'error'):
+            raise ValueError(
+                f'Invalid collision policy "{self.collision_policy}". '
+                'Supported policies are: skip, overwrite, error.'
+            )
 
 
 @dataclasses.dataclass

@@ -27,7 +27,9 @@ checks, and candidate block hydration to produce train, validation,
 and testing splits without data leakage.
 
 Public APIs:
-    - PartitionParameters: configuration for data block partitioning.
+    - AOIConfig: configuration for AOI spatial boundaries.
+    - HydrationConfig: configuration for candidate hydration.
+    - PartitionConfig: configuration for data block partitioning.
     - PartitionResults: container for partitioned splits and hydration.
     - create_blocks_partition: split blocks safely without leakage.
 '''
@@ -45,27 +47,50 @@ import landseg.geopipe.prepare.partition.operations as operations
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class PartitionParameters:
-    '''Configuration for the dataset partitioning pipeline.'''
-    # val split, test split
-    val_test_ratios: tuple[float, float]
-    buffer_step: int
-    # 0-based
-    reward_ratios: dict[int, float]
-    # exponent for transforming block counts
-    scoring_alpha: float
-    # reward weight for classes during L1
-    scoring_beta: float
-    max_skew_rate: float
-    # row_size, col_size, row_stride, col_stride
-    block_spec: tuple[int, int, int, int]
+@dataclasses.dataclass(frozen=True)
+class AOIConfig:
+    '''Configuration for area-of-interest spatial boundaries.'''
     train_aoi: str | None = None
     val_aoi: str | None = None
     test_aoi: str | None = None
-    aoi_min_overlap: float = 0.5
+    min_overlap: float = 0.5
     canvas_crs: str = 'EPSG:3161'
     canvas_transform: rasterio.transform.Affine | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class HydrationConfig:
+    '''Configuration for candidate block scoring and hydration.'''
+    reward_ratios: dict[int, float] = dataclasses.field(default_factory=dict)
+    scoring_alpha: float = 1.0
+    scoring_beta: float = 0.0
+    max_skew_rate: float = 1.0
+
+
+@dataclasses.dataclass(frozen=True)
+class PartitionConfig:
+    '''Configuration for the dataset partitioning pipeline.'''
+    val_test_ratios: tuple[float, float]
+    block_spec: tuple[int, int, int, int]
+    buffer_step: int = 0
+    aoi: AOIConfig | None = None
+    hydration: HydrationConfig | None = None
+
+    @property
+    def has_aoi(self) -> bool:
+        '''Return True if any AOI boundaries are specified.'''
+        if self.aoi is None:
+            return False
+        return bool(
+            self.aoi.train_aoi or self.aoi.val_aoi or self.aoi.test_aoi
+        )
+
+    @property
+    def has_hydration(self) -> bool:
+        '''Return True if candidate block hydration is configured.'''
+        if self.hydration is None:
+            return False
+        return bool(self.hydration.reward_ratios)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -81,7 +106,7 @@ def create_blocks_partition(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
     valid_blocks: dict[tuple[int, int], str],
-    config: PartitionParameters,
+    config: PartitionConfig,
     *,
     ext_test_blks: list[str] | None = None,
     logger: prepare.PreparationLogger | None = None,
@@ -112,9 +137,7 @@ def create_blocks_partition(
             split block paths, raw split coordinates, and hydration
             diagnostics.
     '''
-    has_aoi = bool(config.train_aoi or config.val_aoi or config.test_aoi)
-
-    if has_aoi:
+    if config.has_aoi:
         raw_splits = _split_by_aoi(
             base_class_counts,
             valid_blocks,
@@ -131,7 +154,10 @@ def create_blocks_partition(
         )
 
     # hydration process (optional)
-    if bool(config.reward_ratios):
+    if config.has_hydration:
+        assert config.hydration is not None
+        hydration_cfg = config.hydration
+
         # filter candidate blocks for hydration
         safe_candidates = operations.filter_safe_tiles(
             list(valid_class_counts.keys()),
@@ -149,17 +175,17 @@ def create_blocks_partition(
         ranked_candidates = operations.score_blocks(
             list(raw_splits.global_class_count),
             blocks_to_score,
-            reward=tuple(config.reward_ratios.keys()),
-            alpha=config.scoring_alpha,
-            beta=config.scoring_beta
+            reward=tuple(hydration_cfg.reward_ratios.keys()),
+            alpha=hydration_cfg.scoring_alpha,
+            beta=hydration_cfg.scoring_beta
         )
 
         # hydrate using the safe candidates
         hydration_results = operations.hydrate_train_split(
             list(raw_splits.train_class_count),
             ranked_candidates,
-            target_ratios=config.reward_ratios,
-            max_skew_rate=config.max_skew_rate
+            target_ratios=hydration_cfg.reward_ratios,
+            max_skew_rate=hydration_cfg.max_skew_rate
         )
     else:
         hydration_results = operations.HydrationResults()
@@ -183,24 +209,27 @@ def create_blocks_partition(
 def _split_by_aoi(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_blocks: dict[tuple[int, int], str],
-    config: PartitionParameters,
+    config: PartitionConfig,
     *,
     ext_test_blks: list[str] | None,
     logger: prepare.PreparationLogger | None,
 ) -> operations.SplitsResult:
     '''Resolve AOI partitions and split remaining blocks.'''
-    transform = config.canvas_transform or rasterio.transform.Affine.identity()
+    aoi_cfg = config.aoi or AOIConfig()
+    transform = (
+        aoi_cfg.canvas_transform or rasterio.transform.Affine.identity()
+    )
     block_size = (config.block_spec[0], config.block_spec[1])
 
     aoi_res = operations.resolve_aoi_partitions(
         list(valid_blocks.keys()),
-        train_aoi=config.train_aoi,
-        val_aoi=config.val_aoi,
-        test_aoi=config.test_aoi,
+        train_aoi=aoi_cfg.train_aoi,
+        val_aoi=aoi_cfg.val_aoi,
+        test_aoi=aoi_cfg.test_aoi,
         block_size=block_size,
-        canvas_crs=config.canvas_crs,
+        canvas_crs=aoi_cfg.canvas_crs,
         canvas_transform=transform,
-        min_overlap=config.aoi_min_overlap,
+        min_overlap=aoi_cfg.min_overlap,
         logger=logger,
     )
 
@@ -214,10 +243,10 @@ def _split_by_aoi(
         unassigned_counts = {c: base_class_counts[c] for c in unassigned}
         auto_test_ratio = (
             0.0
-            if (config.test_aoi or ext_test_blks)
+            if (aoi_cfg.test_aoi or ext_test_blks)
             else config.val_test_ratios[1]
         )
-        auto_val_ratio = 0.0 if config.val_aoi else config.val_test_ratios[0]
+        auto_val_ratio = 0.0 if aoi_cfg.val_aoi else config.val_test_ratios[0]
 
         if auto_val_ratio > 0.0 or auto_test_ratio > 0.0:
             auto_splits = operations.stratified_splitter(
@@ -228,9 +257,9 @@ def _split_by_aoi(
             )
             val_coords.extend(auto_splits.val)
             test_coords.extend(auto_splits.test)
-            if not config.train_aoi:
+            if not aoi_cfg.train_aoi:
                 train_coords.extend(auto_splits.train)
-        elif not config.train_aoi:
+        elif not aoi_cfg.train_aoi:
             train_coords.extend(unassigned)
 
     # enforce spatial buffer on training blocks against val and test

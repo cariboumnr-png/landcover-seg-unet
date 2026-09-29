@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 World grid artifacts lifecycle management.
 
@@ -33,11 +31,10 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import os
-import typing
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid.builder as builder
 
@@ -46,20 +43,9 @@ import landseg.geopipe.grid.builder as builder
 PayloadCtrl = artifacts.PayloadController[list[list[int]], geo_core.GridMeta]
 
 
-# ----- private types
-class _WorldGridPrepConfig(typing.Protocol):
-    '''Config shape to prepare world grid artifacts.'''
-    @property
-    def mode(self) -> str: ...
-    @property
-    def params(self) -> builder.GridParameters: ...
-    @property
-    def output_dpath(self) -> str: ...
-
-
 # ----- public functions
 def prepare_world_grid(
-    config: _WorldGridPrepConfig | None = None,
+    config: contracts.WorldGridPrepConfig | None = None,
     *,
     load_only: bool = False,
     override_grid_fpath: str | None = None,
@@ -105,7 +91,16 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        _grid = builder.build_grid(config.mode, config.params)
+        gird_config = builder.GridConfigs(
+            tile_size=config.params.tile_size,
+            tile_stride=config.params.tile_stride,
+            ref_fpath=config.params.ref_fpath,
+            crs_string=config.params.crs_string,
+            origin=config.params.origin,
+            pixel_size=config.params.pixel_size,
+            extent_in_crs_units=config.params.extent_in_crs_units,
+        ) # simple pass-through
+        _grid = builder.build_grid(config.mode, gird_config)
         payload = _grid.to_payload()
         ctrl.save(payload)
         is_loaded = False
@@ -129,7 +124,7 @@ def get_grid_report_fpath(output_dpath: str) -> str:
 
 
 # ----- private helpers
-def _get_grid_fpath(config: _WorldGridPrepConfig) -> str:
+def _get_grid_fpath(config: contracts.WorldGridPrepConfig) -> str:
     '''Return canonical file path of a world grid artifact.'''
     p = config.params
     gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)

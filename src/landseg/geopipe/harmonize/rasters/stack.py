@@ -42,8 +42,8 @@ import rasterio.crs
 
 # ----- public functions
 def stack_rasters(
-    features_fapths: list[str],
-    labels_fapths: list[str],
+    features_fpaths: list[str],
+    labels_fpaths: list[str],
     output_dir: str,
 ) -> typing.Generator[str, None, dict[str, str]]:
     '''
@@ -73,26 +73,26 @@ def stack_rasters(
     yield 'Stacking rasters if applicable'
 
     # features
-    n = len(features_fapths)
+    n = len(features_fpaths)
     if n == 0:
         pass
     elif n == 1:
-        stacked.update({'features': features_fapths[0]})
+        stacked.update({'features': features_fpaths[0]})
     else:
         out_path = _out_path('features')
-        _composite_vrt(features_fapths, out_path, 'feature')
+        _composite_vrt(features_fpaths, out_path, 'feature')
         stacked.update({'features': out_path})
         yield f'Feature rasters stacked to {out_path} (n={n})'
 
     # labels
-    n = len(labels_fapths)
+    n = len(labels_fpaths)
     if n == 0:
         pass
     elif n == 1:
-        stacked.update({'labels': labels_fapths[0]})
+        stacked.update({'labels': labels_fpaths[0]})
     else:
         out_path = _out_path('labels')
-        _composite_vrt(labels_fapths, out_path, 'label')
+        _composite_vrt(labels_fpaths, out_path, 'label')
         stacked.update({'labels': out_path})
         yield f'Label rasters stacked to {out_path} (n={n})'
 

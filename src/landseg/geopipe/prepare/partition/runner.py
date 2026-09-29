@@ -35,6 +35,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
+import dataclasses
 import time
 import typing
 # local imports
@@ -62,7 +63,7 @@ class _PipelinePaths(typing.Protocol):
 def run_datablocks_partition(
     context: dataset.DatasetView,
     paths: _PipelinePaths,
-    partition_config: orchestration.PartitionParameters,
+    partition_config: orchestration.PartitionConfig,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare.PreparationLogger,
@@ -90,10 +91,23 @@ def run_datablocks_partition(
     start_time = time.perf_counter()
 
     # ensure canvas CRS and transform default from context
-    if partition_config.canvas_crs == 'EPSG:3161' and context.crs:
-        partition_config.canvas_crs = context.crs
-    if partition_config.canvas_transform is None and context.transform:
-        partition_config.canvas_transform = context.transform
+    if partition_config.aoi is not None:
+        aoi = partition_config.aoi
+        new_crs = (
+            context.crs
+            if (aoi.canvas_crs == 'EPSG:3161' and context.crs)
+            else aoi.canvas_crs
+        )
+        new_tf = (
+            context.transform
+            if (aoi.canvas_transform is None and context.transform)
+            else aoi.canvas_transform
+        )
+        if new_crs != aoi.canvas_crs or new_tf != aoi.canvas_transform:
+            aoi = dataclasses.replace(
+                aoi, canvas_crs=new_crs, canvas_transform=new_tf
+            )
+            partition_config = dataclasses.replace(partition_config, aoi=aoi)
 
     # partition fpaths and summary JSON controller
     partition_ctrl = PartitionCtrl(paths.splits_source_blocks, policy)

@@ -112,7 +112,7 @@ def test_data_ingestion_configurator(tmp_path):
     ).set_feature_engineering(
         add_topo=['slope', 'tpi'],
         add_spectral=['ndvi', 'ndmi'],
-    )
+    ).set_collision_policy('overwrite')
 
     root = cfg_builder.running_root_config
     assert root.pipeline.name == 'data-ingest'
@@ -120,6 +120,7 @@ def test_data_ingestion_configurator(tmp_path):
     assert root.data.ingestion.harmonization_run == 1
     assert root.data.ingestion.datablocks.add_topo == ['slope', 'tpi']
     assert root.data.ingestion.datablocks.add_spectral == ['ndvi', 'ndmi']
+    assert root.data.ingestion.datablocks.collision_policy == 'overwrite'
 
 
 

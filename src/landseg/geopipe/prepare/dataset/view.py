@@ -28,7 +28,7 @@ self-contained in-memory dataset view.
 
 Public APIs:
     - `DatasetView`: unified immutable dataset preparation view.
-    - `DatasetViewParameters`: configuration parameters for dataset view.
+    - `DatasetViewConfig`: configuration parameters for dataset view.
     - `build_dataset_view`: construct full preparation view.
 '''
 
@@ -46,7 +46,7 @@ import landseg.geopipe.prepare.dataset.semantics as semantics
 
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
-class DatasetViewParameters:
+class DatasetViewConfig:
     '''Configuration parameters for dataset view compilation.'''
     valid_pxs: dict[str, float] = dataclasses.field(default_factory=dict)
     focal_target: str | None = None
@@ -103,7 +103,7 @@ class DatasetView:
 def build_dataset_view(
     catalog_fpath: str,
     schema: geo_core.DatasetSchema,
-    parameters: DatasetViewParameters | None = None,
+    parameters: DatasetViewConfig | None = None,
     *,
     canvas_crs: str | None = None,
     canvas_transform: rasterio.transform.Affine | None = None,
@@ -134,7 +134,7 @@ def build_dataset_view(
             unified preparation view combining catalog, features,
             and targets.
     '''
-    params = parameters or DatasetViewParameters()
+    params = parameters or DatasetViewConfig()
 
     # initial catalog view
     view = catalog.read_catalog(

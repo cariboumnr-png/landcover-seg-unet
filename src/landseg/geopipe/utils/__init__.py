@@ -29,6 +29,8 @@ Public APIs:
     - `name_xy`: Convert block name string to (x, y) coordinate tuple.
     - `open_rasters`: Context manager yielding opened raster readers.
     - `xy_name`: Convert (x, y) coordinate tuple to block name string.
+    - `check_run_collision`: Search runs manifest for matching run.
+    - `compute_fingerprint`: Deterministic SHA-256 hash of payload.
 '''
 
 # standard imports
@@ -38,6 +40,8 @@ import typing
 
 __all__ = [
     # functions
+    'compute_fingerprint',
+    'find_run_collision',
     'name_xy',
     'open_rasters',
     'xy_name',
@@ -53,6 +57,10 @@ if typing.TYPE_CHECKING:
     from .raster_context import (
         open_rasters,
     )
+    from .run_collision import (
+        find_run_collision,
+        compute_fingerprint,
+    )
 
 
 def __getattr__(name: str):
@@ -65,6 +73,13 @@ def __getattr__(name: str):
 
     if name in {'open_rasters'}:
         obj = importlib.import_module('.raster_context', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'find_run_collision',
+        'compute_fingerprint',
+    }:
+        obj = importlib.import_module('.run_collision', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

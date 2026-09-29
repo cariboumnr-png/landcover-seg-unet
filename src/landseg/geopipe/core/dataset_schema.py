@@ -72,6 +72,7 @@ class _DatasetInfo(typing.TypedDict):
     last_updated: str
     dataprep_commit: str
     mapped_grids: list[str]
+    block_identity: str
     data_source: _DataSource
     image_schemes: dict[str, dict[str, list[str]]]
     label_schemes: dict[str, dict[str, geo_core.LabelScheme]]

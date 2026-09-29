@@ -120,7 +120,7 @@ def test_build_epoch_runner_with_schedule(
     When: Calling `build_epoch_runner` with schedule.
     Then: Frequencies are bound to trainer and evaluator.
     '''
-    schedule = session_config.engine.engine_schedule
+    schedule = session_config.engine_schedule
     schedule.update_loss_every_n_batch = 10
     schedule.val_every_n_epoch = 2
     schedule.infer_every_n_epoch = 3

@@ -232,6 +232,16 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
             self._spec.origin[1],
         )
 
+    @property
+    def affine_identity(self) -> str:
+        '''Spatial coordinate frame for raster warping.'''
+        return f'{self.crs}|{self.origin!r}|{self.pixel_size!r}'
+
+    @property
+    def block_identity(self) -> str:
+        '''Block pool compatibility frame.'''
+        return f'{self.affine_identity}|{self.tile_size!r}'
+
     # ----- alternative constructor
     @classmethod
     def from_payload(cls, payload: GridPayload) -> GridLayout:

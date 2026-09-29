@@ -77,7 +77,7 @@ def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
         os.path.join(out_dpath, 'data_blocks', 'blocks')
     )
     assert os.path.exists(
-        os.path.join(out_dpath, 'ingest_report.json')
+        os.path.join(out_dpath, 'run_0001', 'ingest_report.json')
     )
 
 
@@ -112,18 +112,29 @@ def test_data_ingest_pipeline_targeted_harmonization_run(
     # run world-grid first, then harmonization twice to create run_0001 and run_0002
     pipelines.exec_world_grid(config)
     pipelines.exec_harmonize_data(config)
-    pipelines.exec_harmonize_data(config)
+
+    # run batch 2 with distinct resampling config to produce run_0002
+    cfg_schema.data.harmonization.resampling_continuous = 'nearest'
+    config_batch2 = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+    pipelines.exec_harmonize_data(config_batch2)
 
     h_root = str(tmp_path / 'harmonized')
     assert os.path.exists(os.path.join(h_root, 'run_0001'))
     assert os.path.exists(os.path.join(h_root, 'run_0002'))
 
-    # ingest targeting run_0001
+    # ingest targeting run_0001 (reverting config for ingestion)
     pipelines.exec_ingest_data(config)
     out_dpath = config.data.ingestion.output_dpath
     assert os.path.exists(
         os.path.join(out_dpath, 'data_blocks', 'catalog.json')
     )
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0001', 'ingest_report.json')
+    )
+    assert not os.path.exists(os.path.join(out_dpath, 'run_0002'))
 
 
 def test_data_ingest_pipeline_with_spectral_and_topo(
@@ -164,3 +175,63 @@ def test_data_ingest_pipeline_with_spectral_and_topo(
     assert os.path.exists(
         os.path.join(out_dpath, 'data_blocks', 'catalog.json')
     )
+
+
+def test_data_ingest_pipeline_multi_batch_catchup_and_idempotence(
+    tmp_path,
+    dummy_data_paths
+):
+    '''
+    Given: Two completed harmonization runs and no prior ingestion.
+    When: `exec_ingest_data` runs in auto pending mode, then runs again.
+    Then: Both batches are ingested sequentially, and re-run is a no-op.
+    '''
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    grid_cfg = cfg_schema.data.world_grid
+    grid_cfg.mode = 'ref'
+    grid_cfg.params.ref_fpath = dummy_data_paths.extent
+    grid_cfg.params.crs_string = 'EPSG:3161'
+    grid_cfg.params.tile_size = (256, 256)
+    grid_cfg.params.tile_stride = (128, 128)
+
+    cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
+    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
+    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested_data')
+    cfg_schema.data.ingestion.rebuild = False
+    cfg_schema.data.ingestion.harmonization_run = None
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    pipelines.exec_world_grid(config)
+    pipelines.exec_harmonize_data(config)
+
+    # run batch 2 with distinct resampling config to avoid run collision
+    cfg_schema.data.harmonization.resampling_continuous = 'nearest'
+    config_batch2 = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+    pipelines.exec_harmonize_data(config_batch2)
+
+    # first ingestion: should ingest both run_0001 and run_0002
+    pipelines.exec_ingest_data(config)
+
+    out_dpath = config.data.ingestion.output_dpath
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0001', 'ingest_report.json')
+    )
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0002', 'ingest_report.json')
+    )
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0002', 'collisions.json')
+    )
+    assert not os.path.exists(os.path.join(out_dpath, 'run_0003'))
+
+    # second ingestion: should detect 0 pending runs and cleanly no-op
+    pipelines.exec_ingest_data(config)
+    assert not os.path.exists(os.path.join(out_dpath, 'run_0003'))
+

@@ -98,20 +98,32 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     paths = artifacts.IngestionPaths(str(tmp_path))
 
     # set pipeline configurations
-    config = blocks.BlockBuildingParameters(
+    inputs = blocks.BlockBuildingInputs(
         image_fpath=str(img),
         label_fpath=str(lbl),
-        dem_pad=8,
+    )
+    config = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        collision_policy='skip',
+    )
+    context = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=str(tmp_path / 'collisions.json'),
+        harmonize_run_id='harm_test',
+        ingest_run_id='test_run_canonical',
     )
 
     # run the pipeline
     blocks.run_blocks_building(
-        world_grid,
-        paths.data_blocks,
+        inputs,
         config,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
-        logger=logger
+        context,
+        logger=logger,
     )
 
     # verify outputs
@@ -128,6 +140,13 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     assert 'block_name' in first_block
     assert 'file_path' in first_block
 
+    # read and inspect schema
+    with open(db_paths.schema, 'r', encoding='UTF-8') as f:
+        schema_data = json.load(f)
+    assert schema_data['dataset']['block_identity'] == (
+        world_grid.block_identity
+    )
+
     # read and inspect report
     assert logger.summary is not None
     assert 'data_blocks' in logger.summary
@@ -136,19 +155,19 @@ def test_pipeline_run_canonical_blocks(tmp_path, dummy_geotiff_factory):
     assert logger.summary['data_blocks']['label_filepath'] == str(lbl)
 
 
-def test_pipeline_block_building_parameters_features():
+def test_pipeline_block_building_config_features():
     '''
-    Given: Custom feature arguments for `BlockBuildingParameters`.
-    When: Instantiating `BlockBuildingParameters`.
+    Given: Custom feature arguments for `BlockBuildingConfig`.
+    When: Instantiating `BlockBuildingConfig`.
     Then: Hold configured add_topo and add_spectral values.
     '''
-    params = blocks.BlockBuildingParameters(
-        image_fpath='img.tif',
-        label_fpath='lbl.tif',
-        dem_pad=8,
+    config = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
         add_spectral=['ndvi', 'ndmi'],
-        add_topo=True,
+        add_topo=['slope'],
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        collision_policy='skip',
     )
-    assert params.add_topo is True
-    assert params.add_spectral == ['ndvi', 'ndmi']
+    assert config.add_topo == ['slope']
+    assert config.add_spectral == ['ndvi', 'ndmi']

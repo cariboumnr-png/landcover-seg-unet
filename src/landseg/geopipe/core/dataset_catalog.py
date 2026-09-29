@@ -60,6 +60,8 @@ class DatasetBlockMeta(typing.TypedDict):
     source_image_sha_256: str
     source_label: str | None
     source_label_sha_256: str | None
+    harmonize_run_id: typing.NotRequired[str | None]
+    ingest_run_id: typing.NotRequired[str | None]
 
 
 # ----- public classes

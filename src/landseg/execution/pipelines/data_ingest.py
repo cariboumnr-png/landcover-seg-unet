@@ -26,53 +26,111 @@ Prepares the world grid, materializes domain knowledge, and builds
 the immutable raw block catalogue for later experiments.
 '''
 
+# standard imports
+from __future__ import annotations
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest as ingest
+import landseg.utils as utils
 
-# aliases
+# ----- typing aliases
 ConfigController = artifacts.Controller[dict]
 
 
+# ----- public functions
 def exec_ingest_data(config: configs.RootConfig) -> None:
-    '''Run the ingestion pipeline.'''
+    '''
+    Run data ingestion pipeline across planned harmonization batches.
+
+    Discovers available upstream harmonization runs and matches them
+    against the downstream ingestion ledger to resolve pending batches.
+    Executes each planned batch sequentially into the block pool.
+
+    Args:
+        config:
+            Root execution configuration containing data and ingestion
+            settings.
+    '''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.data_ingestion
+
+    planned_batches = ingest.resolve_pending_ingestion_batches(
+        artifact_paths.data_harmonization.runs_manifest,
+        artifact_paths.data_ingestion.runs_manifest,
+        target=config.data.ingestion.harmonization_run,
+        rebuild=config.data.ingestion.rebuild,
+    )
+
+    if not planned_batches:
+        logger = utils.Logger(name='data-ingest', enable_file_log=False)
+        logger.log_sep()
+        logger.log(
+            'INFO',
+            'No pending harmonization batches to ingest. '
+            'Ingestion pool is up to date.'
+        )
+        logger.log_sep()
+        logger.close()
+        return
+
+    for batch_record in planned_batches:
+        _exec_single_ingestion_batch(batch_record, config)
+
+
+# ----- private helpers
+def _exec_single_ingestion_batch(
+    harmonization_record: contracts.HarmonizationRunRecord,
+    config: configs.RootConfig,
+) -> None:
+    '''Execute ingestion for a single resolved harmonization batch.'''
+    artifact_paths = artifacts.ArtifactPaths.from_config(config)
+    ingestion_paths = artifact_paths.data_ingestion.init_pipeline_folders()
 
     logger = ingest.IngestionLogger(
         name='data-ingest',
-        log_file=paths.report,
+        log_file=ingestion_paths.report,
         enable_file_log=False
     )
-    logger.init_summary(run_id='ingest')
+    logger.init_summary(run_id=ingestion_paths.run_id)
 
     try:
         logger.log_sep()
+        logger.log(
+            'INFO',
+            f'Ingesting harmonization run [{harmonization_record["run_id"]}] '
+            f'({harmonization_record["run_uid"]})'
+            f' into run [{ingestion_paths.run_id}]'
+        )
 
-        # resolve lifecycle policy dynamically
         policy = (
             artifacts.LifecyclePolicy.REBUILD
             if config.data.ingestion.rebuild
             else artifacts.LifecyclePolicy.BUILD_IF_MISSING
         )
 
-        # run pipeline
         ingest.run_data_ingestion(
-            artifact_paths,
+            artifact_paths.data_harmonization,
+            ingestion_paths,
+            harmonization_record,
             config.data.ingestion,
             policy=policy,
-            logger=logger
+            logger=logger,
         )
 
-        # persist the whole config dict
-        artifacts.Controller[dict](paths.config).persist(config.as_dict)
+        artifacts.Controller[dict](ingestion_paths.config).persist(config.as_dict)
 
     except Exception as e:
         logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Ingestion pipeline failed: {e}', exc_info=True)
+        logger.log(
+            'ERROR', f'Ingestion pipeline failed: {e}', exc_info=True
+        )
         raise e
 
     finally:
+        logger.update_runs_manifest(
+            ingestion_paths.runs_manifest,
+            ingestion_paths.effective_run_folder
+        )
         logger.log_sep()
         logger.close()

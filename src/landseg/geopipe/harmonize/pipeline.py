@@ -30,22 +30,13 @@ import dataclasses
 import os
 import typing
 # local imports
-import landseg.artifacts.paths as paths
+import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.context as harmonize_context
 import landseg.geopipe.harmonize.logger as harmonize_logger
 import landseg.geopipe.harmonize.manifest as harmonize_manifest
 import landseg.geopipe.harmonize.rasters as harmonize_rasters
-
-
-# ----- private types
-class _HarmonizationPipelineConfig(typing.Protocol):
-    @property
-    def dataset_manifest(self) -> str: ...
-    @property
-    def resampling_continuous(self) -> str: ...
-    @property
-    def resampling_categorical(self) -> str: ...
 
 
 # ----- private dataclasses
@@ -59,34 +50,47 @@ class _ProcessedRasters:
 
 # ----- public functions
 def run_data_harmonization(
-    world_grid_output_dpath: str,
-    artifacts_paths: paths.HarmonizationPaths,
-    config: _HarmonizationPipelineConfig,
+    world_grid_source: str,
+    artifacts_paths: artifacts.HarmonizationPaths,
+    config: contracts.HarmonizationPipelineConfig,
     *,
     logger: harmonize_logger.HarmonizationLogger
 ) -> None:
     '''Run data harmonization pipeline.'''
 
-    # load canonical world grid from upstream grid pipeline report
-    logger.log('INFO', '[START] Loading world grid from grid report')
-    context = harmonize_context.build_harmonization_context(world_grid_output_dpath)
+    # build harmonization context
+    logger.log('INFO', '[START] Building data harmonization context')
+    context = harmonize_context.build_harmonization_context(
+        world_grid_source,
+        artifacts_paths.runs_manifest,
+        config
+    )
     logger.set_grid_reference(context.grid_id, context.grid_fpath)
-    logger.log('INFO', f'[COMPLETE] World grid loaded: {context.grid_id}')
+    logger.set_identity(context.current_run_identity)
 
-    # compile dataset manifest JOSN
-    compiled = harmonize_manifest.compile_dataset_manifest(config.dataset_manifest)
+    # early exit
+    if context.collided_run_uid is not None:
+        logger.set_summary_status('SKIPPED')
+        logger.log(
+            'INFO',
+            f'[COMPLETE] Harmonization run with the same inputs and configs '
+            f'already done (run uid: {context.collided_run_uid}), skipped'
+        )
+        return
+    logger.log('INFO', '[COMPLETE] Data harmonization context built')
 
-    # set up generator - each source to harmonize
+    # set up generator and run for each source
+    logger.log(
+        'INFO',
+        f'[START] Harmonizing data onto grid: {context.grid.affine_identity}'
+    )
     proc = _harmonize_sources(
-        compiled,
-        artifacts_paths.effective_root,
+        context.compiled_dataset_manifest,
+        artifacts_paths.effective_run_folder,
         context.grid,
         categorical_resampling=config.resampling_categorical,
         continuous_resampling=config.resampling_continuous,
     )
-
-    # run generator
-    logger.log('INFO', f'[START] Harmonizing data onto grid: {context.grid_id}')
     processed: _ProcessedRasters
     while True:
         try:
@@ -95,6 +99,14 @@ def run_data_harmonization(
         except StopIteration as s:
             processed = s.value
             break
+
+    # generate valid feature pixel mask if feature raster is provided
+    feature_raster = processed.finalized.get('features')
+    if feature_raster:
+        mask_path = artifacts_paths.valid_mask_raster
+        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
+        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
+        logger.set_valid_mask_raster(mask_path)
 
     # log processed file paths
     for name, path in processed.provenance.items():
@@ -106,16 +118,8 @@ def run_data_harmonization(
     for name, path in processed.finalized.items():
         logger.add_finalized_raster(name, path)
 
-    # generate valid feature pixel mask if feature raster is provided
-    feature_raster = processed.finalized.get('features')
-    if feature_raster:
-        mask_path = artifacts_paths.valid_mask_raster
-        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
-        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
-        logger.set_valid_mask_raster(mask_path)
 
-
-# ----- private functions
+# ----- private helpers
 def _harmonize_sources(
     compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
     output_dir: str,

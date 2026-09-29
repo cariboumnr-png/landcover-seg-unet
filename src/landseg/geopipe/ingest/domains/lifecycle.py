@@ -27,7 +27,7 @@ tile map artifacts and mapped raster tiles using configurable
 lifecycle policies.
 
 Public APIs:
-    - `DomainBuildingParameters`: Config for domain building.
+    - `DomainBuildingConfig`: Container for domain mapping configs.
     - `prepare_domain_maps`: Build or load domain tile maps for rasters.
 '''
 
@@ -54,8 +54,8 @@ MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class DomainBuildingParameters:
+@dataclasses.dataclass(frozen=True)
+class DomainBuildingConfig:
     '''Container for domain mapping configurations.'''
     input_fpath: str
     domain_fpath: str
@@ -63,11 +63,17 @@ class DomainBuildingParameters:
     valid_threshold: float
     target_variance: float
 
+    @property
+    def name(self) -> str:
+        '''Return layer name derived from input raster filename.'''
+        base, _ = os.path.splitext(os.path.basename(self.input_fpath))
+        return base
+
 
 # ----- public functions
 def prepare_domain_maps(
     world_grid: geo_core.GridLayout,
-    domain_configs: list[DomainBuildingParameters],
+    domain_configs: list[DomainBuildingConfig],
     *,
     policy: artifacts.LifecyclePolicy,
     logger: ingest.IngestionLogger,
@@ -79,7 +85,7 @@ def prepare_domain_maps(
         world_grid:
             Canonical world grid layout used for spatial alignment.
         domain_configs:
-            List of domain building parameter configurations.
+            List of domain building configurations.
         policy:
             Lifecycle policy determining build vs load behavior.
         logger:
@@ -91,7 +97,7 @@ def prepare_domain_maps(
 
         # copy the world grid instance
         grid = copy.deepcopy(world_grid)
-        name, _ = os.path.splitext(os.path.basename(config.input_fpath))
+        name = config.name
 
         # check domain artifacts
         ctrl = DomainCtrl(
@@ -145,7 +151,7 @@ def prepare_domain_maps(
 # ----- private helpers
 def _prep_mapping(
     grid: geo_core.GridLayout,
-    config: DomainBuildingParameters,
+    config: DomainBuildingConfig,
     *,
     policy: artifacts.LifecyclePolicy,
 ) -> mapper.RasterTileDict:

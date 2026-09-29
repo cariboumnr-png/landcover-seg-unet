@@ -30,7 +30,7 @@ metadata. This pipeline produces experiment-agnostic artifacts intended
 for reuse across downstream workflows.
 
 Public APIs:
-    - BlockBuildingParameters: Config container for block pipeline.
+    - BlockPipelineRuntimeContext: Context for block pipeline.
     - run_blocks_building: Runs the canonical data block pipeline.
 '''
 
@@ -47,6 +47,9 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.manifest as manifest
 import landseg.geopipe.ingest.blocks.mapper as mapper
 
+# typing aliases
+CollisionManifestCtrl = artifacts.Controller[contracts.RunCollisionManifest]
+
 
 # ----- private types
 class _PipelinePaths(typing.Protocol):
@@ -61,24 +64,22 @@ class _PipelinePaths(typing.Protocol):
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class BlockBuildingParameters:
-    '''Config container for the canonical block-building pipeline.'''
-    image_fpath: str
-    label_fpath: str | None
-    dem_pad: int
-    ignore_index: int
-    add_spectral: list[str] | None = None
-    add_topo: list[str] | None = None
+@dataclasses.dataclass(frozen=True)
+class BlockPipelineRuntimeContext:
+    '''Run context, e.g., run identity and collision handling.'''
+    world_grid: geo_core.GridLayout
+    block_artifact_paths: _PipelinePaths
+    collisions_artifacts_fpath: str
+    harmonize_run_id: str
+    ingest_run_id: str
 
 
 # ----- public functions
 def run_blocks_building(
-    world_grid: geo_core.GridLayout,
-    artfact_paths: _PipelinePaths,
-    config: BlockBuildingParameters,
+    inputs: assembler.BlockBuildingInputs,
+    config: assembler.BlockBuildingConfig,
+    context: BlockPipelineRuntimeContext,
     *,
-    policy: artifacts.LifecyclePolicy,
     logger: ingest.IngestionLogger,
 ) -> None:
     '''
@@ -100,77 +101,96 @@ def run_blocks_building(
             Lifecycle policy governing artifact update behavior.
         logger:
             Logger instance used for structured telemetry reporting.
+        collisions_fpath:
+            Optional file path to persist the run collision manifest.
     '''
     start_time = time.perf_counter()
 
+    artifact_paths = context.block_artifact_paths
+
     # map rasters to the provided world grid
     ras_windows = mapper.map_rasters_to_grid(
-        world_grid,
-        config.image_fpath,
-        config.label_fpath,
-        artfact_paths.mapped_window(world_grid.gid),
-        policy=policy,
+        context.world_grid,
+        inputs.image_fpath,
+        inputs.label_fpath,
+        artifact_paths.mapped_window(context.world_grid.gid),
+        policy=config.artifacts_policy,
     )
+
+    # inspect incumbent catalog if present
+    incumbent_catalog: geo_core.DatasetCatalog | None = None
+    try:
+        cat_dict = artifacts.Controller[dict](artifact_paths.catalog).fetch()
+        if cat_dict:
+            incumbent_catalog = geo_core.DatasetCatalog.from_dict(cat_dict)
+    except artifacts.ArtifactError:
+        pass
 
     # build data blocks
-    result = assembler.build_blocks(
-        assembler.BlockBuildingInput(
-            output_root=artfact_paths.blocks,
-            image_fpath=config.image_fpath,
-            label_fpath=config.label_fpath,
-        ),
-        assembler.BlockBuildingContext(
-            image=ras_windows.image,
-            label=ras_windows.label,
-        ),
-        assembler.BlockBuildingConfig(
-            ignore_index=config.ignore_index,
-            dem_pad_px=config.dem_pad,
-            block_size=ras_windows.tile_shape,
-            image_band_map=assembler.read_band_map(config.image_fpath),
-            label_specs=assembler.read_label_specs(config.label_fpath),
-            add_spectral=config.add_spectral,
-            add_topo=config.add_topo,
-        ),
-        policy=policy,
+    building_context = assembler.BlockBuildingContext(
+        image=ras_windows.image,
+        label=ras_windows.label,
+        block_size=ras_windows.tile_shape,
+        image_band_map=assembler.read_band_map(inputs.image_fpath),
+        label_specs=assembler.read_label_specs(inputs.label_fpath),
+        incumbent_catalog=incumbent_catalog,
     )
+    block_building_result = assembler.build_blocks(
+        inputs,
+        config,
+        building_context,
+        output_dir=artifact_paths.blocks,
+    )
+
+    # persist collision manifest
+    CollisionManifestCtrl(context.collisions_artifacts_fpath).persist({
+        'ingestion_run_id': context.ingest_run_id or '',
+        'ingestion_run_uid': logger.run_uid,
+        'harmonization_run_id': context.harmonize_run_id or '',
+        'collision_policy': config.collision_policy,
+        'total_collided': len(block_building_result.collided_blocks),
+        'collided_blocks': block_building_result.collided_blocks,
+    })
 
     # create/update catalog and metadata JSON
-    updated = manifest.ManifestUpdateContext(
-        updated_coords=result.coords_created,
-        source_image=config.image_fpath,
-        source_label=config.label_fpath,
-        mapped_grid_id=world_grid.gid,
-        blocks_dir=artfact_paths.blocks,
-        label_color_map=result.label_color_map
+    paths = context.block_artifact_paths
+    provenance = manifest.ManifestProvenance(
+        grid_id=context.world_grid.gid,
+        block_identity=context.world_grid.block_identity,
+        source_image=inputs.image_fpath,
+        source_label=inputs.label_fpath,
+        harmonize_run_id=context.harmonize_run_id,
+        ingest_run_id=context.ingest_run_id,
     )
     manifest_report = manifest.update_manifest(
-        updated,
-        artfact_paths.catalog,
-        artfact_paths.schema,
-        policy=policy,
+        paths.catalog,
+        paths.schema,
+        paths.blocks,
+        provenance,
+        block_building_result,
+        policy=config.artifacts_policy,
     )
 
-    # update structured log if IngestionLogger wrapper is used
-    duration = time.perf_counter() - start_time
-    stats = result.stats
-    report: contracts.DataBlocksReport = {
-        'image_filepath': config.image_fpath,
-        'label_filepath': config.label_fpath,
-        'duration_sec': duration,
-        'stats': {
-            'shared_raster_windows': int(stats['shared_raster_windows']),
-            'expected_shape_windows': int(stats['expected_shape_windows']),
-            'blocks_on_disk_before': int(stats['blocks_on_disk_before']),
-            'blocks_to_process': int(stats['blocks_to_process']),
-            'damaged_blocks_removed': int(stats['damaged_blocks_removed']),
-            'blocks_created': int(stats['blocks_created']),
-        },
+    stats = block_building_result.running_stats
+
+    logger.set_data_blocks_report({
+        'image_filepath': inputs.image_fpath,
+        'label_filepath': inputs.label_fpath,
+        'duration_sec': time.perf_counter() - start_time,
+        'stats': stats,
         'manifest': {
             'catalog_status': manifest_report['catalog_status'],
             'catalog_updated': manifest_report['catalog_updated'],
             'cataloged_blocks_count': manifest_report['cataloged_blocks_count'],
             'schema_updated': manifest_report['schema_updated'],
-        }
-    }
-    logger.set_data_blocks_report(report)
+        },
+    })
+
+    logger.log(
+        'INFO',
+        f'Intra-pool block collisions: {stats["blocks_collided"]} '
+        f'(policy: {config.collision_policy}, '
+        f'added: {stats["blocks_added"]}, '
+        f'skipped: {stats["blocks_skipped"]}, '
+        f'overwritten: {stats["blocks_overwritten"]})'
+    )

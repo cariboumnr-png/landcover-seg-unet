@@ -47,7 +47,7 @@ def evaluate(config: configs.RootConfig):
     # init run io folder tree
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
     session_paths = artifact_paths.session
-    session_paths.init()
+    session_paths.init_pipeline_folders()
 
     # parse evaluation pipeline configs
     eval_config = config.pipeline.model_evaluate

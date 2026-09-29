@@ -70,7 +70,7 @@ src/landseg/
 |-- artifacts/
 |   |-- checkpoint.py             Checkpoint save/load helpers
 |   |-- controller.py             Policy-driven artifact resolve/build/rebuild logic
-|   |-- paths.py                  Canonical artifact path definitions
+|   |-- paths/                    Canonical artifact path definitions
 |   |-- payload_io.py             Structured payload and metadata persistence
 |   `-- policy.py                 Artifact lifecycle rules
 |

@@ -83,14 +83,10 @@ def test_run_datablocks_partition(tmp_path, mocker):
         targets=targets,
     )
 
-    partition_config = orchestration.PartitionParameters(
+    partition_config = orchestration.PartitionConfig(
         val_test_ratios=(0.0, 0.0),
-        buffer_step=1,
-        reward_ratios={},
-        scoring_alpha=1.0,
-        scoring_beta=0.0,
-        max_skew_rate=1.0,
         block_spec=(256, 256, 128, 128),
+        buffer_step=1,
     )
 
     logger = prepare.PreparationLogger(
