@@ -106,22 +106,30 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    config1 = blocks.BlockBuildingParameters(
+    inputs1 = blocks.BlockBuildingInputs(
         image_fpath=img,
         label_fpath=lbl,
-        dem_pad=8,
+    )
+    config1 = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
-        harmonize_run_id='harm_0001',
-        ingest_run_id='run_0001',
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='skip',
     )
+    context1 = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
+        harmonize_run_id='harm_0001',
+        ingest_run_id='run_0001',
+    )
     blocks.run_blocks_building(
-        world_grid,
-        paths.data_blocks,
+        inputs1,
         config1,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        context1,
         logger=logger1,
-        collisions_fpath=str(tmp_path / 'collisions_run1.json'),
     )
 
     # verify initial catalog lineage
@@ -141,23 +149,31 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    config2 = blocks.BlockBuildingParameters(
+    inputs2 = blocks.BlockBuildingInputs(
         image_fpath=img,
         label_fpath=lbl,
-        dem_pad=8,
+    )
+    config2 = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
-        harmonize_run_id='harm_0002',
-        ingest_run_id='run_0002',
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='skip',
     )
     col2_fpath = str(tmp_path / 'collisions_run2.json')
+    context2 = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=col2_fpath,
+        harmonize_run_id='harm_0002',
+        ingest_run_id='run_0002',
+    )
     blocks.run_blocks_building(
-        world_grid,
-        paths.data_blocks,
+        inputs2,
         config2,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        context2,
         logger=logger2,
-        collisions_fpath=col2_fpath,
     )
 
     # verify catalog was untouched and retains original lineage
@@ -179,7 +195,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         assert record['incumbent_harmonize_run'] == 'harm_0001'
 
     # verify telemetry report
-    c_stats = logger2.summary['data_blocks']['collisions']
+    c_stats = logger2.summary['data_blocks']['stats']
     assert c_stats['blocks_collided'] == len(catalog_run1)
     assert c_stats['blocks_skipped'] == len(catalog_run1)
     assert c_stats['blocks_overwritten'] == 0
@@ -200,20 +216,29 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    config1 = blocks.BlockBuildingParameters(
+    inputs1 = blocks.BlockBuildingInputs(
         image_fpath=img,
         label_fpath=lbl,
-        dem_pad=8,
+    )
+    config1 = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
-        harmonize_run_id='harm_0001',
-        ingest_run_id='run_0001',
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='skip',
     )
+    context1 = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
+        harmonize_run_id='harm_0001',
+        ingest_run_id='run_0001',
+    )
     blocks.run_blocks_building(
-        world_grid,
-        paths.data_blocks,
+        inputs1,
         config1,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        context1,
         logger=logger1,
     )
 
@@ -224,23 +249,31 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    config2 = blocks.BlockBuildingParameters(
+    inputs2 = blocks.BlockBuildingInputs(
         image_fpath=img,
         label_fpath=lbl,
-        dem_pad=8,
+    )
+    config2 = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
-        harmonize_run_id='harm_0002',
-        ingest_run_id='run_0002',
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='overwrite',
     )
     col2_fpath = str(tmp_path / 'collisions_run2.json')
+    context2 = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=col2_fpath,
+        harmonize_run_id='harm_0002',
+        ingest_run_id='run_0002',
+    )
     blocks.run_blocks_building(
-        world_grid,
-        paths.data_blocks,
+        inputs2,
         config2,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        context2,
         logger=logger2,
-        collisions_fpath=col2_fpath,
     )
 
     # verify catalog was updated with new lineage
@@ -260,7 +293,7 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
         assert record['incumbent_harmonize_run'] == 'harm_0001'
 
     # verify telemetry
-    c_stats = logger2.summary['data_blocks']['collisions']
+    c_stats = logger2.summary['data_blocks']['stats']
     assert c_stats['blocks_overwritten'] > 0
     assert c_stats['blocks_skipped'] == 0
 
@@ -280,20 +313,29 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    config1 = blocks.BlockBuildingParameters(
+    inputs1 = blocks.BlockBuildingInputs(
         image_fpath=img,
         label_fpath=lbl,
-        dem_pad=8,
+    )
+    config1 = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
-        harmonize_run_id='harm_0001',
-        ingest_run_id='run_0001',
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='skip',
     )
+    context1 = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
+        harmonize_run_id='harm_0001',
+        ingest_run_id='run_0001',
+    )
     blocks.run_blocks_building(
-        world_grid,
-        paths.data_blocks,
+        inputs1,
         config1,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        context1,
         logger=logger1,
     )
 
@@ -304,22 +346,31 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    config2 = blocks.BlockBuildingParameters(
+    inputs2 = blocks.BlockBuildingInputs(
         image_fpath=img,
         label_fpath=lbl,
-        dem_pad=8,
+    )
+    config2 = blocks.BlockBuildingConfig(
+        dem_pad_px=8,
         ignore_index=255,
+        add_spectral=None,
+        add_topo=None,
+        artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+        collision_policy='error',
+    )
+    context2 = blocks.BlockPipelineRuntimeContext(
+        world_grid=world_grid,
+        block_artifact_paths=paths.data_blocks,
+        collisions_artifacts_fpath=str(tmp_path / 'collisions_run2.json'),
         harmonize_run_id='harm_0002',
         ingest_run_id='run_0002',
-        collision_policy='error',
     )
 
     with pytest.raises(artifacts.ArtifactError, match='Intra-pool block'):
         blocks.run_blocks_building(
-            world_grid,
-            paths.data_blocks,
+            inputs2,
             config2,
-            policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
+            context2,
             logger=logger2,
         )
 

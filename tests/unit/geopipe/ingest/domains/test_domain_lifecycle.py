@@ -47,7 +47,7 @@ def test_prepare_domain_maps_build_and_load(tmp_path, mocker):
     )
     grid = geo_core.GridLayout(grid_spec)
 
-    config = domain_lifecycle.DomainBuildingParameters(
+    config = domain_lifecycle.DomainBuildingConfig(
         input_fpath='dummy_input.tif',
         domain_fpath=str(tmp_path / 'domain_map.json'),
         tiles_fpath=str(tmp_path / 'tiles.npz'),

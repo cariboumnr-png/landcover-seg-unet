@@ -82,7 +82,7 @@ def run_data_ingestion(
         logger.log('INFO', '[START] Domain maps preparation')
         domain_paths = ingestion_paths.domains
         domain_configs = [
-            ingest_domains.DomainBuildingParameters(
+            ingest_domains.DomainBuildingConfig(
                 input_fpath=path,
                 domain_fpath=domain_paths.domain_map_fpath(name),
                 tiles_fpath=domain_paths.mapped_tiles_fpath(
@@ -93,7 +93,7 @@ def run_data_ingestion(
             ) for name, path in context.domains.items()
         ]
         ingest_domains.prepare_domain_maps(
-           context.grid,
+            context.grid,
             domain_configs,
             policy=policy,
             logger=logger,

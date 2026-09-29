@@ -56,8 +56,9 @@ def test_build_data_block_image_only_no_added_features():
     Then: Return a block containing valid image arrays and no label.
     '''
     cfg = _make_config()
+    ctx = _make_context()
     inputs = _make_inputs()
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert block.data.image is not None
     assert block.data.valid_mask is not None
@@ -71,8 +72,9 @@ def test_build_data_block_image_only_add_spectral():
     Then: Append ndvi as an extra band in the image data.
     '''
     cfg = _make_config(add_spectral=['ndvi'])
+    ctx = _make_context()
     inputs = _make_inputs()
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert block.data.image.shape[0] == 8
 
@@ -84,11 +86,12 @@ def test_build_data_block_image_only_add_topo():
     Then: Append slope, aspect cos, aspect sin, and tpi bands.
     '''
     cfg = _make_config(add_topo=['slope', 'aspect', 'tpi'])
+    ctx = _make_context()
     inputs = _make_inputs(
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         image_padded_dem=numpy.ones((272, 272), dtype=numpy.float32),
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert block.data.image.shape[0] == 11
 
@@ -100,12 +103,13 @@ def test_build_data_block_with_label_no_added_features():
     Then: Return a block containing the parsed multi-channel label
         stack.
     '''
-    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    cfg = _make_config()
+    ctx = _make_context(label_specs=BASE_LABELSPECS)
     inputs = _make_inputs(
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         label_array=BASE_LABEL_ARRAY,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert block.manifest['has_label'] is True
     assert block.data.label is not None
@@ -120,14 +124,14 @@ def test_build_data_block_full():
     cfg = _make_config(
         add_topo=['slope', 'aspect', 'tpi'],
         add_spectral=['ndvi'],
-        label_specs=BASE_LABELSPECS,
     )
+    ctx = _make_context(label_specs=BASE_LABELSPECS)
     inputs = _make_inputs(
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         image_padded_dem=numpy.ones((272, 272), dtype=numpy.float32),
         label_array=BASE_LABEL_ARRAY,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert block.data.image is not None
     assert block.data.valid_mask is not None
@@ -143,14 +147,15 @@ def test_build_data_block_image_stats_handles_invalids(invalid):
     When: Building a DataBlock.
     Then: Ignore the invalid values during band mean/std calculations.
     '''
-    cfg = _make_config(image_nodata=invalid)
+    cfg = _make_config()
+    ctx = _make_context(image_nodata=invalid)
 
     img = numpy.ones((7, 256, 256), dtype=numpy.float32)
     invalid_idx = rng.choice(img.size, 999, replace=False)
     img.flat[invalid_idx] = invalid
     inputs = _make_inputs(image_array=img)
 
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     stats = block.manifest['image_stats']
     assert len(stats) == 7
@@ -175,11 +180,12 @@ def test_build_data_block_label_canonicalize_base_layer():
     When: Building a DataBlock.
     Then: Compile the single base label channel in the stack.
     '''
-    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    cfg = _make_config()
+    ctx = _make_context(label_specs=BASE_LABELSPECS)
     inputs = _make_inputs(
         label_array=BASE_LABEL_ARRAY,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert len(block.data.label) == 1
     assert block.manifest['label_num_cls'] == {'base': 4}
@@ -207,11 +213,12 @@ def test_build_data_block_label_canonicalize_zero_based_index():
             'class_name': {'0': 'WAT', '1': 'FOR', '2': 'WET', '3': 'UCL'},
         }
     }
-    cfg = _make_config(label_specs=zero_based_specs)
+    cfg = _make_config()
+    ctx = _make_context(label_specs=zero_based_specs)
     inputs = _make_inputs(
         label_array=zero_based_array,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     stack_base = block.data.label[0]
     assert set(numpy.unique(stack_base)) == {1, 2, 3, 255}
@@ -229,11 +236,12 @@ def test_build_data_block_label_stats_valid_ratio():
     When: Building a DataBlock.
     Then: Calculate the valid pixel ratio correctly.
     '''
-    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    cfg = _make_config()
+    ctx = _make_context(label_specs=BASE_LABELSPECS)
     inputs = _make_inputs(
         label_array=BASE_LABEL_ARRAY,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     valid = float(numpy.mean(BASE_LABEL_ARRAY != 4))
     assert block.manifest['valid_ratios'].get('base') == pytest.approx(valid)
@@ -245,11 +253,12 @@ def test_build_data_block_label_stats_class_count_entropy():
     When: Building a DataBlock.
     Then: Calculate absolute class counts and Shannon entropy.
     '''
-    cfg = _make_config(label_specs=BASE_LABELSPECS)
+    cfg = _make_config()
+    ctx = _make_context(label_specs=BASE_LABELSPECS)
     inputs = _make_inputs(
         label_array=BASE_LABEL_ARRAY,
     )
-    block = assembler.build_data_block(inputs, cfg)
+    block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert block.manifest['label_count'] == {
         'base': [16384, 16384, 16384, 0]
@@ -277,9 +286,10 @@ def test_inputs_post_init_label_specs_missing():
     Then: Raise a ValueError.
     '''
     cfg = _make_config()
+    ctx = _make_context(label_specs=None)
     inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     with pytest.raises(ValueError, match='"label_specs" not provided'):
-        assembler.build_data_block(inputs, cfg)
+        assembler.build_data_block(inputs, cfg, ctx)
 
 
 def test_inputs_post_init_invalid_label_shape():
@@ -323,8 +333,11 @@ def test_config_post_init_invalid_spectral_indices():
     When: Instantiating DataBlockConfig.
     Then: Raise a ValueError.
     '''
+    cfg = _make_config(add_spectral=['foo'])
+    ctx = _make_context()
+    inputs = _make_inputs()
     with pytest.raises(ValueError, match='Invalid spectral indices'):
-        _make_config(add_spectral=['foo'])
+        assembler.build_data_block(inputs, cfg, ctx)
 
 
 def test_config_post_init_missing_red_for_any_spectral():
@@ -333,8 +346,11 @@ def test_config_post_init_missing_red_for_any_spectral():
     When: Instantiating DataBlockConfig.
     Then: Raise a ValueError.
     '''
+    cfg = _make_config(add_spectral=['ndvi'])
+    ctx = _make_context(image_band_map={'foo': 0})
+    inputs = _make_inputs()
     with pytest.raises(ValueError, match='red band missing'):
-        _make_config(image_band_map={'foo': 0}, add_spectral=['ndvi'])
+        assembler.build_data_block(inputs, cfg, ctx)
 
 
 @pytest.mark.parametrize(
@@ -347,8 +363,11 @@ def test_config_post_init_missing_required_bands(indice, required):
     When: Instantiating DataBlockConfig.
     Then: Raise a ValueError.
     '''
+    cfg = _make_config(add_spectral=[indice])
+    ctx = _make_context(image_band_map={'red': 0})
+    inputs = _make_inputs()
     with pytest.raises(ValueError, match=f'{required} band missing'):
-        _make_config(image_band_map={'red': 0}, add_spectral=[indice])
+        assembler.build_data_block(inputs, cfg, ctx)
 
 
 # ----- helpers
@@ -364,6 +383,16 @@ def _make_inputs(**overrides):
 
 def _make_config(**overrides):
     base = assembler.DataBlockConfig(
+        image_dem_pad_px=8,
+        label_ignore_index=255,
+        add_spectral=None,
+        add_topo=None,
+    )
+    return dataclasses.replace(base, **overrides)
+
+
+def _make_context(**overrides):
+    base = assembler.DataBlockContext(
         image_band_map={
             'red': 0,
             'green': 1,
@@ -374,12 +403,8 @@ def _make_config(**overrides):
             'dem': 6,
         },
         image_nodata=numpy.nan,
-        image_dem_pad_px=8,
-        label_ignore_index=255,
         label_nodata=0,
         label_specs=None,
-        add_spectral=None,
-        add_topo=None,
     )
     return dataclasses.replace(base, **overrides)
 

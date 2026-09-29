@@ -83,7 +83,7 @@ def test_build_dataset_view(monkeypatch: pytest.MonkeyPatch):
         lambda *args, **kwargs: dummy_view,
     )
 
-    params = view_mod.DatasetViewParameters(
+    params = view_mod.DatasetViewConfig(
         valid_pxs={'landcover': 0.5},
         features=['red', 'blue'],
         targets={'landcover': 'binary'},
@@ -169,7 +169,7 @@ def test_build_dataset_view_explicit_focal_target(
         lambda *args, **kwargs: dummy_view,
     )
 
-    params = view_mod.DatasetViewParameters(
+    params = view_mod.DatasetViewConfig(
         valid_pxs={'landcover': 0.5},
         focal_target='landcover',
         targets={'landcover': 'binary'},

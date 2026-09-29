@@ -27,8 +27,8 @@ lifecycle APIs via lazy resolution to keep import order simple and
 circular-free.
 
 Public APIs:
-    - `DomainBuildingParameters`: container for domain parameters.
-    - `prepare_domain_maps`: build or load domain tile maps.
+    - `DomainBuildingConfig`: Container for domain mapping configs.
+    - `prepare_domain_maps`: Build or load domain tile maps.
 '''
 
 # standard imports
@@ -38,7 +38,7 @@ import typing
 
 __all__ = [
     # classes
-    'DomainBuildingParameters',
+    'DomainBuildingConfig',
     # functions
     'prepare_domain_maps',
 ]
@@ -47,14 +47,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .lifecycle import (
-        DomainBuildingParameters,
+        DomainBuildingConfig,
         prepare_domain_maps,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'DomainBuildingParameters',
+        'DomainBuildingConfig',
         'prepare_domain_maps',
     }:
         obj = importlib.import_module('.lifecycle', __package__)

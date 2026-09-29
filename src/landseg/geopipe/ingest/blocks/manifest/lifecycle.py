@@ -29,17 +29,18 @@ data blocks, and ensures consistency between on-disk block artifacts and
 their recorded schema throughout data preparation and update workflows.
 
 Public APIs:
-    - ManifestUpdateContext: Dataclass context for manifest update.
+    - ManifestProvenance: Lineage and grid identity metadata.
     - update_manifest: Updates dataset catalog and schema artifacts.
 '''
 
 # standard imports
 import dataclasses
 import os
-import typing
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.manifest.catalog as catalog
 import landseg.geopipe.ingest.blocks.manifest.schema as schema
 import landseg.geopipe.utils as geo_utils
@@ -51,28 +52,27 @@ SchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class ManifestUpdateContext:
-    '''Context describing a manifest update operation.'''
-    updated_coords: list[tuple[int, int]]   # grid coords for created blocks
-    source_image: str               # path to the source image raster
-    source_label: str | None        # optional path to the label raster
-    mapped_grid_id: str             # id for the grid the blocks are mapped to
-    blocks_dir: str                 # where data blocks are
-    label_color_map: dict[str, list[int]] | None
-    block_identity: str = ''        # canonical compatibility identity
+@dataclasses.dataclass(frozen=True)
+class ManifestProvenance:
+    '''Lineage and grid identity recorded in catalog and schema.'''
+    grid_id: str
+    block_identity: str
+    source_image: str
+    source_label: str | None = None
     harmonize_run_id: str | None = None
     ingest_run_id: str | None = None
 
 
 # ----- public functions
 def update_manifest(
-    context: ManifestUpdateContext,
     catalog_fpath: str,
     schema_fpath: str,
+    blocks_dir: str,
+    provenance: ManifestProvenance,
+    output: assembler.BlockBuildingOutput,
     *,
     policy: artifacts.LifecyclePolicy,
-) -> dict[str, typing.Any]:
+) -> contracts.ManifestStats:
     '''
     Update dataset manifest artifacts according to lifecycle policy.
 
@@ -82,17 +82,21 @@ def update_manifest(
     to rebuild or append entries, and writes updated JSON artifacts.
 
     Args:
-        context:
-            Manifest update configuration and execution context.
         catalog_fpath:
             File path to target catalog JSON artifact.
         schema_fpath:
             File path to target schema JSON artifact.
+        blocks_dir:
+            Directory containing on-disk data block artifacts.
+        provenance:
+            Source lineage and grid identity metadata.
+        output:
+            Results from block building assembly execution.
         policy:
             Lifecycle policy governing artifact update behavior.
 
     Returns:
-        dict[str, typing.Any]:
+        contracts.ManifestStats:
             Status mapping containing update results and metrics.
     '''
     # ----- catalog
@@ -103,7 +107,12 @@ def update_manifest(
         raise artifacts.ArtifactError from exc
 
     # get catalog status
-    current, to_update = _catalog_status(catalog_dict, context, policy=policy)
+    current, to_update = _catalog_status(
+        catalog_dict,
+        blocks_dir,
+        output.coords_created,
+        policy=policy,
+    )
     catalog_status = 'present'
     if not catalog_dict:
         catalog_status = 'absent'
@@ -115,11 +124,11 @@ def update_manifest(
         _catalog = catalog.build_catalog(
             to_update,
             original_catalog=current,
-            mapped_grid_id=context.mapped_grid_id,
-            source_image=context.source_image,
-            source_label=context.source_label,
-            harmonize_run_id=context.harmonize_run_id,
-            ingest_run_id=context.ingest_run_id,
+            mapped_grid_id=provenance.grid_id,
+            source_image=provenance.source_image,
+            source_label=provenance.source_label,
+            harmonize_run_id=provenance.harmonize_run_id,
+            ingest_run_id=provenance.ingest_run_id,
         )
         catalog_json = _catalog.to_json_payload()
         ctrl.persist(catalog_json)
@@ -133,29 +142,30 @@ def update_manifest(
     except artifacts.ArtifactError as exc: # e.g., current schema corrupted
         raise artifacts.ArtifactError from exc
 
-    sample_block = _sample(context.blocks_dir)
+    sample_block = _sample(blocks_dir)
     schema_dict = schema.build_schema(
         sample_block,
         original=schema_dict,
-        mapped_grid_id=context.mapped_grid_id,
-        block_identity=context.block_identity,
-        sources=(context.source_image, context.source_label),
-        label_color_map=context.label_color_map
+        mapped_grid_id=provenance.grid_id,
+        block_identity=provenance.block_identity,
+        sources=(provenance.source_image, provenance.source_label),
+        label_color_map=output.label_color_map,
     )
     ctrl.persist(schema_dict)
 
     return {
         'catalog_status': catalog_status,
-        'catalog_updated': to_update,
+        'catalog_updated': bool(to_update),
         'cataloged_blocks_count': len(_catalog),
-        'schema_updated': True
+        'schema_updated': True,
     }
 
 
 # ----- private helpers
 def _catalog_status(
     data_dict: dict[str, geo_core.DatasetBlockMeta] | None,
-    context: ManifestUpdateContext,
+    blocks_dir: str,
+    updated_coords: list[tuple[int, int]],
     *,
     policy: artifacts.LifecyclePolicy,
 ) -> tuple[geo_core.DatasetCatalog, list[str]]:
@@ -167,13 +177,12 @@ def _catalog_status(
         _catalog = geo_core.DatasetCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
-    blocks_dir = context.blocks_dir
     current = [f for f in os.listdir(blocks_dir) if f.endswith('npz')]
     if not current:
         raise FileNotFoundError('No block files found')
 
     # get filenames from the updated coordinates (parse from coords)
-    updated = [f'{geo_utils.xy_name(c)}.npz' for c in context.updated_coords]
+    updated = [f'{geo_utils.xy_name(c)}.npz' for c in updated_coords]
 
     # determine status
     cataloged = [os.path.basename(c['file_path']) for c in _catalog.values()]
@@ -193,7 +202,7 @@ def _catalog_status(
                 2: [],
                 3: [f'{blocks_dir}/{f}' for f in updated],
                 4: [f'{blocks_dir}/{f}' for f in current],
-                5: [f'{blocks_dir}/{f}' for f in current]
+                5: [f'{blocks_dir}/{f}' for f in current],
             }[catalog_status]
         # policy: force rebuild all
         case artifacts.LifecyclePolicy.REBUILD:

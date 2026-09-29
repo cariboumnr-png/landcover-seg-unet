@@ -56,7 +56,7 @@ def run_data_preparation(
     )
 
     # build dataset view
-    dataset_params = prepare_dataset.DatasetViewParameters(
+    dataset_params = prepare_dataset.DatasetViewConfig(
         valid_pxs=config.catalog.valid_pxs,
         focal_target=config.catalog.focal_target,
         test_catalog=config.catalog.test_catalog,
@@ -79,20 +79,37 @@ def run_data_preparation(
     scoring = config.scoring
     hydration = config.hydration
     # partition config
-    partition_config = prepare_partition.PartitionParameters(
+    has_aoi = bool(
+        partition.train_aoi or partition.val_aoi or partition.test_aoi
+    )
+    aoi_config = (
+        prepare_partition.AOIConfig(
+            train_aoi=partition.train_aoi,
+            val_aoi=partition.val_aoi,
+            test_aoi=partition.test_aoi,
+            min_overlap=partition.aoi_min_overlap,
+            canvas_crs=dataset_view.crs,
+            canvas_transform=dataset_view.transform,
+        )
+        if has_aoi
+        else None
+    )
+    hydration_config = (
+        prepare_partition.HydrationConfig(
+            reward_ratios=scoring.reward,
+            scoring_alpha=scoring.alpha,
+            scoring_beta=scoring.beta,
+            max_skew_rate=hydration.max_skew_rate,
+        )
+        if bool(scoring.reward)
+        else None
+    )
+    partition_config = prepare_partition.PartitionConfig(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
-        buffer_step=partition.buffer_step,
-        reward_ratios=scoring.reward,
-        scoring_alpha=scoring.alpha,
-        scoring_beta=scoring.beta,
-        max_skew_rate=hydration.max_skew_rate,
         block_spec=tile_specs_tuple,
-        train_aoi=partition.train_aoi,
-        val_aoi=partition.val_aoi,
-        test_aoi=partition.test_aoi,
-        aoi_min_overlap=partition.aoi_min_overlap,
-        canvas_crs=dataset_view.crs,
-        canvas_transform=dataset_view.transform,
+        buffer_step=partition.buffer_step,
+        aoi=aoi_config,
+        hydration=hydration_config,
     )
     prepare_partition.run_datablocks_partition(
         dataset_view,

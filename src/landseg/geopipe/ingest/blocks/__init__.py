@@ -26,7 +26,9 @@ Coordinates data block construction, window mapping, and manifest
 management through lazy module resolution.
 
 Public APIs:
-    - BlockBuildingParameters: Config container for block pipeline.
+    - BlockBuildingConfig: Config container for block pipeline.
+    - BlockBuildingInputs: I/O path inputs for block pipeline.
+    - BlockPipelineRuntimeContext: Context for block pipeline.
     - run_blocks_building: Runs canonical data block pipeline.
 '''
 

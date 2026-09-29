@@ -237,6 +237,8 @@ def build_blocks(
         BlockBuildingOutput:
             Execution output containing created coordinates and stats.
     '''
+    os.makedirs(output_dir, exist_ok=True)
+
     # prepare raster read windows
     coords_to_check = _prep_block_windows(inputs, context, output_dir)
 

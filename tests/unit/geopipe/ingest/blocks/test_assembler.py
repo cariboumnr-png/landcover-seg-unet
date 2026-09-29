@@ -76,6 +76,10 @@ def test_check_npz_integrity_success(tmp_path):
     fpath = tmp_path / 'test.npz'
     img = numpy.ones((5, 8, 8), dtype=numpy.float32)
     cfg = builder.DataBlockConfig(
+        image_dem_pad_px=8,
+        label_ignore_index=255,
+    )
+    context = builder.DataBlockContext(
         image_band_map={
             'red': 0,
             'green': 1,
@@ -84,8 +88,6 @@ def test_check_npz_integrity_success(tmp_path):
             'dem': 4,
         },
         image_nodata=numpy.nan,
-        image_dem_pad_px=8,
-        label_ignore_index=255
     )
     inputs = builder.DataBlockInputs(
         block_name='test_block',
@@ -93,7 +95,7 @@ def test_check_npz_integrity_success(tmp_path):
         image_padded_dem=None,
         label_array=None,
     )
-    block = builder.build_data_block(inputs, cfg)
+    block = builder.build_data_block(inputs, cfg, context)
     block.save(str(fpath))
     res = io.check_npz_integrity((0, 0), str(fpath))
     assert res == {(0, 0): True}
@@ -163,12 +165,16 @@ def test_build_single_block_success(dummy_geotiff_factory):
     )
 
     # pylint: disable=protected-access
+    db_config = builder.DataBlockConfig(
+        image_dem_pad_px=2,
+        label_ignore_index=255,
+        add_spectral=['ndvi'],
+        add_topo=['slope', 'aspect', 'tpi'],
+    )
     block = lifecycle._build_single_block(
         name='block_4_4',
-        inputs=inputs,
-        ignore_index=255,
-        add_spectral=['ndvi'],
-        add_topo=['slope', 'aspect', 'tpi']
+        raster_inputs=inputs,
+        db_config=db_config,
     )
     assert block.manifest['block_name'] == 'block_4_4'
     assert block.manifest['has_label'] is True
@@ -214,10 +220,14 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     )
 
     # pylint: disable=protected-access
+    db_config = builder.DataBlockConfig(
+        image_dem_pad_px=2,
+        label_ignore_index=255,
+    )
     block = lifecycle._build_single_block(
         name='block_4_4_def',
-        inputs=inputs,
-        ignore_index=255
+        raster_inputs=inputs,
+        db_config=db_config,
     )
     assert block.manifest['block_name'] == 'block_4_4_def'
     assert block.manifest['has_label'] is True
@@ -241,8 +251,8 @@ def test_build_blocks_orchestrator(
         filename='label.tif', width=16, height=16, bands=1
     ))
 
-    inputs = assembler.BlockBuildingInput(
-        output_root=str(tmp_path / 'blocks'),
+    out_dir = str(tmp_path / 'blocks')
+    inputs = assembler.BlockBuildingInputs(
         image_fpath=img_path,
         label_fpath=lbl_path,
     )
@@ -255,11 +265,6 @@ def test_build_blocks_orchestrator(
     }
 
     label_windows = dict(image_windows)
-    context = assembler.BlockBuildingContext(
-        image=image_windows,
-        label=label_windows
-    )
-
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
@@ -267,10 +272,9 @@ def test_build_blocks_orchestrator(
             'index_base': 0,
         }
     }
-
-    config = assembler.BlockBuildingConfig(
-        ignore_index=255,
-        dem_pad_px=2,
+    context = assembler.BlockBuildingContext(
+        image=image_windows,
+        label=label_windows,
         block_size=(8, 8),
         image_band_map={
             'red': 0,
@@ -280,25 +284,32 @@ def test_build_blocks_orchestrator(
             'dem': 4,
         },
         label_specs=label_specs,
+    )
+
+    config = assembler.BlockBuildingConfig(
+        dem_pad_px=2,
+        ignore_index=255,
         add_spectral=['ndvi'],
-        add_topo=['slope', 'aspect', 'tpi']
+        add_topo=['slope', 'aspect', 'tpi'],
+        artifacts_policy=artifacts.LifecyclePolicy.REBUILD,
+        collision_policy='skip',
     )
 
     result = assembler.build_blocks(
         inputs=inputs,
-        context=context,
         config=config,
-        policy=artifacts.LifecyclePolicy.REBUILD,
+        context=context,
+        output_dir=out_dir,
     )
 
     assert len(result.coords_created) == 4
-    assert result.stats['blocks_created'] == 4
-    assert result.stats['blocks_on_disk_before'] == 0
+    assert result.running_stats['blocks_added'] == 4
+    assert result.running_stats['blocks_on_disk_before'] == 0
     assert result.label_color_map is None
 
     for coord in image_windows:
         name = geo_utils.xy_name(coord)
-        assert os.path.exists(os.path.join(inputs.output_root, f'{name}.npz'))
+        assert os.path.exists(os.path.join(out_dir, f'{name}.npz'))
 
 
 # ----- test block construction

@@ -27,7 +27,7 @@ to keep import order simple and circular-free.
 
 Public APIs:
     - `DatasetView`: unified immutable dataset preparation view.
-    - `DatasetViewParameters`: configuration parameters for dataset view.
+    - `DatasetViewConfig`: configuration parameters for dataset view.
     - `build_dataset_view`: construct full preparation view.
 '''
 
@@ -39,7 +39,7 @@ import typing
 __all__ = [
     # classes
     'DatasetView',
-    'DatasetViewParameters',
+    'DatasetViewConfig',
     # functions
     'build_dataset_view',
 ]
@@ -49,7 +49,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .view import (
         DatasetView,
-        DatasetViewParameters,
+        DatasetViewConfig,
         build_dataset_view,
     )
 
@@ -57,7 +57,7 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {
         'DatasetView',
-        'DatasetViewParameters',
+        'DatasetViewConfig',
         'build_dataset_view',
     }:
         obj = importlib.import_module('.view', __package__)

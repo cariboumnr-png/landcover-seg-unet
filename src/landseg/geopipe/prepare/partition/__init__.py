@@ -26,7 +26,9 @@ Exposes partition configuration parameters and dataset split runner
 via lazy resolution.
 
 Public APIs:
-    - PartitionParameters: configuration parameters for partitioning.
+    - AOIConfig: configuration for AOI spatial boundaries.
+    - HydrationConfig: configuration for candidate hydration.
+    - PartitionConfig: configuration for data block partitioning.
     - run_datablocks_partition: partition blocks into train/val/test.
 '''
 
@@ -37,7 +39,9 @@ import typing
 
 __all__ = [
     # classes
-    'PartitionParameters',
+    'AOIConfig',
+    'HydrationConfig',
+    'PartitionConfig',
     # functions
     'run_datablocks_partition',
 ]
@@ -46,7 +50,9 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .orchestration import (
-        PartitionParameters,
+        AOIConfig,
+        HydrationConfig,
+        PartitionConfig,
     )
     from .runner import (
         run_datablocks_partition,
@@ -54,7 +60,11 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'PartitionParameters'}:
+    if name in {
+        'AOIConfig',
+        'HydrationConfig',
+        'PartitionConfig',
+    }:
         obj = importlib.import_module('.orchestration', __package__)
         return getattr(obj, name)
 
@@ -63,3 +73,4 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+

@@ -30,7 +30,7 @@ metadata. This pipeline produces experiment-agnostic artifacts intended
 for reuse across downstream workflows.
 
 Public APIs:
-    - BlockBuildingParameters: Config container for block pipeline.
+    - BlockPipelineRuntimeContext: Context for block pipeline.
     - run_blocks_building: Runs the canonical data block pipeline.
 '''
 
@@ -153,21 +153,21 @@ def run_blocks_building(
     })
 
     # create/update catalog and metadata JSON
-    updated = manifest.ManifestUpdateContext(
-        updated_coords=block_building_result.coords_created,
+    paths = context.block_artifact_paths
+    provenance = manifest.ManifestProvenance(
+        grid_id=context.world_grid.gid,
+        block_identity=context.world_grid.block_identity,
         source_image=inputs.image_fpath,
         source_label=inputs.label_fpath,
-        mapped_grid_id=context.world_grid.gid,
-        blocks_dir=context.block_artifact_paths.blocks,
-        label_color_map=block_building_result.label_color_map,
-        block_identity=context.world_grid.block_identity,
         harmonize_run_id=context.harmonize_run_id,
         ingest_run_id=context.ingest_run_id,
     )
     manifest_report = manifest.update_manifest(
-        updated,
-        context.block_artifact_paths.catalog,
-        context.block_artifact_paths.schema,
+        paths.catalog,
+        paths.schema,
+        paths.blocks,
+        provenance,
+        block_building_result,
         policy=config.artifacts_policy,
     )
 
