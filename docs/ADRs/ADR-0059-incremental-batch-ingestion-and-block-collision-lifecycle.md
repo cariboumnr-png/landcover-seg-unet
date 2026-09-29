@@ -1,7 +1,7 @@
 # ADR-0059: Incremental Batch Ingestion and Block Collision Lifecycle
 
-**Status:** Accepted (Phases 1 & 2 Implemented; Phases 3 & 4 Deferred)<br>
-**Date:** 2026-09-23 (Updated 2026-09-26)
+**Status:** Accepted — Implemented (Phases 1 & 2; Phases 3 & 4 Deferred)<br>
+**Date:** 2026-09-23 (Updated 2026-09-29)
 
 ---
 
@@ -42,13 +42,13 @@ While `data-harmonize` operates per batch run (`run_xxx`), `data-ingest` was ori
 
 ## 2. Decision
 
-We evolve `landseg.geopipe` to support **incremental batch ingestion into a unified canonical block pool** anchored to a **decoupled spatial frame**, with **first-class ingestion run ledgers**, **automatic batch catch-up**, and an **explicit collision policy**.
+We evolved `landseg.geopipe` to support **incremental batch ingestion into a unified canonical block pool** anchored to a **decoupled spatial frame**, with **first-class ingestion run ledgers**, **automatic batch catch-up**, and an **explicit collision policy**.
 
-Implementation is structured across four phases:
+Implementation was structured across four phases:
 - **Phase 1 (Implemented)**: Ingestion run ledger (`ingestion_runs.json`), run-level collision detection (`fingerprint`), automatic batch catch-up resolution, spatial identity decoupling (`affine_identity` vs `block_identity`), and pool grid compatibility verification.
 - **Phase 2 (Implemented)**: Fine-grained intra-pool block collision policy (`CollisionPolicy: [skip, overwrite, error]`), mandatory persistence of run collision manifests (`collisions.json`) recording all overlapping coordinates, and cumulative catalog lineage.
-- **Phase 3 (Proposed / Deferred)**: Inter-batch boundary seam stitching and nodata-filling for partial border blocks bisected by regional swath seams (deferred to future work; enabled by Phase 2's `collisions.json`).
-- **Phase 4 (Proposed / Deferred)**: Higher-level workflow orchestration (`landseg.execution.workflows`) decoupling multi-run and cross-pipeline workflows (e.g., `study-sweep`, end-to-end data intake, and pre-flight telemetry checks) from atomic execution pipelines.
+- **Phase 3 (Deferred)**: Inter-batch boundary seam stitching and nodata-filling for partial border blocks bisected by regional swath seams (deferred to future work; enabled by Phase 2's `collisions.json`).
+- **Phase 4 (Deferred)**: Higher-level workflow orchestration (`landseg.execution.workflows`) decoupling multi-run and cross-pipeline workflows (e.g., `study-sweep`, end-to-end data intake, and pre-flight telemetry checks) from atomic execution pipelines.
 
 ### 2.1. Architectural Mental Model
 
@@ -129,7 +129,7 @@ Implementation is structured across four phases:
        }
      }
      ```
-   - `ingested_data/run_XXXX/`: Run-isolated telemetry, logs, and `ingest_report.json`.
+   - `ingested_data/run_XXXX/`: Run-isolated telemetry, logs, `collisions.json`, and `ingest_report.json`.
 
 ### 2.3. Spatial Identity Decoupling & Pool Grid Verification (Phase 1 Implemented)
 
@@ -214,7 +214,7 @@ We extended `DatasetBlockMeta` in `landseg.geopipe.core.dataset_catalog` and `ma
 - Executes pending batches sequentially with individual progress reporting.
 - Exits cleanly as a no-op when all batches are up-to-date.
 
-### 2.9. Proposed Phase 3: Border Seam Dilemma and Stitching Deferral
+### 2.9. Deferred Phase 3: Border Seam Dilemma and Stitching Deferral
 
 A subtle but critical reality of incremental geospatial data arrival is the **border seam dilemma**:
 - When Batch A terminates along a regional acquisition boundary (e.g. flight swath edge or district boundary) that bisects discrete grid tile $(r, c)$, Batch A ingests a **"partial block"** containing valid sensor measurements on one side and `nodata` / background padding on the other.
@@ -225,9 +225,9 @@ A subtle but critical reality of incremental geospatial data arrival is the **bo
 Resolving this boundary condition requires a dedicated **block stitching / mosaic blending pass** that loads both tensors and merges valid pixels where the other contains `nodata`.
 
 **Explicit Deferral Decision**:
-We explicitly propose to **defer block stitching to Phase 3**. Attempting to implement multi-band tensor blending, categorical label conflict resolution, and nodata-filling within the current branch would significantly inflate complexity and destabilize core pooling invariants. Because Phase 2 guarantees that all colliding coordinates are immutably cataloged in `collisions.json`, Phase 3 can be introduced later as a clean, decoupled post-processing consolidation utility without disrupting the canonical ingestion contract.
+We explicitly deferred block stitching to Phase 3. Attempting to implement multi-band tensor blending, categorical label conflict resolution, and nodata-filling within the current branch would significantly inflate complexity and destabilize core pooling invariants. Because Phase 2 guarantees that all colliding coordinates are immutably cataloged in `collisions.json`, Phase 3 can be introduced later as a clean, decoupled post-processing consolidation utility without disrupting the canonical ingestion contract.
 
-### 2.10. Proposed Phase 4: Higher-Level Workflow Orchestration (`landseg.execution.workflows`)
+### 2.10. Deferred Phase 4: Higher-Level Workflow Orchestration (`landseg.execution.workflows`)
 
 A structural insight emerging from Phase 1 and 2 implementation is the architectural tension between **atomic pipeline execution** and **higher-level multi-run orchestration**:
 - In `landseg.execution.pipelines`, atomic commands (`world-grid`, `data-harmonize`, `data-prepare`, `model-train`, `model-evaluate`) strictly maintain a $1$-to-$1$ relationship with their execution context: $1$ invocation $\rightarrow$ $1$ run folder, $1$ report, and $1$ manifest entry.
@@ -253,7 +253,7 @@ To resolve this dichotomy without bloating atomic execution pipelines, Phase 4 w
      * Emitting an executive status-quo dashboard summarizing pipeline readiness.
 
 **Explicit Deferral Decision**:
-Phase 2 implementation remains focused on finalizing intra-pool block collisions, `collisions.json`, and catalog lineage within the existing pipeline surface. Workflow decoupling and the creation of `landseg.execution.workflows` are formally deferred to Phase 4 on a dedicated branch.
+Phase 2 implementation remained focused on finalizing intra-pool block collisions, `collisions.json`, and catalog lineage within the existing pipeline surface. Workflow decoupling and the creation of `landseg.execution.workflows` were formally deferred to Phase 4 on a dedicated branch.
 
 ---
 

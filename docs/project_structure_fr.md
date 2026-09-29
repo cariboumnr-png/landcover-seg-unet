@@ -70,7 +70,7 @@ src/landseg/
 |-- artifacts/
 |   |-- checkpoint.py             Sauvegarde/chargement de checkpoints
 |   |-- controller.py             Resolve/build/rebuild selon les politiques
-|   |-- paths.py                  Chemins canoniques des artefacts
+|   |-- paths/                    Chemins canoniques des artefacts
 |   |-- payload_io.py             Persistance des payloads et metadonnees
 |   `-- policy.py                 Regles de cycle de vie des artefacts
 |
