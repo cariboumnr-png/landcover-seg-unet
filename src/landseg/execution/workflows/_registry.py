@@ -23,10 +23,10 @@
 # pylint: disable=too-few-public-methods
 
 '''
-Registry of pipeline commands and their callable implementations.
+Registry of workflow commands and their callable implementations.
 
-Defines the set of valid pipeline names and maps each to its execution
-function. Provides utilities for validating and retrieving pipelines by
+Defines the set of valid workflows names and maps each to its execution
+function. Provides utilities for validating and retrieving workflows by
 name with both runtime checks and static type safety.
 '''
 
@@ -34,57 +34,41 @@ name with both runtime checks and static type safety.
 import typing
 # local imports
 import landseg.configs as configs
-import landseg.execution.pipelines as pipelines
+import landseg.execution.workflows as workflows
 
-# allowed pipeline names
-PipelineName = typing.Literal[
-    'default',
-    'world-grid',
-    'data-harmonize',
-    'data-ingest',
-    'data-prepare',
-    'diagnose-overfit',
-    'model-evaluate',
-    'model-train',
-    'study-analysis',
+# allowed workflow names
+WorkflowName = typing.Literal[
+    'study-sweep',
 ]
-_ALLOWED = set(typing.get_args(PipelineName))
+_ALLOWED = set(typing.get_args(WorkflowName))
 
-# pipeline registry
-class PipelineFn(typing.Protocol):
+# workflow registry
+class WorkflowFn(typing.Protocol):
     def __call__(self, config: configs.RootConfig) -> typing.Any: ...
 
-PIPELINES: dict[PipelineName, PipelineFn] = {
-    'default': pipelines.default_action,
-    'world-grid': pipelines.exec_world_grid,
-    'data-harmonize': pipelines.exec_harmonize_data,
-    'data-ingest': pipelines.exec_ingest_data,
-    'data-prepare': pipelines.exec_prepare_data,
-    'diagnose-overfit': pipelines.overfit,
-    'model-evaluate': pipelines.evaluate,
-    'model-train': pipelines.ModelTrainPipeline.run,
-    'study-analysis': pipelines.analyze,
+PIPELINES: dict[WorkflowName, WorkflowFn] = {
+    'study-sweep': workflows.sweep,
 }
 
 # runtime safe access
-def get(name: str) -> PipelineFn:
+def get(name: str) -> WorkflowFn:
     '''
-    Retrieve the pipeline function associated with a given name.
+    Retrieve the workflow function associated with a given name.
 
     Args:
         name: Pipeline identifier as a string.
 
     Returns:
-        Callable implementing the pipeline.
+        Callable implementing the workflow.
 
     Raises:
-        KeyError: If the name is not a recognized pipeline.
+        KeyError: If the name is not a recognized workflow.
     '''
 
-    def _is_pipeline_name(name: str) -> typing.TypeGuard[PipelineName]:
-        # Return True if the input string is a valid pipeline name.
+    def _is_workflow_name(name: str) -> typing.TypeGuard[WorkflowName]:
+        # Return True if the input string is a valid workflow name.
         return name in _ALLOWED
 
-    if not _is_pipeline_name(name):
-        raise KeyError(f'Unknown pipeline name: {name}; allowed: {_ALLOWED}')
+    if not _is_workflow_name(name):
+        raise KeyError(f'Unknown workflow name: {name}; allowed: {_ALLOWED}')
     return PIPELINES[name]

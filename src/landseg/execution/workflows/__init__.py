@@ -22,7 +22,7 @@
 # pylint: disable=too-many-return-statements
 
 '''
-Top-level namespace for `landseg.execution.pipelines`.
+Top-level namespace for `landseg.execution.workflows`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
@@ -35,16 +35,8 @@ import typing
 
 __all__ = [
     # functions
-    'analyze',
-    'default_action',
-    'evaluate',
-    'exec_harmonize_data',
-    'exec_ingest_data',
-    'exec_prepare_data',
-    'exec_world_grid',
     'get',
-    'overfit',
-    'ModelTrainPipeline',
+    'sweep',
 ]
 
 
@@ -53,33 +45,10 @@ if typing.TYPE_CHECKING:
     from ._registry import (
         get,
     )
-    from .data_harmonize import (
-        exec_harmonize_data,
+    from .study_sweep import (
+        sweep,
     )
-    from .data_ingest import (
-        exec_ingest_data,
-    )
-    from .data_prepare import (
-        exec_prepare_data,
-    )
-    from .default import (
-        default_action,
-    )
-    from .diagnose_overfit import (
-        overfit,
-    )
-    from .model_evaluate import (
-        evaluate,
-    )
-    from .model_train import (
-        ModelTrainPipeline,
-    )
-    from .study_analysis import (
-        analyze,
-    )
-    from .world_grid import (
-        exec_world_grid,
-    )
+
 
 
 def __getattr__(name: str):
@@ -87,40 +56,8 @@ def __getattr__(name: str):
         obj = importlib.import_module('._registry', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_harmonize_data'}:
-        obj = importlib.import_module('.data_harmonize', __package__)
-        return getattr(obj, name)
-
-    if name in {'exec_ingest_data'}:
-        obj = importlib.import_module('.data_ingest', __package__)
-        return getattr(obj, name)
-
-    if name in {'exec_prepare_data'}:
-        obj = importlib.import_module('.data_prepare', __package__)
-        return getattr(obj, name)
-
-    if name in {'default_action'}:
-        obj = importlib.import_module('.default', __package__)
-        return getattr(obj, name)
-
-    if name in {'overfit'}:
-        obj = importlib.import_module('.diagnose_overfit', __package__)
-        return getattr(obj, name)
-
-    if name in {'evaluate'}:
-        obj = importlib.import_module('.model_evaluate', __package__)
-        return getattr(obj, name)
-
-    if name in {'ModelTrainPipeline'}:
-        obj = importlib.import_module('.model_train', __package__)
-        return getattr(obj, name)
-
-    if name in {'analyze'}:
-        obj = importlib.import_module('.study_analysis', __package__)
-        return getattr(obj, name)
-
-    if name in {'exec_world_grid'}:
-        obj = importlib.import_module('.world_grid', __package__)
+    if name in {'sweep'}:
+        obj = importlib.import_module('.study_sweep', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

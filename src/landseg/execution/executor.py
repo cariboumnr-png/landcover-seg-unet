@@ -32,6 +32,7 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as piplines
+import landseg.execution.workflows as workflows
 import landseg.geopipe.core as geo_core
 
 # aliases
@@ -43,8 +44,15 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
     # upstream detection checks
     # _validate_upstream_pipelines(root_config)
-    # get command from pipeline
-    command = piplines.get(root_config.pipeline.name)
+    # get command from pipeline or workflows
+    try:
+        command = piplines.get(root_config.pipeline.name)
+    except KeyError:
+        try:
+            command = workflows.get(root_config.pipeline.name)
+        except KeyError as e:
+            raise KeyError('Pipeline or workflow name not found') from e
+
     # run command and return result
     return command(root_config)
 

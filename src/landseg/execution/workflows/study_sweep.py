@@ -34,13 +34,10 @@ analysis are handled elsewhere.
 # standard imports
 import typing
 # local imports
-import landseg._constants as c
+import landseg.execution.pipelines as pipelines
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
-import landseg.geopipe as geopipe
-import landseg.models as models
-import landseg.session as session
 import landseg.study as study
 
 # aliases
@@ -67,68 +64,22 @@ def sweep(config: configs.RootConfig):
 
 def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
     '''Build a continuous training session runner.'''
-    # init run io folder tree
+    config.session.mode = 'continuous' # ensure session type
+
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    session_paths = artifact_paths.session.init_pipeline_folders()
-
-    # save running config per session
-    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
-    config_ctrl.persist(config.as_dict)
-
-    # init a SessionLogger
-    logger = session.SessionLogger(
-        name='session',
-        log_file=session_paths.summary,
-        console_lvl=None,
-        enable_file_log=False
-    )
 
     def run_wrapper():
-        logger.init_summary(
-            run_id=session_paths.run_id,
-            pipeline=config.pipeline.name,
+        training_pipeline = pipelines.ModelTrainPipeline(
+            config,
+            artifact_paths=artifact_paths,
+            disable_console_logging=True
         )
-        logger.set_inputs(config.as_dict)
+
+        logger = training_pipeline.logger
+        runner = training_pipeline.build_runner(mode_override='continuous')
+
         try:
-            logger.log_sep()
-
-            # collect artifacts and build `DataSpecs`
-            dataspecs = geopipe.build_dataspec(
-                artifact_paths,
-                mode='default',
-                ids_domain_name=config.data.specification.domain_ids_name,
-                vec_domain_name=config.data.specification.domain_vec_name
-            )
-            logger.set_inputs({'dataspecs': dataspecs.to_dict()})
-
-            # setup the model
-            model = models.build_multihead_unet(
-                patch_size=config.session.dataloader.patch_size,
-                dataspecs=dataspecs,
-                unet_backbone_config=config.models.unet_backbone_config,
-                conditioning_config=config.models.conditioning_config,
-                enable_clamp=config.models.numeric_safety.enable_clamp,
-                clamp_range=config.models.numeric_safety.clamp_range
-            )
-
-            # build session runner
-            runner = session.build_session_runner(
-                dataspecs=dataspecs,
-                model=model,
-                config=config.session,
-                context=session.SessionBuildContext(
-                    device=c.DEVICE,
-                    session_paths=session_paths,
-                    eval_dataset='val',
-                    logger=logger
-                ),
-                session_type='continuous'
-            )
-
             yield from runner.run()
-
-            # update summary
-            logger.set_summary_status('SUCCESS')
 
         except Exception as e:
             logger.set_summary_status('FAILED')
@@ -136,7 +87,8 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
             raise e
 
         finally:
+            logger.set_summary_status('SUCCESS')
             logger.log_sep()
             logger.close() # summary dict will be persisted
 
-    return session_paths.step_results, run_wrapper
+    return artifact_paths.session.step_results, run_wrapper
