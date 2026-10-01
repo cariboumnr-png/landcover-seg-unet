@@ -309,6 +309,13 @@ class SessionConfig:
     def engine_tasks(self) -> _TasksConfig:
         return self.engine.engine_tasks
 
+    @property
+    def training_mode(self) -> typing.Literal['continuous', 'curriculum']:
+        return typing.cast(
+            typing.Literal['continuous', 'curriculum'],
+            self.mode
+        )
+
     def validate(self):
         # mode specific requirements
         if self.mode == 'continuous':

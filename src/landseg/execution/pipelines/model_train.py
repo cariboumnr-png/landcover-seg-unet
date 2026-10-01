@@ -36,166 +36,204 @@ import torch
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.core as core
+import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
 
 
-def train(config: configs.RootConfig) -> None:
-    '''
-    Run a full training job.
+class ModelTrainPipeline(base.Pipeline):
+    '''Model train pipeline runner class.'''
 
-    Creates an run directory, builds `DataSpecs` from the prepared
-    artifacts and schema, instantiates the model, and executes the runner.
+    def __init__(
+        self,
+        config: configs.RootConfig,
+        *,
+        artifact_paths: artifacts.ArtifactPaths | None = None,
+        disable_console_logging: bool = False
+    ):
+        '''Init'''
+        super().__init__(config)
 
-    Args:
-        config: RootConfig with model, trainer, and runner settings.
-    '''
-    # init session results paths and create run io folder tree
-    artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    session_paths = artifact_paths.session.init_pipeline_folders()
+        self.config = config
 
-    # persist running config as JSON
-    config_ctrl = artifacts.Controller[dict](session_paths.config) # no policy
-    config_ctrl.persist(config.as_dict)
+        if artifact_paths is None:
+            self.artifact_paths = artifacts.ArtifactPaths.from_config(config)
+        else:
+            self.artifact_paths = artifact_paths
 
-    # init a SessionLogger
-    logger = session.SessionLogger(
-        name='session',
-        log_file=session_paths.summary,
-        console_lvl=config.execution.console_level,
-        enable_file_log=False
-    )
-    logger.init_summary(
-        run_id=session_paths.run_id,
-        pipeline=config.pipeline.name,
-    )
+        self.session_paths = self.artifact_paths.session.init_pipeline_folders()
 
-    try:
-        logger.log_sep()
+        console_level = (
+            None
+            if disable_console_logging
+            else config.execution.console_level
+        )
+        self.logger = session.SessionLogger(
+            name='session',
+            log_file=self.session_paths.summary,
+            console_lvl=console_level,
+            enable_file_log=False
+        )
+        self.logger.init_summary(
+            run_id=self.session_paths.run_id,
+            pipeline=config.pipeline.name,
+        )
+
+        # persist running config as JSON
+        config_ctrl = artifacts.Controller[dict](self.session_paths.config)
+        config_ctrl.persist(config.as_dict)
+
+    @classmethod
+    def run(cls, config: configs.RootConfig) -> None:
+        '''Initialize a pipeline runner and run training end-to-end.'''
+        self = cls(config)
+        try:
+            runner = self.build_runner()
+
+            self.logger.log('INFO', '[START] Training session')
+            start_t = time.perf_counter()
+            final = runner.execute()
+            self.timer['exec'] = time.perf_counter() - start_t
+            self.logger.log('INFO', f'[COMPLETE] Training session (D_{self.timer['exec']:.2f}s)')
+
+            self.logger.set_summary_status('SUCCESS')
+            self.logger.set_results(self._summarize_results(final))
+
+        except Exception as e:
+            self.logger.set_summary_status('FAILED')
+            self.logger.log('ERROR', f'Training pipeline failed: {e}', exc_info=True)
+            raise e
+
+        finally:
+            self.logger.log_sep()
+            self.logger.close() # summary JSON will be persisted
+
+    def validate(self) -> None: ...
+
+    @typing.overload
+    def build_runner(
+        self,
+        *,
+        mode_override: typing.Literal['continuous'],
+    ) -> session.ContinuousRunner: ...
+
+
+    @typing.overload
+    def build_runner(
+        self,
+        *,
+        mode_override: typing.Literal['curriculum'],
+    ) -> session.CurriculumRunner: ...
+
+    @typing.overload
+    def build_runner(
+        self,
+        *,
+        mode_override: None = None,
+    ) -> session.ContinuousRunner | session.CurriculumRunner: ...
+
+    def build_runner(
+        self,
+        *,
+        mode_override: typing.Literal['continuous', 'curriculum'] | None = None,
+    ) -> session.ContinuousRunner | session.CurriculumRunner:
+        '''doc.'''
+        self.logger.log_sep()
 
         # collect artifacts and build `DataSpecs`
-        logger.log('INFO', '[START] Data specifications setup')
+        self.logger.log('INFO', '[START] Data specifications setup')
         start_t = time.perf_counter()
         dataspecs = geopipe.build_dataspec(
-            artifact_paths,
+            self.artifact_paths,
             mode='default',
-            ids_domain_name=config.data.specification.domain_ids_name,
-            vec_domain_name=config.data.specification.domain_vec_name
+            ids_domain_name=self.config.data.specification.domain_ids_name,
+            vec_domain_name=self.config.data.specification.domain_vec_name
         )
-        d_setup = time.perf_counter() - start_t
-        logger.log('INFO', f'[COMPLETE] Data specs setup (D_{d_setup:.2f}s)')
+        self.timer['data'] = time.perf_counter() - start_t
+        self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
 
         for s in dataspecs.summary:
-            logger.log('INFO', s)
-        logger.log_sep()
+            self.logger.log('INFO', s)
+        self.logger.log_sep()
 
         # setup the model
-        logger.log('INFO', '[START] Model assembly')
+        self.logger.log('INFO', '[START] Model assembly')
         start_t = time.perf_counter()
         model = models.build_multihead_unet(
-            patch_size=config.session.dataloader.patch_size,
+            patch_size=self.config.session.dataloader.patch_size,
             dataspecs=dataspecs,
-            unet_backbone_config=config.models.unet_backbone_config,
-            conditioning_config=config.models.conditioning_config,
-            enable_clamp=config.models.numeric_safety.enable_clamp,
-            clamp_range=config.models.numeric_safety.clamp_range
+            unet_backbone_config=self.config.models.unet_backbone_config,
+            conditioning_config=self.config.models.conditioning_config,
+            enable_clamp=self.config.models.numeric_safety.enable_clamp,
+            clamp_range=self.config.models.numeric_safety.clamp_range
         )
-        d_model = time.perf_counter() - start_t
-        logger.log('INFO', f'[COMPLETE] Model assembly (D_{d_model:.2f}s)')
+        self.timer['model'] = time.perf_counter() - start_t
+        self.logger.log('INFO', f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
 
-        logger.set_inputs(_summarize_inputs(config, model, dataspecs))
-        logger.log_sep()
+        # summarize inputs and log
+        total_p = sum(p.numel() for p in model.parameters())
+        trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        self.logger.set_inputs({
+            'system': {
+                'device':c.DEVICE_NAME,
+                'torch_version': torch.__version__
+            },
+            'model': {
+                'backbone': 'unet',
+                'total_parameters': total_p,
+                'trainable_parameters': trainable_p,
+                'heads': list(dataspecs.heads.class_counts.keys())
+            },
+            'data': {
+                'patch_size': self.config.session.dataloader.patch_size
+            },
+            'dataspecs': dataspecs.to_dict()
+        })
+        self.logger.log_sep()
 
-        # build the session runner
+        # build and return the session runner
+        match mode_override:
+            case 'continuous': session_type = 'continuous'
+            case 'curriculum': session_type = 'curriculum'
+            case None: session_type = self.config.session.training_mode
+
         runner = session.build_session_runner(
             dataspecs=dataspecs,
             model=model,
-            config=config.session,
+            config=self.config.session,
             context=session.SessionBuildContext(
                 device=c.DEVICE,
-                session_paths=session_paths,
+                session_paths=self.session_paths,
                 eval_dataset='val',
-                logger=logger
+                logger=self.logger
             ),
-            session_type=typing.cast(
-                typing.Literal['continuous', 'curriculum'],
-                config.session.mode
-            ) # guaruanteed by root config validation,
+            session_type=session_type,
         )
+        return runner
 
-        # run session execution
-        logger.log('INFO', '[START] Training session')
-        start_t = time.perf_counter()
-        final = runner.execute()
-        d_exec = time.perf_counter() - start_t
-        logger.log('INFO', f'[COMPLETE] Training session (D_{d_exec:.2f}s)')
+    def _summarize_results(self, final: float) -> dict[str, typing.Any]:
+        '''Summarize peak memory and log final results and metrics.'''
+        process = psutil.Process()
+        peak_cpu_mb = process.memory_info().rss / (1024 * 1024)
+        peak_gpu_mb = 0.0
+        if torch.cuda.is_available():
+            peak_gpu_mb = torch.cuda.max_memory_allocated() / (1024 * 1024)
 
-        logger.set_summary_status('SUCCESS')
-        logger.set_results(_summarize_results(final, d_setup, d_model, d_exec))
+        t_data = self.timer.get('data', 0.0)
+        t_model = self.timer.get('model', 0.0)
+        t_exec = self.timer.get('exec', 0.0)
 
-    except Exception as e:
-        logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Training pipeline failed: {e}', exc_info=True)
-        raise e
-
-    # close logger
-    finally:
-        logger.log_sep()
-        logger.close() # summary JSON will be persisted
-
-
-# ----- private helpers (no schema TEMPORARY)
-def _summarize_inputs(
-    config: configs.RootConfig,
-    model: torch.nn.Module,
-    dataspecs: core.DataSpecs
-) -> dict[str, typing.Any]:
-    '''Summarize pipeline run environment and model metadata inputs.'''
-    total_p = sum(p.numel() for p in model.parameters())
-    trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    return {
-        'system': {
-            'device':c.DEVICE_NAME,
-            'torch_version': torch.__version__
-        },
-        'model': {
-            'backbone': 'unet',
-            'total_parameters': total_p,
-            'trainable_parameters': trainable_p,
-            'heads': list(dataspecs.heads.class_counts.keys())
-        },
-        'data': {
-            'patch_size': config.session.dataloader.patch_size
-        },
-        'dataspecs': dataspecs.to_dict()
-    }
-
-
-def _summarize_results(
-    final: float,
-    d_setup: float,
-    d_model: float,
-    d_exec: float,
-) -> dict[str, typing.Any]:
-    '''Summarize peak memory and log final results and metrics.'''
-    process = psutil.Process()
-    peak_cpu_mb = float(process.memory_info().rss / (1024 * 1024))
-    peak_gpu_mb = 0.0
-    if torch.cuda.is_available():
-        peak_gpu_mb = float(torch.cuda.max_memory_allocated() / (1024 * 1024))
-
-    return {
-        'best_value': final,
-        'duration_sec': d_setup + d_model + d_exec,
-        'durations': {
-            'data_specs_setup_sec': d_setup,
-            'model_assembly_sec': d_model,
-            'execution_sec': d_exec
-        },
-        'system': {
-            'peak_cpu_memory_mb': peak_cpu_mb,
-            'peak_gpu_memory_mb': peak_gpu_mb
+        return {
+            'best_value': final,
+            'duration_sec': t_data + t_model + t_exec,
+            'durations': {
+                'data_specs_setup_sec': t_data,
+                'model_assembly_sec': t_model,
+                'execution_sec': t_exec
+            },
+            'system': {
+                'peak_cpu_memory_mb': float(peak_cpu_mb),
+                'peak_gpu_memory_mb': float(peak_gpu_mb)
+            }
         }
-    }

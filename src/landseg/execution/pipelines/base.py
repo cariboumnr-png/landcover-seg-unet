@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -20,64 +20,27 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Base pipeline ABC
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
-import typing
+import abc
+# local imports
+import landseg.configs as configs
 
-__all__ = [
-    # classes
-    'ContinuousRunner',
-    'CurriculumRunner',
-    'SessionBuildContext',
-    'SessionLogger',
-    # functions
-    'build_session_runner',
-    # typing
-    'SessionConfigShape',
-]
+class Pipeline(abc.ABC):
+    '''Pipeline ABC'''
 
+    def __init__(self, config: configs.RootConfig) -> None:
+        '''Init'''
+        self.config = config
+        self.timer: dict[str, float] = {}
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .logger import (
-        SessionLogger,
-    )
-    from .factory import (
-        SessionBuildContext,
-        SessionConfigShape,
-        build_session_runner
-    )
-    from .orchestration import (
-        ContinuousRunner,
-        CurriculumRunner,
-    )
+    @abc.abstractmethod
+    @classmethod
+    def run(cls, config: configs.RootConfig) -> None:
+        '''Initialize a pipeline runner and run end-to-end process.'''
 
-
-def __getattr__(name: str):
-    if name in {'SessionLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'SessionBuildContext',
-        'SessionConfigShape',
-        'build_session_runner',
-    }:
-        obj = importlib.import_module('.factory', __package__)
-        return getattr(obj, name)
-
-    if name in {
-    'ContinuousRunner',
-    'CurriculumRunner',
-    }:
-        obj = importlib.import_module('.orchestration', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    @abc.abstractmethod
+    def validate(self) -> None:
+        '''Validate pipeline environment and upstream requirements.'''
