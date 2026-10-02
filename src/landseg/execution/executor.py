@@ -57,22 +57,34 @@ COMMANDS = typing.Literal[
 def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
     command = root_config.pipeline.name
+    results = None
 
     match command:
         case 'world-grid':
-            return pipelines.WorldGridGeneration(root_config).run()
+            pipelines.WorldGridGeneration(root_config).run()
+
         case 'data-harmonize':
-            return pipelines.DataHarmonization(root_config).run()
+            pipelines.DataHarmonization(root_config).run()
+
         case 'data-ingest':
-            return pipelines.DataIngestion(root_config).run()
+            pipelines.DataIngestion(root_config).run()
+
+        case 'data-prepare':
+            pipelines.DataPreparation(root_config).run()
+
         case 'model-train':
-            return pipelines.ModelTraining(root_config).run()
+            pipelines.ModelTraining(root_config).run()
+
         case 'batch-ingest':
-            return workflows.execute_batch_ingest(root_config)
+            workflows.execute_batch_ingest(root_config)
+
         case 'study-sweep':
-            return workflows.execute_study_sweep(root_config)
+            results = workflows.execute_study_sweep(root_config)
+
         case _:
             raise KeyError(f'Unknown command: {command}; allowed: {COMMANDS}')
+
+    return results
 
 
 # ----- private helpers

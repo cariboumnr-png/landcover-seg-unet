@@ -47,8 +47,8 @@ class ModelTraining(base.Pipeline):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        session_paths = self.artifact_paths.session
-        self.pipeline_paths = session_paths.init_pipeline_folders()
+        self.pipeline_paths = self.artifact_paths.session
+        self.pipeline_paths.init_pipeline_folders()
 
         self.logger = session.SessionLogger(
             name='session',

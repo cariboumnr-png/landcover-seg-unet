@@ -40,7 +40,7 @@ __all__ = [
     'evaluate',
     'DataHarmonization',
     'DataIngestion',
-    'exec_prepare_data',
+    'DataPreparation',
     'WorldGridGeneration',
     'overfit',
     'ModelTraining',
@@ -56,7 +56,7 @@ if typing.TYPE_CHECKING:
         DataIngestion
     )
     from .data_prepare import (
-        exec_prepare_data,
+        DataPreparation,
     )
     from .default import (
         default_action,
@@ -88,7 +88,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.data_ingest', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_prepare_data'}:
+    if name in {'DataPreparation'}:
         obj = importlib.import_module('.data_prepare', __package__)
         return getattr(obj, name)
 

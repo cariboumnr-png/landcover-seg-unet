@@ -39,9 +39,9 @@ class DataIngestion(base.Pipeline):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        ingestion_paths = self.artifact_paths.data_ingestion
-        self.pipeline_paths = ingestion_paths.init_pipeline_folders()
         self.upstream_paths = self.artifact_paths.data_harmonization
+        self.pipeline_paths = self.artifact_paths.data_ingestion
+        self.pipeline_paths.init_pipeline_folders()
 
         self.logger = ingest.IngestionLogger(
             name='data-ingest',

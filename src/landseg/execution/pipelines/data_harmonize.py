@@ -35,8 +35,8 @@ class DataHarmonization(base.Pipeline):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        harmonization_paths = self.artifact_paths.data_harmonization
-        self.pipeline_paths = harmonization_paths.init_pipeline_folders()
+        self.pipeline_paths = self.artifact_paths.data_harmonization
+        self.pipeline_paths.init_pipeline_folders()
 
         self.logger = harmonize.HarmonizationLogger(
             name='data-harmonize',
