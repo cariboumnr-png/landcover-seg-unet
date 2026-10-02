@@ -35,28 +35,24 @@ import typing
 
 __all__ = [
     # functions
-    'get',
-    'sweep',
+    'execute_batch_ingest',
+    'execute_study_sweep',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._registry import (
-        get,
-    )
-    from .study_sweep import (
-        sweep,
-    )
+    from .batch_ingest import execute_batch_ingest
+    from .study_sweep import execute_study_sweep
 
 
 
 def __getattr__(name: str):
-    if name in {'get'}:
-        obj = importlib.import_module('._registry', __package__)
+    if name in {'execute_batch_ingest'}:
+        obj = importlib.import_module('.batch_ingest', __package__)
         return getattr(obj, name)
 
-    if name in {'sweep'}:
+    if name in {'execute_study_sweep'}:
         obj = importlib.import_module('.study_sweep', __package__)
         return getattr(obj, name)
 

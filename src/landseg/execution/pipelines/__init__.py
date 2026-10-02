@@ -38,26 +38,22 @@ __all__ = [
     'analyze',
     'default_action',
     'evaluate',
-    'exec_harmonize_data',
-    'exec_ingest_data',
+    'DataHarmonization',
+    'DataIngestion',
     'exec_prepare_data',
-    'exec_world_grid',
-    'get',
+    'WorldGridGeneration',
     'overfit',
-    'ModelTrainPipeline',
+    'ModelTraining',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._registry import (
-        get,
-    )
     from .data_harmonize import (
-        exec_harmonize_data,
+        DataHarmonization,
     )
     from .data_ingest import (
-        exec_ingest_data,
+        DataIngestion
     )
     from .data_prepare import (
         exec_prepare_data,
@@ -72,26 +68,23 @@ if typing.TYPE_CHECKING:
         evaluate,
     )
     from .model_train import (
-        ModelTrainPipeline,
+        ModelTraining,
     )
     from .study_analysis import (
         analyze,
     )
     from .world_grid import (
-        exec_world_grid,
+        WorldGridGeneration,
     )
 
 
 def __getattr__(name: str):
-    if name in {'get'}:
-        obj = importlib.import_module('._registry', __package__)
-        return getattr(obj, name)
 
-    if name in {'exec_harmonize_data'}:
+    if name in {'DataHarmonization'}:
         obj = importlib.import_module('.data_harmonize', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_ingest_data'}:
+    if name in {'DataIngestion'}:
         obj = importlib.import_module('.data_ingest', __package__)
         return getattr(obj, name)
 
@@ -111,7 +104,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.model_evaluate', __package__)
         return getattr(obj, name)
 
-    if name in {'ModelTrainPipeline'}:
+    if name in {'ModelTraining'}:
         obj = importlib.import_module('.model_train', __package__)
         return getattr(obj, name)
 
@@ -119,7 +112,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.study_analysis', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_world_grid'}:
+    if name in {'WorldGridGeneration'}:
         obj = importlib.import_module('.world_grid', __package__)
         return getattr(obj, name)
 

@@ -31,7 +31,7 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.execution.pipelines as piplines
+import landseg.execution.pipelines as pipelines
 import landseg.execution.workflows as workflows
 import landseg.geopipe.core as geo_core
 
@@ -39,22 +39,40 @@ import landseg.geopipe.core as geo_core
 DictControl = artifacts.Controller[dict[str, typing.Any]]
 
 
+COMMANDS = typing.Literal[
+    'default',
+    'world-grid',
+    'data-harmonize',
+    'data-ingest',
+    'data-prepare',
+    'diagnose-overfit',
+    'model-evaluate',
+    'model-train',
+    'batch-ingest',
+    'study-analysis',
+]
+
+
 # ----- public functions
 def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI pipeline with resolved configuration.'''
-    # upstream detection checks
-    # _validate_upstream_pipelines(root_config)
-    # get command from pipeline or workflows
-    try:
-        command = piplines.get(root_config.pipeline.name)
-    except KeyError:
-        try:
-            command = workflows.get(root_config.pipeline.name)
-        except KeyError as e:
-            raise KeyError('Pipeline or workflow name not found') from e
+    command = root_config.pipeline.name
 
-    # run command and return result
-    return command(root_config)
+    match command:
+        case 'world-grid':
+            return pipelines.WorldGridGeneration(root_config).run()
+        case 'data-harmonize':
+            return pipelines.DataHarmonization(root_config).run()
+        case 'data-ingest':
+            return pipelines.DataIngestion(root_config).run()
+        case 'model-train':
+            return pipelines.ModelTraining(root_config).run()
+        case 'batch-ingest':
+            return workflows.execute_batch_ingest(root_config)
+        case 'study-sweep':
+            return workflows.execute_study_sweep(root_config)
+        case _:
+            raise KeyError(f'Unknown command: {command}; allowed: {COMMANDS}')
 
 
 # ----- private helpers
