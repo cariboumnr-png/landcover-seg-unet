@@ -20,45 +20,55 @@
 # =========================================================================== #
 
 '''
-Base pipeline ABC
+Data ingestion pipeline.
+
+Prepares the world grid, materializes domain knowledge, and builds
+the immutable raw block catalogue for later experiments.
 '''
 
-# standard imports
-import abc
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.execution.pipelines as pipelines
+import landseg.geopipe.ingest as ingest
+import landseg.utils as utils
 
-class Pipeline(abc.ABC):
-    '''Pipeline ABC'''
 
-    def __init__(
-        self,
-        config: configs.RootConfig,
-        *,
-        artifact_paths: artifacts.ArtifactPaths | None = None,
-        disable_console_logging: bool = False
-    ) -> None:
-        '''Init'''
-        self.config = config
+# ----- public functions
+def execute_batch_ingest(config: configs.RootConfig) -> None:
+    '''
+    Run data ingestion pipeline across planned harmonization batches.
 
-        if artifact_paths is None:
-            self.artifact_paths = artifacts.ArtifactPaths.from_config(self.config)
-        else:
-            self.artifact_paths = artifact_paths
+    Discovers available upstream harmonization runs and matches them
+    against the downstream ingestion ledger to resolve pending batches.
+    Executes each planned batch sequentially into the block pool.
 
-        self.console_level = (
-            None
-            if disable_console_logging
-            else self.config.execution.console_level
+    Args:
+        config:
+            Root execution configuration containing data and ingestion
+            settings.
+    '''
+    artifact_paths = artifacts.ArtifactPaths.from_config(config)
+
+    planned_batches = ingest.resolve_pending_ingestion_batches(
+        artifact_paths.data_harmonization.runs_manifest,
+        artifact_paths.data_ingestion.runs_manifest,
+        target=config.data.ingestion.harmonization_run,
+        rebuild=config.data.ingestion.rebuild,
+    )
+
+    if not planned_batches:
+        logger = utils.Logger(name='data-ingest', enable_file_log=False)
+        logger.log_sep()
+        logger.log(
+            'INFO',
+            'No pending harmonization batches to ingest. '
+            'Ingestion pool is up to date.'
         )
+        logger.log_sep()
+        logger.close()
+        return
 
-        self.timer: dict[str, float] = {}
-
-    @abc.abstractmethod
-    def run(self) -> None:
-        '''Initialize a pipeline runner and run end-to-end process.'''
-
-    @abc.abstractmethod
-    def validate(self) -> None:
-        '''Validate pipeline environment and upstream requirements.'''
+    for batch_record in planned_batches:
+        pp = pipelines.DataIngestion(config)
+        pp.run(batch_record)

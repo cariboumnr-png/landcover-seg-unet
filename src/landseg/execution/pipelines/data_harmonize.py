@@ -25,47 +25,54 @@ Data harmonization pipeline command implementation.
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.configs as configs
+import landseg.execution.pipelines.base as base
 import landseg.geopipe.harmonize as harmonize
 
 
-# ----- public functions
-def exec_harmonize_data(config: configs.RootConfig) -> None:
-    '''Execute the data-harmonize pipeline.'''
-    artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.data_harmonization.init_pipeline_folders()
+class DataHarmonization(base.Pipeline):
+    '''Data harmonziation pipeline.'''
 
-    logger = harmonize.HarmonizationLogger(
-        name='data-harmonize',
-        log_file=paths.report,
-        enable_file_log=False
-    )
-    logger.init_summary(run_id=paths.run_id)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    try:
-        logger.log_sep()
+        harmonization_paths = self.artifact_paths.data_harmonization
+        self.pipeline_paths = harmonization_paths.init_pipeline_folders()
 
-        # run pipeline
-        harmonize.run_data_harmonization(
-            config.data.world_grid.output_dpath,
-            paths,
-            config.data.harmonization,
-            logger=logger
+        self.logger = harmonize.HarmonizationLogger(
+            name='data-harmonize',
+            log_file=self.pipeline_paths.report,
+            enable_file_log=False
         )
-        logger.log('INFO', '[COMPLETE] Harmonization finished')
+        self.logger.init_summary(run_id=self.pipeline_paths.run_id)
 
-        # persist the whole config dict
-        artifacts.Controller[dict](paths.config).persist(config.as_dict)
+        # persist running config as JSON
+        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
+        config_ctrl.persist(self.config.as_dict)
 
-    except Exception as e:
-        logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Data harmonization failed: {e}')
-        raise
+    def run(self) -> None:
+        '''Execute data harmonziation.'''
+        try:
+            self.logger.log_sep()
+            self.logger.log('INFO', '[START] Data harmonization')
+            harmonize.run_data_harmonization(
+                self.config.data.world_grid.output_dpath,
+                self.pipeline_paths,
+                self.config.data.harmonization,
+                logger=self.logger
+            )
+            self.logger.log('INFO', '[COMPLETE] Data harmonization')
 
-    finally:
-        logger.update_runs_manifest(
-            paths.runs_manifest,
-            paths.effective_run_folder
-        )
-        logger.log_sep()
-        logger.close()
+        except Exception as e:
+            self.logger.set_summary_status('FAILED')
+            self.logger.log('ERROR', f'Data harmonization failed: {e}')
+            raise
+
+        finally:
+            self.logger.update_runs_manifest(
+                self.pipeline_paths.runs_manifest,
+                self.pipeline_paths.effective_run_folder
+            )
+            self.logger.log_sep()
+            self.logger.close()
+
+    def validate(self) -> None: ...

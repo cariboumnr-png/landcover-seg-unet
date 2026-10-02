@@ -35,59 +35,38 @@ import torch
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
-import landseg.configs as configs
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
 
 
-class ModelTrainPipeline(base.Pipeline):
+class ModelTraining(base.Pipeline):
     '''Model train pipeline runner class.'''
 
-    def __init__(
-        self,
-        config: configs.RootConfig,
-        *,
-        artifact_paths: artifacts.ArtifactPaths | None = None,
-        disable_console_logging: bool = False
-    ):
-        '''Init'''
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        self.config = config
+        session_paths = self.artifact_paths.session
+        self.pipeline_paths = session_paths.init_pipeline_folders()
 
-        if artifact_paths is None:
-            self.artifact_paths = artifacts.ArtifactPaths.from_config(config)
-        else:
-            self.artifact_paths = artifact_paths
-
-        self.session_paths = self.artifact_paths.session.init_pipeline_folders()
-
-        console_level = (
-            None
-            if disable_console_logging
-            else config.execution.console_level
-        )
         self.logger = session.SessionLogger(
             name='session',
-            log_file=self.session_paths.summary,
-            console_lvl=console_level,
+            log_file=self.pipeline_paths.summary,
+            console_lvl=self.console_level,
             enable_file_log=False
         )
         self.logger.init_summary(
-            run_id=self.session_paths.run_id,
-            pipeline=config.pipeline.name,
+            run_id=self.pipeline_paths.run_id,
+            pipeline=self.config.pipeline.name,
         )
 
         # persist running config as JSON
-        config_ctrl = artifacts.Controller[dict](self.session_paths.config)
-        config_ctrl.persist(config.as_dict)
+        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
+        config_ctrl.persist(self.config.as_dict)
 
-    @classmethod
-    def run(cls, config: configs.RootConfig) -> None:
+    def run(self) -> None:
         '''Initialize a pipeline runner and run training end-to-end.'''
-        self = cls(config)
         try:
             runner = self.build_runner()
 
@@ -107,7 +86,7 @@ class ModelTrainPipeline(base.Pipeline):
 
         finally:
             self.logger.log_sep()
-            self.logger.close() # summary JSON will be persisted
+            self.logger.close()
 
     def validate(self) -> None: ...
 
@@ -139,8 +118,6 @@ class ModelTrainPipeline(base.Pipeline):
         mode_override: typing.Literal['continuous', 'curriculum'] | None = None,
     ) -> session.ContinuousRunner | session.CurriculumRunner:
         '''doc.'''
-        self.logger.log_sep()
-
         # collect artifacts and build `DataSpecs`
         self.logger.log('INFO', '[START] Data specifications setup')
         start_t = time.perf_counter()
@@ -204,7 +181,7 @@ class ModelTrainPipeline(base.Pipeline):
             config=self.config.session,
             context=session.SessionBuildContext(
                 device=c.DEVICE,
-                session_paths=self.session_paths,
+                session_paths=self.pipeline_paths,
                 eval_dataset='val',
                 logger=self.logger
             ),

@@ -34,10 +34,10 @@ analysis are handled elsewhere.
 # standard imports
 import typing
 # local imports
-import landseg.execution.pipelines as pipelines
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
+import landseg.execution.pipelines as pipelines
 import landseg.study as study
 
 # aliases
@@ -45,7 +45,7 @@ StepGenerator = typing.Generator[core.SessionStepSummary, None, None]
 StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
 
-def sweep(config: configs.RootConfig):
+def execute_study_sweep(config: configs.RootConfig):
     '''
     Execute a configured study sweep.
 
@@ -69,7 +69,7 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
 
     def run_wrapper():
-        training_pipeline = pipelines.ModelTrainPipeline(
+        training_pipeline = pipelines.ModelTraining(
             config,
             artifact_paths=artifact_paths,
             disable_console_logging=True
