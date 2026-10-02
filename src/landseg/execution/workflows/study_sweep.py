@@ -76,7 +76,7 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
         )
 
         logger = training_pipeline.logger
-        runner = training_pipeline.build_runner(mode_override='continuous')
+        runner = training_pipeline.build_session_runner(mode_override='continuous')
 
         try:
             yield from runner.run()

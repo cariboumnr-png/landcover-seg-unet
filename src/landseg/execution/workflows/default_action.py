@@ -20,41 +20,20 @@
 # =========================================================================== #
 
 '''
-Study-level trial analysis.
-
-This module performs lightweight, post hoc analysis over completed sweep
-trials. It operates strictly on persisted Optuna study metadata and
-materializes simple ranked summaries for downstream inspect
+Default
 '''
 
+# standard imports
+import dataclasses
+import json
 # local imports
-import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.study as study
 
+def execute_default_action(config: configs.RootConfig):
+    '''place holder.'''
 
-def analyze(config: configs.RootConfig):
-    '''
-    Analyze and rank completed sweep trials.
-
-    This function loads an existing Optuna study using the configured
-    study name and storage backend, ranks completed trials according to
-    their objective values, and persists a small ranked summary as a
-    study-level artifact.
-    '''
-
-    # load and rank
-    sweep_config = config.pipeline.study_sweep
-    ranked = study.rank_trials(
-        sweep_config.study_name,
-        sweep_config.storage,
-        top_k=5,
-        ascending=False
-    )
-
-    # persist artifacts
-    analysis_json = f'{config.execution.exp_root}/analysis/{sweep_config.study_name}.json'
-    ctrl = artifacts.Controller[list[dict]](analysis_json)
-    ctrl.persist(ranked)
-
-    print(ranked)
+    config.validate_all()
+    as_dict = dataclasses.asdict(config)
+    print('This is the default action')
+    print('Follows are the whole runtime configs')
+    print(json.dumps(as_dict, indent=2))

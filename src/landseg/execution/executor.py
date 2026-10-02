@@ -60,6 +60,9 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     results = None
 
     match command:
+        case 'default':
+            workflows.execute_default_action(root_config)
+
         case 'world-grid':
             pipelines.WorldGridGeneration(root_config).run()
 
@@ -74,6 +77,9 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
 
         case 'model-train':
             pipelines.ModelTraining(root_config).run()
+
+        case 'diagnose-overfit':
+            workflows.execute_diagnose_overfit(root_config)
 
         case 'batch-ingest':
             workflows.execute_batch_ingest(root_config)

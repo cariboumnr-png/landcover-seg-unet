@@ -31,7 +31,7 @@ import typing
 import omegaconf
 # local imports
 import landseg.configs as configs
-import landseg.execution.pipelines.study_analysis as analysis_pipeline
+import landseg.execution.workflows.study_analysis as analysis_pipeline
 
 
 # ----- `analyze` pipeline test

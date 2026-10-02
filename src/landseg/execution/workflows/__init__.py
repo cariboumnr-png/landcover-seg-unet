@@ -36,6 +36,9 @@ import typing
 __all__ = [
     # functions
     'execute_batch_ingest',
+    'execute_default_action',
+    'execute_diagnose_overfit',
+    'execute_study_analysis',
     'execute_study_sweep',
 ]
 
@@ -43,6 +46,9 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .batch_ingest import execute_batch_ingest
+    from .default_action import execute_default_action
+    from .diagnose_overfit import execute_diagnose_overfit
+    from .study_analysis import execute_study_analysis
     from .study_sweep import execute_study_sweep
 
 
@@ -50,6 +56,18 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {'execute_batch_ingest'}:
         obj = importlib.import_module('.batch_ingest', __package__)
+        return getattr(obj, name)
+
+    if name in {'execute_default_action'}:
+        obj = importlib.import_module('.default_action', __package__)
+        return getattr(obj, name)
+
+    if name in {'execute_diagnose_overfit'}:
+        obj = importlib.import_module('.diagnose_overfit', __package__)
+        return getattr(obj, name)
+
+    if name in {'execute_study_analysis'}:
+        obj = importlib.import_module('.study_analysis', __package__)
         return getattr(obj, name)
 
     if name in {'execute_study_sweep'}:

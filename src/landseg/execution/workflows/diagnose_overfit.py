@@ -48,7 +48,7 @@ import landseg.session.engine as engine
 
 
 # ----- overfit test pipeline
-def overfit(config: configs.RootConfig) -> None:
+def execute_diagnose_overfit(config: configs.RootConfig) -> None:
     '''
     Run an overfit test on a single block.
 
@@ -207,9 +207,14 @@ def _create_block(
 ) -> str:
     '''Build one valid block for the overfit test.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
+    hm_record = ingest.resolve_pending_ingestion_batches(
+        artifact_paths.data_harmonization.runs_manifest,
+        artifact_paths.data_ingestion.runs_manifest,
+        target='latest',
+    )[0]
     context = ingest.build_ingestion_context(
         artifact_paths.data_harmonization,
-        config.data.ingestion.harmonization_run,
+        hm_record,
     )
     if not context.has_data:
         raise ValueError(
