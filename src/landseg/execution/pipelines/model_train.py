@@ -33,15 +33,12 @@ import typing
 import psutil
 import torch
 # local imports
-import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
-import landseg.geopipe as geopipe
-import landseg.models as models
 import landseg.session as session
 
 
-class ModelTraining(base.Pipeline):
+class ModelTraining(base.Pipeline[session.SessionLogger]):
     '''Model train pipeline runner class.'''
 
     def __init__(self, *args, **kwargs):
@@ -68,7 +65,7 @@ class ModelTraining(base.Pipeline):
     def run(self) -> None:
         '''Initialize a pipeline runner and run training end-to-end.'''
         try:
-            runner = self.build_runner()
+            runner = self.build_session_runner()
 
             self.logger.log('INFO', '[START] Training session')
             start_t = time.perf_counter()
@@ -89,105 +86,6 @@ class ModelTraining(base.Pipeline):
             self.logger.close()
 
     def validate(self) -> None: ...
-
-    @typing.overload
-    def build_runner(
-        self,
-        *,
-        mode_override: typing.Literal['continuous'],
-    ) -> session.ContinuousRunner: ...
-
-
-    @typing.overload
-    def build_runner(
-        self,
-        *,
-        mode_override: typing.Literal['curriculum'],
-    ) -> session.CurriculumRunner: ...
-
-    @typing.overload
-    def build_runner(
-        self,
-        *,
-        mode_override: None = None,
-    ) -> session.ContinuousRunner | session.CurriculumRunner: ...
-
-    def build_runner(
-        self,
-        *,
-        mode_override: typing.Literal['continuous', 'curriculum'] | None = None,
-    ) -> session.ContinuousRunner | session.CurriculumRunner:
-        '''doc.'''
-        # collect artifacts and build `DataSpecs`
-        self.logger.log('INFO', '[START] Data specifications setup')
-        start_t = time.perf_counter()
-        dataspecs = geopipe.build_dataspec(
-            self.artifact_paths,
-            mode='default',
-            ids_domain_name=self.config.data.specification.domain_ids_name,
-            vec_domain_name=self.config.data.specification.domain_vec_name
-        )
-        self.timer['data'] = time.perf_counter() - start_t
-        self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
-
-        for s in dataspecs.summary:
-            self.logger.log('INFO', s)
-        self.logger.log_sep()
-
-        # setup the model
-        self.logger.log('INFO', '[START] Model assembly')
-        start_t = time.perf_counter()
-        model = models.build_multihead_unet(
-            patch_size=self.config.session.dataloader.patch_size,
-            dataspecs=dataspecs,
-            unet_backbone_config=self.config.models.unet_backbone_config,
-            conditioning_config=self.config.models.conditioning_config,
-            enable_clamp=self.config.models.numeric_safety.enable_clamp,
-            clamp_range=self.config.models.numeric_safety.clamp_range
-        )
-        self.timer['model'] = time.perf_counter() - start_t
-        self.logger.log('INFO', f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
-
-        # summarize inputs and log
-        total_p = sum(p.numel() for p in model.parameters())
-        trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        self.logger.set_inputs({
-            'system': {
-                'device':c.DEVICE_NAME,
-                'torch_version': torch.__version__
-            },
-            'model': {
-                'backbone': 'unet',
-                'total_parameters': total_p,
-                'trainable_parameters': trainable_p,
-                'heads': list(dataspecs.heads.class_counts.keys())
-            },
-            'data': {
-                'patch_size': self.config.session.dataloader.patch_size
-            },
-            'dataspecs': dataspecs.to_dict()
-        })
-        self.logger.log_sep()
-
-        # build and return the session runner
-        match mode_override:
-            case 'continuous': session_type = 'continuous'
-            case 'curriculum': session_type = 'curriculum'
-            case None: session_type = self.config.session.training_mode
-
-        runner = session.build_session_runner(
-            dataspecs=dataspecs,
-            model=model,
-            config=self.config.session,
-            context=session.SessionBuildContext(
-                device=c.DEVICE,
-                session_paths=self.pipeline_paths,
-                eval_dataset='val',
-                logger=self.logger
-            ),
-            session_type=session_type,
-        )
-        return runner
 
     def _summarize_results(self, final: float) -> dict[str, typing.Any]:
         '''Summarize peak memory and log final results and metrics.'''

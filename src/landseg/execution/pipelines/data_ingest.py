@@ -33,7 +33,7 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest as ingest
 
 
-class DataIngestion(base.Pipeline):
+class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
     '''Data ingestion pipeline.'''
 
     def __init__(self, *args, **kwargs):
@@ -47,7 +47,7 @@ class DataIngestion(base.Pipeline):
             name='data-ingest',
             log_file=self.pipeline_paths.report,
             enable_file_log=False
-            )
+        )
         self.logger.init_summary(run_id=self.pipeline_paths.run_id)
 
         # persist running config as JSON

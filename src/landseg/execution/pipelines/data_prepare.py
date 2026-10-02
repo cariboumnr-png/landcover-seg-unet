@@ -29,10 +29,10 @@ statistics, normalizes all splits, and emits the final dataset schema.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
-import landseg.geopipe.prepare as geopipe_prepare
+import landseg.geopipe.prepare as prepare
 
 
-class DataPreparation(base.Pipeline):
+class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
     '''Data preparetion pipline.'''
 
     def __init__(self, *args, **kwargs):
@@ -42,7 +42,7 @@ class DataPreparation(base.Pipeline):
         self.pipeline_paths = self.artifact_paths.data_preparation
         self.pipeline_paths.init_pipeline_folders()
 
-        self.logger = geopipe_prepare.PreparationLogger(
+        self.logger = prepare.PreparationLogger(
             name='data-prep',
             log_file=self.pipeline_paths.report,
             enable_file_log=False
@@ -66,7 +66,7 @@ class DataPreparation(base.Pipeline):
             )
 
             # run pipeline
-            geopipe_prepare.run_data_preparation(
+            prepare.run_data_preparation(
                 self.artifact_paths,
                 self.config.data.preparation,
                 self.config.data.world_grid.tile_specs_tuple,

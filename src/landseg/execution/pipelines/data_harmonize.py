@@ -29,7 +29,7 @@ import landseg.execution.pipelines.base as base
 import landseg.geopipe.harmonize as harmonize
 
 
-class DataHarmonization(base.Pipeline):
+class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
     '''Data harmonziation pipeline.'''
 
     def __init__(self, *args, **kwargs):

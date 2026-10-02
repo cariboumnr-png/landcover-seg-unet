@@ -29,7 +29,7 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
 
 
-class WorldGridGeneration(base.Pipeline):
+class WorldGridGeneration(base.Pipeline[grid.GridLogger]):
     '''World grid generation pipeline.'''
 
     def __init__(self, *args, **kwargs):
