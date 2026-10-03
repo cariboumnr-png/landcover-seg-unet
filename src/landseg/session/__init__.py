@@ -47,8 +47,8 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .engine.epoch import (
-        EpochRunner
+    from .engine import (
+        EpochRunner,
     )
     from .logger import (
         SessionLogger,
@@ -66,7 +66,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {'EpochRunner'}:
-        obj = importlib.import_module('.engine.epoch', __package__)
+        obj = importlib.import_module('.engine', __package__)
         return getattr(obj, name)
 
     if name in {'SessionLogger'}:
