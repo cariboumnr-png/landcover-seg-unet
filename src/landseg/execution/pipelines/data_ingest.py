@@ -33,9 +33,16 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest as ingest
 
 
-class DataIngestion(
-    base.Pipeline[ingest.IngestionContext, ingest.IngestionLogger]
-):
+# ----- typing aliases
+_PipelineBase = base.Pipeline[
+    ingest.IngestionContext,
+    ingest.IngestionLogger,
+    artifacts.IngestionPaths,
+]
+
+
+# ----- public classes
+class DataIngestion(_PipelineBase):
     '''Data ingestion pipeline.'''
 
     @property

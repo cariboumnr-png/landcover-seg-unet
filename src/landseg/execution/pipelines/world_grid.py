@@ -31,7 +31,16 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
 
 
-class WorldGridGeneration(base.Pipeline[None, grid.GridLogger]):
+# ----- typing aliases
+_PipelineBase = base.Pipeline[
+    None,
+    grid.GridLogger,
+    None,
+]
+
+
+# ----- public classes
+class WorldGridGeneration(_PipelineBase):
     '''World grid generation pipeline.'''
 
     @property

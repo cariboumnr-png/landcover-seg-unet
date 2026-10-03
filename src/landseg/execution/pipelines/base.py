@@ -41,9 +41,10 @@ import landseg.session as session
 
 ContextT = typing.TypeVar('ContextT')
 LoggerT = typing.TypeVar('LoggerT')
+PathsT = typing.TypeVar('PathsT')
 
 
-class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT]):
+class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT, PathsT]):
     '''Pipeline ABC'''
 
     def __init__(
@@ -71,10 +72,10 @@ class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT]):
         self.context: ContextT | None = None
         self.dataspecs: core.DataSpecs | None = None
         self.logger: LoggerT | None = None
-        self.pipeline_paths = self._resolve_pipeline_paths()
+        self.pipeline_paths: PathsT = self._resolve_pipeline_paths()
 
     @abc.abstractmethod
-    def _resolve_pipeline_paths(self) -> typing.Any:
+    def _resolve_pipeline_paths(self) -> PathsT:
         '''Resolve and return the canonical paths object for this pipeline.'''
 
     @abc.abstractmethod
@@ -83,10 +84,8 @@ class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT]):
 
     def _initialize_run(self) -> None:
         '''Initialize run directories, persist config, and open logger.'''
-        if hasattr(self.pipeline_paths, 'init_pipeline_folders'):
+        if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
             self.pipeline_paths.init_pipeline_folders()
-
-        if hasattr(self.pipeline_paths, 'config'):
             config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
             config_ctrl.persist(self.config.as_dict)
 

@@ -33,7 +33,16 @@ import landseg.geopipe as geopipe
 import landseg.session as session
 
 
-class ModelEvaluation(base.Pipeline[core.DataSpecs, session.SessionLogger]):
+# ----- typing aliases
+_PipelineBase = base.Pipeline[
+    core.DataSpecs,
+    session.SessionLogger,
+    artifacts.SessionPaths,
+]
+
+
+# ----- public classes
+class ModelEvaluation(_PipelineBase):
     '''Model evaluation pipeline.'''
 
     def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:

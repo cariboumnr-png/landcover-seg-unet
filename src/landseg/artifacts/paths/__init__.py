@@ -36,6 +36,7 @@ __all__ = [
     'HarmonizationPaths',
     'IngestionPaths',
     'KnowledgePaths',
+    'PipelineArtifactsPaths',
     'PreparationPaths',
     'SessionPaths',
 ]
@@ -43,6 +44,9 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .base import (
+        PipelineArtifactsPaths,
+    )
     from .data_harmonization import (
         HarmonizationPaths,
     )
@@ -82,6 +86,10 @@ def __getattr__(name: str):
 
     if name in {'ArtifactPaths'}:
         obj = importlib.import_module('.root', __package__)
+        return getattr(obj, name)
+
+    if name in {'PipelineArtifactsPaths'}:
+        obj = importlib.import_module('.base', __package__)
         return getattr(obj, name)
 
     if name in {'SessionPaths'}:

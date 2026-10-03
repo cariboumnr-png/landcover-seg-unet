@@ -67,6 +67,11 @@ class PipelineArtifactsPaths:
         '''Return run folder name as the canonical run identifier.'''
         return os.path.basename(self.effective_run_folder)
 
+    @property
+    def config(self) -> str:
+        '''Return path to persisted configuration JSON.'''
+        return os.path.join(self.effective_run_folder, 'config.json')
+
     def get_run_folder(self, run_id: int | str | None = None) -> str:
         '''
         Return the path to a run folder.

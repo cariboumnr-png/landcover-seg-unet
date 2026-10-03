@@ -34,9 +34,16 @@ import landseg.execution.pipelines.base as base
 import landseg.geopipe.prepare as prepare
 
 
-class DataPreparation(
-    base.Pipeline[prepare.PreparationContext, prepare.PreparationLogger]
-):
+# ----- typing aliases
+_PipelineBase = base.Pipeline[
+    prepare.PreparationContext,
+    prepare.PreparationLogger,
+    artifacts.PreparationPaths,
+]
+
+
+# ----- public classes
+class DataPreparation(_PipelineBase):
     '''Data preparation pipeline.'''
 
     @property

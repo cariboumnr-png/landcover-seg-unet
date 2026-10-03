@@ -40,7 +40,16 @@ import landseg.geopipe as geopipe
 import landseg.session as session
 
 
-class ModelTraining(base.Pipeline[core.DataSpecs, session.SessionLogger]):
+# ----- typing aliases
+_PipelineBase = base.Pipeline[
+    core.DataSpecs,
+    session.SessionLogger,
+    artifacts.SessionPaths,
+]
+
+
+# ----- public classes
+class ModelTraining(_PipelineBase):
     '''Model train pipeline runner class.'''
 
     @property
