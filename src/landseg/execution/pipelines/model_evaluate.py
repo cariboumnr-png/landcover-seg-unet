@@ -99,3 +99,5 @@ class ModelEvaluation(base.Pipeline[session.SessionLogger]):
             self.logger.close()
 
         return evaluation_results.target_metrics
+
+    def validate(self) -> None: ...

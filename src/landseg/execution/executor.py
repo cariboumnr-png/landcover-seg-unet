@@ -42,6 +42,7 @@ COMMANDS = typing.Literal[
     'model-train',
     'batch-ingest',
     'study-analysis',
+    'study-sweep'
 ]
 
 
@@ -70,11 +71,17 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
         case 'model-train':
             pipelines.ModelTraining(root_config).run()
 
+        case 'model-evaluate':
+            pipelines.ModelEvaluation(root_config).run()
+
         case 'diagnose-overfit':
             workflows.execute_diagnose_overfit(root_config)
 
         case 'batch-ingest':
             workflows.execute_batch_ingest(root_config)
+
+        case 'study-analysis':
+            workflows.execute_study_analysis(root_config)
 
         case 'study-sweep':
             results = workflows.execute_study_sweep(root_config)
