@@ -439,7 +439,7 @@ def get_grid_report_fpath(output_dpath: str) -> str:
     return os.path.join(output_dpath, 'grid_report.json')
 
 
-def read_grid_report(report_fpath: str) -> grid_contracts.WorldGridReport:
+def read_grid_report(fp: str) -> tuple[str, grid_contracts.WorldGridReport]:
     '''
     Read a grid execution report and extract world grid summary.
 
@@ -453,6 +453,6 @@ def read_grid_report(report_fpath: str) -> grid_contracts.WorldGridReport:
     '''
     ctrl = artifacts.Controller[
         grid_contracts.GridReportSchema
-    ].load_json_or_fail(report_fpath)
+    ].load_json_or_fail(fp)
     report = ctrl.fetch()
-    return report['grid']
+    return report['status'], report['grid']

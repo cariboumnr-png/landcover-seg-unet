@@ -44,7 +44,6 @@ import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 import landseg.models as models
 import landseg.session as session
-import landseg.session.engine as engine
 
 
 # ----- overfit test pipeline
@@ -221,21 +220,16 @@ def _create_block(
             'Harmonized feature/label rasters not found in report'
         )
 
-    # world grid from ingestion context
-    world_grid = context.grid
-
     # map raster windows onto world grid
     logger.log('INFO', 'Mapping image unto the world grid')
     datablocks_cfg = config.data.ingestion.datablocks
     assert context.features
     assert context.labels
     mapped = mapper.map_rasters_to_grid(
-        world_grid,
+        context.grid,
         context.features,
         context.labels,
-        artifact_paths.data_ingestion.data_blocks.mapped_window(
-            world_grid.gid
-        ),
+        artifact_paths.data_ingestion.data_blocks.mapped_window(context.grid.gid),
         policy=artifacts.LifecyclePolicy.REBUILD
     )
 
@@ -305,7 +299,7 @@ def _resolve_target_head(
 
 # ----- overfit epoch training loop helper
 def _run_overfit_loop(
-    runner: engine.EpochRunner,
+    runner: session.EpochRunner,
     config: configs.RootConfig,
     logger: session.SessionLogger,
 ) -> dict[str, typing.Any]:

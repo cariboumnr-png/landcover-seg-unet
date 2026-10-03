@@ -59,6 +59,8 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
         harmonization_record: contracts.HarmonizationRunRecord | None = None
     ):
         '''Run data ingestion from specified harmonziation run.'''
+        self.validate(harmonization_record)
+
         try:
             self.logger.log_sep()
 
@@ -106,4 +108,24 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
             self.logger.log_sep()
             self.logger.close()
 
-    def validate(self) -> None: ...
+    def validate(
+        self,
+        harmonization_record: contracts.HarmonizationRunRecord | None = None
+    ) -> None:
+        # resolve to the latest harmonization run if not specified
+        try:
+            hm_record = ingest.resolve_pending_ingestion_batches(
+                self.artifact_paths.data_harmonization.runs_manifest,
+                self.pipeline_paths.runs_manifest,
+                target='latest',
+            )[0] if harmonization_record is None else harmonization_record
+
+        except Exception as e:
+            raise RuntimeError(
+                f'Upstream pipeline "date-harmonize" has not been successfully'
+                f' executed yet. Try see the harmonization run manifest here: '
+                f'{self.artifact_paths.data_harmonization.runs_manifest}'
+            ) from e
+
+        if hm_record['status'] != 'SUCCESS':
+            raise RuntimeError('Provided harmonization run was not successful')

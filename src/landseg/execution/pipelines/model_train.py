@@ -44,6 +44,7 @@ class ModelTraining(base.Pipeline[session.SessionLogger]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.upstream_paths = self.artifact_paths.data_preparation
         self.pipeline_paths = self.artifact_paths.session
         self.pipeline_paths.init_pipeline_folders()
 
@@ -64,6 +65,8 @@ class ModelTraining(base.Pipeline[session.SessionLogger]):
 
     def run(self) -> None:
         '''Initialize a pipeline runner and run training end-to-end.'''
+        self.validate()
+        
         try:
             runner = self.build_session_runner()
 
@@ -85,7 +88,26 @@ class ModelTraining(base.Pipeline[session.SessionLogger]):
             self.logger.log_sep()
             self.logger.close()
 
-    def validate(self) -> None: ...
+    def validate(self) -> None:
+        report_fp = self.upstream_paths.report
+        report_ctrl = artifacts.Controller[dict].load_json_or_fail(report_fp)
+
+        try:
+            report = report_ctrl.fetch()
+        except artifacts.ArtifactError as e:
+            raise RuntimeError(
+                'Upstream pipeline "data-prepare" has not been executed yet. '
+                f'Missing or invalid preparation report at canonical path: '
+                f'{report_fp}'
+            ) from e
+
+        if report.get('status') != 'SUCCESS':
+            status_val = report.get('status')
+            raise RuntimeError(
+                'Upstream pipeline "data-prepare" status is '
+                f'"{status_val}", not "SUCCESS". '
+                'Please re-run "data-prepare" successfully first.'
+            )
 
     def _summarize_results(self, final: float) -> dict[str, typing.Any]:
         '''Summarize peak memory and log final results and metrics.'''

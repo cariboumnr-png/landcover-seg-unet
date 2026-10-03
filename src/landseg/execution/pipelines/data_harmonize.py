@@ -26,6 +26,7 @@ Data harmonization pipeline command implementation.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize as harmonize
 
 
@@ -51,6 +52,8 @@ class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
 
     def run(self) -> None:
         '''Execute data harmonziation.'''
+        self.validate()
+
         try:
             self.logger.log_sep()
             self.logger.log('INFO', '[START] Data harmonization')
@@ -75,4 +78,20 @@ class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
             self.logger.log_sep()
             self.logger.close()
 
-    def validate(self) -> None: ...
+    def validate(self) -> None:
+        '''Check world-grid status when running data harmonization.'''
+        invalid_upstream = False
+        cfg =  self.config.data.world_grid
+        report_fp = geo_core.get_grid_report_fpath(cfg.output_dpath)
+        try:
+            status, _ = geo_core.read_grid_report(report_fp)
+            if status != 'SUCCESS':
+                invalid_upstream = True
+        except artifacts.ArtifactError:
+            invalid_upstream = True
+
+        if invalid_upstream:
+            raise RuntimeError(
+                f'Upstream pipeline "world-grid" has not been successfully'
+                f' executed yet. Try see its report here: {report_fp}'
+            )

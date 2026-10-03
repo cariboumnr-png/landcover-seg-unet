@@ -75,7 +75,7 @@ def build_harmonization_context(
         report_fpath = geo_core.get_grid_report_fpath(grid_source_path)
     else:
         report_fpath = grid_source_path
-    grid_report = geo_core.read_grid_report(report_fpath)
+    _, grid_report = geo_core.read_grid_report(report_fpath)
     world_grid = geo_core.load_grid_from_fpath(grid_report['grid_fpath'])
 
     # compile dataset manifest JOSN

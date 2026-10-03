@@ -26,8 +26,6 @@ Splits raw blocks into train/val(/test), computes train-only band
 statistics, normalizes all splits, and emits the final dataset schema.
 '''
 
-# standard imports
-from __future__ import annotations
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths
