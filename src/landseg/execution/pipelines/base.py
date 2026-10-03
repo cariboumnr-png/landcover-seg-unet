@@ -33,6 +33,7 @@ import torch
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.core as core
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
@@ -68,6 +69,7 @@ class Pipeline(abc.ABC, typing.Generic[T]):
         self.logger: T
 
         self.timer: dict[str, float] = {}
+        self.dataspecs: core.DataSpecs | None = None
 
     @abc.abstractmethod
     def run(self) -> typing.Any:
@@ -122,17 +124,21 @@ class Pipeline(abc.ABC, typing.Generic[T]):
                 'is either "model-train" or "model-evaluate".'
             )
 
-        # collect artifacts and build `DataSpecs`
-        self.logger.log('INFO', '[START] Data specifications setup')
-        start_t = time.perf_counter()
-        dataspecs = geopipe.build_dataspec(
-            self.artifact_paths,
-            mode='default',
-            ids_domain_name=self.config.data.specification.domain_ids_name,
-            vec_domain_name=self.config.data.specification.domain_vec_name
-        )
-        self.timer['data'] = time.perf_counter() - start_t
-        self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
+        # collect artifacts and build `DataSpecs` if not already cached
+        if self.dataspecs is not None:
+            dataspecs = self.dataspecs
+        else:
+            self.logger.log('INFO', '[START] Data specifications setup')
+            start_t = time.perf_counter()
+            dataspecs = geopipe.build_dataspec(
+                self.artifact_paths,
+                mode='default',
+                ids_domain_name=self.config.data.specification.domain_ids_name,
+                vec_domain_name=self.config.data.specification.domain_vec_name
+            )
+            self.timer['data'] = time.perf_counter() - start_t
+            self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
+            self.dataspecs = dataspecs
 
         for s in dataspecs.summary:
             self.logger.log('INFO', s)

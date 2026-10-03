@@ -23,9 +23,12 @@
 Evaluating a model.
 '''
 
+# standard imports
+import os
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
+import landseg.geopipe as geopipe
 import landseg.session as session
 
 
@@ -55,6 +58,8 @@ class ModelEvaluation(base.Pipeline[session.SessionLogger]):
 
     def run(self) -> float:
         '''Run model evaluation pipeline.'''
+        if self.dataspecs is None:
+            self.validate()
 
         try:
             self.logger.log_sep()
@@ -100,4 +105,44 @@ class ModelEvaluation(base.Pipeline[session.SessionLogger]):
 
         return evaluation_results.target_metrics
 
-    def validate(self) -> None: ...
+    def validate(self) -> None:
+        '''Validate model evaluation prerequisites and build dataspecs.'''
+        eval_config = self.config.pipeline.model_evaluate
+        if not eval_config.checkpoint or not os.path.exists(eval_config.checkpoint):
+            raise FileNotFoundError(
+                f'Evaluation checkpoint not found: {eval_config.checkpoint}'
+            )
+
+        if eval_config.split not in ('val', 'test'):
+            raise ValueError(f'Invalid split: {eval_config.split}')
+
+        # verify upstream data-prepare report
+        report_fp = self.artifact_paths.data_preparation.report
+        report_ctrl = artifacts.Controller[dict].load_json_or_fail(report_fp)
+        try:
+            report = report_ctrl.fetch()
+        except artifacts.ArtifactError as e:
+            raise RuntimeError(
+                'Upstream pipeline "data-prepare" has not been executed yet. '
+                f'Missing report at: {report_fp}'
+            ) from e
+
+        if report.get('status') != 'SUCCESS':
+            status_val = report.get('status')
+            raise RuntimeError(
+                f'Upstream pipeline "data-prepare" status is "{status_val}".'
+            )
+
+        self.dataspecs = geopipe.build_dataspec(
+            self.artifact_paths,
+            mode='default',
+            ids_domain_name=self.config.data.specification.domain_ids_name,
+            vec_domain_name=self.config.data.specification.domain_vec_name,
+        )
+
+        split_dict = getattr(self.dataspecs.splits, eval_config.split, None)
+        if not split_dict:
+            raise RuntimeError(
+                f'Evaluation split "{eval_config.split}" has no blocks '
+                'in prepared dataset.'
+            )
