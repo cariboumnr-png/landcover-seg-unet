@@ -42,6 +42,7 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
         self.upstream_paths = self.artifact_paths.data_harmonization
         self.pipeline_paths = self.artifact_paths.data_ingestion
         self.pipeline_paths.init_pipeline_folders()
+        self.context: ingest.IngestionContext | None = None
 
         self.logger = ingest.IngestionLogger(
             name='data-ingest',
@@ -58,24 +59,18 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
         self,
         harmonization_record: contracts.HarmonizationRunRecord | None = None
     ):
-        '''Run data ingestion from specified harmonziation run.'''
-        self.validate(harmonization_record)
+        '''Run data ingestion from specified harmonization run.'''
+        if self.context is None or harmonization_record is not None:
+            self.validate(harmonization_record)
 
         try:
+            assert self.context is not None
             self.logger.log_sep()
-
-            # resolve the latest harmonization run if not specified
-            hm_record = ingest.resolve_pending_ingestion_batches(
-                self.artifact_paths.data_harmonization.runs_manifest,
-                self.pipeline_paths.runs_manifest,
-                target='latest',
-            )[0] if harmonization_record is None else harmonization_record
-
             self.logger.log(
                 'INFO',
-                f'Ingesting harmonization run [{hm_record["run_id"]}] '
-                f'({hm_record["run_uid"]})'
-                f' into run [{self.pipeline_paths.run_id}]'
+                f'Ingesting harmonization run [{self.context.harmonization_run_id}] '
+                f'({self.context.run_uid}) '
+                f'into run [{self.pipeline_paths.run_id}]'
             )
 
             policy = (
@@ -85,9 +80,8 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
             )
 
             ingest.run_data_ingestion(
-                self.upstream_paths,
+                self.context,
                 self.pipeline_paths,
-                hm_record,
                 self.config.data.ingestion,
                 policy=policy,
                 logger=self.logger,
@@ -112,20 +106,38 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
         self,
         harmonization_record: contracts.HarmonizationRunRecord | None = None
     ) -> None:
-        # resolve to the latest harmonization run if not specified
+        '''Validate upstream harmonization and build ingestion context.'''
         try:
-            hm_record = ingest.resolve_pending_ingestion_batches(
-                self.artifact_paths.data_harmonization.runs_manifest,
-                self.pipeline_paths.runs_manifest,
-                target='latest',
-            )[0] if harmonization_record is None else harmonization_record
+            target = (
+                self.config.data.ingestion.harmonization_run
+                if self.config.data.ingestion.harmonization_run is not None
+                else 'latest'
+            )
+            hm_record = (
+                harmonization_record
+                if harmonization_record is not None
+                else ingest.resolve_pending_ingestion_batches(
+                    self.artifact_paths.data_harmonization.runs_manifest,
+                    self.pipeline_paths.runs_manifest,
+                    target=target,
+                    rebuild=self.config.data.ingestion.rebuild,
+                )[0]
+            )
 
         except Exception as e:
             raise RuntimeError(
-                f'Upstream pipeline "date-harmonize" has not been successfully'
-                f' executed yet. Try see the harmonization run manifest here: '
+                'Upstream pipeline "data-harmonize" has not been successfully '
+                'executed yet. Try see the harmonization run manifest here: '
                 f'{self.artifact_paths.data_harmonization.runs_manifest}'
             ) from e
 
         if hm_record['status'] != 'SUCCESS':
             raise RuntimeError('Provided harmonization run was not successful')
+
+        self.context = ingest.build_ingestion_context(
+            self.upstream_paths,
+            hm_record,
+            runs_manifest_fpath=self.pipeline_paths.runs_manifest,
+            dataset_schema_fpath=self.pipeline_paths.data_blocks.schema,
+            config=self.config.data.ingestion,
+        )

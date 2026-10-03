@@ -38,6 +38,7 @@ class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
 
         self.pipeline_paths = self.artifact_paths.data_harmonization
         self.pipeline_paths.init_pipeline_folders()
+        self.context: harmonize.HarmonizationContext | None = None
 
         self.logger = harmonize.HarmonizationLogger(
             name='data-harmonize',
@@ -51,14 +52,16 @@ class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
         config_ctrl.persist(self.config.as_dict)
 
     def run(self) -> None:
-        '''Execute data harmonziation.'''
-        self.validate()
+        '''Execute data harmonization.'''
+        if self.context is None:
+            self.validate()
 
         try:
+            assert self.context is not None
             self.logger.log_sep()
             self.logger.log('INFO', '[START] Data harmonization')
             harmonize.run_data_harmonization(
-                self.config.data.world_grid.output_dpath,
+                self.context,
                 self.pipeline_paths,
                 self.config.data.harmonization,
                 logger=self.logger
@@ -79,9 +82,9 @@ class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
             self.logger.close()
 
     def validate(self) -> None:
-        '''Check world-grid status when running data harmonization.'''
+        '''Check world-grid status and build harmonization context.'''
         invalid_upstream = False
-        cfg =  self.config.data.world_grid
+        cfg = self.config.data.world_grid
         report_fp = geo_core.get_grid_report_fpath(cfg.output_dpath)
         try:
             status, _ = geo_core.read_grid_report(report_fp)
@@ -92,6 +95,12 @@ class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
 
         if invalid_upstream:
             raise RuntimeError(
-                f'Upstream pipeline "world-grid" has not been successfully'
-                f' executed yet. Try see its report here: {report_fp}'
+                'Upstream pipeline "world-grid" has not been successfully '
+                f'executed yet. Try see its report here: {report_fp}'
             )
+
+        self.context = harmonize.build_harmonization_context(
+            cfg.output_dpath,
+            self.pipeline_paths.runs_manifest,
+            self.config.data.harmonization
+        )

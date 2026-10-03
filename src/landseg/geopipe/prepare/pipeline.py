@@ -39,7 +39,8 @@ import landseg.geopipe.prepare.partition as prepare_partition
 
 # ----- public functions
 def run_data_preparation(
-    artifact_paths: paths.ArtifactPaths,
+    context: prepare_context.PreparationContext,
+    prep_paths: paths.PreparationPaths,
     config: contracts.PreparationPipelineConfig,
     tile_specs_tuple: tuple[int, int, int, int], # need to canonalize
     *,
@@ -47,12 +48,6 @@ def run_data_preparation(
     logger: prepare_logger.PreparationLogger,
 ) -> None:
     '''Run the preparation pipeline for an experiment.'''
-    # resolve preparation context
-    prep_context = prepare_context.build_preparation_context(
-        artifact_paths.data_ingestion.data_blocks.catalog,
-        artifact_paths.data_ingestion.data_blocks.schema,
-    )
-
     # build dataset view
     dataset_params = prepare_dataset.DatasetViewConfig(
         valid_pxs=config.catalog.valid_pxs,
@@ -63,11 +58,11 @@ def run_data_preparation(
         targets=config.targets,
     )
     dataset_view = prepare_dataset.build_dataset_view(
-        prep_context.catalog_fpath,
-        prep_context.schema,
+        context.catalog_fpath,
+        context.schema,
         parameters=dataset_params,
-        canvas_crs=prep_context.canvas_crs,
-        canvas_transform=prep_context.canvas_transform,
+        canvas_crs=context.canvas_crs,
+        canvas_transform=context.canvas_transform,
     )
 
     # datablocks partition
@@ -111,7 +106,7 @@ def run_data_preparation(
     )
     prepare_partition.run_datablocks_partition(
         dataset_view,
-        artifact_paths.data_preparation,
+        prep_paths,
         partition_config,
         policy=policy,
         logger=logger,
@@ -124,7 +119,7 @@ def run_data_preparation(
     # materialize
     logger.log('INFO', '[START] Block normalization')
     prepare_materialize.run_materialize_blocks(
-        artifact_paths.data_preparation,
+        prep_paths,
         dataset_view,
         policy=policy,
         logger=logger

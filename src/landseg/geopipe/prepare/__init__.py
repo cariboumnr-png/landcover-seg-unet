@@ -26,7 +26,9 @@ Exposes public dataset context builders, partitioners, materializers,
 preparation schema, and schema generators via lazy resolution.
 
 Public APIs:
+    - `PreparationContext`: Resolved execution context for prepare.
     - `PreparationLogger`: Specialized logger for preparation runs.
+    - `build_preparation_context`: Build context from catalog & schema.
     - `run_data_preparation`: pipeline runner.
 '''
 
@@ -37,14 +39,20 @@ import typing
 
 __all__ = [
     # classes
+    'PreparationContext',
     'PreparationLogger',
     # functions
+    'build_preparation_context',
     'run_data_preparation',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .context import (
+        PreparationContext,
+        build_preparation_context,
+    )
     from .logger import (
         PreparationLogger,
     )
@@ -54,6 +62,10 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {'PreparationContext', 'build_preparation_context'}:
+        obj = importlib.import_module('.context', __package__)
+        return getattr(obj, name)
+
     if name in {'PreparationLogger'}:
         obj = importlib.import_module('.logger', __package__)
         return getattr(obj, name)

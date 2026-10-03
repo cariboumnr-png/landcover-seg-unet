@@ -282,6 +282,7 @@ def test_grid_report_helpers(tmp_path):
         expected_fp
     ).persist(report_data)
 
-    loaded = grid_layout.read_grid_report(expected_fp)
+    status, loaded = grid_layout.read_grid_report(expected_fp)
+    assert status == 'SUCCESS'
     assert loaded['grid_id'] == 'ontario_grid'
     assert loaded['grid_fpath'] == '/path/to/grid.json'

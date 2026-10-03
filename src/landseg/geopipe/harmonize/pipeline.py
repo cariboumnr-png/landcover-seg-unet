@@ -50,21 +50,13 @@ class _ProcessedRasters:
 
 # ----- public functions
 def run_data_harmonization(
-    world_grid_source: str,
+    context: harmonize_context.HarmonizationContext,
     artifacts_paths: artifacts.HarmonizationPaths,
     config: contracts.HarmonizationPipelineConfig,
     *,
     logger: harmonize_logger.HarmonizationLogger
 ) -> None:
     '''Run data harmonization pipeline.'''
-
-    # build harmonization context
-    logger.log('INFO', '[START] Building data harmonization context')
-    context = harmonize_context.build_harmonization_context(
-        world_grid_source,
-        artifacts_paths.runs_manifest,
-        config
-    )
     logger.set_grid_reference(context.grid_id, context.grid_fpath)
     logger.set_identity(context.current_run_identity)
 
@@ -77,7 +69,6 @@ def run_data_harmonization(
             f'already done (run uid: {context.collided_run_uid}), skipped'
         )
         return
-    logger.log('INFO', '[COMPLETE] Data harmonization context built')
 
     # set up generator and run for each source
     logger.log(

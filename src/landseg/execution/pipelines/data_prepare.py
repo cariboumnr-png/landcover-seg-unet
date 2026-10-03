@@ -26,6 +26,8 @@ Splits raw blocks into train/val(/test), computes train-only band
 statistics, normalizes all splits, and emits the final dataset schema.
 '''
 
+# standard imports
+import os
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
@@ -33,7 +35,7 @@ import landseg.geopipe.prepare as prepare
 
 
 class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
-    '''Data preparetion pipline.'''
+    '''Data preparation pipeline.'''
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,6 +43,7 @@ class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
         self.upstream_paths = self.artifact_paths.data_ingestion
         self.pipeline_paths = self.artifact_paths.data_preparation
         self.pipeline_paths.init_pipeline_folders()
+        self.context: prepare.PreparationContext | None = None
 
         self.logger = prepare.PreparationLogger(
             name='data-prep',
@@ -54,8 +57,12 @@ class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
         config_ctrl.persist(self.config.as_dict)
 
     def run(self):
-        '''Run data preparation pipeline'''
+        '''Run data preparation pipeline.'''
+        if self.context is None:
+            self.validate()
+
         try:
+            assert self.context is not None
             self.logger.log_sep()
 
             # resolve lifecycle policy dynamically
@@ -67,7 +74,8 @@ class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
 
             # run pipeline
             prepare.run_data_preparation(
-                self.artifact_paths,
+                self.context,
+                self.pipeline_paths,
                 self.config.data.preparation,
                 self.config.data.world_grid.tile_specs_tuple,
                 policy=policy,
@@ -83,4 +91,14 @@ class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
             self.logger.log_sep()
             self.logger.close()
 
-    def validate(self) -> None: ...
+    def validate(self) -> None:
+        '''Validate upstream ingestion artifacts and build context.'''
+        catalog_fp = self.upstream_paths.data_blocks.catalog
+        schema_fp = self.upstream_paths.data_blocks.schema
+        if not os.path.exists(catalog_fp) or not os.path.exists(schema_fp):
+            raise RuntimeError(
+                'Upstream pipeline "data-ingest" has not produced canonical '
+                f'catalog or schema. Missing: {catalog_fp} or {schema_fp}'
+            )
+
+        self.context = prepare.build_preparation_context(catalog_fp, schema_fp)
