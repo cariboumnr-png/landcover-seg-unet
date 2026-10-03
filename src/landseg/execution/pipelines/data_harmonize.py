@@ -30,31 +30,32 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize as harmonize
 
 
-class DataHarmonization(base.Pipeline[harmonize.HarmonizationLogger]):
-    '''Data harmonziation pipeline.'''
+class DataHarmonization(
+    base.Pipeline[harmonize.HarmonizationContext, harmonize.HarmonizationLogger]
+):
+    '''Data harmonization pipeline.'''
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def _resolve_pipeline_paths(self) -> artifacts.HarmonizationPaths:
+        '''Resolve and return data harmonization artifact paths.'''
+        return self.artifact_paths.data_harmonization
 
-        self.pipeline_paths = self.artifact_paths.data_harmonization
-        self.pipeline_paths.init_pipeline_folders()
-        self.context: harmonize.HarmonizationContext | None = None
-
-        self.logger = harmonize.HarmonizationLogger(
+    def _create_logger(self) -> harmonize.HarmonizationLogger:
+        '''Instantiate and configure the harmonization logger.'''
+        logger = harmonize.HarmonizationLogger(
             name='data-harmonize',
             log_file=self.pipeline_paths.report,
-            enable_file_log=False
+            enable_file_log=False,
         )
-        self.logger.init_summary(run_id=self.pipeline_paths.run_id)
-
-        # persist running config as JSON
-        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-        config_ctrl.persist(self.config.as_dict)
+        logger.init_summary(run_id=self.pipeline_paths.run_id)
+        return logger
 
     def run(self) -> None:
         '''Execute data harmonization.'''
         if self.context is None:
             self.validate()
+
+        self._initialize_run()
+        assert self.logger is not None
 
         try:
             assert self.context is not None

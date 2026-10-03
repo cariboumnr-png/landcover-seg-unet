@@ -27,39 +27,40 @@ Evaluating a model.
 import os
 # local imports
 import landseg.artifacts as artifacts
+import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
 
 
-class ModelEvaluation(base.Pipeline[session.SessionLogger]):
+class ModelEvaluation(base.Pipeline[core.DataSpecs, session.SessionLogger]):
     '''Model evaluation pipeline.'''
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:
+        '''Resolve and return session artifact paths.'''
+        return self.artifact_paths.session
 
-        self.pipeline_paths = self.artifact_paths.session
-        self.pipeline_paths.init_pipeline_folders()
-
-        self.logger = session.SessionLogger(
+    def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the session logger.'''
+        logger = session.SessionLogger(
             name='session',
             log_file=self.pipeline_paths.summary,
-            console_lvl=20,
-            enable_file_log=False
+            console_lvl=self.console_level,
+            enable_file_log=False,
         )
-        self.logger.init_summary(
+        logger.init_summary(
             run_id=self.pipeline_paths.run_id,
             pipeline=self.config.pipeline.name,
         )
-
-        # persist running config as JSON
-        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-        config_ctrl.persist(self.config.as_dict)
+        return logger
 
     def run(self) -> float:
         '''Run model evaluation pipeline.'''
         if self.dataspecs is None:
             self.validate()
+
+        self._initialize_run()
+        assert self.logger is not None
 
         try:
             self.logger.log_sep()

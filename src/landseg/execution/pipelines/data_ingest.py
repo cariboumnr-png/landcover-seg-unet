@@ -33,27 +33,29 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest as ingest
 
 
-class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
+class DataIngestion(
+    base.Pipeline[ingest.IngestionContext, ingest.IngestionLogger]
+):
     '''Data ingestion pipeline.'''
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @property
+    def upstream_paths(self) -> artifacts.HarmonizationPaths:
+        '''Return upstream data harmonization artifact paths.'''
+        return self.artifact_paths.data_harmonization
 
-        self.upstream_paths = self.artifact_paths.data_harmonization
-        self.pipeline_paths = self.artifact_paths.data_ingestion
-        self.pipeline_paths.init_pipeline_folders()
-        self.context: ingest.IngestionContext | None = None
+    def _resolve_pipeline_paths(self) -> artifacts.IngestionPaths:
+        '''Resolve and return data ingestion artifact paths.'''
+        return self.artifact_paths.data_ingestion
 
-        self.logger = ingest.IngestionLogger(
+    def _create_logger(self) -> ingest.IngestionLogger:
+        '''Instantiate and configure the ingestion logger.'''
+        logger = ingest.IngestionLogger(
             name='data-ingest',
             log_file=self.pipeline_paths.report,
-            enable_file_log=False
+            enable_file_log=False,
         )
-        self.logger.init_summary(run_id=self.pipeline_paths.run_id)
-
-        # persist running config as JSON
-        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-        config_ctrl.persist(self.config.as_dict)
+        logger.init_summary(run_id=self.pipeline_paths.run_id)
+        return logger
 
     def run(
         self,
@@ -62,6 +64,9 @@ class DataIngestion(base.Pipeline[ingest.IngestionLogger]):
         '''Run data ingestion from specified harmonization run.'''
         if self.context is None or harmonization_record is not None:
             self.validate(harmonization_record)
+
+        self._initialize_run()
+        assert self.logger is not None
 
         try:
             assert self.context is not None

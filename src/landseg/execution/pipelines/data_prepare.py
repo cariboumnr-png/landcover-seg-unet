@@ -34,32 +34,37 @@ import landseg.execution.pipelines.base as base
 import landseg.geopipe.prepare as prepare
 
 
-class DataPreparation(base.Pipeline[prepare.PreparationLogger]):
+class DataPreparation(
+    base.Pipeline[prepare.PreparationContext, prepare.PreparationLogger]
+):
     '''Data preparation pipeline.'''
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @property
+    def upstream_paths(self) -> artifacts.IngestionPaths:
+        '''Return upstream data ingestion artifact paths.'''
+        return self.artifact_paths.data_ingestion
 
-        self.upstream_paths = self.artifact_paths.data_ingestion
-        self.pipeline_paths = self.artifact_paths.data_preparation
-        self.pipeline_paths.init_pipeline_folders()
-        self.context: prepare.PreparationContext | None = None
+    def _resolve_pipeline_paths(self) -> artifacts.PreparationPaths:
+        '''Resolve and return data preparation artifact paths.'''
+        return self.artifact_paths.data_preparation
 
-        self.logger = prepare.PreparationLogger(
+    def _create_logger(self) -> prepare.PreparationLogger:
+        '''Instantiate and configure the preparation logger.'''
+        logger = prepare.PreparationLogger(
             name='data-prep',
             log_file=self.pipeline_paths.report,
-            enable_file_log=False
+            enable_file_log=False,
         )
-        self.logger.init_summary(run_id='prepare')
+        logger.init_summary(run_id='prepare')
+        return logger
 
-        # persist running config as JSON
-        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-        config_ctrl.persist(self.config.as_dict)
-
-    def run(self):
+    def run(self) -> None:
         '''Run data preparation pipeline.'''
         if self.context is None:
             self.validate()
+
+        self._initialize_run()
+        assert self.logger is not None
 
         try:
             assert self.context is not None

@@ -31,24 +31,34 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
 
 
-class WorldGridGeneration(base.Pipeline[grid.GridLogger]):
+class WorldGridGeneration(base.Pipeline[None, grid.GridLogger]):
     '''World grid generation pipeline.'''
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @property
+    def grid_cfg(self):
+        '''Return world grid configuration.'''
+        return self.config.data.world_grid
 
-        self.grid_cfg = self.config.data.world_grid
+    def _resolve_pipeline_paths(self) -> None:
+        '''World grid does not use an artifacts pipeline paths container.'''
+        return None
 
-        self.logger = grid.GridLogger(
+    def _create_logger(self) -> grid.GridLogger:
+        '''Instantiate and configure the grid logger.'''
+        logger = grid.GridLogger(
             name='world-grid',
             log_file=grid.get_grid_report_fpath(self.grid_cfg.output_dpath),
             enable_file_log=False,
         )
-        self.logger.init_summary(run_id='world-grid')
+        logger.init_summary(run_id='world-grid')
+        return logger
 
-    def run(self):
+    def run(self) -> None:
         '''Execute the world-grid pipeline.'''
         self.validate()
+
+        self._initialize_run()
+        assert self.logger is not None
 
         try:
             self.logger.log_sep()
