@@ -96,17 +96,17 @@ def test_harmonization_paths(tmp_path):
     '''
     e = str(tmp_path)
     paths = paths_mod.HarmonizationPaths(root=e)
-    paths.init()
+    paths.init_pipeline_folders()
 
     assert paths.run_id == 'run_0001'
-    r = paths.effective_root
+    r = paths.effective_run_folder
     assert paths.valid_mask_raster == os.path.join(r, 'valid_pixel_mask.vrt')
     assert paths.config == os.path.join(r, 'config.json')
-    assert paths.report == os.path.join(r, 'harmonize_report.json')
+    assert paths.report == os.path.join(r, 'report.json')
 
     # second init auto-increments run_id
     etl_paths_2 = paths_mod.HarmonizationPaths(root=e)
-    etl_paths_2.init()
+    etl_paths_2.init_pipeline_folders()
     assert etl_paths_2.run_id == 'run_0002'
 
 
@@ -148,8 +148,8 @@ def test_ingestion_paths():
     '''
     f = os.path.join('/tmp', 'exp', 'ingested_data')
     f_paths = paths_mod.IngestionPaths(root=f)
-    assert f_paths.report == os.path.join(f, 'ingest_report.json')
-    assert f_paths.config == os.path.join(f, 'config.json')
+    assert f_paths.report == os.path.join(f, 'run_0001', 'report.json')
+    assert f_paths.config == os.path.join(f, 'run_0001', 'config.json')
 
     # domain maps fpaths
     d_dir = os.path.join(f, 'domain_knowledge')
@@ -189,7 +189,7 @@ def test_preparation_paths():
     t = os.path.join('/tmp', 'exp', 'prepared_data')
     t_paths = paths_mod.PreparationPaths(root=t)
 
-    assert t_paths.report == os.path.join(t, 'prep_report.json')
+    assert t_paths.report == os.path.join(t, 'report.json')
     assert t_paths.config == os.path.join(t, 'config.json')
     assert t_paths.train_blocks == os.path.join(t, 'train_blocks')
     assert t_paths.val_blocks == os.path.join(t, 'val_blocks')
@@ -214,7 +214,7 @@ def test_session_paths_init_and_checkpoints(tmp_path):
     Then: Auto-increment run IDs and build checkpoint paths.
     '''
     session_paths = paths_mod.SessionPaths(root=str(tmp_path))
-    session_paths.init()
+    session_paths.init_pipeline_folders()
 
     assert session_paths.run_id == 'run_0001'
     assert os.path.isdir(session_paths.checkpoints)
@@ -223,20 +223,20 @@ def test_session_paths_init_and_checkpoints(tmp_path):
     assert os.path.isdir(session_paths.previews)
 
     c = session_paths.checkpoints
-    r = session_paths.run_folder
+    r = session_paths.effective_run_folder
     assert session_paths.best_checkpoint('model') == os.path.join(c, 'model_best.pt')
     assert session_paths.last_checkpoint('model') == os.path.join(c, 'model_last.pt')
     assert session_paths.phase_status == os.path.join(c, 'status.json')
     assert session_paths.config == os.path.join(r, 'config.json')
+    assert session_paths.report == os.path.join(r, 'report.json')
 
     # second run initialization auto-increments run_id
     results_2 = paths_mod.SessionPaths(root=str(tmp_path))
-    results_2.init()
+    results_2.init_pipeline_folders()
     assert results_2.run_id == 'run_0002'
 
     # trace_to_last option targets previous run
-    results_last = paths_mod.SessionPaths(root=str(tmp_path))
-    results_last.init(trace_to_last=True)
+    results_last = paths_mod.SessionPaths(root=str(tmp_path), trace_to_last=True)
     assert results_last.run_id == 'run_0002'
 
 

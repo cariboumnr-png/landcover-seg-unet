@@ -34,20 +34,28 @@ import typing
 import omegaconf
 import pytest
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.core as core
 import landseg.execution.pipelines.model_evaluate as eval_pipeline
+import landseg.models as models
+import landseg.session as session
 
 
-# ----- `evaluate` pipeline test
+# ----- `ModelEvaluation` tests
 def test_evaluate_invalid_split_raises_value_error(tmp_path):
     '''
     Given: A RootConfig with an invalid evaluation split.
-    When: `evaluate` is called.
+    When: `ModelEvaluation.validate` is called.
     Then: Raise a ValueError.
     '''
+    chk_file = str(tmp_path / 'chk.pt')
+    with open(chk_file, 'w', encoding='utf-8') as f:
+        f.write('dummy')
+
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
-    schema.pipeline.model_evaluate.checkpoint = 'chk.pt'
+    schema.pipeline.model_evaluate.checkpoint = chk_file
     schema.pipeline.model_evaluate.split = 'invalid'
 
     config = typing.cast(
@@ -56,13 +64,13 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
     )
 
     with pytest.raises(ValueError, match='Invalid split'):
-        eval_pipeline.evaluate(config)
+        eval_pipeline.ModelEvaluation(config).validate()
 
 
 def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
     '''
     Given: A valid RootConfig and mock dependencies.
-    When: `evaluate` is called.
+    When: `ModelEvaluation.run` is called.
     Then: Execute evaluation and persist results.
     '''
     exp_root = str(tmp_path / 'exp')
@@ -70,8 +78,13 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
     with open(chk_file, 'w', encoding='utf-8') as f:
         f.write('dummy')
 
+    prep_root = str(tmp_path / 'prep')
+    prep_paths = artifacts.PreparationPaths(root=prep_root)
+    artifacts.Controller[dict](prep_paths.report).persist({'status': 'SUCCESS'})
+
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = exp_root
+    schema.data.preparation.output_dpath = prep_root
     schema.pipeline.model_evaluate.checkpoint = chk_file
     schema.pipeline.model_evaluate.split = 'val'
 
@@ -103,22 +116,73 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
         def run_epoch(self, _epoch: int):
             return MockEvalResult()
 
+    class DummyModel:
+        def parameters(self):
+            return []
+
+    mock_model = typing.cast(core.MultiheadModelLike, DummyModel())
+
     monkeypatch.setattr(
         eval_pipeline.geopipe, 'build_dataspec', lambda *a, **kw: dataspecs
     )
     monkeypatch.setattr(
-        eval_pipeline.models, 'build_multihead_unet', lambda *a, **kw: None
+        models, 'build_multihead_unet', lambda *a, **kw: mock_model
     )
     monkeypatch.setattr(
-        eval_pipeline.artifacts, 'load_checkpoint', lambda *a, **kw: None
-    )
-    monkeypatch.setattr(
-        eval_pipeline.session,
+        session,
         'build_session_runner',
         lambda *a, **kw: MockRunner(),
     )
 
-    target_metric = eval_pipeline.evaluate(config)
+    target_metric = eval_pipeline.ModelEvaluation(config).run()
 
     assert target_metric == 0.85
     assert os.path.exists(f'{exp_root}/results/run_0001/evaluation.json')
+
+
+def test_evaluate_validate_missing_checkpoint(tmp_path):
+    '''
+    Given: Evaluation configuration with non-existent checkpoint path.
+    When: Calling `validate` on `ModelEvaluation`.
+    Then: Raise a FileNotFoundError.
+    '''
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = str(tmp_path)
+    schema.pipeline.model_evaluate.checkpoint = str(tmp_path / 'missing.pt')
+    schema.pipeline.model_evaluate.split = 'val'
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    pipeline = eval_pipeline.ModelEvaluation(config)
+    with pytest.raises(FileNotFoundError, match='Evaluation checkpoint not found'):
+        pipeline.validate()
+
+
+def test_evaluate_validate_missing_prep_report(tmp_path):
+    '''
+    Given: Evaluation configuration without upstream preparation report.
+    When: Calling `validate` on `ModelEvaluation`.
+    Then: Raise a RuntimeError indicating missing preparation report.
+    '''
+    chk_file = str(tmp_path / 'chk.pt')
+    with open(chk_file, 'w', encoding='utf-8') as f:
+        f.write('dummy')
+
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = str(tmp_path)
+    schema.data.preparation.output_dpath = str(tmp_path / 'prep')
+    schema.pipeline.model_evaluate.checkpoint = chk_file
+    schema.pipeline.model_evaluate.split = 'val'
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    pipeline = eval_pipeline.ModelEvaluation(config)
+    with pytest.raises(
+        RuntimeError,
+        match='Upstream pipeline "data-prepare" has not been executed yet'
+    ):
+        pipeline.validate()

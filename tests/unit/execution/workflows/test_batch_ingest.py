@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -19,10 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for the world grid execution pipeline.'''
+'''Unit tests for batch ingestion workflow (batch_ingest.py).'''
 
 # standard imports
-import json
 import os
 import typing
 # third-party imports
@@ -30,24 +29,32 @@ import omegaconf
 # local imports
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
+import landseg.execution.workflows.batch_ingest as batch_ingest
 
 
-# ----- `WorldGridGeneration` tests
-def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
+# ----- `execute_batch_ingest` workflow tests
+def test_batch_ingest_multi_batch_catchup_and_idempotence(
+    tmp_path,
+    dummy_data_paths,
+):
     '''
-    Given: Valid extent reference raster and grid configuration.
-    When: World grid generation pipeline is executed.
-    Then: Produce canonical world grid JSON artifact on disk.
+    Given: Two completed harmonization runs and no prior ingestion.
+    When: `execute_batch_ingest` runs in auto pending mode, then runs again.
+    Then: Both batches are ingested sequentially, and re-run is a no-op.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
-    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
     grid_cfg.params.ref_fpath = dummy_data_paths.extent
     grid_cfg.params.crs_string = 'EPSG:3161'
     grid_cfg.params.tile_size = (256, 256)
     grid_cfg.params.tile_stride = (128, 128)
+
+    cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
+    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
+    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested_data')
+    cfg_schema.data.ingestion.rebuild = False
+    cfg_schema.data.ingestion.harmonization_run = None
 
     config = typing.cast(
         configs.RootConfig,
@@ -55,26 +62,31 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     )
 
     pipelines.WorldGridGeneration(config).run()
+    pipelines.DataHarmonization(config).run()
 
-    # verify canonical world grid artifact was generated
-    grid_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'grid_row_256_128_col_256_128.json'
+    # run batch 2 with distinct resampling config to avoid run collision
+    cfg_schema.data.harmonization.resampling_continuous = 'nearest'
+    config_batch2 = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
     )
-    assert os.path.exists(grid_fpath)
-    with open(grid_fpath, 'r', encoding='utf-8') as f:
-        grid_data = json.load(f)
-    assert isinstance(grid_data, list)
-    assert len(grid_data) > 0
+    pipelines.DataHarmonization(config_batch2).run()
 
-    # verify grid report artifact was generated
-    report_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'grid_report.json'
+    # first ingestion: should ingest both run_0001 and run_0002
+    batch_ingest.execute_batch_ingest(config)
+
+    out_dpath = config.data.ingestion.output_dpath
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0001', 'report.json')
     )
-    assert os.path.exists(report_fpath)
-    with open(report_fpath, 'r', encoding='utf-8') as f:
-        report_data = json.load(f)
-    assert report_data['status'] == 'SUCCESS'
-    assert report_data['grid']['grid_fpath'] == grid_fpath
-    assert report_data['total_tiles'] == len(grid_data)
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0002', 'report.json')
+    )
+    assert os.path.exists(
+        os.path.join(out_dpath, 'run_0002', 'collisions.json')
+    )
+    assert not os.path.exists(os.path.join(out_dpath, 'run_0003'))
+
+    # second ingestion: should detect 0 pending runs and cleanly no-op
+    batch_ingest.execute_batch_ingest(config)
+    assert not os.path.exists(os.path.join(out_dpath, 'run_0003'))

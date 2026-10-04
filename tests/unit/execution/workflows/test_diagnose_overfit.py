@@ -35,7 +35,7 @@ import omegaconf
 # local imports
 import landseg.configs as configs
 import landseg.core as core
-import landseg.execution.pipelines.diagnose_overfit as overfit_pipeline
+import landseg.execution.workflows.diagnose_overfit as overfit_pipeline
 import landseg.session as session
 
 
@@ -67,11 +67,11 @@ def test_prepare_dataspecs(tmp_path, dataspecs):
     assert specs.domains.vec_dim == 0
 
 
-# ----- `overfit` pipeline mock test
+# ----- `execute_diagnose_overfit` workflow test
 def test_overfit_pipeline_with_existing_block(tmp_path, dataspecs, monkeypatch):
     '''
     Given: A RootConfig and an existing block in output directory.
-    When: `overfit` pipeline executes.
+    When: `execute_diagnose_overfit` workflow executes.
     Then: Successfully load existing block, set up model and run overfit.
     '''
     monkeypatch.setattr(overfit_pipeline.c, 'OVERFIT_MAX_EPOCH', 2)
@@ -93,7 +93,7 @@ def test_overfit_pipeline_with_existing_block(tmp_path, dataspecs, monkeypatch):
 
     cfg = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(schema))
 
-    overfit_pipeline.overfit(cfg)
+    overfit_pipeline.execute_diagnose_overfit(cfg)
 
     summary_fpath = f'{overfit_dpath}/log/overfit_summary.json'
     assert os.path.exists(summary_fpath)

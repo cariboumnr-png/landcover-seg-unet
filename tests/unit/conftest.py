@@ -55,10 +55,12 @@ def dataspecs(tmp_path):
             },
         }
         cfg = assembler.DataBlockConfig(
-            image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
-            image_nodata=numpy.nan,
             image_dem_pad_px=0,
             label_ignore_index=255,
+        )
+        context = assembler.DataBlockContext(
+            image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
+            image_nodata=numpy.nan,
             label_specs=label_specs,
         )
         for name in ('train_block', 'val_block', 'test_block'):
@@ -68,7 +70,7 @@ def dataspecs(tmp_path):
                 image_padded_dem=None,
                 label_array=lbl,
             )
-            block = assembler.build_data_block(inputs, cfg)
+            block = assembler.build_data_block(inputs, cfg, context)
             block.save(f'{tmp_path}/{name}.npz')
 
     return core.DataSpecs(

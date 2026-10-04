@@ -20,43 +20,57 @@
 # =========================================================================== #
 
 '''
-Unit tests for pipeline registry (_registry.py).
+Unit tests for study analysis pipeline (study_analysis.py).
 '''
 
+# standard imports
+import json
+import os
+import typing
 # third-party imports
-import pytest
+import omegaconf
 # local imports
-import landseg.execution.pipelines._registry as registry
+import landseg.configs as configs
+import landseg.execution.workflows.study_analysis as analysis_pipeline
 
 
-# ----- `get` helper
-@pytest.mark.parametrize('name', [
-    'default',
-    'world-grid',
-    'data-harmonize',
-    'data-ingest',
-    'data-prepare',
-    'diagnose-overfit',
-    'model-evaluate',
-    'model-train',
-    'study-sweep',
-    'study-analysis',
-])
-def test_get_valid_pipeline(name: registry.PipelineName):
+# ----- `execute_study_analysis` workflow test
+def test_analyze_pipeline(tmp_path, monkeypatch):
     '''
-    Given: A valid pipeline name.
-    When: `get` is called.
-    Then: Return the registered pipeline callable.
+    Given: A RootConfig instance with study_sweep settings.
+    When: `execute_study_analysis` is called.
+    Then: Rank completed trials and persist analysis JSON artifact.
     '''
-    pipeline_fn = registry.get(name)
-    assert callable(pipeline_fn)
+    mock_ranked = [{'trial_id': 1, 'value': 0.95, 'params': {'lr': 0.001}}]
 
+    def mock_rank_trials(
+        study_name: str,
+        storage: str,
+        top_k: int = 5,
+        ascending: bool = False,
+    ):
+        _ = study_name, storage, top_k, ascending
+        return mock_ranked
 
-def test_get_invalid_pipeline_raises_key_error():
-    '''
-    Given: An unknown pipeline name.
-    When: `get` is called.
-    Then: Raise a KeyError.
-    '''
-    with pytest.raises(KeyError, match='Unknown pipeline name'):
-        registry.get('non-existent-pipeline')
+    monkeypatch.setattr(
+        analysis_pipeline.study, 'rank_trials', mock_rank_trials
+    )
+
+    exp_root = str(tmp_path / 'exp')
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = exp_root
+    schema.pipeline.study_sweep.study_name = 'test_study'
+    schema.pipeline.study_sweep.storage = 'sqlite:///test.db'
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+
+    analysis_pipeline.execute_study_analysis(config)
+
+    analysis_fpath = f'{exp_root}/analysis/test_study.json'
+    assert os.path.exists(analysis_fpath)
+    with open(analysis_fpath, 'r', encoding='utf-8') as f:
+        saved_data = json.load(f)
+    assert saved_data == mock_ranked

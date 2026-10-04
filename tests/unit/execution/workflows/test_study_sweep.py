@@ -33,14 +33,14 @@ import typing
 import omegaconf
 # local imports
 import landseg.configs as configs
-import landseg.execution.pipelines.study_sweep as sweep_pipeline
+import landseg.execution.workflows.study_sweep as sweep_pipeline
 
 
-# ----- `sweep` pipeline test
+# ----- `execute_study_sweep` workflow test
 def test_sweep_pipeline(tmp_path, monkeypatch):
     '''
     Given: A RootConfig instance.
-    When: `sweep` pipeline executes.
+    When: `execute_study_sweep` workflow executes.
     Then: Call `study.run_sweep` and return best result summary.
     '''
     @dataclasses.dataclass
@@ -62,7 +62,7 @@ def test_sweep_pipeline(tmp_path, monkeypatch):
         omegaconf.OmegaConf.to_object(schema)
     )
 
-    result = sweep_pipeline.sweep(config)
+    result = sweep_pipeline.execute_study_sweep(config)
 
     assert result == {
         'best_value': 0.92,
