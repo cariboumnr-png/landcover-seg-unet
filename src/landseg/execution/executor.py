@@ -30,6 +30,7 @@ import typing
 # local imports
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
+import landseg.execution.preflight as preflight
 import landseg.execution.workflows as workflows
 
 
@@ -101,36 +102,4 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
 # ----- private helpers
 def _dispatch_preflight(root_config: configs.RootConfig) -> typing.Any:
     '''Dispatch pre-flight checks for target pipeline(s).'''
-    target = root_config.command.preflight.target
-    pipeline_runners: dict[str, typing.Callable[[], typing.Any]] = {
-        'world-grid': lambda: (
-            pipelines.WorldGridGeneration(root_config).preflight()
-        ),
-        'data-harmonize': lambda: (
-            pipelines.DataHarmonization(root_config).preflight()
-        ),
-        'data-ingest': lambda: (
-            pipelines.DataIngestion(root_config).preflight()
-        ),
-        'data-prepare': lambda: (
-            pipelines.DataPreparation(root_config).preflight()
-        ),
-        'model-train': lambda: (
-            pipelines.ModelTraining(root_config).preflight()
-        ),
-        'model-evaluate': lambda: (
-            pipelines.ModelEvaluation(root_config).preflight()
-        ),
-    }
-
-    if target in pipeline_runners:
-        return pipeline_runners[target]()
-
-    if target == 'all':
-        return [runner_fn() for runner_fn in pipeline_runners.values()]
-
-    allowed = sorted(list(pipeline_runners.keys()) + ['all'])
-    raise KeyError(
-        f'Target "{target}" not supported for pipeline preflight; '
-        f'allowed: {allowed}'
-    )
+    return preflight.run_preflight(root_config)

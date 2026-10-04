@@ -19,12 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for base pipeline pre-flight validation methods.'''
+'''Unit tests for standalone pre-flight execution validation module.'''
 
 # local imports
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.pipelines.base as base
+import landseg.execution.preflight as preflight
 
 
 # ----- test helper classes
@@ -58,19 +59,19 @@ class _DummyFailingPipeline(base.Pipeline):
         raise RuntimeError('Missing upstream artifact')
 
 
-# ----- `Pipeline.preflight` tests
-def test_pipeline_preflight_success():
+# ----- `inspect_pipeline` tests
+def test_inspect_pipeline_success():
     '''
     Given: A pipeline whose `validate()` method succeeds without error.
-    When: `preflight()` is called on the pipeline runner.
+    When: `inspect_pipeline()` is called on the pipeline runner.
     Then: Return a READY result with a passing prerequisite probe.
     '''
     config = configs.RootConfig()
     runner = _DummySuccessPipeline(config)
 
-    result = runner.preflight()
+    result = preflight.inspect_pipeline(runner)
 
-    assert isinstance(result, base.PreflightResult)
+    assert isinstance(result, preflight.PreflightResult)
     assert result.target == 'dummy-pipeline'
     assert result.status == 'READY'
     assert result.is_ready is True
@@ -79,28 +80,28 @@ def test_pipeline_preflight_success():
 
     probe = result.probes[0]
     assert probe.probe_id == 'pipeline_prerequisites'
-    assert probe.status == base.ProbeStatus.PASS
+    assert probe.status == preflight.ProbeStatus.PASS
     assert 'dummy-pipeline' in probe.message
 
 
-def test_pipeline_preflight_failure():
+def test_inspect_pipeline_failure():
     '''
     Given: A pipeline whose `validate()` method raises a RuntimeError.
-    When: `preflight()` is called on the pipeline runner.
+    When: `inspect_pipeline()` is called on the pipeline runner.
     Then: Return a BLOCKED result capturing the failure in probe errors.
     '''
     config = configs.RootConfig()
     runner = _DummyFailingPipeline(config)
 
-    result = runner.preflight()
+    result = preflight.inspect_pipeline(runner)
 
-    assert isinstance(result, base.PreflightResult)
+    assert isinstance(result, preflight.PreflightResult)
     assert result.target == 'failing-pipeline'
     assert result.status == 'BLOCKED'
     assert result.is_ready is False
     assert len(result.errors) == 1
     assert 'Missing upstream artifact' in result.errors[0]
-    assert result.probes[0].status == base.ProbeStatus.FAIL
+    assert result.probes[0].status == preflight.ProbeStatus.FAIL
     assert result.probes[0].details.get('error_type') == 'RuntimeError'
 
 
@@ -110,20 +111,20 @@ def test_preflight_result_serialization():
     When: `as_dict()` is invoked.
     Then: Return a valid JSON-serializable dictionary representation.
     '''
-    result = base.PreflightResult(
+    result = preflight.PreflightResult(
         target='test-pipeline',
         status='READY',
         probes=[
-            base.ProbeResult(
+            preflight.ProbeResult(
                 probe_id='probe_1',
                 category='hardware',
-                status=base.ProbeStatus.PASS,
+                status=preflight.ProbeStatus.PASS,
                 message='GPU available',
             ),
-            base.ProbeResult(
+            preflight.ProbeResult(
                 probe_id='probe_2',
                 category='lineage',
-                status=base.ProbeStatus.WARN,
+                status=preflight.ProbeStatus.WARN,
                 message='Pending batches detected',
             ),
         ],
@@ -188,3 +189,57 @@ def test_pipeline_default_path_resolution(monkeypatch):
     assert dp.pipeline_paths == dp.artifact_paths.data_preparation
     assert mt.pipeline_paths == mt.artifact_paths.session
     assert me.pipeline_paths == me.artifact_paths.session
+
+
+def test_run_preflight_dispatch_single_target(monkeypatch):
+    '''
+    Given: A valid RootConfig with target='world-grid'.
+    When: `run_preflight()` is invoked.
+    Then: Return a PreflightResult for world-grid.
+    '''
+    monkeypatch.setattr(pipelines.WorldGridGeneration, 'validate', lambda self: None)
+    cfg = configs.RootConfig()
+
+    result = preflight.run_preflight(cfg, target='world-grid')
+
+    assert isinstance(result, preflight.PreflightResult)
+    assert result.target == 'world-grid'
+    assert result.status == 'READY'
+
+
+def test_run_preflight_dispatch_all_targets(monkeypatch):
+    '''
+    Given: A valid RootConfig with target='all'.
+    When: `run_preflight()` is invoked.
+    Then: Return a list of PreflightResults for all 6 pipelines.
+    '''
+    monkeypatch.setattr(pipelines.WorldGridGeneration, 'validate', lambda self: None)
+    monkeypatch.setattr(pipelines.DataHarmonization, 'validate', lambda self: None)
+    monkeypatch.setattr(pipelines.DataIngestion, 'validate', lambda self: None)
+    monkeypatch.setattr(pipelines.DataPreparation, 'validate', lambda self: None)
+    monkeypatch.setattr(pipelines.ModelTraining, 'validate', lambda self: None)
+    monkeypatch.setattr(pipelines.ModelEvaluation, 'validate', lambda self: None)
+    cfg = configs.RootConfig()
+
+    results = preflight.run_preflight(cfg, target='all')
+
+    assert isinstance(results, list)
+    assert len(results) == 6
+    targets = [r.target for r in results]
+    assert 'world-grid' in targets
+    assert 'model-train' in targets
+
+
+def test_run_preflight_dispatch_unknown_target():
+    '''
+    Given: An unsupported target string.
+    When: `run_preflight()` is invoked.
+    Then: Raise a KeyError with allowed targets.
+    '''
+    cfg = configs.RootConfig()
+    try:
+        preflight.run_preflight(cfg, target='unknown-target')
+        assert False, 'Should have raised KeyError'
+    except KeyError as err:
+        assert 'Target "unknown-target" not supported' in str(err)
+

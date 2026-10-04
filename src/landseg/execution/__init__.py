@@ -34,6 +34,8 @@ import typing
 __all__ = [
     # typing
     'execute_pipeline',
+    'inspect_pipeline',
+    'run_preflight',
 ]
 
 
@@ -42,11 +44,19 @@ if typing.TYPE_CHECKING:
     from .executor import (
         execute_pipeline,
     )
+    from .preflight import (
+        inspect_pipeline,
+        run_preflight,
+    )
 
 
 def __getattr__(name: str):
     if name in {'execute_pipeline'}:
         obj = importlib.import_module('.executor', __package__)
+        return getattr(obj, name)
+
+    if name in {'inspect_pipeline', 'run_preflight'}:
+        obj = importlib.import_module('.preflight', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

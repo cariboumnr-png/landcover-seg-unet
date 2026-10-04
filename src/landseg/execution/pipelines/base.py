@@ -25,8 +25,6 @@ Base pipeline ABC
 
 # standard imports
 import abc
-import dataclasses
-import enum
 import time
 import typing
 # third-party imports
@@ -39,74 +37,6 @@ import landseg.core as core
 import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
-
-
-# ----- public types
-class ProbeStatus(enum.StrEnum):
-    '''Diagnostic probe execution status.'''
-
-    PASS = 'PASS'
-    WARN = 'WARN'
-    FAIL = 'FAIL'
-    SKIP = 'SKIP'
-
-
-# ----- public dataclasses
-@dataclasses.dataclass(frozen=True)
-class ProbeResult:
-    '''Single diagnostic probe evaluation result.'''
-
-    probe_id: str
-    category: str
-    status: ProbeStatus
-    message: str
-    details: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
-
-
-@dataclasses.dataclass
-class PreflightResult:
-    '''Aggregated pre-flight inspection result for a pipeline.'''
-
-    target: str
-    status: str
-    probes: list[ProbeResult] = dataclasses.field(default_factory=list)
-    telemetry: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
-
-    @property
-    def is_ready(self) -> bool:
-        '''Return True if no probes have failed.'''
-        return all(p.status != ProbeStatus.FAIL for p in self.probes)
-
-    @property
-    def errors(self) -> list[str]:
-        '''Return error messages from failed probes.'''
-        return [p.message for p in self.probes if p.status == ProbeStatus.FAIL]
-
-    @property
-    def warnings(self) -> list[str]:
-        '''Return warning messages from warning probes.'''
-        return [p.message for p in self.probes if p.status == ProbeStatus.WARN]
-
-    def as_dict(self) -> dict[str, typing.Any]:
-        '''Return dictionary representation for report serialization.'''
-        return {
-            'target': self.target,
-            'status': self.status,
-            'is_ready': self.is_ready,
-            'probes': [
-                {
-                    'probe_id': p.probe_id,
-                    'category': p.category,
-                    'status': p.status.value,
-                    'message': p.message,
-                    'details': p.details,
-                }
-                for p in self.probes
-            ],
-            'errors': self.errors,
-            'warnings': self.warnings,
-            'telemetry': self.telemetry,
-        }
 
 
 # ----- public classes
@@ -153,51 +83,6 @@ class Pipeline(abc.ABC):
     @abc.abstractmethod
     def _create_logger(self) -> typing.Any:
         '''Instantiate and configure the logger for this pipeline.'''
-
-    def preflight(self) -> PreflightResult:
-        '''
-        Run pre-flight validation probes without committing compute.
-
-        Evaluates pipeline prerequisites non-destructively, returning
-        structured probe diagnostics and overall readiness status. Subclasses
-        can override or extend this method with domain-specific probes.
-
-        Returns:
-            PreflightResult:
-                Aggregated readiness evaluation and diagnostic probe results.
-        '''
-        probes: list[ProbeResult] = []
-        try:
-            self.validate()
-            probes.append(
-                ProbeResult(
-                    probe_id='pipeline_prerequisites',
-                    category='lineage',
-                    status=ProbeStatus.PASS,
-                    message=(
-                        f'Prerequisites verified for pipeline '
-                        f'"{self.pipeline_name}".'
-                    ),
-                )
-            )
-            status = 'READY'
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            probes.append(
-                ProbeResult(
-                    probe_id='pipeline_prerequisites',
-                    category='lineage',
-                    status=ProbeStatus.FAIL,
-                    message=str(err),
-                    details={'error_type': type(err).__name__},
-                )
-            )
-            status = 'BLOCKED'
-
-        return PreflightResult(
-            target=self.pipeline_name,
-            status=status,
-            probes=probes,
-        )
 
     @typing.overload
     def build_session_runner(
