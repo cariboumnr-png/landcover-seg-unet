@@ -53,7 +53,7 @@ class _StudySweep:
     seed: int = 42
 
 @dataclasses.dataclass
-class PipelineConfig:
+class CommandConfig:
     name: str = 'default'
     model_train: _TrainModel = field(default_factory=_TrainModel)
     model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)

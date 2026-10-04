@@ -34,10 +34,10 @@ Actuellement utilisable:
 
 - Ingestion des donnees et preparation propre a l'experience
 - Construction de grilles, domaines, blocs de donnees, manifestes et datasets a partir d'artefacts
-- Pipelines d'entrainement et d'evaluation autonome des modeles
+- Commandes d'entrainement et d'evaluation autonome des modeles
 - Diagnostics de surapprentissage pour valider la chaine de bout en bout
 - Chemins de code pour les adaptateurs TensorBoard et MLflow
-- Points d'entree de sweep d'etude et d'analyse d'etude orientes Optuna
+- Points d'entree de commande pour le sweep d'etude et l'analyse d'etude orientes Optuna
 
 Encore en maturation:
 
@@ -89,12 +89,12 @@ Les sessions assemblent la surface runtime pour l'entrainement ou l'evaluation:
 - callbacks, tracking, tableaux de bord et formatage de rapports
 - politiques d'orchestration et runners
 
-### Pipelines D'Execution
+### Couche D'Execution
 
-La couche d'execution selectionne un pipeline nomme, resout la configuration,
-coordonne la resolution des artefacts et delegue le travail principal aux
-factories et modules runtime. Les implementations de pipelines restent
-volontairement minces.
+La couche d'execution dispatche une commande nommee (pipelines d'execution
+atomiques ou workflows composites), resout la configuration, coordonne la
+resolution des artefacts et delegue le travail aux factories et runners de
+session. Les implementations restent volontairement minces.
 
 ## Installation
 
@@ -107,7 +107,7 @@ pip install .
 Cela installe la commande console `landseg`:
 
 ```bash
-landseg pipeline=default
+landseg command=default
 ```
 
 Pour executer dans des environnements distants (tels que des noeuds de calcul
@@ -115,7 +115,7 @@ Databricks ou des machines virtuelles) sans installer le package, vous pouvez
 utiliser le script de demarrage :
 
 ```bash
-python scripts/run.py pipeline=default
+python scripts/run.py command=default
 ```
 
 ## Configuration
@@ -138,9 +138,9 @@ Avant d'executer les pipelines de donnees, lisez le
 [guide de preparation des donnees](./docs/data_preparation_fr.md) et organisez
 les entrees locales sous la racine d'experience configuree.
 
-## Utilisation Des Pipelines
+## Utilisation Des Commandes
 
-Les noms de pipelines sont enregistres dans `landseg.execution.pipelines`.
+Les noms de commandes sont enregistres dans `landseg.execution.executor`.
 
 ### 0. Génération De La Grille Monde
 
@@ -148,7 +148,7 @@ Construit et persiste l'artefact de grille monde canonique pour le tuilage
 spatial à partir d'un raster de référence ou de paramètres d'étendue explicites.
 
 ```bash
-landseg pipeline=world-grid
+landseg command=world-grid
 ```
 
 ### 1. Harmonisation Des Données
@@ -157,7 +157,7 @@ Harmonise, reprojette et rééchantillonne les rasters bruts (features, labels
 et masques de domaine) sur le canevas de la grille monde.
 
 ```bash
-landseg pipeline=data-harmonize
+landseg command=data-harmonize
 ```
 
 ### 2. Ingestion Des Donnees
@@ -166,60 +166,69 @@ Construit les blocs de données canoniques non partitionnés à partir des
 rasters harmonisés et de la grille monde.
 
 ```bash
-landseg pipeline=data-ingest
+landseg command=data-ingest
 ```
 
-### 3. Preparation Des Donnees
+### 3. Ingestion Par Lots
+
+Ingère séquentiellement plusieurs lots d'harmonisation planifiés dans le pool
+canonique de blocs de données.
+
+```bash
+landseg command=batch-ingest
+```
+
+### 4. Preparation Des Donnees
 
 Construit les artefacts propres a l'experience a partir des blocs de donnees
 ingeres, y compris le partitionnement géographique par AOI, les splits, la
 normalisation et les schemas.
 
 ```bash
-landseg pipeline=data-prepare
+landseg command=data-prepare
 ```
 
-### 4. Entrainement Du Modele
+### 5. Entrainement Du Modele
 
 Construit et execute une session complete d'entrainement a partir des artefacts
 prepares.
 
 ```bash
-landseg pipeline=model-train
+landseg command=model-train
 ```
 
-### 5. Evaluation Du Modele
+### 6. Evaluation Du Modele
 
 Execute l'evaluation a partir des artefacts prepares et d'un checkpoint entraine.
 
 ```bash
-landseg pipeline=model-evaluate pipeline.model_evaluate.checkpoint=path/to/checkpoint
+landseg command=model-evaluate command.model_evaluate.checkpoint=path/to/checkpoint
 ```
 
-### 6. Diagnostic De Surapprentissage
+### 7. Diagnostic De Surapprentissage
 
 Execute un diagnostic contraint de bout en bout sur un petit perimetre pour
 valider le cablage du modele, du dataset, des pertes, de l'optimiseur, des
 metriques et de l'execution.
 
 ```bash
-landseg pipeline=diagnose-overfit
+landseg command=diagnose-overfit
 ```
 
-### 7. Sweep D'Etude
+### 8. Sweep D'Etude
 
 Execute le point d'entree de sweep oriente Optuna.
 
 ```bash
-landseg pipeline=study-sweep
+landseg command=study-sweep
 ```
 
-### 8. Analyse D'Etude
+### 9. Analyse D'Etude
 
 Analyse les resultats d'etude via le point d'entree d'analyse.
 
 ```bash
-landseg pipeline=study-analysis
+landseg command=study-analysis
 ```
 
 ## Organisation Des Artefacts Et Des Sorties
@@ -232,7 +241,7 @@ correspond a:
 experiment/
 |-- input/       Entrees source locales
 |-- artifacts/   Artefacts generes reutilisables
-`-- results/     Sorties de pipelines/sessions
+`-- results/     Sorties d'execution et de sessions
 ```
 
 Les artefacts sont destines a servir de source de verite pour la
@@ -250,7 +259,7 @@ src/landseg/
 |-- artifacts/       Chemins, persistance, politiques, checkpoints
 |-- configs/         Defaults Hydra YAML et schemas de config structures
 |-- core/            Contrats partages et types de resultats
-|-- execution/       Registre de pipelines et dispatch de haut niveau
+|-- execution/       Dispatch de commandes, pipelines et workflows
 |-- geopipe/         Pipeline geospatial de fondation et transformation
 |-- models/          Frames, backbones, tetes, conditionnement, factories
 |-- session/         Donnees runtime, moteurs, taches, instrumentation, orchestration

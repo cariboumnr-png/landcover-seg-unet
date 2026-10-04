@@ -47,12 +47,12 @@ class BaseConfigurator:
         self._cfg.data.ingestion.output_dpath = f'{experiment_root}/artifacts/ingested_data'
         self._cfg.data.preparation.output_dpath = f'{experiment_root}/artifacts/prepared_data'
         # set pipeline name
-        self._cfg.pipeline.name = pipeline_name
+        self._cfg.command.name = pipeline_name
 
     @property
     def running_root_config(self) -> configs.RootConfig:
         '''Validate and return the `RootConfig`,'''
-        match self._cfg.pipeline.name:
+        match self._cfg.command.name:
             case 'world-grid':
                 self._cfg.data.world_grid.validate()
             case 'data-harmonize':

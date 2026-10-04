@@ -71,7 +71,7 @@ def make_objective(
     def objective(trial: optuna.Trial) -> float:
 
         # get trial config depending on the objective preset
-        objectives_fn = presets.resolve(cfg.pipeline.study_sweep.preset_name)
+        objectives_fn = presets.resolve(cfg.command.study_sweep.preset_name)
         _cfg = copy.deepcopy(cfg)
         trial_cfg = objectives_fn(_cfg, trial)
 

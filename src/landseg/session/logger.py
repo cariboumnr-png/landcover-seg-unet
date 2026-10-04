@@ -60,14 +60,14 @@ class SessionLogger(utils.Logger):
         self,
         *,
         run_id: str,
-        pipeline: str,
+        command: str,
         timestamp: str | None = None
     ) -> None:
         '''Initialize the structured session summary dictionary.'''
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
             'run_id': run_id,
-            'pipeline': pipeline,
+            'pipeline': command,
             'started_at': t,
             'status': 'RUNNING',
             'completed_at': None,

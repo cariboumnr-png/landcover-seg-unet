@@ -55,8 +55,8 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
 
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
-    schema.pipeline.model_evaluate.checkpoint = chk_file
-    schema.pipeline.model_evaluate.split = 'invalid'
+    schema.command.model_evaluate.checkpoint = chk_file
+    schema.command.model_evaluate.split = 'invalid'
 
     config = typing.cast(
         configs.RootConfig,
@@ -85,8 +85,8 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = exp_root
     schema.data.preparation.output_dpath = prep_root
-    schema.pipeline.model_evaluate.checkpoint = chk_file
-    schema.pipeline.model_evaluate.split = 'val'
+    schema.command.model_evaluate.checkpoint = chk_file
+    schema.command.model_evaluate.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,
@@ -148,8 +148,8 @@ def test_evaluate_validate_missing_checkpoint(tmp_path):
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
-    schema.pipeline.model_evaluate.checkpoint = str(tmp_path / 'missing.pt')
-    schema.pipeline.model_evaluate.split = 'val'
+    schema.command.model_evaluate.checkpoint = str(tmp_path / 'missing.pt')
+    schema.command.model_evaluate.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,
@@ -173,8 +173,8 @@ def test_evaluate_validate_missing_prep_report(tmp_path):
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
     schema.data.preparation.output_dpath = str(tmp_path / 'prep')
-    schema.pipeline.model_evaluate.checkpoint = chk_file
-    schema.pipeline.model_evaluate.split = 'val'
+    schema.command.model_evaluate.checkpoint = chk_file
+    schema.command.model_evaluate.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,

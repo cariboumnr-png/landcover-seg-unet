@@ -41,4 +41,4 @@ def test_cli_help_smoke():
     )
     assert result.returncode == 0
     assert 'Config' in result.stdout
-    assert 'pipeline:' in result.stdout
+    assert 'command:' in result.stdout

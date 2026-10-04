@@ -22,25 +22,25 @@
 # pylint: disable=protected-access
 
 '''
-Unit tests for `landseg.configs.schema.sections.pipeline`.
+Unit tests for `landseg.configs.schema.sections.commands`.
 '''
 
 # local imports
-import landseg.configs.schema.sections.pipeline as pipeline
+import landseg.configs.schema.sections.commands as commands
 
 
-# ----- `PipelineConfig` tests
-def test_pipeline_config_defaults():
+# ----- `CommandConfig` tests
+def test_command_config_defaults():
     '''
-    Given: Default instantiation parameters for `PipelineConfig`.
-    When: Instantiating `PipelineConfig` without arguments.
-    Then: Initialize default pipeline name and sweep trial counts.
+    Given: Default instantiation parameters for `CommandConfig`.
+    When: Instantiating `CommandConfig` without arguments.
+    Then: Initialize default command name and sweep trial counts.
     '''
-    cfg = pipeline.PipelineConfig()
+    cfg = commands.CommandConfig()
     assert cfg.name == 'default'
-    assert isinstance(cfg.model_train, pipeline._TrainModel)
-    assert isinstance(cfg.model_evaluate, pipeline._EvaluateModel)
-    assert isinstance(cfg.study_sweep, pipeline._StudySweep)
+    assert isinstance(cfg.model_train, commands._TrainModel)
+    assert isinstance(cfg.model_evaluate, commands._EvaluateModel)
+    assert isinstance(cfg.study_sweep, commands._StudySweep)
 
     assert cfg.model_evaluate.checkpoint is None
     assert cfg.model_evaluate.split == 'test'
@@ -51,22 +51,22 @@ def test_pipeline_config_defaults():
     assert cfg.study_sweep.n_trials == 50
 
 
-def test_pipeline_config_custom_initialization():
+def test_command_config_custom_initialization():
     '''
     Given: Custom `_EvaluateModel` and `_StudySweep` sub-configs.
-    When: Instantiating `PipelineConfig` with custom sub-configurations.
+    When: Instantiating `CommandConfig` with custom sub-configurations.
     Then: Store specified sub-configurations on attributes.
     '''
-    eval_cfg = pipeline._EvaluateModel(
+    eval_cfg = commands._EvaluateModel(
         checkpoint='/path/to/ckpt.pt',
         split='val',
         export_previews=True,
     )
-    sweep_cfg = pipeline._StudySweep(
+    sweep_cfg = commands._StudySweep(
         study_name='custom_study',
         n_trials=100,
     )
-    cfg = pipeline.PipelineConfig(
+    cfg = commands.CommandConfig(
         name='experiment_1',
         model_evaluate=eval_cfg,
         study_sweep=sweep_cfg,

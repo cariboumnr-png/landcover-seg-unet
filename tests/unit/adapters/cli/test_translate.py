@@ -153,8 +153,8 @@ def test_translate_user_config_model_train():
     result = translate_mod.translate_user_config(user_cfg)
 
     assert result.models.model_body == 'unet'
-    assert result.session.data_loader.patch_size == 128
-    assert result.session.data_loader.batch_size == 32
+    assert result.session.dataloader.patch_size == 128
+    assert result.session.dataloader.batch_size == 32
     assert result.session.output_dpath == '/path/exp/results'
     phases = result.session.orchestration.curriculum.single.phases
     assert len(phases) == 1

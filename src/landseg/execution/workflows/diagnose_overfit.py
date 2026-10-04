@@ -61,7 +61,7 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
     root = f'{config.execution.exp_root}/results/overfit_test'
     log_file = f'{root}/log/overfit_summary.json'
     logger = session.SessionLogger('overfit', log_file=log_file)
-    logger.init_summary(run_id='overfit_test', pipeline='diagnose_overfit')
+    logger.init_summary(run_id='overfit_test', command='diagnose_overfit')
 
     try:
         logger.log_sep()

@@ -33,7 +33,7 @@ def run(root_config: configs.RootConfig):
 
     logger = utils.Logger('api', './api.log')
     try:
-        logger.log('INFO', f'Running pipeline: {root_config.pipeline.name}')
+        logger.log('INFO', f'Running command: {root_config.command.name}')
         return execution.execute_pipeline(root_config)
     except KeyboardInterrupt:
         logger.log('INFO', 'Execution interrupted')

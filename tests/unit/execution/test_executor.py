@@ -76,7 +76,7 @@ def test_execute_pipeline_dispatch(
 
         monkeypatch.setattr(target_mod, target_attr, mock_workflow)
 
-    config = configs.RootConfig(pipeline=secs.PipelineConfig(name=command))
+    config = configs.RootConfig(command=secs.CommandConfig(name=command))
     result = executor.execute_pipeline(config)
 
     assert len(called) == 1
@@ -92,7 +92,7 @@ def test_execute_pipeline_unknown_command_raises_key_error():
     Then: Raise a KeyError.
     '''
     config = configs.RootConfig(
-        pipeline=secs.PipelineConfig(name='non-existent-command')
+        command=secs.CommandConfig(name='non-existent-command')
     )
     with pytest.raises(KeyError, match='Unknown command'):
         executor.execute_pipeline(config)

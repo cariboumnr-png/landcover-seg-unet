@@ -59,7 +59,7 @@ class ModelEvaluation(_PipelineBase):
         )
         logger.init_summary(
             run_id=self.pipeline_paths.run_id,
-            pipeline=self.config.pipeline.name,
+            command=self.config.command.name,
         )
         return logger
 
@@ -75,7 +75,7 @@ class ModelEvaluation(_PipelineBase):
             self.logger.log_sep()
 
             # parse evaluation pipeline configs
-            eval_config = self.config.pipeline.model_evaluate
+            eval_config = self.config.command.model_evaluate
             assert eval_config.checkpoint
             if eval_config.split not in ('val', 'test'):
                 raise ValueError(f"Invalid split: {eval_config.split}")
@@ -117,7 +117,7 @@ class ModelEvaluation(_PipelineBase):
 
     def validate(self) -> None:
         '''Validate model evaluation prerequisites and build dataspecs.'''
-        eval_config = self.config.pipeline.model_evaluate
+        eval_config = self.config.command.model_evaluate
         if not eval_config.checkpoint or not os.path.exists(eval_config.checkpoint):
             raise FileNotFoundError(
                 f'Evaluation checkpoint not found: {eval_config.checkpoint}'

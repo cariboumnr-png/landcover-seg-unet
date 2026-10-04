@@ -88,7 +88,7 @@ class RootConfig:
     # study settings
     study: sec.StudyConfig = field(default_factory=sec.StudyConfig)
     # pipeline specific CLI flags
-    pipeline: sec.PipelineConfig = field(default_factory=sec.PipelineConfig)
+    command: sec.CommandConfig = field(default_factory=sec.CommandConfig)
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:

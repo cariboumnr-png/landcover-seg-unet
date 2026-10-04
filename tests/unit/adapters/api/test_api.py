@@ -40,7 +40,7 @@ def test_api_run_success(mocker):
         return_value={'status': 'SUCCESS'}
     )
     cfg = configs.RootConfig()
-    cfg.pipeline.name = 'data-harmonize'
+    cfg.command.name = 'data-harmonize'
 
     result = api.run(cfg)
     mock_exec.assert_called_once_with(cfg)

@@ -90,7 +90,7 @@ The grid is defined via a **reference raster** (e.g., `sample_extent.tif`):
 Run the world grid pipeline:
 
 ```bash
-landseg pipeline=world-grid
+landseg command=world-grid
 ```
 
 This outputs a canonical grid artifact under:
@@ -347,7 +347,7 @@ pixel grid. The `data-harmonize` pipeline automatically:
 
 Execute harmonization:
 ```bash
-landseg pipeline=data-harmonize
+landseg command=data-harmonize
 ```
 
 ---

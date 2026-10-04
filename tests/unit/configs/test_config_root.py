@@ -49,7 +49,7 @@ def test_root_config_defaults_and_as_dict():
     assert isinstance(root.models, sec.ModelsConfig)
     assert isinstance(root.session, sec.SessionConfig)
     assert isinstance(root.study, sec.StudyConfig)
-    assert isinstance(root.pipeline, sec.PipelineConfig)
+    assert isinstance(root.command, sec.CommandConfig)
 
     # dictionary serialization test
     cfg_dict = root.as_dict

@@ -77,16 +77,15 @@ src/landseg/
 |-- configs/
 |   |-- hydra/
 |   |   |-- config.yaml           Point d'entree de composition Hydra
-|   |   |-- dataspecs/            Defaults des specifications de donnees
+|   |   |-- command/              Configs harmonize, ingest, prepare, train, eval et study
 |   |   |-- data/                 Defaults d'harmonisation, d'ingestion et de préparation
 |   |   |-- models/               Defaults des architectures modeles
-|   |   |-- pipeline/             Configs harmonize, ingest, prepare, train, eval et study
 |   |   |-- session/              Configs dataloader, moteur, taches et orchestration
 |   |   `-- study/                Defaults d'etude et de sweep
 |   `-- schema/
 |       |-- root.py               Schema structure racine
 |       |-- utils.py              Utilitaires de schema
-|       `-- sections/             Dataclasses par section: pipeline, session, models, etc.
+|       `-- sections/             Dataclasses par section: commands, session, models, data, etc.
 |
 |-- core/
 |   |-- data_specs.py             Contrat runtime de specification des donnees
@@ -94,18 +93,20 @@ src/landseg/
 |   `-- session_results.py        Sorties structurees des sessions
 |
 |-- execution/
-|   |-- executor.py               Point d'entree unifie d'execution
-|   `-- pipelines/
-|       |-- _registry.py          Lookup et enregistrement des pipelines
-|       |-- world_grid.py         Pipeline de génération de grille monde
-|       |-- data_harmonize.py     Pipeline d'harmonisation des données
-|       |-- data_ingest.py        Pipeline d'ingestion des données
-|       |-- data_prepare.py       Pipeline de préparation des données
-|       |-- model_train.py        Pipeline d'entrainement
-|       |-- model_evaluate.py     Pipeline d'evaluation
-|       |-- diagnose_overfit.py   Diagnostic d'overfit
-|       |-- study_sweep.py        Sweep d'hyperparametres
-|       `-- study_analysis.py     Analyse des resultats d'etude
+|   |-- executor.py               Point d'entree unifie de dispatch des commandes
+|   |-- pipelines/                Pipelines d'execution atomiques par etape
+|   |   |-- base.py               Gabarit ExecutionPipeline et execution de cycle de vie
+|   |   |-- world_grid.py         Pipeline de génération de grille monde
+|   |   |-- data_harmonize.py     Pipeline d'harmonisation des données
+|   |   |-- data_ingest.py        Pipeline d'ingestion des données
+|   |   |-- data_prepare.py       Pipeline de préparation des données
+|   |   |-- model_train.py        Pipeline d'entrainement
+|   |   `-- model_evaluate.py     Pipeline d'evaluation
+|   `-- workflows/                Workflows d'orchestration composites multi-etapes
+|       |-- batch_ingest.py       Ingestion par lots vers le pool de blocs
+|       |-- diagnose_overfit.py   Workflow de diagnostic de surapprentissage
+|       |-- study_sweep.py        Workflow d'orchestration de sweep Optuna
+|       `-- study_analysis.py     Workflow d'analyse des resultats d'etude
 |
 |-- geopipe/
 |   |-- contracts/                Schémas centraux de rapports et de transfert
