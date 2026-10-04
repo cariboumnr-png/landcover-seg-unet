@@ -142,35 +142,6 @@ class Pipeline(abc.ABC):
         self.logger: typing.Any = None
         self.pipeline_paths: typing.Any = self._resolve_pipeline_paths()
 
-    def _resolve_pipeline_paths(self) -> typing.Any:
-        '''Resolve canonical artifact paths based on pipeline name.'''
-        match self.pipeline_name:
-            case 'world-grid':
-                return None
-            case 'data-harmonize':
-                return self.artifact_paths.data_harmonization
-            case 'data-ingest':
-                return self.artifact_paths.data_ingestion
-            case 'data-prepare':
-                return self.artifact_paths.data_preparation
-            case 'model-train' | 'model-evaluate':
-                return self.artifact_paths.session
-            case _:
-                return None
-
-    @abc.abstractmethod
-    def _create_logger(self) -> typing.Any:
-        '''Instantiate and configure the logger for this pipeline.'''
-
-    def _initialize_run(self) -> None:
-        '''Initialize run directories, persist config, and open logger.'''
-        if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
-            self.pipeline_paths.init_pipeline_folders()
-            config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-            config_ctrl.persist(self.config.as_dict)
-
-        self.logger = self._create_logger()
-
     @abc.abstractmethod
     def run(self) -> typing.Any:
         '''Initialize a pipeline runner and run end-to-end process.'''
@@ -178,6 +149,10 @@ class Pipeline(abc.ABC):
     @abc.abstractmethod
     def validate(self) -> None:
         '''Validate pipeline environment and upstream requirements.'''
+
+    @abc.abstractmethod
+    def _create_logger(self) -> typing.Any:
+        '''Instantiate and configure the logger for this pipeline.'''
 
     def preflight(self) -> PreflightResult:
         '''
@@ -344,3 +319,28 @@ class Pipeline(abc.ABC):
             session_type=session_type,
         )
         return runner
+
+    def _initialize_run(self) -> None:
+        '''Initialize run directories, persist config, and open logger.'''
+        if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
+            self.pipeline_paths.init_pipeline_folders()
+            config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
+            config_ctrl.persist(self.config.as_dict)
+
+        self.logger = self._create_logger()
+
+    def _resolve_pipeline_paths(self) -> typing.Any:
+        '''Resolve canonical artifact paths based on pipeline name.'''
+        match self.pipeline_name:
+            case 'world-grid':
+                return None
+            case 'data-harmonize':
+                return self.artifact_paths.data_harmonization
+            case 'data-ingest':
+                return self.artifact_paths.data_ingestion
+            case 'data-prepare':
+                return self.artifact_paths.data_preparation
+            case 'model-train' | 'model-evaluate':
+                return self.artifact_paths.session
+            case _:
+                return None

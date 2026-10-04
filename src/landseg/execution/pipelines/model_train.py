@@ -53,20 +53,6 @@ class ModelTraining(base.Pipeline):
         '''Return upstream data preparation artifact paths.'''
         return self.artifact_paths.data_preparation
 
-    def _create_logger(self) -> session.SessionLogger:
-        '''Instantiate and configure the session logger.'''
-        logger = session.SessionLogger(
-            name='session',
-            log_file=self.pipeline_paths.report,
-            console_lvl=self.console_level,
-            enable_file_log=False,
-        )
-        logger.init_summary(
-            run_id=self.pipeline_paths.run_id,
-            command=self.config.command.name,
-        )
-        return logger
-
     def run(self) -> None:
         '''Initialize a pipeline runner and run training end-to-end.'''
         if self.dataspecs is None:
@@ -124,6 +110,20 @@ class ModelTraining(base.Pipeline):
             ids_domain_name=self.config.data.specification.domain_ids_name,
             vec_domain_name=self.config.data.specification.domain_vec_name,
         )
+
+    def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the session logger.'''
+        logger = session.SessionLogger(
+            name='session',
+            log_file=self.pipeline_paths.report,
+            console_lvl=self.console_level,
+            enable_file_log=False,
+        )
+        logger.init_summary(
+            run_id=self.pipeline_paths.run_id,
+            command=self.config.command.name,
+        )
+        return logger
 
     def _summarize_results(self, final: float) -> dict[str, typing.Any]:
         '''Summarize peak memory and log final results and metrics.'''

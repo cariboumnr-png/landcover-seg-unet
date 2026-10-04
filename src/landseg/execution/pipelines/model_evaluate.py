@@ -41,20 +41,6 @@ class ModelEvaluation(base.Pipeline):
     logger: session.SessionLogger | None
     pipeline_paths: artifacts.SessionPaths
 
-    def _create_logger(self) -> session.SessionLogger:
-        '''Instantiate and configure the session logger.'''
-        logger = session.SessionLogger(
-            name='session',
-            log_file=self.pipeline_paths.report,
-            console_lvl=self.console_level,
-            enable_file_log=False,
-        )
-        logger.init_summary(
-            run_id=self.pipeline_paths.run_id,
-            command=self.config.command.name,
-        )
-        return logger
-
     def run(self) -> float:
         '''Run model evaluation pipeline.'''
         if self.dataspecs is None:
@@ -148,3 +134,17 @@ class ModelEvaluation(base.Pipeline):
                 f'Evaluation split "{eval_config.split}" has no blocks '
                 'in prepared dataset.'
             )
+
+    def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the session logger.'''
+        logger = session.SessionLogger(
+            name='session',
+            log_file=self.pipeline_paths.report,
+            console_lvl=self.console_level,
+            enable_file_log=False,
+        )
+        logger.init_summary(
+            run_id=self.pipeline_paths.run_id,
+            command=self.config.command.name,
+        )
+        return logger

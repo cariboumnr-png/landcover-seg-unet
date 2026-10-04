@@ -47,16 +47,6 @@ class DataIngestion(base.Pipeline):
         '''Return upstream data harmonization artifact paths.'''
         return self.artifact_paths.data_harmonization
 
-    def _create_logger(self) -> ingest.IngestionLogger:
-        '''Instantiate and configure the ingestion logger.'''
-        logger = ingest.IngestionLogger(
-            name='data-ingest',
-            log_file=self.pipeline_paths.report,
-            enable_file_log=False,
-        )
-        logger.init_summary(run_id=self.pipeline_paths.run_id)
-        return logger
-
     def run(
         self,
         harmonization_record: contracts.HarmonizationRunRecord | None = None
@@ -146,3 +136,13 @@ class DataIngestion(base.Pipeline):
             dataset_schema_fpath=self.pipeline_paths.data_blocks.schema,
             config=self.config.data.ingestion,
         )
+
+    def _create_logger(self) -> ingest.IngestionLogger:
+        '''Instantiate and configure the ingestion logger.'''
+        logger = ingest.IngestionLogger(
+            name='data-ingest',
+            log_file=self.pipeline_paths.report,
+            enable_file_log=False,
+        )
+        logger.init_summary(run_id=self.pipeline_paths.run_id)
+        return logger

@@ -45,16 +45,6 @@ class WorldGridGeneration(base.Pipeline):
         '''Return world grid configuration.'''
         return self.config.data.world_grid
 
-    def _create_logger(self) -> grid.GridLogger:
-        '''Instantiate and configure the grid logger.'''
-        logger = grid.GridLogger(
-            name='world-grid',
-            log_file=grid.get_grid_report_fpath(self.grid_cfg.output_dpath),
-            enable_file_log=False,
-        )
-        logger.init_summary(run_id='world-grid')
-        return logger
-
     def run(self) -> None:
         '''Execute the world-grid pipeline.'''
         self.validate()
@@ -100,3 +90,13 @@ class WorldGridGeneration(base.Pipeline):
                 raise FileNotFoundError(
                     f'Reference raster for world-grid does not exist: {ref_fp}'
                 )
+
+    def _create_logger(self) -> grid.GridLogger:
+        '''Instantiate and configure the grid logger.'''
+        logger = grid.GridLogger(
+            name='world-grid',
+            log_file=grid.get_grid_report_fpath(self.grid_cfg.output_dpath),
+            enable_file_log=False,
+        )
+        logger.init_summary(run_id='world-grid')
+        return logger

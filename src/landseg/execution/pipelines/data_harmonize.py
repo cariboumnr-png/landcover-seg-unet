@@ -39,16 +39,6 @@ class DataHarmonization(base.Pipeline):
     logger: harmonize.HarmonizationLogger | None
     pipeline_paths: artifacts.HarmonizationPaths
 
-    def _create_logger(self) -> harmonize.HarmonizationLogger:
-        '''Instantiate and configure the harmonization logger.'''
-        logger = harmonize.HarmonizationLogger(
-            name='data-harmonize',
-            log_file=self.pipeline_paths.report,
-            enable_file_log=False,
-        )
-        logger.init_summary(run_id=self.pipeline_paths.run_id)
-        return logger
-
     def run(self) -> None:
         '''Execute data harmonization.'''
         if self.context is None:
@@ -105,3 +95,13 @@ class DataHarmonization(base.Pipeline):
             self.pipeline_paths.runs_manifest,
             self.config.data.harmonization
         )
+
+    def _create_logger(self) -> harmonize.HarmonizationLogger:
+        '''Instantiate and configure the harmonization logger.'''
+        logger = harmonize.HarmonizationLogger(
+            name='data-harmonize',
+            log_file=self.pipeline_paths.report,
+            enable_file_log=False,
+        )
+        logger.init_summary(run_id=self.pipeline_paths.run_id)
+        return logger

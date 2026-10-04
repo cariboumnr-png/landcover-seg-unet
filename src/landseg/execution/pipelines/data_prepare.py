@@ -48,16 +48,6 @@ class DataPreparation(base.Pipeline):
         '''Return upstream data ingestion artifact paths.'''
         return self.artifact_paths.data_ingestion
 
-    def _create_logger(self) -> prepare.PreparationLogger:
-        '''Instantiate and configure the preparation logger.'''
-        logger = prepare.PreparationLogger(
-            name='data-prep',
-            log_file=self.pipeline_paths.report,
-            enable_file_log=False,
-        )
-        logger.init_summary(run_id='prepare')
-        return logger
-
     def run(self) -> None:
         '''Run data preparation pipeline.'''
         if self.context is None:
@@ -107,3 +97,13 @@ class DataPreparation(base.Pipeline):
             )
 
         self.context = prepare.build_preparation_context(catalog_fp, schema_fp)
+
+    def _create_logger(self) -> prepare.PreparationLogger:
+        '''Instantiate and configure the preparation logger.'''
+        logger = prepare.PreparationLogger(
+            name='data-prep',
+            log_file=self.pipeline_paths.report,
+            enable_file_log=False,
+        )
+        logger.init_summary(run_id='prepare')
+        return logger
