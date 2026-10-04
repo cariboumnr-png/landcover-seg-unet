@@ -65,7 +65,7 @@ class ModelTraining(_PipelineBase):
         '''Instantiate and configure the session logger.'''
         logger = session.SessionLogger(
             name='session',
-            log_file=self.pipeline_paths.summary,
+            log_file=self.pipeline_paths.report,
             console_lvl=self.console_level,
             enable_file_log=False,
         )

@@ -58,16 +58,8 @@ class SessionPaths(base.PipelineArtifactsPaths):
         return os.path.join(self.checkpoints, 'status.json')
 
     @property
-    def config(self) -> str:
-        return os.path.join(self.effective_run_folder, 'config.json')
-
-    @property
     def evaluation(self) -> str:
         return os.path.join(self.effective_run_folder, 'evaluation.json')
-
-    @property
-    def summary(self) -> str:
-        return os.path.join(self.effective_run_folder, 'summary.json')
 
     @property
     def step_results(self) -> str:
@@ -80,7 +72,7 @@ class SessionPaths(base.PipelineArtifactsPaths):
         return os.path.join(self.checkpoints, f'{name}_last.pt')
 
     def _init_pipeline_folders(self):
-        os.makedirs(self.effective_run_folder, exist_ok=True)
+        super()._init_pipeline_folders()
         os.makedirs(self.checkpoints, exist_ok=True)
         os.makedirs(self.logs, exist_ok=True)
         os.makedirs(self.plots, exist_ok=True)

@@ -68,6 +68,11 @@ class PipelineArtifactsPaths:
         return os.path.basename(self.effective_run_folder)
 
     @property
+    def report(self) -> str:
+        '''Return the file path of the pipeline execution report.'''
+        return os.path.join(self.effective_run_folder, 'report.json')
+
+    @property
     def config(self) -> str:
         '''Return path to persisted configuration JSON.'''
         return os.path.join(self.effective_run_folder, 'config.json')
@@ -128,5 +133,6 @@ class PipelineArtifactsPaths:
         self._init_pipeline_folders()
         return self
 
-    def _init_pipeline_folders(self) -> None: ...
-        # leave for the subclass to implement
+    def _init_pipeline_folders(self) -> None:
+        os.makedirs(self.root, exist_ok=True)
+        os.makedirs(self.effective_run_folder, exist_ok=True)

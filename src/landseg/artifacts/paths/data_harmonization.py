@@ -46,16 +46,7 @@ class HarmonizationPaths(base.PipelineArtifactsPaths):
     def valid_mask_raster(self) -> str:
         return os.path.join(self.effective_run_folder, 'valid_pixel_mask.vrt')
 
-    @property
-    def report(self) -> str:
-        return os.path.join(self.effective_run_folder, 'harmonize_report.json')
-
-    @property
-    def config(self) -> str:
-        return os.path.join(self.effective_run_folder, 'config.json')
-
     def _init_pipeline_folders(self):
-        os.makedirs(self.root, exist_ok=True)
-        os.makedirs(self.effective_run_folder, exist_ok=True)
+        super()._init_pipeline_folders()
         if not os.path.exists(self.runs_manifest):
             controller.Controller[dict](self.runs_manifest).persist({})
