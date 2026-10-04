@@ -33,26 +33,19 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest as ingest
 
 
-# ----- typing aliases
-_PipelineBase = base.Pipeline[
-    ingest.IngestionContext,
-    ingest.IngestionLogger,
-    artifacts.IngestionPaths,
-]
-
-
 # ----- public classes
-class DataIngestion(_PipelineBase):
+class DataIngestion(base.Pipeline):
     '''Data ingestion pipeline.'''
+
+    pipeline_name: str = 'data-ingest'
+    context: ingest.IngestionContext | None
+    logger: ingest.IngestionLogger | None
+    pipeline_paths: artifacts.IngestionPaths
 
     @property
     def upstream_paths(self) -> artifacts.HarmonizationPaths:
         '''Return upstream data harmonization artifact paths.'''
         return self.artifact_paths.data_harmonization
-
-    def _resolve_pipeline_paths(self) -> artifacts.IngestionPaths:
-        '''Resolve and return data ingestion artifact paths.'''
-        return self.artifact_paths.data_ingestion
 
     def _create_logger(self) -> ingest.IngestionLogger:
         '''Instantiate and configure the ingestion logger.'''

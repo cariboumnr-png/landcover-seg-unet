@@ -25,6 +25,8 @@ Base pipeline ABC
 
 # standard imports
 import abc
+import dataclasses
+import enum
 import time
 import typing
 # third-party imports
@@ -39,13 +41,79 @@ import landseg.models as models
 import landseg.session as session
 
 
-ContextT = typing.TypeVar('ContextT')
-LoggerT = typing.TypeVar('LoggerT')
-PathsT = typing.TypeVar('PathsT')
+# ----- public types
+class ProbeStatus(enum.StrEnum):
+    '''Diagnostic probe execution status.'''
+
+    PASS = 'PASS'
+    WARN = 'WARN'
+    FAIL = 'FAIL'
+    SKIP = 'SKIP'
 
 
-class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT, PathsT]):
-    '''Pipeline ABC'''
+# ----- public dataclasses
+@dataclasses.dataclass(frozen=True)
+class ProbeResult:
+    '''Single diagnostic probe evaluation result.'''
+
+    probe_id: str
+    category: str
+    status: ProbeStatus
+    message: str
+    details: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
+
+
+@dataclasses.dataclass
+class PreflightResult:
+    '''Aggregated pre-flight inspection result for a pipeline.'''
+
+    target: str
+    status: str
+    probes: list[ProbeResult] = dataclasses.field(default_factory=list)
+    telemetry: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
+
+    @property
+    def is_ready(self) -> bool:
+        '''Return True if no probes have failed.'''
+        return all(p.status != ProbeStatus.FAIL for p in self.probes)
+
+    @property
+    def errors(self) -> list[str]:
+        '''Return error messages from failed probes.'''
+        return [p.message for p in self.probes if p.status == ProbeStatus.FAIL]
+
+    @property
+    def warnings(self) -> list[str]:
+        '''Return warning messages from warning probes.'''
+        return [p.message for p in self.probes if p.status == ProbeStatus.WARN]
+
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return dictionary representation for report serialization.'''
+        return {
+            'target': self.target,
+            'status': self.status,
+            'is_ready': self.is_ready,
+            'probes': [
+                {
+                    'probe_id': p.probe_id,
+                    'category': p.category,
+                    'status': p.status.value,
+                    'message': p.message,
+                    'details': p.details,
+                }
+                for p in self.probes
+            ],
+            'errors': self.errors,
+            'warnings': self.warnings,
+            'telemetry': self.telemetry,
+        }
+
+
+# ----- public classes
+class Pipeline(abc.ABC):
+    '''Base pipeline runner class.'''
+
+    pipeline_name: str = 'unknown'
 
     def __init__(
         self,
@@ -69,17 +137,29 @@ class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT, PathsT]):
         )
 
         self.timer: dict[str, float] = {}
-        self.context: ContextT | None = None
+        self.context: typing.Any = None
         self.dataspecs: core.DataSpecs | None = None
-        self.logger: LoggerT | None = None
-        self.pipeline_paths: PathsT = self._resolve_pipeline_paths()
+        self.logger: typing.Any = None
+        self.pipeline_paths: typing.Any = self._resolve_pipeline_paths()
+
+    def _resolve_pipeline_paths(self) -> typing.Any:
+        '''Resolve canonical artifact paths based on pipeline name.'''
+        match self.pipeline_name:
+            case 'world-grid':
+                return None
+            case 'data-harmonize':
+                return self.artifact_paths.data_harmonization
+            case 'data-ingest':
+                return self.artifact_paths.data_ingestion
+            case 'data-prepare':
+                return self.artifact_paths.data_preparation
+            case 'model-train' | 'model-evaluate':
+                return self.artifact_paths.session
+            case _:
+                return None
 
     @abc.abstractmethod
-    def _resolve_pipeline_paths(self) -> PathsT:
-        '''Resolve and return the canonical paths object for this pipeline.'''
-
-    @abc.abstractmethod
-    def _create_logger(self) -> LoggerT:
+    def _create_logger(self) -> typing.Any:
         '''Instantiate and configure the logger for this pipeline.'''
 
     def _initialize_run(self) -> None:
@@ -98,6 +178,51 @@ class Pipeline(abc.ABC, typing.Generic[ContextT, LoggerT, PathsT]):
     @abc.abstractmethod
     def validate(self) -> None:
         '''Validate pipeline environment and upstream requirements.'''
+
+    def preflight(self) -> PreflightResult:
+        '''
+        Run pre-flight validation probes without committing compute.
+
+        Evaluates pipeline prerequisites non-destructively, returning
+        structured probe diagnostics and overall readiness status. Subclasses
+        can override or extend this method with domain-specific probes.
+
+        Returns:
+            PreflightResult:
+                Aggregated readiness evaluation and diagnostic probe results.
+        '''
+        probes: list[ProbeResult] = []
+        try:
+            self.validate()
+            probes.append(
+                ProbeResult(
+                    probe_id='pipeline_prerequisites',
+                    category='lineage',
+                    status=ProbeStatus.PASS,
+                    message=(
+                        f'Prerequisites verified for pipeline '
+                        f'"{self.pipeline_name}".'
+                    ),
+                )
+            )
+            status = 'READY'
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            probes.append(
+                ProbeResult(
+                    probe_id='pipeline_prerequisites',
+                    category='lineage',
+                    status=ProbeStatus.FAIL,
+                    message=str(err),
+                    details={'error_type': type(err).__name__},
+                )
+            )
+            status = 'BLOCKED'
+
+        return PreflightResult(
+            target=self.pipeline_name,
+            status=status,
+            probes=probes,
+        )
 
     @typing.overload
     def build_session_runner(

@@ -29,19 +29,22 @@ Pipieline schema
 # standard imports
 import dataclasses
 
-# alias
+# ----- typing aliases
 field = dataclasses.field
 
-# ------------------------------PIPELINE  CONFIGS------------------------------
+
+# ----- private dataclasses
 @dataclasses.dataclass
 class _TrainModel:
     pass  # training uses session config only (for now)
+
 
 @dataclasses.dataclass
 class _EvaluateModel:
     checkpoint: str | None = None
     split: str = 'test'
     export_previews: bool = False
+
 
 @dataclasses.dataclass
 class _StudySweep:
@@ -52,9 +55,21 @@ class _StudySweep:
     n_trials: int = 50
     seed: int = 42
 
+
+@dataclasses.dataclass
+class _PreflightConfig:
+    target: str = 'all'
+    strict: bool = False
+    export_report: bool = True
+    report_path: str | None = None
+    check_gpu: bool = True
+
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class CommandConfig:
     name: str = 'default'
+    preflight: _PreflightConfig = field(default_factory=_PreflightConfig)
     model_train: _TrainModel = field(default_factory=_TrainModel)
     model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
     study_sweep: _StudySweep = field(default_factory=_StudySweep)

@@ -34,6 +34,11 @@ import importlib
 import typing
 
 __all__ = [
+    # types
+    'Pipeline',
+    'PreflightResult',
+    'ProbeResult',
+    'ProbeStatus',
     # functions
     'DataHarmonization',
     'DataIngestion',
@@ -46,6 +51,12 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .base import (
+        Pipeline,
+        PreflightResult,
+        ProbeResult,
+        ProbeStatus,
+    )
     from .data_harmonize import (
         DataHarmonization,
     )
@@ -69,6 +80,9 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {'Pipeline', 'PreflightResult', 'ProbeResult', 'ProbeStatus'}:
+        obj = importlib.import_module('.base', __package__)
+        return getattr(obj, name)
 
     if name in {'DataHarmonization'}:
         obj = importlib.import_module('.data_harmonize', __package__)

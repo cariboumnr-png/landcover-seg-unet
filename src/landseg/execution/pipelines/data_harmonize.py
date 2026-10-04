@@ -30,21 +30,14 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize as harmonize
 
 
-# ----- typing aliases
-_PipelineBase = base.Pipeline[
-    harmonize.HarmonizationContext,
-    harmonize.HarmonizationLogger,
-    artifacts.HarmonizationPaths,
-]
-
-
 # ----- public classes
-class DataHarmonization(_PipelineBase):
+class DataHarmonization(base.Pipeline):
     '''Data harmonization pipeline.'''
 
-    def _resolve_pipeline_paths(self) -> artifacts.HarmonizationPaths:
-        '''Resolve and return data harmonization artifact paths.'''
-        return self.artifact_paths.data_harmonization
+    pipeline_name: str = 'data-harmonize'
+    context: harmonize.HarmonizationContext | None
+    logger: harmonize.HarmonizationLogger | None
+    pipeline_paths: artifacts.HarmonizationPaths
 
     def _create_logger(self) -> harmonize.HarmonizationLogger:
         '''Instantiate and configure the harmonization logger.'''

@@ -38,9 +38,16 @@ def test_command_config_defaults():
     '''
     cfg = commands.CommandConfig()
     assert cfg.name == 'default'
+    assert isinstance(cfg.preflight, commands._PreflightConfig)
     assert isinstance(cfg.model_train, commands._TrainModel)
     assert isinstance(cfg.model_evaluate, commands._EvaluateModel)
     assert isinstance(cfg.study_sweep, commands._StudySweep)
+
+    assert cfg.preflight.target == 'all'
+    assert cfg.preflight.strict is False
+    assert cfg.preflight.export_report is True
+    assert cfg.preflight.report_path is None
+    assert cfg.preflight.check_gpu is True
 
     assert cfg.model_evaluate.checkpoint is None
     assert cfg.model_evaluate.split == 'test'
@@ -57,6 +64,10 @@ def test_command_config_custom_initialization():
     When: Instantiating `CommandConfig` with custom sub-configurations.
     Then: Store specified sub-configurations on attributes.
     '''
+    preflight_cfg = commands._PreflightConfig(
+        target='model-train',
+        strict=True,
+    )
     eval_cfg = commands._EvaluateModel(
         checkpoint='/path/to/ckpt.pt',
         split='val',
@@ -68,13 +79,17 @@ def test_command_config_custom_initialization():
     )
     cfg = commands.CommandConfig(
         name='experiment_1',
+        preflight=preflight_cfg,
         model_evaluate=eval_cfg,
         study_sweep=sweep_cfg,
     )
 
     assert cfg.name == 'experiment_1'
+    assert cfg.preflight.target == 'model-train'
+    assert cfg.preflight.strict is True
     assert cfg.model_evaluate.checkpoint == '/path/to/ckpt.pt'
     assert cfg.model_evaluate.split == 'val'
     assert cfg.model_evaluate.export_previews is True
     assert cfg.study_sweep.study_name == 'custom_study'
     assert cfg.study_sweep.n_trials == 100
+

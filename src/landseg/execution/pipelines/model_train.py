@@ -34,32 +34,24 @@ import psutil
 import torch
 # local imports
 import landseg.artifacts as artifacts
-import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
 
 
-# ----- typing aliases
-_PipelineBase = base.Pipeline[
-    core.DataSpecs,
-    session.SessionLogger,
-    artifacts.SessionPaths,
-]
-
-
 # ----- public classes
-class ModelTraining(_PipelineBase):
+class ModelTraining(base.Pipeline):
     '''Model train pipeline runner class.'''
+
+    pipeline_name: str = 'model-train'
+    context: None
+    logger: session.SessionLogger | None
+    pipeline_paths: artifacts.SessionPaths
 
     @property
     def upstream_paths(self) -> artifacts.PreparationPaths:
         '''Return upstream data preparation artifact paths.'''
         return self.artifact_paths.data_preparation
-
-    def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:
-        '''Resolve and return session artifact paths.'''
-        return self.artifact_paths.session
 
     def _create_logger(self) -> session.SessionLogger:
         '''Instantiate and configure the session logger.'''

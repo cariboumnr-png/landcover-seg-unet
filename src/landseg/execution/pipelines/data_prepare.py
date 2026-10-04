@@ -34,26 +34,19 @@ import landseg.execution.pipelines.base as base
 import landseg.geopipe.prepare as prepare
 
 
-# ----- typing aliases
-_PipelineBase = base.Pipeline[
-    prepare.PreparationContext,
-    prepare.PreparationLogger,
-    artifacts.PreparationPaths,
-]
-
-
 # ----- public classes
-class DataPreparation(_PipelineBase):
+class DataPreparation(base.Pipeline):
     '''Data preparation pipeline.'''
+
+    pipeline_name: str = 'data-prepare'
+    context: prepare.PreparationContext | None
+    logger: prepare.PreparationLogger | None
+    pipeline_paths: artifacts.PreparationPaths
 
     @property
     def upstream_paths(self) -> artifacts.IngestionPaths:
         '''Return upstream data ingestion artifact paths.'''
         return self.artifact_paths.data_ingestion
-
-    def _resolve_pipeline_paths(self) -> artifacts.PreparationPaths:
-        '''Resolve and return data preparation artifact paths.'''
-        return self.artifact_paths.data_preparation
 
     def _create_logger(self) -> prepare.PreparationLogger:
         '''Instantiate and configure the preparation logger.'''

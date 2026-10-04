@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-branches
+
 '''
 Pipeline execution
 '''
@@ -41,6 +43,7 @@ COMMANDS = typing.Literal[
     'model-evaluate',
     'model-train',
     'batch-ingest',
+    'preflight',
     'study-analysis',
     'study-sweep'
 ]
@@ -55,6 +58,9 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     match command:
         case 'default':
             workflows.execute_default_action(root_config)
+
+        case 'preflight':
+            results = _dispatch_preflight(root_config)
 
         case 'world-grid':
             pipelines.WorldGridGeneration(root_config).run()
@@ -90,3 +96,41 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
             raise KeyError(f'Unknown command: {command}; allowed: {COMMANDS}')
 
     return results
+
+
+# ----- private helpers
+def _dispatch_preflight(root_config: configs.RootConfig) -> typing.Any:
+    '''Dispatch pre-flight checks for target pipeline(s).'''
+    target = root_config.command.preflight.target
+    pipeline_runners: dict[str, typing.Callable[[], typing.Any]] = {
+        'world-grid': lambda: (
+            pipelines.WorldGridGeneration(root_config).preflight()
+        ),
+        'data-harmonize': lambda: (
+            pipelines.DataHarmonization(root_config).preflight()
+        ),
+        'data-ingest': lambda: (
+            pipelines.DataIngestion(root_config).preflight()
+        ),
+        'data-prepare': lambda: (
+            pipelines.DataPreparation(root_config).preflight()
+        ),
+        'model-train': lambda: (
+            pipelines.ModelTraining(root_config).preflight()
+        ),
+        'model-evaluate': lambda: (
+            pipelines.ModelEvaluation(root_config).preflight()
+        ),
+    }
+
+    if target in pipeline_runners:
+        return pipeline_runners[target]()
+
+    if target == 'all':
+        return [runner_fn() for runner_fn in pipeline_runners.values()]
+
+    allowed = sorted(list(pipeline_runners.keys()) + ['all'])
+    raise KeyError(
+        f'Target "{target}" not supported for pipeline preflight; '
+        f'allowed: {allowed}'
+    )

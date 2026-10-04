@@ -31,26 +31,19 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
 
 
-# ----- typing aliases
-_PipelineBase = base.Pipeline[
-    None,
-    grid.GridLogger,
-    None,
-]
-
-
 # ----- public classes
-class WorldGridGeneration(_PipelineBase):
+class WorldGridGeneration(base.Pipeline):
     '''World grid generation pipeline.'''
+
+    pipeline_name: str = 'world-grid'
+    context: None
+    logger: grid.GridLogger | None
+    pipeline_paths: None
 
     @property
     def grid_cfg(self):
         '''Return world grid configuration.'''
         return self.config.data.world_grid
-
-    def _resolve_pipeline_paths(self) -> None:
-        '''World grid does not use an artifacts pipeline paths container.'''
-        return None
 
     def _create_logger(self) -> grid.GridLogger:
         '''Instantiate and configure the grid logger.'''

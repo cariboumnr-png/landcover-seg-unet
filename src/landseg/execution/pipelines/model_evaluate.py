@@ -27,27 +27,19 @@ Evaluating a model.
 import os
 # local imports
 import landseg.artifacts as artifacts
-import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
 
 
-# ----- typing aliases
-_PipelineBase = base.Pipeline[
-    core.DataSpecs,
-    session.SessionLogger,
-    artifacts.SessionPaths,
-]
-
-
 # ----- public classes
-class ModelEvaluation(_PipelineBase):
+class ModelEvaluation(base.Pipeline):
     '''Model evaluation pipeline.'''
 
-    def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:
-        '''Resolve and return session artifact paths.'''
-        return self.artifact_paths.session
+    pipeline_name: str = 'model-evaluate'
+    context: None
+    logger: session.SessionLogger | None
+    pipeline_paths: artifacts.SessionPaths
 
     def _create_logger(self) -> session.SessionLogger:
         '''Instantiate and configure the session logger.'''
