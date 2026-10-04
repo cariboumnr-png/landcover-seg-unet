@@ -40,7 +40,7 @@ import landseg.session as session
 
 
 # ----- public classes
-class ModelTraining(base.Pipeline):
+class ModelTraining(base.SessionPipeline):
     '''Model train pipeline runner class.'''
 
     pipeline_name: str = 'model-train'

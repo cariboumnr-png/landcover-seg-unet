@@ -29,7 +29,7 @@ import landseg.execution.preflight as preflight
 
 
 # ----- test helper classes
-class _DummySuccessPipeline(base.Pipeline):
+class _DummySuccessPipeline(base.BasePipeline):
     '''Concrete pipeline implementation with passing validation.'''
 
     pipeline_name = 'dummy-pipeline'
@@ -44,7 +44,7 @@ class _DummySuccessPipeline(base.Pipeline):
         pass
 
 
-class _DummyFailingPipeline(base.Pipeline):
+class _DummyFailingPipeline(base.BasePipeline):
     '''Concrete pipeline implementation that raises on validation.'''
 
     pipeline_name = 'failing-pipeline'

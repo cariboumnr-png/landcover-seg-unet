@@ -35,7 +35,9 @@ import typing
 
 __all__ = [
     # types
-    'Pipeline',
+    'BasePipeline',
+    'GeoPipeline',
+    'SessionPipeline',
     # functions
     'DataHarmonization',
     'DataIngestion',
@@ -49,7 +51,9 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .base import (
-        Pipeline,
+        BasePipeline,
+        GeoPipeline,
+        SessionPipeline,
     )
     from .data_harmonize import (
         DataHarmonization,
@@ -74,7 +78,7 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'Pipeline'}:
+    if name in {'BasePipeline', 'GeoPipeline', 'SessionPipeline'}:
         obj = importlib.import_module('.base', __package__)
         return getattr(obj, name)
 

@@ -32,7 +32,7 @@ import landseg.geopipe.grid as grid
 
 
 # ----- public classes
-class WorldGridGeneration(base.Pipeline):
+class WorldGridGeneration(base.GeoPipeline):
     '''World grid generation pipeline.'''
 
     pipeline_name: str = 'world-grid'

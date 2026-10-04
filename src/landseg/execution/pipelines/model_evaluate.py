@@ -33,7 +33,7 @@ import landseg.session as session
 
 
 # ----- public classes
-class ModelEvaluation(base.Pipeline):
+class ModelEvaluation(base.SessionPipeline):
     '''Model evaluation pipeline.'''
 
     pipeline_name: str = 'model-evaluate'

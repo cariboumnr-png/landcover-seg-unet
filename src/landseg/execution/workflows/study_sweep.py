@@ -75,8 +75,9 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
             disable_console_logging=True
         )
 
-        logger = training_pipeline.logger
         runner = training_pipeline.build_session_runner(mode_override='continuous')
+        logger = training_pipeline.logger
+        assert logger is not None
 
         try:
             yield from runner.run()

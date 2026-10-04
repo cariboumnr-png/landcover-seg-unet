@@ -20,7 +20,15 @@
 # =========================================================================== #
 
 '''
-Base pipeline ABC
+Base pipeline abstractions.
+
+Provides common foundation, geospatial data pipeline, and machine
+learning session pipeline base classes.
+
+Public APIs:
+    - `BasePipeline`: Root abstract pipeline runner class.
+    - `GeoPipeline`: Base class for geospatial data pipelines.
+    - `SessionPipeline`: Base class for neural network session pipelines.
 '''
 
 # standard imports
@@ -40,8 +48,8 @@ import landseg.session as session
 
 
 # ----- public classes
-class Pipeline(abc.ABC):
-    '''Base pipeline runner class.'''
+class BasePipeline(abc.ABC):
+    '''Base pipeline runner class common to all pipelines.'''
 
     pipeline_name: str = 'unknown'
 
@@ -52,23 +60,20 @@ class Pipeline(abc.ABC):
         artifact_paths: artifacts.ArtifactPaths | None = None,
         disable_console_logging: bool = False
     ) -> None:
-        '''Init'''
+        '''Initialize common pipeline configuration and attributes.'''
         self.config = config
-
-        if artifact_paths is None:
-            self.artifact_paths = artifacts.ArtifactPaths.from_config(self.config)
-        else:
-            self.artifact_paths = artifact_paths
-
+        self.artifact_paths = (
+            artifact_paths
+            if artifact_paths is not None
+            else artifacts.ArtifactPaths.from_config(self.config)
+        )
         self.console_level = (
             None
             if disable_console_logging
             else self.config.execution.console_level
         )
-
         self.timer: dict[str, float] = {}
         self.context: typing.Any = None
-        self.dataspecs: core.DataSpecs | None = None
         self.logger: typing.Any = None
         self.pipeline_paths: typing.Any = self._resolve_pipeline_paths()
 
@@ -83,6 +88,66 @@ class Pipeline(abc.ABC):
     @abc.abstractmethod
     def _create_logger(self) -> typing.Any:
         '''Instantiate and configure the logger for this pipeline.'''
+
+    def _initialize_run(self) -> None:
+        '''Initialize run directories, persist config, and open logger.'''
+        if self.logger is not None:
+            return
+
+        if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
+            self.pipeline_paths.init_pipeline_folders()
+            config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
+            config_ctrl.persist(self.config.as_dict)
+
+        self.logger = self._create_logger()
+
+    def _resolve_pipeline_paths(self) -> typing.Any:
+        '''Resolve canonical artifact paths based on pipeline name.'''
+        return None
+
+
+class GeoPipeline(BasePipeline):
+    '''Base class for geospatial data pipelines.'''
+
+    def _resolve_pipeline_paths(self) -> typing.Any:
+        '''Resolve canonical artifact paths for geospatial pipelines.'''
+        match self.pipeline_name:
+            case 'world-grid':
+                return None
+            case 'data-harmonize':
+                return self.artifact_paths.data_harmonization
+            case 'data-ingest':
+                return self.artifact_paths.data_ingestion
+            case 'data-prepare':
+                return self.artifact_paths.data_preparation
+            case _:
+                return None
+
+
+class SessionPipeline(BasePipeline):
+    '''Base class for neural network session pipelines.'''
+
+    logger: session.SessionLogger | None
+    pipeline_paths: artifacts.SessionPaths
+
+    def __init__(
+        self,
+        config: configs.RootConfig,
+        *,
+        artifact_paths: artifacts.ArtifactPaths | None = None,
+        disable_console_logging: bool = False
+    ) -> None:
+        '''Initialize session pipeline with dataspecs cache.'''
+        super().__init__(
+            config,
+            artifact_paths=artifact_paths,
+            disable_console_logging=disable_console_logging
+        )
+        self.dataspecs: core.DataSpecs | None = None
+
+    def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:
+        '''Resolve session artifact paths.'''
+        return self.artifact_paths.session
 
     @typing.overload
     def build_session_runner(
@@ -121,13 +186,22 @@ class Pipeline(abc.ABC):
         *,
         mode_override: typing.Literal['continuous', 'curriculum', 'evaluate'] | None = None,
         eval_split: typing.Literal['val', 'test'] = 'val',
-    ) -> session.EpochRunner | session.ContinuousRunner | session.CurriculumRunner :
-        '''doc.'''
-        if not isinstance(self.logger, session.SessionLogger):
-            raise ValueError(
-                '"build_session_runner()" method only works when the pipeline '
-                'is either "model-train" or "model-evaluate".'
-            )
+    ) -> session.EpochRunner | session.ContinuousRunner | session.CurriculumRunner:
+        '''
+        Assemble dataspecs, model, and return configured session runner.
+
+        Args:
+            mode_override:
+                optional session mode to override configuration.
+            eval_split:
+                dataset split to use during evaluation.
+
+        Returns:
+            session.EpochRunner | session.ContinuousRunner | session.CurriculumRunner:
+                instantiated session runner.
+        '''
+        self._initialize_run()
+        assert isinstance(self.logger, session.SessionLogger)
 
         # collect artifacts and build `DataSpecs` if not already cached
         if self.dataspecs is not None:
@@ -168,7 +242,7 @@ class Pipeline(abc.ABC):
         trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.logger.set_inputs({
             'system': {
-                'device':c.DEVICE_NAME,
+                'device': c.DEVICE_NAME,
                 'torch_version': torch.__version__
             },
             'model': {
@@ -191,7 +265,7 @@ class Pipeline(abc.ABC):
             case 'curriculum': session_type = 'curriculum'
             case None: session_type = self.config.session.training_mode
 
-        runner = session.build_session_runner(
+        return session.build_session_runner(
             dataspecs=dataspecs,
             model=model,
             config=self.config.session,
@@ -203,29 +277,3 @@ class Pipeline(abc.ABC):
             ),
             session_type=session_type,
         )
-        return runner
-
-    def _initialize_run(self) -> None:
-        '''Initialize run directories, persist config, and open logger.'''
-        if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
-            self.pipeline_paths.init_pipeline_folders()
-            config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-            config_ctrl.persist(self.config.as_dict)
-
-        self.logger = self._create_logger()
-
-    def _resolve_pipeline_paths(self) -> typing.Any:
-        '''Resolve canonical artifact paths based on pipeline name.'''
-        match self.pipeline_name:
-            case 'world-grid':
-                return None
-            case 'data-harmonize':
-                return self.artifact_paths.data_harmonization
-            case 'data-ingest':
-                return self.artifact_paths.data_ingestion
-            case 'data-prepare':
-                return self.artifact_paths.data_preparation
-            case 'model-train' | 'model-evaluate':
-                return self.artifact_paths.session
-            case _:
-                return None

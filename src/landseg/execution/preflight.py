@@ -113,7 +113,7 @@ class PreflightResult:
 
 
 # ----- public functions
-def inspect_pipeline(pipeline: base.Pipeline) -> PreflightResult:
+def inspect_pipeline(pipeline: base.BasePipeline) -> PreflightResult:
     '''
     Run pre-flight validation probes on a pipeline non-destructively.
 

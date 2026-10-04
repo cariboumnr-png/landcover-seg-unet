@@ -34,7 +34,7 @@ import landseg.geopipe.ingest as ingest
 
 
 # ----- public classes
-class DataIngestion(base.Pipeline):
+class DataIngestion(base.GeoPipeline):
     '''Data ingestion pipeline.'''
 
     pipeline_name: str = 'data-ingest'

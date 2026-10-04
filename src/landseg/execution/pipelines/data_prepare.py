@@ -35,7 +35,7 @@ import landseg.geopipe.prepare as prepare
 
 
 # ----- public classes
-class DataPreparation(base.Pipeline):
+class DataPreparation(base.GeoPipeline):
     '''Data preparation pipeline.'''
 
     pipeline_name: str = 'data-prepare'

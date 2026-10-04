@@ -31,7 +31,7 @@ import landseg.geopipe.harmonize as harmonize
 
 
 # ----- public classes
-class DataHarmonization(base.Pipeline):
+class DataHarmonization(base.GeoPipeline):
     '''Data harmonization pipeline.'''
 
     pipeline_name: str = 'data-harmonize'
