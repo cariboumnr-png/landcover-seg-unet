@@ -41,7 +41,7 @@ __all__ = [
     # functions
     'export_preflight_report',
     'format_preflight_report',
-    'inspect_pipeline',
+    'inspect_target',
     'run_preflight',
 ]
 
@@ -50,7 +50,7 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from . import probes
     from .engine import (
-        inspect_pipeline,
+        inspect_target,
         run_preflight,
     )
     from .reporter import (
@@ -72,7 +72,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.schema', __package__)
         return getattr(obj, name)
 
-    if name in {'inspect_pipeline', 'run_preflight'}:
+    if name in {'inspect_target', 'run_preflight'}:
         obj = importlib.import_module('.engine', __package__)
         return getattr(obj, name)
 

@@ -34,7 +34,7 @@ import typing
 __all__ = [
     # typing
     'execute_pipeline',
-    'inspect_pipeline',
+    'inspect_target',
     'run_preflight',
 ]
 
@@ -45,7 +45,7 @@ if typing.TYPE_CHECKING:
         execute_pipeline,
     )
     from .preflight import (
-        inspect_pipeline,
+        inspect_target,
         run_preflight,
     )
 
@@ -55,7 +55,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.executor', __package__)
         return getattr(obj, name)
 
-    if name in {'inspect_pipeline', 'run_preflight'}:
+    if name in {'inspect_target', 'run_preflight'}:
         obj = importlib.import_module('.preflight', __package__)
         return getattr(obj, name)
 

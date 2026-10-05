@@ -42,6 +42,7 @@ import landseg.execution.preflight.schema as schema
 def probe_hardware(
     check_gpu: bool = True,
     telemetry: dict[str, typing.Any] | None = None,
+    root_config: typing.Any = None,
 ) -> list[schema.ProbeResult]:
     '''
     Inspect compute accelerator availability and system hardware state.
@@ -51,6 +52,8 @@ def probe_hardware(
             whether GPU accelerator availability should be verified.
         telemetry:
             optional dictionary to populate with hardware metadata.
+        root_config:
+            optional root configuration for batch tensor memory estimate.
 
     Returns:
         list[schema.ProbeResult]:
@@ -76,6 +79,46 @@ def probe_hardware(
                     details={'device_name': device_name, 'cuda': True},
                 )
             )
+            try:
+                free_b, total_b = torch.cuda.mem_get_info(0)
+                free_gb = free_b / (1024 ** 3)
+                batch_size = (
+                    root_config.session.data_loader.batch_size
+                    if root_config is not None
+                    and hasattr(root_config, 'session')
+                    and hasattr(root_config.session, 'data_loader')
+                    else 16
+                )
+                # estimate B * C * H * W * 4 bytes * 10x overhead factor
+                est_b = batch_size * 4 * 256 * 256 * 4 * 10
+                est_gb = est_b / (1024 ** 3)
+                vram_status = (
+                    schema.ProbeStatus.PASS
+                    if free_b >= est_b
+                    else schema.ProbeStatus.WARN
+                )
+                probes.append(
+                    schema.ProbeResult(
+                        probe_id='vram_headroom',
+                        category='hardware',
+                        status=vram_status,
+                        message=(
+                            f'{free_gb:.1f} GB free / '
+                            f'~{est_gb:.1f} GB est. batch'
+                        ),
+                        details={
+                            'vram_free_bytes': free_b,
+                            'total_bytes': total_b,
+                            'estimated_batch_bytes': est_b,
+                        },
+                    )
+                )
+                if telemetry is not None:
+                    telemetry['vram_free_gb'] = round(free_gb, 2)
+                    total_gb = total_b / (1024 ** 3)
+                    telemetry['vram_total_gb'] = round(total_gb, 2)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
         else:
             probes.append(
                 schema.ProbeResult(

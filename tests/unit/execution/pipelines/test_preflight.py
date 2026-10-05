@@ -64,17 +64,17 @@ class _DummyFailingPipeline(base.BasePipeline):
         raise RuntimeError('Missing upstream artifact')
 
 
-# ----- `inspect_pipeline` tests
-def test_inspect_pipeline_success():
+# ----- `inspect_target` tests
+def test_inspect_target_success():
     '''
     Given: A pipeline whose `validate()` method succeeds without error.
-    When: `inspect_pipeline()` is called on the pipeline runner.
+    When: `inspect_target()` is called on the pipeline runner.
     Then: Return a READY result with a passing prerequisite probe.
     '''
     config = configs.RootConfig()
     runner = _DummySuccessPipeline(config)
 
-    result = preflight.inspect_pipeline(runner)
+    result = preflight.inspect_target(runner)
 
     assert isinstance(result, preflight.PreflightResult)
     assert result.target == 'dummy-pipeline'
@@ -90,16 +90,16 @@ def test_inspect_pipeline_success():
     )
 
 
-def test_inspect_pipeline_failure():
+def test_inspect_target_failure():
     '''
     Given: A pipeline whose `validate()` method raises a RuntimeError.
-    When: `inspect_pipeline()` is called on the pipeline runner.
+    When: `inspect_target()` is called on the pipeline runner.
     Then: Return a BLOCKED result capturing the failure in probe errors.
     '''
     config = configs.RootConfig()
     runner = _DummyFailingPipeline(config)
 
-    result = preflight.inspect_pipeline(runner)
+    result = preflight.inspect_target(runner)
 
     assert isinstance(result, preflight.PreflightResult)
     assert result.target == 'failing-pipeline'
@@ -144,6 +144,72 @@ def test_probe_storage():
     assert len(results) == 1
     assert results[0].category == 'storage'
     assert results[0].probe_id == 'output_directory'
+
+
+def test_probe_spatial():
+    '''
+    Given: A target and RootConfig.
+    When: `probe_spatial` is called.
+    Then: Return crs_validity, pixel_resolution, and block_dimensions.
+    '''
+    cfg = configs.RootConfig()
+    results = preflight.probes.probe_spatial('world-grid', cfg)
+    probe_ids = [p.probe_id for p in results]
+    assert 'crs_validity' in probe_ids
+    assert 'pixel_resolution' in probe_ids
+    assert 'block_dimensions' in probe_ids
+
+
+def test_probe_ledger(tmp_path):
+    '''
+    Given: A RootConfig pointing to a temporary experiment root.
+    When: `probe_ledger` is called for data-ingest.
+    Then: Return ledger diagnostic probe records.
+    '''
+    cfg = configs.RootConfig()
+    cfg.execution.exp_root = str(tmp_path / 'exp')
+    results = preflight.probes.probe_ledger('data-ingest', cfg)
+    assert any(p.probe_id == 'harmonize_ledger' for p in results)
+
+
+def test_probe_model():
+    '''
+    Given: A model-train target.
+    When: `probe_model` is called.
+    Then: Verify backbone_registry and channel_compatibility probes.
+    '''
+    cfg = configs.RootConfig()
+    results = preflight.probes.probe_model('model-train', cfg)
+    probe_ids = [p.probe_id for p in results]
+    assert 'backbone_registry' in probe_ids
+    assert 'channel_compatibility' in probe_ids
+
+
+def test_probe_study():
+    '''
+    Given: A study-sweep target.
+    When: `probe_study` is called.
+    Then: Return study_schema probe result.
+    '''
+    cfg = configs.RootConfig()
+    results = preflight.probes.probe_study('study-sweep', cfg)
+    assert any(p.probe_id == 'study_schema' for p in results)
+
+
+def test_inspect_target():
+    '''
+    Given: An execution target (batch-ingest).
+    When: `inspect_target` is invoked.
+    Then: Return a valid PreflightResult with diagnostic probes.
+    '''
+    cfg = configs.RootConfig()
+    result = preflight.inspect_target('batch-ingest', cfg)
+    assert isinstance(result, preflight.PreflightResult)
+    assert result.target == 'batch-ingest'
+    probe_ids = [p.probe_id for p in result.probes]
+    assert 'harmonize_ledger' in probe_ids
+    assert 'pending_batch_queue' in probe_ids
+    assert 'collision_policy' in probe_ids
 
 
 def test_preflight_result_serialization():
@@ -372,7 +438,7 @@ def test_run_preflight_dispatch_all_targets(tmp_path, monkeypatch):
     '''
     Given: A valid RootConfig with target='all'.
     When: `run_preflight()` is invoked.
-    Then: Return a list of PreflightResults for all 6 pipelines.
+    Then: Return a list of PreflightResults for all 10 targets.
     '''
     monkeypatch.setattr(
         pipelines.WorldGridGeneration, 'validate', lambda self: None
@@ -398,10 +464,12 @@ def test_run_preflight_dispatch_all_targets(tmp_path, monkeypatch):
     results = preflight.run_preflight(cfg, target='all')
 
     assert isinstance(results, list)
-    assert len(results) == 6
+    assert len(results) == 10
     targets = [r.target for r in results]
     assert 'world-grid' in targets
     assert 'model-train' in targets
+    assert 'batch-ingest' in targets
+    assert 'study-sweep' in targets
 
 
 def test_run_preflight_strict_mode_failure(tmp_path, monkeypatch):

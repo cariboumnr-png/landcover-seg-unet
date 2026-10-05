@@ -20,13 +20,13 @@
 # =========================================================================== #
 
 '''
-Pre-flight execution engine and pipeline inspection dispatcher.
+Pre-flight execution engine and inspection dispatcher.
 
 Coordinates non-destructive validation probe execution across pipeline
-targets, handles reporting, and enforces execution readiness.
+and workflow targets, handles reporting, and enforces readiness.
 
 Public APIs:
-    - `inspect_pipeline`: Run diagnostic probe suite on a pipeline.
+    - `inspect_target`: Run diagnostic probe suite on an execution target.
     - `run_preflight`: Dispatch pre-flight checks for targets.
 '''
 
@@ -42,43 +42,61 @@ import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def inspect_pipeline(
-    pipeline: base.BasePipeline,
+def inspect_target(
+    target: str | base.BasePipeline,
     root_config: configs.RootConfig | None = None,
 ) -> schema.PreflightResult:
     '''
-    Run pre-flight validation probes on a pipeline non-destructively.
+    Run diagnostic probe suite on an execution target non-destructively.
 
     Args:
-        pipeline:
-            concrete pipeline runner instance to inspect.
+        target:
+            execution target identifier or concrete pipeline runner instance.
         root_config:
-            optional root configuration for hardware and runtime context.
+            optional root configuration (inferred from pipeline if omitted).
 
     Returns:
         schema.PreflightResult:
             aggregated readiness evaluation and diagnostic probe results.
     '''
+    if isinstance(target, base.BasePipeline):
+        target_name = target.pipeline_name
+        eff_pipeline: base.BasePipeline | None = target
+        eff_config = root_config or target.config
+    else:
+        target_name = target
+        eff_pipeline = None
+        eff_config = root_config or configs.RootConfig()
+
     probe_results: list[schema.ProbeResult] = []
     telemetry: dict[str, typing.Any] = {}
 
-    check_gpu = (
-        root_config.command.preflight.check_gpu
-        if root_config is not None
-        else True
-    )
+    check_gpu = eff_config.command.preflight.check_gpu
 
     probe_results.extend(
-        probes.probe_hardware(check_gpu=check_gpu, telemetry=telemetry)
+        probes.probe_hardware(
+            check_gpu=check_gpu,
+            telemetry=telemetry,
+            root_config=eff_config,
+        )
     )
-    probe_results.extend(probes.probe_storage(pipeline))
-    probe_results.extend(probes.probe_lineage(pipeline))
+    probe_results.extend(
+        probes.probe_storage(target, root_config=eff_config)
+    )
+
+    if eff_pipeline is not None:
+        probe_results.extend(probes.probe_lineage(eff_pipeline))
+
+    probe_results.extend(probes.probe_spatial(target_name, eff_config))
+    probe_results.extend(probes.probe_ledger(target_name, eff_config))
+    probe_results.extend(probes.probe_model(target_name, eff_config))
+    probe_results.extend(probes.probe_study(target_name, eff_config))
 
     all_ready = all(p.status != schema.ProbeStatus.FAIL for p in probe_results)
     status = 'READY' if all_ready else 'BLOCKED'
 
     return schema.PreflightResult(
-        target=pipeline.pipeline_name,
+        target=target_name,
         status=status,
         probes=probe_results,
         telemetry=telemetry,
@@ -98,8 +116,8 @@ def run_preflight(
         root_config:
             hydra-composed root configuration.
         target:
-            pipeline name or 'all'. If None, defaults to the target
-            specified in `root_config.command.preflight.target`.
+            pipeline name, workflow name, or 'all'. If None, defaults
+            to `root_config.command.preflight.target`.
         exp_root:
             optional experiment root directory override.
 
@@ -108,51 +126,66 @@ def run_preflight(
             single result or list of results across all targets.
     '''
     selected_target = target or root_config.command.preflight.target
-    pipeline_runners: dict[
-        str, typing.Callable[[], schema.PreflightResult]
-    ] = {
+    target_runners: dict[str, typing.Callable[[], schema.PreflightResult]] = {
         'world-grid': lambda: (
-            inspect_pipeline(
-                pipelines.WorldGridGeneration(root_config), root_config
+            inspect_target(
+                pipelines.WorldGridGeneration(root_config),
+                root_config,
             )
         ),
         'data-harmonize': lambda: (
-            inspect_pipeline(
-                pipelines.DataHarmonization(root_config), root_config
+            inspect_target(
+                pipelines.DataHarmonization(root_config),
+                root_config,
             )
         ),
         'data-ingest': lambda: (
-            inspect_pipeline(
-                pipelines.DataIngestion(root_config), root_config
+            inspect_target(
+                pipelines.DataIngestion(root_config),
+                root_config,
             )
         ),
         'data-prepare': lambda: (
-            inspect_pipeline(
-                pipelines.DataPreparation(root_config), root_config
+            inspect_target(
+                pipelines.DataPreparation(root_config),
+                root_config,
             )
         ),
         'model-train': lambda: (
-            inspect_pipeline(
-                pipelines.ModelTraining(root_config), root_config
+            inspect_target(
+                pipelines.ModelTraining(root_config),
+                root_config,
             )
         ),
         'model-evaluate': lambda: (
-            inspect_pipeline(
-                pipelines.ModelEvaluation(root_config), root_config
+            inspect_target(
+                pipelines.ModelEvaluation(root_config),
+                root_config,
             )
+        ),
+        'batch-ingest': lambda: (
+            inspect_target('batch-ingest', root_config)
+        ),
+        'diagnose-overfit': lambda: (
+            inspect_target('diagnose-overfit', root_config)
+        ),
+        'study-sweep': lambda: (
+            inspect_target('study-sweep', root_config)
+        ),
+        'study-analysis': lambda: (
+            inspect_target('study-analysis', root_config)
         ),
     }
 
-    if selected_target in pipeline_runners:
-        results: schema.PreflightResult | list[
-            schema.PreflightResult
-        ] = pipeline_runners[selected_target]()
+    if selected_target in target_runners:
+        results: schema.PreflightResult | list[schema.PreflightResult]
+        results = target_runners[selected_target]()
     elif selected_target == 'all':
-        results = [runner_fn() for runner_fn in pipeline_runners.values()]
+        results = [runner_fn() for runner_fn in target_runners.values()]
     else:
-        allowed = sorted(list(pipeline_runners.keys()) + ['all'])
+        allowed = sorted(list(target_runners.keys()) + ['all'])
         raise KeyError(
-            f'Target "{selected_target}" not supported for pipeline preflight; '
+            f'Target "{selected_target}" not supported for preflight; '
             f'allowed: {allowed}'
         )
 

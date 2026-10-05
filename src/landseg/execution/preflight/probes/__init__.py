@@ -22,8 +22,8 @@
 '''
 Diagnostic probe library for pre-flight readiness checks.
 
-Exposes specialized probes for hardware, filesystem storage, and
-lineage validation.
+Exposes specialized probes for hardware, filesystem storage, spatial
+contracts, run ledgers, model specifications, and optimization studies.
 '''
 
 # standard imports
@@ -33,8 +33,12 @@ import typing
 
 __all__ = [
     'probe_hardware',
+    'probe_ledger',
     'probe_lineage',
+    'probe_model',
+    'probe_spatial',
     'probe_storage',
+    'probe_study',
 ]
 
 
@@ -43,11 +47,23 @@ if typing.TYPE_CHECKING:
     from .hardware import (
         probe_hardware,
     )
+    from .ledger import (
+        probe_ledger,
+    )
     from .lineage import (
         probe_lineage,
     )
+    from .model import (
+        probe_model,
+    )
+    from .spatial import (
+        probe_spatial,
+    )
     from .storage import (
         probe_storage,
+    )
+    from .study import (
+        probe_study,
     )
 
 
@@ -56,12 +72,28 @@ def __getattr__(name: str):
         obj = importlib.import_module('.hardware', __package__)
         return getattr(obj, name)
 
+    if name in {'probe_ledger'}:
+        obj = importlib.import_module('.ledger', __package__)
+        return getattr(obj, name)
+
     if name in {'probe_lineage'}:
         obj = importlib.import_module('.lineage', __package__)
         return getattr(obj, name)
 
+    if name in {'probe_model'}:
+        obj = importlib.import_module('.model', __package__)
+        return getattr(obj, name)
+
+    if name in {'probe_spatial'}:
+        obj = importlib.import_module('.spatial', __package__)
+        return getattr(obj, name)
+
     if name in {'probe_storage'}:
         obj = importlib.import_module('.storage', __package__)
+        return getattr(obj, name)
+
+    if name in {'probe_study'}:
+        obj = importlib.import_module('.study', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
