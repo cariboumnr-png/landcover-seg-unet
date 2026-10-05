@@ -39,6 +39,11 @@ class DataHarmonization(base.GeoPipeline):
     logger: harmonize.HarmonizationLogger
     pipeline_paths: artifacts.HarmonizationPaths
 
+    @property
+    def upstream_paths(self) -> artifacts.WorldGridPaths:
+        '''Return upstream data harmonization artifact paths.'''
+        return self.artifact_paths.world_grid
+
     def run(self) -> None:
         '''Execute data harmonization.'''
         self.validate()
@@ -71,8 +76,7 @@ class DataHarmonization(base.GeoPipeline):
     def validate(self) -> None:
         '''Check world-grid status and build harmonization context.'''
         invalid_upstream = False
-        cfg = self.config.data.world_grid
-        report_fp = geo_core.get_grid_report_fpath(cfg.output_dpath)
+        report_fp = self.upstream_paths.report
         try:
             status, _ = geo_core.read_grid_report(report_fp)
             if status != 'SUCCESS':
@@ -87,7 +91,7 @@ class DataHarmonization(base.GeoPipeline):
             )
 
         self.context = harmonize.build_harmonization_context(
-            cfg.output_dpath,
+            self.upstream_paths.report,
             self.pipeline_paths.runs_manifest,
             self.config.data.harmonization
         )
@@ -95,7 +99,7 @@ class DataHarmonization(base.GeoPipeline):
     def _create_logger(self) -> harmonize.HarmonizationLogger:
         '''Instantiate and configure the harmonization logger.'''
         logger = harmonize.HarmonizationLogger(
-            name='data-harmonize',
+            name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
             enable_file_log=False,
         )

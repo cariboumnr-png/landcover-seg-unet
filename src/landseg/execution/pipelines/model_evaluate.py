@@ -132,7 +132,7 @@ class ModelEvaluation(base.SessionPipeline):
     def _create_logger(self) -> session.SessionLogger:
         '''Instantiate and configure the session logger.'''
         logger = session.SessionLogger(
-            name='session',
+            name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
             console_lvl=self.console_level,
             enable_file_log=False,

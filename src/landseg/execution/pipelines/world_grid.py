@@ -26,6 +26,7 @@ World grid pipeline command implementation.
 # standard imports
 import os
 # local imports
+import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
@@ -38,7 +39,7 @@ class WorldGridGeneration(base.GeoPipeline):
     pipeline_name: str = 'world-grid'
     context: None
     logger: grid.GridLogger
-    pipeline_paths: None
+    pipeline_paths: artifacts.WorldGridPaths
 
     @property
     def grid_cfg(self):
@@ -92,8 +93,8 @@ class WorldGridGeneration(base.GeoPipeline):
     def _create_logger(self) -> grid.GridLogger:
         '''Instantiate and configure the grid logger.'''
         logger = grid.GridLogger(
-            name='world-grid',
-            log_file=grid.get_grid_report_fpath(self.grid_cfg.output_dpath),
+            name=self.pipeline_name,
+            log_file=self.pipeline_paths.report,
             enable_file_log=False,
         )
         logger.init_summary(run_id='world-grid')

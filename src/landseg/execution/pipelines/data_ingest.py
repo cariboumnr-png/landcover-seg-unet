@@ -136,7 +136,7 @@ class DataIngestion(base.GeoPipeline):
     def _create_logger(self) -> ingest.IngestionLogger:
         '''Instantiate and configure the ingestion logger.'''
         logger = ingest.IngestionLogger(
-            name='data-ingest',
+            name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
             enable_file_log=False,
         )

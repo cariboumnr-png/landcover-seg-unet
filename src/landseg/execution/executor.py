@@ -57,11 +57,23 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
     results = None
 
     match command:
+        case 'preflight':
+            results = preflight.run_preflight(root_config)
+
         case 'default':
             workflows.execute_default_action(root_config)
 
-        case 'preflight':
-            results = _dispatch_preflight(root_config)
+        case 'diagnose-overfit':
+            workflows.execute_diagnose_overfit(root_config)
+
+        case 'batch-ingest':
+            workflows.execute_batch_ingest(root_config)
+
+        case 'study-analysis':
+            workflows.execute_study_analysis(root_config)
+
+        case 'study-sweep':
+            results = workflows.execute_study_sweep(root_config)
 
         case 'world-grid':
             pipelines.WorldGridGeneration(root_config).run()
@@ -81,25 +93,7 @@ def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
         case 'model-evaluate':
             pipelines.ModelEvaluation(root_config).run()
 
-        case 'diagnose-overfit':
-            workflows.execute_diagnose_overfit(root_config)
-
-        case 'batch-ingest':
-            workflows.execute_batch_ingest(root_config)
-
-        case 'study-analysis':
-            workflows.execute_study_analysis(root_config)
-
-        case 'study-sweep':
-            results = workflows.execute_study_sweep(root_config)
-
         case _:
             raise KeyError(f'Unknown command: {command}; allowed: {COMMANDS}')
 
     return results
-
-
-# ----- private helpers
-def _dispatch_preflight(root_config: configs.RootConfig) -> typing.Any:
-    '''Dispatch pre-flight checks for target pipeline(s).'''
-    return preflight.run_preflight(root_config)

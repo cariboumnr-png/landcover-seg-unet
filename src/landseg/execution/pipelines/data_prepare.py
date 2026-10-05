@@ -97,7 +97,7 @@ class DataPreparation(base.GeoPipeline):
     def _create_logger(self) -> prepare.PreparationLogger:
         '''Instantiate and configure the preparation logger.'''
         logger = prepare.PreparationLogger(
-            name='data-prep',
+            name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
             enable_file_log=False,
         )

@@ -76,6 +76,8 @@ class BasePipeline(abc.ABC):
         )
         self.timer: dict[str, float] = {}
 
+        self._resolve_pipeline_paths()
+
     @abc.abstractmethod
     def run(self) -> typing.Any:
         '''Initialize a pipeline runner and run end-to-end process.'''
@@ -88,35 +90,37 @@ class BasePipeline(abc.ABC):
     def _create_logger(self) -> typing.Any:
         '''Instantiate and configure the logger for this pipeline.'''
 
+    @abc.abstractmethod
+    def _resolve_pipeline_paths(self) -> None:
+        '''Resolve canonical artifact paths based on pipeline name.'''
+
     def _initialize_run(self) -> None:
         '''Initialize run directories, persist config, and open logger.'''
-        self.logger = self._create_logger()
-        if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
-            self.pipeline_paths.init_pipeline_folders()
-            config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
-            config_ctrl.persist(self.config.as_dict)
+        assert isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths)
+        self.pipeline_paths.init_pipeline_folders()
 
-    def _resolve_pipeline_paths(self) -> typing.Any:
-        '''Resolve canonical artifact paths based on pipeline name.'''
-        return None
+        config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
+        config_ctrl.persist(self.config.as_dict)
+
+        self.logger = self._create_logger()
 
 
 class GeoPipeline(BasePipeline):
     '''Base class for geospatial data pipelines.'''
 
-    def _resolve_pipeline_paths(self) -> typing.Any:
+    def _resolve_pipeline_paths(self) -> None:
         '''Resolve canonical artifact paths for geospatial pipelines.'''
         match self.pipeline_name:
             case 'world-grid':
-                return None
+                self.pipeline_paths = self.artifact_paths.world_grid
             case 'data-harmonize':
-                return self.artifact_paths.data_harmonization
+                self.pipeline_paths = self.artifact_paths.data_harmonization
             case 'data-ingest':
-                return self.artifact_paths.data_ingestion
+                self.pipeline_paths = self.artifact_paths.data_ingestion
             case 'data-prepare':
-                return self.artifact_paths.data_preparation
+                self.pipeline_paths = self.artifact_paths.data_preparation
             case _:
-                return None
+                raise ValueError(f'Invalid pipeline name: {self.pipeline_name}')
 
 
 class SessionPipeline(BasePipeline):
@@ -126,9 +130,9 @@ class SessionPipeline(BasePipeline):
     logger: session.SessionLogger
     pipeline_paths: artifacts.SessionPaths
 
-    def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:
+    def _resolve_pipeline_paths(self) -> None:
         '''Resolve session artifact paths.'''
-        return self.artifact_paths.session
+        self.pipeline_paths = self.artifact_paths.session
 
     @typing.overload
     def build_session_runner(
