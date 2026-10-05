@@ -39,6 +39,7 @@ __all__ = [
     'PipelineArtifactsPaths',
     'PreparationPaths',
     'SessionPaths',
+    'WorldGridPaths',
 ]
 
 
@@ -64,6 +65,9 @@ if typing.TYPE_CHECKING:
     )
     from .session import (
         SessionPaths,
+    )
+    from .world_grid import (
+        WorldGridPaths
     )
 
 
@@ -94,6 +98,10 @@ def __getattr__(name: str):
 
     if name in {'SessionPaths'}:
         obj = importlib.import_module('.session', __package__)
+        return getattr(obj, name)
+
+    if name in {'WorldGridPaths'}:
+        obj = importlib.import_module('.world_grid', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

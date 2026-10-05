@@ -44,7 +44,6 @@ from __future__ import annotations
 import collections.abc
 import dataclasses
 import math
-import os
 import typing
 # third-party imports
 import rasterio
@@ -65,6 +64,8 @@ RasterWindow: typing.TypeAlias = rasterio.windows.Window
 
 RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
 '''Mapping of pixel-origin coordinates to raster windows.'''
+
+GridReportCtrl = artifacts.Controller[grid_contracts.GridReportSchema]
 
 
 # ----- public types
@@ -409,36 +410,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
 
 
 # ----- public functions
-def load_grid_from_fpath(fpath: str) -> GridLayout:
-    '''
-    Load a world grid layout directly from a file path.
-
-    Args:
-        fpath:
-            File path to the serialized grid JSON artifact.
-
-    Returns:
-        GridLayout:
-            Restored GridLayout instance.
-    '''
-    return GridLayout.from_fpath(fpath)
-
-
-def get_grid_report_fpath(output_dpath: str) -> str:
-    '''
-    Return canonical file path of the world grid report artifact.
-
-    Args:
-        output_dpath:
-            Output directory containing world grid artifacts.
-
-    Returns:
-        str:
-            Full path to the grid_report.json artifact.
-    '''
-    return os.path.join(output_dpath, 'grid_report.json')
-
-
 def read_grid_report(fp: str) -> tuple[str, grid_contracts.WorldGridReport]:
     '''
     Read a grid execution report and extract world grid summary.
@@ -451,8 +422,6 @@ def read_grid_report(fp: str) -> tuple[str, grid_contracts.WorldGridReport]:
         grid_contracts.WorldGridReport:
             World grid summary report extracted from the artifact.
     '''
-    ctrl = artifacts.Controller[
-        grid_contracts.GridReportSchema
-    ].load_json_or_fail(fp)
+    ctrl = GridReportCtrl.load_json_or_fail(fp)
     report = ctrl.fetch()
     return report['status'], report['grid']

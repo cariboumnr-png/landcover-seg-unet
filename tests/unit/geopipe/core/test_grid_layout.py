@@ -24,7 +24,6 @@
 '''Unit tests for world-grid tiling utility (grid_layout.py).'''
 
 # standard imports
-import json
 import os
 # third-party imports
 import pytest
@@ -250,7 +249,7 @@ def test_gridlayout_from_fpath(tmp_path):
     assert from_cls.gid == layout.gid
     assert len(from_cls) == len(layout)
 
-    from_func = grid_layout.load_grid_from_fpath(grid_fp)
+    from_func = grid_layout.GridLayout.from_fpath(grid_fp)
     assert from_func.gid == layout.gid
 
 
@@ -261,7 +260,6 @@ def test_grid_report_helpers(tmp_path):
     Then: Resolve report path and extract WorldGridReport payload.
     '''
     expected_fp = os.path.join(str(tmp_path), 'grid_report.json')
-    assert grid_layout.get_grid_report_fpath(str(tmp_path)) == expected_fp
 
     grid_report: contracts.WorldGridReport = {
         'grid_fpath': '/path/to/grid.json',

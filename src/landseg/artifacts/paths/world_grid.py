@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -19,49 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
-Top-level namespace for `landseg.geopipe.grid`.
-
-Exposes world grid construction and lifecycle management APIs via lazy
-resolution to keep import order simple and circular-free.
-
-Public APIs:
-    - `GridLogger`: Logger tracking world grid execution and report.
-    - `prepare_world_grid`: Build or load persisted world grid artifact.
+Canonical filesystem paths for world grid artifacts.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    # classes
-    'GridLogger',
-    # functions
-    'prepare_world_grid',
-]
+import dataclasses
+# local imports
+import landseg.artifacts.paths.base as base
 
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .lifecycle import (
-        prepare_world_grid,
-    )
-    from .logger import (
-        GridLogger,
-    )
+# ----- public dataclasses
+@dataclasses.dataclass
+class WorldGridPaths(base.PipelineArtifactsPaths):
+    '''Paths for world grid artifacts.'''
 
-
-def __getattr__(name: str):
-    if name in {
-        'prepare_world_grid',
-    }:
-        obj = importlib.import_module('.lifecycle', __package__)
-        return getattr(obj, name)
-
-    if name in {'GridLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    @property
+    def effective_run_folder(self) -> str:
+        return self.root  # overwrites the default 'run_XXXX' naming convention

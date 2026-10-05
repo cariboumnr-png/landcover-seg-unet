@@ -187,7 +187,7 @@ def build_ingestion_context(
     grid_fpath = report.get('grid_fpath')
     if not grid_fpath and 'world_grid' in report:
         grid_fpath = report['world_grid'].get('grid_fpath')
-    world_grid = geo_core.load_grid_from_fpath(grid_fpath)
+    world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # verify grid compatibility
     if dataset_schema_fpath is not None:

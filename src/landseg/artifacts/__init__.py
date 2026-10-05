@@ -60,6 +60,7 @@ __all__ = [
     'PipelineArtifactsPaths',
     'PreparationPaths',
     'SessionPaths',
+    'WorldGridPaths',
     # functions
     'load_checkpoint',
     'save_checkpoint',
@@ -88,6 +89,7 @@ if typing.TYPE_CHECKING:
         PipelineArtifactsPaths,
         PreparationPaths,
         SessionPaths,
+        WorldGridPaths,
     )
     from .payload_io import (
         PayloadController,
@@ -122,6 +124,7 @@ def __getattr__(name: str):
         'PipelineArtifactsPaths',
         'PreparationPaths',
         'SessionPaths',
+        'WorldGridPaths',
     }:
         obj = importlib.import_module('.paths', __package__)
         return getattr(obj, name)

@@ -32,8 +32,6 @@ Public APIs:
     - `DomainTileMap`: Mapping of valid spatial domain tiles.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
-    - `get_grid_report_fpath`: Canonical path to grid report artifact.
-    - `load_grid_from_fpath`: Load world grid layout directly from file.
     - `read_grid_report`: Read grid report JSON and extract summary.
     - `CategoricalSpec`: TypedDict for categorical raster specs.
     - `DataBlockManifest`: TypedDict for block serialization manifest.
@@ -65,8 +63,6 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
-    'get_grid_report_fpath',
-    'load_grid_from_fpath',
     'read_grid_report',
     # typing
     'CategoricalSpec',
@@ -119,8 +115,6 @@ if typing.TYPE_CHECKING:
         RasterReader,
         RasterWindow,
         RasterWindowDict,
-        get_grid_report_fpath,
-        load_grid_from_fpath,
         read_grid_report,
     )
 
@@ -172,8 +166,6 @@ def __getattr__(name: str):
         'RasterReader',
         'RasterWindow',
         'RasterWindowDict',
-        'get_grid_report_fpath',
-        'load_grid_from_fpath',
         'read_grid_report',
     }:
         obj = importlib.import_module('.grid_layout', __package__)
