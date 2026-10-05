@@ -34,6 +34,7 @@ import psutil
 import torch
 # local imports
 import landseg.artifacts as artifacts
+import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
@@ -77,7 +78,6 @@ class ModelTraining(base.SessionPipeline):
             self.logger.close()
 
     def validate(self) -> None:
-        '''Validate upstream preparation artifacts and build dataspecs.'''
         report_fp = self.upstream_paths.report
         report_ctrl = artifacts.Controller[dict].load_json_or_fail(report_fp)
 
@@ -98,15 +98,7 @@ class ModelTraining(base.SessionPipeline):
                 'Please re-run "data-prepare" successfully first.'
             )
 
-        self.context = geopipe.build_dataspec(
-            self.artifact_paths,
-            mode='default',
-            ids_domain_name=self.config.data.specification.domain_ids_name,
-            vec_domain_name=self.config.data.specification.domain_vec_name,
-        )
-
     def _create_logger(self) -> session.SessionLogger:
-        '''Instantiate and configure the session logger.'''
         logger = session.SessionLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -119,8 +111,15 @@ class ModelTraining(base.SessionPipeline):
         )
         return logger
 
+    def _build_context(self) -> core.DataSpecs:
+        return geopipe.build_dataspec(
+            self.artifact_paths,
+            mode='default',
+            ids_domain_name=self.config.data.specification.domain_ids_name,
+            vec_domain_name=self.config.data.specification.domain_vec_name,
+        )
+
     def _summarize_results(self, final: float) -> dict[str, typing.Any]:
-        '''Summarize peak memory and log final results and metrics.'''
         process = psutil.Process()
         peak_cpu_mb = process.memory_info().rss / (1024 * 1024)
         peak_gpu_mb = 0.0

@@ -35,25 +35,25 @@ class DataHarmonization(base.GeoPipeline):
     '''Data harmonization pipeline.'''
 
     pipeline_name: str = 'data-harmonize'
-    context: harmonize.HarmonizationContext
     logger: harmonize.HarmonizationLogger
     pipeline_paths: artifacts.HarmonizationPaths
 
     @property
     def upstream_paths(self) -> artifacts.WorldGridPaths:
-        '''Return upstream data harmonization artifact paths.'''
+        '''Return upstream <world-grid> artifact paths.'''
         return self.artifact_paths.world_grid
 
     def run(self) -> None:
-        '''Execute data harmonization.'''
+        '''Execute data harmonization pipeline.'''
         self.validate()
         self._initialize_run()
+        context = self._build_context()
 
         try:
             self.logger.log_sep()
             self.logger.log('INFO', '[START] Data harmonization')
             harmonize.run_data_harmonization(
-                self.context,
+                context,
                 self.pipeline_paths,
                 self.config.data.harmonization,
                 logger=self.logger
@@ -74,7 +74,6 @@ class DataHarmonization(base.GeoPipeline):
             self.logger.close()
 
     def validate(self) -> None:
-        '''Check world-grid status and build harmonization context.'''
         invalid_upstream = False
         report_fp = self.upstream_paths.report
         try:
@@ -90,14 +89,7 @@ class DataHarmonization(base.GeoPipeline):
                 f'executed yet. Try see its report here: {report_fp}'
             )
 
-        self.context = harmonize.build_harmonization_context(
-            self.upstream_paths.report,
-            self.pipeline_paths.runs_manifest,
-            self.config.data.harmonization
-        )
-
     def _create_logger(self) -> harmonize.HarmonizationLogger:
-        '''Instantiate and configure the harmonization logger.'''
         logger = harmonize.HarmonizationLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -105,3 +97,10 @@ class DataHarmonization(base.GeoPipeline):
         )
         logger.init_summary(run_id=self.pipeline_paths.run_id)
         return logger
+
+    def _build_context(self) -> harmonize.HarmonizationContext:
+        return harmonize.build_harmonization_context(
+            self.upstream_paths.report,
+            self.pipeline_paths.runs_manifest,
+            self.config.data.harmonization
+        )

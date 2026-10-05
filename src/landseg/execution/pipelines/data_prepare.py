@@ -39,7 +39,6 @@ class DataPreparation(base.GeoPipeline):
     '''Data preparation pipeline.'''
 
     pipeline_name: str = 'data-prepare'
-    context: prepare.PreparationContext
     logger: prepare.PreparationLogger
     pipeline_paths: artifacts.PreparationPaths
 
@@ -52,6 +51,7 @@ class DataPreparation(base.GeoPipeline):
         '''Run data preparation pipeline.'''
         self.validate()
         self._initialize_run()
+        context = self._build_context()
 
         try:
             self.logger.log_sep()
@@ -65,7 +65,7 @@ class DataPreparation(base.GeoPipeline):
 
             # run pipeline
             prepare.run_data_preparation(
-                self.context,
+                context,
                 self.pipeline_paths,
                 self.config.data.preparation,
                 self.config.data.world_grid.tile_specs_tuple,
@@ -83,7 +83,6 @@ class DataPreparation(base.GeoPipeline):
             self.logger.close()
 
     def validate(self) -> None:
-        '''Validate upstream ingestion artifacts and build context.'''
         catalog_fp = self.upstream_paths.data_blocks.catalog
         schema_fp = self.upstream_paths.data_blocks.schema
         if not os.path.exists(catalog_fp) or not os.path.exists(schema_fp):
@@ -92,10 +91,7 @@ class DataPreparation(base.GeoPipeline):
                 f'catalog or schema. Missing: {catalog_fp} or {schema_fp}'
             )
 
-        self.context = prepare.build_preparation_context(catalog_fp, schema_fp)
-
     def _create_logger(self) -> prepare.PreparationLogger:
-        '''Instantiate and configure the preparation logger.'''
         logger = prepare.PreparationLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -103,3 +99,9 @@ class DataPreparation(base.GeoPipeline):
         )
         logger.init_summary(run_id='prepare')
         return logger
+
+    def _build_context(self) -> prepare.PreparationContext:
+        return prepare.build_preparation_context(
+            self.upstream_paths.data_blocks.catalog,
+            self.upstream_paths.data_blocks.schema,
+        )

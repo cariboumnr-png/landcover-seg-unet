@@ -142,4 +142,3 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
         match='Upstream pipeline "world-grid" has not been successfully executed'
     ):
         pipeline.validate()
-

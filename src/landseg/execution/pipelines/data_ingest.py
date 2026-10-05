@@ -38,30 +38,29 @@ class DataIngestion(base.GeoPipeline):
     '''Data ingestion pipeline.'''
 
     pipeline_name: str = 'data-ingest'
-    context: ingest.IngestionContext
     logger: ingest.IngestionLogger
     pipeline_paths: artifacts.IngestionPaths
 
     @property
     def upstream_paths(self) -> artifacts.HarmonizationPaths:
-        '''Return upstream data harmonization artifact paths.'''
+        '''Return upstream <data-harmonize> artifact paths.'''
         return self.artifact_paths.data_harmonization
 
     def run(
         self,
-        harmonization_record: contracts.HarmonizationRunRecord | None = None
+        harmonization_record: contracts.HarmonizationRunRecord | None = None,
     ):
         '''Run data ingestion from specified harmonization run.'''
-        self.validate(harmonization_record)
+        valided_record = self.validate(harmonization_record)
         self._initialize_run()
+        context = self._build_context(valided_record)
 
         try:
             self.logger.log_sep()
             self.logger.log(
                 'INFO',
-                f'Ingesting harmonization run [{self.context.harmonization_run_id}] '
-                f'({self.context.run_uid}) '
-                f'into run [{self.pipeline_paths.run_id}]'
+                f'Ingesting harmonization run [{context.harmonization_run_id}]'
+                f' ({context.run_uid}) into run [{self.pipeline_paths.run_id}]'
             )
 
             policy = (
@@ -71,7 +70,7 @@ class DataIngestion(base.GeoPipeline):
             )
 
             ingest.run_data_ingestion(
-                self.context,
+                context,
                 self.pipeline_paths,
                 self.config.data.ingestion,
                 policy=policy,
@@ -96,8 +95,7 @@ class DataIngestion(base.GeoPipeline):
     def validate(
         self,
         harmonization_record: contracts.HarmonizationRunRecord | None = None
-    ) -> None:
-        '''Validate upstream harmonization and build ingestion context.'''
+    ) -> contracts.HarmonizationRunRecord:
         try:
             target = (
                 self.config.data.ingestion.harmonization_run
@@ -125,16 +123,9 @@ class DataIngestion(base.GeoPipeline):
         if hm_record['status'] != 'SUCCESS':
             raise RuntimeError('Provided harmonization run was not successful')
 
-        self.context = ingest.build_ingestion_context(
-            self.upstream_paths,
-            hm_record,
-            runs_manifest_fpath=self.pipeline_paths.runs_manifest,
-            dataset_schema_fpath=self.pipeline_paths.data_blocks.schema,
-            config=self.config.data.ingestion,
-        )
+        return hm_record
 
     def _create_logger(self) -> ingest.IngestionLogger:
-        '''Instantiate and configure the ingestion logger.'''
         logger = ingest.IngestionLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -142,3 +133,16 @@ class DataIngestion(base.GeoPipeline):
         )
         logger.init_summary(run_id=self.pipeline_paths.run_id)
         return logger
+
+    def _build_context(
+        self,
+        valided_record: contracts.HarmonizationRunRecord | None = None,
+    ) -> ingest.IngestionContext:
+        assert valided_record # typing only
+        return ingest.build_ingestion_context(
+            self.upstream_paths,
+            valided_record,
+            runs_manifest_fpath=self.pipeline_paths.runs_manifest,
+            dataset_schema_fpath=self.pipeline_paths.data_blocks.schema,
+            config=self.config.data.ingestion,
+        )

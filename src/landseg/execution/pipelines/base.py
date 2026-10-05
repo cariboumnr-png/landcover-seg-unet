@@ -83,16 +83,20 @@ class BasePipeline(abc.ABC):
         '''Initialize a pipeline runner and run end-to-end process.'''
 
     @abc.abstractmethod
-    def validate(self) -> None:
+    def validate(self) -> typing.Any:
         '''Validate pipeline environment and upstream requirements.'''
+
+    @abc.abstractmethod
+    def _resolve_pipeline_paths(self) -> None:
+        '''Resolve canonical artifact paths based on pipeline name.'''
 
     @abc.abstractmethod
     def _create_logger(self) -> typing.Any:
         '''Instantiate and configure the logger for this pipeline.'''
 
     @abc.abstractmethod
-    def _resolve_pipeline_paths(self) -> None:
-        '''Resolve canonical artifact paths based on pipeline name.'''
+    def _build_context(self) -> typing.Any:
+        '''Build the necessary pipeline running context object.'''
 
     def _initialize_run(self) -> None:
         '''Initialize run directories, persist config, and open logger.'''
@@ -103,7 +107,6 @@ class BasePipeline(abc.ABC):
         config_ctrl.persist(self.config.as_dict)
 
         self.logger = self._create_logger()
-
 
 class GeoPipeline(BasePipeline):
     '''Base class for geospatial data pipelines.'''
@@ -129,6 +132,10 @@ class SessionPipeline(BasePipeline):
     context: core.DataSpecs
     logger: session.SessionLogger
     pipeline_paths: artifacts.SessionPaths
+
+    @abc.abstractmethod
+    def _build_context(self) -> core.DataSpecs:
+        '''Build the necessary pipeline running context object.'''
 
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve session artifact paths.'''
@@ -185,17 +192,8 @@ class SessionPipeline(BasePipeline):
             session.EpochRunner | session.ContinuousRunner | session.CurriculumRunner:
                 instantiated session runner.
         '''
-        self._initialize_run()
-        assert isinstance(self.logger, session.SessionLogger)
+        dataspecs = self._build_context()
 
-        # validate (`DataSpecs` will be built into self.context)
-        self.logger.log('INFO', '[START] Data specifications setup')
-        start_t = time.perf_counter()
-        self.validate()
-        self.timer['data'] = time.perf_counter() - start_t
-        self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
-
-        dataspecs = self.context
         for s in dataspecs.summary:
             self.logger.log('INFO', s)
         self.logger.log_sep()

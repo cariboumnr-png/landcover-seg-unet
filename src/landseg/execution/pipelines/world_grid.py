@@ -86,7 +86,7 @@ class WorldGridGeneration(base.GeoPipeline):
         if self.grid_cfg.mode == 'ref':
             ref_fp = self.grid_cfg.params.ref_fpath
             if not ref_fp or not os.path.exists(ref_fp):
-                raise FileNotFoundError(
+                raise RuntimeError(
                     f'Reference raster for world-grid does not exist: {ref_fp}'
                 )
 
@@ -99,3 +99,5 @@ class WorldGridGeneration(base.GeoPipeline):
         )
         logger.init_summary(run_id='world-grid')
         return logger
+
+    def _build_context(self):...

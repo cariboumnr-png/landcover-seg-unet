@@ -27,6 +27,7 @@ Evaluating a model.
 import os
 # local imports
 import landseg.artifacts as artifacts
+import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
@@ -43,14 +44,12 @@ class ModelEvaluation(base.SessionPipeline):
         self.validate()
         self._initialize_run()
 
+        eval_config = self.config.command.model_evaluate
+        if eval_config.split not in ('val', 'test'):
+            raise ValueError(f"Invalid split: {eval_config.split}")
+
         try:
             self.logger.log_sep()
-
-            # parse evaluation pipeline configs
-            eval_config = self.config.command.model_evaluate
-            assert eval_config.checkpoint
-            if eval_config.split not in ('val', 'test'):
-                raise ValueError(f"Invalid split: {eval_config.split}")
 
             runner = self.build_session_runner(
                 mode_override='evaluate',
@@ -88,17 +87,15 @@ class ModelEvaluation(base.SessionPipeline):
         return evaluation_results.target_metrics
 
     def validate(self) -> None:
-        '''Validate model evaluation prerequisites and build dataspecs.'''
         eval_config = self.config.command.model_evaluate
         if not eval_config.checkpoint or not os.path.exists(eval_config.checkpoint):
-            raise FileNotFoundError(
+            raise RuntimeError(
                 f'Evaluation checkpoint not found: {eval_config.checkpoint}'
             )
 
         if eval_config.split not in ('val', 'test'):
-            raise ValueError(f'Invalid split: {eval_config.split}')
+            raise RuntimeError(f'Invalid split: {eval_config.split}')
 
-        # verify upstream data-prepare report
         report_fp = self.artifact_paths.data_preparation.report
         report_ctrl = artifacts.Controller[dict].load_json_or_fail(report_fp)
         try:
@@ -115,22 +112,7 @@ class ModelEvaluation(base.SessionPipeline):
                 f'Upstream pipeline "data-prepare" status is "{status_val}".'
             )
 
-        self.context = geopipe.build_dataspec(
-            self.artifact_paths,
-            mode='default',
-            ids_domain_name=self.config.data.specification.domain_ids_name,
-            vec_domain_name=self.config.data.specification.domain_vec_name,
-        )
-
-        split_dict = getattr(self.context.splits, eval_config.split, None)
-        if not split_dict:
-            raise RuntimeError(
-                f'Evaluation split "{eval_config.split}" has no blocks '
-                'in prepared dataset.'
-            )
-
     def _create_logger(self) -> session.SessionLogger:
-        '''Instantiate and configure the session logger.'''
         logger = session.SessionLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -142,3 +124,21 @@ class ModelEvaluation(base.SessionPipeline):
             command=self.config.command.name,
         )
         return logger
+
+    def _build_context(self) -> core.DataSpecs:
+        dataspecs = geopipe.build_dataspec(
+            self.artifact_paths,
+            mode='default',
+            ids_domain_name=self.config.data.specification.domain_ids_name,
+            vec_domain_name=self.config.data.specification.domain_vec_name,
+        )
+
+        eval_config = self.config.command.model_evaluate
+        split_dict = getattr(dataspecs.splits, eval_config.split, None)
+        if not split_dict:
+            raise RuntimeError(
+                f'Evaluation split "{eval_config.split}" has no blocks '
+                'in prepared dataset.'
+            )
+
+        return dataspecs

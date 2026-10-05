@@ -198,4 +198,3 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
         match='Upstream pipeline "data-harmonize" has not been successfully executed'
     ):
         pipeline.validate()
-
