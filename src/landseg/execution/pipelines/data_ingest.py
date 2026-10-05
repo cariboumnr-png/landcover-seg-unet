@@ -38,8 +38,8 @@ class DataIngestion(base.GeoPipeline):
     '''Data ingestion pipeline.'''
 
     pipeline_name: str = 'data-ingest'
-    context: ingest.IngestionContext | None
-    logger: ingest.IngestionLogger | None
+    context: ingest.IngestionContext
+    logger: ingest.IngestionLogger
     pipeline_paths: artifacts.IngestionPaths
 
     @property
@@ -52,14 +52,10 @@ class DataIngestion(base.GeoPipeline):
         harmonization_record: contracts.HarmonizationRunRecord | None = None
     ):
         '''Run data ingestion from specified harmonization run.'''
-        if self.context is None or harmonization_record is not None:
-            self.validate(harmonization_record)
-
+        self.validate(harmonization_record)
         self._initialize_run()
-        assert self.logger is not None
 
         try:
-            assert self.context is not None
             self.logger.log_sep()
             self.logger.log(
                 'INFO',

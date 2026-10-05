@@ -39,8 +39,8 @@ class DataPreparation(base.GeoPipeline):
     '''Data preparation pipeline.'''
 
     pipeline_name: str = 'data-prepare'
-    context: prepare.PreparationContext | None
-    logger: prepare.PreparationLogger | None
+    context: prepare.PreparationContext
+    logger: prepare.PreparationLogger
     pipeline_paths: artifacts.PreparationPaths
 
     @property
@@ -50,14 +50,10 @@ class DataPreparation(base.GeoPipeline):
 
     def run(self) -> None:
         '''Run data preparation pipeline.'''
-        if self.context is None:
-            self.validate()
-
+        self.validate()
         self._initialize_run()
-        assert self.logger is not None
 
         try:
-            assert self.context is not None
             self.logger.log_sep()
 
             # resolve lifecycle policy dynamically

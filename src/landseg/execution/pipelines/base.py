@@ -42,7 +42,6 @@ import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
-import landseg.geopipe as geopipe
 import landseg.models as models
 import landseg.session as session
 
@@ -52,6 +51,9 @@ class BasePipeline(abc.ABC):
     '''Base pipeline runner class common to all pipelines.'''
 
     pipeline_name: str = 'unknown'
+    context: typing.Any
+    logger: typing.Any
+    pipeline_paths: typing.Any
 
     def __init__(
         self,
@@ -73,9 +75,6 @@ class BasePipeline(abc.ABC):
             else self.config.execution.console_level
         )
         self.timer: dict[str, float] = {}
-        self.context: typing.Any = None
-        self.logger: typing.Any = None
-        self.pipeline_paths: typing.Any = self._resolve_pipeline_paths()
 
     @abc.abstractmethod
     def run(self) -> typing.Any:
@@ -91,15 +90,11 @@ class BasePipeline(abc.ABC):
 
     def _initialize_run(self) -> None:
         '''Initialize run directories, persist config, and open logger.'''
-        if self.logger is not None:
-            return
-
+        self.logger = self._create_logger()
         if isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths):
             self.pipeline_paths.init_pipeline_folders()
             config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
             config_ctrl.persist(self.config.as_dict)
-
-        self.logger = self._create_logger()
 
     def _resolve_pipeline_paths(self) -> typing.Any:
         '''Resolve canonical artifact paths based on pipeline name.'''
@@ -127,23 +122,9 @@ class GeoPipeline(BasePipeline):
 class SessionPipeline(BasePipeline):
     '''Base class for neural network session pipelines.'''
 
-    logger: session.SessionLogger | None
+    context: core.DataSpecs
+    logger: session.SessionLogger
     pipeline_paths: artifacts.SessionPaths
-
-    def __init__(
-        self,
-        config: configs.RootConfig,
-        *,
-        artifact_paths: artifacts.ArtifactPaths | None = None,
-        disable_console_logging: bool = False
-    ) -> None:
-        '''Initialize session pipeline with dataspecs cache.'''
-        super().__init__(
-            config,
-            artifact_paths=artifact_paths,
-            disable_console_logging=disable_console_logging
-        )
-        self.dataspecs: core.DataSpecs | None = None
 
     def _resolve_pipeline_paths(self) -> artifacts.SessionPaths:
         '''Resolve session artifact paths.'''
@@ -203,22 +184,14 @@ class SessionPipeline(BasePipeline):
         self._initialize_run()
         assert isinstance(self.logger, session.SessionLogger)
 
-        # collect artifacts and build `DataSpecs` if not already cached
-        if self.dataspecs is not None:
-            dataspecs = self.dataspecs
-        else:
-            self.logger.log('INFO', '[START] Data specifications setup')
-            start_t = time.perf_counter()
-            dataspecs = geopipe.build_dataspec(
-                self.artifact_paths,
-                mode='default',
-                ids_domain_name=self.config.data.specification.domain_ids_name,
-                vec_domain_name=self.config.data.specification.domain_vec_name
-            )
-            self.timer['data'] = time.perf_counter() - start_t
-            self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
-            self.dataspecs = dataspecs
+        # validate (`DataSpecs` will be built into self.context)
+        self.logger.log('INFO', '[START] Data specifications setup')
+        start_t = time.perf_counter()
+        self.validate()
+        self.timer['data'] = time.perf_counter() - start_t
+        self.logger.log('INFO', f'[COMPLETE] Data specs setup (D_{self.timer['data']:.2f}s)')
 
+        dataspecs = self.context
         for s in dataspecs.summary:
             self.logger.log('INFO', s)
         self.logger.log_sep()

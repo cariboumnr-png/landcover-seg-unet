@@ -44,9 +44,6 @@ class ModelTraining(base.SessionPipeline):
     '''Model train pipeline runner class.'''
 
     pipeline_name: str = 'model-train'
-    context: None
-    logger: session.SessionLogger | None
-    pipeline_paths: artifacts.SessionPaths
 
     @property
     def upstream_paths(self) -> artifacts.PreparationPaths:
@@ -55,11 +52,8 @@ class ModelTraining(base.SessionPipeline):
 
     def run(self) -> None:
         '''Initialize a pipeline runner and run training end-to-end.'''
-        if self.dataspecs is None:
-            self.validate()
-
+        self.validate()
         self._initialize_run()
-        assert self.logger is not None
 
         try:
             runner = self.build_session_runner()
@@ -104,7 +98,7 @@ class ModelTraining(base.SessionPipeline):
                 'Please re-run "data-prepare" successfully first.'
             )
 
-        self.dataspecs = geopipe.build_dataspec(
+        self.context = geopipe.build_dataspec(
             self.artifact_paths,
             mode='default',
             ids_domain_name=self.config.data.specification.domain_ids_name,

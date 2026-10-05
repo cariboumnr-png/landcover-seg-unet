@@ -35,20 +35,16 @@ class DataHarmonization(base.GeoPipeline):
     '''Data harmonization pipeline.'''
 
     pipeline_name: str = 'data-harmonize'
-    context: harmonize.HarmonizationContext | None
-    logger: harmonize.HarmonizationLogger | None
+    context: harmonize.HarmonizationContext
+    logger: harmonize.HarmonizationLogger
     pipeline_paths: artifacts.HarmonizationPaths
 
     def run(self) -> None:
         '''Execute data harmonization.'''
-        if self.context is None:
-            self.validate()
-
+        self.validate()
         self._initialize_run()
-        assert self.logger is not None
 
         try:
-            assert self.context is not None
             self.logger.log_sep()
             self.logger.log('INFO', '[START] Data harmonization')
             harmonize.run_data_harmonization(

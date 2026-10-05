@@ -37,17 +37,11 @@ class ModelEvaluation(base.SessionPipeline):
     '''Model evaluation pipeline.'''
 
     pipeline_name: str = 'model-evaluate'
-    context: None
-    logger: session.SessionLogger | None
-    pipeline_paths: artifacts.SessionPaths
 
     def run(self) -> float:
         '''Run model evaluation pipeline.'''
-        if self.dataspecs is None:
-            self.validate()
-
+        self.validate()
         self._initialize_run()
-        assert self.logger is not None
 
         try:
             self.logger.log_sep()
@@ -121,14 +115,14 @@ class ModelEvaluation(base.SessionPipeline):
                 f'Upstream pipeline "data-prepare" status is "{status_val}".'
             )
 
-        self.dataspecs = geopipe.build_dataspec(
+        self.context = geopipe.build_dataspec(
             self.artifact_paths,
             mode='default',
             ids_domain_name=self.config.data.specification.domain_ids_name,
             vec_domain_name=self.config.data.specification.domain_vec_name,
         )
 
-        split_dict = getattr(self.dataspecs.splits, eval_config.split, None)
+        split_dict = getattr(self.context.splits, eval_config.split, None)
         if not split_dict:
             raise RuntimeError(
                 f'Evaluation split "{eval_config.split}" has no blocks '

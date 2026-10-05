@@ -37,7 +37,7 @@ class WorldGridGeneration(base.GeoPipeline):
 
     pipeline_name: str = 'world-grid'
     context: None
-    logger: grid.GridLogger | None
+    logger: grid.GridLogger
     pipeline_paths: None
 
     @property
@@ -48,9 +48,7 @@ class WorldGridGeneration(base.GeoPipeline):
     def run(self) -> None:
         '''Execute the world-grid pipeline.'''
         self.validate()
-
         self._initialize_run()
-        assert self.logger is not None
 
         try:
             self.logger.log_sep()
