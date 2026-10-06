@@ -26,8 +26,6 @@ Splits raw blocks into train/val(/test), computes train-only band
 statistics, normalizes all splits, and emits the final dataset schema.
 '''
 
-# standard imports
-import os
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
@@ -49,7 +47,6 @@ class DataPreparation(base.GeoPipeline):
 
     def run(self) -> None:
         '''Run data preparation pipeline.'''
-        self.validate()
         self._initialize_run()
         context = self._build_context()
 
@@ -81,15 +78,6 @@ class DataPreparation(base.GeoPipeline):
         finally:
             self.logger.log_sep()
             self.logger.close()
-
-    def validate(self) -> None:
-        catalog_fp = self.upstream_paths.data_blocks.catalog
-        schema_fp = self.upstream_paths.data_blocks.schema
-        if not os.path.exists(catalog_fp) or not os.path.exists(schema_fp):
-            raise RuntimeError(
-                'Upstream pipeline "data-ingest" has not produced canonical '
-                f'catalog or schema. Missing: {catalog_fp} or {schema_fp}'
-            )
 
     def _create_logger(self) -> prepare.PreparationLogger:
         logger = prepare.PreparationLogger(

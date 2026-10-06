@@ -23,8 +23,6 @@
 World grid pipeline command implementation.
 '''
 
-# standard imports
-import os
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
@@ -48,7 +46,6 @@ class WorldGridGeneration(base.GeoPipeline):
 
     def run(self) -> None:
         '''Execute the world-grid pipeline.'''
-        self.validate()
         self._initialize_run()
 
         try:
@@ -80,15 +77,6 @@ class WorldGridGeneration(base.GeoPipeline):
         finally:
             self.logger.log_sep()
             self.logger.close()
-
-    def validate(self) -> None:
-        '''Validate world-grid configuration and input references.'''
-        if self.grid_cfg.mode == 'ref':
-            ref_fp = self.grid_cfg.params.ref_fpath
-            if not ref_fp or not os.path.exists(ref_fp):
-                raise RuntimeError(
-                    f'Reference raster for world-grid does not exist: {ref_fp}'
-                )
 
     def _create_logger(self) -> grid.GridLogger:
         '''Instantiate and configure the grid logger.'''

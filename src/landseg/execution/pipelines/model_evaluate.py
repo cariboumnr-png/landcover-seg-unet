@@ -39,7 +39,6 @@ class ModelEvaluation(base.SessionPipeline):
 
     def run(self) -> float:
         '''Run model evaluation pipeline.'''
-        self.validate()
         self._initialize_run()
 
         eval_config = self.config.command.model_evaluate
@@ -81,23 +80,6 @@ class ModelEvaluation(base.SessionPipeline):
             self.logger.close()
 
         return evaluation_results.target_metrics
-
-    def validate(self) -> None:
-        report_fp = self.artifact_paths.data_preparation.report
-        report_ctrl = artifacts.Controller[dict].load_json_or_fail(report_fp)
-        try:
-            report = report_ctrl.fetch()
-        except artifacts.ArtifactError as e:
-            raise RuntimeError(
-                'Upstream pipeline "data-prepare" has not been executed yet. '
-                f'Missing report at: {report_fp}'
-            ) from e
-
-        if report.get('status') != 'SUCCESS':
-            status_val = report.get('status')
-            raise RuntimeError(
-                f'Upstream pipeline "data-prepare" status is "{status_val}".'
-            )
 
     def _create_logger(self) -> session.SessionLogger:
         logger = session.SessionLogger(

@@ -36,9 +36,8 @@ __all__ = [
     'PreflightResult',
     'ProbeResult',
     'ProbeStatus',
-    # modules
-    'probes',
     # functions
+    'assert_target_prerequisites',
     'export_preflight_report',
     'format_preflight_report',
     'inspect_target',
@@ -48,10 +47,12 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from . import probes
     from .engine import (
         inspect_target,
         run_preflight,
+    )
+    from .prerequisites import (
+        assert_target_prerequisites
     )
     from .reporter import (
         export_preflight_report,
@@ -65,8 +66,10 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'probes'}:
-        return importlib.import_module('.probes', __package__)
+
+    if name in {'assert_target_prerequisites'}:
+        obj = importlib.import_module('.prerequisites', __package__)
+        return getattr(obj, name)
 
     if name in {'PreflightResult', 'ProbeResult', 'ProbeStatus'}:
         obj = importlib.import_module('.schema', __package__)

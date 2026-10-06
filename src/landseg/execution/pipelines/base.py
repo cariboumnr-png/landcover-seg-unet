@@ -42,6 +42,7 @@ import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
+import landseg.execution.preflight as preflight
 import landseg.models as models
 import landseg.session as session
 
@@ -83,10 +84,6 @@ class BasePipeline(abc.ABC):
         '''Initialize a pipeline runner and run end-to-end process.'''
 
     @abc.abstractmethod
-    def validate(self) -> typing.Any:
-        '''Validate pipeline environment and upstream requirements.'''
-
-    @abc.abstractmethod
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve canonical artifact paths based on pipeline name.'''
 
@@ -100,6 +97,8 @@ class BasePipeline(abc.ABC):
 
     def _initialize_run(self) -> None:
         '''Initialize run directories, persist config, and open logger.'''
+        self._validate()
+
         assert isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths)
         self.pipeline_paths.init_pipeline_folders()
 
@@ -107,6 +106,14 @@ class BasePipeline(abc.ABC):
         config_ctrl.persist(self.config.as_dict)
 
         self.logger = self._create_logger()
+
+    def _validate(self) -> typing.Any:
+        '''Validate pipeline environment and upstream requirements.'''
+        preflight.assert_target_prerequisites(
+            self.pipeline_name,
+            self.artifact_paths,
+            self.config
+        )
 
 
 class GeoPipeline(BasePipeline):
