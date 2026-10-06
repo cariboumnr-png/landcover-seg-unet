@@ -23,8 +23,6 @@
 Evaluating a model.
 '''
 
-# standard imports
-import os
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
@@ -45,15 +43,13 @@ class ModelEvaluation(base.SessionPipeline):
         self._initialize_run()
 
         eval_config = self.config.command.model_evaluate
-        if eval_config.split not in ('val', 'test'):
-            raise ValueError(f"Invalid split: {eval_config.split}")
 
         try:
             self.logger.log_sep()
 
             runner = self.build_session_runner(
                 mode_override='evaluate',
-                eval_split=eval_config.split
+                eval_split=eval_config.valid_split,
             )
 
             self.logger.set_inputs({
@@ -87,15 +83,6 @@ class ModelEvaluation(base.SessionPipeline):
         return evaluation_results.target_metrics
 
     def validate(self) -> None:
-        eval_config = self.config.command.model_evaluate
-        if not eval_config.checkpoint or not os.path.exists(eval_config.checkpoint):
-            raise RuntimeError(
-                f'Evaluation checkpoint not found: {eval_config.checkpoint}'
-            )
-
-        if eval_config.split not in ('val', 'test'):
-            raise RuntimeError(f'Invalid split: {eval_config.split}')
-
         report_fp = self.artifact_paths.data_preparation.report
         report_ctrl = artifacts.Controller[dict].load_json_or_fail(report_fp)
         try:

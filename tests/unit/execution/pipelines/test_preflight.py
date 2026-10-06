@@ -42,6 +42,12 @@ class _DummySuccessPipeline(base.BasePipeline):
     def _create_logger(self):
         return None
 
+    def _resolve_pipeline_paths(self):
+        self.pipeline_paths = None
+
+    def _build_context(self):
+        return None
+
     def run(self):
         return 'success'
 
@@ -55,6 +61,12 @@ class _DummyFailingPipeline(base.BasePipeline):
     pipeline_name = 'failing-pipeline'
 
     def _create_logger(self):
+        return None
+
+    def _resolve_pipeline_paths(self):
+        self.pipeline_paths = None
+
+    def _build_context(self):
         return None
 
     def run(self):
@@ -303,7 +315,7 @@ def test_pipeline_default_path_resolution(monkeypatch):
     mt = pipelines.ModelTraining(cfg)
     me = pipelines.ModelEvaluation(cfg)
 
-    assert wg.pipeline_paths is None
+    assert wg.pipeline_paths == wg.artifact_paths.world_grid
     assert dh.pipeline_paths == dh.artifact_paths.data_harmonization
     assert di.pipeline_paths == di.artifact_paths.data_ingestion
     assert dp.pipeline_paths == dp.artifact_paths.data_preparation
@@ -331,7 +343,7 @@ def test_format_preflight_report_single():
         ],
     )
 
-    text = preflight._format_preflight_report(result)
+    text = preflight.format_preflight_report(result)
 
     assert 'PRE-FLIGHT READINESS CHECK: model-train' in text
     assert 'lineage' in text
@@ -366,7 +378,7 @@ def test_format_preflight_report_multi():
         ),
     ]
 
-    text = preflight._format_preflight_report(results)
+    text = preflight.format_preflight_report(results)
 
     assert 'PRE-FLIGHT READINESS CHECK: world-grid' in text
     assert 'PRE-FLIGHT READINESS CHECK: model-train' in text
@@ -397,7 +409,7 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
         ],
     )
 
-    report_fp, uid = preflight._export_preflight_report(
+    report_fp, uid = preflight.export_preflight_report(
         result, cfg, 'model-train'
     )
 

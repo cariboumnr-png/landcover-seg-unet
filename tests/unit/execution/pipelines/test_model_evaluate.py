@@ -46,7 +46,7 @@ import landseg.session as session
 def test_evaluate_invalid_split_raises_value_error(tmp_path):
     '''
     Given: A RootConfig with an invalid evaluation split.
-    When: `ModelEvaluation.validate` is called.
+    When: `config.command.validate()` is called.
     Then: Raise a ValueError.
     '''
     chk_file = str(tmp_path / 'chk.pt')
@@ -64,7 +64,7 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
     )
 
     with pytest.raises(ValueError, match='Invalid split'):
-        eval_pipeline.ModelEvaluation(config).validate()
+        config.command.validate()
 
 
 def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
@@ -143,7 +143,7 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
 def test_evaluate_validate_missing_checkpoint(tmp_path):
     '''
     Given: Evaluation configuration with non-existent checkpoint path.
-    When: Calling `validate` on `ModelEvaluation`.
+    When: Calling `config.command.validate()` on RootConfig.
     Then: Raise a FileNotFoundError.
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -155,9 +155,8 @@ def test_evaluate_validate_missing_checkpoint(tmp_path):
         configs.RootConfig,
         omegaconf.OmegaConf.to_object(schema)
     )
-    pipeline = eval_pipeline.ModelEvaluation(config)
-    with pytest.raises(FileNotFoundError, match='Evaluation checkpoint not found'):
-        pipeline.validate()
+    with pytest.raises(FileNotFoundError, match='Checkpoint not found'):
+        config.command.validate()
 
 
 def test_evaluate_validate_missing_prep_report(tmp_path):

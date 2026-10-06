@@ -23,11 +23,20 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Pipieline schema
+Pipeline command schema specifications.
+
+Defines sub-command configurations for training, evaluation, sweeps,
+and preflight readiness checks.
+
+Public APIs:
+    - `CommandConfig`: Root command configuration section.
 '''
 
 # standard imports
 import dataclasses
+import os
+import typing
+
 
 # ----- typing aliases
 field = dataclasses.field
@@ -36,14 +45,29 @@ field = dataclasses.field
 # ----- private dataclasses
 @dataclasses.dataclass
 class _TrainModel:
-    pass  # training uses session config only (for now)
+
+    def validate(self) -> None:...
 
 
 @dataclasses.dataclass
 class _EvaluateModel:
+
     checkpoint: str | None = None
     split: str = 'test'
     export_previews: bool = False
+
+    @property
+    def valid_split(self) -> typing.Literal['val', 'test']:
+        '''Return validated evaluation split identifier.'''
+        if self.split not in ('val', 'test'):
+            raise ValueError(f'Invalid split: {self.split}')
+        return typing.cast(typing.Literal['val', 'test'], self.split)
+
+    def validate(self) -> None:
+        if self.split not in ('val', 'test'):
+            raise ValueError(f'Invalid split: {self.split}')
+        if self.checkpoint and not os.path.exists(self.checkpoint):
+            raise FileNotFoundError(f'Checkpoint not found: {self.checkpoint}')
 
 
 @dataclasses.dataclass
@@ -55,6 +79,8 @@ class _StudySweep:
     n_trials: int = 50
     seed: int = 42
 
+    def validate(self):...
+
 
 @dataclasses.dataclass
 class _PreflightConfig:
@@ -63,6 +89,8 @@ class _PreflightConfig:
     export_report: bool = True
     report_path: str | None = None
     check_gpu: bool = True
+
+    def validate(self):...
 
 
 # ----- public dataclasses
@@ -73,3 +101,9 @@ class CommandConfig:
     model_train: _TrainModel = field(default_factory=_TrainModel)
     model_evaluate: _EvaluateModel = field(default_factory=_EvaluateModel)
     study_sweep: _StudySweep = field(default_factory=_StudySweep)
+
+    def validate(self):
+        self.preflight.validate()
+        self.model_train.validate()
+        self.model_evaluate.validate()
+        self.study_sweep.validate()

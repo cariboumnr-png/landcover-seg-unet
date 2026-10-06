@@ -108,6 +108,7 @@ class BasePipeline(abc.ABC):
 
         self.logger = self._create_logger()
 
+
 class GeoPipeline(BasePipeline):
     '''Base class for geospatial data pipelines.'''
 

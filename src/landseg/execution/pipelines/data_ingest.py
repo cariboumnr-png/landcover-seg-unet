@@ -51,9 +51,9 @@ class DataIngestion(base.GeoPipeline):
         harmonization_record: contracts.HarmonizationRunRecord | None = None,
     ):
         '''Run data ingestion from specified harmonization run.'''
-        valided_record = self.validate(harmonization_record)
+        validated_record = self.validate(harmonization_record)
         self._initialize_run()
-        context = self._build_context(valided_record)
+        context = self._build_context(validated_record)
 
         try:
             self.logger.log_sep()
@@ -136,12 +136,12 @@ class DataIngestion(base.GeoPipeline):
 
     def _build_context(
         self,
-        valided_record: contracts.HarmonizationRunRecord | None = None,
+        validated_record: contracts.HarmonizationRunRecord | None = None,
     ) -> ingest.IngestionContext:
-        assert valided_record # typing only
+        validated_record = validated_record or self.validate()
         return ingest.build_ingestion_context(
             self.upstream_paths,
-            valided_record,
+            validated_record,
             runs_manifest_fpath=self.pipeline_paths.runs_manifest,
             dataset_schema_fpath=self.pipeline_paths.data_blocks.schema,
             config=self.config.data.ingestion,

@@ -95,6 +95,7 @@ class RootConfig:
         return dataclasses.asdict(typing.cast(typing.Any, self))
 
     def validate_all(self) -> None:
+        self.command.validate()
         self.data.validate()
         self.models.validate()
         self.session.validate()
