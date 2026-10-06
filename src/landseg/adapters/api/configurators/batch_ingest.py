@@ -20,64 +20,23 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.adapters.api`.
+Multi-batch ingestion workflow configurator.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Public APIs:
+    - `BatchIngestConfigurator`: Configure multi-batch ingestion workflows.
 '''
 
-# standard imports
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    # classes
-    'BatchIngestConfigurator',
-    'DataHarmonizationConfigurator',
-    'DataIngestionConfigurator',
-    'DataPreparationConfigurator',
-    'StudySweepConfigurator',
-    'TrainingSessionConfigurator',
-    'WorldGridConfigurator',
-    # functions
-    'run',
-    'run_preflight',
-]
+# local imports
+import landseg.adapters.api.configurators.data_ingest as data_ingest
 
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .api import (
-        run,
-        run_preflight,
-    )
-    from .configurators import (
-        BatchIngestConfigurator,
-        DataHarmonizationConfigurator,
-        DataIngestionConfigurator,
-        DataPreparationConfigurator,
-        StudySweepConfigurator,
-        TrainingSessionConfigurator,
-        WorldGridConfigurator,
-    )
+# ----- public classes
+class BatchIngestConfigurator(data_ingest.DataIngestionConfigurator):
+    '''Configure multi-batch data ingestion workflow.'''
 
-
-def __getattr__(name: str):
-    if name in {'run', 'run_preflight'}:
-        obj = importlib.import_module('.api', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'BatchIngestConfigurator',
-        'DataHarmonizationConfigurator',
-        'DataIngestionConfigurator',
-        'DataPreparationConfigurator',
-        'StudySweepConfigurator',
-        'TrainingSessionConfigurator',
-        'WorldGridConfigurator',
-    }:
-        obj = importlib.import_module('.configurators', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    def __init__(
+        self,
+        experiment_root: str,
+    ):
+        super().__init__(experiment_root)
+        self._cfg.command.name = 'batch-ingest'

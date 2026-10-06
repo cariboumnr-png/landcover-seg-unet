@@ -26,6 +26,7 @@ Configurator base class
 # standard imports
 import typing
 # local imports
+import landseg.adapters.api.api as api
 import landseg.configs as configs
 
 class BaseConfigurator:
@@ -57,17 +58,35 @@ class BaseConfigurator:
                 self._cfg.data.world_grid.validate()
             case 'data-harmonize':
                 self._cfg.data.harmonization.validate()
-            case 'data-ingest':
+            case 'data-ingest' | 'batch-ingest':
                 self._cfg.data.ingestion.validate()
             case 'data-prepare':
                 self._cfg.data.preparation.validate()
-            case 'model-train':
+            case 'model-evaluate':
                 self._cfg.models.validate()
                 self._cfg.session.validate()
-            case 'study-sweep':
+                self._cfg.command.model_evaluate.validate()
+            case 'model-train' | 'diagnose-overfit' | 'study-sweep' | 'study-analysis':
                 self._cfg.models.validate()
                 self._cfg.session.validate()
         return self._cfg
+
+    def preflight(
+        self,
+        *,
+        strict: bool = False,
+        export_report: bool = True,
+        check_gpu: bool = True,
+    ) -> typing.Any:
+        '''Run pre-flight diagnostic validation for configured command.'''
+        return api.run_preflight(
+            config=self.running_root_config,
+            target=self._cfg.command.name,
+            strict=strict,
+            export_report=export_report,
+            check_gpu=check_gpu,
+        )
+
 
     # ----- shared methods for configuring runtime sessions
     def set_data_loading(

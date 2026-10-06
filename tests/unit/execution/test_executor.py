@@ -85,24 +85,16 @@ def test_execute_pipeline_dispatch(
         assert result == 'workflow_run_result'
 
 
-def test_execute_pipeline_preflight_dispatch(monkeypatch):
+def test_execute_pipeline_preflight_dispatch(mocker):
     '''
-    Given: A RootConfig with command='preflight' and target='model-train'.
+    Given: A RootConfig with command='preflight'.
     When: `execute_pipeline` is called.
-    Then: Call `preflight()` on the target pipeline runner.
+    Then: Dispatch to `preflight.run_preflight`.
     '''
-    called = []
-
-    class MockPipeline:
-        def __init__(self, cfg):
-            self.cfg = cfg
-
-        def preflight(self):
-            called.append(self.cfg)
-            return 'preflight_mock_result'
-
-    monkeypatch.setattr(pipelines, 'ModelTraining', MockPipeline)
-
+    mock_run = mocker.patch(
+        'landseg.execution.preflight.run_preflight',
+        return_value='preflight_mock_result'
+    )
     config = configs.RootConfig(
         command=secs.CommandConfig(
             name='preflight',
@@ -110,52 +102,15 @@ def test_execute_pipeline_preflight_dispatch(monkeypatch):
         )
     )
     result = executor.execute_pipeline(config)
-    assert len(called) == 1
+    mock_run.assert_called_once_with(config)
     assert result == 'preflight_mock_result'
-
-
-def test_execute_pipeline_preflight_all_dispatch(monkeypatch):
-    '''
-    Given: A RootConfig with command='preflight' and target='all'.
-    When: `execute_pipeline` is called.
-    Then: Call `preflight()` across all 6 registered pipeline runners.
-    '''
-    called = []
-
-    class MockPipeline:
-        def __init__(self, cfg):
-            self.cfg = cfg
-
-        def preflight(self):
-            called.append(self.cfg)
-            return 'preflight_result'
-
-    for runner_name in [
-        'WorldGridGeneration',
-        'DataHarmonization',
-        'DataIngestion',
-        'DataPreparation',
-        'ModelTraining',
-        'ModelEvaluation',
-    ]:
-        monkeypatch.setattr(pipelines, runner_name, MockPipeline)
-
-    config = configs.RootConfig(
-        command=secs.CommandConfig(
-            name='preflight',
-            preflight=secs.commands._PreflightConfig(target='all'),
-        )
-    )
-    results = executor.execute_pipeline(config)
-    assert len(called) == 6
-    assert len(results) == 6
 
 
 def test_execute_pipeline_preflight_invalid_target_raises_key_error():
     '''
     Given: A RootConfig with command='preflight' and unknown target.
     When: `execute_pipeline` is called.
-    Then: Raise a KeyError.
+    Then: Raise a KeyError from the preflight engine.
     '''
     config = configs.RootConfig(
         command=secs.CommandConfig(
@@ -163,7 +118,7 @@ def test_execute_pipeline_preflight_invalid_target_raises_key_error():
             preflight=secs.commands._PreflightConfig(target='unknown-target'),
         )
     )
-    with pytest.raises(KeyError, match='not supported for pipeline preflight'):
+    with pytest.raises(KeyError, match='not supported for preflight'):
         executor.execute_pipeline(config)
 
 

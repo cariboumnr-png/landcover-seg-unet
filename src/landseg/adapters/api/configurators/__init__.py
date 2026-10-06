@@ -37,6 +37,7 @@ import typing
 __all__ = [
     # classes
     'BaseConfigurator',
+    'BatchIngestConfigurator',
     'DataHarmonizationConfigurator',
     'DataIngestionConfigurator',
     'DataPreparationConfigurator',
@@ -50,6 +51,9 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .base import (
         BaseConfigurator,
+    )
+    from .batch_ingest import (
+        BatchIngestConfigurator,
     )
     from .data_harmonize import (
         DataHarmonizationConfigurator,
@@ -76,9 +80,14 @@ def __getattr__(name: str):
         obj = importlib.import_module('.base', __package__)
         return getattr(obj, name)
 
+    if name in {'BatchIngestConfigurator'}:
+        obj = importlib.import_module('.batch_ingest', __package__)
+        return getattr(obj, name)
+
     if name in {'DataHarmonizationConfigurator'}:
         obj = importlib.import_module('.data_harmonize', __package__)
         return getattr(obj, name)
+
 
     if name in {'DataIngestionConfigurator'}:
         obj = importlib.import_module('.data_ingest', __package__)

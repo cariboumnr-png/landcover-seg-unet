@@ -23,14 +23,28 @@
 Programmatic API entry
 '''
 
+# standard imports
+import typing
 # local imports
 import landseg.configs as configs
 import landseg.execution as execution
+import landseg.execution.preflight as preflight
 import landseg.utils as utils
 
-def run(root_config: configs.RootConfig):
-    '''Run pipeline'''
 
+# ----- public functions
+def run(root_config: configs.RootConfig) -> typing.Any:
+    '''
+    Run execution pipeline or workflow with resolved configuration.
+
+    Args:
+        root_config:
+            Root execution configuration instance.
+
+    Returns:
+        typing.Any:
+            Result returned by the dispatched pipeline or workflow.
+    '''
     logger = utils.Logger('api', './api.log')
     try:
         logger.log('INFO', f'Running command: {root_config.command.name}')
@@ -45,3 +59,70 @@ def run(root_config: configs.RootConfig):
             exc_info=True,
         )
         raise
+
+
+def run_preflight(
+    config: configs.RootConfig | str | None = None,
+    target: str | None = None,
+    *,
+    strict: bool | None = None,
+    export_report: bool | None = None,
+    report_path: str | None = None,
+    check_gpu: bool | None = None,
+    exp_root: str | None = None,
+) -> preflight.PreflightResult | list[preflight.PreflightResult]:
+    '''
+    Run pre-flight diagnostic validation checks programmatically.
+
+    Probes system resources, spatial grid alignments, upstream ledgers,
+    and dataset integrity prior to committing heavy computation.
+
+    Args:
+        config:
+            Optional root configuration or target string. Defaults to a
+            new `RootConfig` instance.
+        target:
+            Optional pipeline or workflow target name (e.g.,
+            `'model-train'`, `'batch-ingest'`, or `'all'`).
+        strict:
+            If specified, overrides `config.command.preflight.strict`.
+        export_report:
+            If specified, overrides `config.command.preflight.export_report`.
+        report_path:
+            If specified, overrides `config.command.preflight.report_path`.
+        check_gpu:
+            If specified, overrides `config.command.preflight.check_gpu`.
+        exp_root:
+            Optional experiment root directory override.
+
+    Returns:
+        preflight.PreflightResult | list[preflight.PreflightResult]:
+            Pre-flight validation report or list of reports across targets.
+    '''
+    if isinstance(config, str) and target is None:
+        resolved_target = config
+        cfg = configs.RootConfig()
+    else:
+        cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
+        resolved_target = target
+
+    if strict is not None:
+        cfg.command.preflight.strict = strict
+    if export_report is not None:
+        cfg.command.preflight.export_report = export_report
+    if report_path is not None:
+        cfg.command.preflight.report_path = report_path
+    if check_gpu is not None:
+        cfg.command.preflight.check_gpu = check_gpu
+
+    if resolved_target is None:
+        if cfg.command.name not in ('preflight', 'default'):
+            resolved_target = cfg.command.name
+        else:
+            resolved_target = cfg.command.preflight.target
+
+    return preflight.run_preflight(
+        root_config=cfg,
+        target=resolved_target,
+        exp_root=exp_root,
+    )
