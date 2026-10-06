@@ -59,11 +59,13 @@ class ModelTraining(base.SessionPipeline):
             runner = self.build_session_runner()
 
             self.logger.log('INFO', '[START] Training session')
+
             start_t = time.perf_counter()
             final = runner.execute()
-            self.timer['exec'] = time.perf_counter() - start_t
-            self.logger.log('INFO', f'[COMPLETE] Training session (D_{self.timer['exec']:.2f}s)')
+            t = time.perf_counter() - start_t
+            self.timer['exec'] = t
 
+            self.logger.log('INFO', f'[COMPLETE] Training session (D_{t:.2f}s)')
             self.logger.set_summary_status('SUCCESS')
             self.logger.set_results(self._summarize_results(final))
 

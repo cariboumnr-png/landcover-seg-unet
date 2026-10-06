@@ -41,11 +41,11 @@ class ModelEvaluation(base.SessionPipeline):
         '''Run model evaluation pipeline.'''
         self._initialize_run()
 
-        eval_config = self.config.command.model_evaluate
 
         try:
             self.logger.log_sep()
 
+            eval_config = self.config.command.model_evaluate
             runner = self.build_session_runner(
                 mode_override='evaluate',
                 eval_split=eval_config.valid_split,
@@ -57,18 +57,18 @@ class ModelEvaluation(base.SessionPipeline):
             })
 
             # evaluate
-            evaluation_results = runner.run_epoch(0) # will always run
-            assert evaluation_results.validation
-            _metrics = evaluation_results.validation.head_metrics
+            results = runner.run_epoch(0) # will always run
+            assert results.validation
+            _metrics = results.validation.head_metrics
             metrics = {h: m.as_dict for h, m in _metrics.items()}
 
             # persist the validation log as the current outputs
-            output_ctrl = artifacts.Controller[dict](self.pipeline_paths.evaluation)
+            output_ctrl = artifacts.Controller(self.pipeline_paths.evaluation)
             output_ctrl.persist(metrics)
 
             # update summary
             self.logger.set_summary_status('SUCCESS')
-            self.logger.set_results({'final': evaluation_results.target_metrics})
+            self.logger.set_results({'final': results.target_metrics})
 
         except Exception as e:
             self.logger.set_summary_status('FAILED')
@@ -79,7 +79,7 @@ class ModelEvaluation(base.SessionPipeline):
             self.logger.log_sep()
             self.logger.close()
 
-        return evaluation_results.target_metrics
+        return results.target_metrics
 
     def _create_logger(self) -> session.SessionLogger:
         logger = session.SessionLogger(

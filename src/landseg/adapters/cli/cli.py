@@ -51,7 +51,7 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
     # run specified mode with exceptions handling
     try:
         root_config = cli.resolve_configs(config)
-        return execution.execute_pipeline(root_config)
+        return execution.execute_command(root_config)
     # manual keyboard interruption
     except KeyboardInterrupt:
         logger.log('INFO', '\nExperiment manually interrupted, exiting...')

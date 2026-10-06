@@ -51,8 +51,8 @@ COMMANDS = typing.Literal[
 
 
 # ----- public functions
-def execute_pipeline(root_config: configs.RootConfig) -> typing.Any:
-    '''Run the selected CLI pipeline with resolved configuration.'''
+def execute_command(root_config: configs.RootConfig) -> typing.Any:
+    '''Run the selected CLI command with resolved configuration.'''
     command = root_config.command.name
     results = None
 

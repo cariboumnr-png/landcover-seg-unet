@@ -42,17 +42,18 @@ class BaseConfigurator:
         # init a default RootConfig instance
         self._cfg = configs.RootConfig()
         # set artifact output dirpaths
+        _r = f'{experiment_root}/artifacts/'
         self._cfg.execution.exp_root = experiment_root
-        self._cfg.data.world_grid.output_dpath = f'{experiment_root}/artifacts/world_grids'
-        self._cfg.data.harmonization.output_dpath = f'{experiment_root}/artifacts/harmonized_data'
-        self._cfg.data.ingestion.output_dpath = f'{experiment_root}/artifacts/ingested_data'
-        self._cfg.data.preparation.output_dpath = f'{experiment_root}/artifacts/prepared_data'
-        # set pipeline name
+        self._cfg.data.world_grid.output_dpath = f'{_r}/world_grids'
+        self._cfg.data.harmonization.output_dpath = f'{_r}/harmonized_data'
+        self._cfg.data.ingestion.output_dpath = f'{_r}/ingested_data'
+        self._cfg.data.preparation.output_dpath = f'{_r}/prepared_data'
+        # set command name
         self._cfg.command.name = pipeline_name
 
     @property
     def running_root_config(self) -> configs.RootConfig:
-        '''Validate and return the `RootConfig`,'''
+        '''Validate respective section of the `RootConfig` and return.'''
         match self._cfg.command.name:
             case 'world-grid':
                 self._cfg.data.world_grid.validate()
@@ -66,7 +67,11 @@ class BaseConfigurator:
                 self._cfg.models.validate()
                 self._cfg.session.validate()
                 self._cfg.command.model_evaluate.validate()
-            case 'model-train' | 'diagnose-overfit' | 'study-sweep' | 'study-analysis':
+            case (
+                'model-train' |
+                'diagnose-overfit' |
+                'study-sweep' | 'study-analysis'
+            ):
                 self._cfg.models.validate()
                 self._cfg.session.validate()
         return self._cfg

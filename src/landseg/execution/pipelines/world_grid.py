@@ -39,11 +39,6 @@ class WorldGridGeneration(base.GeoPipeline):
     logger: grid.GridLogger
     pipeline_paths: artifacts.WorldGridPaths
 
-    @property
-    def grid_cfg(self):
-        '''Return world grid configuration.'''
-        return self.config.data.world_grid
-
     def run(self) -> None:
         '''Execute the world-grid pipeline.'''
         self._initialize_run()
@@ -52,7 +47,8 @@ class WorldGridGeneration(base.GeoPipeline):
             self.logger.log_sep()
             self.logger.log('INFO', 'Building/loading canonical world grid')
 
-            is_loaded, grid_fp, world_grid = grid.prepare_world_grid(self.grid_cfg)
+            cfg = self.config.data.world_grid
+            is_loaded, grid_fp, world_grid = grid.prepare_world_grid(cfg)
             status_str = 'loaded' if is_loaded else 'created and persisted'
 
             grid_report: contracts.WorldGridReport = {
@@ -63,17 +59,19 @@ class WorldGridGeneration(base.GeoPipeline):
                 'tile_size': world_grid.tile_size,
                 'tile_overlap': world_grid.tile_overlap,
             }
-            self.logger.set_grid_report(grid_report, total_tiles=len(world_grid))
+            self.logger.set_grid_report(grid_report, len(world_grid))
 
             self.logger.log('INFO', f'[COMPLETE] World grid {status_str}')
             self.logger.log('INFO', f'Grid ID: {world_grid.gid}')
             self.logger.log('INFO', f'Grid artifact file path: {grid_fp}')
             self.logger.log('INFO', f'CRS: {world_grid.crs}')
             self.logger.log('INFO', f'Total Tiles: {len(world_grid)}')
+
         except Exception as err:
             self.logger.set_summary_status('FAILED')
             self.logger.log('ERROR', f'World grid execution failed: {err}')
             raise
+
         finally:
             self.logger.log_sep()
             self.logger.close()

@@ -48,7 +48,7 @@ def run(root_config: configs.RootConfig) -> typing.Any:
     logger = utils.Logger('api', './api.log')
     try:
         logger.log('INFO', f'Running command: {root_config.command.name}')
-        return execution.execute_pipeline(root_config)
+        return execution.execute_command(root_config)
     except KeyboardInterrupt:
         logger.log('INFO', 'Execution interrupted')
         raise
