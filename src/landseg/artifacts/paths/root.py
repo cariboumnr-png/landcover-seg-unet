@@ -53,6 +53,7 @@ class ArtifactPaths:
         '''Construct `ArtifactPaths` from a `RootConfig` instance.'''
         return cls(
             root=config.execution.exp_root,
+            world_grid_root=config.data.world_grid.output_dpath,
             harmonization_root=config.data.harmonization.output_dpath,
             ingestion_root=config.data.ingestion.output_dpath,
             preparation_root=config.data.preparation.output_dpath,

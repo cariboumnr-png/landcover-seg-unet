@@ -111,6 +111,7 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
     Then: Raise a RuntimeError indicating missing data-ingest artifacts.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
     cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested')
     cfg_schema.data.preparation.output_dpath = str(tmp_path / 'prepared')
 
@@ -121,6 +122,6 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
     pipeline = pipelines.DataPreparation(config)
     with pytest.raises(
         RuntimeError,
-        match='Upstream pipeline "data-ingest" has not produced canonical catalog or schema'
+        match='Upstream pipeline "data-ingest"'
     ):
-        pipeline.validate()
+        pipeline._validate()

@@ -58,51 +58,61 @@ def probe_storage(
     '''
     probes: list[schema.ProbeResult] = []
 
-    # resolve target and effective pipeline
+    target_dir: str | None = None
     if isinstance(target_or_pipeline, base.BasePipeline):
-        eff_pipeline: base.BasePipeline | None = target_or_pipeline
         target = target_or_pipeline.pipeline_name
+        if target_or_pipeline.pipeline_paths is not None:
+            p_paths = target_or_pipeline.pipeline_paths
+            if isinstance(p_paths, paths_base.PipelineArtifactsPaths):
+                target_dir = p_paths.root
     else:
-        eff_pipeline = None
         target = target_or_pipeline
+        eff_config = root_config or configs.RootConfig()
+        artifact_paths = artifacts.ArtifactPaths.from_config(eff_config)
+        target_to_paths = {
+            'world-grid': artifact_paths.world_grid.root,
+            'data-harmonize': artifact_paths.data_harmonization.root,
+            'data-ingest': artifact_paths.data_ingestion.root,
+            'data-prepare': artifact_paths.data_preparation.root,
+            'model-train': artifact_paths.session.root,
+            'model-evaluate': artifact_paths.session.root,
+        }
+        target_dir = target_to_paths.get(target)
 
     # check pipeline output directory
-    if eff_pipeline is not None and eff_pipeline.pipeline_paths is not None:
-        p_paths = eff_pipeline.pipeline_paths
-        if isinstance(p_paths, paths_base.PipelineArtifactsPaths):
-            target_dir = p_paths.root
-            check_dir = target_dir
-            while check_dir and not os.path.exists(check_dir):
-                parent = os.path.dirname(check_dir)
-                if parent == check_dir:
-                    break
-                check_dir = parent
+    if target_dir is not None:
+        check_dir = target_dir
+        while check_dir and not os.path.exists(check_dir):
+            parent = os.path.dirname(check_dir)
+            if parent == check_dir:
+                break
+            check_dir = parent
 
-            if check_dir and os.path.exists(check_dir):
-                is_writable = os.access(check_dir, os.W_OK)
-                status = (
-                    schema.ProbeStatus.PASS
-                    if is_writable
-                    else schema.ProbeStatus.FAIL
-                )
-                msg = (
-                    f"'{target_dir}' writable"
-                    if is_writable
-                    else f"'{target_dir}' not writable"
-                )
-            else:
-                status = schema.ProbeStatus.PASS
-                msg = f"'{target_dir}' path resolved"
-
-            probes.append(
-                schema.ProbeResult(
-                    probe_id='output_directory',
-                    category='storage',
-                    status=status,
-                    message=msg,
-                    details={'target_dir': target_dir},
-                )
+        if check_dir and os.path.exists(check_dir):
+            is_writable = os.access(check_dir, os.W_OK)
+            status = (
+                schema.ProbeStatus.PASS
+                if is_writable
+                else schema.ProbeStatus.FAIL
             )
+            msg = (
+                f"'{target_dir}' writable"
+                if is_writable
+                else f"'{target_dir}' not writable"
+            )
+        else:
+            status = schema.ProbeStatus.PASS
+            msg = f"'{target_dir}' path resolved"
+
+        probes.append(
+            schema.ProbeResult(
+                probe_id='output_directory',
+                category='storage',
+                status=status,
+                message=msg,
+                details={'target_dir': target_dir},
+            )
+        )
 
     # pool directory check for batch ingestion
     if target == 'batch-ingest' and root_config is not None:

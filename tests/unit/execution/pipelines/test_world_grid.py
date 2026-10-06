@@ -70,7 +70,7 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     # verify grid report artifact was generated
     report_fpath = os.path.join(
         str(tmp_path / 'world_grids'),
-        'grid_report.json'
+        'report.json'
     )
     assert os.path.exists(report_fpath)
     with open(report_fpath, 'r', encoding='utf-8') as f:

@@ -51,9 +51,6 @@ class _DummySuccessPipeline(base.BasePipeline):
     def run(self):
         return 'success'
 
-    def validate(self):
-        pass
-
 
 class _DummyFailingPipeline(base.BasePipeline):
     '''Concrete pipeline implementation that raises on validation.'''
@@ -72,14 +69,11 @@ class _DummyFailingPipeline(base.BasePipeline):
     def run(self):
         return 'failed'
 
-    def validate(self):
-        raise RuntimeError('Missing upstream artifact')
-
 
 # ----- `inspect_target` tests
 def test_inspect_target_success():
     '''
-    Given: A pipeline whose `validate()` method succeeds without error.
+    Given: A pipeline whose validation succeeds without error.
     When: `inspect_target()` is called on the pipeline runner.
     Then: Return a READY result with a passing prerequisite probe.
     '''
@@ -102,14 +96,25 @@ def test_inspect_target_success():
     )
 
 
-def test_inspect_target_failure():
+def test_inspect_target_failure(monkeypatch):
     '''
-    Given: A pipeline whose `validate()` method raises a RuntimeError.
+    Given: A pipeline whose prerequisite checks fail.
     When: `inspect_target()` is called on the pipeline runner.
     Then: Return a BLOCKED result capturing the failure in probe errors.
     '''
     config = configs.RootConfig()
     runner = _DummyFailingPipeline(config)
+    monkeypatch.setattr(
+        preflight.prerequisites,
+        'check_target_prerequisites',
+        lambda target, paths, cfg: [
+            preflight.prerequisites.PrerequisiteCheck.failed(
+                target=target,
+                upstream_target='upstream-step',
+                message='Missing upstream artifact',
+            )
+        ],
+    )
 
     result = preflight.inspect_target(runner)
 
@@ -124,7 +129,6 @@ def test_inspect_target_failure():
         p for p in result.probes if p.probe_id == 'pipeline_prerequisites'
     )
     assert lineage_probe.status == preflight.ProbeStatus.FAIL
-    assert lineage_probe.details.get('error_type') == 'RuntimeError'
 
 
 # ----- probe unit tests
@@ -427,15 +431,12 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
 
 
 # ----- `run_preflight` dispatch tests
-def test_run_preflight_dispatch_single_target(tmp_path, monkeypatch):
+def test_run_preflight_dispatch_single_target(tmp_path):
     '''
     Given: A valid RootConfig with target='world-grid'.
     When: `run_preflight()` is invoked.
     Then: Return a PreflightResult for world-grid and export report.
     '''
-    monkeypatch.setattr(
-        pipelines.WorldGridGeneration, 'validate', lambda self: None
-    )
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
 
@@ -453,22 +454,9 @@ def test_run_preflight_dispatch_all_targets(tmp_path, monkeypatch):
     Then: Return a list of PreflightResults for all 10 targets.
     '''
     monkeypatch.setattr(
-        pipelines.WorldGridGeneration, 'validate', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataHarmonization, 'validate', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataIngestion, 'validate', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataPreparation, 'validate', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.ModelTraining, 'validate', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.ModelEvaluation, 'validate', lambda self: None
+        preflight.prerequisites,
+        'check_target_prerequisites',
+        lambda target, paths, cfg: [],
     )
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
@@ -490,16 +478,26 @@ def test_run_preflight_strict_mode_failure(tmp_path, monkeypatch):
     When: `run_preflight()` is invoked.
     Then: Raise a RuntimeError due to strict mode enforcement.
     '''
-    def _fail_val(self):
-        raise RuntimeError('Missing source dataset')
-
-    monkeypatch.setattr(pipelines.WorldGridGeneration, 'validate', _fail_val)
+    monkeypatch.setattr(
+        preflight.prerequisites,
+        'check_target_prerequisites',
+        lambda target, paths, cfg: [
+            preflight.prerequisites.PrerequisiteCheck.failed(
+                target=target,
+                upstream_target='world-grid',
+                message='Missing source dataset',
+            )
+        ],
+    )
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
     cfg.command.preflight.strict = True
 
-    with pytest.raises(RuntimeError, match='Strict preflight validation failed'):
-        preflight.run_preflight(cfg, target='world-grid')
+    with pytest.raises(
+        RuntimeError,
+        match='Strict preflight validation failed'
+    ):
+        preflight.run_preflight(cfg, target='data-harmonize')
 
 
 def test_run_preflight_dispatch_unknown_target():

@@ -129,6 +129,7 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
     Then: Raise a RuntimeError indicating missing world-grid report.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
     cfg_schema.data.world_grid.output_dpath = str(tmp_path / 'world_grids')
     cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
 
@@ -139,6 +140,6 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
     pipeline = pipelines.DataHarmonization(config)
     with pytest.raises(
         RuntimeError,
-        match='Upstream pipeline "world-grid" has not been successfully executed'
+        match='Upstream pipeline "world-grid"'
     ):
-        pipeline.validate()
+        pipeline._validate()

@@ -185,6 +185,7 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
     Then: Raise a RuntimeError indicating missing data-harmonize runs.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
     cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
     cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested')
 
@@ -195,6 +196,6 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
     pipeline = pipelines.DataIngestion(config)
     with pytest.raises(
         RuntimeError,
-        match='Upstream pipeline "data-harmonize" has not been successfully executed'
+        match='Upstream pipeline "data-harmonize"'
     ):
-        pipeline.validate()
+        pipeline._validate()

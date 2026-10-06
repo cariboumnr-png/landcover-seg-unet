@@ -110,9 +110,9 @@ def test_train_validate_missing_preparation_report(tmp_path):
     pipeline = train_pipeline.ModelTraining(config)
     with pytest.raises(
         RuntimeError,
-        match='Upstream pipeline "data-prepare" has not been executed yet'
+        match='Upstream pipeline "data-prepare"'
     ):
-        pipeline.validate()
+        pipeline._validate()
 
 
 def test_train_validate_failed_preparation_report(tmp_path):
@@ -138,4 +138,4 @@ def test_train_validate_failed_preparation_report(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-prepare" status is "FAILED"'
     ):
-        pipeline.validate()
+        pipeline._validate()

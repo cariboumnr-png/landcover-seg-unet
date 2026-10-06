@@ -34,7 +34,6 @@ Public APIs:
 import typing
 # local imports
 import landseg.configs as configs
-import landseg.execution.pipelines as pipelines
 import landseg.execution.pipelines.base as base
 import landseg.execution.preflight.probes as probes
 import landseg.execution.preflight.reporter as reporter
@@ -61,11 +60,9 @@ def inspect_target(
     '''
     if isinstance(target, base.BasePipeline):
         target_name = target.pipeline_name
-        eff_pipeline: base.BasePipeline | None = target
         eff_config = root_config or target.config
     else:
         target_name = target
-        eff_pipeline = None
         eff_config = root_config or configs.RootConfig()
 
     probe_results: list[schema.ProbeResult] = []
@@ -80,13 +77,8 @@ def inspect_target(
             root_config=eff_config,
         )
     )
-    probe_results.extend(
-        probes.probe_storage(target, root_config=eff_config)
-    )
-
-    if eff_pipeline is not None:
-        probe_results.extend(probes.probe_lineage(eff_pipeline))
-
+    probe_results.extend(probes.probe_storage(target, root_config=eff_config))
+    probe_results.extend(probes.probe_lineage(target, root_config=eff_config))
     probe_results.extend(probes.probe_spatial(target_name, eff_config))
     probe_results.extend(probes.probe_ledger(target_name, eff_config))
     probe_results.extend(probes.probe_model(target_name, eff_config))
@@ -126,55 +118,21 @@ def run_preflight(
             single result or list of results across all targets.
     '''
     selected_target = target or root_config.command.preflight.target
+    supported_targets = [
+        'world-grid',
+        'data-harmonize',
+        'data-ingest',
+        'data-prepare',
+        'model-train',
+        'model-evaluate',
+        'batch-ingest',
+        'diagnose-overfit',
+        'study-sweep',
+        'study-analysis',
+    ]
     target_runners: dict[str, typing.Callable[[], schema.PreflightResult]] = {
-        'world-grid': lambda: (
-            inspect_target(
-                pipelines.WorldGridGeneration(root_config),
-                root_config,
-            )
-        ),
-        'data-harmonize': lambda: (
-            inspect_target(
-                pipelines.DataHarmonization(root_config),
-                root_config,
-            )
-        ),
-        'data-ingest': lambda: (
-            inspect_target(
-                pipelines.DataIngestion(root_config),
-                root_config,
-            )
-        ),
-        'data-prepare': lambda: (
-            inspect_target(
-                pipelines.DataPreparation(root_config),
-                root_config,
-            )
-        ),
-        'model-train': lambda: (
-            inspect_target(
-                pipelines.ModelTraining(root_config),
-                root_config,
-            )
-        ),
-        'model-evaluate': lambda: (
-            inspect_target(
-                pipelines.ModelEvaluation(root_config),
-                root_config,
-            )
-        ),
-        'batch-ingest': lambda: (
-            inspect_target('batch-ingest', root_config)
-        ),
-        'diagnose-overfit': lambda: (
-            inspect_target('diagnose-overfit', root_config)
-        ),
-        'study-sweep': lambda: (
-            inspect_target('study-sweep', root_config)
-        ),
-        'study-analysis': lambda: (
-            inspect_target('study-analysis', root_config)
-        ),
+        name: (lambda n=name: inspect_target(n, root_config))
+        for name in supported_targets
     }
 
     if selected_target in target_runners:

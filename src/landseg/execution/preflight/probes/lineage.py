@@ -23,50 +23,74 @@
 Lineage diagnostic probe implementation.
 
 Validates upstream artifact prerequisites and dependency readiness by
-evaluating `pipeline.validate()` non-destructively.
+evaluating target prerequisites non-destructively.
 
 Public APIs:
     - `probe_lineage`: Evaluate pipeline upstream prerequisites.
 '''
 
 # local imports
+import landseg.artifacts as artifacts
+import landseg.configs as configs
 import landseg.execution.pipelines.base as base
+import landseg.execution.preflight.prerequisites as prerequisites
 import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def probe_lineage(pipeline: base.BasePipeline) -> list[schema.ProbeResult]:
+def probe_lineage(
+    target: base.BasePipeline | str,
+    root_config: configs.RootConfig | None = None,
+) -> list[schema.ProbeResult]:
     '''
     Validate upstream pipeline prerequisites and execution lineage.
 
     Args:
-        pipeline:
-            concrete pipeline runner instance to validate.
+        target:
+            concrete pipeline runner instance or execution target string.
+        root_config:
+            optional hydra-composed root configuration instance.
 
     Returns:
         list[schema.ProbeResult]:
-            evaluation result containing passing or failing probe record.
+            evaluation result containing passing or failing probe records.
     '''
-    try:
-        pipeline.validate()
+    if isinstance(target, base.BasePipeline):
+        target_name = target.pipeline_name
+        eff_config = root_config or target.config
+        artifact_paths = target.artifact_paths
+    else:
+        target_name = target
+        eff_config = root_config or configs.RootConfig()
+        artifact_paths = artifacts.ArtifactPaths.from_config(eff_config)
+
+    checks = prerequisites.check_target_prerequisites(
+        target_name, artifact_paths, eff_config
+    )
+    if checks:
+        return [check.to_probe_result() for check in checks]
+
+    if target_name == 'world-grid':
         return [
             schema.ProbeResult(
                 probe_id='pipeline_prerequisites',
                 category='lineage',
                 status=schema.ProbeStatus.PASS,
                 message=(
-                    f'Prerequisites verified for pipeline '
-                    f'"{pipeline.pipeline_name}".'
+                    'Root pipeline "world-grid" has no upstream '
+                    'prerequisites.'
                 ),
             )
         ]
-    except Exception as err:  # pylint: disable=broad-exception-caught
-        return [
-            schema.ProbeResult(
-                probe_id='pipeline_prerequisites',
-                category='lineage',
-                status=schema.ProbeStatus.FAIL,
-                message=str(err),
-                details={'error_type': type(err).__name__},
-            )
-        ]
+
+    return [
+        schema.ProbeResult(
+            probe_id='pipeline_prerequisites',
+            category='lineage',
+            status=schema.ProbeStatus.PASS,
+            message=(
+                f'No upstream prerequisites defined for target '
+                f'"{target_name}".'
+            ),
+        )
+    ]

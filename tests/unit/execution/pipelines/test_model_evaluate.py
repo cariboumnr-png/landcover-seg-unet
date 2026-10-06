@@ -182,6 +182,6 @@ def test_evaluate_validate_missing_prep_report(tmp_path):
     pipeline = eval_pipeline.ModelEvaluation(config)
     with pytest.raises(
         RuntimeError,
-        match='Upstream pipeline "data-prepare" has not been executed yet'
+        match='Upstream pipeline "data-prepare"'
     ):
-        pipeline.validate()
+        pipeline._validate()
