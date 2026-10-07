@@ -29,105 +29,45 @@ Public APIs:
     - `dataset_targets`: Inspect configured features and target mappings.
 '''
 
+# standard imports
+import os
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def split_ratios(
+def raw_dataset(
     config: configs.RootConfig,
     pid: str | None = None,
 ) -> schema.ProbeResult:
-    '''
-    Validate dataset train, validation, and test split ratios.
+    '''Inspect raw input raster dataset manifest'''
+    try:
+        manifest_fp = config.data.harmonization.dataset_manifest
+        dirp = os.path.dirname(manifest_fp)
+        ctrl = artifacts.Controller[list].load_json_or_fail(manifest_fp)
+        ctrl.hash(overwrite=False) # hash upon first open
 
-    Args:
-        config:
-            root configuration containing dataset partition parameters.
-        pid:
-            optional probe identifier override.
-
-    Returns:
-        schema.ProbeResult:
-            diagnostic probe record evaluating split ratio proportions.
-    '''
-    probe_id = pid or 'split_ratios'
-    partition = config.data.preparation.partition
-    val_r = partition.val_ratio
-    test_r = partition.test_ratio
-    train_r = 1.0 - (val_r + test_r)
-
-    if val_r < 0.0 or test_r < 0.0 or train_r < 0.0:
+        manifest = ctrl.fetch()
+        if not isinstance(manifest, list): # simple check
+            raise RuntimeError('Raw dataset manifest JSON not read as a list')
+        n = len(manifest)
+        if n == 0:
+            raise RuntimeError('Raw dataset manifest JSON appears to be empty')
         return schema.ProbeResult(
-            pid=probe_id,
+            pid=pid or 'source_dataset_manifest',
+            category='Dataset',
+            status=schema.ProbeStatus.PASS,
+            message=f'Found {n} rasters available for harmonization at: {dirp}',
+            details={'dataset_manifest_filepath': manifest_fp}
+        )
+
+    except (artifacts.ArtifactError, RuntimeError) as e:
+        return schema.ProbeResult(
+            pid=pid or 'source_dataset_manifest',
             category='Dataset',
             status=schema.ProbeStatus.FAIL,
-            message=(
-                f'Invalid split ratios: val={val_r:.2f}, test={test_r:.2f} '
-                f'exceed total ratio of 1.0'
-            ),
-            details={'train': train_r, 'val': val_r, 'test': test_r},
+            message='Raw dataset manifest JSON cannot be read or is invalid',
+            details={'error': str(e)}
         )
-
-    return schema.ProbeResult(
-        pid=probe_id,
-        category='Dataset',
-        status=schema.ProbeStatus.PASS,
-        message=(
-            f'train: {train_r:.2f} | val: {val_r:.2f} | '
-            f'test: {test_r:.2f}'
-        ),
-        details={'train': train_r, 'val': val_r, 'test': test_r},
-    )
-
-
-def dataset_targets(
-    config: configs.RootConfig,
-    pid: str | None = None,
-) -> schema.ProbeResult:
-    '''
-    Inspect configured dataset features and target mappings.
-
-    Args:
-        config:
-            root configuration containing preparation specifications.
-        pid:
-            optional probe identifier override.
-
-    Returns:
-        schema.ProbeResult:
-            diagnostic probe record for feature and target specifications.
-    '''
-    probe_id = pid or 'dataset_targets'
-    prep = config.data.preparation
-    feat_count = len(prep.features)
-    target_count = len(prep.targets)
-
-    if feat_count == 0 or target_count == 0:
-        return schema.ProbeResult(
-            pid=probe_id,
-            category='Dataset',
-            status=schema.ProbeStatus.WARN,
-            message=(
-                f'Features ({feat_count}) or targets ({target_count}) '
-                'empty; relying on defaults'
-            ),
-            details={
-                'features_count': feat_count,
-                'targets_count': target_count,
-            },
-        )
-
-    return schema.ProbeResult(
-        pid=probe_id,
-        category='Dataset',
-        status=schema.ProbeStatus.PASS,
-        message=(
-            f'{feat_count} feature source(s) and {target_count} target(s)'
-        ),
-        details={
-            'features': list(prep.features.keys()),
-            'targets': list(prep.targets.keys()),
-        },
-    )

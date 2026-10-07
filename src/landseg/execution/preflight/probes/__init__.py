@@ -32,11 +32,10 @@ import importlib
 import typing
 
 __all__ = [
-    'canonical_pool_state',
+    'ingestion_pool_state',
     'checkpoint_ready',
     'collision_policy',
     'crs_info',
-    'dataset_targets',
     'dir_writable',
     'eval_split',
     'grid_extent',
@@ -45,10 +44,12 @@ __all__ = [
     'hardware_info',
     'model_body',
     'past_runs',
-    'pending_batches',
+    'pending_harmonization',
+    'pending_ingestion',
     'pixel_size',
+    'prepared_blocks_state',
+    'raw_dataset',
     'spatial_reference',
-    'split_ratios',
     'target_file_exists',
 ]
 
@@ -56,8 +57,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .dataset import (
-        dataset_targets,
-        split_ratios,
+        raw_dataset,
     )
     from .filesystem import (
         dir_writable,
@@ -67,9 +67,11 @@ if typing.TYPE_CHECKING:
         hardware_info,
     )
     from .ledger import (
-        canonical_pool_state,
+        ingestion_pool_state,
         past_runs,
-        pending_batches,
+        pending_harmonization,
+        pending_ingestion,
+        prepared_blocks_state,
     )
     from .model import (
         checkpoint_ready,
@@ -91,8 +93,7 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'dataset_targets',
-        'split_ratios',
+        'raw_dataset',
     }:
         obj = importlib.import_module('.dataset', __package__)
         return getattr(obj, name)
@@ -111,10 +112,11 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'canonical_pool_state',
+        'ingestion_pool_state',
         'past_runs',
-        'pending_batches',
-        'probe_ledger',
+        'pending_harmonization',
+        'pending_ingestion',
+        'prepared_blocks_state',
     }:
         obj = importlib.import_module('.ledger', __package__)
         return getattr(obj, name)
@@ -145,5 +147,3 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
-
-

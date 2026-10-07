@@ -378,9 +378,7 @@ def check_target_prerequisites(
             check_manifest_runs(
                 target='data-ingest',
                 upstream_target='data-harmonize',
-                manifest_fpath=(
-                    artifact_paths.data_harmonization.runs_manifest
-                ),
+                manifest_fpath=artifact_paths.data_harmonization.runs_manifest,
             )
         )
 
@@ -399,9 +397,7 @@ def check_target_prerequisites(
             check_manifest_runs(
                 target='data-prepare',
                 upstream_target='data-ingest',
-                manifest_fpath=(
-                    artifact_paths.data_ingestion.runs_manifest
-                ),
+                manifest_fpath=artifact_paths.data_ingestion.runs_manifest,
             )
         )
 

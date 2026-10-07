@@ -56,6 +56,7 @@ class HarmonizationRunRecord(typing.TypedDict):
     run_uid: str
     run_id: str
     run_folder: str
+    source_dataset_manifest: str
     status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
     timestamp: str
     fingerprint: str

@@ -31,8 +31,6 @@ Public APIs:
 # standard imports
 import os
 # local imports
-# import landseg.artifacts as artifacts
-# import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
@@ -50,10 +48,15 @@ def dir_writable(
             message='Target directory path is not defined',
             details={'target_dir': dir_path},
         )
-    if os.path.exists(dir_path):
-        check_dir = dir_path
-    else:
-        check_dir = os.path.dirname(dir_path)
+
+    # find existing parent dir (recursive)
+    check_dir = os.path.abspath(dir_path)
+    while not os.path.exists(check_dir):
+        parent = os.path.dirname(check_dir)
+        if parent == check_dir:
+            break
+        check_dir = parent
+
     w_ok = os.access(check_dir, os.W_OK)
     status = schema.ProbeStatus.PASS if w_ok else schema.ProbeStatus.FAIL
     flag = 'is' if w_ok else 'is not'
@@ -63,23 +66,28 @@ def dir_writable(
         category='Filesystem',
         status=status,
         message=f'Target directory {flag} writable',
-        details={'target_dir': check_dir},
+        details={'target_dir': dir_path},
     )
 
 
 def target_file_exists(
     file_path: str,
-    pid: str | None = None
+    pid: str | None = None,
+    force_rebuild: bool = False,
 ) -> schema.ProbeResult:
     '''Check if the target file already exists.'''
     is_file = os.path.exists(file_path) and os.path.isfile(file_path)
-    status = schema.ProbeStatus.WARN if is_file else schema.ProbeStatus.PASS
-    flag = 'already' if is_file else 'does not'
 
+    match is_file, force_rebuild:
+        case True, True: status = schema.ProbeStatus.WARN
+        case True, False: status = schema.ProbeStatus.PASS
+        case False, _: status = schema.ProbeStatus.PASS
+
+    flag = 'already' if is_file else 'does not'
     return schema.ProbeResult(
         pid=pid or 'target_file',
         category='Filesystem',
         status=status,
-        message=f'Target file {flag} exists',
+        message=f'Target file {flag} exists; force_rebuild: {force_rebuild}',
         details={'target_file_path': file_path},
     )

@@ -36,11 +36,10 @@ import os
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
-import landseg.geopipe.ingest as ingest
 
 
 # ----- typing aliases
-DictCtrl = artifacts.Controller[dict]
+RunManifestCtrl = artifacts.Controller[dict[str, dict[str, str]]] # known type
 
 
 # ----- public functions
@@ -62,7 +61,7 @@ def past_runs(
             diagnostic probe record summarizing run status counts.
     '''
     try:
-        manifest = DictCtrl(manifest_path).fetch()
+        manifest = RunManifestCtrl(manifest_path).fetch()
         if manifest is not None:
             total_run_n = len(manifest)
             success_run_n = len(
@@ -109,12 +108,58 @@ def past_runs(
         )
 
 
-def pending_batches(
+def pending_harmonization(
     artifact_paths: artifacts.ArtifactPaths,
-    root_config: configs.RootConfig,
-    *,
-    warn_if_pending: bool = False,
+    root_config: configs.RootConfig
+) -> schema.ProbeResult:
+    '''Inspect if input source dataset is already harmonized.'''
+    dataset_manifest_path = os.path.abspath(
+        root_config.data.harmonization.dataset_manifest
+    )
+
+    manifest = RunManifestCtrl(
+        artifact_paths.data_harmonization.runs_manifest
+    ).fetch()
+    if manifest is None:
+        return schema.ProbeResult(
+            pid='harmonized_dataset',
+            category='Ledger',
+            status=schema.ProbeStatus.PASS,
+            message='Harmonization has not been run'
+        )
+
+    for v in manifest.values():
+        if (
+            v.get('source_dataset_manifest') == dataset_manifest_path and
+            v.get('status') == 'SUCCESS'
+        ):
+            return schema.ProbeResult(
+                    pid='harmonized_dataset',
+                    category='Ledger',
+                    status=schema.ProbeStatus.WARN,
+                    message=(
+                        f'Provided dataset already harmonized from run '
+                        f'<{v.get('run_uid')}>'
+                    ),
+                    details={
+                        'dataset_manifest_fpath': dataset_manifest_path,
+                        'target_harmonization_run_uid': v.get('run_uid')
+                    },
+                )
+
+    return schema.ProbeResult(
+        pid='harmonized_dataset',
+        category='Ledger',
+        status=schema.ProbeStatus.PASS,
+        message=f'Dataset from {dataset_manifest_path} not yet harmonized'
+    )
+
+
+def pending_ingestion(
+    artifact_paths: artifacts.ArtifactPaths,
     pid: str | None = None,
+    *,
+    desire_pending: bool = True,
 ) -> schema.ProbeResult:
     '''
     Inspect pending harmonization batches awaiting ingestion.
@@ -122,78 +167,80 @@ def pending_batches(
     Args:
         artifact_paths:
             artifact path tree containing ETL run manifest paths.
-        root_config:
-            root configuration containing ingestion parameters.
-        warn_if_pending:
-            if True, emit WARN when batches are pending (for training).
         pid:
             optional probe identifier override.
+        warn_if_pending:
+            if True, emit WARN when batches are pending (for training).
 
     Returns:
         schema.ProbeResult:
             probe record indicating pending batch count and IDs.
     '''
-    harm_manifest = artifact_paths.data_harmonization.runs_manifest
+    probe_id = pid or 'pending_ingestion'
+
+    harmonize_manifest = artifact_paths.data_harmonization.runs_manifest
     ingest_manifest = artifact_paths.data_ingestion.runs_manifest
-    target = root_config.data.ingestion.harmonization_run
-    rebuild = root_config.data.ingestion.rebuild
 
-    probe_id = pid or (
-        'pending_data_warning' if warn_if_pending else 'pending_batch_queue'
-    )
-    try:
-        pending = ingest.resolve_pending_ingestion_batches(
-            harm_manifest,
-            ingest_manifest,
-            target=target,
-            rebuild=rebuild,
-        )
-        run_ids = [p['run_id'] for p in pending]
+    harmonization_runs = RunManifestCtrl(harmonize_manifest).fetch()
+    ingestion_runs = RunManifestCtrl(ingest_manifest).fetch()
 
-        if warn_if_pending:
-            if pending:
-                return schema.ProbeResult(
-                    pid=probe_id,
-                    category='Ledger',
-                    status=schema.ProbeStatus.WARN,
-                    message=f'{len(pending)} batches pending in harmonization',
-                    details={'pending_run_ids': run_ids},
-                )
-            return schema.ProbeResult(
-                pid=probe_id,
-                category='Ledger',
-                status=schema.ProbeStatus.PASS,
-                message='Harmonization ledger up to date; no pending batches',
-            )
-
+    if not harmonization_runs:
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',
-            status=schema.ProbeStatus.PASS,
-            message=(
-                f'{len(pending)} batches pending in queue'
-                if pending
-                else 'Batch queue is empty; pool is up to date'
-            ),
-            details={'pending_run_ids': run_ids},
+            status=schema.ProbeStatus.FAIL,
+            message='Unable to resolve pending batches',
+            details={
+                'harmonization_run_manifest': harmonize_manifest,
+                'ingestion_run_manifest': ingest_manifest
+            },
         )
-    except Exception as err:  # pylint: disable=broad-exception-caught
-        status = (
-            schema.ProbeStatus.WARN
-            if warn_if_pending
-            else schema.ProbeStatus.FAIL
-        )
+
+    good_harmonization_runs = {
+        k: v for k, v in harmonization_runs.items()
+        if v.get('status') == 'SUCCESS'
+    }
+
+    effective_ingestion_runs = ingestion_runs or {}
+    good_ingestion_runs = {
+        k: v for k, v in effective_ingestion_runs.items()
+        if v.get('status') == 'SUCCESS'
+    }
+
+    harmonization_uids = set(
+        v.get('run_uid') for v in good_harmonization_runs.values()
+    )
+    harmonization_uids_in_ingestion = set(
+        v.get('harmonization_run_uid') for v in good_ingestion_runs.values()
+    )
+
+    pending = harmonization_uids - harmonization_uids_in_ingestion
+
+    match bool(pending), desire_pending:
+        case True, True: status = schema.ProbeStatus.PASS
+        case True, False: status = schema.ProbeStatus.WARN
+        case False, True: status = schema.ProbeStatus.WARN
+        case False, False: status = schema.ProbeStatus.PASS
+
+    if pending:
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',
             status=status,
-            message=f'Failed resolving pending batches: {err}',
-            details={'error': str(err)},
+            message=f'{len(pending)} batches pending ingestion',
+            details={'pending_run_ids': list(pending)},
         )
 
+    return schema.ProbeResult(
+        pid=probe_id,
+        category='Ledger',
+        status=status,
+        message='Harmonization ledger up to date; nothing to ingest',
+    )
 
-def canonical_pool_state(
-    catalog_path: str,
+
+def ingestion_pool_state(
+    artifact_paths: artifacts.ArtifactPaths,
     pid: str | None = None,
 ) -> schema.ProbeResult:
     '''
@@ -209,7 +256,9 @@ def canonical_pool_state(
         schema.ProbeResult:
             probe record detailing existing blocks in canonical pool.
     '''
-    probe_id = pid or 'canonical_pool_state'
+    probe_id = pid or 'ingested_blocks_pool'
+    catalog_path = artifact_paths.data_ingestion.data_blocks.catalog
+
     if not os.path.exists(catalog_path):
         return schema.ProbeResult(
             pid=probe_id,
@@ -220,13 +269,13 @@ def canonical_pool_state(
         )
 
     try:
-        catalog = DictCtrl(catalog_path).fetch()
+        catalog = RunManifestCtrl(catalog_path).fetch()
         block_count = len(catalog) if catalog is not None else 0
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',
             status=schema.ProbeStatus.PASS,
-            message=f'Pool contains {block_count} existing blocks',
+            message=f'Ingestion pool contains {block_count} existing blocks',
             details={'path': catalog_path, 'block_count': block_count},
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
@@ -237,3 +286,62 @@ def canonical_pool_state(
             message=f'Failed reading pool catalog: {err}',
             details={'path': catalog_path, 'error': str(err)},
         )
+
+
+def prepared_blocks_state(
+    artifact_paths: artifacts.ArtifactPaths,
+    pid: str | None = None,
+    *,
+    desire_existing: bool = False,
+) -> schema.ProbeResult:
+    '''Inspect prepared blocks state.'''
+    probe_id = pid or 'prepared_blocks_state'
+    schema_path = artifact_paths.data_preparation.schema
+    prep_schema = artifacts.Controller[dict](schema_path).fetch()
+
+    match bool(prep_schema), desire_existing:
+        case False, False:
+            return schema.ProbeResult(
+                pid=probe_id,
+                category='Ledger',
+                status=schema.ProbeStatus.PASS,
+                message='Data preparation not yet run',
+            )
+
+        case False, True:
+            return schema.ProbeResult(
+                pid=probe_id,
+                category='Ledger',
+                status=schema.ProbeStatus.WARN,
+                message='Data preparation schema not found; blocks not prepared',
+            )
+
+        case True, False:
+            assert prep_schema is not None
+            n_train = len(prep_schema.get('train_blocks', {}))
+            n_val = len(prep_schema.get('val_blocks', {}))
+            n_test = len(prep_schema.get('test_blocks', {}))
+            return schema.ProbeResult(
+                pid=probe_id,
+                category='Ledger',
+                status=schema.ProbeStatus.WARN,
+                message=(
+                    f'Found existing prepared blocks; '
+                    f'train: {n_train} | val: {n_val} | test: {n_test}'
+                ),
+            )
+
+        case True, True:
+            assert prep_schema is not None
+            n_train = len(prep_schema.get('train_blocks', {}))
+            n_val = len(prep_schema.get('val_blocks', {}))
+            n_test = len(prep_schema.get('test_blocks', {}))
+            return schema.ProbeResult(
+                pid=probe_id,
+                category='Ledger',
+                status=schema.ProbeStatus.PASS,
+                message=(
+                    f'Found {n_train} train / {n_val} val / {n_test} test '
+                    'prepared blocks ready'
+                ),
+            )

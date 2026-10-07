@@ -60,7 +60,7 @@ def spatial_reference(
             if ref_fpath is not None and os.path.isfile(ref_fpath)
             else schema.ProbeStatus.FAIL
         ),
-        message=f'Reference path: {ref_fpath}',
+        message=f'Reference raster found at: {ref_fpath}',
         details={'path': ref_fpath},
     )
 
@@ -145,7 +145,7 @@ def grid_specs(
     sx, sy = config.data.world_grid.params.tile_stride
 
     return schema.ProbeResult(
-        pid='block_dimensions',
+        pid='block_specifications',
         category='Spatial',
         status=schema.ProbeStatus.PASS,
         message=f'{bx}x{by} px tile with {sx}x{sy} px stride',

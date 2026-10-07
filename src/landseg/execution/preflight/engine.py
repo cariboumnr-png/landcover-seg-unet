@@ -72,12 +72,16 @@ def inspect_target(
     results: list[schema.ProbeResult] = []
     artifact_paths = artifacts.ArtifactPaths.from_config(root_config)
 
+    grid_paths = artifact_paths.world_grid
+    harm_paths = artifact_paths.data_harmonization
+    ingest_paths = artifact_paths.data_ingestion
+    prep_paths = artifact_paths.data_preparation
+
     match target:
         case 'world-grid':
-            paths = artifact_paths.world_grid
             results.extend([
-                probes.dir_writable(paths.root, 'world_grid_output'),
-                probes.target_file_exists(paths.report, 'world_grid_report'),
+                probes.dir_writable(grid_paths.root, 'world_grid_output'),
+                probes.target_file_exists(grid_paths.report, 'world_grid_report'),
                 probes.spatial_reference(root_config),
                 probes.crs_info(root_config),
                 probes.pixel_size(root_config),
@@ -87,41 +91,32 @@ def inspect_target(
             ])
 
         case 'data-harmonize':
-            paths = artifact_paths.data_harmonization
             results.extend([
                 *_check_prerequisites(target, artifact_paths),
-                probes.dir_writable(paths.root, 'harmonization_output'),
-                probes.past_runs(paths.runs_manifest, 'past_harmonization_runs'),
+                probes.dir_writable(harm_paths.root, 'harmonization_output'),
+                probes.raw_dataset(root_config),
+                probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
+                probes.pending_harmonization(artifact_paths, root_config),
             ])
 
-        case 'data-ingest':
-            paths = artifact_paths.data_ingestion
+        case 'data-ingest' | 'batch-ingest':
             results.extend([
                 *_check_prerequisites(target, artifact_paths),
-                probes.dir_writable(paths.root, 'ingestion_output'),
-                probes.collision_policy(root_config),
-                probes.past_runs(paths.runs_manifest, 'past_ingestion_runs'),
-                probes.canonical_pool_state(paths.data_blocks.catalog),
-            ])
-
-        case 'batch-ingest':
-            harm_paths = artifact_paths.data_harmonization
-            ingest_paths = artifact_paths.data_ingestion
-            results.extend([
                 probes.dir_writable(ingest_paths.root, 'ingestion_output'),
                 probes.collision_policy(root_config),
                 probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
-                probes.pending_batches(artifact_paths, root_config),
-                probes.canonical_pool_state(ingest_paths.data_blocks.catalog),
+                probes.past_runs(ingest_paths.runs_manifest, 'past_ingestion_runs'),
+                probes.pending_ingestion(artifact_paths),
+                probes.ingestion_pool_state(artifact_paths),
             ])
 
         case 'data-prepare':
-            paths = artifact_paths.data_preparation
             results.extend([
                 *_check_prerequisites(target, artifact_paths),
-                probes.dir_writable(paths.root, 'preparation_output'),
-                probes.split_ratios(root_config),
-                probes.dataset_targets(root_config),
+                probes.dir_writable(prep_paths.root, 'preparation_output'),
+                probes.target_file_exists(prep_paths.report, 'preparation_report'),
+                probes.ingestion_pool_state(artifact_paths),
+                probes.prepared_blocks_state(artifact_paths),
             ])
 
         case 'model-train':
@@ -129,7 +124,8 @@ def inspect_target(
                 *_check_prerequisites(target, artifact_paths),
                 probes.dir_writable(artifact_paths.session_root, 'checkpoint_dir'),
                 probes.model_body(root_config),
-                probes.pending_batches(artifact_paths, root_config, warn_if_pending=True),
+                probes.pending_ingestion(artifact_paths, desire_pending=False),
+                probes.prepared_blocks_state(artifact_paths, desire_existing=True),
                 *probes.hardware_info(root_config),
             ])
 

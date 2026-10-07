@@ -138,8 +138,9 @@ class HarmonizationLogger(utils.Logger):
 
     def update_runs_manifest(
         self,
-        manifest_fpath: str,
+        run_manifest_fpath: str,
         run_folder: str,
+        dataset_manifest_fpath: str
     ) -> None:
         '''Record or update the harmonization runs manifest.'''
         if self.summary is None:
@@ -151,11 +152,12 @@ class HarmonizationLogger(utils.Logger):
             'run_uid': uid,
             'run_id': self.summary.get('run_id', ''),
             'run_folder': os.path.abspath(run_folder),
+            'source_dataset_manifest': os.path.abspath(dataset_manifest_fpath),
             'status': self.summary.get('status', 'FAILED'),
             'timestamp': self.summary.get('timestamp', ''),
             'fingerprint': self.summary.get('fingerprint', '')
         }
-        ctrl = ManifestCtrl(manifest_fpath)
+        ctrl = ManifestCtrl(run_manifest_fpath)
         try:
             manifest_data = ctrl.fetch() or {} # manifest.json can be absent
         except artifacts.ArtifactError as e:

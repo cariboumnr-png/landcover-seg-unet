@@ -66,7 +66,8 @@ class DataHarmonization(base.GeoPipeline):
         finally:
             self.logger.update_runs_manifest(
                 self.pipeline_paths.runs_manifest,
-                self.pipeline_paths.effective_run_folder
+                self.pipeline_paths.effective_run_folder,
+                self.config.data.harmonization.dataset_manifest
             )
             self.logger.log_sep()
             self.logger.close()
