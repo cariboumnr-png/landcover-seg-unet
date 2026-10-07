@@ -33,7 +33,6 @@ Public APIs:
 # standard imports
 import datetime
 import os
-import typing
 import uuid
 # local imports
 import landseg._constants as c
@@ -41,6 +40,11 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
+
+# constants
+MAX_WIDTH = 120
+HEADER_ROW = f' {"CATEGORY":<15}{"PROBE ID":<30}{"STATUS":<9}{"DETAILS"}'
+MSG_MAX_LEN = MAX_WIDTH - 15 - 30 - 9 - 3 # 3 as the len of "..."
 
 # ----- public functions
 def format_preflight_report(
@@ -57,56 +61,45 @@ def format_preflight_report(
         str:
             formatted terminal dashboard text.
     '''
-    result_list = (
-        [results] if isinstance(results, schema.PreflightResult) else results
-    )
-    lines: list[str] = []
-    width = 80
-    sep = '=' * width
-    thin_sep = '-' * width
+    result_list = results if isinstance(results, list) else [results]
+    lns: list[str] = []
+    sep = '=' * MAX_WIDTH
+    thin_sep = '-' * MAX_WIDTH
 
     for result in result_list:
-        lines.append(sep)
+        lns.append(sep)
         header = f'PRE-FLIGHT READINESS CHECK: {result.target}'
-        lines.append(f'{header:^{width}}')
-        lines.append(sep)
-        lines.append(
-            f' {"CATEGORY":<11}{"PROBE ID":<26}{"STATUS":<9}{"DETAILS"}'
-        )
-        lines.append(thin_sep)
+        lns.append(f'{header:^{MAX_WIDTH}}')
+        lns.append(sep)
+        lns.append(HEADER_ROW)
+        lns.append(thin_sep)
 
-        for probe in result.probes:
-            msg = probe.message
-            if len(msg) > 32:
-                msg = msg[:29] + '...'
-            lines.append(
-                f' {probe.category:<11}{probe.probe_id:<26}'
-                f'{probe.status.value:<9}{msg}'
-            )
+        for p in result.probes:
+            m = p.message
+            if len(m) > MSG_MAX_LEN:
+                m = m[:MSG_MAX_LEN - 1] + '...'
+            lns.append(f' {p.category:<15}{p.pid:<30}{p.status.value:<9}{m}')
 
-        lines.append(sep)
-        err_count = len(result.errors)
-        warn_count = len(result.warnings)
-        lines.append(
-            f' STATUS: {result.status} '
-            f'({err_count} errors, {warn_count} warnings)'
-        )
+        lns.append(sep)
+
         if result.telemetry:
-            telemetry_str = ', '.join(
-                f'{k}: {v}' for k, v in result.telemetry.items()
-            )
-            lines.append(f' Telemetry: {telemetry_str}')
-        lines.append(sep)
+            lns.append(' Telemetry:')
+            for k, v in result.telemetry.items():
+                lns.append(f'   - {k:<15}\t{v}')
+
+        e_n = len(result.errors)
+        w_n = len(result.warnings)
+        lns.append(f' STATUS: {result.status} ({e_n} errors, {w_n} warnings)')
+
+        lns.append(sep)
 
     if len(result_list) > 1:
-        ready_count = sum(1 for r in result_list if r.is_ready)
-        blocked_count = len(result_list) - ready_count
-        lines.append(
-            f' SYSTEM STATUS: {ready_count} READY | {blocked_count} BLOCKED'
-        )
-        lines.append(sep)
+        ready_n = sum(1 for r in result_list if r.is_ready)
+        blocked_n = len(result_list) - ready_n
+        lns.append(f' SYSTEM STATUS: {ready_n} READY | {blocked_n} BLOCKED')
+        lns.append(sep)
 
-    return '\n'.join(lines)
+    return '\n'.join(lns)
 
 
 def export_preflight_report(
@@ -133,31 +126,23 @@ def export_preflight_report(
         tuple[str, str]:
             persisted report file path and generated timestamped UID.
     '''
-    result_list = (
-        [results] if isinstance(results, schema.PreflightResult) else results
-    )
-    effective_exp_root = exp_root or root_config.execution.exp_root
-    preflight_dir = os.path.join(effective_exp_root, 'preflight')
+    result_list = results if isinstance(results, list) else [results]
 
     now = datetime.datetime.now()
-    timestamp_iso = now.strftime(c.TF_ISO8601)
-    timestamp_tag = now.strftime('%Y%m%d_%H%M%S')
-    uid = f'{timestamp_tag}_{uuid.uuid4().hex[:6]}'
+    uid = f'{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}'
 
-    custom_report_path = root_config.command.preflight.report_path
-    if custom_report_path:
-        report_fp = custom_report_path
-        parent_dir = os.path.dirname(report_fp)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
+    if root_config.command.preflight.report_path:
+        report_fp = root_config.command.preflight.report_path
+        report_dir = os.path.dirname(report_fp)
     else:
-        os.makedirs(preflight_dir, exist_ok=True)
-        report_fp = os.path.join(
-            preflight_dir, f'preflight_report_{uid}.json'
-        )
+        effective_exp_root = exp_root or root_config.execution.exp_root
+        report_dir = os.path.join(effective_exp_root, 'preflight')
+        report_fp = os.path.join(report_dir, f'preflight_report_{uid}.json')
+
+    if report_dir:
+        os.makedirs(report_dir, exist_ok=True)
 
     all_ready = all(r.is_ready for r in result_list)
-    overall_status = 'READY' if all_ready else 'BLOCKED'
 
     pass_count = sum(
         sum(1 for p in r.probes if p.status == schema.ProbeStatus.PASS)
@@ -175,26 +160,22 @@ def export_preflight_report(
         sum(1 for p in r.probes if p.status == schema.ProbeStatus.SKIP)
         for r in result_list
     )
-    total_probes = pass_count + warn_count + fail_count + skip_count
 
-    report_payload: dict[str, typing.Any] = {
-        'timestamp': timestamp_iso,
+    artifacts.Controller[dict](report_fp).persist({
+        'timestamp': now.strftime(c.TF_ISO8601),
         'uid': uid,
         'target': target,
-        'status': overall_status,
+        'status': 'READY' if all_ready else 'BLOCKED',
         'strict': bool(root_config.command.preflight.strict),
         'is_ready': all_ready,
         'summary': {
-            'total_probes': total_probes,
+            'total_probes': pass_count + warn_count + fail_count + skip_count,
             'pass': pass_count,
             'warn': warn_count,
             'fail': fail_count,
             'skip': skip_count,
         },
         'targets': [r.as_dict() for r in result_list],
-    }
-
-    report_ctrl = artifacts.Controller[dict](report_fp)
-    report_ctrl.persist(report_payload)
+    })
 
     return report_fp, uid
