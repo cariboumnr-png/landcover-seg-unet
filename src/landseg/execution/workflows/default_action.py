@@ -20,20 +20,15 @@
 # =========================================================================== #
 
 '''
-Default
+Default CLI action, currently routed to run preflight check
 '''
 
-# standard imports
-import dataclasses
-import json
 # local imports
 import landseg.configs as configs
+import landseg.execution.preflight as preflight
 
 def execute_default_action(config: configs.RootConfig):
     '''place holder.'''
 
-    config.validate_all()
-    as_dict = dataclasses.asdict(config)
-    print('This is the default action')
-    print('Follows are the whole runtime configs')
-    print(json.dumps(as_dict, indent=2))
+    print('Running whole project preflight checks by default')
+    _ = preflight.run_preflight(config)
