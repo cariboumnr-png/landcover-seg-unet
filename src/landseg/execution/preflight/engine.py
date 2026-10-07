@@ -85,6 +85,7 @@ def inspect_target(
         case 'data-ingest':
             paths = artifact_paths.data_ingestion
             results.append(probes.dir_writable(paths.root, 'ingestion_output'))
+            results.append(probes.collision_policy(root_config))
             results.append(probes.past_runs(paths.runs_manifest, 'past_ingestion_runs'))
             results.append(probes.canonical_pool_state(paths.data_blocks.catalog))
             results.extend(_check_prerequisites(target, artifact_paths))
@@ -93,6 +94,7 @@ def inspect_target(
             harm_paths = artifact_paths.data_harmonization
             ingest_paths = artifact_paths.data_ingestion
             results.append(probes.dir_writable(ingest_paths.root, 'ingestion_output'))
+            results.append(probes.collision_policy(root_config))
             results.append(probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'))
             results.append(
                 probes.pending_batches(
@@ -107,6 +109,8 @@ def inspect_target(
         case 'data-prepare':
             paths = artifact_paths.data_preparation
             results.append(probes.dir_writable(paths.root, 'preparation_output'))
+            results.append(probes.split_ratios(root_config))
+            results.append(probes.dataset_targets(root_config))
             results.extend(_check_prerequisites(target, artifact_paths))
 
         case 'model-train':

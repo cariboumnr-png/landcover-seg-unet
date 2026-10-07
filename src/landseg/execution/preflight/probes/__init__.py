@@ -34,7 +34,9 @@ import typing
 __all__ = [
     'canonical_pool_state',
     'checkpoint_ready',
+    'collision_policy',
     'crs_info',
+    'dataset_targets',
     'dir_writable',
     'eval_split',
     'grid_extent',
@@ -46,12 +48,17 @@ __all__ = [
     'pending_batches',
     'pixel_size',
     'spatial_reference',
+    'split_ratios',
     'target_file_exists',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .dataset import (
+        dataset_targets,
+        split_ratios,
+    )
     from .filesystem import (
         dir_writable,
         target_file_exists,
@@ -69,6 +76,9 @@ if typing.TYPE_CHECKING:
         eval_split,
         model_body,
     )
+    from .policy import (
+        collision_policy,
+    )
     from .spatial import (
         crs_info,
         grid_extent,
@@ -80,6 +90,13 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'dataset_targets',
+        'split_ratios',
+    }:
+        obj = importlib.import_module('.dataset', __package__)
+        return getattr(obj, name)
+
     if name in {
         'dir_writable',
         'target_file_exists',
@@ -111,6 +128,12 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
+        'collision_policy',
+    }:
+        obj = importlib.import_module('.policy', __package__)
+        return getattr(obj, name)
+
+    if name in {
         'crs_info',
         'grid_extent',
         'grid_origin',
@@ -122,4 +145,5 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
 

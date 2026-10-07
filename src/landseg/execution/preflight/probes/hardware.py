@@ -71,7 +71,7 @@ def hardware_info(
             probes.append(
                 schema.ProbeResult(
                     pid='cuda_device',
-                    category='hardware',
+                    category='Hardware',
                     status=schema.ProbeStatus.PASS,
                     message=f'{device_name} (cuda:0)',
                     details={'device_name': device_name, 'cuda': True},
@@ -98,7 +98,7 @@ def hardware_info(
                 probes.append(
                     schema.ProbeResult(
                         pid='vram_headroom',
-                        category='hardware',
+                        category='Hardware',
                         status=vram_status,
                         message=(
                             f'{free_gb:.1f} GB free / '
@@ -121,7 +121,7 @@ def hardware_info(
             probes.append(
                 schema.ProbeResult(
                     pid='cuda_device',
-                    category='hardware',
+                    category='Hardware',
                     status=schema.ProbeStatus.WARN,
                     message='CUDA unavailable; compute running on CPU',
                     details={'device_name': 'cpu', 'cuda': False},

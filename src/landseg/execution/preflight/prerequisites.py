@@ -102,7 +102,7 @@ class PrerequisiteCheck:
     def to_probe_result(
         self,
         probe_id: str = 'pipeline_prerequisites',
-        category: str = 'lineage',
+        category: str = 'Lineage',
     ) -> schema.ProbeResult:
         '''
         Convert prerequisite evaluation into preflight probe result.
