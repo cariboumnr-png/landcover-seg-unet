@@ -112,7 +112,6 @@ class BasePipeline(abc.ABC):
         preflight.assert_target_prerequisites(
             self.pipeline_name,
             self.artifact_paths,
-            self.config
         )
 
 

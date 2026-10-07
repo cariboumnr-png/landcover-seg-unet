@@ -37,87 +37,124 @@ import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def probe_spatial(
-    target: str,
-    root_config: configs.RootConfig,
-) -> list[schema.ProbeResult]:
-    '''
-    Inspect spatial grid contracts and projection validity.
+def spatial_reference(
+    config: configs.RootConfig,
+) -> schema.ProbeResult:
+    '''Reports the world grid spatial definition source.'''
+    grid_cfg = config.data.world_grid
 
-    Args:
-        target:
-            pipeline or workflow target identifier.
-        root_config:
-            hydra-composed root configuration.
-
-    Returns:
-        list[schema.ProbeResult]:
-            list of spatial diagnostic probe records.
-    '''
-    probes: list[schema.ProbeResult] = []
-    grid_cfg = root_config.data.world_grid.params
-
-    # crs check
-    crs_str = grid_cfg.crs_string or getattr(
-        root_config.data, 'crs', 'EPSG:3161'
-    )
-    if crs_str:
-        probes.append(
-            schema.ProbeResult(
-                probe_id='crs_validity',
-                category='spatial',
-                status=schema.ProbeStatus.PASS,
-                message=f'Target CRS: {crs_str}',
-                details={'crs': crs_str},
-            )
-        )
-
-    # pixel resolution check
-    px_size = grid_cfg.pixel_size or (10.0, 10.0)
-    probes.append(
-        schema.ProbeResult(
-            probe_id='pixel_resolution',
-            category='spatial',
+    if grid_cfg.mode == 'manual':
+        return schema.ProbeResult(
+            pid='world_grid_reference',
+            category='Spatial',
             status=schema.ProbeStatus.PASS,
-            message=f'Resolution: {px_size[0]}m x {px_size[1]}m',
-            details={'pixel_size': px_size},
+            message='Manual spatial definitions below',
         )
+
+    ref_fpath = grid_cfg.params.ref_fpath
+    return schema.ProbeResult(
+        pid='world_grid_reference',
+        category='Spatial',
+        status=(
+            schema.ProbeStatus.PASS
+            if ref_fpath is not None and os.path.isfile(ref_fpath)
+            else schema.ProbeStatus.FAIL
+        ),
+        message=f'Reference path: {ref_fpath}',
+        details={'path': ref_fpath},
     )
 
-    # block dimensions check
-    tile_size = grid_cfg.tile_size or (256, 256)
-    probes.append(
-        schema.ProbeResult(
-            probe_id='block_dimensions',
-            category='spatial',
-            status=schema.ProbeStatus.PASS,
-            message=f'{tile_size[0]}x{tile_size[1]} px tile',
-            details={'tile_size': tile_size},
-        )
+
+def crs_info(
+    config: configs.RootConfig,
+) -> schema.ProbeResult:
+    '''Reports the target coordinate reference system.'''
+    grid_cfg = config.data.world_grid
+    if grid_cfg.mode == 'ref':
+        message = 'Target CRS is defined by the reference raster'
+    else:
+        message = f'Target CRS: {grid_cfg.params.crs_string}'
+
+    return schema.ProbeResult(
+        pid='crs',
+        category='Spatial',
+        status=_ref_mode_status(config),
+        message=message,
     )
 
-    # world grid existence check for downstream stages
-    if target in {'data-harmonize', 'data-ingest', 'data-prepare'}:
-        ref_fpath = grid_cfg.ref_fpath
-        if ref_fpath and os.path.isfile(ref_fpath):
-            probes.append(
-                schema.ProbeResult(
-                    probe_id='world_grid_spec',
-                    category='spatial',
-                    status=schema.ProbeStatus.PASS,
-                    message=f'Found grid definition at {ref_fpath}',
-                    details={'path': ref_fpath},
-                )
-            )
-        elif ref_fpath:
-            probes.append(
-                schema.ProbeResult(
-                    probe_id='world_grid_spec',
-                    category='spatial',
-                    status=schema.ProbeStatus.WARN,
-                    message=f'Grid spec not found at {ref_fpath}',
-                    details={'path': ref_fpath},
-                )
-            )
 
-    return probes
+def pixel_size(
+    config: configs.RootConfig,
+) -> schema.ProbeResult:
+    '''Reports the world grid pixel size.'''
+    grid_cfg = config.data.world_grid
+    if grid_cfg.mode == 'ref':
+        message = 'Pixel size is defined by the reference raster'
+    else:
+        message = f'Pixel size: {grid_cfg.params.pixel_size}'
+
+    return schema.ProbeResult(
+        pid='pixel_size',
+        category='Spatial',
+        status=_ref_mode_status(config),
+        message=message,
+    )
+
+
+def grid_extent(
+    config: configs.RootConfig,
+) -> schema.ProbeResult:
+    '''Reports the world grid extent.'''
+    grid_cfg = config.data.world_grid
+    if grid_cfg.mode == 'ref':
+        message = 'Grid extent is defined by the reference raster'
+    else:
+        message = f'Grid extent: {grid_cfg.params.extent_in_crs_units}'
+
+    return schema.ProbeResult(
+        pid='grid_extent',
+        category='Spatial',
+        status=_ref_mode_status(config),
+        message=message,
+    )
+
+
+def grid_origin(
+    config: configs.RootConfig,
+) -> schema.ProbeResult:
+    '''Reports the world grid origin.'''
+    grid_cfg = config.data.world_grid
+    if grid_cfg.mode == 'ref':
+        message = 'Grid origin is defined by the reference raster'
+    else:
+        message = f'Grid origin: {grid_cfg.params.origin}'
+
+    return schema.ProbeResult(
+        pid='grid_origin',
+        category='Spatial',
+        status=_ref_mode_status(config),
+        message=message,
+    )
+
+
+def grid_specs(
+    config: configs.RootConfig,
+) -> schema.ProbeResult:
+    '''Reports the configured tile dimensions and stride.'''
+    bx, by = config.data.world_grid.params.tile_size
+    sx, sy = config.data.world_grid.params.tile_stride
+
+    return schema.ProbeResult(
+        pid='block_dimensions',
+        category='Spatial',
+        status=schema.ProbeStatus.PASS,
+        message=f'{bx}x{by} px tile with {sx}x{sy} px stride',
+    )
+
+
+def _ref_mode_status(config: configs.RootConfig) -> schema.ProbeStatus:
+    if config.data.world_grid.mode == 'ref':
+        status = schema.ProbeStatus.SKIP
+    else:
+        status = schema.ProbeStatus.PASS
+    return status

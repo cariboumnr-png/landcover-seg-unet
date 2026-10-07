@@ -20,28 +20,58 @@
 # =========================================================================== #
 
 '''
-Model architecture and checkpoint diagnostic probes.
+Storage and filesystem diagnostic probes.
 
-Inspects neural backbone configurations, channel counts, and evaluation
-checkpoint weights prior to model execution.
+Validates output directory access, writability, and path readiness.
 
 Public APIs:
-    - `probe_model`: Check neural architecture and checkpoint readiness.
+    - `probe_storage`: Validate pipeline output directory access.
 '''
 
+# standard imports
+import os
 # local imports
-import landseg.configs as configs
+# import landseg.artifacts as artifacts
+# import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def model_body(root_config: configs.RootConfig) -> schema.ProbeResult:
-    '''Inspect configured model body'''
-    body = root_config.models.model_body
+def dir_writable(
+    dir_path: str,
+    pid: str | None = None
+) -> schema.ProbeResult:
+    '''Check if destination directory is writable.'''
+    if os.path.exists(dir_path):
+        check_dir = dir_path
+    else:
+        check_dir = os.path.dirname(dir_path)
+    w_ok = os.access(check_dir, os.W_OK)
+    status = schema.ProbeStatus.PASS if w_ok else schema.ProbeStatus.FAIL
+    flag = 'is' if w_ok else 'is not'
+
     return schema.ProbeResult(
-        pid='model_body',
-        category='model',
-        status=schema.ProbeStatus.PASS,
-        message=f'Configured architecture: "{body}" recognized in registry',
-        details={'model_body': body},
+        pid=pid or 'target_directory',
+        category='Filesystem',
+        status=status,
+        message=f'Target directory {flag} writable',
+        details={'target_dir': check_dir},
+    )
+
+
+def file_exists(
+    file_path: str,
+    pid: str | None = None
+) -> schema.ProbeResult:
+    '''Check if the target file already exists.'''
+    is_file = os.path.exists(file_path) and os.path.isfile(file_path)
+    status = schema.ProbeStatus.WARN if is_file else schema.ProbeStatus.PASS
+    flag = 'already' if is_file else 'does not'
+
+    return schema.ProbeResult(
+        pid=pid or 'target_file',
+        category='Filesystem',
+        status=status,
+        message=f'Target file {flag} exists',
+        details={'target_file_path': file_path},
     )

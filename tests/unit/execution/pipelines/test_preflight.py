@@ -89,7 +89,7 @@ def test_inspect_target_success():
     assert len(result.errors) == 0
 
     assert any(
-        p.probe_id == 'pipeline_prerequisites'
+        p.pid == 'pipeline_prerequisites'
         and p.status == preflight.ProbeStatus.PASS
         and 'dummy-pipeline' in p.message
         for p in result.probes
@@ -126,7 +126,7 @@ def test_inspect_target_failure(monkeypatch):
     assert 'Missing upstream artifact' in result.errors[0]
 
     lineage_probe = next(
-        p for p in result.probes if p.probe_id == 'pipeline_prerequisites'
+        p for p in result.probes if p.pid == 'pipeline_prerequisites'
     )
     assert lineage_probe.status == preflight.ProbeStatus.FAIL
 
@@ -222,7 +222,7 @@ def test_inspect_target():
     result = preflight.inspect_target('batch-ingest', cfg)
     assert isinstance(result, preflight.PreflightResult)
     assert result.target == 'batch-ingest'
-    probe_ids = [p.probe_id for p in result.probes]
+    probe_ids = [p.pid for p in result.probes]
     assert 'harmonize_ledger' in probe_ids
     assert 'pending_batch_queue' in probe_ids
     assert 'collision_policy' in probe_ids
@@ -239,13 +239,13 @@ def test_preflight_result_serialization():
         status='READY',
         probes=[
             preflight.ProbeResult(
-                probe_id='probe_1',
+                pid='probe_1',
                 category='hardware',
                 status=preflight.ProbeStatus.PASS,
                 message='GPU available',
             ),
             preflight.ProbeResult(
-                probe_id='probe_2',
+                pid='probe_2',
                 category='lineage',
                 status=preflight.ProbeStatus.WARN,
                 message='Pending batches detected',
@@ -339,7 +339,7 @@ def test_format_preflight_report_single():
         status='READY',
         probes=[
             preflight.ProbeResult(
-                probe_id='pipeline_prerequisites',
+                pid='pipeline_prerequisites',
                 category='lineage',
                 status=preflight.ProbeStatus.PASS,
                 message='Prerequisites verified for model-train',
@@ -373,7 +373,7 @@ def test_format_preflight_report_multi():
             status='BLOCKED',
             probes=[
                 preflight.ProbeResult(
-                    probe_id='chk',
+                    pid='chk',
                     category='lineage',
                     status=preflight.ProbeStatus.FAIL,
                     message='Missing file',
@@ -405,7 +405,7 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
         status='READY',
         probes=[
             preflight.ProbeResult(
-                probe_id='p1',
+                pid='p1',
                 category='lineage',
                 status=preflight.ProbeStatus.PASS,
                 message='All ok',

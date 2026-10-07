@@ -35,21 +35,19 @@ import typing
 import torch
 # local imports
 import landseg._constants as c
+import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def probe_hardware(
-    check_gpu: bool = True,
-    telemetry: dict[str, typing.Any] | None = None,
-    root_config: typing.Any = None,
+def hardware_info(
+    telemetry: dict[str, typing.Any] | None,
+    root_config: configs.RootConfig,
 ) -> list[schema.ProbeResult]:
     '''
     Inspect compute accelerator availability and system hardware state.
 
     Args:
-        check_gpu:
-            whether GPU accelerator availability should be verified.
         telemetry:
             optional dictionary to populate with hardware metadata.
         root_config:
@@ -67,12 +65,12 @@ def probe_hardware(
         telemetry['device'] = c.DEVICE_NAME
         telemetry['cuda_available'] = cuda_available
 
-    if check_gpu:
+    if root_config.command.preflight.check_gpu:
         if cuda_available:
             device_name = torch.cuda.get_device_name(0)
             probes.append(
                 schema.ProbeResult(
-                    probe_id='cuda_device',
+                    pid='cuda_device',
                     category='hardware',
                     status=schema.ProbeStatus.PASS,
                     message=f'{device_name} (cuda:0)',
@@ -83,7 +81,7 @@ def probe_hardware(
                 free_b, total_b = torch.cuda.mem_get_info(0)
                 free_gb = free_b / (1024 ** 3)
                 batch_size = (
-                    root_config.session.data_loader.batch_size
+                    root_config.session.dataloader.batch_size
                     if root_config is not None
                     and hasattr(root_config, 'session')
                     and hasattr(root_config.session, 'data_loader')
@@ -99,7 +97,7 @@ def probe_hardware(
                 )
                 probes.append(
                     schema.ProbeResult(
-                        probe_id='vram_headroom',
+                        pid='vram_headroom',
                         category='hardware',
                         status=vram_status,
                         message=(
@@ -122,7 +120,7 @@ def probe_hardware(
         else:
             probes.append(
                 schema.ProbeResult(
-                    probe_id='cuda_device',
+                    pid='cuda_device',
                     category='hardware',
                     status=schema.ProbeStatus.WARN,
                     message='CUDA unavailable; compute running on CPU',

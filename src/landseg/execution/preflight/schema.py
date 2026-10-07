@@ -50,7 +50,7 @@ class ProbeStatus(enum.StrEnum):
 @dataclasses.dataclass(frozen=True)
 class ProbeResult:
     '''Single diagnostic probe evaluation result.'''
-    probe_id: str
+    pid: str
     category: str
     status: ProbeStatus
     message: str
@@ -88,7 +88,7 @@ class PreflightResult:
             'is_ready': self.is_ready,
             'probes': [
                 {
-                    'probe_id': p.probe_id,
+                    'probe_id': p.pid,
                     'category': p.category,
                     'status': p.status.value,
                     'message': p.message,

@@ -33,8 +33,9 @@ Public APIs:
 # standard imports
 import typing
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.execution.pipelines.base as base
+import landseg.execution.preflight.prerequisites as prerequisites
 import landseg.execution.preflight.probes as probes
 import landseg.execution.preflight.reporter as reporter
 import landseg.execution.preflight.schema as schema
@@ -42,8 +43,8 @@ import landseg.execution.preflight.schema as schema
 
 # ----- public functions
 def inspect_target(
-    target: str | base.BasePipeline,
-    root_config: configs.RootConfig | None = None,
+    target: str,
+    root_config: configs.RootConfig,
 ) -> schema.PreflightResult:
     '''
     Run diagnostic probe suite on an execution target non-destructively.
@@ -58,39 +59,61 @@ def inspect_target(
         schema.PreflightResult:
             aggregated readiness evaluation and diagnostic probe results.
     '''
-    if isinstance(target, base.BasePipeline):
-        target_name = target.pipeline_name
-        eff_config = root_config or target.config
-    else:
-        target_name = target
-        eff_config = root_config or configs.RootConfig()
-
-    probe_results: list[schema.ProbeResult] = []
+    results: list[schema.ProbeResult] = []
     telemetry: dict[str, typing.Any] = {}
 
-    check_gpu = eff_config.command.preflight.check_gpu
+    artifact_paths = artifacts.ArtifactPaths.from_config(root_config)
 
-    probe_results.extend(
-        probes.probe_hardware(
-            check_gpu=check_gpu,
-            telemetry=telemetry,
-            root_config=eff_config,
-        )
-    )
-    probe_results.extend(probes.probe_storage(target, root_config=eff_config))
-    probe_results.extend(probes.probe_lineage(target, root_config=eff_config))
-    probe_results.extend(probes.probe_spatial(target_name, eff_config))
-    probe_results.extend(probes.probe_ledger(target_name, eff_config))
-    probe_results.extend(probes.probe_model(target_name, eff_config))
-    probe_results.extend(probes.probe_study(target_name, eff_config))
+    match target:
+        case 'world-grid':
+            paths = artifact_paths.world_grid
+            results.append(probes.spatial_reference(root_config))
+            results.append(probes.crs_info(root_config))
+            results.append(probes.pixel_size(root_config))
+            results.append(probes.grid_extent(root_config))
+            results.append(probes.grid_origin(root_config))
+            results.append(probes.grid_specs(root_config))
+            results.append(probes.dir_writable(paths.root, 'world_grid_output'))
+            results.append(probes.file_exists(paths.report, 'world_grid_report'))
 
-    all_ready = all(p.status != schema.ProbeStatus.FAIL for p in probe_results)
+        case 'data-harmonize':
+            paths = artifact_paths.data_harmonization
+            results.append(probes.dir_writable(paths.root, 'harmonization_output'))
+            results.append(probes.past_runs(paths.runs_manifest, 'past_harmonziation_runs'))
+            results.extend(_check_prerequistes(target, artifact_paths))
+
+        case 'data-ingest':
+            paths = artifact_paths.data_ingestion
+            results.append(probes.dir_writable(paths.root, 'ingestion_output'))
+            results.append(probes.past_runs(paths.runs_manifest, 'past_ingestion_runs'))
+            results.extend(_check_prerequistes(target, artifact_paths))
+
+        case 'data-prepare':
+            paths = artifact_paths.data_preparation
+            results.append(probes.dir_writable(paths.root, 'preparation_output'))
+            results.extend(_check_prerequistes(target, artifact_paths))
+
+        case 'model-train':
+            results.append(probes.model_body(root_config))
+            results.extend(probes.hardware_info(telemetry, root_config))
+            results.extend(_check_prerequistes(target, artifact_paths))
+
+        case 'model-evaluate':
+            results.append(probes.model_body(root_config))
+            results.extend(probes.hardware_info(telemetry, root_config))
+            results.extend(_check_prerequistes(target, artifact_paths))
+
+        case 'diagnose-overfit':
+            results.append(probes.model_body(root_config))
+            results.extend(probes.hardware_info(telemetry, root_config))
+
+    all_ready = all(p.status != schema.ProbeStatus.FAIL for p in results)
     status = 'READY' if all_ready else 'BLOCKED'
 
     return schema.PreflightResult(
-        target=target_name,
+        target=target,
         status=status,
-        probes=probe_results,
+        probes=results,
         telemetry=telemetry,
     )
 
@@ -125,10 +148,10 @@ def run_preflight(
         'data-prepare',
         'model-train',
         'model-evaluate',
-        'batch-ingest',
         'diagnose-overfit',
-        'study-sweep',
-        'study-analysis',
+        # 'batch-ingest',
+        # 'study-sweep',
+        # 'study-analysis',
     ]
     target_runners: dict[str, typing.Callable[[], schema.PreflightResult]] = {
         name: (lambda n=name: inspect_target(n, root_config))
@@ -138,8 +161,10 @@ def run_preflight(
     if selected_target in target_runners:
         results: schema.PreflightResult | list[schema.PreflightResult]
         results = target_runners[selected_target]()
+
     elif selected_target == 'all':
         results = [runner_fn() for runner_fn in target_runners.values()]
+
     else:
         allowed = sorted(list(target_runners.keys()) + ['all'])
         raise KeyError(
@@ -177,3 +202,11 @@ def run_preflight(
             )
 
     return results
+
+
+def _check_prerequistes(
+    target: str,
+    artifact_paths: artifacts.ArtifactPaths,
+):
+    checks = prerequisites.check_target_prerequisites(target, artifact_paths)
+    return [check.to_probe_result() for check in checks]

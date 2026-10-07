@@ -32,68 +32,83 @@ import importlib
 import typing
 
 __all__ = [
-    'probe_hardware',
-    'probe_ledger',
-    'probe_lineage',
-    'probe_model',
-    'probe_spatial',
-    'probe_storage',
-    'probe_study',
+    'hardware_info',
+    'spatial',
+
+    'past_runs',
+
+    'model_body',
+
+    'dir_writable',
+    'file_exists',
+
+    'crs_info',
+    'grid_extent',
+    'grid_origin',
+    'grid_specs',
+    'pixel_size',
+    'spatial_reference',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
     from .hardware import (
-        probe_hardware,
+        hardware_info,
     )
     from .ledger import (
-        probe_ledger,
-    )
-    from .lineage import (
-        probe_lineage,
+        past_runs,
     )
     from .model import (
-        probe_model,
+        model_body,
     )
     from .spatial import (
-        probe_spatial,
+        crs_info,
+        grid_extent,
+        grid_origin,
+        grid_specs,
+        pixel_size,
+        spatial_reference,
     )
-    from .storage import (
-        probe_storage,
+    from .filesystem import (
+        dir_writable,
+        file_exists,
     )
-    from .study import (
-        probe_study,
-    )
-
 
 def __getattr__(name: str):
     if name in {'probe_hardware'}:
         obj = importlib.import_module('.hardware', __package__)
         return getattr(obj, name)
 
-    if name in {'probe_ledger'}:
+    if name in {
+        'probe_ledger',
+        'past_runs'
+    }:
         obj = importlib.import_module('.ledger', __package__)
         return getattr(obj, name)
 
-    if name in {'probe_lineage'}:
-        obj = importlib.import_module('.lineage', __package__)
-        return getattr(obj, name)
-
-    if name in {'probe_model'}:
+    if name in {
+        'model_body'
+    }:
         obj = importlib.import_module('.model', __package__)
         return getattr(obj, name)
 
-    if name in {'probe_spatial'}:
+    if name in {
+        'crs_info',
+        'grid_extent',
+        'grid_origin',
+        'grid_specs',
+        'pixel_size',
+        'spatial_reference',
+    }:
         obj = importlib.import_module('.spatial', __package__)
         return getattr(obj, name)
 
-    if name in {'probe_storage'}:
-        obj = importlib.import_module('.storage', __package__)
-        return getattr(obj, name)
-
-    if name in {'probe_study'}:
-        obj = importlib.import_module('.study', __package__)
+    if name in {
+        'dir_writable',
+        'file_exists',
+    }:
+        obj = importlib.import_module('.filesystem', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

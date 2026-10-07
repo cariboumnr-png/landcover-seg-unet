@@ -40,7 +40,6 @@ import os
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
@@ -119,7 +118,7 @@ class PrerequisiteCheck:
                 structured probe record with pass or fail status.
         '''
         return schema.ProbeResult(
-            probe_id=probe_id,
+            pid=probe_id,
             category=category,
             status=(
                 schema.ProbeStatus.PASS
@@ -346,7 +345,6 @@ def check_manifest_runs(
 def check_target_prerequisites(
     target: str,
     artifact_paths: artifacts.ArtifactPaths,
-    root_config: configs.RootConfig | None = None,
 ) -> list[PrerequisiteCheck]:
     '''
     Evaluate all upstream prerequisite checks for an execution target.
@@ -363,7 +361,6 @@ def check_target_prerequisites(
         list[PrerequisiteCheck]:
             list of prerequisite check results for the target.
     '''
-    del root_config
     checks: list[PrerequisiteCheck] = []
 
     if target == 'world-grid':
@@ -425,7 +422,6 @@ def check_target_prerequisites(
 def assert_target_prerequisites(
     target: str,
     artifact_paths: artifacts.ArtifactPaths,
-    root_config: configs.RootConfig | None = None,
 ) -> None:
     '''
     Assert that all prerequisites pass for a target, raising on failure.
@@ -442,6 +438,6 @@ def assert_target_prerequisites(
         RuntimeError:
             if any prerequisite condition fails.
     '''
-    checks = check_target_prerequisites(target, artifact_paths, root_config)
+    checks = check_target_prerequisites(target, artifact_paths)
     for check in checks:
         check.raise_if_failed()
