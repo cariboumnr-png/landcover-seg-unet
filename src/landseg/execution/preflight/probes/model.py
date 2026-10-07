@@ -62,15 +62,15 @@ def model_body(root_config: configs.RootConfig) -> schema.ProbeResult:
 
 
 def checkpoint_ready(
-    checkpoint_path: str | None,
+    root_config: configs.RootConfig,
     pid: str | None = None,
 ) -> schema.ProbeResult:
     '''
     Inspect model weights checkpoint file existence and readable size.
 
     Args:
-        checkpoint_path:
-            file path to trained model weights checkpoint.
+        root_config:
+            root configuration containing evaluation checkpoint path.
         pid:
             optional probe identifier override.
 
@@ -78,6 +78,7 @@ def checkpoint_ready(
         schema.ProbeResult:
             diagnostic result indicating whether checkpoint is ready.
     '''
+    checkpoint_path = root_config.command.model_evaluate.checkpoint
     if not checkpoint_path or not os.path.isfile(checkpoint_path):
         return schema.ProbeResult(
             pid=pid or 'checkpoint_exists',
@@ -98,15 +99,15 @@ def checkpoint_ready(
 
 
 def eval_split(
-    split_name: str | None,
+    root_config: configs.RootConfig,
     pid: str | None = None,
 ) -> schema.ProbeResult:
     '''
     Validate configured evaluation dataset partition split.
 
     Args:
-        split_name:
-            target partition split identifier ('val', 'test', or 'train').
+        root_config:
+            root configuration containing evaluation split setting.
         pid:
             optional probe identifier override.
 
@@ -114,6 +115,7 @@ def eval_split(
         schema.ProbeResult:
             diagnostic result indicating whether split is supported.
     '''
+    split_name = root_config.command.model_evaluate.split
     supported_splits = {'test', 'val', 'train'}
     if split_name in supported_splits:
         return schema.ProbeResult(

@@ -354,8 +354,6 @@ def check_target_prerequisites(
             target execution pipeline or workflow identifier.
         artifact_paths:
             resolved experiment artifact paths instance.
-        root_config:
-            optional root configuration for parameter-dependent checks.
 
     Returns:
         list[PrerequisiteCheck]:

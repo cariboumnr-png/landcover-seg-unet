@@ -26,11 +26,9 @@ Inspects accelerator device availability, PyTorch runtime version, and
 hardware capabilities.
 
 Public APIs:
-    - `probe_hardware`: Check accelerator and compute environment.
+    - `hardware_info`: Check accelerator and compute environment.
 '''
 
-# standard imports
-import typing
 # third-party imports
 import torch
 # local imports
@@ -41,17 +39,14 @@ import landseg.execution.preflight.schema as schema
 
 # ----- public functions
 def hardware_info(
-    telemetry: dict[str, typing.Any] | None,
     root_config: configs.RootConfig,
 ) -> list[schema.ProbeResult]:
     '''
     Inspect compute accelerator availability and system hardware state.
 
     Args:
-        telemetry:
-            optional dictionary to populate with hardware metadata.
         root_config:
-            optional root configuration for batch tensor memory estimate.
+            root configuration for GPU check and batch memory estimate.
 
     Returns:
         list[schema.ProbeResult]:
@@ -59,11 +54,6 @@ def hardware_info(
     '''
     probes: list[schema.ProbeResult] = []
     cuda_available = torch.cuda.is_available()
-
-    if telemetry is not None:
-        telemetry['torch_version'] = torch.__version__
-        telemetry['device'] = c.DEVICE_NAME
-        telemetry['cuda_available'] = cuda_available
 
     if root_config.command.preflight.check_gpu:
         if cuda_available:
@@ -74,12 +64,18 @@ def hardware_info(
                     category='Hardware',
                     status=schema.ProbeStatus.PASS,
                     message=f'{device_name} (cuda:0)',
-                    details={'device_name': device_name, 'cuda': True},
+                    details={
+                        'device_name': device_name,
+                        'cuda': True,
+                        'device': c.DEVICE_NAME,
+                        'torch_version': torch.__version__,
+                    },
                 )
             )
             try:
                 free_b, total_b = torch.cuda.mem_get_info(0)
                 free_gb = free_b / (1024 ** 3)
+                total_gb = total_b / (1024 ** 3)
                 batch_size = (
                     root_config.session.dataloader.batch_size
                     if root_config is not None
@@ -105,16 +101,15 @@ def hardware_info(
                             f'~{est_gb:.1f} GB est. batch'
                         ),
                         details={
+                            'vram_free_gb': round(free_gb, 2),
+                            'vram_total_gb': round(total_gb, 2),
+                            'estimated_batch_gb': round(est_gb, 2),
                             'vram_free_bytes': free_b,
                             'total_bytes': total_b,
                             'estimated_batch_bytes': est_b,
                         },
                     )
                 )
-                if telemetry is not None:
-                    telemetry['vram_free_gb'] = round(free_gb, 2)
-                    total_gb = total_b / (1024 ** 3)
-                    telemetry['vram_total_gb'] = round(total_gb, 2)
             except Exception:  # pylint: disable=broad-exception-caught
                 pass
         else:
@@ -124,7 +119,12 @@ def hardware_info(
                     category='Hardware',
                     status=schema.ProbeStatus.WARN,
                     message='CUDA unavailable; compute running on CPU',
-                    details={'device_name': 'cpu', 'cuda': False},
+                    details={
+                        'device_name': 'cpu',
+                        'cuda': False,
+                        'device': c.DEVICE_NAME,
+                        'torch_version': torch.__version__,
+                    },
                 )
             )
 

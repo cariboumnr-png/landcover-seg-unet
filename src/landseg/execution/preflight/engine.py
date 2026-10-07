@@ -26,12 +26,11 @@ Coordinates non-destructive validation probe execution across pipeline
 and workflow targets, handles reporting, and enforces readiness.
 
 Public APIs:
+    - `SUPPORTED_TARGETS`: execution targets supported by preflight engine.
     - `inspect_target`: Run diagnostic probe suite on an execution target.
     - `run_preflight`: Dispatch pre-flight checks for targets.
 '''
 
-# standard imports
-import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
@@ -39,6 +38,17 @@ import landseg.execution.preflight.prerequisites as prerequisites
 import landseg.execution.preflight.probes as probes
 import landseg.execution.preflight.reporter as reporter
 import landseg.execution.preflight.schema as schema
+
+SUPPORTED_TARGETS: tuple[str, ...] = (
+    'world-grid',
+    'data-harmonize',
+    'data-ingest',
+    'batch-ingest',
+    'data-prepare',
+    'model-train',
+    'model-evaluate',
+    'diagnose-overfit',
+)
 
 
 # ----- public functions
@@ -60,87 +70,84 @@ def inspect_target(
             aggregated readiness evaluation and diagnostic probe results.
     '''
     results: list[schema.ProbeResult] = []
-    telemetry: dict[str, typing.Any] = {}
-
     artifact_paths = artifacts.ArtifactPaths.from_config(root_config)
 
     match target:
         case 'world-grid':
             paths = artifact_paths.world_grid
-            results.append(probes.spatial_reference(root_config))
-            results.append(probes.crs_info(root_config))
-            results.append(probes.pixel_size(root_config))
-            results.append(probes.grid_extent(root_config))
-            results.append(probes.grid_origin(root_config))
-            results.append(probes.grid_specs(root_config))
-            results.append(probes.dir_writable(paths.root, 'world_grid_output'))
-            results.append(probes.target_file_exists(paths.report, 'world_grid_report'))
+            results.extend([
+                probes.dir_writable(paths.root, 'world_grid_output'),
+                probes.target_file_exists(paths.report, 'world_grid_report'),
+                probes.spatial_reference(root_config),
+                probes.crs_info(root_config),
+                probes.pixel_size(root_config),
+                probes.grid_extent(root_config),
+                probes.grid_origin(root_config),
+                probes.grid_specs(root_config),
+            ])
 
         case 'data-harmonize':
             paths = artifact_paths.data_harmonization
-            results.append(probes.dir_writable(paths.root, 'harmonization_output'))
-            results.append(probes.past_runs(paths.runs_manifest, 'past_harmonization_runs'))
-            results.extend(_check_prerequisites(target, artifact_paths))
+            results.extend([
+                *_check_prerequisites(target, artifact_paths),
+                probes.dir_writable(paths.root, 'harmonization_output'),
+                probes.past_runs(paths.runs_manifest, 'past_harmonization_runs'),
+            ])
 
         case 'data-ingest':
             paths = artifact_paths.data_ingestion
-            results.append(probes.dir_writable(paths.root, 'ingestion_output'))
-            results.append(probes.collision_policy(root_config))
-            results.append(probes.past_runs(paths.runs_manifest, 'past_ingestion_runs'))
-            results.append(probes.canonical_pool_state(paths.data_blocks.catalog))
-            results.extend(_check_prerequisites(target, artifact_paths))
+            results.extend([
+                *_check_prerequisites(target, artifact_paths),
+                probes.dir_writable(paths.root, 'ingestion_output'),
+                probes.collision_policy(root_config),
+                probes.past_runs(paths.runs_manifest, 'past_ingestion_runs'),
+                probes.canonical_pool_state(paths.data_blocks.catalog),
+            ])
 
         case 'batch-ingest':
             harm_paths = artifact_paths.data_harmonization
             ingest_paths = artifact_paths.data_ingestion
-            results.append(probes.dir_writable(ingest_paths.root, 'ingestion_output'))
-            results.append(probes.collision_policy(root_config))
-            results.append(probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'))
-            results.append(
-                probes.pending_batches(
-                    harm_paths.runs_manifest,
-                    ingest_paths.runs_manifest,
-                    target=root_config.data.ingestion.harmonization_run,
-                    rebuild=root_config.data.ingestion.rebuild,
-                )
-            )
-            results.append(probes.canonical_pool_state(ingest_paths.data_blocks.catalog))
+            results.extend([
+                probes.dir_writable(ingest_paths.root, 'ingestion_output'),
+                probes.collision_policy(root_config),
+                probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
+                probes.pending_batches(artifact_paths, root_config),
+                probes.canonical_pool_state(ingest_paths.data_blocks.catalog),
+            ])
 
         case 'data-prepare':
             paths = artifact_paths.data_preparation
-            results.append(probes.dir_writable(paths.root, 'preparation_output'))
-            results.append(probes.split_ratios(root_config))
-            results.append(probes.dataset_targets(root_config))
-            results.extend(_check_prerequisites(target, artifact_paths))
+            results.extend([
+                *_check_prerequisites(target, artifact_paths),
+                probes.dir_writable(paths.root, 'preparation_output'),
+                probes.split_ratios(root_config),
+                probes.dataset_targets(root_config),
+            ])
 
         case 'model-train':
-            harm_paths = artifact_paths.data_harmonization
-            ingest_paths = artifact_paths.data_ingestion
-            results.append(probes.model_body(root_config))
-            results.extend(probes.hardware_info(telemetry, root_config))
-            results.append(probes.dir_writable(artifact_paths.session_root, 'checkpoint_dir'))
-            results.append(probes.pending_batches(
-                    harm_paths.runs_manifest,
-                    ingest_paths.runs_manifest,
-                    target=root_config.data.ingestion.harmonization_run,
-                    rebuild=root_config.data.ingestion.rebuild,
-                    warn_if_pending=True,
-                )
-            )
-            results.extend(_check_prerequisites(target, artifact_paths))
+            results.extend([
+                *_check_prerequisites(target, artifact_paths),
+                probes.dir_writable(artifact_paths.session_root, 'checkpoint_dir'),
+                probes.model_body(root_config),
+                probes.pending_batches(artifact_paths, root_config, warn_if_pending=True),
+                *probes.hardware_info(root_config),
+            ])
 
         case 'model-evaluate':
-            eval_cfg = root_config.command.model_evaluate
-            results.append(probes.checkpoint_ready(eval_cfg.checkpoint))
-            results.append(probes.eval_split(eval_cfg.split))
-            results.append(probes.model_body(root_config))
-            results.extend(probes.hardware_info(telemetry, root_config))
-            results.append(probes.dir_writable(artifact_paths.session_root, 'eval_output'))
-            results.extend(_check_prerequisites(target, artifact_paths))
+            results.extend([
+                *_check_prerequisites(target, artifact_paths),
+                probes.dir_writable(artifact_paths.session_root, 'eval_output'),
+                probes.checkpoint_ready(root_config),
+                probes.model_body(root_config),
+                probes.eval_split(root_config),
+                *probes.hardware_info(root_config),
+            ])
 
         case 'diagnose-overfit':
-            results.append(probes.model_body(root_config))
-            results.extend(probes.hardware_info(telemetry, root_config))
+            results.extend([
+                probes.model_body(root_config),
+                *probes.hardware_info(root_config),
+            ])
 
         case _:
             results.append(
@@ -148,10 +155,7 @@ def inspect_target(
                     pid='target_support',
                     category='Execution',
                     status=schema.ProbeStatus.FAIL,
-                    message=(
-                        f'Target "{target}" has no registered preflight '
-                        'inspection suite'
-                    ),
+                    message=f'Target "{target}" has no registered preflight inspection suite',
                 )
             )
 
@@ -162,7 +166,6 @@ def inspect_target(
         target=target,
         status=status,
         probes=results,
-        telemetry=telemetry,
     )
 
 
@@ -189,32 +192,15 @@ def run_preflight(
             single result or list of results across all targets.
     '''
     selected_target = target or root_config.command.preflight.target
-    supported_targets = [
-        'world-grid',
-        'data-harmonize',
-        'data-ingest',
-        'batch-ingest',
-        'data-prepare',
-        'model-train',
-        'model-evaluate',
-        'diagnose-overfit',
-        # 'study-sweep',
-        # 'study-analysis',
-    ]
-    target_runners: dict[str, typing.Callable[[], schema.PreflightResult]] = {
-        name: (lambda n=name: inspect_target(n, root_config))
-        for name in supported_targets
-    }
-
-    if selected_target in target_runners:
+    if selected_target in SUPPORTED_TARGETS:
         results: schema.PreflightResult | list[schema.PreflightResult]
-        results = target_runners[selected_target]()
+        results = inspect_target(selected_target, root_config)
 
     elif selected_target == 'all':
-        results = [runner_fn() for runner_fn in target_runners.values()]
+        results = [inspect_target(t, root_config) for t in SUPPORTED_TARGETS]
 
     else:
-        allowed = sorted(list(target_runners.keys()) + ['all'])
+        allowed = sorted(list(SUPPORTED_TARGETS) + ['all'])
         raise KeyError(
             f'Target "{selected_target}" not supported for preflight; '
             f'allowed: {allowed}'
@@ -252,9 +238,11 @@ def run_preflight(
     return results
 
 
+# ----- private helpers
 def _check_prerequisites(
     target: str,
     artifact_paths: artifacts.ArtifactPaths,
-):
+) -> list[schema.ProbeResult]:
+    '''Check prerequisite artifacts for target pipeline.'''
     checks = prerequisites.check_target_prerequisites(target, artifact_paths)
     return [check.to_probe_result() for check in checks]

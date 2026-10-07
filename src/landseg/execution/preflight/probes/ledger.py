@@ -34,6 +34,7 @@ Public APIs:
 import os
 # local imports
 import landseg.artifacts as artifacts
+import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 import landseg.geopipe.ingest as ingest
 
@@ -109,11 +110,9 @@ def past_runs(
 
 
 def pending_batches(
-    harmonization_manifest: str,
-    ingestion_manifest: str,
+    artifact_paths: artifacts.ArtifactPaths,
+    root_config: configs.RootConfig,
     *,
-    target: int | str | None = None,
-    rebuild: bool = False,
     warn_if_pending: bool = False,
     pid: str | None = None,
 ) -> schema.ProbeResult:
@@ -121,14 +120,10 @@ def pending_batches(
     Inspect pending harmonization batches awaiting ingestion.
 
     Args:
-        harmonization_manifest:
-            file path to harmonization runs manifest JSON.
-        ingestion_manifest:
-            file path to ingestion runs manifest JSON.
-        target:
-            optional harmonization run target identifier or index.
-        rebuild:
-            whether already ingested runs are considered for rebuild.
+        artifact_paths:
+            artifact path tree containing ETL run manifest paths.
+        root_config:
+            root configuration containing ingestion parameters.
         warn_if_pending:
             if True, emit WARN when batches are pending (for training).
         pid:
@@ -138,13 +133,18 @@ def pending_batches(
         schema.ProbeResult:
             probe record indicating pending batch count and IDs.
     '''
+    harm_manifest = artifact_paths.data_harmonization.runs_manifest
+    ingest_manifest = artifact_paths.data_ingestion.runs_manifest
+    target = root_config.data.ingestion.harmonization_run
+    rebuild = root_config.data.ingestion.rebuild
+
     probe_id = pid or (
         'pending_data_warning' if warn_if_pending else 'pending_batch_queue'
     )
     try:
         pending = ingest.resolve_pending_ingestion_batches(
-            harmonization_manifest,
-            ingestion_manifest,
+            harm_manifest,
+            ingest_manifest,
             target=target,
             rebuild=rebuild,
         )
@@ -178,10 +178,15 @@ def pending_batches(
             details={'pending_run_ids': run_ids},
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
+        status = (
+            schema.ProbeStatus.WARN
+            if warn_if_pending
+            else schema.ProbeStatus.FAIL
+        )
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',
-            status=schema.ProbeStatus.FAIL,
+            status=status,
             message=f'Failed resolving pending batches: {err}',
             details={'error': str(err)},
         )

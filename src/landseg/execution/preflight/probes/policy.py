@@ -35,16 +35,15 @@ import landseg.execution.preflight.schema as schema
 
 # ----- public functions
 def collision_policy(
-    target: str | configs.RootConfig,
+    root_config: configs.RootConfig,
     pid: str | None = None,
 ) -> schema.ProbeResult:
     '''
     Inspect block collision resolution policy.
 
     Args:
-        target:
-            root configuration or collision policy string ('skip',
-            'overwrite', 'error').
+        root_config:
+            root configuration containing ingestion collision policy.
         pid:
             optional probe identifier override.
 
@@ -52,11 +51,7 @@ def collision_policy(
         schema.ProbeResult:
             diagnostic probe record for collision handling policy.
     '''
-    if isinstance(target, str):
-        policy = target.lower()
-    else:
-        policy = target.data.ingestion.datablocks.collision_policy.lower()
-
+    policy = root_config.data.ingestion.datablocks.collision_policy.lower()
     probe_id = pid or 'collision_policy'
     if policy == 'overwrite':
         return schema.ProbeResult(
