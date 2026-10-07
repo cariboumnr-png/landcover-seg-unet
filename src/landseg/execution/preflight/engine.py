@@ -74,38 +74,82 @@ def inspect_target(
             results.append(probes.grid_origin(root_config))
             results.append(probes.grid_specs(root_config))
             results.append(probes.dir_writable(paths.root, 'world_grid_output'))
-            results.append(probes.file_exists(paths.report, 'world_grid_report'))
+            results.append(probes.target_file_exists(paths.report, 'world_grid_report'))
 
         case 'data-harmonize':
             paths = artifact_paths.data_harmonization
             results.append(probes.dir_writable(paths.root, 'harmonization_output'))
-            results.append(probes.past_runs(paths.runs_manifest, 'past_harmonziation_runs'))
-            results.extend(_check_prerequistes(target, artifact_paths))
+            results.append(probes.past_runs(paths.runs_manifest, 'past_harmonization_runs'))
+            results.extend(_check_prerequisites(target, artifact_paths))
 
         case 'data-ingest':
             paths = artifact_paths.data_ingestion
             results.append(probes.dir_writable(paths.root, 'ingestion_output'))
             results.append(probes.past_runs(paths.runs_manifest, 'past_ingestion_runs'))
-            results.extend(_check_prerequistes(target, artifact_paths))
+            results.append(probes.canonical_pool_state(paths.data_blocks.catalog))
+            results.extend(_check_prerequisites(target, artifact_paths))
+
+        case 'batch-ingest':
+            harm_paths = artifact_paths.data_harmonization
+            ingest_paths = artifact_paths.data_ingestion
+            results.append(probes.dir_writable(ingest_paths.root, 'ingestion_output'))
+            results.append(probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'))
+            results.append(
+                probes.pending_batches(
+                    harm_paths.runs_manifest,
+                    ingest_paths.runs_manifest,
+                    target=root_config.data.ingestion.harmonization_run,
+                    rebuild=root_config.data.ingestion.rebuild,
+                )
+            )
+            results.append(probes.canonical_pool_state(ingest_paths.data_blocks.catalog))
 
         case 'data-prepare':
             paths = artifact_paths.data_preparation
             results.append(probes.dir_writable(paths.root, 'preparation_output'))
-            results.extend(_check_prerequistes(target, artifact_paths))
+            results.extend(_check_prerequisites(target, artifact_paths))
 
         case 'model-train':
+            harm_paths = artifact_paths.data_harmonization
+            ingest_paths = artifact_paths.data_ingestion
             results.append(probes.model_body(root_config))
             results.extend(probes.hardware_info(telemetry, root_config))
-            results.extend(_check_prerequistes(target, artifact_paths))
+            results.append(probes.dir_writable(artifact_paths.session_root, 'checkpoint_dir'))
+            results.append(probes.pending_batches(
+                    harm_paths.runs_manifest,
+                    ingest_paths.runs_manifest,
+                    target=root_config.data.ingestion.harmonization_run,
+                    rebuild=root_config.data.ingestion.rebuild,
+                    warn_if_pending=True,
+                )
+            )
+            results.extend(_check_prerequisites(target, artifact_paths))
 
         case 'model-evaluate':
+            eval_cfg = root_config.command.model_evaluate
+            results.append(probes.checkpoint_ready(eval_cfg.checkpoint))
+            results.append(probes.eval_split(eval_cfg.split))
             results.append(probes.model_body(root_config))
             results.extend(probes.hardware_info(telemetry, root_config))
-            results.extend(_check_prerequistes(target, artifact_paths))
+            results.append(probes.dir_writable(artifact_paths.session_root, 'eval_output'))
+            results.extend(_check_prerequisites(target, artifact_paths))
 
         case 'diagnose-overfit':
             results.append(probes.model_body(root_config))
             results.extend(probes.hardware_info(telemetry, root_config))
+
+        case _:
+            results.append(
+                schema.ProbeResult(
+                    pid='target_support',
+                    category='Execution',
+                    status=schema.ProbeStatus.FAIL,
+                    message=(
+                        f'Target "{target}" has no registered preflight '
+                        'inspection suite'
+                    ),
+                )
+            )
 
     all_ready = all(p.status != schema.ProbeStatus.FAIL for p in results)
     status = 'READY' if all_ready else 'BLOCKED'
@@ -145,11 +189,11 @@ def run_preflight(
         'world-grid',
         'data-harmonize',
         'data-ingest',
+        'batch-ingest',
         'data-prepare',
         'model-train',
         'model-evaluate',
         'diagnose-overfit',
-        # 'batch-ingest',
         # 'study-sweep',
         # 'study-analysis',
     ]
@@ -204,7 +248,7 @@ def run_preflight(
     return results
 
 
-def _check_prerequistes(
+def _check_prerequisites(
     target: str,
     artifact_paths: artifacts.ArtifactPaths,
 ):

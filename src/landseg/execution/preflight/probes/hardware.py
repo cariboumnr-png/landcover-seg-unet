@@ -84,7 +84,7 @@ def hardware_info(
                     root_config.session.dataloader.batch_size
                     if root_config is not None
                     and hasattr(root_config, 'session')
-                    and hasattr(root_config.session, 'data_loader')
+                    and hasattr(root_config.session, 'dataloader')
                     else 16
                 )
                 # estimate B * C * H * W * 4 bytes * 10x overhead factor

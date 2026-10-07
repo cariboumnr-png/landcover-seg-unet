@@ -18,7 +18,6 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 '''
 Ledger and lineage integrity diagnostic probes.
 
@@ -26,28 +25,41 @@ Inspects ETL run manifests (`harmonization_runs.json`, `ingestion_runs.json`)
 and discovers pending batches or lineage discrepancies prior to execution.
 
 Public APIs:
-    - `probe_ledger`: Inspect ledger health and detect pending runs.
+    - `past_runs`: Inspect past runs recorded in run manifest.
+    - `pending_batches`: Check pending batches awaiting ingestion.
+    - `canonical_pool_state`: Check block count in canonical pool.
 '''
 
 # standard imports
-# import json
-# import os
+import os
 # local imports
 import landseg.artifacts as artifacts
-# import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
-# import landseg.geopipe.ingest as ingest
+import landseg.geopipe.ingest as ingest
 
 
 # ----- typing aliases
 DictCtrl = artifacts.Controller[dict]
+
 
 # ----- public functions
 def past_runs(
     manifest_path: str,
     pid: str | None = None,
 ) -> schema.ProbeResult:
-    '''Inpect past runs.'''
+    '''
+    Inspect execution run history manifest.
+
+    Args:
+        manifest_path:
+            file path to run history ledger JSON manifest.
+        pid:
+            optional probe identifier override.
+
+    Returns:
+        schema.ProbeResult:
+            diagnostic probe record summarizing run status counts.
+    '''
     try:
         manifest = DictCtrl(manifest_path).fetch()
         if manifest is not None:
@@ -75,7 +87,7 @@ def past_runs(
                     'total_runs': total_run_n,
                     'successful_runs': success_run_n,
                     'skipped_runs': skipped_run_n,
-                    'failed_runs': failed_run_n
+                    'failed_runs': failed_run_n,
                 },
             )
         return schema.ProbeResult(
@@ -92,146 +104,131 @@ def past_runs(
             category='Ledger',
             status=schema.ProbeStatus.FAIL,
             message='Error reading run history manifest',
-            details={'path': manifest_path, 'error': e},
+            details={'path': manifest_path, 'error': str(e)},
         )
 
-# def probe_ledger(
-#     target: str,
-#     root_config: configs.RootConfig,
-# ) -> list[schema.ProbeResult]:
-#     '''
-#     Inspect run ledgers and verify multi-stage execution lineage.
 
-#     Args:
-#         target:
-#             pipeline or workflow target identifier.
-#         root_config:
-#             hydra-composed root configuration.
+def pending_batches(
+    harmonization_manifest: str,
+    ingestion_manifest: str,
+    *,
+    target: int | str | None = None,
+    rebuild: bool = False,
+    warn_if_pending: bool = False,
+    pid: str | None = None,
+) -> schema.ProbeResult:
+    '''
+    Inspect pending harmonization batches awaiting ingestion.
 
-#     Returns:
-#         list[schema.ProbeResult]:
-#             list of ledger diagnostic probe records.
-#     '''
-#     probes: list[schema.ProbeResult] = []
-#     artifact_paths = artifacts.ArtifactPaths.from_config(root_config)
-#     harm_manifest = artifact_paths.data_harmonization.runs_manifest
-#     ingest_manifest = artifact_paths.data_ingestion.runs_manifest
+    Args:
+        harmonization_manifest:
+            file path to harmonization runs manifest JSON.
+        ingestion_manifest:
+            file path to ingestion runs manifest JSON.
+        target:
+            optional harmonization run target identifier or index.
+        rebuild:
+            whether already ingested runs are considered for rebuild.
+        warn_if_pending:
+            if True, emit WARN when batches are pending (for training).
+        pid:
+            optional probe identifier override.
 
-#     # check harmonization ledger
-#     if target in {'data-harmonize', 'data-ingest', 'batch-ingest', 'model-train'}:
-#         if os.path.isfile(harm_manifest):
-#             try:
-#                 with open(harm_manifest, 'r', encoding='utf-8') as f:
-#                     harm_data = json.load(f)
-#                 run_count = len(harm_data) if isinstance(harm_data, list) else 0
-#                 probes.append(
-#                     schema.ProbeResult(
-#                         pid='harmonize_ledger',
-#                         category='ledger',
-#                         status=schema.ProbeStatus.PASS,
-#                         message=(
-#                             f"'{os.path.basename(harm_manifest)}' healthy "
-#                             f"({run_count} runs)"
-#                         ),
-#                         details={'run_count': run_count, 'path': harm_manifest},
-#                     )
-#                 )
-#             except Exception as err:  # pylint: disable=broad-exception-caught
-#                 probes.append(
-#                     schema.ProbeResult(
-#                         pid='harmonize_ledger',
-#                         category='ledger',
-#                         status=schema.ProbeStatus.FAIL,
-#                         message=f'Failed reading {harm_manifest}: {err}',
-#                         details={'error': str(err)},
-#                     )
-#                 )
-#         elif target in {'data-ingest', 'batch-ingest'}:
-#             probes.append(
-#                 schema.ProbeResult(
-#                     pid='harmonize_ledger',
-#                     category='ledger',
-#                     status=schema.ProbeStatus.WARN,
-#                     message=f'Harmonization ledger not found at {harm_manifest}',
-#                     details={'path': harm_manifest},
-#                 )
-#             )
+    Returns:
+        schema.ProbeResult:
+            probe record indicating pending batch count and IDs.
+    '''
+    probe_id = pid or (
+        'pending_data_warning' if warn_if_pending else 'pending_batch_queue'
+    )
+    try:
+        pending = ingest.resolve_pending_ingestion_batches(
+            harmonization_manifest,
+            ingestion_manifest,
+            target=target,
+            rebuild=rebuild,
+        )
+        run_ids = [p['run_id'] for p in pending]
 
-#     # pending data warning for model training
-#     if target == 'model-train':
-#         try:
-#             pending = ingest.resolve_pending_ingestion_batches(
-#                 harm_manifest,
-#                 ingest_manifest,
-#                 target=root_config.data.ingestion.harmonization_run,
-#                 rebuild=root_config.data.ingestion.rebuild,
-#             )
-#             if pending:
-#                 run_ids = [p['run_id'] for p in pending]
-#                 probes.append(
-#                     schema.ProbeResult(
-#                         pid='pending_data_warning',
-#                         category='lineage',
-#                         status=schema.ProbeStatus.WARN,
-#                         message=(
-#                             f'{len(pending)} batches pending in '
-#                             f'harmonization ledger'
-#                         ),
-#                         details={'pending_run_ids': run_ids},
-#                     )
-#                 )
-#         except Exception:  # pylint: disable=broad-exception-caught
-#             pass
+        if warn_if_pending:
+            if pending:
+                return schema.ProbeResult(
+                    pid=probe_id,
+                    category='Ledger',
+                    status=schema.ProbeStatus.WARN,
+                    message=f'{len(pending)} batches pending in harmonization',
+                    details={'pending_run_ids': run_ids},
+                )
+            return schema.ProbeResult(
+                pid=probe_id,
+                category='Ledger',
+                status=schema.ProbeStatus.PASS,
+                message='Harmonization ledger up to date; no pending batches',
+            )
 
-#     # batch ingestion queue and policy checks
-#     if target == 'batch-ingest':
-#         try:
-#             pending = ingest.resolve_pending_ingestion_batches(
-#                 harm_manifest,
-#                 ingest_manifest,
-#                 target=root_config.data.ingestion.harmonization_run,
-#                 rebuild=root_config.data.ingestion.rebuild,
-#             )
-#             run_ids = [p['run_id'] for p in pending]
-#             probes.append(
-#                 schema.ProbeResult(
-#                     pid='pending_batch_queue',
-#                     category='lineage',
-#                     status=schema.ProbeStatus.PASS,
-#                     message=f'{len(pending)} batches pending in queue',
-#                     details={'pending_run_ids': run_ids},
-#                 )
-#             )
-#         except Exception as err:  # pylint: disable=broad-exception-caught
-#             probes.append(
-#                 schema.ProbeResult(
-#                     pid='pending_batch_queue',
-#                     category='lineage',
-#                     status=schema.ProbeStatus.FAIL,
-#                     message=f'Failed resolving batch queue: {err}',
-#                 )
-#             )
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.PASS,
+            message=(
+                f'{len(pending)} batches pending in queue'
+                if pending
+                else 'Batch queue is empty; pool is up to date'
+            ),
+            details={'pending_run_ids': run_ids},
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.FAIL,
+            message=f'Failed resolving pending batches: {err}',
+            details={'error': str(err)},
+        )
 
-#         policy = getattr(root_config.data.ingestion, 'collision_policy', 'skip')
-#         if policy == 'overwrite':
-#             probes.append(
-#                 schema.ProbeResult(
-#                     pid='collision_policy',
-#                     category='policy',
-#                     status=schema.ProbeStatus.WARN,
-#                     message="Policy 'overwrite' replaces existing blocks",
-#                     details={'policy': policy},
-#                 )
-#             )
-#         else:
-#             probes.append(
-#                 schema.ProbeResult(
-#                     pid='collision_policy',
-#                     category='policy',
-#                     status=schema.ProbeStatus.PASS,
-#                     message=f"Collision policy '{policy}' configured",
-#                     details={'policy': policy},
-#                 )
-#             )
 
-#     return probes
+def canonical_pool_state(
+    catalog_path: str,
+    pid: str | None = None,
+) -> schema.ProbeResult:
+    '''
+    Inspect canonical block pool catalog state and block count.
+
+    Args:
+        catalog_path:
+            file path to canonical blocks catalog JSON.
+        pid:
+            optional probe identifier override.
+
+    Returns:
+        schema.ProbeResult:
+            probe record detailing existing blocks in canonical pool.
+    '''
+    probe_id = pid or 'canonical_pool_state'
+    if not os.path.exists(catalog_path):
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.PASS,
+            message='Canonical pool is empty (no blocks ingested yet)',
+            details={'path': catalog_path, 'block_count': 0},
+        )
+
+    try:
+        catalog = DictCtrl(catalog_path).fetch()
+        block_count = len(catalog) if catalog is not None else 0
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.PASS,
+            message=f'Pool contains {block_count} existing blocks',
+            details={'path': catalog_path, 'block_count': block_count},
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.FAIL,
+            message=f'Failed reading pool catalog: {err}',
+            details={'path': catalog_path, 'error': str(err)},
+        )

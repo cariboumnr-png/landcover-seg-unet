@@ -32,34 +32,41 @@ import importlib
 import typing
 
 __all__ = [
-    'hardware_info',
-    'spatial',
-
-    'past_runs',
-
-    'model_body',
-
-    'dir_writable',
-    'file_exists',
-
+    'canonical_pool_state',
+    'checkpoint_ready',
     'crs_info',
+    'dir_writable',
+    'eval_split',
     'grid_extent',
     'grid_origin',
     'grid_specs',
+    'hardware_info',
+    'model_body',
+    'past_runs',
+    'pending_batches',
     'pixel_size',
     'spatial_reference',
+    'target_file_exists',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .filesystem import (
+        dir_writable,
+        target_file_exists,
+    )
     from .hardware import (
         hardware_info,
     )
     from .ledger import (
+        canonical_pool_state,
         past_runs,
+        pending_batches,
     )
     from .model import (
+        checkpoint_ready,
+        eval_split,
         model_body,
     )
     from .spatial import (
@@ -70,25 +77,35 @@ if typing.TYPE_CHECKING:
         pixel_size,
         spatial_reference,
     )
-    from .filesystem import (
-        dir_writable,
-        file_exists,
-    )
+
 
 def __getattr__(name: str):
-    if name in {'probe_hardware'}:
+    if name in {
+        'dir_writable',
+        'target_file_exists',
+    }:
+        obj = importlib.import_module('.filesystem', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'hardware_info',
+    }:
         obj = importlib.import_module('.hardware', __package__)
         return getattr(obj, name)
 
     if name in {
+        'canonical_pool_state',
+        'past_runs',
+        'pending_batches',
         'probe_ledger',
-        'past_runs'
     }:
         obj = importlib.import_module('.ledger', __package__)
         return getattr(obj, name)
 
     if name in {
-        'model_body'
+        'checkpoint_ready',
+        'eval_split',
+        'model_body',
     }:
         obj = importlib.import_module('.model', __package__)
         return getattr(obj, name)
@@ -104,11 +121,5 @@ def __getattr__(name: str):
         obj = importlib.import_module('.spatial', __package__)
         return getattr(obj, name)
 
-    if name in {
-        'dir_writable',
-        'file_exists',
-    }:
-        obj = importlib.import_module('.filesystem', __package__)
-        return getattr(obj, name)
-
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+

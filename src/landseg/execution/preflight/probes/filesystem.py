@@ -38,10 +38,18 @@ import landseg.execution.preflight.schema as schema
 
 # ----- public functions
 def dir_writable(
-    dir_path: str,
+    dir_path: str | None,
     pid: str | None = None
 ) -> schema.ProbeResult:
     '''Check if destination directory is writable.'''
+    if dir_path is None:
+        return schema.ProbeResult(
+            pid=pid or 'target_directory',
+            category='Filesystem',
+            status=schema.ProbeStatus.FAIL,
+            message='Target directory path is not defined',
+            details={'target_dir': dir_path},
+        )
     if os.path.exists(dir_path):
         check_dir = dir_path
     else:
@@ -59,7 +67,7 @@ def dir_writable(
     )
 
 
-def file_exists(
+def target_file_exists(
     file_path: str,
     pid: str | None = None
 ) -> schema.ProbeResult:
