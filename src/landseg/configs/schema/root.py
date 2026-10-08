@@ -33,7 +33,8 @@ from __future__ import annotations
 import dataclasses
 import typing
 # local imports
-import landseg.configs.schema.data as data
+from landseg.configs.schema.data import DataConfig
+from landseg.configs.schema.session import SessionConfig
 import landseg.configs.schema.sections as sec
 
 # alias
@@ -81,11 +82,11 @@ class RootConfig:
     # execution configs
     execution: _ExecutionContext = field(default_factory=_ExecutionContext)
     # data ETL settings
-    data: data.DataConfig = field(default_factory=data.DataConfig)
+    data: DataConfig = field(default_factory=DataConfig)
     # model settings
     models: sec.ModelsConfig = field(default_factory=sec.ModelsConfig)
     # session settings
-    session: sec.SessionConfig = field(default_factory=sec.SessionConfig)
+    session: SessionConfig = field(default_factory=SessionConfig)
     # study settings
     study: sec.StudyConfig = field(default_factory=sec.StudyConfig)
     # pipeline specific CLI flags
