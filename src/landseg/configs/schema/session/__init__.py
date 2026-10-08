@@ -33,13 +33,6 @@ import typing
 
 __all__ = [
     # classes
-    'DataLoaderConfig',
-    'EngineConfig',
-    'EngineExec',
-    'EngineOptim',
-    'EngineSchedule',
-    'EngineTask',
-    'OrchestrationConfig',
     'SessionConfig',
 ]
 
@@ -49,43 +42,12 @@ if typing.TYPE_CHECKING:
     from ._composite import (
         SessionConfig,
     )
-    from .dataloader import (
-        DataLoaderConfig,
-    )
-    from .engine import (
-        EngineConfig,
-        EngineExec,
-        EngineOptim,
-        EngineSchedule,
-        EngineTask,
-    )
-    from .orchestration import (
-        OrchestrationConfig,
-    )
 
 
 def __getattr__(name: str):
-
     if name in {'SessionConfig'}:
         obj = importlib.import_module('._composite', __package__)
         return getattr(obj, name)
 
-    if name in {'DataLoaderConfig'}:
-        obj = importlib.import_module('.dataloader', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'EngineConfig',
-        'EngineExec',
-        'EngineOptim',
-        'EngineSchedule',
-        'EngineTask',
-    }:
-        obj = importlib.import_module('.engine', __package__)
-        return getattr(obj, name)
-
-    if name in {'OrchestrationConfig'}:
-        obj = importlib.import_module('.orchestration', __package__)
-        return getattr(obj, name)
-
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+

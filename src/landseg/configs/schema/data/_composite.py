@@ -29,29 +29,29 @@ Data configs section
 import dataclasses
 # local imports
 import landseg.configs.schema.base as base
-import landseg.configs.schema.data as data
+import landseg.configs.schema.data.harmonziation as harmonization_sec
+import landseg.configs.schema.data.ingestion as ingestion_sec
+import landseg.configs.schema.data.preparation as preparation_sec
+import landseg.configs.schema.data.specification as specification_sec
+import landseg.configs.schema.data.world_grid as world_grid_sec
 
-# alias
+# ----- aliases
 field = dataclasses.field
+
+WorldGrid = world_grid_sec.WorldGridConfig
+DataHarmonization = harmonization_sec.DataHarmonizationConfig
+DataIngestion = ingestion_sec.DataIngestionConfig
+DataPreparation = preparation_sec.DataPreparationConfig
+DataSpecification = specification_sec.DataSpecificationConfig
 
 
 @dataclasses.dataclass
 class DataConfig(base.BaseConfigSection):
-    world_grid: data.WorldGridConfig = field(
-        default_factory=data.WorldGridConfig
-    )
-    harmonization: data.DataHarmonizationConfig = field(
-        default_factory=data.DataHarmonizationConfig
-    )
-    ingestion: data.DataIngestionConfig = field(
-        default_factory=data.DataIngestionConfig
-    )
-    preparation: data.DataPreparationConfig = field(
-        default_factory=data.DataPreparationConfig
-    )
-    specification: data.DataSpecificationConfig = field(
-        default_factory=data.DataSpecificationConfig
-    )
+    world_grid: WorldGrid = field(default_factory=WorldGrid)
+    harmonization: DataHarmonization = field(default_factory=DataHarmonization)
+    ingestion: DataIngestion = field(default_factory=DataIngestion)
+    preparation: DataPreparation = field(default_factory=DataPreparation)
+    specification: DataSpecification = field(default_factory=DataSpecification)
 
     def validate(self):
         self.world_grid.validate()

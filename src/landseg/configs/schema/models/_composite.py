@@ -30,40 +30,40 @@ import dataclasses
 import typing
 # local imports
 import landseg.configs.schema.base as base
-import landseg.configs.schema.models as models
+import landseg.configs.schema.models.backbones as backbones_sec
+import landseg.configs.schema.models.conditioners as conditioners_sec
+import landseg.configs.schema.models.safety as safety_sec
 
-# alias
+# ----- aliases
 field = dataclasses.field
+default_bodies = backbones_sec.default_bodies
+default_bottlenecks = backbones_sec.default_bottlenecks
+default_conditioners = conditioners_sec.default_conditioners
+UNetBackbone = backbones_sec.UNetBackboneConfig
+DomainTarget = conditioners_sec.DomainTargetConfig
+NumericSafety = safety_sec.NumericSafety
 
 
 @dataclasses.dataclass
 class ModelsConfig(base.BaseConfigSection):
     model_body: str = 'unet'
-    model_body_registry: dict[str, typing.Any] = field(
-        default_factory=models.default_bodies
-    )
+    model_body_registry: dict[str, typing.Any] = field(default_factory=default_bodies)
     bottleneck: str = 'conv'
-    bottleneck_registry: dict[str, typing.Any] = field(
-        default_factory=models.default_bottlenecks
-    )
+    bottleneck_registry: dict[str, typing.Any] = field(default_factory=default_bottlenecks)
     conditioners: list[str] = field(default_factory=lambda: [])
-    conditioner_registry: dict[str, typing.Any] = field(
-        default_factory=models.default_conditioners
-    )
-    numeric_safety: models.NumericSafety = field(
-        default_factory=models.NumericSafety
-    )
+    conditioner_registry: dict[str, typing.Any] = field(default_factory=default_conditioners)
+    numeric_safety: NumericSafety = field(default_factory=NumericSafety)
 
     @property
-    def unet_backbone_config(self) -> models.UNetBackboneConfig:
+    def unet_backbone_config(self) -> UNetBackbone:
         '''Return configured UNet backbone configuration.'''
-        return models.UNetBackboneConfig(
+        return UNetBackbone(
             body=self.model_body_registry[self.model_body],
             bottleneck=self.bottleneck_registry[self.bottleneck]
         )
 
     @property
-    def conditioning_config(self) -> dict[str, models.DomainTargetConfig]:
+    def conditioning_config(self) -> dict[str, DomainTarget]:
         '''Return configured conditioners configuration.'''
         return {c: self.conditioner_registry[c] for c in self.conditioners}
 

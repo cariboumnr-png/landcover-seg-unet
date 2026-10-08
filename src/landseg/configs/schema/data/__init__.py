@@ -34,11 +34,6 @@ import typing
 __all__ = [
     # classes
     'DataConfig',
-    'DataHarmonizationConfig',
-    'DataIngestionConfig',
-    'DataPreparationConfig',
-    'DataSpecificationConfig',
-    'WorldGridConfig',
 ]
 
 
@@ -47,47 +42,11 @@ if typing.TYPE_CHECKING:
     from ._composite import (
         DataConfig,
     )
-    from .harmonziation import (
-        DataHarmonizationConfig,
-    )
-    from .ingestion import (
-        DataIngestionConfig,
-    )
-    from .preparation import (
-        DataPreparationConfig,
-    )
-    from .specification import (
-        DataSpecificationConfig,
-    )
-    from .world_grid import (
-        WorldGridConfig,
-    )
 
 
 def __getattr__(name: str):
-
     if name in {'DataConfig'}:
         obj = importlib.import_module('._composite', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataHarmonizationConfig'}:
-        obj = importlib.import_module('.harmonziation', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataIngestionConfig'}:
-        obj = importlib.import_module('.ingestion', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataPreparationConfig'}:
-        obj = importlib.import_module('.preparation', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataSpecificationConfig'}:
-        obj = importlib.import_module('.specification', __package__)
-        return getattr(obj, name)
-
-    if name in {'WorldGridConfig'}:
-        obj = importlib.import_module('.world_grid', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

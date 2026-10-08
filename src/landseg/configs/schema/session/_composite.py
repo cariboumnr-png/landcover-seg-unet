@@ -30,23 +30,22 @@ import dataclasses
 import typing
 # local imports
 import landseg.configs.schema.base as base
-import landseg.configs.schema.session as session
+import landseg.configs.schema.session.dataloader as dataloader_sec
+import landseg.configs.schema.session.engine as engine_sec
+import landseg.configs.schema.session.orchestration as orchestration_sec
 
-# alias
+# ----- aliases
 field = dataclasses.field
+DataLoader = dataloader_sec.DataLoaderConfig
+Engine = engine_sec.EngineConfig
+Orchestration = orchestration_sec.OrchestrationConfig
 
 
 @dataclasses.dataclass
 class SessionConfig(base.BaseConfigSection):
-    dataloader: session.DataLoaderConfig = field(
-        default_factory=session.DataLoaderConfig
-    )
-    engine: session.EngineConfig = field(
-        default_factory=session.EngineConfig
-    )
-    orchestration: session.OrchestrationConfig = field(
-        default_factory=session.OrchestrationConfig
-    )
+    dataloader: DataLoader = field(default_factory=DataLoader)
+    engine: Engine = field(default_factory=Engine)
+    orchestration: Orchestration = field(default_factory=Orchestration)
     mode: str = 'continuous'
     output_dpath: str = '${execution.exp_root}/results/'
 
@@ -56,22 +55,22 @@ class SessionConfig(base.BaseConfigSection):
         # allow_early_stop=True is invalid for curriculum
 
     @property
-    def engine_exec(self) -> session.EngineExec:
+    def engine_exec(self) -> engine_sec.EngineExec:
         '''Return config subgroup: `session.EngineExec`.'''
         return self.engine.engine_exec
 
     @property
-    def engine_optim(self) -> session.EngineOptim:
+    def engine_optim(self) -> engine_sec.EngineOptim:
         '''Return config subgroup: `session.EngineOptim`.'''
         return self.engine.engine_optim
 
     @property
-    def engine_schedule(self) -> session.EngineSchedule:
+    def engine_schedule(self) -> engine_sec.EngineSchedule:
         '''Return config subgroup: `session.EngineSchedule`.'''
         return self.engine.engine_schedule
 
     @property
-    def engine_tasks(self) -> session.EngineTask:
+    def engine_tasks(self) -> engine_sec.EngineTask:
         '''Return config subgroup: `session.EngineTask`.'''
         return self.engine.engine_tasks
 

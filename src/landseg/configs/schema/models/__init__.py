@@ -33,13 +33,7 @@ import typing
 
 __all__ = [
     # classes
-    'DomainTargetConfig',
     'ModelsConfig',
-    'NumericSafety',
-    'UNetBackboneConfig',
-    'default_bodies',
-    'default_bottlenecks',
-    'default_conditioners',
 ]
 
 
@@ -48,47 +42,11 @@ if typing.TYPE_CHECKING:
     from ._composite import (
         ModelsConfig,
     )
-    from .backbones import (
-        UNetBackboneConfig,
-        default_bodies,
-        default_bottlenecks,
-    )
-    from .conditioners import (
-        DomainTargetConfig,
-        default_conditioners,
-    )
-    from .safety import (
-        NumericSafety,
-    )
 
 
 def __getattr__(name: str):
-
-    if name in {
-        'ModelsConfig',
-    }:
+    if name in {'ModelsConfig'}:
         obj = importlib.import_module('._composite', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'UNetBackboneConfig',
-        'default_bodies',
-        'default_bottlenecks',
-    }:
-        obj = importlib.import_module('.backbones', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'DomainTargetConfig',
-        'default_conditioners'
-    }:
-        obj = importlib.import_module('.conditioners', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'NumericSafety',
-    }:
-        obj = importlib.import_module('.safety', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
