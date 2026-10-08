@@ -108,21 +108,6 @@ def prepare_world_grid(
     return is_loaded, grid_fpath, _grid
 
 
-def get_grid_report_fpath(output_dpath: str) -> str:
-    '''
-    Return canonical file path of the world grid report artifact.
-
-    Args:
-        output_dpath:
-            Output directory containing world grid artifacts.
-
-    Returns:
-        str:
-            Full path to the grid_report.json artifact.
-    '''
-    return geo_core.get_grid_report_fpath(output_dpath)
-
-
 # ----- private helpers
 def _get_grid_fpath(config: contracts.WorldGridPrepConfig) -> str:
     '''Return canonical file path of a world grid artifact.'''

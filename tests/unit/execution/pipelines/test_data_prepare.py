@@ -26,12 +26,13 @@ import os
 import typing
 # third-party imports
 import omegaconf
+import pytest
 # local imports
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 
 
-# ----- pipeline execution
+# ----- `DataPreparation` tests
 def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     '''
     Given: A RootConfig pointing to valid raster inputs and temporary
@@ -83,14 +84,14 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     )
 
     # 1) run world-grid and harmonize to populate ETL outputs in EPSG:3161
-    pipelines.exec_world_grid(config)
-    pipelines.exec_harmonize_data(config)
+    pipelines.WorldGridGeneration(config).run()
+    pipelines.DataHarmonization(config).run()
 
     # 2) run the ingestion pipeline to build ingestion inputs
-    pipelines.exec_ingest_data(config)
+    pipelines.DataIngestion(config).run()
 
     # 3) run the preparation pipeline
-    pipelines.exec_prepare_data(config)
+    pipelines.DataPreparation(config).run()
 
     # verify the generated preparation outputs
     out_dpath = config.data.preparation.output_dpath
@@ -99,5 +100,28 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
         os.path.join(out_dpath, 'block_splits_prepared.json')
     )
     assert os.path.exists(os.path.join(out_dpath, 'image_stats.json'))
-    assert os.path.exists(os.path.join(out_dpath, 'prep_report.json'))
+    assert os.path.exists(os.path.join(out_dpath, 'report.json'))
     assert os.path.exists(os.path.join(out_dpath, 'schema.json'))
+
+
+def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
+    '''
+    Given: Preparation configuration without upstream catalog/schema.
+    When: Calling `validate` on `DataPreparation`.
+    Then: Raise a RuntimeError indicating missing data-ingest artifacts.
+    '''
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested')
+    cfg_schema.data.preparation.output_dpath = str(tmp_path / 'prepared')
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+    pipeline = pipelines.DataPreparation(config)
+    with pytest.raises(
+        RuntimeError,
+        match='Upstream pipeline "data-ingest"'
+    ):
+        pipeline._validate()

@@ -35,7 +35,7 @@ import typing
 #
 class RootConfigShape(typing.Protocol):
     @property
-    def pipeline(self) -> _Pipeline: ...
+    def command(self) -> _Command: ...
     @property
     def study(self) -> _StudyObjectives: ...
     # setter methods
@@ -74,7 +74,7 @@ class RootConfigShape(typing.Protocol):
     def set_transformer_attn_dropout(self, attn_dropout: float) -> None: ...
 
 #
-class _Pipeline(typing.Protocol):
+class _Command(typing.Protocol):
     @property
     def study_sweep(self) -> _StudySweep: ...
 

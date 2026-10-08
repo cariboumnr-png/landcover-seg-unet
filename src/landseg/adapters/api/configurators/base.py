@@ -26,6 +26,7 @@ Configurator base class
 # standard imports
 import typing
 # local imports
+import landseg.adapters.api.api as api
 import landseg.configs as configs
 
 class BaseConfigurator:
@@ -41,33 +42,56 @@ class BaseConfigurator:
         # init a default RootConfig instance
         self._cfg = configs.RootConfig()
         # set artifact output dirpaths
+        _r = f'{experiment_root}/artifacts/'
         self._cfg.execution.exp_root = experiment_root
-        self._cfg.data.world_grid.output_dpath = f'{experiment_root}/artifacts/world_grids'
-        self._cfg.data.harmonization.output_dpath = f'{experiment_root}/artifacts/harmonized_data'
-        self._cfg.data.ingestion.output_dpath = f'{experiment_root}/artifacts/ingested_data'
-        self._cfg.data.preparation.output_dpath = f'{experiment_root}/artifacts/prepared_data'
-        # set pipeline name
-        self._cfg.pipeline.name = pipeline_name
+        self._cfg.data.world_grid.output_dpath = f'{_r}/world_grids'
+        self._cfg.data.harmonization.output_dpath = f'{_r}/harmonized_data'
+        self._cfg.data.ingestion.output_dpath = f'{_r}/ingested_data'
+        self._cfg.data.preparation.output_dpath = f'{_r}/prepared_data'
+        # set command name
+        self._cfg.command.name = pipeline_name
 
     @property
     def running_root_config(self) -> configs.RootConfig:
-        '''Validate and return the `RootConfig`,'''
-        match self._cfg.pipeline.name:
+        '''Validate respective section of the `RootConfig` and return.'''
+        match self._cfg.command.name:
             case 'world-grid':
                 self._cfg.data.world_grid.validate()
             case 'data-harmonize':
                 self._cfg.data.harmonization.validate()
-            case 'data-ingest':
+            case 'data-ingest' | 'batch-ingest':
                 self._cfg.data.ingestion.validate()
             case 'data-prepare':
                 self._cfg.data.preparation.validate()
-            case 'model-train':
+            case 'model-evaluate':
                 self._cfg.models.validate()
                 self._cfg.session.validate()
-            case 'study-sweep':
+                self._cfg.command.model_evaluate.validate()
+            case (
+                'model-train' |
+                'diagnose-overfit' |
+                'study-sweep' | 'study-analysis'
+            ):
                 self._cfg.models.validate()
                 self._cfg.session.validate()
         return self._cfg
+
+    def preflight(
+        self,
+        *,
+        strict: bool = False,
+        export_report: bool = True,
+        check_gpu: bool = True,
+    ) -> typing.Any:
+        '''Run pre-flight diagnostic validation for configured command.'''
+        return api.run_preflight(
+            config=self.running_root_config,
+            target=self._cfg.command.name,
+            strict=strict,
+            export_report=export_report,
+            check_gpu=check_gpu,
+        )
+
 
     # ----- shared methods for configuring runtime sessions
     def set_data_loading(

@@ -41,6 +41,7 @@ if typing.TYPE_CHECKING:
 class ArtifactPaths:
     '''Root entrypoint for all artifact path namespaces.'''
     root: str = './experiment'
+    world_grid_root: str | None = None
     harmonization_root: str | None = None
     ingestion_root: str | None = None
     preparation_root: str | None = None
@@ -52,11 +53,17 @@ class ArtifactPaths:
         '''Construct `ArtifactPaths` from a `RootConfig` instance.'''
         return cls(
             root=config.execution.exp_root,
+            world_grid_root=config.data.world_grid.output_dpath,
             harmonization_root=config.data.harmonization.output_dpath,
             ingestion_root=config.data.ingestion.output_dpath,
             preparation_root=config.data.preparation.output_dpath,
             session_root=config.session.output_dpath,
         )
+
+    @property
+    def world_grid(self) -> paths.WorldGridPaths:
+        r = self.world_grid_root or os.path.join(self.root, 'world_grids')
+        return paths.WorldGridPaths(r)
 
     @property
     def data_harmonization(self) -> paths.HarmonizationPaths:

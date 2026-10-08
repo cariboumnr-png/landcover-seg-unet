@@ -92,19 +92,22 @@ pipeline artifacts, and session execution results under an experiment root direc
 │       ├── prep_report.json                     # Preparation execution summary report
 │       └── config.json                          # Preparation configuration record
 │
-└── results/                                     # Produced by 'model-train' / 'model-evaluate'
-    └── run_0001/                                # Serialized experiment run directory
-        ├── checkpoints/
-        │   ├── status.json                      # Training phase status tracking
-        │   ├── <name>_best.pt                   # Best model checkpoint weights
-        │   └── <name>_last.pt                   # Final model checkpoint weights
-        ├── logs/                                # Training run execution logs
-        ├── plots/                               # Metric and diagnostic visualization plots
-        ├── previews/                            # Model output prediction previews
-        ├── config.json                          # Fully resolved execution configuration
-        ├── evaluation.json                      # Evaluation metrics JSON (if evaluation run)
-        ├── summary.json                         # Overall run summary metrics JSON
-        └── step_results.json                    # Per-step loss/metric tracking JSON
+├── results/                                     # Produced by 'model-train' / 'model-evaluate'
+│   └── run_0001/                                # Serialized experiment run directory
+│       ├── checkpoints/
+│       │   ├── status.json                      # Training phase status tracking
+│       │   ├── <name>_best.pt                   # Best model checkpoint weights
+│       │   └── <name>_last.pt                   # Final model checkpoint weights
+│       ├── logs/                                # Training run execution logs
+│       ├── plots/                               # Metric and diagnostic visualization plots
+│       ├── previews/                            # Model output prediction previews
+│       ├── config.json                          # Fully resolved execution configuration
+│       ├── evaluation.json                      # Evaluation metrics JSON (if evaluation run)
+│       ├── summary.json                         # Overall run summary metrics JSON
+│       └── step_results.json                    # Per-step loss/metric tracking JSON
+│
+└── preflight/                                   # Produced by 'command=preflight' validation
+    └── preflight_report_<uid>.json              # Pre-flight readiness diagnostic report JSON
 
 * Note: Sidecar `_meta.json` files are generated alongside grid, domain, and window JSON artifacts.
 ```

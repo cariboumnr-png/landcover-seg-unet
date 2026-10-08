@@ -38,14 +38,8 @@ class PreparationPaths(base.PipelineArtifactsPaths):
     '''Paths for prepared datasets and split artifacts.'''
 
     @property
-    def report(self) -> str:
-        '''Return the file path of the preparation execution report.'''
-        return os.path.join(self.root, 'prep_report.json')
-
-    @property
-    def config(self) -> str:
-        '''Return the file path of the persisted preparation configuration.'''
-        return os.path.join(self.root, 'config.json')
+    def effective_run_folder(self) -> str:
+        return self.root  # overwrites the default 'run_XXXX' naming convention
 
     @property
     def train_blocks(self) -> str:
@@ -84,6 +78,7 @@ class PreparationPaths(base.PipelineArtifactsPaths):
         return os.path.join(self.root, 'schema.json')
 
     def _init_pipeline_folders(self):
+        super()._init_pipeline_folders()
         os.makedirs(self.train_blocks, exist_ok=True)
         os.makedirs(self.val_blocks, exist_ok=True)
         os.makedirs(self.test_blocks, exist_ok=True)

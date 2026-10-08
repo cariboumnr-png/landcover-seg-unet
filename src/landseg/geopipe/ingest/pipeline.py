@@ -40,9 +40,8 @@ import landseg.geopipe.ingest.logger as ingest_logger
 
 # ----- public functions
 def run_data_ingestion(
-    harmonization_paths: paths.HarmonizationPaths,
+    context: ingest_context.IngestionContext,
     ingestion_paths: paths.IngestionPaths,
-    harmonization_record: contracts.HarmonizationRunRecord,
     config: contracts.IngestionPipelineConfig,
     *,
     policy: artifacts.LifecyclePolicy,
@@ -51,15 +50,6 @@ def run_data_ingestion(
     '''Run the ingestion pipeline.'''
     assert logger.summary
 
-    # build ingestion context
-    logger.log('INFO', '[START] Building data ingestion context')
-    context = ingest_context.build_ingestion_context(
-        harmonization_paths,
-        harmonization_record,
-        ingestion_paths.runs_manifest,
-        ingestion_paths.data_blocks.schema,
-        config
-    )
     logger.set_harmonization_reference(
         run_uid=context.run_uid,
         run_id=context.harmonization_run_id,
@@ -75,7 +65,6 @@ def run_data_ingestion(
             f'already done (run uid: {context.collided_run_uid}), skipped'
         )
         return
-    logger.log('INFO', '[COMPLETE] Data ingestion context built')
 
     # ----- materialize domain maps
     if context.domains:

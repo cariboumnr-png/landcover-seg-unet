@@ -36,9 +36,9 @@ import typing
 
 __all__ = [
     # classes
+    'CommandConfig',
     'DataConfig',
     'ModelsConfig',
-    'PipelineConfig',
     'SessionConfig',
     'StudyConfig',
 ]
@@ -46,14 +46,14 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .commands import (
+        CommandConfig,
+    )
     from .data import (
         DataConfig,
     )
     from .models import (
         ModelsConfig,
-    )
-    from .pipeline import (
-        PipelineConfig,
     )
     from .session import (
         SessionConfig,
@@ -64,16 +64,16 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {'CommandConfig'}:
+        obj = importlib.import_module('.commands', __package__)
+        return getattr(obj, name)
+
     if name in {'DataConfig'}:
         obj = importlib.import_module('.data', __package__)
         return getattr(obj, name)
 
     if name in {'ModelsConfig'}:
         obj = importlib.import_module('.models', __package__)
-        return getattr(obj, name)
-
-    if name in {'PipelineConfig'}:
-        obj = importlib.import_module('.pipeline', __package__)
         return getattr(obj, name)
 
     if name in {'SessionConfig'}:

@@ -28,48 +28,68 @@ statistics, normalizes all splits, and emits the final dataset schema.
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.configs as configs
-import landseg.geopipe.prepare as geopipe_prepare
+import landseg.execution.pipelines.base as base
+import landseg.geopipe.prepare as prepare
 
 
-def exec_prepare_data(config: configs.RootConfig):
-    '''Run the preparation pipeline for an experiment.'''
-    artifact_paths = artifacts.ArtifactPaths.from_config(config)
-    paths = artifact_paths.data_preparation.init_pipeline_folders()
+# ----- public classes
+class DataPreparation(base.GeoPipeline):
+    '''Data preparation pipeline.'''
 
-    logger = geopipe_prepare.PreparationLogger(
-        name='data-prep',
-        log_file=paths.report,
-        enable_file_log=False
-    )
-    logger.init_summary(run_id='prepare')
+    pipeline_name: str = 'data-prepare'
+    logger: prepare.PreparationLogger
+    pipeline_paths: artifacts.PreparationPaths
 
-    try:
-        logger.log_sep()
+    @property
+    def upstream_paths(self) -> artifacts.IngestionPaths:
+        '''Return upstream data ingestion artifact paths.'''
+        return self.artifact_paths.data_ingestion
 
-        # resolve lifecycle policy dynamically
-        policy = (
-            artifacts.LifecyclePolicy.REBUILD
-            if config.data.preparation.rebuild
-            else artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    def run(self) -> None:
+        '''Run data preparation pipeline.'''
+        self._initialize_run()
+        context = self._build_context()
+
+        try:
+            self.logger.log_sep()
+
+            # resolve lifecycle policy dynamically
+            policy = (
+                artifacts.LifecyclePolicy.REBUILD
+                if self.config.data.preparation.rebuild
+                else artifacts.LifecyclePolicy.BUILD_IF_MISSING
+            )
+
+            # run pipeline
+            prepare.run_data_preparation(
+                context,
+                self.pipeline_paths,
+                self.config.data.preparation,
+                self.config.data.world_grid.tile_specs_tuple,
+                policy=policy,
+                logger=self.logger,
+            )
+
+        except Exception as e:
+            self.logger.set_summary_status('FAILED')
+            self.logger.log('ERROR', f'Preparation pipeline failed: {e}', exc_info=True)
+            raise e
+
+        finally:
+            self.logger.log_sep()
+            self.logger.close()
+
+    def _create_logger(self) -> prepare.PreparationLogger:
+        logger = prepare.PreparationLogger(
+            name=self.pipeline_name,
+            log_file=self.pipeline_paths.report,
+            enable_file_log=False,
         )
+        logger.init_summary(run_id='prepare')
+        return logger
 
-        # run pipeline
-        geopipe_prepare.run_data_preparation(
-            artifact_paths,
-            config.data.preparation,
-            config.data.world_grid.tile_specs_tuple,
-            policy=policy,
-            logger=logger,
+    def _build_context(self) -> prepare.PreparationContext:
+        return prepare.build_preparation_context(
+            self.upstream_paths.data_blocks.catalog,
+            self.upstream_paths.data_blocks.schema,
         )
-
-        # persist the whole config dict
-        artifacts.Controller[dict](paths.config).persist(config.as_dict)
-
-    except Exception as e:
-        logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Preparation pipeline failed: {e}', exc_info=True)
-        raise e
-    finally:
-        logger.log_sep()
-        logger.close()

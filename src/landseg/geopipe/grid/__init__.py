@@ -27,7 +27,6 @@ resolution to keep import order simple and circular-free.
 
 Public APIs:
     - `GridLogger`: Logger tracking world grid execution and report.
-    - `get_grid_report_fpath`: Return canonical grid report file path.
     - `prepare_world_grid`: Build or load persisted world grid artifact.
 '''
 
@@ -40,7 +39,6 @@ __all__ = [
     # classes
     'GridLogger',
     # functions
-    'get_grid_report_fpath',
     'prepare_world_grid',
 ]
 
@@ -48,7 +46,6 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .lifecycle import (
-        get_grid_report_fpath,
         prepare_world_grid,
     )
     from .logger import (
@@ -58,7 +55,6 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'get_grid_report_fpath',
         'prepare_world_grid',
     }:
         obj = importlib.import_module('.lifecycle', __package__)

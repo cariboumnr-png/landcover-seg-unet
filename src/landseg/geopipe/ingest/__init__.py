@@ -28,10 +28,11 @@ context resolution, and pipeline execution tools via lazy module
 resolution.
 
 Public APIs:
+    - `IngestionContext`: Loaded execution context with grid.
     - `IngestionLogger`: Structured logger for ingestion stages.
-    - `run_data_ingestion`: Pipeline runner.
     - `build_ingestion_context`: Load ingestion context from report.
     - `resolve_pending_ingestion_batches`: Determine batches to ingest.
+    - `run_data_ingestion`: Pipeline runner.
     - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 
@@ -42,27 +43,29 @@ import typing
 
 __all__ = [
     # classes
+    'IngestionContext',
     'IngestionLogger',
     # functions
-    'run_data_ingestion',
     'build_ingestion_context',
     'resolve_pending_ingestion_batches',
+    'run_data_ingestion',
     'verify_pool_grid_compatibility',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .context import (
+        IngestionContext,
+        build_ingestion_context,
+        resolve_pending_ingestion_batches,
+        verify_pool_grid_compatibility,
+    )
     from .logger import (
         IngestionLogger,
     )
     from .pipeline import (
         run_data_ingestion,
-    )
-    from .context import (
-        build_ingestion_context,
-        resolve_pending_ingestion_batches,
-        verify_pool_grid_compatibility,
     )
 
 
@@ -76,6 +79,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
+        'IngestionContext',
         'build_ingestion_context',
         'resolve_pending_ingestion_batches',
         'verify_pool_grid_compatibility',

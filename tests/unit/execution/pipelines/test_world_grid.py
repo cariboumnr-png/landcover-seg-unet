@@ -32,11 +32,11 @@ import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 
 
-# ----- `exec_world_grid` tests
+# ----- `WorldGridGeneration` tests
 def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     '''
     Given: Valid extent reference raster and grid configuration.
-    When: `exec_world_grid` is executed.
+    When: World grid generation pipeline is executed.
     Then: Produce canonical world grid JSON artifact on disk.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -54,7 +54,7 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
 
-    pipelines.exec_world_grid(config)
+    pipelines.WorldGridGeneration(config).run()
 
     # verify canonical world grid artifact was generated
     grid_fpath = os.path.join(
@@ -70,7 +70,7 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     # verify grid report artifact was generated
     report_fpath = os.path.join(
         str(tmp_path / 'world_grids'),
-        'grid_report.json'
+        'report.json'
     )
     assert os.path.exists(report_fpath)
     with open(report_fpath, 'r', encoding='utf-8') as f:

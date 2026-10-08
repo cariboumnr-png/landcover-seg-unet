@@ -34,10 +34,11 @@ Actuellement utilisable:
 
 - Ingestion des donnees et preparation propre a l'experience
 - Construction de grilles, domaines, blocs de donnees, manifestes et datasets a partir d'artefacts
-- Pipelines d'entrainement et d'evaluation autonome des modeles
+- Commandes d'entrainement et d'evaluation autonome des modeles
 - Diagnostics de surapprentissage pour valider la chaine de bout en bout
+- Moteur de validation d'aptitude avant vol
 - Chemins de code pour les adaptateurs TensorBoard et MLflow
-- Points d'entree de sweep d'etude et d'analyse d'etude orientes Optuna
+- Points d'entree de commande pour le sweep d'etude et l'analyse d'etude orientes Optuna
 
 Encore en maturation:
 
@@ -52,6 +53,7 @@ Encore en maturation:
 - [Structure du depot](./docs/project_structure_fr.md)
 - [Schema du workflow](./docs/workflow_chart_fr.md)
 - [Guide de preparation des donnees](./docs/data_preparation_fr.md)
+- [Guide de preparation avant vol](./docs/preflight_readiness_fr.md)
 - [Decisions d'architecture](./docs/ADRs/)
 
 ## Concepts Cles
@@ -89,12 +91,12 @@ Les sessions assemblent la surface runtime pour l'entrainement ou l'evaluation:
 - callbacks, tracking, tableaux de bord et formatage de rapports
 - politiques d'orchestration et runners
 
-### Pipelines D'Execution
+### Couche D'Execution
 
-La couche d'execution selectionne un pipeline nomme, resout la configuration,
-coordonne la resolution des artefacts et delegue le travail principal aux
-factories et modules runtime. Les implementations de pipelines restent
-volontairement minces.
+La couche d'execution dispatche une commande nommee (pipelines d'execution
+atomiques ou workflows composites), resout la configuration, coordonne la
+resolution des artefacts et delegue le travail aux factories et runners de
+session. Les implementations restent volontairement minces.
 
 ## Installation
 
@@ -107,7 +109,7 @@ pip install .
 Cela installe la commande console `landseg`:
 
 ```bash
-landseg pipeline=default
+landseg command=default
 ```
 
 Pour executer dans des environnements distants (tels que des noeuds de calcul
@@ -115,7 +117,7 @@ Databricks ou des machines virtuelles) sans installer le package, vous pouvez
 utiliser le script de demarrage :
 
 ```bash
-python scripts/run.py pipeline=default
+python scripts/run.py command=default
 ```
 
 ## Configuration
@@ -138,9 +140,9 @@ Avant d'executer les pipelines de donnees, lisez le
 [guide de preparation des donnees](./docs/data_preparation_fr.md) et organisez
 les entrees locales sous la racine d'experience configuree.
 
-## Utilisation Des Pipelines
+## Utilisation Des Commandes
 
-Les noms de pipelines sont enregistres dans `landseg.execution.pipelines`.
+Les noms de commandes sont enregistres dans `landseg.execution.executor`.
 
 ### 0. Génération De La Grille Monde
 
@@ -148,7 +150,7 @@ Construit et persiste l'artefact de grille monde canonique pour le tuilage
 spatial à partir d'un raster de référence ou de paramètres d'étendue explicites.
 
 ```bash
-landseg pipeline=world-grid
+landseg command=world-grid
 ```
 
 ### 1. Harmonisation Des Données
@@ -157,7 +159,7 @@ Harmonise, reprojette et rééchantillonne les rasters bruts (features, labels
 et masques de domaine) sur le canevas de la grille monde.
 
 ```bash
-landseg pipeline=data-harmonize
+landseg command=data-harmonize
 ```
 
 ### 2. Ingestion Des Donnees
@@ -166,61 +168,85 @@ Construit les blocs de données canoniques non partitionnés à partir des
 rasters harmonisés et de la grille monde.
 
 ```bash
-landseg pipeline=data-ingest
+landseg command=data-ingest
 ```
 
-### 3. Preparation Des Donnees
+### 3. Ingestion Par Lots
+
+Ingère séquentiellement plusieurs lots d'harmonisation planifiés dans le pool
+canonique de blocs de données.
+
+```bash
+landseg command=batch-ingest
+```
+
+### 4. Preparation Des Donnees
 
 Construit les artefacts propres a l'experience a partir des blocs de donnees
 ingeres, y compris le partitionnement géographique par AOI, les splits, la
 normalisation et les schemas.
 
 ```bash
-landseg pipeline=data-prepare
+landseg command=data-prepare
 ```
 
-### 4. Entrainement Du Modele
+### 5. Entrainement Du Modele
 
 Construit et execute une session complete d'entrainement a partir des artefacts
 prepares.
 
 ```bash
-landseg pipeline=model-train
+landseg command=model-train
 ```
 
-### 5. Evaluation Du Modele
+### 6. Evaluation Du Modele
 
 Execute l'evaluation a partir des artefacts prepares et d'un checkpoint entraine.
 
 ```bash
-landseg pipeline=model-evaluate pipeline.model_evaluate.checkpoint=path/to/checkpoint
+landseg command=model-evaluate command.model_evaluate.checkpoint=path/to/checkpoint
 ```
 
-### 6. Diagnostic De Surapprentissage
+### 7. Diagnostic De Surapprentissage
 
 Execute un diagnostic contraint de bout en bout sur un petit perimetre pour
 valider le cablage du modele, du dataset, des pertes, de l'optimiseur, des
 metriques et de l'execution.
 
 ```bash
-landseg pipeline=diagnose-overfit
+landseg command=diagnose-overfit
 ```
 
-### 7. Sweep D'Etude
+### 8. Sweep D'Etude
 
 Execute le point d'entree de sweep oriente Optuna.
 
 ```bash
-landseg pipeline=study-sweep
+landseg command=study-sweep
 ```
 
-### 8. Analyse D'Etude
+### 9. Analyse D'Etude
 
 Analyse les resultats d'etude via le point d'entree d'analyse.
 
 ```bash
-landseg pipeline=study-analysis
+landseg command=study-analysis
 ```
+
+### 10. Validation Avant Vol (Pre-Flight)
+
+Execute des audits non destructifs avant vol pour verifier les dependances,
+l'integrite des registres, les contrats spatiaux et les ressources de calcul
+avant de lancer des traitements lourds.
+
+```bash
+# Auditer l'environnement complet ou des cibles specifiques de pipeline
+landseg command=preflight target=all
+landseg command=preflight target=model-train strict=true
+```
+
+Pour les specifications detaillees des sondes, codes de statut et tableaux
+de bord, consultez le [guide de preparation avant vol](./docs/preflight_readiness_fr.md).
 
 ## Organisation Des Artefacts Et Des Sorties
 
@@ -232,7 +258,7 @@ correspond a:
 experiment/
 |-- input/       Entrees source locales
 |-- artifacts/   Artefacts generes reutilisables
-`-- results/     Sorties de pipelines/sessions
+`-- results/     Sorties d'execution et de sessions
 ```
 
 Les artefacts sont destines a servir de source de verite pour la
@@ -250,7 +276,7 @@ src/landseg/
 |-- artifacts/       Chemins, persistance, politiques, checkpoints
 |-- configs/         Defaults Hydra YAML et schemas de config structures
 |-- core/            Contrats partages et types de resultats
-|-- execution/       Registre de pipelines et dispatch de haut niveau
+|-- execution/       Dispatch de commandes, pipelines, workflows et moteur avant-vol
 |-- geopipe/         Pipeline geospatial de fondation et transformation
 |-- models/          Frames, backbones, tetes, conditionnement, factories
 |-- session/         Donnees runtime, moteurs, taches, instrumentation, orchestration
@@ -279,32 +305,36 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
-- Surfaces d'API programmatiques pour les environnements interactifs et les
-  Jupyter Notebooks (`TrainingSessionConfigurator`, etc.).
-- Renforcement des contrats de modeles et limites strictes de validation de
-  configuration.
-- Mecanismes d'etiquettes multi-tetes, pertes regularisees (pertes de
-  coherence) et metriques d'evaluation etendues.
-- Prereglages initiaux de sweep d'etude Optuna et integration des metriques
-  d'objectifs.
+- Orchestration d'execution et validation avant vol : pipelines atomiques,
+  workflows composites (`e2e-intake`, `e2e-experiment`) et moteur preflight
+  (`command=preflight`, ADR-0060).
+- Ingestion incrementale par lots, registres de runs et politiques de
+  collision (`skip` vs `overwrite`, ADR-0059).
+- Semantique dynamique des donnees et preparation decouplee (`data-prepare`,
+  ADR-0057).
+- Surfaces d'API programmatiques et integration pour notebooks (ADR-0029).
+- Regularisation par similarite ecologique (ADR-0053), tetes multiples et
+  metriques d'evaluation etendues (ADR-0042).
+- Prereglages de sweeps d'etude Optuna et metriques d'objectifs (ADR-0044).
 
 Objectifs a court et moyen terme :
 
-- Mettre a jour les schemas de workflow pour refleter la separation d'execution
-  session/runtime actuelle.
-- Documenter les guides de workflow Optuna recommandes et publier des tutoriels
-  programmatiques.
-- Stabiliser les formats de rapports de metriques et les comparaisons entre
-  executions.
+- Recettes de configuration modulaires sous `configs/recipes/` et simplification
+  des surcharges CLI (ADR-0060 Section 6).
+- Documentation des workflows de sweep Optuna et publication de tutoriels en
+  notebooks.
+- Stabilisation des formats de rapports de metriques et outils de comparaison
+  inter-runs.
 
 Objectifs a plus long terme :
 
-- Ajouter d'autres familles de modeles au-dela de la pile actuelle de type U-Net.
-- Definir des chemins d'export stables pour les modeles entraines et les
-  artefacts d'evaluation.
-- Soutenir des workflows plus riches d'analyse inter-experiences.
-- Continuer a consolider les frontieres internes a mesure que les ADR se
-  stabilisent.
+- Runners de workflow a etat avec orchestration DAG, reprise sur incident et
+  rejeu d'etapes (ADR-0060 Section 6.3).
+- Architecture d'apprentissage continu et memoire tampon de rejeu (ADR-0052).
+- Ajout de nouvelles familles de modeles au-dela de la pile U-Net actuelle
+  (ex. transformeurs visuels).
+- Chemins d'export stables pour la production (ONNX, TorchScript).
+- Prise en charge de flux d'analyse inter-experiences plus riches.
 
 ## Contribution
 

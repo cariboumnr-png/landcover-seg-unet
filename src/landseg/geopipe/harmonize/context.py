@@ -31,9 +31,7 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
-import os
 # local imports
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
@@ -54,7 +52,7 @@ class HarmonizationContext:
 
 # ----- public functions
 def build_harmonization_context(
-    grid_source_path: str,
+    grid_report_path: str,
     runs_manifest_fpath: str,
     config: contracts.HarmonizationPipelineConfig,
 ) -> HarmonizationContext:
@@ -62,8 +60,8 @@ def build_harmonization_context(
     Load world grid reference context from an upstream grid report.
 
     Args:
-        grid_source:
-            File path to grid report JSON or directory containing it.
+        grid_report_path:
+            File path to grid report JSON.
 
     Returns:
         HarmonizationContext:
@@ -71,12 +69,8 @@ def build_harmonization_context(
             grid reference metadata.
     '''
     # fetch world grid
-    if os.path.isdir(grid_source_path):
-        report_fpath = geo_core.get_grid_report_fpath(grid_source_path)
-    else:
-        report_fpath = grid_source_path
-    grid_report = geo_core.read_grid_report(report_fpath)
-    world_grid = geo_core.load_grid_from_fpath(grid_report['grid_fpath'])
+    _, grid_report = geo_core.read_grid_report(grid_report_path)
+    world_grid = geo_core.GridLayout.from_fpath(grid_report['grid_fpath'])
 
     # compile dataset manifest JOSN
     compiled = manifest.compile_dataset_manifest(config.dataset_manifest)
@@ -86,7 +80,7 @@ def build_harmonization_context(
     identity = {
         'inputs': compiled,
         'grid': {
-            'grid_fpath': report_fpath,
+            'grid_fpath': grid_report_path,
             'grid_identity': grid_identity,
         },
         'config': {

@@ -12,12 +12,14 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- ADRs/                     Decisions d'architecture
 |   |-- images/                   Images de documentation
 |   |-- data_preparation_fr.md    Guide de preparation des donnees
+|   |-- preflight_readiness_fr.md Guide de validation preliminaire et diagnostics
 |   |-- workflow_chart_fr.md      Diagramme general du workflow
 |   `-- project_structure_fr.md   Ce fichier
 |
 |-- experiment/                   I/O locale ignoree des experiences
 |   |-- artifacts/                Grilles, manifestes, checkpoints, etc. generes
 |   |-- input/                    Entrees locales d'experience
+|   |-- preflight/                Rapports de validation préliminaire exportés
 |   `-- results/                  Sorties locales de pipelines/sessions
 |
 |-- notebooks/
@@ -77,16 +79,15 @@ src/landseg/
 |-- configs/
 |   |-- hydra/
 |   |   |-- config.yaml           Point d'entree de composition Hydra
-|   |   |-- dataspecs/            Defaults des specifications de donnees
+|   |   |-- command/              Configs harmonize, ingest, prepare, train, eval et study
 |   |   |-- data/                 Defaults d'harmonisation, d'ingestion et de préparation
 |   |   |-- models/               Defaults des architectures modeles
-|   |   |-- pipeline/             Configs harmonize, ingest, prepare, train, eval et study
 |   |   |-- session/              Configs dataloader, moteur, taches et orchestration
 |   |   `-- study/                Defaults d'etude et de sweep
 |   `-- schema/
 |       |-- root.py               Schema structure racine
 |       |-- utils.py              Utilitaires de schema
-|       `-- sections/             Dataclasses par section: pipeline, session, models, etc.
+|       `-- sections/             Dataclasses par section: commands, session, models, data, etc.
 |
 |-- core/
 |   |-- data_specs.py             Contrat runtime de specification des donnees
@@ -94,18 +95,28 @@ src/landseg/
 |   `-- session_results.py        Sorties structurees des sessions
 |
 |-- execution/
-|   |-- executor.py               Point d'entree unifie d'execution
-|   `-- pipelines/
-|       |-- _registry.py          Lookup et enregistrement des pipelines
-|       |-- world_grid.py         Pipeline de génération de grille monde
-|       |-- data_harmonize.py     Pipeline d'harmonisation des données
-|       |-- data_ingest.py        Pipeline d'ingestion des données
-|       |-- data_prepare.py       Pipeline de préparation des données
-|       |-- model_train.py        Pipeline d'entrainement
-|       |-- model_evaluate.py     Pipeline d'evaluation
-|       |-- diagnose_overfit.py   Diagnostic d'overfit
-|       |-- study_sweep.py        Sweep d'hyperparametres
-|       `-- study_analysis.py     Analyse des resultats d'etude
+|   |-- executor.py               Point d'entree unifie de dispatch des commandes
+|   |-- pipelines/                Pipelines d'execution atomiques par etape
+|   |   |-- base.py               Gabarit ExecutionPipeline et execution de cycle de vie
+|   |   |-- world_grid.py         Pipeline de génération de grille monde
+|   |   |-- data_harmonize.py     Pipeline d'harmonisation des données
+|   |   |-- data_ingest.py        Pipeline d'ingestion des données
+|   |   |-- data_prepare.py       Pipeline de préparation des données
+|   |   |-- model_train.py        Pipeline d'entrainement
+|   |   `-- model_evaluate.py     Pipeline d'evaluation
+|   |-- preflight/                Moteur de sondes et répartiteur d'inspection préliminaire
+|   |   |-- probes/               Sondes diagnostiques (matériel, stockage, spatial, registre, etc.)
+|   |   |-- engine.py             Moteur d'inspection et répartiteur de cibles
+|   |   |-- prerequisites.py      Vérification de lignage et prérequis amont
+|   |   |-- reporter.py           Formatage du tableau de bord terminal et export de rapport
+|   |   `-- schema.py             Modèles de données des résultats de sondes et préparation
+|   `-- workflows/                Workflows d'orchestration composites multi-etapes
+|       |-- batch_ingest.py       Ingestion par lots vers le pool de blocs
+|       |-- diagnose_overfit.py   Workflow de diagnostic de surapprentissage
+|       |-- e2e_intake.py         Workflow d'ingestion continue (harmonisation + ingestion)
+|       |-- e2e_experiment.py     Workflow d'experimentation complete (grille -> modele)
+|       |-- study_sweep.py        Workflow d'orchestration de sweep Optuna
+|       `-- study_analysis.py     Workflow d'analyse des resultats d'etude
 |
 |-- geopipe/
 |   |-- contracts/                Schémas centraux de rapports et de transfert

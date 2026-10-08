@@ -9,8 +9,8 @@ defaults:
   - session: default
   # study
   - study: default
-  # pipeline
-  - pipeline: default
+  # command
+  - command: default
   # disable logging entirely
   - override hydra/job_logging: disabled
   - override hydra/hydra_logging: disabled

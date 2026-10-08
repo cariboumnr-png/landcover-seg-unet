@@ -48,7 +48,7 @@ def test_world_grid_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.pipeline.name == 'world-grid'
+    assert root.command.name == 'world-grid'
     assert root.data.world_grid.params.crs_string == 'EPSG:3161'
     assert root.data.world_grid.params.ref_fpath == str(ref_tif)
     assert root.data.world_grid.params.tile_size == (256, 256)
@@ -84,7 +84,7 @@ def test_data_harmonization_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.pipeline.name == 'data-harmonize'
+    assert root.command.name == 'data-harmonize'
     assert root.data.world_grid.params.tile_size == (512, 512)
     assert root.data.world_grid.params.tile_stride == (64, 64)
     assert root.data.world_grid.output_dpath == str(tmp_path / 'world_grids')
@@ -115,7 +115,7 @@ def test_data_ingestion_configurator(tmp_path):
     ).set_collision_policy('overwrite')
 
     root = cfg_builder.running_root_config
-    assert root.pipeline.name == 'data-ingest'
+    assert root.command.name == 'data-ingest'
     assert root.data.ingestion.rebuild is True
     assert root.data.ingestion.harmonization_run == 1
     assert root.data.ingestion.datablocks.add_topo == ['slope', 'tpi']
@@ -149,7 +149,7 @@ def test_data_preparation_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.pipeline.name == 'data-prepare'
+    assert root.command.name == 'data-prepare'
     assert root.data.preparation.features == {'sentinel2': 'rgb_nir'}
     assert root.data.preparation.targets == {'landcover': 'binary'}
     assert root.data.preparation.partition.val_ratio == 0.15
@@ -198,7 +198,7 @@ def test_training_session_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.pipeline.name == 'model-train'
+    assert root.command.name == 'model-train'
     assert root.models.model_body == 'unet'
     assert root.models.bottleneck == 'conv'
     assert root.models.model_body_registry['unet'].base_ch == 64
@@ -207,3 +207,44 @@ def test_training_session_configurator(tmp_path):
     assert root.session.dataloader.batch_size == 16
     assert root.session.dataloader.patch_size == 256
     assert root.data.specification.domain_ids_name == 'sample_domain_1'
+
+
+# ----- `BatchIngestConfigurator` tests
+def test_batch_ingest_configurator(tmp_path):
+    '''
+    Given: Parameters for multi-batch ingestion workflow.
+    When: Chaining methods on `BatchIngestConfigurator`.
+    Then: Correctly set command name to 'batch-ingest' and validate.
+    '''
+    cfg_builder = configurators.BatchIngestConfigurator(
+        experiment_root=str(tmp_path),
+    )
+    cfg_builder.set_rebuild(True).set_collision_policy('skip')
+
+    root = cfg_builder.running_root_config
+    assert root.command.name == 'batch-ingest'
+    assert root.data.ingestion.rebuild is True
+    assert root.data.ingestion.datablocks.collision_policy == 'skip'
+
+
+# ----- `BaseConfigurator.preflight` tests
+def test_configurator_preflight(mocker, tmp_path):
+    '''
+    Given: A configurator instance.
+    When: Calling `.preflight()` on the configurator.
+    Then: Delegate to `api.run_preflight` with current configuration.
+    '''
+    mock_run_preflight = mocker.patch(
+        'landseg.adapters.api.api.run_preflight',
+        return_value='report'
+    )
+    cfg_builder = configurators.WorldGridConfigurator(
+        experiment_root=str(tmp_path),
+    )
+    res = cfg_builder.preflight(strict=True)
+
+    assert res == 'report'
+    mock_run_preflight.assert_called_once()
+    assert mock_run_preflight.call_args.kwargs['target'] == 'world-grid'
+    assert mock_run_preflight.call_args.kwargs['strict'] is True
+

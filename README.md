@@ -29,10 +29,11 @@ Currently usable:
 
 - Data ingestion and experiment-scoped data preparation
 - Artifact-backed grid, domain, data block, manifest, and dataset construction
-- Model training and standalone model evaluation pipelines
+- Model training and standalone model evaluation commands
 - Overfit diagnostics for end-to-end stack validation
+- Pre-flight readiness validation and dry-run diagnostics
 - TensorBoard and MLflow dashboard adapter code paths
-- Optuna-oriented study sweep and study analysis pipeline entry points
+- Optuna-oriented study sweep and study analysis command entry points
 
 Still maturing:
 
@@ -47,6 +48,7 @@ Still maturing:
 - [Repository structure](./docs/project_structure.md)
 - [Workflow chart](./docs/workflow_chart.md)
 - [Data preparation guide](./docs/data_preparation.md)
+- [Pre-flight readiness guide](./docs/preflight_readiness.md)
 - [Architecture decision records](./docs/ADRs/)
 
 ## Core Concepts
@@ -82,11 +84,12 @@ Sessions assemble the runtime surface for training or evaluation:
 - callbacks, tracking, dashboards, and report formatting
 - orchestration policies and runners
 
-### Execution Pipelines
+### Execution Layer
 
-The execution layer selects a named pipeline, resolves configuration, coordinates
-artifact resolution, and delegates core work to factories and runtime modules.
-Pipeline implementations are intentionally thin.
+The execution layer dispatches a named command (atomic execution pipelines or
+composite workflows), resolves configuration, coordinates artifact resolution,
+and delegates core work to factories and session runners. Pipeline and workflow
+implementations are intentionally thin.
 
 ## Installation
 
@@ -99,14 +102,14 @@ pip install .
 This installs the `landseg` console script:
 
 ```bash
-landseg pipeline=default
+landseg command=default
 ```
 
 For running in remote environments (such as Databricks job compute nodes or VMs)
 without installing the package, you can run the bootstrap entry point:
 
 ```bash
-python scripts/run.py pipeline=default
+python scripts/run.py command=default
 ```
 
 ## Configuration
@@ -127,9 +130,9 @@ Before running data pipelines, read the
 [data preparation guide](./docs/data_preparation.md) and organize local inputs
 under the configured experiment root.
 
-## Pipeline Usage
+## Command Usage
 
-Pipeline names are registered in `landseg.execution.pipelines`.
+Command names are registered in `landseg.execution.executor`.
 
 ### 0. World Grid Generation
 
@@ -137,7 +140,7 @@ Build and persist the canonical spatial tiling world grid artifact from a
 reference raster or explicit extent parameters.
 
 ```bash
-landseg pipeline=world-grid
+landseg command=world-grid
 ```
 
 ### 1. Data Harmonization
@@ -146,7 +149,7 @@ Harmonize, reproject, and resample raw raster datasets (features, labels,
 and domain masks) onto the canonical world grid canvas.
 
 ```bash
-landseg pipeline=data-harmonize
+landseg command=data-harmonize
 ```
 
 ### 2. Data Ingestion
@@ -155,58 +158,81 @@ Build canonical unpartitioned data blocks from harmonized rasters and the
 world grid.
 
 ```bash
-landseg pipeline=data-ingest
+landseg command=data-ingest
 ```
 
-### 3. Data Preparation
+### 3. Batch Ingestion
+
+Sequentially ingest multiple planned harmonization batches into the canonical
+data block pool.
+
+```bash
+landseg command=batch-ingest
+```
+
+### 4. Data Preparation
 
 Build experiment-scoped artifacts from ingested data blocks, including
 geographic AOI partitioning, splits, normalization statistics, and schemas.
 
 ```bash
-landseg pipeline=data-prepare
+landseg command=data-prepare
 ```
 
-### 4. Model Training
+### 5. Model Training
 
 Construct and run a full training session from prepared artifacts.
 
 ```bash
-landseg pipeline=model-train
+landseg command=model-train
 ```
 
-### 5. Model Evaluation
+### 6. Model Evaluation
 
 Run evaluation from prepared artifacts and a trained checkpoint.
 
 ```bash
-landseg pipeline=model-evaluate pipeline.model_evaluate.checkpoint=path/to/checkpoint
+landseg command=model-evaluate command.model_evaluate.checkpoint=path/to/checkpoint
 ```
 
-### 6. Overfit Diagnostic
+### 7. Overfit Diagnostic
 
 Run a constrained end-to-end diagnostic on a small scope to validate model,
 dataset, loss, optimizer, metric, and execution wiring.
 
 ```bash
-landseg pipeline=diagnose-overfit
+landseg command=diagnose-overfit
 ```
 
-### 7. Study Sweep
+### 8. Study Sweep
 
 Run the Optuna-oriented study sweep entry point.
 
 ```bash
-landseg pipeline=study-sweep
+landseg command=study-sweep
 ```
 
-### 7. Study Analysis
+### 9. Study Analysis
 
 Analyze study results through the study analysis entry point.
 
 ```bash
-landseg pipeline=study-analysis
+landseg command=study-analysis
 ```
+
+### 10. Pre-Flight Validation
+
+Run non-destructive pre-flight audits to verify dependencies, ledger integrity,
+spatial contracts, and compute resources prior to execution.
+
+```bash
+# Audit full environment or specific pipeline targets
+landseg command=preflight target=all
+landseg command=preflight target=model-train strict=true
+```
+
+For detailed probe specifications, status codes, and terminal dashboards, see the
+[pre-flight readiness guide](./docs/preflight_readiness.md).
 
 ## Artifact And Output Layout
 
@@ -217,7 +243,7 @@ directory. In the default working tree this corresponds to:
 experiment/
 |-- input/       Local source inputs
 |-- artifacts/   Reusable generated artifacts
-`-- results/     Pipeline/session outputs
+`-- results/     Execution and session outputs
 ```
 
 Artifacts are intended to be the source of truth for reproducibility. The
@@ -235,7 +261,7 @@ src/landseg/
 |-- artifacts/       Artifact paths, persistence, lifecycle policy, checkpoints
 |-- configs/         Hydra YAML defaults and structured config schemas
 |-- core/            Shared contracts and result types
-|-- execution/       Pipeline registry and top-level dispatch
+|-- execution/       Command dispatch, pipelines, workflows, and preflight engine
 |-- geopipe/         Geospatial harmonize, ingest, and prepare pipelines
 |-- models/          Model frames, backbones, heads, conditioning, factories
 |-- session/         Runtime data, engines, tasks, instrumentation, orchestration
@@ -263,26 +289,34 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
-- Programmatic API surfaces for interactive environments and Jupyter Notebooks
-  (`TrainingSessionConfigurator`, etc.).
-- Hardening model contracts and strict configuration validation boundaries.
-- Multi-head label mechanisms, regularized losses (consistency losses), and
-  extended evaluation metrics.
-- Initial Optuna study sweep presets and objective metrics integrations.
+- Execution orchestration and pre-flight validation: atomic pipelines,
+  composite workflows (`e2e-intake`, `e2e-experiment`), and preflight
+  inspection engine (`command=preflight`, ADR-0060).
+- Incremental batch ingestion with run ledgers, collision handling policies
+  (`skip` vs. `overwrite`), and canonical block pooling (ADR-0059).
+- Dynamic dataset semantics and decoupled data preparation (`data-prepare`,
+  ADR-0057).
+- Programmatic API surfaces and interactive notebook workflows (ADR-0029).
+- Ecological similarity loss regularization (ADR-0053), multi-head labels,
+  and extended validation metrics (ADR-0042).
+- Optuna study sweep presets and objective metrics integrations (ADR-0044).
 
 Near-term / Medium-term focus:
 
-- Update workflow charts to match the current session/runtime execution split.
-- Document recommended Optuna workflow guides and publish programmatic
-  tutorials.
-- Stabilize metrics reporting formats and cross-run comparisons.
+- Modular configuration recipes under `configs/recipes/` and flattened CLI
+  parameter overrides (ADR-0060 Section 6).
+- Document Optuna sweep workflows and publish end-to-end tutorial notebooks.
+- Stabilize metrics reporting formats and cross-run comparison tools.
 
 Longer-term goals:
 
-- Add more model families beyond the current U-Net-style stack.
-- Define stable export paths for trained models and evaluation artifacts.
+- Stateful workflow runners with DAG orchestration, pause/resume, and
+  step-level retry mechanisms (ADR-0060 Section 6.3).
+- Continual learning and replay buffer sampling architecture (ADR-0052).
+- Add more model families beyond the current U-Net-style stack (e.g., vision
+  transformers).
+- Define stable production export paths for trained models (ONNX, TorchScript).
 - Support richer cross-experiment analysis workflows.
-- Continue consolidating internal boundaries as ADRs settle.
 
 ## Contributing
 

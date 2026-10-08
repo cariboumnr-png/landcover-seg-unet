@@ -27,17 +27,18 @@ import os
 import typing
 # third-party imports
 import omegaconf
+import pytest
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 
 
-# ----- `exec_harmonize_data` tests
+# ----- `DataHarmonization` tests
 def test_data_harmonize_pipeline_success(tmp_path, dummy_data_paths):
     '''
     Given: Valid dummy input rasters and manifest configuration.
-    When: `exec_harmonize_data` is executed.
+    When: `DataHarmonization.run` is executed.
     Then: Produce harmonized VRTs, valid pixel mask, and canonical world grid.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -60,13 +61,13 @@ def test_data_harmonize_pipeline_success(tmp_path, dummy_data_paths):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
 
-    pipelines.exec_world_grid(config)
-    pipelines.exec_harmonize_data(config)
+    pipelines.WorldGridGeneration(config).run()
+    pipelines.DataHarmonization(config).run()
 
     # verify run folder output
     run_dir = str(tmp_path / 'harmonized' / 'run_0001')
     assert os.path.exists(run_dir)
-    assert os.path.exists(os.path.join(run_dir, 'harmonize_report.json'))
+    assert os.path.exists(os.path.join(run_dir, 'report.json'))
     assert os.path.exists(os.path.join(run_dir, 'valid_pixel_mask.vrt'))
 
     # verify canonical world grid artifact was generated
@@ -84,7 +85,7 @@ def test_data_harmonize_pipeline_success(tmp_path, dummy_data_paths):
 def test_data_harmonize_pipeline_collision_skip(tmp_path, dummy_data_paths):
     '''
     Given: An already completed harmonization run.
-    When: `exec_harmonize_data` is executed again with identical inputs.
+    When: `DataHarmonization.run` is executed again with identical inputs.
     Then: Second run is detected as collision and recorded as SKIPPED.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -106,9 +107,9 @@ def test_data_harmonize_pipeline_collision_skip(tmp_path, dummy_data_paths):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
 
-    pipelines.exec_world_grid(config)
-    pipelines.exec_harmonize_data(config)
-    pipelines.exec_harmonize_data(config)
+    pipelines.WorldGridGeneration(config).run()
+    pipelines.DataHarmonization(config).run()
+    pipelines.DataHarmonization(config).run()
 
     manifest_fp = os.path.join(
         str(tmp_path / 'harmonized'), 'harmonization_runs.json'
@@ -120,3 +121,25 @@ def test_data_harmonize_pipeline_collision_skip(tmp_path, dummy_data_paths):
     assert runs[uids[0]]['status'] == 'SUCCESS'
     assert runs[uids[1]]['status'] == 'SKIPPED'
 
+
+def test_data_harmonize_validate_missing_world_grid(tmp_path):
+    '''
+    Given: Harmonization configuration without upstream world grid report.
+    When: Calling `validate` on `DataHarmonization`.
+    Then: Raise a RuntimeError indicating missing world-grid report.
+    '''
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.world_grid.output_dpath = str(tmp_path / 'world_grids')
+    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+    pipeline = pipelines.DataHarmonization(config)
+    with pytest.raises(
+        RuntimeError,
+        match='Upstream pipeline "world-grid"'
+    ):
+        pipeline._validate()

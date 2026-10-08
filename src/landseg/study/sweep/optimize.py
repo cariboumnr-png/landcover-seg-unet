@@ -55,7 +55,7 @@ def run_sweep(
     '''
 
     # sweep config
-    config = root_config.pipeline.study_sweep
+    config = root_config.command.study_sweep
 
     # storage (enables resume)
     storage = config.storage if config.storage is not None else None

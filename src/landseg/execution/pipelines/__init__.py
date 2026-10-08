@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 # pylint: disable=too-many-return-statements
 
 '''
@@ -35,100 +34,75 @@ import importlib
 import typing
 
 __all__ = [
+    # types
+    'BasePipeline',
+    'GeoPipeline',
+    'SessionPipeline',
     # functions
-    'analyze',
-    'default_action',
-    'evaluate',
-    'exec_harmonize_data',
-    'exec_ingest_data',
-    'exec_prepare_data',
-    'exec_world_grid',
-    'get',
-    'overfit',
-    'sweep',
-    'train',
+    'DataHarmonization',
+    'DataIngestion',
+    'DataPreparation',
+    'ModelEvaluation',
+    'ModelTraining',
+    'WorldGridGeneration',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._registry import (
-        get,
+    from .base import (
+        BasePipeline,
+        GeoPipeline,
+        SessionPipeline,
     )
     from .data_harmonize import (
-        exec_harmonize_data,
+        DataHarmonization,
     )
     from .data_ingest import (
-        exec_ingest_data,
+        DataIngestion
     )
     from .data_prepare import (
-        exec_prepare_data,
+        DataPreparation,
     )
-    from .default import (
-        default_action,
-    )
-    from .diagnose_overfit import (
-        overfit,
-    )
+
     from .model_evaluate import (
-        evaluate,
+        ModelEvaluation,
     )
     from .model_train import (
-        train,
+        ModelTraining,
     )
-    from .study_analysis import (
-        analyze,
-    )
-    from .study_sweep import (
-        sweep,
-    )
+
     from .world_grid import (
-        exec_world_grid,
+        WorldGridGeneration,
     )
 
 
 def __getattr__(name: str):
-    if name in {'get'}:
-        obj = importlib.import_module('._registry', __package__)
+    if name in {'BasePipeline', 'GeoPipeline', 'SessionPipeline'}:
+        obj = importlib.import_module('.base', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_harmonize_data'}:
+    if name in {'DataHarmonization'}:
         obj = importlib.import_module('.data_harmonize', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_ingest_data'}:
+    if name in {'DataIngestion'}:
         obj = importlib.import_module('.data_ingest', __package__)
         return getattr(obj, name)
 
-    if name in {'exec_prepare_data'}:
+    if name in {'DataPreparation'}:
         obj = importlib.import_module('.data_prepare', __package__)
         return getattr(obj, name)
 
-    if name in {'default_action'}:
-        obj = importlib.import_module('.default', __package__)
-        return getattr(obj, name)
-
-    if name in {'overfit'}:
-        obj = importlib.import_module('.diagnose_overfit', __package__)
-        return getattr(obj, name)
-
-    if name in {'evaluate'}:
+    if name in {'ModelEvaluation'}:
         obj = importlib.import_module('.model_evaluate', __package__)
         return getattr(obj, name)
 
-    if name in {'train'}:
+    if name in {'ModelTraining'}:
         obj = importlib.import_module('.model_train', __package__)
         return getattr(obj, name)
 
-    if name in {'analyze'}:
-        obj = importlib.import_module('.study_analysis', __package__)
-        return getattr(obj, name)
-
-    if name in {'sweep'}:
-        obj = importlib.import_module('.study_sweep', __package__)
-        return getattr(obj, name)
-
-    if name in {'exec_world_grid'}:
+    if name in {'WorldGridGeneration'}:
         obj = importlib.import_module('.world_grid', __package__)
         return getattr(obj, name)
 

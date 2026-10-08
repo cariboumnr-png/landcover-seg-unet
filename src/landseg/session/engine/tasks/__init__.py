@@ -56,7 +56,7 @@ if typing.TYPE_CHECKING:
     from .heads import (
         HeadSpec,
     )
-    from .loss.composite import (
+    from .loss import (
         CompositeLoss,
     )
     from .metrics import (
@@ -82,7 +82,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {'CompositeLoss'}:
-        obj = importlib.import_module('.loss.composite', __package__)
+        obj = importlib.import_module('.loss', __package__)
         return getattr(obj, name)
 
     if name in {

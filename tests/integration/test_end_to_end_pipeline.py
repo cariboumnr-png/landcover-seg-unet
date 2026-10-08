@@ -84,7 +84,7 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     )
 
     # ----- stage 1: world grid
-    pipelines.exec_world_grid(config)
+    pipelines.WorldGridGeneration(config).run()
     assert os.path.exists(
         os.path.join(
             str(tmp_path / 'world_grids'),
@@ -93,10 +93,10 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     )
 
     # ----- stage 2: harmonize
-    pipelines.exec_harmonize_data(config)
+    pipelines.DataHarmonization(config).run()
 
     h_run = os.path.join(config.data.harmonization.output_dpath, 'run_0001')
-    assert os.path.exists(os.path.join(h_run, 'harmonize_report.json'))
+    assert os.path.exists(os.path.join(h_run, 'report.json'))
     assert os.path.exists(
         os.path.join(h_run, 'harmonized_features_STACKED.vrt')
     )
@@ -106,10 +106,10 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     assert os.path.exists(os.path.join(h_run, 'valid_pixel_mask.vrt'))
 
     # ----- stage 3: ingest
-    pipelines.exec_ingest_data(config)
+    pipelines.DataIngestion(config).run()
 
     i_root = config.data.ingestion.output_dpath
-    assert os.path.exists(os.path.join(i_root, 'ingest_report.json'))
+    assert os.path.exists(os.path.join(i_root, 'run_0001', 'report.json'))
     assert os.path.exists(
         os.path.join(i_root, 'data_blocks', 'catalog.json')
     )
@@ -130,10 +130,10 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     assert len(catalog) > 0
 
     # ----- stage 4: prepare
-    pipelines.exec_prepare_data(config)
+    pipelines.DataPreparation(config).run()
 
     p_root = config.data.preparation.output_dpath
-    assert os.path.exists(os.path.join(p_root, 'prep_report.json'))
+    assert os.path.exists(os.path.join(p_root, 'report.json'))
     assert os.path.exists(
         os.path.join(p_root, 'block_splits_source.json')
     )

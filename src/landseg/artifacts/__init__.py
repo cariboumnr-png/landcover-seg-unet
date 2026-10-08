@@ -57,8 +57,10 @@ __all__ = [
     'KnowledgePaths',
     'LifecyclePolicy',
     'PayloadController',
+    'PipelineArtifactsPaths',
     'PreparationPaths',
     'SessionPaths',
+    'WorldGridPaths',
     # functions
     'load_checkpoint',
     'save_checkpoint',
@@ -84,8 +86,10 @@ if typing.TYPE_CHECKING:
         HarmonizationPaths,
         IngestionPaths,
         KnowledgePaths,
+        PipelineArtifactsPaths,
         PreparationPaths,
         SessionPaths,
+        WorldGridPaths,
     )
     from .payload_io import (
         PayloadController,
@@ -117,8 +121,10 @@ def __getattr__(name: str):
         'HarmonizationPaths',
         'IngestionPaths',
         'KnowledgePaths',
+        'PipelineArtifactsPaths',
         'PreparationPaths',
         'SessionPaths',
+        'WorldGridPaths',
     }:
         obj = importlib.import_module('.paths', __package__)
         return getattr(obj, name)

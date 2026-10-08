@@ -33,6 +33,9 @@ import typing
 
 __all__ = [
     # classes
+    'ContinuousRunner',
+    'CurriculumRunner',
+    'EpochRunner',
     'SessionBuildContext',
     'SessionLogger',
     # functions
@@ -44,6 +47,9 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .engine import (
+        EpochRunner,
+    )
     from .logger import (
         SessionLogger,
     )
@@ -52,9 +58,17 @@ if typing.TYPE_CHECKING:
         SessionConfigShape,
         build_session_runner
     )
+    from .orchestration import (
+        ContinuousRunner,
+        CurriculumRunner,
+    )
 
 
 def __getattr__(name: str):
+    if name in {'EpochRunner'}:
+        obj = importlib.import_module('.engine', __package__)
+        return getattr(obj, name)
+
     if name in {'SessionLogger'}:
         obj = importlib.import_module('.logger', __package__)
         return getattr(obj, name)
@@ -65,6 +79,13 @@ def __getattr__(name: str):
         'build_session_runner',
     }:
         obj = importlib.import_module('.factory', __package__)
+        return getattr(obj, name)
+
+    if name in {
+    'ContinuousRunner',
+    'CurriculumRunner',
+    }:
+        obj = importlib.import_module('.orchestration', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -12,12 +12,14 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- ADRs/                     Architecture decision records
 |   |-- images/                   Documentation images
 |   |-- data_preparation.md       Data preparation guide
+|   |-- preflight_readiness.md    Pre-flight readiness and diagnostic guide
 |   |-- workflow_chart.md         High-level workflow chart
 |   `-- project_structure.md      This file
 |
 |-- experiment/                   Ignored local experiment I/O
 |   |-- artifacts/                Generated grids, manifests, checkpoints, etc.
 |   |-- input/                    Local experiment inputs
+|   |-- preflight/                Exported pre-flight readiness reports
 |   `-- results/                  Local pipeline/session outputs
 |
 |-- notebooks/
@@ -77,16 +79,15 @@ src/landseg/
 |-- configs/
 |   |-- hydra/
 |   |   |-- config.yaml           Hydra composition entry point
-|   |   |-- dataspecs/            Dataset specification defaults
+|   |   |-- command/              data-harmonize, data-ingest, data-prepare, train, eval, study configs
 |   |   |-- data/                 Harmonization, ingestion, and preparation defaults
 |   |   |-- models/               Model architecture defaults
-|   |   |-- pipeline/             data-harmonize, data-ingest, data-prepare, train, eval, study configs
 |   |   |-- session/              Dataloader, engine, task, and orchestration configs
 |   |   `-- study/                Study/sweep defaults
 |   `-- schema/
 |       |-- root.py               Root structured config schema
 |       |-- utils.py              Schema helper utilities
-|       `-- sections/             Section dataclasses for pipeline, session, models, etc.
+|       `-- sections/             Section dataclasses for commands, session, models, data, etc.
 |
 |-- core/
 |   |-- data_specs.py             Runtime data specification contract
@@ -94,18 +95,28 @@ src/landseg/
 |   `-- session_results.py        Structured session outputs
 |
 |-- execution/
-|   |-- executor.py               Unified execution entry point
-|   `-- pipelines/
-|       |-- _registry.py          Pipeline lookup and registration
-|       |-- world_grid.py         World grid generation pipeline
-|       |-- data_harmonize.py     Data harmonization pipeline
-|       |-- data_ingest.py        Data ingestion pipeline
-|       |-- data_prepare.py       Data preparation pipeline
-|       |-- model_train.py        Training pipeline
-|       |-- model_evaluate.py     Evaluation pipeline
-|       |-- diagnose_overfit.py   Overfit diagnostic pipeline
-|       |-- study_sweep.py        Hyperparameter sweep pipeline
-|       `-- study_analysis.py     Study result analysis pipeline
+|   |-- executor.py               Unified command dispatcher entry point
+|   |-- pipelines/                Atomic stage execution pipelines
+|   |   |-- base.py               ExecutionPipeline template and lifecycle runner
+|   |   |-- world_grid.py         World grid generation pipeline
+|   |   |-- data_harmonize.py     Data harmonization pipeline
+|   |   |-- data_ingest.py        Data ingestion pipeline
+|   |   |-- data_prepare.py       Data preparation pipeline
+|   |   |-- model_train.py        Training pipeline
+|   |   `-- model_evaluate.py     Evaluation pipeline
+|   |-- preflight/                Readiness probe engine and inspection dispatcher
+|   |   |-- probes/               Diagnostic probes for hardware, storage, spatial, ledger, etc.
+|   |   |-- engine.py             Inspection engine and target dispatcher
+|   |   |-- prerequisites.py      Upstream lineage and prerequisite checks
+|   |   |-- reporter.py           Terminal dashboard formatting and report export
+|   |   `-- schema.py             Probe result and readiness data models
+|   `-- workflows/                Composite multi-stage orchestration workflows
+|       |-- batch_ingest.py       Batch harmonization to block pool ingestion
+|       |-- diagnose_overfit.py   Overfit diagnostic workflow
+|       |-- e2e_intake.py         Continuous data intake workflow (harmonize + ingest)
+|       |-- e2e_experiment.py     Full lifecycle experiment workflow (grid -> train)
+|       |-- study_sweep.py        Hyperparameter sweep orchestration workflow
+|       `-- study_analysis.py     Study result analysis workflow
 |
 |-- geopipe/
 |   |-- contracts/                Central pipeline summary and report schemas

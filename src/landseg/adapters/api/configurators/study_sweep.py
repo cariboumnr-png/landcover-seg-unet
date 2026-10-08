@@ -43,8 +43,8 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
 
         #
         self.study = self._cfg.study
-        self._cfg.pipeline.study_sweep.storage = optuna_storage
-        self._cfg.pipeline.study_sweep.seed = seed
+        self._cfg.command.study_sweep.storage = optuna_storage
+        self._cfg.command.study_sweep.seed = seed
 
     # ----- sweep configs
     def set_sweep(
@@ -57,7 +57,7 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         '''Set study sweep parameters.'''
 
         presets.resolve(preset_name)
-        sweep_cfg = self._cfg.pipeline.study_sweep
+        sweep_cfg = self._cfg.command.study_sweep
         sweep_cfg.study_name = study_name
         sweep_cfg.preset_name = preset_name
         sweep_cfg.n_trials = n_trials

@@ -33,6 +33,7 @@ import typing
 
 __all__ = [
     # classes
+    'CompositeLoss',
     'CompositeLossConfig',
     'HeadLosses',
     # functions
@@ -47,6 +48,7 @@ if typing.TYPE_CHECKING:
         build_headlosses,
     )
     from .composite import (
+        CompositeLoss,
         CompositeLossConfig,
     )
 
@@ -59,7 +61,10 @@ def __getattr__(name: str):
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
-    if name in {'CompositeLossConfig'}:
+    if name in {
+        'CompositeLoss',
+        'CompositeLossConfig',
+    }:
         obj = importlib.import_module('.composite', __package__)
         return getattr(obj, name)
 

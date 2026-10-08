@@ -55,10 +55,8 @@ if typing.TYPE_CHECKING:
     from .runner import (
         EpochRunner,
     )
-    from .policy.base import (
-        EngineRuntime,
-    )
     from .policy import (
+        EngineRuntime,
         MultiHeadEvaluator,
         MultiHeadTrainer,
     )
@@ -77,11 +75,8 @@ def __getattr__(name: str):
         obj = importlib.import_module('.runner', __package__)
         return getattr(obj, name)
 
-    if name in {'EngineRuntime'}:
-        obj = importlib.import_module('.policy.base', __package__)
-        return getattr(obj, name)
-
     if name in {
+        'EngineRuntime',
         'MultiHeadEvaluator',
         'MultiHeadTrainer',
     }:

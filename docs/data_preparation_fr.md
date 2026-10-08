@@ -92,7 +92,7 @@ La grille est définie via un **raster de référence** (`sample_extent.tif`) :
 Exécutez le pipeline de grille mondiale :
 
 ```bash
-landseg pipeline=world-grid
+landseg command=world-grid
 ```
 
 Cela génère l'artefact canonique sous :
@@ -350,7 +350,7 @@ automatiquement :
 
 Exécutez l'harmonisation :
 ```bash
-landseg pipeline=data-harmonize
+landseg command=data-harmonize
 ```
 
 ---
