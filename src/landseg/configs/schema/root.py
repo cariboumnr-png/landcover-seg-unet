@@ -36,6 +36,7 @@ import typing
 from landseg.configs.schema.data import DataConfig
 from landseg.configs.schema.models import ModelsConfig
 from landseg.configs.schema.session import SessionConfig
+from landseg.configs.schema.study import StudyConfig
 import landseg.configs.schema.sections as sec
 
 # alias
@@ -89,7 +90,7 @@ class RootConfig:
     # session settings
     session: SessionConfig = field(default_factory=SessionConfig)
     # study settings
-    study: sec.StudyConfig = field(default_factory=sec.StudyConfig)
+    study: StudyConfig = field(default_factory=StudyConfig)
     # pipeline specific CLI flags
     command: sec.CommandConfig = field(default_factory=sec.CommandConfig)
 
