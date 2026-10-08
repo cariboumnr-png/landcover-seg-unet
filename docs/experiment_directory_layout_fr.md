@@ -95,19 +95,22 @@ et de résultats (`results/`) correspondants.
 │       ├── prep_report.json                     # Rapport de synthèse d'exécution de la préparation
 │       └── config.json                          # Enregistrement de configuration de la préparation
 │
-└── results/                                     # Produit par 'model-train' / 'model-evaluate'
-    └── run_0001/                                # Répertoire de session d'expérience sérialisé
-        ├── checkpoints/
-        │   ├── status.json                      # Suivi du statut de la phase d'entraînement
-        │   ├── <name>_best.pt                   # Poids des meilleurs points de contrôle du modèle
-        │   └── <name>_last.pt                   # Poids des derniers points de contrôle du modèle
-        ├── logs/                                # Journaux d'exécution de la session d'entraînement
-        ├── plots/                               # Graphiques de visualisation des métriques et diagnostics
-        ├── previews/                            # Aperçus des prédictions de sortie du modèle
-        ├── config.json                          # Configuration d'exécution entièrement résolue
-        ├── evaluation.json                      # JSON de métriques d'évaluation (si session d'évaluation)
-        ├── summary.json                         # JSON de métriques globales de la session
-        └── step_results.json                    # JSON de suivi des pertes et métriques par étape
+├── results/                                     # Produit par 'model-train' / 'model-evaluate'
+│   └── run_0001/                                # Répertoire de session d'expérience sérialisé
+│       ├── checkpoints/
+│       │   ├── status.json                      # Suivi du statut de la phase d'entraînement
+│       │   ├── <name>_best.pt                   # Poids des meilleurs points de contrôle du modèle
+│       │   └── <name>_last.pt                   # Poids des derniers points de contrôle du modèle
+│       ├── logs/                                # Journaux d'exécution de la session d'entraînement
+│       ├── plots/                               # Graphiques de visualisation des métriques et diagnostics
+│       ├── previews/                            # Aperçus des prédictions de sortie du modèle
+│       ├── config.json                          # Configuration d'exécution entièrement résolue
+│       ├── evaluation.json                      # JSON de métriques d'évaluation (si session d'évaluation)
+│       ├── summary.json                         # JSON de métriques globales de la session
+│       └── step_results.json                    # JSON de suivi des pertes et métriques par étape
+│
+└── preflight/                                   # Produit par la validation 'command=preflight'
+    └── preflight_report_<uid>.json              # Rapport JSON de diagnostic de préparation
 
 * Remarque : Les fichiers `_meta.json` associés sont générés aux côtés des artefacts JSON de grille, de domaine et de fenêtre.
 ```

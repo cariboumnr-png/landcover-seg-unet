@@ -12,12 +12,14 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- ADRs/                     Decisions d'architecture
 |   |-- images/                   Images de documentation
 |   |-- data_preparation_fr.md    Guide de preparation des donnees
+|   |-- preflight_readiness_fr.md Guide de validation preliminaire et diagnostics
 |   |-- workflow_chart_fr.md      Diagramme general du workflow
 |   `-- project_structure_fr.md   Ce fichier
 |
 |-- experiment/                   I/O locale ignoree des experiences
 |   |-- artifacts/                Grilles, manifestes, checkpoints, etc. generes
 |   |-- input/                    Entrees locales d'experience
+|   |-- preflight/                Rapports de validation préliminaire exportés
 |   `-- results/                  Sorties locales de pipelines/sessions
 |
 |-- notebooks/
@@ -102,6 +104,12 @@ src/landseg/
 |   |   |-- data_prepare.py       Pipeline de préparation des données
 |   |   |-- model_train.py        Pipeline d'entrainement
 |   |   `-- model_evaluate.py     Pipeline d'evaluation
+|   |-- preflight/                Moteur de sondes et répartiteur d'inspection préliminaire
+|   |   |-- probes/               Sondes diagnostiques (matériel, stockage, spatial, registre, etc.)
+|   |   |-- engine.py             Moteur d'inspection et répartiteur de cibles
+|   |   |-- prerequisites.py      Vérification de lignage et prérequis amont
+|   |   |-- reporter.py           Formatage du tableau de bord terminal et export de rapport
+|   |   `-- schema.py             Modèles de données des résultats de sondes et préparation
 |   `-- workflows/                Workflows d'orchestration composites multi-etapes
 |       |-- batch_ingest.py       Ingestion par lots vers le pool de blocs
 |       |-- diagnose_overfit.py   Workflow de diagnostic de surapprentissage

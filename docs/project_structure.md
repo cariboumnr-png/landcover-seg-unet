@@ -12,12 +12,14 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- ADRs/                     Architecture decision records
 |   |-- images/                   Documentation images
 |   |-- data_preparation.md       Data preparation guide
+|   |-- preflight_readiness.md    Pre-flight readiness and diagnostic guide
 |   |-- workflow_chart.md         High-level workflow chart
 |   `-- project_structure.md      This file
 |
 |-- experiment/                   Ignored local experiment I/O
 |   |-- artifacts/                Generated grids, manifests, checkpoints, etc.
 |   |-- input/                    Local experiment inputs
+|   |-- preflight/                Exported pre-flight readiness reports
 |   `-- results/                  Local pipeline/session outputs
 |
 |-- notebooks/
@@ -102,6 +104,12 @@ src/landseg/
 |   |   |-- data_prepare.py       Data preparation pipeline
 |   |   |-- model_train.py        Training pipeline
 |   |   `-- model_evaluate.py     Evaluation pipeline
+|   |-- preflight/                Readiness probe engine and inspection dispatcher
+|   |   |-- probes/               Diagnostic probes for hardware, storage, spatial, ledger, etc.
+|   |   |-- engine.py             Inspection engine and target dispatcher
+|   |   |-- prerequisites.py      Upstream lineage and prerequisite checks
+|   |   |-- reporter.py           Terminal dashboard formatting and report export
+|   |   `-- schema.py             Probe result and readiness data models
 |   `-- workflows/                Composite multi-stage orchestration workflows
 |       |-- batch_ingest.py       Batch harmonization to block pool ingestion
 |       |-- diagnose_overfit.py   Overfit diagnostic workflow

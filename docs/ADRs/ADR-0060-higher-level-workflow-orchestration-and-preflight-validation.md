@@ -1,6 +1,6 @@
 # ADR-0060: Higher-Level Workflow Orchestration and Pre-Flight Validation Engine
 
-**Status:** Proposed<br>
+**Status:** Accepted — Implemented (Phases 1–3; Phase 4 Pending)<br>
 **Date:** 2026-09-29
 
 ---
@@ -84,35 +84,35 @@ heavy compute is dispatched.
 
 ## 2. Decision
 
-We will formalize a dedicated **higher-level workflow orchestration layer**
+We have formalized a dedicated **higher-level workflow orchestration layer**
 (`landseg.execution.workflows`) decoupled from atomic pipelines, and
-introduce a **unified pre-flight validation engine** (`workflows.preflight`).
+introduced a **unified pre-flight validation engine** (`landseg.execution.preflight`).
 
-We will:
-1. **Decouple Atomic Pipelines from Multi-Run Workflows**:
-   - `landseg.execution.pipelines.*` will remain strictly scoped to atomic,
+We have:
+1. **Decoupled Atomic Pipelines from Multi-Run Workflows**:
+   - `landseg.execution.pipelines.*` remains strictly scoped to atomic,
      single-target execution units (enforcing the 1-to-1 invariant).
-   - `landseg.execution.workflows.*` will host multi-run iterators, composite
+   - `landseg.execution.workflows.*` hosts multi-run iterators, composite
      multi-pipeline DAGs, and hyperparameter search loops.
-2. **Refactor Ingestion into Atomic Pipeline and Batch Workflow**:
-   - `pipelines.data_ingest` will execute an explicit, single harmonization
+2. **Refactored Ingestion into Atomic Pipeline and Batch Workflow**:
+   - `pipelines.data_ingest` executes an explicit, single harmonization
      batch target (`harmonize_run_id`).
-   - `workflows.batch_ingest` will resolve pending batches from ledgers,
-     handle queue ordering, and invoke the atomic pipeline sequentially.
-3. **Relocate `study-sweep` to Workflows**:
-   - Relocate `pipelines.study_sweep` to `workflows.study_sweep`, decoupling
+   - `workflows.batch_ingest` resolves pending batches from ledgers,
+     handles queue ordering, and invokes the atomic pipeline sequentially.
+3. **Relocated `study-sweep` to Workflows**:
+   - Relocated `pipelines.study_sweep` to `workflows.study_sweep`, decoupling
      Optuna multi-trial search from atomic training sessions.
-4. **Implement Pre-Flight Validation Engine**:
-   - Provide a dry-run inspection framework that probes upstream ledgers,
+4. **Implemented Pre-Flight Validation Engine**:
+   - Provides a dry-run inspection framework that probes upstream ledgers,
      spatial grid invariants (`affine_identity`, `block_identity`),
      raster metadata integrity, and system compute resources prior to
      execution.
-5. **Introduce Runner Classes for Atomic Pipelines (Deferring Workflow Runners)**:
-   - Encapsulate each atomic pipeline within a dedicated runner class
+5. **Introduced Runner Classes for Atomic Pipelines (Deferring Workflow Runners)**:
+   - Encapsulated each atomic pipeline within a dedicated runner class
      (`WorldGridGeneration`, `DataHarmonization`, `DataIngestion`,
      `DataPreparation`, `ModelTraining`, `ModelEvaluation`) with a consistent
      `.run()` invocation lifecycle.
-   - Retain workflows as structurally simple, lightweight functions
+   - Retained workflows as structurally simple, lightweight functions
      (`execute_<workflow>(root_config)`) in `landseg.execution.workflows`,
      deferring class-based workflow runners and registry abstractions until
      composite DAG patterns demand stateful orchestration.
@@ -133,34 +133,33 @@ We will:
 +------------------------------------------------------------------------------+
 |                        landseg.execution.executor.py                         |
 |      Unified router: Resolves configs and dispatches execution targets       |
-+-------------------+-----------------------------------+----------------------+
-                    |                                   |
-                    v                                   v
-+--------------------------------------+     +---------------------------------+
-|     landseg.execution.workflows      |     |   landseg.execution.pipelines   |
-|   (Multi-Run / Composite / Search)   |     |    (Atomic Single-Run Units)    |
-|--------------------------------------|     |---------------------------------|
-| - batch_ingest (multi-batch loop)    |     | - WorldGridGeneration           |
-| - diagnose_overfit (overfit test)    |     | - DataHarmonization             |
-| - study_sweep (Optuna trial search)  |     | - DataIngestion (single batch)  |
-| - study_analysis (study reporting)   |     | - DataPreparation               |
-| - preflight (cross-pipeline dry run) |     | - ModelTraining                 |
-| - e2e_intake (harmonize+ingest)      |     | - ModelEvaluation               |
-| - e2e_experiment (full 5-stage chain)|     |                                 |
-+------------------+-------------------+     +----------------+----------------+
-                   |                                          ^
-                   +-----------------(delegates to)-----------+
-                                                              |
-                                                              v
-                                             +---------------------------------+
-                                             |     geopipe / session core      |
-                                             +---------------------------------+
++-------------------+----------------------+-----------------------------------+
+                    |                      |                                   |
+                    v                      v                                   v
++-----------------------+  +-------------------------------+  +----------------+
+|  execution.workflows  |  |  execution.pipelines (Atomic) |  |   execution.   |
+| (Multi-Run/Composite) |  |-------------------------------|  |   preflight    |
+|-----------------------|  | - WorldGridGeneration         |  | (Readiness/    |
+| - batch_ingest        |  | - DataHarmonization           |  |  Inspection)   |
+| - diagnose_overfit    |  | - DataIngestion               |  |----------------|
+| - study_sweep         |  | - DataPreparation             |  | - inspect_target
+| - study_analysis      |  | - ModelTraining               |  | - run_preflight|
+| - e2e_intake          |  | - ModelEvaluation             |  | - probes/      |
+| - e2e_experiment      |  |                               |  | - prerequisites
++-----------+-----------+  +---------------+---------------+  +----------------+
+            |                              ^
+            +-------(delegates to)---------+
+                                           |
+                                           v
+                           +-------------------------------+
+                           |     geopipe / session core    |
+                           +-------------------------------+
 ```
 
 ### 3.2. Execution Abstractions: Pipeline Runner Classes vs. Functional Workflows
 
 To balance operational encapsulation with architectural simplicity, execution
-units will adopt a bifurcated abstraction model:
+units adopt a bifurcated abstraction model:
 
 #### 1. Atomic Pipeline Runner Classes
 Atomic single-target pipelines encapsulate run target resolution, execution
@@ -182,7 +181,7 @@ structurally simple. They coordinate existing pipelines, invoke loops, or
 delegate to optimization engines without requiring internal run directories
 or complex local state machines.
 
-Workflows will be exposed as straightforward, lightweight functions accepting
+Workflows are exposed as straightforward, lightweight functions accepting
 `RootConfig`:
 - `workflows.execute_batch_ingest(root_config)`
 - `workflows.execute_study_sweep(root_config)`
@@ -209,52 +208,73 @@ Under this separation of concerns:
   for each pending batch. It collects individual run reports and emits a
   consolidated `batch_ingest_summary.json`.
 
-### 3.4. Pre-Flight Validation Engine (`workflows.preflight`)
+### 3.4. Pre-Flight Validation Engine (`landseg.execution.preflight`)
 
-The pre-flight engine will implement a non-destructive dry-run inspection
-pipeline capable of evaluating execution prerequisites across both atomic
+The pre-flight engine implements a non-destructive dry-run inspection
+framework capable of evaluating execution prerequisites across both atomic
 pipelines and composite workflows prior to committing compute:
 
 ```text
-[PreflightEngine]
+[landseg.execution.preflight]
        |
-       +--> [Probe: Environment & Hardware]
-       |        (GPU availability, CUDA memory, VRAM requirements)
+       +--> [Lineage / Prerequisites]
+       |        (upstream pipeline reports, manifest completion, required artifacts)
        |
-       +--> [Probe: Grid & Spatial Identity]
-       |        (world grid existence, CRS, affine_identity, block_identity)
+       +--> [Filesystem & Storage]
+       |        (target output directory writability, existing report overwrites)
        |
-       +--> [Probe: Ledger Integrity & Catch-Up]
-       |        (harmonization_runs.json, ingestion_runs.json, pending runs)
+       +--> [Domain Contracts: Spatial / Dataset / Policy / Model]
+       |        (spatial grid & CRS reference, raw dataset manifests, collision policy, model architectures)
        |
-       +--> [Probe: Dataset Inputs & Paths]
-       |        (existence of raw GeoTIFFs, valid VRT pointers, schema)
+       +--> [Ledger & Lineage Integrity]
+       |        (past runs history, pending harmonization/ingestion batches, canonical block pool state)
+       |
+       +--> [Hardware & Compute Environment]
+       |        (accelerator availability, CUDA/CPU detection, torch version, VRAM headroom)
        |
        `--> [Reporter: Terminal Dashboard & JSON Artifact]
-                (emits ANSI status table and preflight_report.json)
+                (emits standardized 120-col status table and preflight_report_<uid>.json)
 ```
 
-#### Diagnostic Probe Categories:
-1. **Hardware & Environment Probe**:
-   - Detects GPU availability, device name, CUDA capability, and free VRAM.
-   - Compares batch tensor size ($B \times C \times H \times W$) against
-     available memory to warn about potential CUDA Out-Of-Memory (OOM) risks.
-2. **Spatial Grid & Tensor Frame Probe**:
-   - Validates existence and schema compliance of `world_grids/`.
-   - Compares `incoming_grid.block_identity` against canonical `schema.json`.
-   - Verifies Coordinate Reference Systems (CRS) across all configured
-     feature and label sources.
-3. **Ledger & Lineage Probe**:
-   - Inspects `harmonization_runs.json` and `ingestion_runs.json` for
-     dangling runs, failed attempts, or hash discrepancies.
-   - Identifies exact pending batches awaiting ingestion.
-4. **Raster & Path Integrity Probe**:
-   - Confirms readability of raw source GeoTIFFs and virtual rasters (`.vrt`).
-   - Verifies nodata values, data types, and band channel configurations.
+#### Diagnostic Probe Categories & Canonical Ordering:
+Probes execute in a strictly defined canonical order:
+1. **Lineage**:
+   - Evaluates upstream execution dependencies and pipeline report status
+     via `_check_prerequisites` and `check_target_prerequisites`.
+   - Validates completed upstream reports, manifest records, and required
+     disk artifacts.
+2. **Filesystem**:
+   - Verifies target destination directory writability via `dir_writable`.
+   - Detects whether target artifact files already exist and assesses
+     rebuild flags via `target_file_exists`.
+3. **Domain Contracts**:
+   - **Spatial**: Reports world grid spatial reference source
+     (`spatial_reference`), target CRS (`crs_info`), pixel resolution
+     (`pixel_size`), grid extent (`grid_extent`), origin (`grid_origin`),
+     and tile specs (`grid_specs`).
+   - **Dataset**: Inspects input raster dataset manifest readability and
+     entry count via `raw_dataset`.
+   - **Policy**: Verifies block collision handling policy (`skip` vs
+     `overwrite`) via `collision_policy`.
+   - **Model**: Verifies neural backbone architecture recognition via
+     `model_body`, evaluation checkpoint readiness via `checkpoint_ready`,
+     and evaluation dataset split via `eval_split`.
+4. **Ledger**:
+   - Audits cumulative ETL run manifests (`harmonization_runs.json`,
+     `ingestion_runs.json`) via `past_runs`.
+   - Evaluates whether input datasets are already harmonized via
+     `pending_harmonization`.
+   - Resolves batches pending ingestion via `pending_ingestion`.
+   - Inspects canonical block pool catalog state and block counts via
+     `ingestion_pool_state` and prepared split blocks via
+     `prepared_blocks_state`.
+5. **Hardware**:
+   - Inspects compute accelerator state (`cuda_device`) and estimates VRAM
+     headroom against batch tensor memory requirements (`vram_headroom`).
 
 #### Command & Programmatic Interface:
 
-We will introduce `command=preflight` as a first-class execution target in
+We have introduced `command=preflight` as a first-class execution target in
 Hydra and `executor.py`, configured via `_PreflightConfig` in
 `landseg.configs.schema.sections.commands`:
 
@@ -293,300 +313,75 @@ if not report.is_ready:
 
 ---
 
-### 3.5. Command Pre-Flight Output Templates
+### 3.5. Command Pre-Flight Output Dashboards & Artifacts
 
-The pre-flight validation engine will emit standardized terminal status
-dashboards and a structured JSON artifact (`preflight_report.json`) tailored
-to the specific dependencies of each command:
+The pre-flight validation engine renders a standardized 120-column ASCII
+terminal dashboard and persists a structured JSON report artifact
+(`preflight_report_<uid>.json`) under `<exp_root>/preflight/`.
 
-#### 1. `world-grid` (Grid Definition & CRS)
+> [!NOTE]
+> **Detailed Target Reference**: For exhaustive terminal output dashboards across
+> all 8 execution targets, probe interpretation details, and CLI options, refer to
+> the standalone [Pre-Flight Readiness Guide](../preflight_readiness.md)
+> ([French](../preflight_readiness_fr.md)).
+
+#### Illustrative Terminal Dashboard (`model-train`):
 ```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: world-grid                          
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Spatial    crs_validity           PASS     EPSG:3161 (NAD83 / Ontario MNR)     
- Spatial    pixel_resolution       PASS     Resolution: 10.0m x 10.0m           
- Spatial    block_dimensions       PASS     256x256 px (2,560m x 2,560m tile)   
- Path       bounds_geojson         PASS     'data/aoi/study_area.geojson' exists
- Filesystem output_directory       PASS     'data/world_grids/' is writable     
- Filesystem existing_grid_check    WARN     'world_grid.geojson' exists (overwrite)
-================================================================================
- STATUS: READY (1 warning)
- Telemetry: Estimated grid coverage: ~4,200 blocks across AOI
-================================================================================
+========================================================================================================================
+                                        PRE-FLIGHT READINESS CHECK: model-train
+========================================================================================================================
+ CATEGORY       PROBE ID                      STATUS   DETAILS
+------------------------------------------------------------------------------------------------------------------------
+ Lineage        pipeline_prerequisites        PASS     Upstream "data-prepare" prerequisites verified.
+ Filesystem     checkpoint_dir                PASS     Target directory is writable
+ Model          model_body                    PASS     Configured architecture: "unetppp" recognized in registry
+ Ledger         pending_ingestion             PASS     Harmonization ledger up to date; nothing to ingest
+ Ledger         prepared_blocks_state         PASS     Found 3 train / 1 val / 1 test prepared blocks ready
+ Hardware       cuda_device                   WARN     CUDA unavailable; compute running on CPU
+========================================================================================================================
+ STATUS: READY (0 errors, 1 warnings)
+========================================================================================================================
 ```
 
-#### 2. `data-harmonize` (Raster Reprojection & Resampling)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: data-harmonize                      
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Dependency world_grid_spec        PASS     Found 'data/world_grids/schema.json'
- Path       raw_raster_manifest    PASS     Found 8 source GeoTIFFs (14.2 GB)   
- GDAL       driver_support         PASS     GTiff / VRT drivers available       
- Geometry   spatial_intersection   PASS     Source rasters intersect AOI (100%) 
- Raster     band_channel_match     PASS     All files contain 4 bands (RGBN)    
- Ledger     harmonize_ledger       PASS     'harmonization_runs.json' healthy   
-================================================================================
- STATUS: READY
- Telemetry: 8 files to warp -> estimated harmonized output: ~16.8 GB
-================================================================================
-```
+#### Pre-Flight Output Artifact (`preflight_report_<uid>.json`)
+When report export is enabled, the preflight engine persists full diagnostic records
+and summary telemetry as structured JSON files under
+`<exp_root>/preflight/preflight_report_<timestamp>_<uid>.json`.
 
-#### 3. `data-ingest` (Atomic Single-Batch Ingestion)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: data-ingest                         
- Target Batch: run_0003                                                         
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Lineage    target_run_exists      PASS     'harmonized_data/run_0003' completed
- Grid       block_identity_match   PASS     EPSG:3161|(0,0)|10.0|(256,256) matches
- Policy     collision_policy       PASS     'skip' policy configured            
- Ledger     canonical_pool_state   PASS     Pool contains 1,280 existing blocks 
- Storage    pool_write_access      PASS     'data/canonical_pool/' writable     
-================================================================================
- STATUS: READY
- Telemetry: Batch run_0003 contains ~340 candidate blocks; ~15 known duplicates
-================================================================================
-```
-
-#### 4. `batch-ingest` (Multi-Batch Ingestion Workflow)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: batch-ingest                        
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Ledger     harmonization_runs     PASS     4 completed runs in ledger          
- Lineage    pending_batch_queue    PASS     2 batches pending (run_0003, run_0004)
- Grid       pool_grid_homogeneity  PASS     All batches match pool CRS & affine 
- Storage    disk_capacity          PASS     Available: 142 GB (est. needed: 4.8 GB)
- Policy     collision_policy       WARN     Policy 'overwrite' replaces blocks  
-================================================================================
- STATUS: READY (1 warning)
- Telemetry: Queue: [run_0003, run_0004] | Total incoming blocks: ~680
-================================================================================
-```
-
-#### 5. `data-prepare` (Partitioning & Label Mapping)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: data-prepare                        
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Lineage    canonical_pool_ready   PASS     1,960 blocks available in pool      
- Labels     scheme_reclassification PASS    All 12 source classes map to targets
- Labels     unmapped_classes       PASS     0 unmapped raster class IDs detected
- Dataset    split_ratios           PASS     train: 0.70 | val: 0.15 | test: 0.15
- Dataset    split_strategy         PASS     'spatial_block_hash' valid          
- Storage    experiment_dir         PASS     'data/prepared/exp_01/' writable    
-================================================================================
- STATUS: READY
- Telemetry: Estimated split counts: Train=1,372 | Val=294 | Test=294
-================================================================================
-```
-
-#### 6. `model-train` (Deep Learning Session)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: model-train                         
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Dataset    prepared_manifest      PASS     Found 1,372 train / 294 val blocks  
- Hardware   cuda_device            PASS     NVIDIA RTX 4090 (Device 0)          
- Memory     vram_headroom          PASS     22.4 GB free / ~2.2 GB est. batch   
- Model      backbone_registry      PASS     'resnet34' recognized by smp/timm   
- Model      channel_compatibility  PASS     Input channels (4) match data (4)   
- Ledger     checkpoint_dir         PASS     'runs/train/run_0012/' writable     
- Lineage    pending_data_warning   WARN     2 batches pending in harmonization  
-================================================================================
- STATUS: READY (1 warning)
- Telemetry: Batch: (32, 4, 256, 256) | Precision: amp_bf16 | Est. step: ~42ms  
-================================================================================
-```
-
-#### 7. `model-evaluate` (Checkpoint Evaluation)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: model-evaluate                      
- Checkpoint: runs/train/run_0010/checkpoints/best_miou.pt                       
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- File       checkpoint_exists      PASS     Weights file exists (86.4 MB)       
- Integrity  torch_state_dict       PASS     Valid checkpoint state dictionary   
- Model      architecture_match     PASS     State dict matches 'unet_resnet34'  
- Dataset    eval_split_exists      PASS     'test' split has 294 samples        
- Metrics    metric_registry        PASS     [mIoU, F1, PixelAccuracy] configured
- Storage    report_destination     PASS     'runs/eval/run_0010/' writable      
-================================================================================
- STATUS: READY
- Telemetry: Model parameters: 24.4M | Target split: 'test' (294 tiles)         
-================================================================================
-```
-
-#### 8. `diagnose-overfit` (Fast Overfit Verification)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: diagnose-overfit                    
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Data       batch_builder          PASS     Batch constructed (2, 4, 256, 256)  
- Compute    device_allocation      PASS     Allocated on cuda:0                 
- Graph      forward_pass           PASS     Logits shape (2, 6, 256, 256)       
- Autograd   backward_gradient      PASS     Loss computed (0.693); no NaNs      
- Memory     peak_overhead          PASS     Peak allocation: 340 MB             
-================================================================================
- STATUS: READY
- Telemetry: Minimal autograd step verified. Ready for overfit test.
-================================================================================
-```
-
-#### 9. `study-sweep` (Optuna Hyperparameter Search)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: study-sweep                         
- Study: canopy_seg_v1 | Storage: sqlite:///optuna.db                           
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Storage    rdbms_connection       PASS     Connected to sqlite:///optuna.db    
- Optuna     study_schema           PASS     Study exists / initialized cleanly  
- Search     parameter_space        PASS     All 6 search ranges valid           
- Pruning    pruner_algorithm       PASS     MedianPruner configured properly    
- Hardware   gpu_concurrency        PASS     1 GPU available (1 worker active)   
- Dependency model_train_contract   PASS     Prepared dataset and backbones ready
- Budget     compute_budget_warning WARN     50 trials x 30 epochs: ~14.5 GPU hrs
-================================================================================
- STATUS: READY (1 warning)
- Telemetry: 6 hyperparameters in space | Target metric: 'val_miou' (maximize)  
-================================================================================
-```
-
-#### 10. `study-analysis` (Optuna Study Reporting)
-```text
-================================================================================
-               PRE-FLIGHT READINESS CHECK: study-analysis                      
- Study: canopy_seg_v1                                                           
-================================================================================
- CATEGORY   PROBE ID               STATUS   DETAILS                             
---------------------------------------------------------------------------------
- Storage    rdbms_connection       PASS     Connected to sqlite:///optuna.db    
- Study      study_exists           PASS     Study 'canopy_seg_v1' found         
- Trials     trial_count_threshold  PASS     38 completed trials (min req: 5)    
- Trials     pruned_trial_count     INFO     8 trials pruned                     
- Trials     failed_trial_count     PASS     0 failed trials                     
- Storage    report_directory       PASS     'runs/studies/canopy_seg_v1/' valid 
-================================================================================
- STATUS: READY
- Telemetry: Best trial: Trial #24 (val_miou = 0.814)
-================================================================================
-```
-
-#### 11. `all` (Full System-Wide Readiness Audit)
-```text
-================================================================================
-                   LANDSEG SYSTEM-WIDE READINESS AUDIT                         
-================================================================================
- PIPELINE / WORKFLOW    STATUS   KEY FINDINGS                                   
---------------------------------------------------------------------------------
- 1. world-grid          READY    Grid EPSG:3161 defined; 4,200 blocks coverage  
- 2. data-harmonize      READY    8 raw GeoTIFFs (14.2 GB) ready to warp         
- 3. data-ingest         READY    No active single batch selected                
- 4. batch-ingest        READY*   2 batches pending ingestion in ledger          
- 5. data-prepare        READY    1,960 pool blocks ready; label scheme valid    
- 6. model-train         READY*   GPU ready (RTX 4090); pending batches notice   
- 7. model-evaluate      BLOCKED  No checkpoint specified (set checkpoint=...)  
- 8. diagnose-overfit    READY    Forward/backward autograd healthy              
- 9. study-sweep         READY    sqlite:///optuna.db accessible                 
- 10. study-analysis     READY    38 trials recorded in database                 
-================================================================================
- SYSTEM STATUS: 9 READY | 1 BLOCKED (model-evaluate missing checkpoint parameter)
-================================================================================
-```
-
-#### Pre-Flight Output Artifact (`preflight_report.json`):
-```json
-{
-  "timestamp": "2026-10-04T12:35:00Z",
-  "target": "model-train",
-  "status": "READY",
-  "strict": false,
-  "exit_code": 0,
-  "summary": {
-    "total_probes": 7,
-    "pass": 6,
-    "warn": 1,
-    "fail": 0,
-    "skip": 0
-  },
-  "probes": [
-    {
-      "probe_id": "vram_headroom",
-      "category": "hardware",
-      "status": "PASS",
-      "message": "22.4 GB free / ~2.2 GB est. batch footprint",
-      "details": {
-        "vram_free_bytes": 24051810304,
-        "estimated_batch_bytes": 2362232000,
-        "headroom_ratio": 10.18
-      }
-    },
-    {
-      "probe_id": "pending_data_warning",
-      "category": "lineage",
-      "status": "WARN",
-      "message": "2 batches pending in harmonization ledger",
-      "details": {"pending_run_ids": ["run_0003", "run_0004"]}
-    }
-  ],
-  "telemetry": {
-    "batch_shape": [32, 4, 256, 256],
-    "precision": "amp_bf16",
-    "est_step_ms": 42
-  }
-}
-```
+For the complete JSON artifact schema specification and sample payloads, refer to
+the [Pre-Flight Readiness Guide](../preflight_readiness.md) (or French
+[Guide de préparation avant vol](../preflight_readiness_fr.md)).
 
 ---
 
 ## 4. Implementation Plan
 
-### Phase 1: Core Execution Infrastructure
-- Standardize atomic pipelines on dedicated runner classes (`DataHarmonization`,
+### Phase 1: Core Execution Infrastructure (Completed)
+- Standardized atomic pipelines on dedicated runner classes (`DataHarmonization`,
   `ModelTraining`, etc.) exposing `.run()`.
-- Create `src/landseg/execution/workflows/` with lightweight functional entry
+- Created `src/landseg/execution/workflows/` with lightweight functional entry
   points (`execute_<workflow>(root_config)`), deferring class-based workflow
   runners.
-- Update `executor.py` to route `command=<name>` directly to atomic runner
+- Updated `executor.py` to route `command=<name>` directly to atomic runner
   classes (`pipelines.*(root_config).run()`) or workflow functions
   (`workflows.execute_*(root_config)`).
 
-### Phase 2: Workflow Migrations (`study_sweep` & `batch_ingest`)
-- Relocate `pipelines.study_sweep` to `workflows.study_sweep`.
-- Refactor `pipelines.data_ingest` to execute single explicit batch targets.
-- Implement `workflows.batch_ingest` to manage multi-batch discovery,
+### Phase 2: Workflow Migrations (`study_sweep` & `batch_ingest`) (Completed)
+- Relocated `pipelines.study_sweep` to `workflows.study_sweep`.
+- Refactored `pipelines.data_ingest` to execute single explicit batch targets.
+- Implemented `workflows.batch_ingest` to manage multi-batch discovery,
   sequential queue processing, and error containment.
-- Add unit tests for `batch_ingest` workflow and isolated single-batch
+- Added unit tests for `batch_ingest` workflow and isolated single-batch
   `data_ingest` pipeline.
 
-### Phase 3: Pre-Flight Validation Engine (`workflows.preflight`)
-- Implement `PreflightEngine` and probe registry in `workflows/preflight/`.
-- Build diagnostic probes: hardware/memory, spatial grid identity,
-  ledger integrity, and raster paths.
-- Add rich terminal status table formatting (with pass/warn/fail indicators).
-- Wire `--dry-run` and `preflight` CLI entry points across all pipelines.
+### Phase 3: Pre-Flight Validation Engine (`landseg.execution.preflight`) (Completed)
+- Implemented inspection engine and probe registry in `src/landseg/execution/preflight/`.
+- Built diagnostic probes: hardware/memory, spatial grid identity,
+  ledger integrity, model contracts, and filesystem permissions.
+- Added 120-column ASCII terminal dashboard formatting (with pass/warn/fail indicators).
+- Wired `command=preflight` entry point and JSON artifact export under experiment root.
 
-### Phase 4: Composite End-to-End Workflows
+### Phase 4: Composite End-to-End Workflows (Pending)
 - Implement `workflows.end_to_end_intake` (`harmonize` $\rightarrow$ `ingest`).
 - Implement `workflows.e2e_experiment` (`world-grid` $\rightarrow$ `model-train`).
 - Provide programmatic notebook helpers in `landseg.adapters.api`.
