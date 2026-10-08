@@ -84,7 +84,7 @@ def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
 
         except Exception as e:
             logger.set_summary_status('FAILED')
-            logger.log('ERROR', f'Trial execution failed: {e}', exc_info=True)
+            logger.error(f'Trial execution failed: {e}', exc_info=True)
             raise e
 
         finally:

@@ -66,7 +66,7 @@ def run_data_preparation(
     )
 
     # datablocks partition
-    logger.log('INFO', '[START] Dataset partitioning splits')
+    logger.info('[START] Dataset partitioning splits')
     # data preparation config aliases
     partition = config.partition
     scoring = config.scoring
@@ -114,10 +114,10 @@ def run_data_preparation(
     assert logger.summary
     assert logger.summary['data_partition']
     d = logger.summary['data_partition']['duration_sec']
-    logger.log('INFO', f'[COMPLETE] Dataset partitioning splits (D_{d:.2f}s)')
+    logger.info(f'[COMPLETE] Dataset partitioning splits (D_{d:.2f}s)')
 
     # materialize
-    logger.log('INFO', '[START] Block normalization')
+    logger.info('[START] Block normalization')
     prepare_materialize.run_materialize_blocks(
         prep_paths,
         dataset_view,
@@ -126,4 +126,4 @@ def run_data_preparation(
     )
     assert logger.summary['normalization']
     d = logger.summary['normalization']['duration_sec']
-    logger.log('INFO', f'[COMPLETE] Block normalization (D_{d:.2f}s)')
+    logger.info(f'[COMPLETE] Block normalization (D_{d:.2f}s)')

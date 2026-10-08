@@ -202,11 +202,11 @@ class SessionPipeline(BasePipeline):
         dataspecs = self._build_context()
 
         for s in dataspecs.summary:
-            self.logger.log('INFO', s)
+            self.logger.info(s)
         self.logger.log_sep()
 
         # setup the model
-        self.logger.log('INFO', '[START] Model assembly')
+        self.logger.info('[START] Model assembly')
         start_t = time.perf_counter()
         model = models.build_multihead_unet(
             patch_size=self.config.session.dataloader.patch_size,
@@ -217,7 +217,7 @@ class SessionPipeline(BasePipeline):
             clamp_range=self.config.models.numeric_safety.clamp_range
         )
         self.timer['model'] = time.perf_counter() - start_t
-        self.logger.log('INFO', f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
+        self.logger.info(f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
 
         # summarize inputs and log
         total_p = sum(p.numel() for p in model.parameters())

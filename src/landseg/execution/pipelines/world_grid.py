@@ -45,7 +45,7 @@ class WorldGridGeneration(base.GeoPipeline):
 
         try:
             self.logger.log_sep()
-            self.logger.log('INFO', 'Building/loading canonical world grid')
+            self.logger.info('Building/loading canonical world grid')
 
             cfg = self.config.data.world_grid
             is_loaded, grid_fp, world_grid = grid.prepare_world_grid(cfg)
@@ -61,15 +61,15 @@ class WorldGridGeneration(base.GeoPipeline):
             }
             self.logger.set_grid_report(grid_report, len(world_grid))
 
-            self.logger.log('INFO', f'[COMPLETE] World grid {status_str}')
-            self.logger.log('INFO', f'Grid ID: {world_grid.gid}')
-            self.logger.log('INFO', f'Grid artifact file path: {grid_fp}')
-            self.logger.log('INFO', f'CRS: {world_grid.crs}')
-            self.logger.log('INFO', f'Total Tiles: {len(world_grid)}')
+            self.logger.info(f'[COMPLETE] World grid {status_str}')
+            self.logger.info(f'Grid ID: {world_grid.gid}')
+            self.logger.info(f'Grid artifact file path: {grid_fp}')
+            self.logger.info(f'CRS: {world_grid.crs}')
+            self.logger.info(f'Total Tiles: {len(world_grid)}')
 
         except Exception as err:
             self.logger.set_summary_status('FAILED')
-            self.logger.log('ERROR', f'World grid execution failed: {err}')
+            self.logger.error(f'World grid execution failed: {err}')
             raise
 
         finally:

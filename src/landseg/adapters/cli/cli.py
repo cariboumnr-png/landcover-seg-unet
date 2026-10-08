@@ -62,12 +62,12 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
 
     # manual keyboard interruption
     except KeyboardInterrupt:
-        logger.log('INFO', '\nExperiment manually interrupted, exiting...')
+        logger.info('\nExperiment manually interrupted, exiting...')
         sys.exit(130)
 
     # capture others and log
     except Exception: # pylint: disable=broad-exception-caught
-        logger.log('CRITICAL', 'Unhandled exception occurred', exc_info=True)
+        logger.exception('Unhandled exception occurred')
         sys.exit(1)
 
 if __name__ == '__main__':

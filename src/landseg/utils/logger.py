@@ -20,51 +20,22 @@
 # =========================================================================== #
 
 '''
-A Logger module for logging.
+Unified logging utilities for console and file destinations.
 
-This module provides a Logger class to handle logging messages to a file
-and optionally to the console. The logging levels supported include
-`debug`, `info`, `warning`, `error`, and `critical` (case-insensitive).
+Provides a unified `Logger` class wrapping standard library logging
+with support for console and delayed file handlers, structured
+formatting, and convenience severity methods.
 
-Classes:
-    Logger: Logs information to logfile and console at desired levels.
-
-Functions:
-    close_all_logs(): Closes all active log files in the project.
-
-Example usage:
-
-    # import required modules
-    import datetime
-    import logging
-    import utils_logger.Logger
-
-    # set up the Logger instance
-    logger = utils_logger.Logger(name='proj_logger',
-                                 log_file='./log/main.log',
-                                 log_lvl=logging.DEBUG,
-                                 console_lvl=logging.WARNING)
-
-    # log messages with varying log levels
-    logger.log('info', 'This is an info message')
-    logger.log('warning', 'This is a warning message')
-    logger.log('error', 'This is an error message')
-
-    # close the logger and rename the log file
-    logger.close()
-    finish_time = datetime.datetime.now().strftime('%Y%m%d_%H%M')
-    os.rename('mainlog', f'mainlog_{finish_time}.log')
-
-    # example lines in the resulting log file
-    """
-    2025-03-14 03:14:15,926-proj_logger-INFO - 'This is an info message'
-    """
+Public APIs:
+    - `Logger`: manages file and console logging handlers.
 '''
 
 # standard imports
 import logging
 import os
 
+
+# ----- public classes
 class Logger:
     '''
     A class to handle logging messages to a file and optionally to the
@@ -99,83 +70,50 @@ class Logger:
             enable_file_log (bool, optional): Whether to write text logs
             to file.
         '''
-
-        # gather arguments
         if name is None:
             name = os.path.basename(__file__)
-        # if no log file path is provided
-        if log_file is None:
-            # make sure dir exists
-            default_dirpath = f'{os.getcwd()}/logs'
-            os.makedirs(default_dirpath, exist_ok=True)
-            # timestap = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            log_file = f'{default_dirpath}/proj.log' # default log file
 
-        # assign attributes for potential access
+        if log_file is None:
+            log_file = os.path.join(os.getcwd(), 'logs', 'proj.log')
+        elif not log_file.endswith('.log'):
+            root, _ = os.path.splitext(log_file)
+            log_file = f'{root}.log'
+
         self.name = name
         self.log_file = log_file
         self.console_lvl = console_lvl
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
 
-        # init logger attribute
         self.logger = logging.getLogger(name)
-        # set log level accordingly
         self.logger.setLevel(log_lvl)
-        # prevent log messages from propagating to the root logger
         self.logger.propagate = False
 
-        # check if the logger already has handlers to avoid duplication
         if not self.logger.hasHandlers():
             formatter = logging.Formatter(
-                '%(asctime)s-%(name)s-%(levelname)s\t- %(message)s')
+                '%(asctime)s-%(name)s-%(levelname)s\t- %(message)s'
+            )
 
-            # create a file handler if enabled
             if enable_file_log:
-                # if provided log_file is not a .log file
-                if not log_file.endswith('log'):
-                    _root, _ = os.path.splitext(log_file)
-                    _log_file = f'{_root}.log'
-                else:
-                    _log_file = log_file
-                # create a file handler - delay=True to create file upon first log
-                file_handler = logging.FileHandler(_log_file, delay=True)
+                file_handler = logging.FileHandler(
+                    self.log_file, delay=True
+                )
                 file_handler.setLevel(log_lvl)
                 file_handler.setFormatter(formatter)
-                # add the file handler to the logger
                 self.logger.addHandler(file_handler)
 
-            # add a console handler if chosen to
             if console_lvl is not None:
                 console_handler = logging.StreamHandler()
                 console_handler.setLevel(console_lvl)
                 console_handler.setFormatter(formatter)
                 self.logger.addHandler(console_handler)
 
-    @property
-    def silent(self) -> bool:
-        '''Return true is console logging is disabled.'''
-        return bool(not self.console_lvl)
-
-    def get_child(self, suffix: str) -> 'Logger':
-        '''Return a new Logger wrapper around a child logger.'''
-
-        # build the child logging.Logger
-        child_logging_logger = self.logger.getChild(suffix)
-
-        # create a new wrapper instance without re-adding handlers
-        child = object.__new__(self.__class__)  # bypass __init__
-        # copy simple attributes
-        child.name = child_logging_logger.name
-        child.log_file = getattr(self, 'log_file', None)
-        # attach the child logger
-        child.logger = child_logging_logger
-        # child logger console loggine level
-        child.console_lvl = self.console_lvl
-
-        # no handlers here. let the child propagate to the parent
-        # base has handlers and propagate=False only stops base->root).
-        # child propagate=True: its records reach the base’s handlers.
-        return child
+        self._level_dispatch = {
+            'debug': self.logger.debug,
+            'info': self.logger.info,
+            'warning': self.logger.warning,
+            'error': self.logger.error,
+            'critical': self.logger.critical,
+        }
 
     def log(
         self,
@@ -186,33 +124,76 @@ class Logger:
     ) -> None:
         '''
         Logs a message with the specified logging level.
-
         Args:
-            level (str): The logging level includes `'debug'`, `'info'`,
-                `'warning'`, `'error'`, and `'critical'`.
+            level (str): The logging level ('debug', 'info', 'warning',
+                'error', 'critical').
             message (str): The message to log.
             skip_log (bool, optional): Flag whether to log or not.
+            exc_info (bool, optional): Flag whether to include traceback.
         '''
-
-        # skip logging if chooses so
         if skip_log:
             return
-
-        # define log levels
-        log_levels = {
-            'debug': self.logger.debug,
-            'info': self.logger.info,
-            'warning': self.logger.warning,
-            'error': self.logger.error,
-            'critical': self.logger.critical
-        }
-
-        # log accordingly and defaulting to 'info' if level is unrecognized
-        # case-insensitive
-        log_method = log_levels.get(level.lower(), self.logger.info)
+        log_method = self._level_dispatch.get(level.lower(), self.logger.info)
         log_method(message, exc_info=exc_info)
 
-    def log_sep(self, sep: str = '=', ln: int=90) -> None:
+    def debug(
+        self,
+        message: str,
+        skip_log: bool = False,
+        exc_info: bool = False
+    ) -> None:
+        '''Log a debug-level message.'''
+        self.log('debug', message, skip_log=skip_log, exc_info=exc_info)
+
+    def info(
+        self,
+        message: str,
+        skip_log: bool = False,
+        exc_info: bool = False
+    ) -> None:
+        '''Log an info-level message.'''
+        self.log('info', message, skip_log=skip_log, exc_info=exc_info)
+
+    def warning(
+        self,
+        message: str,
+        skip_log: bool = False,
+        exc_info: bool = False
+    ) -> None:
+        '''Log a warning-level message.'''
+        self.log('warning', message, skip_log=skip_log, exc_info=exc_info)
+
+    def error(
+        self,
+        message: str,
+        skip_log: bool = False,
+        exc_info: bool = False
+    ) -> None:
+        '''Log an error-level message.'''
+        self.log('error', message, skip_log=skip_log, exc_info=exc_info)
+
+    def critical(
+        self,
+        message: str,
+        skip_log: bool = False,
+        exc_info: bool = False
+    ) -> None:
+        '''Log a critical-level message.'''
+        self.log('critical', message, skip_log=skip_log, exc_info=exc_info)
+
+    def exception(
+        self,
+        message: str,
+        skip_log: bool = False
+    ) -> None:
+        '''Log an error-level message with exception traceback.'''
+        self.log('error', message, skip_log=skip_log, exc_info=True)
+
+    def log_sep(
+        self,
+        sep: str = '=',
+        ln: int = 90
+    ) -> None:
         '''
         Log a separator with a length of repeated string.
 
@@ -221,15 +202,13 @@ class Logger:
                 (default: `'='`).
             ln (int, optional): Length of the line (default: 90).
         '''
-
-        self.log('INFO', sep * ln)
+        self.log('info', sep * ln)
 
     def on_close(self) -> None:
         '''Hook for subclasses to execute code when close() is called.'''
 
     def close(self) -> None:
         '''Closes the file handler.'''
-
         self.on_close()
         handlers = self.logger.handlers[:]
         for handler in handlers:

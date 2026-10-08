@@ -262,8 +262,7 @@ def _resolve_conflicts(
     for b in val_raw:
         if b in assigned_test:
             if logger is not None:
-                logger.log(
-                    'WARNING',
+                logger.warning(
                     f'Block {b} overlaps both test and validation AOIs. '
                     'Assigned to test by priority.'
                 )
@@ -273,15 +272,13 @@ def _resolve_conflicts(
     for b in train_raw:
         if b in assigned_test:
             if logger is not None:
-                logger.log(
-                    'WARNING',
+                logger.warning(
                     f'Block {b} overlaps both test and training AOIs. '
                     'Assigned to test by priority.'
                 )
         elif b in assigned_val:
             if logger is not None:
-                logger.log(
-                    'WARNING',
+                logger.warning(
                     f'Block {b} overlaps both validation and training AOIs. '
                     'Assigned to validation by priority.'
                 )

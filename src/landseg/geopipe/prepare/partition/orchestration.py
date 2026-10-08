@@ -273,10 +273,7 @@ def _split_by_aoi(
         )
         if len(safe_train) < len(train_coords) and logger is not None:
             excluded = len(train_coords) - len(safe_train)
-            logger.log(
-                'WARNING',
-                f'Pruned {excluded} training block(s) bordering buffer zone.'
-            )
+            logger.warning(f'Pruned {excluded} training block(s) bordering buffer zone.')
         train_coords = safe_train
 
     # aggregate class counts

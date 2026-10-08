@@ -72,7 +72,7 @@ class ModelEvaluation(base.SessionPipeline):
 
         except Exception as e:
             self.logger.set_summary_status('FAILED')
-            self.logger.log('ERROR', f'Evaluation pipeline failed: {e}', exc_info=True)
+            self.logger.error(f'Evaluation pipeline failed: {e}', exc_info=True)
             raise e
 
         finally:

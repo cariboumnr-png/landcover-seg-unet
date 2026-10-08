@@ -186,8 +186,7 @@ def run_blocks_building(
         },
     })
 
-    logger.log(
-        'INFO',
+    logger.info(
         f'Intra-pool block collisions: {stats["blocks_collided"]} '
         f'(policy: {config.collision_policy}, '
         f'added: {stats["blocks_added"]}, '

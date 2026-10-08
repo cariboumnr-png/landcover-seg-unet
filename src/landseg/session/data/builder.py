@@ -217,8 +217,7 @@ def _load(
                 'cached': dataset_obj.n_cached
             }
         })
-        logger.log(
-            'INFO',
+        logger.info(
             f'Blocks type\t[{mode}]: '
             f'Loaded {dataset_obj.n_preloaded} blocks | '
             f'Cached {dataset_obj.n_cached} blocks'

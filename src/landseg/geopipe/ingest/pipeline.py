@@ -59,8 +59,7 @@ def run_data_ingestion(
     # early exit
     if context.collided_run_uid is not None:
         logger.set_summary_status('SKIPPED')
-        logger.log(
-            'INFO',
+        logger.info(
             f'[COMPLETE] Ingestion run with the same inputs and configs '
             f'already done (run uid: {context.collided_run_uid}), skipped'
         )
@@ -68,7 +67,7 @@ def run_data_ingestion(
 
     # ----- materialize domain maps
     if context.domains:
-        logger.log('INFO', '[START] Domain maps preparation')
+        logger.info('[START] Domain maps preparation')
         domain_paths = ingestion_paths.domains
         domain_configs = [
             ingest_domains.DomainBuildingConfig(
@@ -89,15 +88,15 @@ def run_data_ingestion(
         )
 
         d = sum(dm['duration_sec'] for dm in logger.summary['domain_maps'])
-        logger.log('INFO', f'[COMPLETE] Domain maps preparation (D_{d:.2f}s)')
+        logger.info(f'[COMPLETE] Domain maps preparation (D_{d:.2f}s)')
     else:
-        logger.log('INFO', '[NOTE] No domain knowledge layers provided')
+        logger.info('[NOTE] No domain knowledge layers provided')
 
     # ----- build canonical data blocks if provided
     if not context.has_data:
-        logger.log('INFO', 'Harmonized feature/label rasters not provided')
+        logger.info('Harmonized feature/label rasters not provided')
     else:
-        logger.log('INFO', '[START] Canonical data blocks building')
+        logger.info('[START] Canonical data blocks building')
 
         assert context.features
 
@@ -130,7 +129,4 @@ def run_data_ingestion(
 
         assert logger.summary['data_blocks'] # typing
         d = logger.summary['data_blocks']['duration_sec']
-        logger.log(
-            'INFO',
-            f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)'
-        )
+        logger.info(f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)')

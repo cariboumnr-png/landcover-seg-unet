@@ -111,7 +111,7 @@ def prepare_domain_maps(
         loaded = False
         if payload:
             loaded = True
-            logger.log('INFO', f'[CHECKPOINT] Loaded domain layer [{name}]')
+            logger.info(f'[CHECKPOINT] Loaded domain layer [{name}]')
         else:
             # check mapped tiles before building
             mapped = _prep_mapping(grid, config, policy=policy)
@@ -123,7 +123,7 @@ def prepare_domain_maps(
                 target_variance=config.target_variance,
             ).to_json_payload()
             ctrl.save(payload)
-            logger.log('INFO', f'[CHECKPOINT] Created domain layer [{name}]')
+            logger.info(f'[CHECKPOINT] Created domain layer [{name}]')
 
         duration = time.perf_counter() - start_time
 

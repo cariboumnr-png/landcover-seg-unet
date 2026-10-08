@@ -44,15 +44,15 @@ class LoggingCallback(base.BaseCallback):
 
     def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None:
         if self.logger:
-            self.logger.log('INFO', f'[START] Phase {phase.name}')
-            self.logger.log('INFO', f'- Max Epochs:\t{phase.num_epochs}')
-            self.logger.log('INFO', f'- LR Scale:\t{phase.lr_scale}')
-            self.logger.log('INFO', f'- Active Heads:\t{phase.active_heads}')
-            self.logger.log('INFO', f'- Frozen Heads:\t{phase.frozen_heads}')
+            self.logger.info(f'[START] Phase {phase.name}')
+            self.logger.info(f'- Max Epochs:\t{phase.num_epochs}')
+            self.logger.info(f'- LR Scale:\t{phase.lr_scale}')
+            self.logger.info(f'- Active Heads:\t{phase.active_heads}')
+            self.logger.info(f'- Frozen Heads:\t{phase.frozen_heads}')
 
     def on_batch_begin(self, action: str, bidx: int) -> None:
         if self.logger:
-            self.logger.log('DEBUG', f'{action}... batch_{bidx:04d}')
+            self.logger.debug(f'{action}... batch_{bidx:04d}')
 
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
         if self.logger and results.metrics_updated:
@@ -68,7 +68,7 @@ class LoggingCallback(base.BaseCallback):
             ])
             text_list.append(f'LR: {results.current_lr:.4e}')
             msg = f'batch_{bidx:04d} | ' + '|'.join(text_list)
-            self.logger.log('DEBUG', msg)
+            self.logger.debug(msg)
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
         metrics = results.raw_metrics
@@ -85,12 +85,12 @@ class LoggingCallback(base.BaseCallback):
             t = results.phase_max_epoch
             n = len(str(t))
             epoch_str = f'[Epoch {results.epoch_in_phase:0{n}d}/{t}] {msg}'
-            self.logger.log('INFO', epoch_str)
+            self.logger.info(epoch_str)
 
     def on_session_phase_end(self, phase: str, reason: str) -> None:
         if self.logger:
-            self.logger.log('INFO', f'[COMPLETE] Phase {phase} ({reason})')
+            self.logger.info(f'[COMPLETE] Phase {phase} ({reason})')
 
     def on_checkpointing(self, fp: str) -> None:
         if self.logger:
-            self.logger.log('INFO', f'Checkpoint saved: {fp}')
+            self.logger.info(f'Checkpoint saved: {fp}')

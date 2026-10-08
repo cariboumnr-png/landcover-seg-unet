@@ -50,21 +50,18 @@ def execute_e2e_intake(config: configs.RootConfig) -> None:
     '''
     logger = utils.Logger(name='e2e-intake', enable_file_log=False)
     logger.log_sep()
-    logger.log('INFO', 'Starting End-to-End Data Intake workflow...')
+    logger.info('Starting End-to-End Data Intake workflow...')
     logger.log_sep()
 
     # stage 1: harmonize raw rasters onto world grid canvas
-    logger.log('INFO', '[1/2] Running Data Harmonization pipeline...')
+    logger.info('[1/2] Running Data Harmonization pipeline...')
     pipelines.DataHarmonization(config).run()
 
     # stage 2: ingest pending harmonized batches into the block pool
-    logger.log('INFO', '[2/2] Running Batch Ingestion workflow...')
+    logger.info('[2/2] Running Batch Ingestion workflow...')
     batch_ingest.execute_batch_ingest(config)
 
     logger.log_sep()
-    logger.log(
-        'INFO',
-        'End-to-End Data Intake workflow completed successfully.'
-    )
+    logger.info('End-to-End Data Intake workflow completed successfully.')
     logger.log_sep()
     logger.close()

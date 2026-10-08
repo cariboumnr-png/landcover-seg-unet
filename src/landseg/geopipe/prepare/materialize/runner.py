@@ -120,18 +120,14 @@ def run_materialize_blocks(
     ctrl = ImageStatsCtrl(paths.image_stats, policy)
     agg_stats = ctrl.fetch()
     if policy != artifacts.LifecyclePolicy.REBUILD and agg_stats:
-        logger.log(
-            'INFO', '[CHECKPOINT] Loaded image stats from training split'
-        )
+        logger.info('[CHECKPOINT] Loaded image stats from training split')
     else:
         agg_stats = stats.aggregate_image_stats(
             set(src['train'].values()),
             list(context.features.indices)
         )
         ctrl.persist(agg_stats)
-        logger.log(
-            'INFO', '[CHECKPOINT] Created image stats from training split'
-        )
+        logger.info('[CHECKPOINT] Created image stats from training split')
 
     # load or build normalized blocks for each split
     ctrl = PartitionCtrl(paths.splits_prepared_blocks, policy)
@@ -140,7 +136,7 @@ def run_materialize_blocks(
 
     purged_total = 0
     if policy != artifacts.LifecyclePolicy.REBUILD and prepared:
-        logger.log('INFO', '[CHECKPOINT] Loaded normalized dataset blocks')
+        logger.info('[CHECKPOINT] Loaded normalized dataset blocks')
     else:
         prepared, purged_total = _materialize(
             (train, val, test),
@@ -150,10 +146,10 @@ def run_materialize_blocks(
             logger=logger,
         )
         ctrl.persist(prepared)
-        logger.log('INFO', '[CHECKPOINT] Created normalized dataset blocks')
+        logger.info('[CHECKPOINT] Created normalized dataset blocks')
 
     # build schema
-    logger.log('INFO', '[START] Prepared schema building')
+    logger.info('[START] Prepared schema building')
     schema.build_schema(
         paths,
         context,
@@ -194,7 +190,7 @@ def _materialize(
     )
     if purged:
         purged_total += purged
-        logger.log('DEBUG', f'{purged} stale training block files removed')
+        logger.debug(f'{purged} stale training block files removed')
     val_norm, purged = materialize.materialize_blocks(
         val_split,
         aggregated_stats,
@@ -203,7 +199,7 @@ def _materialize(
     )
     if purged:
         purged_total += purged
-        logger.log('DEBUG', f'{purged} stale validation block files removed')
+        logger.debug(f'{purged} stale validation block files removed')
     test_norm, purged = materialize.materialize_blocks(
         test_split,
         aggregated_stats,
@@ -212,7 +208,7 @@ def _materialize(
     )
     if purged:
         purged_total += purged
-        logger.log('DEBUG', f'{purged} stale testing block files removed')
+        logger.debug(f'{purged} stale testing block files removed')
 
     prepared = {
         'train': train_norm,

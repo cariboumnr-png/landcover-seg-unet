@@ -141,10 +141,10 @@ def run_datablocks_partition(
         summary_ctrl.persist(splits_summary)
 
         status = 'created'
-        logger.log('INFO', '[CHECKPOINT] Created dataset partition splits')
+        logger.info('[CHECKPOINT] Created dataset partition splits')
     else:
         status = 'loaded'
-        logger.log('INFO', '[CHECKPOINT] Loaded dataset partition splits')
+        logger.info('[CHECKPOINT] Loaded dataset partition splits')
 
     duration = time.perf_counter() - start_time
     report: contracts.DataPartitionReport = {

@@ -111,7 +111,7 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
 
     except Exception as e:
         logger.set_summary_status('FAILED')
-        logger.log('ERROR', f'Overfit pipeline failed: {e}', exc_info=True)
+        logger.error(f'Overfit pipeline failed: {e}', exc_info=True)
         raise e
 
     finally:
@@ -131,7 +131,7 @@ def _prepare_dataspecs(
         for f in os.listdir(save_dpath):
             if f.endswith('.npz'):
                 block_fpath = os.path.join(save_dpath, f)
-                logger.log('INFO', f'Using existing block: {block_fpath}')
+                logger.info(f'Using existing block: {block_fpath}')
                 break
 
     if not block_fpath:
@@ -221,7 +221,7 @@ def _create_block(
         )
 
     # map raster windows onto world grid
-    logger.log('INFO', 'Mapping image unto the world grid')
+    logger.info('Mapping image unto the world grid')
     datablocks_cfg = config.data.ingestion.datablocks
     assert context.features
     assert context.labels
@@ -234,7 +234,7 @@ def _create_block(
     )
 
     # retrieve band map and label specs from VRT
-    logger.log('INFO', 'Building a single data block')
+    logger.info('Building a single data block')
     image_band_map = assembler.read_band_map(context.features)
     label_specs = assembler.read_label_specs(context.labels)
 
@@ -256,7 +256,7 @@ def _create_block(
     target_head = _resolve_target_head(config, label_specs)
 
     # build single valid test block matching criteria
-    logger.log('DEBUG', 'Try: valid_px_per=0.95; need_all_class=True')
+    logger.debug('Try: valid_px_per=0.95; need_all_class=True')
     block_fpath = assembler.build_test_block(
         save_dpath=save_dpath,
         inputs=inputs_map,
@@ -266,7 +266,7 @@ def _create_block(
     )
     # second try
     if not block_fpath:
-        logger.log('DEBUG', 'Try: valid_px_per=0.95; need_all_class=False')
+        logger.debug('Try: valid_px_per=0.95; need_all_class=False')
         block_fpath = assembler.build_test_block(
             save_dpath=save_dpath,
             inputs=inputs_map,
@@ -278,7 +278,7 @@ def _create_block(
     if not block_fpath:
         raise ValueError('No valid block for testing is found')
 
-    logger.log('INFO', f'Single block successfully created: {block_fpath}')
+    logger.info(f'Single block successfully created: {block_fpath}')
     return block_fpath
 
 
@@ -306,9 +306,9 @@ def _run_overfit_loop(
     '''Execute epoch training loop until threshold or max epochs.'''
     max_epoch = c.OVERFIT_MAX_EPOCH
     lr = config.session.engine_optim.lr
-    logger.log('INFO', 'Starting overfit test')
-    logger.log('INFO', f'Maximum epoch: {max_epoch}')
-    logger.log('INFO', f'Learning rate: {lr}')
+    logger.info('Starting overfit test')
+    logger.info(f'Maximum epoch: {max_epoch}')
+    logger.info(f'Learning rate: {lr}')
 
     loss, iou = 0.0, 0.0
     for ep in range(1, max_epoch + 1):
@@ -320,12 +320,9 @@ def _run_overfit_loop(
         )
         loss = results.training.total_objective
         iou = results.target_metrics
-        logger.log(
-            'INFO',
-            f'Epoch: {ep:04d} | Loss: {loss:.4f} | IoU: {iou:.4f}'
-        )
+        logger.info(f'Epoch: {ep:04d} | Loss: {loss:.4f} | IoU: {iou:.4f}')
         if iou >= 0.99:
-            logger.log('INFO', 'Overfit reached - test complete')
+            logger.info('Overfit reached - test complete')
             return {
                 'final_epoch': ep,
                 'final_loss': loss,
@@ -333,7 +330,7 @@ def _run_overfit_loop(
                 'overfit_reached': True,
             }
 
-    logger.log('WARNING', f'IoU did not reach 99% after {max_epoch} epochs.')
+    logger.warning(f'IoU did not reach 99% after {max_epoch} epochs.')
     return {
         'final_epoch': max_epoch,
         'final_loss': loss,

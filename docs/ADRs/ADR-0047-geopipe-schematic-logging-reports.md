@@ -72,7 +72,7 @@ The schematic logging pattern established for `geopipe` data pipelines has been 
 
 * **`SessionLogger`** (defined in `session/common/logger.py`): Subclasses `utils.Logger` and accumulates runtime metrics (`inputs` and `results`), persisting a structured `summary.json` file upon `close()`.
 * **Execution Pipelines**: `model_train.py`, `model_evaluate.py`, and `study_sweep.py` migrate to `SessionLogger`, standardizing milestone boundaries (`[START]` / `[COMPLETE]`), memory footprint tracking (peak CPU RSS / GPU allocated MB), fine-grained step timing, and lean dataset specifications (`DataSpecs.to_dict()`).
-* **Decoupled Engine Callbacks**: `LoggingCallback` passes the `SessionLogger` instance to handle all phase and epoch reporting via `logger.log('INFO', ...)`, eliminating raw `print()` statements and decoupling dataset/runner classes from I/O side effects.
+* **Decoupled Engine Callbacks**: `LoggingCallback` passes the `SessionLogger` instance to handle all phase and epoch reporting via `logger.info(...)`, eliminating raw `print()` statements and decoupling dataset/runner classes from I/O side effects.
 * **Unified Verbosity**: Removed legacy `verbose_runner` and `print_out` flags across pipelines. Console log severity (`full`, `select`, or `silent`) is governed strictly by `SessionLogger.console_lvl`.
 
 ## 3. Consequences

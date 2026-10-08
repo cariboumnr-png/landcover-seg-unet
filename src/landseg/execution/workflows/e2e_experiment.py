@@ -50,36 +50,30 @@ def execute_e2e_experiment(config: configs.RootConfig) -> None:
     '''
     logger = utils.Logger(name='e2e-experiment', enable_file_log=False)
     logger.log_sep()
-    logger.log(
-        'INFO',
-        'Starting Full End-to-End Experiment workflow sequence...'
-    )
+    logger.info('Starting Full End-to-End Experiment workflow sequence...')
     logger.log_sep()
 
     # stage 1: canonical world grid
-    logger.log('INFO', '[1/5] Stage: World Grid Generation')
+    logger.info('[1/5] Stage: World Grid Generation')
     pipelines.WorldGridGeneration(config).run()
 
     # stage 2: data harmonization
-    logger.log('INFO', '[2/5] Stage: Data Harmonization')
+    logger.info('[2/5] Stage: Data Harmonization')
     pipelines.DataHarmonization(config).run()
 
     # stage 3: batch ingestion into canonical block pool
-    logger.log('INFO', '[3/5] Stage: Batch Ingestion')
+    logger.info('[3/5] Stage: Batch Ingestion')
     pipelines.DataIngestion(config).run()
 
     # stage 4: data preparation (AOI partition splits & DataSpecs)
-    logger.log('INFO', '[4/5] Stage: Data Preparation')
+    logger.info('[4/5] Stage: Data Preparation')
     pipelines.DataPreparation(config).run()
 
     # stage 5: neural model training session
-    logger.log('INFO', '[5/5] Stage: Model Training')
+    logger.info('[5/5] Stage: Model Training')
     pipelines.ModelTraining(config).run()
 
     logger.log_sep()
-    logger.log(
-        'INFO',
-        'Full End-to-End Experiment workflow completed successfully.'
-    )
+    logger.info('Full End-to-End Experiment workflow completed successfully.')
     logger.log_sep()
     logger.close()

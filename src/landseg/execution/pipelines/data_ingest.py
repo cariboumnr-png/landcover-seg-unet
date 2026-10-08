@@ -56,8 +56,7 @@ class DataIngestion(base.GeoPipeline):
 
         try:
             self.logger.log_sep()
-            self.logger.log(
-                'INFO',
+            self.logger.info(
                 f'Ingesting harmonization run [{context.harmonization_run_id}]'
                 f' ({context.run_uid}) into run [{self.pipeline_paths.run_id}]'
             )
@@ -78,9 +77,7 @@ class DataIngestion(base.GeoPipeline):
 
         except Exception as e:
             self.logger.set_summary_status('FAILED')
-            self.logger.log(
-                'ERROR', f'Ingestion pipeline failed: {e}', exc_info=True
-            )
+            self.logger.exception(f'Ingestion pipeline failed: {e}')
             raise e
 
         finally:

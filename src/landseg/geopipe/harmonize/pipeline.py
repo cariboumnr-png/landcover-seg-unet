@@ -63,18 +63,14 @@ def run_data_harmonization(
     # early exit
     if context.collided_run_uid is not None:
         logger.set_summary_status('SKIPPED')
-        logger.log(
-            'INFO',
+        logger.info(
             f'[COMPLETE] Harmonization run with the same inputs and configs '
             f'already done (run uid: {context.collided_run_uid}), skipped'
         )
         return
 
     # set up generator and run for each source
-    logger.log(
-        'INFO',
-        f'[START] Harmonizing data onto grid: {context.grid.affine_identity}'
-    )
+    logger.info(f'[START] Harmonizing data onto grid: {context.grid.affine_identity}')
     proc = _harmonize_sources(
         context.compiled_dataset_manifest,
         artifacts_paths.effective_run_folder,
@@ -86,7 +82,7 @@ def run_data_harmonization(
     while True:
         try:
             log_message = next(proc)
-            logger.log('INFO', log_message)
+            logger.info(log_message)
         except StopIteration as s:
             processed = s.value
             break
@@ -95,7 +91,7 @@ def run_data_harmonization(
     feature_raster = processed.finalized.get('features')
     if feature_raster:
         mask_path = artifacts_paths.valid_mask_raster
-        logger.log('INFO', f'Generating valid mask raster: {mask_path}')
+        logger.info(f'Generating valid mask raster: {mask_path}')
         harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
         logger.set_valid_mask_raster(mask_path)
 

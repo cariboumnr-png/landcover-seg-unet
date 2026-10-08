@@ -157,9 +157,9 @@ def build_schema(
             'heads': heads_schema,
         }
         schema_ctrl.persist(schema)
-        logger.log('INFO', '[CHECKPOINT] Created dataset prepared schema')
+        logger.info('[CHECKPOINT] Created dataset prepared schema')
     else:
-        logger.log('INFO', '[CHECKPOINT] Loaded dataset prepared schema')
+        logger.info('[CHECKPOINT] Loaded dataset prepared schema')
 
     # compile report
     duration = time.perf_counter() - start_time

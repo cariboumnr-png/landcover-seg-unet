@@ -58,20 +58,20 @@ class ModelTraining(base.SessionPipeline):
         try:
             runner = self.build_session_runner()
 
-            self.logger.log('INFO', '[START] Training session')
+            self.logger.info('[START] Training session')
 
             start_t = time.perf_counter()
             final = runner.execute()
             t = time.perf_counter() - start_t
             self.timer['exec'] = t
 
-            self.logger.log('INFO', f'[COMPLETE] Training session (D_{t:.2f}s)')
+            self.logger.info(f'[COMPLETE] Training session (D_{t:.2f}s)')
             self.logger.set_summary_status('SUCCESS')
             self.logger.set_results(self._summarize_results(final))
 
         except Exception as e:
             self.logger.set_summary_status('FAILED')
-            self.logger.log('ERROR', f'Training pipeline failed: {e}', exc_info=True)
+            self.logger.error(f'Training pipeline failed: {e}', exc_info=True)
             raise e
 
         finally:

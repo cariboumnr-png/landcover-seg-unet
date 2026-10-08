@@ -60,11 +60,7 @@ def execute_batch_ingest(config: configs.RootConfig) -> None:
     if not planned_batches:
         logger = utils.Logger(name='data-ingest', enable_file_log=False)
         logger.log_sep()
-        logger.log(
-            'INFO',
-            'No pending harmonization batches to ingest. '
-            'Ingestion pool is up to date.'
-        )
+        logger.info('No pending batches to ingest, ingestion pool is up to date')
         logger.log_sep()
         logger.close()
         return

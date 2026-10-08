@@ -49,18 +49,18 @@ class DataHarmonization(base.GeoPipeline):
 
         try:
             self.logger.log_sep()
-            self.logger.log('INFO', '[START] Data harmonization')
+            self.logger.info('[START] Data harmonization')
             harmonize.run_data_harmonization(
                 context,
                 self.pipeline_paths,
                 self.config.data.harmonization,
                 logger=self.logger
             )
-            self.logger.log('INFO', '[COMPLETE] Data harmonization')
+            self.logger.info('[COMPLETE] Data harmonization')
 
         except Exception as e:
             self.logger.set_summary_status('FAILED')
-            self.logger.log('ERROR', f'Data harmonization failed: {e}')
+            self.logger.error(f'Data harmonization failed: {e}')
             raise
 
         finally:
