@@ -34,6 +34,7 @@ import dataclasses
 import typing
 # local imports
 from landseg.configs.schema.data import DataConfig
+from landseg.configs.schema.models import ModelsConfig
 from landseg.configs.schema.session import SessionConfig
 import landseg.configs.schema.sections as sec
 
@@ -42,7 +43,7 @@ field = dataclasses.field
 
 # ------------------------------EXECUTION CONFIGS------------------------------
 @dataclasses.dataclass
-class _ExecutionContext:
+class ExecutionContext:
     '''Mutable execution context.'''
     verbosity: str | int | None = 'full' # 'full', 'logging_only', 'silent', 10/20/None
     exp_root: str = './experiment' # root directory for this experiment run
@@ -80,11 +81,11 @@ class RootConfig:
     '''Root structured config for landseg.'''
 
     # execution configs
-    execution: _ExecutionContext = field(default_factory=_ExecutionContext)
+    execution: ExecutionContext = field(default_factory=ExecutionContext)
     # data ETL settings
     data: DataConfig = field(default_factory=DataConfig)
     # model settings
-    models: sec.ModelsConfig = field(default_factory=sec.ModelsConfig)
+    models: ModelsConfig = field(default_factory=ModelsConfig)
     # session settings
     session: SessionConfig = field(default_factory=SessionConfig)
     # study settings

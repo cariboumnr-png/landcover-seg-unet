@@ -41,7 +41,7 @@ def test_root_config_defaults_and_as_dict():
     '''
     root = root_mod.RootConfig()
 
-    assert isinstance(root.execution, root_mod._ExecutionContext)
+    assert isinstance(root.execution, root_mod.ExecutionContext)
     assert isinstance(root.data.harmonization, sec.data._HarmonizationCfg)
     assert isinstance(root.data.ingestion, sec.data._IngestionCfg)
     assert isinstance(root.data.preparation, sec.data._PreparationCfg)
