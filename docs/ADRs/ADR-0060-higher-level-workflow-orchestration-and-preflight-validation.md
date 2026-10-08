@@ -1,6 +1,6 @@
 # ADR-0060: Higher-Level Workflow Orchestration and Pre-Flight Validation Engine
 
-**Status:** Accepted — Implemented (Phases 1–3; Phase 4 Pending)<br>
+**Status:** Accepted — Implemented<br>
 **Date:** 2026-09-29
 
 ---
@@ -51,13 +51,13 @@ represent **composite workflows** that sit above atomic pipeline execution:
    distinct training runs. Treating `study-sweep` as an atomic pipeline
    distorts pipeline semantics, report schemas, and execution guarantees.
 
-3. **Continuous End-to-End Data Intake (`end_to_end_intake`)**:
+3. **Continuous End-to-End Data Intake (`e2e_intake`)**:
    When raw GeoTIFF packages arrive, production pipelines must run
    `data-harmonize` followed immediately by `data-ingest` for each batch,
    accumulating data into the canonical block pool without manual
    intervention between stages.
 
-4. **Full Experiment Workflows (`end_to_end_experiment`)**:
+4. **Full Experiment Workflows (`e2e_experiment`)**:
    Running the complete lifecycle (`world-grid` $\rightarrow$ `data-harmonize`
    $\rightarrow$ `data-ingest` $\rightarrow$ `data-prepare` $\rightarrow$
    `model-train`) requires external shell scripts or manual step-by-step
@@ -381,10 +381,11 @@ the [Pre-Flight Readiness Guide](../preflight_readiness.md) (or French
 - Added 120-column ASCII terminal dashboard formatting (with pass/warn/fail indicators).
 - Wired `command=preflight` entry point and JSON artifact export under experiment root.
 
-### Phase 4: Composite End-to-End Workflows (Pending)
-- Implement `workflows.end_to_end_intake` (`harmonize` $\rightarrow$ `ingest`).
-- Implement `workflows.e2e_experiment` (`world-grid` $\rightarrow$ `model-train`).
-- Provide programmatic notebook helpers in `landseg.adapters.api`.
+### Phase 4: Composite End-to-End Workflows (Completed)
+- Implemented `workflows.e2e_intake` (`harmonize` $\rightarrow$ `ingest`).
+- Implemented `workflows.e2e_experiment` (`world-grid` $\rightarrow$ `model-train`).
+- Provided programmatic notebook helpers in `landseg.adapters.api`
+  (`run_e2e_intake`, `run_e2e_experiment`).
 
 ---
 

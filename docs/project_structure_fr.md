@@ -113,6 +113,8 @@ src/landseg/
 |   `-- workflows/                Workflows d'orchestration composites multi-etapes
 |       |-- batch_ingest.py       Ingestion par lots vers le pool de blocs
 |       |-- diagnose_overfit.py   Workflow de diagnostic de surapprentissage
+|       |-- e2e_intake.py         Workflow d'ingestion continue (harmonisation + ingestion)
+|       |-- e2e_experiment.py     Workflow d'experimentation complete (grille -> modele)
 |       |-- study_sweep.py        Workflow d'orchestration de sweep Optuna
 |       `-- study_analysis.py     Workflow d'analyse des resultats d'etude
 |

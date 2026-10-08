@@ -36,6 +36,7 @@ Actuellement utilisable:
 - Construction de grilles, domaines, blocs de donnees, manifestes et datasets a partir d'artefacts
 - Commandes d'entrainement et d'evaluation autonome des modeles
 - Diagnostics de surapprentissage pour valider la chaine de bout en bout
+- Moteur de validation d'aptitude avant vol
 - Chemins de code pour les adaptateurs TensorBoard et MLflow
 - Points d'entree de commande pour le sweep d'etude et l'analyse d'etude orientes Optuna
 
@@ -52,6 +53,7 @@ Encore en maturation:
 - [Structure du depot](./docs/project_structure_fr.md)
 - [Schema du workflow](./docs/workflow_chart_fr.md)
 - [Guide de preparation des donnees](./docs/data_preparation_fr.md)
+- [Guide de preparation avant vol](./docs/preflight_readiness_fr.md)
 - [Decisions d'architecture](./docs/ADRs/)
 
 ## Concepts Cles
@@ -231,6 +233,21 @@ Analyse les resultats d'etude via le point d'entree d'analyse.
 landseg command=study-analysis
 ```
 
+### 10. Validation Avant Vol (Pre-Flight)
+
+Execute des audits non destructifs avant vol pour verifier les dependances,
+l'integrite des registres, les contrats spatiaux et les ressources de calcul
+avant de lancer des traitements lourds.
+
+```bash
+# Auditer l'environnement complet ou des cibles specifiques de pipeline
+landseg command=preflight target=all
+landseg command=preflight target=model-train strict=true
+```
+
+Pour les specifications detaillees des sondes, codes de statut et tableaux
+de bord, consultez le [guide de preparation avant vol](./docs/preflight_readiness_fr.md).
+
 ## Organisation Des Artefacts Et Des Sorties
 
 L'I/O locale des experiences est normalement placee sous le repertoire
@@ -259,7 +276,7 @@ src/landseg/
 |-- artifacts/       Chemins, persistance, politiques, checkpoints
 |-- configs/         Defaults Hydra YAML et schemas de config structures
 |-- core/            Contrats partages et types de resultats
-|-- execution/       Dispatch de commandes, pipelines et workflows
+|-- execution/       Dispatch de commandes, pipelines, workflows et moteur avant-vol
 |-- geopipe/         Pipeline geospatial de fondation et transformation
 |-- models/          Frames, backbones, tetes, conditionnement, factories
 |-- session/         Donnees runtime, moteurs, taches, instrumentation, orchestration
@@ -288,32 +305,36 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
-- Surfaces d'API programmatiques pour les environnements interactifs et les
-  Jupyter Notebooks (`TrainingSessionConfigurator`, etc.).
-- Renforcement des contrats de modeles et limites strictes de validation de
-  configuration.
-- Mecanismes d'etiquettes multi-tetes, pertes regularisees (pertes de
-  coherence) et metriques d'evaluation etendues.
-- Prereglages initiaux de sweep d'etude Optuna et integration des metriques
-  d'objectifs.
+- Orchestration d'execution et validation avant vol : pipelines atomiques,
+  workflows composites (`e2e-intake`, `e2e-experiment`) et moteur preflight
+  (`command=preflight`, ADR-0060).
+- Ingestion incrementale par lots, registres de runs et politiques de
+  collision (`skip` vs `overwrite`, ADR-0059).
+- Semantique dynamique des donnees et preparation decouplee (`data-prepare`,
+  ADR-0057).
+- Surfaces d'API programmatiques et integration pour notebooks (ADR-0029).
+- Regularisation par similarite ecologique (ADR-0053), tetes multiples et
+  metriques d'evaluation etendues (ADR-0042).
+- Prereglages de sweeps d'etude Optuna et metriques d'objectifs (ADR-0044).
 
 Objectifs a court et moyen terme :
 
-- Mettre a jour les schemas de workflow pour refleter la separation d'execution
-  session/runtime actuelle.
-- Documenter les guides de workflow Optuna recommandes et publier des tutoriels
-  programmatiques.
-- Stabiliser les formats de rapports de metriques et les comparaisons entre
-  executions.
+- Recettes de configuration modulaires sous `configs/recipes/` et simplification
+  des surcharges CLI (ADR-0060 Section 6).
+- Documentation des workflows de sweep Optuna et publication de tutoriels en
+  notebooks.
+- Stabilisation des formats de rapports de metriques et outils de comparaison
+  inter-runs.
 
 Objectifs a plus long terme :
 
-- Ajouter d'autres familles de modeles au-dela de la pile actuelle de type U-Net.
-- Definir des chemins d'export stables pour les modeles entraines et les
-  artefacts d'evaluation.
-- Soutenir des workflows plus riches d'analyse inter-experiences.
-- Continuer a consolider les frontieres internes a mesure que les ADR se
-  stabilisent.
+- Runners de workflow a etat avec orchestration DAG, reprise sur incident et
+  rejeu d'etapes (ADR-0060 Section 6.3).
+- Architecture d'apprentissage continu et memoire tampon de rejeu (ADR-0052).
+- Ajout de nouvelles familles de modeles au-dela de la pile U-Net actuelle
+  (ex. transformeurs visuels).
+- Chemins d'export stables pour la production (ONNX, TorchScript).
+- Prise en charge de flux d'analyse inter-experiences plus riches.
 
 ## Contribution
 

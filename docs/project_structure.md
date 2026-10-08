@@ -113,6 +113,8 @@ src/landseg/
 |   `-- workflows/                Composite multi-stage orchestration workflows
 |       |-- batch_ingest.py       Batch harmonization to block pool ingestion
 |       |-- diagnose_overfit.py   Overfit diagnostic workflow
+|       |-- e2e_intake.py         Continuous data intake workflow (harmonize + ingest)
+|       |-- e2e_experiment.py     Full lifecycle experiment workflow (grid -> train)
 |       |-- study_sweep.py        Hyperparameter sweep orchestration workflow
 |       `-- study_analysis.py     Study result analysis workflow
 |

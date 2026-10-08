@@ -31,6 +31,7 @@ Currently usable:
 - Artifact-backed grid, domain, data block, manifest, and dataset construction
 - Model training and standalone model evaluation commands
 - Overfit diagnostics for end-to-end stack validation
+- Pre-flight readiness validation and dry-run diagnostics
 - TensorBoard and MLflow dashboard adapter code paths
 - Optuna-oriented study sweep and study analysis command entry points
 
@@ -47,6 +48,7 @@ Still maturing:
 - [Repository structure](./docs/project_structure.md)
 - [Workflow chart](./docs/workflow_chart.md)
 - [Data preparation guide](./docs/data_preparation.md)
+- [Pre-flight readiness guide](./docs/preflight_readiness.md)
 - [Architecture decision records](./docs/ADRs/)
 
 ## Core Concepts
@@ -218,6 +220,20 @@ Analyze study results through the study analysis entry point.
 landseg command=study-analysis
 ```
 
+### 10. Pre-Flight Validation
+
+Run non-destructive pre-flight audits to verify dependencies, ledger integrity,
+spatial contracts, and compute resources prior to execution.
+
+```bash
+# Audit full environment or specific pipeline targets
+landseg command=preflight target=all
+landseg command=preflight target=model-train strict=true
+```
+
+For detailed probe specifications, status codes, and terminal dashboards, see the
+[pre-flight readiness guide](./docs/preflight_readiness.md).
+
 ## Artifact And Output Layout
 
 Local experiment I/O is normally rooted under the configured experiment
@@ -245,7 +261,7 @@ src/landseg/
 |-- artifacts/       Artifact paths, persistence, lifecycle policy, checkpoints
 |-- configs/         Hydra YAML defaults and structured config schemas
 |-- core/            Shared contracts and result types
-|-- execution/       Command dispatch, pipelines, and workflows
+|-- execution/       Command dispatch, pipelines, workflows, and preflight engine
 |-- geopipe/         Geospatial harmonize, ingest, and prepare pipelines
 |-- models/          Model frames, backbones, heads, conditioning, factories
 |-- session/         Runtime data, engines, tasks, instrumentation, orchestration
@@ -273,26 +289,34 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
-- Programmatic API surfaces for interactive environments and Jupyter Notebooks
-  (`TrainingSessionConfigurator`, etc.).
-- Hardening model contracts and strict configuration validation boundaries.
-- Multi-head label mechanisms, regularized losses (consistency losses), and
-  extended evaluation metrics.
-- Initial Optuna study sweep presets and objective metrics integrations.
+- Execution orchestration and pre-flight validation: atomic pipelines,
+  composite workflows (`e2e-intake`, `e2e-experiment`), and preflight
+  inspection engine (`command=preflight`, ADR-0060).
+- Incremental batch ingestion with run ledgers, collision handling policies
+  (`skip` vs. `overwrite`), and canonical block pooling (ADR-0059).
+- Dynamic dataset semantics and decoupled data preparation (`data-prepare`,
+  ADR-0057).
+- Programmatic API surfaces and interactive notebook workflows (ADR-0029).
+- Ecological similarity loss regularization (ADR-0053), multi-head labels,
+  and extended validation metrics (ADR-0042).
+- Optuna study sweep presets and objective metrics integrations (ADR-0044).
 
 Near-term / Medium-term focus:
 
-- Update workflow charts to match the current session/runtime execution split.
-- Document recommended Optuna workflow guides and publish programmatic
-  tutorials.
-- Stabilize metrics reporting formats and cross-run comparisons.
+- Modular configuration recipes under `configs/recipes/` and flattened CLI
+  parameter overrides (ADR-0060 Section 6).
+- Document Optuna sweep workflows and publish end-to-end tutorial notebooks.
+- Stabilize metrics reporting formats and cross-run comparison tools.
 
 Longer-term goals:
 
-- Add more model families beyond the current U-Net-style stack.
-- Define stable export paths for trained models and evaluation artifacts.
+- Stateful workflow runners with DAG orchestration, pause/resume, and
+  step-level retry mechanisms (ADR-0060 Section 6.3).
+- Continual learning and replay buffer sampling architecture (ADR-0052).
+- Add more model families beyond the current U-Net-style stack (e.g., vision
+  transformers).
+- Define stable production export paths for trained models (ONNX, TorchScript).
 - Support richer cross-experiment analysis workflows.
-- Continue consolidating internal boundaries as ADRs settle.
 
 ## Contributing
 
