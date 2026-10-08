@@ -33,6 +33,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 # local imports
+import landseg.configs.schema.data as data
 import landseg.configs.schema.sections as sec
 
 # alias
@@ -80,7 +81,7 @@ class RootConfig:
     # execution configs
     execution: _ExecutionContext = field(default_factory=_ExecutionContext)
     # data ETL settings
-    data: sec.DataConfig = field(default_factory=sec.DataConfig)
+    data: data.DataConfig = field(default_factory=data.DataConfig)
     # model settings
     models: sec.ModelsConfig = field(default_factory=sec.ModelsConfig)
     # session settings
