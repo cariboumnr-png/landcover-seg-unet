@@ -126,3 +126,41 @@ def run_preflight(
         target=resolved_target,
         exp_root=exp_root,
     )
+
+
+def run_intake(
+    config: configs.RootConfig | None = None,
+) -> typing.Any:
+    '''
+    Run continuous end-to-end data intake (harmonize + ingest).
+
+    Args:
+        config:
+            Optional root execution configuration instance.
+
+    Returns:
+        typing.Any:
+            Result returned by the dispatched intake workflow.
+    '''
+    cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
+    cfg.command.name = 'e2e-intake'
+    return run(cfg)
+
+
+def run_experiment(
+    config: configs.RootConfig | None = None,
+) -> typing.Any:
+    '''
+    Run full lifecycle experiment (grid, harmonize, ingest, prepare, train).
+
+    Args:
+        config:
+            Optional root execution configuration instance.
+
+    Returns:
+        typing.Any:
+            Result returned by the dispatched experiment workflow.
+    '''
+    cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
+    cfg.command.name = 'e2e-experiment'
+    return run(cfg)

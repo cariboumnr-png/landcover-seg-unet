@@ -38,6 +38,8 @@ __all__ = [
     'execute_batch_ingest',
     'execute_default_action',
     'execute_diagnose_overfit',
+    'execute_e2e_experiment',
+    'execute_e2e_intake',
     'execute_study_analysis',
     'execute_study_sweep',
 ]
@@ -48,6 +50,8 @@ if typing.TYPE_CHECKING:
     from .batch_ingest import execute_batch_ingest
     from .default_action import execute_default_action
     from .diagnose_overfit import execute_diagnose_overfit
+    from .e2e_experiment import execute_e2e_experiment
+    from .e2e_intake import execute_e2e_intake
     from .study_analysis import execute_study_analysis
     from .study_sweep import execute_study_sweep
 
@@ -64,6 +68,14 @@ def __getattr__(name: str):
 
     if name in {'execute_diagnose_overfit'}:
         obj = importlib.import_module('.diagnose_overfit', __package__)
+        return getattr(obj, name)
+
+    if name in {'execute_e2e_experiment'}:
+        obj = importlib.import_module('.e2e_experiment', __package__)
+        return getattr(obj, name)
+
+    if name in {'execute_e2e_intake'}:
+        obj = importlib.import_module('.e2e_intake', __package__)
         return getattr(obj, name)
 
     if name in {'execute_study_analysis'}:

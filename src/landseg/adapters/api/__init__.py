@@ -42,6 +42,8 @@ __all__ = [
     'WorldGridConfigurator',
     # functions
     'run',
+    'run_experiment',
+    'run_intake',
     'run_preflight',
 ]
 
@@ -50,6 +52,8 @@ __all__ = [
 if typing.TYPE_CHECKING:
     from .api import (
         run,
+        run_experiment,
+        run_intake,
         run_preflight,
     )
     from .configurators import (
@@ -64,7 +68,12 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'run', 'run_preflight'}:
+    if name in {
+        'run',
+        'run_experiment',
+        'run_intake',
+        'run_preflight',
+    }:
         obj = importlib.import_module('.api', __package__)
         return getattr(obj, name)
 

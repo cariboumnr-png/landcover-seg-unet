@@ -44,6 +44,10 @@ COMMANDS = typing.Literal[
     'model-evaluate',
     'model-train',
     'batch-ingest',
+    'e2e-intake',
+    'e2e-experiment',
+    'end-to-end-intake',
+    'end-to-end-experiment',
     'preflight',
     'study-analysis',
     'study-sweep'
@@ -68,6 +72,12 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
 
         case 'batch-ingest':
             workflows.execute_batch_ingest(root_config)
+
+        case 'e2e-intake' | 'end-to-end-intake':
+            workflows.execute_e2e_intake(root_config)
+
+        case 'e2e-experiment' | 'end-to-end-experiment':
+            workflows.execute_e2e_experiment(root_config)
 
         case 'study-analysis':
             workflows.execute_study_analysis(root_config)
