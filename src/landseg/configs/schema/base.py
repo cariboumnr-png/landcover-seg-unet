@@ -19,70 +19,49 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
-# pylint: disable=too-many-return-statements
-
-'''
-Top-level namespace for `landseg.configs._schema`.
-
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
-'''
+'''Base class for a configuration section'''
 
 # standard imports
-from __future__ import annotations
-import importlib
+import dataclasses
+import os
 import typing
 
-__all__ = [
-    # classes
-    'CommandConfig',
-    'DataConfig',
-    'ModelsConfig',
-    'SessionConfig',
-    'StudyConfig',
-]
+class BaseConfigSection:
+    '''Base configuration class providing shared validation primitives.'''
 
+    @property
+    def as_dict(self) -> dict[str, typing.Any]:
+        '''Return dictionary representation of the dataclass section.'''
+        return dataclasses.asdict(typing.cast(typing.Any, self))
 
-# for static check
-if typing.TYPE_CHECKING:
-    from .commands import (
-        CommandConfig,
-    )
-    from .data import (
-        DataConfig,
-    )
-    from .models import (
-        ModelsConfig,
-    )
-    from .session import (
-        SessionConfig,
-    )
-    from .study import (
-        StudyConfig,
-    )
+    def validate(self) -> None:
+        '''Validate section integrity. Default is a no-op.'''
+        return None
 
+    @staticmethod
+    def file_exists(path: str) -> bool:
+        '''If file exists, return True'''
+        return os.path.isfile(path) and os.path.exists(path)
 
-def __getattr__(name: str):
+    @staticmethod
+    def must_exist(path: str | None, tag: str) -> None:
+        '''Raise FileNotFoundError if file does not exist'''
+        if path and not BaseConfigSection.file_exists(path):
+            raise FileNotFoundError(f'File [{tag}] is invalid: {path}')
 
-    if name in {'CommandConfig'}:
-        obj = importlib.import_module('.commands', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataConfig'}:
-        obj = importlib.import_module('.data', __package__)
-        return getattr(obj, name)
-
-    if name in {'ModelsConfig'}:
-        obj = importlib.import_module('.models', __package__)
-        return getattr(obj, name)
-
-    if name in {'SessionConfig'}:
-        obj = importlib.import_module('.session', __package__)
-        return getattr(obj, name)
-
-    if name in {'StudyConfig'}:
-        obj = importlib.import_module('.study', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    @staticmethod
+    def must_within(
+        value: typing.Any,
+        tag: str,
+        mmin: int | float | None = None,
+        mmax: int | float | None = None,
+    ) -> None:
+        '''Raise ValueError if value is outside the specified range'''
+        if not isinstance(value, (int, float)):
+            return
+        rr = f'[{mmin}, {mmax}]'
+        if (
+            (mmin is not None and value < mmin) or
+            (mmax is not None and value > mmax)
+        ):
+            raise ValueError(f'Value [{tag}] must be within {rr}, got: {value}')
