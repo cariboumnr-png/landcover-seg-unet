@@ -36,7 +36,7 @@ def obj_base(
       - Data batch size (`int`)
     '''
 
-    study_cfg = trial_cfg.study.base
+    study_cfg = trial_cfg.study.optimization.base
 
     # optimizer domain example
     trial_cfg.set_optimizer_lr(

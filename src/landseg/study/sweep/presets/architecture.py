@@ -37,7 +37,7 @@ def obj_architecture(
       - Bottleneck type (`str`)
     '''
 
-    study_cfg = trial_cfg.study.architecture
+    study_cfg = trial_cfg.study.architecture.architecture
 
     trial_cfg.set_model_body(
         model_body=trial.suggest_categorical(
@@ -74,7 +74,7 @@ def obj_bottleneck(
       - Transformer hyperparameters
     '''
 
-    study_cfg = trial_cfg.study.bottleneck
+    study_cfg = trial_cfg.study.architecture.bottleneck
 
     bottleneck = trial.suggest_categorical(
         name='model.bottleneck',
@@ -140,7 +140,7 @@ def obj_conditioning(
       - Conditioner selection (`list[str]`)
     '''
 
-    study_cfg = trial_cfg.study.conditioning
+    study_cfg = trial_cfg.study.architecture.conditioning
 
     # auto construct conditioners mapping
     # e.g., {'film_concat': ['film', 'concat']}

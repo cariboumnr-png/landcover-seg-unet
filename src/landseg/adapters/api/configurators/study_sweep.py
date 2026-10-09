@@ -71,9 +71,9 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
     ) -> typing.Self:
         '''Set ranges for base objectives preset.'''
         if learning_rate is not None:
-            self.study.base.learning_rate = learning_rate
+            self.study.optimization.base.learning_rate = learning_rate
         if batch_size is not None:
-            self.study.base.batch_size = batch_size
+            self.study.optimization.base.batch_size = batch_size
         return self
 
     def set_quick_preset_ranges(
@@ -85,13 +85,13 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
     ) -> typing.Self:
         '''Set ranges for entry-level (quick) sweep preset.'''
         if learning_rate is not None:
-            self.study.optimizer.learning_rate = learning_rate
+            self.study.optimization.optimizer.learning_rate = learning_rate
         if weight_decay is not None:
-            self.study.optimizer.weight_decay = weight_decay
+            self.study.optimization.optimizer.weight_decay = weight_decay
         if batch_size is not None:
-            self.study.throughput.batch_size = batch_size
+            self.study.optimization.throughput.batch_size = batch_size
         if use_amp is not None:
-            self.study.throughput.use_amp = use_amp
+            self.study.optimization.throughput.use_amp = use_amp
         return self
 
     def set_capacity_preset_ranges(
@@ -110,23 +110,25 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         '''Set ranges for capacity/architecture sweep preset.'''
         # architecture
         if model_body is not None:
-            self.study.architecture.model_body = model_body
+            self.study.architecture.architecture.model_body = model_body
         if base_channel is not None:
-            self.study.architecture.base_channel = base_channel
+            self.study.architecture.architecture.base_channel = base_channel
         # bottleneck
         if bottleneck is not None:
-            self.study.architecture.bottleneck = bottleneck
-            self.study.bottleneck.bottleneck = bottleneck
+            self.study.architecture.architecture.bottleneck = bottleneck
+            self.study.architecture.bottleneck.bottleneck = bottleneck
         if num_conv_blks is not None:
-            self.study.bottleneck.num_conv_blocks = num_conv_blks
+            self.study.architecture.bottleneck.num_conv_blocks = num_conv_blks
         if num_transformer_blks is not None:
-            self.study.bottleneck.num_transformer_blocks = num_transformer_blks
+            self.study.architecture.bottleneck.num_transformer_blocks = (
+                num_transformer_blks
+            )
         if num_heads is not None:
-            self.study.bottleneck.num_heads = num_heads
+            self.study.architecture.bottleneck.num_heads = num_heads
         if mlp_ratio is not None:
-            self.study.bottleneck.mlp_ratio = mlp_ratio
+            self.study.architecture.bottleneck.mlp_ratio = mlp_ratio
         if dropout is not None:
-            self.study.bottleneck.dropout = dropout
+            self.study.architecture.bottleneck.dropout = dropout
         if attn_dropout is not None:
-            self.study.bottleneck.attn_dropout = attn_dropout
+            self.study.architecture.bottleneck.attn_dropout = attn_dropout
         return self

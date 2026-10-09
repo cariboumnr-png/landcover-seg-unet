@@ -36,7 +36,7 @@ def obj_loss_balance(
       - Dice loss weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.loss_balance
+    study_cfg = trial_cfg.study.objectives.loss_balance
 
     trial_cfg.set_objective_focal_weight(
         weight=trial.suggest_float(
@@ -66,7 +66,7 @@ def obj_loss_aux(
       - TV loss weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.loss_auxiliary
+    study_cfg = trial_cfg.study.objectives.loss_auxiliary
 
     trial_cfg.set_objective_spectral_weight(
         weight=trial.suggest_float(
@@ -95,7 +95,7 @@ def obj_regularization(
       - consistency regularizer lambda weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.regularization
+    study_cfg = trial_cfg.study.objectives.regularization
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

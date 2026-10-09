@@ -36,7 +36,7 @@ def obj_head_weights(
       - logit adjust alpha weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.head_weights
+    study_cfg = trial_cfg.study.objectives.head_weights
 
     trial_cfg.set_runtime_logit_adjust_alpha(
         alpha=trial.suggest_float(
@@ -58,7 +58,7 @@ def obj_mtl_joint(
       - logit adjust alpha (`float`)
     '''
 
-    study_cfg = trial_cfg.study.mtl_joint
+    study_cfg = trial_cfg.study.objectives.mtl_joint
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(
@@ -88,7 +88,7 @@ def obj_hierarchy(
       - consistency reduction (`str`)
     '''
 
-    study_cfg = trial_cfg.study.hierarchy
+    study_cfg = trial_cfg.study.objectives.hierarchy
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

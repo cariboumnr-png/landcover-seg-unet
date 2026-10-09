@@ -50,3 +50,15 @@ class OptimizerSearchSpace(base.BaseConfigSection):
 class ThroughputSearchSpace(base.BaseConfigSection):
     batch_size: tuple[int, int, int] = (16, 64, 16)
     use_amp: list[bool] = field(default_factory=lambda: [True, False])
+
+
+@dataclasses.dataclass
+class OptimizationSearchConfig(base.BaseConfigSection):
+    base: BaseSearchSpace = field(default_factory=BaseSearchSpace)
+    optimizer: OptimizerSearchSpace = field(default_factory=OptimizerSearchSpace)
+    throughput: ThroughputSearchSpace = field(default_factory=ThroughputSearchSpace)
+
+    def validate(self) -> None:
+        self.base.validate()
+        self.optimizer.validate()
+        self.throughput.validate()

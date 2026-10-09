@@ -36,7 +36,7 @@ def obj_optimizer(
       - weight decay (`float`)
     '''
 
-    study_cfg = trial_cfg.study.optimizer
+    study_cfg = trial_cfg.study.optimization.optimizer
 
     trial_cfg.set_optimizer_lr(
         lr=trial.suggest_float(
@@ -68,7 +68,7 @@ def obj_throughput(
       - AMP usage (`bool`)
     '''
 
-    study_cfg = trial_cfg.study.throughput
+    study_cfg = trial_cfg.study.optimization.throughput
 
     trial_cfg.set_data_batch_size(
         batch_size=trial.suggest_int(

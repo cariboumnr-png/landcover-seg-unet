@@ -36,7 +36,7 @@ def obj_data_geometry(
       - Batch size (`int`)
     '''
 
-    study_cfg = trial_cfg.study.data_geometry
+    study_cfg = trial_cfg.study.architecture.data_geometry
 
     trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(
@@ -67,7 +67,7 @@ def obj_context_window(
       - Patch size (`int`)
     '''
 
-    study_cfg = trial_cfg.study.context_window
+    study_cfg = trial_cfg.study.architecture.context_window
 
     trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(

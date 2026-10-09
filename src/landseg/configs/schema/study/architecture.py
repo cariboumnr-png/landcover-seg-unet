@@ -73,3 +73,29 @@ class ConditioningSearchSpace(base.BaseConfigSection):
     conditioners: list[list[str]] = field(
         default_factory=lambda: [[], ['film'], ['concat'], ['film', 'concat']]
     )
+
+
+@dataclasses.dataclass
+class ArchitectureSearchConfig(base.BaseConfigSection):
+    data_geometry: DataGeometrySearchSpace = field(
+        default_factory=DataGeometrySearchSpace
+    )
+    context_window: ContextWindowSearchSpace = field(
+        default_factory=ContextWindowSearchSpace
+    )
+    architecture: ArchitectureSearchSpace = field(
+        default_factory=ArchitectureSearchSpace
+    )
+    bottleneck: BottleneckSearchSpace = field(
+        default_factory=BottleneckSearchSpace
+    )
+    conditioning: ConditioningSearchSpace = field(
+        default_factory=ConditioningSearchSpace
+    )
+
+    def validate(self) -> None:
+        self.data_geometry.validate()
+        self.context_window.validate()
+        self.architecture.validate()
+        self.bottleneck.validate()
+        self.conditioning.validate()

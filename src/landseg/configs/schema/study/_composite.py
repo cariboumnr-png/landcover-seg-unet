@@ -35,35 +35,18 @@ import landseg.configs.schema.study.optimization as optimization_sec
 
 # ----- aliases
 field = dataclasses.field
-BaseSearch = optimization_sec.BaseSearchSpace
-OptimizerSearch = optimization_sec.OptimizerSearchSpace
-ThroughputSearch = optimization_sec.ThroughputSearchSpace
-DataGeometrySearch = architecture_sec.DataGeometrySearchSpace
-ContextWindowSearch = architecture_sec.ContextWindowSearchSpace
-ArchitectureSearch = architecture_sec.ArchitectureSearchSpace
-BottleneckSearch = architecture_sec.BottleneckSearchSpace
-ConditioningSearch = architecture_sec.ConditioningSearchSpace
-LossBalanceSearch = objectives_sec.LossBalanceSearchSpace
-LossAuxiliarySearch = objectives_sec.LossAuxiliarySearchSpace
-RegularizationSearch = objectives_sec.RegularizationSearchSpace
-HeadWeightsSearch = objectives_sec.HeadWeightsSearchSpace
-MtlJointSearch = objectives_sec.MtlJointSearchSpace
-HierarchySearch = objectives_sec.HierarchySearchSpace
+OptimizationSearch = optimization_sec.OptimizationSearchConfig
+ArchitectureSearch = architecture_sec.ArchitectureSearchConfig
+ObjectivesSearch = objectives_sec.ObjectivesSearchConfig
 
 
 @dataclasses.dataclass
 class StudyConfig(base.BaseConfigSection):
-    base: BaseSearch = field(default_factory=BaseSearch)
-    optimizer: OptimizerSearch = field(default_factory=OptimizerSearch)
-    throughput: ThroughputSearch = field(default_factory=ThroughputSearch)
-    data_geometry: DataGeometrySearch = field(default_factory=DataGeometrySearch)
-    context_window: ContextWindowSearch = field(default_factory=ContextWindowSearch)
+    optimization: OptimizationSearch = field(default_factory=OptimizationSearch)
     architecture: ArchitectureSearch = field(default_factory=ArchitectureSearch)
-    bottleneck: BottleneckSearch = field(default_factory=BottleneckSearch)
-    conditioning: ConditioningSearch = field(default_factory=ConditioningSearch)
-    loss_balance: LossBalanceSearch = field(default_factory=LossBalanceSearch)
-    loss_auxiliary: LossAuxiliarySearch = field(default_factory=LossAuxiliarySearch)
-    regularization: RegularizationSearch = field(default_factory=RegularizationSearch)
-    head_weights: HeadWeightsSearch = field(default_factory=HeadWeightsSearch)
-    mtl_joint: MtlJointSearch = field(default_factory=MtlJointSearch)
-    hierarchy: HierarchySearch = field(default_factory=HierarchySearch)
+    objectives: ObjectivesSearch = field(default_factory=ObjectivesSearch)
+
+    def validate(self) -> None:
+        self.optimization.validate()
+        self.architecture.validate()
+        self.objectives.validate()

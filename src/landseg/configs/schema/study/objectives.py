@@ -68,3 +68,33 @@ class HierarchySearchSpace(base.BaseConfigSection):
     consistency_reduction: list[str] = field(
         default_factory=lambda: ['mean', 'sum']
     )
+
+
+@dataclasses.dataclass
+class ObjectivesSearchConfig(base.BaseConfigSection):
+    loss_balance: LossBalanceSearchSpace = field(
+        default_factory=LossBalanceSearchSpace
+    )
+    loss_auxiliary: LossAuxiliarySearchSpace = field(
+        default_factory=LossAuxiliarySearchSpace
+    )
+    regularization: RegularizationSearchSpace = field(
+        default_factory=RegularizationSearchSpace
+    )
+    head_weights: HeadWeightsSearchSpace = field(
+        default_factory=HeadWeightsSearchSpace
+    )
+    mtl_joint: MtlJointSearchSpace = field(
+        default_factory=MtlJointSearchSpace
+    )
+    hierarchy: HierarchySearchSpace = field(
+        default_factory=HierarchySearchSpace
+    )
+
+    def validate(self) -> None:
+        self.loss_balance.validate()
+        self.loss_auxiliary.validate()
+        self.regularization.validate()
+        self.head_weights.validate()
+        self.mtl_joint.validate()
+        self.hierarchy.validate()
