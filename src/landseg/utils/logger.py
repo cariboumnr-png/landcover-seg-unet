@@ -75,7 +75,7 @@ class Logger:
 
         if log_file is None:
             log_file = os.path.join(os.getcwd(), 'logs', 'proj.log')
-        elif not log_file.endswith('.log'):
+        elif not log_file.endswith(('.log', 'json')): # allow JSON log file
             root, _ = os.path.splitext(log_file)
             log_file = f'{root}.log'
 
