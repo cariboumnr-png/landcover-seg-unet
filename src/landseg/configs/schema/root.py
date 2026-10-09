@@ -103,6 +103,7 @@ class RootConfig:
         self.data.validate()
         self.models.validate()
         self.session.validate()
+        self.study.validate()
 
     # hyperparameter setters (for sweeping)
     # ----- data geometry

@@ -76,7 +76,7 @@ class RootConfigShape(typing.Protocol):
 #
 class _Command(typing.Protocol):
     @property
-    def study_sweep(self) -> _StudySweep: ...
+    def name(self) -> str: ...
 
 class _StudySweep(typing.Protocol):
     @property
@@ -93,6 +93,8 @@ class _StudySweep(typing.Protocol):
     def seed(self) -> int: ...
 
 class _StudyObjectives(typing.Protocol):
+    @property
+    def sweep(self) -> _StudySweep: ...
     @property
     def optimization(self) -> _OptimizationSearch: ...
     @property

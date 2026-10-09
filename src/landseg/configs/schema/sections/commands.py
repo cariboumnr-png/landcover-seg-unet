@@ -48,18 +48,6 @@ class _TrainModel:
 
 
 @dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'study_test'
-    storage: str = 'sqlite:///optuna.db'
-    preset_name: str = 'base'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
-
-    def validate(self):...
-
-
-@dataclasses.dataclass
 class _PreflightConfig:
     target: str = 'all'
     strict: bool = False
@@ -76,9 +64,7 @@ class CommandConfig:
     name: str = 'default'
     preflight: _PreflightConfig = field(default_factory=_PreflightConfig)
     model_train: _TrainModel = field(default_factory=_TrainModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
 
     def validate(self):
         self.preflight.validate()
         self.model_train.validate()
-        self.study_sweep.validate()

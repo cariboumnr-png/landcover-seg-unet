@@ -22,35 +22,28 @@
 # pylint: disable=missing-class-docstring
 
 '''
-Study configuration section.
+Study sweep hyperparameter optimization configuration.
 '''
 
 # standard imports
 import dataclasses
 # local imports
 import landseg.configs.schema.base as base
-import landseg.configs.schema.study.architecture as architecture_sec
-import landseg.configs.schema.study.objectives as objectives_sec
-import landseg.configs.schema.study.optimization as optimization_sec
-import landseg.configs.schema.study.sweep as sweep_sec
-
-# ----- aliases
-field = dataclasses.field
-OptimizationSearch = optimization_sec.OptimizationSearchConfig
-ArchitectureSearch = architecture_sec.ArchitectureSearchConfig
-ObjectivesSearch = objectives_sec.ObjectivesSearchConfig
-StudySweep = sweep_sec.StudySweepConfig
 
 
 @dataclasses.dataclass
-class StudyConfig(base.BaseConfigSection):
-    optimization: OptimizationSearch = field(default_factory=OptimizationSearch)
-    architecture: ArchitectureSearch = field(default_factory=ArchitectureSearch)
-    objectives: ObjectivesSearch = field(default_factory=ObjectivesSearch)
-    sweep: StudySweep = field(default_factory=StudySweep)
+class StudySweepConfig(base.BaseConfigSection):
+    study_name: str = 'study_test'
+    storage: str = 'sqlite:///optuna.db'
+    preset_name: str = 'base'
+    direction: str = 'maximize'
+    n_trials: int = 50
+    seed: int = 42
 
     def validate(self) -> None:
-        self.optimization.validate()
-        self.architecture.validate()
-        self.objectives.validate()
-        self.sweep.validate()
+        self.require_attr_type_range('study_name', str)
+        self.require_attr_type_range('storage', str)
+        self.require_attr_type_range('preset_name', str)
+        self.require_attr_type_range('direction', str, ['minimize', 'maximize'])
+        self.require_attr_type_range('n_trials', int, (1, None))
+        self.require_attr_type_range('seed', int, (0, None))
