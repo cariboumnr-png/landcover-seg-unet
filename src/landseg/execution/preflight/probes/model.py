@@ -78,7 +78,7 @@ def checkpoint_ready(
         schema.ProbeResult:
             diagnostic result indicating whether checkpoint is ready.
     '''
-    checkpoint_path = root_config.command.model_evaluate.checkpoint
+    checkpoint_path = root_config.session.evaluation.checkpoint
     if not checkpoint_path or not os.path.isfile(checkpoint_path):
         return schema.ProbeResult(
             pid=pid or 'checkpoint_exists',
@@ -115,7 +115,7 @@ def eval_split(
         schema.ProbeResult:
             diagnostic result indicating whether split is supported.
     '''
-    split_name = root_config.command.model_evaluate.split
+    split_name = root_config.session.evaluation.split
     supported_splits = {'test', 'val', 'train'}
     if split_name in supported_splits:
         return schema.ProbeResult(

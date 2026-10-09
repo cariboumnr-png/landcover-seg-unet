@@ -66,7 +66,6 @@ class BaseConfigurator:
             case 'model-evaluate':
                 self._cfg.models.validate()
                 self._cfg.session.validate()
-                self._cfg.command.model_evaluate.validate()
             case (
                 'model-train' |
                 'diagnose-overfit' |

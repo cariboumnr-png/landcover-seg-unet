@@ -45,7 +45,7 @@ class ModelEvaluation(base.SessionPipeline):
         try:
             self.logger.log_sep()
 
-            eval_config = self.config.command.model_evaluate
+            eval_config = self.config.session.evaluation
             runner = self.build_session_runner(
                 mode_override='evaluate',
                 eval_split=eval_config.valid_split,
@@ -102,7 +102,7 @@ class ModelEvaluation(base.SessionPipeline):
             vec_domain_name=self.config.data.specification.domain_vec_name,
         )
 
-        eval_config = self.config.command.model_evaluate
+        eval_config = self.config.session.evaluation
         split_dict = getattr(dataspecs.splits, eval_config.split, None)
         if not split_dict:
             raise RuntimeError(

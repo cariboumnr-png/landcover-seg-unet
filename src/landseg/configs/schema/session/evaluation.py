@@ -20,65 +20,34 @@
 # =========================================================================== #
 
 # pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
 
 '''
-Pipeline command schema specifications.
-
-Defines sub-command configurations for training, evaluation, sweeps,
-and preflight readiness checks.
-
-Public APIs:
-    - `CommandConfig`: Root command configuration section.
+Session model evaluation configuration.
 '''
 
 # standard imports
 import dataclasses
+import typing
+# local imports
+import landseg.configs.schema.base as base
 
 
-# ----- typing aliases
-field = dataclasses.field
-
-
-# ----- private dataclasses
-@dataclasses.dataclass
-class _TrainModel:
-
-    def validate(self) -> None:...
+SPLITS = ['val', 'test']
 
 
 @dataclasses.dataclass
-class _StudySweep:
-    study_name: str = 'study_test'
-    storage: str = 'sqlite:///optuna.db'
-    preset_name: str = 'base'
-    direction: str = 'maximize'
-    n_trials: int = 50
-    seed: int = 42
+class EvaluationConfig(base.BaseConfigSection):
+    checkpoint: str | None = None
+    split: str = 'test'
+    export_previews: bool = False
 
-    def validate(self):...
+    @property
+    def valid_split(self) -> typing.Literal['val', 'test']:
+        '''Return validated evaluation split identifier.'''
+        if self.split not in ('val', 'test'):
+            raise ValueError(f'Invalid split: {self.split}')
+        return typing.cast(typing.Literal['val', 'test'], self.split)
 
-
-@dataclasses.dataclass
-class _PreflightConfig:
-    target: str = 'all'
-    strict: bool = False
-    export_report: bool = True
-    report_path: str | None = None
-    check_gpu: bool = True
-
-    def validate(self):...
-
-
-# ----- public dataclasses
-@dataclasses.dataclass
-class CommandConfig:
-    name: str = 'default'
-    preflight: _PreflightConfig = field(default_factory=_PreflightConfig)
-    model_train: _TrainModel = field(default_factory=_TrainModel)
-    study_sweep: _StudySweep = field(default_factory=_StudySweep)
-
-    def validate(self):
-        self.preflight.validate()
-        self.model_train.validate()
-        self.study_sweep.validate()
+    def validate(self) -> None:
+        self.require_attr_type_range('split', str, ['val', 'test'])
+        self.require_file(self.checkpoint, 'Checkpoint')

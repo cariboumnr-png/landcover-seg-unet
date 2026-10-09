@@ -32,12 +32,14 @@ import typing
 import landseg.configs.schema.base as base
 import landseg.configs.schema.session.dataloader as dataloader_sec
 import landseg.configs.schema.session.engine as engine_sec
+import landseg.configs.schema.session.evaluation as evaluation_sec
 import landseg.configs.schema.session.orchestration as orchestration_sec
 
 # ----- aliases
 field = dataclasses.field
 DataLoader = dataloader_sec.DataLoaderConfig
 Engine = engine_sec.EngineConfig
+Evaluation = evaluation_sec.EvaluationConfig
 Orchestration = orchestration_sec.OrchestrationConfig
 
 
@@ -46,6 +48,7 @@ class SessionConfig(base.BaseConfigSection):
     dataloader: DataLoader = field(default_factory=DataLoader)
     engine: Engine = field(default_factory=Engine)
     orchestration: Orchestration = field(default_factory=Orchestration)
+    evaluation: Evaluation = field(default_factory=Evaluation)
     mode: str = 'continuous'
     output_dpath: str = '${execution.exp_root}/results/'
 
@@ -83,6 +86,7 @@ class SessionConfig(base.BaseConfigSection):
         self.dataloader.validate()
         self.engine.validate()
         self.orchestration.validate()
+        self.evaluation.validate()
 
         if self.mode == 'continuous':
             if self.orchestration.curriculum.schema != 'single':
