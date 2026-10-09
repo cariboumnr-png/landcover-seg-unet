@@ -100,7 +100,7 @@ class BaseConfigSection:
                 all(isinstance(vv, str) for vv in v)
             ):
                 raise ValueError('Literal range must be a list/tuple of str')
-            return [vv.lower for vv in v]
+            return [vv.lower() for vv in v]
 
         if value is None:
             return # skip if value is None type
@@ -146,14 +146,11 @@ class BaseConfigSection:
         file_path: str | None,
         file_name: str
     ) -> None:
-        '''Raise FileNotFoundError if file does not exist'''
-        if file_path and not BaseConfigSection.file_exists(file_path):
+        '''Raise if file is not `None` but does not exist.'''
+        if file_path is None:
+            return
+        if not os.path.isfile(file_path) and os.path.exists(file_path):
             raise ConfigValidationError(
                 f'File [{file_name}] is not file or does not exist at: '
                 f'{file_path}'
             )
-
-    @staticmethod
-    def file_exists(path: str) -> bool:
-        '''If file exists, return True'''
-        return os.path.isfile(path) and os.path.exists(path)

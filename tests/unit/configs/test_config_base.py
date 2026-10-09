@@ -43,11 +43,6 @@ def test_file_exists_and_require_file(tmp_path):
     dummy_file = tmp_path / 'test.txt'
     dummy_file.write_text('content')
 
-    assert base.BaseConfigSection.file_exists(str(dummy_file)) is True
-    assert base.BaseConfigSection.file_exists(
-        str(tmp_path / 'none.txt')
-    ) is False
-
     # require_file passes silently for existing file or None / empty
     base.BaseConfigSection.require_file(str(dummy_file), 'dummy')
     base.BaseConfigSection.require_file(None, 'none_path')

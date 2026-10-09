@@ -41,7 +41,7 @@ class EngineExec(base.BaseConfigSection):
     logit_adjust_alpha: float = 1.0
 
     def validate(self):
-        self.require_attr_type_range('logit adjust alpha', float, (0.0, None))
+        self.require_attr_type_range('logit_adjust_alpha', float, (0.0, None))
 
 
 @dataclasses.dataclass
