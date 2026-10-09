@@ -27,9 +27,9 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_optimizer(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Optimizer preset mutations:
       - Learning rate (`float`)
@@ -59,9 +59,9 @@ def obj_optimizer(
     return trial_cfg
 
 def obj_throughput(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Throughput preset mutations:
       - Batch size (`int`)

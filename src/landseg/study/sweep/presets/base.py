@@ -27,9 +27,9 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_base(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Base preset mutations:
       - Learning rate (`float`)

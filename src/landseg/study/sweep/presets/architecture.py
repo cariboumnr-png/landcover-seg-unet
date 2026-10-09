@@ -27,9 +27,9 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_architecture(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Architecture preset mutations:
       - Model body (`str`)
@@ -65,9 +65,9 @@ def obj_architecture(
     return trial_cfg
 
 def obj_bottleneck(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Bottlenect preset mutations:
       - Blocks count (`int`)
@@ -132,9 +132,9 @@ def obj_bottleneck(
     return trial_cfg
 
 def obj_conditioning(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Conditioning preset mutations:
       - Conditioner selection (`list[str]`)

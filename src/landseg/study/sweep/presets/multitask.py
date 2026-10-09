@@ -28,9 +28,9 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_head_weights(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Head weights preset mutations:
       - logit adjust alpha weight (`float`)
@@ -49,9 +49,9 @@ def obj_head_weights(
     return trial_cfg
 
 def obj_mtl_joint(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     MTL joint preset mutations:
       - consistency lambda (`float`)
@@ -79,9 +79,9 @@ def obj_mtl_joint(
     return trial_cfg
 
 def obj_hierarchy(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Hierarchy preset mutations:
       - consistency lambda (`float`)

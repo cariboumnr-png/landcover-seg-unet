@@ -27,9 +27,9 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_loss_balance(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Main loss balance mutations:
       - Focal loss weight (`float`)
@@ -57,9 +57,9 @@ def obj_loss_balance(
     return trial_cfg
 
 def obj_loss_aux(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Auxiliary loss mutations:
       - Spectral loss weight (`float`)
@@ -87,9 +87,9 @@ def obj_loss_aux(
     return trial_cfg
 
 def obj_regularization(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Regularization mutations:
       - consistency regularizer lambda weight (`float`)

@@ -40,6 +40,7 @@ import typing
 import optuna
 # local imports
 import landseg.artifacts as artifacts
+import landseg.configs as configs
 import landseg.core as core
 import landseg.study.sweep as sweep
 import landseg.study.sweep.presets as presets
@@ -51,7 +52,7 @@ StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 # -------------------------------Public Function-------------------------------
 def make_objective(
     runner_builder: typing.Callable[..., tuple[str, StepRunner]],
-    cfg: sweep.RootConfigShape,
+    cfg: configs.RootConfig,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''
     Build an Optuna-compatible objective function from a base runner.
@@ -73,11 +74,11 @@ def make_objective(
         # get trial config depending on the objective preset
         objectives_fn = presets.resolve(cfg.study.sweep.preset_name)
         _cfg = copy.deepcopy(cfg)
-        trial_cfg = objectives_fn(_cfg, trial)
-
+        mutator = sweep.TrialMutator(_cfg)
+        objectives_fn(mutator, trial)
 
         # build the runner with trial config
-        step_results_path, run = runner_builder(trial_cfg)
+        step_results_path, run = runner_builder(mutator.config)
 
         # tracking
         # - step results

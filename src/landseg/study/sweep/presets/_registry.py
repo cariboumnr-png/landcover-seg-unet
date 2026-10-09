@@ -30,8 +30,8 @@ import landseg.study.sweep as sweep
 import landseg.study.sweep.presets as presets
 
 PresetFn = typing.Callable[
-    [sweep.RootConfigShape, optuna.Trial],
-    sweep.RootConfigShape,
+    [sweep.TrialMutator, optuna.Trial],
+    sweep.TrialMutator,
 ]
 
 _REGISTRY: dict[str, PresetFn] = {

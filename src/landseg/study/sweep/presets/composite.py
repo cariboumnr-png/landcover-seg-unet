@@ -30,9 +30,9 @@ import landseg.study.sweep as sweep
 import landseg.study.sweep.presets as presets
 
 def comp_quick(
-    cfg: sweep.RootConfigShape,
+    cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''Composite quick preset: optimizer + throughput.'''
 
     cfg = presets.obj_optimizer(cfg, trial)
@@ -40,9 +40,9 @@ def comp_quick(
     return cfg
 
 def comp_capacity(
-    cfg: sweep.RootConfigShape,
+    cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''Composite capacity preset: architecture + bottleneck.'''
 
     cfg = presets.obj_architecture(cfg, trial)
@@ -50,9 +50,9 @@ def comp_capacity(
     return cfg
 
 def comp_mtl_quality(
-    cfg: sweep.RootConfigShape,
+    cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''Composite mtl quality preset: loss balance + regularization'''
 
     cfg = presets.obj_loss_balance(cfg, trial)
@@ -61,9 +61,9 @@ def comp_mtl_quality(
     return cfg
 
 def comp_candidate(
-    cfg: sweep.RootConfigShape,
+    cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''Composite production candidate: combines all presets.'''
 
     cfg = presets.obj_optimizer(cfg, trial)

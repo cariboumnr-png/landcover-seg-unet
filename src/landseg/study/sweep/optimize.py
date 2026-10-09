@@ -33,12 +33,13 @@ import typing
 # third-party imports
 import optuna
 # local imports
+import landseg.configs as configs
 import landseg.study.sweep as sweep
 
 # -------------------------------Public Function-------------------------------
 def run_sweep(
     runner_builder: typing.Callable,
-    root_config: sweep.RootConfigShape,
+    root_config: configs.RootConfig,
 ) -> optuna.Study:
     '''
     Create and execute an Optuna study using the configured sweep policy.
