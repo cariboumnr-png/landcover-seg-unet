@@ -22,11 +22,15 @@
 # pylint: disable=protected-access
 
 '''
-Unit tests for `landseg.configs.schema.sections.study`.
+Unit tests for `landseg.configs.schema.study`.
 '''
 
 # local imports
-import landseg.configs.schema.sections.study as study
+import landseg.configs.schema.study as study
+import landseg.configs.schema.study.architecture as architecture_sec
+import landseg.configs.schema.study.objectives as objectives_sec
+import landseg.configs.schema.study.optimization as optimization_sec
+import landseg.configs.schema.study.sweep as sweep_sec
 
 
 # ----- `StudyConfig` tests
@@ -38,28 +42,46 @@ def test_study_config_default_instantiation():
     '''
     cfg = study.StudyConfig()
 
-    assert isinstance(cfg.base, study._BaseObj)
-    assert isinstance(cfg.optimizer, study._OptimizerObj)
-    assert isinstance(cfg.architecture, study._ArchitectureObj)
+    assert isinstance(
+        cfg.optimization, optimization_sec.OptimizationSearchConfig
+    )
+    assert isinstance(
+        cfg.architecture, architecture_sec.ArchitectureSearchConfig
+    )
+    assert isinstance(
+        cfg.objectives, objectives_sec.ObjectivesSearchConfig
+    )
+    assert isinstance(
+        cfg.sweep, sweep_sec.StudySweepConfig
+    )
 
     # range definitions
-    assert cfg.base.learning_rate == (1e-5, 1e-1)
-    assert cfg.optimizer.weight_decay == (1e-6, 1e-2)
-    assert cfg.architecture.model_body == study.MODEL_BODIES
-    assert cfg.architecture.bottleneck == study.BOTTLENECKS
+    assert cfg.optimization.base.learning_rate == (1e-5, 1e-1)
+    assert cfg.optimization.optimizer.weight_decay == (1e-6, 1e-2)
+    assert (
+        cfg.architecture.architecture.model_body
+        == architecture_sec.MODEL_BODIES
+    )
+    assert (
+        cfg.architecture.architecture.bottleneck
+        == architecture_sec.BOTTLENECKS
+    )
 
 
 def test_study_config_custom_objective():
     '''
-    Given: A custom `_ArchitectureObj` search space definition.
+    Given: A custom `ArchitectureSearchSpace` search space definition.
     When: Passing custom architecture to `StudyConfig`.
     Then: Store specified model bodies and base channel choices.
     '''
-    custom_arch = study._ArchitectureObj(
+    custom_arch_space = architecture_sec.ArchitectureSearchSpace(
         model_body=['unet'],
         base_channel=(32, 64, 32),
     )
+    custom_arch = architecture_sec.ArchitectureSearchConfig(
+        architecture=custom_arch_space
+    )
     cfg = study.StudyConfig(architecture=custom_arch)
 
-    assert cfg.architecture.model_body == ['unet']
-    assert cfg.architecture.base_channel == (32, 64, 32)
+    assert cfg.architecture.architecture.model_body == ['unet']
+    assert cfg.architecture.architecture.base_channel == (32, 64, 32)

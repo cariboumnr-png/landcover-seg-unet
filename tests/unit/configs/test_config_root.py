@@ -28,8 +28,13 @@ Unit tests for `landseg.configs.schema.root`.
 # third-party imports
 import pytest
 # local imports
+import landseg.configs.schema.base as base
+import landseg.configs.schema.data as data_schema
+import landseg.configs.schema.data.ingestion as ingestion_sec
+import landseg.configs.schema.models as models_schema
 import landseg.configs.schema.root as root_mod
-import landseg.configs.schema.sections as sec
+import landseg.configs.schema.session as session_schema
+import landseg.configs.schema.study as study_schema
 
 
 # ----- `RootConfig` tests
@@ -42,14 +47,11 @@ def test_root_config_defaults_and_as_dict():
     root = root_mod.RootConfig()
 
     assert isinstance(root.execution, root_mod.ExecutionContext)
-    assert isinstance(root.data.harmonization, sec.data._HarmonizationCfg)
-    assert isinstance(root.data.ingestion, sec.data._IngestionCfg)
-    assert isinstance(root.data.preparation, sec.data._PreparationCfg)
-    assert isinstance(root.data.specification, sec.data._Specification)
-    assert isinstance(root.models, sec.ModelsConfig)
-    assert isinstance(root.session, sec.SessionConfig)
-    assert isinstance(root.study, sec.StudyConfig)
-    assert isinstance(root.command, sec.CommandConfig)
+    assert isinstance(root.data, data_schema.DataConfig)
+    assert isinstance(root.models, models_schema.ModelsConfig)
+    assert isinstance(root.session, session_schema.SessionConfig)
+    assert isinstance(root.study, study_schema.StudyConfig)
+    assert root.command == 'default'
 
     # dictionary serialization test
     cfg_dict = root.as_dict
@@ -83,10 +85,10 @@ def test_root_config_hyperparameter_setters():
     assert root.session.engine_optim.opt_cls == 'Adam'
 
 
-def test_root_config_validate_all(tmp_path):
+def test_root_config_validate(tmp_path):
     '''
     Given: A `RootConfig` with valid foundation files and session.
-    When: `RootConfig.validate_all()` is executed.
+    When: `RootConfig.validate()` is executed.
     Then: Complete validation across all configuration sub-sections.
     '''
     cfg_json = tmp_path / 'cfg.json'
@@ -102,21 +104,20 @@ def test_root_config_validate_all(tmp_path):
     root.data.harmonization.dataset_manifest = str(cfg_json)
     root.session.orchestration.single_phase.num_epochs = 10
 
-    root.validate_all()
+    root.validate()
 
 
 def test_ingestion_config_harmonization_run_validation():
     '''
-    Given: An `_IngestionCfg` instance.
+    Given: A `DataIngestionConfig` instance.
     When: Setting valid and invalid `harmonization_run` values.
     Then: Accept valid int/str values and raise error on invalid.
     '''
-    cfg = sec.data._IngestionCfg()
+    cfg = ingestion_sec.DataIngestionConfig()
 
     # valid int, str, path, None
     cfg.harmonization_run = None
     cfg.validate()
-
 
     cfg.harmonization_run = 1
     cfg.validate()
@@ -128,16 +129,11 @@ def test_ingestion_config_harmonization_run_validation():
     cfg.validate()
 
     # invalid non-positive int
-    cfg.harmonization_run = 0
-    with pytest.raises(ValueError, match='positive'):
-        cfg.validate()
-
-    # invalid empty string
-    cfg.harmonization_run = '   '
-    with pytest.raises(ValueError, match='empty'):
+    cfg.harmonization_run = -1
+    with pytest.raises(base.ConfigValidationError):
         cfg.validate()
 
     # invalid type
     cfg.harmonization_run = [1] # type: ignore
-    with pytest.raises(TypeError, match='Invalid harmonization_run type'):
+    with pytest.raises(base.ConfigValidationError):
         cfg.validate()

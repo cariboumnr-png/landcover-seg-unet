@@ -25,7 +25,6 @@
 import pytest
 # local imports
 import landseg.configs as configs
-import landseg.configs.schema.sections as secs
 import landseg.execution.executor as executor
 import landseg.execution.pipelines as pipelines
 import landseg.execution.workflows as workflows
@@ -78,7 +77,7 @@ def test_execute_pipeline_dispatch(
 
         monkeypatch.setattr(target_mod, target_attr, mock_workflow)
 
-    config = configs.RootConfig(command=secs.CommandConfig(name=command))
+    config = configs.RootConfig(command=command)
     result = executor.execute_pipeline(config)
 
     assert len(called) == 1
@@ -98,7 +97,7 @@ def test_execute_pipeline_preflight_dispatch(mocker):
         return_value='preflight_mock_result'
     )
     config = configs.RootConfig(
-        command=secs.CommandConfig(name='preflight'),
+        command='preflight',
         execution=configs.ExecutionContext(preflight_target='model-train'),
     )
     result = executor.execute_pipeline(config)
@@ -113,7 +112,7 @@ def test_execute_pipeline_preflight_invalid_target_raises_key_error():
     Then: Raise a KeyError from the preflight engine.
     '''
     config = configs.RootConfig(
-        command=secs.CommandConfig(name='preflight'),
+        command='preflight',
         execution=configs.ExecutionContext(preflight_target='unknown-target'),
     )
     with pytest.raises(KeyError, match='not supported for preflight'):
@@ -127,7 +126,7 @@ def test_execute_pipeline_unknown_command_raises_key_error():
     Then: Raise a KeyError.
     '''
     config = configs.RootConfig(
-        command=secs.CommandConfig(name='non-existent-command')
+        command='non-existent-command'
     )
     with pytest.raises(KeyError, match='Unknown command'):
         executor.execute_pipeline(config)

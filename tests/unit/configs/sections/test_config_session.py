@@ -22,13 +22,17 @@
 # pylint: disable=protected-access
 
 '''
-Unit tests for `landseg.configs.schema.sections.session`.
+Unit tests for `landseg.configs.schema.session`.
 '''
 
 # third-party imports
 import pytest
 # local imports
-import landseg.configs.schema.sections.session as session_mod
+import landseg.configs.schema.base as base
+import landseg.configs.schema.session as session_mod
+import landseg.configs.schema.session.dataloader as dataloader_sec
+import landseg.configs.schema.session.engine as engine_sec
+import landseg.configs.schema.session.orchestration as orchestration_sec
 
 
 # ----- `SessionConfig` tests
@@ -81,31 +85,34 @@ def test_session_config_invalid_mode():
 
 def test_session_subsections_validation():
     '''
-    Given: Sub-component configs (`_DataLoaderConfig`, `_OptimConfig`).
+    Given: Sub-component configs (`DataLoaderConfig`, `EngineOptim`).
     When: Instantiating and validating with invalid parameters.
-    Then: Raise ValueError for invalid patch sizes, T_max, or epochs.
+    Then: Raise ConfigValidationError for invalid patch sizes or epochs.
     '''
     # data loader validation for negative size
-    with pytest.raises(ValueError, match='data patch size'):
-        session_mod._DataLoaderConfig(patch_size=-1).validate()
+    with pytest.raises(base.ConfigValidationError):
+        dataloader_sec.DataLoaderConfig(patch_size=-1).validate()
 
     # optim config missing T_max for CosAnneal
-    with pytest.raises(ValueError, match='missing T_max for CosAnneal'):
-        session_mod._OptimConfig(
+    with pytest.raises(
+        base.ConfigValidationError,
+        match='missing T_max for CosAnneal'
+    ):
+        engine_sec.EngineOptim(
             sched_cls='CosAnneal',
             sched_args={},
         ).validate()
 
     # tasks config invalid alpha fn
-    with pytest.raises(ValueError, match='Invalid loss alpha function'):
-        session_mod._TasksConfig(alpha_fn='invalid_fn').validate()
+    with pytest.raises(
+        base.ConfigValidationError,
+        match='Invalid loss alpha function'
+    ):
+        engine_sec.EngineTask(alpha_fn='invalid_fn').validate()
 
     # phase start epoch larger than num epochs
-    with pytest.raises(
-        ValueError,
-        match='is larger than the max number of epochs',
-    ):
-        session_mod._Phase(
+    with pytest.raises(base.ConfigValidationError):
+        orchestration_sec.PhaseConfig(
             start_epoch=10,
             num_epochs=5,
         ).validate()

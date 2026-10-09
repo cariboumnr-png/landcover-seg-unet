@@ -22,13 +22,16 @@
 # pylint: disable=protected-access
 
 '''
-Unit tests for `landseg.configs.schema.sections.models`.
+Unit tests for `landseg.configs.schema.models`.
 '''
 
 # third-party imports
 import pytest
 # local imports
-import landseg.configs.schema.sections.models as models
+import landseg.configs.schema.models as models
+import landseg.configs.schema.models.backbones as backbones
+import landseg.configs.schema.models.conditioners as conditioners
+import landseg.configs.schema.models.safety as safety
 
 
 # ----- `ModelsConfig` tests
@@ -46,7 +49,7 @@ def test_models_config_defaults_and_getters():
 
     # backbone property check
     backbone_cfg = cfg.unet_backbone_config
-    assert isinstance(backbone_cfg, models._UNetBackboneConfig)
+    assert isinstance(backbone_cfg, backbones.UNetBackboneConfig)
     assert backbone_cfg.body.body == 'unet'
 
     # base channel modification
@@ -56,8 +59,8 @@ def test_models_config_defaults_and_getters():
     # conditioners getter check
     cfg.conditioners = ['film', 'concat']
     cond_map = cfg.conditioning_config
-    assert isinstance(cond_map['film'], models._FiLM)
-    assert isinstance(cond_map['concat'], models._Concat)
+    assert isinstance(cond_map['film'], conditioners.FiLM)
+    assert isinstance(cond_map['concat'], conditioners.Concat)
 
 
 def test_models_config_validation_failures():
@@ -78,7 +81,7 @@ def test_models_config_validation_failures():
 
     # invalid clamp range ordering
     invalid_clamp = models.ModelsConfig(
-        numeric_safety=models._NumericSafety(clamp_range=(10.0, 1.0)),
+        numeric_safety=safety.NumericSafety(clamp_range=(10.0, 1.0)),
     )
-    with pytest.raises(ValueError, match='Invalid clamp_range ordering'):
+    with pytest.raises(ValueError, match='Invalid clamp'):
         invalid_clamp.validate()

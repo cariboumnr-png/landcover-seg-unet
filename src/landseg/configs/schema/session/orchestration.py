@@ -61,7 +61,7 @@ class PhaseConfig(base.BaseConfigSection):
 
     def validate(self):
         self.require_attr_type_range('num_epochs', int, (1, None))
-        self.require_attr_type_range('start_epochs', int, (1, self.num_epochs))
+        self.require_attr_type_range('start_epoch', int, (1, self.num_epochs))
         self.require_attr_type_range('lr_scale', float, (0.0, None))
 
 

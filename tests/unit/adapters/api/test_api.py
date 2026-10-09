@@ -40,7 +40,7 @@ def test_api_run_success(mocker):
         return_value={'status': 'SUCCESS'}
     )
     cfg = configs.RootConfig()
-    cfg.command.name = 'data-harmonize'
+    cfg.command = 'data-harmonize'
 
     result = api.run(cfg)
     mock_exec.assert_called_once_with(cfg)
@@ -91,7 +91,7 @@ def test_api_run_preflight_delegates(mocker):
         return_value='report'
     )
     cfg = configs.RootConfig()
-    cfg.command.name = 'model-train'
+    cfg.command = 'model-train'
 
     result = api.run_preflight(cfg, target='model-train', strict=True)
     assert result == 'report'
@@ -122,16 +122,16 @@ def test_api_run_preflight_string_target(mocker):
 
 def test_api_run_preflight_inferred_target(mocker):
     '''
-    Given: A `RootConfig` with `command.name = 'data-harmonize'`.
+    Given: A `RootConfig` with `command = 'data-harmonize'`.
     When: Calling `api.run_preflight(cfg)` without explicit target.
-    Then: Infer target from `command.name`.
+    Then: Infer target from `command`.
     '''
     mock_preflight = mocker.patch(
         'landseg.execution.preflight.run_preflight',
         return_value='report'
     )
     cfg = configs.RootConfig()
-    cfg.command.name = 'data-harmonize'
+    cfg.command = 'data-harmonize'
 
     result = api.run_preflight(cfg)
     assert result == 'report'

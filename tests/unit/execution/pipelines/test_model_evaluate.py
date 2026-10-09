@@ -46,7 +46,7 @@ import landseg.session as session
 def test_evaluate_invalid_split_raises_value_error(tmp_path):
     '''
     Given: A RootConfig with an invalid evaluation split.
-    When: `config.command.validate()` is called.
+    When: `config.session.evaluation.validate()` is called.
     Then: Raise a ValueError.
     '''
     chk_file = str(tmp_path / 'chk.pt')
@@ -55,8 +55,8 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
 
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
-    schema.command.model_evaluate.checkpoint = chk_file
-    schema.command.model_evaluate.split = 'invalid'
+    schema.session.evaluation.checkpoint = chk_file
+    schema.session.evaluation.split = 'invalid'
 
     config = typing.cast(
         configs.RootConfig,
@@ -64,7 +64,7 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
     )
 
     with pytest.raises(ValueError, match='Invalid split'):
-        config.command.validate()
+        config.session.evaluation.validate()
 
 
 def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
@@ -85,8 +85,8 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = exp_root
     schema.data.preparation.output_dpath = prep_root
-    schema.command.model_evaluate.checkpoint = chk_file
-    schema.command.model_evaluate.split = 'val'
+    schema.session.evaluation.checkpoint = chk_file
+    schema.session.evaluation.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,
@@ -143,20 +143,20 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
 def test_evaluate_validate_missing_checkpoint(tmp_path):
     '''
     Given: Evaluation configuration with non-existent checkpoint path.
-    When: Calling `config.command.validate()` on RootConfig.
+    When: Calling `config.session.evaluation.validate()` on RootConfig.
     Then: Raise a FileNotFoundError.
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
-    schema.command.model_evaluate.checkpoint = str(tmp_path / 'missing.pt')
-    schema.command.model_evaluate.split = 'val'
+    schema.session.evaluation.checkpoint = str(tmp_path / 'missing.pt')
+    schema.session.evaluation.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,
         omegaconf.OmegaConf.to_object(schema)
     )
     with pytest.raises(FileNotFoundError, match='Checkpoint not found'):
-        config.command.validate()
+        config.session.evaluation.validate()
 
 
 def test_evaluate_validate_missing_prep_report(tmp_path):
@@ -172,8 +172,8 @@ def test_evaluate_validate_missing_prep_report(tmp_path):
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
     schema.data.preparation.output_dpath = str(tmp_path / 'prep')
-    schema.command.model_evaluate.checkpoint = chk_file
-    schema.command.model_evaluate.split = 'val'
+    schema.session.evaluation.checkpoint = chk_file
+    schema.session.evaluation.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,

@@ -60,7 +60,7 @@ class DataBlocks(base.BaseConfigSection):
 
     def validate(self) -> None:
         self.require_attr_type_range('ignore_index', int)
-        self.require_attr_type_range('image_dem_pand', int, (1, None))
+        self.require_attr_type_range('image_dem_pad', int, (1, None))
         self.require_attr_type_range('collision_policy', str, POLICY)
 
         if self.add_topo is not None:

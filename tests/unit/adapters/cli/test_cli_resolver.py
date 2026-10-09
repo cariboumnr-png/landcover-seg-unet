@@ -97,3 +97,25 @@ def test_resolve_configs_missing_user_file():
             config=cfg_dict,
             use_additional_settings=True,
         )
+
+
+def test_resolve_configs_overfit_recipe_applied():
+    '''
+    Given: A Hydra configuration targeting 'diagnose-overfit'.
+    When: Calling `resolve_configs` with task command.
+    Then: Automatically discover and apply the overfit recipe overrides.
+    '''
+    cfg_dict = omegaconf.OmegaConf.create({
+        'command': 'diagnose-overfit',
+    })
+
+    root = resolver_mod.resolve_configs(
+        config=cfg_dict,
+        use_additional_settings=True,
+    )
+
+    assert root.command == 'diagnose-overfit'
+    assert root.session.engine_exec.use_amp is False
+    assert root.session.engine_optim.lr == 1e-3
+    assert root.session.engine_tasks.loss_configs.focal.gamma == 0.0
+
