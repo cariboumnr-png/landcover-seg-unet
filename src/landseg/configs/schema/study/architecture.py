@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Architecture and geometry hyperparameter search spaces for study sweeps.
-'''
+'''Composite architecture search space configuration.'''
 
 # standard imports
 import dataclasses
@@ -36,30 +32,33 @@ field = dataclasses.field
 
 MODEL_BODIES: list[str] = ['unet', 'unetpp', 'unetppp']
 BOTTLENECKS: list[str] = ['conv', 'transformer', 'hybrid']
+CONDITIONERS: list[list[str]] = [[], ['film'], ['concat'], ['film', 'concat']]
 
 @dataclasses.dataclass
-class DataGeometrySearchSpace(base.BaseConfigSection):
+class DataGeometry(base.BaseConfigSection):
+    '''Data geometry search space.'''
     patch_size: tuple[int, int, int] = (64, 128, 64)
     batch_size: tuple[int, int, int] = (16, 64, 16)
 
 
 @dataclasses.dataclass
-class ContextWindowSearchSpace(base.BaseConfigSection):
+class ContextWindow(base.BaseConfigSection):
+    '''Context window search space.'''
     patch_size: tuple[int, int, int] = (64, 128, 64)
 
 
 @dataclasses.dataclass
-class ArchitectureSearchSpace(base.BaseConfigSection):
-    model_body: list[str] = field(default_factory=lambda: list(MODEL_BODIES))
+class Architecture(base.BaseConfigSection):
+    '''Model core architecture search space.'''
+    model_body: list[str] = field(default_factory=lambda: MODEL_BODIES)
     base_channel: tuple[int, int, int] = (16, 64, 16)
-    bottleneck: list[str] = field(default_factory=lambda: list(BOTTLENECKS))
+    bottleneck: list[str] = field(default_factory=lambda: BOTTLENECKS)
 
 
 @dataclasses.dataclass
-class BottleneckSearchSpace(base.BaseConfigSection):
-    bottleneck: list[str] = field(
-        default_factory=lambda: list(BOTTLENECKS)
-    )
+class Bottleneck(base.BaseConfigSection):
+    '''Bottleneck search space.'''
+    bottleneck: list[str] = field(default_factory=lambda: BOTTLENECKS)
     num_conv_blocks: tuple[int, int, int] = (1, 4, 1)
     num_transformer_blocks: tuple[int, int, int] = (1, 4, 1)
     num_heads: list[int] = field(default_factory=lambda: [2, 4, 8])
@@ -69,29 +68,19 @@ class BottleneckSearchSpace(base.BaseConfigSection):
 
 
 @dataclasses.dataclass
-class ConditioningSearchSpace(base.BaseConfigSection):
-    conditioners: list[list[str]] = field(
-        default_factory=lambda: [[], ['film'], ['concat'], ['film', 'concat']]
-    )
+class Conditioning(base.BaseConfigSection):
+    '''Conditioner search space.'''
+    conditioners: list[list[str]] = field(default_factory=lambda: CONDITIONERS)
 
 
 @dataclasses.dataclass
 class ArchitectureSearchConfig(base.BaseConfigSection):
-    data_geometry: DataGeometrySearchSpace = field(
-        default_factory=DataGeometrySearchSpace
-    )
-    context_window: ContextWindowSearchSpace = field(
-        default_factory=ContextWindowSearchSpace
-    )
-    architecture: ArchitectureSearchSpace = field(
-        default_factory=ArchitectureSearchSpace
-    )
-    bottleneck: BottleneckSearchSpace = field(
-        default_factory=BottleneckSearchSpace
-    )
-    conditioning: ConditioningSearchSpace = field(
-        default_factory=ConditioningSearchSpace
-    )
+    '''Composite architecture search space configuration.'''
+    data_geometry: DataGeometry = field(default_factory=DataGeometry)
+    context_window: ContextWindow = field(default_factory=ContextWindow)
+    architecture: Architecture = field(default_factory=Architecture)
+    bottleneck: Bottleneck = field(default_factory=Bottleneck)
+    conditioning: Conditioning = field(default_factory=Conditioning)
 
     def validate(self) -> None:
         self.data_geometry.validate()

@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Study sweep hyperparameter optimization configuration.
-'''
+'''Study sweep hyperparameter optimization configuration.'''
 
 # standard imports
 import dataclasses
@@ -33,6 +29,7 @@ import landseg.configs.schema.base as base
 
 @dataclasses.dataclass
 class StudySweepConfig(base.BaseConfigSection):
+    '''Study sweep hyperparameter optimization configuration.'''
     study_name: str = 'study_test'
     storage: str = 'sqlite:///optuna.db'
     preset_name: str = 'base'

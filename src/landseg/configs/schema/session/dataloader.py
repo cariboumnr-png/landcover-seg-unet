@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Session dataloader configs
-'''
+'''Session dataloader configs.'''
 
 # standard imports
 import dataclasses
@@ -33,6 +29,7 @@ import landseg.configs.schema.base as base
 
 @dataclasses.dataclass
 class DataLoaderConfig(base.BaseConfigSection):
+    '''Session dataloader configs.'''
     patch_size: int = 128
     batch_size: int = 16
 

@@ -32,9 +32,6 @@ import typing
 import landseg.configs.schema.base as base
 
 
-SPLITS = ['val', 'test']
-
-
 @dataclasses.dataclass
 class EvaluationConfig(base.BaseConfigSection):
     checkpoint: str | None = None

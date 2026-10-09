@@ -28,30 +28,11 @@ Pipeline execution
 # standard imports
 import typing
 # local imports
+import landseg._constants as c
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.preflight as preflight
 import landseg.execution.workflows as workflows
-
-
-COMMANDS = typing.Literal[
-    'default',
-    'world-grid',
-    'data-harmonize',
-    'data-ingest',
-    'data-prepare',
-    'diagnose-overfit',
-    'model-evaluate',
-    'model-train',
-    'batch-ingest',
-    'e2e-intake',
-    'e2e-experiment',
-    'end-to-end-intake',
-    'end-to-end-experiment',
-    'preflight',
-    'study-analysis',
-    'study-sweep'
-]
 
 
 # ----- public functions
@@ -104,6 +85,6 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
             pipelines.ModelEvaluation(root_config).run()
 
         case _:
-            raise KeyError(f'Unknown command: {command}; allowed: {COMMANDS}')
+            raise KeyError(f'Unknown command: {command}; allowed: {c.COMMANDS}')
 
     return results

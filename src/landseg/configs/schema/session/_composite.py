@@ -21,9 +21,7 @@
 
 # pylint: disable=missing-class-docstring
 
-'''
-Session config section
-'''
+'''Session configuration section'''
 
 # standard imports
 import dataclasses

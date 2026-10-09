@@ -21,9 +21,7 @@
 
 # pylint: disable=missing-class-docstring
 
-'''
-Model architecture schema. Field validation pending
-'''
+'''Model architecture schema. Field validation pending'''
 
 # standard imports
 import dataclasses

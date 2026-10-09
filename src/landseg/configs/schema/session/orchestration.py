@@ -20,11 +20,8 @@
 # =========================================================================== #
 
 # pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
 
-'''
-Session schema
-'''
+'''Session orchestration configuration'''
 
 # standard imports
 import dataclasses

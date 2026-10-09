@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Objective, loss, and regularization search spaces for study sweeps.
-'''
+'''Objective, loss, and regularization search spaces for study sweeps.'''
 
 # standard imports
 import dataclasses
@@ -35,61 +31,54 @@ field = dataclasses.field
 
 
 @dataclasses.dataclass
-class LossBalanceSearchSpace(base.BaseConfigSection):
+class LossBalance(base.BaseConfigSection):
+    '''Loss weights search space.'''
     focal_weight: tuple[float, float] = (0.0, 1.0)
     dice_weight: tuple[float, float] = (0.0, 1.0)
 
 
 @dataclasses.dataclass
-class LossAuxiliarySearchSpace(base.BaseConfigSection):
+class LossAuxiliary(base.BaseConfigSection):
+    '''Auxiliary loss weight search space.'''
     spectral_weight: tuple[float, float] = (0.0, 1e-2)
     tv_weight: tuple[float, float] = (0.0, 1e-3)
 
 
 @dataclasses.dataclass
-class RegularizationSearchSpace(base.BaseConfigSection):
+class Regularization(base.BaseConfigSection):
+    ''''Regularization search space.'''
     consistency_lambda: tuple[float, float] = (0.0, 1.0)
 
 
 @dataclasses.dataclass
-class HeadWeightsSearchSpace(base.BaseConfigSection):
+class HeadWeights(base.BaseConfigSection):
+    '''Head weights search space.'''
     logit_adjust_alpha: tuple[float, float] = (0.0, 2.0)
 
 
 @dataclasses.dataclass
-class MtlJointSearchSpace(base.BaseConfigSection):
+class MtlJoint(base.BaseConfigSection):
+    '''MTL search space.'''
     consistency_lambda: tuple[float, float] = (0.0, 1.0)
     logit_adjust_alpha: tuple[float, float] = (0.0, 2.0)
 
 
 @dataclasses.dataclass
-class HierarchySearchSpace(base.BaseConfigSection):
+class Hierarchy(base.BaseConfigSection):
+    '''Hierarchy search space.'''
     consistency_lambda: tuple[float, float] = (0.0, 1.0)
-    consistency_reduction: list[str] = field(
-        default_factory=lambda: ['mean', 'sum']
-    )
+    consistency_reduction: list[str] = field(default_factory=lambda: ['mean', 'sum'])
 
 
 @dataclasses.dataclass
 class ObjectivesSearchConfig(base.BaseConfigSection):
-    loss_balance: LossBalanceSearchSpace = field(
-        default_factory=LossBalanceSearchSpace
-    )
-    loss_auxiliary: LossAuxiliarySearchSpace = field(
-        default_factory=LossAuxiliarySearchSpace
-    )
-    regularization: RegularizationSearchSpace = field(
-        default_factory=RegularizationSearchSpace
-    )
-    head_weights: HeadWeightsSearchSpace = field(
-        default_factory=HeadWeightsSearchSpace
-    )
-    mtl_joint: MtlJointSearchSpace = field(
-        default_factory=MtlJointSearchSpace
-    )
-    hierarchy: HierarchySearchSpace = field(
-        default_factory=HierarchySearchSpace
-    )
+    '''Objective search space configuration.'''
+    loss_balance: LossBalance = field(default_factory=LossBalance)
+    loss_auxiliary: LossAuxiliary = field(default_factory=LossAuxiliary)
+    regularization: Regularization = field(default_factory=Regularization)
+    head_weights: HeadWeights = field(default_factory=HeadWeights)
+    mtl_joint: MtlJoint = field(default_factory=MtlJoint)
+    hierarchy: Hierarchy = field(default_factory=Hierarchy)
 
     def validate(self) -> None:
         self.loss_balance.validate()

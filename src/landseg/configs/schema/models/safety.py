@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Model architecture schema
-'''
+'''Model numeric safety configuration.'''
 
 # standard imports
 import dataclasses
@@ -33,6 +29,7 @@ import landseg.configs.schema.base as base
 
 @dataclasses.dataclass
 class NumericSafety(base.BaseConfigSection):
+    '''Model numeric safety configuration.'''
     enable_clamp: bool = True
     clamp_range: tuple[float, float] = (1e-4, 1e4)
 

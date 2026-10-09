@@ -74,7 +74,7 @@ def test_study_config_custom_objective():
     When: Passing custom architecture to `StudyConfig`.
     Then: Store specified model bodies and base channel choices.
     '''
-    custom_arch_space = architecture_sec.ArchitectureSearchSpace(
+    custom_arch_space = architecture_sec.Architecture(
         model_body=['unet'],
         base_channel=(32, 64, 32),
     )

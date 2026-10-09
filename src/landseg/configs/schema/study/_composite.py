@@ -21,9 +21,7 @@
 
 # pylint: disable=missing-class-docstring
 
-'''
-Study configuration section.
-'''
+'''Study configuration section.'''
 
 # standard imports
 import dataclasses
@@ -44,6 +42,7 @@ StudySweep = sweep_sec.StudySweepConfig
 
 @dataclasses.dataclass
 class StudyConfig(base.BaseConfigSection):
+    '''Composite study configuration section.'''
     optimization: OptimizationSearch = field(default_factory=OptimizationSearch)
     architecture: ArchitectureSearch = field(default_factory=ArchitectureSearch)
     objectives: ObjectivesSearch = field(default_factory=ObjectivesSearch)

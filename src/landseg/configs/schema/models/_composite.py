@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Models configs section
-'''
+'''Models configuration section'''
 
 # standard imports
 import dataclasses
@@ -46,6 +42,7 @@ NumericSafety = safety_sec.NumericSafety
 
 @dataclasses.dataclass
 class ModelsConfig(base.BaseConfigSection):
+    '''Composite configuration section for `models` module.'''
     model_body: str = 'unet'
     model_body_registry: dict[str, typing.Any] = field(default_factory=default_bodies)
     bottleneck: str = 'conv'

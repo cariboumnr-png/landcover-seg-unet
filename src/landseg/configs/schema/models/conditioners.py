@@ -26,7 +26,6 @@ Model architecture schema
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import typing
 # local imports
