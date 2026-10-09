@@ -47,4 +47,5 @@ class EvaluationConfig(base.BaseConfigSection):
 
     def validate(self) -> None:
         self.require_attr_type_range('split', str, ['val', 'test'])
-        self.require_file(self.checkpoint, 'Checkpoint')
+        if self.checkpoint is not None:
+            self.require_file(self.checkpoint, 'Checkpoint')

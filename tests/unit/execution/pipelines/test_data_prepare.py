@@ -64,8 +64,8 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     transform_cfg.output_dpath = str(tmp_path / 'prepared')
     transform_cfg.rebuild = True
 
-    transform_cfg.catalog.valid_pxs = {'image': 0.05}
-    transform_cfg.catalog.focal_target = None
+    transform_cfg.datasetview.valid_pxs = {'image': 0.05}
+    transform_cfg.datasetview.focal_target = None
 
     transform_cfg.partition.val_ratio = 0.2
     transform_cfg.partition.test_ratio = 0.1

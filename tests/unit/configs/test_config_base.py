@@ -43,16 +43,17 @@ def test_file_exists_and_require_file(tmp_path):
     dummy_file = tmp_path / 'test.txt'
     dummy_file.write_text('content')
 
-    # require_file passes silently for existing file or None / empty
+    # require_file passes silently for existing file or None
     base.BaseConfigSection.require_file(str(dummy_file), 'dummy')
     base.BaseConfigSection.require_file(None, 'none_path')
-    base.BaseConfigSection.require_file('', 'empty_path')
 
-    # require_file raises ConfigValidationError for missing path
-    with pytest.raises(base.ConfigValidationError, match='is not file'):
+    # require_file raises ConfigValidationError for missing path or empty
+    with pytest.raises(base.ConfigValidationError, match='Invalid file'):
         base.BaseConfigSection.require_file(
             str(tmp_path / 'missing.txt'), 'missing'
         )
+    with pytest.raises(base.ConfigValidationError, match='Invalid file'):
+        base.BaseConfigSection.require_file('', 'empty_path')
 
 
 # ----- `BaseConfigSection` type and range validation tests

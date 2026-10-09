@@ -32,6 +32,7 @@ import landseg.configs.schema.base as base
 import landseg.configs.schema.session as session_mod
 import landseg.configs.schema.session.dataloader as dataloader_sec
 import landseg.configs.schema.session.engine as engine_sec
+import landseg.configs.schema.session.evaluation as eval_sec
 import landseg.configs.schema.session.orchestration as orchestration_sec
 
 
@@ -116,3 +117,31 @@ def test_session_subsections_validation():
             start_epoch=10,
             num_epochs=5,
         ).validate()
+
+
+# ----- `EvaluationConfig` tests
+def test_evaluation_config_validation(tmp_path):
+    '''
+    Given: `EvaluationConfig` with various checkpoint paths and splits.
+    When: `EvaluationConfig.validate()` is called.
+    Then: Pass for None or valid files, and raise ConfigValidationError.
+    '''
+    # default None checkpoint passes
+    cfg = eval_sec.EvaluationConfig()
+    cfg.validate()
+
+    # existing checkpoint passes
+    dummy_ckpt = tmp_path / 'model.pt'
+    dummy_ckpt.write_text('dummy')
+    eval_sec.EvaluationConfig(checkpoint=str(dummy_ckpt)).validate()
+
+    # missing checkpoint raises
+    with pytest.raises(base.ConfigValidationError):
+        eval_sec.EvaluationConfig(
+            checkpoint=str(tmp_path / 'missing.pt')
+        ).validate()
+
+    # invalid split raises
+    with pytest.raises(base.ConfigValidationError):
+        eval_sec.EvaluationConfig(split='invalid').validate()
+

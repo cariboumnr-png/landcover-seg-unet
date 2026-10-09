@@ -33,10 +33,10 @@ def test_api_run_success(mocker):
     '''
     Given: A valid `RootConfig` instance.
     When: Calling `api.run`.
-    Then: Delegate execution to `execution.execute_pipeline`.
+    Then: Delegate execution to `execution.execute_command`.
     '''
     mock_exec = mocker.patch(
-        'landseg.execution.execute_pipeline',
+        'landseg.execution.execute_command',
         return_value={'status': 'SUCCESS'}
     )
     cfg = configs.RootConfig()
@@ -50,11 +50,11 @@ def test_api_run_success(mocker):
 def test_api_run_keyboard_interrupt(mocker):
     '''
     Given: A pipeline run that is interrupted by user.
-    When: `execution.execute_pipeline` raises KeyboardInterrupt.
+    When: `execution.execute_command` raises KeyboardInterrupt.
     Then: Propagate KeyboardInterrupt.
     '''
     mocker.patch(
-        'landseg.execution.execute_pipeline',
+        'landseg.execution.execute_command',
         side_effect=KeyboardInterrupt
     )
     cfg = configs.RootConfig()
@@ -66,11 +66,11 @@ def test_api_run_keyboard_interrupt(mocker):
 def test_api_run_exception(mocker):
     '''
     Given: A pipeline run that raises an unhandled exception.
-    When: `execution.execute_pipeline` raises RuntimeError.
+    When: `execution.execute_command` raises RuntimeError.
     Then: Log error and re-raise the exception.
     '''
     mocker.patch(
-        'landseg.execution.execute_pipeline',
+        'landseg.execution.execute_command',
         side_effect=RuntimeError('Pipeline failed')
     )
     cfg = configs.RootConfig()

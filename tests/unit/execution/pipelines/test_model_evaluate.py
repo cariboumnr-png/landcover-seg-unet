@@ -63,7 +63,7 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
         omegaconf.OmegaConf.to_object(schema)
     )
 
-    with pytest.raises(ValueError, match='Invalid split'):
+    with pytest.raises(configs.schema.base.ConfigValidationError):
         config.session.evaluation.validate()
 
 

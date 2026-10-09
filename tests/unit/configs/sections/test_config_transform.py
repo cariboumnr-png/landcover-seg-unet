@@ -48,29 +48,29 @@ def test_preparation_defaults_and_validation():
     assert dt.hydration.max_skew_rate == 10.0
 
 
-def test_preparation_features_validation():
+# ----- `DatasetViewConfig` tests
+def test_dataset_view_features_validation():
     '''
-    Given: `DataPreparationConfig` with valid and invalid features types.
-    When: `DataPreparationConfig.validate()` runs.
+    Given: `DatasetViewConfig` with valid and invalid features types.
+    When: `DatasetViewConfig.validate()` runs.
     Then: Accept string or list values, or raise ValueError.
     '''
     # valid features configurations
-    valid = prep_sec.DataPreparationConfig(
+    valid = prep_sec.DatasetViewConfig(
         features={'sentinel2': 'rgb_nir', 'spectral': ['ndvi']}
     )
     valid.validate()
 
     # invalid value type
-    invalid = prep_sec.DataPreparationConfig(features={'topo': 123})
+    invalid = prep_sec.DatasetViewConfig(features={'topo': 123})
     with pytest.raises(ValueError, match='Expected type'):
         invalid.validate()
 
 
-# ----- `CatalogView` tests
-def test_catalog_view_validation():
+def test_dataset_view_threshold_validation():
     '''
-    Given: `CatalogView` with valid and out-of-range thresholds.
-    When: `CatalogView.validate()` is called.
+    Given: `DatasetViewConfig` with valid and out-of-range thresholds.
+    When: `DatasetViewConfig.validate()` is called.
     Then: Validate pixel threshold boundaries or raise ValueError.
     '''
     catalog = prep_sec.DatasetViewConfig(valid_pxs={'image': 0.8, 'label': 0.95})

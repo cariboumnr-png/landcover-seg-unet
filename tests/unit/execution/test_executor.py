@@ -30,7 +30,7 @@ import landseg.execution.pipelines as pipelines
 import landseg.execution.workflows as workflows
 
 
-# ----- `execute_pipeline` tests
+# ----- `execute_command` tests
 @pytest.mark.parametrize('command,target_mod,target_attr,is_class', [
     ('default', workflows, 'execute_default_action', False),
     ('world-grid', pipelines, 'WorldGridGeneration', True),
@@ -46,7 +46,7 @@ import landseg.execution.workflows as workflows
     ('study-analysis', workflows, 'execute_study_analysis', False),
     ('study-sweep', workflows, 'execute_study_sweep', False),
 ])
-def test_execute_pipeline_dispatch(
+def test_execute_command_dispatch(
     monkeypatch,
     command: str,
     target_mod,
@@ -55,7 +55,7 @@ def test_execute_pipeline_dispatch(
 ):
     '''
     Given: A RootConfig with a registered pipeline command.
-    When: `execute_pipeline` is called.
+    When: `execute_command` is called.
     Then: Dispatch correctly to target pipeline or workflow callable.
     '''
     called = []
@@ -78,7 +78,7 @@ def test_execute_pipeline_dispatch(
         monkeypatch.setattr(target_mod, target_attr, mock_workflow)
 
     config = configs.RootConfig(command=command)
-    result = executor.execute_pipeline(config)
+    result = executor.execute_command(config)
 
     assert len(called) == 1
     assert called[0] is config
@@ -86,10 +86,10 @@ def test_execute_pipeline_dispatch(
         assert result == 'workflow_run_result'
 
 
-def test_execute_pipeline_preflight_dispatch(mocker):
+def test_execute_command_preflight_dispatch(mocker):
     '''
     Given: A RootConfig with command='preflight'.
-    When: `execute_pipeline` is called.
+    When: `execute_command` is called.
     Then: Dispatch to `preflight.run_preflight`.
     '''
     mock_run = mocker.patch(
@@ -100,15 +100,15 @@ def test_execute_pipeline_preflight_dispatch(mocker):
         command='preflight',
         execution=configs.ExecutionContext(preflight_target='model-train'),
     )
-    result = executor.execute_pipeline(config)
+    result = executor.execute_command(config)
     mock_run.assert_called_once_with(config)
     assert result == 'preflight_mock_result'
 
 
-def test_execute_pipeline_preflight_invalid_target_raises_key_error():
+def test_execute_command_preflight_invalid_target_raises_key_error():
     '''
     Given: A RootConfig with command='preflight' and unknown target.
-    When: `execute_pipeline` is called.
+    When: `execute_command` is called.
     Then: Raise a KeyError from the preflight engine.
     '''
     config = configs.RootConfig(
@@ -116,18 +116,19 @@ def test_execute_pipeline_preflight_invalid_target_raises_key_error():
         execution=configs.ExecutionContext(preflight_target='unknown-target'),
     )
     with pytest.raises(KeyError, match='not supported for preflight'):
-        executor.execute_pipeline(config)
+        executor.execute_command(config)
 
 
-def test_execute_pipeline_unknown_command_raises_key_error():
+def test_execute_command_unknown_command_raises_key_error():
     '''
     Given: A RootConfig with an unrecognized pipeline command.
-    When: `execute_pipeline` is called.
+    When: `execute_command` is called.
     Then: Raise a KeyError.
     '''
     config = configs.RootConfig(
         command='non-existent-command'
     )
     with pytest.raises(KeyError, match='Unknown command'):
-        executor.execute_pipeline(config)
+        executor.execute_command(config)
+
 

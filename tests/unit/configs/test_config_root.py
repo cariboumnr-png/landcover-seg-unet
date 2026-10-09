@@ -61,28 +61,15 @@ def test_root_config_defaults_and_as_dict():
     assert 'models' in cfg_dict
 
 
-def test_root_config_hyperparameter_setters():
+def test_root_config_command_validation():
     '''
-    Given: A default `RootConfig` instance.
-    When: Invoking hyperparameter setter helper methods.
-    Then: Mutate nested session data loader and optimizer fields.
+    Given: A `RootConfig` instance with invalid command string.
+    When: `RootConfig.validate()` is called.
+    Then: Raise ConfigValidationError for unsupported commands.
     '''
-    root = root_mod.RootConfig()
-
-    root.set_data_patch_size(256)
-    assert root.session.dataloader.patch_size == 256
-
-    root.set_data_batch_size(32)
-    assert root.session.dataloader.batch_size == 32
-
-    root.set_optimizer_lr(5e-4)
-    assert root.session.engine_optim.lr == 5e-4
-
-    root.set_optimizer_weight_decay(1e-4)
-    assert root.session.engine_optim.weight_decay == 1e-4
-
-    root.set_optimizer_type('Adam')
-    assert root.session.engine_optim.opt_cls == 'Adam'
+    root = root_mod.RootConfig(command='unsupported_command')
+    with pytest.raises(base.ConfigValidationError):
+        root.validate()
 
 
 def test_root_config_validate(tmp_path):
