@@ -98,10 +98,8 @@ def test_execute_pipeline_preflight_dispatch(mocker):
         return_value='preflight_mock_result'
     )
     config = configs.RootConfig(
-        command=secs.CommandConfig(
-            name='preflight',
-            preflight=secs.commands._PreflightConfig(target='model-train'),
-        )
+        command=secs.CommandConfig(name='preflight'),
+        execution=configs.ExecutionContext(preflight_target='model-train'),
     )
     result = executor.execute_pipeline(config)
     mock_run.assert_called_once_with(config)
@@ -115,10 +113,8 @@ def test_execute_pipeline_preflight_invalid_target_raises_key_error():
     Then: Raise a KeyError from the preflight engine.
     '''
     config = configs.RootConfig(
-        command=secs.CommandConfig(
-            name='preflight',
-            preflight=secs.commands._PreflightConfig(target='unknown-target'),
-        )
+        command=secs.CommandConfig(name='preflight'),
+        execution=configs.ExecutionContext(preflight_target='unknown-target'),
     )
     with pytest.raises(KeyError, match='not supported for preflight'):
         executor.execute_pipeline(config)

@@ -131,13 +131,9 @@ def export_preflight_report(
     now = datetime.datetime.now()
     uid = f'{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}'
 
-    if root_config.command.preflight.report_path:
-        report_fp = root_config.command.preflight.report_path
-        report_dir = os.path.dirname(report_fp)
-    else:
-        effective_exp_root = exp_root or root_config.execution.exp_root
-        report_dir = os.path.join(effective_exp_root, 'preflight')
-        report_fp = os.path.join(report_dir, f'preflight_report_{uid}.json')
+    effective_exp_root = exp_root or root_config.execution.exp_root
+    report_dir = os.path.join(effective_exp_root, 'preflight')
+    report_fp = os.path.join(report_dir, f'preflight_report_{uid}.json')
 
     if report_dir:
         os.makedirs(report_dir, exist_ok=True)
@@ -166,7 +162,7 @@ def export_preflight_report(
         'uid': uid,
         'target': target,
         'status': 'READY' if all_ready else 'BLOCKED',
-        'strict': bool(root_config.command.preflight.strict),
+        'strict': bool(root_config.execution.preflight_strict_mode),
         'is_ready': all_ready,
         'summary': {
             'total_probes': pass_count + warn_count + fail_count + skip_count,

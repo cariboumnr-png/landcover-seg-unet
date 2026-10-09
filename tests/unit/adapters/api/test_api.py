@@ -95,7 +95,7 @@ def test_api_run_preflight_delegates(mocker):
 
     result = api.run_preflight(cfg, target='model-train', strict=True)
     assert result == 'report'
-    assert cfg.command.preflight.strict is True
+    assert cfg.execution.preflight_strict_mode is True
     mock_preflight.assert_called_once_with(
         root_config=cfg,
         target='model-train',

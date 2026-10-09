@@ -2,9 +2,3 @@
 
 name: preflight
 
-preflight:
-  target: all
-  strict: false
-  export_report: true
-  report_path: null
-  check_gpu: true

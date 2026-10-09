@@ -34,62 +34,25 @@ def test_command_config_defaults():
     '''
     Given: Default instantiation parameters for `CommandConfig`.
     When: Instantiating `CommandConfig` without arguments.
-    Then: Initialize default command name and sweep trial counts.
+    Then: Initialize default command name and model_train sub-config.
     '''
     cfg = commands.CommandConfig()
     assert cfg.name == 'default'
-    assert isinstance(cfg.preflight, commands._PreflightConfig)
     assert isinstance(cfg.model_train, commands._TrainModel)
-    assert isinstance(cfg.model_evaluate, commands._EvaluateModel)
-    assert isinstance(cfg.study_sweep, commands._StudySweep)
-
-    assert cfg.preflight.target == 'all'
-    assert cfg.preflight.strict is False
-    assert cfg.preflight.export_report is True
-    assert cfg.preflight.report_path is None
-    assert cfg.preflight.check_gpu is True
-
-    assert cfg.model_evaluate.checkpoint is None
-    assert cfg.model_evaluate.split == 'test'
-    assert cfg.model_evaluate.export_previews is False
-
-    assert cfg.study_sweep.study_name == 'study_test'
-    assert cfg.study_sweep.preset_name == 'base'
-    assert cfg.study_sweep.n_trials == 50
 
 
 def test_command_config_custom_initialization():
     '''
-    Given: Custom `_EvaluateModel` and `_StudySweep` sub-configs.
-    When: Instantiating `CommandConfig` with custom sub-configurations.
-    Then: Store specified sub-configurations on attributes.
+    Given: Custom `_TrainModel` sub-config.
+    When: Instantiating `CommandConfig` with custom sub-configuration.
+    Then: Store specified sub-configuration on attribute.
     '''
-    preflight_cfg = commands._PreflightConfig(
-        target='model-train',
-        strict=True,
-    )
-    eval_cfg = commands._EvaluateModel(
-        checkpoint='/path/to/ckpt.pt',
-        split='val',
-        export_previews=True,
-    )
-    sweep_cfg = commands._StudySweep(
-        study_name='custom_study',
-        n_trials=100,
-    )
+    train_cfg = commands._TrainModel()
     cfg = commands.CommandConfig(
         name='experiment_1',
-        preflight=preflight_cfg,
-        model_evaluate=eval_cfg,
-        study_sweep=sweep_cfg,
+        model_train=train_cfg,
     )
 
     assert cfg.name == 'experiment_1'
-    assert cfg.preflight.target == 'model-train'
-    assert cfg.preflight.strict is True
-    assert cfg.model_evaluate.checkpoint == '/path/to/ckpt.pt'
-    assert cfg.model_evaluate.split == 'val'
-    assert cfg.model_evaluate.export_previews is True
-    assert cfg.study_sweep.study_name == 'custom_study'
-    assert cfg.study_sweep.n_trials == 100
+    assert cfg.model_train is train_cfg
 

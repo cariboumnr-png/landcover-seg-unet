@@ -49,7 +49,9 @@ class ExecutionContext:
     exp_root: str = './experiment' # root directory for this experiment run
     user_cfg: str | None = None # external user configs
     dev_cfg: str | None = None # developer-only override config
-    cli_mode: bool = False # indicates whether the execution was initiated through the CLI resolver
+    cli_mode: bool = False # indicates whether execution initiated via CLI
+    preflight_target: str | None = None
+    preflight_strict_mode: bool = False
 
     @property
     def console_level(self) -> int | None:

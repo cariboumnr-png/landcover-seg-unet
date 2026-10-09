@@ -25,8 +25,7 @@
 '''
 Pipeline command schema specifications.
 
-Defines sub-command configurations for training, evaluation, sweeps,
-and preflight readiness checks.
+Defines sub-command configurations for training.
 
 Public APIs:
     - `CommandConfig`: Root command configuration section.
@@ -47,24 +46,11 @@ class _TrainModel:
     def validate(self) -> None:...
 
 
-@dataclasses.dataclass
-class _PreflightConfig:
-    target: str = 'all'
-    strict: bool = False
-    export_report: bool = True
-    report_path: str | None = None
-    check_gpu: bool = True
-
-    def validate(self):...
-
-
 # ----- public dataclasses
 @dataclasses.dataclass
 class CommandConfig:
     name: str = 'default'
-    preflight: _PreflightConfig = field(default_factory=_PreflightConfig)
     model_train: _TrainModel = field(default_factory=_TrainModel)
 
     def validate(self):
-        self.preflight.validate()
         self.model_train.validate()
