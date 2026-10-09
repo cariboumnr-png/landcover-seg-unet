@@ -19,12 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
-'''
-World grid configs
-'''
+'''Configuration for `geopipe.grid` module.'''
 
 # standard imports
 import dataclasses
@@ -32,12 +27,10 @@ import re
 # local imports
 import landseg.configs.schema.base as base
 
-# alias
-field = dataclasses.field
-
 
 @dataclasses.dataclass
 class GridSpecs(base.BaseConfigSection):
+    '''Configuration for `geopipe.grid` module.'''
     tile_size: tuple[int, int] = (256, 256)
     tile_stride: tuple[int, int] = (128, 128)
     ref_fpath: str | None = None
@@ -61,26 +54,10 @@ class GridSpecs(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class WorldGridConfig(base.BaseConfigSection):
+    '''Configuration for `geopipe.grid` module.'''
     mode: str = 'ref'
-    params: GridSpecs = field(default_factory=GridSpecs)
+    params: GridSpecs = dataclasses.field(default_factory=GridSpecs)
     output_dpath: str = 'experiment/artifacts/world_grids'
-
-    @property
-    def tile_specs_tuple(self) -> tuple[int, int, int, int]:
-        '''Tile specs in px as (row, col, overlap_row, overlap_col).'''
-        return (
-            self.params.tile_size[0],
-            self.params.tile_size[1],
-            self.params.tile_stride[0],
-            self.params.tile_stride[1]
-        )
-
-    @property
-    def spatial_resolution(self) -> float | None:
-        '''Return resolution (CRS units per pixel). Assume square px.'''
-        if self.params.pixel_size:
-            return self.params.pixel_size[0]
-        return None
 
     def validate(self) -> None:
         self.params.validate()

@@ -88,7 +88,6 @@ def test_grid_cfg_validation(tmp_path):
         )
     )
     grid_ref.validate()
-    assert grid_ref.tile_specs_tuple == (256, 256, 0, 0)
 
     # missing reference file
     grid_missing_ref = grid_sec.WorldGridConfig(
@@ -112,7 +111,6 @@ def test_grid_cfg_validation(tmp_path):
         )
     )
     grid_manual.validate()
-    assert grid_manual.spatial_resolution == 10.0
 
     # invalid manual CRS
     grid_invalid_crs = grid_sec.WorldGridConfig(

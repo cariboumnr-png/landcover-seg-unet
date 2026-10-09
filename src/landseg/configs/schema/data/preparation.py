@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Data preparation configs
-'''
+'''Configuration for `geopipe.preparation` module.'''
 
 # standard imports
 import dataclasses
@@ -36,20 +32,32 @@ field = dataclasses.field
 
 
 @dataclasses.dataclass
-class CatalogView(base.BaseConfigSection):
+class DatasetViewConfig(base.BaseConfigSection):
+    '''Configuration for `geopipe.preparation.dataset` module.'''
     valid_pxs: dict[str, float] = field(default_factory=lambda: {'image': 0.9})
     focal_target: str | None = None
     test_catalog: str | None = None
     non_overlapping_test_grid: bool = True
+    features: dict[str, typing.Any] = field(default_factory=dict)
+    targets: dict[str, typing.Any] = field(default_factory=dict)
 
     def validate(self) -> None:
         for k, v in self.valid_pxs.items():
             self.require_type_range(k, 'array_key', str)
             self.require_type_range(v, f'{k} valid threshold', float, (0, 1))
 
+        for k, v in self.features.items():
+            self.require_type_range(k, 'feature_config_name', (str))
+            self.require_type_range(v, 'feature_config', (str, list))
+
+        for k, v in self.targets.items():
+            self.require_type_range(k, 'target_config_name', str)
+            self.require_type_range(v, 'target_config', dict)
+
 
 @dataclasses.dataclass
 class Partition(base.BaseConfigSection):
+    '''Configuration for `geopipe.preparation.partition` module.'''
     val_ratio: float = 0.1
     test_ratio: float = 0.0
     buffer_step: int = 1
@@ -66,6 +74,7 @@ class Partition(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class Scoring(base.BaseConfigSection):
+    '''Configuration for `geopipe.preparation.partition` module.'''
     reward: dict[int, float] = field(default_factory=dict)
     alpha: float = 1.0
     beta: float = 0.0
@@ -77,6 +86,7 @@ class Scoring(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class Hydration(base.BaseConfigSection):
+    '''Configuration for `geopipe.preparation.partition` module.'''
     max_skew_rate: float = 10.0
 
     def validate(self) -> None:
@@ -85,9 +95,8 @@ class Hydration(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class DataPreparationConfig(base.BaseConfigSection):
-    features: dict[str, typing.Any] = field(default_factory=dict)
-    targets: dict[str, typing.Any] = field(default_factory=dict)
-    catalog: CatalogView = field(default_factory=CatalogView)
+    '''Configuration for `geopipe.preparation` module.'''
+    datasetview: DatasetViewConfig = field(default_factory=DatasetViewConfig)
     partition: Partition = field(default_factory=Partition)
     scoring: Scoring = field(default_factory=Scoring)
     hydration: Hydration = field(default_factory=Hydration)
@@ -95,15 +104,7 @@ class DataPreparationConfig(base.BaseConfigSection):
     output_dpath: str = '${execution.exp_root}/artifacts/prepared_data'
 
     def validate(self) -> None:
-        self.catalog.validate()
+        self.datasetview.validate()
         self.partition.validate()
         self.scoring.validate()
         self.hydration.validate()
-
-        for k, v in self.features.items():
-            self.require_type_range(k, 'feature_config_name', (str))
-            self.require_type_range(v, 'feature_config', (str, list))
-
-        for k, v in self.targets.items():
-            self.require_type_range(k, 'target_config_name', str)
-            self.require_type_range(v, 'target_config', dict)

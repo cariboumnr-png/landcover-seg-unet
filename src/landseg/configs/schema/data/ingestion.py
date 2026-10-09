@@ -19,19 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Data ingestion configs
-'''
+'''Configuration for `geopipe.ingestion` module.'''
 
 # standard imports
 import dataclasses
 # local imports
 import landseg.configs.schema.base as base
-
-# alias
-field = dataclasses.field
 
 
 POLICY = ['skip', 'overwrite', 'error']
@@ -39,9 +32,9 @@ TOPO = ['slope', 'tpi']
 SPECTRAL =  ['ndvi', 'ndmi', 'nbr']
 
 
-
 @dataclasses.dataclass
 class Domains(base.BaseConfigSection):
+    '''Configuration for `geopipe.ingestion.domains` module.'''
     valid_threshold: float = 0.7
     target_variance: float = 0.9
 
@@ -52,6 +45,7 @@ class Domains(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class DataBlocks(base.BaseConfigSection):
+    '''Configuration for `geopipe.ingestion.blocks` module.'''
     ignore_index: int = 255
     image_dem_pad: int = 8
     collision_policy: str = 'skip'
@@ -76,8 +70,9 @@ class DataBlocks(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class DataIngestionConfig(base.BaseConfigSection):
-    domains: Domains = field(default_factory=Domains)
-    datablocks: DataBlocks = field(default_factory=DataBlocks)
+    '''Configuration for `geopipe.ingestion` module.'''
+    domains: Domains = dataclasses.field(default_factory=Domains)
+    datablocks: DataBlocks = dataclasses.field(default_factory=DataBlocks)
     rebuild: bool = False
     harmonization_run: int | str | None = None
     output_dpath: str = '${execution.exp_root}/artifacts/ingested_data'

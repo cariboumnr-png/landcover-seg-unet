@@ -19,19 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Data harmonziation configs
-'''
+'''Configuration for `geopipe.harmonization` module.'''
 
 # standard imports
 import dataclasses
 # local imports
 import landseg.configs.schema.base as base
-
-# alias
-field = dataclasses.field
 
 
 CONT = ['cubic', 'bilinear']
@@ -40,6 +33,7 @@ CATE = ['nearest']
 
 @dataclasses.dataclass
 class DataHarmonizationConfig(base.BaseConfigSection):
+    '''Configuration for `geopipe.harmonization` module.'''
     dataset_manifest: str = ''
     resampling_continuous: str = 'bilinear'
     resampling_categorical: str = 'nearest'

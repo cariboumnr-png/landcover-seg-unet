@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Data configs section
-'''
+'''Configuration for `geopipe` module.'''
 
 # standard imports
 import dataclasses
@@ -37,7 +33,6 @@ import landseg.configs.schema.data.world_grid as world_grid_sec
 
 # ----- aliases
 field = dataclasses.field
-
 WorldGrid = world_grid_sec.WorldGridConfig
 DataHarmonization = harmonization_sec.DataHarmonizationConfig
 DataIngestion = ingestion_sec.DataIngestionConfig
@@ -47,6 +42,7 @@ DataSpecification = specification_sec.DataSpecificationConfig
 
 @dataclasses.dataclass
 class DataConfig(base.BaseConfigSection):
+    '''Configuration for `geopipe` module.'''
     world_grid: WorldGrid = field(default_factory=WorldGrid)
     harmonization: DataHarmonization = field(default_factory=DataHarmonization)
     ingestion: DataIngestion = field(default_factory=DataIngestion)

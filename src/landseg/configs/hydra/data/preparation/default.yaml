@@ -1,11 +1,9 @@
-# feature channels selection by raster name ({} selects all bands)
-features: {}
-
-# target reclassification by raster name ({} uses canonical base classes)
-targets: {}
-
-# catalog datablocks view settings
-catalog:
+# dataset view settings
+datasetview:
+  # feature channels selection by raster name ({} selects all bands)
+  features: {}
+  # target reclassification by raster name ({} uses canonical base classes)
+  targets: {}
   valid_pxs:
     image: 0.9 # at least 90% valid image pixels
   focal_target: null

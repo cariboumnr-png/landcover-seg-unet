@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Data specifiction configs (`DataSpecs` building)
-'''
+'''Configuration for `DataSpecs` building.'''
 
 # standard imports
 import dataclasses
@@ -33,6 +29,7 @@ import landseg.configs.schema.base as base
 
 @dataclasses.dataclass
 class DataSpecificationConfig(base.BaseConfigSection):
+    '''Configuration for `DataSpecs` building.'''
     domain_ids_name: str | None = None
     domain_vec_name: str | None = None
 
