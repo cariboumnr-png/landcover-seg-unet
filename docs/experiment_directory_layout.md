@@ -65,6 +65,7 @@ pipeline artifacts, and session execution results under an experiment root direc
 │   │
 │   ├── ingested_data/                           # Produced by 'data-ingest' pipeline
 │   │   ├── ingestion_runs.json                  # Cumulative ingestion run ledger
+│   │   ├── block_windows.json                   # Grid-aligned spatial window index manifests
 │   │   ├── run_0001/                            # Serialized batch run directory
 │   │   │   ├── ingest_report.json               # Ingestion execution summary report
 │   │   │   ├── collisions.json                  # Inter-batch spatial collision ledger
@@ -74,8 +75,6 @@ pipeline artifacts, and session execution results under an experiment root direc
 │   │   │   └── <domain_name>_tiles_<gid>.npz
 │   │   └── data_blocks/                         # Canonical dataset blocks pool (pre-split)
 │   │       ├── blocks/                          # Extracted unnormalized block arrays
-│   │       ├── windows/                         # Grid-aligned spatial window index manifests
-│   │       │   └── windows_<gid>.json *
 │   │       ├── catalog.json                     # Cumulative dataset block catalog & lineage
 │   │       └── schema.json                      # Dataset block structural schema & block_identity
 │   │

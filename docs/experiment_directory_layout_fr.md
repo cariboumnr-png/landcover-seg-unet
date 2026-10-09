@@ -68,6 +68,7 @@ et de résultats (`results/`) correspondants.
 │   │
 │   ├── ingested_data/                           # Produit par le pipeline 'data-ingest'
 │   │   ├── ingestion_runs.json                  # Registre cumulatif d'ingestion
+│   │   ├── block_windows.json                   # Manifestes d'index des fenêtres spatiales
 │   │   ├── run_0001/                            # Répertoire de lot sérialisé
 │   │   │   ├── ingest_report.json               # Rapport de synthèse d'ingestion
 │   │   │   ├── collisions.json                  # Registre des collisions entre lots
@@ -77,8 +78,6 @@ et de résultats (`results/`) correspondants.
 │   │   │   └── <domain_name>_tiles_<gid>.npz
 │   │   └── data_blocks/                         # Bassin canonique de blocs de données
 │   │       ├── blocks/                          # Tableaux bruts non normalisés
-│   │       ├── windows/                         # Manifestes d'index des fenêtres spatiales
-│   │       │   └── windows_<gid>.json *
 │   │       ├── catalog.json                     # Catalogue cumulatif et traçabilité
 │   │       └── schema.json                      # Schéma structurel et block_identity
 │   │

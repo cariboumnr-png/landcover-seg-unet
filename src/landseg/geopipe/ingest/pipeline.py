@@ -65,7 +65,47 @@ def run_data_ingestion(
         )
         return
 
-    # ----- materialize domain maps
+    # ----- build canonical data blocks if provided
+    if not context.has_data:
+        logger.info('Harmonized feature/label rasters not provided')
+    else:
+        logger.info('[START] Canonical data blocks building')
+
+        assert context.features
+
+        data_blocks_inputs = ingest_blocks.BlockBuildingInputs(
+            image_fpath=context.features,
+            label_fpath=context.labels,
+        )
+        data_blocks_config = ingest_blocks.BlockBuildingConfig(
+            dem_pad_px=config.datablocks.image_dem_pad,
+            ignore_index=config.datablocks.ignore_index,
+            add_spectral=config.datablocks.add_spectral,
+            add_topo=config.datablocks.add_topo,
+            artifacts_policy=policy,
+            collision_policy=config.datablocks.collision_policy,
+        )
+        data_blocks_context = ingest_blocks.BlockPipelineRuntimeContext(
+            world_grid=context.grid,
+            block_artifact_paths=ingestion_paths.data_blocks,
+            block_windowns_artifact_fapth=ingestion_paths.windows,
+            collisions_artifacts_fpath=ingestion_paths.collisions,
+            harmonize_run_id=context.harmonization_run_id,
+            ingest_run_id=logger.run_id,
+        )
+
+        ingest_blocks.run_blocks_building(
+            data_blocks_inputs,
+            data_blocks_config,
+            data_blocks_context,
+            logger=logger,
+        )
+
+        assert logger.summary['data_blocks'] # typing
+        d = logger.summary['data_blocks']['duration_sec']
+        logger.info(f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)')
+
+    # ----- materialize domain maps if provided
     if context.domains:
         logger.info('[START] Domain maps preparation')
         domain_paths = ingestion_paths.domains
@@ -91,42 +131,3 @@ def run_data_ingestion(
         logger.info(f'[COMPLETE] Domain maps preparation (D_{d:.2f}s)')
     else:
         logger.info('[NOTE] No domain knowledge layers provided')
-
-    # ----- build canonical data blocks if provided
-    if not context.has_data:
-        logger.info('Harmonized feature/label rasters not provided')
-    else:
-        logger.info('[START] Canonical data blocks building')
-
-        assert context.features
-
-        data_blocks_inputs = ingest_blocks.BlockBuildingInputs(
-            image_fpath=context.features,
-            label_fpath=context.labels,
-        )
-        data_blocks_config = ingest_blocks.BlockBuildingConfig(
-            dem_pad_px=config.datablocks.image_dem_pad,
-            ignore_index=config.datablocks.ignore_index,
-            add_spectral=config.datablocks.add_spectral,
-            add_topo=config.datablocks.add_topo,
-            artifacts_policy=policy,
-            collision_policy=config.datablocks.collision_policy,
-        )
-        data_blocks_context = ingest_blocks.BlockPipelineRuntimeContext(
-            world_grid=context.grid,
-            block_artifact_paths=ingestion_paths.data_blocks,
-            collisions_artifacts_fpath=ingestion_paths.collisions,
-            harmonize_run_id=context.harmonization_run_id,
-            ingest_run_id=logger.run_id,
-        )
-
-        ingest_blocks.run_blocks_building(
-            data_blocks_inputs,
-            data_blocks_config,
-            data_blocks_context,
-            logger=logger,
-        )
-
-        assert logger.summary['data_blocks'] # typing
-        d = logger.summary['data_blocks']['duration_sec']
-        logger.info(f'[COMPLETE] Canonical data blocks preparation (D_{d:.2f}s)')

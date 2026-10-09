@@ -60,7 +60,6 @@ class _PipelinePaths(typing.Protocol):
     def catalog(self) -> str: ...
     @property
     def schema(self) -> str: ...
-    def mapped_window(self, gid: str) -> str: ...
 
 
 # ----- public dataclasses
@@ -69,6 +68,7 @@ class BlockPipelineRuntimeContext:
     '''Run context, e.g., run identity and collision handling.'''
     world_grid: geo_core.GridLayout
     block_artifact_paths: _PipelinePaths
+    block_windowns_artifact_fapth: str
     collisions_artifacts_fpath: str
     harmonize_run_id: str
     ingest_run_id: str
@@ -113,7 +113,7 @@ def run_blocks_building(
         context.world_grid,
         inputs.image_fpath,
         inputs.label_fpath,
-        artifact_paths.mapped_window(context.world_grid.gid),
+        context.block_windowns_artifact_fapth,
         policy=config.artifacts_policy,
     )
 

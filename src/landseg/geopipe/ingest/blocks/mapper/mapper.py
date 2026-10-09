@@ -46,9 +46,10 @@ import landseg.geopipe.ingest.blocks.mapper.geometry as geometry
 class MappedRasterWindows:
     '''Container for output raster read windows and metadata.'''
     grid_id: str                        # world grid identifier
-    tile_shape: tuple[int, int]         # expected window shape (W*H) in px
     image: geo_core.RasterWindowDict   # indexed read windows
     label: geo_core.RasterWindowDict   # indexed read windows (can be empty)
+    tile_shape: tuple[int, int]         # expected window shape (W*H) in px
+    tile_overlap: tuple[int, int]
 
 
 # ----- public functions
@@ -99,7 +100,8 @@ def map_rasters(
         image=_get_windows(world_grid, geom['image_transform'], inside),
         label=_get_windows(world_grid, geom['label_transform'], inside),
         grid_id=world_grid.gid,
-        tile_shape=world_grid.tile_size
+        tile_shape=world_grid.tile_size,
+        tile_overlap=world_grid.tile_overlap,
     )
 
 

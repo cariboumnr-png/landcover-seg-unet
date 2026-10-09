@@ -52,6 +52,10 @@ class IngestionPaths(base.PipelineArtifactsPaths):
         return _DomainMaps(os.path.join(self.root, 'domain_knowledge'))
 
     @property
+    def windows(self):
+        return os.path.join(self.root, 'block_windows.json')
+
+    @property
     def collisions(self) -> str:
         return os.path.join(self.effective_run_folder, 'collisions.json')
 
@@ -59,7 +63,6 @@ class IngestionPaths(base.PipelineArtifactsPaths):
         super()._init_pipeline_folders()
         os.makedirs(self.data_blocks.root, exist_ok=True)
         os.makedirs(self.data_blocks.blocks, exist_ok=True)
-        os.makedirs(self.data_blocks.windows, exist_ok=True)
         os.makedirs(self.domains.root, exist_ok=True)
         if not os.path.exists(self.runs_manifest):
             controller.Controller[dict](self.runs_manifest).persist({})
@@ -90,16 +93,9 @@ class _DataBlocks:
         return os.path.join(self.root, 'blocks')
 
     @property
-    def windows(self) -> str:
-        return os.path.join(self.root, 'windows')
-
-    @property
     def catalog(self) -> str:
         return os.path.join(self.root, 'catalog.json')
 
     @property
     def schema(self) -> str:
         return os.path.join(self.root, 'schema.json')
-
-    def mapped_window(self, gid: str) -> str:
-        return os.path.join(self.windows, f'windows_{gid}.json')
