@@ -78,6 +78,23 @@ def resolve_configs(
                 f'User configuration file not found at: {user}'
             )
 
+    # add modular task recipe if applicable (e.g. diagnose_overfit.yaml)
+    cmd = omegaconf.OmegaConf.select(config, 'command', default=None)
+    cmd_name = None
+    if isinstance(cmd, omegaconf.DictConfig) and 'name' in cmd:
+        cmd_name = cmd.name
+    elif isinstance(cmd, str):
+        cmd_name = cmd
+
+    if cmd_name and use_additional_settings:
+        recipe_filename = f"{cmd_name.replace('-', '_')}.yaml"
+        root_dpath = pathlib.Path(__file__).resolve().parents[4]
+        recipe_path = root_dpath / 'configs' / 'recipes' / recipe_filename
+        if recipe_path.exists():
+            recipe_cfg = omegaconf.OmegaConf.load(recipe_path)
+            assert isinstance(recipe_cfg, omegaconf.DictConfig)
+            config_list.append(recipe_cfg)
+
     # add dev settings (optional and untracked)
     dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)
     if dev and use_additional_settings:
@@ -91,7 +108,7 @@ def resolve_configs(
             )
 
     # merging configs in order (last wins)
-    # dev -> user -> hydra defaults -> schema defaults
+    # dev -> recipe -> user -> hydra defaults -> schema defaults
     with omegaconf.open_dict(config):
         merged = omegaconf.OmegaConf.merge(*config_list)
     cfg = typing.cast(omegaconf.DictConfig, merged)

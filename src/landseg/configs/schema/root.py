@@ -19,9 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-instance-attributes
-
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
 suitable for OmegaConf structured configs.
@@ -32,18 +29,18 @@ from __future__ import annotations
 import dataclasses
 import typing
 # local imports
+import landseg.configs.schema.base as base
 from landseg.configs.schema.data import DataConfig
 from landseg.configs.schema.models import ModelsConfig
 from landseg.configs.schema.session import SessionConfig
 from landseg.configs.schema.study import StudyConfig
-import landseg.configs.schema.sections as sec
 
 # alias
 field = dataclasses.field
 
-# ------------------------------EXECUTION CONFIGS------------------------------
+
 @dataclasses.dataclass
-class ExecutionContext:
+class ExecutionContext(base.BaseConfigSection):
     '''Mutable execution context.'''
     verbosity: str | int | None = 'full' # 'full', 'logging_only', 'silent', 10/20/None
     exp_root: str = './experiment' # root directory for this experiment run
@@ -77,11 +74,9 @@ class ExecutionContext:
                 raise ValueError(f'Invalid option: {self.verbosity}')
 
 
-# --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass
-class RootConfig:
+class RootConfig(base.BaseConfigSection):
     '''Root structured config for landseg.'''
-
     # execution configs
     execution: ExecutionContext = field(default_factory=ExecutionContext)
     # data ETL settings
@@ -92,15 +87,14 @@ class RootConfig:
     session: SessionConfig = field(default_factory=SessionConfig)
     # study settings
     study: StudyConfig = field(default_factory=StudyConfig)
-    # pipeline specific CLI flags
-    command: sec.CommandConfig = field(default_factory=sec.CommandConfig)
+    # command
+    command: str = 'default'
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
         return dataclasses.asdict(typing.cast(typing.Any, self))
 
-    def validate_all(self) -> None:
-        self.command.validate()
+    def validate(self) -> None:
         self.data.validate()
         self.models.validate()
         self.session.validate()

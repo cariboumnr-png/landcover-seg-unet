@@ -53,11 +53,11 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
         root_config = cli.resolve_configs(config)
 
         # skip validation for commands: default | preflight
-        if root_config.command.name in ['default', 'preflight']:
+        if root_config.command in ['default', 'preflight']:
             return execution.execute_command(root_config)
 
         # validate configs and run other commands as configured
-        root_config.validate_all()
+        root_config.validate()
         return execution.execute_command(root_config)
 
     # manual keyboard interruption

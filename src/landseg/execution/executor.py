@@ -57,7 +57,7 @@ COMMANDS = typing.Literal[
 # ----- public functions
 def execute_command(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI command with resolved configuration.'''
-    command = root_config.command.name
+    command = root_config.command
     results = None
 
     match command:

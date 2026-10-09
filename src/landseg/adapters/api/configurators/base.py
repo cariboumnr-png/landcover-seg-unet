@@ -35,7 +35,7 @@ class BaseConfigurator:
     def __init__(
         self,
         experiment_root: str,
-        pipeline_name: str,
+        command_name: str,
     ):
         '''Initialize the configurator'''
 
@@ -49,12 +49,12 @@ class BaseConfigurator:
         self._cfg.data.ingestion.output_dpath = f'{_r}/ingested_data'
         self._cfg.data.preparation.output_dpath = f'{_r}/prepared_data'
         # set command name
-        self._cfg.command.name = pipeline_name
+        self._cfg.command = command_name
 
     @property
     def running_root_config(self) -> configs.RootConfig:
         '''Validate respective section of the `RootConfig` and return.'''
-        match self._cfg.command.name:
+        match self._cfg.command:
             case 'world-grid':
                 self._cfg.data.world_grid.validate()
             case 'data-harmonize':
@@ -79,16 +79,12 @@ class BaseConfigurator:
         self,
         *,
         strict: bool = False,
-        export_report: bool = True,
-        check_gpu: bool = True,
     ) -> typing.Any:
         '''Run pre-flight diagnostic validation for configured command.'''
         return api.run_preflight(
-            config=self.running_root_config,
-            target=self._cfg.command.name,
+            self.running_root_config,
+            self._cfg.command,
             strict=strict,
-            export_report=export_report,
-            check_gpu=check_gpu,
         )
 
 

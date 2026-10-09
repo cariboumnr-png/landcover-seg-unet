@@ -47,7 +47,7 @@ def run(root_config: configs.RootConfig) -> typing.Any:
     '''
     logger = utils.Logger('api', './api.log')
     try:
-        logger.info(f'Running command: {root_config.command.name}')
+        logger.info(f'Running command: {root_config.command}')
         return execution.execute_command(root_config)
     except KeyboardInterrupt:
         logger.info('Execution interrupted')
@@ -104,8 +104,8 @@ def run_preflight(
         cfg.execution.preflight_strict_mode = strict
 
     if resolved_target is None:
-        if cfg.command.name not in ('preflight', 'default'):
-            resolved_target = cfg.command.name
+        if cfg.command not in ('preflight', 'default'):
+            resolved_target = cfg.command
         else:
             resolved_target = cfg.execution.preflight_target or 'all'
 
@@ -131,7 +131,7 @@ def run_intake(
             Result returned by the dispatched intake workflow.
     '''
     cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
-    cfg.command.name = 'e2e-intake'
+    cfg.command = 'e2e-intake'
     return run(cfg)
 
 
@@ -150,5 +150,5 @@ def run_experiment(
             Result returned by the dispatched experiment workflow.
     '''
     cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
-    cfg.command.name = 'e2e-experiment'
+    cfg.command = 'e2e-experiment'
     return run(cfg)

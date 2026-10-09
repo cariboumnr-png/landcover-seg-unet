@@ -1,9 +1,10 @@
-# @package _global_
+# =============================================================================
+# Single-Block Overfit Verification Recipe
+# =============================================================================
 
 session:
-
   engine_exec:
-    use_amp: False
+    use_amp: false
     logit_adjust_alpha: 0.0
 
   engine_optim:
@@ -23,6 +24,5 @@ session:
         weight: 0.0
       tv:
         weight: 0.0
-
-command:
-  name: diagnose-overfit
+      ecological:
+        weight: 0.0
