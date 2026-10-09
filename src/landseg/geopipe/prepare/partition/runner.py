@@ -122,11 +122,11 @@ def run_datablocks_partition(
 
         # blocks fpaths
         partition_results = orchestration.create_blocks_partition(
-            context.base_class_counts,
-            context.valid_class_counts,
-            context.valid_blocks,
+            context.manifest.base_class_counts,
+            context.manifest.valid_class_counts,
+            context.manifest.valid_blocks,
+            context.manifest.external_test_blocks,
             partition_config,
-            ext_test_blks=context.external_test_blocks,
             logger=logger,
         )
 

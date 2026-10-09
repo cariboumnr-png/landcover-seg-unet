@@ -29,7 +29,7 @@ import rasterio.transform
 import landseg.artifacts as artifacts
 import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.dataset as dataset
-import landseg.geopipe.prepare.dataset.catalog as catalog
+import landseg.geopipe.prepare.dataset.normalizer as normalizer
 import landseg.geopipe.prepare.dataset.semantics as semantics
 import landseg.geopipe.prepare.partition.orchestration as orchestration
 import landseg.geopipe.prepare.partition.runner as runner
@@ -58,7 +58,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         label_stats=str(tmp_path / 'label_stats.json'),
     )
 
-    catalog_view = catalog.DataBlocksView(
+    catalog_view = normalizer.NormalizedDataBlocksManifest(
         valid_blocks={(0, 0): 'path/to/block_0.npz'},
         external_test_blocks=None,
         crs='EPSG:3161',
@@ -78,7 +78,7 @@ def test_run_datablocks_partition(tmp_path, mocker):
         resolved_reclass={'landcover': None},
     )
     ctx = dataset.DatasetView(
-        catalog=catalog_view,
+        manifest=catalog_view,
         features=features,
         targets=targets,
     )

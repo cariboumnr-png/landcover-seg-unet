@@ -42,25 +42,27 @@ def run_data_preparation(
     context: prepare_context.PreparationContext,
     prep_paths: paths.PreparationPaths,
     config: contracts.PreparationPipelineConfig,
-    tile_specs_tuple: tuple[int, int, int, int], # need to canonalize
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare_logger.PreparationLogger,
 ) -> None:
     '''Run the preparation pipeline for an experiment.'''
     # build dataset view
-    dataset_params = prepare_dataset.DatasetViewConfig(
-        valid_pxs=config.catalog.valid_pxs,
-        focal_target=config.catalog.focal_target,
-        test_catalog=config.catalog.test_catalog,
-        non_overlapping_test_grid=config.catalog.non_overlapping_test_grid,
-        features=config.features,
-        targets=config.targets,
+    dataset_view_inputs = prepare_dataset.DataBlocksManifestInputs(
+        schema=context.schema,
+        catalog=context.catalog,
+        test_catalog=context.test_catalog,
+    )
+    dataset_view_config = prepare_dataset.DatasetViewConfig(
+        head_pxs_thres=config.datasetview.valid_pxs,
+        focal_head=config.datasetview.focal_target,
+        non_overlapping_test_grid=config.datasetview.non_overlapping_test_grid,
+        features=config.datasetview.features,
+        targets=config.datasetview.targets,
     )
     dataset_view = prepare_dataset.build_dataset_view(
-        context.catalog_fpath,
-        context.schema,
-        parameters=dataset_params,
+        dataset_view_inputs,
+        dataset_view_config,
         canvas_crs=context.canvas_crs,
         canvas_transform=context.canvas_transform,
     )
@@ -72,9 +74,6 @@ def run_data_preparation(
     scoring = config.scoring
     hydration = config.hydration
     # partition config
-    has_aoi = bool(
-        partition.train_aoi or partition.val_aoi or partition.test_aoi
-    )
     aoi_config = (
         prepare_partition.AOIConfig(
             train_aoi=partition.train_aoi,
@@ -84,7 +83,7 @@ def run_data_preparation(
             canvas_crs=dataset_view.crs,
             canvas_transform=dataset_view.transform,
         )
-        if has_aoi
+        if partition.train_aoi or partition.val_aoi or partition.test_aoi
         else None
     )
     hydration_config = (
@@ -99,7 +98,7 @@ def run_data_preparation(
     )
     partition_config = prepare_partition.PartitionConfig(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
-        block_spec=tile_specs_tuple,
+        block_spec=context.block_specs,
         buffer_step=partition.buffer_step,
         aoi=aoi_config,
         hydration=hydration_config,

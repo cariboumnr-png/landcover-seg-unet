@@ -53,7 +53,7 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         reward_classes: dict[int, float]
     ) -> typing.Self:
         '''Set blocks hydration for reward classes in the target head'''
-        self._cfg.data.preparation.catalog.focal_target = target_head
+        self._cfg.data.preparation.datasetview.focal_target = target_head
         self._cfg.data.preparation.scoring.reward = reward_classes
         return self
 
@@ -70,7 +70,7 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
                 'dem': 'all',
             })
         '''
-        self._cfg.data.preparation.features = features or {}
+        self._cfg.data.preparation.datasetview.features = features or {}
         return self
 
     def set_targets(
@@ -86,7 +86,7 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
                 'leadspc': 'raw',
             })
         '''
-        self._cfg.data.preparation.targets = targets or {}
+        self._cfg.data.preparation.datasetview.targets = targets or {}
         return self
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:

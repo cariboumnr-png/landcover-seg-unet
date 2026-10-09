@@ -106,9 +106,9 @@ def create_blocks_partition(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
     valid_blocks: dict[tuple[int, int], str],
+    ext_test_blks: list[str] | None,
     config: PartitionConfig,
     *,
-    ext_test_blks: list[str] | None = None,
     logger: prepare.PreparationLogger | None = None,
 ) -> PartitionResults:
     '''

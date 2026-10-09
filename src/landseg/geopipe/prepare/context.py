@@ -43,24 +43,30 @@ import landseg.geopipe.core as geo_core
 
 
 # ----- typing aliases
+CatalogCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
 DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
+DictCtrl = artifacts.Controller[dict]
 
 
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class PreparationContext:
     '''Resolved upstream ingestion references for dataset preparation.'''
-    catalog_fpath: str
-    schema_fpath: str
+    catalog: dict[str, geo_core.DatasetBlockMeta]
+    test_catalog: dict[str, geo_core.DatasetBlockMeta] | None
     schema: geo_core.DatasetSchema
+    block_specs: tuple[int, int, int, int] # (row, col, overlap_r, overlap_c)
     canvas_crs: str
     canvas_transform: rasterio.transform.Affine
 
 
 # ----- public functions
 def build_preparation_context(
+    windows_fpath: str,
     catalog_fpath: str,
     schema_fpath: str,
+    *,
+    test_catalog_fpath: str | None = None,
 ) -> PreparationContext:
     '''
     Build preparation context from upstream ingestion catalog and schema.
@@ -80,8 +86,13 @@ def build_preparation_context(
             resolved execution context containing schema and canvas
             metadata.
     '''
-    # load ingested data schema
+    # load artifacts
+    windows = DictCtrl.load_json_or_fail(windows_fpath).fetch()
     schema = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+    catalog = CatalogCtrl.load_json_or_fail(catalog_fpath).fetch()
+    test_catalog = None
+    if test_catalog_fpath is not None:
+        test_catalog = CatalogCtrl.load_json_or_fail(test_catalog_fpath).fetch()
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
@@ -94,10 +105,20 @@ def build_preparation_context(
     except rasterio.errors.RasterioError as e:
         raise ValueError(f'Error reading image: {image_paths[0]}') from e
 
+    # block specs from windows
+    block_size: list[int] | None = windows.get('tile_shape')
+    block_overlap: list[int] | None = windows.get('tile_overlap')
+    if not (
+        isinstance(block_size, list) and len(block_size) == 2 and
+        isinstance(block_overlap, list) and len(block_overlap) == 2
+    ): # sanity
+        raise ValueError(f'Invalid block windows artifact: {windows_fpath}')
+
     return PreparationContext(
-        catalog_fpath=catalog_fpath,
-        schema_fpath=schema_fpath,
+        catalog=catalog,
+        test_catalog=test_catalog,
         schema=schema,
+        block_specs=(*block_size, *block_overlap),
         canvas_crs=canvas_crs,
         canvas_transform=canvas_transform,
     )

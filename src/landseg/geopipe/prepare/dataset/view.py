@@ -40,7 +40,7 @@ import typing
 import rasterio.transform
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.dataset.catalog as catalog
+import landseg.geopipe.prepare.dataset.normalizer as normalizer
 import landseg.geopipe.prepare.dataset.semantics as semantics
 
 
@@ -48,9 +48,8 @@ import landseg.geopipe.prepare.dataset.semantics as semantics
 @dataclasses.dataclass(frozen=True)
 class DatasetViewConfig:
     '''Configuration parameters for dataset view compilation.'''
-    valid_pxs: dict[str, float] = dataclasses.field(default_factory=dict)
-    focal_target: str | None = None
-    test_catalog: str | None = None
+    head_pxs_thres: dict[str, float] = dataclasses.field(default_factory=dict)
+    focal_head: str | None = None
     non_overlapping_test_grid: bool = True
     features: typing.Mapping[str, str] | list[str] | None = None
     targets: typing.Mapping[str, str | geo_core.LabelScheme] | None = None
@@ -59,54 +58,21 @@ class DatasetViewConfig:
 @dataclasses.dataclass(frozen=True)
 class DatasetView:
     '''Unified dataset view for partitioning and statistics.'''
-    catalog: catalog.DataBlocksView
+    focal_head: str
+    crs: str
+    transform: rasterio.transform.Affine
+    manifest: normalizer.NormalizedDataBlocksView
     features: semantics.FeatureSelection
     targets: semantics.TargetHeadsContext
-
-    @property
-    def focal_head(self) -> str:
-        '''Active focal head name for partitioning.'''
-        return self.catalog.focal_head
-
-    @property
-    def base_class_counts(self) -> dict[tuple[int, int], list[int]]:
-        '''Base grid block per-class counts for active focal head.'''
-        return self.catalog.base_class_counts
-
-    @property
-    def valid_class_counts(self) -> dict[tuple[int, int], list[int]]:
-        '''Valid block per-class counts for active focal head.'''
-        return self.catalog.valid_class_counts
-
-    @property
-    def valid_blocks(self) -> dict[tuple[int, int], str]:
-        '''Mapping of block coordinate to file path.'''
-        return self.catalog.valid_blocks
-
-    @property
-    def external_test_blocks(self) -> list[str] | None:
-        '''Optional external holdout test block file paths.'''
-        return self.catalog.external_test_blocks
-
-    @property
-    def crs(self) -> str:
-        '''Coordinate reference system string of the dataset canvas.'''
-        return self.catalog.crs
-
-    @property
-    def transform(self) -> rasterio.transform.Affine:
-        '''Affine transform of the dataset canvas.'''
-        return self.catalog.transform
 
 
 # ----- public functions
 def build_dataset_view(
-    catalog_fpath: str,
-    schema: geo_core.DatasetSchema,
-    parameters: DatasetViewConfig | None = None,
+    inputs: normalizer.DataBlocksManifestInputs,
+    config: DatasetViewConfig,
     *,
-    canvas_crs: str | None = None,
-    canvas_transform: rasterio.transform.Affine | None = None,
+    canvas_crs: str,
+    canvas_transform: rasterio.transform.Affine,
 ) -> DatasetView:
     '''
     Build complete dataset view from catalog, schema, and parameters.
@@ -134,50 +100,47 @@ def build_dataset_view(
             unified preparation view combining catalog, features,
             and targets.
     '''
-    params = parameters or DatasetViewConfig()
+    config = config or DatasetViewConfig()
 
     # initial catalog view
-    view = catalog.read_catalog(
-        catalog_fpath,
-        schema,
-        valid_pxs=params.valid_pxs,
-        focal_target=params.focal_target,
-        test_catalog=params.test_catalog,
-        non_overlapping_test_grid=params.non_overlapping_test_grid,
-        canvas_crs=canvas_crs,
-        canvas_transform=canvas_transform,
+    view = normalizer.read_dataset_manifest(
+        inputs,
+        head_pxs_thres=config.head_pxs_thres,
+        focal_head=config.focal_head,
+        non_overlapping_test_grid=config.non_overlapping_test_grid,
     )
+
+    schema = inputs.schema
 
     # resolve feature channels
-    feature_selection = semantics.resolve_feature_channels(
-        schema, params.features
-    )
+    features = semantics.resolve_feature_channels(schema, config.features)
 
     # resolve target heads
-    targets = semantics.resolve_target_heads(schema, params.targets)
+    targets = semantics.resolve_target_heads(schema, config.targets)
 
     # resolve focal head from target heads and config
-    focal_head = semantics.resolve_focal_head(targets, params.focal_target)
+    focal_head = semantics.resolve_focal_head(targets, config.focal_head)
 
-    # enriched catalog view with class counts
-    enriched_view = _enrich_view_w_class_counts(
-        view, schema, targets, focal_head
-    )
+    # enriched manifest with class counts
+    enriched = _enrich_datablocks_manifest(view, schema, targets, focal_head)
 
     return DatasetView(
-        catalog=enriched_view,
-        features=feature_selection,
+        focal_head=focal_head,
+        crs=canvas_crs,
+        transform=canvas_transform,
+        manifest=enriched,
+        features=features,
         targets=targets,
     )
 
 
 # ----- private helpers
-def _enrich_view_w_class_counts(
-    catalog_view: catalog.DataBlocksView,
+def _enrich_datablocks_manifest(
+    datablocks_manifest: normalizer.NormalizedDataBlocksView,
     data_schema: geo_core.DatasetSchema,
     targets: semantics.TargetHeadsContext,
     focal_head: str,
-) -> catalog.DataBlocksView:
+) -> normalizer.NormalizedDataBlocksView:
     '''Enrich catalog view with derived class counts for focal head.'''
     row_size = data_schema['tensor_shapes']['image']['H']
     col_size = data_schema['tensor_shapes']['image']['W']
@@ -186,7 +149,7 @@ def _enrich_view_w_class_counts(
     valid_counts: dict[tuple[int, int], list[int]] = {}
     base_counts: dict[tuple[int, int], list[int]] = {}
 
-    for coord, raw_counts in catalog_view.raw_class_counts.items():
+    for coord, raw_counts in datablocks_manifest.raw_class_counts.items():
         head_counts = semantics.derive_head_class_counts(targets, raw_counts)
         updated_raw_counts[coord] = head_counts
         if focal_head in head_counts:
@@ -196,8 +159,7 @@ def _enrich_view_w_class_counts(
                 base_counts[coord] = counts
 
     return dataclasses.replace(
-        catalog_view,
-        focal_head=focal_head,
+        datablocks_manifest,
         raw_class_counts=updated_raw_counts,
         valid_class_counts=valid_counts,
         base_class_counts=base_counts,

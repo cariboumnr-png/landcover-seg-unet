@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Catalog adapter utilities for dataset preparation.
+Data blocks normalizer utilities for dataset preparation.
 
 Provides helpers to load and filter canonical blocks catalogs and schemas,
 extracting class counts and spatial coordinates needed for downstream
@@ -34,10 +34,6 @@ Public APIs:
 # standard imports
 import dataclasses
 import typing
-# third-party imports
-import rasterio
-import rasterio.errors
-import rasterio.transform
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -46,34 +42,36 @@ import landseg.geopipe.core as geo_core
 # ----- typing aliases
 field = dataclasses.field
 CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
+Coord = tuple[int, int]
 
 
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
-class DataBlocksView:
+class DataBlocksManifestInputs:
+    '''Bundled datablocks manifest artifacts.'''
+    schema: geo_core.DatasetSchema
+    catalog: dict[str, geo_core.DatasetBlockMeta]
+    test_catalog: dict[str, geo_core.DatasetBlockMeta] | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class NormalizedDataBlocksView:
     '''High-level view of data blocks for partitioning.'''
-    valid_blocks: dict[tuple[int, int], str]
+    valid_blocks: dict[Coord, str]
     external_test_blocks: list[str] | None
-    crs: str
-    transform: rasterio.transform.Affine
-    raw_class_counts: dict[tuple[int, int], dict[str, list[int]]] = field(default_factory=dict)
-    valid_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
-    base_class_counts: dict[tuple[int, int], list[int]] = field(default_factory=dict)
-    focal_head: str = ''
+    raw_class_counts: dict[Coord, dict[str, list[int]]] = field(default_factory=dict)
+    valid_class_counts: dict[Coord, list[int]] = field(default_factory=dict)
+    base_class_counts: dict[Coord, list[int]] = field(default_factory=dict)
 
 
 # ----- public functions
-def read_catalog(
-    catalog_fpath: str,
-    dataset_schema: geo_core.DatasetSchema,
+def read_dataset_manifest(
+    inputs: DataBlocksManifestInputs,
     *,
-    valid_pxs: typing.Mapping[str, float] | None = None,
-    focal_target: str | None = None,
-    test_catalog: str | None = None,
+    head_pxs_thres: typing.Mapping[str, float] | None = None,
+    focal_head: str | None = None,
     non_overlapping_test_grid: bool = True,
-    canvas_crs: str | None = None,
-    canvas_transform: rasterio.transform.Affine | None = None,
-) -> DataBlocksView:
+) -> NormalizedDataBlocksView:
     '''
     Load and adapt canonical blocks into a structured view.
 
@@ -82,49 +80,28 @@ def read_catalog(
     blocks.
 
     Args:
-        catalog_fpath:
-            path to canonical blocks catalog JSON.
-        dataset_schema:
+        schema:
             ingested dataset schema instance.
-        valid_pxs:
-            optional mapping of target head to valid pixel threshold.
-        focal_target:
-            optional target head name for partition stratification.
+        catalog:
+            ingested canonical blocks catalog.
         test_catalog:
             optional path to external holdout test catalog JSON.
+        head_pxs_thres:
+            optional mapping of target head to valid pixel threshold.
+        focal_head:
+            optional target head name for partition stratification.
         non_overlapping_test_grid:
             whether to restrict external test blocks to non-overlapping.
-        canvas_crs:
-            optional pre-resolved CRS string of the dataset canvas.
-        canvas_transform:
-            optional pre-resolved Affine transform of the canvas.
 
     Returns:
         DataBlocksView:
             filtered metadata and block mappings for partitioning.
     '''
-    # retrieve image paths and shape from schema
-    image_paths = dataset_schema['dataset']['data_source']['image_paths']
-    image_shape = dataset_schema['tensor_shapes']['image']
-
-    # resolve canvas crs and transform from image source if not provided
-    if canvas_crs is None or canvas_transform is None:
-        try:
-            with rasterio.open(image_paths[0]) as src:
-                if src.crs is None:
-                    raise ValueError(f'Raster has no CRS: {image_paths[0]}')
-                canvas_crs = src.crs.to_string()
-                canvas_transform = src.transform
-        except rasterio.errors.RasterioError as e:
-            raise ValueError(f'Error reading image: {image_paths[0]}') from e
-
-    assert canvas_crs is not None
-    assert canvas_transform is not None
-
     # valid blocks filtered by pixel thresholds
-    valid_blocks = _filter_blocks(catalog_fpath, valid_pxs)
+    valid_blocks = _filter_blocks(inputs.catalog, head_pxs_thres)
 
     # blocks on base grid (no stride/overlap)
+    image_shape = inputs.schema['tensor_shapes']['image']
     row_size, col_size = image_shape['H'], image_shape['W']
     base_coords = [
         k for k, v in valid_blocks.items()
@@ -132,8 +109,8 @@ def read_catalog(
     ]
 
     # parse external test data catalog if provided
-    if test_catalog is not None:
-        test_blocks = _filter_blocks(test_catalog, valid_pxs)
+    if inputs.test_catalog is not None:
+        test_blocks = _filter_blocks(inputs.test_catalog, head_pxs_thres)
         if non_overlapping_test_grid:
             test_blocks = list(
                 v['file_path'] for k, v in test_blocks.items()
@@ -150,7 +127,7 @@ def read_catalog(
     raw_counts = {k: v['class_count'] for k, v in valid_blocks.items()}
 
     # preliminary focal head derivation from config or catalog entry
-    focal_head = focal_target or ''
+    focal_head = focal_head or ''
     if not focal_head and valid_blocks: # fallback to 1st available head
         first_entry = next(iter(valid_blocks.values()))
         if 'class_count' in first_entry and first_entry['class_count']:
@@ -168,21 +145,18 @@ def read_catalog(
             if k in base_coords and focal_head in v.get('class_count', {})
         }
 
-    return DataBlocksView(
+    return NormalizedDataBlocksView(
         valid_blocks={k: v['file_path'] for k, v in valid_blocks.items()},
         external_test_blocks=test_blocks,
-        crs=canvas_crs,
-        transform=canvas_transform,
         raw_class_counts=raw_counts,
         valid_class_counts=valid_counts,
         base_class_counts=base_counts,
-        focal_head=focal_head,
     )
 
 
 # ----- private helpers
 def _filter_blocks(
-    fpath: str,
+    catalog_dict: dict[str, geo_core.DatasetBlockMeta],
     valid_px_thresholds: typing.Mapping[str, float] | None = None,
 ) -> dict[tuple[int, int], geo_core.DatasetBlockMeta]:
     '''Parse catalog JSON into filtered class counts and file paths.'''
@@ -198,9 +172,7 @@ def _filter_blocks(
                 return False
         return True
 
-    catalog_dict = CatalogDictCtrl.load_json_or_fail(fpath).fetch()
     catalog = geo_core.DatasetCatalog.from_dict(catalog_dict)
-
     valid_catalog = {
         k: v for k, v in catalog.items()
         if _is_valid_block(thresholds, v['valid_px_ratios'])

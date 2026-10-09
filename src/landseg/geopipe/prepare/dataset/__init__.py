@@ -38,6 +38,7 @@ import typing
 
 __all__ = [
     # classes
+    'DataBlocksManifestInputs',
     'DatasetView',
     'DatasetViewConfig',
     # functions
@@ -47,6 +48,9 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .normalizer import (
+        DataBlocksManifestInputs
+    )
     from .view import (
         DatasetView,
         DatasetViewConfig,
@@ -55,6 +59,12 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'DataBlocksManifestInputs',
+    }:
+        obj = importlib.import_module('.normalizer', __package__)
+        return getattr(obj, name)
+
     if name in {
         'DatasetView',
         'DatasetViewConfig',

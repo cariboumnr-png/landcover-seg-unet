@@ -71,10 +71,10 @@ def test_catalog_view_validation():
     When: `_CatalogView.validate()` is called.
     Then: Validate pixel threshold boundaries or raise ValueError.
     '''
-    catalog = data._CatalogView(valid_pxs={'image': 0.8, 'label': 0.95})
+    catalog = prep_sec.DatasetViewConfig(valid_pxs={'image': 0.8, 'label': 0.95})
     catalog.validate()
 
-    invalid_catalog = data._CatalogView(valid_pxs={'image': 1.5})
+    invalid_catalog = prep_sec.DatasetViewConfig(valid_pxs={'image': 1.5})
     with pytest.raises(ValueError, match='valid threshold'):
         invalid_catalog.validate()
 
@@ -110,5 +110,5 @@ def test_scoring_and_hydration_validation():
     hydration = data._Hydration(max_skew_rate=5.0)
     hydration.validate()
 
-    with pytest.raises(ValueError, match='hydration skew ratio'):
-        data._Hydration(max_skew_rate=-2.0).validate()
+    with pytest.raises(base.ConfigValidationError):
+        prep_sec.Hydration(max_skew_rate=-2.0).validate()

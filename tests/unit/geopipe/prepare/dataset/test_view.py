@@ -28,7 +28,7 @@ import pytest
 import rasterio.transform
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.prepare.dataset.catalog as catalog
+import landseg.geopipe.prepare.dataset.normalizer as normalizer
 import landseg.geopipe.prepare.dataset.view as view_mod
 
 
@@ -39,7 +39,7 @@ def test_build_dataset_view(monkeypatch: pytest.MonkeyPatch):
     When: Running build_dataset_view.
     Then: Orchestrate and return a unified DatasetView.
     '''
-    dummy_view = catalog.DataBlocksView(
+    dummy_view = normalizer.NormalizedDataBlocksManifest(
         valid_blocks={(0, 0): 'path/to/block_0_0.h5'},
         external_test_blocks=None,
         crs='EPSG:3161',
@@ -78,13 +78,13 @@ def test_build_dataset_view(monkeypatch: pytest.MonkeyPatch):
 
     # mock read_catalog
     monkeypatch.setattr(
-        catalog,
+        normalizer,
         'read_catalog',
         lambda *args, **kwargs: dummy_view,
     )
 
     params = view_mod.DatasetViewConfig(
-        valid_pxs={'landcover': 0.5},
+        head_pxs_thres={'landcover': 0.5},
         features=['red', 'blue'],
         targets={'landcover': 'binary'},
     )
@@ -92,7 +92,7 @@ def test_build_dataset_view(monkeypatch: pytest.MonkeyPatch):
     dview = view_mod.build_dataset_view(
         'fake/catalog.json',
         dummy_schema,
-        parameters=params,
+        config=params,
         canvas_crs='EPSG:3161',
         canvas_transform=rasterio.transform.Affine.identity(),
     )
@@ -126,7 +126,7 @@ def test_build_dataset_view_explicit_focal_target(
     When: Running build_dataset_view.
     Then: Correctly resolve focal head and populate matching counts.
     '''
-    dummy_view = catalog.DataBlocksView(
+    dummy_view = normalizer.NormalizedDataBlocksManifest(
         valid_blocks={(0, 0): 'path/to/block_0_0.h5'},
         external_test_blocks=None,
         crs='EPSG:3161',
@@ -164,21 +164,21 @@ def test_build_dataset_view_explicit_focal_target(
     )
 
     monkeypatch.setattr(
-        catalog,
+        normalizer,
         'read_catalog',
         lambda *args, **kwargs: dummy_view,
     )
 
     params = view_mod.DatasetViewConfig(
-        valid_pxs={'landcover': 0.5},
-        focal_target='landcover',
+        head_pxs_thres={'landcover': 0.5},
+        focal_head='landcover',
         targets={'landcover': 'binary'},
     )
 
     dview = view_mod.build_dataset_view(
         'fake/catalog.json',
         dummy_schema,
-        parameters=params,
+        config=params,
         canvas_crs='EPSG:3161',
         canvas_transform=rasterio.transform.Affine.identity(),
     )

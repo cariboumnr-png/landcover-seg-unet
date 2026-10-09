@@ -111,7 +111,7 @@ def run_materialize_blocks(
     # label stats on training blocks - parse from context
     ctrl = LabelStatsCtrl(paths.label_stats, policy)
     lbl_counts = stats.count_label(
-        context.catalog.raw_class_counts,
+        context.manifest.raw_class_counts,
         list(src['train'].keys())
     )
     ctrl.persist(lbl_counts)

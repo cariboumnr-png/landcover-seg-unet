@@ -65,7 +65,6 @@ class DataPreparation(base.GeoPipeline):
                 context,
                 self.pipeline_paths,
                 self.config.data.preparation,
-                self.config.data.world_grid.tile_specs_tuple,
                 policy=policy,
                 logger=self.logger,
             )
@@ -90,6 +89,8 @@ class DataPreparation(base.GeoPipeline):
 
     def _build_context(self) -> prepare.PreparationContext:
         return prepare.build_preparation_context(
+            self.upstream_paths.windows,
             self.upstream_paths.data_blocks.catalog,
             self.upstream_paths.data_blocks.schema,
+            test_catalog_fpath=self.config.data.preparation.datasetview.test_catalog
         )

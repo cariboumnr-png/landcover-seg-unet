@@ -149,12 +149,12 @@ def test_data_preparation_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.command.name == 'data-prepare'
-    assert root.data.preparation.features == {'sentinel2': 'rgb_nir'}
-    assert root.data.preparation.targets == {'landcover': 'binary'}
+    assert root.command == 'data-prepare'
+    assert root.data.preparation.datasetview.features == {'sentinel2': 'rgb_nir'}
+    assert root.data.preparation.datasetview.targets == {'landcover': 'binary'}
     assert root.data.preparation.partition.val_ratio == 0.15
     assert root.data.preparation.partition.test_ratio == 0.05
-    assert root.data.preparation.catalog.focal_target == 'class_head'
+    assert root.data.preparation.datasetview.focal_target == 'class_head'
     assert root.data.preparation.scoring.reward == {1: 2.0}
     assert root.data.preparation.rebuild is True
 
@@ -247,4 +247,3 @@ def test_configurator_preflight(mocker, tmp_path):
     mock_run_preflight.assert_called_once()
     assert mock_run_preflight.call_args.kwargs['target'] == 'world-grid'
     assert mock_run_preflight.call_args.kwargs['strict'] is True
-

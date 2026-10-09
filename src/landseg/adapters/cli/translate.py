@@ -44,7 +44,7 @@ def translate_user_config(raw: omegaconf.DictConfig) -> omegaconf.DictConfig:
             },
 
             'preparation': {
-                'catalog': {},
+                'datasetview': {},
                 'partition': {},
                 'scoring': {},
             },
@@ -136,8 +136,8 @@ def _translate_data_prepare(
 ) -> None:
     '''Map data-prepare settings to preparation fields.'''
     mapping = {
-        'features': ['data.preparation.features'],
-        'targets': ['data.preparation.targets'],
+        'features': ['data.preparation.datasetview.features'],
+        'targets': ['data.preparation.datasetview.targets'],
         'val_ratio': ['data.preparation.partition.val_ratio'],
         'test_ratio': ['data.preparation.partition.test_ratio'],
         'buffer_step': ['data.preparation.partition.buffer_step'],
@@ -145,11 +145,11 @@ def _translate_data_prepare(
         'val_aoi': ['data.preparation.partition.val_aoi'],
         'test_aoi': ['data.preparation.partition.test_aoi'],
         'aoi_min_overlap': ['data.preparation.partition.aoi_min_overlap'],
-        'target_head': ['data.preparation.catalog.focal_target'],
+        'target_head': ['data.preparation.datasetview.focal_target'],
         'reward_classes': ['data.preparation.scoring.reward'],
-        'test_catalog': ['data.preparation.catalog.test_catalog'],
+        'test_catalog': ['data.preparation.datasetview.test_catalog'],
         'non_overlapping_test_grid': [
-            'data.preparation.catalog.non_overlapping_test_grid'
+            'data.preparation.datasetview.non_overlapping_test_grid'
         ],
         'rebuild': ['data.preparation.rebuild'],
         'output_dpath': ['data.preparation.output_dpath'],
