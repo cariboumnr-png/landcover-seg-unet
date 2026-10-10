@@ -1,5 +1,8 @@
 # =============================================================================
 # Single-Block Overfit Verification Recipe
+# -----------------------------------------------------------------------------
+# Overrides optimization and task loss parameters for quick overfit
+# diagnostic on a single sample block.
 # =============================================================================
 
 session:

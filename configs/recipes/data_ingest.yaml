@@ -1,0 +1,37 @@
+# =============================================================================
+# Data Ingestion Recipe
+# -----------------------------------------------------------------------------
+# Ingests harmonized raster blocks, attaches domains, and extracts
+# features.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Pipeline I/O Paths
+# -----------------------------------------------------------------------------
+# Upstream harmonized data directory
+input_dpath: ./experiment/artifacts/harmonized_data
+# Destination directory for ingested foundation data blocks
+output_dpath: ./experiment/artifacts/ingested_data
+
+# -----------------------------------------------------------------------------
+# Ingestion Parameters
+# -----------------------------------------------------------------------------
+# Target harmonization run folder index or path (null for latest)
+harmonization_run: null
+# Force rebuild even if ingested blocks already exist
+rebuild: true
+
+# -----------------------------------------------------------------------------
+# Feature Engineering for Ingested Data Blocks (Optional)
+# -----------------------------------------------------------------------------
+# Compute and append derived topographic layers
+# Supported: [slope, tpi]
+# Required bands: DEM
+# Set null or [] to disable
+add_topo: [slope, tpi]
+
+# Derived spectral indices to compute and append to data blocks
+# Supported: [ndvi, ndmi, nbr]
+# Required bands: red, nir, swir1/swir2
+# Set null or [] to disable
+add_spectral: [ndvi, ndmi, nbr]

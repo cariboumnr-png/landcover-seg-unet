@@ -1,0 +1,82 @@
+# =============================================================================
+# Data Preparation Recipe
+# -----------------------------------------------------------------------------
+# Partitions blocks into train/val/test splits, applies channel
+# selections, and balances classes for downstream training.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Pipeline I/O Paths
+# -----------------------------------------------------------------------------
+# Upstream ingested data directory
+input_dpath: ./experiment/artifacts/ingested_data
+# Destination directory for prepared data splits and transforms
+output_dpath: ./experiment/artifacts/prepared_data
+
+# -----------------------------------------------------------------------------
+# Execution Settings
+# -----------------------------------------------------------------------------
+# Force rebuild splits & normalization even if they exist
+rebuild: true
+
+# -----------------------------------------------------------------------------
+# Feature Channels & Target Schemes (Optional)
+# -----------------------------------------------------------------------------
+# Select input feature channels by dataset name (null uses all bands)
+# Accepts named schemes defined in sidecars, inline lists of bands,
+# or engineered pseudo-datasets ('topo', 'spectral'):
+#   features:
+#     sentinel2: rgb_nir          # Named scheme from sidecar
+#     dem: all                    # Use all bands from DEM
+#     topo: all                   # Include engineered topo layers
+#     spectral: all               # Include engineered spectral bands
+#     # Or specific derived bands:
+#     # topo: [slope, tpi]
+#     # spectral: [ndvi, ndmi]
+#     # Or inline arbitrary band list:
+#     # sentinel2: [blue, green, red, nir]
+features: {}
+# {} selects all bands
+
+# Select target reclassification by label name (null uses base classes)
+# Accepts named schemes defined in sidecars or inline reclass dict:
+#   targets:
+#     landcover: binary           # Named scheme from sidecar
+#     leadspc: raw                # Use canonical base classes
+#     # Or inline:
+#     # landcover:
+#     #   reclass:
+#     #     "1": [1, 2]
+#     #   reclass_name:
+#     #     "1": "forest"
+targets: {}
+# {} uses canonical base classes
+
+# -----------------------------------------------------------------------------
+# Geographic AOI Block Selection (Optional)
+# -----------------------------------------------------------------------------
+# Explicit GeoTIFF raster paths for selecting blocks (null for
+# auto-split):
+test_aoi: ./experiment/input/reference_raster/sample_test_aoi.tif
+val_aoi: null
+train_aoi: null
+# Minimum block overlap ratio with AOI raster to select (0.0 to 1.0)
+aoi_min_overlap: 0.5
+# External test dataset catalog (optional alternative to test_aoi)
+test_catalog: null
+# Include only non-overlapping base grid blocks from test catalog
+non_overlapping_test_grid: true
+
+# -----------------------------------------------------------------------------
+# Automated Splitting & Class Balancing (For unassigned candidate pool)
+# -----------------------------------------------------------------------------
+# Ratio of unassigned blocks partitioned for validation (0.0 to 1.0)
+val_ratio: 0.20
+# Test partition ratio from unassigned pool (0.0 disables test split)
+test_ratio: 0.00
+# Spatial buffer step distance to prevent spatial leakage into train
+buffer_step: 0
+# Oversampling target head name (null to disable)
+target_head: null
+# Map of class index (0-based) to oversampling reward (e.g., {1: 2.0})
+reward_classes: {}
