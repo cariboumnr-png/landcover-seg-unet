@@ -1,0 +1,28 @@
+# =============================================================================
+# Data Harmonization Recipe
+# -----------------------------------------------------------------------------
+# Harmonizes source rasters into canonical VRTs based on the dataset
+# manifest.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Upstream Pipeline I/O
+  # ---------------------------------------------------------------------------
+  world_grid:
+    # Upstream world grid directory
+    output_dpath: ./experiment/artifacts/world_grids
+
+  # ---------------------------------------------------------------------------
+  # Harmonization Parameters & Destination Output
+  # ---------------------------------------------------------------------------
+  harmonization:
+    # Destination directory for harmonized data artifacts
+    output_dpath: ./experiment/artifacts/harmonized_data
+
+    # Path to dataset metadata JSON manifest
+    dataset_manifest: ./experiment/input/raw_data/manifest.json
+
+    # Resampling rules
+    resampling_continuous: bilinear
+    resampling_categorical: nearest

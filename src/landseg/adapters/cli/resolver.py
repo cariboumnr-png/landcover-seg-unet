@@ -29,12 +29,12 @@ import pathlib
 import typing
 # third-party imports
 import omegaconf
-## local imports
-import landseg.adapters.cli.translate as translate
+# local imports
 import landseg.configs as configs
 
 # register omegaconf.OmegaConf.resolvers
 omegaconf.OmegaConf.register_new_resolver('concat', lambda x, y: x + y)
+
 
 def resolve_configs(
     config: omegaconf.DictConfig,
@@ -54,46 +54,20 @@ def resolve_configs(
     # - might override by additional settings (*yaml) below in CLI mode
     config_list.append(config)
 
-    # add user settings - this contains the essesion I/O to start the program
-    # if provided externally
-    user = omegaconf.OmegaConf.select(config, 'execution.user_cfg', default=None)
-    # otherwise fallback to shipped user config
-    if user is None:
-        # resolve absolute path to the user settings at root/configs bewtween
-        # root/src/landseg/adapters/cli/resolver.py and
-        # root/configs/user.yaml
-        # -> root as the 5th parent of .../resolver.py
-        user = pathlib.Path(__file__).resolve().parents[4]/'configs'/'user.yaml'
-        is_fallback = True
-    else:
-        is_fallback = False
-    if use_additional_settings:
-        if os.path.exists(user):
-            user_settings = omegaconf.OmegaConf.load(user)
-            assert isinstance(user_settings, omegaconf.DictConfig)
-            translated_settings = translate.translate_user_config(user_settings)
-            config_list.append(translated_settings)
-        elif not is_fallback:
-            raise FileNotFoundError(
-                f'User configuration file not found at: {user}'
-            )
-
-    # add modular task recipe if applicable (e.g. diagnose_overfit.yaml)
+    # resolve command recipe
     cmd = omegaconf.OmegaConf.select(config, 'command', default=None)
-    cmd_name = None
-    if isinstance(cmd, omegaconf.DictConfig) and 'name' in cmd:
-        cmd_name = cmd.name
-    elif isinstance(cmd, str):
-        cmd_name = cmd
-
-    if cmd_name and use_additional_settings:
-        recipe_filename = f"{cmd_name.replace('-', '_')}.yaml"
+    if cmd and cmd != 'default' and use_additional_settings:
+        recipe_filename = f"{cmd.replace('-', '_')}.yaml"
         root_dpath = pathlib.Path(__file__).resolve().parents[4]
-        recipe_path = root_dpath / 'configs' / 'recipes' / recipe_filename
-        if recipe_path.exists():
-            recipe_cfg = omegaconf.OmegaConf.load(recipe_path)
-            assert isinstance(recipe_cfg, omegaconf.DictConfig)
-            config_list.append(recipe_cfg)
+        recipe_path = root_dpath / 'configs' / recipe_filename
+        if not recipe_path.exists():
+            raise FileNotFoundError(
+                f'Tracked recipe not found for command "{cmd}" at: '
+                f'{recipe_path}'
+            )
+        recipe_cfg = omegaconf.OmegaConf.load(recipe_path)
+        assert isinstance(recipe_cfg, omegaconf.DictConfig)
+        config_list.append(recipe_cfg)
 
     # add dev settings (optional and untracked)
     dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)
@@ -108,7 +82,7 @@ def resolve_configs(
             )
 
     # merging configs in order (last wins)
-    # dev -> recipe -> user -> hydra defaults -> schema defaults
+    # dev -> recipe -> hydra defaults -> schema defaults
     with omegaconf.open_dict(config):
         merged = omegaconf.OmegaConf.merge(*config_list)
     cfg = typing.cast(omegaconf.DictConfig, merged)

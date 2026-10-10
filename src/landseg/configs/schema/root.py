@@ -49,8 +49,6 @@ class ExecutionContext(base.BaseConfigSection):
     exp_root: str = './experiment'
     preflight_target: str | None = None
     preflight_strict_mode: bool = False
-    # consider to prune:
-    user_cfg: str | None = None # external user configs
     dev_cfg: str | None = None # developer-only override config
     cli_mode: bool = False # indicates whether execution initiated via CLI
 

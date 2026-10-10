@@ -81,15 +81,15 @@ def test_resolve_configs_base(tmp_path):
     assert root.session.orchestration.single_phase.num_epochs == 5
 
 
-def test_resolve_configs_missing_user_file():
+def test_resolve_configs_missing_dev_file():
     '''
-    Given: Non-existent user config path in `execution.user_cfg`.
+    Given: Non-existent dev config path in `execution.dev_cfg`.
     When: `resolve_configs` executes with
         `use_additional_settings=True`.
-    Then: Raise a FileNotFoundError indicating missing user config file.
+    Then: Raise a FileNotFoundError indicating missing dev config file.
     '''
     cfg_dict = omegaconf.OmegaConf.create({
-        'execution': {'user_cfg': '/path/missing_user.yaml'},
+        'execution': {'dev_cfg': '/path/missing_dev.yaml'},
     })
 
     with pytest.raises(FileNotFoundError, match='configuration file not found'):
@@ -119,3 +119,49 @@ def test_resolve_configs_overfit_recipe_applied():
     assert root.session.engine_optim.lr == 1e-3
     assert root.session.engine_tasks.loss_configs.focal.gamma == 0.0
 
+
+def test_resolve_configs_command_recipe_applied():
+    '''
+    Given: A Hydra configuration targeting 'data-harmonize'.
+    When: Calling `resolve_configs` with command.
+    Then: Load configs directly from `data_harmonize.yaml`.
+    '''
+    cfg_dict = omegaconf.OmegaConf.create({
+        'command': 'data-harmonize',
+    })
+
+    root = resolver_mod.resolve_configs(
+        config=cfg_dict,
+        use_additional_settings=True,
+    )
+
+    assert root.command == 'data-harmonize'
+    assert root.data.world_grid.output_dpath == (
+        './experiment/artifacts/world_grids'
+    )
+    assert root.data.harmonization.output_dpath == (
+        './experiment/artifacts/harmonized_data'
+    )
+    assert root.data.harmonization.resampling_continuous == 'bilinear'
+    # verify recipe values applied correctly
+    assert root.data.preparation.partition.val_ratio != 0.20
+
+
+def test_resolve_configs_missing_recipe():
+    '''
+    Given: A Hydra configuration targeting an unknown command.
+    When: Calling `resolve_configs` with
+        `use_additional_settings=True`.
+    Then: Raise a FileNotFoundError indicating missing tracked recipe.
+    '''
+    cfg_dict = omegaconf.OmegaConf.create({
+        'command': 'non-existent-cmd',
+    })
+
+    with pytest.raises(
+        FileNotFoundError, match='Tracked recipe not found for command'
+    ):
+        resolver_mod.resolve_configs(
+            config=cfg_dict,
+            use_additional_settings=True,
+        )
