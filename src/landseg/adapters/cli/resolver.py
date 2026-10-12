@@ -92,4 +92,5 @@ def resolve_configs(
     root = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
     root.execution.cli_mode = True
 
-    return root # note here configs are not yet validated
+    root.validate()
+    return root

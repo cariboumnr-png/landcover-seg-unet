@@ -80,26 +80,33 @@ class SessionConfig(base.BaseConfigSection):
         '''Typed training mode.'''
         return typing.cast(typing.Literal['continuous', 'curriculum'], self.mode)
 
-    def validate(self):
+    def validate(
+        self,
+        mode: typing.Literal['train', 'evaluate'] = 'train',
+    ):
         self.dataloader.validate()
         self.engine.validate()
-        self.orchestration.validate()
-        self.evaluation.validate()
 
-        if self.mode == 'continuous':
-            if self.orchestration.curriculum.schema != 'single':
+        if mode == 'train':
+            self.orchestration.validate()
+
+            if self.mode == 'continuous':
+                if self.orchestration.curriculum.schema != 'single':
+                    raise ValueError(
+                        '[curriculum.schema] must be "single" for a continuous '
+                        'training session'
+                    )
+            elif self.mode == 'curriculum':
+                if self.orchestration.curriculum.schema == 'single':
+                    raise ValueError(
+                        '[curriculum.schema] must not be "single" for a curriculum'
+                        '-based training session; expected: "baseline" or "custom"'
+                    )
+            else:
                 raise ValueError(
-                    '[curriculum.schema] must be "single" for a continuous '
-                    'training session'
+                    f'Invalid mode: {self.mode}, '
+                    f'must be "continuous" or "curriculum"'
                 )
-        elif self.mode == 'curriculum':
-            if self.orchestration.curriculum.schema == 'single':
-                raise ValueError(
-                    '[curriculum.schema] must not be "single" for a curriculum'
-                    '-based training session; expected: "baseline" or "custom"'
-                )
+
         else:
-            raise ValueError(
-                f'Invalid mode: {self.mode}, '
-                f'must be "continuous" or "curriculum"'
-            )
+            self.evaluation.validate()

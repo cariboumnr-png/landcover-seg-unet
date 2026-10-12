@@ -63,19 +63,31 @@ class WorldGridConfig(base.BaseConfigSection):
         self.params.validate()
 
         if self.mode == 'ref':
+            if self.params.ref_fpath is None:
+                raise base.ConfigValidationError(
+                    'Extent reference file path required for "ref" mode.'
+                )
             self.require_file(self.params.ref_fpath, 'grid reference raster')
 
         elif self.mode == 'manual':
             crs = self.params.crs_string
-            if not crs or not bool(re.fullmatch(r'epsg:\d+', crs, re.I)):
-                raise ValueError(f'Invalid CRS, must be [EPSG:....], got {crs}')
+            try:
+                if not crs or not bool(re.fullmatch(r'epsg:\d+', crs, re.I)):
+                    raise ValueError(f'CRS must be [EPSG:xxxx], got {crs}')
 
-            if not self.params.origin:
-                raise ValueError('Origin not provided')
-            if not self.params.pixel_size:
-                raise ValueError('Pixel size not provided')
-            if not self.params.extent_in_crs_units:
-                raise ValueError('Extent (in CRS units) not provided')
+                if not self.params.origin:
+                    raise ValueError('Origin not provided')
 
-            if self.params.pixel_size[0] != self.params.pixel_size[1]:
-                raise ValueError('Only square pixels are supported')
+                if not self.params.pixel_size:
+                    raise ValueError('Pixel size not provided')
+
+                if not self.params.extent_in_crs_units:
+                    raise ValueError('Extent (in CRS units) not provided')
+
+                if self.params.pixel_size[0] != self.params.pixel_size[1]:
+                    raise ValueError('Only square pixels are supported')
+
+            except ValueError as e:
+                raise base.ConfigValidationError(
+                    f'Invalid manual grid configuration: {e}'
+                ) from e

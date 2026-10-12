@@ -75,9 +75,45 @@ class RootConfig(base.BaseConfigSection):
     study: StudyConfig = field(default_factory=StudyConfig)
     command: str = 'default'
 
-    def validate(self) -> None:
-        self.data.validate()
-        self.models.validate()
-        self.session.validate()
-        self.study.validate()
-        self.require_attr_type_range('command', str, c.COMMANDS)
+    def validate(
+        self,
+        command: str | None = None,
+    ) -> None:
+        '''Validate the entire configuration structure.'''
+        command = self.command if command is None else command
+        try:
+            self.require_type_range(command, 'command', str, c.COMMANDS)
+        except ValueError as e:
+            raise base.ConfigValidationError(
+                f'Failed to validate command: {command}'
+            ) from e
+        match command:
+            case 'default' | 'preflight':
+                pass
+            case 'world-grid':
+                self.data.world_grid.validate()
+            case 'data-harmonize':
+                self.data.harmonization.validate()
+            case 'data-ingest' | 'batch-ingest':
+                self.data.ingestion.validate()
+            case 'data-prepare':
+                self.data.preparation.validate()
+            case 'model-train' | 'diagnose-overfit':
+                self.models.validate()
+                self.session.validate(mode='train')
+            case 'model-evaluate':
+                self.models.validate()
+                self.session.validate(mode='evaluate')
+            case 'study-sweep':
+                self.models.validate()
+                self.session.validate(mode='train')
+                self.study.validate()
+            case 'study-analysis':
+                self.study.sweep.validate()
+            case 'e2e-intake' | 'end-to-end-intake':
+                self.data.harmonization.validate()
+                self.data.ingestion.validate()
+            case 'e2e-experiment' | 'end-to-end-experiment':
+                self.data.validate()
+                self.models.validate()
+                self.session.validate(mode='train')

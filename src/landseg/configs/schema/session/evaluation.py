@@ -42,10 +42,11 @@ class EvaluationConfig(base.BaseConfigSection):
     def valid_split(self) -> typing.Literal['val', 'test']:
         '''Return validated evaluation split identifier.'''
         if self.split not in ('val', 'test'):
-            raise ValueError(f'Invalid split: {self.split}')
+            raise base.ConfigValidationError(f'Invalid split: {self.split}')
         return typing.cast(typing.Literal['val', 'test'], self.split)
 
     def validate(self) -> None:
         self.require_attr_type_range('split', str, ['val', 'test'])
-        if self.checkpoint is not None:
-            self.require_file(self.checkpoint, 'Checkpoint')
+        if self.checkpoint is None:
+            raise base.ConfigValidationError('Checkpoint is required')
+        self.require_file(self.checkpoint, 'Checkpoint')
