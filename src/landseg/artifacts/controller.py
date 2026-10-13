@@ -68,6 +68,9 @@ class Controller(typing.Generic[T]):
             file_path: Absolute or relative path to the artifact file.
             policy: Lifecycle policy governing load and rebuild behavior.
         '''
+        if not bool(file_path):
+            print(file_path)
+            raise _ArtifactMissing # e.g., empty str
 
         self.fp = file_path
         self.dir = os.path.dirname(self.fp)

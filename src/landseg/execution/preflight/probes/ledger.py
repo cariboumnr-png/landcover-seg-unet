@@ -113,14 +113,12 @@ def pending_harmonization(
     root_config: configs.RootConfig
 ) -> schema.ProbeResult:
     '''Inspect if input source dataset is already harmonized.'''
-    dataset_manifest_path = os.path.abspath(
-        root_config.data.harmonization.dataset_manifest
-    )
 
-    manifest = RunManifestCtrl(
-        artifact_paths.data_harmonization.runs_manifest
-    ).fetch()
-    if manifest is None:
+    harmonization_runs_mfst = artifact_paths.data_harmonization.runs_manifest
+    try:
+        ctrl = RunManifestCtrl.load_json_or_fail(harmonization_runs_mfst)
+        harmonization_runs = ctrl.fetch()
+    except artifacts.ArtifactError:
         return schema.ProbeResult(
             pid='harmonized_dataset',
             category='Ledger',
@@ -128,9 +126,10 @@ def pending_harmonization(
             message='Harmonization has not been run'
         )
 
-    for v in manifest.values():
+    dt_mfst = os.path.abspath(root_config.data.harmonization.dataset_manifest)
+    for v in harmonization_runs.values():
         if (
-            v.get('source_dataset_manifest') == dataset_manifest_path and
+            v.get('source_dataset_manifest') == dt_mfst and
             v.get('status') == 'SUCCESS'
         ):
             return schema.ProbeResult(
@@ -142,7 +141,7 @@ def pending_harmonization(
                         f'<{v.get('run_uid')}>'
                     ),
                     details={
-                        'dataset_manifest_fpath': dataset_manifest_path,
+                        'dataset_manifest_fpath': dt_mfst,
                         'target_harmonization_run_uid': v.get('run_uid')
                     },
                 )
@@ -151,7 +150,7 @@ def pending_harmonization(
         pid='harmonized_dataset',
         category='Ledger',
         status=schema.ProbeStatus.PASS,
-        message=f'Dataset from {dataset_manifest_path} not yet harmonized'
+        message=f'Dataset from {dt_mfst} not yet harmonized'
     )
 
 
@@ -178,41 +177,52 @@ def pending_ingestion(
     '''
     probe_id = pid or 'pending_ingestion'
 
-    harmonize_manifest = artifact_paths.data_harmonization.runs_manifest
-    ingest_manifest = artifact_paths.data_ingestion.runs_manifest
+    harmonization_runs_mfst = artifact_paths.data_harmonization.runs_manifest
+    ingestion_runs_mfst = artifact_paths.data_ingestion.runs_manifest
 
-    harmonization_runs = RunManifestCtrl(harmonize_manifest).fetch()
-    ingestion_runs = RunManifestCtrl(ingest_manifest).fetch()
-
-    if not harmonization_runs:
+    try:
+        ctrl = RunManifestCtrl.load_json_or_fail(harmonization_runs_mfst)
+        harmonization_runs = ctrl.fetch()
+        good_harmonization_runs = {
+            k: v for k, v in harmonization_runs.items()
+            if v.get('status') == 'SUCCESS'
+        }
+        harmonization_uids = set(
+            v.get('run_uid') for v in good_harmonization_runs.values()
+        )
+    except artifacts.ArtifactError:
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',
             status=schema.ProbeStatus.FAIL,
             message='Unable to resolve pending batches',
             details={
-                'harmonization_run_manifest': harmonize_manifest,
-                'ingestion_run_manifest': ingest_manifest
+                'harmonization_run_manifest': harmonization_runs_mfst,
+                'ingestion_run_manifest': ingestion_runs_mfst
             },
         )
 
-    good_harmonization_runs = {
-        k: v for k, v in harmonization_runs.items()
-        if v.get('status') == 'SUCCESS'
-    }
-
-    effective_ingestion_runs = ingestion_runs or {}
-    good_ingestion_runs = {
-        k: v for k, v in effective_ingestion_runs.items()
-        if v.get('status') == 'SUCCESS'
-    }
-
-    harmonization_uids = set(
-        v.get('run_uid') for v in good_harmonization_runs.values()
-    )
-    harmonization_uids_in_ingestion = set(
-        v.get('harmonization_run_uid') for v in good_ingestion_runs.values()
-    )
+    try:
+        ctrl = RunManifestCtrl.load_json_or_fail(ingestion_runs_mfst)
+        ingestion_runs = ctrl.fetch()
+        good_ingestion_runs = {
+            k: v for k, v in ingestion_runs.items()
+            if v.get('status') == 'SUCCESS'
+        }
+        harmonization_uids_in_ingestion = set(
+            v.get('harmonization_run_uid') for v in good_ingestion_runs.values()
+        )
+    except artifacts.ArtifactError:
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.FAIL,
+            message='Unable to resolve pending batches',
+            details={
+                'harmonization_run_manifest': harmonization_runs_mfst,
+                'ingestion_run_manifest': ingestion_runs_mfst
+            },
+        )
 
     pending = harmonization_uids - harmonization_uids_in_ingestion
 
@@ -296,8 +306,18 @@ def prepared_blocks_state(
 ) -> schema.ProbeResult:
     '''Inspect prepared blocks state.'''
     probe_id = pid or 'prepared_blocks_state'
+
     schema_path = artifact_paths.data_preparation.schema
-    prep_schema = artifacts.Controller[dict](schema_path).fetch()
+    try:
+        ctrl = artifacts.Controller[dict].load_json_or_fail(schema_path)
+        prep_schema = ctrl.fetch()
+    except artifacts.ArtifactError:
+        return schema.ProbeResult(
+            pid=probe_id,
+            category='Ledger',
+            status=schema.ProbeStatus.PASS,
+            message='Data preparation not yet run',
+        )
 
     match bool(prep_schema), desire_existing:
         case False, False:
