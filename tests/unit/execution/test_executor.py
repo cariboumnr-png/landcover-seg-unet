@@ -35,7 +35,7 @@ import landseg.execution.workflows as workflows
     ('default', workflows, 'execute_default_action', False),
     ('world-grid', pipelines, 'WorldGridGeneration', True),
     ('data-harmonize', pipelines, 'DataHarmonization', True),
-    ('data-ingest', pipelines, 'DataIngestion', True),
+    ('data-ingest', workflows, 'execute_batch_ingest', False),
     ('data-prepare', pipelines, 'DataPreparation', True),
     ('model-train', pipelines, 'ModelTraining', True),
     ('model-evaluate', pipelines, 'ModelEvaluation', True),

@@ -51,7 +51,7 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
         case 'diagnose-overfit':
             workflows.execute_diagnose_overfit(root_config)
 
-        case 'batch-ingest':
+        case 'data-ingest' | 'batch-ingest':
             workflows.execute_batch_ingest(root_config)
 
         case 'e2e-intake' | 'end-to-end-intake':
@@ -71,9 +71,6 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
 
         case 'data-harmonize':
             pipelines.DataHarmonization(root_config).run()
-
-        case 'data-ingest':
-            pipelines.DataIngestion(root_config).run()
 
         case 'data-prepare':
             pipelines.DataPreparation(root_config).run()
