@@ -74,30 +74,10 @@ def test_resolve_configs_base(tmp_path):
 
     root = resolver_mod.resolve_configs(
         config=cfg_dict,
-        use_additional_settings=False,
     )
 
     assert root.execution.cli_mode is True
     assert root.session.orchestration.single_phase.num_epochs == 5
-
-
-def test_resolve_configs_missing_dev_file():
-    '''
-    Given: Non-existent dev config path in `execution.dev_cfg`.
-    When: `resolve_configs` executes with
-        `use_additional_settings=True`.
-    Then: Raise a FileNotFoundError indicating missing dev config file.
-    '''
-    cfg_dict = omegaconf.OmegaConf.create({
-        'execution': {'dev_cfg': '/path/missing_dev.yaml'},
-    })
-
-    with pytest.raises(FileNotFoundError, match='configuration file not found'):
-        resolver_mod.resolve_configs(
-            config=cfg_dict,
-            use_additional_settings=True,
-        )
-
 
 def test_resolve_configs_overfit_recipe_applied():
     '''
@@ -111,7 +91,6 @@ def test_resolve_configs_overfit_recipe_applied():
 
     root = resolver_mod.resolve_configs(
         config=cfg_dict,
-        use_additional_settings=True,
     )
 
     assert root.command == 'diagnose-overfit'
@@ -132,7 +111,6 @@ def test_resolve_configs_command_recipe_applied():
 
     root = resolver_mod.resolve_configs(
         config=cfg_dict,
-        use_additional_settings=True,
     )
 
     assert root.command == 'data-harmonize'
@@ -163,5 +141,4 @@ def test_resolve_configs_missing_recipe():
     ):
         resolver_mod.resolve_configs(
             config=cfg_dict,
-            use_additional_settings=True,
         )

@@ -25,10 +25,28 @@ Default CLI action, currently routed to run preflight check
 
 # local imports
 import landseg.configs as configs
-import landseg.execution.preflight as preflight
 
 def execute_default_action(config: configs.RootConfig):
-    '''place holder.'''
+    '''Default action.'''
+    _ = config
+    print('''
+        LANDSEG
 
-    print('Running whole project preflight checks by default')
-    _ = preflight.run_preflight(config)
+        Land-cover segmentation framework for geospatial data preparation,
+        model training, evaluation, and study workflows.
+
+        Commands:
+        world-grid        Build canonical world grid
+        data-harmonize    Harmonize source rasters
+        data-ingest       Build data block artifacts
+        data-prepare      Create datasets and metadata
+        model-train       Train a model
+        model-evaluate    Evaluate a checkpoint
+        diagnose-overfit  Run overfit diagnostics
+        study-sweep       Run Optuna studies
+        study-analysis    Analyze study results
+        preflight         Run readiness validation
+
+        Example:
+        landseg command=model-train
+    ''')
