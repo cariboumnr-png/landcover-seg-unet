@@ -1,0 +1,87 @@
+# =============================================================================
+# Full End-to-End Experiment Pipeline Recipe
+# -----------------------------------------------------------------------------
+# Executes complete geospatial ML workflow: world grid generation, raw raster
+# harmonization, batch ingestion, split preparation, and model training.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Stage 1: World Grid Generation
+  # ---------------------------------------------------------------------------
+  world_grid:
+    output_dpath: ./experiment/artifacts/world_grids
+    mode: ref
+    params:
+      ref_fpath: ./experiment/input/reference_raster/sample_extent.tif
+      tile_size: [256, 256]
+      tile_stride: [128, 128]
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Data Harmonization
+  # ---------------------------------------------------------------------------
+  harmonization:
+    output_dpath: ./experiment/artifacts/harmonized_data
+    dataset_manifest: ./experiment/input/raw_data/manifest.json
+    resampling_continuous: bilinear
+    resampling_categorical: nearest
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Data Ingestion
+  # ---------------------------------------------------------------------------
+  ingestion:
+    output_dpath: ./experiment/artifacts/ingested_data
+    harmonization_run: null
+    rebuild: true
+    datablocks:
+      add_topo: [slope, tpi]
+      add_spectral: [ndvi, ndmi, nbr]
+
+  # ---------------------------------------------------------------------------
+  # Stage 4: Data Preparation
+  # ---------------------------------------------------------------------------
+  preparation:
+    output_dpath: ./experiment/artifacts/prepared_data
+    rebuild: true
+    datasetview:
+      features: {}
+      targets: {}
+      test_catalog: null
+      non_overlapping_test_grid: true
+    partition:
+      val_ratio: 0.20
+      test_ratio: 0.00
+      buffer_step: 0
+      test_aoi: ./experiment/input/reference_raster/sample_test_aoi.tif
+      val_aoi: null
+      train_aoi: null
+      aoi_min_overlap: 0.5
+    scoring:
+      reward: {}
+
+# -----------------------------------------------------------------------------
+# Stage 5: Model Architecture & Training Session
+# -----------------------------------------------------------------------------
+models:
+  model_body: unetppp
+  bottleneck: transformer
+  conditioners: [concat, film]
+
+session:
+  output_dpath: ./experiment/results
+  dataloader:
+    patch_size: 128
+    batch_size: 16
+
+  engine:
+    engine_optim:
+      lr: 1e-4
+      weight_decay: 1e-4
+
+  orchestration:
+    curriculum:
+      single:
+        phases:
+          - name: e2e-train
+            num_epochs: 25
+            active_heads: null

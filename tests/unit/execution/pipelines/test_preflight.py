@@ -519,7 +519,7 @@ def test_run_preflight_strict_mode_failure(tmp_path, monkeypatch):
     )
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
-    cfg.command.preflight.strict = True
+    cfg.execution.preflight_strict_mode = True
 
     with pytest.raises(
         RuntimeError,

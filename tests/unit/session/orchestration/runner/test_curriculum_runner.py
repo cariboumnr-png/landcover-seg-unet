@@ -24,7 +24,7 @@
 '''Unit tests for curriculum training runner (runner/curriculum.py).'''
 
 # local imports
-import landseg.configs.schema.sections.session as session_schema
+import landseg.configs.schema.session.orchestration as orch_sec
 import landseg.session.orchestration.runner.curriculum as curriculum_mod
 
 
@@ -39,8 +39,8 @@ def test_curriculum_runner_initialization(
     Then: Store curriculum phases and initialize global epoch tracker.
     '''
     phases = [
-        session_schema._Phase(name='phase_1', num_epochs=2),
-        session_schema._Phase(name='phase_2', num_epochs=2)
+        orch_sec.PhaseConfig(name='phase_1', num_epochs=2),
+        orch_sec.PhaseConfig(name='phase_2', num_epochs=2)
     ]
 
     runner = curriculum_mod.CurriculumRunner(
@@ -68,8 +68,8 @@ def test_curriculum_runner_run_generator(
     mocker.patch('landseg.artifacts.save_checkpoint', autospec=True)
 
     phases = [
-        session_schema._Phase(name='phase_1', num_epochs=1),
-        session_schema._Phase(name='phase_2', num_epochs=1)
+        orch_sec.PhaseConfig(name='phase_1', num_epochs=1),
+        orch_sec.PhaseConfig(name='phase_2', num_epochs=1)
     ]
 
     runner = curriculum_mod.CurriculumRunner(
@@ -101,7 +101,7 @@ def test_curriculum_runner_execute(
     mocker.patch('landseg.artifacts.save_checkpoint', autospec=True)
     mocker.patch('landseg.artifacts.Controller.persist', autospec=True)
 
-    phases = [session_schema._Phase(name='phase_1', num_epochs=1)]
+    phases = [orch_sec.PhaseConfig(name='phase_1', num_epochs=1)]
 
     runner = curriculum_mod.CurriculumRunner(
         training_phases=phases,

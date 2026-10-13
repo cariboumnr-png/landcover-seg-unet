@@ -22,21 +22,21 @@
 # pylint: disable=protected-access
 
 '''
-Unit tests for `landseg.configs.schema.sections.dataspecs`.
+Unit tests for `landseg.configs.schema.data.specification`.
 '''
 
 # local imports
-import landseg.configs.schema.sections.data as data
+import landseg.configs.schema.data.specification as spec_sec
 
 
-# ----- `DataSpecs` tests
+# ----- `DataSpecificationConfig` tests
 def test_data_specs_default_instantiation():
     '''
-    Given: Default `DataSpecs` instantiation parameters.
-    When: Creating a `DataSpecs` instance without arguments.
+    Given: Default `DataSpecificationConfig` instantiation parameters.
+    When: Creating a `DataSpecificationConfig` instance without args.
     Then: Initialize `domain_ids_name` and `domain_vec_name` as None.
     '''
-    specs = data._Specification()
+    specs = spec_sec.DataSpecificationConfig()
     assert specs.domain_ids_name is None
     assert specs.domain_vec_name is None
 
@@ -44,12 +44,13 @@ def test_data_specs_default_instantiation():
 def test_data_specs_custom_values():
     '''
     Given: Explicit domain names for IDs and vector representations.
-    When: Instantiating `DataSpecs` with custom strings.
+    When: Instantiating `DataSpecificationConfig` with custom strings.
     Then: Store specified domain strings on corresponding attributes.
     '''
-    specs = data._Specification(
+    specs = spec_sec.DataSpecificationConfig(
         domain_ids_name='eco_region',
         domain_vec_name='climate_vec',
     )
     assert specs.domain_ids_name == 'eco_region'
     assert specs.domain_vec_name == 'climate_vec'
+

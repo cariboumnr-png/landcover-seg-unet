@@ -28,36 +28,17 @@ Pipeline execution
 # standard imports
 import typing
 # local imports
+import landseg._constants as c
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.preflight as preflight
 import landseg.execution.workflows as workflows
 
 
-COMMANDS = typing.Literal[
-    'default',
-    'world-grid',
-    'data-harmonize',
-    'data-ingest',
-    'data-prepare',
-    'diagnose-overfit',
-    'model-evaluate',
-    'model-train',
-    'batch-ingest',
-    'e2e-intake',
-    'e2e-experiment',
-    'end-to-end-intake',
-    'end-to-end-experiment',
-    'preflight',
-    'study-analysis',
-    'study-sweep'
-]
-
-
 # ----- public functions
 def execute_command(root_config: configs.RootConfig) -> typing.Any:
     '''Run the selected CLI command with resolved configuration.'''
-    command = root_config.command.name
+    command = root_config.command
     results = None
 
     match command:
@@ -70,7 +51,7 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
         case 'diagnose-overfit':
             workflows.execute_diagnose_overfit(root_config)
 
-        case 'batch-ingest':
+        case 'data-ingest' | 'batch-ingest':
             workflows.execute_batch_ingest(root_config)
 
         case 'e2e-intake' | 'end-to-end-intake':
@@ -91,9 +72,6 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
         case 'data-harmonize':
             pipelines.DataHarmonization(root_config).run()
 
-        case 'data-ingest':
-            pipelines.DataIngestion(root_config).run()
-
         case 'data-prepare':
             pipelines.DataPreparation(root_config).run()
 
@@ -104,6 +82,6 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
             pipelines.ModelEvaluation(root_config).run()
 
         case _:
-            raise KeyError(f'Unknown command: {command}; allowed: {COMMANDS}')
+            raise KeyError(f'Unknown command: {command}; allowed: {c.COMMANDS}')
 
     return results

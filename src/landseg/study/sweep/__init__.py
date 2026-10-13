@@ -32,18 +32,18 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
+    'TrialMutator',
     # functions
     'make_objective',
     'run_sweep',
-    # typing
-    'RootConfigShape',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .config import (
-        RootConfigShape,
+    from .mutator import (
+        TrialMutator,
     )
     from .objectives import (
         make_objective,
@@ -54,8 +54,8 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'RootConfigShape'}:
-        obj = importlib.import_module('.config', __package__)
+    if name in {'TrialMutator'}:
+        obj = importlib.import_module('.mutator', __package__)
         return getattr(obj, name)
 
     if name in {'make_objective'}:

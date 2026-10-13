@@ -33,14 +33,14 @@ def test_api_run_success(mocker):
     '''
     Given: A valid `RootConfig` instance.
     When: Calling `api.run`.
-    Then: Delegate execution to `execution.execute_pipeline`.
+    Then: Delegate execution to `execution.execute_command`.
     '''
     mock_exec = mocker.patch(
-        'landseg.execution.execute_pipeline',
+        'landseg.execution.execute_command',
         return_value={'status': 'SUCCESS'}
     )
     cfg = configs.RootConfig()
-    cfg.command.name = 'data-harmonize'
+    cfg.command = 'data-harmonize'
 
     result = api.run(cfg)
     mock_exec.assert_called_once_with(cfg)
@@ -50,11 +50,11 @@ def test_api_run_success(mocker):
 def test_api_run_keyboard_interrupt(mocker):
     '''
     Given: A pipeline run that is interrupted by user.
-    When: `execution.execute_pipeline` raises KeyboardInterrupt.
+    When: `execution.execute_command` raises KeyboardInterrupt.
     Then: Propagate KeyboardInterrupt.
     '''
     mocker.patch(
-        'landseg.execution.execute_pipeline',
+        'landseg.execution.execute_command',
         side_effect=KeyboardInterrupt
     )
     cfg = configs.RootConfig()
@@ -66,11 +66,11 @@ def test_api_run_keyboard_interrupt(mocker):
 def test_api_run_exception(mocker):
     '''
     Given: A pipeline run that raises an unhandled exception.
-    When: `execution.execute_pipeline` raises RuntimeError.
+    When: `execution.execute_command` raises RuntimeError.
     Then: Log error and re-raise the exception.
     '''
     mocker.patch(
-        'landseg.execution.execute_pipeline',
+        'landseg.execution.execute_command',
         side_effect=RuntimeError('Pipeline failed')
     )
     cfg = configs.RootConfig()
@@ -91,11 +91,11 @@ def test_api_run_preflight_delegates(mocker):
         return_value='report'
     )
     cfg = configs.RootConfig()
-    cfg.command.name = 'model-train'
+    cfg.command = 'model-train'
 
     result = api.run_preflight(cfg, target='model-train', strict=True)
     assert result == 'report'
-    assert cfg.command.preflight.strict is True
+    assert cfg.execution.preflight_strict_mode is True
     mock_preflight.assert_called_once_with(
         root_config=cfg,
         target='model-train',
@@ -122,16 +122,16 @@ def test_api_run_preflight_string_target(mocker):
 
 def test_api_run_preflight_inferred_target(mocker):
     '''
-    Given: A `RootConfig` with `command.name = 'data-harmonize'`.
+    Given: A `RootConfig` with `command = 'data-harmonize'`.
     When: Calling `api.run_preflight(cfg)` without explicit target.
-    Then: Infer target from `command.name`.
+    Then: Infer target from `command`.
     '''
     mock_preflight = mocker.patch(
         'landseg.execution.preflight.run_preflight',
         return_value='report'
     )
     cfg = configs.RootConfig()
-    cfg.command.name = 'data-harmonize'
+    cfg.command = 'data-harmonize'
 
     result = api.run_preflight(cfg)
     assert result == 'report'

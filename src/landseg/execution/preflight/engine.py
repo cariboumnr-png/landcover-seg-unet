@@ -179,7 +179,7 @@ def run_preflight(
             hydra-composed root configuration.
         target:
             pipeline name, workflow name, or 'all'. If None, defaults
-            to `root_config.command.preflight.target`.
+            to `root_config.execution.preflight_target` or 'all'.
         exp_root:
             optional experiment root directory override.
 
@@ -187,7 +187,11 @@ def run_preflight(
         schema.PreflightResult | list[schema.PreflightResult]:
             single result or list of results across all targets.
     '''
-    selected_target = target or root_config.command.preflight.target
+    selected_target = (
+        target
+        or root_config.execution.preflight_target
+        or 'all'
+    )
     if selected_target in SUPPORTED_TARGETS:
         results: schema.PreflightResult | list[schema.PreflightResult]
         results = inspect_target(selected_target, root_config)
@@ -206,18 +210,17 @@ def run_preflight(
     report_text = reporter.format_preflight_report(results)
     print(report_text)
 
-    # export report artifact if configured
-    if root_config.command.preflight.export_report:
-        report_fp, _ = reporter.export_preflight_report(
-            results,
-            root_config,
-            selected_target,
-            exp_root=exp_root,
-        )
-        print(f'Preflight report saved to: {report_fp}')
+    # export report artifact
+    report_fp, _ = reporter.export_preflight_report(
+        results,
+        root_config,
+        selected_target,
+        exp_root=exp_root,
+    )
+    print(f'Preflight report saved to: {report_fp}')
 
     # strict mode enforcement
-    if root_config.command.preflight.strict:
+    if root_config.execution.preflight_strict_mode:
         result_list = (
             [results] if isinstance(results, schema.PreflightResult) else results
         )

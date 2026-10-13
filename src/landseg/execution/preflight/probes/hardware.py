@@ -55,77 +55,76 @@ def hardware_info(
     probes: list[schema.ProbeResult] = []
     cuda_available = torch.cuda.is_available()
 
-    if root_config.command.preflight.check_gpu:
-        if cuda_available:
-            device_name = torch.cuda.get_device_name(0)
+    if cuda_available:
+        device_name = torch.cuda.get_device_name(0)
+        probes.append(
+            schema.ProbeResult(
+                pid='cuda_device',
+                category='Hardware',
+                status=schema.ProbeStatus.PASS,
+                message=f'{device_name} (cuda:0)',
+                details={
+                    'device_name': device_name,
+                    'cuda': True,
+                    'device': c.DEVICE_NAME,
+                    'torch_version': torch.__version__,
+                },
+            )
+        )
+        try:
+            free_b, total_b = torch.cuda.mem_get_info(0)
+            free_gb = free_b / (1024 ** 3)
+            total_gb = total_b / (1024 ** 3)
+            batch_size = (
+                root_config.session.dataloader.batch_size
+                if root_config is not None
+                and hasattr(root_config, 'session')
+                and hasattr(root_config.session, 'dataloader')
+                else 16
+            )
+            # estimate B * C * H * W * 4 bytes * 10x overhead factor
+            est_b = batch_size * 4 * 256 * 256 * 4 * 10
+            est_gb = est_b / (1024 ** 3)
+            vram_status = (
+                schema.ProbeStatus.PASS
+                if free_b >= est_b
+                else schema.ProbeStatus.WARN
+            )
             probes.append(
                 schema.ProbeResult(
-                    pid='cuda_device',
+                    pid='vram_headroom',
                     category='Hardware',
-                    status=schema.ProbeStatus.PASS,
-                    message=f'{device_name} (cuda:0)',
+                    status=vram_status,
+                    message=(
+                        f'{free_gb:.1f} GB free / '
+                        f'~{est_gb:.1f} GB est. batch'
+                    ),
                     details={
-                        'device_name': device_name,
-                        'cuda': True,
-                        'device': c.DEVICE_NAME,
-                        'torch_version': torch.__version__,
+                        'vram_free_gb': round(free_gb, 2),
+                        'vram_total_gb': round(total_gb, 2),
+                        'estimated_batch_gb': round(est_gb, 2),
+                        'vram_free_bytes': free_b,
+                        'total_bytes': total_b,
+                        'estimated_batch_bytes': est_b,
                     },
                 )
             )
-            try:
-                free_b, total_b = torch.cuda.mem_get_info(0)
-                free_gb = free_b / (1024 ** 3)
-                total_gb = total_b / (1024 ** 3)
-                batch_size = (
-                    root_config.session.dataloader.batch_size
-                    if root_config is not None
-                    and hasattr(root_config, 'session')
-                    and hasattr(root_config.session, 'dataloader')
-                    else 16
-                )
-                # estimate B * C * H * W * 4 bytes * 10x overhead factor
-                est_b = batch_size * 4 * 256 * 256 * 4 * 10
-                est_gb = est_b / (1024 ** 3)
-                vram_status = (
-                    schema.ProbeStatus.PASS
-                    if free_b >= est_b
-                    else schema.ProbeStatus.WARN
-                )
-                probes.append(
-                    schema.ProbeResult(
-                        pid='vram_headroom',
-                        category='Hardware',
-                        status=vram_status,
-                        message=(
-                            f'{free_gb:.1f} GB free / '
-                            f'~{est_gb:.1f} GB est. batch'
-                        ),
-                        details={
-                            'vram_free_gb': round(free_gb, 2),
-                            'vram_total_gb': round(total_gb, 2),
-                            'estimated_batch_gb': round(est_gb, 2),
-                            'vram_free_bytes': free_b,
-                            'total_bytes': total_b,
-                            'estimated_batch_bytes': est_b,
-                        },
-                    )
-                )
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
-        else:
-            probes.append(
-                schema.ProbeResult(
-                    pid='cuda_device',
-                    category='Hardware',
-                    status=schema.ProbeStatus.WARN,
-                    message='CUDA unavailable; compute running on CPU',
-                    details={
-                        'device_name': 'cpu',
-                        'cuda': False,
-                        'device': c.DEVICE_NAME,
-                        'torch_version': torch.__version__,
-                    },
-                )
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+    else:
+        probes.append(
+            schema.ProbeResult(
+                pid='cuda_device',
+                category='Hardware',
+                status=schema.ProbeStatus.WARN,
+                message='CUDA unavailable; compute running on CPU',
+                details={
+                    'device_name': 'cpu',
+                    'cuda': False,
+                    'device': c.DEVICE_NAME,
+                    'torch_version': torch.__version__,
+                },
             )
+        )
 
     return probes

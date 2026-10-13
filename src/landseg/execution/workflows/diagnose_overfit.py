@@ -229,7 +229,7 @@ def _create_block(
         context.grid,
         context.features,
         context.labels,
-        artifact_paths.data_ingestion.data_blocks.mapped_window(context.grid.gid),
+        artifact_paths.data_ingestion.windows,
         policy=artifacts.LifecyclePolicy.REBUILD
     )
 

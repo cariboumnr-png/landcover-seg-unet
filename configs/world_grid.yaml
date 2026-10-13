@@ -1,0 +1,26 @@
+# =============================================================================
+# World Grid Generation Recipe
+# -----------------------------------------------------------------------------
+# Constructs and persists canonical spatial tiling grid for the
+# experiment.
+# =============================================================================
+
+data:
+  world_grid:
+    # -------------------------------------------------------------------------
+    # Pipeline I/O Paths
+    # -------------------------------------------------------------------------
+    # Destination directory for generated world grid artifacts
+    output_dpath: ./experiment/artifacts/world_grids
+
+    # -------------------------------------------------------------------------
+    # Spatial Target & World Grid Tiling
+    # -------------------------------------------------------------------------
+    mode: ref
+    params:
+      # Reference GeoTIFF defining geographic extent and projection
+      ref_fpath: ./experiment/input/reference_raster/sample_extent.tif
+
+      # Spatial tile dimensions and stride (pixels)
+      tile_size: [256, 256]
+      tile_stride: [128, 128]

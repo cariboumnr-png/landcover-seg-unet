@@ -40,3 +40,21 @@ DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 DEVICE_NAME: str = _get_device_name()
 TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 OVERFIT_MAX_EPOCH: int = 1000
+COMMANDS = [
+    'default',
+    'world-grid',
+    'data-harmonize',
+    'data-ingest',
+    'data-prepare',
+    'diagnose-overfit',
+    'model-evaluate',
+    'model-train',
+    'batch-ingest',
+    'e2e-intake',
+    'e2e-experiment',
+    'end-to-end-intake',
+    'end-to-end-experiment',
+    'preflight',
+    'study-analysis',
+    'study-sweep'
+]

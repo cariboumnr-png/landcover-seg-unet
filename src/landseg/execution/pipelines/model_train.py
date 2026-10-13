@@ -87,7 +87,7 @@ class ModelTraining(base.SessionPipeline):
         )
         logger.init_summary(
             run_id=self.pipeline_paths.run_id,
-            command=self.config.command.name,
+            command=self.config.command,
         )
         return logger
 

@@ -48,7 +48,7 @@ def test_world_grid_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.command.name == 'world-grid'
+    assert root.command == 'world-grid'
     assert root.data.world_grid.params.crs_string == 'EPSG:3161'
     assert root.data.world_grid.params.ref_fpath == str(ref_tif)
     assert root.data.world_grid.params.tile_size == (256, 256)
@@ -84,7 +84,7 @@ def test_data_harmonization_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.command.name == 'data-harmonize'
+    assert root.command == 'data-harmonize'
     assert root.data.world_grid.params.tile_size == (512, 512)
     assert root.data.world_grid.params.tile_stride == (64, 64)
     assert root.data.world_grid.output_dpath == str(tmp_path / 'world_grids')
@@ -115,7 +115,7 @@ def test_data_ingestion_configurator(tmp_path):
     ).set_collision_policy('overwrite')
 
     root = cfg_builder.running_root_config
-    assert root.command.name == 'data-ingest'
+    assert root.command == 'data-ingest'
     assert root.data.ingestion.rebuild is True
     assert root.data.ingestion.harmonization_run == 1
     assert root.data.ingestion.datablocks.add_topo == ['slope', 'tpi']
@@ -198,7 +198,7 @@ def test_training_session_configurator(tmp_path):
     )
 
     root = cfg_builder.running_root_config
-    assert root.command.name == 'model-train'
+    assert root.command == 'model-train'
     assert root.models.model_body == 'unet'
     assert root.models.bottleneck == 'conv'
     assert root.models.model_body_registry['unet'].base_ch == 64
@@ -222,7 +222,7 @@ def test_batch_ingest_configurator(tmp_path):
     cfg_builder.set_rebuild(True).set_collision_policy('skip')
 
     root = cfg_builder.running_root_config
-    assert root.command.name == 'batch-ingest'
+    assert root.command == 'batch-ingest'
     assert root.data.ingestion.rebuild is True
     assert root.data.ingestion.datablocks.collision_policy == 'skip'
 

@@ -27,16 +27,16 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_data_geometry(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Data geometry mutations:
       - Patch size (`int`)
       - Batch size (`int`)
     '''
 
-    study_cfg = trial_cfg.study.data_geometry
+    study_cfg = trial_cfg.study.architecture.data_geometry
 
     trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(
@@ -59,15 +59,15 @@ def obj_data_geometry(
     return trial_cfg
 
 def obj_context_window(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Context window mutation:
       - Patch size (`int`)
     '''
 
-    study_cfg = trial_cfg.study.context_window
+    study_cfg = trial_cfg.study.architecture.context_window
 
     trial_cfg.set_data_patch_size(
         patch_size=trial.suggest_int(

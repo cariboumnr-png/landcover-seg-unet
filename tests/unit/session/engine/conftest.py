@@ -32,7 +32,7 @@ import dataclasses
 # third-party imports
 import pytest
 # local imports
-import landseg.configs.schema.sections.session as session_schema
+import landseg.configs.schema.session.engine as engine_sec
 import landseg.session.engine.tasks.loss.builder as loss_builder
 import landseg.session.engine.tasks.metrics as metrics
 import landseg.session.engine.tasks.heads as headspecs
@@ -51,7 +51,7 @@ def mock_hspecs(dataspecs):
 def mock_hlosses(mock_hspecs):
     return loss_builder.build_headlosses(
         mock_hspecs,
-        config=session_schema._LossTypesConfig(),
+        config=engine_sec.LossConfigs(),
         ignore_index=255,
         spectral_band_indices=None
     )
@@ -76,7 +76,7 @@ def mock_constraint():
     ):
         if forbidden is None:
             forbidden = [2]
-        return session_schema._MTLConstraints(
+        return engine_sec.MTLConstraints(
             name=name,
             source_head=source_head,
             trigger_val=trigger_val,

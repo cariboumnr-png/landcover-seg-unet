@@ -33,6 +33,7 @@ import typing
 
 __all__ = [
     # classes
+    'ExecutionContext',
     'RootConfig',
 ]
 
@@ -40,12 +41,13 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .schema import (
+        ExecutionContext,
         RootConfig,
     )
 
 
 def __getattr__(name: str):
-    if name in {'RootConfig'}:
+    if name in {'ExecutionContext', 'RootConfig'}:
         obj = importlib.import_module('.schema', __package__)
         return getattr(obj, name)
 

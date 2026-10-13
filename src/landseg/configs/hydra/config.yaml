@@ -9,18 +9,20 @@ defaults:
   - session: default
   # study
   - study: default
-  # command
-  - command: default
   # disable logging entirely
   - override hydra/job_logging: disabled
   - override hydra/hydra_logging: disabled
+
+# command
+command: default
 
 # execution options
 execution:
   verbosity: select # 'full', 'select', 'silent'
   exp_root: ./experiment
-  user_cfg: ${oc.env:AUX_SETTINGS_PATH, null} # user supply
   dev_cfg: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
+  preflight_target: null
+  preflight_strict_mode: false
 
 # hydra settings
 hydra:

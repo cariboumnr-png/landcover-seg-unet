@@ -27,16 +27,16 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_base(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Base preset mutations:
       - Learning rate (`float`)
       - Data batch size (`int`)
     '''
 
-    study_cfg = trial_cfg.study.base
+    study_cfg = trial_cfg.study.optimization.base
 
     # optimizer domain example
     trial_cfg.set_optimizer_lr(

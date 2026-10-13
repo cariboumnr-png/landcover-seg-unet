@@ -33,6 +33,7 @@ Public APIs:
 # local imports
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
+import landseg.execution.workflows.batch_ingest as batch_ingest
 import landseg.utils as utils
 
 
@@ -63,7 +64,7 @@ def execute_e2e_experiment(config: configs.RootConfig) -> None:
 
     # stage 3: batch ingestion into canonical block pool
     logger.info('[3/5] Stage: Batch Ingestion')
-    pipelines.DataIngestion(config).run()
+    batch_ingest.execute_batch_ingest(config)
 
     # stage 4: data preparation (AOI partition splits & DataSpecs)
     logger.info('[4/5] Stage: Data Preparation')

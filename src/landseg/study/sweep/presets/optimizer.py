@@ -27,16 +27,16 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_optimizer(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Optimizer preset mutations:
       - Learning rate (`float`)
       - weight decay (`float`)
     '''
 
-    study_cfg = trial_cfg.study.optimizer
+    study_cfg = trial_cfg.study.optimization.optimizer
 
     trial_cfg.set_optimizer_lr(
         lr=trial.suggest_float(
@@ -59,16 +59,16 @@ def obj_optimizer(
     return trial_cfg
 
 def obj_throughput(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Throughput preset mutations:
       - Batch size (`int`)
       - AMP usage (`bool`)
     '''
 
-    study_cfg = trial_cfg.study.throughput
+    study_cfg = trial_cfg.study.optimization.throughput
 
     trial_cfg.set_data_batch_size(
         batch_size=trial.suggest_int(

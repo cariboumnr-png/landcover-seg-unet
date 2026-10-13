@@ -47,7 +47,7 @@ def run(root_config: configs.RootConfig) -> typing.Any:
     '''
     logger = utils.Logger('api', './api.log')
     try:
-        logger.info(f'Running command: {root_config.command.name}')
+        logger.info(f'Running command: {root_config.command}')
         return execution.execute_command(root_config)
     except KeyboardInterrupt:
         logger.info('Execution interrupted')
@@ -62,9 +62,6 @@ def run_preflight(
     target: str | None = None,
     *,
     strict: bool | None = None,
-    export_report: bool | None = None,
-    report_path: str | None = None,
-    check_gpu: bool | None = None,
     exp_root: str | None = None,
 ) -> preflight.PreflightResult | list[preflight.PreflightResult]:
     '''
@@ -81,13 +78,14 @@ def run_preflight(
             Optional pipeline or workflow target name (e.g.,
             `'model-train'`, `'batch-ingest'`, or `'all'`).
         strict:
-            If specified, overrides `config.command.preflight.strict`.
+            If specified, overrides
+            `config.execution.preflight_strict_mode`.
         export_report:
-            If specified, overrides `config.command.preflight.export_report`.
+            Deprecated override for report export.
         report_path:
-            If specified, overrides `config.command.preflight.report_path`.
+            Deprecated override for report path.
         check_gpu:
-            If specified, overrides `config.command.preflight.check_gpu`.
+            Deprecated override for GPU probe.
         exp_root:
             Optional experiment root directory override.
 
@@ -103,19 +101,13 @@ def run_preflight(
         resolved_target = target
 
     if strict is not None:
-        cfg.command.preflight.strict = strict
-    if export_report is not None:
-        cfg.command.preflight.export_report = export_report
-    if report_path is not None:
-        cfg.command.preflight.report_path = report_path
-    if check_gpu is not None:
-        cfg.command.preflight.check_gpu = check_gpu
+        cfg.execution.preflight_strict_mode = strict
 
     if resolved_target is None:
-        if cfg.command.name not in ('preflight', 'default'):
-            resolved_target = cfg.command.name
+        if cfg.command not in ('preflight', 'default'):
+            resolved_target = cfg.command
         else:
-            resolved_target = cfg.command.preflight.target
+            resolved_target = cfg.execution.preflight_target or 'all'
 
     return preflight.run_preflight(
         root_config=cfg,
@@ -139,7 +131,7 @@ def run_intake(
             Result returned by the dispatched intake workflow.
     '''
     cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
-    cfg.command.name = 'e2e-intake'
+    cfg.command = 'e2e-intake'
     return run(cfg)
 
 
@@ -158,5 +150,5 @@ def run_experiment(
             Result returned by the dispatched experiment workflow.
     '''
     cfg = config if isinstance(config, configs.RootConfig) else configs.RootConfig()
-    cfg.command.name = 'e2e-experiment'
+    cfg.command = 'e2e-experiment'
     return run(cfg)

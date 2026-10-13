@@ -1,0 +1,57 @@
+# =============================================================================
+# Data Preparation Recipe
+# -----------------------------------------------------------------------------
+# Partitions blocks into train/val/test splits, applies channel
+# selections, and balances classes for downstream training.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Upstream Pipeline I/O
+  # ---------------------------------------------------------------------------
+  ingestion:
+    # Upstream ingested data directory
+    output_dpath: ./experiment/artifacts/ingested_data
+
+  # ---------------------------------------------------------------------------
+  # Preparation Parameters & Destination Output
+  # ---------------------------------------------------------------------------
+  preparation:
+    # Destination directory for prepared data splits and transforms
+    output_dpath: ./experiment/artifacts/prepared_data
+
+    # Force rebuild splits & normalization even if they exist
+    rebuild: true
+
+    datasetview:
+      # Select input feature channels by dataset name ({} selects all)
+      features: {}
+
+      # Select target reclassification by label name ({} uses base classes)
+      targets: {}
+
+      # Explicit test catalog or non-overlapping grid selection
+      test_catalog: null
+      non_overlapping_test_grid: true
+
+    partition:
+      # Ratio of unassigned blocks partitioned for validation (0.0 to 1.0)
+      val_ratio: 0.20
+
+      # Test partition ratio from unassigned pool (0.0 disables test split)
+      test_ratio: 0.00
+
+      # Spatial buffer step distance to prevent spatial leakage into train
+      buffer_step: 0
+
+      # Geographic AOI block selection (explicit raster paths or null)
+      test_aoi: ./experiment/input/reference_raster/sample_test_aoi.tif
+      val_aoi: null
+      train_aoi: null
+
+      # Minimum block overlap ratio with AOI raster to select (0.0 to 1.0)
+      aoi_min_overlap: 0.5
+
+    scoring:
+      # Map of class index to oversampling reward (e.g., {1: 2.0})
+      reward: {}

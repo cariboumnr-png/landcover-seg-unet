@@ -27,9 +27,9 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_architecture(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Architecture preset mutations:
       - Model body (`str`)
@@ -37,7 +37,7 @@ def obj_architecture(
       - Bottleneck type (`str`)
     '''
 
-    study_cfg = trial_cfg.study.architecture
+    study_cfg = trial_cfg.study.architecture.architecture
 
     trial_cfg.set_model_body(
         model_body=trial.suggest_categorical(
@@ -65,16 +65,16 @@ def obj_architecture(
     return trial_cfg
 
 def obj_bottleneck(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Bottlenect preset mutations:
       - Blocks count (`int`)
       - Transformer hyperparameters
     '''
 
-    study_cfg = trial_cfg.study.bottleneck
+    study_cfg = trial_cfg.study.architecture.bottleneck
 
     bottleneck = trial.suggest_categorical(
         name='model.bottleneck',
@@ -132,15 +132,15 @@ def obj_bottleneck(
     return trial_cfg
 
 def obj_conditioning(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Conditioning preset mutations:
       - Conditioner selection (`list[str]`)
     '''
 
-    study_cfg = trial_cfg.study.conditioning
+    study_cfg = trial_cfg.study.architecture.conditioning
 
     # auto construct conditioners mapping
     # e.g., {'film_concat': ['film', 'concat']}

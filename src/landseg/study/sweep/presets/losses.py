@@ -27,16 +27,16 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_loss_balance(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Main loss balance mutations:
       - Focal loss weight (`float`)
       - Dice loss weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.loss_balance
+    study_cfg = trial_cfg.study.objectives.loss_balance
 
     trial_cfg.set_objective_focal_weight(
         weight=trial.suggest_float(
@@ -57,16 +57,16 @@ def obj_loss_balance(
     return trial_cfg
 
 def obj_loss_aux(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Auxiliary loss mutations:
       - Spectral loss weight (`float`)
       - TV loss weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.loss_auxiliary
+    study_cfg = trial_cfg.study.objectives.loss_auxiliary
 
     trial_cfg.set_objective_spectral_weight(
         weight=trial.suggest_float(
@@ -87,15 +87,15 @@ def obj_loss_aux(
     return trial_cfg
 
 def obj_regularization(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Regularization mutations:
       - consistency regularizer lambda weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.regularization
+    study_cfg = trial_cfg.study.objectives.regularization
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

@@ -1,0 +1,33 @@
+# =============================================================================
+# Continuous Data Intake Workflow Recipe
+# -----------------------------------------------------------------------------
+# Coordinates raw raster harmonization followed by batch ingestion into the
+# canonical block pool.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Upstream Pipeline I/O
+  # ---------------------------------------------------------------------------
+  world_grid:
+    output_dpath: ./experiment/artifacts/world_grids
+
+  # ---------------------------------------------------------------------------
+  # Stage 1: Data Harmonization
+  # ---------------------------------------------------------------------------
+  harmonization:
+    output_dpath: ./experiment/artifacts/harmonized_data
+    dataset_manifest: ./experiment/input/raw_data/manifest.json
+    resampling_continuous: bilinear
+    resampling_categorical: nearest
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Batch Data Ingestion
+  # ---------------------------------------------------------------------------
+  ingestion:
+    output_dpath: ./experiment/artifacts/ingested_data
+    harmonization_run: null
+    rebuild: false
+    datablocks:
+      add_topo: [slope, tpi]
+      add_spectral: [ndvi, ndmi, nbr]

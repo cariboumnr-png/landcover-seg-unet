@@ -59,8 +59,8 @@ def test_analyze_pipeline(tmp_path, monkeypatch):
     exp_root = str(tmp_path / 'exp')
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = exp_root
-    schema.command.study_sweep.study_name = 'test_study'
-    schema.command.study_sweep.storage = 'sqlite:///test.db'
+    schema.study.sweep.study_name = 'test_study'
+    schema.study.sweep.storage = 'sqlite:///test.db'
 
     config = typing.cast(
         configs.RootConfig,

@@ -123,11 +123,11 @@ def test_translate_user_config_data_prepare():
     })
     result = translate_mod.translate_user_config(user_cfg)
 
-    assert result.data.preparation.features.sentinel2 == 'rgb_nir'
-    assert result.data.preparation.targets.landcover == 'binary'
+    assert result.data.preparation.datasetview.features.sentinel2 == 'rgb_nir'
+    assert result.data.preparation.datasetview.targets.landcover == 'binary'
     assert result.data.preparation.partition.val_ratio == 0.2
     assert result.data.preparation.partition.test_ratio == 0.1
-    assert result.data.preparation.catalog.focal_target == 'cover'
+    assert result.data.preparation.datasetview.focal_target == 'cover'
     assert result.data.preparation.rebuild is True
     assert result.data.preparation.output_dpath == (
         '/path/exp/artifacts/transform'

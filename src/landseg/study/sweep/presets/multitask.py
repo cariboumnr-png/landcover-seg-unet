@@ -28,15 +28,15 @@ import optuna
 import landseg.study.sweep as sweep
 
 def obj_head_weights(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Head weights preset mutations:
       - logit adjust alpha weight (`float`)
     '''
 
-    study_cfg = trial_cfg.study.head_weights
+    study_cfg = trial_cfg.study.objectives.head_weights
 
     trial_cfg.set_runtime_logit_adjust_alpha(
         alpha=trial.suggest_float(
@@ -49,16 +49,16 @@ def obj_head_weights(
     return trial_cfg
 
 def obj_mtl_joint(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     MTL joint preset mutations:
       - consistency lambda (`float`)
       - logit adjust alpha (`float`)
     '''
 
-    study_cfg = trial_cfg.study.mtl_joint
+    study_cfg = trial_cfg.study.objectives.mtl_joint
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(
@@ -79,16 +79,16 @@ def obj_mtl_joint(
     return trial_cfg
 
 def obj_hierarchy(
-    trial_cfg: sweep.RootConfigShape,
+    trial_cfg: sweep.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.RootConfigShape:
+) -> sweep.TrialMutator:
     '''
     Hierarchy preset mutations:
       - consistency lambda (`float`)
       - consistency reduction (`str`)
     '''
 
-    study_cfg = trial_cfg.study.hierarchy
+    study_cfg = trial_cfg.study.objectives.hierarchy
 
     trial_cfg.set_mtl_consistency_lambda(
         value=trial.suggest_float(

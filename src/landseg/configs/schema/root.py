@@ -19,180 +19,101 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-public-methods
-
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
 suitable for OmegaConf structured configs.
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
-import typing
 # local imports
-import landseg.configs.schema.sections as sec
+import landseg._constants as c
+import landseg.configs.schema.base as base
+import landseg.configs.schema.data as data
+import landseg.configs.schema.models as models
+import landseg.configs.schema.session as session
+import landseg.configs.schema.study as study
 
 # alias
 field = dataclasses.field
+DataConfig = data.DataConfig
+ModelsConfig = models.ModelsConfig
+SessionConfig = session.SessionConfig
+StudyConfig = study.StudyConfig
 
-# ------------------------------EXECUTION CONFIGS------------------------------
+
 @dataclasses.dataclass
-class _ExecutionContext:
+class ExecutionContext(base.BaseConfigSection):
     '''Mutable execution context.'''
-    verbosity: str | int | None = 'full' # 'full', 'logging_only', 'silent', 10/20/None
-    exp_root: str = './experiment' # root directory for this experiment run
-    user_cfg: str | None = None # external user configs
+    verbosity: str | int | None = 'full'
+    exp_root: str = './experiment'
+    preflight_target: str | None = None
+    preflight_strict_mode: bool = False
     dev_cfg: str | None = None # developer-only override config
-    cli_mode: bool = False # indicates whether the execution was initiated through the CLI resolver
+    cli_mode: bool = False # indicates whether execution initiated via CLI
 
     @property
     def console_level(self) -> int | None:
-        '''Parse verbosity option into console level.'''
-        if self.verbosity is None:
-            return None
-        if isinstance(self.verbosity, str):
-            match self.verbosity:
-                case 'full':
-                    return 10
-                case 'select':
-                    return 20
-                case 'silent':
-                    return None
-                case _:
-                    raise ValueError(f'Invalid option: {self.verbosity}')
+        '''Normalized console level from verbosity setting.'''
         match self.verbosity:
-            case 10:
-                return 10
-            case 20:
-                return 20
-            case _:
-                raise ValueError(f'Invalid option: {self.verbosity}')
+            case 10: return 10
+            case 20: return 20
+            case 'full': return 10
+            case 'select': return 20
+            case 'silent': return None
+            case None: return None
+            case _: raise ValueError(f'Invalid option: {self.verbosity}')
 
 
-# --------------------------------ROOT  CONFIGS--------------------------------
 @dataclasses.dataclass
-class RootConfig:
-    '''Root structured config for landseg.'''
+class RootConfig(base.BaseConfigSection):
+    '''Root structured configuration schema.'''
+    execution: ExecutionContext = field(default_factory=ExecutionContext)
+    data: DataConfig = field(default_factory=DataConfig)
+    models: ModelsConfig = field(default_factory=ModelsConfig)
+    session: SessionConfig = field(default_factory=SessionConfig)
+    study: StudyConfig = field(default_factory=StudyConfig)
+    command: str = 'default'
 
-    # execution configs
-    execution: _ExecutionContext = field(default_factory=_ExecutionContext)
-    # data ETL settings
-    data: sec.DataConfig = field(default_factory=sec.DataConfig)
-    # model settings
-    models: sec.ModelsConfig = field(default_factory=sec.ModelsConfig)
-    # session settings
-    session: sec.SessionConfig = field(default_factory=sec.SessionConfig)
-    # study settings
-    study: sec.StudyConfig = field(default_factory=sec.StudyConfig)
-    # pipeline specific CLI flags
-    command: sec.CommandConfig = field(default_factory=sec.CommandConfig)
-
-    @property
-    def as_dict(self) -> dict[str, typing.Any]:
-        return dataclasses.asdict(typing.cast(typing.Any, self))
-
-    def validate_all(self) -> None:
-        self.command.validate()
-        self.data.validate()
-        self.models.validate()
-        self.session.validate()
-
-    # hyperparameter setters (for sweeping)
-    # ----- data geometry
-    def set_data_patch_size(self, patch_size: int) -> None:
-        self.session.dataloader.patch_size = patch_size
-
-    def set_data_batch_size(self, batch_size: int) -> None:
-        self.session.dataloader.batch_size = batch_size
-
-    # ----- runtime optimization
-    def set_optimizer_lr(self, lr: float) -> None:
-        self.session.engine_optim.lr = lr
-
-    def set_optimizer_weight_decay(self, weight_decay: float) -> None:
-        self.session.engine_optim.weight_decay = weight_decay
-
-    def set_optimizer_type(self, opt_cls: str) -> None:
-        self.session.engine_optim.opt_cls = opt_cls
-
-    def set_optimizer_scheduler_type(self, sched_cls: str | None) -> None:
-        self.session.engine_optim.sched_cls = sched_cls
-
-    def set_optimizer_scheduler_args(self, sched_args: dict[str, typing.Any]) -> None:
-        self.session.engine_optim.sched_args = sched_args
-
-    def set_optimizer_grad_clip_norm(self, grad_clip_norm: float | None) -> None:
-        self.session.engine_optim.grad_clip_norm = grad_clip_norm
-
-    def set_runtime_use_amp(self, use_amp: bool) -> None:
-        self.session.engine_exec.use_amp = use_amp
-
-    def set_runtime_logit_adjust_alpha(self, alpha: float) -> None:
-        self.session.engine_exec.logit_adjust_alpha = alpha
-
-    # ----- objective (loss + regularization)
-    def set_objective_focal_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.focal.weight = weight
-
-    def set_objective_dice_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.dice.weight = weight
-
-    def set_objective_spectral_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.spectral.weight = weight
-
-    def set_objective_tv_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.tv.weight = weight
-
-    def set_objective_ecological_weight(self, weight: float) -> None:
-        self.session.engine_tasks.loss_configs.ecological.weight = weight
-
-    # ----- multitask
-    def set_mtl_consistency_lambda(self, value: float) -> None:
-        reg_config = self.session.engine_tasks.mtl_reg_configs
-        reg_config.consistency_lambda = value
-
-    def set_mtl_consistency_reduction(self, reduction: str) -> None:
-        reg_config = self.session.engine_tasks.mtl_reg_configs
-        reg_config.consistency_reduction = reduction
-
-    # ----- architecture
-    def set_model_body(self, model_body: str) -> None:
-        self.models.model_body = model_body
-
-    def set_model_base_channel(self, base_channel: int) -> None:
-        self.models.set_base_channel(base_channel)
-
-    def set_model_bottleneck(self, bottleneck: str) -> None:
-        self.models.bottleneck = bottleneck
-
-    def set_model_conditioners(self, conditioners: list[str]) -> None:
-        self.models.conditioners = conditioners
-
-    # ----- bottleneck structure (architecture sub-domain)
-    def set_bottleneck_convolution_blocks(self, num_blocks: int | None) -> None:
-        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
-        bottleneck.num_conv_blocks = num_blocks
-
-    def set_bottleneck_transformer_blocks(self, num_blocks: int | None) -> None:
-        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
-        bottleneck.num_transformer_blocks = num_blocks
-
-    # ----- transformer parameters (architecture sub-domain)
-    def set_transformer_num_heads(self, num_heads: int) -> None:
-        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
-        bottleneck.transformer_params.num_heads = num_heads
-
-    def set_transformer_mlp_ratio(self, mlp_ratio: float) -> None:
-        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
-        bottleneck.transformer_params.mlp_ratio = mlp_ratio
-
-    def set_transformer_dropout(self, dropout: float) -> None:
-        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
-        bottleneck.transformer_params.dropout = dropout
-
-    def set_transformer_attn_dropout(self, attn_dropout: float) -> None:
-        bottleneck = self.models.bottleneck_registry[self.models.bottleneck]
-        bottleneck.transformer_params.attn_dropout = attn_dropout
+    def validate(
+        self,
+        command: str | None = None,
+    ) -> None:
+        '''Validate the entire configuration structure.'''
+        command = self.command if command is None else command
+        try:
+            self.require_type_range(command, 'command', str, c.COMMANDS)
+        except ValueError as e:
+            raise base.ConfigValidationError(
+                f'Failed to validate command: {command}'
+            ) from e
+        match command:
+            case 'default' | 'preflight':
+                pass
+            case 'world-grid':
+                self.data.world_grid.validate()
+            case 'data-harmonize':
+                self.data.harmonization.validate()
+            case 'data-ingest' | 'batch-ingest':
+                self.data.ingestion.validate()
+            case 'data-prepare':
+                self.data.preparation.validate()
+            case 'model-train' | 'diagnose-overfit':
+                self.models.validate()
+                self.session.validate(mode='train')
+            case 'model-evaluate':
+                self.models.validate()
+                self.session.validate(mode='evaluate')
+            case 'study-sweep':
+                self.models.validate()
+                self.session.validate(mode='train')
+                self.study.validate()
+            case 'study-analysis':
+                self.study.sweep.validate()
+            case 'e2e-intake' | 'end-to-end-intake':
+                self.data.harmonization.validate()
+                self.data.ingestion.validate()
+            case 'e2e-experiment' | 'end-to-end-experiment':
+                self.data.validate()
+                self.models.validate()
+                self.session.validate(mode='train')

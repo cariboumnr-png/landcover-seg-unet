@@ -44,7 +44,7 @@ def execute_study_analysis(config: configs.RootConfig):
     '''
 
     # load and rank
-    sweep_config = config.command.study_sweep
+    sweep_config = config.study.sweep
     ranked = study.rank_trials(
         sweep_config.study_name,
         sweep_config.storage,
