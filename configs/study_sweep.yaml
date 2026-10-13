@@ -1,0 +1,60 @@
+# =============================================================================
+# Hyperparameter Study Sweep Recipe
+# -----------------------------------------------------------------------------
+# Executes Optuna study sweep across defined search spaces with scalar
+# objective evaluation.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Upstream Pipeline I/O
+  # ---------------------------------------------------------------------------
+  preparation:
+    output_dpath: ./experiment/artifacts/prepared_data
+
+# -----------------------------------------------------------------------------
+# Base Model Architecture
+# -----------------------------------------------------------------------------
+models:
+  model_body: unetppp
+  bottleneck: transformer
+  conditioners: [concat, film]
+
+# -----------------------------------------------------------------------------
+# Session Runner Settings
+# -----------------------------------------------------------------------------
+session:
+  mode: continuous
+  output_dpath: ./experiment/results
+  dataloader:
+    patch_size: 128
+    batch_size: 16
+
+  orchestration:
+    curriculum:
+      single:
+        phases:
+          - name: sweep-trial
+            num_epochs: 5
+            active_heads: null
+
+# -----------------------------------------------------------------------------
+# Study & Search Space Parameters
+# -----------------------------------------------------------------------------
+study:
+  sweep:
+    study_name: landseg_sweep
+    storage: sqlite:///./experiment/results/optuna.db
+    preset_name: base
+    direction: maximize
+    n_trials: 20
+    seed: 42
+
+  optimization:
+    base:
+      learning_rate: [1e-5, 1e-2]
+      batch_size: [16, 64, 16]
+
+  architecture:
+    context_window:
+      patch_size: [64, 128, 64]

@@ -1,0 +1,36 @@
+# =============================================================================
+# Model Evaluation Recipe
+# -----------------------------------------------------------------------------
+# Evaluates a trained model checkpoint on prepared evaluation or test splits.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Upstream Pipeline I/O
+  # ---------------------------------------------------------------------------
+  preparation:
+    output_dpath: ./experiment/artifacts/prepared_data
+
+# -----------------------------------------------------------------------------
+# Model Architecture Configuration
+# -----------------------------------------------------------------------------
+models:
+  model_body: unetppp
+  bottleneck: transformer
+  conditioners: [concat, film]
+
+# -----------------------------------------------------------------------------
+# Evaluation Session Configuration
+# -----------------------------------------------------------------------------
+session:
+  output_dpath: ./experiment/results
+  dataloader:
+    patch_size: 128
+    batch_size: 16
+
+  evaluation:
+    # Path to saved model checkpoint weights
+    checkpoint: ./experiment/results/checkpoints/best_model.pth
+
+    # Evaluation dataset split: "val" or "test"
+    split: test

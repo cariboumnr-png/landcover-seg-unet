@@ -1,0 +1,10 @@
+# =============================================================================
+# Post-Sweep Study Analysis Recipe
+# -----------------------------------------------------------------------------
+# Inspects and ranks completed Optuna study sweep trials from the storage DB.
+# =============================================================================
+
+study:
+  sweep:
+    study_name: landseg_sweep
+    storage: sqlite:///./experiment/results/optuna.db

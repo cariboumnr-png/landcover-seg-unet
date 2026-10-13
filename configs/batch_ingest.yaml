@@ -1,0 +1,23 @@
+# =============================================================================
+# Batch Data Ingestion Recipe
+# -----------------------------------------------------------------------------
+# Ingests pending harmonized batches sequentially into the canonical block pool.
+# =============================================================================
+
+data:
+  # ---------------------------------------------------------------------------
+  # Upstream Pipeline I/O
+  # ---------------------------------------------------------------------------
+  harmonization:
+    output_dpath: ./experiment/artifacts/harmonized_data
+
+  # ---------------------------------------------------------------------------
+  # Batch Ingestion Parameters & Destination Output
+  # ---------------------------------------------------------------------------
+  ingestion:
+    output_dpath: ./experiment/artifacts/ingested_data
+    harmonization_run: null
+    rebuild: false
+    datablocks:
+      add_topo: [slope, tpi]
+      add_spectral: [ndvi, ndmi, nbr]

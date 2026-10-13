@@ -1,6 +1,6 @@
 # ADR-0061: Configuration Modernization and Modular Recipes
 
-**Status:** Proposed<br>
+**Status:** Accepted<br>
 **Date:** 2026-10-08
 
 ---
@@ -12,97 +12,95 @@ dataclass schemas (`landseg.configs.schema`) and a single user recipe
 surface (`configs/user.yaml`).
 
 While this structure established strong type checking and runtime
-validation, several quality-of-life and architectural frictions have
+validation, several quality-of-life and architectural frictions
 emerged:
 
 1. **Monolithic Schema Modules**:
-   Sections such as `sections/data.py` (~320 lines) and `sections/session.py`
-   (~340 lines) bundle multiple distinct sub-domains (e.g., world grid,
-   ingestion, partitioning, engine optimization, multitask loss, and
-   curriculum orchestration) into single dense files.
+   Sections such as `sections/data.py` and `sections/session.py` bundled
+   multiple distinct sub-domains (e.g., world grid, ingestion, partitioning,
+   engine optimization, multitask loss, and curriculum orchestration) into
+   dense single files.
 2. **Disconnected Validation Primitives**:
-   Validation utilities (`must_within`, `must_exist`, `file_exists`) reside
-   in a standalone `utils.py` module. Schema dataclasses import and invoke
+   Validation utilities (`must_within`, `must_exist`, `file_exists`) resided
+   in a standalone `utils.py` module. Schema dataclasses imported and invoked
    them procedurally rather than inheriting a consistent validation
    protocol or lifecycle.
 3. **Boundary Bleed Between Domain and Command Configs (ADR-0060 §6.1)**:
-   Sub-configs currently under `CommandConfig` (such as `_TrainModel`,
-   `_EvaluateModel`, and `_StudySweep`) mix long-lived domain parameters
-   with ephemeral CLI invocation parameters. Requiring nested overrides
-   like `command.model_evaluate.checkpoint=...` impairs CLI ergonomics.
+   Sub-configs mixed long-lived domain parameters with ephemeral CLI
+   invocation parameters. Requiring nested overrides impaired CLI
+   ergonomics.
 4. **Monolithic User Recipe Surface (ADR-0060 §6.2)**:
    `configs/user.yaml` was designed as an end-to-end pipeline recipe.
    Fitting distinct operational tasks (`model-evaluate`, `study-sweep`,
-   `batch-ingest`) into one file bloats the document with unused keys
-   during standard workflows.
+   `batch-ingest`) into one file bloated the document with unused keys
+   during standard workflows and required an intermediate translation layer.
 
 ---
 
 ## 2. Decision
 
-We will modernize the configuration schema and user recipe surfaces
-through targeted quality-of-life enhancements, preserving complete
-backward compatibility with existing call sites and Hydra resolvers.
+We modernized the configuration schema and user recipe surfaces through
+targeted modular enhancements:
 
 ### 2.1. Unified Section Base Class (`BaseConfigSection`)
 
-We will introduce a lightweight, field-free base class `BaseConfigSection`
-in `landseg.configs.schema.base`:
+We introduced a lightweight, field-free base class `BaseConfigSection` in
+`landseg.configs.schema.base`:
 
-- **Static Validation Primitives**: Expose `must_within`, `must_exist`, and
-  `file_exists` directly on the class, allowing dataclass methods to call
-  `self.must_within(...)` or `BaseConfigSection.must_within(...)`.
-- **Validation Lifecycle**: Provide a default no-op `validate(self) -> None`
+- **Static Validation Primitives**: Exposed type and range check helpers
+  directly on the class, allowing dataclass methods to call
+  `self.require_type_range(...)` or `self.require_attr_type_range(...)`.
+- **Validation Lifecycle**: Provided a default no-op `validate(self) -> None`
   to guarantee a uniform interface across all configuration nodes.
-- **Serialization Helper**: Provide a uniform `as_dict` property returning
+- **Serialization Helper**: Provided a uniform `as_dict` property returning
   `dataclasses.asdict(self)`.
-- **Dataclass Preservation**: Schema classes will inherit
-  `BaseConfigSection` while strictly preserving `@dataclasses.dataclass`.
-  `BaseConfigSection` will remain a plain (non-dataclass) class with zero
-  fields to prevent Python default-argument ordering conflicts.
-- **Backward Compatibility**: `landseg.configs.schema.utils` will re-export
-  the validation helpers, ensuring existing imports continue working without
-  modification.
+- **Dataclass Preservation**: Schema classes inherit `BaseConfigSection`
+  while strictly preserving `@dataclasses.dataclass`. `BaseConfigSection`
+  remains a plain (non-dataclass) class with zero fields to prevent Python
+  default-argument ordering conflicts.
 
 ### 2.2. Modularization of Monolithic Sections
 
-We will decompose monolithic schema files into focused sub-modules under
+We decomposed monolithic schema files into focused sub-modules under
 facade packages:
 
-- **`sections/data/`**: Split into `grid.py`, `ingestion.py`, `preparation.py`,
-  and `specification.py`.
-- **`sections/session/`**: Split into `loader.py`, `engine.py`, and
-  `orchestration.py`.
-- **Facade Re-exports**: `sections/data/__init__.py` and
-  `sections/session/__init__.py` will re-export all public and private
-  dataclasses, maintaining transparent compatibility for all tests and
-  import sites.
+- **`data/`**: Split into `world_grid.py`, `harmonziation.py`, `ingestion.py`,
+  `preparation.py`, `specification.py`, and composite aggregator
+  `_composite.py`.
+- **`session/`**: Split into `dataloader.py`, `engine.py`, `evaluation.py`,
+  `orchestration.py`, and composite aggregator `_composite.py`.
+- **`models/` & `study/`**: Modularized backbones, conditioners, safety,
+  optimization, architecture, objectives, and sweeps.
+- **Facade Re-exports**: Facade `__init__.py` files re-export all public
+  and private dataclasses, maintaining transparent compatibility for all
+  tests and import sites.
 
-### 2.3. Domain vs. Command Boundary Separation
+### 2.3. Command-Aware Partial Validation
 
-We will decouple long-lived domain declarations from ephemeral invocation
-flags:
+Each recipe configures only the subset of the schema required for its
+target command. We enhanced `RootConfig.validate(command)` with
+command-aware selective branching:
 
-- **Flatten Command Overrides**: Promote ephemeral CLI flags directly
-  under `CommandConfig` (e.g., `command.checkpoint: str | None = None`,
-  `command.split: str = 'test'`), enabling clean CLI overrides like
-  `command.checkpoint=...`.
-- **Domain Property Alignment**: Ensure persistent evaluation and sweep
-  parameters reside within their natural domain containers (`session` and
-  `study`).
+- Only active pipeline sections are validated for the selected execution
+  command.
+- `SessionConfig.validate(mode)` differentiates between `'train'` and
+  `'evaluate'` execution modes, enforcing `evaluation.checkpoint` only
+  during evaluation sessions.
 
-### 2.4. Modular User Recipes (`configs/recipes/`)
+### 2.4. Modular User Recipes (`configs/`)
 
-We will decouple `configs/user.yaml` into dedicated, task-oriented recipe
-files under `configs/recipes/`:
+We decoupled `configs/user.yaml` into lean, task-oriented recipe files
+located directly in `configs/`:
 
-- `configs/recipes/train_e2e.yaml`: Full end-to-end pipeline training recipe.
-- `configs/recipes/evaluate.yaml`: Dedicated checkpoint evaluation recipe.
-- `configs/recipes/sweep.yaml`: Hyperparameter sweep optimization recipe.
-- `configs/recipes/batch_ingest.yaml`: Incremental batch ingestion recipe.
-- **Translator Compatibility**: We will retain `configs/user.yaml` as the
-  default training wrapper and update `translate_user_config` to seamlessly
-  resolve specialized recipe files.
+- Single pipelines: `world_grid.yaml`, `data_harmonize.yaml`,
+  `data_ingest.yaml`, `data_prepare.yaml`, `model_train.yaml`,
+  `model_evaluate.yaml`.
+- Specialized workflows: `batch_ingest.yaml`, `diagnose_overfit.yaml`,
+  `study_sweep.yaml`, `study_analysis.yaml`.
+- Composite lifecycles: `e2e_intake.yaml` (continuous intake) and
+  `e2e_experiment.yaml` (full 5-stage lifecycle replacing legacy
+  `user.yaml`).
+- **Translation Layer Retirement**: (tentative) Recipes directly mirror the structured OmegaConf schema without requiring intermediate translation dictionaries.
 
 ---
 
@@ -111,11 +109,12 @@ files under `configs/recipes/`:
 ### Positive
 - **Cohesive Schema Hierarchy**: All configuration nodes share a common
   validation interface and lifecycle hook (`validate()`).
-- **Improved Code Organization**: Dense multi-hundred-line files are
-  decomposed into readable, single-responsibility modules matching the test
-  suite structure.
-- **Ergonomic CLI Overrides**: Flattened invocation parameters simplify
-  command-line overrides without cumbersome sub-dictionary nesting.
+- **Command-Aware Validation**: Workflows only validate their active
+  sections, eliminating false validation errors on unused configuration
+  sub-trees.
+- **Direct Schema Alignment**: Eliminating intermediate recipe translation
+  provides direct 1-to-1 parity between YAML recipe keys and dataclass
+  fields.
 - **Clean Recipe Management**: Users interact with lean, task-specific
   recipes instead of a bloated master configuration file.
 - **Zero Breaking Changes**: Preserved module aliases and facades ensure
@@ -123,5 +122,5 @@ files under `configs/recipes/`:
 
 ### Negative / Considerations
 - **Multiple Recipe Templates**: Maintaining separate recipe files under
-  `configs/recipes/` requires keeping templates aligned as schema defaults
+  `configs/` requires keeping templates aligned as schema defaults
   evolve.
