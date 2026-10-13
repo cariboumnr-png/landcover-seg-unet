@@ -171,16 +171,7 @@ rasters harmonisés et de la grille monde.
 landseg command=data-ingest
 ```
 
-### 3. Ingestion Par Lots
-
-Ingère séquentiellement plusieurs lots d'harmonisation planifiés dans le pool
-canonique de blocs de données.
-
-```bash
-landseg command=batch-ingest
-```
-
-### 4. Preparation Des Donnees
+### 3. Preparation Des Donnees
 
 Construit les artefacts propres a l'experience a partir des blocs de donnees
 ingeres, y compris le partitionnement géographique par AOI, les splits, la
@@ -190,7 +181,7 @@ normalisation et les schemas.
 landseg command=data-prepare
 ```
 
-### 5. Entrainement Du Modele
+### 4. Entrainement Du Modele
 
 Construit et execute une session complete d'entrainement a partir des artefacts
 prepares.
@@ -199,7 +190,7 @@ prepares.
 landseg command=model-train
 ```
 
-### 6. Evaluation Du Modele
+### 5. Evaluation Du Modele
 
 Execute l'evaluation a partir des artefacts prepares et d'un checkpoint entraine.
 
@@ -207,7 +198,7 @@ Execute l'evaluation a partir des artefacts prepares et d'un checkpoint entraine
 landseg command=model-evaluate command.model_evaluate.checkpoint=path/to/checkpoint
 ```
 
-### 7. Diagnostic De Surapprentissage
+### 6. Diagnostic De Surapprentissage
 
 Execute un diagnostic contraint de bout en bout sur un petit perimetre pour
 valider le cablage du modele, du dataset, des pertes, de l'optimiseur, des
@@ -217,7 +208,7 @@ metriques et de l'execution.
 landseg command=diagnose-overfit
 ```
 
-### 8. Sweep D'Etude
+### 7. Sweep D'Etude
 
 Execute le point d'entree de sweep oriente Optuna.
 
@@ -225,7 +216,7 @@ Execute le point d'entree de sweep oriente Optuna.
 landseg command=study-sweep
 ```
 
-### 9. Analyse D'Etude
+### 8. Analyse D'Etude
 
 Analyse les resultats d'etude via le point d'entree d'analyse.
 
@@ -233,7 +224,7 @@ Analyse les resultats d'etude via le point d'entree d'analyse.
 landseg command=study-analysis
 ```
 
-### 10. Validation Avant Vol (Pre-Flight)
+### 9. Validation Avant Vol (Pre-Flight)
 
 Execute des audits non destructifs avant vol pour verifier les dependances,
 l'integrite des registres, les contrats spatiaux et les ressources de calcul
@@ -241,8 +232,8 @@ avant de lancer des traitements lourds.
 
 ```bash
 # Auditer l'environnement complet ou des cibles specifiques de pipeline
-landseg command=preflight target=all
-landseg command=preflight target=model-train strict=true
+landseg command=preflight # passer en revue toutes les commandes
+landseg command=preflight execution.preflight_target=model-train # commandes ciblées
 ```
 
 Pour les specifications detaillees des sondes, codes de statut et tableaux

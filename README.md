@@ -161,16 +161,7 @@ world grid.
 landseg command=data-ingest
 ```
 
-### 3. Batch Ingestion
-
-Sequentially ingest multiple planned harmonization batches into the canonical
-data block pool.
-
-```bash
-landseg command=batch-ingest
-```
-
-### 4. Data Preparation
+### 3. Data Preparation
 
 Build experiment-scoped artifacts from ingested data blocks, including
 geographic AOI partitioning, splits, normalization statistics, and schemas.
@@ -179,7 +170,7 @@ geographic AOI partitioning, splits, normalization statistics, and schemas.
 landseg command=data-prepare
 ```
 
-### 5. Model Training
+### 4. Model Training
 
 Construct and run a full training session from prepared artifacts.
 
@@ -187,7 +178,7 @@ Construct and run a full training session from prepared artifacts.
 landseg command=model-train
 ```
 
-### 6. Model Evaluation
+### 5. Model Evaluation
 
 Run evaluation from prepared artifacts and a trained checkpoint.
 
@@ -195,7 +186,7 @@ Run evaluation from prepared artifacts and a trained checkpoint.
 landseg command=model-evaluate command.model_evaluate.checkpoint=path/to/checkpoint
 ```
 
-### 7. Overfit Diagnostic
+### 6. Overfit Diagnostic
 
 Run a constrained end-to-end diagnostic on a small scope to validate model,
 dataset, loss, optimizer, metric, and execution wiring.
@@ -204,7 +195,7 @@ dataset, loss, optimizer, metric, and execution wiring.
 landseg command=diagnose-overfit
 ```
 
-### 8. Study Sweep
+### 7. Study Sweep
 
 Run the Optuna-oriented study sweep entry point.
 
@@ -212,7 +203,7 @@ Run the Optuna-oriented study sweep entry point.
 landseg command=study-sweep
 ```
 
-### 9. Study Analysis
+### 8. Study Analysis
 
 Analyze study results through the study analysis entry point.
 
@@ -220,15 +211,15 @@ Analyze study results through the study analysis entry point.
 landseg command=study-analysis
 ```
 
-### 10. Pre-Flight Validation
+### 9. Pre-Flight Validation
 
 Run non-destructive pre-flight audits to verify dependencies, ledger integrity,
 spatial contracts, and compute resources prior to execution.
 
 ```bash
 # Audit full environment or specific pipeline targets
-landseg command=preflight target=all
-landseg command=preflight target=model-train strict=true
+landseg command=preflight # run over all commands
+landseg command=preflight execution.preflight_target=model-train # targeted command
 ```
 
 For detailed probe specifications, status codes, and terminal dashboards, see the

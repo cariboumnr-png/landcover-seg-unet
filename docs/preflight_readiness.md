@@ -53,14 +53,11 @@ Pre-flight checks are invoked via `command=preflight` through Hydra:
 python scripts/run.py command=preflight
 
 # Inspect a specific pipeline or workflow target
-python scripts/run.py command=preflight command.preflight.target=model-train
-python scripts/run.py command=preflight command.preflight.target=batch-ingest
+python scripts/run.py command=preflight execution.preflight_target=model-train
+python scripts/run.py command=preflight execution.preflight_target=batch-ingest
 
 # Enable strict mode (warnings cause execution gate failure)
-python scripts/run.py command=preflight command.preflight.target=data-harmonize command.preflight.strict=true
-
-# Disable report JSON export (console dashboard only)
-python scripts/run.py command=preflight command.preflight.export_report=false
+python scripts/run.py command=preflight execution_preflight_target=data-harmonize execution.preflight_strict_mode=true
 ```
 
 ### Programmatic Python API

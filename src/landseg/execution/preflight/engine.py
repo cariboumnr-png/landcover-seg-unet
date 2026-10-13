@@ -43,7 +43,6 @@ SUPPORTED_TARGETS: tuple[str, ...] = (
     'world-grid',
     'data-harmonize',
     'data-ingest',
-    'batch-ingest',
     'data-prepare',
     'model-train',
     'model-evaluate',
@@ -69,7 +68,6 @@ def inspect_target(
         schema.PreflightResult:
             aggregated readiness evaluation and diagnostic probe results.
     '''
-    results: list[schema.ProbeResult] = []
     artifact_paths = artifacts.ArtifactPaths.from_config(root_config)
 
     grid_paths = artifact_paths.world_grid
@@ -77,6 +75,8 @@ def inspect_target(
     ingest_paths = artifact_paths.data_ingestion
     prep_paths = artifact_paths.data_preparation
 
+    checks = prerequisites.check_target_prerequisites(target, artifact_paths)
+    results = [check.to_probe_result() for check in checks]
     match target:
         case 'world-grid':
             results.extend([
@@ -92,16 +92,14 @@ def inspect_target(
 
         case 'data-harmonize':
             results.extend([
-                *_check_prerequisites(target, artifact_paths),
                 probes.dir_writable(harm_paths.root, 'harmonization_output'),
                 probes.raw_dataset(root_config),
                 probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
                 probes.pending_harmonization(artifact_paths, root_config),
             ])
 
-        case 'data-ingest' | 'batch-ingest':
+        case 'data-ingest':
             results.extend([
-                *_check_prerequisites(target, artifact_paths),
                 probes.dir_writable(ingest_paths.root, 'ingestion_output'),
                 probes.collision_policy(root_config),
                 probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
@@ -112,7 +110,6 @@ def inspect_target(
 
         case 'data-prepare':
             results.extend([
-                *_check_prerequisites(target, artifact_paths),
                 probes.dir_writable(prep_paths.root, 'preparation_output'),
                 probes.target_file_exists(prep_paths.report, 'preparation_report'),
                 probes.ingestion_pool_state(artifact_paths),
@@ -121,7 +118,6 @@ def inspect_target(
 
         case 'model-train':
             results.extend([
-                *_check_prerequisites(target, artifact_paths),
                 probes.dir_writable(artifact_paths.session_root, 'checkpoint_dir'),
                 probes.model_body(root_config),
                 probes.pending_ingestion(artifact_paths, desire_pending=False),
@@ -131,7 +127,6 @@ def inspect_target(
 
         case 'model-evaluate':
             results.extend([
-                *_check_prerequisites(target, artifact_paths),
                 probes.dir_writable(artifact_paths.session_root, 'eval_output'),
                 probes.checkpoint_ready(root_config),
                 probes.model_body(root_config),
@@ -235,13 +230,3 @@ def run_preflight(
             )
 
     return results
-
-
-# ----- private helpers
-def _check_prerequisites(
-    target: str,
-    artifact_paths: artifacts.ArtifactPaths,
-) -> list[schema.ProbeResult]:
-    '''Check prerequisite artifacts for target pipeline.'''
-    checks = prerequisites.check_target_prerequisites(target, artifact_paths)
-    return [check.to_probe_result() for check in checks]

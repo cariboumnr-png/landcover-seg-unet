@@ -373,7 +373,7 @@ def check_target_prerequisites(
             )
         )
 
-    elif target == 'data-ingest':
+    elif target in {'data-ingest', 'diagnose-overfit'}:
         checks.append(
             check_manifest_runs(
                 target='data-ingest',

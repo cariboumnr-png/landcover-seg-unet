@@ -55,14 +55,11 @@ Les vérifications préalables sont exécutées via `command=preflight` avec Hyd
 python scripts/run.py command=preflight
 
 # Inspecter une cible spécifique de pipeline ou de workflow
-python scripts/run.py command=preflight command.preflight.target=model-train
-python scripts/run.py command=preflight command.preflight.target=batch-ingest
+python scripts/run.py command=preflight execution.preflight_target=model-train
+python scripts/run.py command=preflight execution.preflight_target=batch-inges
 
 # Activer le mode strict (les avertissements bloquent l'exécution)
-python scripts/run.py command=preflight command.preflight.target=data-harmonize command.preflight.strict=true
-
-# Désactiver l'export du rapport JSON (affichage console uniquement)
-python scripts/run.py command=preflight command.preflight.export_report=false
+python scripts/run.py command=preflight execution_preflight_target=data-harmonize execution.preflight_strict_mode=true
 ```
 
 ### API Python programmatique
