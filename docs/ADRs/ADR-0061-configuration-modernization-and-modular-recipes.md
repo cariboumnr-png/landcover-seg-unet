@@ -95,12 +95,14 @@ located directly in `configs/`:
 - Single pipelines: `world_grid.yaml`, `data_harmonize.yaml`,
   `data_ingest.yaml`, `data_prepare.yaml`, `model_train.yaml`,
   `model_evaluate.yaml`.
-- Specialized workflows: `batch_ingest.yaml`, `diagnose_overfit.yaml`,
+- Specialized workflows: `diagnose_overfit.yaml`,
   `study_sweep.yaml`, `study_analysis.yaml`.
-- Composite lifecycles: `e2e_intake.yaml` (continuous intake) and
-  `e2e_experiment.yaml` (full 5-stage lifecycle replacing legacy
-  `user.yaml`).
-- **Translation Layer Retirement**: (tentative) Recipes directly mirror the structured OmegaConf schema without requiring intermediate translation dictionaries.
+- Composite lifecycles (`configs/end_to_end/`): `e2e_intake.yaml`
+  (continuous intake) and `e2e_experiment.yaml` (full 5-stage lifecycle
+  replacing legacy `user.yaml`).
+- **Translation Layer Retirement**: (tentative) Recipes directly mirror the
+  structured OmegaConf schema without requiring intermediate translation
+  dictionaries.
 
 ---
 

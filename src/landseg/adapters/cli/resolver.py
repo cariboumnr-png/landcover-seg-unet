@@ -36,6 +36,7 @@ import landseg.configs as configs
 omegaconf.OmegaConf.register_new_resolver('concat', lambda x, y: x + y)
 
 
+# ----- public functions
 def resolve_configs(
     config: omegaconf.DictConfig,
     use_additional_settings: bool = True
@@ -56,14 +57,14 @@ def resolve_configs(
 
     # resolve command recipe
     cmd = omegaconf.OmegaConf.select(config, 'command', default=None)
-    if cmd and cmd != 'default' and use_additional_settings:
-        recipe_filename = f"{cmd.replace('-', '_')}.yaml"
+    if cmd and cmd not in ('default', 'preflight') and use_additional_settings:
         root_dpath = pathlib.Path(__file__).resolve().parents[4]
-        recipe_path = root_dpath / 'configs' / recipe_filename
-        if not recipe_path.exists():
+        recipe_path = _resolve_recipe_path(cmd, root_dpath)
+        if recipe_path is None:
+            expected = root_dpath / 'configs' / f"{cmd.replace('-', '_')}.yaml"
             raise FileNotFoundError(
                 f'Tracked recipe not found for command "{cmd}" at: '
-                f'{recipe_path}'
+                f'{expected}'
             )
         recipe_cfg = omegaconf.OmegaConf.load(recipe_path)
         assert isinstance(recipe_cfg, omegaconf.DictConfig)
@@ -94,3 +95,26 @@ def resolve_configs(
 
     root.validate()
     return root
+
+
+# ----- private helpers
+def _resolve_recipe_path(
+    cmd: str,
+    root_dpath: pathlib.Path,
+) -> pathlib.Path | None:
+    norm_cmd = cmd.replace('-', '_')
+    if norm_cmd == 'batch_ingest':
+        norm_cmd = 'data_ingest'
+    elif norm_cmd in ('end_to_end_experiment', 'e2e_experiment'):
+        norm_cmd = 'e2e_experiment'
+    elif norm_cmd in ('end_to_end_intake', 'e2e_intake'):
+        norm_cmd = 'e2e_intake'
+
+    candidates = [
+        root_dpath / 'configs' / f'{norm_cmd}.yaml',
+        root_dpath / 'configs' / 'end_to_end' / f'{norm_cmd}.yaml',
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return None
