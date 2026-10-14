@@ -52,7 +52,7 @@ class DatasetViewConfig(base.BaseConfigSection):
 
         for k, v in self.targets.items():
             self.require_type_range(k, 'target_config_name', str)
-            self.require_type_range(v, 'target_config', dict)
+            self.require_type_range(v, 'target_config', (str, dict))
 
 
 @dataclasses.dataclass

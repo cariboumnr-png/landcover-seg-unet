@@ -98,9 +98,13 @@ class RootConfig(base.BaseConfigSection):
                 self.data.ingestion.validate()
             case 'data-prepare':
                 self.data.preparation.validate()
-            case 'model-train' | 'diagnose-overfit':
+            case 'model-train':
                 self.models.validate()
                 self.session.validate(mode='train')
+            case 'diagnose-overfit':
+                self.models.validate()
+                self.session.dataloader.validate()
+                self.session.engine.validate()
             case 'model-evaluate':
                 self.models.validate()
                 self.session.validate(mode='evaluate')

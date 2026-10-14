@@ -49,15 +49,15 @@ artifacts.
 Pre-flight checks are invoked via `command=preflight` through Hydra:
 
 ```bash
-# Run system-wide readiness audit across all 8 supported targets
+# Run system-wide readiness audit across all supported targets
 python scripts/run.py command=preflight
 
 # Inspect a specific pipeline or workflow target
 python scripts/run.py command=preflight execution.preflight_target=model-train
-python scripts/run.py command=preflight execution.preflight_target=batch-ingest
+python scripts/run.py command=preflight execution.preflight_target=data-ingest
 
 # Enable strict mode (warnings cause execution gate failure)
-python scripts/run.py command=preflight execution_preflight_target=data-harmonize execution.preflight_strict_mode=true
+python scripts/run.py command=preflight execution.preflight_target=data-harmonize execution.preflight_strict_mode=true
 ```
 
 ### Programmatic Python API

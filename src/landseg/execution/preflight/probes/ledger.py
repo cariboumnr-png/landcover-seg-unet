@@ -213,16 +213,7 @@ def pending_ingestion(
             v.get('harmonization_run_uid') for v in good_ingestion_runs.values()
         )
     except artifacts.ArtifactError:
-        return schema.ProbeResult(
-            pid=probe_id,
-            category='Ledger',
-            status=schema.ProbeStatus.FAIL,
-            message='Unable to resolve pending batches',
-            details={
-                'harmonization_run_manifest': harmonization_runs_mfst,
-                'ingestion_run_manifest': ingestion_runs_mfst
-            },
-        )
+        harmonization_uids_in_ingestion = set()
 
     pending = harmonization_uids - harmonization_uids_in_ingestion
 
@@ -312,12 +303,7 @@ def prepared_blocks_state(
         ctrl = artifacts.Controller[dict].load_json_or_fail(schema_path)
         prep_schema = ctrl.fetch()
     except artifacts.ArtifactError:
-        return schema.ProbeResult(
-            pid=probe_id,
-            category='Ledger',
-            status=schema.ProbeStatus.PASS,
-            message='Data preparation not yet run',
-        )
+        prep_schema = None
 
     match bool(prep_schema), desire_existing:
         case False, False:

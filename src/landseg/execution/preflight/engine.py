@@ -146,7 +146,10 @@ def inspect_target(
                     pid='target_support',
                     category='Execution',
                     status=schema.ProbeStatus.FAIL,
-                    message=f'Target "{target}" has no registered preflight inspection suite',
+                    message=(
+                        f'Target "{target}" has no registered preflight '
+                        'inspection suite'
+                    ),
                 )
             )
 

@@ -51,15 +51,15 @@ le terminal et générant des artefacts de rapport JSON structurés.
 Les vérifications préalables sont exécutées via `command=preflight` avec Hydra :
 
 ```bash
-# Exécuter l'audit de préparation global sur les 8 cibles prises en charge
+# Exécuter l'audit de préparation global sur les cibles prises en charge
 python scripts/run.py command=preflight
 
 # Inspecter une cible spécifique de pipeline ou de workflow
 python scripts/run.py command=preflight execution.preflight_target=model-train
-python scripts/run.py command=preflight execution.preflight_target=batch-inges
+python scripts/run.py command=preflight execution.preflight_target=data-ingest
 
 # Activer le mode strict (les avertissements bloquent l'exécution)
-python scripts/run.py command=preflight execution_preflight_target=data-harmonize execution.preflight_strict_mode=true
+python scripts/run.py command=preflight execution.preflight_target=data-harmonize execution.preflight_strict_mode=true
 ```
 
 ### API Python programmatique

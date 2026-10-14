@@ -62,7 +62,20 @@ def resolve_configs(
     *,
     e2e_override: bool = True
 ) -> configs.RootConfig:
-    '''Resolve configs from difference sources'''
+    '''
+    Resolve hierarchical configuration from schemas, recipes, and overrides.
+
+    Args:
+        config:
+            Hydra-composed input configuration.
+        e2e_override:
+            If True and running an e2e command, end-to-end composite recipes
+            override sectional settings.
+
+    Returns:
+        configs.RootConfig:
+            Fully resolved and validated root configuration instance.
+    '''
 
     # list of configs to resolve
     config_list: list = []
@@ -151,9 +164,10 @@ def _resolve_recipe_config(
     for path in candidates:
         if path.exists():
             resolved_path = path
+            break
 
     if resolved_path is None:
-        expected = root_dpath / 'configs' / f'{norm_cmd.replace("-", "_")}.yaml'
+        expected = root_dpath / 'configs' / f'{norm_cmd}.yaml'
         raise FileNotFoundError(
             f'Tracked recipe not found for command "{cmd}" at: {expected}'
         )

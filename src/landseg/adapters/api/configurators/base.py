@@ -81,11 +81,7 @@ class BaseConfigurator:
         strict: bool = False,
     ) -> typing.Any:
         '''Run pre-flight diagnostic validation for configured command.'''
-        return api.run_preflight(
-            self.running_root_config,
-            self._cfg.command,
-            strict=strict,
-        )
+        return api.run_preflight(self._cfg, self._cfg.command, strict=strict)
 
 
     # ----- shared methods for configuring runtime sessions
