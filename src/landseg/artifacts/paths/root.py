@@ -27,7 +27,7 @@ Root entrypoint for all artifact path namespaces.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts.paths as paths
@@ -62,27 +62,36 @@ class ArtifactPaths:
 
     @property
     def world_grid(self) -> paths.WorldGridPaths:
-        r = self.world_grid_root or os.path.join(self.root, 'world_grids')
+        r = self.world_grid_root or str(pathlib.Path(self.root) / 'world_grids')
         return paths.WorldGridPaths(r)
 
     @property
     def data_harmonization(self) -> paths.HarmonizationPaths:
-        r = self.harmonization_root or os.path.join(self.root, 'harmonized_data')
+        r = (
+            self.harmonization_root
+            or str(pathlib.Path(self.root) / 'harmonized_data')
+        )
         return paths.HarmonizationPaths(r)
 
     @property
     def data_ingestion(self) -> paths.IngestionPaths:
-        r = self.ingestion_root or os.path.join(self.root, 'ingested_data')
+        r = (
+            self.ingestion_root
+            or str(pathlib.Path(self.root) / 'ingested_data')
+        )
         return paths.IngestionPaths(r)
 
     @property
     def data_preparation(self) -> paths.PreparationPaths:
-        r = self.preparation_root or os.path.join(self.root, 'prepared_data')
+        r = (
+            self.preparation_root
+            or str(pathlib.Path(self.root) / 'prepared_data')
+        )
         return paths.PreparationPaths(r)
 
     @property
     def session(self) -> paths.SessionPaths:
-        r = self.session_root or os.path.join(self.root, 'results')
+        r = self.session_root or str(pathlib.Path(self.root) / 'results')
         return paths.SessionPaths(root=r)
 
     @property

@@ -32,7 +32,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
-import os
+import pathlib
 import pickle
 import typing
 import zipfile
@@ -73,16 +73,17 @@ class Controller(typing.Generic[T]):
             raise _ArtifactMissing # e.g., empty str
 
         self.fp = file_path
-        self.dir = os.path.dirname(self.fp)
-        self.fname = os.path.basename(file_path)
-        self.hash_fpath = os.path.join(self.dir, '_hash.json')
+        path = pathlib.Path(file_path)
+        self.dir = str(path.parent)
+        self.fname = path.name
+        self.hash_fpath = str(path.parent / '_hash.json')
         self.type = self._get_file_type(file_path)
         self.policy = policy
 
     @property
     def is_valid(self) -> bool:
         '''Return True if the artifact exists and its hash is valid.'''
-        return os.path.exists(self.fp) and self._check_sha256()
+        return pathlib.Path(self.fp).exists() and self._check_sha256()
 
     @property
     def sha256(self) -> str:
@@ -92,7 +93,7 @@ class Controller(typing.Generic[T]):
     @property
     def creation_time(self) -> str:
         '''Return a formatted artifact file creation times string.'''
-        t = os.path.getctime(self.fp)
+        t = pathlib.Path(self.fp).stat().st_ctime
         return datetime.datetime.fromtimestamp(t).strftime(c.TF_ISO8601)
 
     # ----- alternative constructors
@@ -173,7 +174,7 @@ class Controller(typing.Generic[T]):
 
         # make sure parent directory exsits before writing
         if self.dir: # skip if write to root, e.g., ./file.json
-            os.makedirs(self.dir, exist_ok=True)
+            pathlib.Path(self.dir).mkdir(parents=True, exist_ok=True)
 
         # write files according to type and hash
         match self.type:

@@ -27,7 +27,7 @@ Canonical filesystem paths for data harmonization (ETL) artifacts.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
@@ -40,13 +40,15 @@ class HarmonizationPaths(base.PipelineArtifactsPaths):
 
     @property
     def runs_manifest(self) -> str:
-        return os.path.join(self.root, 'harmonization_runs.json')
+        return str(pathlib.Path(self.root) / 'harmonization_runs.json')
 
     @property
     def valid_mask_raster(self) -> str:
-        return os.path.join(self.effective_run_folder, 'valid_pixel_mask.vrt')
+        return str(
+            pathlib.Path(self.effective_run_folder) / 'valid_pixel_mask.vrt'
+        )
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        if not os.path.exists(self.runs_manifest):
+        if not pathlib.Path(self.runs_manifest).exists():
             controller.Controller[dict](self.runs_manifest).persist({})

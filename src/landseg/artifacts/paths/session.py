@@ -22,12 +22,13 @@
 # pylint: disable=missing-function-docstring
 
 '''
-Canonical filesystem paths for session experiment training and evaluation results.
+Canonical filesystem paths for session experiment training and
+evaluation results.
 '''
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts.paths.base as base
 
@@ -39,41 +40,43 @@ class SessionPaths(base.PipelineArtifactsPaths):
 
     @property
     def checkpoints(self) -> str:
-        return os.path.join(self.effective_run_folder, 'checkpoints')
+        return str(pathlib.Path(self.effective_run_folder) / 'checkpoints')
 
     @property
     def logs(self) -> str:
-        return os.path.join(self.effective_run_folder, 'logs')
+        return str(pathlib.Path(self.effective_run_folder) / 'logs')
 
     @property
     def plots(self) -> str:
-        return os.path.join(self.effective_run_folder, 'plots')
+        return str(pathlib.Path(self.effective_run_folder) / 'plots')
 
     @property
     def previews(self) -> str:
-        return os.path.join(self.effective_run_folder, 'previews')
+        return str(pathlib.Path(self.effective_run_folder) / 'previews')
 
     @property
     def phase_status(self) -> str:
-        return os.path.join(self.checkpoints, 'status.json')
+        return str(pathlib.Path(self.checkpoints) / 'status.json')
 
     @property
     def evaluation(self) -> str:
-        return os.path.join(self.effective_run_folder, 'evaluation.json')
+        return str(pathlib.Path(self.effective_run_folder) / 'evaluation.json')
 
     @property
     def step_results(self) -> str:
-        return os.path.join(self.effective_run_folder, 'step_results.json')
+        return str(
+            pathlib.Path(self.effective_run_folder) / 'step_results.json'
+        )
 
     def best_checkpoint(self, name: str) -> str:
-        return os.path.join(self.checkpoints, f'{name}_best.pt')
+        return str(pathlib.Path(self.checkpoints) / f'{name}_best.pt')
 
     def last_checkpoint(self, name: str) -> str:
-        return os.path.join(self.checkpoints, f'{name}_last.pt')
+        return str(pathlib.Path(self.checkpoints) / f'{name}_last.pt')
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        os.makedirs(self.checkpoints, exist_ok=True)
-        os.makedirs(self.logs, exist_ok=True)
-        os.makedirs(self.plots, exist_ok=True)
-        os.makedirs(self.previews, exist_ok=True)
+        pathlib.Path(self.checkpoints).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.logs).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.plots).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.previews).mkdir(parents=True, exist_ok=True)

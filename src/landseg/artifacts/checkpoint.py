@@ -27,9 +27,9 @@ optimizer, and scheduler state along with lightweight training metadata.
 '''
 
 # standard imports
-import os
-import typing
+import pathlib
 import time
+import typing
 # third-party imports
 import torch
 # local imports
@@ -79,7 +79,7 @@ def save_checkpoint(
             # ensure buffers are flushed before rename
             time.sleep(0.05)
 
-            os.replace(tmp, fpath)
+            pathlib.Path(tmp).replace(fpath)
             return
         except (PermissionError, RuntimeError) as _:
             if attempt == 9:

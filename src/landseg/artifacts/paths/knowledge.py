@@ -25,7 +25,7 @@ Path manager for repository knowledge base artifacts.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 
 
 # ----- `KnowledgePaths` definition
@@ -36,28 +36,32 @@ class KnowledgePaths:
 
     def profile_dpath(self, profile: str) -> str:
         '''Return path to the profile embedding directory.'''
-        return os.path.join(self.root, 'embeddings', profile)
+        return str(pathlib.Path(self.root) / 'embeddings' / profile)
 
     def similarity_matrix_fpath(self, profile: str) -> str:
         '''Return path to species similarity matrix tensor for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_similarity_matrix.pt'
+        return str(
+            pathlib.Path(self.profile_dpath(profile))
+            / 'species_similarity_matrix.pt'
         )
 
     def embeddings_fpath(self, profile: str) -> str:
         '''Return path to species embeddings tensor for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_embeddings.pt'
+        return str(
+            pathlib.Path(self.profile_dpath(profile))
+            / 'species_embeddings.pt'
         )
 
     def metadata_fpath(self, profile: str) -> str:
         '''Return path to species metadata JSON for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_metadata.json'
+        return str(
+            pathlib.Path(self.profile_dpath(profile))
+            / 'species_metadata.json'
         )
 
     def similarity_csv_fpath(self, profile: str) -> str:
         '''Return path to species similarity CSV for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_similarity_matrix.csv'
+        return str(
+            pathlib.Path(self.profile_dpath(profile))
+            / 'species_similarity_matrix.csv'
         )

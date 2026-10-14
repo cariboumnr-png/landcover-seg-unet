@@ -28,7 +28,7 @@ Canonical filesystem paths for data ingestion artifacts.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
@@ -41,30 +41,30 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 
     @property
     def runs_manifest(self) -> str:
-        return os.path.join(self.root, 'ingestion_runs.json')
+        return str(pathlib.Path(self.root) / 'ingestion_runs.json')
 
     @property
     def data_blocks(self):
-        return _DataBlocks(os.path.join(self.root, 'data_blocks'))
+        return _DataBlocks(str(pathlib.Path(self.root) / 'data_blocks'))
 
     @property
     def domains(self):
-        return _DomainMaps(os.path.join(self.root, 'domain_knowledge'))
+        return _DomainMaps(str(pathlib.Path(self.root) / 'domain_knowledge'))
 
     @property
     def windows(self):
-        return os.path.join(self.root, 'block_windows.json')
+        return str(pathlib.Path(self.root) / 'block_windows.json')
 
     @property
     def collisions(self) -> str:
-        return os.path.join(self.effective_run_folder, 'collisions.json')
+        return str(pathlib.Path(self.effective_run_folder) / 'collisions.json')
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        os.makedirs(self.data_blocks.root, exist_ok=True)
-        os.makedirs(self.data_blocks.blocks, exist_ok=True)
-        os.makedirs(self.domains.root, exist_ok=True)
-        if not os.path.exists(self.runs_manifest):
+        pathlib.Path(self.data_blocks.root).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.data_blocks.blocks).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.domains.root).mkdir(parents=True, exist_ok=True)
+        if not pathlib.Path(self.runs_manifest).exists():
             controller.Controller[dict](self.runs_manifest).persist({})
 
 
@@ -75,12 +75,12 @@ class _DomainMaps:
     root: str
 
     def domain_map_fpath(self, domain_name: str) -> str:
-        no_ext, _ = os.path.splitext(domain_name)
-        return os.path.join(self.root, f'{no_ext}.json')
+        stem = pathlib.Path(domain_name).stem
+        return str(pathlib.Path(self.root) / f'{stem}.json')
 
     def mapped_tiles_fpath(self, domain_name: str, gid: str) -> str:
-        no_ext, _ = os.path.splitext(domain_name)
-        return os.path.join(self.root, f'{no_ext}_tiles_{gid}.npz')
+        stem = pathlib.Path(domain_name).stem
+        return str(pathlib.Path(self.root) / f'{stem}_tiles_{gid}.npz')
 
 
 @dataclasses.dataclass
@@ -90,12 +90,12 @@ class _DataBlocks:
 
     @property
     def blocks(self) -> str:
-        return os.path.join(self.root, 'blocks')
+        return str(pathlib.Path(self.root) / 'blocks')
 
     @property
     def catalog(self) -> str:
-        return os.path.join(self.root, 'catalog.json')
+        return str(pathlib.Path(self.root) / 'catalog.json')
 
     @property
     def schema(self) -> str:
-        return os.path.join(self.root, 'schema.json')
+        return str(pathlib.Path(self.root) / 'schema.json')

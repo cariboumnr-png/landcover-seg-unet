@@ -42,7 +42,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -126,7 +126,7 @@ class PayloadController(typing.Generic[D, M]):
         self.policy = policy
 
         # compile file paths
-        no_ext, _ = os.path.splitext(data_fpath)
+        no_ext = str(pathlib.Path(data_fpath).with_suffix(''))
         self.data_path = data_fpath
         self.meta_path = f'{no_ext}_meta.json'
 

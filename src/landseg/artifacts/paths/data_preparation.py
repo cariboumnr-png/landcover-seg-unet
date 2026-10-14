@@ -27,7 +27,7 @@ Canonical filesystem paths for data preparation artifacts.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts.paths.base as base
 
@@ -43,42 +43,42 @@ class PreparationPaths(base.PipelineArtifactsPaths):
 
     @property
     def train_blocks(self) -> str:
-        return os.path.join(self.root, 'train_blocks')
+        return str(pathlib.Path(self.root) / 'train_blocks')
 
     @property
     def val_blocks(self) -> str:
-        return os.path.join(self.root, 'val_blocks')
+        return str(pathlib.Path(self.root) / 'val_blocks')
 
     @property
     def test_blocks(self) -> str:
-        return os.path.join(self.root, 'test_blocks')
+        return str(pathlib.Path(self.root) / 'test_blocks')
 
     @property
     def splits_source_blocks(self) -> str:
-        return os.path.join(self.root, 'block_splits_source.json')
+        return str(pathlib.Path(self.root) / 'block_splits_source.json')
 
     @property
     def splits_summary(self) -> str:
-        return os.path.join(self.root, 'block_splits_summary.json')
+        return str(pathlib.Path(self.root) / 'block_splits_summary.json')
 
     @property
     def label_stats(self) -> str:
-        return os.path.join(self.root, 'label_stats.json')
+        return str(pathlib.Path(self.root) / 'label_stats.json')
 
     @property
     def image_stats(self) -> str:
-        return os.path.join(self.root, 'image_stats.json')
+        return str(pathlib.Path(self.root) / 'image_stats.json')
 
     @property
     def splits_prepared_blocks(self) -> str:
-        return os.path.join(self.root, 'block_splits_prepared.json')
+        return str(pathlib.Path(self.root) / 'block_splits_prepared.json')
 
     @property
     def schema(self) -> str:
-        return os.path.join(self.root, 'schema.json')
+        return str(pathlib.Path(self.root) / 'schema.json')
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        os.makedirs(self.train_blocks, exist_ok=True)
-        os.makedirs(self.val_blocks, exist_ok=True)
-        os.makedirs(self.test_blocks, exist_ok=True)
+        pathlib.Path(self.train_blocks).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.val_blocks).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.test_blocks).mkdir(parents=True, exist_ok=True)
