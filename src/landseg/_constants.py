@@ -23,6 +23,8 @@
 Namespace for project environmental constants.
 '''
 
+# standard imports
+import pathlib
 # third-party imports
 import torch
 
@@ -36,10 +38,20 @@ def _get_device_name() -> str:
     return DEVICE
 
 # ----- constants
+PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
+
+REPO_ROOT = PACKAGE_ROOT.parents[1]
+
+KNOWLEDGE_ROOT = REPO_ROOT / 'knowledge'
+
 DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 DEVICE_NAME: str = _get_device_name()
+
 TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
+
 OVERFIT_MAX_EPOCH: int = 1000
+
 COMMANDS = [
     'default',
     'world-grid',

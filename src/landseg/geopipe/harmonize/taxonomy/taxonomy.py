@@ -32,10 +32,10 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import json
 import os
 # local imports
+import landseg._constants as c
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
@@ -72,7 +72,7 @@ def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
     num_cls: int,
-    knowledge_root: str = './knowledge',
+    knowledge_root: str = str(c.KNOWLEDGE_ROOT),
 ) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
@@ -126,7 +126,7 @@ def validate_specs(
 # ----- private helpers
 def _resolve_taxonomy_metadata(
     profile: str,
-    root: str = 'knowledge',
+    root: str = str(c.KNOWLEDGE_ROOT),
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
