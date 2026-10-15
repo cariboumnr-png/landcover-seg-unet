@@ -35,6 +35,7 @@ analysis layer defined in ADR-0026.
 
 # standard imports
 import copy
+import pathlib
 import typing
 # third-party imports
 import optuna
@@ -51,7 +52,7 @@ StepRunner: typing.TypeAlias = typing.Callable[..., StepGenerator]
 
 # -------------------------------Public Function-------------------------------
 def make_objective(
-    runner_builder: typing.Callable[..., tuple[str, StepRunner]],
+    runner_builder: typing.Callable[..., tuple[pathlib.Path, StepRunner]],
     cfg: configs.RootConfig,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''

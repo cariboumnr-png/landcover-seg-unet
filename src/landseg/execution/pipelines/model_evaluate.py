@@ -41,7 +41,6 @@ class ModelEvaluation(base.SessionPipeline):
         '''Run model evaluation pipeline.'''
         self._initialize_run()
 
-
         try:
             self.logger.log_sep()
 
