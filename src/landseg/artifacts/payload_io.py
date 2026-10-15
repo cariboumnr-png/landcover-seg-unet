@@ -138,7 +138,7 @@ class PayloadController(typing.Generic[D, M]):
     @classmethod
     def load_json_or_fail(
         cls,
-        data_fpath: str,
+        data_fpath: str | pathlib.Path,
         *,
         schema_id: str,
     ) -> LoadOrFailPayloadController[D, M]:
@@ -148,7 +148,7 @@ class PayloadController(typing.Generic[D, M]):
     @classmethod
     def load_or_fail(
         cls,
-        data_fpath: str,
+        data_fpath: str | pathlib.Path,
         *,
         schema_id: str,
     ) -> LoadOrFailPayloadController[D, M]:
@@ -267,7 +267,7 @@ class PayloadController(typing.Generic[D, M]):
 
 class LoadOrFailPayloadController(PayloadController[D, M]):
     '''"Load or fail" specialized PayloadController subclass.'''
-    def __init__(self, data_fpath: str, *, schema_id: str):
+    def __init__(self, data_fpath: str | pathlib.Path, *, schema_id: str):
         super().__init__(
             data_fpath,
             schema_id=schema_id,

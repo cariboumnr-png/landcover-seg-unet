@@ -107,8 +107,8 @@ def export_preflight_report(
     root_config: configs.RootConfig,
     target: str,
     *,
-    exp_root: str | None = None,
-) -> tuple[str, str]:
+    exp_root: pathlib.Path | None = None,
+) -> tuple[pathlib.Path, str]:
     '''
     Export pre-flight report to a timestamped JSON artifact.
 

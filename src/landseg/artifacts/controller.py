@@ -270,14 +270,14 @@ class Controller(typing.Generic[T]):
         raise ValueError(f'Unsupported file type: {fp}')
 
     @staticmethod
-    def _json_read(fp):
+    def _json_read(fp: pathlib.Path):
         '''Read JSON data from disk.'''
 
         with open(fp, 'r', encoding='UTF-8') as src:
             return json.load(src)
 
     @staticmethod
-    def _json_write(fp, src):
+    def _json_write(fp: pathlib.Path, src: typing.Any):
         '''Write JSON data or formatted JSON string to disk.'''
 
         if isinstance(src, str): # special case: formatted JSON string
@@ -288,12 +288,12 @@ class Controller(typing.Generic[T]):
                 json.dump(src, file, indent=4, default=str)
 
     @staticmethod
-    def _csv_read(fp) -> pandas.DataFrame:
+    def _csv_read(fp: pathlib.Path) -> pandas.DataFrame:
         '''Read CSV data from disk into DataFrame.'''
         return pandas.read_csv(fp)
 
     @staticmethod
-    def _csv_write(fp, src: typing.Any) -> None:
+    def _csv_write(fp: pathlib.Path, src: typing.Any) -> None:
         '''Write DataFrame or CSV formatted string to disk.'''
         if isinstance(src, pandas.DataFrame):
             src.to_csv(fp)
@@ -304,17 +304,17 @@ class Controller(typing.Generic[T]):
             raise ValueError(f'Unsupported CSV source type: {type(src)}')
 
     @staticmethod
-    def _pt_read(fp) -> typing.Any:
+    def _pt_read(fp: pathlib.Path) -> typing.Any:
         '''Read PyTorch object or tensor from disk.'''
         return torch.load(fp, map_location='cpu', weights_only=True)
 
     @staticmethod
-    def _pt_write(fp, src: typing.Any) -> None:
+    def _pt_write(fp: pathlib.Path, src: typing.Any) -> None:
         '''Write PyTorch object or tensor to disk.'''
         torch.save(src, fp)
 
     @staticmethod
-    def _npz_read_dict(fp):
+    def _npz_read_dict(fp: pathlib.Path):
         '''Load a dictionary of arrays from a compressed NPZ file.'''
         data = numpy.load(fp)
         keys = data['keys']
@@ -325,7 +325,7 @@ class Controller(typing.Generic[T]):
         return dict(zip(resolved_keys, data['values']))
 
     @staticmethod
-    def _npz_write_dict(fp, src):
+    def _npz_write_dict(fp: pathlib.Path, src: typing.Any):
         '''Persist a dictionary of NumPy arrays as a compressed NPZ.'''
 
         # early exits

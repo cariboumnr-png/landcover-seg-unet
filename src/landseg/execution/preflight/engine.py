@@ -31,6 +31,8 @@ Public APIs:
     - `run_preflight`: Dispatch pre-flight checks for targets.
 '''
 
+# standard imports
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
@@ -167,7 +169,7 @@ def run_preflight(
     root_config: configs.RootConfig,
     target: str | None = None,
     *,
-    exp_root: str | None = None,
+    exp_root: pathlib.Path | None = None,
 ) -> schema.PreflightResult | list[schema.PreflightResult]:
     '''
     Dispatch pre-flight diagnostic checks for target pipeline(s).

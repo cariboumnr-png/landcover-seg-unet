@@ -44,7 +44,7 @@ RunManifestCtrl = artifacts.Controller[dict[str, dict[str, str]]] # known type
 
 # ----- public functions
 def past_runs(
-    manifest_path: str,
+    manifest_path: pathlib.Path,
     pid: str | None = None,
 ) -> schema.ProbeResult:
     '''

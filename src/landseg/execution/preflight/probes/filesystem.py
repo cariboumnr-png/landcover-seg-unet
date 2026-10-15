@@ -37,7 +37,7 @@ import landseg.execution.preflight.schema as schema
 
 # ----- public functions
 def dir_writable(
-    dir_path: str | None,
+    dir_path: pathlib.Path | None,
     pid: str | None = None
 ) -> schema.ProbeResult:
     '''Check if destination directory is writable.'''
@@ -51,7 +51,7 @@ def dir_writable(
         )
 
     # find existing parent dir (recursive)
-    check_path = pathlib.Path(dir_path).resolve()
+    check_path = dir_path.resolve()
     while not check_path.exists():
         parent = check_path.parent
         if parent == check_path:
@@ -72,12 +72,12 @@ def dir_writable(
 
 
 def target_file_exists(
-    file_path: str,
+    file_path: pathlib.Path,
     pid: str | None = None,
     force_rebuild: bool = False,
 ) -> schema.ProbeResult:
     '''Check if the target file already exists.'''
-    is_file = pathlib.Path(file_path).is_file()
+    is_file = file_path.is_file()
 
     match is_file, force_rebuild:
         case True, True: status = schema.ProbeStatus.WARN
@@ -90,5 +90,5 @@ def target_file_exists(
         category='Filesystem',
         status=status,
         message=f'Target file {flag} exists; force_rebuild: {force_rebuild}',
-        details={'target_file_path': file_path},
+        details={'target_file_path': str(file_path.resolve())},
     )
