@@ -215,3 +215,8 @@ class Logger:
         for handler in handlers:
             handler.close()
             self.logger.removeHandler(handler)
+
+    @staticmethod
+    def abs_path(fp: str | pathlib.Path) -> str:
+        '''Shared method to return an absolute path from input.'''
+        return str(pathlib.Path(fp).resolve())
