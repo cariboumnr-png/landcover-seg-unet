@@ -39,44 +39,42 @@ class SessionPaths(base.PipelineArtifactsPaths):
     '''Root entry of a training run.'''
 
     @property
-    def checkpoints(self) -> str:
-        return str(pathlib.Path(self.effective_run_folder) / 'checkpoints')
+    def checkpoints(self) -> pathlib.Path:
+        return self.effective_run_folder / 'checkpoints'
 
     @property
-    def logs(self) -> str:
-        return str(pathlib.Path(self.effective_run_folder) / 'logs')
+    def logs(self) -> pathlib.Path:
+        return self.effective_run_folder / 'logs'
 
     @property
-    def plots(self) -> str:
-        return str(pathlib.Path(self.effective_run_folder) / 'plots')
+    def plots(self) -> pathlib.Path:
+        return self.effective_run_folder / 'plots'
 
     @property
-    def previews(self) -> str:
-        return str(pathlib.Path(self.effective_run_folder) / 'previews')
+    def previews(self) -> pathlib.Path:
+        return self.effective_run_folder / 'previews'
 
     @property
-    def phase_status(self) -> str:
-        return str(pathlib.Path(self.checkpoints) / 'status.json')
+    def phase_status(self) -> pathlib.Path:
+        return self.checkpoints / 'status.json'
 
     @property
-    def evaluation(self) -> str:
-        return str(pathlib.Path(self.effective_run_folder) / 'evaluation.json')
+    def evaluation(self) -> pathlib.Path:
+        return self.effective_run_folder / 'evaluation.json'
 
     @property
-    def step_results(self) -> str:
-        return str(
-            pathlib.Path(self.effective_run_folder) / 'step_results.json'
-        )
+    def step_results(self) -> pathlib.Path:
+        return self.effective_run_folder / 'step_results.json'
 
-    def best_checkpoint(self, name: str) -> str:
-        return str(pathlib.Path(self.checkpoints) / f'{name}_best.pt')
+    def best_checkpoint(self, name: str) -> pathlib.Path:
+        return self.checkpoints / f'{name}_best.pt'
 
-    def last_checkpoint(self, name: str) -> str:
-        return str(pathlib.Path(self.checkpoints) / f'{name}_last.pt')
+    def last_checkpoint(self, name: str) -> pathlib.Path:
+        return self.checkpoints / f'{name}_last.pt'
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        pathlib.Path(self.checkpoints).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.logs).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.plots).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.previews).mkdir(parents=True, exist_ok=True)
+        self.checkpoints.mkdir(parents=True, exist_ok=True)
+        self.logs.mkdir(parents=True, exist_ok=True)
+        self.plots.mkdir(parents=True, exist_ok=True)
+        self.previews.mkdir(parents=True, exist_ok=True)

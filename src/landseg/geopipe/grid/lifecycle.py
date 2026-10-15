@@ -49,7 +49,7 @@ def prepare_world_grid(
     *,
     load_only: bool = False,
     override_grid_fpath: str | None = None,
-) -> tuple[bool, str, geo_core.GridLayout]:
+) -> tuple[bool, pathlib.Path, geo_core.GridLayout]:
     '''
     Build or load a persisted world grid artifact.
 
@@ -109,8 +109,8 @@ def prepare_world_grid(
 
 
 # ----- private helpers
-def _get_grid_fpath(config: contracts.WorldGridPrepConfig) -> str:
+def _get_grid_fpath(config: contracts.WorldGridPrepConfig) -> pathlib.Path:
     '''Return canonical file path of a world grid artifact.'''
     p = config.params
     gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)
-    return str(pathlib.Path(config.output_dpath) / f'{gid}.json')
+    return pathlib.Path(config.output_dpath) / f'{gid}.json'

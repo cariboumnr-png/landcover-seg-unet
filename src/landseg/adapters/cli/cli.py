@@ -46,7 +46,7 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
     # cli logger
     # use platform-agnostic temp directory
     # /tmp is databricks compute node friendly
-    log_fp = str(pathlib.Path(tempfile.gettempdir()) / 'cli.log')
+    log_fp = pathlib.Path(tempfile.gettempdir()) / 'cli.log'
     logger = utils.Logger('cli', log_fp)
 
     # run specified mode with exceptions handling

@@ -52,48 +52,48 @@ class TIFFConfig:
 @dataclasses.dataclass
 class TIFFPaths:
     '''Container for dummy TIFF file paths.'''
-    root: str
+    root: str | pathlib.Path
 
     @property
-    def extent(self) -> str:
+    def extent(self) -> pathlib.Path:
         return self._make_path('reference_raster/sample_extent.tif')
 
     @property
-    def test_aoi(self) -> str:
+    def test_aoi(self) -> pathlib.Path:
         return self._make_path('reference_raster/sample_test_aoi.tif')
 
     @property
-    def domain_1(self) -> str:
+    def domain_1(self) -> pathlib.Path:
         return self._make_path('raw_data/sample_domain_1.tif')
 
     @property
-    def domain_2(self) -> str:
+    def domain_2(self) -> pathlib.Path:
         return self._make_path('raw_data/sample_domain_2.tif')
 
     @property
-    def sentinel2(self) -> str:
+    def sentinel2(self) -> pathlib.Path:
         return self._make_path('raw_data/sample_sentinel2.tif')
 
     @property
-    def dem(self) -> str:
+    def dem(self) -> pathlib.Path:
         return self._make_path('raw_data/sample_dem.tif')
 
     @property
-    def landcover(self) -> str:
+    def landcover(self) -> pathlib.Path:
         return self._make_path('raw_data/sample_landcover.tif')
 
     @property
-    def leadspc(self) -> str:
+    def leadspc(self) -> pathlib.Path:
         return self._make_path('raw_data/sample_leadspc.tif')
 
     @property
-    def manifest(self) -> str:
+    def manifest(self) -> pathlib.Path:
         return self._make_path('raw_data/manifest.json')
 
     @property
     def all_paths_exist(self) -> bool:
         return all(
-            pathlib.Path(p).exists() for p in [
+            p.exists() for p in [
                 self.extent,
                 self.test_aoi,
                 self.domain_1,
@@ -106,13 +106,13 @@ class TIFFPaths:
             ]
         )
 
-    def _make_path(self, p: str) -> str:
-        return str((pathlib.Path(self.root) / p).resolve())
+    def _make_path(self, p: str) -> pathlib.Path:
+        return (pathlib.Path(self.root) / p).resolve()
 
 
 # ----- public function
 def create_dummy_geotiff(
-    fpath: str,
+    fpath: str | pathlib.Path,
     *,
     config: TIFFConfig,
     data_gen_func: typing.Callable[[tuple[int, int], int], numpy.ndarray],
@@ -432,7 +432,10 @@ def _get_transform(x: float, y: float, res: float) -> rasterio.transform.Affine:
     return rasterio.transform.from_origin(x, y, res, res)
 
 
-def _write_jsons(src: list[dict[str, typing.Any]], manifest: str) -> None:
+def _write_jsons(
+    src: list[dict[str, typing.Any]],
+    manifest: str | pathlib.Path,
+) -> None:
     '''Write per file sidecar JSON and manifest JSON.'''
     # clear existing hash record if regenerating
     hash_path = pathlib.Path(manifest).parent / '_hash.json'
@@ -440,13 +443,14 @@ def _write_jsons(src: list[dict[str, typing.Any]], manifest: str) -> None:
 
     manifest_list: list[dict[str, typing.Any]] = []
     for cfg in src:
-        json_fpath = cfg['path'].replace('tif', 'json')
+        path_obj = pathlib.Path(cfg['path'])
+        json_fpath = path_obj.with_suffix('.json')
         with open(json_fpath, 'w', encoding='utf-8') as f:
-            json.dump(cfg, f, indent=4)
+            json.dump(cfg, f, indent=4, default=str)
         manifest_list.append({
             'name': cfg['name'],
-            'path': cfg['path'],
-            'manifest': json_fpath,
+            'path': str(path_obj),
+            'manifest': str(json_fpath),
         })
     with open(manifest, 'w', encoding='utf-8') as f:
         json.dump(manifest_list, f, indent=4)

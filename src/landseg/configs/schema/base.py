@@ -143,7 +143,7 @@ class BaseConfigSection:
 
     @staticmethod
     def require_file(
-        path: str | None,
+        path: str | pathlib.Path | None,
         name: str
     ) -> None:
         '''Raise if file does not exist.'''

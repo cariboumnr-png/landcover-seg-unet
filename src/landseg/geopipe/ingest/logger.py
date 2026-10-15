@@ -132,8 +132,8 @@ class IngestionLogger(utils.Logger):
 
     def update_runs_manifest(
         self,
-        manifest_fpath: str,
-        run_folder: str,
+        manifest_fpath: str | pathlib.Path,
+        run_folder: str | pathlib.Path,
     ) -> None:
         '''Record or update current run in the ingestion runs manifest.'''
         if self.summary is None:

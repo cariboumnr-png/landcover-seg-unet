@@ -57,8 +57,8 @@ import landseg.utils as utils
 @dataclasses.dataclass(frozen=True)
 class BlockBuildingInputs:
     '''I/O paths used during block construction.'''
-    image_fpath: str
-    label_fpath: str | None
+    image_fpath: str | pathlib.Path
+    label_fpath: str | pathlib.Path | None
 
     @property
     def has_label(self) -> bool:
@@ -132,13 +132,13 @@ class _StructuralValidationResults:
 
 # ----- public functions
 def build_test_block(
-    save_dpath: str,
+    save_dpath: str | pathlib.Path,
     inputs: dict[str, io.RasterReadInput],
     *,
     target_head: str,
     valid_px_per: float,
     need_all_classes: bool,
-) -> str | None:
+) -> pathlib.Path | None:
     '''
     Build, normalize, and persist a single valid block for testing.
 
@@ -161,7 +161,7 @@ def build_test_block(
             block to be accepted.
 
     Returns:
-        str | None:
+        pathlib.Path | None:
             Path to the saved test block if found, otherwise None.
     '''
     shuffled_inputs = list(inputs.items())
@@ -210,8 +210,9 @@ def build_test_block(
     std = numpy.std(candidate.data.image)
     candidate.data.image = (candidate.data.image - mean) / (std or 1.0)
 
-    pathlib.Path(save_dpath).mkdir(parents=True, exist_ok=True)
-    fpath = str(pathlib.Path(save_dpath) / f'test_{name}.npz')
+    dpath = pathlib.Path(save_dpath)
+    dpath.mkdir(parents=True, exist_ok=True)
+    fpath = dpath / f'test_{name}.npz'
     candidate.save(fpath)
     return fpath
 
@@ -287,8 +288,8 @@ def build_blocks(
 def _prep_block_windows(
     inputs: BlockBuildingInputs,
     context: BlockBuildingContext,
-    output_dir: str,
-) -> dict[tuple[int, int], str]:
+    output_dir: str | pathlib.Path,
+) -> dict[tuple[int, int], pathlib.Path]:
     '''Find coordinates matching block size and compute window counts.'''
     if inputs.has_label:
         common_coords = set(context.image.keys()) & set(context.label.keys())
@@ -304,14 +305,15 @@ def _prep_block_windows(
         ):
             valid_coords.remove(coord)
 
+    out_p = pathlib.Path(output_dir)
     return {
-        c: str(pathlib.Path(output_dir) / f'{geo_utils.xy_name(c)}.npz')
+        c: out_p / f'{geo_utils.xy_name(c)}.npz'
         for c in valid_coords
     }
 
 
 def _structural_validation(
-    input_coords: dict[tuple[int, int], str],
+    input_coords: dict[tuple[int, int], str | pathlib.Path],
     incumbent_catalog: geo_core.DatasetCatalog | None = None,
     *,
     artifacts_policy: artifacts.LifecyclePolicy,
@@ -415,7 +417,7 @@ def _create_missing_blocks(
         job = (
             _build_single_block,
             (name, block_inputs, build_config),
-            {'save_fpath': str(pathlib.Path(output_dir) / f'{name}.npz')}
+            {'save_fpath': pathlib.Path(output_dir) / f'{name}.npz'}
         )
         creation_jobs.append(job)
 
@@ -428,7 +430,7 @@ def _build_single_block(
     raster_inputs: io.RasterReadInput,
     db_config: builder.DataBlockConfig,
     *,
-    save_fpath: str | None = None,
+    save_fpath: str | pathlib.Path | None = None,
 ) -> geo_core.DataBlock:
     '''
     Create a DataBlock from input rasters for the window context.

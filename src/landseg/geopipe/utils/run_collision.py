@@ -61,13 +61,13 @@ def compute_fingerprint(payload: typing.Any) -> str:
         str:
             Hexadecimal SHA-256 digest string.
     '''
-    canonical_repr = json.dumps(payload, sort_keys=True)
+    canonical_repr = json.dumps(payload, sort_keys=True, default=str)
     return hashlib.sha256(canonical_repr.encode('utf-8')).hexdigest()
 
 
 def find_run_collision(
     fingerprint: str,
-    manifest_fpath: str,
+    manifest_fpath: str | pathlib.Path,
     *,
     success_status: str = 'SUCCESS',
 ) -> str | None:

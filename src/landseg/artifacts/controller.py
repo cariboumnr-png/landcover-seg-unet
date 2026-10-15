@@ -58,7 +58,7 @@ class Controller(typing.Generic[T]):
 
     def __init__(
         self,
-        file_path: str,
+        file_path: str | pathlib.Path,
         policy: artifacts.LifecyclePolicy | None = None,
     ):
         '''
@@ -72,12 +72,12 @@ class Controller(typing.Generic[T]):
             print(file_path)
             raise _ArtifactMissing # e.g., empty str
 
-        self.fp = file_path
         path = pathlib.Path(file_path)
-        self.dir = str(path.parent)
+        self.fp = path
+        self.dir = path.parent
         self.fname = path.name
-        self.hash_fpath = str(path.parent / '_hash.json')
-        self.type = self._get_file_type(file_path)
+        self.hash_fpath = path.parent / '_hash.json'
+        self.type = self._get_file_type(path)
         self.policy = policy
 
     @property
@@ -98,17 +98,23 @@ class Controller(typing.Generic[T]):
 
     # ----- alternative constructors
     @classmethod
-    def load_json_or_fail(cls, fp: str) -> 'LoadOrFailController[T]':
+    def load_json_or_fail(
+        cls, fp: str | pathlib.Path
+    ) -> 'LoadOrFailController[T]':
         '''Factory for a JSON controller that reads or fails.'''
         return LoadOrFailController(fp)
 
     @classmethod
-    def load_csv_or_fail(cls, fp: str) -> 'LoadOrFailController[T]':
+    def load_csv_or_fail(
+        cls, fp: str | pathlib.Path
+    ) -> 'LoadOrFailController[T]':
         '''Factory for a CSV controller that reads or fails.'''
         return LoadOrFailController(fp)
 
     @classmethod
-    def load_pt_or_fail(cls, fp: str) -> 'LoadOrFailController[T]':
+    def load_pt_or_fail(
+        cls, fp: str | pathlib.Path
+    ) -> 'LoadOrFailController[T]':
         '''Factory for a PyTorch PT controller that reads or fails.'''
         return LoadOrFailController(fp)
 
@@ -174,7 +180,7 @@ class Controller(typing.Generic[T]):
 
         # make sure parent directory exsits before writing
         if self.dir: # skip if write to root, e.g., ./file.json
-            pathlib.Path(self.dir).mkdir(parents=True, exist_ok=True)
+            self.dir.mkdir(parents=True, exist_ok=True)
 
         # write files according to type and hash
         match self.type:
@@ -251,14 +257,15 @@ class Controller(typing.Generic[T]):
             return False
 
     @staticmethod
-    def _get_file_type(fp: str) -> str:
-        if fp.endswith('.json') or fp.endswith('json'):
+    def _get_file_type(fp: pathlib.Path) -> str:
+        name = fp.name
+        if name.endswith(('.json', 'json')):
             return 'json'
-        if fp.endswith('.npz') or fp.endswith('npz'):
+        if name.endswith(('.npz', 'npz')):
             return 'npz_dict'
-        if fp.endswith('.csv') or fp.endswith('csv'):
+        if name.endswith(('.csv', 'csv')):
             return 'csv'
-        if fp.endswith('.pt') or fp.endswith('pt'):
+        if name.endswith(('.pt', 'pt')):
             return 'pt'
         raise ValueError(f'Unsupported file type: {fp}')
 
@@ -278,15 +285,15 @@ class Controller(typing.Generic[T]):
                 file.write(src)
         else:
             with open(fp, 'w', encoding='UTF-8') as file:
-                json.dump(src, file, indent=4)
+                json.dump(src, file, indent=4, default=str)
 
     @staticmethod
-    def _csv_read(fp: str) -> pandas.DataFrame:
+    def _csv_read(fp) -> pandas.DataFrame:
         '''Read CSV data from disk into DataFrame.'''
         return pandas.read_csv(fp)
 
     @staticmethod
-    def _csv_write(fp: str, src: typing.Any) -> None:
+    def _csv_write(fp, src: typing.Any) -> None:
         '''Write DataFrame or CSV formatted string to disk.'''
         if isinstance(src, pandas.DataFrame):
             src.to_csv(fp)
@@ -297,12 +304,12 @@ class Controller(typing.Generic[T]):
             raise ValueError(f'Unsupported CSV source type: {type(src)}')
 
     @staticmethod
-    def _pt_read(fp: str) -> typing.Any:
+    def _pt_read(fp) -> typing.Any:
         '''Read PyTorch object or tensor from disk.'''
         return torch.load(fp, map_location='cpu', weights_only=True)
 
     @staticmethod
-    def _pt_write(fp: str, src: typing.Any) -> None:
+    def _pt_write(fp, src: typing.Any) -> None:
         '''Write PyTorch object or tensor to disk.'''
         torch.save(src, fp)
 
@@ -353,7 +360,7 @@ class Controller(typing.Generic[T]):
 
 class LoadOrFailController(Controller[T]):
     '''"Load or fail" specialized Controller subclass.'''
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str | pathlib.Path):
         super().__init__(file_path, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
 
 

@@ -126,12 +126,12 @@ def _prepare_dataspecs(
     logger: session.SessionLogger,
 ) -> core.DataSpecs:
     '''Build or select a single test block and construct `DataSpecs`.'''
-    block_fpath: str | None = None
+    block_fpath: pathlib.Path | None = None
     save_path = pathlib.Path(save_dpath)
     if save_path.exists():
         for p in save_path.iterdir():
             if p.name.endswith('.npz'):
-                block_fpath = str(p)
+                block_fpath = p
                 logger.info(f'Using existing block: {block_fpath}')
                 break
 
@@ -201,10 +201,10 @@ def _prepare_dataspecs(
 
 # ----- block construction helper
 def _create_block(
-    save_dpath: str,
+    save_dpath: str | pathlib.Path,
     config: configs.RootConfig,
     logger: session.SessionLogger,
-) -> str:
+) -> pathlib.Path:
     '''Build one valid block for the overfit test.'''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
     hm_record = ingest.resolve_pending_ingestion_batches(

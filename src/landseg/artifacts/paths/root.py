@@ -40,13 +40,27 @@ if typing.TYPE_CHECKING:
 @dataclasses.dataclass
 class ArtifactPaths:
     '''Root entrypoint for all artifact path namespaces.'''
-    root: str = './experiment'
-    world_grid_root: str | None = None
-    harmonization_root: str | None = None
-    ingestion_root: str | None = None
-    preparation_root: str | None = None
-    session_root: str | None = None
-    knowledge_root: str = 'knowledge'
+    root: pathlib.Path | str = './experiment'
+    world_grid_root: pathlib.Path | str | None = None
+    harmonization_root: pathlib.Path | str | None = None
+    ingestion_root: pathlib.Path | str | None = None
+    preparation_root: pathlib.Path | str | None = None
+    session_root: pathlib.Path | str | None = None
+    knowledge_root: pathlib.Path | str = 'knowledge'
+
+    def __post_init__(self):
+        self.root = pathlib.Path(self.root)
+        if self.world_grid_root is not None:
+            self.world_grid_root = pathlib.Path(self.world_grid_root)
+        if self.harmonization_root is not None:
+            self.harmonization_root = pathlib.Path(self.harmonization_root)
+        if self.ingestion_root is not None:
+            self.ingestion_root = pathlib.Path(self.ingestion_root)
+        if self.preparation_root is not None:
+            self.preparation_root = pathlib.Path(self.preparation_root)
+        if self.session_root is not None:
+            self.session_root = pathlib.Path(self.session_root)
+        self.knowledge_root = pathlib.Path(self.knowledge_root)
 
     @classmethod
     def from_config(cls, config: 'configs.RootConfig') -> typing.Self:
@@ -62,36 +76,27 @@ class ArtifactPaths:
 
     @property
     def world_grid(self) -> paths.WorldGridPaths:
-        r = self.world_grid_root or str(pathlib.Path(self.root) / 'world_grids')
+        r = self.world_grid_root or (self.root / 'world_grids')
         return paths.WorldGridPaths(r)
 
     @property
     def data_harmonization(self) -> paths.HarmonizationPaths:
-        r = (
-            self.harmonization_root
-            or str(pathlib.Path(self.root) / 'harmonized_data')
-        )
+        r = self.harmonization_root or (self.root / 'harmonized_data')
         return paths.HarmonizationPaths(r)
 
     @property
     def data_ingestion(self) -> paths.IngestionPaths:
-        r = (
-            self.ingestion_root
-            or str(pathlib.Path(self.root) / 'ingested_data')
-        )
+        r = self.ingestion_root or (self.root / 'ingested_data')
         return paths.IngestionPaths(r)
 
     @property
     def data_preparation(self) -> paths.PreparationPaths:
-        r = (
-            self.preparation_root
-            or str(pathlib.Path(self.root) / 'prepared_data')
-        )
+        r = self.preparation_root or (self.root / 'prepared_data')
         return paths.PreparationPaths(r)
 
     @property
     def session(self) -> paths.SessionPaths:
-        r = self.session_root or str(pathlib.Path(self.root) / 'results')
+        r = self.session_root or (self.root / 'results')
         return paths.SessionPaths(root=r)
 
     @property

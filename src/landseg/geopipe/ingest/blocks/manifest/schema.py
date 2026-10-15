@@ -35,6 +35,7 @@ Public APIs:
 
 # standard imports
 import datetime
+import pathlib
 # local imports
 import landseg._constants as c
 import landseg.geopipe.core as geo_core
@@ -43,7 +44,7 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 
 # ----- public functions
 def build_schema(
-    sample_block_fpath: str,
+    sample_block_fpath: str | pathlib.Path,
     *,
     original: geo_core.DatasetSchema | None,
     sources: tuple[str, str | None],

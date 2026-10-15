@@ -39,16 +39,14 @@ class HarmonizationPaths(base.PipelineArtifactsPaths):
     '''Paths for data harmonization ETL artifacts.'''
 
     @property
-    def runs_manifest(self) -> str:
-        return str(pathlib.Path(self.root) / 'harmonization_runs.json')
+    def runs_manifest(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'harmonization_runs.json'
 
     @property
-    def valid_mask_raster(self) -> str:
-        return str(
-            pathlib.Path(self.effective_run_folder) / 'valid_pixel_mask.vrt'
-        )
+    def valid_mask_raster(self) -> pathlib.Path:
+        return self.effective_run_folder / 'valid_pixel_mask.vrt'
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        if not pathlib.Path(self.runs_manifest).exists():
+        if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})

@@ -32,6 +32,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
+import pathlib
 # local imports
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
@@ -45,15 +46,16 @@ class HarmonizationContext:
     '''Resolved world grid reference container for harmonization.'''
     grid: geo_core.GridLayout
     grid_id: str
-    grid_fpath: str
+    grid_fpath: str | pathlib.Path
     compiled_dataset_manifest: dict[str, manifest.ManifestEntry]
     current_run_identity: str = ''
     collided_run_uid: str | None = None
 
+
 # ----- public functions
 def build_harmonization_context(
-    grid_report_path: str,
-    runs_manifest_fpath: str,
+    grid_report_path: str | pathlib.Path,
+    runs_manifest_fpath: str | pathlib.Path,
     config: contracts.HarmonizationPipelineConfig,
 ) -> HarmonizationContext:
     '''

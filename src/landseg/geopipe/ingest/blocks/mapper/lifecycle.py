@@ -30,6 +30,8 @@ Public APIs:
     - map_rasters_to_grid: Maps rasters onto grid with caching.
 '''
 
+# standard imports
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -39,9 +41,9 @@ import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
 # ----- public functions
 def map_rasters_to_grid(
     world_grid: geo_core.GridLayout,
-    image_path: str,
-    label_path: str | None,
-    mapped_windows_path: str,
+    image_path: str | pathlib.Path,
+    label_path: str | pathlib.Path | None,
+    mapped_windows_path: str | pathlib.Path,
     *,
     policy: artifacts.LifecyclePolicy,
 ) -> mapper.MappedRasterWindows:

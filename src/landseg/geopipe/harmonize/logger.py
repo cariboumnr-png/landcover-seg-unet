@@ -91,7 +91,9 @@ class HarmonizationLogger(utils.Logger):
             return self.summary.get('run_uid', '')
         return ''
 
-    def add_source_provenance(self, name: str, source_path: str) -> None:
+    def add_source_provenance(
+        self, name: str, source_path: str | pathlib.Path
+    ) -> None:
         '''Record source file size and modification timestamp provenance.'''
         if self.summary is not None and pathlib.Path(source_path).exists():
             stat = pathlib.Path(source_path).stat()
@@ -102,28 +104,34 @@ class HarmonizationLogger(utils.Logger):
             }
             self.summary['provenance'][name] = provenance
 
-    def add_harmonized_source(self, name: str, path: str) -> None:
+    def add_harmonized_source(
+        self, name: str, path: str | pathlib.Path
+    ) -> None:
         '''Record a harmonized raster layer output path.'''
         if self.summary is not None:
             self.summary['harmonized_sources'][name] = str(
                 pathlib.Path(path).resolve()
             )
 
-    def add_finalized_raster(self, name: str, path: str) -> None:
+    def add_finalized_raster(
+        self, name: str, path: str | pathlib.Path
+    ) -> None:
         '''Record multi-channel feature composite raster path.'''
         if self.summary is not None:
             self.summary['finalized_rasters'][name] = str(
                 pathlib.Path(path).resolve()
             )
 
-    def set_valid_mask_raster(self, path: str) -> None:
+    def set_valid_mask_raster(self, path: str | pathlib.Path) -> None:
         '''Record valid pixel mask raster path.'''
         if self.summary is not None:
             self.summary['valid_mask_raster'] = str(
                 pathlib.Path(path).resolve()
             )
 
-    def set_grid_reference(self, grid_id: str, grid_fpath: str) -> None:
+    def set_grid_reference(
+        self, grid_id: str, grid_fpath: str | pathlib.Path
+    ) -> None:
         '''Record world grid identifier and artifact file path.'''
         if self.summary is not None:
             self.summary['grid_id'] = grid_id
@@ -146,9 +154,9 @@ class HarmonizationLogger(utils.Logger):
 
     def update_runs_manifest(
         self,
-        run_manifest_fpath: str,
-        run_folder: str,
-        dataset_manifest_fpath: str
+        run_manifest_fpath: str | pathlib.Path,
+        run_folder: str | pathlib.Path,
+        dataset_manifest_fpath: str | pathlib.Path,
     ) -> None:
         '''Record or update the harmonization runs manifest.'''
         if self.summary is None:

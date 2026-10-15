@@ -42,7 +42,7 @@ import landseg.knowledge as knowledge
 
 # ----- public functions
 def get_available_profiles(
-    knowledge_root: str = 'knowledge',
+    knowledge_root: str | pathlib.Path = 'knowledge',
 ) -> list[str]:
     '''
     Return list of registered taxonomy profile names in knowledge base.
@@ -71,7 +71,7 @@ def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
     num_cls: int,
-    knowledge_root: str = str(c.KNOWLEDGE_ROOT),
+    knowledge_root: str | pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
@@ -125,7 +125,7 @@ def validate_specs(
 # ----- private helpers
 def _resolve_taxonomy_metadata(
     profile: str,
-    root: str = str(c.KNOWLEDGE_ROOT),
+    root: str | pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
@@ -133,10 +133,10 @@ def _resolve_taxonomy_metadata(
         pathlib.Path(profile) / 'species_metadata.json',
         pathlib.Path(profile),
     ]
-    meta_path: str | None = None
+    meta_path: pathlib.Path | None = None
     for p in candidate_paths:
         if p.is_file():
-            meta_path = str(p.resolve())
+            meta_path = p.resolve()
             break
 
     if meta_path is None:

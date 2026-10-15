@@ -40,31 +40,31 @@ class IngestionPaths(base.PipelineArtifactsPaths):
     '''Paths for ingested datasets and knowledge artifacts.'''
 
     @property
-    def runs_manifest(self) -> str:
-        return str(pathlib.Path(self.root) / 'ingestion_runs.json')
+    def runs_manifest(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'ingestion_runs.json'
 
     @property
-    def data_blocks(self):
-        return _DataBlocks(str(pathlib.Path(self.root) / 'data_blocks'))
+    def data_blocks(self) -> '_DataBlocks':
+        return _DataBlocks(pathlib.Path(self.root) / 'data_blocks')
 
     @property
-    def domains(self):
-        return _DomainMaps(str(pathlib.Path(self.root) / 'domain_knowledge'))
+    def domains(self) -> '_DomainMaps':
+        return _DomainMaps(pathlib.Path(self.root) / 'domain_knowledge')
 
     @property
-    def windows(self):
-        return str(pathlib.Path(self.root) / 'block_windows.json')
+    def windows(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'block_windows.json'
 
     @property
-    def collisions(self) -> str:
-        return str(pathlib.Path(self.effective_run_folder) / 'collisions.json')
+    def collisions(self) -> pathlib.Path:
+        return self.effective_run_folder / 'collisions.json'
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
         pathlib.Path(self.data_blocks.root).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.data_blocks.blocks).mkdir(parents=True, exist_ok=True)
+        self.data_blocks.blocks.mkdir(parents=True, exist_ok=True)
         pathlib.Path(self.domains.root).mkdir(parents=True, exist_ok=True)
-        if not pathlib.Path(self.runs_manifest).exists():
+        if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})
 
 
@@ -72,30 +72,36 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 @dataclasses.dataclass
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''
-    root: str
+    root: pathlib.Path | str
 
-    def domain_map_fpath(self, domain_name: str) -> str:
-        stem = pathlib.Path(domain_name).stem
-        return str(pathlib.Path(self.root) / f'{stem}.json')
+    def __post_init__(self):
+        self.root = pathlib.Path(self.root)
 
-    def mapped_tiles_fpath(self, domain_name: str, gid: str) -> str:
+    def domain_map_fpath(self, domain_name: str) -> pathlib.Path:
         stem = pathlib.Path(domain_name).stem
-        return str(pathlib.Path(self.root) / f'{stem}_tiles_{gid}.npz')
+        return self.root / f'{stem}.json'
+
+    def mapped_tiles_fpath(self, domain_name: str, gid: str) -> pathlib.Path:
+        stem = pathlib.Path(domain_name).stem
+        return self.root / f'{stem}_tiles_{gid}.npz'
 
 
 @dataclasses.dataclass
 class _DataBlocks:
     '''Container for canonical dataset data blocks.'''
-    root: str
+    root: pathlib.Path | str
+
+    def __post_init__(self):
+        self.root = pathlib.Path(self.root)
 
     @property
-    def blocks(self) -> str:
-        return str(pathlib.Path(self.root) / 'blocks')
+    def blocks(self) -> pathlib.Path:
+        return self.root / 'blocks'
 
     @property
-    def catalog(self) -> str:
-        return str(pathlib.Path(self.root) / 'catalog.json')
+    def catalog(self) -> pathlib.Path:
+        return self.root / 'catalog.json'
 
     @property
-    def schema(self) -> str:
-        return str(pathlib.Path(self.root) / 'schema.json')
+    def schema(self) -> pathlib.Path:
+        return self.root / 'schema.json'

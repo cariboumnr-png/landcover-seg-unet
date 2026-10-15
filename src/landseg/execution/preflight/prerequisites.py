@@ -233,9 +233,10 @@ def check_files_exist(
     missing = [fp for fp in file_paths if not pathlib.Path(fp).exists()]
 
     if missing:
+        missing_str = ", ".join(str(fp) for fp in missing)
         message = (
             f'Upstream pipeline "{upstream_target}" has not produced '
-            f'required artifacts. Missing: {", ".join(missing)}'
+            f'required artifacts. Missing: {missing_str}'
         )
         return PrerequisiteCheck.failed(
             target,

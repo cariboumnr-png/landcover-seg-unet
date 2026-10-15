@@ -36,6 +36,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
+import pathlib
 import time
 import typing
 # local imports
@@ -47,7 +48,8 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.manifest as manifest
 import landseg.geopipe.ingest.blocks.mapper as mapper
 
-# typing aliases
+
+# ----- typing aliases
 CollisionManifestCtrl = artifacts.Controller[contracts.RunCollisionManifest]
 
 
@@ -55,11 +57,11 @@ CollisionManifestCtrl = artifacts.Controller[contracts.RunCollisionManifest]
 class _PipelinePaths(typing.Protocol):
     '''Typed pipeline-specific paths container.'''
     @property
-    def blocks(self) -> str: ...
+    def blocks(self) -> pathlib.Path: ...
     @property
-    def catalog(self) -> str: ...
+    def catalog(self) -> pathlib.Path: ...
     @property
-    def schema(self) -> str: ...
+    def schema(self) -> pathlib.Path: ...
 
 
 # ----- public dataclasses
@@ -68,8 +70,8 @@ class BlockPipelineRuntimeContext:
     '''Run context, e.g., run identity and collision handling.'''
     world_grid: geo_core.GridLayout
     block_artifact_paths: _PipelinePaths
-    block_windowns_artifact_fapth: str
-    collisions_artifacts_fpath: str
+    block_windowns_artifact_fapth: str | pathlib.Path
+    collisions_artifacts_fpath: str | pathlib.Path
     harmonize_run_id: str
     ingest_run_id: str
 

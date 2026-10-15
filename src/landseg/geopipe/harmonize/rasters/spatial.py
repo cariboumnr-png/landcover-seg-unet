@@ -44,12 +44,12 @@ import landseg.geopipe.core as geo_core
 # ----- public functions
 def warp_to_grid(
     *,
-    input_path: str,
-    output_path: str,
+    input_path: str | pathlib.Path,
+    output_path: str | pathlib.Path,
     world_grid: geo_core.GridLayout,
     is_categorical: bool = False,
     resampling_method: str | None = None,
-) -> str:
+) -> pathlib.Path:
     '''
     Reproject and snap an input raster to target grid as a VRT.
 
@@ -66,7 +66,7 @@ def warp_to_grid(
             Optional string override ('nearest', 'bilinear', 'cubic').
 
     Returns:
-        str:
+        pathlib.Path:
             Absolute path to output harmonized Virtual Raster file.
     '''
     out_path = pathlib.Path(output_path).resolve()
@@ -102,4 +102,4 @@ def warp_to_grid(
             ) as vrt:
                 rasterio.shutil.copy(vrt, output_path, driver='VRT')
 
-    return str(out_path)
+    return out_path

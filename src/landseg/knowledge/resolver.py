@@ -54,7 +54,7 @@ def resolve_similarity_matrix(
         artifacts.ArtifactError: If hash validation fails or the file
             is corrupted.
     '''
-    kp = artifacts.KnowledgePaths(root=str(knowledge_root))
+    kp = artifacts.KnowledgePaths(root=knowledge_root)
     matrix_path = kp.similarity_matrix_fpath(profile)
     ctrl = artifacts.Controller[torch.Tensor].load_pt_or_fail(matrix_path)
     tensor = ctrl.fetch()
@@ -80,7 +80,7 @@ def resolve_profile_metadata(
         artifacts.ArtifactError: If hash validation fails or the file
             is corrupted.
     '''
-    kp = artifacts.KnowledgePaths(root=str(knowledge_root))
+    kp = artifacts.KnowledgePaths(root=knowledge_root)
     meta_path = kp.metadata_fpath(profile)
     ctrl = MetaController.load_json_or_fail(meta_path)
     meta = ctrl.fetch()

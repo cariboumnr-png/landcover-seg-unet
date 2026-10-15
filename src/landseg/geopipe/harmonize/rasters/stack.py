@@ -42,17 +42,17 @@ import rasterio.crs
 
 # ----- public functions
 def stack_rasters(
-    features_fpaths: list[str],
-    labels_fpaths: list[str],
-    output_dir: str,
-) -> typing.Generator[str, None, dict[str, str]]:
+    features_fpaths: list[pathlib.Path],
+    labels_fpaths: list[pathlib.Path],
+    output_dir: str | pathlib.Path,
+) -> typing.Generator[str, None, dict[str, pathlib.Path]]:
     '''
     Stack feature and label rasters into composite VRT files.
 
     Args:
-        features_fapths:
+        features_fpaths:
             List of file paths for feature rasters.
-        labels_fapths:
+        labels_fpaths:
             List of file paths for label rasters.
         output_dir:
             Directory path where stacked VRT files will be saved.
@@ -62,14 +62,14 @@ def stack_rasters(
             Status messages during stacking process.
 
     Returns:
-        dict[str, str]:
+        dict[str, pathlib.Path]:
             Mapping of raster role ('features', 'labels') to stacked
             VRT file path.
     '''
-    def _out_path(tag: str) -> str:
-        return str(pathlib.Path(output_dir) / f'harmonized_{tag}_STACKED.vrt')
+    def _out_path(tag: str) -> pathlib.Path:
+        return pathlib.Path(output_dir) / f'harmonized_{tag}_STACKED.vrt'
 
-    stacked: dict[str, str] = {}
+    stacked: dict[str, pathlib.Path] = {}
     yield 'Stacking rasters if applicable'
 
     # features
@@ -77,7 +77,7 @@ def stack_rasters(
     if n == 0:
         pass
     elif n == 1:
-        stacked.update({'features': features_fpaths[0]})
+        stacked.update({'features': pathlib.Path(features_fpaths[0])})
     else:
         out_path = _out_path('features')
         _composite_vrt(features_fpaths, out_path, 'feature')
@@ -89,7 +89,7 @@ def stack_rasters(
     if n == 0:
         pass
     elif n == 1:
-        stacked.update({'labels': labels_fpaths[0]})
+        stacked.update({'labels': pathlib.Path(labels_fpaths[0])})
     else:
         out_path = _out_path('labels')
         _composite_vrt(labels_fpaths, out_path, 'label')
@@ -101,10 +101,10 @@ def stack_rasters(
 
 # ----- private helpers
 def _composite_vrt(
-    source_paths: list[str],
-    output_path: str,
+    source_paths: list[pathlib.Path],
+    output_path: str | pathlib.Path,
     raster_type: typing.Literal['feature', 'label']
-) -> str:
+) -> pathlib.Path:
     '''Stack multiple rasters into one composite VRT.'''
     if not source_paths:
         raise ValueError('source_paths list cannot be empty.')
@@ -117,12 +117,12 @@ def _composite_vrt(
     ]
     _build_stacked_vrt_xml(resolved_sources, output_path, raster_type)
 
-    return str(out_p)
+    return out_p
 
 
 def _build_stacked_vrt_xml(
     source_paths: list[str],
-    output_path: str,
+    output_path: str | pathlib.Path,
     raster_type: typing.Literal['feature', 'label']
 ) -> None:
     '''Build a VRT by stacking bands from multiple source rasters.'''

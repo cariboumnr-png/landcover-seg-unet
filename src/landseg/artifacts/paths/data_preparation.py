@@ -38,47 +38,47 @@ class PreparationPaths(base.PipelineArtifactsPaths):
     '''Paths for prepared datasets and split artifacts.'''
 
     @property
-    def effective_run_folder(self) -> str:
-        return self.root  # overwrites the default 'run_XXXX' naming convention
+    def effective_run_folder(self) -> pathlib.Path:
+        return pathlib.Path(self.root)
 
     @property
-    def train_blocks(self) -> str:
-        return str(pathlib.Path(self.root) / 'train_blocks')
+    def train_blocks(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'train_blocks'
 
     @property
-    def val_blocks(self) -> str:
-        return str(pathlib.Path(self.root) / 'val_blocks')
+    def val_blocks(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'val_blocks'
 
     @property
-    def test_blocks(self) -> str:
-        return str(pathlib.Path(self.root) / 'test_blocks')
+    def test_blocks(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'test_blocks'
 
     @property
-    def splits_source_blocks(self) -> str:
-        return str(pathlib.Path(self.root) / 'block_splits_source.json')
+    def splits_source_blocks(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'block_splits_source.json'
 
     @property
-    def splits_summary(self) -> str:
-        return str(pathlib.Path(self.root) / 'block_splits_summary.json')
+    def splits_summary(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'block_splits_summary.json'
 
     @property
-    def label_stats(self) -> str:
-        return str(pathlib.Path(self.root) / 'label_stats.json')
+    def label_stats(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'label_stats.json'
 
     @property
-    def image_stats(self) -> str:
-        return str(pathlib.Path(self.root) / 'image_stats.json')
+    def image_stats(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'image_stats.json'
 
     @property
-    def splits_prepared_blocks(self) -> str:
-        return str(pathlib.Path(self.root) / 'block_splits_prepared.json')
+    def splits_prepared_blocks(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'block_splits_prepared.json'
 
     @property
-    def schema(self) -> str:
-        return str(pathlib.Path(self.root) / 'schema.json')
+    def schema(self) -> pathlib.Path:
+        return pathlib.Path(self.root) / 'schema.json'
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        pathlib.Path(self.train_blocks).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.val_blocks).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.test_blocks).mkdir(parents=True, exist_ok=True)
+        self.train_blocks.mkdir(parents=True, exist_ok=True)
+        self.val_blocks.mkdir(parents=True, exist_ok=True)
+        self.test_blocks.mkdir(parents=True, exist_ok=True)

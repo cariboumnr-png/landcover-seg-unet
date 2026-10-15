@@ -43,9 +43,9 @@ import landseg.geopipe.harmonize.rasters as harmonize_rasters
 @dataclasses.dataclass
 class _ProcessedRasters:
     '''Container for processed raster paths dictionaries.'''
-    provenance: dict[str, str] = dataclasses.field(default_factory=dict)
-    harmonized: dict[str, str] = dataclasses.field(default_factory=dict)
-    finalized: dict[str, str] = dataclasses.field(default_factory=dict)
+    provenance: dict[str, pathlib.Path] = dataclasses.field(default_factory=dict)
+    harmonized: dict[str, pathlib.Path] = dataclasses.field(default_factory=dict)
+    finalized: dict[str, pathlib.Path] = dataclasses.field(default_factory=dict)
 
 
 # ----- public functions
@@ -109,15 +109,15 @@ def run_data_harmonization(
 # ----- private helpers
 def _harmonize_sources(
     compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
-    output_dir: str,
+    output_dir: str | pathlib.Path,
     world_grid: geo_core.GridLayout,
     *,
     categorical_resampling: str,
     continuous_resampling: str,
 ) -> typing.Generator[str, None, _ProcessedRasters]:
     '''Harmonize all compiled raster sources onto the canonical grid.'''
-    features: list[str] = []
-    labels: list[str] = []
+    features: list[pathlib.Path] = []
+    labels: list[pathlib.Path] = []
     processed = _ProcessedRasters()
 
     for path, mfst in compiled_sources.items():
@@ -129,7 +129,7 @@ def _harmonize_sources(
         resampling = (
             categorical_resampling if is_cat else continuous_resampling
         )
-        out_vrt = str(pathlib.Path(output_dir) / f'{tagged_name}.vrt')
+        out_vrt = pathlib.Path(output_dir) / f'{tagged_name}.vrt'
 
         yield (
             f'Harmonizing raster {path} -> {out_vrt} '
@@ -146,7 +146,7 @@ def _harmonize_sources(
         # band mapping is now required
         harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
 
-        processed.provenance[tagged_name] = str(pathlib.Path(path).resolve())
+        processed.provenance[tagged_name] = pathlib.Path(path).resolve()
         processed.harmonized[tagged_name] = warped
 
         match mfst['category']:
@@ -168,7 +168,10 @@ def _harmonize_sources(
     return processed
 
 
-def _tag_domain_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
+def _tag_domain_metadata(
+    warped: str | pathlib.Path,
+    mfst: harmonize_manifest.ManifestEntry,
+) -> None:
     '''Attach domain raster metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')
     if not cat_specs:
@@ -181,7 +184,10 @@ def _tag_domain_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) ->
         )
 
 
-def _tag_feature_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
+def _tag_feature_metadata(
+    warped: str | pathlib.Path,
+    mfst: harmonize_manifest.ManifestEntry,
+) -> None:
     '''Attach feature schemes metadata tags to VRT file.'''
     schemes = mfst.get('schemes')
     if schemes:
@@ -191,7 +197,10 @@ def _tag_feature_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -
         )
 
 
-def _tag_label_metadata(warped: str, mfst: harmonize_manifest.ManifestEntry) -> None:
+def _tag_label_metadata(
+    warped: str | pathlib.Path,
+    mfst: harmonize_manifest.ManifestEntry,
+) -> None:
     '''Attach categorical label metadata tags to VRT file.'''
     cat_specs = mfst.get('categorical_specs')
     if not cat_specs:

@@ -73,9 +73,9 @@ def generate_embeddings_and_matrix(
     '''
     csv_path = pathlib.Path(csv_path)
     csv_stem = csv_path.stem
-    kp = artifacts.KnowledgePaths(root=str(knowledge_root))
+    kp = artifacts.KnowledgePaths(root=knowledge_root)
 
-    target_dir = pathlib.Path(kp.profile_dpath(csv_stem))
+    target_dir = kp.profile_dpath(csv_stem)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     print(f'Loading species profiles from: {csv_path}')

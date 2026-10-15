@@ -41,9 +41,9 @@ import rasterio.vrt
 
 # ----- public functions
 def unify_nodata_mask(
-    input_path: str,
-    output_mask_path: str,
-) -> str:
+    input_path: str | pathlib.Path,
+    output_mask_path: str | pathlib.Path,
+) -> pathlib.Path:
     '''
     Create a 1-band boolean valid pixel mask across bands.
 
@@ -56,7 +56,7 @@ def unify_nodata_mask(
             Destination path for the valid-pixel mask raster.
 
     Returns:
-        str:
+        pathlib.Path:
             Absolute path to the created mask raster.
     '''
     out_path = pathlib.Path(output_mask_path).resolve()
@@ -81,18 +81,18 @@ def unify_nodata_mask(
             'nodata': 0,
             'compress': 'deflate'
         })
-        if output_mask_path.endswith('.vrt'):
+        if out_path.suffix == '.vrt':
             meta['driver'] = 'GTiff'
-            raw_tif = output_mask_path[:-4] + '_mask.tif'
+            raw_tif = out_path.with_name(f'{out_path.stem}_mask.tif')
             with rasterio.open(raw_tif, 'w', **meta) as dst:
                 dst.write(valid_mask, 1)
 
             with rasterio.open(raw_tif) as mask_src:
                 with rasterio.vrt.WarpedVRT(mask_src) as vrt:
-                    rasterio.shutil.copy(vrt, output_mask_path, driver='VRT')
+                    rasterio.shutil.copy(vrt, out_path, driver='VRT')
         else:
             meta['driver'] = 'GTiff'
-            with rasterio.open(output_mask_path, 'w', **meta) as dst:
+            with rasterio.open(out_path, 'w', **meta) as dst:
                 dst.write(valid_mask, 1)
 
-    return str(out_path)
+    return out_path

@@ -47,10 +47,10 @@ def materialize_blocks(
     input_blocks: set[str],
     stats: dict[str, contracts.ImageBandStats],
     context: dataset.DatasetView,
-    output_dir: str,
+    output_dir: str | pathlib.Path,
     *,
     rebuild: bool = False,
-) -> tuple[dict[str, str], int]:
+) -> tuple[dict[str, pathlib.Path], int]:
     '''
     Normalize a collection of raw data blocks using global image stats.
 
@@ -71,7 +71,7 @@ def materialize_blocks(
             if True, reprocesses all blocks regardless of existence.
 
     Returns:
-        tuple[dict[str, str], int]:
+        tuple[dict[str, pathlib.Path], int]:
             mapping of block names to file paths, and count of purged
             files.
     '''
@@ -103,10 +103,10 @@ def materialize_blocks(
         utils.ParallelExecutor(desc=' - Normalize data blocks').run(jobs)
 
     # return current file paths
-    indexed_files: dict[str, str] = {}
+    indexed_files: dict[str, pathlib.Path] = {}
     for p in pathlib.Path(output_dir).iterdir():
         if p.name.endswith('.npz'):
-            indexed_files[p.stem] = str(p.resolve())
+            indexed_files[p.stem] = p.resolve()
     return indexed_files, purged
 
 
@@ -129,9 +129,9 @@ def _purge(
 
 
 def _materialize_one_block(
-    block_fpath: str,
+    block_fpath: str | pathlib.Path,
     img_stats: dict[str, contracts.ImageBandStats],
-    target_dpath: str,
+    target_dpath: str | pathlib.Path,
     context: dataset.DatasetView,
 ):
     '''Normalize a single data block and write it to disk.'''
@@ -157,7 +157,7 @@ def _materialize_one_block(
 
     # write blocks to files
     filename = pathlib.Path(block_fpath).name
-    save_fpath = str(pathlib.Path(target_dpath) / filename)
+    save_fpath = pathlib.Path(target_dpath) / filename
     # key names: image, label
     numpy.savez_compressed(save_fpath, image=img_arr, label=lbl_arr)
 

@@ -123,7 +123,7 @@ def export_preflight_report(
             optional experiment root directory override.
 
     Returns:
-        tuple[str, str]:
+        tuple[pathlib.Path, str]:
             persisted report file path and generated timestamped UID.
     '''
     result_list = results if isinstance(results, list) else [results]
@@ -133,7 +133,7 @@ def export_preflight_report(
 
     effective_exp_root = exp_root or root_config.execution.exp_root
     report_dir = pathlib.Path(effective_exp_root) / 'preflight'
-    report_fp = str(report_dir / f'preflight_report_{uid}.json')
+    report_fp = report_dir / f'preflight_report_{uid}.json'
 
     report_dir.mkdir(parents=True, exist_ok=True)
 

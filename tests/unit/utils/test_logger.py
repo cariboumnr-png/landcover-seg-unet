@@ -23,7 +23,6 @@
 
 # standard imports
 import logging
-import os
 # local imports
 import landseg.utils.logger as logger
 
@@ -37,12 +36,12 @@ def test_logger_initialization(tmp_path):
     log_file = tmp_path / 'test_init.log'
     log_inst = logger.Logger(
         name='test_logger',
-        log_file=str(log_file),
+        log_file=log_file,
         log_lvl=logging.INFO
     )
 
     assert log_inst.name == 'test_logger'
-    assert log_inst.log_file == str(log_file)
+    assert log_inst.log_file == log_file
 
     log_inst.close()
 
@@ -56,7 +55,7 @@ def test_logger_disabled_console(tmp_path):
     log_file = tmp_path / 'test_silent.log'
     log_inst = logger.Logger(
         name='test_silent_logger',
-        log_file=str(log_file),
+        log_file=log_file,
         console_lvl=None
     )
 
@@ -79,7 +78,7 @@ def test_logger_convenience_methods(tmp_path):
     log_file = tmp_path / 'test_levels.log'
     log_inst = logger.Logger(
         name='test_levels',
-        log_file=str(log_file),
+        log_file=log_file,
         log_lvl=logging.DEBUG,
         enable_file_log=True
     )
@@ -110,7 +109,7 @@ def test_logger_exception_method(tmp_path):
     log_file = tmp_path / 'test_exception.log'
     log_inst = logger.Logger(
         name='test_exc',
-        log_file=str(log_file),
+        log_file=log_file,
         log_lvl=logging.ERROR,
         enable_file_log=True
     )
@@ -139,7 +138,7 @@ def test_logger_skip_log(tmp_path):
     log_file = tmp_path / 'test_skip.log'
     log_inst = logger.Logger(
         name='test_skip',
-        log_file=str(log_file),
+        log_file=log_file,
         log_lvl=logging.INFO,
         enable_file_log=True
     )
@@ -164,7 +163,7 @@ def test_logger_writes_to_file(tmp_path):
     log_file = tmp_path / 'test_write.log'
     log_inst = logger.Logger(
         name='test_writer',
-        log_file=str(log_file),
+        log_file=log_file,
         log_lvl=logging.INFO,
         enable_file_log=True
     )
@@ -173,7 +172,7 @@ def test_logger_writes_to_file(tmp_path):
     log_inst.log('debug', 'Test message debug')
     log_inst.close()
 
-    assert os.path.exists(log_file)
+    assert log_file.exists()
 
     with open(log_file, 'r', encoding='UTF-8') as f:
         content = f.read()
@@ -191,7 +190,7 @@ def test_logger_separator(tmp_path):
     log_file = tmp_path / 'test_sep.log'
     log_inst = logger.Logger(
         name='test_sep',
-        log_file=str(log_file),
+        log_file=log_file,
         log_lvl=logging.INFO
     )
 

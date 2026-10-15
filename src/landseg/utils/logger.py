@@ -48,7 +48,7 @@ class Logger:
     def __init__(
         self,
         name: str | None = None,
-        log_file: str | None = None,
+        log_file: str | pathlib.Path | None = None,
         log_lvl: int = logging.DEBUG,
         console_lvl: int | None = logging.INFO,
         enable_file_log: bool = True
@@ -74,14 +74,16 @@ class Logger:
             name = pathlib.Path(__file__).name
 
         if log_file is None:
-            log_file = str(pathlib.Path.cwd() / 'logs' / 'proj.log')
-        elif not log_file.endswith(('.log', 'json')): # allow JSON log file
-            log_file = str(pathlib.Path(log_file).with_suffix('.log'))
+            log_file = pathlib.Path.cwd() / 'logs' / 'proj.log'
+        else:
+            log_file = pathlib.Path(log_file)
+            if not log_file.name.endswith(('.log', 'json')):
+                log_file = log_file.with_suffix('.log')
 
         self.name = name
         self.log_file = log_file
         self.console_lvl = console_lvl
-        pathlib.Path(self.log_file).parent.mkdir(parents=True, exist_ok=True)
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
 
         self.logger = logging.getLogger(name)
         self.logger.setLevel(log_lvl)

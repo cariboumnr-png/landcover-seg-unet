@@ -217,9 +217,9 @@ def _catalog_status(
             raise NotImplementedError(f'Unsupported policy: {policy}')
 
 
-def _sample(d: str) -> str:
+def _sample(d: str | pathlib.Path) -> pathlib.Path:
     '''Find a representative sample .npz file in the directory.'''
     for p in pathlib.Path(d).iterdir():
         if p.name.endswith('npz'):
-            return str(p)
+            return p
     raise ValueError(f'No .npz file found at {d}')

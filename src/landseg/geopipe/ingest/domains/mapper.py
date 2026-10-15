@@ -31,6 +31,7 @@ Public APIs:
 '''
 
 # standard imports
+import pathlib
 import typing
 # third-party imports
 import numpy
@@ -49,7 +50,7 @@ RasterTileDict: typing.TypeAlias = dict[tuple[int, int], numpy.typing.NDArray]
 # ----- public functions
 def map_domain_to_grid(
     world_grid: geo_core.GridLayout,
-    raster_path: str,
+    raster_path: str | pathlib.Path,
 ) -> RasterTileDict:
     '''
     Map a domain raster onto a world grid and re-index labels.
@@ -85,7 +86,7 @@ def map_domain_to_grid(
 # ----- private helpers
 def _read_raster(
     grid: geo_core.GridLayout,
-    fpath: str,
+    fpath: str | pathlib.Path,
 ) -> tuple[RasterTileDict, int, int]:
     '''Read a raster over all grid windows using parallel executor.'''
     # open domain raster
@@ -118,7 +119,7 @@ def _read_raster(
 def _read(
     raster_window_id: tuple[int, int],
     raster_window: geo_core.RasterWindow,
-    raster_fpath: str,
+    raster_fpath: str | pathlib.Path,
     expected_h_w: tuple[int, int],
 ) -> tuple[tuple[int, int], numpy.typing.NDArray]:
     '''Read a single raster window and return its first band.'''

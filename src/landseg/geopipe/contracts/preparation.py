@@ -43,6 +43,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
+import pathlib
 import typing
 
 PREPARED_SCHEMA_ID = 'prepared_schema/v1'
@@ -62,7 +63,7 @@ class PreparationPipelineConfig(typing.Protocol):
     @property
     def rebuild(self) -> bool: ...
     @property
-    def output_dpath(self) -> str: ...
+    def output_dpath(self) -> str | pathlib.Path: ...
 
 
 class _DatasetViewConfig(typing.Protocol):
@@ -123,14 +124,14 @@ class NormalizationReport(typing.TypedDict):
     duration_sec: float
     unwanted_blocks_removed: int
     rebuild: bool
-    stats_filepath: str
+    stats_filepath: str | pathlib.Path
 
 
 class SchemaReport(typing.TypedDict):
     '''Execution report for dataset schema generation.'''
     status: typing.Literal['loaded', 'created']
     duration_sec: float
-    schema_filepath: str
+    schema_filepath: str | pathlib.Path
     classes_mapped: list[str]
 
 

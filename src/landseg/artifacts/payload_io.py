@@ -101,7 +101,7 @@ class PayloadController(typing.Generic[D, M]):
 
     def __init__(
         self,
-        data_fpath: str,
+        data_fpath: str | pathlib.Path,
         *,
         schema_id: str,
         policy: artifacts.LifecyclePolicy,
@@ -126,9 +126,9 @@ class PayloadController(typing.Generic[D, M]):
         self.policy = policy
 
         # compile file paths
-        no_ext = str(pathlib.Path(data_fpath).with_suffix(''))
-        self.data_path = data_fpath
-        self.meta_path = f'{no_ext}_meta.json'
+        data_p = pathlib.Path(data_fpath)
+        self.data_path = data_p
+        self.meta_path = data_p.with_name(f'{data_p.stem}_meta.json')
 
         # controllers
         self.data_ctrl = artifacts.Controller(self.data_path, policy)

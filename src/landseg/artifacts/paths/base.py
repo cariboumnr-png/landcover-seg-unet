@@ -33,17 +33,20 @@ import typing
 @dataclasses.dataclass
 class PipelineArtifactsPaths:
     '''Paths for pipeline specific artifacts.'''
-    root: str
-    run_folder: str | None = None
+    root: pathlib.Path | str
+    run_folder: pathlib.Path | str | None = None
     trace_to_last: bool = False
     _run_id: str = ''
-    _run_folder: str = ''
+    _run_folder: pathlib.Path | str = ''
 
     def __post_init__(self):
         '''Compile current run folder.'''
+        self.root = pathlib.Path(self.root)
+        if self.run_folder is not None:
+            self.run_folder = pathlib.Path(self.run_folder)
         if not self._run_id:
             i = 1
-            root_path = pathlib.Path(self.root)
+            root_path = self.root
             while True:
                 candidate_id = f'run_{i:04d}'
                 candidate_folder = root_path / candidate_id
@@ -55,30 +58,37 @@ class PipelineArtifactsPaths:
                 self._run_id = f'run_{i:04d}'
             else:
                 self._run_id = f'run_{i:04d}'
-            self._run_folder = str(root_path / self._run_id)
+            self._run_folder = root_path / self._run_id
             self.run_folder = self._run_folder
 
     @property
-    def effective_run_folder(self) -> str:
+    def effective_run_folder(self) -> pathlib.Path:
         '''Return either provided or compiled run folder path.'''
-        return self.run_folder if self.run_folder else self._run_folder
+        return (
+            pathlib.Path(self.run_folder)
+            if self.run_folder
+            else pathlib.Path(self._run_folder)
+        )
 
     @property
     def run_id(self) -> str:
         '''Return run folder name as the canonical run identifier.'''
-        return pathlib.Path(self.effective_run_folder).name
+        return self.effective_run_folder.name
 
     @property
-    def report(self) -> str:
+    def report(self) -> pathlib.Path:
         '''Return the file path of the pipeline execution report.'''
-        return str(pathlib.Path(self.effective_run_folder) / 'report.json')
+        return self.effective_run_folder / 'report.json'
 
     @property
-    def config(self) -> str:
+    def config(self) -> pathlib.Path:
         '''Return path to persisted configuration JSON.'''
-        return str(pathlib.Path(self.effective_run_folder) / 'config.json')
+        return self.effective_run_folder / 'config.json'
 
-    def get_run_folder(self, run_id: int | str | None = None) -> str:
+    def get_run_folder(
+        self,
+        run_id: int | str | pathlib.Path | None = None
+    ) -> pathlib.Path:
         '''
         Return the path to a run folder.
 
@@ -95,15 +105,16 @@ class PipelineArtifactsPaths:
             TypeError:
                 If run_id is of an invalid type.
         '''
-        root_path = pathlib.Path(self.root)
+        root_path = self.root
         if run_id is not None:
             if isinstance(run_id, int):
                 folder = root_path / f'run_{run_id:04d}'
-            elif isinstance(run_id, str):
-                if run_id.isdigit():
+            elif isinstance(run_id, (str, pathlib.Path)):
+                p = pathlib.Path(run_id)
+                if isinstance(run_id, str) and run_id.isdigit():
                     folder = root_path / f'run_{int(run_id):04d}'
-                elif pathlib.Path(run_id).is_dir():
-                    folder = pathlib.Path(run_id)
+                elif p.is_dir():
+                    folder = p
                 elif (root_path / run_id).is_dir():
                     folder = root_path / run_id
                 else:
@@ -115,7 +126,7 @@ class PipelineArtifactsPaths:
 
             if not folder.is_dir():
                 raise FileNotFoundError(f'Run folder does not exist: {folder}')
-            self.run_folder = str(folder)
+            self.run_folder = folder
             return self.run_folder
 
         if not root_path.exists():
@@ -129,7 +140,7 @@ class PipelineArtifactsPaths:
         if not runs:
             raise FileNotFoundError('No run folders found.')
 
-        self.run_folder = str(root_path / runs[-1])
+        self.run_folder = root_path / runs[-1]
         return self.run_folder
 
     def init_pipeline_folders(self) -> typing.Self:
@@ -138,7 +149,5 @@ class PipelineArtifactsPaths:
         return self
 
     def _init_pipeline_folders(self) -> None:
-        pathlib.Path(self.root).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.effective_run_folder).mkdir(
-            parents=True, exist_ok=True
-        )
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.effective_run_folder.mkdir(parents=True, exist_ok=True)

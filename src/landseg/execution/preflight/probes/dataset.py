@@ -45,7 +45,7 @@ def raw_dataset(
     '''Inspect raw input raster dataset manifest'''
     try:
         manifest_fp = config.data.harmonization.dataset_manifest
-        dirp = str(pathlib.Path(manifest_fp).parent)
+        dirp = pathlib.Path(manifest_fp).parent
         ctrl = artifacts.Controller[list].load_json_or_fail(manifest_fp)
         ctrl.hash(overwrite=False) # hash upon first open
 

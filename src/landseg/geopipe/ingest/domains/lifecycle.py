@@ -57,9 +57,9 @@ MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 @dataclasses.dataclass(frozen=True)
 class DomainBuildingConfig:
     '''Container for domain mapping configurations.'''
-    input_fpath: str
-    domain_fpath: str
-    tiles_fpath: str
+    input_fpath: str | pathlib.Path
+    domain_fpath: str | pathlib.Path
+    tiles_fpath: str | pathlib.Path
     valid_threshold: float
     target_variance: float
 
