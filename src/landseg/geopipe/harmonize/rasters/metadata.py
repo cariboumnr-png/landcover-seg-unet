@@ -39,7 +39,7 @@ import rasterio
 
 # ----- public functions
 def add_band_description_to_vrt(
-    vrt_fpath: str,
+    vrt_fpath: pathlib.Path,
     band_mapping: dict[int, str],
 ) -> None:
     '''
@@ -51,7 +51,7 @@ def add_band_description_to_vrt(
         band_mapping:
             Mapping from 1-based band index to band description string.
     '''
-    with rasterio.open(pathlib.Path(vrt_fpath), 'r+') as vrt:
+    with rasterio.open(vrt_fpath, 'r+') as vrt:
         if len(band_mapping) != vrt.count:
             raise ValueError(
                 f'Expected {vrt.count} band descriptions, '
@@ -62,7 +62,7 @@ def add_band_description_to_vrt(
 
 
 def add_tag_to_vrt(
-    vrt_fpath: str,
+    vrt_fpath: pathlib.Path,
     **kwargs: typing.Any,
 ) -> None:
     '''
@@ -77,5 +77,5 @@ def add_tag_to_vrt(
     tags = {k: v for k, v in kwargs.items() if v is not None}
     if not tags:
         return
-    with rasterio.open(pathlib.Path(vrt_fpath), 'r+') as vrt:
+    with rasterio.open(vrt_fpath, 'r+') as vrt:
         vrt.update_tags(**tags)

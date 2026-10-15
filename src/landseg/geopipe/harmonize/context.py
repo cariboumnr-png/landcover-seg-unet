@@ -72,7 +72,8 @@ def build_harmonization_context(
     '''
     # fetch world grid
     _, grid_report = geo_core.read_report(grid_report_path)
-    world_grid = geo_core.GridLayout.from_fpath(grid_report['grid_fpath'])
+    grid_fpath = pathlib.Path(grid_report['grid_fpath'])
+    world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # compile dataset manifest JOSN
     compiled = manifest.compile_dataset_manifest(config.dataset_manifest)
@@ -98,7 +99,7 @@ def build_harmonization_context(
     return HarmonizationContext(
         grid=world_grid,
         grid_id=grid_report['grid_id'],
-        grid_fpath=pathlib.Path(grid_report['grid_fpath']),
+        grid_fpath=grid_fpath,
         compiled_dataset_manifest=compiled,
         current_run_identity=fingerprint,
         collided_run_uid=collided

@@ -223,6 +223,7 @@ class ManifestEntryNormalizer:
 
 
 # ----- private helpers
+# TODO maybe we should centrally manage these *require functions along others
 def _require_dict(d: typing.Any) -> dict:
     '''Validate that the input is a non-empty dictionary.'''
     if not isinstance(d, dict):

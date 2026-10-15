@@ -152,7 +152,7 @@ class HarmonizationLogger(utils.Logger):
         self,
         run_manifest_fpath: pathlib.Path,
         run_folder: pathlib.Path,
-        dataset_manifest_fpath: pathlib.Path,
+        dataset_manifest_fpath: str,
     ) -> None:
         '''Record or update the harmonization runs manifest.'''
         if self.summary is None:
@@ -163,10 +163,8 @@ class HarmonizationLogger(utils.Logger):
         record: contracts.HarmonizationRunRecord = {
             'run_uid': uid,
             'run_id': self.summary.get('run_id', ''),
-            'run_folder': str(pathlib.Path(run_folder).resolve()),
-            'source_dataset_manifest': str(
-                pathlib.Path(dataset_manifest_fpath).resolve()
-            ),
+            'run_folder': self.abs_path(run_folder),
+            'source_dataset_manifest': self.abs_path(dataset_manifest_fpath),
             'status': self.summary.get('status', 'FAILED'),
             'timestamp': self.summary.get('timestamp', ''),
             'fingerprint': self.summary.get('fingerprint', '')

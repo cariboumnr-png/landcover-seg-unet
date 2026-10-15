@@ -36,7 +36,7 @@ import typing
 
 __all__ = [
     # functions
-    'get_available_profiles',
+    'get_profiles',
     'validate_specs',
 ]
 
@@ -44,14 +44,14 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .taxonomy import (
-        get_available_profiles,
+        get_profiles,
         validate_specs,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'get_available_profiles',
+        'get_profiles',
         'validate_specs',
     }:
         obj = importlib.import_module('.taxonomy', __package__)

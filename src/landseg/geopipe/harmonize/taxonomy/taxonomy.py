@@ -41,9 +41,7 @@ import landseg.knowledge as knowledge
 
 
 # ----- public functions
-def get_available_profiles(
-    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
-) -> list[str]:
+def get_profiles(knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT) -> list[str]:
     '''
     Return list of registered taxonomy profile names in knowledge base.
 
@@ -140,7 +138,7 @@ def _resolve_taxonomy_metadata(
             break
 
     if meta_path is None:
-        available = get_available_profiles(root)
+        available = get_profiles(root)
         avail_str = (
             ', '.join(f"'{a}'" for a in available) if available else 'none'
         )
