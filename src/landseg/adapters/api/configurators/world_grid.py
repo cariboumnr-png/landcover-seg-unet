@@ -48,14 +48,14 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
     ) -> typing.Self:
         '''Set study extent and grid specs.'''
         self._cfg.data.world_grid.mode = mode
-        self._cfg.data.world_grid.params.crs_string = crs
-        self._cfg.data.world_grid.params.tile_size = (tile_size, tile_size)
-        self._cfg.data.world_grid.params.tile_stride = (
+        self._cfg.data.world_grid.manual_specs.crs_string = crs
+        self._cfg.data.world_grid.tile_size = (tile_size, tile_size)
+        self._cfg.data.world_grid.tile_stride = (
             tile_stride,
             tile_stride,
         )
         if reference_raster:
-            self._cfg.data.world_grid.params.ref_fpath = reference_raster
+            self._cfg.data.world_grid.ref_fpath = reference_raster
         return self
 
     def set_output_dpath(self, output_dpath: str) -> typing.Self:

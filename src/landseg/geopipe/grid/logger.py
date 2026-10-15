@@ -32,11 +32,13 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import datetime
+import pathlib
 import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.grid as contracts
+import landseg.geopipe.core as geo_core
 import landseg.utils as utils
 
 
@@ -77,13 +79,21 @@ class GridLogger(utils.Logger):
 
     def set_grid_report(
         self,
-        report: contracts.WorldGridReport,
-        total_tiles: int,
+        world_grid: geo_core.GridLayout,
+        grid_filepath: pathlib.Path,
     ) -> None:
         '''Record world grid summary report and tile count.'''
+        grid_report: contracts.WorldGridReport = {
+            'grid_fpath': self.abs_path(grid_filepath),
+            'grid_id': world_grid.gid,
+            'crs': world_grid.crs,
+            'pixel_size': world_grid.pixel_size,
+            'tile_size': world_grid.tile_size,
+            'tile_overlap': world_grid.tile_overlap,
+        }
         if self.summary is not None:
-            self.summary['grid'] = report
-            self.summary['total_tiles'] = total_tiles
+            self.summary['grid'] = grid_report
+            self.summary['total_tiles'] = len(world_grid)
 
     def set_summary_status(
         self,

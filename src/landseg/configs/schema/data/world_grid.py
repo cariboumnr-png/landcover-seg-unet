@@ -31,15 +31,37 @@ import landseg.configs.schema.base as base
 @dataclasses.dataclass
 class GridSpecs(base.BaseConfigSection):
     '''Configuration for `geopipe.grid` module.'''
-    tile_size: tuple[int, int] = (256, 256)
-    tile_stride: tuple[int, int] = (128, 128)
-    ref_fpath: str | None = None
-    crs_string: str | None = None
-    origin: tuple[float, float] | None = None
-    pixel_size: tuple[float, float] | None = None
-    extent_in_crs_units: tuple[float, float] | None = None
+    crs_string: str = 'epsg:3161'
+    origin: tuple[float, float] = (0.0, 0.0)
+    pixel_size: tuple[float, float] = (0.0, 0.0)
+    extent_in_crs_units: tuple[float, float] = (0.0, 0.0)
 
     def validate(self):
+        if not bool(re.fullmatch(r'epsg:\d+', self.crs_string, re.I)):
+            raise base.ConfigValidationError(
+                f'CRS string must be [EPSG:xxxx], got {self.crs_string}'
+            )
+        px_x, px_y = self.pixel_size
+        self.require_type_range(px_x, 'pixel_size_x', float, (0.0, None))
+        self.require_type_range(px_y, 'pixel_size_y', float, (0.0, None))
+        if px_x != px_y:
+            raise ValueError('Only square pixels are supported')
+
+        ex_x, ex_y = self.extent_in_crs_units
+        self.require_type_range(ex_x, 'extent_x', float, (0.0, None))
+        self.require_type_range(ex_y, 'extent_y', float, (0.0, None))
+
+@dataclasses.dataclass
+class WorldGridConfig(base.BaseConfigSection):
+    '''Configuration for `geopipe.grid` module.'''
+    tile_size: tuple[int, int] = (256, 256)
+    tile_stride: tuple[int, int] = (128, 128)
+    mode: str = 'ref'
+    ref_fpath: str = ''
+    manual_specs: GridSpecs = dataclasses.field(default_factory=GridSpecs)
+    output_dpath: str = '${execution.exp_root}/artifacts/world_grids'
+
+    def validate(self) -> None:
         # currently we only accept equal row and col sizes and strides
         if self.tile_size[0] != self.tile_size[1]:
             raise ValueError('Only square blocks are supported.')
@@ -51,43 +73,13 @@ class GridSpecs(base.BaseConfigSection):
         if self.tile_stride[0] < 0:
             raise ValueError('Block stride must be zero or positive.')
 
+        match self.mode:
+            case 'ref':
+                self.require_file(self.ref_fpath, 'grid reference raster')
 
-@dataclasses.dataclass
-class WorldGridConfig(base.BaseConfigSection):
-    '''Configuration for `geopipe.grid` module.'''
-    mode: str = 'ref'
-    params: GridSpecs = dataclasses.field(default_factory=GridSpecs)
-    output_dpath: str = 'experiment/artifacts/world_grids'
+            case 'manual':
+                self.manual_specs.validate()
 
-    def validate(self) -> None:
-        self.params.validate()
-
-        if self.mode == 'ref':
-            if self.params.ref_fpath is None:
-                raise base.ConfigValidationError(
-                    'Extent reference file path required for "ref" mode.'
-                )
-            self.require_file(self.params.ref_fpath, 'grid reference raster')
-
-        elif self.mode == 'manual':
-            crs = self.params.crs_string
-            try:
-                if not crs or not bool(re.fullmatch(r'epsg:\d+', crs, re.I)):
-                    raise ValueError(f'CRS must be [EPSG:xxxx], got {crs}')
-
-                if not self.params.origin:
-                    raise ValueError('Origin not provided')
-
-                if not self.params.pixel_size:
-                    raise ValueError('Pixel size not provided')
-
-                if not self.params.extent_in_crs_units:
-                    raise ValueError('Extent (in CRS units) not provided')
-
-                if self.params.pixel_size[0] != self.params.pixel_size[1]:
-                    raise ValueError('Only square pixels are supported')
-
-            except ValueError as e:
-                raise base.ConfigValidationError(
-                    f'Invalid manual grid configuration: {e}'
-                ) from e
+            case _: raise base.ConfigValidationError(
+                f'Grid mode can either be "ref" or "manual", got: {self.mode}'
+            )

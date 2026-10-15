@@ -45,19 +45,20 @@ import landseg.geopipe.utils as geo_utils
 @dataclasses.dataclass
 class GridConfigs:
     '''Grid building configurations'''
-    tile_size: tuple[int, int]
-    tile_stride: tuple[int, int]
-    ref_fpath: str | None
-    crs_string: str | None
-    origin: tuple[float, float] | None
-    pixel_size: tuple[float, float] | None
-    extent_in_crs_units: tuple[float, float] | None
+    crs_string: str
+    origin: tuple[float, float]
+    pixel_size: tuple[float, float]
+    extent_in_crs_units: tuple[float, float]
 
 
 # ----- public functions
 def build_grid(
+    tile_size: tuple[int, int],
+    tile_stride: tuple[int, int],
+    *,
     mode: typing.Literal['ref', 'manual'] | str,
-    config: GridConfigs,
+    ref_fpath: pathlib.Path | None = None,
+    manual_specs: GridConfigs | None = None,
 ) -> geo_core.GridLayout:
     '''
     Build a world grid layout from reference raster or manual parameters.
@@ -75,10 +76,10 @@ def build_grid(
     '''
     # derive from reference raster
     if mode == 'ref':
-        if not (config.ref_fpath and pathlib.Path(config.ref_fpath).exists()):
-            raise ValueError(f'Invalid reference raster: {config.ref_fpath}')
+        if not (ref_fpath and ref_fpath.exists()):
+            raise ValueError(f'Invalid reference raster: {ref_fpath}')
 
-        with geo_utils.open_rasters(config.ref_fpath) as (src,):
+        with geo_utils.open_rasters(ref_fpath) as (src,):
             assert src
             # get transform - pixel size
             transform = src.transform
@@ -87,32 +88,26 @@ def build_grid(
             l, b, r, t = src.bounds
             # assign to gridspec
             grid_spec = geo_core.GridSpec(
-                crs=config.crs_string or str(src.crs),
+                crs=str(src.crs),
                 origin=(l, t),             # left, top as x, y
                 pixel_size=(px, py),       # pixel size in x, y
-                tile_size=config.tile_size,
-                tile_stride=config.tile_stride,
+                tile_size=tile_size,
+                tile_stride=tile_stride,
                 grid_extent=(t - b, r - l) # top-bottom as H, right-left as W
             )
 
     # manually define the extent
     elif mode == 'manual':
-        if not config.crs_string:
-            raise ValueError('CRS string not provided')
-        if not config.origin:
-            raise ValueError('Origin not provided')
-        if not config.pixel_size:
-            raise ValueError('Pixel size not provided')
-        if not config.extent_in_crs_units:
-            raise ValueError('Extent (in CRS units) not provided')
+        if not manual_specs:
+            raise ValueError('Manual grid specs not provided')
 
         grid_spec = geo_core.GridSpec(
-            crs=config.crs_string,
-            origin=config.origin,
-            pixel_size=config.pixel_size,
-            tile_size=config.tile_size,
-            tile_stride=config.tile_stride,
-            grid_extent=config.extent_in_crs_units
+            crs=manual_specs.crs_string,
+            origin=manual_specs.origin,
+            pixel_size=manual_specs.pixel_size,
+            tile_size=tile_size,
+            tile_stride=tile_stride,
+            grid_extent=manual_specs.extent_in_crs_units
         )
 
     else:

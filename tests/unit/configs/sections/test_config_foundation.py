@@ -41,28 +41,28 @@ def test_grid_parameters_validation():
     When: `GridSpecs.validate()` is invoked.
     Then: Accept valid square configs or raise ValueError for invalid.
     '''
-    params = grid_sec.GridSpecs(
+    params = grid_sec.WorldGridConfig(
         tile_size=(256, 256),
         tile_stride=(0, 0),
     )
     params.validate()
 
     with pytest.raises(ValueError, match='Only square blocks are supported'):
-        grid_sec.GridSpecs(tile_size=(256, 512)).validate()
+        grid_sec.WorldGridConfig(tile_size=(256, 512)).validate()
 
     with pytest.raises(ValueError, match='Only equal row/column stride'):
-        grid_sec.GridSpecs(
+        grid_sec.WorldGridConfig(
             tile_size=(256, 256),
             tile_stride=(10, 20),
         ).validate()
 
     with pytest.raises(ValueError, match='Block size must be positive'):
-        grid_sec.GridSpecs(tile_size=(0, 0)).validate()
+        grid_sec.WorldGridConfig(tile_size=(0, 0)).validate()
 
     with pytest.raises(
         ValueError, match='Block stride must be zero or positive'
     ):
-        grid_sec.GridSpecs(
+        grid_sec.WorldGridConfig(
             tile_size=(256, 256),
             tile_stride=(-1, -1),
         ).validate()
@@ -78,24 +78,10 @@ def test_grid_cfg_validation(tmp_path):
     ref_file = tmp_path / 'ref.tif'
     ref_file.write_text('dummy')
 
-    grid_ref = grid_sec.WorldGridConfig(
-        mode='ref',
-        params=grid_sec.GridSpecs(
-            ref_fpath=str(ref_file),
-            crs_string='EPSG:32617',
-            tile_size=(256, 256),
-            tile_stride=(0, 0),
-        )
-    )
-    grid_ref.validate()
-
     # missing reference file
     grid_missing_ref = grid_sec.WorldGridConfig(
         mode='ref',
-        params=grid_sec.GridSpecs(
-            ref_fpath=str(tmp_path / 'non_existent.tif'),
-            crs_string='EPSG:32617',
-        )
+        ref_fpath=str(tmp_path / 'non_existent.tif'),
     )
     with pytest.raises(base.ConfigValidationError):
         grid_missing_ref.validate()
@@ -103,7 +89,7 @@ def test_grid_cfg_validation(tmp_path):
     # manual mode validation
     grid_manual = grid_sec.WorldGridConfig(
         mode='manual',
-        params=grid_sec.GridSpecs(
+        manual_specs=grid_sec.GridSpecs(
             crs_string='EPSG:32617',
             origin=(0.0, 0.0),
             pixel_size=(10.0, 10.0),
@@ -115,7 +101,7 @@ def test_grid_cfg_validation(tmp_path):
     # invalid manual CRS
     grid_invalid_crs = grid_sec.WorldGridConfig(
         mode='manual',
-        params=grid_sec.GridSpecs(
+        manual_specs=grid_sec.GridSpecs(
             crs_string='INVALID_CRS',
             origin=(0.0, 0.0),
             pixel_size=(10.0, 10.0),

@@ -8,19 +8,18 @@
 data:
   world_grid:
     # -------------------------------------------------------------------------
-    # Pipeline I/O Paths
+    # Spatial tile dimensions and stride (pixels)
     # -------------------------------------------------------------------------
-    # Destination directory for generated world grid artifacts
-    output_dpath: ./experiment/artifacts/world_grids
+    tile_size: [256, 256]
+    tile_stride: [128, 128]
 
     # -------------------------------------------------------------------------
     # Spatial Target & World Grid Tiling
     # -------------------------------------------------------------------------
     mode: ref
-    params:
-      # Reference GeoTIFF defining geographic extent and projection
-      ref_fpath: ./experiment/input/reference_raster/sample_extent.tif
+    ref_fpath: ./experiment/input/reference_raster/sample_extent.tif
 
-      # Spatial tile dimensions and stride (pixels)
-      tile_size: [256, 256]
-      tile_stride: [128, 128]
+    # -------------------------------------------------------------------------
+    # Pipeline I/O Paths
+    # -------------------------------------------------------------------------
+    output_dpath: ./experiment/artifacts/world_grids

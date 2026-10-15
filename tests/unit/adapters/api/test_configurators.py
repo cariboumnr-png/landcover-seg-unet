@@ -49,10 +49,10 @@ def test_world_grid_configurator(tmp_path):
 
     root = cfg_builder.running_root_config
     assert root.command == 'world-grid'
-    assert root.data.world_grid.params.crs_string == 'EPSG:3161'
-    assert root.data.world_grid.params.ref_fpath == str(ref_tif)
-    assert root.data.world_grid.params.tile_size == (256, 256)
-    assert root.data.world_grid.params.tile_stride == (128, 128)
+    assert root.data.world_grid.manual_specs.crs_string == 'EPSG:3161'
+    assert root.data.world_grid.ref_fpath == str(ref_tif)
+    assert root.data.world_grid.tile_size == (256, 256)
+    assert root.data.world_grid.tile_stride == (128, 128)
     assert root.data.world_grid.output_dpath == str(tmp_path / 'world_grids')
 
 
@@ -85,8 +85,8 @@ def test_data_harmonization_configurator(tmp_path):
 
     root = cfg_builder.running_root_config
     assert root.command == 'data-harmonize'
-    assert root.data.world_grid.params.tile_size == (512, 512)
-    assert root.data.world_grid.params.tile_stride == (64, 64)
+    assert root.data.world_grid.tile_size == (512, 512)
+    assert root.data.world_grid.tile_stride == (64, 64)
     assert root.data.world_grid.output_dpath == str(tmp_path / 'world_grids')
     assert root.data.harmonization.dataset_manifest == str(manifest_json)
     assert root.data.harmonization.resampling_continuous == 'bilinear'
