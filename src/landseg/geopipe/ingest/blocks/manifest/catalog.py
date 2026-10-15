@@ -108,9 +108,11 @@ def build_catalog(
             'creation_time': ctrl.creation_time,
             'sha_256': ctrl.sha256,
             'aligned_grid': mapped_grid_id,
-            'source_image': str(source_image),
+            'source_image': str(source_image.resolve()),
             'source_image_sha_256': img_hash,
-            'source_label': str(source_label) if source_label else None,
+            'source_label': (
+                str(source_label.resolve()) if source_label else None
+            ),
             'source_label_sha_256': lbl_hash,
             'harmonize_run_id': harmonize_run_id,
             'ingest_run_id': ingest_run_id,

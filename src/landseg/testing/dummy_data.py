@@ -449,8 +449,8 @@ def _write_jsons(
             json.dump(cfg, f, indent=4, default=str)
         manifest_list.append({
             'name': cfg['name'],
-            'path': str(path_obj),
-            'manifest': str(json_fpath),
+            'path': str(path_obj.resolve()),
+            'manifest': str(json_fpath.resolve()),
         })
     with open(manifest, 'w', encoding='utf-8') as f:
         json.dump(manifest_list, f, indent=4)

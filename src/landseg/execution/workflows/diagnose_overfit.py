@@ -185,8 +185,8 @@ def _prepare_dataspecs(
             similarity_matrices=sim_matrices,
         ),
         splits=core.Splits(
-            train={block.manifest['block_name']: str(block_fpath)},
-            val={block.manifest['block_name']: str(block_fpath)},
+            train={block.manifest['block_name']: str(block_fpath.resolve())},
+            val={block.manifest['block_name']: str(block_fpath.resolve())},
             test={},
         ),
         domains=core.Domains(

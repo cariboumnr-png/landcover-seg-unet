@@ -326,7 +326,7 @@ def _finalize_partition(
         indexed: dict[str, str] = {}
         for fpath in fpaths:
             name = pathlib.Path(fpath).stem
-            indexed[name] = fpath # name is the same as core.xy_name()
+            indexed[name] = str(pathlib.Path(fpath).resolve())
         return indexed
 
     train = [

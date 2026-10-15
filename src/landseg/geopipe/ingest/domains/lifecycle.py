@@ -131,9 +131,9 @@ def prepare_domain_maps(
         report: contracts.DomainMapReport = {
             'name': name,
             'status': 'loaded' if loaded else 'created',
-            'input_filepath': str(config.input_fpath),
-            'domain_filepath': str(config.domain_fpath),
-            'tiles_filepath': str(config.tiles_fpath),
+            'input_filepath': str(config.input_fpath.resolve()),
+            'domain_filepath': str(config.domain_fpath.resolve()),
+            'tiles_filepath': str(config.tiles_fpath.resolve()),
             'duration_sec': duration,
             'stats': {
                 'max_index': int(meta['max_index']),

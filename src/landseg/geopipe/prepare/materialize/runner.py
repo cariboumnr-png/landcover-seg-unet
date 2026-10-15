@@ -165,7 +165,7 @@ def run_materialize_blocks(
         'duration_sec': duration,
         'unwanted_blocks_removed': purged_total,
         'rebuild': False,
-        'stats_filepath': str(paths.image_stats),
+        'stats_filepath': str(paths.image_stats.resolve()),
     }
     logger.set_normalization_report(report)
 
@@ -178,7 +178,7 @@ def _materialize(
     paths: _PipelinePaths,
     *,
     logger: prepare.PreparationLogger,
-) -> tuple[dict[str, dict[str, pathlib.Path]], int]:
+) -> tuple[contracts.BlocksPartition, int]:
     '''Materialize and normalize train, validation, and test splits.'''
     train_split, val_split, test_split = splits
 
@@ -211,7 +211,7 @@ def _materialize(
         purged_total += purged
         logger.debug(f'{purged} stale testing block files removed')
 
-    prepared = {
+    prepared: contracts.BlocksPartition = {
         'train': train_norm,
         'val': val_norm,
         'test': test_norm

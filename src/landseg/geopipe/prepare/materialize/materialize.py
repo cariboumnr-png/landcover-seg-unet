@@ -50,7 +50,7 @@ def materialize_blocks(
     output_dir: pathlib.Path,
     *,
     rebuild: bool = False,
-) -> tuple[dict[str, pathlib.Path], int]:
+) -> tuple[dict[str, str], int]:
     '''
     Normalize a collection of raw data blocks using global image stats.
 
@@ -71,7 +71,7 @@ def materialize_blocks(
             if True, reprocesses all blocks regardless of existence.
 
     Returns:
-        tuple[dict[str, pathlib.Path], int]:
+        tuple[dict[str, str], int]:
             mapping of block names to file paths, and count of purged
             files.
     '''
@@ -103,10 +103,10 @@ def materialize_blocks(
         utils.ParallelExecutor(desc=' - Normalize data blocks').run(jobs)
 
     # return current file paths
-    indexed_files: dict[str, pathlib.Path] = {}
+    indexed_files: dict[str, str] = {}
     for p in output_dir.iterdir():
         if p.name.endswith('.npz'):
-            indexed_files[p.stem] = p.resolve()
+            indexed_files[p.stem] = str(p.resolve())
     return indexed_files, purged
 
 

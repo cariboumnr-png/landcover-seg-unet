@@ -104,11 +104,11 @@ def build_schema(
             grids.append(mapped_grid_id)
         if block_identity and not original['dataset'].get('block_identity'):
             original['dataset']['block_identity'] = block_identity
-        img_str = str(source_image)
+        img_str = str(source_image.resolve())
         if img_str not in images:
             images.append(img_str)
         if source_label:
-            lbl_str = str(source_label)
+            lbl_str = str(source_label.resolve())
             if lbl_str not in labels:
                 labels.append(lbl_str)
         original['dataset'].setdefault('image_schemes', {})
@@ -132,8 +132,10 @@ def build_schema(
             'mapped_grids': [mapped_grid_id],
             'block_identity': block_identity,
             'data_source': {
-                'image_paths': [str(source_image)],
-                'label_paths': [str(source_label)] if source_label else [],
+                'image_paths': [str(source_image.resolve())],
+                'label_paths': (
+                    [str(source_label.resolve())] if source_label else []
+                ),
             },
             'image_schemes': image_schemes,
             'label_schemes': label_schemes,
