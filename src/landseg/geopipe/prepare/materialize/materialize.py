@@ -136,7 +136,7 @@ def _materialize_one_block(
 ):
     '''Normalize a single data block and write it to disk.'''
     # read block
-    block = geo_core.DataBlock.load(block_fpath)
+    block = geo_core.DataBlock.load(str(block_fpath))
     data = block.data
 
     # image channel selection

@@ -67,7 +67,7 @@ def compute_fingerprint(payload: typing.Any) -> str:
 
 def find_run_collision(
     fingerprint: str,
-    manifest_fpath: pathlib.Path,
+    manifest_fpath: str,
     *,
     success_status: str = 'SUCCESS',
 ) -> str | None:
@@ -89,10 +89,11 @@ def find_run_collision(
         str | None:
             Colliding run identifier if found, otherwise None.
     '''
-    if not manifest_fpath.exists():
+    fpath = pathlib.Path(manifest_fpath)
+    if not fpath.exists():
         return None
 
-    manifest = ManifestCtrl(manifest_fpath).fetch() or {}
+    manifest = ManifestCtrl(fpath).fetch() or {}
 
     for run_uid, record in manifest.items():
         if (

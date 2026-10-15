@@ -52,7 +52,7 @@ class WorldGridGeneration(base.GeoPipeline):
             status_str = 'loaded' if is_loaded else 'created and persisted'
 
             grid_report: contracts.WorldGridReport = {
-                'grid_fpath': grid_fp,
+                'grid_fpath': str(grid_fp),
                 'grid_id': world_grid.gid,
                 'crs': world_grid.crs,
                 'pixel_size': world_grid.pixel_size,

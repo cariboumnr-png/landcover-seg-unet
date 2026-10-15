@@ -165,7 +165,7 @@ def run_materialize_blocks(
         'duration_sec': duration,
         'unwanted_blocks_removed': purged_total,
         'rebuild': False,
-        'stats_filepath': paths.image_stats,
+        'stats_filepath': str(paths.image_stats),
     }
     logger.set_normalization_report(report)
 

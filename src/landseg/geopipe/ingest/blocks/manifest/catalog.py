@@ -42,7 +42,7 @@ import landseg.geopipe.utils as geo_utils
 
 # ----- public functions
 def build_catalog(
-    input_block_fpaths: list[str],
+    input_block_fpaths: list[pathlib.Path],
     *,
     original_catalog: geo_core.DatasetCatalog,
     mapped_grid_id: str,
@@ -96,11 +96,11 @@ def build_catalog(
     # add to current catalog dict
     for fp in input_block_fpaths:
         ctrl = artifacts.Controller(fp) # with no policy here
-        meta = geo_core.DataBlock.load(fp).manifest
+        meta = geo_core.DataBlock.load(str(fp)).manifest
         row, col = geo_utils.name_xy(meta['block_name'])
         entry: geo_core.DatasetBlockMeta = {
             'block_name': meta['block_name'],
-            'file_path': str(pathlib.Path(fp).resolve()),
+            'file_path': str(fp.resolve()),
             'row_col': [row, col],
             'valid_px_ratios': meta['valid_ratios'],
             'class_count': meta['label_count'],

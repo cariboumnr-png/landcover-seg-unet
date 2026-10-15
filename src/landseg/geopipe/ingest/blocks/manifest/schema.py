@@ -104,10 +104,13 @@ def build_schema(
             grids.append(mapped_grid_id)
         if block_identity and not original['dataset'].get('block_identity'):
             original['dataset']['block_identity'] = block_identity
-        if not source_image in images:
-            images.append(str(source_image))
-        if source_label and not source_label in labels:
-            labels.append(str(source_label))
+        img_str = str(source_image)
+        if img_str not in images:
+            images.append(img_str)
+        if source_label:
+            lbl_str = str(source_label)
+            if lbl_str not in labels:
+                labels.append(lbl_str)
         original['dataset'].setdefault('image_schemes', {})
         original['dataset']['image_schemes'].update(image_schemes)
         original['dataset'].setdefault('label_schemes', {})
@@ -115,7 +118,7 @@ def build_schema(
         return original
 
     # read from the sample block
-    sample_blk = geo_core.DataBlock.load(sample_block_fpath)
+    sample_blk = geo_core.DataBlock.load(str(sample_block_fpath))
     image_shape = sample_blk.data.image.shape
     label_shape = sample_blk.data.label.shape
 

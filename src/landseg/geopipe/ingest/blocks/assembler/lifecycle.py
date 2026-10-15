@@ -213,7 +213,7 @@ def build_test_block(
     dpath = pathlib.Path(save_dpath)
     dpath.mkdir(parents=True, exist_ok=True)
     fpath = dpath / f'test_{name}.npz'
-    candidate.save(fpath)
+    candidate.save(str(fpath))
     return fpath
 
 
@@ -468,5 +468,5 @@ def _build_single_block(
     block = builder.build_data_block(db_inputs, db_config, db_context)
 
     if save_fpath:
-        block.save(save_fpath)
+        block.save(str(save_fpath))
     return block

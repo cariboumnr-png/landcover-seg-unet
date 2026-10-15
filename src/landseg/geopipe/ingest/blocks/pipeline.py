@@ -177,7 +177,9 @@ def run_blocks_building(
 
     logger.set_data_blocks_report({
         'image_filepath': str(inputs.image_fpath),
-        'label_filepath': str(inputs.label_fpath),
+        'label_filepath': (
+            str(inputs.label_fpath) if inputs.label_fpath is not None else None
+        ),
         'duration_sec': time.perf_counter() - start_time,
         'stats': stats,
         'manifest': {

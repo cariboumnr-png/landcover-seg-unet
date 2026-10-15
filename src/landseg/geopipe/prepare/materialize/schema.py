@@ -168,7 +168,7 @@ def build_schema(
     report: contracts.SchemaReport = {
         'status': 'loaded' if loaded else 'created',
         'duration_sec': duration,
-        'schema_filepath': paths.schema,
+        'schema_filepath': str(paths.schema),
         'classes_mapped': list(schema['label_stats'].keys()),
     }
     logger.set_schema_report(report)

@@ -145,7 +145,9 @@ def _harmonize_sources(
             resampling_method=resampling,
         )
         # band mapping is now required
-        harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
+        harmonize_rasters.add_band_description_to_vrt(
+            str(warped), mfst['band_mapping']
+        )
 
         processed.provenance[tagged_name] = _path.resolve()
         processed.harmonized[tagged_name] = warped
@@ -180,7 +182,7 @@ def _tag_domain_metadata(
 
     if 'index_base' in cat_specs:
         harmonize_rasters.add_tag_to_vrt(
-            warped,
+            str(warped),
             index_base=cat_specs['index_base'],
         )
 
@@ -193,7 +195,7 @@ def _tag_feature_metadata(
     schemes = mfst.get('schemes')
     if schemes:
         harmonize_rasters.add_tag_to_vrt(
-            warped,
+            str(warped),
             schemes={mfst['name']: schemes},
         )
 
@@ -209,7 +211,7 @@ def _tag_label_metadata(
 
     schemes = mfst.get('schemes')
     harmonize_rasters.add_tag_to_vrt(
-        warped,
+        str(warped),
         index_base=cat_specs['index_base'],
         num_cls=cat_specs['num_cls'],
         ignore_cls=cat_specs['ignore_cls'],

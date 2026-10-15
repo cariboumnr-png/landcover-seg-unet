@@ -168,7 +168,7 @@ def _catalog_status(
     updated_coords: list[tuple[int, int]],
     *,
     policy: artifacts.LifecyclePolicy,
-) -> tuple[geo_core.DatasetCatalog, list[str]]:
+) -> tuple[geo_core.DatasetCatalog, list[pathlib.Path]]:
     '''Assess catalog status and determine required updates.'''
     # instantiate a catalog class from dict
     if data_dict:
@@ -178,7 +178,7 @@ def _catalog_status(
 
     # get filenames from all current npz files in blks_dir
     current = [
-        p.name for p in pathlib.Path(blocks_dir).iterdir()
+        p.name for p in blocks_dir.iterdir()
         if p.name.endswith('npz')
     ]
     if not current:
@@ -203,15 +203,15 @@ def _catalog_status(
         # policy: build if missing
         case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
             return _catalog, {
-                1: [f'{blocks_dir}/{f}' for f in current],
+                1: [blocks_dir / f for f in current],
                 2: [],
-                3: [f'{blocks_dir}/{f}' for f in updated],
-                4: [f'{blocks_dir}/{f}' for f in current],
-                5: [f'{blocks_dir}/{f}' for f in current],
+                3: [blocks_dir / f for f in updated],
+                4: [blocks_dir / f for f in current],
+                5: [blocks_dir / f for f in current],
             }[catalog_status]
         # policy: force rebuild all
         case artifacts.LifecyclePolicy.REBUILD:
-            return _catalog, [f'{blocks_dir}/{f}' for f in current]
+            return _catalog, [blocks_dir / f for f in current]
         # unsupported policy
         case _:
             raise NotImplementedError(f'Unsupported policy: {policy}')

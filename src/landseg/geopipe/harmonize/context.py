@@ -91,7 +91,9 @@ def build_harmonization_context(
         }
     }
     fingerprint = geo_utils.compute_fingerprint(identity)
-    collided = geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
+    collided = geo_utils.find_run_collision(
+        fingerprint, str(runs_manifest_fpath)
+    )
 
     return HarmonizationContext(
         grid=world_grid,

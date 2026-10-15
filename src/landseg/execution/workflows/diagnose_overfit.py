@@ -136,9 +136,9 @@ def _prepare_dataspecs(
                 break
 
     if not block_fpath:
-        block_fpath = _create_block(save_dpath, config, logger)
+        block_fpath = _create_block(save_path, config, logger)
 
-    block = geo_core.DataBlock.load(block_fpath)
+    block = geo_core.DataBlock.load(str(block_fpath))
     counts = block.manifest['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original'}
 
@@ -185,8 +185,8 @@ def _prepare_dataspecs(
             similarity_matrices=sim_matrices,
         ),
         splits=core.Splits(
-            train={block.manifest['block_name']: block_fpath},
-            val={block.manifest['block_name']: block_fpath},
+            train={block.manifest['block_name']: str(block_fpath)},
+            val={block.manifest['block_name']: str(block_fpath)},
             test={},
         ),
         domains=core.Domains(
@@ -201,7 +201,7 @@ def _prepare_dataspecs(
 
 # ----- block construction helper
 def _create_block(
-    save_dpath: str | pathlib.Path,
+    save_dpath: pathlib.Path,
     config: configs.RootConfig,
     logger: session.SessionLogger,
 ) -> pathlib.Path:

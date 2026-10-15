@@ -124,14 +124,14 @@ class NormalizationReport(typing.TypedDict):
     duration_sec: float
     unwanted_blocks_removed: int
     rebuild: bool
-    stats_filepath: pathlib.Path
+    stats_filepath: str
 
 
 class SchemaReport(typing.TypedDict):
     '''Execution report for dataset schema generation.'''
     status: typing.Literal['loaded', 'created']
     duration_sec: float
-    schema_filepath: pathlib.Path
+    schema_filepath: str
     classes_mapped: list[str]
 
 
