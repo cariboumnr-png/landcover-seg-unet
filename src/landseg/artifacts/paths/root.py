@@ -40,13 +40,13 @@ if typing.TYPE_CHECKING:
 @dataclasses.dataclass
 class ArtifactPaths:
     '''Root entrypoint for all artifact path namespaces.'''
-    root: pathlib.Path | str = './experiment'
-    world_grid_root: pathlib.Path | str | None = None
-    harmonization_root: pathlib.Path | str | None = None
-    ingestion_root: pathlib.Path | str | None = None
-    preparation_root: pathlib.Path | str | None = None
-    session_root: pathlib.Path | str | None = None
-    knowledge_root: pathlib.Path | str = 'knowledge'
+    root: pathlib.Path = pathlib.Path('./experiment')
+    world_grid_root: pathlib.Path | None = None
+    harmonization_root: pathlib.Path | None = None
+    ingestion_root: pathlib.Path | None = None
+    preparation_root: pathlib.Path | None = None
+    session_root: pathlib.Path | None = None
+    knowledge_root: pathlib.Path = pathlib.Path('knowledge')
 
     def __post_init__(self):
         self.root = pathlib.Path(self.root)
@@ -66,12 +66,32 @@ class ArtifactPaths:
     def from_config(cls, config: 'configs.RootConfig') -> typing.Self:
         '''Construct `ArtifactPaths` from a `RootConfig` instance.'''
         return cls(
-            root=config.execution.exp_root,
-            world_grid_root=config.data.world_grid.output_dpath,
-            harmonization_root=config.data.harmonization.output_dpath,
-            ingestion_root=config.data.ingestion.output_dpath,
-            preparation_root=config.data.preparation.output_dpath,
-            session_root=config.session.output_dpath,
+            root=pathlib.Path(config.execution.exp_root),
+            world_grid_root=(
+                pathlib.Path(config.data.world_grid.output_dpath)
+                if config.data.world_grid.output_dpath
+                else None
+            ),
+            harmonization_root=(
+                pathlib.Path(config.data.harmonization.output_dpath)
+                if config.data.harmonization.output_dpath
+                else None
+            ),
+            ingestion_root=(
+                pathlib.Path(config.data.ingestion.output_dpath)
+                if config.data.ingestion.output_dpath
+                else None
+            ),
+            preparation_root=(
+                pathlib.Path(config.data.preparation.output_dpath)
+                if config.data.preparation.output_dpath
+                else None
+            ),
+            session_root=(
+                pathlib.Path(config.session.output_dpath)
+                if config.session.output_dpath
+                else None
+            ),
         )
 
     @property

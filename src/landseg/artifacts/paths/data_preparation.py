@@ -39,43 +39,43 @@ class PreparationPaths(base.PipelineArtifactsPaths):
 
     @property
     def effective_run_folder(self) -> pathlib.Path:
-        return pathlib.Path(self.root)
+        return self.root
 
     @property
     def train_blocks(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'train_blocks'
+        return self.root / 'train_blocks'
 
     @property
     def val_blocks(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'val_blocks'
+        return self.root / 'val_blocks'
 
     @property
     def test_blocks(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'test_blocks'
+        return self.root / 'test_blocks'
 
     @property
     def splits_source_blocks(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'block_splits_source.json'
+        return self.root / 'block_splits_source.json'
 
     @property
     def splits_summary(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'block_splits_summary.json'
+        return self.root / 'block_splits_summary.json'
 
     @property
     def label_stats(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'label_stats.json'
+        return self.root / 'label_stats.json'
 
     @property
     def image_stats(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'image_stats.json'
+        return self.root / 'image_stats.json'
 
     @property
     def splits_prepared_blocks(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'block_splits_prepared.json'
+        return self.root / 'block_splits_prepared.json'
 
     @property
     def schema(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'schema.json'
+        return self.root / 'schema.json'
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()

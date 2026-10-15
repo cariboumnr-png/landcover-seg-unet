@@ -32,7 +32,7 @@ import pathlib
 @dataclasses.dataclass
 class KnowledgePaths:
     '''Path manager for repository knowledge base embeddings and profiles.'''
-    root: pathlib.Path | str = 'knowledge'
+    root: pathlib.Path = pathlib.Path('knowledge')
 
     def __post_init__(self):
         self.root = pathlib.Path(self.root)

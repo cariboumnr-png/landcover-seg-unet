@@ -40,7 +40,7 @@ class HarmonizationPaths(base.PipelineArtifactsPaths):
 
     @property
     def runs_manifest(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'harmonization_runs.json'
+        return self.root / 'harmonization_runs.json'
 
     @property
     def valid_mask_raster(self) -> pathlib.Path:

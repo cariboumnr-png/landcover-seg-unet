@@ -39,4 +39,4 @@ class WorldGridPaths(base.PipelineArtifactsPaths):
 
     @property
     def effective_run_folder(self) -> pathlib.Path:
-        return pathlib.Path(self.root)
+        return self.root

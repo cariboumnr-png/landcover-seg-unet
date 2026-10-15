@@ -33,11 +33,11 @@ import typing
 @dataclasses.dataclass
 class PipelineArtifactsPaths:
     '''Paths for pipeline specific artifacts.'''
-    root: pathlib.Path | str
-    run_folder: pathlib.Path | str | None = None
+    root: pathlib.Path
+    run_folder: pathlib.Path | None = None
     trace_to_last: bool = False
     _run_id: str = ''
-    _run_folder: pathlib.Path | str = ''
+    _run_folder: pathlib.Path | None = None
 
     def __post_init__(self):
         '''Compile current run folder.'''
@@ -65,9 +65,9 @@ class PipelineArtifactsPaths:
     def effective_run_folder(self) -> pathlib.Path:
         '''Return either provided or compiled run folder path.'''
         return (
-            pathlib.Path(self.run_folder)
-            if self.run_folder
-            else pathlib.Path(self._run_folder)
+            self.run_folder
+            if self.run_folder is not None
+            else (self._run_folder if self._run_folder is not None else self.root)
         )
 
     @property
@@ -115,8 +115,8 @@ class PipelineArtifactsPaths:
                     folder = root_path / f'run_{int(run_id):04d}'
                 elif p.is_dir():
                     folder = p
-                elif (root_path / run_id).is_dir():
-                    folder = root_path / run_id
+                elif (root_path / p).is_dir():
+                    folder = root_path / p
                 else:
                     raise FileNotFoundError(
                         f'Run folder does not exist: {run_id}'

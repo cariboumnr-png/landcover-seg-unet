@@ -41,19 +41,19 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 
     @property
     def runs_manifest(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'ingestion_runs.json'
+        return self.root / 'ingestion_runs.json'
 
     @property
     def data_blocks(self) -> '_DataBlocks':
-        return _DataBlocks(pathlib.Path(self.root) / 'data_blocks')
+        return _DataBlocks(self.root / 'data_blocks')
 
     @property
     def domains(self) -> '_DomainMaps':
-        return _DomainMaps(pathlib.Path(self.root) / 'domain_knowledge')
+        return _DomainMaps(self.root / 'domain_knowledge')
 
     @property
     def windows(self) -> pathlib.Path:
-        return pathlib.Path(self.root) / 'block_windows.json'
+        return self.root / 'block_windows.json'
 
     @property
     def collisions(self) -> pathlib.Path:
@@ -61,9 +61,9 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        pathlib.Path(self.data_blocks.root).mkdir(parents=True, exist_ok=True)
+        self.data_blocks.root.mkdir(parents=True, exist_ok=True)
         self.data_blocks.blocks.mkdir(parents=True, exist_ok=True)
-        pathlib.Path(self.domains.root).mkdir(parents=True, exist_ok=True)
+        self.domains.root.mkdir(parents=True, exist_ok=True)
         if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})
 
@@ -72,7 +72,7 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 @dataclasses.dataclass
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''
-    root: pathlib.Path | str
+    root: pathlib.Path
 
     def __post_init__(self):
         self.root = pathlib.Path(self.root)
@@ -89,7 +89,7 @@ class _DomainMaps:
 @dataclasses.dataclass
 class _DataBlocks:
     '''Container for canonical dataset data blocks.'''
-    root: pathlib.Path | str
+    root: pathlib.Path
 
     def __post_init__(self):
         self.root = pathlib.Path(self.root)
