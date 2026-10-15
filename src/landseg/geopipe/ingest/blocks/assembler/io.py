@@ -231,7 +231,7 @@ def check_npz_integrity(
     '''
     ok = False
     try:
-        geo_core.DataBlock.load(str(fpath))
+        geo_core.DataBlock.load(fpath)
         ok = True
     except (FileNotFoundError, zipfile.error, zlib.error, ValueError):
         ok = False

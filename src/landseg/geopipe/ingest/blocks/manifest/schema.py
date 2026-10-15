@@ -118,7 +118,7 @@ def build_schema(
         return original
 
     # read from the sample block
-    sample_blk = geo_core.DataBlock.load(str(sample_block_fpath))
+    sample_blk = geo_core.DataBlock.load(sample_block_fpath)
     image_shape = sample_blk.data.image.shape
     label_shape = sample_blk.data.label.shape
 

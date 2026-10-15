@@ -26,8 +26,6 @@ Prepares the world grid, materializes domain knowledge, and builds
 the immutable raw block catalogue for later experiments.
 '''
 
-# standard imports
-from __future__ import annotations
 # local imports
 import landseg.artifacts as artifacts
 import landseg.artifacts.paths as paths

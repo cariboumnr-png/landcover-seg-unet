@@ -31,7 +31,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 # third-party imports
 import numpy

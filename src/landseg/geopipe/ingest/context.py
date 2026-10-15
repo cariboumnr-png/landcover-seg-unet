@@ -50,9 +50,7 @@ import landseg.geopipe.utils as geo_utils
 
 # ----- typing aliases
 HarmonizationRecords = dict[str, contracts.HarmonizationRunRecord]
-HarmonizationReportCtrl = (
-    artifacts.Controller[contracts.HarmonizationReportSchema]
-)
+HarmonizationReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
 HarmonizationManifestCtrl = artifacts.Controller[HarmonizationRecords]
 IngestionRecords = dict[str, contracts.IngestionRunRecord]
 IngestionManifestCtrl = artifacts.Controller[IngestionRecords]
@@ -185,10 +183,8 @@ def build_ingestion_context(
 
     # fetch world grid
     raw_grid = report.get('grid_fpath')
-    if not raw_grid and 'world_grid' in report:
-        raw_grid = report['world_grid'].get('grid_fpath')
-    world_grid = geo_core.GridLayout.from_fpath(raw_grid)
     grid_fpath = pathlib.Path(raw_grid)
+    world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # verify grid compatibility
     if dataset_schema_fpath is not None:

@@ -143,17 +143,13 @@ class IngestionLogger(utils.Logger):
             return
         record: contracts.IngestionRunRecord = {
             'run_uid': uid,
-            'run_id': self.summary.get('run_id', ''),
-            'harmonization_run_uid': self.summary.get(
-                'harmonization_run_uid', ''
-            ),
-            'harmonization_run_id': self.summary.get(
-                'harmonization_run_id', ''
-            ),
-            'status': self.summary.get('status', 'FAILED'),
-            'timestamp': self.summary.get('timestamp', ''),
-            'fingerprint': self.summary.get('fingerprint', ''),
-            'run_folder': str(pathlib.Path(run_folder).resolve()),
+            'run_id': self.summary['run_id'],
+            'harmonization_run_uid': self.summary['harmonization_run_uid'],
+            'harmonization_run_id': self.summary['harmonization_run_id'],
+            'status': self.summary['status'],
+            'timestamp': self.summary['timestamp'],
+            'fingerprint': self.summary['fingerprint'],
+            'run_folder': str(run_folder.resolve()),
         }
         ctrl = artifacts.Controller[dict](manifest_fpath)
         try:
