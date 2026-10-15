@@ -66,6 +66,7 @@ from __future__ import annotations
 # standard imports
 import collections
 import dataclasses
+import pathlib
 # third-party imports
 import numpy
 import torch
@@ -100,7 +101,7 @@ class BlockDatasetContext:
         ValueError: If `block_size` is smaller than `patch_size`, or if
             `block_size` is not evenly divisible by `patch_size`.
     '''
-    block_src: dict[str, str]
+    block_src: dict[str, pathlib.Path]
     block_size: int
     patch_size: int
     image_key: str
@@ -346,7 +347,7 @@ class _BlockDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        fpath: str,
+        fpath: pathlib.Path,
         config: BlockDatasetContext,
         domains: dict[str, int | list[float] | None],
         *,

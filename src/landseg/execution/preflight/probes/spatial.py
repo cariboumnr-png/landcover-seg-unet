@@ -49,7 +49,7 @@ def spatial_reference(config: configs.RootConfig) -> schema.ProbeResult:
             message='Manual spatial definitions below',
         )
 
-    ref_fpath = grid_cfg.manual_specs.ref_fpath
+    ref_fpath = grid_cfg.ref_fpath
     return schema.ProbeResult(
         pid='world_grid_reference',
         category='Spatial',
@@ -129,8 +129,8 @@ def grid_origin(config: configs.RootConfig) -> schema.ProbeResult:
 
 def grid_specs(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the configured tile dimensions and stride.'''
-    bx, by = config.data.world_grid.manual_specs.tile_size
-    sx, sy = config.data.world_grid.manual_specs.tile_stride
+    bx, by = config.data.world_grid.tile_size
+    sx, sy = config.data.world_grid.tile_stride
 
     return schema.ProbeResult(
         pid='block_specifications',

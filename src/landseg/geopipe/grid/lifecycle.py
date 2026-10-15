@@ -96,7 +96,7 @@ def prepare_world_grid(
             config.tile_size,
             config.tile_stride,
             mode=config.mode,
-            ref_fpath=pathlib.Path(config.ref_fpath),
+            ref_fpath=pathlib.Path(config.ref_fpath) if config.ref_fpath else None,
             manual_specs=builder.GridConfigs(
                 crs_string=config.manual_specs.crs_string,
                 origin=config.manual_specs.origin,

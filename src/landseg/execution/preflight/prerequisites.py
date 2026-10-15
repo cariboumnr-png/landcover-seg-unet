@@ -230,7 +230,7 @@ def check_files_exist(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    missing = [fp for fp in file_paths if fp.exists()]
+    missing = [fp for fp in file_paths if not fp.exists()]
 
     if missing:
         missing_str = ", ".join(str(fp) for fp in missing)

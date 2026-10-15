@@ -166,7 +166,7 @@ def __getattr__(name: str):
         'RasterReader',
         'RasterWindow',
         'RasterWindowDict',
-        'read_grid_report',
+        'read_report',
     }:
         obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)

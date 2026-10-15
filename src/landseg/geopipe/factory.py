@@ -32,6 +32,7 @@ Public APIs:
 
 # standard imports
 import math
+import pathlib
 import typing
 # third-party imports
 import numpy
@@ -119,7 +120,7 @@ def build_dataspec(
 
 
 # ----- private helpers
-def _load_domain(fp: str) -> geo_core.DomainTileMap:
+def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
     ctrl = DomainCtrl.load_or_fail(
         fp,
@@ -240,14 +241,12 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(
-    prepared_schema: prepare_contracts.PreparedSchema,
-) -> core.Splits:
+def _get_split(schema: prepare_contracts.PreparedSchema) -> core.Splits:
     '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
-        train=prepared_schema['train_blocks'],
-        val=prepared_schema['val_blocks'],
-        test=prepared_schema['test_blocks']
+        train={k: pathlib.Path(v) for k, v in schema['train_blocks'].items()},
+        val={k: pathlib.Path(v) for k, v in schema['val_blocks'].items()},
+        test={k: pathlib.Path(v) for k, v in schema['test_blocks'].items()}
     )
 
 

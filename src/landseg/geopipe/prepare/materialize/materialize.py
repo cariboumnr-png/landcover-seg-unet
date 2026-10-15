@@ -44,7 +44,7 @@ import landseg.utils as utils
 
 # ----- public functions
 def materialize_blocks(
-    input_blocks: set[str],
+    input_blocks: set[pathlib.Path],
     stats: dict[str, contracts.ImageBandStats],
     context: dataset.DatasetView,
     output_dir: pathlib.Path,
@@ -76,7 +76,7 @@ def materialize_blocks(
             files.
     '''
     names: list[str] = []
-    work: list[str] = []
+    work: list[pathlib.Path] = []
     for b in input_blocks:
         name = pathlib.Path(b).name
         names.append(name)

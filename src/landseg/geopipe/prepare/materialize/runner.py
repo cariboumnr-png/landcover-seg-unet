@@ -105,9 +105,9 @@ def run_materialize_blocks(
     src = ctrl.fetch()
 
     # get source by split
-    train = set(src['train'].values())
-    val = set(src['val'].values())
-    test = set(src['test'].values())
+    train = set(pathlib.Path(p) for p in src['train'].values())
+    val = set(pathlib.Path(p) for p in src['val'].values())
+    test = set(pathlib.Path(p) for p in src['test'].values())
 
     # label stats on training blocks - parse from context
     ctrl = LabelStatsCtrl(paths.label_stats, policy)
@@ -172,7 +172,7 @@ def run_materialize_blocks(
 
 # ----- private helpers
 def _materialize(
-    splits: tuple[set[str], set[str], set[str]],
+    splits: tuple[set[pathlib.Path], set[pathlib.Path], set[pathlib.Path]],
     aggregated_stats: dict[str, contracts.ImageBandStats],
     context: dataset.DatasetView,
     paths: _PipelinePaths,

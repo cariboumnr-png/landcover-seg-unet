@@ -58,8 +58,8 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
     Args:
         config: RootConfig with model/trainer settings.
     '''
-    root = f'{config.execution.exp_root}/results/overfit_test'
-    log_file = f'{root}/log/overfit_summary.json'
+    root = pathlib.Path(config.execution.exp_root) / 'results' / 'overfit_test'
+    log_file = root / 'log' / 'overfit_summary.json'
     logger = session.SessionLogger('overfit', log_file=log_file)
     logger.init_summary(run_id='overfit_test', command='diagnose_overfit')
 
@@ -121,24 +121,23 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
 
 # ----- dataspecs builder
 def _prepare_dataspecs(
-    save_dpath: str,
+    save_dpath: pathlib.Path,
     config: configs.RootConfig,
     logger: session.SessionLogger,
 ) -> core.DataSpecs:
     '''Build or select a single test block and construct `DataSpecs`.'''
     block_fpath: pathlib.Path | None = None
-    save_path = pathlib.Path(save_dpath)
-    if save_path.exists():
-        for p in save_path.iterdir():
+    if save_dpath.exists():
+        for p in save_dpath.iterdir():
             if p.name.endswith('.npz'):
                 block_fpath = p
                 logger.info(f'Using existing block: {block_fpath}')
                 break
 
     if not block_fpath:
-        block_fpath = _create_block(save_path, config, logger)
+        block_fpath = _create_block(save_dpath, config, logger)
 
-    block = geo_core.DataBlock.load(str(block_fpath))
+    block = geo_core.DataBlock.load(block_fpath)
     counts = block.manifest['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original'}
 
@@ -185,8 +184,8 @@ def _prepare_dataspecs(
             similarity_matrices=sim_matrices,
         ),
         splits=core.Splits(
-            train={block.manifest['block_name']: str(block_fpath.resolve())},
-            val={block.manifest['block_name']: str(block_fpath.resolve())},
+            train={block.manifest['block_name']: block_fpath.resolve()},
+            val={block.manifest['block_name']: block_fpath.resolve()},
             test={},
         ),
         domains=core.Domains(
