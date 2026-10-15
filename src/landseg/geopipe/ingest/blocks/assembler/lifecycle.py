@@ -57,15 +57,15 @@ import landseg.utils as utils
 @dataclasses.dataclass(frozen=True)
 class BlockBuildingInputs:
     '''I/O paths used during block construction.'''
-    image_fpath: str | pathlib.Path
-    label_fpath: str | pathlib.Path | None
+    image_fpath: pathlib.Path
+    label_fpath: pathlib.Path | None
 
     @property
     def has_label(self) -> bool:
         '''Return `True` is label raster is provided.'''
         return (
             bool(self.label_fpath)
-            and pathlib.Path(self.label_fpath).exists()
+            and self.label_fpath.exists()
         )
 
 
@@ -132,7 +132,7 @@ class _StructuralValidationResults:
 
 # ----- public functions
 def build_test_block(
-    save_dpath: str | pathlib.Path,
+    save_dpath: pathlib.Path,
     inputs: dict[str, io.RasterReadInput],
     *,
     target_head: str,
@@ -222,7 +222,7 @@ def build_blocks(
     config: BlockBuildingConfig,
     context: BlockBuildingContext,
     *,
-    output_dir: str,
+    output_dir: pathlib.Path,
 ) -> BlockBuildingOutput:
     '''
     Validate on-disk blocks, clear corrupt ones, and build missing.
@@ -241,10 +241,11 @@ def build_blocks(
         BlockBuildingOutput:
             Execution output containing created coordinates and stats.
     '''
-    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+    _output_dir = pathlib.Path(output_dir)
+    _output_dir.mkdir(parents=True, exist_ok=True)
 
     # prepare raster read windows
-    coords_to_check = _prep_block_windows(inputs, context, output_dir)
+    coords_to_check = _prep_block_windows(inputs, context, _output_dir)
 
     # inspect existing blocks
     validation_results = _structural_validation(
@@ -256,7 +257,7 @@ def build_blocks(
 
     # create blocks if missing
     todo = validation_results.coords_todo
-    _create_missing_blocks(inputs, todo, config, context, output_dir)
+    _create_missing_blocks(inputs, todo, config, context, _output_dir)
 
     # extract label color map from specs if present and pass through
     label_color_map: dict[str, list[int]] | None = None
@@ -288,7 +289,7 @@ def build_blocks(
 def _prep_block_windows(
     inputs: BlockBuildingInputs,
     context: BlockBuildingContext,
-    output_dir: str | pathlib.Path,
+    output_dir: pathlib.Path,
 ) -> dict[tuple[int, int], pathlib.Path]:
     '''Find coordinates matching block size and compute window counts.'''
     if inputs.has_label:
@@ -305,15 +306,14 @@ def _prep_block_windows(
         ):
             valid_coords.remove(coord)
 
-    out_p = pathlib.Path(output_dir)
     return {
-        c: out_p / f'{geo_utils.xy_name(c)}.npz'
+        c: output_dir / f'{geo_utils.xy_name(c)}.npz'
         for c in valid_coords
     }
 
 
 def _structural_validation(
-    input_coords: dict[tuple[int, int], str | pathlib.Path],
+    input_coords: dict[tuple[int, int], pathlib.Path],
     incumbent_catalog: geo_core.DatasetCatalog | None = None,
     *,
     artifacts_policy: artifacts.LifecyclePolicy,
@@ -390,7 +390,7 @@ def _create_missing_blocks(
     coords_todo: list[tuple[int, int]],
     config: BlockBuildingConfig,
     context: BlockBuildingContext,
-    output_dir: str
+    output_dir: pathlib.Path
 ) -> None:
     '''Build all missing coordinates in parallel.'''
     creation_jobs = []
@@ -430,7 +430,7 @@ def _build_single_block(
     raster_inputs: io.RasterReadInput,
     db_config: builder.DataBlockConfig,
     *,
-    save_fpath: str | pathlib.Path | None = None,
+    save_fpath: pathlib.Path | None = None,
 ) -> geo_core.DataBlock:
     '''
     Create a DataBlock from input rasters for the window context.

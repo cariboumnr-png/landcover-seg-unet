@@ -56,8 +56,8 @@ class MappedRasterWindows:
 # ----- public functions
 def map_rasters(
     world_grid: geo_core.GridLayout,
-    image_fpath: str | pathlib.Path,
-    label_fpath: str | pathlib.Path | None,
+    image_fpath: pathlib.Path,
+    label_fpath: pathlib.Path | None,
 ) -> MappedRasterWindows:
     '''
     Map input rasters to the world grid and build read windows.

@@ -57,17 +57,17 @@ class ManifestProvenance:
     '''Lineage and grid identity recorded in catalog and schema.'''
     grid_id: str
     block_identity: str
-    source_image: str
-    source_label: str | None = None
+    source_image: pathlib.Path
+    source_label: pathlib.Path | None = None
     harmonize_run_id: str | None = None
     ingest_run_id: str | None = None
 
 
 # ----- public functions
 def update_manifest(
-    catalog_fpath: str,
-    schema_fpath: str,
-    blocks_dir: str,
+    catalog_fpath: pathlib.Path,
+    schema_fpath: pathlib.Path,
+    blocks_dir: pathlib.Path,
     provenance: ManifestProvenance,
     output: assembler.BlockBuildingOutput,
     *,
@@ -164,7 +164,7 @@ def update_manifest(
 # ----- private helpers
 def _catalog_status(
     data_dict: dict[str, geo_core.DatasetBlockMeta] | None,
-    blocks_dir: str,
+    blocks_dir: pathlib.Path,
     updated_coords: list[tuple[int, int]],
     *,
     policy: artifacts.LifecyclePolicy,
@@ -217,9 +217,9 @@ def _catalog_status(
             raise NotImplementedError(f'Unsupported policy: {policy}')
 
 
-def _sample(d: str | pathlib.Path) -> pathlib.Path:
+def _sample(d: pathlib.Path) -> pathlib.Path:
     '''Find a representative sample .npz file in the directory.'''
-    for p in pathlib.Path(d).iterdir():
+    for p in d.iterdir():
         if p.name.endswith('npz'):
             return p
     raise ValueError(f'No .npz file found at {d}')

@@ -63,11 +63,11 @@ class PreparationContext:
 
 # ----- public functions
 def build_preparation_context(
-    windows_fpath: str | pathlib.Path,
-    catalog_fpath: str | pathlib.Path,
-    schema_fpath: str | pathlib.Path,
+    windows_fpath: pathlib.Path,
+    catalog_fpath: pathlib.Path,
+    schema_fpath: pathlib.Path,
     *,
-    test_catalog_fpath: str | pathlib.Path | None = None,
+    test_catalog_fpath: pathlib.Path | None = None,
 ) -> PreparationContext:
     '''
     Build preparation context from upstream ingestion catalog and schema.

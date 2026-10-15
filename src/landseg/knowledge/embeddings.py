@@ -55,8 +55,8 @@ class SpeciesEmbeddingsMetadata(typing.TypedDict):
 
 
 def generate_embeddings_and_matrix(
-    csv_path: str | pathlib.Path,
-    knowledge_root: str | pathlib.Path = 'knowledge',
+    csv_path: pathlib.Path,
+    knowledge_root: pathlib.Path = pathlib.Path('knowledge'),
     *,
     model_name: str = 'BAAI/bge-base-en-v1.5',
     normalize: bool = True,
@@ -71,7 +71,6 @@ def generate_embeddings_and_matrix(
         model_name: HuggingFace sentence transformer model name.
         normalize: Whether to L2-normalize embeddings for cosine similarity.
     '''
-    csv_path = pathlib.Path(csv_path)
     csv_stem = csv_path.stem
     kp = artifacts.KnowledgePaths(root=knowledge_root)
 

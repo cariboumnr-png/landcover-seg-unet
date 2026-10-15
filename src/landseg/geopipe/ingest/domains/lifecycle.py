@@ -57,16 +57,16 @@ MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 @dataclasses.dataclass(frozen=True)
 class DomainBuildingConfig:
     '''Container for domain mapping configurations.'''
-    input_fpath: str | pathlib.Path
-    domain_fpath: str | pathlib.Path
-    tiles_fpath: str | pathlib.Path
+    input_fpath: pathlib.Path
+    domain_fpath: pathlib.Path
+    tiles_fpath: pathlib.Path
     valid_threshold: float
     target_variance: float
 
     @property
     def name(self) -> str:
         '''Return layer name derived from input raster filename.'''
-        return pathlib.Path(self.input_fpath).stem
+        return self.input_fpath.stem
 
 
 # ----- public functions

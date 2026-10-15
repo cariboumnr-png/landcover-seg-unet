@@ -44,8 +44,8 @@ import landseg.geopipe.core as geo_core
 # ----- public functions
 def warp_to_grid(
     *,
-    input_path: str | pathlib.Path,
-    output_path: str | pathlib.Path,
+    input_path: pathlib.Path,
+    output_path: pathlib.Path,
     world_grid: geo_core.GridLayout,
     is_categorical: bool = False,
     resampling_method: str | None = None,

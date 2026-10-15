@@ -41,8 +41,8 @@ import rasterio.vrt
 
 # ----- public functions
 def unify_nodata_mask(
-    input_path: str | pathlib.Path,
-    output_mask_path: str | pathlib.Path,
+    input_path: pathlib.Path,
+    output_mask_path: pathlib.Path,
 ) -> pathlib.Path:
     '''
     Create a 1-band boolean valid pixel mask across bands.

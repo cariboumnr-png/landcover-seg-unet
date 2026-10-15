@@ -59,8 +59,8 @@ class GeometrySummary(typing.TypedDict):
 
 # ----- public functions
 def validate_geometry(
-    image_fpath: str | pathlib.Path,
-    label_fpath: str | pathlib.Path | None,
+    image_fpath: pathlib.Path,
+    label_fpath: pathlib.Path | None,
 ) -> GeometrySummary:
     '''
     Ingest raster inputs and validate their alignment.

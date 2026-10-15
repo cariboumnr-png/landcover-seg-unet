@@ -92,7 +92,7 @@ class HarmonizationLogger(utils.Logger):
         return ''
 
     def add_source_provenance(
-        self, name: str, source_path: str | pathlib.Path
+        self, name: str, source_path: pathlib.Path
     ) -> None:
         '''Record source file size and modification timestamp provenance.'''
         if self.summary is not None and pathlib.Path(source_path).exists():
@@ -104,25 +104,21 @@ class HarmonizationLogger(utils.Logger):
             }
             self.summary['provenance'][name] = provenance
 
-    def add_harmonized_source(
-        self, name: str, path: str | pathlib.Path
-    ) -> None:
+    def add_harmonized_source(self, name: str, path: pathlib.Path) -> None:
         '''Record a harmonized raster layer output path.'''
         if self.summary is not None:
             self.summary['harmonized_sources'][name] = str(
                 pathlib.Path(path).resolve()
             )
 
-    def add_finalized_raster(
-        self, name: str, path: str | pathlib.Path
-    ) -> None:
+    def add_finalized_raster(self, name: str, path: pathlib.Path) -> None:
         '''Record multi-channel feature composite raster path.'''
         if self.summary is not None:
             self.summary['finalized_rasters'][name] = str(
                 pathlib.Path(path).resolve()
             )
 
-    def set_valid_mask_raster(self, path: str | pathlib.Path) -> None:
+    def set_valid_mask_raster(self, path: pathlib.Path) -> None:
         '''Record valid pixel mask raster path.'''
         if self.summary is not None:
             self.summary['valid_mask_raster'] = str(
@@ -130,7 +126,7 @@ class HarmonizationLogger(utils.Logger):
             )
 
     def set_grid_reference(
-        self, grid_id: str, grid_fpath: str | pathlib.Path
+        self, grid_id: str, grid_fpath: pathlib.Path
     ) -> None:
         '''Record world grid identifier and artifact file path.'''
         if self.summary is not None:
@@ -154,9 +150,9 @@ class HarmonizationLogger(utils.Logger):
 
     def update_runs_manifest(
         self,
-        run_manifest_fpath: str | pathlib.Path,
-        run_folder: str | pathlib.Path,
-        dataset_manifest_fpath: str | pathlib.Path,
+        run_manifest_fpath: pathlib.Path,
+        run_folder: pathlib.Path,
+        dataset_manifest_fpath: pathlib.Path,
     ) -> None:
         '''Record or update the harmonization runs manifest.'''
         if self.summary is None:

@@ -109,7 +109,7 @@ def run_data_harmonization(
 # ----- private helpers
 def _harmonize_sources(
     compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
-    output_dir: str | pathlib.Path,
+    output_dir: pathlib.Path,
     world_grid: geo_core.GridLayout,
     *,
     categorical_resampling: str,
@@ -129,15 +129,16 @@ def _harmonize_sources(
         resampling = (
             categorical_resampling if is_cat else continuous_resampling
         )
-        out_vrt = pathlib.Path(output_dir) / f'{tagged_name}.vrt'
+        out_vrt = output_dir / f'{tagged_name}.vrt'
 
         yield (
             f'Harmonizing raster {path} -> {out_vrt} '
             f'(resampling: {resampling})'
         )
 
+        _path = pathlib.Path(path)
         warped = harmonize_rasters.warp_to_grid(
-            input_path=path,
+            input_path=_path,
             output_path=out_vrt,
             world_grid=world_grid,
             is_categorical=is_cat,
@@ -146,7 +147,7 @@ def _harmonize_sources(
         # band mapping is now required
         harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
 
-        processed.provenance[tagged_name] = pathlib.Path(path).resolve()
+        processed.provenance[tagged_name] = _path.resolve()
         processed.harmonized[tagged_name] = warped
 
         match mfst['category']:
@@ -169,7 +170,7 @@ def _harmonize_sources(
 
 
 def _tag_domain_metadata(
-    warped: str | pathlib.Path,
+    warped: pathlib.Path,
     mfst: harmonize_manifest.ManifestEntry,
 ) -> None:
     '''Attach domain raster metadata tags to VRT file.'''
@@ -185,7 +186,7 @@ def _tag_domain_metadata(
 
 
 def _tag_feature_metadata(
-    warped: str | pathlib.Path,
+    warped: pathlib.Path,
     mfst: harmonize_manifest.ManifestEntry,
 ) -> None:
     '''Attach feature schemes metadata tags to VRT file.'''
@@ -198,7 +199,7 @@ def _tag_feature_metadata(
 
 
 def _tag_label_metadata(
-    warped: str | pathlib.Path,
+    warped: pathlib.Path,
     mfst: harmonize_manifest.ManifestEntry,
 ) -> None:
     '''Attach categorical label metadata tags to VRT file.'''

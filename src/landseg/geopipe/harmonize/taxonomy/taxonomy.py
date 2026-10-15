@@ -42,7 +42,7 @@ import landseg.knowledge as knowledge
 
 # ----- public functions
 def get_available_profiles(
-    knowledge_root: str | pathlib.Path = 'knowledge',
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> list[str]:
     '''
     Return list of registered taxonomy profile names in knowledge base.
@@ -55,7 +55,7 @@ def get_available_profiles(
         list[str]:
             List of profile directory names containing species metadata.
     '''
-    emb_dir = pathlib.Path(knowledge_root) / 'embeddings'
+    emb_dir = knowledge_root / 'embeddings'
     if not emb_dir.is_dir():
         return []
     profiles: list[str] = []
@@ -71,7 +71,7 @@ def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
     num_cls: int,
-    knowledge_root: str | pathlib.Path = c.KNOWLEDGE_ROOT,
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
@@ -125,11 +125,11 @@ def validate_specs(
 # ----- private helpers
 def _resolve_taxonomy_metadata(
     profile: str,
-    root: str | pathlib.Path = c.KNOWLEDGE_ROOT,
+    root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
-        pathlib.Path(root) / 'embeddings' / profile / 'species_metadata.json',
+        root / 'embeddings' / profile / 'species_metadata.json',
         pathlib.Path(profile) / 'species_metadata.json',
         pathlib.Path(profile),
     ]

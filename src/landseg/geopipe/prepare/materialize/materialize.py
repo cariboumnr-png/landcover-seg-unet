@@ -47,7 +47,7 @@ def materialize_blocks(
     input_blocks: set[str],
     stats: dict[str, contracts.ImageBandStats],
     context: dataset.DatasetView,
-    output_dir: str | pathlib.Path,
+    output_dir: pathlib.Path,
     *,
     rebuild: bool = False,
 ) -> tuple[dict[str, pathlib.Path], int]:
@@ -83,14 +83,14 @@ def materialize_blocks(
         if rebuild:
             work.append(b)
         else:
-            if not (pathlib.Path(output_dir) / name).exists():
+            if not (output_dir / name).exists():
                 work.append(b)
 
     # purge blocks not belong
     purged = _purge(names, output_dir)
 
     # normalize blocks
-    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     jobs = [
         (
             _materialize_one_block,
@@ -104,7 +104,7 @@ def materialize_blocks(
 
     # return current file paths
     indexed_files: dict[str, pathlib.Path] = {}
-    for p in pathlib.Path(output_dir).iterdir():
+    for p in output_dir.iterdir():
         if p.name.endswith('.npz'):
             indexed_files[p.stem] = p.resolve()
     return indexed_files, purged
@@ -113,10 +113,10 @@ def materialize_blocks(
 # ----- private helpers
 def _purge(
     filenames_to_keep: list[str],
-    target_dir: str,
+    target_dir: pathlib.Path,
 ) -> int:
     '''Remove files in target directory not present in expected list.'''
-    target_path = pathlib.Path(target_dir)
+    target_path = target_dir
     if not target_path.exists():
         return 0
 
@@ -129,9 +129,9 @@ def _purge(
 
 
 def _materialize_one_block(
-    block_fpath: str | pathlib.Path,
+    block_fpath: pathlib.Path,
     img_stats: dict[str, contracts.ImageBandStats],
-    target_dpath: str | pathlib.Path,
+    target_dpath: pathlib.Path,
     context: dataset.DatasetView,
 ):
     '''Normalize a single data block and write it to disk.'''
@@ -156,8 +156,8 @@ def _materialize_one_block(
     )
 
     # write blocks to files
-    filename = pathlib.Path(block_fpath).name
-    save_fpath = pathlib.Path(target_dpath) / filename
+    filename = block_fpath.name
+    save_fpath = target_dpath / filename
     # key names: image, label
     numpy.savez_compressed(save_fpath, image=img_arr, label=lbl_arr)
 

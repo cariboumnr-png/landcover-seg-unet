@@ -41,9 +41,9 @@ import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
 # ----- public functions
 def map_rasters_to_grid(
     world_grid: geo_core.GridLayout,
-    image_path: str | pathlib.Path,
-    label_path: str | pathlib.Path | None,
-    mapped_windows_path: str | pathlib.Path,
+    image_path: pathlib.Path,
+    label_path: pathlib.Path | None,
+    mapped_windows_path: pathlib.Path,
     *,
     policy: artifacts.LifecyclePolicy,
 ) -> mapper.MappedRasterWindows:

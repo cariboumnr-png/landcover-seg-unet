@@ -29,6 +29,7 @@ import pathlib
 # third-party imports
 import torch
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.knowledge as knowledge
 
@@ -37,7 +38,7 @@ MetaController = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata]
 
 def resolve_similarity_matrix(
     profile: str,
-    knowledge_root: str | pathlib.Path = 'knowledge',
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> torch.Tensor:
     '''
     Resolve and load precomputed species similarity matrix for a profile.
@@ -63,7 +64,7 @@ def resolve_similarity_matrix(
 
 def resolve_profile_metadata(
     profile: str,
-    knowledge_root: str | pathlib.Path = 'knowledge',
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> knowledge.SpeciesEmbeddingsMetadata:
     '''
     Resolve and load species embeddings metadata for a profile.

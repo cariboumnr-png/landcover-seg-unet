@@ -44,10 +44,10 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 
 # ----- public functions
 def build_schema(
-    sample_block_fpath: str | pathlib.Path,
+    sample_block_fpath: pathlib.Path,
     *,
     original: geo_core.DatasetSchema | None,
-    sources: tuple[str, str | None],
+    sources: tuple[pathlib.Path, pathlib.Path | None],
     mapped_grid_id: str,
     block_identity: str = '',
     label_color_map: dict[str, list[int]] | None
@@ -105,9 +105,9 @@ def build_schema(
         if block_identity and not original['dataset'].get('block_identity'):
             original['dataset']['block_identity'] = block_identity
         if not source_image in images:
-            images.append(source_image)
+            images.append(str(source_image))
         if source_label and not source_label in labels:
-            labels.append(source_label)
+            labels.append(str(source_label))
         original['dataset'].setdefault('image_schemes', {})
         original['dataset']['image_schemes'].update(image_schemes)
         original['dataset'].setdefault('label_schemes', {})
@@ -129,8 +129,8 @@ def build_schema(
             'mapped_grids': [mapped_grid_id],
             'block_identity': block_identity,
             'data_source': {
-                'image_paths': [source_image],
-                'label_paths': [source_label] if source_label else [],
+                'image_paths': [str(source_image)],
+                'label_paths': [str(source_label)] if source_label else [],
             },
             'image_schemes': image_schemes,
             'label_schemes': label_schemes,

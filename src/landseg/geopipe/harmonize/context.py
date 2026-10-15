@@ -46,7 +46,7 @@ class HarmonizationContext:
     '''Resolved world grid reference container for harmonization.'''
     grid: geo_core.GridLayout
     grid_id: str
-    grid_fpath: str | pathlib.Path
+    grid_fpath: pathlib.Path
     compiled_dataset_manifest: dict[str, manifest.ManifestEntry]
     current_run_identity: str = ''
     collided_run_uid: str | None = None
@@ -54,8 +54,8 @@ class HarmonizationContext:
 
 # ----- public functions
 def build_harmonization_context(
-    grid_report_path: str | pathlib.Path,
-    runs_manifest_fpath: str | pathlib.Path,
+    grid_report_path: pathlib.Path,
+    runs_manifest_fpath: pathlib.Path,
     config: contracts.HarmonizationPipelineConfig,
 ) -> HarmonizationContext:
     '''
@@ -71,7 +71,7 @@ def build_harmonization_context(
             grid reference metadata.
     '''
     # fetch world grid
-    _, grid_report = geo_core.read_grid_report(grid_report_path)
+    _, grid_report = geo_core.read_report(grid_report_path)
     world_grid = geo_core.GridLayout.from_fpath(grid_report['grid_fpath'])
 
     # compile dataset manifest JOSN
@@ -82,7 +82,7 @@ def build_harmonization_context(
     identity = {
         'inputs': compiled,
         'grid': {
-            'grid_fpath': grid_report_path,
+            'grid_fpath': str(grid_report_path.resolve()),
             'grid_identity': grid_identity,
         },
         'config': {
@@ -96,7 +96,7 @@ def build_harmonization_context(
     return HarmonizationContext(
         grid=world_grid,
         grid_id=grid_report['grid_id'],
-        grid_fpath=grid_report['grid_fpath'],
+        grid_fpath=pathlib.Path(grid_report['grid_fpath']),
         compiled_dataset_manifest=compiled,
         current_run_identity=fingerprint,
         collided_run_uid=collided

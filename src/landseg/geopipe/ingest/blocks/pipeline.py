@@ -70,8 +70,8 @@ class BlockPipelineRuntimeContext:
     '''Run context, e.g., run identity and collision handling.'''
     world_grid: geo_core.GridLayout
     block_artifact_paths: _PipelinePaths
-    block_windowns_artifact_fapth: str | pathlib.Path
-    collisions_artifacts_fpath: str | pathlib.Path
+    block_windowns_artifact_fapth: pathlib.Path
+    collisions_artifacts_fpath: pathlib.Path
     harmonize_run_id: str
     ingest_run_id: str
 
@@ -176,8 +176,8 @@ def run_blocks_building(
     stats = block_building_result.running_stats
 
     logger.set_data_blocks_report({
-        'image_filepath': inputs.image_fpath,
-        'label_filepath': inputs.label_fpath,
+        'image_filepath': str(inputs.image_fpath),
+        'label_filepath': str(inputs.label_fpath),
         'duration_sec': time.perf_counter() - start_time,
         'stats': stats,
         'manifest': {
