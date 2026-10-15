@@ -31,7 +31,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
@@ -126,7 +126,9 @@ def pending_harmonization(
             message='Harmonization has not been run'
         )
 
-    dt_mfst = os.path.abspath(root_config.data.harmonization.dataset_manifest)
+    dt_mfst = str(
+        pathlib.Path(root_config.data.harmonization.dataset_manifest).resolve()
+    )
     for v in harmonization_runs.values():
         if (
             v.get('source_dataset_manifest') == dt_mfst and
@@ -260,7 +262,7 @@ def ingestion_pool_state(
     probe_id = pid or 'ingested_blocks_pool'
     catalog_path = artifact_paths.data_ingestion.data_blocks.catalog
 
-    if not os.path.exists(catalog_path):
+    if not pathlib.Path(catalog_path).exists():
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',

@@ -27,7 +27,7 @@ and trains until near-perfect IoU to validate the end-to-end stack.
 '''
 
 # standard imports
-import os
+import pathlib
 import typing
 # third-party imports
 import torch
@@ -127,10 +127,11 @@ def _prepare_dataspecs(
 ) -> core.DataSpecs:
     '''Build or select a single test block and construct `DataSpecs`.'''
     block_fpath: str | None = None
-    if os.path.exists(save_dpath):
-        for f in os.listdir(save_dpath):
-            if f.endswith('.npz'):
-                block_fpath = os.path.join(save_dpath, f)
+    save_path = pathlib.Path(save_dpath)
+    if save_path.exists():
+        for p in save_path.iterdir():
+            if p.name.endswith('.npz'):
+                block_fpath = str(p)
                 logger.info(f'Using existing block: {block_fpath}')
                 break
 

@@ -36,7 +36,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -154,7 +154,7 @@ def check_report_status(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    if not os.path.isfile(report_fpath):
+    if not pathlib.Path(report_fpath).is_file():
         message = (
             f'Upstream pipeline "{upstream_target}" report not found at: '
             f'{report_fpath}'
@@ -230,7 +230,7 @@ def check_files_exist(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    missing = [fp for fp in file_paths if not os.path.exists(fp)]
+    missing = [fp for fp in file_paths if not pathlib.Path(fp).exists()]
 
     if missing:
         message = (
@@ -276,7 +276,7 @@ def check_manifest_runs(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    if not os.path.isfile(manifest_fpath):
+    if not pathlib.Path(manifest_fpath).is_file():
         message = (
             f'Upstream pipeline "{upstream_target}" runs manifest '
             f'not found at: {manifest_fpath}'

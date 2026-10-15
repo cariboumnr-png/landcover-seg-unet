@@ -32,7 +32,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
@@ -79,7 +79,7 @@ def checkpoint_ready(
             diagnostic result indicating whether checkpoint is ready.
     '''
     checkpoint_path = root_config.session.evaluation.checkpoint
-    if not checkpoint_path or not os.path.isfile(checkpoint_path):
+    if not checkpoint_path or not pathlib.Path(checkpoint_path).is_file():
         return schema.ProbeResult(
             pid=pid or 'checkpoint_exists',
             category='Model',
@@ -88,7 +88,9 @@ def checkpoint_ready(
             details={'checkpoint': checkpoint_path},
         )
 
-    size_mb = os.path.getsize(checkpoint_path) / (1024 ** 2)
+    size_mb = (
+        pathlib.Path(checkpoint_path).stat().st_size / (1024 ** 2)
+    )
     return schema.ProbeResult(
         pid=pid or 'checkpoint_exists',
         category='Model',

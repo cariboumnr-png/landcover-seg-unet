@@ -30,7 +30,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
@@ -45,7 +45,7 @@ def raw_dataset(
     '''Inspect raw input raster dataset manifest'''
     try:
         manifest_fp = config.data.harmonization.dataset_manifest
-        dirp = os.path.dirname(manifest_fp)
+        dirp = str(pathlib.Path(manifest_fp).parent)
         ctrl = artifacts.Controller[list].load_json_or_fail(manifest_fp)
         ctrl.hash(overwrite=False) # hash upon first open
 

@@ -30,7 +30,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
@@ -57,7 +57,7 @@ def spatial_reference(
         category='Spatial',
         status=(
             schema.ProbeStatus.PASS
-            if ref_fpath is not None and os.path.isfile(ref_fpath)
+            if ref_fpath is not None and pathlib.Path(ref_fpath).is_file()
             else schema.ProbeStatus.FAIL
         ),
         message=f'Reference raster found at: {ref_fpath}',

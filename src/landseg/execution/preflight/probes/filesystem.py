@@ -30,6 +30,7 @@ Public APIs:
 
 # standard imports
 import os
+import pathlib
 # local imports
 import landseg.execution.preflight.schema as schema
 
@@ -50,14 +51,14 @@ def dir_writable(
         )
 
     # find existing parent dir (recursive)
-    check_dir = os.path.abspath(dir_path)
-    while not os.path.exists(check_dir):
-        parent = os.path.dirname(check_dir)
-        if parent == check_dir:
+    check_path = pathlib.Path(dir_path).resolve()
+    while not check_path.exists():
+        parent = check_path.parent
+        if parent == check_path:
             break
-        check_dir = parent
+        check_path = parent
 
-    w_ok = os.access(check_dir, os.W_OK)
+    w_ok = os.access(check_path, os.W_OK)
     status = schema.ProbeStatus.PASS if w_ok else schema.ProbeStatus.FAIL
     flag = 'is' if w_ok else 'is not'
 
@@ -76,7 +77,7 @@ def target_file_exists(
     force_rebuild: bool = False,
 ) -> schema.ProbeResult:
     '''Check if the target file already exists.'''
-    is_file = os.path.exists(file_path) and os.path.isfile(file_path)
+    is_file = pathlib.Path(file_path).is_file()
 
     match is_file, force_rebuild:
         case True, True: status = schema.ProbeStatus.WARN
