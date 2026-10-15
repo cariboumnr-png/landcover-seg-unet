@@ -28,7 +28,7 @@ Dummy dataset generator for landseg integration testing and local execution.
 # standard imports
 import dataclasses
 import json
-import os
+import pathlib
 import typing
 # third-party imports
 import numpy
@@ -93,7 +93,7 @@ class TIFFPaths:
     @property
     def all_paths_exist(self) -> bool:
         return all(
-            os.path.exists(p) for p in [
+            pathlib.Path(p).exists() for p in [
                 self.extent,
                 self.test_aoi,
                 self.domain_1,
@@ -107,7 +107,7 @@ class TIFFPaths:
         )
 
     def _make_path(self, p: str) -> str:
-        return os.path.abspath(os.path.join(self.root, p))
+        return str((pathlib.Path(self.root) / p).resolve())
 
 
 # ----- public function
@@ -127,7 +127,7 @@ def create_dummy_geotiff(
         data_gen_func:
             Callback generating data per band.
     '''
-    os.makedirs(os.path.dirname(fpath), exist_ok=True)
+    pathlib.Path(fpath).parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(
         fpath,
         'w',
@@ -153,7 +153,7 @@ def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
             Root directory for output files.
     '''
     print('Generating dummy geospatial data for landseg pipeline...')
-    os.makedirs(input_root, exist_ok=True)
+    pathlib.Path(input_root).mkdir(parents=True, exist_ok=True)
     paths = TIFFPaths(input_root)
 
     canonical_crs = 'EPSG:3161'
@@ -435,9 +435,8 @@ def _get_transform(x: float, y: float, res: float) -> rasterio.transform.Affine:
 def _write_jsons(src: list[dict[str, typing.Any]], manifest: str) -> None:
     '''Write per file sidecar JSON and manifest JSON.'''
     # clear existing hash record if regenerating
-    hash_fpath = os.path.join(os.path.dirname(manifest), '_hash.json')
-    if os.path.exists(hash_fpath):
-        os.remove(hash_fpath)
+    hash_path = pathlib.Path(manifest).parent / '_hash.json'
+    hash_path.unlink(missing_ok=True)
 
     manifest_list: list[dict[str, typing.Any]] = []
     for cfg in src:
