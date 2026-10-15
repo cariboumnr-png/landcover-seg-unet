@@ -33,11 +33,8 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import typing
-# third-party imports
-import rasterio.transform
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset.normalizer as normalizer
@@ -59,8 +56,6 @@ class DatasetViewConfig:
 class DatasetView:
     '''Unified dataset view for partitioning and statistics.'''
     focal_head: str
-    crs: str
-    transform: rasterio.transform.Affine
     manifest: normalizer.NormalizedDataBlocksView
     features: semantics.FeatureSelection
     targets: semantics.TargetHeadsContext
@@ -70,9 +65,6 @@ class DatasetView:
 def build_dataset_view(
     inputs: normalizer.DataBlocksManifestInputs,
     config: DatasetViewConfig,
-    *,
-    canvas_crs: str,
-    canvas_transform: rasterio.transform.Affine,
 ) -> DatasetView:
     '''
     Build complete dataset view from catalog, schema, and parameters.
@@ -126,8 +118,6 @@ def build_dataset_view(
 
     return DatasetView(
         focal_head=focal_head,
-        crs=canvas_crs,
-        transform=canvas_transform,
         manifest=enriched,
         features=features,
         targets=targets,

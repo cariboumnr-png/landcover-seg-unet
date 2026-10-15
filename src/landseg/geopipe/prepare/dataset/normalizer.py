@@ -33,6 +33,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -57,8 +58,8 @@ class DataBlocksManifestInputs:
 @dataclasses.dataclass(frozen=True)
 class NormalizedDataBlocksView:
     '''High-level view of data blocks for partitioning.'''
-    valid_blocks: dict[Coord, str]
-    external_test_blocks: list[str] | None
+    valid_blocks: dict[Coord, pathlib.Path]
+    external_test_blocks: list[pathlib.Path] | None
     raw_class_counts: dict[Coord, dict[str, list[int]]] = field(default_factory=dict)
     valid_class_counts: dict[Coord, list[int]] = field(default_factory=dict)
     base_class_counts: dict[Coord, list[int]] = field(default_factory=dict)
@@ -113,12 +114,12 @@ def read_dataset_manifest(
         test_blocks = _filter_blocks(inputs.test_catalog, head_pxs_thres)
         if non_overlapping_test_grid:
             test_blocks = list(
-                v['file_path'] for k, v in test_blocks.items()
+                pathlib.Path(v['file_path']) for k, v in test_blocks.items()
                 if k in base_coords
             )
         else:
             test_blocks = list(
-                v['file_path'] for v in test_blocks.values()
+                pathlib.Path(v['file_path']) for v in test_blocks.values()
             )
     else:
         test_blocks = None
@@ -146,7 +147,9 @@ def read_dataset_manifest(
         }
 
     return NormalizedDataBlocksView(
-        valid_blocks={k: v['file_path'] for k, v in valid_blocks.items()},
+        valid_blocks={
+            k: pathlib.Path(v['file_path']) for k, v in valid_blocks.items()
+        },
         external_test_blocks=test_blocks,
         raw_class_counts=raw_counts,
         valid_class_counts=valid_counts,

@@ -40,6 +40,7 @@ import rasterio.errors
 import rasterio.transform
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 
 
@@ -57,6 +58,9 @@ class PreparationContext:
     test_catalog: dict[str, geo_core.DatasetBlockMeta] | None
     schema: geo_core.DatasetSchema
     block_specs: tuple[int, int, int, int] # (row, col, overlap_r, overlap_c)
+    train_aoi: pathlib.Path | None
+    val_aoi: pathlib.Path | None
+    test_aoi: pathlib.Path | None
     canvas_crs: str
     canvas_transform: rasterio.transform.Affine
 
@@ -66,8 +70,7 @@ def build_preparation_context(
     windows_fpath: pathlib.Path,
     catalog_fpath: pathlib.Path,
     schema_fpath: pathlib.Path,
-    *,
-    test_catalog_fpath: pathlib.Path | None = None,
+    config: contracts.PreparationPipelineConfig,
 ) -> PreparationContext:
     '''
     Build preparation context from upstream ingestion catalog and schema.
@@ -92,8 +95,8 @@ def build_preparation_context(
     schema = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
     catalog = CatalogCtrl.load_json_or_fail(catalog_fpath).fetch()
     test_catalog = None
-    if test_catalog_fpath is not None:
-        test_catalog = CatalogCtrl.load_json_or_fail(test_catalog_fpath).fetch()
+    if config.datasetview.test_catalog is not None:
+        test_catalog = CatalogCtrl.load_json_or_fail(config.datasetview.test_catalog).fetch()
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
@@ -115,11 +118,16 @@ def build_preparation_context(
     ): # sanity
         raise ValueError(f'Invalid block windows artifact: {windows_fpath}')
 
+    partition = config.partition
+
     return PreparationContext(
         catalog=catalog,
         test_catalog=test_catalog,
         schema=schema,
         block_specs=(*block_size, *block_overlap),
+        train_aoi=pathlib.Path(partition.train_aoi) if partition.train_aoi else None,
+        val_aoi=pathlib.Path(partition.val_aoi) if partition.val_aoi else None,
+        test_aoi=pathlib.Path(partition.test_aoi) if partition.test_aoi else None,
         canvas_crs=canvas_crs,
         canvas_transform=canvas_transform,
     )

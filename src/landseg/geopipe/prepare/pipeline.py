@@ -63,8 +63,6 @@ def run_data_preparation(
     dataset_view = prepare_dataset.build_dataset_view(
         dataset_view_inputs,
         dataset_view_config,
-        canvas_crs=context.canvas_crs,
-        canvas_transform=context.canvas_transform,
     )
 
     # datablocks partition
@@ -76,15 +74,13 @@ def run_data_preparation(
     # partition config
     aoi_config = (
         prepare_partition.AOIConfig(
-            train_aoi=partition.train_aoi,
-            val_aoi=partition.val_aoi,
-            test_aoi=partition.test_aoi,
+            train_aoi=context.train_aoi,
+            val_aoi=context.val_aoi,
+            test_aoi=context.test_aoi,
+            canvas_crs=context.canvas_crs,
+            canvas_transform=context.canvas_transform,
             min_overlap=partition.aoi_min_overlap,
-            canvas_crs=dataset_view.crs,
-            canvas_transform=dataset_view.transform,
         )
-        if partition.train_aoi or partition.val_aoi or partition.test_aoi
-        else None
     )
     hydration_config = (
         prepare_partition.HydrationConfig(
@@ -99,8 +95,8 @@ def run_data_preparation(
     partition_config = prepare_partition.PartitionConfig(
         val_test_ratios=(partition.val_ratio, partition.test_ratio),
         block_spec=context.block_specs,
-        buffer_step=partition.buffer_step,
         aoi=aoi_config,
+        buffer_step=partition.buffer_step,
         hydration=hydration_config,
     )
     prepare_partition.run_datablocks_partition(

@@ -50,12 +50,12 @@ import landseg.geopipe.prepare.partition.operations as operations
 @dataclasses.dataclass(frozen=True)
 class AOIConfig:
     '''Configuration for area-of-interest spatial boundaries.'''
-    train_aoi: str | None = None
-    val_aoi: str | None = None
-    test_aoi: str | None = None
-    min_overlap: float = 0.5
+    train_aoi: pathlib.Path | None = None
+    val_aoi: pathlib.Path | None = None
+    test_aoi: pathlib.Path | None = None
     canvas_crs: str = 'EPSG:3161'
     canvas_transform: rasterio.transform.Affine | None = None
+    min_overlap: float = 0.5
 
 
 @dataclasses.dataclass(frozen=True)
@@ -72,8 +72,8 @@ class PartitionConfig:
     '''Configuration for the dataset partitioning pipeline.'''
     val_test_ratios: tuple[float, float]
     block_spec: tuple[int, int, int, int]
+    aoi: AOIConfig
     buffer_step: int = 0
-    aoi: AOIConfig | None = None
     hydration: HydrationConfig | None = None
 
     @property
@@ -105,8 +105,8 @@ class PartitionResults:
 def create_blocks_partition(
     base_class_counts: dict[tuple[int, int], list[int]],
     valid_class_counts: dict[tuple[int, int], list[int]],
-    valid_blocks: dict[tuple[int, int], str],
-    ext_test_blks: list[str] | None,
+    valid_blocks: dict[tuple[int, int], pathlib.Path],
+    ext_test_blks: list[pathlib.Path] | None,
     config: PartitionConfig,
     *,
     logger: prepare.PreparationLogger | None = None,
@@ -208,28 +208,22 @@ def create_blocks_partition(
 # ----- private helpers
 def _split_by_aoi(
     base_class_counts: dict[tuple[int, int], list[int]],
-    valid_blocks: dict[tuple[int, int], str],
+    valid_blocks: dict[tuple[int, int], pathlib.Path],
     config: PartitionConfig,
     *,
-    ext_test_blks: list[str] | None,
+    ext_test_blks: list[pathlib.Path] | None,
     logger: prepare.PreparationLogger | None,
 ) -> operations.SplitsResult:
     '''Resolve AOI partitions and split remaining blocks.'''
-    aoi_cfg = config.aoi or AOIConfig()
-    transform = (
-        aoi_cfg.canvas_transform or rasterio.transform.Affine.identity()
-    )
-    block_size = (config.block_spec[0], config.block_spec[1])
-
     aoi_res = operations.resolve_aoi_partitions(
         list(valid_blocks.keys()),
-        train_aoi=aoi_cfg.train_aoi,
-        val_aoi=aoi_cfg.val_aoi,
-        test_aoi=aoi_cfg.test_aoi,
-        block_size=block_size,
-        canvas_crs=aoi_cfg.canvas_crs,
-        canvas_transform=transform,
-        min_overlap=aoi_cfg.min_overlap,
+        train_aoi=config.aoi.train_aoi,
+        val_aoi=config.aoi.val_aoi,
+        test_aoi=config.aoi.test_aoi,
+        block_size=(config.block_spec[0], config.block_spec[1]),
+        crs=config.aoi.canvas_crs,
+        transform=config.aoi.canvas_transform or rasterio.transform.Affine.identity(),
+        min_overlap=config.aoi.min_overlap,
         logger=logger,
     )
 
@@ -243,10 +237,10 @@ def _split_by_aoi(
         unassigned_counts = {c: base_class_counts[c] for c in unassigned}
         auto_test_ratio = (
             0.0
-            if (aoi_cfg.test_aoi or ext_test_blks)
+            if (config.aoi.test_aoi or ext_test_blks)
             else config.val_test_ratios[1]
         )
-        auto_val_ratio = 0.0 if aoi_cfg.val_aoi else config.val_test_ratios[0]
+        auto_val_ratio = 0.0 if config.aoi.val_aoi else config.val_test_ratios[0]
 
         if auto_val_ratio > 0.0 or auto_test_ratio > 0.0:
             auto_splits = operations.stratified_splitter(
@@ -257,9 +251,9 @@ def _split_by_aoi(
             )
             val_coords.extend(auto_splits.val)
             test_coords.extend(auto_splits.test)
-            if not aoi_cfg.train_aoi:
+            if not config.aoi.train_aoi:
                 train_coords.extend(auto_splits.train)
-        elif not aoi_cfg.train_aoi:
+        elif not config.aoi.train_aoi:
             train_coords.extend(unassigned)
 
     # enforce spatial buffer on training blocks against val and test
@@ -314,18 +308,18 @@ def _split_by_aoi(
 
 
 def _finalize_partition(
-    valid_blocks: dict[tuple[int, int], str],
+    valid_blocks: dict[tuple[int, int], pathlib.Path],
     splits: operations.SplitsResult,
     additional_train: list[tuple[int, int]],
     *,
-    ext_test_blks: list[str] | None,
+    ext_test_blks: list[pathlib.Path] | None,
 ) -> contracts.BlocksPartition:
     '''Finalize the partition process with leakage sanity checks.'''
-    def _index_fpath(fpaths: list[str]) -> dict[str, str]:
+    def _index_fpath(fpaths: list[pathlib.Path]) -> dict[str, str]:
         '''Index block file paths by block name without extension.'''
         indexed: dict[str, str] = {}
         for fpath in fpaths:
-            name = pathlib.Path(fpath).stem
+            name = fpath.stem
             indexed[name] = str(pathlib.Path(fpath).resolve())
         return indexed
 

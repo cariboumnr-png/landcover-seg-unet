@@ -32,6 +32,7 @@ Public APIs:
 '''
 
 # standard imports
+import pathlib
 import math
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
@@ -82,7 +83,7 @@ def count_label(
 
 
 def aggregate_image_stats(
-    input_blocks: set[str],
+    input_blocks: set[pathlib.Path],
     channel_indices: list[int] | None = None,
 ) -> dict[str, contracts.ImageBandStats]:
     '''

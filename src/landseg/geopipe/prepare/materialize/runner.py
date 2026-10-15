@@ -124,7 +124,7 @@ def run_materialize_blocks(
         logger.info('[CHECKPOINT] Loaded image stats from training split')
     else:
         agg_stats = stats.aggregate_image_stats(
-            set(src['train'].values()),
+            set(pathlib.Path(p) for p in src['train'].values()),
             list(context.features.indices)
         )
         ctrl.persist(agg_stats)

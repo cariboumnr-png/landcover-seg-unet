@@ -92,5 +92,5 @@ class DataPreparation(base.GeoPipeline):
             self.upstream_paths.windows,
             self.upstream_paths.data_blocks.catalog,
             self.upstream_paths.data_blocks.schema,
-            test_catalog_fpath=self.config.data.preparation.datasetview.test_catalog
+            self.config.data.preparation,
         )
