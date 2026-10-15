@@ -133,7 +133,7 @@ class DataBlock:
         )
 
     @classmethod
-    def load(cls, fpath: str) -> 'DataBlock':
+    def load(cls, fpath: pathlib.Path) -> 'DataBlock':
         '''
         Load a DataBlock from a serialized .npz file.
 
@@ -149,8 +149,7 @@ class DataBlock:
                 populated block instance with restored arrays and
                 manifest.
         '''
-        path = pathlib.Path(fpath)
-        loaded = numpy.load(path)
+        loaded = numpy.load(fpath)
         manifest = json.loads(loaded['manifest_json'].item())
         arrays = DataBlockArrays(
             image=loaded['image'],
@@ -159,7 +158,7 @@ class DataBlock:
         )
         return cls(data=arrays, manifest=manifest)
 
-    def save(self, fpath: str) -> None:
+    def save(self, fpath: pathlib.Path) -> None:
         '''
         Save the DataBlock to a compressed .npz file.
 
@@ -170,13 +169,12 @@ class DataBlock:
             fpath:
                 output file path ending with .npz.
         '''
-        path = pathlib.Path(fpath)
-        if path.suffix != '.npz':
+        if fpath.suffix != '.npz':
             raise ValueError(f'Output path must end with .npz: {fpath}')
 
         manifest_str = json.dumps(self.manifest, separators=(',', ':'))
         numpy.savez_compressed(
-            path,
+            fpath,
             image=self.data.image,
             label=self.data.label,
             valid_mask=self.data.valid_mask,

@@ -43,7 +43,6 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import pathlib
 import typing
 
 PREPARED_SCHEMA_ID = 'prepared_schema/v1'
@@ -63,7 +62,7 @@ class PreparationPipelineConfig(typing.Protocol):
     @property
     def rebuild(self) -> bool: ...
     @property
-    def output_dpath(self) -> str | pathlib.Path: ...
+    def output_dpath(self) -> str: ...
 
 
 class _DatasetViewConfig(typing.Protocol):

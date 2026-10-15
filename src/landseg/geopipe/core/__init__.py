@@ -63,7 +63,7 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
-    'read_grid_report',
+    'read_report',
     # typing
     'CategoricalSpec',
     'DataBlockManifest',
@@ -115,7 +115,7 @@ if typing.TYPE_CHECKING:
         RasterReader,
         RasterWindow,
         RasterWindowDict,
-        read_grid_report,
+        read_report,
     )
 
 

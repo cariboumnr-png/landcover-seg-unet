@@ -44,6 +44,7 @@ from __future__ import annotations
 import collections.abc
 import dataclasses
 import math
+import pathlib
 import typing
 # third-party imports
 import rasterio
@@ -289,7 +290,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         return obj
 
     @classmethod
-    def from_fpath(cls, fpath: str) -> GridLayout:
+    def from_fpath(cls, fpath: pathlib.Path) -> GridLayout:
         '''
         Load a world grid layout directly from a serialized JSON file.
 
@@ -410,7 +411,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
 
 
 # ----- public functions
-def read_grid_report(fp: str) -> tuple[str, grid_contracts.WorldGridReport]:
+def read_report(fp: pathlib.Path) -> tuple[str, grid_contracts.WorldGridReport]:
     '''
     Read a grid execution report and extract world grid summary.
 
