@@ -31,7 +31,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 import typing
 # third-party imports
 import numpy
@@ -78,19 +78,19 @@ def materialize_blocks(
     names: list[str] = []
     work: list[str] = []
     for b in input_blocks:
-        name = os.path.basename(b)
+        name = pathlib.Path(b).name
         names.append(name)
         if rebuild:
             work.append(b)
         else:
-            if not os.path.exists(f'{output_dir}/{name}'):
+            if not (pathlib.Path(output_dir) / name).exists():
                 work.append(b)
 
     # purge blocks not belong
     purged = _purge(names, output_dir)
 
     # normalize blocks
-    os.makedirs(output_dir, exist_ok=True)
+    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     jobs = [
         (
             _materialize_one_block,
@@ -104,12 +104,9 @@ def materialize_blocks(
 
     # return current file paths
     indexed_files: dict[str, str] = {}
-    for fpath in os.listdir(output_dir):
-        if fpath.endswith('.npz'):
-            name, _ = os.path.splitext(os.path.basename(fpath))
-            # use absolute fpath
-            fp = os.path.abspath(f'{output_dir}/{fpath}')
-            indexed_files[name] = fp
+    for p in pathlib.Path(output_dir).iterdir():
+        if p.name.endswith('.npz'):
+            indexed_files[p.stem] = str(p.resolve())
     return indexed_files, purged
 
 
@@ -119,14 +116,14 @@ def _purge(
     target_dir: str,
 ) -> int:
     '''Remove files in target directory not present in expected list.'''
-    if not os.path.exists(target_dir) or not os.listdir(target_dir):
+    target_path = pathlib.Path(target_dir)
+    if not target_path.exists():
         return 0
 
     removed = 0
-    for name in os.listdir(target_dir):
-        path = os.path.join(target_dir, name)
-        if os.path.isfile(path) and name not in filenames_to_keep:
-            os.remove(path)
+    for p in target_path.iterdir():
+        if p.is_file() and p.name not in filenames_to_keep:
+            p.unlink()
             removed += 1
     return removed
 
@@ -159,8 +156,8 @@ def _materialize_one_block(
     )
 
     # write blocks to files
-    filename = os.path.basename(block_fpath)
-    save_fpath = os.path.join(target_dpath, filename)
+    filename = pathlib.Path(block_fpath).name
+    save_fpath = str(pathlib.Path(target_dpath) / filename)
     # key names: image, label
     numpy.savez_compressed(save_fpath, image=img_arr, label=lbl_arr)
 

@@ -33,7 +33,7 @@ Public APIs:
 
 # standard imports
 import json
-import os
+import pathlib
 # local imports
 import landseg._constants as c
 import landseg.geopipe.core as geo_core
@@ -55,16 +55,15 @@ def get_available_profiles(
         list[str]:
             List of profile directory names containing species metadata.
     '''
-    emb_dir = os.path.join(knowledge_root, 'embeddings')
-    if not os.path.isdir(emb_dir):
+    emb_dir = pathlib.Path(knowledge_root) / 'embeddings'
+    if not emb_dir.is_dir():
         return []
     profiles: list[str] = []
-    for item in os.listdir(emb_dir):
-        sub = os.path.join(emb_dir, item)
-        if os.path.isdir(sub):
-            meta_path = os.path.join(sub, 'species_metadata.json')
-            if os.path.isfile(meta_path):
-                profiles.append(item)
+    for sub in emb_dir.iterdir():
+        if sub.is_dir():
+            meta_path = sub / 'species_metadata.json'
+            if meta_path.is_file():
+                profiles.append(sub.name)
     return sorted(profiles)
 
 
@@ -130,14 +129,14 @@ def _resolve_taxonomy_metadata(
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
-        os.path.join(root, 'embeddings', profile, 'species_metadata.json'),
-        os.path.join(profile, 'species_metadata.json'),
-        profile,
+        pathlib.Path(root) / 'embeddings' / profile / 'species_metadata.json',
+        pathlib.Path(profile) / 'species_metadata.json',
+        pathlib.Path(profile),
     ]
     meta_path: str | None = None
     for p in candidate_paths:
-        if os.path.isfile(p):
-            meta_path = os.path.abspath(p)
+        if p.is_file():
+            meta_path = str(p.resolve())
             break
 
     if meta_path is None:

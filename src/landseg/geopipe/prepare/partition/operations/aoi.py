@@ -35,7 +35,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # third-party imports
 import rasterio
 import rasterio.transform
@@ -200,7 +200,7 @@ def _load_aoi_bounds(
     canvas_crs: str,
 ) -> tuple[float, float, float, float]:
     '''Load AOI raster bounds and reproject to canvas CRS if needed.'''
-    if not os.path.exists(aoi_path):
+    if not pathlib.Path(aoi_path).exists():
         raise FileNotFoundError(f'AOI raster file not found: {aoi_path}')
 
     with rasterio.open(aoi_path) as src:

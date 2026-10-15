@@ -31,7 +31,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
@@ -113,4 +113,4 @@ def _get_grid_fpath(config: contracts.WorldGridPrepConfig) -> str:
     '''Return canonical file path of a world grid artifact.'''
     p = config.params
     gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)
-    return os.path.join(config.output_dpath, f'{gid}.json')
+    return str(pathlib.Path(config.output_dpath) / f'{gid}.json')

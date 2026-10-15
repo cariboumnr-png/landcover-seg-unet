@@ -33,7 +33,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -100,7 +100,7 @@ def build_catalog(
         row, col = geo_utils.name_xy(meta['block_name'])
         entry: geo_core.DatasetBlockMeta = {
             'block_name': meta['block_name'],
-            'file_path': os.path.abspath(fp), # use absolute path
+            'file_path': str(pathlib.Path(fp).resolve()),
             'row_col': [row, col],
             'valid_px_ratios': meta['valid_ratios'],
             'class_count': meta['label_count'],

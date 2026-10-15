@@ -33,7 +33,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import datetime
-import os
+import pathlib
 import typing
 import uuid
 # local imports
@@ -153,7 +153,7 @@ class IngestionLogger(utils.Logger):
             'status': self.summary.get('status', 'FAILED'),
             'timestamp': self.summary.get('timestamp', ''),
             'fingerprint': self.summary.get('fingerprint', ''),
-            'run_folder': os.path.abspath(run_folder),
+            'run_folder': str(pathlib.Path(run_folder).resolve()),
         }
         ctrl = artifacts.Controller[dict](manifest_fpath)
         try:

@@ -31,7 +31,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import os
+import pathlib
 # third-party imports
 import numpy
 import rasterio
@@ -59,8 +59,8 @@ def unify_nodata_mask(
         str:
             Absolute path to the created mask raster.
     '''
-    out_dir = os.path.dirname(os.path.abspath(output_mask_path))
-    os.makedirs(out_dir, exist_ok=True)
+    out_path = pathlib.Path(output_mask_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     with rasterio.open(input_path) as src:
         valid_mask = numpy.ones((src.height, src.width), dtype=numpy.uint8)
@@ -95,4 +95,4 @@ def unify_nodata_mask(
             with rasterio.open(output_mask_path, 'w', **meta) as dst:
                 dst.write(valid_mask, 1)
 
-    return os.path.abspath(output_mask_path)
+    return str(out_path)

@@ -27,7 +27,7 @@ Data harmonization pipeline command implementation.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -129,7 +129,7 @@ def _harmonize_sources(
         resampling = (
             categorical_resampling if is_cat else continuous_resampling
         )
-        out_vrt = os.path.join(output_dir, f'{tagged_name}.vrt')
+        out_vrt = str(pathlib.Path(output_dir) / f'{tagged_name}.vrt')
 
         yield (
             f'Harmonizing raster {path} -> {out_vrt} '
@@ -146,7 +146,7 @@ def _harmonize_sources(
         # band mapping is now required
         harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
 
-        processed.provenance[tagged_name] = os.path.abspath(path)
+        processed.provenance[tagged_name] = str(pathlib.Path(path).resolve())
         processed.harmonized[tagged_name] = warped
 
         match mfst['category']:

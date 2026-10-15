@@ -35,7 +35,7 @@ Public APIs:
 from __future__ import annotations
 import copy
 import dataclasses
-import os
+import pathlib
 import time
 # local imports
 import landseg.artifacts as artifacts
@@ -66,8 +66,7 @@ class DomainBuildingConfig:
     @property
     def name(self) -> str:
         '''Return layer name derived from input raster filename.'''
-        base, _ = os.path.splitext(os.path.basename(self.input_fpath))
-        return base
+        return pathlib.Path(self.input_fpath).stem
 
 
 # ----- public functions

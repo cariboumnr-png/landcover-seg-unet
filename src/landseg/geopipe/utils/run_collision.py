@@ -35,7 +35,7 @@ Public APIs:
 from __future__ import annotations
 import hashlib
 import json
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts.controller as controller
@@ -89,7 +89,7 @@ def find_run_collision(
         str | None:
             Colliding run identifier if found, otherwise None.
     '''
-    if not os.path.exists(manifest_fpath):
+    if not pathlib.Path(manifest_fpath).exists():
         return None
 
     manifest = ManifestCtrl(manifest_fpath).fetch() or {}

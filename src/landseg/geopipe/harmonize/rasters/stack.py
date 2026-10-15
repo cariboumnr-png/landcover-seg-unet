@@ -32,7 +32,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import ast
-import os
+import pathlib
 import typing
 import xml.etree.ElementTree
 # third-party imports
@@ -67,7 +67,7 @@ def stack_rasters(
             VRT file path.
     '''
     def _out_path(tag: str) -> str:
-        return os.path.join(output_dir, f'harmonized_{tag}_STACKED.vrt')
+        return str(pathlib.Path(output_dir) / f'harmonized_{tag}_STACKED.vrt')
 
     stacked: dict[str, str] = {}
     yield 'Stacking rasters if applicable'
@@ -109,12 +109,15 @@ def _composite_vrt(
     if not source_paths:
         raise ValueError('source_paths list cannot be empty.')
 
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    out_p = pathlib.Path(output_path).resolve()
+    out_p.parent.mkdir(parents=True, exist_ok=True)
 
-    source_paths = [os.path.abspath(p) for p in source_paths]
-    _build_stacked_vrt_xml(source_paths, output_path, raster_type)
+    resolved_sources = [
+        str(pathlib.Path(p).resolve()) for p in source_paths
+    ]
+    _build_stacked_vrt_xml(resolved_sources, output_path, raster_type)
 
-    return os.path.abspath(output_path)
+    return str(out_p)
 
 
 def _build_stacked_vrt_xml(

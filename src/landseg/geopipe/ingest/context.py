@@ -39,7 +39,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -274,7 +274,7 @@ def _resolve_harmonization_runs(manifest_fpath: str) -> HarmonizationRecords:
         artifacts.ArtifactError:
             If the manifest does not exist or has no successful runs.
     '''
-    if not os.path.exists(manifest_fpath):
+    if not pathlib.Path(manifest_fpath).exists():
         raise artifacts.ArtifactError(
             'Harmonization runs manifest does not exist at '
             f'{manifest_fpath}. '
@@ -351,10 +351,13 @@ def _resolve_target_harmonization_run(
             if rec.get('run_id') == target:
                 return rec
 
-        target_norm = os.path.normpath(target)
+        target_norm = str(pathlib.Path(target).resolve())
         for rec in successful_runs.values():
             rec_folder = rec.get('run_folder', '')
-            if rec_folder and os.path.normpath(rec_folder) == target_norm:
+            if (
+                rec_folder
+                and str(pathlib.Path(rec_folder).resolve()) == target_norm
+            ):
                 return rec
 
         raise artifacts.ArtifactError(
@@ -378,7 +381,7 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
             Set of upstream harmonization run UIDs that completed with
             status 'SUCCESS'.
     '''
-    if not os.path.exists(manifest_fpath):
+    if not pathlib.Path(manifest_fpath).exists():
         return set()
 
     try:
@@ -418,7 +421,7 @@ def verify_pool_grid_compatibility(
             If existing pool schema belongs to an incompatible spatial
             block identity or grid ID.
     '''
-    if not os.path.exists(schema_fpath):
+    if not pathlib.Path(schema_fpath).exists():
         return
 
     try:

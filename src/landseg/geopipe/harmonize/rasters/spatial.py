@@ -31,7 +31,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import os
+import pathlib
 # third-party imports
 import rasterio
 import rasterio.enums
@@ -69,7 +69,8 @@ def warp_to_grid(
         str:
             Absolute path to output harmonized Virtual Raster file.
     '''
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    out_path = pathlib.Path(output_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if is_categorical or resampling_method == 'nearest':
         resample_alg = rasterio.enums.Resampling.nearest
@@ -101,4 +102,4 @@ def warp_to_grid(
             ) as vrt:
                 rasterio.shutil.copy(vrt, output_path, driver='VRT')
 
-    return os.path.abspath(output_path)
+    return str(out_path)

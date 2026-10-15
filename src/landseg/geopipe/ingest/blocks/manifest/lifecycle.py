@@ -35,7 +35,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
@@ -177,7 +177,10 @@ def _catalog_status(
         _catalog = geo_core.DatasetCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
-    current = [f for f in os.listdir(blocks_dir) if f.endswith('npz')]
+    current = [
+        p.name for p in pathlib.Path(blocks_dir).iterdir()
+        if p.name.endswith('npz')
+    ]
     if not current:
         raise FileNotFoundError('No block files found')
 
@@ -185,7 +188,9 @@ def _catalog_status(
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in updated_coords]
 
     # determine status
-    cataloged = [os.path.basename(c['file_path']) for c in _catalog.values()]
+    cataloged = [
+        pathlib.Path(c['file_path']).name for c in _catalog.values()
+    ]
     catalog_status = {
         (True, False): 2,   # catalog present, no new blocks
         (True, True): 3,    # catalog present, has new blocks
@@ -214,7 +219,7 @@ def _catalog_status(
 
 def _sample(d: str) -> str:
     '''Find a representative sample .npz file in the directory.'''
-    for f in os.listdir(d):
-        if f.endswith('npz'):
-            return f'{d}/{f}'
+    for p in pathlib.Path(d).iterdir():
+        if p.name.endswith('npz'):
+            return str(p)
     raise ValueError(f'No .npz file found at {d}')

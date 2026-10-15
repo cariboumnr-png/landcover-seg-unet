@@ -36,7 +36,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # third-party imports
 import rasterio
 import rasterio.transform
@@ -325,8 +325,7 @@ def _finalize_partition(
         '''Index block file paths by block name without extension.'''
         indexed: dict[str, str] = {}
         for fpath in fpaths:
-            filename = os.path.basename(fpath)
-            name, _ = os.path.splitext(filename)
+            name = pathlib.Path(fpath).stem
             indexed[name] = fpath # name is the same as core.xy_name()
         return indexed
 

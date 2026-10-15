@@ -33,7 +33,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import datetime
-import os
+import pathlib
 import typing
 import uuid
 # local imports
@@ -93,10 +93,10 @@ class HarmonizationLogger(utils.Logger):
 
     def add_source_provenance(self, name: str, source_path: str) -> None:
         '''Record source file size and modification timestamp provenance.'''
-        if self.summary is not None and os.path.exists(source_path):
-            stat = os.stat(source_path)
+        if self.summary is not None and pathlib.Path(source_path).exists():
+            stat = pathlib.Path(source_path).stat()
             provenance: contracts.ProvenanceRecord = {
-                'path': os.path.abspath(source_path),
+                'path': str(pathlib.Path(source_path).resolve()),
                 'size_bytes': stat.st_size,
                 'mtime': stat.st_mtime
             }
@@ -105,23 +105,31 @@ class HarmonizationLogger(utils.Logger):
     def add_harmonized_source(self, name: str, path: str) -> None:
         '''Record a harmonized raster layer output path.'''
         if self.summary is not None:
-            self.summary['harmonized_sources'][name] = os.path.abspath(path)
+            self.summary['harmonized_sources'][name] = str(
+                pathlib.Path(path).resolve()
+            )
 
     def add_finalized_raster(self, name: str, path: str) -> None:
         '''Record multi-channel feature composite raster path.'''
         if self.summary is not None:
-            self.summary['finalized_rasters'][name] = os.path.abspath(path)
+            self.summary['finalized_rasters'][name] = str(
+                pathlib.Path(path).resolve()
+            )
 
     def set_valid_mask_raster(self, path: str) -> None:
         '''Record valid pixel mask raster path.'''
         if self.summary is not None:
-            self.summary['valid_mask_raster'] = os.path.abspath(path)
+            self.summary['valid_mask_raster'] = str(
+                pathlib.Path(path).resolve()
+            )
 
     def set_grid_reference(self, grid_id: str, grid_fpath: str) -> None:
         '''Record world grid identifier and artifact file path.'''
         if self.summary is not None:
             self.summary['grid_id'] = grid_id
-            self.summary['grid_fpath'] = os.path.abspath(grid_fpath)
+            self.summary['grid_fpath'] = str(
+                pathlib.Path(grid_fpath).resolve()
+            )
 
     def set_identity(self, fingerprint: str) -> None:
         '''Record fingerprint of the inputs and configs of this run.'''
@@ -151,8 +159,10 @@ class HarmonizationLogger(utils.Logger):
         record: contracts.HarmonizationRunRecord = {
             'run_uid': uid,
             'run_id': self.summary.get('run_id', ''),
-            'run_folder': os.path.abspath(run_folder),
-            'source_dataset_manifest': os.path.abspath(dataset_manifest_fpath),
+            'run_folder': str(pathlib.Path(run_folder).resolve()),
+            'source_dataset_manifest': str(
+                pathlib.Path(dataset_manifest_fpath).resolve()
+            ),
             'status': self.summary.get('status', 'FAILED'),
             'timestamp': self.summary.get('timestamp', ''),
             'fingerprint': self.summary.get('fingerprint', '')

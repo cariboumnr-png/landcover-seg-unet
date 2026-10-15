@@ -34,7 +34,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
@@ -75,7 +75,7 @@ def build_grid(
     '''
     # derive from reference raster
     if mode == 'ref':
-        if not (config.ref_fpath and os.path.exists(config.ref_fpath)):
+        if not (config.ref_fpath and pathlib.Path(config.ref_fpath).exists()):
             raise ValueError(f'Invalid reference raster: {config.ref_fpath}')
 
         with geo_utils.open_rasters(config.ref_fpath) as (src,):

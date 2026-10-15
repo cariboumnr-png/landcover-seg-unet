@@ -38,7 +38,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import dataclasses
-import os
+import pathlib
 import random
 import typing
 # third-party imports
@@ -63,7 +63,10 @@ class BlockBuildingInputs:
     @property
     def has_label(self) -> bool:
         '''Return `True` is label raster is provided.'''
-        return bool(self.label_fpath) and os.path.exists(self.label_fpath)
+        return (
+            bool(self.label_fpath)
+            and pathlib.Path(self.label_fpath).exists()
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -207,8 +210,8 @@ def build_test_block(
     std = numpy.std(candidate.data.image)
     candidate.data.image = (candidate.data.image - mean) / (std or 1.0)
 
-    os.makedirs(save_dpath, exist_ok=True)
-    fpath = os.path.join(save_dpath, f'test_{name}.npz')
+    pathlib.Path(save_dpath).mkdir(parents=True, exist_ok=True)
+    fpath = str(pathlib.Path(save_dpath) / f'test_{name}.npz')
     candidate.save(fpath)
     return fpath
 
@@ -237,7 +240,7 @@ def build_blocks(
         BlockBuildingOutput:
             Execution output containing created coordinates and stats.
     '''
-    os.makedirs(output_dir, exist_ok=True)
+    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     # prepare raster read windows
     coords_to_check = _prep_block_windows(inputs, context, output_dir)
@@ -302,7 +305,7 @@ def _prep_block_windows(
             valid_coords.remove(coord)
 
     return {
-        c: os.path.join(output_dir, f'{geo_utils.xy_name(c)}.npz')
+        c: str(pathlib.Path(output_dir) / f'{geo_utils.xy_name(c)}.npz')
         for c in valid_coords
     }
 
@@ -332,7 +335,7 @@ def _structural_validation(
             collided_coords.append(c)
         else:
             try:
-                os.remove(input_coords[c])
+                pathlib.Path(input_coords[c]).unlink()
                 removed_count += 1
             except FileNotFoundError:
                 pass
@@ -412,7 +415,7 @@ def _create_missing_blocks(
         job = (
             _build_single_block,
             (name, block_inputs, build_config),
-            {'save_fpath': os.path.join(output_dir, f'{name}.npz')}
+            {'save_fpath': str(pathlib.Path(output_dir) / f'{name}.npz')}
         )
         creation_jobs.append(job)
 
