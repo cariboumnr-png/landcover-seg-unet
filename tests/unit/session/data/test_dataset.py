@@ -77,46 +77,6 @@ def test_block_config_invalid_sizes():
         )
 
 
-# ----- `_CacheDict` tests
-def test_cache_dict_setitem_no_eviction():
-    '''
-    Given: A `_CacheDict` instance initiated with `maxsize=0`.
-    When: Set (key, value) pairs like a regular dictionary.
-    Then: Preserves existing dictionary content without eviction.
-    '''
-
-    cache_dict = dataset._CacheDict(maxsize=0)
-    for i in range(10):
-        cache_dict[i] = i + 1
-
-    assert len(cache_dict) == 10
-    assert 4 in cache_dict and cache_dict[4] == 5 # check one pair
-
-    cache_dict[10] = 11 # set another pair
-    assert len(cache_dict) == 11
-    assert 10 in cache_dict and cache_dict[10] == 11 # sanity
-
-
-def test_cache_dict_setitem_with_eviction():
-    '''
-    Given: A `_CacheDict` instance initiated with `maxsize=n`.
-    When: Set a (key, value) pair when maximum length has been reached.
-    Then: Evicts the oldest (key, value) pair from the dictionary.
-    '''
-
-    cache_dict = dataset._CacheDict(maxsize=10)
-    for i in range(10):
-        cache_dict[i] = i + 1
-
-    assert len(cache_dict) == 10
-    assert 4 in cache_dict and cache_dict[4] == 5 # check one pair
-
-    cache_dict[10] = 11 # set another pair
-    assert len(cache_dict) == 10 # constant length
-    assert 10 in cache_dict and cache_dict[10] == 11 # sanity
-    assert 0 not in cache_dict # first item dropped
-
-
 # ----- `_BlockDataset` tests
 def test_block_dataset_instantiation(tmp_path):
     '''

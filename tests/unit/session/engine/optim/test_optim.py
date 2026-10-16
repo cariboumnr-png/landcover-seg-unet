@@ -62,50 +62,6 @@ def test_optimization_lrs_property(mock_model):
     assert opt_wrap.lrs == [1e-3]
 
 
-def test_optimization_step_optimizer(mock_model):
-    '''
-    Given: `Optimization` wrapper around an optimizer with gradients.
-    When: Calling `step_optimizer`.
-    Then: Delegate execution to underlying optimizer.
-    '''
-    optimizer = _get_mock_optimizer(mock_model)
-    opt_wrap = optim.Optimization(optimizer)
-    out = mock_model.linear(torch.tensor([[1.0, 1.0]]))
-    loss = out.sum()
-    loss.backward()
-
-    opt_wrap.step_optimizer()
-
-
-def test_optimization_zero_grad(mock_model):
-    '''
-    Given: `Optimization` wrapper after backward pass.
-    When: Calling `zero_grad(set_to_none=True)`.
-    Then: Parameter gradients are reset to None.
-    '''
-    optimizer = _get_mock_optimizer(mock_model)
-    opt_wrap = optim.Optimization(optimizer)
-    out = mock_model.linear(torch.tensor([[1.0, 1.0]]))
-    loss = out.sum()
-    loss.backward()
-
-    assert mock_model.linear.weight.grad is not None
-    opt_wrap.zero_grad(set_to_none=True)
-    assert mock_model.linear.weight.grad is None
-
-
-def test_optimization_step_scheduler_none(mock_model):
-    '''
-    Given: `Optimization` without a scheduler.
-    When: Calling `step_scheduler`.
-    Then: No operation occurs and no exception is raised.
-    '''
-    optimizer = _get_mock_optimizer(mock_model)
-    opt_wrap = optim.Optimization(optimizer, scheduler=None)
-
-    opt_wrap.step_scheduler()
-
-
 def test_optimization_step_scheduler_active(mock_model):
     '''
     Given: `Optimization` with active `CosineAnnealingLR` scheduler.

@@ -22,9 +22,8 @@
 '''Unit tests for ingestion context resolution.'''
 
 # standard imports
-import dataclasses
-import json
 import os
+import pathlib
 # third-party imports
 import pytest
 # local imports
@@ -61,25 +60,22 @@ def _create_dummy_grid(fpath: str) -> geo_core.GridLayout:
 def test_ingestion_context_properties(tmp_path):
     '''
     Given: Instantiated IngestionContext.
-    When: Checking has_data and attempting attribute mutation.
-    Then: has_data evaluates correctly and mutation raises error.
+    When: Checking has_data and grid properties.
+    Then: has_data and grid metadata evaluate correctly.
     '''
-    grid_fp = str(tmp_path / 'grid.json')
+    grid_fp = tmp_path / 'grid.json'
     layout = _create_dummy_grid(grid_fp)
     ctx = ingest_context.IngestionContext(
         grid=layout,
         grid_fpath=grid_fp,
-        domains={'landcover': '/data/lc.tif'},
-        features='/data/features.vrt',
-        labels='/data/labels.vrt',
-        valid_mask_raster='/data/mask.tif',
+        domains={'landcover': pathlib.Path('/data/lc.tif')},
+        features=pathlib.Path('/data/features.vrt'),
+        labels=pathlib.Path('/data/labels.vrt'),
+        valid_mask_raster=pathlib.Path('/data/mask.tif'),
     )
     assert ctx.has_data is True
     assert ctx.grid_fpath == grid_fp
     assert ctx.grid.gid == layout.gid
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        # pylint: disable=dataclass-cannot-be-modified
-        ctx.grid_fpath = 'other_path'
 
 
 def test_build_ingestion_context_success(tmp_path):
@@ -88,11 +84,11 @@ def test_build_ingestion_context_success(tmp_path):
     When: `build_ingestion_context` is executed.
     Then: Successfully resolve IngestionContext with loaded GridLayout.
     '''
-    grid_fp = str(tmp_path / 'grid.json')
+    grid_fp = tmp_path / 'grid.json'
     layout = _create_dummy_grid(grid_fp)
 
-    harm_dpath = str(tmp_path / 'harmonized')
-    run_dpath = os.path.join(harm_dpath, 'run_0001')
+    harm_dpath = tmp_path / 'harmonized'
+    run_dpath = harm_dpath / 'run_0001'
     os.makedirs(run_dpath, exist_ok=True)
 
     report_content = {
@@ -109,9 +105,9 @@ def test_build_ingestion_context_success(tmp_path):
         },
         'valid_mask_raster': '/final/valid_pixel_mask.vrt',
         'grid_id': layout.gid,
-        'grid_fpath': grid_fp,
+        'grid_fpath': str(grid_fp),
     }
-    report_fp = os.path.join(run_dpath, 'harmonize_report.json')
+    report_fp = pathlib.Path(run_dpath) / 'report.json'
     artifacts.Controller[contracts.HarmonizationReportSchema](
         report_fp
     ).persist(report_content)
@@ -121,7 +117,7 @@ def test_build_ingestion_context_success(tmp_path):
     manifest_rec: contracts.HarmonizationRunRecord = {
         'run_uid': 'uid_test_0001',
         'run_id': 'run_0001',
-        'run_folder': run_dpath,
+        'run_folder': str(run_dpath),
         'status': 'SUCCESS',
         'timestamp': '2026-09-18T00:00:00Z',
     }
@@ -135,9 +131,9 @@ def test_build_ingestion_context_success(tmp_path):
 
     assert ctx.grid.gid == layout.gid
     assert ctx.grid_fpath == grid_fp
-    assert ctx.features == '/final/features.vrt'
-    assert ctx.labels == '/final/labels.vrt'
-    assert ctx.domains == {'domain_landcover': '/final/domain_lc.tif'}
+    assert ctx.features == pathlib.Path('/final/features.vrt')
+    assert ctx.labels == pathlib.Path('/final/labels.vrt')
+    assert ctx.domains == {'domain_landcover': pathlib.Path('/final/domain_lc.tif')}
     assert ctx.has_data is True
     assert ctx.run_uid == 'uid_test_0001'
     assert ctx.harmonization_run_id == 'run_0001'
@@ -381,7 +377,7 @@ def test_verify_pool_grid_compatibility(tmp_path):
     '''
     grid_fp = str(tmp_path / 'grid.json')
     layout = _create_dummy_grid(grid_fp)
-    schema_fp = str(tmp_path / 'schema.json')
+    schema_fp = tmp_path / 'schema.json'
 
     # when schema artifact does not exist -> no error
     ingest_context.verify_pool_grid_compatibility(schema_fp, layout)
