@@ -20,98 +20,57 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
+# pylint: disable=protected-access
 
-'''Shared config fixtures and mock structures for testing landseg.models.'''
+'''Shared config fixtures for testing landseg.models.'''
 
 # standard imports
-import dataclasses
 import typing
 # third-party imports
 import pytest
 # local imports
-import landseg.models.core.config as config
-import landseg.models.backbones.unet.components as components
-import landseg.models.backbones.unet.body as body
-
-# aliases
-field = dataclasses.field
+import landseg.configs.schema.models.backbones as backbones_schema
+import landseg.configs.schema.models.conditioners as conditioners_schema
 
 
-@dataclasses.dataclass(frozen=True)
-class MockDomainTargetConfig:
-    name: str
-    use_ids: bool = False
-    use_vec: bool = False
-    ids_embd_dims: int = 0
-    vec_proj_dims: int = 0
-    vec_proj_config: config.DomainProjectionConfig = field(
-        default_factory=lambda: {}
-    )
-    conditioner_config: config.DomainConditionerAdapterConfig = field(
-        default_factory=lambda: {}
-    )
-
-
-@dataclasses.dataclass(frozen=True)
-class MockConvolutionParameters:
-    norm: str | None = None
-    gn_groups: int | None = None
-    p_drop: float = 0.0
-
-
-@dataclasses.dataclass(frozen=True)
-class MockTransformerParameters:
-    num_heads: int = 1
-    mlp_ratio: float = 2.0
-    dropout: float = 0.0
-    attn_dropout: float = 0.0
-
-
-@dataclasses.dataclass(frozen=True)
-class MockBottleneckConfig:
-    variant: str = 'conv'
-    num_conv_blocks: int | None = 1
-    conv_params: components.ConvolutionParameters | None = None
-    num_transformer_blocks: int | None = None
-    transformer_params: components.TransformerParameters | None = None
-
-
-@dataclasses.dataclass(frozen=True)
-class MockUNetBodyConfig:
-    body: str = 'unet'
-    base_ch: int = 16
-    encoder_conv_params: components.ConvolutionParameters = field(
-        default_factory=MockConvolutionParameters
-    )
-    nodes_conv_params: components.ConvolutionParameters | None = None
-    decoder_conv_params: components.ConvolutionParameters | None = None
-
-
-@dataclasses.dataclass(frozen=True)
-class MockUNetBackboneConfig:
-    body: body.UNetBodyConfig
-    bottleneck: components.BottleneckConfig
-
-
+# ----- fixtures
 @pytest.fixture
 def mock_domain_config_factory():
+    '''Return a domain target configuration building function.'''
     def _create(
         name: str = 'test_target',
         use_ids: bool = False,
         use_vec: bool = False,
         ids_embd_dims: int = 8,
         vec_proj_dims: int = 8,
-        vec_proj_config: config.DomainProjectionConfig | None = None,
-        conditioner_config: config.DomainConditionerAdapterConfig | None = None,
-    ) -> MockDomainTargetConfig:
-        return MockDomainTargetConfig(
+        vec_proj_config: conditioners_schema.ProjectionConfig | None = None,
+        conditioner_config: (
+            conditioners_schema.ConditionerAdapter | None
+        ) = None,
+    ) -> conditioners_schema.DomainTargetConfig:
+        if name == 'film' or (
+            conditioner_config and 'hidden_dim' in conditioner_config
+        ):
+            return conditioners_schema.FiLM(
+                name=name,
+                use_ids=use_ids,
+                use_vec=use_vec,
+                ids_embd_dims=ids_embd_dims if use_ids else 0,
+                vec_proj_dims=vec_proj_dims if use_vec else 0,
+                vec_proj_config=(
+                    vec_proj_config or conditioners_schema._film_proj()
+                ),
+                conditioner_config=(
+                    conditioner_config or conditioners_schema._film_cond()
+                ),
+            )
+        return conditioners_schema.Concat(
             name=name,
             use_ids=use_ids,
             use_vec=use_vec,
-            ids_embd_dims=ids_embd_dims,
-            vec_proj_dims=vec_proj_dims,
-            vec_proj_config=vec_proj_config or {},
+            ids_embd_dims=ids_embd_dims if use_ids else 0,
+            vec_proj_dims=vec_proj_dims if use_vec else 0,
+            vec_proj_config=vec_proj_config or {'use_mlp': False},
             conditioner_config=conditioner_config or {},
         )
     return _create
@@ -131,11 +90,18 @@ def mock_backbone_config_factory():
         body_type: str = 'unet',
         base_ch: int = 16,
         bottleneck: typing.Literal['conv', 'hybrid', 'transformer'] = 'conv',
-    ) -> MockUNetBackboneConfig:
-        conv_params = MockConvolutionParameters()
-        transformer_params = MockTransformerParameters()
+    ) -> backbones_schema.UNetBackboneConfig:
+        conv_params = backbones_schema.ConvParams(
+            norm=None, gn_groups=None, p_drop=0.0
+        )
+        transformer_params = backbones_schema.Transformer(
+            num_heads=1,
+            mlp_ratio=2.0,
+            dropout=0.0,
+            attn_dropout=0.0,
+        )
 
-        body_cfg = MockUNetBodyConfig(
+        body_cfg = backbones_schema.UNetBodyConfig(
             body=body_type,
             base_ch=base_ch,
             encoder_conv_params=conv_params,
@@ -143,15 +109,20 @@ def mock_backbone_config_factory():
             decoder_conv_params=conv_params,
         )
         match bottleneck:
-            case 'conv': n_conv, n_transformer = 1, None
-            case 'hybrid': n_conv, n_transformer = 1, 1
-            case 'transformer': n_conv, n_transformer = None, 1
-        btnk_cfg = MockBottleneckConfig(
+            case 'conv':
+                n_conv, n_transformer = 1, None
+            case 'hybrid':
+                n_conv, n_transformer = 1, 1
+            case 'transformer':
+                n_conv, n_transformer = None, 1
+        btnk_cfg = backbones_schema.BottleneckConfig(
             variant=bottleneck,
             num_conv_blocks=n_conv,
             conv_params=conv_params,
             num_transformer_blocks=n_transformer,
-            transformer_params=transformer_params
+            transformer_params=transformer_params,
         )
-        return MockUNetBackboneConfig(body=body_cfg, bottleneck=btnk_cfg)
+        return backbones_schema.UNetBackboneConfig(
+            body=body_cfg, bottleneck=btnk_cfg
+        )
     return _create

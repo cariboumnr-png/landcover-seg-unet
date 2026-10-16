@@ -24,7 +24,7 @@
 '''Fixtures for testing `landseg.core` module.'''
 
 # standard imports
-import os
+import pathlib
 # third-party imports
 import numpy
 import pytest
@@ -34,45 +34,56 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler as assembler
 
 
-@pytest.fixture
-def dataspecs(tmp_path):
-    # write temp block files
-    if not os.path.exists(f'{tmp_path}/train_block.npz'):
-        img = numpy.random.rand(4, 256, 256).astype(numpy.float32)
-        lbl = numpy.random.randint(1, 3, size=(2, 256, 256)).astype(numpy.int64)
-        label_specs: dict[str, geo_core.CategoricalSpec] = {
-            'head_1': {
-                'num_cls': 2,
-                'ignore_cls': [255],
-                'index_base': 1,
-                'class_name': {'1': 'bg', '2': 'fg'},
-            },
-            'head_2': {
-                'num_cls': 3,
-                'ignore_cls': [255],
-                'index_base': 1,
-                'class_name': {'1': 'c0', '2': 'c1', '3': 'c2'},
-            },
-        }
-        cfg = assembler.DataBlockConfig(
-            image_dem_pad_px=0,
-            label_ignore_index=255,
+# ----- private fixtures
+@pytest.fixture(scope='session')
+def _shared_block_files(tmp_path_factory):
+    '''Build and persist shared test data blocks once per session.'''
+    block_dir = tmp_path_factory.mktemp('dataspecs_blocks')
+    img = numpy.random.rand(4, 256, 256).astype(numpy.float32)
+    lbl = numpy.random.randint(1, 3, size=(2, 256, 256)).astype(numpy.int64)
+    label_specs: dict[str, geo_core.CategoricalSpec] = {
+        'head_1': {
+            'num_cls': 2,
+            'ignore_cls': [255],
+            'index_base': 1,
+            'class_name': {'1': 'bg', '2': 'fg'},
+        },
+        'head_2': {
+            'num_cls': 3,
+            'ignore_cls': [255],
+            'index_base': 1,
+            'class_name': {'1': 'c0', '2': 'c1', '3': 'c2'},
+        },
+    }
+    cfg = assembler.DataBlockConfig(
+        image_dem_pad_px=0,
+        label_ignore_index=255,
+    )
+    context = assembler.DataBlockContext(
+        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
+        image_nodata=numpy.nan,
+        label_specs=label_specs,
+    )
+    paths: dict[str, pathlib.Path] = {}
+    for name in ('train_block', 'val_block', 'test_block'):
+        inputs = assembler.DataBlockInputs(
+            block_name=name,
+            image_array=img,
+            image_padded_dem=None,
+            label_array=lbl,
         )
-        context = assembler.DataBlockContext(
-            image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
-            image_nodata=numpy.nan,
-            label_specs=label_specs,
-        )
-        for name in ('train_block', 'val_block', 'test_block'):
-            inputs = assembler.DataBlockInputs(
-                block_name=name,
-                image_array=img,
-                image_padded_dem=None,
-                label_array=lbl,
-            )
-            block = assembler.build_data_block(inputs, cfg, context)
-            block.save(f'{tmp_path}/{name}.npz')
+        block = assembler.build_data_block(inputs, cfg, context)
+        fpath = block_dir / f'{name}.npz'
+        block.save(fpath)
+        paths[name] = fpath
+    return paths
 
+
+# ----- public fixtures
+@pytest.fixture
+def in_memory_dataspecs():
+    '''Provide in-memory `DataSpecs` without physical disk blocks.'''
+    dummy_dir = pathlib.Path('/virtual/data')
     return core.DataSpecs(
         name="test_dataset",
         mode="default",
@@ -104,9 +115,66 @@ def dataspecs(tmp_path):
             head_parent_cls={'head_1': None, 'head_2': None},
         ),
         splits=core.Splits(
-            train={'train_block': f'{tmp_path}/train_block.npz'},
-            val={'val_block': f'{tmp_path}/val_block.npz'},
-            test={'test_block': f'{tmp_path}/test_block.npz'},
+            train={'train_block': dummy_dir / 'train_block.npz'},
+            val={'val_block': dummy_dir / 'val_block.npz'},
+            test={'test_block': dummy_dir / 'test_block.npz'},
+        ),
+        domains=core.Domains(
+            train=core.Domains.Dom(
+                ids_domain={'train_block': 1},
+                vec_domain={'train_block': [0.1, 0.2]},
+            ),
+            val=core.Domains.Dom(
+                ids_domain={'val_block': 2},
+                vec_domain={'val_block': [0.3, 0.4]},
+            ),
+            test=core.Domains.Dom(
+                ids_domain={'test_block': 3},
+                vec_domain={'test_block': [0.5, 0.6]},
+            ),
+            ids_num=3,
+            vec_dim=2,
+        ),
+    )
+
+
+@pytest.fixture
+def dataspecs(_shared_block_files):
+    '''Provide fresh `DataSpecs` mapped to pre-built session data blocks.'''
+    return core.DataSpecs(
+        name="test_dataset",
+        mode="default",
+        meta=core.Meta(
+            blk_bytes=1024,
+            test_blks_grid=(1, 1),
+            label_color_map=None,
+            image_specs=core.Meta.Image(
+                num_channels=4,
+                height_width=256,
+                array_key='image',
+                band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
+            ),
+            label_specs=core.Meta.Label(
+                ignore_index=255,
+                array_key='label',
+            ),
+        ),
+        heads=core.Heads(
+            class_counts={
+                'head_1': [100, 200],
+                'head_2': [50, 150, 250],
+            },
+            logits_adjust={
+                'head_1': [0.2, 0.1],
+                'head_2': [0.1, 0.1, 0.1],
+            },
+            head_parent={'head_1': None, 'head_2': None},
+            head_parent_cls={'head_1': None, 'head_2': None},
+        ),
+        splits=core.Splits(
+            train={'train_block': _shared_block_files['train_block']},
+            val={'val_block': _shared_block_files['val_block']},
+            test={'test_block': _shared_block_files['test_block']},
         ),
         domains=core.Domains(
             train=core.Domains.Dom(
