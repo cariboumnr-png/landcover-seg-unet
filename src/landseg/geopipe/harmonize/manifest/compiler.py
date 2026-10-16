@@ -32,7 +32,7 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -54,7 +54,7 @@ class DatasetManifestError(Exception):
 
 
 # ----- public functions
-def compile_dataset_manifest(fp: str) -> dict[str, schema.ManifestEntry]:
+def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
     '''
     Read, validate, and compile dataset manifest from JSON.
 
@@ -63,8 +63,8 @@ def compile_dataset_manifest(fp: str) -> dict[str, schema.ManifestEntry]:
             File path to root dataset manifest JSON.
 
     Returns:
-        dict[str, schema.ManifestEntry]:
-            Mapping of raster file paths to normalized manifest entries.
+        list[schema.ManifestEntry]:
+            List of normalized manifest entries.
     '''
     # load JSON via artifact controller
     ctrl = ManifestCtrl.load_json_or_fail(fp)
@@ -98,5 +98,5 @@ def compile_dataset_manifest(fp: str) -> dict[str, schema.ManifestEntry]:
         assert norm['name'] == mfst_entry.get('name')
         assert norm['path'] == mfst_entry.get('path')
 
-    # return a dict indexed by file path
-    return {c['path']: c for c in compiled}
+    # return a list of entries
+    return compiled

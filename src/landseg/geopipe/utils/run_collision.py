@@ -67,7 +67,7 @@ def compute_fingerprint(payload: typing.Any) -> str:
 
 def find_run_collision(
     fingerprint: str,
-    manifest_fpath: str,
+    manifest_fpath: pathlib.Path,
     *,
     success_status: str = 'SUCCESS',
 ) -> str | None:

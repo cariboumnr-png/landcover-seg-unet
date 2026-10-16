@@ -416,12 +416,12 @@ def read_report(fp: pathlib.Path) -> tuple[str, grid_contracts.WorldGridReport]:
     Read a grid execution report and extract world grid summary.
 
     Args:
-        report_fpath:
+        fp:
             File path to the grid report JSON artifact.
 
     Returns:
-        grid_contracts.WorldGridReport:
-            World grid summary report extracted from the artifact.
+        tuple[str, grid_contracts.WorldGridReport]:
+            Tuple of (status, world grid summary report).
     '''
     ctrl = GridReportCtrl.load_json_or_fail(fp)
     report = ctrl.fetch()

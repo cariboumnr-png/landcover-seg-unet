@@ -60,6 +60,7 @@ def past_runs(
         schema.ProbeResult:
             diagnostic probe record summarizing run status counts.
     '''
+    mfst_fpath_str = str(manifest_path.resolve())
     try:
         manifest = RunManifestCtrl(manifest_path).fetch()
         if manifest is not None:
@@ -83,7 +84,7 @@ def past_runs(
                     f'with {success_run_n} success runs'
                 ),
                 details={
-                    'path': manifest_path,
+                    'path': mfst_fpath_str,
                     'total_runs': total_run_n,
                     'successful_runs': success_run_n,
                     'skipped_runs': skipped_run_n,
@@ -95,7 +96,7 @@ def past_runs(
             category='Ledger',
             status=schema.ProbeStatus.PASS,
             message='Read run history manifest with 0 runs',
-            details={'path': manifest_path, 'runs': 'empty'},
+            details={'path': mfst_fpath_str, 'runs': 'empty'},
         )
 
     except artifacts.ArtifactError as e:
@@ -104,7 +105,7 @@ def past_runs(
             category='Ledger',
             status=schema.ProbeStatus.FAIL,
             message='Error reading run history manifest',
-            details={'path': manifest_path, 'error': str(e)},
+            details={'path': mfst_fpath_str, 'error': str(e)},
         )
 
 
@@ -126,12 +127,11 @@ def pending_harmonization(
             message='Harmonization has not been run'
         )
 
-    dt_mfst = str(
-        pathlib.Path(root_config.data.harmonization.dataset_manifest).resolve()
-    )
+    mfst_path = pathlib.Path(root_config.data.harmonization.dataset_manifest)
+    mfst_path_str = str(mfst_path.resolve())
     for v in harmonization_runs.values():
         if (
-            v.get('source_dataset_manifest') == dt_mfst and
+            v.get('source_dataset_manifest') == mfst_path_str and
             v.get('status') == 'SUCCESS'
         ):
             return schema.ProbeResult(
@@ -143,7 +143,7 @@ def pending_harmonization(
                         f'<{v.get('run_uid')}>'
                     ),
                     details={
-                        'dataset_manifest_fpath': dt_mfst,
+                        'dataset_manifest_fpath': mfst_path_str,
                         'target_harmonization_run_uid': v.get('run_uid')
                     },
                 )
@@ -152,7 +152,7 @@ def pending_harmonization(
         pid='harmonized_dataset',
         category='Ledger',
         status=schema.ProbeStatus.PASS,
-        message=f'Dataset from {dt_mfst} not yet harmonized'
+        message=f'Dataset from {mfst_path_str} not yet harmonized'
     )
 
 
@@ -179,11 +179,11 @@ def pending_ingestion(
     '''
     probe_id = pid or 'pending_ingestion'
 
-    harmonization_runs_mfst = artifact_paths.data_harmonization.runs_manifest
-    ingestion_runs_mfst = artifact_paths.data_ingestion.runs_manifest
+    harmonizations_mfst = artifact_paths.data_harmonization.runs_manifest
+    ingestions_mfst = artifact_paths.data_ingestion.runs_manifest
 
     try:
-        ctrl = RunManifestCtrl.load_json_or_fail(harmonization_runs_mfst)
+        ctrl = RunManifestCtrl.load_json_or_fail(harmonizations_mfst)
         harmonization_runs = ctrl.fetch()
         good_harmonization_runs = {
             k: v for k, v in harmonization_runs.items()
@@ -199,13 +199,13 @@ def pending_ingestion(
             status=schema.ProbeStatus.FAIL,
             message='Unable to resolve pending batches',
             details={
-                'harmonization_run_manifest': harmonization_runs_mfst,
-                'ingestion_run_manifest': ingestion_runs_mfst
+                'harmonization_run_manifest': str(harmonizations_mfst.resolve()),
+                'ingestion_run_manifest': str(ingestions_mfst.resolve())
             },
         )
 
     try:
-        ctrl = RunManifestCtrl.load_json_or_fail(ingestion_runs_mfst)
+        ctrl = RunManifestCtrl.load_json_or_fail(ingestions_mfst)
         ingestion_runs = ctrl.fetch()
         good_ingestion_runs = {
             k: v for k, v in ingestion_runs.items()
@@ -261,14 +261,15 @@ def ingestion_pool_state(
     '''
     probe_id = pid or 'ingested_blocks_pool'
     catalog_path = artifact_paths.data_ingestion.data_blocks.catalog
+    catalog_path_str = str(catalog_path.resolve())
 
-    if not pathlib.Path(catalog_path).exists():
+    if not catalog_path.exists():
         return schema.ProbeResult(
             pid=probe_id,
             category='Ledger',
             status=schema.ProbeStatus.PASS,
             message='Canonical pool is empty (no blocks ingested yet)',
-            details={'path': catalog_path, 'block_count': 0},
+            details={'path': catalog_path_str, 'block_count': 0},
         )
 
     try:
@@ -279,7 +280,7 @@ def ingestion_pool_state(
             category='Ledger',
             status=schema.ProbeStatus.PASS,
             message=f'Ingestion pool contains {block_count} existing blocks',
-            details={'path': catalog_path, 'block_count': block_count},
+            details={'path': catalog_path_str, 'block_count': block_count},
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
         return schema.ProbeResult(
@@ -287,7 +288,7 @@ def ingestion_pool_state(
             category='Ledger',
             status=schema.ProbeStatus.FAIL,
             message=f'Failed reading pool catalog: {err}',
-            details={'path': catalog_path, 'error': str(err)},
+            details={'path': catalog_path_str, 'error': str(err)},
         )
 
 

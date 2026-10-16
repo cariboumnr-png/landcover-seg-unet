@@ -27,8 +27,9 @@ extracting class counts and spatial coordinates needed for downstream
 sampling, partitioning, and analysis.
 
 Public APIs:
-    - DataBlocksView: high-level view of data blocks for partitioning.
-    - read_catalog: load and adapt canonical blocks into a structured view.
+    - `DataBlocksManifestInputs`: Bundled datablocks manifest inputs.
+    - `NormalizedDataBlocksView`: High-level view of data blocks.
+    - `read_dataset_manifest`: Load and adapt blocks into view.
 '''
 
 # standard imports
@@ -81,12 +82,8 @@ def read_dataset_manifest(
     blocks.
 
     Args:
-        schema:
-            ingested dataset schema instance.
-        catalog:
-            ingested canonical blocks catalog.
-        test_catalog:
-            optional path to external holdout test catalog JSON.
+        inputs:
+            bundled manifest inputs with schema and catalog mappings.
         head_pxs_thres:
             optional mapping of target head to valid pixel threshold.
         focal_head:
@@ -95,7 +92,7 @@ def read_dataset_manifest(
             whether to restrict external test blocks to non-overlapping.
 
     Returns:
-        DataBlocksView:
+        NormalizedDataBlocksView:
             filtered metadata and block mappings for partitioning.
     '''
     # valid blocks filtered by pixel thresholds

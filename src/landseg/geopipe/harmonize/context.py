@@ -47,7 +47,7 @@ class HarmonizationContext:
     grid: geo_core.GridLayout
     grid_id: str
     grid_fpath: pathlib.Path
-    compiled_dataset_manifest: dict[str, manifest.ManifestEntry]
+    compiled_dataset_manifest: list[manifest.ManifestEntry]
     current_run_identity: str = ''
     collided_run_uid: str | None = None
 
@@ -76,7 +76,8 @@ def build_harmonization_context(
     world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # compile dataset manifest JOSN
-    compiled = manifest.compile_dataset_manifest(config.dataset_manifest)
+    mfst_path = pathlib.Path(config.dataset_manifest)
+    compiled = manifest.compile_dataset_manifest(mfst_path)
 
     # identify/collision check
     grid_identity = geo_utils.compute_fingerprint(world_grid.affine_identity)
@@ -92,9 +93,7 @@ def build_harmonization_context(
         }
     }
     fingerprint = geo_utils.compute_fingerprint(identity)
-    collided = geo_utils.find_run_collision(
-        fingerprint, str(runs_manifest_fpath)
-    )
+    collided = geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
 
     return HarmonizationContext(
         grid=world_grid,

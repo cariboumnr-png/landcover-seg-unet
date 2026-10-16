@@ -108,7 +108,7 @@ def run_data_harmonization(
 
 # ----- private helpers
 def _harmonize_sources(
-    compiled_sources: dict[str, harmonize_manifest.ManifestEntry],
+    compiled_sources: list[harmonize_manifest.ManifestEntry],
     output_dir: pathlib.Path,
     world_grid: geo_core.GridLayout,
     *,
@@ -120,15 +120,12 @@ def _harmonize_sources(
     labels: list[pathlib.Path] = []
     processed = _ProcessedRasters()
 
-    for path, mfst in compiled_sources.items():
-        if not mfst:
-            raise ValueError(f'No configuration found for raster {path}')
+    for mfst in compiled_sources:
 
+        path = mfst['path']
         is_cat = mfst['category'] in {'domains', 'domain', 'labels', 'label'}
         tagged_name = f'{mfst["category"]}_{mfst["name"]}'
-        resampling = (
-            categorical_resampling if is_cat else continuous_resampling
-        )
+        resampling = categorical_resampling if is_cat else continuous_resampling
         out_vrt = output_dir / f'{tagged_name}.vrt'
 
         yield (
@@ -136,9 +133,8 @@ def _harmonize_sources(
             f'(resampling: {resampling})'
         )
 
-        _path = pathlib.Path(path)
         warped = harmonize_rasters.warp_to_grid(
-            input_path=_path,
+            input_path=path,
             output_path=out_vrt,
             world_grid=world_grid,
             is_categorical=is_cat,
@@ -147,7 +143,7 @@ def _harmonize_sources(
         # band mapping is now required
         harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])
 
-        processed.provenance[tagged_name] = _path.resolve()
+        processed.provenance[tagged_name] = path.resolve()
         processed.harmonized[tagged_name] = warped
 
         match mfst['category']:

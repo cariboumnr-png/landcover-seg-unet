@@ -62,7 +62,7 @@ def prepare_world_grid(
             Optional explicit file path to the grid artifact.
 
     Returns:
-        tuple[bool, str, geo_core.GridLayout]:
+        tuple[bool, pathlib.Path, geo_core.GridLayout]:
             Tuple of (is_loaded, grid file path, GridLayout instance).
     '''
     if override_grid_fpath:

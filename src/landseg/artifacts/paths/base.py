@@ -98,6 +98,10 @@ class PipelineArtifactsPaths:
                 name/ID (e.g. "run_0001" or "1"), or directory path. If
                 None, returns the latest existing run folder.
 
+        Returns:
+            pathlib.Path:
+                Resolved path to the target run directory.
+
         Raises:
             FileNotFoundError:
                 If the requested run does not exist or no run folders

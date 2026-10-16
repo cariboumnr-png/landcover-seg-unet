@@ -238,7 +238,7 @@ def build_ingestion_context(
     }
     fingerprint = geo_utils.compute_fingerprint(identity)
     collided = (
-        geo_utils.find_run_collision(fingerprint, str(runs_manifest_fpath))
+        geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
         if runs_manifest_fpath is not None
         else None
     )
@@ -270,7 +270,6 @@ def _resolve_harmonization_runs(
 
     Returns:
         dict[str, contracts.HarmonizationRunRecord]:
-            Mapping of run UID to successful run records.
             Mapping of run UID to successful run records.
 
     Raises:

@@ -34,7 +34,7 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
+import pathlib
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
@@ -61,7 +61,7 @@ FeatureSchemes: typing.TypeAlias = dict[str, list[str]]
 class ManifestEntry(typing.TypedDict):
     '''Expected shape of dataset config (per raster).'''
     name: str
-    path: str
+    path: pathlib.Path
     band_mapping: dict[int, str]
     category: AllowedCategory
     categorical_specs: geo_core.CategoricalSpec | None
