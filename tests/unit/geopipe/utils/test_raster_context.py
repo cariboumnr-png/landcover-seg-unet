@@ -35,8 +35,8 @@ def test_open_rasters_success(mocker):
     Then: Yields opened readers for paths and None for None entries,
         closing all on exit.
     '''
-    # mock os.path.exists to confirm existence
-    mocker.patch('os.path.exists', return_value=True)
+    # mock pathlib.Path.exists to confirm existence
+    mocker.patch('pathlib.Path.exists', return_value=True)
 
     # mock rasterio.open context manager behavior
     mock_reader = mocker.Mock()
@@ -62,7 +62,7 @@ def test_open_rasters_missing_file(mocker):
     When: `open_rasters` is executed.
     Then: Raise an AssertionError.
     '''
-    mocker.patch('os.path.exists', return_value=False)
+    mocker.patch('pathlib.Path.exists', return_value=False)
 
     with pytest.raises(AssertionError, match='Raster not found'):
         with raster_context.open_rasters('missing.tif') as _:

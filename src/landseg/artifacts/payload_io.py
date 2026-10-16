@@ -42,7 +42,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -101,7 +101,7 @@ class PayloadController(typing.Generic[D, M]):
 
     def __init__(
         self,
-        data_fpath: str,
+        data_fpath: str | pathlib.Path,
         *,
         schema_id: str,
         policy: artifacts.LifecyclePolicy,
@@ -126,9 +126,9 @@ class PayloadController(typing.Generic[D, M]):
         self.policy = policy
 
         # compile file paths
-        no_ext, _ = os.path.splitext(data_fpath)
-        self.data_path = data_fpath
-        self.meta_path = f'{no_ext}_meta.json'
+        data_p = pathlib.Path(data_fpath)
+        self.data_path = data_p
+        self.meta_path = data_p.with_name(f'{data_p.stem}_meta.json')
 
         # controllers
         self.data_ctrl = artifacts.Controller(self.data_path, policy)
@@ -138,7 +138,7 @@ class PayloadController(typing.Generic[D, M]):
     @classmethod
     def load_json_or_fail(
         cls,
-        data_fpath: str,
+        data_fpath: str | pathlib.Path,
         *,
         schema_id: str,
     ) -> LoadOrFailPayloadController[D, M]:
@@ -148,7 +148,7 @@ class PayloadController(typing.Generic[D, M]):
     @classmethod
     def load_or_fail(
         cls,
-        data_fpath: str,
+        data_fpath: str | pathlib.Path,
         *,
         schema_id: str,
     ) -> LoadOrFailPayloadController[D, M]:
@@ -267,7 +267,7 @@ class PayloadController(typing.Generic[D, M]):
 
 class LoadOrFailPayloadController(PayloadController[D, M]):
     '''"Load or fail" specialized PayloadController subclass.'''
-    def __init__(self, data_fpath: str, *, schema_id: str):
+    def __init__(self, data_fpath: str | pathlib.Path, *, schema_id: str):
         super().__init__(
             data_fpath,
             schema_id=schema_id,

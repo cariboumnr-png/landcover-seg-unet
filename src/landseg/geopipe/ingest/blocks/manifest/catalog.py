@@ -33,7 +33,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
@@ -42,12 +42,12 @@ import landseg.geopipe.utils as geo_utils
 
 # ----- public functions
 def build_catalog(
-    input_block_fpaths: list[str],
+    input_block_fpaths: list[pathlib.Path],
     *,
     original_catalog: geo_core.DatasetCatalog,
     mapped_grid_id: str,
-    source_image: str,
-    source_label: str | None,
+    source_image: pathlib.Path,
+    source_label: pathlib.Path | None = None,
     harmonize_run_id: str | None = None,
     ingest_run_id: str | None = None,
 ) -> geo_core.DatasetCatalog:
@@ -100,7 +100,7 @@ def build_catalog(
         row, col = geo_utils.name_xy(meta['block_name'])
         entry: geo_core.DatasetBlockMeta = {
             'block_name': meta['block_name'],
-            'file_path': os.path.abspath(fp), # use absolute path
+            'file_path': str(fp.resolve()),
             'row_col': [row, col],
             'valid_px_ratios': meta['valid_ratios'],
             'class_count': meta['label_count'],
@@ -108,9 +108,11 @@ def build_catalog(
             'creation_time': ctrl.creation_time,
             'sha_256': ctrl.sha256,
             'aligned_grid': mapped_grid_id,
-            'source_image': source_image,
+            'source_image': str(source_image.resolve()),
             'source_image_sha_256': img_hash,
-            'source_label': source_label,
+            'source_label': (
+                str(source_label.resolve()) if source_label else None
+            ),
             'source_label_sha_256': lbl_hash,
             'harmonize_run_id': harmonize_run_id,
             'ingest_run_id': ingest_run_id,

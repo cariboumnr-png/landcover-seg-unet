@@ -34,6 +34,7 @@ Public APIs:
 
 # standard imports
 import math
+import pathlib
 import typing
 # third-party imports
 import rasterio
@@ -58,8 +59,8 @@ class GeometrySummary(typing.TypedDict):
 
 # ----- public functions
 def validate_geometry(
-    image_fpath: str,
-    label_fpath: str | None,
+    image_fpath: pathlib.Path,
+    label_fpath: pathlib.Path | None,
 ) -> GeometrySummary:
     '''
     Ingest raster inputs and validate their alignment.

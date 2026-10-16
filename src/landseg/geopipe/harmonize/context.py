@@ -32,6 +32,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
+import pathlib
 # local imports
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
@@ -45,15 +46,16 @@ class HarmonizationContext:
     '''Resolved world grid reference container for harmonization.'''
     grid: geo_core.GridLayout
     grid_id: str
-    grid_fpath: str
-    compiled_dataset_manifest: dict[str, manifest.ManifestEntry]
+    grid_fpath: pathlib.Path
+    compiled_dataset_manifest: list[manifest.ManifestEntry]
     current_run_identity: str = ''
     collided_run_uid: str | None = None
 
+
 # ----- public functions
 def build_harmonization_context(
-    grid_report_path: str,
-    runs_manifest_fpath: str,
+    grid_report_path: pathlib.Path,
+    runs_manifest_fpath: pathlib.Path,
     config: contracts.HarmonizationPipelineConfig,
 ) -> HarmonizationContext:
     '''
@@ -69,18 +71,20 @@ def build_harmonization_context(
             grid reference metadata.
     '''
     # fetch world grid
-    _, grid_report = geo_core.read_grid_report(grid_report_path)
-    world_grid = geo_core.GridLayout.from_fpath(grid_report['grid_fpath'])
+    _, grid_report = geo_core.read_report(grid_report_path)
+    grid_fpath = pathlib.Path(grid_report['grid_fpath'])
+    world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # compile dataset manifest JOSN
-    compiled = manifest.compile_dataset_manifest(config.dataset_manifest)
+    mfst_path = pathlib.Path(config.dataset_manifest)
+    compiled = manifest.compile_dataset_manifest(mfst_path)
 
     # identify/collision check
     grid_identity = geo_utils.compute_fingerprint(world_grid.affine_identity)
     identity = {
         'inputs': compiled,
         'grid': {
-            'grid_fpath': grid_report_path,
+            'grid_fpath': str(grid_report_path.resolve()),
             'grid_identity': grid_identity,
         },
         'config': {
@@ -94,7 +98,7 @@ def build_harmonization_context(
     return HarmonizationContext(
         grid=world_grid,
         grid_id=grid_report['grid_id'],
-        grid_fpath=grid_report['grid_fpath'],
+        grid_fpath=grid_fpath,
         compiled_dataset_manifest=compiled,
         current_run_identity=fingerprint,
         collided_run_uid=collided

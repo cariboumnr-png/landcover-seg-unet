@@ -30,13 +30,14 @@ Public APIs:
 
 # standard imports
 import os
+import pathlib
 # local imports
 import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
 def dir_writable(
-    dir_path: str | None,
+    dir_path: pathlib.Path | None,
     pid: str | None = None
 ) -> schema.ProbeResult:
     '''Check if destination directory is writable.'''
@@ -50,14 +51,14 @@ def dir_writable(
         )
 
     # find existing parent dir (recursive)
-    check_dir = os.path.abspath(dir_path)
-    while not os.path.exists(check_dir):
-        parent = os.path.dirname(check_dir)
-        if parent == check_dir:
+    check_path = dir_path.resolve()
+    while not check_path.exists():
+        parent = check_path.parent
+        if parent == check_path:
             break
-        check_dir = parent
+        check_path = parent
 
-    w_ok = os.access(check_dir, os.W_OK)
+    w_ok = os.access(check_path, os.W_OK)
     status = schema.ProbeStatus.PASS if w_ok else schema.ProbeStatus.FAIL
     flag = 'is' if w_ok else 'is not'
 
@@ -71,12 +72,12 @@ def dir_writable(
 
 
 def target_file_exists(
-    file_path: str,
+    file_path: pathlib.Path,
     pid: str | None = None,
     force_rebuild: bool = False,
 ) -> schema.ProbeResult:
     '''Check if the target file already exists.'''
-    is_file = os.path.exists(file_path) and os.path.isfile(file_path)
+    is_file = file_path.is_file()
 
     match is_file, force_rebuild:
         case True, True: status = schema.ProbeStatus.WARN
@@ -89,5 +90,5 @@ def target_file_exists(
         category='Filesystem',
         status=status,
         message=f'Target file {flag} exists; force_rebuild: {force_rebuild}',
-        details={'target_file_path': file_path},
+        details={'target_file_path': str(file_path.resolve())},
     )

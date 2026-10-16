@@ -157,8 +157,8 @@ def test_resolve_aoi_partitions_priority_conflict(tmp_path, mocker):
         val_aoi=val_aoi,
         train_aoi=None,
         block_size=(256, 256),
-        canvas_crs='EPSG:3161',
-        canvas_transform=canvas_transform,
+        crs='EPSG:3161',
+        transform=canvas_transform,
         logger=mock_logger,
     )
 
@@ -200,8 +200,8 @@ def test_resolve_aoi_partitions_scenario_1_three_splits(tmp_path):
         val_aoi=val_path,
         train_aoi=train_path,
         block_size=(256, 256),
-        canvas_crs='EPSG:3161',
-        canvas_transform=t_test,
+        crs='EPSG:3161',
+        transform=t_test,
     )
 
     assert result.test == [(0, 0)]

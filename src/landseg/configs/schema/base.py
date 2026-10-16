@@ -23,7 +23,7 @@
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 
 T = typing.TypeVar('T')
@@ -143,9 +143,11 @@ class BaseConfigSection:
 
     @staticmethod
     def require_file(
-        path: str,
+        path: str | None,
         name: str
     ) -> None:
         '''Raise if file does not exist.'''
-        if not os.path.isfile(path):
+        if path is None:
+            return
+        if not pathlib.Path(path).is_file():
             raise ConfigValidationError(f'Invalid file [{name}] at: {path}')

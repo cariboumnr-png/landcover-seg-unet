@@ -36,7 +36,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -134,7 +134,7 @@ class PrerequisiteCheck:
 def check_report_status(
     target: str,
     upstream_target: str,
-    report_fpath: str,
+    report_fpath: pathlib.Path,
     expected_status: str = 'SUCCESS',
 ) -> PrerequisiteCheck:
     '''
@@ -154,7 +154,7 @@ def check_report_status(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    if not os.path.isfile(report_fpath):
+    if not report_fpath.is_file():
         message = (
             f'Upstream pipeline "{upstream_target}" report not found at: '
             f'{report_fpath}'
@@ -163,7 +163,7 @@ def check_report_status(
             target,
             upstream_target,
             message,
-            report_fpath=report_fpath,
+            report_fpath=str(report_fpath),
             expected_status=expected_status,
         )
 
@@ -181,7 +181,7 @@ def check_report_status(
                 target,
                 upstream_target,
                 message,
-                report_fpath=report_fpath,
+                report_fpath=str(report_fpath),
                 actual_status=status_val,
                 expected_status=expected_status,
             )
@@ -191,7 +191,7 @@ def check_report_status(
             target,
             upstream_target,
             message,
-            report_fpath=report_fpath,
+            report_fpath=str(report_fpath),
             status=status_val,
         )
 
@@ -204,7 +204,7 @@ def check_report_status(
             target,
             upstream_target,
             message,
-            report_fpath=report_fpath,
+            report_fpath=str(report_fpath),
             expected_status=expected_status,
             error=str(err),
         )
@@ -213,7 +213,7 @@ def check_report_status(
 def check_files_exist(
     target: str,
     upstream_target: str,
-    file_paths: list[str],
+    file_paths: list[pathlib.Path],
 ) -> PrerequisiteCheck:
     '''
     Validate that required upstream artifact files exist on disk.
@@ -230,12 +230,13 @@ def check_files_exist(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    missing = [fp for fp in file_paths if not os.path.exists(fp)]
+    missing = [fp for fp in file_paths if not fp.exists()]
 
     if missing:
+        missing_str = ", ".join(str(fp) for fp in missing)
         message = (
             f'Upstream pipeline "{upstream_target}" has not produced '
-            f'required artifacts. Missing: {", ".join(missing)}'
+            f'required artifacts. Missing: {missing_str}'
         )
         return PrerequisiteCheck.failed(
             target,
@@ -249,14 +250,14 @@ def check_files_exist(
         target,
         upstream_target,
         message,
-        checked_files=file_paths,
+        checked_files=[str(p) for p in file_paths],
     )
 
 
 def check_manifest_runs(
     target: str,
     upstream_target: str,
-    manifest_fpath: str,
+    manifest_fpath: pathlib.Path,
     min_success_runs: int = 1,
 ) -> PrerequisiteCheck:
     '''
@@ -276,7 +277,7 @@ def check_manifest_runs(
         PrerequisiteCheck:
             evaluation result containing validity and message.
     '''
-    if not os.path.isfile(manifest_fpath):
+    if not manifest_fpath.is_file():
         message = (
             f'Upstream pipeline "{upstream_target}" runs manifest '
             f'not found at: {manifest_fpath}'
@@ -285,7 +286,7 @@ def check_manifest_runs(
             target,
             upstream_target,
             message,
-            manifest_fpath=manifest_fpath,
+            manifest_fpath=str(manifest_fpath),
         )
 
     try:
@@ -311,7 +312,7 @@ def check_manifest_runs(
                 target,
                 upstream_target,
                 message,
-                manifest_fpath=manifest_fpath,
+                manifest_fpath=str(manifest_fpath),
                 total_runs=len(records),
                 successful_runs=success_count,
             )
@@ -324,7 +325,7 @@ def check_manifest_runs(
             target,
             upstream_target,
             message,
-            manifest_fpath=manifest_fpath,
+            manifest_fpath=str(manifest_fpath),
             successful_runs=success_count,
         )
 
@@ -337,7 +338,7 @@ def check_manifest_runs(
             target,
             upstream_target,
             message,
-            manifest_fpath=manifest_fpath,
+            manifest_fpath=str(manifest_fpath),
             error=str(err),
         )
 

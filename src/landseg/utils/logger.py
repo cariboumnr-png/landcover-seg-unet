@@ -32,7 +32,7 @@ Public APIs:
 
 # standard imports
 import logging
-import os
+import pathlib
 
 
 # ----- public classes
@@ -48,7 +48,7 @@ class Logger:
     def __init__(
         self,
         name: str | None = None,
-        log_file: str | None = None,
+        log_file: str | pathlib.Path | None = None,
         log_lvl: int = logging.DEBUG,
         console_lvl: int | None = logging.INFO,
         enable_file_log: bool = True
@@ -71,18 +71,19 @@ class Logger:
             to file.
         '''
         if name is None:
-            name = os.path.basename(__file__)
+            name = pathlib.Path(__file__).name
 
         if log_file is None:
-            log_file = os.path.join(os.getcwd(), 'logs', 'proj.log')
-        elif not log_file.endswith(('.log', 'json')): # allow JSON log file
-            root, _ = os.path.splitext(log_file)
-            log_file = f'{root}.log'
+            log_file = pathlib.Path.cwd() / 'logs' / 'proj.log'
+        else:
+            log_file = pathlib.Path(log_file)
+            if not log_file.name.endswith(('.log', 'json')):
+                log_file = log_file.with_suffix('.log')
 
         self.name = name
         self.log_file = log_file
         self.console_lvl = console_lvl
-        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
 
         self.logger = logging.getLogger(name)
         self.logger.setLevel(log_lvl)
@@ -214,3 +215,8 @@ class Logger:
         for handler in handlers:
             handler.close()
             self.logger.removeHandler(handler)
+
+    @staticmethod
+    def abs_path(fp: str | pathlib.Path) -> str:
+        '''Shared method to return an absolute path from input.'''
+        return str(pathlib.Path(fp).resolve())

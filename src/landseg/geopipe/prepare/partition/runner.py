@@ -36,6 +36,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import dataclasses
+import pathlib
 import time
 import typing
 # local imports
@@ -54,9 +55,9 @@ SplitsSummaryCtrl = artifacts.Controller[contracts.PartitionSummary]
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
-    def splits_source_blocks(self) -> str: ...
+    def splits_source_blocks(self) -> pathlib.Path: ...
     @property
-    def splits_summary(self) -> str: ...
+    def splits_summary(self) -> pathlib.Path: ...
 
 
 # ----- public functions

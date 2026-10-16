@@ -39,7 +39,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import dataclasses
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -50,9 +50,7 @@ import landseg.geopipe.utils as geo_utils
 
 # ----- typing aliases
 HarmonizationRecords = dict[str, contracts.HarmonizationRunRecord]
-HarmonizationReportCtrl = (
-    artifacts.Controller[contracts.HarmonizationReportSchema]
-)
+HarmonizationReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
 HarmonizationManifestCtrl = artifacts.Controller[HarmonizationRecords]
 IngestionRecords = dict[str, contracts.IngestionRunRecord]
 IngestionManifestCtrl = artifacts.Controller[IngestionRecords]
@@ -64,11 +62,11 @@ DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 class IngestionContext:
     '''Execution context holding resolved world grid and rasters.'''
     grid: geo_core.GridLayout
-    grid_fpath: str
-    domains: dict[str, str] | None
-    features: str | None
-    labels: str | None
-    valid_mask_raster: str
+    grid_fpath: pathlib.Path
+    domains: dict[str, pathlib.Path] | None
+    features: pathlib.Path | None
+    labels: pathlib.Path | None
+    valid_mask_raster: pathlib.Path
     run_uid: str = ''
     harmonization_run_id: str = ''
     current_run_identity: str = ''
@@ -82,8 +80,8 @@ class IngestionContext:
 
 # ----- public functions
 def resolve_pending_ingestion_batches(
-    harmonization_run_manifest: str,
-    ingestion_run_manifest: str,
+    harmonization_run_manifest: pathlib.Path,
+    ingestion_run_manifest: pathlib.Path,
     *,
     target: int | str | None = None,
     rebuild: bool = False,
@@ -151,8 +149,8 @@ def resolve_pending_ingestion_batches(
 def build_ingestion_context(
     harmonization_artifact_paths: artifacts.HarmonizationPaths,
     harmonization_record: contracts.HarmonizationRunRecord,
-    runs_manifest_fpath: str | None = None,
-    dataset_schema_fpath: str | None = None,
+    runs_manifest_fpath: pathlib.Path | None = None,
+    dataset_schema_fpath: pathlib.Path | None = None,
     config: contracts.IngestionPipelineConfig | None = None,
 ) -> IngestionContext:
     '''
@@ -184,9 +182,8 @@ def build_ingestion_context(
     report = HarmonizationReportCtrl.load_json_or_fail(report_path).fetch()
 
     # fetch world grid
-    grid_fpath = report.get('grid_fpath')
-    if not grid_fpath and 'world_grid' in report:
-        grid_fpath = report['world_grid'].get('grid_fpath')
+    raw_grid = report.get('grid_fpath')
+    grid_fpath = pathlib.Path(raw_grid)
     world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # verify grid compatibility
@@ -195,13 +192,15 @@ def build_ingestion_context(
 
     # parse harmonized domain/feature/label sources
     finals = report['finalized_rasters']
-    domains: dict[str, str] = {}
+    domains: dict[str, pathlib.Path] = {}
     for key, value in finals.items():
         if 'domain' in key:
-            domains.update({key: value})
+            domains.update({key: pathlib.Path(value)})
 
-    features = finals.get('features')
-    labels = finals.get('labels')
+    features_raw = finals.get('features')
+    labels_raw = finals.get('labels')
+    features = pathlib.Path(features_raw) if features_raw else None
+    labels = pathlib.Path(labels_raw) if labels_raw else None
 
     # identify/collision check
     grid_identity = geo_utils.compute_fingerprint(world_grid.block_identity)
@@ -224,14 +223,16 @@ def build_ingestion_context(
     identity = {
         'harmonization_run_uid': harmonization_record['run_uid'],
         'grid': {
-            'grid_fpath': grid_fpath,
+            'grid_fpath': str(grid_fpath.resolve()),
             'grid_identity': grid_identity,
         },
         'inputs': {
-            'features': features,
-            'labels': labels,
-            'domains': domains,
-            'valid_mask_raster': harmonization_artifact_paths.valid_mask_raster,
+            'features': str(features.resolve()) if features else None,
+            'labels': str(labels.resolve()) if labels else None,
+            'domains': {k: str(v.resolve()) for k, v in domains.items()},
+            'valid_mask_raster': str(
+                harmonization_artifact_paths.valid_mask_raster.resolve()
+            ),
         },
         'config': config_dict,
     }
@@ -257,7 +258,9 @@ def build_ingestion_context(
 
 
 # ----- private helpers
-def _resolve_harmonization_runs(manifest_fpath: str) -> HarmonizationRecords:
+def _resolve_harmonization_runs(
+    manifest_fpath: pathlib.Path
+) -> HarmonizationRecords:
     '''
     Load the harmonization runs manifest and return all successful runs.
 
@@ -268,13 +271,12 @@ def _resolve_harmonization_runs(manifest_fpath: str) -> HarmonizationRecords:
     Returns:
         dict[str, contracts.HarmonizationRunRecord]:
             Mapping of run UID to successful run records.
-            Mapping of run UID to successful run records.
 
     Raises:
         artifacts.ArtifactError:
             If the manifest does not exist or has no successful runs.
     '''
-    if not os.path.exists(manifest_fpath):
+    if not manifest_fpath.exists():
         raise artifacts.ArtifactError(
             'Harmonization runs manifest does not exist at '
             f'{manifest_fpath}. '
@@ -351,10 +353,13 @@ def _resolve_target_harmonization_run(
             if rec.get('run_id') == target:
                 return rec
 
-        target_norm = os.path.normpath(target)
+        target_norm = pathlib.Path(target).resolve()
         for rec in successful_runs.values():
             rec_folder = rec.get('run_folder', '')
-            if rec_folder and os.path.normpath(rec_folder) == target_norm:
+            if (
+                rec_folder
+                and pathlib.Path(rec_folder).resolve() == target_norm
+            ):
                 return rec
 
         raise artifacts.ArtifactError(
@@ -365,7 +370,7 @@ def _resolve_target_harmonization_run(
     raise TypeError(f'Invalid target run type: {type(target)}')
 
 
-def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
+def _resolve_ingestion_runs(manifest_fpath: pathlib.Path) -> set[str]:
     '''
     Load ingestion runs manifest and return ingested harmonization UIDs.
 
@@ -378,7 +383,7 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
             Set of upstream harmonization run UIDs that completed with
             status 'SUCCESS'.
     '''
-    if not os.path.exists(manifest_fpath):
+    if not manifest_fpath.exists():
         return set()
 
     try:
@@ -401,7 +406,7 @@ def _resolve_ingestion_runs(manifest_fpath: str) -> set[str]:
 
 
 def verify_pool_grid_compatibility(
-    schema_fpath: str,
+    schema_fpath: pathlib.Path,
     grid: geo_core.GridLayout,
 ) -> None:
     '''
@@ -418,7 +423,7 @@ def verify_pool_grid_compatibility(
             If existing pool schema belongs to an incompatible spatial
             block identity or grid ID.
     '''
-    if not os.path.exists(schema_fpath):
+    if not schema_fpath.exists():
         return
 
     try:

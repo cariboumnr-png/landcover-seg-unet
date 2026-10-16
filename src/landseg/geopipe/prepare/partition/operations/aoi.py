@@ -35,7 +35,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # third-party imports
 import rasterio
 import rasterio.transform
@@ -56,7 +56,7 @@ class AoiSplitsResult:
 
 # ----- public functions
 def intersect_aoi_raster(
-    aoi_path: str,
+    aoi_path: pathlib.Path,
     candidate_blocks: list[tuple[int, int]],
     *,
     block_size: tuple[int, int],
@@ -100,12 +100,12 @@ def intersect_aoi_raster(
 def resolve_aoi_partitions(
     candidate_blocks: list[tuple[int, int]],
     *,
-    train_aoi: str | None = None,
-    val_aoi: str | None = None,
-    test_aoi: str | None = None,
+    train_aoi: pathlib.Path | None = None,
+    val_aoi: pathlib.Path | None = None,
+    test_aoi: pathlib.Path | None = None,
     block_size: tuple[int, int],
-    canvas_crs: str,
-    canvas_transform: rasterio.transform.Affine,
+    crs: str,
+    transform: rasterio.transform.Affine,
     min_overlap: float = 0.5,
     logger: prepare.PreparationLogger | None = None,
 ) -> AoiSplitsResult:
@@ -144,8 +144,8 @@ def resolve_aoi_partitions(
             test_aoi,
             candidate_blocks,
             block_size=block_size,
-            canvas_crs=canvas_crs,
-            canvas_transform=canvas_transform,
+            canvas_crs=crs,
+            canvas_transform=transform,
             min_overlap=min_overlap,
         )
         if test_aoi
@@ -157,8 +157,8 @@ def resolve_aoi_partitions(
             val_aoi,
             candidate_blocks,
             block_size=block_size,
-            canvas_crs=canvas_crs,
-            canvas_transform=canvas_transform,
+            canvas_crs=crs,
+            canvas_transform=transform,
             min_overlap=min_overlap,
         )
         if val_aoi
@@ -170,8 +170,8 @@ def resolve_aoi_partitions(
             train_aoi,
             candidate_blocks,
             block_size=block_size,
-            canvas_crs=canvas_crs,
-            canvas_transform=canvas_transform,
+            canvas_crs=crs,
+            canvas_transform=transform,
             min_overlap=min_overlap,
         )
         if train_aoi
@@ -196,11 +196,11 @@ def resolve_aoi_partitions(
 
 # ----- private helpers
 def _load_aoi_bounds(
-    aoi_path: str,
+    aoi_path: pathlib.Path,
     canvas_crs: str,
 ) -> tuple[float, float, float, float]:
     '''Load AOI raster bounds and reproject to canvas CRS if needed.'''
-    if not os.path.exists(aoi_path):
+    if not aoi_path.exists():
         raise FileNotFoundError(f'AOI raster file not found: {aoi_path}')
 
     with rasterio.open(aoi_path) as src:

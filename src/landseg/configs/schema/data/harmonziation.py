@@ -37,7 +37,7 @@ class DataHarmonizationConfig(base.BaseConfigSection):
     dataset_manifest: str = ''
     resampling_continuous: str = 'bilinear'
     resampling_categorical: str = 'nearest'
-    output_dpath: str = 'experiment/artifacts/harmonized_data'
+    output_dpath: str = '${execution.exp_root}/artifacts/harmonized_data'
 
     def validate(self) -> None:
         self.require_file(self.dataset_manifest, 'source dataset manifest')

@@ -83,7 +83,7 @@ def test_runner_builder(tmp_path):
         omegaconf.OmegaConf.to_object(schema)
     )
 
-    step_results, wrapper = sweep_pipeline._runner_builder(config)
+    step_results, wrapper = sweep_pipeline._build_runner(config)
 
     assert isinstance(step_results, str)
     assert callable(wrapper)

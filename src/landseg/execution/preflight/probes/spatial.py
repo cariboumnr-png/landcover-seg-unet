@@ -30,16 +30,14 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def spatial_reference(
-    config: configs.RootConfig,
-) -> schema.ProbeResult:
+def spatial_reference(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the world grid spatial definition source.'''
     grid_cfg = config.data.world_grid
 
@@ -51,13 +49,13 @@ def spatial_reference(
             message='Manual spatial definitions below',
         )
 
-    ref_fpath = grid_cfg.params.ref_fpath
+    ref_fpath = grid_cfg.ref_fpath
     return schema.ProbeResult(
         pid='world_grid_reference',
         category='Spatial',
         status=(
             schema.ProbeStatus.PASS
-            if ref_fpath is not None and os.path.isfile(ref_fpath)
+            if ref_fpath is not None and pathlib.Path(ref_fpath).is_file()
             else schema.ProbeStatus.FAIL
         ),
         message=f'Reference raster found at: {ref_fpath}',
@@ -65,15 +63,13 @@ def spatial_reference(
     )
 
 
-def crs_info(
-    config: configs.RootConfig,
-) -> schema.ProbeResult:
+def crs_info(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the target coordinate reference system.'''
     grid_cfg = config.data.world_grid
     if grid_cfg.mode == 'ref':
         message = 'Target CRS is defined by the reference raster'
     else:
-        message = f'Target CRS: {grid_cfg.params.crs_string}'
+        message = f'Target CRS: {grid_cfg.manual_specs.crs_string}'
 
     return schema.ProbeResult(
         pid='crs',
@@ -83,15 +79,13 @@ def crs_info(
     )
 
 
-def pixel_size(
-    config: configs.RootConfig,
-) -> schema.ProbeResult:
+def pixel_size(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the world grid pixel size.'''
     grid_cfg = config.data.world_grid
     if grid_cfg.mode == 'ref':
         message = 'Pixel size is defined by the reference raster'
     else:
-        message = f'Pixel size: {grid_cfg.params.pixel_size}'
+        message = f'Pixel size: {grid_cfg.manual_specs.pixel_size}'
 
     return schema.ProbeResult(
         pid='pixel_size',
@@ -101,15 +95,13 @@ def pixel_size(
     )
 
 
-def grid_extent(
-    config: configs.RootConfig,
-) -> schema.ProbeResult:
+def grid_extent(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the world grid extent.'''
     grid_cfg = config.data.world_grid
     if grid_cfg.mode == 'ref':
         message = 'Grid extent is defined by the reference raster'
     else:
-        message = f'Grid extent: {grid_cfg.params.extent_in_crs_units}'
+        message = f'Grid extent: {grid_cfg.manual_specs.extent_in_crs_units}'
 
     return schema.ProbeResult(
         pid='grid_extent',
@@ -119,15 +111,13 @@ def grid_extent(
     )
 
 
-def grid_origin(
-    config: configs.RootConfig,
-) -> schema.ProbeResult:
+def grid_origin(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the world grid origin.'''
     grid_cfg = config.data.world_grid
     if grid_cfg.mode == 'ref':
         message = 'Grid origin is defined by the reference raster'
     else:
-        message = f'Grid origin: {grid_cfg.params.origin}'
+        message = f'Grid origin: {grid_cfg.manual_specs.origin}'
 
     return schema.ProbeResult(
         pid='grid_origin',
@@ -137,12 +127,10 @@ def grid_origin(
     )
 
 
-def grid_specs(
-    config: configs.RootConfig,
-) -> schema.ProbeResult:
+def grid_specs(config: configs.RootConfig) -> schema.ProbeResult:
     '''Reports the configured tile dimensions and stride.'''
-    bx, by = config.data.world_grid.params.tile_size
-    sx, sy = config.data.world_grid.params.tile_stride
+    bx, by = config.data.world_grid.tile_size
+    sx, sy = config.data.world_grid.tile_stride
 
     return schema.ProbeResult(
         pid='block_specifications',

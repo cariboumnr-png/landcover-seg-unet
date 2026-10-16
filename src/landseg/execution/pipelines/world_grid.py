@@ -26,7 +26,6 @@ World grid pipeline command implementation.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
-import landseg.geopipe.contracts as contracts
 import landseg.geopipe.grid as grid
 
 
@@ -50,16 +49,7 @@ class WorldGridGeneration(base.GeoPipeline):
             cfg = self.config.data.world_grid
             is_loaded, grid_fp, world_grid = grid.prepare_world_grid(cfg)
             status_str = 'loaded' if is_loaded else 'created and persisted'
-
-            grid_report: contracts.WorldGridReport = {
-                'grid_fpath': grid_fp,
-                'grid_id': world_grid.gid,
-                'crs': world_grid.crs,
-                'pixel_size': world_grid.pixel_size,
-                'tile_size': world_grid.tile_size,
-                'tile_overlap': world_grid.tile_overlap,
-            }
-            self.logger.set_grid_report(grid_report, len(world_grid))
+            self.logger.set_grid_report(world_grid, grid_fp)
 
             self.logger.info(f'[COMPLETE] World grid {status_str}')
             self.logger.info(f'Grid ID: {world_grid.gid}')

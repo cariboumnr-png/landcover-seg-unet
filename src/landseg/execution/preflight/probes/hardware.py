@@ -38,9 +38,7 @@ import landseg.execution.preflight.schema as schema
 
 
 # ----- public functions
-def hardware_info(
-    root_config: configs.RootConfig,
-) -> list[schema.ProbeResult]:
+def hardware_info(root_config: configs.RootConfig) -> list[schema.ProbeResult]:
     '''
     Inspect compute accelerator availability and system hardware state.
 

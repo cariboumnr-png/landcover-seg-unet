@@ -32,6 +32,7 @@ analysis are handled elsewhere.
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -55,22 +56,22 @@ def execute_study_sweep(config: configs.RootConfig):
     study analysis pipeline.
     '''
     # run sweep and return
-    s = study.run_sweep(_runner_builder, config)
+    s = study.run_sweep(_build_runner, config)
     return {
         'best_value': s.best_value,
         'best_params': s.best_params,
     }
 
 
-def _runner_builder(config: configs.RootConfig) -> tuple[str, StepRunner]:
+def _build_runner(cfg: configs.RootConfig) -> tuple[pathlib.Path, StepRunner]:
     '''Build a continuous training session runner.'''
-    config.session.mode = 'continuous' # ensure session type
+    cfg.session.mode = 'continuous' # ensure session type
 
-    artifact_paths = artifacts.ArtifactPaths.from_config(config)
+    artifact_paths = artifacts.ArtifactPaths.from_config(cfg)
 
     def run_wrapper():
         training_pipeline = pipelines.ModelTraining(
-            config,
+            cfg,
             artifact_paths=artifact_paths,
             disable_console_logging=True
         )

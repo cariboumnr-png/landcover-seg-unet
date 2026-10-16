@@ -32,7 +32,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import contextlib
-import os
+import pathlib
 import typing
 # third-party imports
 import rasterio
@@ -42,7 +42,7 @@ import rasterio.io
 # ----- public functions
 @contextlib.contextmanager
 def open_rasters(
-    *rasters: str | None,
+    *rasters: str | pathlib.Path | None,
 ) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
     '''
     Open multiple rasters safely and yield a tuple of dataset readers.
@@ -59,8 +59,10 @@ def open_rasters(
         opened_rasters: list[rasterio.io.DatasetReader | None] = []
 
         for raster in rasters:
-            if isinstance(raster, str):
-                assert os.path.exists(raster), f'Raster not found: {raster}'
+            if raster is not None:
+                assert pathlib.Path(raster).exists(), (
+                    f'Raster not found: {raster}'
+                )
                 opened_raster = stack.enter_context(rasterio.open(raster))
                 opened_rasters.append(opened_raster)
             else:

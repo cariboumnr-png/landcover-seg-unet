@@ -29,6 +29,7 @@ import pathlib
 # third-party imports
 import torch
 # local imports
+import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.knowledge as knowledge
 
@@ -37,7 +38,7 @@ MetaController = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata]
 
 def resolve_similarity_matrix(
     profile: str,
-    knowledge_root: str | pathlib.Path = 'knowledge',
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> torch.Tensor:
     '''
     Resolve and load precomputed species similarity matrix for a profile.
@@ -54,7 +55,7 @@ def resolve_similarity_matrix(
         artifacts.ArtifactError: If hash validation fails or the file
             is corrupted.
     '''
-    kp = artifacts.KnowledgePaths(root=str(knowledge_root))
+    kp = artifacts.KnowledgePaths(root=knowledge_root)
     matrix_path = kp.similarity_matrix_fpath(profile)
     ctrl = artifacts.Controller[torch.Tensor].load_pt_or_fail(matrix_path)
     tensor = ctrl.fetch()
@@ -63,7 +64,7 @@ def resolve_similarity_matrix(
 
 def resolve_profile_metadata(
     profile: str,
-    knowledge_root: str | pathlib.Path = 'knowledge',
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> knowledge.SpeciesEmbeddingsMetadata:
     '''
     Resolve and load species embeddings metadata for a profile.
@@ -80,7 +81,7 @@ def resolve_profile_metadata(
         artifacts.ArtifactError: If hash validation fails or the file
             is corrupted.
     '''
-    kp = artifacts.KnowledgePaths(root=str(knowledge_root))
+    kp = artifacts.KnowledgePaths(root=knowledge_root)
     meta_path = kp.metadata_fpath(profile)
     ctrl = MetaController.load_json_or_fail(meta_path)
     meta = ctrl.fetch()

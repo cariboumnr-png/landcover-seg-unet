@@ -27,12 +27,14 @@ extracting class counts and spatial coordinates needed for downstream
 sampling, partitioning, and analysis.
 
 Public APIs:
-    - DataBlocksView: high-level view of data blocks for partitioning.
-    - read_catalog: load and adapt canonical blocks into a structured view.
+    - `DataBlocksManifestInputs`: Bundled datablocks manifest inputs.
+    - `NormalizedDataBlocksView`: High-level view of data blocks.
+    - `read_dataset_manifest`: Load and adapt blocks into view.
 '''
 
 # standard imports
 import dataclasses
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -57,8 +59,8 @@ class DataBlocksManifestInputs:
 @dataclasses.dataclass(frozen=True)
 class NormalizedDataBlocksView:
     '''High-level view of data blocks for partitioning.'''
-    valid_blocks: dict[Coord, str]
-    external_test_blocks: list[str] | None
+    valid_blocks: dict[Coord, pathlib.Path]
+    external_test_blocks: list[pathlib.Path] | None
     raw_class_counts: dict[Coord, dict[str, list[int]]] = field(default_factory=dict)
     valid_class_counts: dict[Coord, list[int]] = field(default_factory=dict)
     base_class_counts: dict[Coord, list[int]] = field(default_factory=dict)
@@ -80,12 +82,8 @@ def read_dataset_manifest(
     blocks.
 
     Args:
-        schema:
-            ingested dataset schema instance.
-        catalog:
-            ingested canonical blocks catalog.
-        test_catalog:
-            optional path to external holdout test catalog JSON.
+        inputs:
+            bundled manifest inputs with schema and catalog mappings.
         head_pxs_thres:
             optional mapping of target head to valid pixel threshold.
         focal_head:
@@ -94,7 +92,7 @@ def read_dataset_manifest(
             whether to restrict external test blocks to non-overlapping.
 
     Returns:
-        DataBlocksView:
+        NormalizedDataBlocksView:
             filtered metadata and block mappings for partitioning.
     '''
     # valid blocks filtered by pixel thresholds
@@ -113,12 +111,12 @@ def read_dataset_manifest(
         test_blocks = _filter_blocks(inputs.test_catalog, head_pxs_thres)
         if non_overlapping_test_grid:
             test_blocks = list(
-                v['file_path'] for k, v in test_blocks.items()
+                pathlib.Path(v['file_path']) for k, v in test_blocks.items()
                 if k in base_coords
             )
         else:
             test_blocks = list(
-                v['file_path'] for v in test_blocks.values()
+                pathlib.Path(v['file_path']) for v in test_blocks.values()
             )
     else:
         test_blocks = None
@@ -146,7 +144,9 @@ def read_dataset_manifest(
         }
 
     return NormalizedDataBlocksView(
-        valid_blocks={k: v['file_path'] for k, v in valid_blocks.items()},
+        valid_blocks={
+            k: pathlib.Path(v['file_path']) for k, v in valid_blocks.items()
+        },
         external_test_blocks=test_blocks,
         raw_class_counts=raw_counts,
         valid_class_counts=valid_counts,

@@ -32,7 +32,7 @@ Public APIs:
 
 # standard imports
 import datetime
-import os
+import pathlib
 import uuid
 # local imports
 import landseg._constants as c
@@ -107,8 +107,8 @@ def export_preflight_report(
     root_config: configs.RootConfig,
     target: str,
     *,
-    exp_root: str | None = None,
-) -> tuple[str, str]:
+    exp_root: pathlib.Path | None = None,
+) -> tuple[pathlib.Path, str]:
     '''
     Export pre-flight report to a timestamped JSON artifact.
 
@@ -123,7 +123,7 @@ def export_preflight_report(
             optional experiment root directory override.
 
     Returns:
-        tuple[str, str]:
+        tuple[pathlib.Path, str]:
             persisted report file path and generated timestamped UID.
     '''
     result_list = results if isinstance(results, list) else [results]
@@ -132,11 +132,10 @@ def export_preflight_report(
     uid = f'{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}'
 
     effective_exp_root = exp_root or root_config.execution.exp_root
-    report_dir = os.path.join(effective_exp_root, 'preflight')
-    report_fp = os.path.join(report_dir, f'preflight_report_{uid}.json')
+    report_dir = pathlib.Path(effective_exp_root) / 'preflight'
+    report_fp = report_dir / f'preflight_report_{uid}.json'
 
-    if report_dir:
-        os.makedirs(report_dir, exist_ok=True)
+    report_dir.mkdir(parents=True, exist_ok=True)
 
     all_ready = all(r.is_ready for r in result_list)
 

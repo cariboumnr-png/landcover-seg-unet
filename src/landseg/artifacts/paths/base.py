@@ -25,7 +25,7 @@ Base class for artifact paths dataclasses for each pipeline.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 import typing
 
 
@@ -33,20 +33,24 @@ import typing
 @dataclasses.dataclass
 class PipelineArtifactsPaths:
     '''Paths for pipeline specific artifacts.'''
-    root: str
-    run_folder: str | None = None
+    root: pathlib.Path
+    run_folder: pathlib.Path | None = None
     trace_to_last: bool = False
     _run_id: str = ''
-    _run_folder: str = ''
+    _run_folder: pathlib.Path | None = None
 
     def __post_init__(self):
         '''Compile current run folder.'''
+        self.root = pathlib.Path(self.root)
+        if self.run_folder is not None:
+            self.run_folder = pathlib.Path(self.run_folder)
         if not self._run_id:
             i = 1
+            root_path = self.root
             while True:
                 candidate_id = f'run_{i:04d}'
-                candidate_folder = os.path.join(self.root, candidate_id)
-                if not os.path.exists(candidate_folder):
+                candidate_folder = root_path / candidate_id
+                if not candidate_folder.exists():
                     break
                 i += 1
             if self.trace_to_last and i > 1:
@@ -54,30 +58,37 @@ class PipelineArtifactsPaths:
                 self._run_id = f'run_{i:04d}'
             else:
                 self._run_id = f'run_{i:04d}'
-            self._run_folder = os.path.join(self.root, self._run_id)
+            self._run_folder = root_path / self._run_id
             self.run_folder = self._run_folder
 
     @property
-    def effective_run_folder(self) -> str:
+    def effective_run_folder(self) -> pathlib.Path:
         '''Return either provided or compiled run folder path.'''
-        return self.run_folder if self.run_folder else self._run_folder
+        return (
+            self.run_folder
+            if self.run_folder is not None
+            else (self._run_folder if self._run_folder is not None else self.root)
+        )
 
     @property
     def run_id(self) -> str:
         '''Return run folder name as the canonical run identifier.'''
-        return os.path.basename(self.effective_run_folder)
+        return self.effective_run_folder.name
 
     @property
-    def report(self) -> str:
+    def report(self) -> pathlib.Path:
         '''Return the file path of the pipeline execution report.'''
-        return os.path.join(self.effective_run_folder, 'report.json')
+        return self.effective_run_folder / 'report.json'
 
     @property
-    def config(self) -> str:
+    def config(self) -> pathlib.Path:
         '''Return path to persisted configuration JSON.'''
-        return os.path.join(self.effective_run_folder, 'config.json')
+        return self.effective_run_folder / 'config.json'
 
-    def get_run_folder(self, run_id: int | str | None = None) -> str:
+    def get_run_folder(
+        self,
+        run_id: int | str | pathlib.Path | None = None
+    ) -> pathlib.Path:
         '''
         Return the path to a run folder.
 
@@ -87,6 +98,10 @@ class PipelineArtifactsPaths:
                 name/ID (e.g. "run_0001" or "1"), or directory path. If
                 None, returns the latest existing run folder.
 
+        Returns:
+            pathlib.Path:
+                Resolved path to the target run directory.
+
         Raises:
             FileNotFoundError:
                 If the requested run does not exist or no run folders
@@ -94,16 +109,18 @@ class PipelineArtifactsPaths:
             TypeError:
                 If run_id is of an invalid type.
         '''
+        root_path = self.root
         if run_id is not None:
             if isinstance(run_id, int):
-                folder = os.path.join(self.root, f'run_{run_id:04d}')
-            elif isinstance(run_id, str):
-                if run_id.isdigit():
-                    folder = os.path.join(self.root, f'run_{int(run_id):04d}')
-                elif os.path.isdir(run_id):
-                    folder = run_id
-                elif os.path.isdir(os.path.join(self.root, run_id)):
-                    folder = os.path.join(self.root, run_id)
+                folder = root_path / f'run_{run_id:04d}'
+            elif isinstance(run_id, (str, pathlib.Path)):
+                p = pathlib.Path(run_id)
+                if isinstance(run_id, str) and run_id.isdigit():
+                    folder = root_path / f'run_{int(run_id):04d}'
+                elif p.is_dir():
+                    folder = p
+                elif (root_path / p).is_dir():
+                    folder = root_path / p
                 else:
                     raise FileNotFoundError(
                         f'Run folder does not exist: {run_id}'
@@ -111,21 +128,23 @@ class PipelineArtifactsPaths:
             else:
                 raise TypeError(f'Invalid run_id type: {type(run_id)}')
 
-            if not os.path.isdir(folder):
+            if not folder.is_dir():
                 raise FileNotFoundError(f'Run folder does not exist: {folder}')
             self.run_folder = folder
-            return folder
+            return self.run_folder
+
+        if not root_path.exists():
+            raise FileNotFoundError('No run folders found.')
 
         runs = sorted(
-            d for d in os.listdir(self.root)
-            if d.startswith('run_')
-            and os.path.isdir(os.path.join(self.root, d))
+            d.name for d in root_path.iterdir()
+            if d.name.startswith('run_') and d.is_dir()
         )
 
         if not runs:
             raise FileNotFoundError('No run folders found.')
 
-        self.run_folder = os.path.join(self.root, runs[-1])
+        self.run_folder = root_path / runs[-1]
         return self.run_folder
 
     def init_pipeline_folders(self) -> typing.Self:
@@ -134,5 +153,5 @@ class PipelineArtifactsPaths:
         return self
 
     def _init_pipeline_folders(self) -> None:
-        os.makedirs(self.root, exist_ok=True)
-        os.makedirs(self.effective_run_folder, exist_ok=True)
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.effective_run_folder.mkdir(parents=True, exist_ok=True)

@@ -25,39 +25,34 @@ Path manager for repository knowledge base artifacts.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 
 
 # ----- `KnowledgePaths` definition
 @dataclasses.dataclass
 class KnowledgePaths:
     '''Path manager for repository knowledge base embeddings and profiles.'''
-    root: str = 'knowledge'
+    root: pathlib.Path = pathlib.Path('knowledge')
 
-    def profile_dpath(self, profile: str) -> str:
+    def __post_init__(self):
+        self.root = pathlib.Path(self.root)
+
+    def profile_dpath(self, profile: str) -> pathlib.Path:
         '''Return path to the profile embedding directory.'''
-        return os.path.join(self.root, 'embeddings', profile)
+        return self.root / 'embeddings' / profile
 
-    def similarity_matrix_fpath(self, profile: str) -> str:
+    def similarity_matrix_fpath(self, profile: str) -> pathlib.Path:
         '''Return path to species similarity matrix tensor for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_similarity_matrix.pt'
-        )
+        return self.profile_dpath(profile) / 'species_similarity_matrix.pt'
 
-    def embeddings_fpath(self, profile: str) -> str:
+    def embeddings_fpath(self, profile: str) -> pathlib.Path:
         '''Return path to species embeddings tensor for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_embeddings.pt'
-        )
+        return self.profile_dpath(profile) / 'species_embeddings.pt'
 
-    def metadata_fpath(self, profile: str) -> str:
+    def metadata_fpath(self, profile: str) -> pathlib.Path:
         '''Return path to species metadata JSON for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_metadata.json'
-        )
+        return self.profile_dpath(profile) / 'species_metadata.json'
 
-    def similarity_csv_fpath(self, profile: str) -> str:
+    def similarity_csv_fpath(self, profile: str) -> pathlib.Path:
         '''Return path to species similarity CSV for profile.'''
-        return os.path.join(
-            self.profile_dpath(profile), 'species_similarity_matrix.csv'
-        )
+        return self.profile_dpath(profile) / 'species_similarity_matrix.csv'

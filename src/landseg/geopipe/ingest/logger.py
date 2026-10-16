@@ -33,7 +33,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import datetime
-import os
+import pathlib
 import typing
 import uuid
 # local imports
@@ -132,8 +132,8 @@ class IngestionLogger(utils.Logger):
 
     def update_runs_manifest(
         self,
-        manifest_fpath: str,
-        run_folder: str,
+        manifest_fpath: pathlib.Path,
+        run_folder: pathlib.Path,
     ) -> None:
         '''Record or update current run in the ingestion runs manifest.'''
         if self.summary is None:
@@ -143,17 +143,13 @@ class IngestionLogger(utils.Logger):
             return
         record: contracts.IngestionRunRecord = {
             'run_uid': uid,
-            'run_id': self.summary.get('run_id', ''),
-            'harmonization_run_uid': self.summary.get(
-                'harmonization_run_uid', ''
-            ),
-            'harmonization_run_id': self.summary.get(
-                'harmonization_run_id', ''
-            ),
-            'status': self.summary.get('status', 'FAILED'),
-            'timestamp': self.summary.get('timestamp', ''),
-            'fingerprint': self.summary.get('fingerprint', ''),
-            'run_folder': os.path.abspath(run_folder),
+            'run_id': self.summary['run_id'],
+            'harmonization_run_uid': self.summary['harmonization_run_uid'],
+            'harmonization_run_id': self.summary['harmonization_run_id'],
+            'status': self.summary['status'],
+            'timestamp': self.summary['timestamp'],
+            'fingerprint': self.summary['fingerprint'],
+            'run_folder': str(run_folder.resolve()),
         }
         ctrl = artifacts.Controller[dict](manifest_fpath)
         try:

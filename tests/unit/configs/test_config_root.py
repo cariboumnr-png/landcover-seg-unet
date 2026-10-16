@@ -86,8 +86,8 @@ def test_root_config_validate(tmp_path):
 
     root = root_mod.RootConfig()
     root.data.world_grid.mode = 'ref'
-    root.data.world_grid.params.ref_fpath = str(ref_tif)
-    root.data.world_grid.params.crs_string = 'EPSG:32617'
+    root.data.world_grid.ref_fpath = str(ref_tif)
+    root.data.world_grid.manual_specs.crs_string = 'EPSG:32617'
     root.data.harmonization.dataset_manifest = str(cfg_json)
     root.session.orchestration.single_phase.num_epochs = 10
 

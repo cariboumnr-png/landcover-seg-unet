@@ -31,7 +31,7 @@ Public APIs:
 '''
 
 # standard imports
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
@@ -48,8 +48,8 @@ def prepare_world_grid(
     config: contracts.WorldGridPrepConfig | None = None,
     *,
     load_only: bool = False,
-    override_grid_fpath: str | None = None,
-) -> tuple[bool, str, geo_core.GridLayout]:
+    override_grid_fpath: pathlib.Path | None = None,
+) -> tuple[bool, pathlib.Path, geo_core.GridLayout]:
     '''
     Build or load a persisted world grid artifact.
 
@@ -62,7 +62,7 @@ def prepare_world_grid(
             Optional explicit file path to the grid artifact.
 
     Returns:
-        tuple[bool, str, geo_core.GridLayout]:
+        tuple[bool, pathlib.Path, geo_core.GridLayout]:
             Tuple of (is_loaded, grid file path, GridLayout instance).
     '''
     if override_grid_fpath:
@@ -70,7 +70,8 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        grid_fpath = _get_grid_fpath(config)
+        gid = geo_core.GridLayout.generate_gid(config.tile_size, config.tile_stride)
+        grid_fpath = pathlib.Path(config.output_dpath) / f'{gid}.json'
 
     ctrl = PayloadCtrl(
         grid_fpath,
@@ -91,26 +92,20 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        gird_config = builder.GridConfigs(
-            tile_size=config.params.tile_size,
-            tile_stride=config.params.tile_stride,
-            ref_fpath=config.params.ref_fpath,
-            crs_string=config.params.crs_string,
-            origin=config.params.origin,
-            pixel_size=config.params.pixel_size,
-            extent_in_crs_units=config.params.extent_in_crs_units,
-        ) # simple pass-through
-        _grid = builder.build_grid(config.mode, gird_config)
+        _grid = builder.build_grid(
+            config.tile_size,
+            config.tile_stride,
+            mode=config.mode,
+            ref_fpath=pathlib.Path(config.ref_fpath) if config.ref_fpath else None,
+            manual_specs=builder.GridConfigs(
+                crs_string=config.manual_specs.crs_string,
+                origin=config.manual_specs.origin,
+                pixel_size=config.manual_specs.pixel_size,
+                extent_in_crs_units=config.manual_specs.extent_in_crs_units,
+            )
+        )
         payload = _grid.to_payload()
         ctrl.save(payload)
         is_loaded = False
 
     return is_loaded, grid_fpath, _grid
-
-
-# ----- private helpers
-def _get_grid_fpath(config: contracts.WorldGridPrepConfig) -> str:
-    '''Return canonical file path of a world grid artifact.'''
-    p = config.params
-    gid = geo_core.GridLayout.generate_gid(p.tile_size, p.tile_stride)
-    return os.path.join(config.output_dpath, f'{gid}.json')

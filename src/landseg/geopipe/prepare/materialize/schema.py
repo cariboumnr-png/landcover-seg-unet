@@ -33,6 +33,7 @@ Public APIs:
 
 # standard imports
 import datetime
+import pathlib
 import time
 import typing
 # local imports
@@ -53,15 +54,15 @@ SchemaCtrl = artifacts.Controller[contracts.PreparedSchema]
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
-    def schema(self) -> str: ...
+    def schema(self) -> pathlib.Path: ...
     @property
-    def splits_source_blocks(self) -> str: ...
+    def splits_source_blocks(self) -> pathlib.Path: ...
     @property
-    def splits_prepared_blocks(self) -> str: ...
+    def splits_prepared_blocks(self) -> pathlib.Path: ...
     @property
-    def label_stats(self) -> str: ...
+    def label_stats(self) -> pathlib.Path: ...
     @property
-    def image_stats(self) -> str: ...
+    def image_stats(self) -> pathlib.Path: ...
 
 
 # ----- public functions
@@ -100,10 +101,10 @@ def build_schema(
     if not schema:
         # artifacts file paths
         collected_artifacts = {
-            'block_source': paths.splits_source_blocks,
-            'block_prepared': paths.splits_prepared_blocks,
-            'label_stats': paths.label_stats,
-            'image_stats': paths.image_stats
+            'block_source': str(paths.splits_source_blocks.resolve()),
+            'block_prepared': str(paths.splits_prepared_blocks.resolve()),
+            'label_stats': str(paths.label_stats.resolve()),
+            'image_stats': str(paths.image_stats.resolve()),
         }
 
         # checksum the artifacts
@@ -167,7 +168,7 @@ def build_schema(
     report: contracts.SchemaReport = {
         'status': 'loaded' if loaded else 'created',
         'duration_sec': duration,
-        'schema_filepath': paths.schema,
+        'schema_filepath': str(paths.schema.resolve()),
         'classes_mapped': list(schema['label_stats'].keys()),
     }
     logger.set_schema_report(report)

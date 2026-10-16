@@ -10,12 +10,11 @@ data:
   # Stage 1: World Grid Generation
   # ---------------------------------------------------------------------------
   world_grid:
-    output_dpath: ./experiment/artifacts/world_grids
+    tile_size: [256, 256]
+    tile_stride: [128, 128]
     mode: ref
-    params:
-      ref_fpath: ./experiment/input/reference_raster/sample_extent.tif
-      tile_size: [256, 256]
-      tile_stride: [128, 128]
+    ref_fpath: ./experiment/input/reference_raster/sample_extent.tif
+    output_dpath: ./experiment/artifacts/world_grids
 
   # ---------------------------------------------------------------------------
   # Stage 2: Data Harmonization

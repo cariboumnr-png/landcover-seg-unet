@@ -31,7 +31,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import os
+import pathlib
 # third-party imports
 import numpy
 import rasterio
@@ -41,9 +41,9 @@ import rasterio.vrt
 
 # ----- public functions
 def unify_nodata_mask(
-    input_path: str,
-    output_mask_path: str,
-) -> str:
+    input_path: pathlib.Path,
+    output_mask_path: pathlib.Path,
+) -> pathlib.Path:
     '''
     Create a 1-band boolean valid pixel mask across bands.
 
@@ -56,11 +56,11 @@ def unify_nodata_mask(
             Destination path for the valid-pixel mask raster.
 
     Returns:
-        str:
+        pathlib.Path:
             Absolute path to the created mask raster.
     '''
-    out_dir = os.path.dirname(os.path.abspath(output_mask_path))
-    os.makedirs(out_dir, exist_ok=True)
+    out_path = pathlib.Path(output_mask_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     with rasterio.open(input_path) as src:
         valid_mask = numpy.ones((src.height, src.width), dtype=numpy.uint8)
@@ -81,18 +81,18 @@ def unify_nodata_mask(
             'nodata': 0,
             'compress': 'deflate'
         })
-        if output_mask_path.endswith('.vrt'):
+        if out_path.suffix == '.vrt':
             meta['driver'] = 'GTiff'
-            raw_tif = output_mask_path[:-4] + '_mask.tif'
+            raw_tif = out_path.with_name(f'{out_path.stem}_mask.tif')
             with rasterio.open(raw_tif, 'w', **meta) as dst:
                 dst.write(valid_mask, 1)
 
             with rasterio.open(raw_tif) as mask_src:
                 with rasterio.vrt.WarpedVRT(mask_src) as vrt:
-                    rasterio.shutil.copy(vrt, output_mask_path, driver='VRT')
+                    rasterio.shutil.copy(vrt, out_path, driver='VRT')
         else:
             meta['driver'] = 'GTiff'
-            with rasterio.open(output_mask_path, 'w', **meta) as dst:
+            with rasterio.open(out_path, 'w', **meta) as dst:
                 dst.write(valid_mask, 1)
 
-    return os.path.abspath(output_mask_path)
+    return out_path

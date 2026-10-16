@@ -35,7 +35,7 @@ Public APIs:
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
@@ -57,17 +57,17 @@ class ManifestProvenance:
     '''Lineage and grid identity recorded in catalog and schema.'''
     grid_id: str
     block_identity: str
-    source_image: str
-    source_label: str | None = None
+    source_image: pathlib.Path
+    source_label: pathlib.Path | None = None
     harmonize_run_id: str | None = None
     ingest_run_id: str | None = None
 
 
 # ----- public functions
 def update_manifest(
-    catalog_fpath: str,
-    schema_fpath: str,
-    blocks_dir: str,
+    catalog_fpath: pathlib.Path,
+    schema_fpath: pathlib.Path,
+    blocks_dir: pathlib.Path,
     provenance: ManifestProvenance,
     output: assembler.BlockBuildingOutput,
     *,
@@ -164,11 +164,11 @@ def update_manifest(
 # ----- private helpers
 def _catalog_status(
     data_dict: dict[str, geo_core.DatasetBlockMeta] | None,
-    blocks_dir: str,
+    blocks_dir: pathlib.Path,
     updated_coords: list[tuple[int, int]],
     *,
     policy: artifacts.LifecyclePolicy,
-) -> tuple[geo_core.DatasetCatalog, list[str]]:
+) -> tuple[geo_core.DatasetCatalog, list[pathlib.Path]]:
     '''Assess catalog status and determine required updates.'''
     # instantiate a catalog class from dict
     if data_dict:
@@ -177,7 +177,10 @@ def _catalog_status(
         _catalog = geo_core.DatasetCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
-    current = [f for f in os.listdir(blocks_dir) if f.endswith('npz')]
+    current = [
+        p.name for p in blocks_dir.iterdir()
+        if p.name.endswith('npz')
+    ]
     if not current:
         raise FileNotFoundError('No block files found')
 
@@ -185,7 +188,9 @@ def _catalog_status(
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in updated_coords]
 
     # determine status
-    cataloged = [os.path.basename(c['file_path']) for c in _catalog.values()]
+    cataloged = [
+        pathlib.Path(c['file_path']).name for c in _catalog.values()
+    ]
     catalog_status = {
         (True, False): 2,   # catalog present, no new blocks
         (True, True): 3,    # catalog present, has new blocks
@@ -198,23 +203,23 @@ def _catalog_status(
         # policy: build if missing
         case artifacts.LifecyclePolicy.BUILD_IF_MISSING:
             return _catalog, {
-                1: [f'{blocks_dir}/{f}' for f in current],
+                1: [blocks_dir / f for f in current],
                 2: [],
-                3: [f'{blocks_dir}/{f}' for f in updated],
-                4: [f'{blocks_dir}/{f}' for f in current],
-                5: [f'{blocks_dir}/{f}' for f in current],
+                3: [blocks_dir / f for f in updated],
+                4: [blocks_dir / f for f in current],
+                5: [blocks_dir / f for f in current],
             }[catalog_status]
         # policy: force rebuild all
         case artifacts.LifecyclePolicy.REBUILD:
-            return _catalog, [f'{blocks_dir}/{f}' for f in current]
+            return _catalog, [blocks_dir / f for f in current]
         # unsupported policy
         case _:
             raise NotImplementedError(f'Unsupported policy: {policy}')
 
 
-def _sample(d: str) -> str:
+def _sample(d: pathlib.Path) -> pathlib.Path:
     '''Find a representative sample .npz file in the directory.'''
-    for f in os.listdir(d):
-        if f.endswith('npz'):
-            return f'{d}/{f}'
+    for p in d.iterdir():
+        if p.name.endswith('npz'):
+            return p
     raise ValueError(f'No .npz file found at {d}')

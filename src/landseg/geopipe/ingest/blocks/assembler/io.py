@@ -42,6 +42,7 @@ from __future__ import annotations
 import ast
 import dataclasses
 import json
+import pathlib
 import typing
 import zipfile
 import zlib
@@ -58,11 +59,11 @@ import landseg.geopipe.utils as geo_utils
 @dataclasses.dataclass(frozen=True)
 class RasterReadInput:
     '''Specifications of parameters needed to read raster windows.'''
-    image_fpath: str
+    image_fpath: pathlib.Path
     image_window: geo_core.RasterWindow
     image_band_map: dict[str, int]
     image_dem_pad_px: int
-    label_fpath: str | None
+    label_fpath: pathlib.Path | None
     label_window: geo_core.RasterWindow | None
     label_specs: dict[str, geo_core.CategoricalSpec] | None
 
@@ -78,7 +79,7 @@ class RasterReadOutput:
 
 
 # ----- public functions
-def read_band_map(fpath: str) -> dict[str, int]:
+def read_band_map(fpath: pathlib.Path) -> dict[str, int]:
     '''
     Return lower-case band-description to zero-based index mapping.
 
@@ -116,7 +117,7 @@ def read_band_map(fpath: str) -> dict[str, int]:
 
 
 def read_label_specs(
-    fpath: str | None,
+    fpath: pathlib.Path | None,
 ) -> dict[str, geo_core.CategoricalSpec]:
     '''
     Return per-band label specifications embedded in a raster.
@@ -166,7 +167,7 @@ def read_label_specs(
         raise ValueError(f'Unable to read label specs from {fpath}') from e
 
 
-def read_schemes(fpath: str | None) -> dict[str, typing.Any]:
+def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
     '''
     Return schemes dictionary embedded in a raster.
 
@@ -213,7 +214,7 @@ def read_schemes(fpath: str | None) -> dict[str, typing.Any]:
 
 def check_npz_integrity(
     coord: tuple[int, int],
-    fpath: str,
+    fpath: pathlib.Path,
 ) -> dict[tuple[int, int], bool]:
     '''
     Verify whether a .npz block file can be successfully loaded.

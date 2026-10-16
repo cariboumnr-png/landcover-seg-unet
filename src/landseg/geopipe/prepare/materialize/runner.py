@@ -34,6 +34,7 @@ Public APIs:
 '''
 
 # standard imports
+import pathlib
 import time
 import typing
 # local imports
@@ -55,21 +56,21 @@ ImageStatsCtrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
-    def splits_source_blocks(self) -> str: ...
+    def splits_source_blocks(self) -> pathlib.Path: ...
     @property
-    def image_stats(self) -> str: ...
+    def image_stats(self) -> pathlib.Path: ...
     @property
-    def label_stats(self) -> str: ...
+    def label_stats(self) -> pathlib.Path: ...
     @property
-    def splits_prepared_blocks(self) -> str: ...
+    def splits_prepared_blocks(self) -> pathlib.Path: ...
     @property
-    def train_blocks(self) -> str: ...
+    def train_blocks(self) -> pathlib.Path: ...
     @property
-    def val_blocks(self) -> str: ...
+    def val_blocks(self) -> pathlib.Path: ...
     @property
-    def test_blocks(self) -> str: ...
+    def test_blocks(self) -> pathlib.Path: ...
     @property
-    def schema(self) -> str: ...
+    def schema(self) -> pathlib.Path: ...
 
 
 # ----- public functions
@@ -104,9 +105,9 @@ def run_materialize_blocks(
     src = ctrl.fetch()
 
     # get source by split
-    train = set(src['train'].values())
-    val = set(src['val'].values())
-    test = set(src['test'].values())
+    train = set(pathlib.Path(p) for p in src['train'].values())
+    val = set(pathlib.Path(p) for p in src['val'].values())
+    test = set(pathlib.Path(p) for p in src['test'].values())
 
     # label stats on training blocks - parse from context
     ctrl = LabelStatsCtrl(paths.label_stats, policy)
@@ -123,7 +124,7 @@ def run_materialize_blocks(
         logger.info('[CHECKPOINT] Loaded image stats from training split')
     else:
         agg_stats = stats.aggregate_image_stats(
-            set(src['train'].values()),
+            train,
             list(context.features.indices)
         )
         ctrl.persist(agg_stats)
@@ -164,20 +165,20 @@ def run_materialize_blocks(
         'duration_sec': duration,
         'unwanted_blocks_removed': purged_total,
         'rebuild': False,
-        'stats_filepath': paths.image_stats,
+        'stats_filepath': str(paths.image_stats.resolve()),
     }
     logger.set_normalization_report(report)
 
 
 # ----- private helpers
 def _materialize(
-    splits: tuple[set[str], set[str], set[str]],
+    splits: tuple[set[pathlib.Path], set[pathlib.Path], set[pathlib.Path]],
     aggregated_stats: dict[str, contracts.ImageBandStats],
     context: dataset.DatasetView,
     paths: _PipelinePaths,
     *,
     logger: prepare.PreparationLogger,
-) -> tuple[dict[str, dict[str, str]], int]:
+) -> tuple[contracts.BlocksPartition, int]:
     '''Materialize and normalize train, validation, and test splits.'''
     train_split, val_split, test_split = splits
 
@@ -210,7 +211,7 @@ def _materialize(
         purged_total += purged
         logger.debug(f'{purged} stale testing block files removed')
 
-    prepared = {
+    prepared: contracts.BlocksPartition = {
         'train': train_norm,
         'val': val_norm,
         'test': test_norm

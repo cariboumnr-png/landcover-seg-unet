@@ -63,11 +63,8 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         output_dpath: str | None = None,
     ) -> typing.Self:
         '''Set target world grid tile dimensions.'''
-        self._cfg.data.world_grid.params.tile_size = (tile_size, tile_size)
-        self._cfg.data.world_grid.params.tile_stride = (
-            tile_stride,
-            tile_stride,
-        )
+        self._cfg.data.world_grid.tile_size = (tile_size, tile_size)
+        self._cfg.data.world_grid.tile_stride = (tile_stride, tile_stride)
         if output_dpath:
             self._cfg.data.world_grid.output_dpath = output_dpath
         return self

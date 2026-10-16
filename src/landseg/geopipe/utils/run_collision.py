@@ -35,7 +35,7 @@ Public APIs:
 from __future__ import annotations
 import hashlib
 import json
-import os
+import pathlib
 import typing
 # local imports
 import landseg.artifacts.controller as controller
@@ -61,13 +61,13 @@ def compute_fingerprint(payload: typing.Any) -> str:
         str:
             Hexadecimal SHA-256 digest string.
     '''
-    canonical_repr = json.dumps(payload, sort_keys=True)
+    canonical_repr = json.dumps(payload, sort_keys=True, default=str)
     return hashlib.sha256(canonical_repr.encode('utf-8')).hexdigest()
 
 
 def find_run_collision(
     fingerprint: str,
-    manifest_fpath: str,
+    manifest_fpath: pathlib.Path,
     *,
     success_status: str = 'SUCCESS',
 ) -> str | None:
@@ -89,10 +89,11 @@ def find_run_collision(
         str | None:
             Colliding run identifier if found, otherwise None.
     '''
-    if not os.path.exists(manifest_fpath):
+    fpath = pathlib.Path(manifest_fpath)
+    if not fpath.exists():
         return None
 
-    manifest = ManifestCtrl(manifest_fpath).fetch() or {}
+    manifest = ManifestCtrl(fpath).fetch() or {}
 
     for run_uid, record in manifest.items():
         if (

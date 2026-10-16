@@ -31,7 +31,7 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
+import pathlib
 import typing
 # third-party imports
 import rasterio
@@ -39,7 +39,7 @@ import rasterio
 
 # ----- public functions
 def add_band_description_to_vrt(
-    vrt_fpath: str,
+    vrt_fpath: pathlib.Path,
     band_mapping: dict[int, str],
 ) -> None:
     '''
@@ -62,7 +62,7 @@ def add_band_description_to_vrt(
 
 
 def add_tag_to_vrt(
-    vrt_fpath: str,
+    vrt_fpath: pathlib.Path,
     **kwargs: typing.Any,
 ) -> None:
     '''

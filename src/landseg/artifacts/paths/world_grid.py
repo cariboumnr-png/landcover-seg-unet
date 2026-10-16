@@ -27,6 +27,7 @@ Canonical filesystem paths for world grid artifacts.
 
 # standard imports
 import dataclasses
+import pathlib
 # local imports
 import landseg.artifacts.paths.base as base
 
@@ -37,5 +38,5 @@ class WorldGridPaths(base.PipelineArtifactsPaths):
     '''Paths for world grid artifacts.'''
 
     @property
-    def effective_run_folder(self) -> str:
-        return self.root  # overwrites the default 'run_XXXX' naming convention
+    def effective_run_folder(self) -> pathlib.Path:
+        return self.root

@@ -28,7 +28,7 @@ Canonical filesystem paths for data ingestion artifacts.
 
 # standard imports
 import dataclasses
-import os
+import pathlib
 # local imports
 import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
@@ -40,31 +40,31 @@ class IngestionPaths(base.PipelineArtifactsPaths):
     '''Paths for ingested datasets and knowledge artifacts.'''
 
     @property
-    def runs_manifest(self) -> str:
-        return os.path.join(self.root, 'ingestion_runs.json')
+    def runs_manifest(self) -> pathlib.Path:
+        return self.root / 'ingestion_runs.json'
 
     @property
-    def data_blocks(self):
-        return _DataBlocks(os.path.join(self.root, 'data_blocks'))
+    def data_blocks(self) -> '_DataBlocks':
+        return _DataBlocks(self.root / 'data_blocks')
 
     @property
-    def domains(self):
-        return _DomainMaps(os.path.join(self.root, 'domain_knowledge'))
+    def domains(self) -> '_DomainMaps':
+        return _DomainMaps(self.root / 'domain_knowledge')
 
     @property
-    def windows(self):
-        return os.path.join(self.root, 'block_windows.json')
+    def windows(self) -> pathlib.Path:
+        return self.root / 'block_windows.json'
 
     @property
-    def collisions(self) -> str:
-        return os.path.join(self.effective_run_folder, 'collisions.json')
+    def collisions(self) -> pathlib.Path:
+        return self.effective_run_folder / 'collisions.json'
 
     def _init_pipeline_folders(self):
         super()._init_pipeline_folders()
-        os.makedirs(self.data_blocks.root, exist_ok=True)
-        os.makedirs(self.data_blocks.blocks, exist_ok=True)
-        os.makedirs(self.domains.root, exist_ok=True)
-        if not os.path.exists(self.runs_manifest):
+        self.data_blocks.root.mkdir(parents=True, exist_ok=True)
+        self.data_blocks.blocks.mkdir(parents=True, exist_ok=True)
+        self.domains.root.mkdir(parents=True, exist_ok=True)
+        if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})
 
 
@@ -72,30 +72,36 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 @dataclasses.dataclass
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''
-    root: str
+    root: pathlib.Path
 
-    def domain_map_fpath(self, domain_name: str) -> str:
-        no_ext, _ = os.path.splitext(domain_name)
-        return os.path.join(self.root, f'{no_ext}.json')
+    def __post_init__(self):
+        self.root = pathlib.Path(self.root)
 
-    def mapped_tiles_fpath(self, domain_name: str, gid: str) -> str:
-        no_ext, _ = os.path.splitext(domain_name)
-        return os.path.join(self.root, f'{no_ext}_tiles_{gid}.npz')
+    def domain_map_fpath(self, domain_name: str) -> pathlib.Path:
+        stem = pathlib.Path(domain_name).stem
+        return self.root / f'{stem}.json'
+
+    def mapped_tiles_fpath(self, domain_name: str, gid: str) -> pathlib.Path:
+        stem = pathlib.Path(domain_name).stem
+        return self.root / f'{stem}_tiles_{gid}.npz'
 
 
 @dataclasses.dataclass
 class _DataBlocks:
     '''Container for canonical dataset data blocks.'''
-    root: str
+    root: pathlib.Path
+
+    def __post_init__(self):
+        self.root = pathlib.Path(self.root)
 
     @property
-    def blocks(self) -> str:
-        return os.path.join(self.root, 'blocks')
+    def blocks(self) -> pathlib.Path:
+        return self.root / 'blocks'
 
     @property
-    def catalog(self) -> str:
-        return os.path.join(self.root, 'catalog.json')
+    def catalog(self) -> pathlib.Path:
+        return self.root / 'catalog.json'
 
     @property
-    def schema(self) -> str:
-        return os.path.join(self.root, 'schema.json')
+    def schema(self) -> pathlib.Path:
+        return self.root / 'schema.json'

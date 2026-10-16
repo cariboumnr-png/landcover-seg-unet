@@ -36,7 +36,7 @@ def test_get_available_profiles_finds_registered_profiles():
     When: `get_available_profiles` is called.
     Then: Return list containing registered profiles.
     '''
-    profiles = taxonomy.get_available_profiles('knowledge')
+    profiles = taxonomy.get_profiles('knowledge')
     assert 'ontario_tree_species_grouped_profiles' in profiles
     assert 'ontario_tree_species_profiles' in profiles
 
@@ -48,7 +48,7 @@ def test_get_available_profiles_nonexistent_dir(tmp_path):
     Then: Return an empty list without raising.
     '''
     empty_root = str(tmp_path / 'nonexistent')
-    profiles = taxonomy.get_available_profiles(empty_root)
+    profiles = taxonomy.get_profiles(empty_root)
     assert profiles == []
 
 

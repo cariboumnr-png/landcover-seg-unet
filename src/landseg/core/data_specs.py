@@ -42,6 +42,7 @@ components.
 # standard imports
 from __future__ import annotations
 import dataclasses
+import pathlib
 import typing
 # third-party imports
 import torch
@@ -212,9 +213,9 @@ class Heads:
 @dataclasses.dataclass
 class Splits:
     '''Train/val/test block file mappings.'''
-    train: dict[str, str]
-    val: dict[str, str]
-    test: dict[str, str]
+    train: dict[str, pathlib.Path]
+    val: dict[str, pathlib.Path]
+    test: dict[str, pathlib.Path]
 
     def __str__(self) -> str:
         return '\n'.join([

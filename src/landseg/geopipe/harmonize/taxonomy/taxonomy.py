@@ -33,7 +33,7 @@ Public APIs:
 
 # standard imports
 import json
-import os
+import pathlib
 # local imports
 import landseg._constants as c
 import landseg.geopipe.core as geo_core
@@ -41,9 +41,7 @@ import landseg.knowledge as knowledge
 
 
 # ----- public functions
-def get_available_profiles(
-    knowledge_root: str = 'knowledge',
-) -> list[str]:
+def get_profiles(knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT) -> list[str]:
     '''
     Return list of registered taxonomy profile names in knowledge base.
 
@@ -55,16 +53,15 @@ def get_available_profiles(
         list[str]:
             List of profile directory names containing species metadata.
     '''
-    emb_dir = os.path.join(knowledge_root, 'embeddings')
-    if not os.path.isdir(emb_dir):
+    emb_dir = knowledge_root / 'embeddings'
+    if not emb_dir.is_dir():
         return []
     profiles: list[str] = []
-    for item in os.listdir(emb_dir):
-        sub = os.path.join(emb_dir, item)
-        if os.path.isdir(sub):
-            meta_path = os.path.join(sub, 'species_metadata.json')
-            if os.path.isfile(meta_path):
-                profiles.append(item)
+    for sub in emb_dir.iterdir():
+        if sub.is_dir():
+            meta_path = sub / 'species_metadata.json'
+            if meta_path.is_file():
+                profiles.append(sub.name)
     return sorted(profiles)
 
 
@@ -72,7 +69,7 @@ def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
     num_cls: int,
-    knowledge_root: str = str(c.KNOWLEDGE_ROOT),
+    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
@@ -126,22 +123,22 @@ def validate_specs(
 # ----- private helpers
 def _resolve_taxonomy_metadata(
     profile: str,
-    root: str = str(c.KNOWLEDGE_ROOT),
+    root: pathlib.Path = c.KNOWLEDGE_ROOT,
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
-        os.path.join(root, 'embeddings', profile, 'species_metadata.json'),
-        os.path.join(profile, 'species_metadata.json'),
-        profile,
+        root / 'embeddings' / profile / 'species_metadata.json',
+        pathlib.Path(profile) / 'species_metadata.json',
+        pathlib.Path(profile),
     ]
-    meta_path: str | None = None
+    meta_path: pathlib.Path | None = None
     for p in candidate_paths:
-        if os.path.isfile(p):
-            meta_path = os.path.abspath(p)
+        if p.is_file():
+            meta_path = p.resolve()
             break
 
     if meta_path is None:
-        available = get_available_profiles(root)
+        available = get_profiles(root)
         avail_str = (
             ', '.join(f"'{a}'" for a in available) if available else 'none'
         )

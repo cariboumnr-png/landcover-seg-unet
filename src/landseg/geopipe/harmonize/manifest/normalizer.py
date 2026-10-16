@@ -223,6 +223,7 @@ class ManifestEntryNormalizer:
 
 
 # ----- private helpers
+# TODO maybe we should centrally manage these *require functions along others
 def _require_dict(d: typing.Any) -> dict:
     '''Validate that the input is a non-empty dictionary.'''
     if not isinstance(d, dict):
@@ -241,11 +242,10 @@ def _require_string(s: typing.Any) -> str:
     return typing.cast(str, s)
 
 
-def _require_path(p: typing.Any) -> str:
+def _require_path(p: typing.Any) -> pathlib.Path:
     '''Validate and convert input to a valid path string.'''
     try:
-        pp = pathlib.Path(p)
-        return str(pp)
+        return pathlib.Path(p)
     except (TypeError, ValueError) as e:
         raise ValueError('Input is not a valid path') from e
 

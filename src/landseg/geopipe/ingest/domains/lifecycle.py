@@ -32,10 +32,9 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import copy
 import dataclasses
-import os
+import pathlib
 import time
 # local imports
 import landseg.artifacts as artifacts
@@ -57,17 +56,16 @@ MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 @dataclasses.dataclass(frozen=True)
 class DomainBuildingConfig:
     '''Container for domain mapping configurations.'''
-    input_fpath: str
-    domain_fpath: str
-    tiles_fpath: str
+    input_fpath: pathlib.Path
+    domain_fpath: pathlib.Path
+    tiles_fpath: pathlib.Path
     valid_threshold: float
     target_variance: float
 
     @property
     def name(self) -> str:
         '''Return layer name derived from input raster filename.'''
-        base, _ = os.path.splitext(os.path.basename(self.input_fpath))
-        return base
+        return self.input_fpath.stem
 
 
 # ----- public functions
@@ -132,9 +130,9 @@ def prepare_domain_maps(
         report: contracts.DomainMapReport = {
             'name': name,
             'status': 'loaded' if loaded else 'created',
-            'input_filepath': config.input_fpath,
-            'domain_filepath': config.domain_fpath,
-            'tiles_filepath': config.tiles_fpath,
+            'input_filepath': str(config.input_fpath.resolve()),
+            'domain_filepath': str(config.domain_fpath.resolve()),
+            'tiles_filepath': str(config.tiles_fpath.resolve()),
             'duration_sec': duration,
             'stats': {
                 'max_index': int(meta['max_index']),

@@ -32,7 +32,7 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import ast
-import os
+import pathlib
 import typing
 import xml.etree.ElementTree
 # third-party imports
@@ -42,17 +42,17 @@ import rasterio.crs
 
 # ----- public functions
 def stack_rasters(
-    features_fpaths: list[str],
-    labels_fpaths: list[str],
-    output_dir: str,
-) -> typing.Generator[str, None, dict[str, str]]:
+    features_fpaths: list[pathlib.Path],
+    labels_fpaths: list[pathlib.Path],
+    output_dir: pathlib.Path,
+) -> typing.Generator[str, None, dict[str, pathlib.Path]]:
     '''
     Stack feature and label rasters into composite VRT files.
 
     Args:
-        features_fapths:
+        features_fpaths:
             List of file paths for feature rasters.
-        labels_fapths:
+        labels_fpaths:
             List of file paths for label rasters.
         output_dir:
             Directory path where stacked VRT files will be saved.
@@ -62,14 +62,14 @@ def stack_rasters(
             Status messages during stacking process.
 
     Returns:
-        dict[str, str]:
+        dict[str, pathlib.Path]:
             Mapping of raster role ('features', 'labels') to stacked
             VRT file path.
     '''
-    def _out_path(tag: str) -> str:
-        return os.path.join(output_dir, f'harmonized_{tag}_STACKED.vrt')
+    def _out_path(tag: str) -> pathlib.Path:
+        return output_dir / f'harmonized_{tag}_STACKED.vrt'
 
-    stacked: dict[str, str] = {}
+    stacked: dict[str, pathlib.Path] = {}
     yield 'Stacking rasters if applicable'
 
     # features
@@ -101,25 +101,28 @@ def stack_rasters(
 
 # ----- private helpers
 def _composite_vrt(
-    source_paths: list[str],
-    output_path: str,
+    source_paths: list[pathlib.Path],
+    output_path: pathlib.Path,
     raster_type: typing.Literal['feature', 'label']
-) -> str:
+) -> pathlib.Path:
     '''Stack multiple rasters into one composite VRT.'''
     if not source_paths:
         raise ValueError('source_paths list cannot be empty.')
 
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    out_p = output_path.resolve()
+    out_p.parent.mkdir(parents=True, exist_ok=True)
 
-    source_paths = [os.path.abspath(p) for p in source_paths]
-    _build_stacked_vrt_xml(source_paths, output_path, raster_type)
+    resolved_sources = [
+        str(p.resolve()) for p in source_paths
+    ]
+    _build_stacked_vrt_xml(resolved_sources, output_path, raster_type)
 
-    return os.path.abspath(output_path)
+    return out_p
 
 
 def _build_stacked_vrt_xml(
     source_paths: list[str],
-    output_path: str,
+    output_path: pathlib.Path,
     raster_type: typing.Literal['feature', 'label']
 ) -> None:
     '''Build a VRT by stacking bands from multiple source rasters.'''

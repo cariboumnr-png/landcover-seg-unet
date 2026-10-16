@@ -34,6 +34,7 @@ Public APIs:
 # standard imports
 import copy
 import dataclasses
+import pathlib
 # third-party imports
 import rasterio
 # local imports
@@ -55,8 +56,8 @@ class MappedRasterWindows:
 # ----- public functions
 def map_rasters(
     world_grid: geo_core.GridLayout,
-    image_fpath: str,
-    label_fpath: str | None,
+    image_fpath: pathlib.Path,
+    label_fpath: pathlib.Path | None,
 ) -> MappedRasterWindows:
     '''
     Map input rasters to the world grid and build read windows.

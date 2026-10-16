@@ -35,6 +35,7 @@ Public APIs:
 
 # standard imports
 import datetime
+import pathlib
 # local imports
 import landseg._constants as c
 import landseg.geopipe.core as geo_core
@@ -43,10 +44,10 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 
 # ----- public functions
 def build_schema(
-    sample_block_fpath: str,
+    sample_block_fpath: pathlib.Path,
     *,
     original: geo_core.DatasetSchema | None,
-    sources: tuple[str, str | None],
+    sources: tuple[pathlib.Path, pathlib.Path | None],
     mapped_grid_id: str,
     block_identity: str = '',
     label_color_map: dict[str, list[int]] | None
@@ -103,10 +104,13 @@ def build_schema(
             grids.append(mapped_grid_id)
         if block_identity and not original['dataset'].get('block_identity'):
             original['dataset']['block_identity'] = block_identity
-        if not source_image in images:
-            images.append(source_image)
-        if source_label and not source_label in labels:
-            labels.append(source_label)
+        img_str = str(source_image.resolve())
+        if img_str not in images:
+            images.append(img_str)
+        if source_label:
+            lbl_str = str(source_label.resolve())
+            if lbl_str not in labels:
+                labels.append(lbl_str)
         original['dataset'].setdefault('image_schemes', {})
         original['dataset']['image_schemes'].update(image_schemes)
         original['dataset'].setdefault('label_schemes', {})
@@ -128,8 +132,10 @@ def build_schema(
             'mapped_grids': [mapped_grid_id],
             'block_identity': block_identity,
             'data_source': {
-                'image_paths': [source_image],
-                'label_paths': [source_label] if source_label else [],
+                'image_paths': [str(source_image.resolve())],
+                'label_paths': (
+                    [str(source_label.resolve())] if source_label else []
+                ),
             },
             'image_schemes': image_schemes,
             'label_schemes': label_schemes,

@@ -24,7 +24,6 @@ Hydra configs resolver
 '''
 
 # standard imports
-import os
 import pathlib
 import typing
 # third-party imports
@@ -119,7 +118,7 @@ def resolve_configs(
     # add dev settings (optional and untracked)
     dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)
     if dev:
-        if os.path.exists(dev):
+        if pathlib.Path(dev).exists():
             dev_cfg = omegaconf.OmegaConf.load(dev)
             assert isinstance(dev_cfg, omegaconf.DictConfig)
             config_list.append(dev_cfg)

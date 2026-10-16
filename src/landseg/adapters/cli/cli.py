@@ -26,7 +26,7 @@ CLI entry.
 '''
 
 # standard imports
-import os
+import pathlib
 import sys
 import tempfile
 import typing
@@ -46,7 +46,8 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
     # cli logger
     # use platform-agnostic temp directory
     # /tmp is databricks compute node friendly
-    logger = utils.Logger('cli', os.path.join(tempfile.gettempdir(), 'cli.log'))
+    log_fp = pathlib.Path(tempfile.gettempdir()) / 'cli.log'
+    logger = utils.Logger('cli', log_fp)
 
     # run specified mode with exceptions handling
     try:
