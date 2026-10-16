@@ -48,10 +48,9 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
     grid_cfg.output_dpath = str(tmp_path / 'world_grids')
-    grid_cfg.params.ref_fpath = dummy_data_paths.extent
-    grid_cfg.params.crs_string = 'EPSG:3161'
-    grid_cfg.params.tile_size = (256, 256)
-    grid_cfg.params.tile_stride = (128, 128)
+    grid_cfg.ref_fpath = dummy_data_paths.extent
+    grid_cfg.tile_size = (256, 256)
+    grid_cfg.tile_stride = (128, 128)
 
     cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
     cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')

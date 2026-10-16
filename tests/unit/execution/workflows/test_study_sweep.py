@@ -28,6 +28,7 @@ Unit tests for study sweep pipeline (study_sweep.py).
 
 # standard imports
 import dataclasses
+import pathlib
 import typing
 # third-party imports
 import omegaconf
@@ -85,5 +86,5 @@ def test_runner_builder(tmp_path):
 
     step_results, wrapper = sweep_pipeline._build_runner(config)
 
-    assert isinstance(step_results, str)
+    assert isinstance(step_results, pathlib.Path)
     assert callable(wrapper)

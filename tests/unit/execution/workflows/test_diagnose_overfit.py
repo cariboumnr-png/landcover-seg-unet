@@ -47,15 +47,15 @@ def test_prepare_dataspecs(tmp_path, dataspecs):
     Then: Return a valid DataSpecs instance with correct shape and meta.
     '''
     block_fpath = dataspecs.splits.train['train_block']
-    dd = str(tmp_path / 'results' / 'overfit_test')
-    os.makedirs(dd, exist_ok=True)
-    shutil.copy(block_fpath, os.path.join(dd, 'test_block.npz'))
+    dd = tmp_path / 'results' / 'overfit_test'
+    dd.mkdir(parents=True, exist_ok=True)
+    shutil.copy(block_fpath, dd / 'test_block.npz')
 
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
     cfg = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(schema))
 
-    logger = session.SessionLogger('test_overfit', log_file=f'{dd}/test.json')
+    logger = session.SessionLogger('test_overfit', log_file=dd / 'test.json')
     specs = overfit_pipeline._prepare_dataspecs(dd, cfg, logger)
 
     assert isinstance(specs, core.DataSpecs)

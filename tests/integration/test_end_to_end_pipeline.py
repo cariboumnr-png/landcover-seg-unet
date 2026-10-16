@@ -48,10 +48,9 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
     grid_cfg.output_dpath = str(tmp_path / 'world_grids')
-    grid_cfg.params.ref_fpath = dummy_data_paths.extent
-    grid_cfg.params.crs_string = 'EPSG:3161'
-    grid_cfg.params.tile_size = (256, 256)
-    grid_cfg.params.tile_stride = (128, 128)
+    grid_cfg.ref_fpath = dummy_data_paths.extent
+    grid_cfg.tile_size = (256, 256)
+    grid_cfg.tile_stride = (128, 128)
 
     # 2. Harmonization configuration
     harm_cfg = cfg_schema.data.harmonization
@@ -67,8 +66,8 @@ def test_end_to_end_data_pipeline_lifecycle(tmp_path, dummy_data_paths):
     prep_cfg = cfg_schema.data.preparation
     prep_cfg.output_dpath = str(tmp_path / 'prepared_data')
     prep_cfg.rebuild = True
-    prep_cfg.catalog.valid_pxs = {'image': 0.05}
-    prep_cfg.catalog.focal_target = None
+    prep_cfg.datasetview.valid_pxs = {'image': 0.05}
+    prep_cfg.datasetview.focal_target = None
     prep_cfg.partition.val_ratio = 0.2
     prep_cfg.partition.test_ratio = 0.1
     prep_cfg.partition.buffer_step = 1

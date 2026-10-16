@@ -144,7 +144,7 @@ def test_evaluate_validate_missing_checkpoint(tmp_path):
     '''
     Given: Evaluation configuration with non-existent checkpoint path.
     When: Calling `config.session.evaluation.validate()` on RootConfig.
-    Then: Raise a FileNotFoundError.
+    Then: Raise a ConfigValidationError.
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = str(tmp_path)
@@ -155,7 +155,7 @@ def test_evaluate_validate_missing_checkpoint(tmp_path):
         configs.RootConfig,
         omegaconf.OmegaConf.to_object(schema)
     )
-    with pytest.raises(FileNotFoundError, match='Checkpoint not found'):
+    with pytest.raises(configs.schema.base.ConfigValidationError):
         config.session.evaluation.validate()
 
 
