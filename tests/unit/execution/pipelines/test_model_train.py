@@ -46,7 +46,7 @@ def test_train_validate_missing_preparation_report(tmp_path):
     Then: Raise a RuntimeError indicating missing preparation report.
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    schema.execution.exp_root = str(tmp_path / 'exp')
+    schema.execution.exp_root = tmp_path / 'exp'
     schema.data.preparation.output_dpath = str(tmp_path / 'prep')
 
     config = typing.cast(
@@ -67,12 +67,12 @@ def test_train_validate_failed_preparation_report(tmp_path):
     When: Calling `validate` on `ModelTraining`.
     Then: Raise a RuntimeError indicating failed preparation status.
     '''
-    prep_root = str(tmp_path / 'prep')
+    prep_root = tmp_path / 'prep'
     prep_paths = artifacts.PreparationPaths(root=prep_root)
     artifacts.Controller[dict](prep_paths.report).persist({'status': 'FAILED'})
 
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    schema.execution.exp_root = str(tmp_path / 'exp')
+    schema.execution.exp_root = tmp_path / 'exp'
     schema.data.preparation.output_dpath = prep_root
 
     config = typing.cast(

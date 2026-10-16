@@ -43,12 +43,11 @@ def mock_domain_config_factory():
         ids_embd_dims: int = 8,
         vec_proj_dims: int = 8,
         vec_proj_config: conditioners_schema.ProjectionConfig | None = None,
-        conditioner_config: (
-            conditioners_schema.ConditionerAdapter | None
-        ) = None,
+        conditioner_config: conditioners_schema.ConditionerAdapter | None = None
     ) -> conditioners_schema.DomainTargetConfig:
-        if name == 'film' or (
-            conditioner_config and 'hidden_dim' in conditioner_config
+        if (
+            name == 'film' or
+            (conditioner_config and 'hidden_dim' in conditioner_config)
         ):
             return conditioners_schema.FiLM(
                 name=name,
@@ -56,13 +55,8 @@ def mock_domain_config_factory():
                 use_vec=use_vec,
                 ids_embd_dims=ids_embd_dims if use_ids else 0,
                 vec_proj_dims=vec_proj_dims if use_vec else 0,
-                vec_proj_config=(
-                    vec_proj_config or {'use_mlp': False}
-                ),
-                conditioner_config=(
-                    conditioner_config
-                    or {'gamma_activation': None, 'beta_activation': None}
-                ),
+                vec_proj_config=vec_proj_config or {'use_mlp': False},
+                conditioner_config=conditioner_config or {'hidden_dim': 128},
             )
         return conditioners_schema.Concat(
             name=name,

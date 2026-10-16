@@ -195,4 +195,4 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-harmonize"'
     ):
-        pipeline._validate()
+        pipeline._validate() # pylint: disable=protected-access

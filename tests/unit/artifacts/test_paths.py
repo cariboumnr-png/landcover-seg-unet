@@ -28,7 +28,6 @@ Unit tests for `landseg.artifacts.paths`.
 import pathlib
 # local imports
 import landseg.artifacts.paths as paths_mod
-import landseg.artifacts.paths.data_ingestion as f_mod
 import landseg.configs as configs_mod
 
 
@@ -54,11 +53,11 @@ def test_artifact_paths_custom_overrides():
     Then: Prioritize custom sub-root paths over central exp_root defaults.
     '''
     art = paths_mod.ArtifactPaths(
-        root='/tmp/exp',
-        harmonization_root='/custom/harmonized',
-        ingestion_root='/custom/ingested',
-        preparation_root='/custom/prepared',
-        session_root='/custom/session'
+        root=pathlib.Path('/tmp/exp'),
+        harmonization_root=pathlib.Path('/custom/harmonized'),
+        ingestion_root=pathlib.Path('/custom/ingested'),
+        preparation_root=pathlib.Path('/custom/prepared'),
+        session_root=pathlib.Path('/custom/session'),
     )
     assert art.data_harmonization.root == pathlib.Path('/custom/harmonized')
     assert art.data_ingestion.root == pathlib.Path('/custom/ingested')
@@ -277,7 +276,7 @@ def test_knowledge_paths_defaults_and_fpaths():
     )
 
     # custom knowledge root
-    kp_custom = paths_mod.KnowledgePaths(root='/opt/knowledge')
+    kp_custom = paths_mod.KnowledgePaths(root=pathlib.Path('/opt/knowledge'))
     assert kp_custom.similarity_matrix_fpath('tree_prof') == (
         pathlib.Path('/opt/knowledge')
         / 'embeddings'
@@ -292,6 +291,6 @@ def test_artifact_paths_knowledge_integration():
     When: Accessing `.knowledge` property.
     Then: Return configured `KnowledgePaths` instance.
     '''
-    art = paths_mod.ArtifactPaths(knowledge_root='/data/knowledge')
+    art = paths_mod.ArtifactPaths(knowledge_root=pathlib.Path('/data/knowledge'))
     assert isinstance(art.knowledge, paths_mod.KnowledgePaths)
     assert art.knowledge.root == pathlib.Path('/data/knowledge')

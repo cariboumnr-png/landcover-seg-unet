@@ -23,7 +23,6 @@
 
 # standard imports
 import json
-import os
 import typing
 # third-party imports
 import omegaconf
@@ -56,22 +55,16 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     pipelines.WorldGridGeneration(config).run()
 
     # verify canonical world grid artifact was generated
-    grid_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'grid_row_256_128_col_256_128.json'
-    )
-    assert os.path.exists(grid_fpath)
+    grid_fpath = tmp_path / 'world_grids' /'grid_row_256_128_col_256_128.json'
+    assert grid_fpath.exists()
     with open(grid_fpath, 'r', encoding='utf-8') as f:
         grid_data = json.load(f)
     assert isinstance(grid_data, list)
     assert len(grid_data) > 0
 
     # verify grid report artifact was generated
-    report_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'report.json'
-    )
-    assert os.path.exists(report_fpath)
+    report_fpath = tmp_path / 'world_grids' / 'report.json'
+    assert report_fpath.exists()
     with open(report_fpath, 'r', encoding='utf-8') as f:
         report_data = json.load(f)
     assert report_data['status'] == 'SUCCESS'

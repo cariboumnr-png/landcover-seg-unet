@@ -26,7 +26,7 @@ and corresponding configurations for local pipeline runs and testing.
 
 # standard imports
 import argparse
-import os
+import pathlib
 import sys
 # local imports
 import landseg.testing as testing
@@ -49,9 +49,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if os.path.exists(args.output_dir) and os.listdir(args.output_dir):
+    out_dir = pathlib.Path(args.output_dir)
+    if out_dir.exists() and any(out_dir.iterdir()):
         print(
-            f'WARNING: Target directory "{args.output_dir}" '
+            f'WARNING: Target directory "{out_dir}" '
             f'already exists and is not empty.'
         )
         if args.yes:
@@ -66,7 +67,7 @@ def main() -> None:
                 sys.exit(0)
 
     print('-' * 10)
-    testing.generate_dummy_data(args.output_dir)
+    testing.generate_dummy_data(out_dir)
 
 
 if __name__ == '__main__':

@@ -28,6 +28,7 @@ import pathlib
 # third-party imports
 import numpy
 import pytest
+import torch
 # local imports
 import landseg.core as core
 import landseg.geopipe.core as geo_core
@@ -193,3 +194,40 @@ def dataspecs(_shared_block_files):
             vec_dim=2,
         ),
     )
+
+
+@pytest.fixture
+def mock_model():
+    return _MockMultiheadModel()
+
+
+class _MockMultiheadModel(torch.nn.Module):
+    '''Mock multihead model for engine epoch tests.'''
+    def __init__(self, spatial_divisor: int = 16):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(4, 2, kernel_size=1)
+        self.linear = torch.nn.Linear(2, 2)
+        self.spatial_divisor = spatial_divisor
+        self.active_heads: list[str] | None = None
+        self.frozen_heads: list[str] | None = None
+        self.logit_adjust_alpha: float = 1.0
+
+    def set_active_heads(self, active_heads: list[str] | None) -> None:
+        self.active_heads = active_heads
+
+    def set_frozen_heads(self, frozen_heads: list[str] | None) -> None:
+        self.frozen_heads = frozen_heads
+
+    def reset_heads(self) -> None:
+        self.active_heads = None
+        self.frozen_heads = None
+
+    def set_logit_adjust_alpha(self, alpha: float) -> None:
+        self.logit_adjust_alpha = alpha
+
+    def forward(self, x, ids_domain=None, vec_domain=None):
+        _ = ids_domain, vec_domain
+        if x.dim() == 2:
+            return self.linear(x)
+        assert self.active_heads is not None
+        return {head: self.conv(x) for head in self.active_heads}

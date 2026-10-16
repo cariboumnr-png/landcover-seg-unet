@@ -56,39 +56,39 @@ class TIFFPaths:
 
     @property
     def extent(self) -> pathlib.Path:
-        return self._make_path('reference_raster/sample_extent.tif')
+        return pathlib.Path(self.root) / 'reference_raster' / 'sample_extent.tif'
 
     @property
     def test_aoi(self) -> pathlib.Path:
-        return self._make_path('reference_raster/sample_test_aoi.tif')
+        return pathlib.Path(self.root) / 'reference_raster' / 'sample_test_aoi.tif'
 
     @property
     def domain_1(self) -> pathlib.Path:
-        return self._make_path('raw_data/sample_domain_1.tif')
+        return pathlib.Path(self.root) / 'raw_data' / 'sample_domain_1.tif'
 
     @property
     def domain_2(self) -> pathlib.Path:
-        return self._make_path('raw_data/sample_domain_2.tif')
+        return pathlib.Path(self.root) / 'raw_data' / 'sample_domain_2.tif'
 
     @property
     def sentinel2(self) -> pathlib.Path:
-        return self._make_path('raw_data/sample_sentinel2.tif')
+        return pathlib.Path(self.root) / 'raw_data' / 'sample_sentinel2.tif'
 
     @property
     def dem(self) -> pathlib.Path:
-        return self._make_path('raw_data/sample_dem.tif')
+        return pathlib.Path(self.root) / 'raw_data' / 'sample_dem.tif'
 
     @property
     def landcover(self) -> pathlib.Path:
-        return self._make_path('raw_data/sample_landcover.tif')
+        return pathlib.Path(self.root) / 'raw_data' / 'sample_landcover.tif'
 
     @property
     def leadspc(self) -> pathlib.Path:
-        return self._make_path('raw_data/sample_leadspc.tif')
+        return pathlib.Path(self.root) / 'raw_data' / 'sample_leadspc.tif'
 
     @property
     def manifest(self) -> pathlib.Path:
-        return self._make_path('raw_data/manifest.json')
+        return pathlib.Path(self.root) / 'raw_data' / 'manifest.json'
 
     @property
     def all_paths_exist(self) -> bool:
@@ -105,9 +105,6 @@ class TIFFPaths:
                 self.manifest,
             ]
         )
-
-    def _make_path(self, p: str) -> pathlib.Path:
-        return (pathlib.Path(self.root) / p).resolve()
 
 
 # ----- public function
@@ -145,7 +142,7 @@ def create_dummy_geotiff(
             dst.write(band_data, b)
 
 
-def generate_dummy_data(input_root: str = './experiment/input') -> TIFFPaths:
+def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     '''Generate the full dummy dataset under input root.
 
     Args:

@@ -96,7 +96,9 @@ def test_validate_model_build_output_not_dict(
         conditioning_config={},
     )
 
-    model.forward = lambda *args, **kwargs: [torch.randn(2, 2, 256, 256)]
+    # override forward output
+    wrong_output = [torch.randn(2, 2, 256, 256)]
+    setattr(model, 'forward', lambda *args, **kwargs: wrong_output)
 
     with pytest.raises(RuntimeError, match='Expected dict'):
         factory._validate_model_build(model, dataspecs)

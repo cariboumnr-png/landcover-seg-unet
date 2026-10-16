@@ -36,7 +36,6 @@ import pytest
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.core as core
 import landseg.execution.pipelines.model_evaluate as eval_pipeline
 import landseg.models as models
 import landseg.session as session
@@ -67,18 +66,18 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
         config.session.evaluation.validate()
 
 
-def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
+def test_evaluate_pipeline_success(tmp_path, dataspecs, mock_model, monkeypatch):
     '''
     Given: A valid RootConfig and mock dependencies.
     When: `ModelEvaluation.run` is called.
     Then: Execute evaluation and persist results.
     '''
-    exp_root = str(tmp_path / 'exp')
-    chk_file = str(tmp_path / 'chk.pt')
+    exp_root = tmp_path / 'exp'
+    chk_file = tmp_path / 'chk.pt'
     with open(chk_file, 'w', encoding='utf-8') as f:
         f.write('dummy')
 
-    prep_root = str(tmp_path / 'prep')
+    prep_root = tmp_path / 'prep'
     prep_paths = artifacts.PreparationPaths(root=prep_root)
     artifacts.Controller[dict](prep_paths.report).persist({'status': 'SUCCESS'})
 
@@ -116,17 +115,15 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
         def run_epoch(self, _epoch: int):
             return MockEvalResult()
 
-    class DummyModel:
-        def parameters(self):
-            return []
-
-    mock_model = typing.cast(core.MultiheadModelLike, DummyModel())
-
     monkeypatch.setattr(
-        eval_pipeline.geopipe, 'build_dataspec', lambda *a, **kw: dataspecs
+        eval_pipeline.geopipe,
+        'build_dataspec',
+        lambda *a, **kw: dataspecs
     )
     monkeypatch.setattr(
-        models, 'build_multihead_unet', lambda *a, **kw: mock_model
+        models,
+        'build_multihead_unet',
+        lambda *a, **kw: mock_model
     )
     monkeypatch.setattr(
         session,
@@ -184,4 +181,4 @@ def test_evaluate_validate_missing_prep_report(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-prepare"'
     ):
-        pipeline._validate()
+        pipeline._validate() # pylint: disable=protected-access

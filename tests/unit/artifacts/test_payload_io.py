@@ -25,7 +25,6 @@ Unit tests for `landseg.artifacts.payload_io`.
 '''
 
 # standard imports
-import os
 import typing
 # third-party imports
 import pytest
@@ -42,8 +41,8 @@ def test_payload_controller_save_and_load(tmp_path):
     When: Calling `PayloadController.save()` and `PayloadController.load()`.
     Then: Write data file and metadata sidecar, restoring exact payload.
     '''
-    data_path = str(tmp_path / 'catalog.json')
-    meta_path = str(tmp_path / 'catalog_meta.json')
+    data_path = tmp_path / 'catalog.json'
+    meta_path = tmp_path / 'catalog_meta.json'
 
     ctrl = payload_mod.PayloadController[dict, dict](
         data_fpath=data_path,
@@ -59,8 +58,8 @@ def test_payload_controller_save_and_load(tmp_path):
 
     ctrl.save(payload_in)
 
-    assert os.path.exists(data_path)
-    assert os.path.exists(meta_path)
+    assert data_path.exists()
+    assert meta_path.exists()
 
     loaded = ctrl.load()
     assert loaded is not None

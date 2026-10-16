@@ -24,30 +24,13 @@ Unit tests for `landseg.knowledge.embeddings`.
 '''
 
 # standard imports
-import json
-import os
-from unittest import mock
+import unittest.mock
 # third-party imports
 import numpy
-import pandas
-import pytest
 import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.knowledge.embeddings as embeddings_mod
-
-
-@pytest.fixture
-def dummy_csv_path(tmp_path):
-    '''Create a dummy species profiles CSV.'''
-    csv_file = tmp_path / 'dummy_species_profiles.csv'
-    df = pandas.DataFrame({
-        'group_code': ['1', '2'],
-        'group_name': ['Species A', 'Species B'],
-        'formatted_description': ['Description of A', 'Description of B'],
-    })
-    df.to_csv(csv_file, index=False)
-    return csv_file
 
 
 # ----- `generate_embeddings_and_matrix` tests
@@ -57,15 +40,15 @@ def test_generate_embeddings_with_knowledge_root_str(dummy_csv_path, tmp_path):
     When: `generate_embeddings_and_matrix()` is called.
     Then: Artifacts are generated in the canonical paths.
     '''
-    kroot = str(tmp_path / 'knowledge')
+    kroot = tmp_path / 'knowledge'
     kp = artifacts.KnowledgePaths(root=kroot)
 
-    mock_model = mock.MagicMock()
+    mock_model = unittest.mock.MagicMock()
     mock_model.encode.return_value = numpy.array(
         [[1.0, 0.0], [0.0, 1.0]], dtype=numpy.float32
     )
 
-    with mock.patch(
+    with unittest.mock.patch(
         'sentence_transformers.SentenceTransformer', return_value=mock_model
     ):
         embeddings_mod.generate_embeddings_and_matrix(
@@ -80,10 +63,10 @@ def test_generate_embeddings_with_knowledge_root_str(dummy_csv_path, tmp_path):
     meta_path = kp.metadata_fpath(profile)
     sim_csv_path = kp.similarity_csv_fpath(profile)
 
-    assert os.path.isfile(emb_path)
-    assert os.path.isfile(sim_path)
-    assert os.path.isfile(meta_path)
-    assert os.path.isfile(sim_csv_path)
+    assert emb_path.is_file()
+    assert sim_path.is_file()
+    assert meta_path.is_file()
+    assert sim_csv_path.is_file()
 
     sim_tensor = torch.load(sim_path, weights_only=True)
     assert sim_tensor.shape == (2, 2)
@@ -105,14 +88,14 @@ def test_generate_embeddings_with_knowledge_root_path(dummy_csv_path, tmp_path):
     Then: Target artifacts are built in the expected directory.
     '''
     kroot_path = tmp_path / 'path_knowledge'
-    kp = artifacts.KnowledgePaths(root=str(kroot_path))
+    kp = artifacts.KnowledgePaths(root=kroot_path)
 
-    mock_model = mock.MagicMock()
+    mock_model = unittest.mock.MagicMock()
     mock_model.encode.return_value = numpy.array(
         [[1.0, 0.0], [0.0, 1.0]], dtype=numpy.float32
     )
 
-    with mock.patch(
+    with unittest.mock.patch(
         'sentence_transformers.SentenceTransformer', return_value=mock_model
     ):
         embeddings_mod.generate_embeddings_and_matrix(
@@ -122,4 +105,4 @@ def test_generate_embeddings_with_knowledge_root_path(dummy_csv_path, tmp_path):
         )
 
     profile = 'dummy_species_profiles'
-    assert os.path.isfile(kp.similarity_matrix_fpath(profile))
+    assert kp.similarity_matrix_fpath(profile).is_file()

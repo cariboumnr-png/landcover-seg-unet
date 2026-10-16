@@ -52,4 +52,3 @@ def test_data_specs_custom_values():
     )
     assert specs.domain_ids_name == 'eco_region'
     assert specs.domain_vec_name == 'climate_vec'
-

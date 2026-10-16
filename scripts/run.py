@@ -28,21 +28,20 @@ Adds 'src' directory to python path and invokes the CLI entry point.
 '''
 
 # standard imports
-import os
+import pathlib
 import sys
 
-def _get_script_dir() -> str:
-    if "__file__" in globals():
-        return os.path.dirname(os.path.abspath(__file__))
-    return os.getcwd()  # Databricks fallback
+def _get_script_dir() -> pathlib.Path:
+    if '__file__' in globals():
+        return pathlib.Path(__file__).resolve().parent
+    return pathlib.Path.cwd()  # Databricks fallback
 
 # Locate absolute path of workspace root and insert 'src' folder into path
 _SCRIPT_DIR = _get_script_dir()
-_WORKSPACE_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..'))
-_SRC_DIR = os.path.join(_WORKSPACE_ROOT, 'src')
+_SRC_DIR = _SCRIPT_DIR.parent / 'src'
 
-if _SRC_DIR not in sys.path:
-    sys.path.insert(0, _SRC_DIR)
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
 
 # local imports after sys path modification
 from landseg.adapters.cli.cli import main

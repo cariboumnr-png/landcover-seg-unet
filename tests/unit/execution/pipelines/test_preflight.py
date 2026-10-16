@@ -21,9 +21,6 @@
 
 '''Unit tests for standalone pre-flight execution validation module.'''
 
-# standard imports
-import os
-import pathlib
 # third-party imports
 import pytest
 # local imports
@@ -32,9 +29,6 @@ import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.preflight as preflight
 import landseg.execution.preflight.engine as engine
-import landseg.execution.preflight.prerequisites as prerequisites
-import landseg.execution.preflight.probes as probes
-import landseg.execution.preflight.schema as schema
 
 
 # ----- `inspect_target` tests

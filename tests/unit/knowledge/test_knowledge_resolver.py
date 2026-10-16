@@ -38,7 +38,7 @@ def test_resolve_similarity_matrix(tmp_path):
     When: `resolve_similarity_matrix` is called with profile name.
     Then: Return loaded torch tensor with verified integrity.
     '''
-    kp = artifacts.KnowledgePaths(root=str(tmp_path / 'knowledge'))
+    kp = artifacts.KnowledgePaths(root=tmp_path / 'knowledge')
     profile = 'test_profile'
     mat_path = kp.similarity_matrix_fpath(profile)
 
@@ -61,7 +61,7 @@ def test_resolve_similarity_matrix_missing(tmp_path):
     with pytest.raises(artifacts.ArtifactError):
         knowledge.resolve_similarity_matrix(
             profile='non_existent_profile',
-            knowledge_root=str(tmp_path / 'knowledge'),
+            knowledge_root=tmp_path / 'knowledge',
         )
 
 
@@ -72,7 +72,7 @@ def test_resolve_profile_metadata(tmp_path):
     When: `resolve_profile_metadata` is called with profile name.
     Then: Return loaded metadata dictionary.
     '''
-    kp = artifacts.KnowledgePaths(root=str(tmp_path / 'knowledge'))
+    kp = artifacts.KnowledgePaths(root=tmp_path / 'knowledge')
     profile = 'test_profile'
     meta_path = kp.metadata_fpath(profile)
 
