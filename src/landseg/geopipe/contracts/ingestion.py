@@ -173,3 +173,12 @@ class ManifestStats(typing.TypedDict):
     cataloged_blocks_count: int
     catalog_updated: bool
     schema_updated: bool
+
+
+class MappedRasterWindowsPayload(typing.TypedDict):
+    '''Serialized JSON payload contract for cached raster window mappings.'''
+    grid_id: str
+    image: list[list[int]]
+    label: list[list[int]]
+    tile_shape: list[int]
+    tile_overlap: list[int]

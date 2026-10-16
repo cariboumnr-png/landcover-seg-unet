@@ -69,6 +69,7 @@ __all__ = [
     'IngestReportSchema',
     'IngestionRunRecord',
     'ManifestStats',
+    'MappedRasterWindowsPayload',
     'NormalizationReport',
     'PartitionSummary',
     'PreparationPipelineConfig',
@@ -109,6 +110,7 @@ if typing.TYPE_CHECKING:
         IngestReportSchema,
         IngestionRunRecord,
         ManifestStats,
+        MappedRasterWindowsPayload,
         RunCollisionManifest,
     )
     from .preparation import (
@@ -155,6 +157,7 @@ def __getattr__(name: str):
         'IngestReportSchema',
         'IngestionRunRecord',
         'ManifestStats',
+        'MappedRasterWindowsPayload',
         'RunCollisionManifest',
     }:
         obj = importlib.import_module('.ingestion', __package__)

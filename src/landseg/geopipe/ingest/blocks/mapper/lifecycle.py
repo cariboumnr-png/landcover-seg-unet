@@ -34,8 +34,13 @@ Public APIs:
 import pathlib
 # local imports
 import landseg.artifacts as artifacts
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
+
+
+# ----- typing aliases
+MappedWindowsCtrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]
 
 
 # ----- public functions
@@ -72,10 +77,10 @@ def map_rasters_to_grid(
             Container describing mapped grid cells and raster windows.
     '''
     # artifacts controller
-    ctrl = artifacts.Controller[dict](mapped_windows_path, policy)
+    ctrl = MappedWindowsCtrl(mapped_windows_path, policy)
 
     # mapped windows fpath
-    payload = ctrl.fetch()
+    payload: contracts.MappedRasterWindowsPayload | None = ctrl.fetch()
     # build if needed
     if not payload:
         mapped_windows = mapper.map_rasters(world_grid, image_path, label_path)
@@ -85,7 +90,7 @@ def map_rasters_to_grid(
             'label': _canonicalize(mapped_windows.label),
             'tile_shape': list(mapped_windows.tile_shape),
             'tile_overlap': list(mapped_windows.tile_overlap)
-        } # TODO currently not typed
+        }
         ctrl.persist(payload)
 
     # build from payload and return
@@ -93,8 +98,8 @@ def map_rasters_to_grid(
         grid_id=payload['grid_id'],
         image=_parse(payload['image']),
         label=_parse(payload['label']),
-        tile_shape=tuple(payload['tile_shape']),
-        tile_overlap=tuple(payload['tile_overlap']),
+        tile_shape=(payload['tile_shape'][0], payload['tile_shape'][1]),
+        tile_overlap=(payload['tile_overlap'][0], payload['tile_overlap'][1]),
     )
     return mapped_windows
 
