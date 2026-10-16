@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''Unit tests for domain mapping module (domain_tile_map.py).'''
 

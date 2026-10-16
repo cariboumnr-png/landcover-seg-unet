@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for NumericSafety (safety.py).'''
 
 # third-party imports
@@ -92,4 +90,5 @@ def test_numeric_safety_autocast_context():
     assert isinstance(ctx, torch.autocast)
     assert ctx.device == 'cpu'
     assert ctx.fast_dtype == torch.bfloat16
-    assert ctx._enabled is True
+    with ctx:
+        assert torch.is_autocast_enabled('cpu')

@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''
 Unit tests for `landseg.artifacts.controller`.
@@ -84,17 +83,17 @@ def test_npz_dict_persist_and_fetch(tmp_path):
 def test_npz_write_validation(tmp_path):
     '''
     Given: An empty dictionary or invalid non-array dictionary values.
-    When: Calling `Controller._npz_write_dict`.
+    When: Calling `Controller.persist()`.
     Then: Raise a ValueError indicating invalid input payload format.
     '''
     npz_path = str(tmp_path / 'invalid.npz')
     ctrl = ctrl_mod.Controller[dict](npz_path)
 
     with pytest.raises(ValueError, match='Cannot save empty dict'):
-        ctrl._npz_write_dict(npz_path, {})
+        ctrl.persist({})
 
     with pytest.raises(ValueError, match='Input source must be a dictionary'):
-        ctrl._npz_write_dict(npz_path, {'key': 'not_an_array'})  # type: ignore
+        ctrl.persist({'key': 'not_an_array'})  # type: ignore
 
 
 # ----- `Controller` CSV tests

@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''
 Unit tests for `landseg.artifacts.paths`.
@@ -169,12 +168,14 @@ def test_ingestion_paths():
 
 def test_data_blocks_paths():
     '''
-    Given: A data blocks root directory string.
-    When: Accessing `_DataBlocks` paths and window map methods.
+    Given: An IngestionPaths instance.
+    When: Accessing `data_blocks` paths.
     Then: Return expected canonical data block artifact paths.
     '''
-    b = pathlib.Path('/tmp') / 'exp' / 'ingested_data' / 'data_blocks'
-    db = f_mod._DataBlocks(root=b)
+    f = pathlib.Path('/tmp') / 'exp' / 'ingested_data'
+    f_paths = paths_mod.IngestionPaths(root=f)
+    db = f_paths.data_blocks
+    b = f / 'data_blocks'
 
     assert db.blocks == b / 'blocks'
     assert db.catalog == b / 'catalog.json'

@@ -43,7 +43,7 @@ test = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--cov=landseg --cov-report=term-missing"
+addopts = "-ra"
 filterwarnings = [
     "ignore::DeprecationWarning:rasterio.*",
     "ignore:Setting the shape on a NumPy array:DeprecationWarning",

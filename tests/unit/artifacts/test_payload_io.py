@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''
 Unit tests for `landseg.artifacts.payload_io`.

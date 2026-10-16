@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
+
 
 '''
 Unit tests for model train pipeline (model_train.py).
@@ -60,7 +58,7 @@ def test_train_validate_missing_preparation_report(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-prepare"'
     ):
-        pipeline._validate()
+        pipeline.run()
 
 
 def test_train_validate_failed_preparation_report(tmp_path):
@@ -86,4 +84,4 @@ def test_train_validate_failed_preparation_report(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-prepare" status is "FAILED"'
     ):
-        pipeline._validate()
+        pipeline.run()

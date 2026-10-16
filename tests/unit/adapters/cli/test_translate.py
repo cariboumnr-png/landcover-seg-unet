@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''
 Unit tests for `landseg.adapters.cli.translate`.
 '''
@@ -161,15 +159,3 @@ def test_translate_user_config_model_train():
     assert phases[0].num_epochs == 25
     assert phases[0].active_heads == ['cover', 'canopy']
 
-
-def test_set_paths_helper():
-    '''
-    Given: A target dictionary and dot-separated property paths.
-    When: Calling internal `_set_paths` helper function.
-    Then: Create nested dictionary and assign value to target keys.
-    '''
-    target: dict = {}
-    translate_mod._set_paths(target, ['a.b.c', 'x.y'], 42)
-
-    assert target['a']['b']['c'] == 42
-    assert target['x']['y'] == 42

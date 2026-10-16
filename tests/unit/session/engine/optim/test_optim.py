@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''Unit tests for optim module (optimization.py, builder.py, __init__.py).'''
 
@@ -45,9 +44,6 @@ def test_optimization_init_defaults(mock_model):
     assert opt_wrap.optimizer is optimizer
     assert opt_wrap.scheduler is None
     assert opt_wrap.grad_clip_norm is None
-    assert opt_wrap._sched_cls is None
-    assert opt_wrap._sched_factory is None
-    assert opt_wrap._sched_args is None
 
 
 def test_optimization_lrs_property(mock_model):
@@ -112,9 +108,6 @@ def test_reconfigure_disable_scheduler(mock_model):
     opt_wrap.reconfigure(disable_scheduler=True)
 
     assert opt_wrap.scheduler is None
-    assert opt_wrap._sched_factory is None
-    assert opt_wrap._sched_cls is None
-    assert opt_wrap._sched_args is None
 
 
 def test_reconfigure_no_op(mock_model):
@@ -163,7 +156,7 @@ def test_reconfigure_scheduler_rebuild(mock_model):
     opt_wrap.reconfigure(sched_args={'T_max': 20})
 
     assert opt_wrap.scheduler is not None
-    assert opt_wrap._sched_args == {'T_max': 20}
+    assert opt_wrap.scheduler.T_max == 20
 
 
 # ----- `build_optimization` factory tests
@@ -225,7 +218,6 @@ def test_build_optimization_sgd_w_cosanneal_scheduler(mock_model, session_config
         torch.optim.lr_scheduler.CosineAnnealingLR
     )
     assert opt_wrap.grad_clip_norm == 0.5
-    assert opt_wrap._sched_cls == 'CosAnneal'
 
 
 def test_build_optimization_onecycle_scheduler(mock_model, session_config):

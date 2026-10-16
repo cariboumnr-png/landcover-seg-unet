@@ -123,4 +123,4 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-ingest"'
     ):
-        pipeline._validate()
+        pipeline.run()

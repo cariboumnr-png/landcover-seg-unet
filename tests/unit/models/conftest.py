@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 
 '''Shared config fixtures for testing landseg.models.'''
 
@@ -58,10 +57,11 @@ def mock_domain_config_factory():
                 ids_embd_dims=ids_embd_dims if use_ids else 0,
                 vec_proj_dims=vec_proj_dims if use_vec else 0,
                 vec_proj_config=(
-                    vec_proj_config or conditioners_schema._film_proj()
+                    vec_proj_config or {'use_mlp': False}
                 ),
                 conditioner_config=(
-                    conditioner_config or conditioners_schema._film_cond()
+                    conditioner_config
+                    or {'gamma_activation': None, 'beta_activation': None}
                 ),
             )
         return conditioners_schema.Concat(
