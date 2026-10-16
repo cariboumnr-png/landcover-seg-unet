@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for epoch runner builder (session/engine/epoch/builder.py).'''
 
 # local imports
@@ -32,6 +30,7 @@ def test_build_epoch_runner_train_eval(
     mock_runtime,
     mock_dataloaders,
     mock_dispatcher,
+    session_config,
 ):
     '''
     Given: Runtime, dataloaders, and dispatcher.
@@ -45,7 +44,7 @@ def test_build_epoch_runner_train_eval(
     )
     runner = epoch_mod.build_epoch_runner(
         context,
-        _schedule(),
+        session_config.engine_schedule,
         mode='train_eval',
     )
 
@@ -59,6 +58,7 @@ def test_build_epoch_runner_train_only(
     mock_runtime,
     mock_dataloaders,
     mock_dispatcher,
+    session_config,
 ):
     '''
     Given: Runtime, dataloaders, and dispatcher.
@@ -72,7 +72,7 @@ def test_build_epoch_runner_train_only(
     )
     runner = epoch_mod.build_epoch_runner(
         context,
-        _schedule(),
+        session_config.engine_schedule,
         mode='train_only',
     )
 
@@ -86,6 +86,7 @@ def test_build_epoch_runner_eval_only(
     mock_runtime,
     mock_dataloaders,
     mock_dispatcher,
+    session_config,
 ):
     '''
     Given: Runtime, dataloaders, and dispatcher.
@@ -99,7 +100,7 @@ def test_build_epoch_runner_eval_only(
     )
     runner = epoch_mod.build_epoch_runner(
         context,
-        _schedule(),
+        session_config.engine_schedule,
         mode='eval_only',
     )
 
@@ -136,15 +137,8 @@ def test_build_epoch_runner_with_schedule(
         mode='train_eval',
     )
 
+    assert runner.trainer is not None
+    assert runner.evaluator is not None
     assert runner.trainer.update_every == 10
     assert runner.evaluator.val_every == 2
     assert runner.evaluator.infer_every == 3
-
-
-def _schedule():
-    class Schedule:
-        update_loss_every_n_batch = 1
-        val_every_n_epoch = 1
-        infer_every_n_epoch = 1
-
-    return Schedule()

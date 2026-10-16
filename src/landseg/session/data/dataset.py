@@ -78,7 +78,7 @@ import landseg.session.contracts as contracts
 
 # ----- public dataclasses
 @dataclasses.dataclass
-class BlockDatasetContext:
+class BlockDatasetConfig:
     '''
     Configuration for partitioning blocks into patches and attaching
     optional per-block domain features.
@@ -89,7 +89,6 @@ class BlockDatasetContext:
     domain metadata to be attached to every returned sample.
 
     Attributes:
-        block_src: Mapping of block names and `.npz` file paths
         block_size: Side length (pixels) of each square data block.
         patch_size: Side length (pixels) of each square patch.
         image_key: Name of the image array in each `.npz` file.
@@ -101,7 +100,6 @@ class BlockDatasetContext:
         ValueError: If `block_size` is smaller than `patch_size`, or if
             `block_size` is not evenly divisible by `patch_size`.
     '''
-    block_src: dict[str, pathlib.Path]
     block_size: int
     patch_size: int
     image_key: str
@@ -155,28 +153,12 @@ class MultiBlockDataset(torch.utils.data.Dataset):
     when present, a per-block domain dict is attached to each returned
     patch. Integer values are converted to `torch.long` and list values
     to `torch.float32`.
-
-    Attributes:
-        fpaths (list[str]):
-            List of block file paths (`.npz`).
-        preload (bool):
-            Whether to preload or stream.
-        block_config (BlockConfig):
-            Block config see the dataclass.
-        data (_MultiBlockData):
-            Storage for images, labels, and domains. In preload mode,
-            image and label arrays are concatenated into NumPy arrays
-            and domains are stored as a list. In streaming mode, each
-            field is backed by a `_CacheDict`.
-
-    Raises:
-        ValueError: If patch extraction fails for a block due to shape
-            or data issues.
     '''
 
     def __init__(
         self,
-        context: BlockDatasetContext,
+        block_src: dict[str, pathlib.Path],
+        config: BlockDatasetConfig,
         *,
         augment_flip: bool = False,
         preload: bool = False,
@@ -201,7 +183,8 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         '''
         super().__init__()
 
-        self.ctx = context
+        self.blk_src = block_src
+        self.cfg = config
         self._preload = preload
         self._aug_flip = augment_flip
 
@@ -213,30 +196,30 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             _lbls: list[numpy.ndarray] = []
             self.data.dom = []
             # no progress bar if logger is silent
-            for blk_name, blk_fpath in self.ctx.block_src.items():
+            for blk_name, blk_fpath in self.blk_src.items():
                 blk_data = _BlockDataset(
                     blk_fpath,
-                    context,
+                    config,
                     self._get_domain(blk_name),
                     augment_flip=self._aug_flip
                 )
                 _imgs.append(blk_data.imgs)
                 _lbls.append(blk_data.lbls)
-                self.data.dom.extend([blk_data.domain] * context.patch_per_blk)
+                self.data.dom.extend([blk_data.domain] * config.patch_per_blk)
             # concatenate
             self.data.img = numpy.concatenate(_imgs, axis=0)
             self.data.lbl = numpy.concatenate(_lbls, axis=0)
-            self._counter = len(self.ctx.block_src), 0
+            self._counter = len(self.blk_src), 0
 
         else: # otherwise streaming
             # streaming caches for blocks
             self.data.img = _CacheDict(maxsize=blk_cache_num)
             self.data.lbl = _CacheDict(maxsize=blk_cache_num)
             self.data.dom = _CacheDict(maxsize=blk_cache_num)
-            self._counter = 0, len(self.ctx.block_src)
+            self._counter = 0, len(self.blk_src)
 
     def __len__(self):
-        return len(self.ctx.block_src) * self.ctx.patch_per_blk
+        return len(self.blk_src) * self.cfg.patch_per_blk
 
     def __getitem__(self, idx: int) -> contracts.DatasetItem:
         if self._preload:
@@ -284,8 +267,8 @@ class MultiBlockDataset(torch.utils.data.Dataset):
 
     def _global_to_local(self, idx: int) -> tuple[int, int]:
         '''Map global patch to block/patch indices (uniform blocks).'''
-        blk_idx = idx // self.ctx.patch_per_blk
-        pch_idx = idx % self.ctx.patch_per_blk
+        blk_idx = idx // self.cfg.patch_per_blk
+        pch_idx = idx % self.cfg.patch_per_blk
         return int(blk_idx), int(pch_idx)
 
     def _load_block_to_cache(self, blk_idx: int) -> None:
@@ -295,10 +278,10 @@ class MultiBlockDataset(torch.utils.data.Dataset):
             return
         # otherwise proceed
         # find blk name by block idx
-        blk_name = list(self.ctx.block_src.keys())[blk_idx]
+        blk_name = list(self.blk_src.keys())[blk_idx]
         blk_data = _BlockDataset(
-            self.ctx.block_src[blk_name],
-            self.ctx,
+            self.blk_src[blk_name],
+            self.cfg,
             self._get_domain(blk_name),
             augment_flip=self._aug_flip
         )
@@ -310,10 +293,10 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         '''Retrieve the per-block domain dict if available.'''
         ids: int | None = None
         vec: list[float] | None = None
-        if self.ctx.ids_domain:
-            ids = self.ctx.ids_domain[name]
-        if self.ctx.vec_domain:
-            vec = self.ctx.vec_domain[name]
+        if self.cfg.ids_domain:
+            ids = self.cfg.ids_domain[name]
+        if self.cfg.vec_domain:
+            vec = self.cfg.vec_domain[name]
         return {'ids': ids, 'vec': vec}
 
 
@@ -348,7 +331,7 @@ class _BlockDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         fpath: pathlib.Path,
-        config: BlockDatasetContext,
+        config: BlockDatasetConfig,
         domains: dict[str, int | list[float] | None],
         *,
         augment_flip: bool = False

@@ -32,6 +32,7 @@ def test_build_session_runner_overfit(
     session_config,
     dataspecs,
     mock_model,
+    mock_session_paths,
 ):
     '''
     Given: Data specs, mock model, session config, and logger.
@@ -42,7 +43,7 @@ def test_build_session_runner_overfit(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
-        context=_get_context(),
+        context=_get_context(mock_session_paths),
         session_type='overfit',
     )
 
@@ -54,6 +55,7 @@ def test_build_session_runner_evaluate(
     session_config,
     dataspecs,
     mock_model,
+    mock_session_paths,
 ):
     '''
     Given: Data specs, mock model, session config, and logger.
@@ -64,7 +66,7 @@ def test_build_session_runner_evaluate(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
-        context=_get_context(),
+        context=_get_context(mock_session_paths),
         session_type='evaluate',
     )
 
@@ -87,7 +89,7 @@ def test_build_session_runner_continuous(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
-        context=_get_context(session_paths=mock_session_paths),
+        context=_get_context(mock_session_paths),
         session_type='continuous',
     )
 
@@ -110,7 +112,7 @@ def test_build_session_runner_curriculum(
         dataspecs=dataspecs,
         model=mock_model,
         config=session_config,
-        context=_get_context(session_paths=mock_session_paths),
+        context=_get_context(mock_session_paths),
         session_type='curriculum',
     )
 
@@ -118,9 +120,9 @@ def test_build_session_runner_curriculum(
 
 
 # ----- internal helpers
-def _get_context(**kwargs):
+def _get_context(mock_session_paths):
     return factory_mod.SessionBuildContext(
         device='cpu',
-        eval_dataset=kwargs.get('eval_dataset', 'val'),
-        session_paths=kwargs.get('session_paths')
+        session_paths=mock_session_paths,
+        eval_dataset='val',
     )

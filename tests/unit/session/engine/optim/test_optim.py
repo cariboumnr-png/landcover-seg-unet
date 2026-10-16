@@ -156,6 +156,7 @@ def test_reconfigure_scheduler_rebuild(mock_model):
     opt_wrap.reconfigure(sched_args={'T_max': 20})
 
     assert opt_wrap.scheduler is not None
+    assert isinstance(opt_wrap.scheduler, sched_factory)
     assert opt_wrap.scheduler.T_max == 20
 
 

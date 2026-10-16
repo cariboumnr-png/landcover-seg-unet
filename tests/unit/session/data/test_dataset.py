@@ -39,8 +39,7 @@ def test_block_config_properties():
     Then: Successfully access `patch_per_dim` and `patch_per_blk`.
     '''
 
-    cfg = dataset.BlockDatasetContext(
-        block_src={},
+    cfg = dataset.BlockDatasetConfig(
         block_size=256,
         patch_size=128,
         image_key='image',
@@ -59,8 +58,7 @@ def test_block_config_invalid_sizes():
     '''
 
     with pytest.raises(ValueError, match='Data block size must > '):
-        _ = dataset.BlockDatasetContext(
-            block_src={},
+        _ = dataset.BlockDatasetConfig(
             block_size=128,
             patch_size=256,
             image_key='image',
@@ -68,8 +66,7 @@ def test_block_config_invalid_sizes():
         )
 
     with pytest.raises(ValueError, match='Data block size must be divisible '):
-        _ = dataset.BlockDatasetContext(
-            block_src={},
+        _ = dataset.BlockDatasetConfig(
             block_size=256,
             patch_size=127,
             image_key='image',
@@ -341,19 +338,19 @@ def test_multiblock_dataset_getitem_no_label(tmp_path):
     When: Call `__getitem__` to retrieve samples.
     Then: Return label as an empty `torch.Tensor`.
     '''
-    fpath = str(tmp_path / 'unlbl.npz')
+    fpath = tmp_path / 'unlbl.npz'
     image = numpy.array([[[1.0, 2.0], [3.0, 4.0]]])
     label = numpy.array([1]) # placeholder label
     numpy.savez(fpath, image=image, label=label)
 
-    context = dataset.BlockDatasetContext(
-        block_src={'unlbl': fpath},
+    config = dataset.BlockDatasetConfig(
         block_size=2,
         patch_size=2,
         image_key='image',
         label_key='label'
     )
-    dt = dataset.MultiBlockDataset(context, preload=False)
+    src = {'unlbl': fpath}
+    dt = dataset.MultiBlockDataset(src, config, preload=False)
     _, y, _ = dt[0]
 
     assert y.numel() == 0
@@ -366,8 +363,7 @@ def test_multiblock_dataset_domain_features(tmp_path):
     Then: Correctly populate domain dictionary with formatted tensors.
     '''
     _ = _test_block_dataset(tmp_path, aug_flip=False, name='blk1.npz')
-    context = dataset.BlockDatasetContext(
-        block_src={'blk1': str(tmp_path / 'blk1.npz')},
+    config = dataset.BlockDatasetConfig(
         block_size=4,
         patch_size=2,
         image_key='image',
@@ -375,7 +371,8 @@ def test_multiblock_dataset_domain_features(tmp_path):
         ids_domain={'blk1': 42},
         vec_domain={'blk1': [0.5, 0.75]}
     )
-    dt = dataset.MultiBlockDataset(context, preload=True)
+    src = {'blk1': tmp_path / 'blk1.npz'}
+    dt = dataset.MultiBlockDataset(src, config, preload=True)
     _, _, dom = dt[0]
 
     assert torch.equal(dom['ids'], torch.tensor(42, dtype=torch.long))
@@ -407,7 +404,7 @@ def test_multiblock_dataset_cache_eviction(tmp_path):
 def _test_block_dataset(tmp_path, *, aug_flip: bool, **kwargs):
     '''Return a `_BlockDataset` obj. with valid default attributes.'''
     blk_name = kwargs.get('name', 'data.npz')
-    fpath = str(tmp_path / blk_name)
+    fpath = tmp_path / blk_name
     image = kwargs.get(
         'image',
         numpy.array([[
@@ -428,8 +425,7 @@ def _test_block_dataset(tmp_path, *, aug_flip: bool, **kwargs):
     )
 
     numpy.savez(fpath, image=image, label=label)
-    context = dataset.BlockDatasetContext(
-        block_src={},
+    context = dataset.BlockDatasetConfig(
         block_size=4,
         patch_size=2,
         image_key='image',
@@ -468,20 +464,21 @@ def _test_multiblock_dataset(tmp_path, preload: bool, cache_size: int = 16):
             [7, 8, 7, 8]
         ]])
     )
+    src = {
+        'blk1': tmp_path / 'blk1.npz',
+        'blk2': tmp_path / 'blk2.npz',
+    }
     # config (same as single block)
-    context = dataset.BlockDatasetContext(
-        block_src={
-            'blk1': str(tmp_path / 'blk1.npz'),
-            'blk2': str(tmp_path / 'blk2.npz'),
-        },
+    config = dataset.BlockDatasetConfig(
         block_size=4,
         patch_size=2,
         image_key='image',
-        label_key='label'
+        label_key='label',
     )
     # return instance
     return dataset.MultiBlockDataset(
-        context,
+        src,
+        config,
         preload=preload,
         blk_cache_num=cache_size
     )

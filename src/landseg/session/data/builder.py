@@ -37,8 +37,8 @@ DataLoaders object containing train/val/test loaders and metadata.
 '''
 
 
-from __future__ import annotations
 # standard imports
+from __future__ import annotations
 import dataclasses
 import typing
 # third-party imports
@@ -184,8 +184,7 @@ def _load(
     if not datablocks:
         return None
 
-    dataset_config = dataset.BlockDatasetContext(
-        block_src=datablocks,
+    dataset_config = dataset.BlockDatasetConfig(
         block_size=data_specs.meta.image_specs.height_width,
         patch_size=config.patch_size,
         image_key=data_specs.meta.image_specs.array_key,
@@ -197,6 +196,7 @@ def _load(
     mem_strategy = memory.get_memory_strategy(data_specs)
 
     dataset_obj = dataset.MultiBlockDataset(
+        datablocks,
         dataset_config,
         augment_flip=bool(mode == 'train'),
         preload=getattr(mem_strategy, f'preload_{mode}', False),
