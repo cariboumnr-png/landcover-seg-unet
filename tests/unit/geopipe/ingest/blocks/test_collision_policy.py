@@ -24,7 +24,6 @@
 '''Unit tests for intra-pool block collision policies and provenance.'''
 
 # standard imports
-import dataclasses
 import json
 import os
 # third-party imports
@@ -36,17 +35,6 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks as blocks
-
-
-@dataclasses.dataclass
-class _Params:
-    tile_size: tuple[int, int] = (256, 256)
-    tile_stride: tuple[int, int] = (128, 128)
-    ref_fpath: str | None = None
-    crs_string: str | None = None
-    origin: tuple[float, float] | None = None
-    pixel_size: tuple[float, float] | None = None
-    extent_in_crs_units: tuple[float, float] | None = None
 
 
 # ----- fixtures
@@ -76,15 +64,14 @@ def test_setup_factory(tmp_path, dummy_geotiff_factory):
                 1, num_cls=2, ignore_cls='[255]', index_base=1
             )
 
-        grid_config = _Params(
-            ref_fpath=str(img),
-            crs_string='EPSG:3161',
+        world_grid = grid_builder.build_grid(
+            mode='ref',
+            ref_fpath=img,
             tile_size=(256, 256),
             tile_stride=(128, 128),
         )
-        world_grid = grid_builder.build_grid('ref', grid_config)
-        paths = artifacts.IngestionPaths(str(tmp_path))
-        return world_grid, paths, str(img), str(lbl)
+        paths = artifacts.IngestionPaths(tmp_path)
+        return world_grid, paths, img, lbl
 
     return _create
 
@@ -121,6 +108,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
     context1 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
+        block_windowns_artifact_fapth=paths.windows,
         collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
         harmonize_run_id='harm_0001',
         ingest_run_id='run_0001',
@@ -165,6 +153,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
     context2 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
+        block_windowns_artifact_fapth=paths.windows,
         collisions_artifacts_fpath=col2_fpath,
         harmonize_run_id='harm_0002',
         ingest_run_id='run_0002',
@@ -231,6 +220,7 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
     context1 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
+        block_windowns_artifact_fapth=paths.windows,
         collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
         harmonize_run_id='harm_0001',
         ingest_run_id='run_0001',
@@ -265,6 +255,7 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
     context2 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
+        block_windowns_artifact_fapth=paths.windows,
         collisions_artifacts_fpath=col2_fpath,
         harmonize_run_id='harm_0002',
         ingest_run_id='run_0002',
@@ -328,6 +319,7 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
     context1 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
+        block_windowns_artifact_fapth=paths.windows,
         collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
         harmonize_run_id='harm_0001',
         ingest_run_id='run_0001',
@@ -361,6 +353,7 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
     context2 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
+        block_windowns_artifact_fapth=paths.windows,
         collisions_artifacts_fpath=str(tmp_path / 'collisions_run2.json'),
         harmonize_run_id='harm_0002',
         ingest_run_id='run_0002',

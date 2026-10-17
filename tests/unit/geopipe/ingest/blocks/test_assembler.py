@@ -244,14 +244,14 @@ def test_build_blocks_orchestrator(
     When: Running build_blocks orchestrator.
     Then: Save built DataBlocks to the output path.
     '''
-    img_path = str(dummy_geotiff_factory(
+    img_path = dummy_geotiff_factory(
         filename='image.tif', width=16, height=16, bands=5
-    ))
-    lbl_path = str(dummy_geotiff_factory(
+    )
+    lbl_path = dummy_geotiff_factory(
         filename='label.tif', width=16, height=16, bands=1
-    ))
+    )
 
-    out_dir = str(tmp_path / 'blocks')
+    out_dir = tmp_path / 'blocks'
     inputs = assembler.BlockBuildingInputs(
         image_fpath=img_path,
         label_fpath=lbl_path,

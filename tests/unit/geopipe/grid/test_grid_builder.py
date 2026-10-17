@@ -54,7 +54,8 @@ def test_build_grid_ref(dummy_geotiff_factory):
         filename='ref_raster.tif',
         width=16,
         height=16,
-        bands=1
+        bands=1,
+        crs='EPSG:32617',
     )
 
     grid = grid_builder.build_grid(

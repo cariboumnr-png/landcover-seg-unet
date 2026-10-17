@@ -61,7 +61,7 @@ def test_prepare_world_grid_build(tmp_path):
     assert is_loaded is False
     assert len(world_grid) == 16
     assert (tmp_path / f'{world_grid.gid}.json').exists()
-    assert grid_fp == str(tmp_path / f'{world_grid.gid}.json')
+    assert grid_fp == tmp_path / f'{world_grid.gid}.json'
 
 
 def test_prepare_world_grid_load(tmp_path):
@@ -82,7 +82,7 @@ def test_prepare_world_grid_load(tmp_path):
     assert is_loaded_2 is True
     assert len(grid_2) == 16
     assert grid_2.gid == grid_1.gid
-    assert grid_fp_2 == str(tmp_path / f'{grid_1.gid}.json')
+    assert grid_fp_2 == tmp_path / f'{grid_1.gid}.json'
 
 
 # ----- private helpers

@@ -48,7 +48,7 @@ def test_normalize_features_entry_basic():
     normalizer = Normalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['name'] == 's2_sample'
-    assert entry['path'] == str(pathlib.Path(raw_entry['path']))
+    assert entry['path'] == pathlib.Path(raw_entry['path'])
     assert entry['category'] == 'features'
     assert entry['band_mapping'] == {1: 'blue', 2: 'green', 3: 'red'}
     assert entry['categorical_specs'] is None
