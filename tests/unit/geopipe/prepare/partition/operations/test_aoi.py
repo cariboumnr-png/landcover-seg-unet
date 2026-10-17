@@ -130,11 +130,11 @@ def test_intersect_aoi_raster_reprojection(tmp_path):
 
 
 # ----- `resolve_aoi_partitions` tests
-def test_resolve_aoi_partitions_priority_conflict(tmp_path, mocker):
+def test_resolve_aoi_partitions_priority_conflict(tmp_path):
     '''
     Given: Overlapping test and validation AOIs covering the same block.
     When: Resolving partitions.
-    Then: Priority rule assigns the block to test and logs a warning.
+    Then: Priority rule assigns the block to test.
     '''
     canvas_transform = rasterio.transform.from_origin(
         500000.0, 600000.0, 20.0, 20.0
@@ -148,7 +148,6 @@ def test_resolve_aoi_partitions_priority_conflict(tmp_path, mocker):
         val_aoi, transform=canvas_transform, shape=(256, 256)
     )
 
-    mock_logger = mocker.MagicMock()
     candidates = [(0, 0), (256, 256)]
 
     result = split_aoi.resolve_aoi_partitions(
@@ -159,14 +158,12 @@ def test_resolve_aoi_partitions_priority_conflict(tmp_path, mocker):
         block_size=(256, 256),
         crs='EPSG:3161',
         transform=canvas_transform,
-        logger=mock_logger,
     )
 
     assert result.test == [(0, 0)]
     assert not result.val
     assert not result.train
     assert result.unassigned == [(256, 256)]
-    assert mock_logger.log.called
 
 
 def test_resolve_aoi_partitions_scenario_1_three_splits(tmp_path):

@@ -33,51 +33,7 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.context as ingest_context
 
 
-# ----- private helpers
-def _create_dummy_grid(fpath: str) -> geo_core.GridLayout:
-    '''Create and persist a minimal grid layout artifact.'''
-    spec = geo_core.GridSpec(
-        crs='EPSG:32617',
-        origin=(0.0, 1000.0),
-        pixel_size=(10.0, 10.0),
-        tile_size=(16, 16),
-        tile_stride=(8, 8),
-        grid_extent=(160.0, 160.0),
-    )
-    layout = geo_core.GridLayout(spec)
-    ctrl = artifacts.PayloadController[
-        list[list[int]], geo_core.GridMeta
-    ](
-        fpath,
-        schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
-    )
-    ctrl.save(layout.to_payload())
-    return layout
-
-
 # ----- `IngestionContext` tests
-def test_ingestion_context_properties(tmp_path):
-    '''
-    Given: Instantiated IngestionContext.
-    When: Checking has_data and grid properties.
-    Then: has_data and grid metadata evaluate correctly.
-    '''
-    grid_fp = tmp_path / 'grid.json'
-    layout = _create_dummy_grid(grid_fp)
-    ctx = ingest_context.IngestionContext(
-        grid=layout,
-        grid_fpath=grid_fp,
-        domains={'landcover': pathlib.Path('/data/lc.tif')},
-        features=pathlib.Path('/data/features.vrt'),
-        labels=pathlib.Path('/data/labels.vrt'),
-        valid_mask_raster=pathlib.Path('/data/mask.tif'),
-    )
-    assert ctx.has_data is True
-    assert ctx.grid_fpath == grid_fp
-    assert ctx.grid.gid == layout.gid
-
-
 def test_build_ingestion_context_success(tmp_path):
     '''
     Given: World grid, runs manifest, and harmonization report.
@@ -416,3 +372,26 @@ def test_verify_pool_grid_compatibility(tmp_path):
         ingest_context.verify_pool_grid_compatibility(
             schema_fp, mismatched_layout
         )
+
+
+# ----- private helpers
+def _create_dummy_grid(fpath: str) -> geo_core.GridLayout:
+    '''Create and persist a minimal grid layout artifact.'''
+    spec = geo_core.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(16, 16),
+        tile_stride=(8, 8),
+        grid_extent=(160.0, 160.0),
+    )
+    layout = geo_core.GridLayout(spec)
+    ctrl = artifacts.PayloadController[
+        list[list[int]], geo_core.GridMeta
+    ](
+        fpath,
+        schema_id=geo_core.GridLayout.SCHEMA_ID,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
+    ctrl.save(layout.to_payload())
+    return layout

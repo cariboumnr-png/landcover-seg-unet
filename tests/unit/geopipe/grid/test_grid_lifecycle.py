@@ -30,20 +30,20 @@ import landseg.geopipe.grid.lifecycle as grid_lifecycle
 
 
 @dataclasses.dataclass
-class _Params:
-    tile_size: tuple[int, int] = (8, 8)
-    tile_stride: tuple[int, int] = (4, 4)
-    ref_fpath: str | None = None
-    crs_string: str | None = None
-    origin: tuple[float, float] | None = None
-    pixel_size: tuple[float, float] | None = None
-    extent_in_crs_units: tuple[float, float] | None = None
+class _Specs:
+    crs_string: str
+    origin: tuple[float, float]
+    pixel_size: tuple[float, float]
+    extent_in_crs_units: tuple[float, float]
 
 
 @dataclasses.dataclass
 class _WorldGridConfig:
+    tile_size: tuple[int, int]
+    tile_stride: tuple[int, int]
     mode: str
-    params: _Params
+    ref_fpath: str
+    manual_specs: _Specs
     output_dpath: str
 
 
@@ -54,19 +54,7 @@ def test_prepare_world_grid_build(tmp_path):
     When: `prepare_world_grid` is executed.
     Then: Build a new GridLayout, save it, and return loaded=False.
     '''
-    params = _Params(
-        crs_string='EPSG:32617',
-        origin=(0.0, 0.0),
-        pixel_size=(10.0, 10.0),
-        extent_in_crs_units=(160.0, 160.0),
-        tile_size=(8, 8),
-        tile_stride=(4, 4)
-    )
-    config = _WorldGridConfig(
-        mode='manual',
-        params=params,
-        output_dpath=str(tmp_path)
-    )
+    config = _get_config(tmp_path)
 
     is_loaded, grid_fp, world_grid = grid_lifecycle.prepare_world_grid(config)
 
@@ -82,19 +70,7 @@ def test_prepare_world_grid_load(tmp_path):
     When: `prepare_world_grid` is executed.
     Then: Load the grid from disk directly and return loaded=True.
     '''
-    params = _Params(
-        crs_string='EPSG:32617',
-        origin=(0.0, 0.0),
-        pixel_size=(10.0, 10.0),
-        extent_in_crs_units=(160.0, 160.0),
-        tile_size=(8, 8),
-        tile_stride=(4, 4)
-    )
-    config = _WorldGridConfig(
-        mode='manual',
-        params=params,
-        output_dpath=str(tmp_path)
-    )
+    config = _get_config(tmp_path)
 
     # build once to save to disk
     is_loaded_1, _, grid_1 = grid_lifecycle.prepare_world_grid(config)
@@ -107,3 +83,21 @@ def test_prepare_world_grid_load(tmp_path):
     assert len(grid_2) == 16
     assert grid_2.gid == grid_1.gid
     assert grid_fp_2 == str(tmp_path / f'{grid_1.gid}.json')
+
+
+# ----- private helpers
+def _get_config(tmp_path):
+    specs = _Specs(
+        crs_string='EPSG:32617',
+        origin=(0.0, 0.0),
+        pixel_size=(10.0, 10.0),
+        extent_in_crs_units=(160.0, 160.0),
+    )
+    return _WorldGridConfig(
+        tile_size=(8, 8),
+        tile_stride=(4, 4),
+        mode='manual',
+        ref_fpath='',
+        manual_specs=specs,
+        output_dpath=str(tmp_path)
+    )

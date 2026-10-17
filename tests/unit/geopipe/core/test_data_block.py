@@ -22,7 +22,7 @@
 '''Unit tests for core DataBlock, DataBlockArrays, and DataBlockManifest.'''
 
 # standard imports
-import os
+import pathlib
 import tempfile
 # third-party imports
 import numpy
@@ -134,7 +134,7 @@ def test_datablock_save_and_load():
     block = geo_core.DataBlock(data=arrays, manifest=manifest)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        fpath = os.path.join(tmpdir, 'test_block.npz')
+        fpath = pathlib.Path(tmpdir) / 'test_block.npz'
         block.save(fpath)
 
         loaded = geo_core.DataBlock.load(fpath)

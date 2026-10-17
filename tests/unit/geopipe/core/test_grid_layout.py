@@ -22,8 +22,6 @@
 
 '''Unit tests for world-grid tiling utility (grid_layout.py).'''
 
-# standard imports
-import os
 # third-party imports
 import pytest
 import rasterio.windows
@@ -234,7 +232,7 @@ def test_gridlayout_from_fpath(tmp_path):
         grid_extent=(3840.0, 3840.0),
     )
     layout = grid_layout.GridLayout(spec)
-    grid_fp = str(tmp_path / 'grid.json')
+    grid_fp = tmp_path / 'grid.json'
     ctrl = artifacts.PayloadController[
         list[list[int]], grid_layout.GridMeta
     ](
@@ -258,7 +256,7 @@ def test_grid_report_helpers(tmp_path):
     When: `get_grid_report_fpath` and `read_grid_report` are called.
     Then: Resolve report path and extract WorldGridReport payload.
     '''
-    expected_fp = os.path.join(str(tmp_path), 'grid_report.json')
+    expected_fp = tmp_path / 'grid_report.json'
 
     grid_report: contracts.WorldGridReport = {
         'grid_fpath': '/path/to/grid.json',

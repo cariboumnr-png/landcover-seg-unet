@@ -27,6 +27,7 @@ Unit tests for `landseg.artifacts.paths`.
 # standard imports
 import pathlib
 # local imports
+import landseg.artifacts.controller as ctrl_mod
 import landseg.artifacts.paths as paths_mod
 import landseg.configs as configs_mod
 
@@ -101,12 +102,14 @@ def test_harmonization_paths(tmp_path):
     e = tmp_path
     paths = paths_mod.HarmonizationPaths(root=e)
     paths.init_pipeline_folders()
+    r = paths.effective_run_folder
 
     assert paths.run_id == 'run_0001'
-    r = paths.effective_run_folder
     assert paths.valid_mask_raster == r / 'valid_pixel_mask.vrt'
     assert paths.config == r / 'config.json'
     assert paths.report == r / 'report.json'
+    assert paths.runs_manifest.is_file()
+    assert ctrl_mod.Controller[dict](paths.runs_manifest).fetch() == {}
 
     # second init auto-increments run_id
     etl_paths_2 = paths_mod.HarmonizationPaths(root=e)
@@ -144,16 +147,20 @@ def test_harmonization_paths_get_run_folder(tmp_path):
     assert h_paths.get_run_folder(run1) == run1
 
 
-def test_ingestion_paths():
+def test_ingestion_paths(tmp_path):
     '''
     Given: An ingestion root directory string.
     When: Accessing `IngestionPaths` properties and sub-container helpers.
     Then: Return expected report, config, and domain map filepaths.
     '''
-    f = pathlib.Path('/tmp') / 'exp' / 'ingested_data'
+    f = tmp_path / 'ingested_data'
     f_paths = paths_mod.IngestionPaths(root=f)
+    f_paths.init_pipeline_folders()
+
     assert f_paths.report == f / 'run_0001' / 'report.json'
     assert f_paths.config == f / 'run_0001' / 'config.json'
+    assert f_paths.runs_manifest.is_file()
+    assert ctrl_mod.Controller[dict](f_paths.runs_manifest).fetch() == {}
 
     # domain maps fpaths
     d_dir = f / 'domain_knowledge'

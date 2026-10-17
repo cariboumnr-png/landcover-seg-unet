@@ -146,14 +146,14 @@ def test_scenario_2_train_val_only_zero_test_blocks():
     assert len(results.partition_fpaths['train']) == 3
 
 
-def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
+def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path):
     '''
     Scenario 3: User provides test_aoi, val_aoi, and train_aoi with
         overlap.
     Given: Test and validation AOIs overlapping block (0, 0), and a
         train AOI covering (256, 256).
     When: Partitioning with buffer_step=1.
-    Then: Overlap resolves to test > val > train with logged warnings.
+    Then: Overlap resolves to test > val > train.
     '''
     t_test = rasterio.transform.from_origin(500000.0, 600000.0, 20.0, 20.0)
     t_train = rasterio.transform.from_origin(
@@ -177,8 +177,6 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
         (256, 256): [10, 10],
     }
 
-    mock_logger = mocker.MagicMock()
-
     config = orchestration.PartitionConfig(
         val_test_ratios=(0.0, 0.0),
         block_spec=(256, 256, 256, 256),
@@ -196,10 +194,8 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
         base_counts,
         blocks,
         config,
-        logger=mock_logger,
     )
 
     assert 'b0' in results.partition_fpaths['test']
     assert 'b3' in results.partition_fpaths['train']
     assert not results.partition_fpaths['val']
-    assert mock_logger.log.called

@@ -96,6 +96,5 @@ def test_dataset_catalog_to_json_payload(sample_entry):
 
     parsed = json.loads(payload_str)
     assert 'row_000020_col_000010' in parsed
-    assert parsed['row_000020_col_000010']['block_name'] == (
-        'row_000020_col_000010'
-    )
+    block = parsed['row_000020_col_000010']
+    assert block['block_name'] == 'row_000020_col_000010'
