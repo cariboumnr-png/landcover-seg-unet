@@ -21,7 +21,13 @@
 
 # pylint: disable=protected-access
 
-'''Unit tests for model evaluate pipeline (model_evaluate.py).'''
+'''
+Unit tests for the model evaluation execution pipeline.
+
+These tests verify pipeline lifecycle, configuration validation, and the
+session runner interaction contract. Complete end-to-end evaluation with
+real model weights and checkpoints is tested in integration tests.
+'''
 
 # standard imports
 import typing
@@ -145,6 +151,7 @@ def test_evaluate_pipeline_success(tmp_path, mocker):
 
     target_metric = eval_pipeline.ModelEvaluation(config).run()
 
+    mock_runner.set_head_state.assert_called_once()
     assert target_metric == 0.85
     eval_fpath = exp_root / 'results' / 'run_0001' / 'evaluation.json'
     assert eval_fpath.exists()

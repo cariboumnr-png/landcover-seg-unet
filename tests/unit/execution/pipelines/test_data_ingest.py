@@ -19,97 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+# pylint: disable=protected-access
 
 '''Unit tests for the data ingestion execution pipeline.'''
 
 # standard imports
-import pathlib
 import typing
 # third-party imports
 import omegaconf
 import pytest
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
+import landseg.geopipe.ingest as ingest
 
 
-# ----- pipeline execution
-def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
-    # compose config with OmegaConf
-    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-
-    # override world grid fields
-    grid_cfg = cfg_schema.data.world_grid
-    grid_cfg.mode = 'ref'
-    grid_cfg.ref_fpath = dummy_data_paths.extent
-    grid_cfg.tile_size = (256, 256)
-    grid_cfg.tile_stride = (128, 128)
-
-    cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
-    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
-
-    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested_data')
-    cfg_schema.data.ingestion.rebuild = True
-
-    # convert back to standard typed `RootConfig` dataclass
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-
-    # run world-grid and harmonize first to generate matching CRS rasters
-    pipelines.WorldGridGeneration(config).run()
-    pipelines.DataHarmonization(config).run()
-
-    # run the ingestion pipeline
-    pipelines.DataIngestion(config).run()
-
-    # verify the generated outputs
-    out_dpath = pathlib.Path(config.data.ingestion.output_dpath)
-    assert (out_dpath / 'data_blocks' / 'catalog.json').exists()
-    assert (out_dpath / 'data_blocks' / 'schema.json').exists()
-    assert (out_dpath / 'data_blocks' / 'blocks').exists()
-    assert (out_dpath / 'run_0001' / 'report.json').exists()
-
-
-def test_data_ingest_pipeline_with_spectral_and_topo(
-    tmp_path,
-    dummy_data_paths
-):
-    '''
-    Given: Pipeline config with add_topo and add_spectral configured.
-    When: Executing data ingestion pipeline.
-    Then: Materialize data blocks with derived feature channels.
-    '''
-    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    grid_cfg = cfg_schema.data.world_grid
-    grid_cfg.mode = 'ref'
-    grid_cfg.ref_fpath = dummy_data_paths.extent
-    grid_cfg.tile_size = (256, 256)
-    grid_cfg.tile_stride = (128, 128)
-
-    cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
-    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
-    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested_data')
-    cfg_schema.data.ingestion.rebuild = True
-    cfg_schema.data.ingestion.datablocks.add_topo = ['slope']
-    cfg_schema.data.ingestion.datablocks.add_spectral = ['ndvi']
-
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-
-    pipelines.WorldGridGeneration(config).run()
-    pipelines.DataHarmonization(config).run()
-    pipelines.DataIngestion(config).run()
-
-    # verify generated outputs
-    out_dpath = pathlib.Path(config.data.ingestion.output_dpath)
-    assert (out_dpath / 'data_blocks' / 'catalog.json').exists()
-
-
+# ----- `DataIngestion` validation tests
 def test_data_ingest_validate_missing_harmonization(tmp_path):
     '''
     Given: Ingestion configuration without upstream harmonization runs.
@@ -130,4 +56,107 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-harmonize"'
     ):
-        pipeline._validate() # pylint: disable=protected-access
+        pipeline._validate()
+
+
+# ----- `DataIngestion` execution and lifecycle tests
+def test_data_ingest_pipeline_success(tmp_path, mocker):
+    '''
+    Given: Upstream harmonization runs and mocked ingest runner.
+    When: Calling `run` on `DataIngestion`.
+    Then: Execute ingestion, update manifest, and write SUCCESS report.
+    '''
+    harm_dpath = tmp_path / 'harmonized'
+    runs_fpath = harm_dpath / 'harmonization_runs.json'
+    artifacts.Controller[dict](runs_fpath).persist({
+        'hash_123': {'status': 'SUCCESS', 'run_id': 'run_0001'}
+    })
+
+    ingest_dpath = tmp_path / 'ingested_data'
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.harmonization.output_dpath = str(harm_dpath)
+    cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
+    cfg_schema.data.ingestion.rebuild = False
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    mock_context = mocker.Mock(
+        harmonization_run_id='run_0001',
+        run_uid='hash_123',
+    )
+    mocker.patch.object(
+        pipelines.DataIngestion,
+        '_build_context',
+        return_value=mock_context,
+    )
+    mock_run = mocker.patch.object(ingest, 'run_data_ingestion')
+
+    pipeline = pipelines.DataIngestion(config)
+    pipeline.run()
+
+    mock_run.assert_called_once()
+    report_fpath = ingest_dpath / 'run_0001' / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'SUCCESS'
+
+    runs_fpath = ingest_dpath / 'ingestion_runs.json'
+    assert runs_fpath.exists()
+    runs = artifacts.Controller[dict](runs_fpath).fetch()
+    assert runs
+    uids = list(runs.keys())
+    assert runs[uids[0]]['status'] == 'SUCCESS'
+
+
+def test_data_ingest_pipeline_failure(tmp_path, mocker):
+    '''
+    Given: Upstream harmonization runs and runner that raises an error.
+    When: Calling `run` on `DataIngestion`.
+    Then: Re-raise error and mark report status as FAILED.
+    '''
+    harm_dpath = tmp_path / 'harmonized'
+    runs_fpath = harm_dpath / 'harmonization_runs.json'
+    artifacts.Controller[dict](runs_fpath).persist({
+        'hash_123': {'status': 'SUCCESS', 'run_id': 'run_0001'}
+    })
+
+    ingest_dpath = tmp_path / 'ingested_data'
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.harmonization.output_dpath = str(harm_dpath)
+    cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    mock_context = mocker.Mock(
+        harmonization_run_id='run_0001',
+        run_uid='hash_123',
+    )
+    mocker.patch.object(
+        pipelines.DataIngestion,
+        '_build_context',
+        return_value=mock_context,
+    )
+    mocker.patch.object(
+        ingest,
+        'run_data_ingestion',
+        side_effect=RuntimeError('Ingestion failed unexpectedly')
+    )
+
+    pipeline = pipelines.DataIngestion(config)
+    with pytest.raises(RuntimeError, match='Ingestion failed unexpectedly'):
+        pipeline.run()
+
+    report_fpath = ingest_dpath / 'run_0001' / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'FAILED'

@@ -22,7 +22,11 @@
 # pylint: disable=protected-access
 
 '''
-Unit tests for model train pipeline (model_train.py).
+Unit tests for the model training execution pipeline.
+
+These tests verify pipeline lifecycle, configuration validation, and the
+session runner interaction contract. Complete end-to-end training with
+real tensors, losses, and checkpoints is tested in integration tests.
 '''
 
 # standard imports
