@@ -24,6 +24,7 @@ Programmatic API entry
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.configs as configs
@@ -112,7 +113,7 @@ def run_preflight(
     return preflight.run_preflight(
         root_config=cfg,
         target=resolved_target,
-        exp_root=exp_root,
+        exp_root=pathlib.Path(exp_root) if exp_root else None,
     )
 
 
