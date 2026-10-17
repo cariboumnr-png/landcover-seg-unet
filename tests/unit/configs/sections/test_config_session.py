@@ -125,9 +125,12 @@ def test_evaluation_config_validation(tmp_path):
     When: `EvaluationConfig.validate()` is called.
     Then: Pass for None or valid files, and raise ConfigValidationError.
     '''
-    # default None checkpoint passes
-    cfg = eval_sec.EvaluationConfig()
-    cfg.validate()
+    # default None checkpoint raises
+    with pytest.raises(
+        base.ConfigValidationError,
+        match='Checkpoint is required',
+    ):
+        eval_sec.EvaluationConfig().validate()
 
     # existing checkpoint passes
     dummy_ckpt = tmp_path / 'model.pt'
@@ -143,4 +146,3 @@ def test_evaluation_config_validation(tmp_path):
     # invalid split raises
     with pytest.raises(base.ConfigValidationError):
         eval_sec.EvaluationConfig(split='invalid').validate()
-

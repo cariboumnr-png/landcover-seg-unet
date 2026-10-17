@@ -43,6 +43,8 @@ def test_grid_parameters_validation():
     params = grid_sec.WorldGridConfig(
         tile_size=(256, 256),
         tile_stride=(0, 0),
+        mode='manual',
+        manual_specs=grid_sec.GridSpecs(),
     )
     params.validate()
 
@@ -107,7 +109,7 @@ def test_grid_cfg_validation(tmp_path):
             extent_in_crs_units=(100.0, 100.0),
         )
     )
-    with pytest.raises(ValueError, match='Invalid CRS'):
+    with pytest.raises(base.ConfigValidationError, match='CRS string must be'):
         grid_invalid_crs.validate()
 
 
@@ -152,11 +154,11 @@ def test_datablocks_add_features_validation():
 
     # invalid topo type
     with pytest.raises(base.ConfigValidationError):
-        ing_sec.DataBlocks(add_topo='invalid').validate()
+        ing_sec.DataBlocks(add_topo='invalid').validate()  # type: ignore
 
     # invalid topo item type
     with pytest.raises(ValueError, match='Expected type'):
-        ing_sec.DataBlocks(add_topo=[123]).validate()
+        ing_sec.DataBlocks(add_topo=[123]).validate()  # type: ignore
 
     # invalid topo feature name
     with pytest.raises(ValueError, match='must be in the following'):
@@ -164,11 +166,11 @@ def test_datablocks_add_features_validation():
 
     # invalid spectral type
     with pytest.raises(base.ConfigValidationError):
-        ing_sec.DataBlocks(add_spectral='ndvi').validate()
+        ing_sec.DataBlocks(add_spectral='ndvi').validate()  # type: ignore
 
     # invalid spectral item type
     with pytest.raises(ValueError, match='Expected type'):
-        ing_sec.DataBlocks(add_spectral=[123]).validate()
+        ing_sec.DataBlocks(add_spectral=[123]).validate()  # type: ignore
 
     # invalid spectral index name
     with pytest.raises(ValueError, match='must be in the following'):

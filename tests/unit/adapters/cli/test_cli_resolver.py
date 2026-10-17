@@ -53,10 +53,7 @@ def test_resolve_configs_base(tmp_path):
             },
             'world_grid': {
                 'mode': 'ref',
-                'params': {
-                    'ref_fpath': str(dev_img),
-                    'crs_string': 'EPSG:32617',
-                },
+                'ref_fpath': str(dev_img),
             },
         },
 
